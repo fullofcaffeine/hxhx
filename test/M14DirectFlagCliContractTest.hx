@@ -1,4 +1,6 @@
 import hxhx.CliRouting;
+import sys.FileSystem;
+import sys.io.File;
 
 class M14DirectFlagCliContractTest {
 	static function assertTrue(cond:Bool, message:String):Void {
@@ -7,6 +9,10 @@ class M14DirectFlagCliContractTest {
 	}
 
 	static function assertEquals(actual:String, expected:String, label:String):Void {
+		assertTrue(actual == expected, label + " mismatch: expected `" + expected + "`, got `" + actual + "`");
+	}
+
+	static function assertIntEquals(actual:Int, expected:Int, label:String):Void {
 		assertTrue(actual == expected, label + " mismatch: expected `" + expected + "`, got `" + actual + "`");
 	}
 
@@ -35,6 +41,17 @@ class M14DirectFlagCliContractTest {
 			i += 1;
 		}
 		return false;
+	}
+
+	static function countArgPair(args:Array<String>, key:String, value:String):Int {
+		var count = 0;
+		var i = 0;
+		while (i < args.length) {
+			if (args[i] == key && i + 1 < args.length && args[i + 1] == value)
+				count += 1;
+			i += 1;
+		}
+		return count;
 	}
 
 	static function hasDefine(args:Array<String>, defineValue:String):Bool {
@@ -96,5 +113,14 @@ class M14DirectFlagCliContractTest {
 		assertTrue(hasDefine(eval.forwarded, "ocaml_output=out"), "ocaml eval output define");
 		assertTrue(hasDefine(eval.forwarded, "ocaml_build=1"), "ocaml eval build define");
 		assertTrue(hasDefine(eval.forwarded, "ocaml_bin=main"), "ocaml eval bin define");
+
+		final tmpDir = ".tmp/m14_direct_flag_cli_contract";
+		if (!FileSystem.exists(tmpDir))
+			FileSystem.createDirectory(tmpDir);
+		final hxmlPath = tmpDir + "/build.hxml";
+		File.saveContent(hxmlPath, "-lib reflaxe.ocaml\n-D ocaml_output=custom_out\n--no-output\n");
+		final evalFromHxml = plan(["--ocaml-eval", hxmlPath, "-main", "Main"]);
+		assertIntEquals(countArgPair(evalFromHxml.forwarded, "--library", "reflaxe.ocaml"), 0, "ocaml eval hxml duplicate library injection");
+		assertTrue(!hasDefine(evalFromHxml.forwarded, "ocaml_output=out"), "ocaml eval hxml keeps explicit output define");
 	}
 }

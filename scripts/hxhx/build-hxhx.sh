@@ -323,6 +323,12 @@ if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP
       "$BOOTSTRAP_BUILD_DIR/backend_js_JsTargetCore.ml"
   fi
 
+  if [ -f "$BOOTSTRAP_BUILD_DIR/hxhx_CliRouting.ml" ]; then
+    python3 "$ROOT/scripts/hxhx/bootstrap_patch_helper.py" \
+      patch-cli-routing-ocaml-eval-hxml \
+      "$BOOTSTRAP_BUILD_DIR/hxhx_CliRouting.ml"
+  fi
+
   (
     cd "$BOOTSTRAP_BUILD_DIR"
     if [ "$HXHX_BOOTSTRAP_HEARTBEAT" != "0" ] || [ "$HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS" != "0" ]; then

@@ -2624,6 +2624,59 @@ def cmd_patch_js_target_core_native_js_lib_externs(argv: list[str]) -> None:
     write_text(path_str, src)
 
 
+def cmd_patch_cli_routing_ocaml_eval_hxml(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-cli-routing-ocaml-eval-hxml <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    old = '''        let evalArgs = Obj.magic (HxArray.copy baseForwarded) in let evalReflaxeTarget = (getDefineValue (Obj.magic evalArgs) ("reflaxe-target" : string) : string) in (
+          ignore (if evalReflaxeTarget != Obj.magic (HxRuntime.hx_null) && not (HxString.equals evalReflaxeTarget "ocaml") then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("Contradiction: --ocaml-eval but -D reflaxe-target=" ^ HxString.toStdString evalReflaxeTarget)) ["Dynamic"; "String"]) else ());
+          ignore (addLibraryIfMissing (Obj.magic evalArgs) ("reflaxe.ocaml" : string));
+          ignore (addDefineIfMissing (Obj.magic evalArgs) ("reflaxe-target=ocaml" : string));
+          ignore (addDefineIfMissing (Obj.magic evalArgs) ("reflaxe-target-code-injection=ocaml" : string));
+          ignore (addDefineIfMissing (Obj.magic evalArgs) ("retain-untyped-meta" : string));
+          ignore (addDefineIfMissing (Obj.magic evalArgs) ("ocaml_output=out" : string));
+          ignore (addDefineIfMissing (Obj.magic evalArgs) ("ocaml_build=1" : string));
+          ignore (addDefineIfMissing (Obj.magic evalArgs) ("ocaml_bin=main" : string));
+          ignore (if HxArray.indexOf evalArgs "--no-output" 0 = -1 then ignore (HxArray.push evalArgs "--no-output") else ());
+          raise (HxRuntime.Hx_return (Obj.repr (let __anon_3 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_3 "lane" (Obj.repr "stage0-ocaml-eval"));
+            ignore (HxAnon.set __anon_3 "backendId" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+            ignore (HxAnon.set __anon_3 "forwarded" (Obj.repr evalArgs));
+            ignore (HxAnon.set __anon_3 "stage0Required" (HxRuntime.box_bool true));
+            __anon_3
+          ))))
+        )'''
+
+    new = '''        let evalArgs = Obj.magic (HxArray.copy baseForwarded) in let expandedEvalArgs = Obj.magic (planningTargetArgs (Obj.magic evalArgs)) in let evalReflaxeTarget = (getDefineValue (Obj.magic expandedEvalArgs) ("reflaxe-target" : string) : string) in (
+          ignore (if evalReflaxeTarget != Obj.magic (HxRuntime.hx_null) && not (HxString.equals evalReflaxeTarget "ocaml") then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("Contradiction: --ocaml-eval but -D reflaxe-target=" ^ HxString.toStdString evalReflaxeTarget)) ["Dynamic"; "String"]) else ());
+          ignore (if not (hasLibrary (Obj.magic expandedEvalArgs) ("reflaxe.ocaml" : string)) then ignore (addLibraryIfMissing (Obj.magic evalArgs) ("reflaxe.ocaml" : string)) else ());
+          ignore (if not (hasDefine (Obj.magic expandedEvalArgs) ("reflaxe-target" : string)) then ignore (addDefineIfMissing (Obj.magic evalArgs) ("reflaxe-target=ocaml" : string)) else ());
+          ignore (if not (hasDefine (Obj.magic expandedEvalArgs) ("reflaxe-target-code-injection" : string)) then ignore (addDefineIfMissing (Obj.magic evalArgs) ("reflaxe-target-code-injection=ocaml" : string)) else ());
+          ignore (if not (hasDefine (Obj.magic expandedEvalArgs) ("retain-untyped-meta" : string)) then ignore (addDefineIfMissing (Obj.magic evalArgs) ("retain-untyped-meta" : string)) else ());
+          ignore (if not (hasDefine (Obj.magic expandedEvalArgs) ("ocaml_output" : string)) then ignore (addDefineIfMissing (Obj.magic evalArgs) ("ocaml_output=out" : string)) else ());
+          ignore (if not (hasDefine (Obj.magic expandedEvalArgs) ("ocaml_build" : string)) then ignore (addDefineIfMissing (Obj.magic evalArgs) ("ocaml_build=1" : string)) else ());
+          ignore (if not (hasDefine (Obj.magic expandedEvalArgs) ("ocaml_bin" : string)) then ignore (addDefineIfMissing (Obj.magic evalArgs) ("ocaml_bin=main" : string)) else ());
+          ignore (if HxArray.indexOf expandedEvalArgs "--no-output" 0 = -1 && HxArray.indexOf evalArgs "--no-output" 0 = -1 then ignore (HxArray.push evalArgs "--no-output") else ());
+          raise (HxRuntime.Hx_return (Obj.repr (let __anon_3 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_3 "lane" (Obj.repr "stage0-ocaml-eval"));
+            ignore (HxAnon.set __anon_3 "backendId" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+            ignore (HxAnon.set __anon_3 "forwarded" (Obj.repr evalArgs));
+            ignore (HxAnon.set __anon_3 "stage0Required" (HxRuntime.box_bool true));
+            __anon_3
+          ))))
+        )'''
+
+    src = replace_one(
+        src,
+        old,
+        new,
+        "build-hxhx: failed to locate bootstrap CliRouting --ocaml-eval hxml parity anchor\n",
+    )
+    write_text(path_str, src)
+
+
 COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "insert-before-anchor": cmd_insert_before_anchor,
     "patch-array-receiver-chain-lowering": cmd_patch_array_receiver_chain_lowering,
@@ -2662,6 +2715,7 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-float-modulo-mutable-local": cmd_patch_float_modulo_mutable_local,
     "patch-plugin-dune-layout": cmd_patch_plugin_dune_layout,
     "patch-js-target-core-native-js-lib-externs": cmd_patch_js_target_core_native_js_lib_externs,
+    "patch-cli-routing-ocaml-eval-hxml": cmd_patch_cli_routing_ocaml_eval_hxml,
 }
 
 

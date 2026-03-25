@@ -60,18 +60,19 @@ class CliRouting {
 				throw "--ocaml-eval is the target; remove other targets.";
 			}
 			final evalArgs = baseForwarded.copy();
-			final evalReflaxeTarget = getDefineValue(evalArgs, "reflaxe-target");
+			final expandedEvalArgs = planningTargetArgs(evalArgs);
+			final evalReflaxeTarget = getDefineValue(expandedEvalArgs, "reflaxe-target");
 			if (evalReflaxeTarget != null && evalReflaxeTarget != "ocaml") {
 				throw "Contradiction: --ocaml-eval but -D reflaxe-target=" + evalReflaxeTarget;
 			}
-			addLibraryIfMissing(evalArgs, "reflaxe.ocaml");
-			addDefineIfMissing(evalArgs, "reflaxe-target=ocaml");
-			addDefineIfMissing(evalArgs, "reflaxe-target-code-injection=ocaml");
-			addDefineIfMissing(evalArgs, "retain-untyped-meta");
-			addDefineIfMissing(evalArgs, "ocaml_output=out");
-			addDefineIfMissing(evalArgs, "ocaml_build=1");
-			addDefineIfMissing(evalArgs, "ocaml_bin=main");
-			if (evalArgs.indexOf("--no-output") == -1)
+			addLibraryIfMissingForPlanning(evalArgs, expandedEvalArgs, "reflaxe.ocaml");
+			addDefineIfMissingForPlanning(evalArgs, expandedEvalArgs, "reflaxe-target=ocaml");
+			addDefineIfMissingForPlanning(evalArgs, expandedEvalArgs, "reflaxe-target-code-injection=ocaml");
+			addDefineIfMissingForPlanning(evalArgs, expandedEvalArgs, "retain-untyped-meta");
+			addDefineIfMissingForPlanning(evalArgs, expandedEvalArgs, "ocaml_output=out");
+			addDefineIfMissingForPlanning(evalArgs, expandedEvalArgs, "ocaml_build=1");
+			addDefineIfMissingForPlanning(evalArgs, expandedEvalArgs, "ocaml_bin=main");
+			if (expandedEvalArgs.indexOf("--no-output") == -1 && evalArgs.indexOf("--no-output") == -1)
 				evalArgs.push("--no-output");
 			return {
 				lane: LANE_STAGE0_OCAML_EVAL,
@@ -187,6 +188,14 @@ class CliRouting {
 		args.push(define);
 	}
 
+	static function addDefineIfMissingForPlanning(args:Array<String>, planned:Array<String>, define:String):Void {
+		final eq = define.indexOf("=");
+		final name = eq == -1 ? define : define.substr(0, eq);
+		if (hasDefine(planned, name))
+			return;
+		addDefineIfMissing(args, define);
+	}
+
 	static function hasLibrary(args:Array<String>, name:String):Bool {
 		var i = 0;
 		while (i < args.length) {
@@ -203,6 +212,12 @@ class CliRouting {
 			return;
 		args.push("--library");
 		args.push(name);
+	}
+
+	static function addLibraryIfMissingForPlanning(args:Array<String>, planned:Array<String>, name:String):Void {
+		if (hasLibrary(planned, name))
+			return;
+		addLibraryIfMissing(args, name);
 	}
 
 	static function hasMacro(args:Array<String>, macroExpr:String):Bool {
