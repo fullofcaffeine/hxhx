@@ -16,6 +16,13 @@ From the repo root:
 npm test
 ```
 
+The default `npm test` loop intentionally excludes a small number of unusually heavy single-regression
+compiler checks when they materially slow iteration. Run those targeted heavy checks separately:
+
+```bash
+npm run test:m14:heavy
+```
+
 Before running deeper compatibility gates, read:
 
 - `docs/02-user-guide/concepts/execution_modes.md`
@@ -79,6 +86,10 @@ npm run clean
 npm run clean:tmp
 npm run clean:deep
 ```
+
+Bootstrap smoke failures now bundle compact diagnostics into `.artifacts/bootstrap-smoke-failures/`
+by default instead of retaining the full `.tmp` build root. Set `HXHX_KEEP_TMP_ON_FAIL=1`
+only when you explicitly need the entire failing temp tree.
 
 Details and retention knobs (`HXHX_KEEP_LOGS`, `HXHX_LOG_DIR`) are documented in:
 `docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md`
@@ -341,10 +352,44 @@ Notes:
     - macro-library smoke (`reflaxe.ocaml` build fixture + Stage3 `--library` activation from `haxe_libraries/*.hxml`)
     - eval.vm plugin API smoke (`eval.vm.Context.loadPlugin`)
     - Stage3 plugin fixture (`hxhxmacros.PluginFixtureMacros.init()`) with hook/classpath/module emission checks.
-  - external promotion pilot (manual/non-required):
+  - external official plugin-hosted proof lane (manual/non-required):
     - `npm run test:hxhx:reflaxe-elixir-todo-pilot`
     - fetches external todo-app Haxe sources, promotes a native plugin artifact, and compiles/runs a deterministic marker sample through Stage3 backend selection.
+    - this is the current official native `hxhx` surface for external `reflaxe-elixir` pressure testing.
+    - writes retained artifacts under `.artifacts/xbnp/reflaxe-elixir-todo-pilot/<run-id>/` including `reflaxe-elixir-todo-pilot.summary.json`
     - detailed guide: `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`
+  - external repo-harness verifier (manual/non-required):
+    - `npm run test:hxhx:reflaxe-elixir-native-verify`
+    - runs upstream-vs-native verification against the real `vendor/reflaxe-elixir` harness entrypoints and writes retained evidence under `.artifacts/pybm/reflaxe-elixir-native-verify/<run-id>/`
+    - this runner is currently a diagnostic baseline for raw source-based `hxhx-as-haxe` workflows, not the official native promotion contract
+    - the official native contract for external `reflaxe-elixir` pressure tests is the promoted host-adapter/plugin path documented in `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`
+    - summary JSON now separates those lanes explicitly:
+      - `proof.officialNativePath`
+      - `proof.diagnosticSourceHostBaseline`
+    - supports lane narrowing with `PYBM_LANES=<csv>`; useful first lanes are:
+      - `ci-guards`
+      - `runtime-smoke`
+      - `todo-build-tests`
+      - `todo-mix-test`
+      - `qa-sentinel`
+    - current verifier artifacts include:
+      - `ci-guards`: `.artifacts/pybm/reflaxe-elixir-native-verify/20260320-015843/reflaxe-elixir-native-verify.summary.json`
+      - `npm-test`: `.artifacts/pybm/reflaxe-elixir-native-verify/20260319-172613/reflaxe-elixir-native-verify.summary.json`
+      - `qa-sentinel`: `.artifacts/pybm/reflaxe-elixir-native-verify/20260318-220339/reflaxe-elixir-native-verify.summary.json`
+      - `todo-mix-test`: `.artifacts/pybm/reflaxe-elixir-native-verify/20260320-015723/reflaxe-elixir-native-verify.summary.json`
+      - `todo-build-tests`: `.artifacts/pybm/reflaxe-elixir-native-verify/20260318-220548/reflaxe-elixir-native-verify.summary.json`
+    - current official native promoted path result:
+      - `proof.officialNativePath.status = pass`
+      - the promoted host-adapter/plugin path compiles, selects `provider/js-native-wrapper`, and the todo pilot runtime passes
+    - current diagnostic source-host split:
+      - `ci-guards`: upstream and native both pass
+      - `npm-test`: upstream now passes after verifier Mix preflight; native source-host baseline classifies as `native_source_target_unimplemented`
+      - `todo-mix-test`: upstream now passes after verifier Mix preflight; native source-host baseline classifies as `no_target_selected`
+      - `todo-build-tests`: upstream passes; native source-host baseline classifies as `no_target_selected`
+      - `qa-sentinel`: upstream passes; native source-host baseline classifies as `no_target_selected`
+      - this means the official promoted native path is green, while the remaining raw source-host gaps are either:
+        - the already-tracked source-host adapter gap for ordinary source-based Reflaxe Elixir HXML workflows, or
+        - narrower host-routing failures such as `no_target_selected`
   - `Stage0 Source Smoke` workflow (`.github/workflows/stage0-source-smoke.yml`) separately validates
     stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`) on a nightly/manual lane
     (tuned with `HXHX_STAGE0_OCAML_BUILD=byte`, `HXHX_STAGE0_DISABLE_PREPASSES=1`, and `HXHX_STAGE0_NO_INLINE=1`; the lane enforces `>=8GB` swapfile capacity on ubuntu runners to reduce OOM kills).

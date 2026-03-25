@@ -48,6 +48,13 @@ npm run ci:guards
 npm test
 ```
 
+If you are working on the heavy Stage3 generic-function arity regression specifically, run it outside the
+default loop:
+
+```bash
+npm run test:m14:heavy
+```
+
 Build `hxhx` from committed bootstrap snapshots:
 
 ```bash
