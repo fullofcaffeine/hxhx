@@ -32,8 +32,15 @@ if [ "$has_connect" = "1" ]; then
   exit 0
 fi
 
-mkdir -p out/_build/default
-: > out/_build/default/out.bc
+mkdir -p out
+cat > out/dune-project <<'DUNE'
+(lang dune 3.0)
+DUNE
+cat > out/dune <<'DUNE'
+(rule
+ (target out.bc)
+ (action (write-file %{target} "")))
+DUNE
 exit 0
 EOF
 chmod +x "$FAKE_HAXE"
@@ -62,7 +69,7 @@ if ! grep -q -- '--connect' "$TRACE_FILE"; then
   exit 1
 fi
 
-if ! grep -q -E '^build\.hxml -D ocaml_build=byte$' "$TRACE_FILE"; then
+if ! grep -q -E '^build\.hxml -D ocaml_emit_only$' "$TRACE_FILE"; then
   echo "Expected retry invocation without --connect." >&2
   cat "$TRACE_FILE" >&2 || true
   exit 1
