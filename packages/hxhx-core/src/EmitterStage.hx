@@ -1324,23 +1324,23 @@ class EmitterStage {
 			return "";
 		}
 
-			function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
-				final out = new Map<String, TyType>();
-				if (ty != null)
-					for (k => existing in ty)
-						out.set(k, existing);
-				out.set(name, t);
-				return out;
-			}
+		function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
+			final out = new Map<String, TyType>();
+			if (ty != null)
+				for (k => existing in ty)
+					out.set(k, existing);
+			out.set(name, t);
+			return out;
+		}
 
-			function extendTyByIdentMany(ty:Null<Map<String, TyType>>, names:Array<String>, t:TyType):Map<String, TyType> {
-				final out = new Map<String, TyType>();
-				if (ty != null)
-					for (k => existing in ty)
-						out.set(k, existing);
-				if (names != null)
-					for (n in names)
-						out.set(n, t);
+		function extendTyByIdentMany(ty:Null<Map<String, TyType>>, names:Array<String>, t:TyType):Map<String, TyType> {
+			final out = new Map<String, TyType>();
+			if (ty != null)
+				for (k => existing in ty)
+					out.set(k, existing);
+			if (names != null)
+				for (n in names)
+					out.set(n, t);
 			return out;
 		}
 
