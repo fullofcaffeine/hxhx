@@ -119,6 +119,9 @@ hxhx --ocaml -main Main -cp src --hxhx-no-emit
 
 - Commit in small, reviewable slices whenever a bounded seam is green.
   - Examples: one regression + one fix, one workflow/doc contract update, one bootstrap-smoke repair.
+- If the checkout is dirty but the next step needs isolation, make a small safety commit in the main checkout first instead of defaulting to a new worktree.
+- Do not create routine auxiliary worktrees for CI/debug loops when the same isolation can be achieved by committing the current slice locally.
+- If an auxiliary worktree is created for a one-off isolation need, fold its changes back into the main checkout and remove it immediately after that seam is resolved.
 - Do **not** let unrelated fixes, docs, runner changes, and bootstrap experiments pile into one large local batch unless the work is genuinely inseparable.
 - If the worktree starts spanning multiple concerns, stop and split it before taking the next seam.
 - When touching CI/workflow or release-contract surfaces, check the corresponding GitHub workflow status before and after the local change so "appropriate and passing" is measured against the real runners, not only local assumptions.
