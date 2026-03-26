@@ -71,17 +71,6 @@ class M14DirectFlagCliContractTest {
 		return false;
 	}
 
-	static function countArgPair(args:Array<String>, key:String, value:String):Int {
-		var count = 0;
-		var i = 0;
-		while (i < args.length) {
-			if (args[i] == key && i + 1 < args.length && args[i + 1] == value)
-				count += 1;
-			i += 1;
-		}
-		return count;
-	}
-
 	static function countDefine(args:Array<String>, defineValue:String):Int {
 		var count = 0;
 		var i = 0;
