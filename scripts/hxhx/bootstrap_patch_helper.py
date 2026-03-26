@@ -1040,191 +1040,6 @@ def cmd_patch_typed_ty_ident_lookups(argv: list[str]) -> None:
     write_text(path_str, src)
 
 
-def cmd_patch_return_expr_ty_ident_lookups(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-return-expr-ty-ident-lookups <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    src = replace_one(
-        src,
-        """let returnExprToOcaml = fun expr allowedValueIdents expectedReturnType arityByIdent tyByIdent staticImportByIdent currentPackagePath moduleNameByPkgAndClass callSigByCallee -> try let __fallback_result_45804 = let hasBringupPoison = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr -> bool) in (""",
-        """let returnExprToOcaml = fun expr allowedValueIdents expectedReturnType arityByIdent tyByIdent staticImportByIdent currentPackagePath moduleNameByPkgAndClass callSigByCallee -> try let __fallback_result_45804 = let getTyIdentRaw = fun name -> let typedTyByIdent = Obj.magic tyByIdent in if typedTyByIdent == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else Obj.magic (HxMap.get_string typedTyByIdent name) in let hasTyIdentRaw = fun name -> getTyIdentRaw (name : string) != Obj.magic (HxRuntime.hx_null) in let hasStaticImportRaw = fun name -> let typedStaticImportByIdent = Obj.magic staticImportByIdent in if typedStaticImportByIdent == Obj.magic (HxRuntime.hx_null) then false else Obj.magic (HxMap.get_string typedStaticImportByIdent name) != Obj.magic (HxRuntime.hx_null) in let resolveTyIdentName = fun name -> if getTyIdentRaw (name : string) != Obj.magic (HxRuntime.hx_null) then name else let lowered = (ocamlValueIdent (name : string) : string) in if not (HxString.equals lowered name) && getTyIdentRaw (lowered : string) != Obj.magic (HxRuntime.hx_null) then lowered else name in let hasTyIdent = fun name -> hasTyIdentRaw (resolveTyIdentName (name : string)) in let hasThisBinding = fun () -> hasTyIdent ("this" : string) || hasTyIdent ("this_" : string) in let tyForIdent = fun name -> let resolvedName = (resolveTyIdentName (name : string) : string) in let direct = (getTyIdentRaw (resolvedName : string) : Obj.t) in let resolved = if direct == Obj.magic (HxRuntime.hx_null) && !currentExprTyHints != Obj.magic (HxRuntime.hx_null) then Obj.magic (HxMap.get_string (!currentExprTyHints) resolvedName) else direct in if resolved == Obj.magic (HxRuntime.hx_null) then ("" : string) else let t = Obj.magic resolved in if t == Obj.magic (HxRuntime.hx_null) then ("" : string) else TyType.toString (Obj.magic t) () in let hasBringupPoison = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr -> bool) in (""",
-        "build-hxhx: failed to locate bootstrap returnExprToOcaml prologue anchor in EmitterStage.ml\n",
-    )
-
-    src = replace_one(
-        src,
-        """      | HxExpr.EThis -> let tempString = ref ("" : string) in (
-        ignore (if mapGetRaw (Obj.repr tyByIdent) ("this" : string) != Obj.magic (HxRuntime.hx_null) then let __assign_45720 = ("this" : string) in (
-          tempString := __assign_45720;
-          __assign_45720
-        ) else let lowered = (ocamlValueIdent ("this" : string) : string) in if not (HxString.equals lowered "this") && mapGetRaw (Obj.repr tyByIdent) (lowered : string) != Obj.magic (HxRuntime.hx_null) then let __assign_45721 = (lowered : string) in (
-          tempString := __assign_45721;
-          __assign_45721
-        ) else let __assign_45722 = ("this" : string) in (
-          tempString := __assign_45722;
-          __assign_45722
-        ));
-        let tempString1 = ref ("" : string) in (
-          ignore (if mapGetRaw (Obj.repr tyByIdent) ("this_" : string) != Obj.magic (HxRuntime.hx_null) then let __assign_45723 = ("this_" : string) in (
-            tempString1 := __assign_45723;
-            __assign_45723
-          ) else let lowered = (ocamlValueIdent ("this_" : string) : string) in if not (HxString.equals lowered "this_") && mapGetRaw (Obj.repr tyByIdent) (lowered : string) != Obj.magic (HxRuntime.hx_null) then let __assign_45724 = (lowered : string) in (
-            tempString1 := __assign_45724;
-            __assign_45724
-          ) else let __assign_45725 = ("this_" : string) in (
-            tempString1 := __assign_45725;
-            __assign_45725
-          ));
-          let __assign_45726 = not (mapGetRaw (Obj.repr tyByIdent) (!tempString : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString1 : string) != Obj.magic (HxRuntime.hx_null)) in (
-            tempResult := __assign_45726;
-            __assign_45726
-          )
-        )
-      )""",
-        """      | HxExpr.EThis -> let __assign_45726 = not ((hasThisBinding ()) : bool) in (
-        tempResult := __assign_45726;
-        __assign_45726
-      )""",
-        "build-hxhx: failed to locate bootstrap returnExprToOcaml EThis lookup anchor in EmitterStage.ml\n",
-    )
-
-    src = replace_one(
-        src,
-        """      | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in if isUpperStart (name : string) then let __assign_45728 = false in (
-        tempResult := __assign_45728;
-        __assign_45728
-      ) else if HxString.equals name "trace" then let __assign_45729 = false in (
-        tempResult := __assign_45729;
-        __assign_45729
-      ) else let tempString2 = ref ("" : string) in (
-        ignore (if mapGetRaw (Obj.repr tyByIdent) (name : string) != Obj.magic (HxRuntime.hx_null) then let __assign_45730 = (name : string) in (
-          tempString2 := __assign_45730;
-          __assign_45730
-        ) else let lowered = (ocamlValueIdent (name : string) : string) in if not (HxString.equals lowered name) && mapGetRaw (Obj.repr tyByIdent) (lowered : string) != Obj.magic (HxRuntime.hx_null) then let __assign_45731 = (lowered : string) in (
-          tempString2 := __assign_45731;
-          __assign_45731
-        ) else let __assign_45732 = (name : string) in (
-          tempString2 := __assign_45732;
-          __assign_45732
-        ));
-        if mapGetRaw (Obj.repr tyByIdent) (!tempString2 : string) != Obj.magic (HxRuntime.hx_null) then let __assign_45733 = false in (
-          tempResult := __assign_45733;
-          __assign_45733
-        ) else if allowedValueIdents != Obj.magic (HxRuntime.hx_null) && (let __nullable_45734 = HxMap.get_string allowedValueIdents name in if __nullable_45734 == HxRuntime.hx_null then false else Obj.obj __nullable_45734 = true) then let __assign_45735 = false in (
-          tempResult := __assign_45735;
-          __assign_45735
-        ) else if mapGetRaw (Obj.repr staticImportByIdent) (name : string) != Obj.magic (HxRuntime.hx_null) then let __assign_45736 = false in (
-          tempResult := __assign_45736;
-          __assign_45736
-        ) else let __assign_45737 = true in (
-          tempResult := __assign_45737;
-          __assign_45737
-        )
-      )""",
-        """      | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in if isUpperStart (name : string) then let __assign_45728 = false in (
-        tempResult := __assign_45728;
-        __assign_45728
-      ) else if HxString.equals name "trace" then let __assign_45729 = false in (
-        tempResult := __assign_45729;
-        __assign_45729
-      ) else if hasTyIdent (name : string) then let __assign_45733 = false in (
-        tempResult := __assign_45733;
-        __assign_45733
-      ) else if allowedValueIdents != Obj.magic (HxRuntime.hx_null) && (let __nullable_45734 = HxMap.get_string allowedValueIdents name in if __nullable_45734 == HxRuntime.hx_null then false else Obj.obj __nullable_45734 = true) then let __assign_45735 = false in (
-        tempResult := __assign_45735;
-        __assign_45735
-      ) else if hasStaticImportRaw (name : string) then let __assign_45736 = false in (
-        tempResult := __assign_45736;
-        __assign_45736
-      ) else let __assign_45737 = true in (
-        tempResult := __assign_45737;
-        __assign_45737
-      )""",
-        "build-hxhx: failed to locate bootstrap returnExprToOcaml EIdent lookup anchor in EmitterStage.ml\n",
-    )
-
-    src = replace_one(
-        src,
-        """      | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let tempLeft = ref ("" : string) in (
-        ignore (let tempString3 = ref ("" : string) in (
-          ignore (if mapGetRaw (Obj.repr tyByIdent) (name : string) != Obj.magic (HxRuntime.hx_null) then let __assign_45789 = (name : string) in (
-            tempString3 := __assign_45789;
-            __assign_45789
-          ) else let lowered = (ocamlValueIdent (name : string) : string) in if not (HxString.equals lowered name) && mapGetRaw (Obj.repr tyByIdent) (lowered : string) != Obj.magic (HxRuntime.hx_null) then let __assign_45790 = (lowered : string) in (
-            tempString3 := __assign_45790;
-            __assign_45790
-          ) else let __assign_45791 = (name : string) in (
-            tempString3 := __assign_45791;
-            __assign_45791
-          ));
-          let resolved = mapGetRaw (Obj.repr tyByIdent) (!tempString3 : string) in if resolved == Obj.magic (HxRuntime.hx_null) then let __assign_45792 = ("" : string) in (
-            tempLeft := __assign_45792;
-            __assign_45792
-          ) else let t = Obj.magic resolved in if t == Obj.magic (HxRuntime.hx_null) then let __assign_45793 = ("" : string) in (
-            tempLeft := __assign_45793;
-            __assign_45793
-          ) else let __assign_45794 = (TyType.toString (Obj.magic t) () : string) in (
-            tempLeft := __assign_45794;
-            __assign_45794
-          )
-        ));
-        if HxString.equals (!tempLeft) "Int" then let __assign_45795 = ("float_of_int " ^ HxString.toStdString (ocamlReadValueIdent (name : string)) : string) in (
-          tempResult1 := __assign_45795;
-          __assign_45795
-        ) else let __assign_45796 = (exprToOcaml (Obj.magic e) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
-          tempResult1 := __assign_45796;
-          __assign_45796
-        )
-      )""",
-        """      | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in if HxString.equals (tyForIdent (name : string)) "Int" then let __assign_45795 = ("float_of_int " ^ HxString.toStdString (ocamlReadValueIdent (name : string)) : string) in (
-        tempResult1 := __assign_45795;
-        __assign_45795
-      ) else let __assign_45796 = (exprToOcaml (Obj.magic e) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
-        tempResult1 := __assign_45796;
-        __assign_45796
-      )""",
-        "build-hxhx: failed to locate bootstrap returnExprToOcaml float coercion anchor in EmitterStage.ml\n",
-    )
-
-    write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: returnExprToOcaml ty lookup repair *)\n")
-
-
-def cmd_patch_expr_ident_ty_reads(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-expr-ident-ty-reads <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    src = replace_one(
-        src,
-        """                            ) else let tempString5 = ref ("" : string) in (
-                              ignore (if mapGetRaw (Obj.repr tyByIdent) (name : string) != Obj.magic (HxRuntime.hx_null) then let __assign_396 = (name : string) in (
-                                tempString5 := __assign_396;
-                                __assign_396
-                              ) else let lowered = (ocamlValueIdent (name : string) : string) in if not (HxString.equals lowered name) && mapGetRaw (Obj.repr tyByIdent) (lowered : string) != Obj.magic (HxRuntime.hx_null) then let __assign_397 = (lowered : string) in (
-                                tempString5 := __assign_397;
-                                __assign_397
-                              ) else let __assign_398 = (name : string) in (
-                                tempString5 := __assign_398;
-                                __assign_398
-                              ));
-                              if mapGetRaw (Obj.repr tyByIdent) (!tempString5 : string) != Obj.magic (HxRuntime.hx_null) then let __assign_399 = (ocamlReadValueIdent (name : string) : string) in (
-                                tempResult13 := __assign_399;
-                                __assign_399
-                              ) else if hasAllowedValueIdent (name : string) then let __assign_bootstrap_allowed_ident = (ocamlReadValueIdent (name : string) : string) in (""",
-        """                            ) else (
-                              if getTyIdentRaw (resolveTyIdentName (name : string)) != Obj.magic (HxRuntime.hx_null) then let __assign_399 = (ocamlReadValueIdent (name : string) : string) in (
-                                tempResult13 := __assign_399;
-                                __assign_399
-                              ) else if hasAllowedValueIdent (name : string) then let __assign_bootstrap_allowed_ident = (ocamlReadValueIdent (name : string) : string) in (""",
-        "build-hxhx: failed to locate bootstrap exprToOcaml ident lookup anchor in EmitterStage.ml\n",
-    )
-
-    write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: exprToOcaml ident read repair *)\n")
-
-
 def cmd_patch_negative_unop_is_int_expr(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-negative-unop-is-int-expr <path>\n")
@@ -2727,6 +2542,17 @@ def cmd_patch_js_target_core_native_js_lib_externs(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
+    # Newer regenerated bootstrap snapshots already carry the source-side js.lib extern
+    # lowering directly. In that case there is nothing left for this compatibility patch to
+    # inject, so treat the helper as a no-op instead of failing on stale anchors.
+    if (
+        "let nativeJsLibGlobalRef = fun fullName ->" in src
+        and "nativeJsLibGlobalRef (Obj.obj (HxAnon.get unit \"fullName\") : string)" in src
+        and "tempLeft <> emitNative" in src
+    ):
+        write_text(path_str, src)
+        return
+
     old_var = '''  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var " ^ HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef"))) ^ " = {};" : string));'''
     new_var = '''  ignore (
     if StringTools.startsWith ((Obj.obj (HxAnon.get unit "fullName") : string)) ("js.lib." : string) then (
@@ -2815,6 +2641,16 @@ def cmd_patch_cli_routing_ocaml_eval_hxml(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
+    # Newer regenerated bootstrap snapshots already include the planning-aware `--ocaml-eval`
+    # argument expansion. Treat those snapshots as converged and skip the legacy anchor patch.
+    if (
+        "let expandedEvalArgs = Obj.magic (planningTargetArgs (Obj.magic evalArgs))" in src
+        and "addLibraryIfMissingForPlanning" in src
+        and "addDefineIfMissingForPlanning" in src
+    ):
+        write_text(path_str, src)
+        return
+
     old = '''        let evalArgs = Obj.magic (HxArray.copy baseForwarded) in let evalReflaxeTarget = (getDefineValue (Obj.magic evalArgs) ("reflaxe-target" : string) : string) in (
           ignore (if evalReflaxeTarget != Obj.magic (HxRuntime.hx_null) && not (HxString.equals evalReflaxeTarget "ocaml") then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("Contradiction: --ocaml-eval but -D reflaxe-target=" ^ HxString.toStdString evalReflaxeTarget)) ["Dynamic"; "String"]) else ());
           ignore (addLibraryIfMissing (Obj.magic evalArgs) ("reflaxe.ocaml" : string));
@@ -2862,10 +2698,6 @@ def cmd_patch_cli_routing_ocaml_eval_hxml(argv: list[str]) -> None:
     write_text(path_str, src)
 
 
-def cmd_patch_clirouting_ocaml_eval_hxml(argv: list[str]) -> None:
-    cmd_patch_cli_routing_ocaml_eval_hxml(argv)
-
-
 COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "insert-before-anchor": cmd_insert_before_anchor,
     "patch-array-receiver-chain-lowering": cmd_patch_array_receiver_chain_lowering,
@@ -2881,8 +2713,6 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-allowed-ident-fallback": cmd_patch_allowed_ident_fallback,
     "patch-typed-ty-map-copying": cmd_patch_typed_ty_map_copying,
     "patch-typed-ty-ident-lookups": cmd_patch_typed_ty_ident_lookups,
-    "patch-return-expr-ty-ident-lookups": cmd_patch_return_expr_ty_ident_lookups,
-    "patch-expr-ident-ty-reads": cmd_patch_expr_ident_ty_reads,
     "patch-negative-unop-is-int-expr": cmd_patch_negative_unop_is_int_expr,
     "patch-stmt-local-allowed-idents": cmd_patch_stmt_local_allowed_idents,
     "patch-instance-call-receiver-forwarding": cmd_patch_instance_call_receiver_forwarding,
@@ -2907,7 +2737,6 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-plugin-dune-layout": cmd_patch_plugin_dune_layout,
     "patch-js-target-core-native-js-lib-externs": cmd_patch_js_target_core_native_js_lib_externs,
     "patch-cli-routing-ocaml-eval-hxml": cmd_patch_cli_routing_ocaml_eval_hxml,
-    "patch-clirouting-ocaml-eval-hxml": cmd_patch_clirouting_ocaml_eval_hxml,
 }
 
 

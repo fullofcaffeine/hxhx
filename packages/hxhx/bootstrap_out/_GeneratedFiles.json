@@ -34,6 +34,7 @@
 		"hxhx_ExprMacroExpander.ml",
 		"hxhx_DisplayResponseSynthesizer.ml",
 		"hxhx_CliRouting.ml",
+		"hxhx_BuildMetadataCollector.ml",
 		"hxhx_BackendProviderResolver.ml",
 		"hxhx_BackendPluginManifestResolver.ml",
 		"hxhx_BackendPluginLoader.ml",
@@ -154,7 +155,7 @@
 		"CompilerDriver.ml",
 		"Any.ml"
 	],
-	"id": 1,
+	"id": 4,
 	"wasCached": false,
 	"version": 1
 }

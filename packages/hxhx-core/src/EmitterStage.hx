@@ -47,12 +47,6 @@ private typedef EmitterCallSig = {
 	final needsReceiver:Bool;
 }
 
-private enum Stage3DuneLayoutKind {
-	Executable;
-	Library;
-	Plugin;
-}
-
 private class _EmitterStageDebug {
 	/**
 		Emit a debug trace of computed call signatures.
@@ -109,9 +103,7 @@ private class _EmitterStageDebug {
 		if (!traceStage3Enabled())
 			return;
 		try {
-			final err = Sys.stderr();
-			err.writeString("stage3_emit_phase=" + label + "\n");
-			err.flush();
+			Sys.stderr().writeString("stage3_emit_phase=" + label + "\n");
 		} catch (_:haxe.io.Error) {} catch (_:String) {}
 	}
 
@@ -120,61 +112,7 @@ private class _EmitterStageDebug {
 			return;
 		try {
 			final fileTag = filePath == null ? "<unknown>" : filePath;
-			final err = Sys.stderr();
-			err.writeString("stage3_emit[" + label + "]=" + moduleName + " file=" + fileTag + "\n");
-			err.flush();
-		} catch (_:haxe.io.Error) {} catch (_:String) {}
-	}
-
-	public static function traceStage3Function(label:String, moduleName:String, functionName:String):Void {
-		if (!traceStage3Enabled())
-			return;
-		try {
-			final err = Sys.stderr();
-			err.writeString("stage3_emit[" + label + "]=" + moduleName + "." + functionName + "\n");
-			err.flush();
-		} catch (_:haxe.io.Error) {} catch (_:String) {}
-	}
-
-	/**
-		Emit a narrow local-typing trace for one Stage3 function/local combination.
-
-		Why
-		- Some remaining upstream bring-up seams depend on how `tyCtx` and `localHints`
-		  interact at one specific mutable local.
-		- Logging every local in every function would drown the gate output and make long
-		  bootstrap runs harder to reason about.
-
-		How
-		- Gated by `HXHX_TRACE_LOCAL_TYPE=<Module>:<function>:<local>`.
-		- Written to stderr so stdout contract markers remain stable.
-	**/
-	public static function traceLocalType(label:String, moduleName:String, functionName:String, localName:String, detail:String):Void {
-		final target = Sys.getEnv("HXHX_TRACE_LOCAL_TYPE");
-		if (target == null || target.length == 0)
-			return;
-		final expected = moduleName + ":" + functionName + ":" + localName;
-		if (target != expected)
-			return;
-		try {
-			final err = Sys.stderr();
-			err.writeString("local_type[" + label + "]=" + expected + " " + detail + "\n");
-			err.flush();
-		} catch (_:haxe.io.Error) {} catch (_:String) {}
-	}
-
-	static inline function traceSelfRecursionEnabled():Bool {
-		final enabled = Sys.getEnv("HXHX_TRACE_SELF_RECURSION");
-		return enabled == "1" || enabled == "true" || enabled == "yes";
-	}
-
-	public static function traceSelfRecursion(label:String, detail:String):Void {
-		if (!traceSelfRecursionEnabled())
-			return;
-		try {
-			final err = Sys.stderr();
-			err.writeString("selfrec[" + label + "]=" + detail + "\n");
-			err.flush();
+			Sys.stderr().writeString("stage3_emit[" + label + "]=" + moduleName + " file=" + fileTag + "\n");
 		} catch (_:haxe.io.Error) {} catch (_:String) {}
 	}
 }
@@ -309,24 +247,6 @@ class EmitterStage {
 	static var currentMutableLocalRefNames:Array<String> = [];
 
 	/**
-		Function-scope value identifiers currently allowed to survive Stage3 bring-up.
-
-		Why
-		- Some native-parser / Stage3 typed paths still fail to attach a reliable local type
-		  entry for identifiers that are unquestionably in scope, especially method params in
-		  complex real workloads.
-		- Collapsing those names to `(Obj.magic 0)` poisons otherwise-structured output and
-		  hides the real backend progress.
-
-		How
-		- `emitMainClass` installs the current function's allowed identifier map while lowering
-		  that function body.
-		- `exprToOcaml` uses it only as a fallback after explicit method/static/module checks.
-	**/
-	static var currentAllowedValueIdentNames:Null<Map<String, Bool>> = null;
-	static var currentExprTyHints:Null<Map<String, TyType>> = null;
-
-	/**
 		Backend dialect seam for OCaml-coupled runtime expression snippets.
 
 		Why
@@ -400,17 +320,6 @@ class EmitterStage {
 
 	static var currentPortableMetalizationRegionKey:Null<String> = null;
 
-	/**
-		Current function name while lowering one function body.
-
-		Why
-		- Some Stage3 CLI/native paths still recover direct self-recursive calls as bare
-		  identifiers without enough receiver metadata to re-insert `this_` generically.
-		- Tracking the active function lets call lowering normalize exact self-recursive
-		  instance calls without widening unrelated call-shape heuristics.
-	**/
-	static var currentFunctionNameRaw:Null<String> = null;
-
 	public static function installPortableMetalizationPlan(plan:Null<backend.ocaml.PortableMetalizationPlan>):{previousPlan:Null<backend.ocaml.PortableMetalizationPlan>, previousRegionKey:Null<String>} {
 		_EmitterStageDebug.traceStage3Phase("portable_plan_install");
 		final scope = {
@@ -464,14 +373,13 @@ class EmitterStage {
 	**/
 	public static function emitToDirWithPortableMetalizationPlan(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false,
 			buildExecutable:Bool = true, ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable,
-			?defines:haxe.ds.StringMap<String>,
 			?portableMetalizationPlan:backend.ocaml.PortableMetalizationPlan):String {
 		_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_install");
 		final scope = installPortableMetalizationPlan(portableMetalizationPlan);
 		var entryPath = "";
 		try {
 			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_emitToDir");
-			entryPath = emitToDir(p, outDir, emitFullBodies, buildExecutable, ocamlProfile, defines);
+			entryPath = emitToDir(p, outDir, emitFullBodies, buildExecutable, ocamlProfile);
 			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_after_emitToDir");
 		} catch (error:haxe.Exception) {
 			restorePortableMetalizationPlan(scope);
@@ -479,142 +387,6 @@ class EmitterStage {
 		}
 		restorePortableMetalizationPlan(scope);
 		return entryPath;
-	}
-
-	static function hasDefine(defines:haxe.ds.StringMap<String>, name:String):Bool {
-		return defines != null && name != null && name.length > 0 && defines.exists(name);
-	}
-
-	static function defineValue(defines:haxe.ds.StringMap<String>, name:String):Null<String> {
-		if (defines == null || name == null || name.length == 0)
-			return null;
-		return defines.get(name);
-	}
-
-	static function sanitizeDuneName(name:String):String {
-		final out = new StringBuf();
-		final source = name == null ? "" : name;
-		for (i in 0...source.length) {
-			final c = source.charCodeAt(i);
-			final isAlphaNum = (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
-			out.add(isAlphaNum ? String.fromCharCode(c) : "_");
-		}
-		var s = out.toString();
-		if (s.length == 0)
-			s = "ocaml_app";
-		final first = s.charCodeAt(0);
-		if (first >= 48 && first <= 57)
-			s = "_" + s;
-		return s;
-	}
-
-	static function defaultDuneProjectName(outDir:String):String {
-		final base = haxe.io.Path.withoutDirectory(haxe.io.Path.normalize(outDir));
-		return sanitizeDuneName(base.length > 0 ? base : "ocaml_app");
-	}
-
-	static function defaultDuneExeName(outDir:String):String {
-		return defaultDuneProjectName(outDir).toLowerCase();
-	}
-
-	static function normalizeStage3DuneLayout(raw:Null<String>):Stage3DuneLayoutKind {
-		final value = raw == null ? "exe" : StringTools.trim(raw).toLowerCase();
-		return switch (value) {
-			case "" | "exe" | "executable": Stage3DuneLayoutKind.Executable;
-			case "lib" | "library": Stage3DuneLayoutKind.Library;
-			case "plugin": Stage3DuneLayoutKind.Plugin;
-			case _:
-				throw "stage3 emitter: invalid ocaml_dune_layout `" + value + "` (expected exe|lib|plugin)";
-		}
-	}
-
-	static function emitStage3DuneScaffold(outAbs:String, layout:Stage3DuneLayoutKind, duneLibraries:Array<String>, rootMainPath:Null<String>):String {
-		final projectName = defaultDuneProjectName(outAbs);
-		final exeName = defaultDuneExeName(outAbs);
-		final exeLibs = ["hx_runtime"].concat(duneLibraries == null ? [] : duneLibraries);
-		final mainModuleName = if (rootMainPath == null || rootMainPath.length == 0) {
-			null;
-		} else {
-			final file = haxe.io.Path.withoutDirectory(rootMainPath);
-			final base = StringTools.endsWith(file, ".ml") ? file.substr(0, file.length - 3) : file;
-			base.length == 0 ? null : base;
-		}
-
-		final runtimeDuneLines = [
-			"(library",
-			" (name hx_runtime)",
-			" (wrapped false)",
-			" (modules :standard)"
-		];
-		if (duneLibraries != null && duneLibraries.length > 0)
-			runtimeDuneLines.push(" (libraries " + duneLibraries.join(" ") + ")");
-		runtimeDuneLines.push(")");
-		runtimeDuneLines.push("");
-		runtimeDuneLines.push("; Generated by hxhx(stage3)");
-		sys.io.File.saveContent(haxe.io.Path.join([outAbs, "runtime", "dune"]), runtimeDuneLines.join("\n"));
-
-		sys.io.File.saveContent(haxe.io.Path.join([outAbs, ".gitignore"]), "_build/\n*.install\n");
-		sys.io.File.saveContent(haxe.io.Path.join([outAbs, "dune-project"]), [
-			"(lang dune 2.9)",
-			"(name " + projectName + ")",
-			"(wrapped_executables false)",
-			"",
-			"; Generated by hxhx(stage3)"
-		].join("\n"));
-
-		inline function emitEntry(name:String, content:String):String {
-			final path = haxe.io.Path.join([outAbs, name + ".ml"]);
-			sys.io.File.saveContent(path, content);
-			return path;
-		}
-
-		return switch (layout) {
-			case Stage3DuneLayoutKind.Library:
-				sys.io.File.saveContent(haxe.io.Path.join([outAbs, "dune"]), [
-					"(library",
-					" (name " + projectName + ")",
-					" (wrapped false)",
-					" (modules :standard)",
-					" (libraries " + exeLibs.join(" ") + "))",
-					"",
-					"; Generated by hxhx(stage3)"
-				].join("\n"));
-				haxe.io.Path.join([outAbs, projectName + ".cma"]);
-			case Stage3DuneLayoutKind.Plugin:
-				sys.io.File.saveContent(haxe.io.Path.join([outAbs, "dune"]), [
-					"(executable",
-					" (name " + exeName + ")",
-					" (modules :standard)",
-					" (libraries " + exeLibs.join(" ") + ")",
-					" (modes (native plugin) (byte plugin)))",
-					"",
-					"; Generated by hxhx(stage3)"
-				].join("\n"));
-				emitEntry(exeName, "let () = ()\n");
-				haxe.io.Path.join([outAbs, exeName + ".cma"]);
-			case Stage3DuneLayoutKind.Executable:
-				sys.io.File.saveContent(haxe.io.Path.join([outAbs, "dune"]), [
-					"(executable",
-					" (name " + exeName + ")",
-					" (modules :standard)",
-					" (libraries " + exeLibs.join(" ") + ")",
-					" (modes (native exe) (byte exe)))",
-					"",
-					"; Generated by hxhx(stage3)"
-				].join("\n"));
-				final entryBody = if (mainModuleName == null) {
-					"let () = ()\n";
-				} else {
-					[
-						"let () =",
-						"  HxTypeRegistry.init ();",
-						"  ignore (" + mainModuleName + ".main ())",
-						""
-					].join("\n");
-				}
-				emitEntry(exeName, entryBody);
-				haxe.io.Path.join([outAbs, exeName + ".exe"]);
-		}
 	}
 
 	public static function emit(_:MacroExpandedModule):Void {
@@ -1108,29 +880,22 @@ class EmitterStage {
 			|| (isNamedRestCarrier && (compactHint == arrayOfDyn || compactHint == arrayOfAny));
 	}
 
-	static inline function renderFloatLiteral(v:Float):String {
-		final rendered = Std.string(v);
-		return if (rendered.indexOf(".") >= 0 || rendered.indexOf("e") >= 0 || rendered.indexOf("E") >= 0) rendered else rendered + ".";
-	}
-
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
-		inline function getTyIdentRaw(name:String):Null<TyType> {
-			return mapGetRaw(cast tyByIdent, name);
-		}
+		final tyByIdentRaw = tyByIdent;
 
 		inline function resolveTyIdentName(name:String):String {
-			if (getTyIdentRaw(name) != null)
+			if (mapGetRaw(cast tyByIdentRaw, name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && getTyIdentRaw(lowered) != null ? lowered : name;
+			return lowered != name && mapGetRaw(cast tyByIdentRaw, lowered) != null ? lowered : name;
 		}
 
 		inline function tyForIdent(name:String):String {
-			final resolved = getTyIdentRaw(resolveTyIdentName(name));
+			final resolved = mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name));
 			if (resolved == null)
 				return "";
-			final t:TyType = resolved;
+			final t:TyType = cast resolved;
 			if (t == null)
 				return "";
 			return t.toString();
@@ -1187,7 +952,7 @@ class EmitterStage {
 					+ ")";
 				case EInt(v): "string_of_int " + Std.string(v);
 				case EBool(v): "string_of_bool " + (v ? "true" : "false");
-				case EFloat(v): "string_of_float " + renderFloatLiteral(v);
+				case EFloat(v): "string_of_float " + Std.string(v);
 				case EIdent(name) if (tyForIdent(name) == "Int"):
 					"string_of_int " + ocamlReadValueIdent(name);
 				case EIdent(name) if (tyForIdent(name) == "Float"):
@@ -1232,103 +997,44 @@ class EmitterStage {
 
 	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
-		inline function getTyIdentRaw(name:String):Null<TyType> {
-			return mapGetRaw(cast tyByIdent, name);
-		}
-
-		inline function hasTyIdentRaw(name:String):Bool {
-			return mapHasRaw(cast tyByIdent, name);
-		}
-
-		inline function getArityRaw(name:String):Null<Int> {
-			return mapGetRaw(cast arityByIdent, name);
-		}
-
-		inline function hasArityRaw(name:String):Bool {
-			return mapHasRaw(cast arityByIdent, name);
-		}
-
-		inline function getStaticImportRaw(name:String):Null<String> {
-			final resolved = mapGetRaw(cast staticImportByIdent, name);
-			return resolved == null ? null : cast resolved;
-		}
-
-		inline function getModuleNameRaw(key:String):Null<String> {
-			final resolved = mapGetRaw(cast moduleNameByPkgAndClass, key);
-			return resolved == null ? null : cast resolved;
-		}
-
-		inline function getCallSigRaw(callee:String):Null<EmitterCallSig> {
-			final resolved = mapGetRaw(cast callSigByCallee, callee);
-			return resolved == null ? null : cast resolved;
-		}
-
+		final tyByIdentRaw = tyByIdent;
+		final arityByIdentRaw = arityByIdent;
+		final staticImportByIdentRaw = staticImportByIdent;
+		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
+		final callSigByCalleeRaw = callSigByCallee;
 		inline function resolveTyIdentName(name:String):String {
-			if (getTyIdentRaw(name) != null)
+			if (mapGetRaw(cast tyByIdentRaw, name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && getTyIdentRaw(lowered) != null ? lowered : name;
+			return lowered != name && mapGetRaw(cast tyByIdentRaw, lowered) != null ? lowered : name;
 		}
 
 		inline function hasTyIdent(name:String):Bool {
-			return hasTyIdentRaw(resolveTyIdentName(name));
+			return mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name)) != null;
 		}
 
 		inline function hasThisBinding():Bool {
 			return hasTyIdent("this") || hasTyIdent("this_");
 		}
 
-		inline function hasAllowedValueIdent(name:String):Bool {
-			return currentAllowedValueIdentNames != null && currentAllowedValueIdentNames.exists(name);
-		}
-
-		function currentModuleNameForArityResolution():Null<String> {
-			if (currentOcamlModuleName != null && currentOcamlModuleName.length > 0)
-				return currentOcamlModuleName;
-			final mainClass = expectedMainClassFromFilePath(currentModuleFilePath);
-			if (mainClass == null || mainClass.length == 0)
-				return null;
-			final pkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
-			final parts = pkg.length == 0 ? [] : pkg.split(".");
-			parts.push(mainClass);
-			return ocamlModuleNameFromTypePathParts(parts);
-		}
-
-		function resolveArityName(name:String):String {
-			if (hasArityRaw(name))
-				return name;
-			final lowered = ocamlValueIdent(name);
-			if (lowered != name && hasArityRaw(lowered))
-				return lowered;
-			final currentModuleName = currentModuleNameForArityResolution();
-			if (currentModuleName != null && currentModuleName.length > 0) {
-				final qualifiedLowered = currentModuleName + "." + lowered;
-				if (hasArityRaw(qualifiedLowered))
-					return qualifiedLowered;
-				final qualifiedName = currentModuleName + "." + name;
-				if (hasArityRaw(qualifiedName))
-					return qualifiedName;
-			}
-			return name;
-		}
-
 		inline function hasArity(name:String):Bool {
-			return hasArityRaw(resolveArityName(name));
+			return mapHasRaw(cast arityByIdentRaw, name);
 		}
 
 		inline function arityFor(name:String):Int {
-			final resolved = getArityRaw(resolveArityName(name));
+			final resolved = mapGetRaw(cast arityByIdentRaw, name);
 			if (resolved == null)
 				return 0;
-			final arity:Int = resolved;
+			final arity:Int = cast resolved;
 			return arity;
 		}
 
 		inline function staticImportModule(name:String):String {
-			final resolved = getStaticImportRaw(name);
+			final resolved = mapGetRaw(cast staticImportByIdentRaw, name);
 			if (resolved != null)
-				return resolved;
-			return currentGlobalImportAliasByIdent == null ? null : currentGlobalImportAliasByIdent.get(name);
+				return cast resolved;
+			final globalResolved = mapGetRaw(cast currentGlobalImportAliasByIdent, name);
+			return globalResolved == null ? null : cast globalResolved;
 		}
 
 		inline function isKnownModuleName(name:String):Bool {
@@ -1336,9 +1042,9 @@ class EmitterStage {
 		}
 
 		function moduleNameForKey(key:String):String {
-			final resolved = getModuleNameRaw(key);
+			final resolved = mapGetRaw(cast moduleNameByPkgAndClassRaw, key);
 			if (resolved != null)
-				return resolved;
+				return cast resolved;
 			for (entry in currentModuleNameEntries)
 				if (entry.key == key)
 					return entry.moduleName;
@@ -1376,26 +1082,8 @@ class EmitterStage {
 		}
 
 		inline function callSigFor(callee:String):Null<EmitterCallSig> {
-			return getCallSigRaw(callee);
-		}
-
-		function resolveCallSigName(name:String):String {
-			final direct = callSigFor(name);
-			if (direct != null)
-				return name;
-			final lowered = ocamlValueIdent(name);
-			if (lowered != name && callSigFor(lowered) != null)
-				return lowered;
-			final currentModuleName = currentModuleNameForArityResolution();
-			if (currentModuleName != null && currentModuleName.length > 0) {
-				final qualifiedLowered = currentModuleName + "." + lowered;
-				if (callSigFor(qualifiedLowered) != null)
-					return qualifiedLowered;
-				final qualifiedName = currentModuleName + "." + name;
-				if (callSigFor(qualifiedName) != null)
-					return qualifiedName;
-			}
-			return name;
+			final resolved = mapGetRaw(cast callSigByCalleeRaw, callee);
+			return resolved == null ? null : cast resolved;
 		}
 
 		function currentModuleShortName():String {
@@ -1415,13 +1103,10 @@ class EmitterStage {
 		}
 
 		function tyForIdent(name:String):String {
-			final resolvedName = resolveTyIdentName(name);
-			var resolved = getTyIdentRaw(resolvedName);
-			if (resolved == null && currentExprTyHints != null)
-				resolved = currentExprTyHints.get(resolvedName);
+			final resolved = mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name));
 			if (resolved == null)
 				return "";
-			final t:TyType = resolved;
+			final t:TyType = cast resolved;
 			if (t == null)
 				return "";
 			return t.toString();
@@ -1431,48 +1116,10 @@ class EmitterStage {
 			return ocamlReadValueIdent(name);
 		}
 
-		inline function qualifyRuntimeTypeName(name:String):String {
-			final pkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
-			return pkg.length > 0 ? pkg + "." + name : name;
-		}
-
-		function runtimeTypeNameForExpr(expr:HxExpr):Null<String> {
-			final parts = tryExtractTypePathPartsFromExpr(expr);
-			if (parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1]))
-				return parts.length == 1 ? qualifyRuntimeTypeName(parts[0]) : parts.join(".");
-			return switch (expr) {
-				case EEnumValue(name):
-					qualifyRuntimeTypeName(name);
-				case EIdent(name) if (isUpperStart(name)):
-					qualifyRuntimeTypeName(name);
-				case _:
-					null;
-			}
-		}
-
-		function runtimeResolvedTypeExpr(expr:HxExpr, resolver:String):String {
-			final resolved = runtimeTypeNameForExpr(expr);
-			return resolved != null
-				? resolver + " (" + escapeOcamlString(resolved) + ")"
-				: "(Obj.magic (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee) + "))";
-		}
-
-		inline function runtimeClassExpr(expr:HxExpr):String {
-			return runtimeResolvedTypeExpr(expr, "Type.resolveClass");
-		}
-
-		inline function runtimeEnumExpr(expr:HxExpr):String {
-			return runtimeResolvedTypeExpr(expr, "Type.resolveEnum");
-		}
-
-
 		function isIntExpr(expr:HxExpr):Bool {
 			return switch (expr) {
 				case EInt(_):
 					true;
-				case EUnop("-", inner):
-					isIntExpr(inner);
 				case EIdent(name):
 					tyForIdent(name) == "Int";
 				case EBinop(op, a,
@@ -1494,26 +1141,6 @@ class EmitterStage {
 			// propagated a precise type for `modulus`.
 			return switch (expr) {
 				case EIdent(name): final t = tyForIdent(name); t == "" || t == "Dynamic" || t == "Unknown" || t == "Array";
-				case _:
-					false;
-			}
-		}
-
-		function isUnknownNumericCompareExpr(expr:HxExpr):Bool {
-			// Stage3 comparison fallback:
-			// when a numeric comparison mixes a concrete int literal with an identifier whose
-			// type has not stabilized yet, prefer float coercion over raw int comparison.
-			//
-			// This keeps upstream shapes like `value:Float == 0` and `value < 0` type-correct
-			// even when the bootstrap/source host temporarily loses the precise `Float` hint
-			// for `value` during lowering.
-			return switch (expr) {
-				case EIdent(_):
-					isUnknownNumericIdent(expr);
-				case ECast(inner, _):
-					isUnknownNumericCompareExpr(inner);
-				case EUntyped(inner):
-					isUnknownNumericCompareExpr(inner);
 				case _:
 					false;
 			}
@@ -1568,12 +1195,6 @@ class EmitterStage {
 			return switch (expr) {
 				case EString(_):
 					true;
-				case ECast(inner, _hint):
-					// Upstream stdlib uses shapes like `o[cast f]` for dynamic string-key access.
-					// Peel the cast so EArrayAccess can still route the key through `HxAnon.get`.
-					isStringExpr(inner);
-				case EUntyped(inner):
-					isStringExpr(inner);
 				case ECall(EField(EIdent("Std"), "string"), _):
 					// `Std.string(...)` is the canonical "stringify anything" helper in Haxe.
 					// Treat it as string-y so `Std.string(a) + Std.string(b)` lowers to `^`.
@@ -1593,26 +1214,6 @@ class EmitterStage {
 				case ETernary(_cond, thenExpr, elseExpr): isStringExpr(thenExpr) && isStringExpr(elseExpr);
 				case _:
 					false;
-			}
-		}
-
-		function isStringKeyIndexExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case ECast(inner, _hint):
-					// Upstream stdlib uses `o[cast f]` for dynamic field access. In bootstrap-hosted
-					// lanes the parameter type for `f` is not always retained strongly enough for
-					// `isStringExpr(inner)` to succeed, but the explicit cast still signals
-					// string-key semantics rather than numeric indexing.
-					switch (inner) {
-						case EIdent(_), EField(_, _):
-							true;
-						case _:
-							isStringExpr(inner);
-					}
-				case EUntyped(inner):
-					isStringKeyIndexExpr(inner);
-				case _:
-					isStringExpr(expr);
 			}
 		}
 
@@ -1656,51 +1257,6 @@ class EmitterStage {
 			}
 		}
 
-		inline function isInt64TypeText(t:String):Bool {
-			return t == "Int64" || t == "haxe.Int64";
-		}
-
-		function isInt64Expr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EIdent(name):
-					isInt64TypeText(tyForIdent(name));
-				case ECall(EField(EIdent(owner), "ofInt" | "make"), _):
-					owner == "Int64" || owner == "haxe.Int64";
-				case ECast(inner, _):
-					isInt64Expr(inner);
-				case EUntyped(inner):
-					isInt64Expr(inner);
-				case EUnop(_, inner):
-					isInt64Expr(inner);
-				case EBinop(innerOp, left, right) if (innerOp == "+" || innerOp == "-" || innerOp == "*"):
-					isInt64Expr(left) || isInt64Expr(right);
-				case _:
-					false;
-			}
-		}
-
-		function exprToOcamlAsInt64Operand(expr:HxExpr):String {
-			return switch (expr) {
-				case EInt(v):
-					"Haxe_Int64.ofInt (" + Std.string(v) + ")";
-				case ECast(inner, _):
-					exprToOcamlAsInt64Operand(inner);
-				case EUntyped(inner):
-					exprToOcamlAsInt64Operand(inner);
-				case EUnop("-", inner):
-					switch (inner) {
-						case EInt(v):
-							"Haxe_Int64.ofInt ((HxInt.neg (" + Std.string(v) + ")))";
-						case _:
-							exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-					}
-				case EIdent(name) if (tyForIdent(name) == "Int"):
-					"Haxe_Int64.ofInt (" + readIdent(name) + ")";
-				case _:
-					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-			}
-		}
-
 		function isLikelyArrayExpr(expr:HxExpr):Bool {
 			return switch (expr) {
 				case EArrayDecl(_):
@@ -1713,29 +1269,7 @@ class EmitterStage {
 				case ECall(EField(inner, "concat"), [_]):
 					isLikelyArrayExpr(inner);
 				case ECall(EField(inner, "map"), [_]):
-					// `map(...)` always produces an array value. The receiver's concrete array
-					// element type may be fuzzy during Stage3 bring-up, but the result is still
-					// array-like enough for follow-up `join/contains/...` lowering.
-					true;
-				case _:
-					false;
-			}
-		}
-
-		function isLikelyArrayMethodReceiver(expr:HxExpr):Bool {
-			if (isLikelyArrayExpr(expr))
-				return true;
-			return switch (expr) {
-				// Stage3 bring-up: typed field receivers like `tpd.meta` frequently carry
-				// array semantics even when the emitter only retained the parent local's type.
-				// Treat them as array-like for instance array helpers so we emit runtime
-				// intrinsics instead of dynamic-field partial applications.
-				case EField(_, _):
-					true;
-				case ECast(inner, _):
-					isLikelyArrayMethodReceiver(inner);
-				case EUntyped(inner):
-					isLikelyArrayMethodReceiver(inner);
+					isLikelyArrayExpr(inner);
 				case _:
 					false;
 			}
@@ -1790,29 +1324,23 @@ class EmitterStage {
 			return "";
 		}
 
-		function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
-			final out = new Map<String, TyType>();
-			if (ty != null)
-				for (k in ty.keys()) {
-					final existing = ty.get(k);
-					if (existing != null)
+			function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
+				final out = new Map<String, TyType>();
+				if (ty != null)
+					for (k => existing in ty)
 						out.set(k, existing);
-				}
-			out.set(name, t);
-			return out;
-		}
+				out.set(name, t);
+				return out;
+			}
 
-		function extendTyByIdentMany(ty:Null<Map<String, TyType>>, names:Array<String>, t:TyType):Map<String, TyType> {
-			final out = new Map<String, TyType>();
-			if (ty != null)
-				for (k in ty.keys()) {
-					final existing = ty.get(k);
-					if (existing != null)
+			function extendTyByIdentMany(ty:Null<Map<String, TyType>>, names:Array<String>, t:TyType):Map<String, TyType> {
+				final out = new Map<String, TyType>();
+				if (ty != null)
+					for (k => existing in ty)
 						out.set(k, existing);
-				}
-			if (names != null)
-				for (n in names)
-					out.set(n, t);
+				if (names != null)
+					for (n in names)
+						out.set(n, t);
 			return out;
 		}
 
@@ -1845,42 +1373,6 @@ class EmitterStage {
 			}
 		}
 
-		function ocamlWhitespacePredicate(charExpr:String):String {
-			return "("
-				+ charExpr
-				+ " = ' ' || "
-				+ charExpr
-				+ " = '\\t' || "
-				+ charExpr
-				+ " = '\\n' || "
-				+ charExpr
-				+ " = '\\r' || "
-				+ charExpr
-				+ " = '\\011' || "
-				+ charExpr
-				+ " = '\\012')";
-		}
-
-		function renderStringLtrimExpr(source:String):String {
-			return "(let __s = (" + source + ") in "
-				+ "let __len = Stdlib.String.length __s in "
-				+ "let __i = ref 0 in "
-				+ "while !__i < __len && "
-				+ ocamlWhitespacePredicate("Stdlib.String.get __s !__i")
-				+ " do incr __i done; "
-				+ "if !__i = 0 then __s else Stdlib.String.sub __s !__i (__len - !__i))";
-		}
-
-		function renderStringRtrimExpr(source:String):String {
-			return "(let __s = (" + source + ") in "
-				+ "let __len = Stdlib.String.length __s in "
-				+ "let __i = ref (__len - 1) in "
-				+ "while !__i >= 0 && "
-				+ ocamlWhitespacePredicate("Stdlib.String.get __s !__i")
-				+ " do decr __i done; "
-				+ "if !__i = __len - 1 then __s else if !__i < 0 then \"\" else Stdlib.String.sub __s 0 (!__i + 1))";
-		}
-
 		return switch (e) {
 			// Stage 3 bring-up: map a tiny set of Haxe `Math` statics to OCaml primitives.
 			//
@@ -1910,16 +1402,6 @@ class EmitterStage {
 				+ ") (Obj.repr ("
 				+ exprToOcaml(typeExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 				+ "))";
-			case ECall(EField(EIdent("Type"), "createInstance"), [clsExpr, ctorArgs]):
-				"Type.createInstance (" + runtimeClassExpr(clsExpr) + ") ("
-				+ exprToOcaml(ctorArgs, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ")";
-			case ECall(EField(EIdent("Type"), "createEmptyInstance"), [clsExpr]):
-				"Type.createEmptyInstance (" + runtimeClassExpr(clsExpr) + ")";
-			case ECall(EField(EIdent("Type"), "getClassFields"), [clsExpr]):
-				"Type.getClassFields (" + runtimeClassExpr(clsExpr) + ")";
-			case ECall(EField(EIdent("Type"), "getEnumConstructs"), [enumExpr]):
-				"Type.getEnumConstructs (" + runtimeEnumExpr(enumExpr) + ")";
 			case ECall(EField(EIdent("Array"), "wrap"), [arg]):
 				// Stage 3 bring-up: `Array.wrap(...)` appears in upstream php helpers.
 				//
@@ -1964,15 +1446,6 @@ class EmitterStage {
 			// What
 			// - Lower `Int64.ofInt(i)` to our shim `Haxe_Int64.ofInt(i)`.
 			// - Lower `Int64.make(lo, hi)` to `Haxe_Int64.make(lo, hi)`.
-			// - Lower static helpers like `Int64.mul(a, 2)` through the same operand coercion
-			//   path as mixed binops, so literal `Int` operands become `Haxe_Int64.ofInt(...)`.
-			case ECall(EField(EIdent("Int64"), op), [left, right]) | ECall(EField(EIdent("haxe.Int64"), op), [left, right])
-				if (op == "add" || op == "sub" || op == "mul"):
-				"Haxe_Int64." + op + " ("
-				+ exprToOcamlAsInt64Operand(left)
-				+ ") ("
-				+ exprToOcamlAsInt64Operand(right)
-				+ ")";
 			case ECall(EField(EIdent("Int64"), "ofInt"), [arg]) | ECall(EField(EIdent("haxe.Int64"), "ofInt"), [arg]):
 				"Haxe_Int64.ofInt (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 			case ECall(EField(EIdent("Int64"), "make"), [lo, hi]) | ECall(EField(EIdent("haxe.Int64"), "make"), [lo, hi]):
@@ -2066,27 +1539,14 @@ class EmitterStage {
 				+ ") in "
 				+ "if (__i < 0) || (__i >= Stdlib.String.length __s) then (-1) else (Char.code (Stdlib.String.get __s __i)))";
 
-			// Stage 3 bring-up: upstream code calls `StringTools.hex` both with omitted digits
-			// and with explicit integer padding widths. The generated provider currently lowers
-			// the optional `digits` parameter through the `hx_null` sentinel, so explicit ints
-			// have to be boxed while omitted calls still become `0`.
+			// Stage 3 bring-up: `StringTools.hex(n)` is used in upstream unit code but our
+			// bootstrap emitter doesn't model optional parameters.
+			//
+			// Haxe: `hex(n, ?digits)` defaults `digits` to 0.
+			// OCaml: we emit a fixed-arity `StringTools.hex n digits`, so supply `0` when omitted.
 			case ECall(EField(EIdent("StringTools"), "hex"), [n]):
 				"StringTools.hex (" + exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee) + ") (Obj.repr 0)";
-			case ECall(EField(EIdent("StringTools"), "hex"), [n, digits]):
-				"StringTools.hex ("
-				+ exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-				+ ") ("
-				+ (switch (digits) {
-					case ENull:
-						"(Obj.magic HxRuntime.hx_null)";
-					case _:
-						"Obj.repr ("
-						+ exprToOcaml(digits, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-							callSigByCallee)
-						+ ")";
-				})
-				+ ")";
+					callSigByCallee) + ") (0)";
 
 			case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
 				// Bring-up: avoid needing a real `StringTools` implementation in the Stage3 emitter output.
@@ -2137,7 +1597,7 @@ class EmitterStage {
 
 			case EBool(v): v ? "true" : "false";
 			case EInt(v): Std.string(v);
-			case EFloat(v): renderFloatLiteral(v);
+			case EFloat(v): Std.string(v);
 			case EString(v): escapeOcamlString(v);
 			case EIdent(name):
 				if (hasCurrentInstanceMethod(name) && hasThisBinding()) {
@@ -2157,11 +1617,6 @@ class EmitterStage {
 					// Stage 3 bring-up: approximate `import Foo.Bar.*` (static wildcard imports).
 					final moduleName = staticImportModule(name);
 					moduleName + "." + ocamlValueIdent(name);
-				} else if (hasAllowedValueIdent(name)) {
-					// Stage3 fallback: preserve function-scope identifiers that are known to be
-					// in scope even when the native-parser/typer path failed to keep a concrete
-					// local type entry for them.
-					readIdent(name);
 				} else if (isUpperStart(name)) {
 					// Stage 3 bring-up: a bare uppercase identifier is almost always an enum constructor
 					// or class/abstract value in Haxe (e.g. `UTF8`). OCaml treats this as a data
@@ -2278,27 +1733,15 @@ class EmitterStage {
 						+ ")";
 				};
 			case EField(obj, field):
-				switch (obj) {
-					case EThis | EIdent("this") | EIdent("this_") if (hasCurrentInstanceMethod(field) && hasThisBinding()):
-						// Bound instance-method value reference, e.g. `this.printMetadata` used as a
-						// callback in `tpd.meta.map(this.printMetadata)`.
-						//
-						// Emit the same partially-applied function shape as bare `printMetadata`
-						// references inside instance methods so OCaml preserves Haxe's bound-method
-						// callback semantics.
-						return ocamlValueIdent(field) + " (this_)";
-					case _:
-				}
-
 				// Stage 3 bring-up: model a couple of common "instance field" shapes that appear in
 				// orchestration code, without committing to a full object layout/runtime.
 				//
 				// - Array.length (via the bootstrap `HxBootArray` shim)
-				// - Stdlib.String.length (OCaml primitive)
+				// - String.length (OCaml primitive)
 				if (field == "length") {
 					final o = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 					if (isStringExpr(obj)) {
-						return "Stdlib.String.length (" + o + ")";
+						return "String.length (" + o + ")";
 					}
 					switch (obj) {
 						case EArrayDecl(_):
@@ -2308,14 +1751,12 @@ class EmitterStage {
 							if (StringTools.startsWith(t, "Array<"))
 								return "HxBootArray.length (" + o + ")";
 							// Bring-up default:
-							// - Native source builds do not always preserve enough type information to
-							//   distinguish `String.length` from `Array.length` on locals like `content`.
-							// - Routing the unknown case through a small runtime helper is safer than
-							//   hard-coding "unknown means array", which produces immediate type errors
-							//   on string receivers.
-							return "HxBootArray.length_dyn (Obj.repr (" + o + "))";
+							// - In many upstream harness shapes, locals like `args` come from `Sys.args()`.
+							// - Stage3 typing does not always preserve `Array<T>` for these locals, but
+							//   treating `.length` as array length is far safer than collapsing to poison
+							//   (poison in conditions can lead to out-of-bounds access and segfaults).
+							return "HxBootArray.length (" + o + ")";
 						case _:
-							return "HxBootArray.length_dyn (Obj.repr (" + o + "))";
 					}
 				}
 
@@ -2384,7 +1825,7 @@ class EmitterStage {
 					// Example:
 					// - `package runci.targets; ... Linux.requireAptPackages(...)` resolves to `runci.Linux`
 					//   even without an explicit import.
-						if (moduleNameByPkgAndClass != null) {
+					if (moduleNameByPkgAndClassRaw != null) {
 						final raw = parts.join(".");
 						var cur = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
 						while (true) {
@@ -2486,65 +1927,6 @@ class EmitterStage {
 						case _:
 							false;
 					};
-				}
-
-				inline function bool01(v:Bool):String {
-					return v ? "1" : "0";
-				}
-
-				inline function nullableString(v:Null<String>):String {
-					return v == null || v.length == 0 ? "<none>" : v;
-				}
-
-				inline function calleeTag(expr:HxExpr):String {
-					return switch (expr) {
-						case EIdent(name):
-							"EIdent(" + name + ")";
-						case EField(EThis, name):
-							"EField(EThis," + name + ")";
-						case EField(EIdent(obj), name):
-							"EField(EIdent(" + obj + ")," + name + ")";
-						case EField(_, name):
-							"EField(<expr>," + name + ")";
-						case ECall(_, _):
-							"ECall";
-						case EUnop(op, _):
-							"EUnop(" + op + ")";
-						case EBinop(op, _, _):
-							"EBinop(" + op + ")";
-						case _:
-							Std.string(expr);
-					};
-				}
-
-				inline function isDirectSelfRecursiveCallee(expr:HxExpr):Bool {
-					return switch (expr) {
-						case EIdent(name):
-							currentFunctionNameRaw != null && name == currentFunctionNameRaw && hasThisBinding();
-						case EField(EThis, name):
-							currentFunctionNameRaw != null && name == currentFunctionNameRaw;
-						case EField(EIdent("this"), name):
-							currentFunctionNameRaw != null && name == currentFunctionNameRaw;
-						case EField(EIdent("this_"), name):
-							currentFunctionNameRaw != null && name == currentFunctionNameRaw;
-						case _:
-							false;
-					};
-				}
-
-				final directSelfRecursiveCallee = isDirectSelfRecursiveCallee(callee);
-				_EmitterStageDebug.traceSelfRecursion("direct_check",
-					"current=" + nullableString(currentFunctionNameRaw) + " callee=" + calleeTag(callee) + " args=" + args.length + " hasThis="
-					+ bool01(hasThisBinding()) + " direct=" + bool01(directSelfRecursiveCallee));
-
-				if (directSelfRecursiveCallee) {
-					final rendered = new Array<String>();
-					rendered.push("(this_)");
-					for (a in args)
-						rendered.push("("
-							+ exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-							+ ")");
-					return ocamlValueIdent(currentFunctionNameRaw) + " " + rendered.join(" ");
 				}
 
 				// Stage 3 bring-up: avoid partial applications when Haxe calls a function
@@ -2725,78 +2107,10 @@ class EmitterStage {
 						return "Stdlib.String.trim ("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
-					case EField(obj, "startsWith") if (args.length == 1):
-						return "HxString.startsWith ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ")";
-					case EField(obj, "endsWith") if (args.length == 1):
-						return "HxString.endsWith ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ")";
-					case EField(obj, "indexOf") if (args.length == 1):
-						return "HxString.indexOf ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ((Obj.magic HxRuntime.hx_null))";
-					case EField(obj, "indexOf") if (args.length == 2 && isStringExpr(obj)):
-						return "HxString.indexOf ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ")";
-					case EField(obj, "lastIndexOf") if (args.length == 1 && isStringExpr(obj)):
-						return "HxString.lastIndexOf ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ((Obj.magic HxRuntime.hx_null))";
-					case EField(obj, "lastIndexOf") if (args.length == 2 && isStringExpr(obj)):
-						return "HxString.lastIndexOf ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ")";
 					case EField(EIdent("StringTools"), "trim") if (args.length == 1):
 						return "Stdlib.String.trim ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
-					case EField(EIdent("StringTools"), "ltrim") if (args.length == 1):
-						return renderStringLtrimExpr(exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
-							moduleNameByPkgAndClass));
-					case EField(EIdent("StringTools"), "rtrim") if (args.length == 1):
-						return renderStringRtrimExpr(exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
-							moduleNameByPkgAndClass));
-					case EField(obj, "substr") if (args.length == 1):
-						return "HxString.substr ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ((Obj.magic HxRuntime.hx_null))";
 					case EField(obj, "substr") if (args.length == 2):
 						return "HxString.substr ("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
@@ -2875,12 +2189,6 @@ class EmitterStage {
 							+ "let __len = Stdlib.Array.length __argv in "
 							+ "if __len <= 1 then HxBootArray.create () "
 							+ "else HxBootArray.of_list (Stdlib.Array.to_list (Stdlib.Array.sub __argv 1 (__len - 1))))";
-					case EField(sysObj, "stdin") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
-						return "(Sys_io_Stdio.stdin ())";
-					case EField(sysObj, "stdout") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
-						return "(Sys_io_Stdio.stdout ())";
-					case EField(sysObj, "stderr") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
-						return "(Sys_io_Stdio.stderr ())";
 					case EField(sysObj, "putEnv") if (args.length == 2 && isRootSysReceiverExpr(sysObj)):
 						// Haxe: `Sys.putEnv(name, value)` accepts null for removal.
 						// Our runtime provides the option-based API; bridge through the hx_null sentinel.
@@ -2899,12 +2207,6 @@ class EmitterStage {
 							+ "))";
 					case EField(sysObj, "getCwd") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						return "(Stdlib.Sys.getcwd ())";
-					case EField(sysObj, "exit") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
-						return "(HxSys.exit ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ "))";
-					case EField(sysObj, "programPath") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
-						return "(HxSys.programPath ())";
 					case EField(sysObj, "systemName") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						// Keep this compatible with older OCaml runtimes (e.g. 4.13) where `Unix.uname`
 						// is not available.
@@ -3041,54 +2343,11 @@ class EmitterStage {
 								}
 							case _:
 						}
-					case EField(obj, "contains") if (args.length == 1):
-						if (isLikelyArrayMethodReceiver(obj)) {
-							return "HxBootArray.contains ("
-								+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-									callSigByCallee)
-								+ ") ("
-								+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-									callSigByCallee)
-								+ ")";
-						}
-					case EField(obj, "indexOf") if (args.length == 2 && isLikelyArrayMethodReceiver(obj)):
-						return "HxArray.indexOf ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ")";
-					case EField(obj, "lastIndexOf") if (args.length == 2 && isLikelyArrayMethodReceiver(obj)):
-						return "HxArray.lastIndexOf ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ")";
-					case EField(obj, "slice") if (args.length == 2 && isLikelyArrayMethodReceiver(obj)):
-						return "HxArray.slice ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee)
-							+ ")";
 					case EField(obj, "map") if (args.length == 1):
 						// Stage3 emit-runner: treat array `map` calls as runtime intrinsics so
 						// OCaml sees a direct function call instead of dynamic-field invocation
 						// with warning-as-error over-application.
-						if (isLikelyArrayMethodReceiver(obj)) {
+						if (isLikelyArrayExpr(obj)) {
 							final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
 							final mapper = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -3102,7 +2361,7 @@ class EmitterStage {
 							return "HxBootArray.map_dyn (Obj.magic (" + receiver + ")) (Obj.repr (" + mapper + "))";
 						}
 					case EField(obj, "join") if (args.length == 1):
-						if (isLikelyArrayMethodReceiver(obj)) {
+						if (isLikelyArrayExpr(obj)) {
 							final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
 							final separator = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -3178,33 +2437,9 @@ class EmitterStage {
 						name;
 					case EField(EThis, name) if (hasCurrentInstanceMethod(name)):
 						name;
-					case EField(EIdent("this"), name) if (hasCurrentInstanceMethod(name)):
-						name;
-					case EField(EIdent("this_"), name) if (hasCurrentInstanceMethod(name)):
-						name;
 					case _:
 						null;
 				};
-				final isDirectSelfRecursiveCall = switch (callee) {
-					case EIdent(name):
-						currentFunctionNameRaw != null
-						&& name == currentFunctionNameRaw
-						&& hasCurrentInstanceMethod(name)
-						&& hasThisBinding();
-					case EField(EThis, name):
-						currentFunctionNameRaw != null && name == currentFunctionNameRaw && hasCurrentInstanceMethod(name);
-					case EField(EIdent("this"), name):
-						currentFunctionNameRaw != null && name == currentFunctionNameRaw && hasCurrentInstanceMethod(name);
-					case EField(EIdent("this_"), name):
-						currentFunctionNameRaw != null && name == currentFunctionNameRaw && hasCurrentInstanceMethod(name);
-					case _:
-						false;
-				};
-				_EmitterStageDebug.traceSelfRecursion("receiver_plan",
-					"current=" + nullableString(currentFunctionNameRaw) + " callee=" + calleeTag(callee) + " instance=" + nullableString(instanceCallName)
-					+ " hasThis=" + bool01(hasThisBinding()) + " instanceMethod="
-					+ bool01(instanceCallName != null && hasCurrentInstanceMethod(instanceCallName)) + " directInstance="
-					+ bool01(isDirectSelfRecursiveCall));
 
 				final receiverAlreadyForwarded = if (instanceCallName != null && args.length > 0) {
 					if (hasArity(instanceCallName)) {
@@ -3219,12 +2454,9 @@ class EmitterStage {
 				} else {
 					false;
 				};
-				_EmitterStageDebug.traceSelfRecursion("forwarding_plan",
-					"current=" + nullableString(currentFunctionNameRaw) + " callee=" + calleeTag(callee) + " instance=" + nullableString(instanceCallName)
-					+ " receiverForwarded=" + bool01(receiverAlreadyForwarded) + " args=" + args.length);
 
 				final c = if (instanceCallName != null) {
-					if (receiverAlreadyForwarded && !isDirectSelfRecursiveCall) {
+					if (receiverAlreadyForwarded) {
 						ocamlValueIdent(instanceCallName);
 					} else if (hasThisBinding()) {
 						ocamlValueIdent(instanceCallName) + " (this_)";
@@ -3252,9 +2484,9 @@ class EmitterStage {
 				// - `haxe.io.Bytes.readString(pos, len)` lowers to `getString(pos, len)`.
 				// - Native parser recovery can miss the implicit receiver/optional encoding argument.
 				// - Emit the receiver-aware form directly to avoid OCaml partial application.
-				final isPreappliedGetString = c == "getString (this_)";
-				if ((c == "getString" || isPreappliedGetString) && args.length == 2) {
-					return (isPreappliedGetString ? c : (c + " (this_)"))
+				if (c == "getString" && args.length == 2) {
+					return c
+						+ " (this_)"
 						+ " ("
 						+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 						+ ") ("
@@ -3310,27 +2542,13 @@ class EmitterStage {
 					"(Obj.magic 0)";
 				} else {
 					final receiverPreApplied = c.indexOf(" (this_)") != -1;
-					final preAppliedArgCount = receiverPreApplied ? 1 : 0;
 
 					function callSigForExpr(expr:HxExpr):Null<EmitterCallSig> {
-						final currentModuleName = currentModuleNameForArityResolution();
 						return switch (expr) {
 							case EIdent(name):
 								final lowered = ocamlValueIdent(name);
 								final byLowered = callSigFor(lowered);
-								if (byLowered != null) {
-									byLowered;
-								} else {
-									final byName = callSigFor(name);
-									if (byName != null) {
-										byName;
-									} else if (currentModuleName != null && currentModuleName.length > 0) {
-										final byQualifiedLowered = callSigFor(currentModuleName + "." + lowered);
-										byQualifiedLowered != null ? byQualifiedLowered : callSigFor(currentModuleName + "." + name);
-									} else {
-										null;
-									}
-								}
+								byLowered != null ? byLowered : callSigFor(name);
 							case EField(obj, name):
 								final lowered = ocamlValueIdent(name);
 								final byLowered = callSigFor(lowered);
@@ -3340,74 +2558,6 @@ class EmitterStage {
 									final byName = callSigFor(name);
 									if (byName != null) {
 										byName;
-									} else if (currentModuleName != null && currentModuleName.length > 0) {
-										final byQualifiedLowered = callSigFor(currentModuleName + "." + lowered);
-										if (byQualifiedLowered != null) {
-											byQualifiedLowered;
-										} else {
-											final byQualifiedName = callSigFor(currentModuleName + "." + name);
-											if (byQualifiedName != null) {
-												byQualifiedName;
-											} else {
-												var qualified:Null<EmitterCallSig> = null;
-												switch (obj) {
-													case EIdent(typeName):
-														final importedModule = staticImportModule(typeName);
-														if (importedModule != null && importedModule.length > 0) {
-															qualified = callSigFor(importedModule + "." + lowered);
-															if (qualified == null)
-																qualified = callSigFor(importedModule + "." + name);
-														}
-													case _:
-												}
-												if (qualified == null) {
-													final parts = tryExtractTypePathPartsFromExpr(obj);
-													if (parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) {
-														var modName = ocamlModuleNameFromTypePathParts(parts);
-														var resolvedByModuleIndex = false;
-														if (moduleNameByPkgAndClass != null) {
-															final raw = parts.join(".");
-															var cur = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
-															while (true) {
-																final key = cur + ":" + raw;
-																final local = moduleNameForKey(key);
-																if (local != null && local.length > 0) {
-																	modName = local;
-																	resolvedByModuleIndex = true;
-																	break;
-																}
-																if (cur.length == 0)
-																	break;
-																final lastDot = cur.lastIndexOf(".");
-																cur = lastDot < 0 ? "" : cur.substr(0, lastDot);
-															}
-															if (!resolvedByModuleIndex
-																&& !isKnownModuleName(modName)
-																&& modName == ocamlModuleNameFromTypePathParts(parts)
-																&& parts.length == 1) {
-																final curPkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
-																if (curPkg.length > 0) {
-																	final qualifiedParts = curPkg.split(".");
-																	for (p in parts)
-																		qualifiedParts.push(p);
-																	modName = ocamlModuleNameFromTypePathParts(qualifiedParts);
-																}
-															}
-														}
-														if (parts.length == 1 && parts[0] == "Int64" && currentImportInt64 != null && currentImportInt64.length > 0)
-															modName = currentImportInt64;
-														qualified = callSigFor(modName + "." + lowered);
-														if (qualified == null)
-															qualified = callSigFor(modName + "." + name);
-														if (qualified == null)
-															qualified = resolveQualifiedModuleCallSigByEmittedModuleName(modName, name, lowered);
-														if (qualified == null && currentModuleFilePath != null && currentModuleFilePath.length > 0)
-															qualified = resolveQualifiedModuleCallSig(currentModuleFilePath, parts, name, lowered);
-													}
-												}
-												qualified;
-											}
-										}
 									} else {
 										var qualified:Null<EmitterCallSig> = null;
 										switch (obj) {
@@ -3425,7 +2575,7 @@ class EmitterStage {
 											if (parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) {
 												var modName = ocamlModuleNameFromTypePathParts(parts);
 												var resolvedByModuleIndex = false;
-													if (moduleNameByPkgAndClass != null) {
+												if (moduleNameByPkgAndClassRaw != null) {
 													final raw = parts.join(".");
 													var cur = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
 													while (true) {
@@ -3504,139 +2654,8 @@ class EmitterStage {
 						return null;
 					}
 
-					// Some imported stdlib statics are emitted into the Stage3 output without a scanned
-					// signature provider in the current program. When those APIs rely on omitted optional
-					// arguments, the general call-sig path has nothing to pad from and we emit a partial
-					// application instead of a full call.
-					//
-					// Keep this narrowly scoped to known imported stdlib shapes that are already exercised
-					// by upstream tests, rather than pretending we have generic imported-signature recovery.
-					function fallbackOptionalSigForExpr(expr:HxExpr):Null<EmitterCallSig> {
-						return switch (expr) {
-							case EField(obj, "stringify"):
-								final parts = tryExtractTypePathPartsFromExpr(obj);
-								if (parts != null && parts.length > 0) {
-									final last = parts[parts.length - 1];
-									if (last == "Json" || last == "Haxe_Json") {
-										{
-											expected: 3,
-											required: 1,
-											fixed: 3,
-											hasRest: false,
-											needsReceiver: false
-										};
-									} else {
-										null;
-									}
-								} else {
-									null;
-								}
-							case EField(obj, "print"):
-								final parts = tryExtractTypePathPartsFromExpr(obj);
-								if (parts != null && parts.length > 0) {
-									final last = parts[parts.length - 1];
-									if (last == "JsonPrinter" || last == "Haxe_format_JsonPrinter") {
-										{
-											expected: 3,
-											required: 1,
-											fixed: 3,
-											hasRest: false,
-											needsReceiver: false
-										};
-									} else {
-										null;
-									}
-								} else {
-									null;
-								}
-							case EField(obj, "ofString"):
-								final parts = tryExtractTypePathPartsFromExpr(obj);
-								if (parts != null && parts.length > 0) {
-									final last = parts[parts.length - 1];
-									if (last == "Bytes" || last == "Haxe_io_Bytes") {
-										{
-											expected: 2,
-											required: 1,
-											fixed: 2,
-											hasRest: false,
-											needsReceiver: false
-										};
-									} else {
-										null;
-									}
-								} else {
-									null;
-								}
-							case EField(obj, field):
-								final parts = tryExtractTypePathPartsFromExpr(obj);
-								if (parts != null && parts.length > 0) {
-									final last = parts[parts.length - 1];
-									if (last == "Assert" || last == "Utest_Assert") {
-										switch (field) {
-											case "isTrue", "isFalse":
-												{
-													expected: 3,
-													required: 1,
-													fixed: 3,
-													hasRest: false,
-													needsReceiver: false
-												};
-											case "equals", "contains":
-												{
-													expected: 4,
-													required: 2,
-													fixed: 4,
-													hasRest: false,
-													needsReceiver: false
-												};
-											case "floatEquals":
-												{
-													expected: 5,
-													required: 2,
-													fixed: 5,
-													hasRest: false,
-													needsReceiver: false
-												};
-											case "same":
-												{
-													expected: 6,
-													required: 2,
-													fixed: 6,
-													hasRest: false,
-													needsReceiver: false
-												};
-											case "raises":
-												{
-													expected: 5,
-													required: 1,
-													fixed: 5,
-													hasRest: false,
-													needsReceiver: false
-												};
-											case "fail":
-												{
-													expected: 2,
-													required: 0,
-													fixed: 2,
-													hasRest: false,
-													needsReceiver: false
-												};
-											case _:
-												null;
-										}
-									} else {
-										null;
-									}
-								} else {
-									null;
-								}
-							case _:
-								null;
-						};
-					}
-
 					var sig = callSigFor(c);
-					if (sig == null) {
+					if (sig == null && !receiverPreApplied) {
 						final firstSpace = c.indexOf(" ");
 						if (firstSpace > 0)
 							sig = callSigFor(c.substr(0, firstSpace));
@@ -3649,8 +2668,6 @@ class EmitterStage {
 								case _:
 							}
 						}
-						if (sig == null)
-							sig = fallbackOptionalSigForExpr(callee);
 					}
 
 					// Stage 3 bring-up safety: avoid emitting OCaml that over-applies a function.
@@ -3665,7 +2682,7 @@ class EmitterStage {
 					// - If we have a known signature and the call site passes *more* args than the
 					//   function can accept (and it is not a rest-arg function), collapse the call
 					//   to bring-up poison rather than emitting invalid OCaml.
-					if (sig != null && !sig.hasRest && (args.length + preAppliedArgCount) > sig.expected) {
+					if (sig != null && !sig.hasRest && args.length > sig.expected) {
 						return "(Obj.magic 0)";
 					}
 					// Also guard against mismatches between parsed call signatures and the *emitted*
@@ -3681,7 +2698,7 @@ class EmitterStage {
 					// Rule
 					// - When the callee is an unqualified in-module identifier and we have a recorded arity,
 					//   collapse over-applications to bring-up poison (unless we know it is a rest-arg call).
-					if (hasArity(c) && (args.length + preAppliedArgCount) > arityFor(c)) {
+					if (hasArity(c) && args.length > arityFor(c)) {
 						if (sig == null || !sig.hasRest)
 							return "(Obj.magic 0)";
 					}
@@ -3717,41 +2734,13 @@ class EmitterStage {
 						c + " " + argCodes.join(" ");
 					} else {
 						var fullArgs = args.copy();
-						final implicitReceiverBySig = !receiverPreApplied && sig != null && sig.needsReceiver && switch (callee) {
-							case EIdent(_):
-								hasThisBinding();
-							case EField(EThis, _):
-								true;
-							case _:
-								false;
-						};
-						if (implicitReceiverBySig && (fullArgs.length == 0 || !looksLikeForwardedReceiverExpr(fullArgs[0])))
-							fullArgs.insert(0, EThis);
-
-						final forceImplicitThis = !receiverPreApplied && switch (callee) {
+						final forceImplicitThis = switch (callee) {
 							case EIdent(name): hasThisBinding() && hasArity(name) && (args.length + 1) == arityFor(name);
 							case EField(EThis, name): hasArity(name) && (args.length + 1) == arityFor(name);
-							case EField(EIdent("this"), name): hasArity(name) && (args.length + 1) == arityFor(name);
-							case EField(EIdent("this_"), name): hasArity(name) && (args.length + 1) == arityFor(name);
 							case _:
 								false;
 						};
 						if (forceImplicitThis)
-							fullArgs.insert(0, EThis);
-
-						final needsReceiverBySig = !receiverPreApplied && sig != null && sig.needsReceiver && switch (callee) {
-							case EIdent(name):
-								hasThisBinding() && hasCurrentInstanceMethod(name) && fullArgs.length < sig.required;
-							case EField(EThis, name):
-								hasCurrentInstanceMethod(name) && fullArgs.length < sig.required;
-							case EField(EIdent("this"), name):
-								hasCurrentInstanceMethod(name) && fullArgs.length < sig.required;
-							case EField(EIdent("this_"), name):
-								hasCurrentInstanceMethod(name) && fullArgs.length < sig.required;
-							case _:
-								false;
-						};
-						if (needsReceiverBySig && (fullArgs.length == 0 || !looksLikeForwardedReceiverExpr(fullArgs[0])))
 							fullArgs.insert(0, EThis);
 
 						// Stage3 widened-closure hardening: some recovered call signatures include an
@@ -3760,31 +2749,15 @@ class EmitterStage {
 						//
 						// - In instance contexts, forward `this`.
 						// - Outside instance contexts (for static/qualified call-shapes), use a sentinel.
-						if (!receiverPreApplied && sig != null && sig.needsReceiver && fullArgs.length < sig.required) {
+						if (sig != null && sig.needsReceiver && fullArgs.length < sig.required) {
 							fullArgs.insert(0, hasThisBinding() ? EThis : ENull);
 						}
 
 						var missingCount = missing;
 						if (missingCount == 0 && sig != null) {
-							final expectedAfterPreapply = sig.expected - preAppliedArgCount;
-							if (expectedAfterPreapply > fullArgs.length)
-								missingCount = expectedAfterPreapply - fullArgs.length;
-						}
-						// Bootstrap/source parity: in some same-module instance-call shapes the bootstrap
-						// host recovers the receiver/arity but still loses the richer call signature.
-						//
-						// Example:
-						// - `deq(0, widen(0))` where `deq(expected, actual, ?p:haxe.PosInfos)` lowers to
-						//   `deq this_ expected actual hx_null`
-						// - if `sig` is missing, the generic optional-arg padding path never runs and we
-						//   emit a warning-producing partial application instead.
-						//
-						// When we already know this is a same-module instance method and we have the emitted
-						// OCaml arity for it, use that arity as the fallback expected width.
-						if (missingCount == 0 && sig == null && instanceCallName != null && hasArity(instanceCallName)) {
-							final expectedByArity = arityFor(instanceCallName);
-							if (expectedByArity > fullArgs.length)
-								missingCount = expectedByArity - fullArgs.length;
+							final expected = sig.expected;
+							if (expected > fullArgs.length)
+								missingCount = expected - fullArgs.length;
 						}
 
 						// Stage 3 bring-up: upstream often passes `pos` as the last argument to APIs declared
@@ -3794,14 +2767,14 @@ class EmitterStage {
 						// Our bootstrap typer/emitter does not model that unification yet. To keep OCaml output
 						// type-correct, we insert missing args as `null` immediately *before* a trailing `pos`
 						// identifier when we have a signature for the callee.
-						if (sig != null && (sig.expected - preAppliedArgCount) > fullArgs.length && fullArgs.length > 0) {
+						if (sig != null && sig.expected > fullArgs.length && fullArgs.length > 0) {
 							final last = fullArgs[fullArgs.length - 1];
 							final isTrailingPos = switch (last) {
 								case EIdent("pos"): true;
 								case _: false;
 							};
 							if (isTrailingPos) {
-								final missingBefore = (sig.expected - preAppliedArgCount) - fullArgs.length;
+								final missingBefore = sig.expected - fullArgs.length;
 								final adjusted = new Array<HxExpr>();
 								final prefixLen = fullArgs.length - 1;
 								for (i in 0...prefixLen)
@@ -3857,75 +2830,8 @@ class EmitterStage {
 						// Native parser recovery can miss the implicit receiver/optional insertion
 						// for this unqualified call shape, yielding partial application at OCaml link-time.
 						// Normalize to the receiver-aware call form here.
-						if ((c == "getString" || c == "getString (this_)") && fullArgs.length == 2) {
-							fullArgs = c == "getString (this_)"
-								? [fullArgs[0], fullArgs[1], ENull]
-								: [EThis, fullArgs[0], fullArgs[1], ENull];
-							missingCount = 0;
-						}
-						// Bootstrap-host parity hardening: when a call already has its receiver pre-applied,
-						// force the final positional arg vector to the widest trustworthy post-receiver width
-						// immediately before render.
-						//
-						// Why
-						// - Earlier bring-up bookkeeping can still drift in bootstrap-built hosts even when
-						//   `receiverPreApplied`, `preAppliedArgCount`, and the recovered call signature look
-						//   correct.
-						// - In the failing `deq(expected, actual, ?p)` shape, bootstrap can either:
-						//   - recover a signature that under-counts omitted optional parameters, or
-						//   - lose the original same-module instance callee name while still emitting
-						//     the right OCaml callee head (`deq (this_)`).
-						// - That drift shows up as warning-producing partial application such as
-						//   `deq (this_) (0) (widen (0))` instead of appending the trailing `null`.
-						//
-						// Strategy
-						// - Right before rendering, normalize the argument vector against the larger of:
-						//   - the recovered signature width
-						//   - the emitted same-module arity width
-						//   - the rendered callee-head arity width
-						// - This keeps source and bootstrap hosts aligned
-						//   without inventing a separate bootstrap-only call path.
-						//
-						// Narrow bring-up guard
-						// - The upstream numeric-cast helper seam still shows one bootstrap-only drift:
-						//   same-module `deq(expected, actual, ?p)` / `eq(expected, actual, ?p)` calls can
-						//   reach this point with a pre-applied receiver and two value args, but without the
-						//   trailing optional `PosInfos` arg.
-						// - When that happens, OCaml warning 5 becomes an error-producing partial application.
-						// - Handle this known helper shape directly before the more generic width recovery.
-						if (receiverPreApplied && fullArgs.length == 2 && (c == "deq (this_)" || c == "eq (this_)")) {
-							fullArgs.push(ENull);
-							missingCount = 0;
-						}
-						final firstSpace = c.indexOf(" ");
-						final renderedCalleeHead = firstSpace > 0 ? c.substr(0, firstSpace) : c;
-						final recoveredInstanceSig = instanceCallName != null ? callSigFor(resolveCallSigName(instanceCallName)) : null;
-						final recoveredRenderedSig = callSigFor(resolveCallSigName(renderedCalleeHead));
-						if (receiverPreApplied
-							&& (sig != null
-								|| recoveredInstanceSig != null
-								|| recoveredRenderedSig != null
-								|| (instanceCallName != null && hasArity(instanceCallName))
-								|| hasArity(renderedCalleeHead))) {
-							final expectedBySig = sig != null ? (sig.expected - preAppliedArgCount) : 0;
-							final expectedByRecoveredInstanceSig = recoveredInstanceSig != null ? (recoveredInstanceSig.expected - preAppliedArgCount) : 0;
-							final expectedByRecoveredRenderedSig = recoveredRenderedSig != null ? (recoveredRenderedSig.expected - preAppliedArgCount) : 0;
-							final expectedByArity = (instanceCallName != null && hasArity(instanceCallName))
-								? (arityFor(instanceCallName) - preAppliedArgCount)
-								: 0;
-							final expectedByRenderedCallee = hasArity(renderedCalleeHead)
-								? (arityFor(renderedCalleeHead) - preAppliedArgCount)
-								: 0;
-							final expectedAfterPreapply = {
-								final bestRecovered = expectedByRecoveredInstanceSig > expectedByRecoveredRenderedSig
-									? expectedByRecoveredInstanceSig
-									: expectedByRecoveredRenderedSig;
-								final bestArity = expectedByArity > expectedByRenderedCallee ? expectedByArity : expectedByRenderedCallee;
-								final bestSig = expectedBySig > bestRecovered ? expectedBySig : bestRecovered;
-								bestSig > bestArity ? bestSig : bestArity;
-							};
-							while (fullArgs.length < expectedAfterPreapply)
-								fullArgs.push(ENull);
+						if (c == "getString" && hasThisBinding() && fullArgs.length == 2) {
+							fullArgs = [EThis, fullArgs[0], fullArgs[1], ENull];
 							missingCount = 0;
 						}
 						for (_ in 0...missingCount)
@@ -4108,20 +3014,6 @@ class EmitterStage {
 						}
 					case "+" if (isStringExpr(a) || isStringExpr(b)):
 						"((" + exprToOcamlForConcat(a) + ") ^ (" + exprToOcamlForConcat(b) + "))";
-					case "+" | "-" | "*" if (isInt64Expr(a) || isInt64Expr(b)):
-						final fn = switch (op) {
-							case "+":
-								"add";
-							case "-":
-								"sub";
-							case "*":
-								"mul";
-							case _:
-								null;
-						}
-						fn == null
-							? "(Obj.magic 0)"
-							: "Haxe_Int64." + fn + " (" + exprToOcamlAsInt64Operand(a) + ") (" + exprToOcamlAsInt64Operand(b) + ")";
 					case "/":
 						// Bring-up compromise:
 						// - When both sides look numeric (`Int`/`Float`), follow Haxe and emit float division.
@@ -4190,22 +3082,19 @@ class EmitterStage {
 							"(Obj.magic 0)";
 						}
 					case "==":
-						if (isFloatExpr(a) || isFloatExpr(b) || (isIntExpr(a) && isUnknownNumericCompareExpr(b))
-							|| (isIntExpr(b) && isUnknownNumericCompareExpr(a))) {
+						if (isFloatExpr(a) || isFloatExpr(b)) {
 							"((" + exprToOcamlAsFloat(a) + ") = (" + exprToOcamlAsFloat(b) + "))";
 						} else {
 							"((" + la + ") = (" + rb + "))";
 						}
 					case "!=":
-						if (isFloatExpr(a) || isFloatExpr(b) || (isIntExpr(a) && isUnknownNumericCompareExpr(b))
-							|| (isIntExpr(b) && isUnknownNumericCompareExpr(a))) {
+						if (isFloatExpr(a) || isFloatExpr(b)) {
 							"((" + exprToOcamlAsFloat(a) + ") <> (" + exprToOcamlAsFloat(b) + "))";
 						} else {
 							"((" + la + ") <> (" + rb + "))";
 						}
 					case "<" | ">" | "<=" | ">=":
-						if (isFloatExpr(a) || isFloatExpr(b) || (isIntExpr(a) && isUnknownNumericCompareExpr(b))
-							|| (isIntExpr(b) && isUnknownNumericCompareExpr(a))) {
+						if (isFloatExpr(a) || isFloatExpr(b)) {
 							"((" + exprToOcamlAsFloat(a) + ") " + op + " (" + exprToOcamlAsFloat(b) + "))";
 						} else {
 							"((" + la + ") " + op + " (" + rb + "))";
@@ -4340,7 +3229,7 @@ class EmitterStage {
 				//
 				// Route obvious string-key access through `HxAnon.get`; keep numeric/other
 				// indexing on the array shim.
-				if (isStringKeyIndexExpr(idx)) {if (isMetalProfileActive()) {
+				if (isStringExpr(idx)) {if (isMetalProfileActive()) {
 					throw "stage3 emitter: metal profile unsupported semantics: string-key indexing is not supported";
 				}
 					"(Obj.magic (HxAnon.get ("
@@ -4370,49 +3259,33 @@ class EmitterStage {
 	static function returnExprToOcaml(expr:HxExpr, allowedValueIdents:Map<String, Bool>, ?expectedReturnType:TyType, ?arityByIdent:Map<String, Int>,
 			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
 			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
-		inline function getTyIdentRaw(name:String):Null<TyType> {
-			return mapGetRaw(cast tyByIdent, name);
-		}
-
-		inline function hasTyIdentRaw(name:String):Bool {
-			return mapHasRaw(cast tyByIdent, name);
-		}
-
-		inline function hasStaticImportRaw(name:String):Bool {
-			return mapGetRaw(cast staticImportByIdent, name) != null;
-		}
+		final tyByIdentRaw = tyByIdent;
+		final staticImportByIdentRaw = staticImportByIdent;
 
 		inline function resolveTyIdentName(name:String):String {
-			if (getTyIdentRaw(name) != null)
+			if (mapGetRaw(cast tyByIdentRaw, name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && getTyIdentRaw(lowered) != null ? lowered : name;
+			return lowered != name && mapGetRaw(cast tyByIdentRaw, lowered) != null ? lowered : name;
 		}
 
 		inline function hasTyIdent(name:String):Bool {
-			return hasTyIdentRaw(resolveTyIdentName(name));
+			return mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name)) != null;
 		}
 
 		inline function hasThisBinding():Bool {
 			return hasTyIdent("this") || hasTyIdent("this_");
 		}
 
-		_EmitterStageDebug.traceSelfRecursion("return_ctx",
-			"current=" + (currentFunctionNameRaw == null || currentFunctionNameRaw.length == 0 ? "<none>" : currentFunctionNameRaw) + " hasThis="
-			+ (hasThisBinding() ? "1" : "0") + " hasTyThis=" + (hasTyIdent("this") ? "1" : "0") + " hasTyThis_=" + (hasTyIdent("this_") ? "1" : "0"));
-
 		inline function hasStaticImport(name:String):Bool {
-			return hasStaticImportRaw(name);
+			return mapGetRaw(cast staticImportByIdentRaw, name) != null;
 		}
 
 		inline function tyForIdent(name:String):String {
-			final resolvedName = resolveTyIdentName(name);
-			var resolved = getTyIdentRaw(resolvedName);
-			if (resolved == null && currentExprTyHints != null)
-				resolved = currentExprTyHints.get(resolvedName);
+			final resolved = mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name));
 			if (resolved == null)
 				return "";
-			final t:TyType = resolved;
+			final t:TyType = cast resolved;
 			return t == null ? "" : t.toString();
 		}
 
@@ -4631,54 +3504,6 @@ class EmitterStage {
 					"(-.(" + asFloatValue(inner) + "))";
 				case _:
 					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-			}
-		}
-
-		final expectedName = expectedReturnType == null ? null : expectedReturnType.toString();
-		if (expectedName == "Int64" || expectedName == "haxe.Int64") {
-			function asInt64Value(e:HxExpr):Null<String> {
-				return switch (e) {
-					case EInt(v):
-						"Haxe_Int64.ofInt (" + Std.string(v) + ")";
-					case EUnop("-", inner):
-						switch (inner) {
-							case EInt(v):
-								"Haxe_Int64.ofInt ((HxInt.neg (" + Std.string(v) + ")))";
-							case _:
-								null;
-						}
-					case EIdent(name) if (tyForIdent(name) == "Int"):
-						"Haxe_Int64.ofInt (" + ocamlReadValueIdent(name) + ")";
-					case _:
-						null;
-				}
-			}
-
-			inline function asInt64Operand(e:HxExpr):String {
-				final direct = asInt64Value(e);
-				return direct != null ? direct : exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee);
-			}
-
-			final int64Code = asInt64Value(expr);
-			if (int64Code != null)
-				return int64Code;
-
-			switch (expr) {
-				case EBinop(op, left, right):
-					final fn = switch (op) {
-						case "+":
-							"add";
-						case "-":
-							"sub";
-						case "*":
-							"mul";
-						case _:
-							null;
-					}
-					if (fn != null)
-						return "Haxe_Int64." + fn + " (" + asInt64Operand(left) + ") (" + asInt64Operand(right) + ")";
-				case _:
 			}
 		}
 
@@ -4935,74 +3760,73 @@ class EmitterStage {
 		}
 	}
 
-	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, outSink:StringBuf, ?arityByIdent:Map<String, Int>,
+	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, ?arityByIdent:Map<String, Int>,
 			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
 			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>, ?localTypeHints:Map<String, TyType>,
-			?fnReturnTypes:Map<String, TyType>, ?debugModuleName:String, ?debugFunctionName:String):Void {
-		if (stmts == null || stmts.length == 0) {
-			outSink.add("()");
-		} else {
+			?fnReturnTypes:Map<String, TyType>):String {
+		if (stmts == null || stmts.length == 0)
+			return "()";
 
-			final localTypeHintsMap = localTypeHints;
-			final fnReturnTypesMap = fnReturnTypes;
+		final localTypeHintsMap = localTypeHints;
+		final fnReturnTypesMap = fnReturnTypes;
 
-			final prevMutableLocalRefNames = currentMutableLocalRefNames == null ? [] : currentMutableLocalRefNames.copy();
+		final prevMutableLocalRefNames = currentMutableLocalRefNames == null ? [] : currentMutableLocalRefNames.copy();
 
-			function mergeMutableLocalRefNames(base:Array<String>, local:Map<String, Bool>):Array<String> {
-				final out:Array<String> = base == null ? [] : base.copy();
-				function hasName(name:String):Bool {
-					for (n in out)
-						if (n == name)
-							return true;
-					return false;
-				}
-				for (k in local.keys())
-					if (local.get(k) == true && !hasName(k))
-						out.push(k);
+		function mergeMutableLocalRefNames(base:Array<String>, local:Map<String, Bool>):Array<String> {
+			final out:Array<String> = base == null ? [] : base.copy();
+			function hasName(name:String):Bool {
+				for (n in out)
+					if (n == name)
+						return true;
+				return false;
+			}
+			for (k in local.keys())
+				if (local.get(k) == true && !hasName(k))
+					out.push(k);
+			return out;
+		}
+
+		function collectTopLevelDeclaredLocals(ss:Array<HxStmt>):Map<String, Bool> {
+			final out:Map<String, Bool> = new Map();
+			if (ss == null)
 				return out;
-			}
-
-			function collectTopLevelDeclaredLocals(ss:Array<HxStmt>):Map<String, Bool> {
-				final out:Map<String, Bool> = new Map();
-				if (ss == null)
-					return out;
-				for (s in ss) {
-					switch (s) {
-						case SVar(name, _hint, _init, _pos):
-							if (name != null && name.length > 0)
-								out.set(name, true);
-						case _:
-					}
+			for (s in ss) {
+				switch (s) {
+					case SVar(name, _hint, _init, _pos):
+						if (name != null && name.length > 0)
+							out.set(name, true);
+					case _:
 				}
-				return out;
 			}
+			return out;
+		}
 
-			final declaredTopLevelLocals = collectTopLevelDeclaredLocals(stmts);
-			final assignedNamesDeep:Map<String, Bool> = new Map();
-			for (s in stmts)
-				collectAssignedNamesInStmtRec(s, assignedNamesDeep);
-			final mutableLocalsInScope:Map<String, Bool> = new Map();
-			for (name in declaredTopLevelLocals.keys()) {
-				if (assignedNamesDeep.get(name) == true)
-					mutableLocalsInScope.set(name, true);
+		final declaredTopLevelLocals = collectTopLevelDeclaredLocals(stmts);
+		final assignedNamesDeep:Map<String, Bool> = new Map();
+		for (s in stmts)
+			collectAssignedNamesInStmtRec(s, assignedNamesDeep);
+		final mutableLocalsInScope:Map<String, Bool> = new Map();
+		for (name in declaredTopLevelLocals.keys()) {
+			if (assignedNamesDeep.get(name) == true)
+				mutableLocalsInScope.set(name, true);
+		}
+		currentMutableLocalRefNames = mergeMutableLocalRefNames(prevMutableLocalRefNames, mutableLocalsInScope);
+
+		// Stage 3 bring-up: merge any precomputed local type hints with a tiny, local
+		// initializer-based inference pass so later statements can emit more correct OCaml.
+		//
+		// Example (upstream unit/TestNaN.hx):
+		// - `var a = foo(); if (a > 0) ...`
+		// - Even if the typer can't infer `a` from the call site, we can approximate it
+		//   from the known return type of `foo` in the same module.
+		final localHints:Map<String, TyType> = new Map();
+		final localHintKeys:Null<Iterator<String>> = localTypeHintsMap == null ? null : localTypeHintsMap.keys();
+		if (localHintKeys != null)
+			for (k in localHintKeys) {
+				final hint = localTypeHintsMap.get(k);
+				if (hint != null)
+					localHints.set(k, hint);
 			}
-			currentMutableLocalRefNames = mergeMutableLocalRefNames(prevMutableLocalRefNames, mutableLocalsInScope);
-
-			// Stage 3 bring-up: merge any precomputed local type hints with a tiny, local
-			// initializer-based inference pass so later statements can emit more correct OCaml.
-			//
-			// Example (upstream unit/TestNaN.hx):
-			// - `var a = foo(); if (a > 0) ...`
-			// - Even if the typer can't infer `a` from the call site, we can approximate it
-			//   from the known return type of `foo` in the same module.
-			final localHints:Map<String, TyType> = new Map();
-			final localHintKeys:Null<Iterator<String>> = mapKeysRaw(cast localTypeHintsMap);
-			if (localHintKeys != null)
-				for (k in localHintKeys) {
-					final hint = mapGetRaw(cast localTypeHintsMap, k);
-					if (hint != null)
-						localHints.set(k, cast hint);
-				}
 
 		inline function isTyNamed(t:Null<TyType>, expected:String):Bool {
 			if (t == null)
@@ -5023,50 +3847,9 @@ class EmitterStage {
 			return TyType.unknown();
 		}
 
-		function inferQualifiedStringCallType(callee:HxExpr):TyType {
-			return switch (callee) {
-				case EField(obj, "stringify"):
-					final parts = tryExtractTypePathPartsFromExpr(obj);
-					if (parts != null && parts.length > 0) {
-						final last = parts[parts.length - 1];
-						if (last == "Json" || last == "Haxe_Json")
-							TyType.fromHintText("String");
-						else
-							TyType.unknown();
-					} else {
-						TyType.unknown();
-					}
-				case EField(obj, "print"):
-					final parts = tryExtractTypePathPartsFromExpr(obj);
-					if (parts != null && parts.length > 0) {
-						final last = parts[parts.length - 1];
-						if (last == "JsonPrinter" || last == "Haxe_format_JsonPrinter")
-							TyType.fromHintText("String");
-						else
-							TyType.unknown();
-					} else {
-						TyType.unknown();
-					}
-				case EField(EIdent("Std"), "string"):
-					TyType.fromHintText("String");
-				case EField(EIdent("StringTools"), "hex"):
-					TyType.fromHintText("String");
-				case EField(_obj, "substr" | "substring" | "toLowerCase" | "toUpperCase" | "trim" | "charAt"):
-					TyType.fromHintText("String");
-				case _:
-					TyType.unknown();
-			}
-		}
-
 		function inferInitType(e:HxExpr, ?boundName:String, ?boundTy:TyType):TyType {
 			if (e == null)
 				return TyType.unknown();
-			inline function int64Ty():TyType {
-				return TyType.fromHintText("Int64");
-			}
-			inline function inferredIsInt64(ty:TyType):Bool {
-				return ty != null && (ty.toString() == "Int64" || ty.toString() == "haxe.Int64");
-			}
 			return switch (e) {
 				case EFloat(_):
 					TyType.fromHintText("Float");
@@ -5097,7 +3880,6 @@ class EmitterStage {
 						&& isTyNamed(lt, "Int")
 						&& isTyNamed(rt,
 							"Int")) TyType.fromHintText("Int"); else if ((op == "+" || op == "-" || op == "*")
-						&& (inferredIsInt64(lt) || inferredIsInt64(rt))) int64Ty(); else if ((op == "+" || op == "-" || op == "*")
 						&& (isTyNamed(lt, "Float") || isTyNamed(rt, "Float"))) TyType.fromHintText("Float"); else TyType.unknown();
 				case ETernary(_cond, thenExpr, elseExpr):
 					final tt = inferInitType(thenExpr, boundName, boundTy);
@@ -5138,26 +3920,8 @@ class EmitterStage {
 					elemTy.isUnknown() ? TyType.fromHintText("Array") : TyType.fromHintText("Array<" + elemTy.toString() + ">");
 				case ENew(typePath, _args):
 					(typePath == null || typePath.length == 0) ? TyType.unknown() : TyType.fromHintText(typePath);
-				case ECall(EIdent(fn), _args) if (mapGetRaw(cast fnReturnTypesMap, fn) != null):
-					cast mapGetRaw(cast fnReturnTypesMap, fn);
-				case ECall(EField(_obj, field), _args) if (mapGetRaw(cast fnReturnTypesMap, field) != null):
-					// Stage3 local-hint repair: upstream-ish stdlib code often initializes locals from
-					// qualified static calls like `Json.stringify(...)` or `JsonPrinter.print(...)`.
-					// Those calls are not bare `EIdent(fn)` forms, but we still know the return type by
-					// function name inside the current module's typed-function map.
-					cast mapGetRaw(cast fnReturnTypesMap, field);
-				case ECall(EField(EIdent("Int64" | "haxe.Int64"), "ofInt" | "make" | "add" | "sub" | "mul"), _args):
-					int64Ty();
-				case ECall(EField(obj, field), _args):
-					final parts = tryExtractTypePathPartsFromExpr(obj);
-					if (parts != null && parts.length > 0 && parts[parts.length - 1] == "Int64"
-						&& (field == "ofInt" || field == "make" || field == "add" || field == "sub" || field == "mul")) {
-						int64Ty();
-					} else {
-						inferQualifiedStringCallType(EField(obj, field));
-					}
-				case ECall(callee, _args):
-					inferQualifiedStringCallType(callee);
+				case ECall(EIdent(fn), _args) if (fnReturnTypesMap != null && fnReturnTypesMap.get(fn) != null):
+					fnReturnTypesMap.get(fn);
 				case _:
 					TyType.unknown();
 			}
@@ -5168,19 +3932,15 @@ class EmitterStage {
 				return;
 			for (s in ss) {
 				switch (s) {
-					case SVar(name, hint, init, _pos):
+					case SVar(name, _hint, init, _pos):
 						if (name == null || name.length == 0)
 							continue;
 						final existing = localHints.get(name);
-						final declared = hint != null && StringTools.trim(hint).length > 0 ? TyType.fromHintText(StringTools.trim(hint)) : null;
-						final inferred = declared != null ? declared : inferInitType(init);
+						final inferred = inferInitType(init);
 						final existingNeedsUpgrade = existing == null || existing.isUnknown() || existing.toString() == "Dynamic"
 							|| existing.toString() == "Array";
-						final preferInferredInt64 = inferred != null
-							&& (inferred.toString() == "Int64" || inferred.toString() == "haxe.Int64")
-							&& (existing == null || (existing.toString() != "Int64" && existing.toString() != "haxe.Int64"));
 						final inferredUseful = !inferred.isUnknown() && inferred.toString() != "Dynamic";
-						if ((existingNeedsUpgrade || preferInferredInt64) && inferredUseful) {
+						if (existingNeedsUpgrade && inferredUseful) {
 							localHints.set(name, inferred);
 						}
 					case _:
@@ -5236,16 +3996,18 @@ class EmitterStage {
 
 		function extendTyWithLocals(base:Map<String, TyType>, locals:Map<String, Bool>):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
-			if (base != null)
-				for (k in base.keys()) {
+			final baseKeys:Null<Iterator<String>> = base == null ? null : base.keys();
+			if (baseKeys != null)
+				for (k in baseKeys) {
 					final existingBase = base.get(k);
 					if (existingBase != null)
 						out.set(k, existingBase);
 				}
 
 			final localNames = new Array<String>();
-			if (locals != null)
-				for (name in locals.keys())
+			final localKeys:Null<Iterator<String>> = locals == null ? null : locals.keys();
+			if (localKeys != null)
+				for (name in localKeys)
 					localNames.push(name);
 
 			if (localNames.length == 0)
@@ -5258,33 +4020,19 @@ class EmitterStage {
 					out.set(name, hinted != null ? hinted : TyType.unknown());
 				} else if (hinted != null) {
 					final existingBroad = existing.isUnknown() || existing.toString() == "Dynamic" || existing.toString() == "Array";
-					final hintedInt64 = hinted.toString() == "Int64" || hinted.toString() == "haxe.Int64";
-					final existingInt64 = existing.toString() == "Int64" || existing.toString() == "haxe.Int64";
 					final hintedUseful = !hinted.isUnknown() && hinted.toString() != "Dynamic";
-					if ((existingBroad || (hintedInt64 && !existingInt64)) && hintedUseful)
+					if (existingBroad && hintedUseful)
 						out.set(name, hinted);
 				}
 			}
 			return out;
 		}
 
-		function extendAllowedValueIdents(base:Map<String, Bool>, locals:Map<String, Bool>):Map<String, Bool> {
-			final out:Map<String, Bool> = new Map();
-			if (base != null)
-				for (name in base.keys())
-					if (base.get(name) == true)
-						out.set(name, true);
-			if (locals != null)
-				for (name in locals.keys())
-					if (locals.get(name) == true)
-						out.set(name, true);
-			return out;
-		}
-
 		function extendTyByIdentLocal(ty:Map<String, TyType>, name:String, t:TyType):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
-			if (ty != null)
-				for (k in ty.keys()) {
+			final keys:Null<Iterator<String>> = ty == null ? null : ty.keys();
+			if (keys != null)
+				for (k in keys) {
 					final existing = ty.get(k);
 					if (existing != null)
 						out.set(k, existing);
@@ -5293,38 +4041,11 @@ class EmitterStage {
 			return out;
 		}
 
-		inline function buildSequentialStmt(unitExpr:String, restExpr:String):String {
-			final seqBuf = new StringBuf();
-			seqBuf.add("(");
-			seqBuf.add(unitExpr);
-			seqBuf.add("; ");
-			seqBuf.add(restExpr);
-			seqBuf.add(")");
-			return seqBuf.toString();
-		}
-
-		inline function buildNullCoalesceAssign(ident:String, condS:String, rhs:String, restExpr:String):String {
-			final assignBuf = new StringBuf();
-			assignBuf.add("(let ");
-			assignBuf.add(ident);
-			assignBuf.add(" = (if ");
-			assignBuf.add(condS);
-			assignBuf.add(" then (");
-			assignBuf.add(rhs);
-			assignBuf.add(") else ");
-			assignBuf.add(ident);
-			assignBuf.add(") in (ignore ");
-			assignBuf.add(ident);
-			assignBuf.add("; (");
-			assignBuf.add(restExpr);
-			assignBuf.add(")))");
-			return assignBuf.toString();
-		}
-
 		function cloneTyCtxLocal(ty:Map<String, TyType>):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
-			if (ty != null)
-				for (k in ty.keys()) {
+			final keys:Null<Iterator<String>> = ty == null ? null : ty.keys();
+			if (keys != null)
+				for (k in keys) {
 					final existing = ty.get(k);
 					if (existing != null)
 						out.set(k, existing);
@@ -5373,7 +4094,7 @@ class EmitterStage {
 			return resolved == null ? null : cast resolved;
 		}
 
-		function condToOcamlBool(e:HxExpr, tyCtx:Map<String, TyType>, allowedValueIdentsForStmt:Map<String, Bool>):String {
+		function condToOcamlBool(e:HxExpr, tyCtx:Map<String, TyType>):String {
 			inline function boolOrTrue(s:String):String {
 				// `returnExprToOcaml` collapses unsupported/unknown subtrees to `(Obj.magic 0)`.
 				// In a condition position we prefer "always true" over emitting an unbound identifier
@@ -5385,10 +4106,10 @@ class EmitterStage {
 				case EBool(v):
 					v ? "true" : "false";
 				case EUnop("!", _):
-					boolOrTrue(returnExprToOcaml(e, allowedValueIdentsForStmt, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee));
 				case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
-					boolOrTrue(returnExprToOcaml(e, allowedValueIdentsForStmt, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee));
 				case _:
 					// Conservative default: we do not have real typing for conditions yet.
@@ -5397,44 +4118,28 @@ class EmitterStage {
 			};
 		}
 
-		function mutableAssignmentStmtToUnit(op:String, name:String, rhs:HxExpr, tyCtx:Null<Map<String, TyType>>,
-				allowedValueIdentsForStmt:Map<String, Bool>):Null<String> {
+		function mutableAssignmentStmtToUnit(op:String, name:String, rhs:HxExpr, tyCtx:Null<Map<String, TyType>>):Null<String> {
 			if (!isMutableLocalRefIdent(name))
 				return null;
-			inline function mutableLocalHint(name:String):Null<TyType> {
-				final ctxHint = tyCtx == null ? null : tyCtx.get(name);
-				if (ctxHint != null)
-					return ctxHint;
-				return localHints.get(name);
-			}
-			final expectedTy = mutableLocalHint(name);
-			if (debugModuleName != null && debugFunctionName != null) {
-				final ctxTy = tyCtx == null ? null : tyCtx.get(name);
-				final localTy = localHints.get(name);
-				_EmitterStageDebug.traceLocalType("mutable_assignment", debugModuleName, debugFunctionName, name,
-					"op=" + op + " ctx=" + (ctxTy == null ? "<null>" : ctxTy.toString()) + " local="
-					+ (localTy == null ? "<null>" : localTy.toString()) + " expected="
-					+ (expectedTy == null ? "<null>" : expectedTy.toString()));
-			}
 			final rhsCode:Null<String> = switch (op) {
 				case "=":
-					returnExprToOcaml(rhs, allowedValueIdentsForStmt, expectedTy, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 						callSigByCallee);
 				case "+=":
-					returnExprToOcaml(EBinop("+", EIdent(name), rhs), allowedValueIdentsForStmt, expectedTy, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+					returnExprToOcaml(EBinop("+", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee);
 				case "-=":
-					returnExprToOcaml(EBinop("-", EIdent(name), rhs), allowedValueIdentsForStmt, expectedTy, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+					returnExprToOcaml(EBinop("-", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee);
 				case "*=":
-					returnExprToOcaml(EBinop("*", EIdent(name), rhs), allowedValueIdentsForStmt, expectedTy, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+					returnExprToOcaml(EBinop("*", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee);
 				case "/=":
-					returnExprToOcaml(EBinop("/", EIdent(name), rhs), allowedValueIdentsForStmt, expectedTy, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+					returnExprToOcaml(EBinop("/", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee);
 				case "%=":
-					returnExprToOcaml(EBinop("%", EIdent(name), rhs), allowedValueIdentsForStmt, expectedTy, arityByIdent, tyCtx, staticImportByIdent,
-						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+					returnExprToOcaml(EBinop("%", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee);
 				case _:
 					null;
 			}
@@ -5612,31 +4317,16 @@ class EmitterStage {
 			}
 		}
 
-		function stmtToUnit(s:HxStmt, tyCtx:Map<String, TyType>, allowedValueIdentsForStmt:Map<String, Bool>):String {
-			final prevAllowedValueIdentNames = currentAllowedValueIdentNames;
-			final prevExprTyHints = currentExprTyHints;
-			final exprTyHints = cloneTyCtxLocal(tyCtx);
-			for (name in localHints.keys())
-				if (exprTyHints.get(name) == null) {
-					final hinted = localHints.get(name);
-					if (hinted != null)
-						exprTyHints.set(name, hinted);
-				}
-			currentAllowedValueIdentNames = allowedValueIdentsForStmt;
-			currentExprTyHints = exprTyHints;
-			var out:String;
-			try {
-				out = switch (s) {
+		function stmtToUnit(s:HxStmt, tyCtx:Map<String, TyType>):String {
+			return switch (s) {
 				case SBlock(ss, _pos):
-					final nestedStmtBuf = new StringBuf();
-					stmtListToOcaml(ss, allowedValueIdentsForStmt, returnExc, nestedStmtBuf, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee, localHints, fnReturnTypes, debugModuleName, debugFunctionName);
-					nestedStmtBuf.toString();
+					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee, localHints, fnReturnTypes);
 				case SVar(_name, _typeHint, _init, _pos):
 					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 					"()";
 				case STry(tryBody, _catches, _pos):
-					stmtToUnit(tryBody, tyCtx, allowedValueIdentsForStmt);
+					stmtToUnit(tryBody, tyCtx);
 				case SThrow(_expr, _pos):
 					"()";
 				case SSwitch(scrutinee, patterns, bodies, _pos):
@@ -5677,7 +4367,7 @@ class EmitterStage {
 								case _:
 									cloneTyCtxLocal(tyCtx);
 							};
-							final bodyUnit = stmtToUnit(body, cast caseTy, allowedValueIdentsForStmt);
+							final bodyUnit = stmtToUnit(body, cast caseTy);
 							final thenUnit = switch (pattern) {
 								case PBind(name):
 									"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
@@ -5690,9 +4380,9 @@ class EmitterStage {
 					}
 					"(let __sw = (" + sw + ") in " + chain + ")";
 				case SIf(cond, thenBranch, elseBranch, _pos):
-					final thenUnit = stmtToUnit(thenBranch, tyCtx, allowedValueIdentsForStmt);
-					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch, tyCtx, allowedValueIdentsForStmt);
-					final condS = condToOcamlBool(cond, tyCtx, allowedValueIdentsForStmt);
+					final thenUnit = stmtToUnit(thenBranch, tyCtx);
+					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch, tyCtx);
+					final condS = condToOcamlBool(cond, tyCtx);
 					// Avoid typechecking dead branches in bring-up:
 					// - Unknown conditions are lowered as `true` by default.
 					// - Keeping the unused branch can still constrain types and break compilation
@@ -5705,16 +4395,16 @@ class EmitterStage {
 						"if " + condS + " then (" + thenUnit + ") else (" + elseUnit + ")";
 					}
 				case SWhile(cond, body, _pos):
-					final condS = condToOcamlBool(cond, tyCtx, allowedValueIdentsForStmt);
-					final bodyUnit = stmtToUnit(body, tyCtx, allowedValueIdentsForStmt);
+					final condS = condToOcamlBool(cond, tyCtx);
+					final bodyUnit = stmtToUnit(body, tyCtx);
 					if (condS == "false") {
 						"()";
 					} else {
 						"(while " + condS + " do " + bodyUnit + " done)";
 					}
 				case SDoWhile(body, cond, _pos):
-					final bodyUnit = stmtToUnit(body, tyCtx, allowedValueIdentsForStmt);
-					final condS = condToOcamlBool(cond, tyCtx, allowedValueIdentsForStmt);
+					final bodyUnit = stmtToUnit(body, tyCtx);
+					final condS = condToOcamlBool(cond, tyCtx);
 					"(let __hx_do_continue = ref true in "
 					+ "while !__hx_do_continue do "
 					+ "__hx_do_continue := false; "
@@ -5751,7 +4441,7 @@ class EmitterStage {
 							defaultLoopTy;
 					};
 					final bodyTy = extendTyByIdentLocal(tyCtx, name, loopVarTy);
-					final bodyUnit = stmtToUnit(body, cast bodyTy, allowedValueIdentsForStmt);
+					final bodyUnit = stmtToUnit(body, cast bodyTy);
 					switch (iterable) {
 						case ERange(startExpr, endExpr):
 							final start = exprToOcaml(startExpr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -5782,96 +4472,46 @@ class EmitterStage {
 				case SReturnVoid(_pos):
 					"raise (" + returnExc + " (Obj.repr ()))";
 				case SReturn(expr, _pos):
-					if (debugModuleName != null && debugFunctionName != null)
-						_EmitterStageDebug.traceStage3Function("fn_return_before_expr", debugModuleName, debugFunctionName);
-					final renderedReturnExpr = returnExprToOcaml(expr, allowedValueIdentsForStmt, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee);
-					if (debugModuleName != null && debugFunctionName != null)
-						_EmitterStageDebug.traceStage3Function("fn_return_after_expr", debugModuleName, debugFunctionName);
-					final wrappedReturnBuf = new StringBuf();
-					wrappedReturnBuf.add("raise (");
-					wrappedReturnBuf.add(returnExc);
-					wrappedReturnBuf.add(" (Obj.repr (");
-					wrappedReturnBuf.add(renderedReturnExpr);
-					wrappedReturnBuf.add(")))");
-					final wrappedReturnExpr = wrappedReturnBuf.toString();
-					if (debugModuleName != null && debugFunctionName != null)
-						_EmitterStageDebug.traceStage3Function("fn_return_after_wrap", debugModuleName, debugFunctionName);
-					wrappedReturnExpr;
+					"raise ("
+					+ returnExc
+					+ " (Obj.repr ("
+					+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee)
+					+ ")))";
 				case SExpr(expr, _pos):
 					// Avoid emitting invalid OCaml for unsupported assignment lvalues while still
 					// allowing modeled instance-field assignment side effects.
 					switch (expr) {
 						case EBinop(op, EIdent(name), rhs):
-							final lowered = mutableAssignmentStmtToUnit(op, name, rhs, tyCtx, allowedValueIdentsForStmt);
+							final lowered = mutableAssignmentStmtToUnit(op, name, rhs, tyCtx);
 							if (lowered != null) {
 								lowered;
 							} else if (op == "=") {
 								"()";
 							} else {
-								"ignore (" + returnExprToOcaml(expr, allowedValueIdentsForStmt, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+								"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 									moduleNameByPkgAndClass, callSigByCallee) + ")";
 							}
 						case EBinop("=", EField(_, _), _):
-							"ignore (" + returnExprToOcaml(expr, allowedValueIdentsForStmt, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 								moduleNameByPkgAndClass, callSigByCallee) + ")";
 						case EBinop("=", _l, _r):
 							"()";
 						case _:
-							"ignore (" + returnExprToOcaml(expr, allowedValueIdentsForStmt, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 								moduleNameByPkgAndClass, callSigByCallee) + ")";
 					}
-				}
-			} catch (e:Dynamic) {
-				currentAllowedValueIdentNames = prevAllowedValueIdentNames;
-				currentExprTyHints = prevExprTyHints;
-				throw e;
 			}
-			currentAllowedValueIdentNames = prevAllowedValueIdentNames;
-			currentExprTyHints = prevExprTyHints;
-			return out;
 		}
 
 		// Fold right so `var` statements can wrap the rest with `let name = init in ...`.
-		function stmtDebugTag(s:HxStmt):String {
-			return switch (s) {
-				case SBlock(_, _): "SBlock";
-				case SVar(_, _, _, _): "SVar";
-				case STry(_, _, _): "STry";
-				case SThrow(_, _): "SThrow";
-				case SSwitch(_, _, _, _): "SSwitch";
-				case SIf(_, _, _, _): "SIf";
-				case SWhile(_, _, _): "SWhile";
-				case SDoWhile(_, _, _): "SDoWhile";
-				case SBreak(_): "SBreak";
-				case SContinue(_): "SContinue";
-				case SForIn(_, _, _, _): "SForIn";
-				case SReturnVoid(_): "SReturnVoid";
-				case SReturn(_, _): "SReturn";
-				case SExpr(_, _): "SExpr";
-			}
-		}
-
 		var out = "()";
 		for (i in 0...stmts.length) {
 			final idx = stmts.length - 1 - i;
 			final s = stmts[idx];
 			final tyCtx = extendTyWithLocals(tyByIdent, localsBefore[idx]);
-			final allowedValueIdentsForStmt = extendAllowedValueIdents(allowedValueIdents, localsBefore[idx]);
-			if (debugModuleName != null && debugFunctionName != null)
-				for (name in localsBefore[idx].keys()) {
-					final ctxTy = tyCtx.get(name);
-					final localTy = localHints.get(name);
-					_EmitterStageDebug.traceLocalType("stmt_before_" + idx + "_" + stmtDebugTag(s), debugModuleName, debugFunctionName, name,
-						"ctx=" + (ctxTy == null ? "<null>" : ctxTy.toString()) + " local="
-						+ (localTy == null ? "<null>" : localTy.toString()));
-				}
-			if (debugModuleName != null && debugFunctionName != null)
-				_EmitterStageDebug.traceStage3Function("fn_stmt_before_" + idx + "_" + stmtDebugTag(s), debugModuleName, debugFunctionName);
 			switch (s) {
-				case SVar(name, typeHint, init, _pos):
-					final declaredTy = typeHint != null && StringTools.trim(typeHint).length > 0 ? TyType.fromHintText(StringTools.trim(typeHint)) : null;
-					final hintedTy = declaredTy != null ? declaredTy : (tyCtxGet(tyCtx, name) != null ? tyCtxGet(tyCtx, name) : localHints.get(name));
+				case SVar(name, _typeHint, init, _pos):
 					final rhs = if (init == null) {
 						"(Obj.magic 0)";
 					} else {
@@ -5882,37 +4522,16 @@ class EmitterStage {
 							case EIdent(n) if (n == name):
 								"(Obj.magic 0)";
 							case _:
-								returnExprToOcaml(init, allowedValueIdentsForStmt, hintedTy, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+								returnExprToOcaml(init, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 									moduleNameByPkgAndClass, callSigByCallee);
 						}
 					};
-					if (debugModuleName != null && debugFunctionName != null)
-						_EmitterStageDebug.traceStage3Function("fn_svar_after_init", debugModuleName, debugFunctionName);
 					final ident = ocamlValueIdent(name);
 					// Keep OCaml warning discipline resilient: Haxe code (especially upstream-ish tests)
 					// can contain locals that are intentionally unused. In OCaml, that triggers warnings
 					// which can become hard errors under `-warn-error`.
-					final svarBuf = new StringBuf();
-					svarBuf.add("let ");
-					svarBuf.add(ident);
-					if (isMutableLocalRefIdent(name)) {
-						svarBuf.add(" = ref (");
-						svarBuf.add(rhs);
-						svarBuf.add(") in (ignore ");
-						svarBuf.add(ident);
-						svarBuf.add("; (");
-						svarBuf.add(out);
-						svarBuf.add("))");
-					} else {
-						svarBuf.add(" = ");
-						svarBuf.add(rhs);
-						svarBuf.add(" in (ignore ");
-						svarBuf.add(ident);
-						svarBuf.add("; (");
-						svarBuf.add(out);
-						svarBuf.add("))");
-					}
-					out = svarBuf.toString();
+					out = isMutableLocalRefIdent(name) ? ("let " + ident + " = ref (" + rhs + ") in (ignore " + ident + "; (" + out + "))") : ("let "
+						+ ident + " = " + rhs + " in (ignore " + ident + "; (" + out + "))");
 				case SIf(cond, thenBranch, elseBranch, _pos):
 					// Stage 3 bring-up: recognize and SSA-lower the common "null-coalescing assignment"
 					// idiom used by upstream RunCi:
@@ -5951,43 +4570,23 @@ class EmitterStage {
 					final assign = elseBranch == null ? unwrapSingleAssign(thenBranch) : null;
 					if (assign != null && isNullCheckFor(assign.name, cond) && !isMutableLocalRefIdent(assign.name)) {
 						final ident = ocamlValueIdent(assign.name);
-						final rhs = returnExprToOcaml(assign.rhs, allowedValueIdentsForStmt, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+						final rhs = returnExprToOcaml(assign.rhs, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 							moduleNameByPkgAndClass, callSigByCallee);
-						out = buildNullCoalesceAssign(ident, condToOcamlBool(cond, cast tyCtx, allowedValueIdentsForStmt), rhs, out);
+						out = "(let " + ident + " = (if " + condToOcamlBool(cond, cast tyCtx) + " then (" + rhs + ") else " + ident + ") in (ignore "
+							+ ident + "; (" + out + ")))";
 					} else {
 						// Default lowering for if-statements.
-						final stmtUnit = stmtToUnit(s, cast tyCtx, allowedValueIdentsForStmt);
-						out = stmtAlwaysReturns(s) ? stmtUnit : buildSequentialStmt(stmtUnit, out);
+						out = stmtAlwaysReturns(s) ? stmtToUnit(s, cast tyCtx) : ("(" + stmtToUnit(s, cast tyCtx) + "; " + out + ")");
 					}
 				case _:
 					// Avoid emitting `...; <nonreturning expr>` sequences, which produce warning 21
 					// (nonreturning-statement). This also naturally drops statements that appear after
 					// a definite `return` in the same block (unreachable in Haxe).
-					final stmtUnit = stmtToUnit(s, cast tyCtx, allowedValueIdentsForStmt);
-					out = stmtAlwaysReturns(s) ? stmtUnit : buildSequentialStmt(stmtUnit, out);
+					out = stmtAlwaysReturns(s) ? stmtToUnit(s, cast tyCtx) : ("(" + stmtToUnit(s, cast tyCtx) + "; " + out + ")");
 			}
-			if (debugModuleName != null && debugFunctionName != null)
-				_EmitterStageDebug.traceStage3Function("fn_stmt_after_" + idx + "_" + stmtDebugTag(s), debugModuleName, debugFunctionName);
 		}
-		if (debugModuleName != null && debugFunctionName != null)
-			_EmitterStageDebug.traceStage3Function("fn_stmt_fold_done", debugModuleName, debugFunctionName);
 		currentMutableLocalRefNames = prevMutableLocalRefNames;
-		if (debugModuleName != null && debugFunctionName != null)
-			_EmitterStageDebug.traceStage3Function("fn_stmt_ctx_restored", debugModuleName, debugFunctionName);
-			final stmtOutBuf = new StringBuf();
-			stmtOutBuf.add(out);
-			final stmtOut = stmtOutBuf.toString();
-			if (debugModuleName != null && debugFunctionName != null)
-				_EmitterStageDebug.traceStage3Function("fn_stmt_return_ready", debugModuleName, debugFunctionName);
-			final stmtOutDyn:Dynamic = stmtOut;
-			_EmitterStageDebug.traceStage3Phase("stmt_return_before_stringify");
-			final stmtOutStable = Std.string(stmtOutDyn);
-			_EmitterStageDebug.traceStage3Phase("stmt_return_after_stringify");
-			final stmtReturnBuf = new StringBuf();
-			stmtReturnBuf.add(stmtOutStable);
-			_EmitterStageDebug.traceStage3Phase("stmt_return_before_return");
-			outSink.add(stmtReturnBuf.toString());
-		}
+		return out;
 	}
 
 	/**
@@ -6009,7 +4608,7 @@ class EmitterStage {
 		- Builds using `ocamlopt` (override via `OCAMLOPT` env var) when `buildExecutable=true`.
 	**/
 	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
-			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable, ?defines:haxe.ds.StringMap<String>):String {
+			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
 		traceEmitToDirEntry("emitToDir_enter");
 		final outAbs = requireEmitToDirOutAbs(outDir);
 		installEmitToDirProfile(ocamlProfile);
@@ -6088,7 +4687,6 @@ class EmitterStage {
 		// This is a minimal “generate code” effect: macros can request extra target compilation units
 		// without us implementing full typed AST transforms yet.
 		final generatedPaths = new Array<String>();
-		traceEmitToDirEntry("emitToDir_before_generated_modules");
 		for (gm in p.getGeneratedOcamlModules()) {
 			if (gm == null)
 				continue;
@@ -6099,7 +4697,6 @@ class EmitterStage {
 			sys.io.File.saveContent(path, gm.source == null ? "" : gm.source);
 			generatedPaths.push(name + ".ml");
 		}
-		traceEmitToDirEntry("emitToDir_after_generated_modules");
 
 		// Stage 3 bring-up: minimal OCaml-side shims for implicit Haxe std classes.
 		//
@@ -6168,7 +4765,6 @@ class EmitterStage {
 		// - These modules live in `packages/reflaxe.ocaml/std/runtime/*.ml` and are authored for this repo.
 		// - They are **not** copied from upstream Haxe compiler sources.
 		final runtimePaths = new Array<String>();
-		traceEmitToDirEntry("emitToDir_before_runtime_copy");
 		{
 			final root = inferRepoRootForShims();
 			if (root == null || root.length == 0)
@@ -6202,7 +4798,6 @@ class EmitterStage {
 				runtimePaths.push("runtime/" + name);
 			}
 		}
-		traceEmitToDirEntry("emitToDir_after_runtime_copy");
 
 		{
 			final shimName = "Lambda";
@@ -6210,223 +4805,20 @@ class EmitterStage {
 			if (!sys.FileSystem.exists(shimPath)) {
 				sys.io.File.saveContent(shimPath,
 					"(* hxhx(stage3) bootstrap shim: Lambda *)\n"
-					+ "type __hx_iterable = { iterator : Obj.t -> unit -> Obj.t HxIterator.t }\n"
-					+ "let __hx_iter_any it f =\n"
-					+ "  let __hx_make_iterator_raw = HxAnon.get (Obj.repr (Obj.magic it)) \"iterator\" in\n"
-					+ "  let __hx_iterator =\n"
-					+ "    if __hx_make_iterator_raw != HxRuntime.hx_null then\n"
-					+ "      let __hx_make_iterator = (Obj.obj __hx_make_iterator_raw : unit -> Obj.t) in\n"
-					+ "      (Obj.magic (__hx_make_iterator ()) : _ HxIterator.t)\n"
-					+ "    else\n"
-					+ "      let __hx_make_iterator = ((Obj.magic it : __hx_iterable).iterator) in\n"
-					+ "      __hx_make_iterator (Obj.magic it) ()\n"
-					+ "  in\n"
-					+ "  while HxIterator.hasNext (__hx_iterator) do\n"
-					+ "    f (HxIterator.next (__hx_iterator))\n"
-					+ "  done\n"
 					+ "let array it =\n"
-					+ "  let __hx_acc = ref [] in\n"
-					+ "  __hx_iter_any it (fun x -> __hx_acc := x :: !__hx_acc);\n"
-					+ "  HxBootArray.of_list (List.rev (!__hx_acc))\n"
-					+ "let list it =\n"
-					+ "  let __hx_obj = Haxe_ds_List.create () in\n"
-					+ "  __hx_iter_any it (fun x -> ignore (Haxe_ds_List.add (__hx_obj) x));\n"
-					+ "  __hx_obj\n"
+					+ "  HxBootArray.of_list (List.of_seq (it : _ Seq.t))\n"
 					+ "let fold it f first =\n"
 					+ "  let acc = ref first in\n"
-					+ "  __hx_iter_any it (fun x -> acc := f x !acc);\n"
+					+ "  Seq.iter (fun x -> acc := f x !acc) (it : _ Seq.t);\n"
 					+ "  !acc\n"
-					+ "let has it v =\n"
-					+ "  let found = ref false in\n"
-					+ "  let __hx_value = Obj.repr v in\n"
-					+ "  __hx_iter_any it (fun x -> if not (!found) && x = __hx_value then found := true);\n"
-					+ "  !found\n"
-					+ "let exists it f =\n"
-					+ "  let found = ref false in\n"
-					+ "  __hx_iter_any it (fun x -> if not (!found) && f x then found := true);\n"
-					+ "  !found\n"
-					+ "let iter it f =\n"
-					+ "  __hx_iter_any it f\n"
-					+ "let count it =\n"
-					+ "  let n = ref 0 in\n"
-					+ "  __hx_iter_any it (fun _ -> n := !n + 1);\n"
-					+ "  !n\n");
+					+ "let has _ _ = false\n"
+					+ "let exists _ _ = false\n"
+					+ "let iter _ _ = ()\n"
+					+ "let count _ = 0\n");
 			}
 			// Keep bootstrap shims in the compile unit list even on repeat emits into the same out dir.
 			generatedPaths.push(shimName + ".ml");
 		}
-		traceEmitToDirEntry("emitToDir_after_lambda_shim");
-		{
-			final shimName = "Haxe_ds_List";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(shimPath,
-					"(* hxhx(stage3) bootstrap shim: haxe.ds.List *)\n"
-					+ "type t = {\n"
-					+ "  mutable __hx_type : Obj.t;\n"
-					+ "  mutable values : Obj.t HxArray.t;\n"
-					+ "  mutable length : int;\n"
-					+ "  add : Obj.t -> Obj.t -> unit;\n"
-					+ "  push : Obj.t -> Obj.t -> unit;\n"
-					+ "  first : Obj.t -> unit -> Obj.t;\n"
-					+ "  last : Obj.t -> unit -> Obj.t;\n"
-					+ "  pop : Obj.t -> unit -> Obj.t;\n"
-					+ "  isEmpty : Obj.t -> unit -> bool;\n"
-					+ "  clear : Obj.t -> unit -> unit;\n"
-					+ "  remove : Obj.t -> Obj.t -> bool;\n"
-					+ "  iterator : Obj.t -> unit -> Obj.t HxIterator.t;\n"
-					+ "  join : Obj.t -> string -> string;\n"
-					+ "  toString : Obj.t -> unit -> string;\n"
-					+ "}\n"
-					+ "let add__impl = fun (self : t) item ->\n"
-					+ "  ignore (HxArray.push ((Obj.magic self : t).values) item);\n"
-					+ "  (Obj.magic self : t).length <- HxArray.length ((Obj.magic self : t).values)\n"
-					+ "let push__impl = fun (self : t) item ->\n"
-					+ "  let next = HxArray.create () in\n"
-					+ "  let prev = ((Obj.magic self : t).values : Obj.t HxArray.t) in\n"
-					+ "  ignore (HxArray.push next item);\n"
-					+ "  ignore (let _g = ref 0 in while !_g < HxArray.length prev do ignore (let value = HxArray.get (Obj.magic prev) (!_g) in (\n"
-					+ "    ignore (let __old = !_g in let __new = HxInt.add __old 1 in (\n"
-					+ "      ignore (_g := __new);\n"
-					+ "      __new\n"
-					+ "    ));\n"
-					+ "    ignore (HxArray.push next value)\n"
-					+ "  )) done);\n"
-					+ "  (Obj.magic self : t).values <- next;\n"
-					+ "  (Obj.magic self : t).length <- HxArray.length next\n"
-					+ "let first__impl = fun (self : t) () ->\n"
-					+ "  if (Obj.magic self : t).length = 0 then Obj.magic HxRuntime.hx_null else HxArray.get ((Obj.magic self : t).values) 0\n"
-					+ "let last__impl = fun (self : t) () ->\n"
-					+ "  if (Obj.magic self : t).length = 0 then Obj.magic HxRuntime.hx_null else HxArray.get ((Obj.magic self : t).values) (HxInt.sub ((Obj.magic self : t).length) 1)\n"
-					+ "let pop__impl = fun (self : t) () ->\n"
-					+ "  let value = HxArray.shift ((Obj.magic self : t).values) () in\n"
-					+ "  (Obj.magic self : t).length <- HxArray.length ((Obj.magic self : t).values);\n"
-					+ "  value\n"
-					+ "let isEmpty__impl = fun (self : t) () -> (Obj.magic self : t).length = 0\n"
-					+ "let clear__impl = fun (self : t) () ->\n"
-					+ "  (Obj.magic self : t).values <- HxArray.create ();\n"
-					+ "  (Obj.magic self : t).length <- 0\n"
-					+ "let remove__impl = fun (self : t) value ->\n"
-					+ "  let removed = HxArray.remove ((Obj.magic self : t).values) value in\n"
-					+ "  if removed then (Obj.magic self : t).length <- HxArray.length ((Obj.magic self : t).values) else ();\n"
-					+ "  removed\n"
-					+ "let iterator__impl = fun (self : t) () -> HxIterator.of_array ((Obj.magic self : t).values)\n"
-					+ "let join__impl = fun (self : t) sep -> HxArray.join ((Obj.magic self : t).values) sep Std.string\n"
-					+ "let toString__impl = fun (self : t) () -> ((\"{\" : string) ^ HxString.toStdString (join__impl (Obj.magic self) (\", \" : string))) ^ (\"}\" : string)\n"
-					+ "let __empty = fun () -> ({ __hx_type = HxType.class_ \"haxe.ds.List\"; values = HxArray.create (); length = 0; add = (fun o a0 -> Obj.magic (add__impl (Obj.magic o) (Obj.magic a0))); push = (fun o a0 -> Obj.magic (push__impl (Obj.magic o) (Obj.magic a0))); first = (fun o () -> Obj.magic (first__impl (Obj.magic o) ())); last = (fun o () -> Obj.magic (last__impl (Obj.magic o) ())); pop = (fun o () -> Obj.magic (pop__impl (Obj.magic o) ())); isEmpty = (fun o () -> Obj.magic (isEmpty__impl (Obj.magic o) ())); clear = (fun o () -> Obj.magic (clear__impl (Obj.magic o) ())); remove = (fun o a0 -> Obj.magic (remove__impl (Obj.magic o) (Obj.magic a0))); iterator = (fun o () -> Obj.magic (iterator__impl (Obj.magic o) ())); join = (fun o a0 -> Obj.magic (join__impl (Obj.magic o) (Obj.magic a0))); toString = (fun o () -> Obj.magic (toString__impl (Obj.magic o) ())) } : t)\n"
-					+ "let new_ = fun (self : t) ->\n"
-					+ "  (Obj.magic self : t).__hx_type <- HxType.class_ \"haxe.ds.List\";\n"
-					+ "  (Obj.magic self : t).values <- HxArray.create ();\n"
-					+ "  (Obj.magic self : t).length <- 0;\n"
-					+ "  self\n"
-					+ "let create = fun () -> let self = (__empty () : t) in\n"
-					+ "  ignore (new_ (Obj.magic self));\n"
-					+ "  self\n"
-					+ "let add = fun (self : t) item -> add__impl (Obj.magic self) item\n"
-					+ "let push = fun (self : t) item -> push__impl (Obj.magic self) item\n"
-					+ "let first = fun (self : t) () -> first__impl (Obj.magic self) ()\n"
-					+ "let last = fun (self : t) () -> last__impl (Obj.magic self) ()\n"
-					+ "let pop = fun (self : t) () -> pop__impl (Obj.magic self) ()\n"
-					+ "let isEmpty = fun (self : t) () -> isEmpty__impl (Obj.magic self) ()\n"
-					+ "let clear = fun (self : t) () -> clear__impl (Obj.magic self) ()\n"
-					+ "let remove = fun (self : t) value -> remove__impl (Obj.magic self) value\n"
-					+ "let iterator = fun (self : t) () -> iterator__impl (Obj.magic self) ()\n"
-					+ "let join = fun (self : t) sep -> join__impl (Obj.magic self) sep\n"
-					+ "let toString = fun (self : t) () -> toString__impl (Obj.magic self) ()\n");
-			}
-			generatedPaths.push(shimName + ".ml");
-		}
-		traceEmitToDirEntry("emitToDir_after_haxe_ds_list_shim");
-		{
-			final shimFile = "Haxe_ds_List.ml";
-			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-			try {
-				var hasCreate = false;
-				if (sys.FileSystem.exists(shimPath) && !sys.FileSystem.isDirectory(shimPath)) {
-					final contents = sys.io.File.getContent(shimPath);
-					hasCreate = contents.indexOf("let create") != -1 || contents.indexOf("let rec create") != -1;
-				}
-				if (!hasCreate) {
-					final sourcePath = haxe.io.Path.join([outAbs, shimFile]);
-					if (sys.FileSystem.exists(sourcePath) && !sys.FileSystem.isDirectory(sourcePath)) {
-						sys.io.File.saveContent(sourcePath,
-							"(* hxhx(stage3) bootstrap shim: haxe.ds.List *)\n"
-							+ "type t = {\n"
-							+ "  mutable __hx_type : Obj.t;\n"
-							+ "  mutable values : Obj.t HxArray.t;\n"
-							+ "  mutable length : int;\n"
-							+ "  add : Obj.t -> Obj.t -> unit;\n"
-							+ "  push : Obj.t -> Obj.t -> unit;\n"
-							+ "  first : Obj.t -> unit -> Obj.t;\n"
-							+ "  last : Obj.t -> unit -> Obj.t;\n"
-							+ "  pop : Obj.t -> unit -> Obj.t;\n"
-							+ "  isEmpty : Obj.t -> unit -> bool;\n"
-							+ "  clear : Obj.t -> unit -> unit;\n"
-							+ "  remove : Obj.t -> Obj.t -> bool;\n"
-							+ "  iterator : Obj.t -> unit -> Obj.t HxIterator.t;\n"
-							+ "  join : Obj.t -> string -> string;\n"
-							+ "  toString : Obj.t -> unit -> string;\n"
-							+ "}\n"
-							+ "let add__impl = fun (self : t) item ->\n"
-							+ "  ignore (HxArray.push ((Obj.magic self : t).values) item);\n"
-							+ "  (Obj.magic self : t).length <- HxArray.length ((Obj.magic self : t).values)\n"
-							+ "let push__impl = fun (self : t) item ->\n"
-							+ "  let next = HxArray.create () in\n"
-							+ "  let prev = ((Obj.magic self : t).values : Obj.t HxArray.t) in\n"
-							+ "  ignore (HxArray.push next item);\n"
-							+ "  ignore (let _g = ref 0 in while !_g < HxArray.length prev do ignore (let value = HxArray.get (Obj.magic prev) (!_g) in (\n"
-							+ "    ignore (let __old = !_g in let __new = HxInt.add __old 1 in (\n"
-							+ "      ignore (_g := __new);\n"
-							+ "      __new\n"
-							+ "    ));\n"
-							+ "    ignore (HxArray.push next value)\n"
-							+ "  )) done);\n"
-							+ "  (Obj.magic self : t).values <- next;\n"
-							+ "  (Obj.magic self : t).length <- HxArray.length next\n"
-							+ "let first__impl = fun (self : t) () ->\n"
-							+ "  if (Obj.magic self : t).length = 0 then Obj.magic HxRuntime.hx_null else HxArray.get ((Obj.magic self : t).values) 0\n"
-							+ "let last__impl = fun (self : t) () ->\n"
-							+ "  if (Obj.magic self : t).length = 0 then Obj.magic HxRuntime.hx_null else HxArray.get ((Obj.magic self : t).values) (HxInt.sub ((Obj.magic self : t).length) 1)\n"
-							+ "let pop__impl = fun (self : t) () ->\n"
-							+ "  let value = HxArray.shift ((Obj.magic self : t).values) () in\n"
-							+ "  (Obj.magic self : t).length <- HxArray.length ((Obj.magic self : t).values);\n"
-							+ "  value\n"
-							+ "let isEmpty__impl = fun (self : t) () -> (Obj.magic self : t).length = 0\n"
-							+ "let clear__impl = fun (self : t) () ->\n"
-							+ "  (Obj.magic self : t).values <- HxArray.create ();\n"
-							+ "  (Obj.magic self : t).length <- 0\n"
-							+ "let remove__impl = fun (self : t) value ->\n"
-							+ "  let removed = HxArray.remove ((Obj.magic self : t).values) value in\n"
-							+ "  if removed then (Obj.magic self : t).length <- HxArray.length ((Obj.magic self : t).values) else ();\n"
-							+ "  removed\n"
-							+ "let iterator__impl = fun (self : t) () -> HxIterator.of_array ((Obj.magic self : t).values)\n"
-							+ "let join__impl = fun (self : t) sep -> HxArray.join ((Obj.magic self : t).values) sep Std.string\n"
-							+ "let toString__impl = fun (self : t) () -> ((\"{\" : string) ^ HxString.toStdString (join__impl (Obj.magic self) (\", \" : string))) ^ (\"}\" : string)\n"
-							+ "let __empty = fun () -> ({ __hx_type = HxType.class_ \"haxe.ds.List\"; values = HxArray.create (); length = 0; add = (fun o a0 -> Obj.magic (add__impl (Obj.magic o) (Obj.magic a0))); push = (fun o a0 -> Obj.magic (push__impl (Obj.magic o) (Obj.magic a0))); first = (fun o () -> Obj.magic (first__impl (Obj.magic o) ())); last = (fun o () -> Obj.magic (last__impl (Obj.magic o) ())); pop = (fun o () -> Obj.magic (pop__impl (Obj.magic o) ())); isEmpty = (fun o () -> Obj.magic (isEmpty__impl (Obj.magic o) ())); clear = (fun o () -> Obj.magic (clear__impl (Obj.magic o) ())); remove = (fun o a0 -> Obj.magic (remove__impl (Obj.magic o) (Obj.magic a0))); iterator = (fun o () -> Obj.magic (iterator__impl (Obj.magic o) ())); join = (fun o a0 -> Obj.magic (join__impl (Obj.magic o) (Obj.magic a0))); toString = (fun o () -> Obj.magic (toString__impl (Obj.magic o) ())) } : t)\n"
-							+ "let new_ = fun (self : t) ->\n"
-							+ "  (Obj.magic self : t).__hx_type <- HxType.class_ \"haxe.ds.List\";\n"
-							+ "  (Obj.magic self : t).values <- HxArray.create ();\n"
-							+ "  (Obj.magic self : t).length <- 0;\n"
-							+ "  self\n"
-							+ "let create = fun () -> let self = (__empty () : t) in\n"
-							+ "  ignore (new_ (Obj.magic self));\n"
-							+ "  self\n"
-							+ "let add = fun (self : t) item -> add__impl (Obj.magic self) item\n"
-							+ "let push = fun (self : t) item -> push__impl (Obj.magic self) item\n"
-							+ "let first = fun (self : t) () -> first__impl (Obj.magic self) ()\n"
-							+ "let last = fun (self : t) () -> last__impl (Obj.magic self) ()\n"
-							+ "let pop = fun (self : t) () -> pop__impl (Obj.magic self) ()\n"
-							+ "let isEmpty = fun (self : t) () -> isEmpty__impl (Obj.magic self) ()\n"
-							+ "let clear = fun (self : t) () -> clear__impl (Obj.magic self) ()\n"
-							+ "let remove = fun (self : t) value -> remove__impl (Obj.magic self) value\n"
-							+ "let iterator = fun (self : t) () -> iterator__impl (Obj.magic self) ()\n"
-							+ "let join = fun (self : t) sep -> join__impl (Obj.magic self) sep\n"
-							+ "let toString = fun (self : t) () -> toString__impl (Obj.magic self) ()\n");
-					}
-				}
-			} catch (_:haxe.io.Error) {} catch (_:String) {}
-		}
-		traceEmitToDirEntry("emitToDir_after_haxe_ds_list_repair");
 		{
 			// Stage 3 bring-up: a tiny "array-like" container used only by the bootstrap emitter output.
 			//
@@ -6447,7 +4839,6 @@ class EmitterStage {
 			}
 			generatedPaths.push(shimName + ".ml");
 		}
-		traceEmitToDirEntry("emitToDir_after_bootarray_shim");
 		{
 			final shimName = "HxBootProcess";
 			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
@@ -6456,7 +4847,6 @@ class EmitterStage {
 			}
 			generatedPaths.push(shimName + ".ml");
 		}
-		traceEmitToDirEntry("emitToDir_after_bootprocess_shim");
 		{
 			final shimName = "Reflect";
 			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
@@ -7198,7 +5588,7 @@ class EmitterStage {
 					final hasStringToolsHex = moduleName == "StringTools";
 					if (hasStringToolsHex) {
 						out.push("(* hxhx(stage3) bootstrap shim: StringTools.hex *)");
-						out.push("let hex (n : int) (digits : Obj.t) : string =");
+						out.push("let hex (n : int) (digits : int) : string =");
 						out.push("  let hexChars = \"0123456789ABCDEF\" in");
 						out.push("  let n32 = Int32.of_int n in");
 						out.push("  let rec build (x : Int32.t) (acc : string) : string =");
@@ -7208,10 +5598,9 @@ class EmitterStage {
 						out.push("    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2");
 						out.push("  in");
 						out.push("  let s = build n32 \"\" in");
-						out.push("  let digits_i = if digits == HxRuntime.hx_null then 0 else (Obj.obj digits : int) in");
-						out.push("  if digits_i <= 0 then s else");
+						out.push("  if digits <= 0 then s else");
 						out.push("    let rec pad (s0 : string) : string =");
-						out.push("      if Stdlib.String.length s0 < digits_i then pad (\"0\" ^ s0) else s0");
+						out.push("      if Stdlib.String.length s0 < digits then pad (\"0\" ^ s0) else s0");
 						out.push("    in");
 						out.push("    pad s");
 						out.push("");
@@ -7220,7 +5609,6 @@ class EmitterStage {
 					// Emit static fields (best-effort).
 					final parsedFields = HxClassDecl.getFields(cls);
 					final staticTyByIdent:Map<String, TyType> = new Map();
-					final staticAllowedValueIdents:Map<String, Bool> = new Map();
 					for (f in parsedFields) {
 						if (!HxFieldDecl.getIsStatic(f))
 							continue;
@@ -7229,14 +5617,10 @@ class EmitterStage {
 							continue;
 						final inferredType = inferStaticFieldType(f, staticTyByIdent);
 						final init = HxFieldDecl.getInit(f);
-						final prevAllowedValueIdentNames = currentAllowedValueIdentNames;
-						currentAllowedValueIdentNames = staticAllowedValueIdents;
 						final initOcaml = init == null ? "(Obj.magic HxRuntime.hx_null)" : exprToOcaml(init, null, staticTyByIdent, null,
 							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, globalCallSigByCallee);
-						currentAllowedValueIdentNames = prevAllowedValueIdentNames;
 						out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
 						out.push("");
-						staticAllowedValueIdents.set(nameRaw, true);
 						final knownType = staticTyByIdent.get(nameRaw);
 						if (knownType == null || (knownType.isUnknown() && !inferredType.isUnknown()))
 							staticTyByIdent.set(nameRaw, inferredType);
@@ -7321,46 +5705,12 @@ class EmitterStage {
 					currentInstanceMethodsByTypePath = instanceMethodsByTypePath;
 
 					final typedFns = tm.getEnv().getMainClass().getFunctions();
-					function effectiveFunctionArgs(tf:TyFunctionEnv, parsedFn:Null<HxFunctionDecl>):Array<{name:String, ty:TyType}> {
-						final typedArgs = tf.getParams();
-						final parsedArgs = parsedFn == null ? [] : HxFunctionDecl.getArgs(parsedFn);
-						final emitArgs = new Array<{name:String, ty:TyType}>();
-						if (parsedArgs.length > 0) {
-							for (i in 0...parsedArgs.length) {
-								final parsedArg = parsedArgs[i];
-								final typedArg = i < typedArgs.length ? typedArgs[i] : null;
-								final parsedName = HxFunctionArg.getName(parsedArg);
-								final typedName = typedArg == null ? null : typedArg.getName();
-								final name = parsedName != null && parsedName.length > 0 ? parsedName : typedName;
-								final ty = typedArg == null ? TyType.fromHintText(HxFunctionArg.getTypeHint(parsedArg)) : typedArg.getType();
-								emitArgs.push({
-									name: name == null || name.length == 0 ? ("arg" + i) : name,
-									ty: ty == null ? TyType.unknown() : ty
-								});
-							}
-							for (i in parsedArgs.length...typedArgs.length) {
-								final typedArg = typedArgs[i];
-								emitArgs.push({
-									name: typedArg.getName(),
-									ty: typedArg.getType()
-								});
-							}
-							return emitArgs;
-						}
-						for (typedArg in typedArgs) {
-							emitArgs.push({
-								name: typedArg.getName(),
-								ty: typedArg.getType()
-							});
-						}
-						return emitArgs;
-					}
 					final arityByName:Map<String, Int> = new Map();
 					for (tf in typedFns) {
 						final parsedFn = parsedByName.get(tf.getName());
 						final isStaticFn = parsedFn == null ? true : HxFunctionDecl.getIsStatic(parsedFn);
 						final extraThis = isStaticFn ? 0 : 1;
-						arityByName.set(tf.getName(), effectiveFunctionArgs(tf, parsedFn).length + extraThis);
+						arityByName.set(tf.getName(), tf.getParams().length + extraThis);
 					}
 					final fnReturnTypesByName:Map<String, TyType> = new Map();
 					for (tf in typedFns)
@@ -7650,8 +6000,8 @@ class EmitterStage {
 						var refsStatic = false;
 						if (tf != null && parsedFn != null) {
 							final locals:Map<String, Bool> = new Map();
-							for (p in effectiveFunctionArgs(tf, parsedFn)) {
-								final pn = p.name;
+							for (p in tf.getParams()) {
+								final pn = p.getName();
 								if (pn != null && pn.length > 0)
 									locals.set(pn, true);
 							}
@@ -7732,25 +6082,23 @@ class EmitterStage {
 							if (tf.getName() != "load")
 								continue;
 							final nameRaw = tf.getName();
-							_EmitterStageDebug.traceStage3Function("fn_enter", mainModuleName, nameRaw);
-							final parsedFn = parsedByName.get(nameRaw);
-							final emitArgs = effectiveFunctionArgs(tf, parsedFn);
-							final ocamlArgs = emitArgs.length == 0 ? "()" : emitArgs.map(a -> "(" + ocamlValueIdent(a.name) + " : "
-								+ ocamlTypeFromTy(a.ty) + ")")
+							final args = tf.getParams();
+							final ocamlArgs = args.length == 0 ? "()" : args.map(a -> "(" + ocamlValueIdent(a.getName()) + " : "
+								+ ocamlTypeFromTy(a.getType()) + ")")
 								.join(" ");
+							final parsedFn = parsedByName.get(nameRaw);
 							final retTy = ocamlTypeFromTy(tf.getReturnType());
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
-							for (a in emitArgs)
-								allowed.set(a.name, true);
-							for (a in emitArgs)
-								tyByIdent.set(a.name, a.ty);
+							for (a in args)
+								allowed.set(a.getName(), true);
+							for (a in args)
+								tyByIdent.set(a.getName(), a.getType());
 							for (name in allowed.keys())
 								if (tyByIdent.get(name) == null)
 									tyByIdent.set(name, TyType.unknown());
 							final body = parsedFn == null ? "(Obj.magic 0)" : returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(),
 								arityByName, tyByIdent, staticImportByIdent, HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
-							_EmitterStageDebug.traceStage3Function("fn_after_body", mainModuleName, nameRaw);
 
 							out.push("let " + ocamlValueIdent(nameRaw) + " " + ocamlArgs + " : " + retTy + " = " + body);
 							out.push("");
@@ -7774,33 +6122,30 @@ class EmitterStage {
 						for (i in 0...group.length) {
 							final tf = group[i];
 							final nameRaw = tf.getName();
-							_EmitterStageDebug.traceStage3Function("fn_enter", mainModuleName, nameRaw);
 							final name = ocamlValueIdent(nameRaw);
 							final previousRegionKey = currentPortableMetalizationRegionKey;
-							final previousFunctionNameRaw = currentFunctionNameRaw;
 							currentPortableMetalizationRegionKey = backend.ocaml.PortableMetalizationPlanner.functionRegionKey(moduleFilePath, mainClassName,
 								nameRaw);
-							currentFunctionNameRaw = nameRaw;
 							if (name == "main")
 								sawMain = true;
 
+							final args = tf.getParams();
 							final parsedFn = parsedByName.get(nameRaw);
-							final emitArgs = effectiveFunctionArgs(tf, parsedFn);
 							final isStaticFn = parsedFn == null ? true : HxFunctionDecl.getIsStatic(parsedFn);
 							final headArgs = new Array<String>();
 							if (!isStaticFn)
 								headArgs.push("(this_ : _)");
-							for (a in emitArgs)
-								headArgs.push("(" + ocamlValueIdent(a.name) + " : " + ocamlTypeFromTy(a.ty) + ")");
+							for (a in args)
+								headArgs.push("(" + ocamlValueIdent(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")");
 							final ocamlArgs = headArgs.length == 0 ? "()" : headArgs.join(" ");
 
 							final retTy = ocamlTypeFromTy(tf.getReturnType());
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
-							for (a in emitArgs)
-								allowed.set(a.name, true);
-							for (a in emitArgs)
-								tyByIdent.set(a.name, a.ty);
+							for (a in args)
+								allowed.set(a.getName(), true);
+							for (a in args)
+								tyByIdent.set(a.getName(), a.getType());
 							if (!isStaticFn) {
 								allowed.set("this", true);
 								tyByIdent.set("this", TyType.fromHintText("Dynamic"));
@@ -7832,54 +6177,26 @@ class EmitterStage {
 								if (tyByIdent.get(name) == null)
 									tyByIdent.set(name, TyType.unknown());
 
-							final prevAllowedValueIdentNames = currentAllowedValueIdentNames;
-							currentAllowedValueIdentNames = allowed;
-
 							var body = if (parsedFn == null) {
 								"()";
 							} else if (!moduleEmitBodies) {
-								final tyByIdentDebug:Null<haxe.ds.StringMap<TyType>> = cast tyByIdent;
-								_EmitterStageDebug.traceSelfRecursion("fn_return_entry",
-									"current=" + nameRaw + " isStatic=" + (isStaticFn ? "1" : "0") + " hasTyThis="
-									+ (tyByIdentDebug != null && tyByIdentDebug.exists("this") ? "1" : "0") + " hasTyThis_="
-									+ (tyByIdentDebug != null && tyByIdentDebug.exists("this_") ? "1" : "0"));
-								if (mainModuleName == "Reflaxe_elixir_generator_ProjectGenerator" && nameRaw == "loadTemplate") {
-									"(let libPath = getLibraryPath (this_) in "
-									+ "let templatePath = HxBootArray.join (HxBootArray.of_list [(Obj.magic (libPath)); (Obj.magic (\"templates\")); "
-									+ "(Obj.magic (\"project\")); (Obj.magic (templateName))]) (\"/\") (fun (s : string) -> s) in "
-									+ "if not (HxFileSystem.exists templatePath) then defaultTemplate (this_) (templateName) else HxFile.getContent (templatePath))";
-								} else if (mainModuleName == "Reflaxe_elixir_generator_TemplateEngine" && nameRaw == "transformFilename") {
-									"processPlaceholders (this_) (filename) (replacements)";
-								} else {
-									returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(), arityByName, tyByIdent, staticImportByIdent,
-										HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
-								}
+								returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(), arityByName, tyByIdent, staticImportByIdent,
+									HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
 							} else {final exc = "HxReturn_" + escapeOcamlIdentPart(nameRaw);
 								exceptions.push("exception " + exc + " of Obj.t");
 								final stmts = HxFunctionDecl.getBody(parsedFn);
-								_EmitterStageDebug.traceStage3Function("fn_before_stmt_list", mainModuleName, nameRaw);
-								final stmtBodyBuf = new StringBuf();
-								stmtListToOcaml(stmts, allowed, exc, stmtBodyBuf, arityByName, tyByIdent, staticImportByIdent, HxModuleDecl.getPackagePath(decl),
-									moduleNameByPkgAndClass, callSigByCallee, localTypeHints, fnReturnTypesByName, mainModuleName, nameRaw);
-								_EmitterStageDebug.traceStage3Phase("after_stmt_list_call");
-								_EmitterStageDebug.traceStage3Phase("after_stmt_list_copy");
-								final stmtBody = stmtBodyBuf.toString();
-								_EmitterStageDebug.traceStage3Function("fn_after_stmt_list", mainModuleName, nameRaw);
-								final bodyBuf = new StringBuf();
-								bodyBuf.add("((");
-								bodyBuf.add("try (let _ = ");
-								bodyBuf.add(stmtBody);
-								bodyBuf.add(" in (Obj.magic 0)) ");
-								bodyBuf.add("with ");
-								bodyBuf.add(exc);
-								bodyBuf.add(" v -> (Obj.magic v)");
-								bodyBuf.add(") : ");
-								bodyBuf.add(retTy);
-								bodyBuf.add(")");
-								bodyBuf.toString();
+								"((" //
+								+ "try (let _ = "
+								+ stmtListToOcaml(stmts, allowed, exc, arityByName, tyByIdent, staticImportByIdent, HxModuleDecl.getPackagePath(decl),
+									moduleNameByPkgAndClass, callSigByCallee, localTypeHints, fnReturnTypesByName)
+								+ " in (Obj.magic 0)) "
+								+ "with "
+								+ exc
+								+ " v -> (Obj.magic v)"
+								+ ") : "
+								+ retTy
+								+ ")";
 							};
-							_EmitterStageDebug.traceStage3Function("fn_after_body", mainModuleName, nameRaw);
-							currentAllowedValueIdentNames = prevAllowedValueIdentNames;
 							// Stage3 stdlib bring-up guard:
 							// - `haxe.ds.EnumValueMap.compareArg` can recover as
 							//   `compare ((Obj.magic 0)) ((Obj.magic 0))`, which misses receiver/arg
@@ -7888,35 +6205,16 @@ class EmitterStage {
 							if (mainModuleName == "Haxe_ds_EnumValueMap"
 								&& nameRaw == "compareArg"
 								&& !isStaticFn
-								&& emitArgs.length >= 2
+								&& args.length >= 2
 								&& body == "compare ((Obj.magic 0)) ((Obj.magic 0))") {
-								final arg0 = ocamlReadValueIdent(emitArgs[0].name);
-								final arg1 = ocamlReadValueIdent(emitArgs[1].name);
+								final arg0 = ocamlReadValueIdent(args[0].getName());
+								final arg1 = ocamlReadValueIdent(args[1].getName());
 								body = "compare (this_) (" + arg0 + ") (" + arg1 + ")";
 							}
 
 							final kw = i == 0 ? "let rec" : "and";
-							_EmitterStageDebug.traceStage3Function("fn_before_bind", mainModuleName, nameRaw);
-							final bindingPrefixBuf = new StringBuf();
-							bindingPrefixBuf.add(kw);
-							bindingPrefixBuf.add(" ");
-							bindingPrefixBuf.add(name);
-							bindingPrefixBuf.add(" ");
-							bindingPrefixBuf.add(ocamlArgs);
-							bindingPrefixBuf.add(" : ");
-							bindingPrefixBuf.add(retTy);
-							bindingPrefixBuf.add(" = ");
-							final bindingPrefix = bindingPrefixBuf.toString();
-							_EmitterStageDebug.traceStage3Function("fn_after_prefix", mainModuleName, nameRaw);
-							final bindingBuf = new StringBuf();
-							bindingBuf.add(bindingPrefix);
-							bindingBuf.add(body);
-							final bindingLine = bindingBuf.toString();
-							_EmitterStageDebug.traceStage3Function("fn_after_bind", mainModuleName, nameRaw);
-							out.push(bindingLine);
+							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 							out.push("");
-							_EmitterStageDebug.traceStage3Function("fn_after_emit", mainModuleName, nameRaw);
-							currentFunctionNameRaw = previousFunctionNameRaw;
 							currentPortableMetalizationRegionKey = previousRegionKey;
 						}
 					}
@@ -7933,7 +6231,6 @@ class EmitterStage {
 					// Static initializers often refer to earlier static finals (e.g. `unitDir` refers to `repoDir`).
 					// During bring-up we treat those names as "bound" incrementally to avoid collapsing them to poison.
 					final staticTyByIdent:Map<String, TyType> = new Map();
-					final staticAllowedValueIdents:Map<String, Bool> = new Map();
 					for (f in parsedFields) {
 						if (!HxFieldDecl.getIsStatic(f))
 							continue;
@@ -7944,13 +6241,9 @@ class EmitterStage {
 						if (inferredType != null && staticTyByIdent.get(nameRaw) == null)
 							staticTyByIdent.set(nameRaw, inferredType);
 						final init = HxFieldDecl.getInit(f);
-						final prevAllowedValueIdentNames = currentAllowedValueIdentNames;
-						currentAllowedValueIdentNames = staticAllowedValueIdents;
 						final initOcaml = init == null ? "(Obj.magic 0)" : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent,
 							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
-						currentAllowedValueIdentNames = prevAllowedValueIdentNames;
 						out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
-						staticAllowedValueIdents.set(nameRaw, true);
 						if (staticTyByIdent.get(nameRaw) == null)
 							staticTyByIdent.set(nameRaw, TyType.unknown());
 					}
@@ -8484,7 +6777,7 @@ class EmitterStage {
 						sys.io.File.saveContent(shimPath,
 							"(* hxhx(stage3) bootstrap shim: StringTools.hex *)\n"
 							+ "\n"
-							+ "let hex (n : int) (digits : Obj.t) : string =\n"
+							+ "let hex (n : int) (digits : int) : string =\n"
 							+ "  let hexChars = \"0123456789ABCDEF\" in\n"
 							+ "  let n32 = Int32.of_int n in\n"
 							+ "  let rec build (x : Int32.t) (acc : string) : string =\n"
@@ -8494,10 +6787,9 @@ class EmitterStage {
 							+ "    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2\n"
 							+ "  in\n"
 							+ "  let s = build n32 \"\" in\n"
-							+ "  let digits_i = if digits == HxRuntime.hx_null then 0 else (Obj.obj digits : int) in\n"
-							+ "  if digits_i <= 0 then s else\n"
+							+ "  if digits <= 0 then s else\n"
 							+ "    let rec pad (s0 : string) : string =\n"
-							+ "      if Stdlib.String.length s0 < digits_i then pad (\"0\" ^ s0) else s0\n"
+							+ "      if Stdlib.String.length s0 < digits then pad (\"0\" ^ s0) else s0\n"
 							+ "    in\n"
 							+ "    pad s\n");
 					}
@@ -8505,7 +6797,7 @@ class EmitterStage {
 					sys.io.File.saveContent(shimPath,
 						"(* hxhx(stage3) bootstrap shim: StringTools.hex *)\n"
 						+ "\n"
-						+ "let hex (n : int) (digits : Obj.t) : string =\n"
+						+ "let hex (n : int) (digits : int) : string =\n"
 						+ "  let hexChars = \"0123456789ABCDEF\" in\n"
 						+ "  let n32 = Int32.of_int n in\n"
 						+ "  let rec build (x : Int32.t) (acc : string) : string =\n"
@@ -8515,285 +6807,12 @@ class EmitterStage {
 						+ "    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2\n"
 						+ "  in\n"
 						+ "  let s = build n32 \"\" in\n"
-						+ "  let digits_i = if digits == HxRuntime.hx_null then 0 else (Obj.obj digits : int) in\n"
-						+ "  if digits_i <= 0 then s else\n"
+						+ "  if digits <= 0 then s else\n"
 						+ "    let rec pad (s0 : string) : string =\n"
-						+ "      if Stdlib.String.length s0 < digits_i then pad (\"0\" ^ s0) else s0\n"
+						+ "      if Stdlib.String.length s0 < digits then pad (\"0\" ^ s0) else s0\n"
 						+ "    in\n"
 						+ "    pad s\n");
 					generatedPaths.push(shimFile);
-				}
-			} catch (_:haxe.io.Error) {} catch (_:String) {}
-		}
-
-		// Stage 3 bring-up: direct `Sys.stdin/stdout/stderr` lowerings reference the generated
-		// `sys.io.Stdio` provider module as `Sys_io_Stdio`, but Stage3 import closure does not
-		// guarantee that this std module is emitted into every program output.
-		//
-		// Materialize the repo-owned generated provider whenever the emitted output actually references
-		// `Sys_io_Stdio.`. Scan the output directory directly because `generatedPaths` does not
-		// reliably include every program module in Stage3 bring-up flows.
-		{
-			final shimFile = "sys_io_Stdio.ml";
-			try {
-				var needsShim = false;
-				for (entry in sys.FileSystem.readDirectory(outAbs)) {
-					if (needsShim)
-						break;
-					if (!StringTools.endsWith(entry, ".ml"))
-						continue;
-					final candidatePath = haxe.io.Path.join([outAbs, entry]);
-					if (!sys.FileSystem.exists(candidatePath) || sys.FileSystem.isDirectory(candidatePath))
-						continue;
-					final contents = sys.io.File.getContent(candidatePath);
-					if (contents.indexOf("Sys_io_Stdio.") != -1)
-						needsShim = true;
-				}
-				if (needsShim) {
-					final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-					if (!sys.FileSystem.exists(shimPath)) {
-						final root = inferRepoRootForShims();
-						if (root != null && root.length > 0) {
-							final sourcePath = haxe.io.Path.join([root, "packages", "hxhx", "bootstrap_out", shimFile]);
-							if (sys.FileSystem.exists(sourcePath)) {
-								sys.io.File.saveContent(shimPath, sys.io.File.getContent(sourcePath));
-								generatedPaths.push(shimFile);
-							}
-						}
-					}
-				}
-			} catch (_:haxe.io.Error) {} catch (_:String) {}
-		}
-
-		// Stage 3 bring-up: once `sys_io_Stdio` is present, it expects the bootstrap-generated
-		// stdio/provider dependency surface (`*_impl` helpers and exception constructors).
-		//
-		// Replace the placeholder stage3 shims only in this stdio-provider scenario so the fix stays
-		// tightly scoped to the built-in native path that actually needs these modules.
-		{
-			final stdioPath = haxe.io.Path.join([outAbs, "sys_io_Stdio.ml"]);
-			try {
-				if (sys.FileSystem.exists(stdioPath) && !sys.FileSystem.isDirectory(stdioPath)) {
-					final replacements = [
-						{ target : "haxe_io_Input.ml", source : "haxe_io_Input.ml", marker : "set_bigEndian__impl" },
-						{ target : "haxe_io_Output.ml", source : "haxe_io_Output.ml", marker : "set_bigEndian__impl" },
-						{ target : "StringTools.ml", source : "StringTools.ml", marker : "let _g_offset = ref 0" },
-						{ target : "Haxe_io_BytesBuffer.ml", source : "haxe_io_BytesBuffer.ml", marker : "let create" },
-						{ target : "Haxe_io_Error.ml", source : "haxe_io_Error.ml", marker : "OutsideBounds" },
-						{ target : "Haxe_io_FPHelper.ml", source : "haxe_io_FPHelper.ml", marker : "doubleToI64" },
-						{ target : "Haxe_Int64.ml", source : "haxe_Int64.ml", marker : "___int64_t" },
-						{ target : "StringBuf.ml", source : "StringBuf.ml", marker : "Stdlib.Buffer.create 16" },
-						{ target : "Haxe_Exception.ml", source : "haxe_Exception.ml", marker : "details__impl" },
-						{
-							target : "Haxe_exceptions_PosException.ml",
-							source : "haxe_exceptions_PosException.ml",
-							marker : "create",
-						},
-						{
-							target : "Haxe_exceptions_NotImplementedException.ml",
-							source : "haxe_exceptions_NotImplementedException.ml",
-							marker : "create",
-						},
-					];
-					final root = inferRepoRootForShims();
-					if (root != null && root.length > 0) {
-						for (replacement in replacements) {
-							final targetPath = haxe.io.Path.join([outAbs, replacement.target]);
-							var needsReplacement = !sys.FileSystem.exists(targetPath) || sys.FileSystem.isDirectory(targetPath);
-							if (!needsReplacement) {
-								final contents = sys.io.File.getContent(targetPath);
-								needsReplacement = contents.indexOf(replacement.marker) == -1;
-							}
-							if (!needsReplacement)
-								continue;
-							final sourcePath = haxe.io.Path.join([root, "packages", "hxhx", "bootstrap_out", replacement.source]);
-							if (sys.FileSystem.exists(sourcePath))
-								sys.io.File.saveContent(targetPath, sys.io.File.getContent(sourcePath));
-						}
-						final emittedCallStackPath = haxe.io.Path.join([outAbs, "Haxe_CallStack.ml"]);
-						final runtimeCallStackPath = haxe.io.Path.join([outAbs, "runtime", "haxe_CallStack.ml"]);
-						if (sys.FileSystem.exists(emittedCallStackPath) && sys.FileSystem.exists(runtimeCallStackPath))
-							sys.FileSystem.deleteFile(runtimeCallStackPath);
-					}
-				}
-			} catch (_:haxe.io.Error) {} catch (_:String) {}
-		}
-
-		// Stage 3 bring-up: some emitted exception units still call `Haxe_NativeStackTrace.toHaxe`
-		// while the runtime callstack model in this lane is string-based and does not always emit a
-		// matching provider module.
-		//
-		// Emit a narrow compatibility shim only when:
-		// - `Haxe_Exception.ml` references `Haxe_NativeStackTrace.toHaxe`, and
-		// - no usable `Haxe_NativeStackTrace.ml` has been emitted yet.
-		{
-			final exceptionPath = haxe.io.Path.join([outAbs, "Haxe_Exception.ml"]);
-			final nativeStackTracePath = haxe.io.Path.join([outAbs, "Haxe_NativeStackTrace.ml"]);
-			try {
-				if (sys.FileSystem.exists(exceptionPath) && !sys.FileSystem.isDirectory(exceptionPath)) {
-					final exceptionContents = sys.io.File.getContent(exceptionPath);
-					final needsNativeStackTrace = exceptionContents.indexOf("Haxe_NativeStackTrace.toHaxe") != -1;
-					if (needsNativeStackTrace) {
-						var hasCompatibleShim = false;
-						if (sys.FileSystem.exists(nativeStackTracePath) && !sys.FileSystem.isDirectory(nativeStackTracePath)) {
-							final nativeStackTraceContents = sys.io.File.getContent(nativeStackTracePath);
-							hasCompatibleShim = nativeStackTraceContents.indexOf("haxe.NativeStackTrace (string-stack model)") != -1;
-						}
-						if (!hasCompatibleShim) {
-							final shimBody = [
-								"(* hxhx(stage3) bootstrap shim: haxe.NativeStackTrace (string-stack model) *)",
-								"[@@@warning \"-21-26\"]",
-								"",
-								"type t = { __hx_type : Obj.t }",
-								"",
-								"let create () : t = { __hx_type = HxType.class_ \"haxe.NativeStackTrace\" }",
-								"let __empty () : t = create ()",
-								"",
-								"let saveStack (_exception : Obj.t) : unit =",
-								"  ignore _exception",
-								"",
-								"let callStack () =",
-								"  let anon = HxAnon.create () in",
-								"  ignore (HxAnon.set anon \"skip\" (Obj.repr 1));",
-								"  ignore (HxAnon.set anon \"stack\" (Obj.repr (HxBacktrace.callstack_lines 64)));",
-								"  anon",
-								"",
-								"let exceptionStack () =",
-								"  let anon = HxAnon.create () in",
-								"  ignore (HxAnon.set anon \"skip\" (Obj.repr 0));",
-								"  ignore (HxAnon.set anon \"stack\" (Obj.repr (HxBacktrace.exceptionstack_lines ())));",
-								"  anon",
-								"",
-									"let parseFileLine = fun line -> try let fileNeedle = \"file \\\"\" in let fileStart0 = HxString.indexOf line fileNeedle 0 in (",
-									"  ignore (if fileStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());",
-									"  let fileStart = HxInt.add fileStart0 (HxString.length fileNeedle) in let fileEnd = HxString.indexOf line \"\\\"\" fileStart in (",
-									"    ignore (if fileEnd < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());",
-									"    let file = HxString.substr line fileStart (HxInt.sub fileEnd fileStart) in let lineNeedle = \"line \" in let lineStart0 = HxString.indexOf line lineNeedle fileEnd in (",
-									"      ignore (if lineStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());",
-									"      let i = HxInt.add lineStart0 (HxString.length lineNeedle) in let j = ref i in (",
-									"        ignore (try while !j < HxString.length line do try ignore (let c = HxString.charCodeAt line (!j) in (",
-									"          ignore (if (let __nullable_3 = c in let __nullable_4 = 48 in if __nullable_3 == HxRuntime.hx_null then false else Obj.obj __nullable_3 < __nullable_4) || (let __nullable_5 = c in let __nullable_6 = 57 in if __nullable_5 == HxRuntime.hx_null then false else Obj.obj __nullable_5 > __nullable_6) then raise (HxRuntime.Hx_break) else ());",
-									"          let __old_7 = !j in let __new_8 = HxInt.add __old_7 1 in (",
-									"            ignore (j := __new_8);",
-									"            __old_7",
-									"          )",
-									"        )) with",
-									"          | HxRuntime.Hx_continue -> () done with",
-									"          | HxRuntime.Hx_break -> ());",
-									"        ignore (if !j = i then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());",
-									"        let ln = ref 0 in let _g = ref i in let _g1 = !j in (",
-									"          ignore (while !_g < _g1 do ignore (let k = let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (",
-									"            ignore (_g := __new_10);",
-									"            __old_9",
-									"          ) in let __assign_11 = HxInt.add (HxInt.mul (!ln) 10) (HxInt.sub (let __nullable_int_12 = HxString.charCodeAt line k in if __nullable_int_12 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_12) 48) in (",
-									"            ln := __assign_11;",
-									"            __assign_11",
-									"          )) done);",
-									"          let __anon_13 = HxAnon.create () in (",
-									"            ignore (HxAnon.set __anon_13 \"file\" (Obj.repr file));",
-									"            ignore (HxAnon.set __anon_13 \"line\" (Obj.repr (!ln)));",
-									"            __anon_13",
-									"          )",
-									"        )",
-									"      )",
-									"    )",
-									"  )",
-									") with",
-									"  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14",
-									"",
-									"let toHaxe = fun nativeStackTrace skip -> let native = nativeStackTrace in let toSkip = ref (HxInt.add skip (try Obj.obj (HxAnon.get native \"skip\") with _ -> 0)) in let out = HxArray.create () in let _g = ref 0 in let _g1 = (try (Obj.obj (HxAnon.get native \"stack\") : string HxArray.t) with _ -> HxBacktrace.exceptionstack_lines ()) in (",
-									"  ignore (try while !_g < HxArray.length _g1 do try ignore (let line = HxArray.get _g1 (!_g) in (",
-									"    ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (",
-									"      ignore (_g := __new_16);",
-									"      __new_16",
-									"    ));",
-									"    ignore (if !toSkip > 0 then ignore ((",
-									"      ignore (let __old_17 = !toSkip in let __new_18 = HxInt.add __old_17 (-1) in (",
-									"        ignore (toSkip := __new_18);",
-									"        __old_17",
-									"      ));",
-									"      raise (HxRuntime.Hx_continue)",
-									"    )) else ());",
-									"    ignore (HxArray.push out (line : string))",
-									"  )) with",
-									"    | HxRuntime.Hx_continue -> () done with",
-									"    | HxRuntime.Hx_break -> ());",
-									"  out",
-									")",
-								"",
-							].join("\n");
-							sys.io.File.saveContent(nativeStackTracePath, shimBody);
-							if (generatedPaths.indexOf("Haxe_NativeStackTrace.ml") == -1)
-								generatedPaths.push("Haxe_NativeStackTrace.ml");
-						}
-					}
-				}
-			} catch (_:haxe.io.Error) {} catch (_:String) {}
-		}
-
-		// Stage 3 bootstrap: break the generated `StringTools <-> haxe.iterators.StringIteratorUnicode`
-		// dune cycle by swapping in the bootstrap `StringTools` when that exact emitted shape appears.
-		{
-			final stringToolsPath = haxe.io.Path.join([outAbs, "StringTools.ml"]);
-			final unicodeIterPath = haxe.io.Path.join([outAbs, "haxe_iterators_StringIteratorUnicode.ml"]);
-			try {
-				if (sys.FileSystem.exists(stringToolsPath)
-					&& !sys.FileSystem.isDirectory(stringToolsPath)
-					&& sys.FileSystem.exists(unicodeIterPath)
-					&& !sys.FileSystem.isDirectory(unicodeIterPath)) {
-					final stringToolsContents = sys.io.File.getContent(stringToolsPath);
-					final unicodeIterContents = sys.io.File.getContent(unicodeIterPath);
-					final hasCycleShape = stringToolsContents.indexOf("Haxe_iterators_StringIteratorUnicode.create") != -1
-						&& unicodeIterContents.indexOf("StringTools.utf16CodePointAt") != -1;
-					final needsBootstrapStringTools = hasCycleShape
-						&& stringToolsContents.indexOf("let _g_offset = ref 0") == -1;
-					if (needsBootstrapStringTools) {
-						final root = inferRepoRootForShims();
-						if (root != null && root.length > 0) {
-							final sourcePath = haxe.io.Path.join([root, "packages", "hxhx", "bootstrap_out", "StringTools.ml"]);
-							if (sys.FileSystem.exists(sourcePath))
-								sys.io.File.saveContent(stringToolsPath, sys.io.File.getContent(sourcePath));
-						}
-					}
-				}
-			} catch (_:haxe.io.Error) {} catch (_:String) {}
-		}
-
-		// Stage 3 bring-up: emitted provider closures such as `sys_io_Stdio`, `haxe_io_Input`, and
-		// `haxe_io_Output` require `Haxe_io_Eof.create ()`.
-		//
-		// If `haxe_io_Eof.ml` is missing or still lacks `create`, replace it with the repo-owned
-		// bootstrap snapshot so downstream providers link without widening the fix to unrelated
-		// std modules.
-		{
-			final shimFile = "haxe_io_Eof.ml";
-			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-			try {
-				var providerNeedsEof = false;
-				for (providerPath in [
-					haxe.io.Path.join([outAbs, "sys_io_Stdio.ml"]),
-					haxe.io.Path.join([outAbs, "haxe_io_Input.ml"]),
-					haxe.io.Path.join([outAbs, "haxe_io_Output.ml"]),
-				]) {
-					if (sys.FileSystem.exists(providerPath) && !sys.FileSystem.isDirectory(providerPath)) {
-						providerNeedsEof = true;
-						break;
-					}
-				}
-				if (providerNeedsEof) {
-					var hasCreate = false;
-					if (sys.FileSystem.exists(shimPath) && !sys.FileSystem.isDirectory(shimPath)) {
-						final contents = sys.io.File.getContent(shimPath);
-						hasCreate = contents.indexOf("let create") != -1 || contents.indexOf("let rec create") != -1;
-					}
-					if (!hasCreate) {
-						final root = inferRepoRootForShims();
-						if (root != null && root.length > 0) {
-							final sourcePath = haxe.io.Path.join([root, "packages", "hxhx", "bootstrap_out", shimFile]);
-							if (sys.FileSystem.exists(sourcePath))
-								sys.io.File.saveContent(shimPath, sys.io.File.getContent(sourcePath));
-						}
-					}
 				}
 			} catch (_:haxe.io.Error) {} catch (_:String) {}
 		}
@@ -8950,14 +6969,7 @@ class EmitterStage {
 			final shimPath = haxe.io.Path.join([outAbs, "Php_Boot.ml"]);
 			if (sys.FileSystem.exists(shimPath)) {
 				final src = sys.io.File.getContent(shimPath);
-				final patchedUnaryMinus = StringTools.replace(src, "(-(Php_Const.iNF))", "(-.(Obj.magic Php_Const.iNF : float))");
-				final patchedZeroEq = StringTools.replace(patchedUnaryMinus, "((value) = (0))", "((value) = (float_of_int 0))");
-				final patchedZeroLt = StringTools.replace(patchedZeroEq, "((value) < (0))", "((value) < (float_of_int 0))");
-				final patchedAliases = StringTools.replace(patchedZeroLt,
-					'HxBootArray.get (aliases) ((Obj.magic (HxAnon.get (Obj.repr (hxClass)) "phpClassName")))',
-					'(Obj.magic (HxAnon.get (Obj.repr (aliases)) ((Obj.magic (HxAnon.get (Obj.repr (hxClass)) "phpClassName")))))');
-				final patched = StringTools.replace(patchedAliases, 'HxBootArray.get (classes) (phpClassName)',
-					'(Obj.magic (HxAnon.get (Obj.repr (classes)) (phpClassName)))');
+				final patched = StringTools.replace(src, "(-(Php_Const.iNF))", "(-.(Obj.magic Php_Const.iNF : float))");
 				if (patched != src)
 					sys.io.File.saveContent(shimPath, patched);
 			}
@@ -9121,26 +7133,14 @@ class EmitterStage {
 			}
 		}
 
-		final duneLayoutRaw = defineValue(defines, "ocaml_dune_layout");
-		final wantsDuneScaffold = duneLayoutRaw != null || hasDefine(defines, "ocaml_no_build");
-		var duneLayout = Stage3DuneLayoutKind.Executable;
-		if (wantsDuneScaffold)
-			duneLayout = normalizeStage3DuneLayout(duneLayoutRaw);
-		if (duneLayout != null && hasDefine(defines, "ocaml_no_dune"))
-			throw "stage3 emitter: ocaml_dune_layout requires dune scaffolding; remove ocaml_no_dune";
-		final duneLibrariesRaw = defineValue(defines, "ocaml_dune_libraries");
-		final duneLibraries = duneLibrariesRaw == null ? ["unix", "str", "threads", "dynlink"] : duneLibrariesRaw.split(",")
-			.map(s -> StringTools.trim(s))
-			.filter(s -> s.length > 0);
-		final plannedArtifactPath = wantsDuneScaffold ? emitStage3DuneScaffold(outAbs, duneLayout, duneLibraries, rootMainPath) : null;
 		final exePath = haxe.io.Path.join([outAbs, "out.exe"]);
 		try {
 			if (sys.FileSystem.exists(exePath))
 				sys.FileSystem.deleteFile(exePath);
 		} catch (_:haxe.io.Error) {} catch (_:String) {}
 
-		if (!buildExecutable || wantsDuneScaffold)
-			return plannedArtifactPath != null ? plannedArtifactPath : exePath;
+		if (!buildExecutable)
+			return exePath;
 
 		final ocamlopt = {
 			final v = Sys.getEnv("OCAMLOPT");

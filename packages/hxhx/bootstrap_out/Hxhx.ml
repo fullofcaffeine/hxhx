@@ -5,6 +5,7 @@ module Runtime = Hxhx_runtime
 module BackendPluginLoader = Hxhx_BackendPluginLoader
 module BackendPluginManifestResolver = Hxhx_BackendPluginManifestResolver
 module BackendProviderResolver = Hxhx_BackendProviderResolver
+module BuildMetadataCollector = Hxhx_BuildMetadataCollector
 module CliRouting = Hxhx_CliRouting
 module DisplayResponseSynthesizer = Hxhx_DisplayResponseSynthesizer
 module ExprMacroExpander = Hxhx_ExprMacroExpander

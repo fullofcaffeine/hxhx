@@ -2025,7 +2025,7 @@ let scanResolvedModuleImports = fun path -> try let __fallback_result_500 = let 
 ) in Obj.magic __fallback_result_500 with
   | HxRuntime.Hx_return __ret_499 -> Obj.obj __ret_499
 
-let encodeContextGetTypePayload = fun name -> try let __fallback_result_547 = (
+let encodeContextGetTypePayload = fun name -> try let __fallback_result_546 = (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   let classPaths = Obj.magic (Hxhx_macro_MacroState.listClassPaths ()) in let cfg = Hxhx_macro_MacroState.getCompilerConfigurationSnapshot () in (
     ignore (let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get cfg "stdPath")) in while !_g < HxArray.length _g1 do ignore (let cp = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
@@ -2163,7 +2163,7 @@ let encodeContextGetTypePayload = fun name -> try let __fallback_result_547 = (
                       ignore (_g := __new_527);
                       __old_526
                     ) in HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("md" ^ string_of_int i : string) (HxArray.get (Obj.magic (!metadata)) i : string))) done);
-                    let tempVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+                    let matchedTypeParamCount = ref 0 in (
                       ignore (let matched = ref (HxRuntime.hx_null : Obj.t) in (
                         ignore (let _g = ref 0 in try while !_g < HxArray.length resolvedTypes do try ignore (let entry = HxArray.get (Obj.magic resolvedTypes) (!_g) in (
                           ignore (let __old_528 = !_g in let __new_529 = HxInt.add __old_528 1 in (
@@ -2180,25 +2180,22 @@ let encodeContextGetTypePayload = fun name -> try let __fallback_result_547 = (
                         )) with
                           | HxRuntime.Hx_continue -> () done with
                           | HxRuntime.Hx_break -> ());
-                        if Obj.magic (!matched) == Obj.magic (HxRuntime.hx_null) then let __assign_531 = Obj.magic (Obj.repr 0) in (
-                          tempVar := __assign_531;
+                        if Obj.magic (!matched) != Obj.magic (HxRuntime.hx_null) then ignore (let __assign_531 = HxArray.length (Obj.obj (HxAnon.get (Obj.magic (!matched)) "typeParamNames")) in (
+                          matchedTypeParamCount := __assign_531;
                           __assign_531
-                        ) else let __assign_532 = Obj.magic (Obj.repr (HxArray.length (Obj.obj (HxAnon.get (Obj.magic (!matched)) "typeParamNames")))) in (
-                          tempVar := __assign_532;
-                          __assign_532
-                        )
+                        )) else ()
                       ));
-                      ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("pc" : string) (HxRuntime.dynamic_toStdString (Obj.magic (!tempVar)) : string)));
+                      ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("pc" : string) (string_of_int (!matchedTypeParamCount) : string)));
                       ignore (let matched = ref (HxRuntime.hx_null : Obj.t) in (
                         ignore (let _g = ref 0 in try while !_g < HxArray.length resolvedTypes do try ignore (let entry = HxArray.get (Obj.magic resolvedTypes) (!_g) in (
-                          ignore (let __old_533 = !_g in let __new_534 = HxInt.add __old_533 1 in (
-                            ignore (_g := __new_534);
-                            __new_534
+                          ignore (let __old_532 = !_g in let __new_533 = HxInt.add __old_532 1 in (
+                            ignore (_g := __new_533);
+                            __new_533
                           ));
                           if HxString.equals (Obj.obj (HxAnon.get entry "name")) (!tempString) then ignore ((
-                            ignore (let __assign_535 = Obj.magic entry in (
-                              matched := __assign_535;
-                              __assign_535
+                            ignore (let __assign_534 = Obj.magic entry in (
+                              matched := __assign_534;
+                              __assign_534
                             ));
                             raise (HxRuntime.Hx_break)
                           )) else ()
@@ -2206,17 +2203,17 @@ let encodeContextGetTypePayload = fun name -> try let __fallback_result_547 = (
                           | HxRuntime.Hx_continue -> () done with
                           | HxRuntime.Hx_break -> ());
                         if Obj.magic (!matched) != Obj.magic (HxRuntime.hx_null) then ignore ((
-                          ignore (let _g = ref 0 in let _g1 = HxArray.length (Obj.obj (HxAnon.get (Obj.magic (!matched)) "typeParamNames")) in while !_g < _g1 do ignore (let i = let __old_536 = !_g in let __new_537 = HxInt.add __old_536 1 in (
-                            ignore (_g := __new_537);
-                            __old_536
+                          ignore (let _g = ref 0 in let _g1 = HxArray.length (Obj.obj (HxAnon.get (Obj.magic (!matched)) "typeParamNames")) in while !_g < _g1 do ignore (let i = let __old_535 = !_g in let __new_536 = HxInt.add __old_535 1 in (
+                            ignore (_g := __new_536);
+                            __old_535
                           ) in HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("pn" ^ string_of_int i : string) (HxArray.get (Obj.magic (Obj.obj (HxAnon.get (Obj.magic (!matched)) "typeParamNames"))) i : string))) done);
                           if Obj.obj (HxAnon.get (Obj.magic (!matched)) "underlyingTypeText") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get (Obj.magic (!matched)) "underlyingTypeText")) > 0 then ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("ut" : string) (Obj.obj (HxAnon.get (Obj.magic (!matched)) "underlyingTypeText") : string))) else ()
                         )) else ()
                       ));
                       ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("sc" : string) (string_of_int (HxArray.length (!tempArray)) : string)));
-                      ignore (let _g = ref 0 in let _g1 = HxArray.length (!tempArray) in while !_g < _g1 do ignore (let i = let __old_538 = !_g in let __new_539 = HxInt.add __old_538 1 in (
-                        ignore (_g := __new_539);
-                        __old_538
+                      ignore (let _g = ref 0 in let _g1 = HxArray.length (!tempArray) in while !_g < _g1 do ignore (let i = let __old_537 = !_g in let __new_538 = HxInt.add __old_537 1 in (
+                        ignore (_g := __new_538);
+                        __old_537
                       ) in let entry = HxArray.get (Obj.magic (!tempArray)) i in (
                         ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("sn" ^ string_of_int i : string) (Obj.obj (HxAnon.get entry "name") : string)));
                         ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("sk" ^ string_of_int i : string) (Obj.obj (HxAnon.get entry "kind") : string)));
@@ -2226,27 +2223,27 @@ let encodeContextGetTypePayload = fun name -> try let __fallback_result_547 = (
                         ignore (if Obj.obj (HxAnon.get entry "initExpr") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get entry "initExpr")) > 0 then ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("se" ^ string_of_int i : string) (Obj.obj (HxAnon.get entry "initExpr") : string))) else ());
                         ignore (if Obj.obj (HxAnon.get entry "returnTypeText") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get entry "returnTypeText")) > 0 then ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("sr" ^ string_of_int i : string) (Obj.obj (HxAnon.get entry "returnTypeText") : string))) else ());
                         ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("sac" ^ string_of_int i : string) (string_of_int (HxArray.length (Obj.obj (HxAnon.get entry "args"))) : string)));
-                        ignore (let _g2 = ref 0 in let _g3 = HxArray.length (Obj.obj (HxAnon.get entry "args")) in while !_g2 < _g3 do ignore (let j = let __old_540 = !_g2 in let __new_541 = HxInt.add __old_540 1 in (
-                          ignore (_g2 := __new_541);
-                          __old_540
+                        ignore (let _g2 = ref 0 in let _g3 = HxArray.length (Obj.obj (HxAnon.get entry "args")) in while !_g2 < _g3 do ignore (let j = let __old_539 = !_g2 in let __new_540 = HxInt.add __old_539 1 in (
+                          ignore (_g2 := __new_540);
+                          __old_539
                         ) in let arg = HxArray.get (Obj.magic (Obj.obj (HxAnon.get entry "args"))) j in (
                           ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ((("san" ^ string_of_int i) ^ "_") ^ string_of_int j : string) (Obj.obj (HxAnon.get arg "name") : string)));
                           let tempString2 = ref ("" : string) in (
-                            ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get arg "opt") then let __assign_542 = ("1" : string) in (
+                            ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get arg "opt") then let __assign_541 = ("1" : string) in (
+                              tempString2 := __assign_541;
+                              __assign_541
+                            ) else let __assign_542 = ("0" : string) in (
                               tempString2 := __assign_542;
                               __assign_542
-                            ) else let __assign_543 = ("0" : string) in (
-                              tempString2 := __assign_543;
-                              __assign_543
                             ));
                             ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ((("sao" ^ string_of_int i) ^ "_") ^ string_of_int j : string) (!tempString2 : string)));
                             HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ((("sat" ^ string_of_int i) ^ "_") ^ string_of_int j : string) (Obj.obj (HxAnon.get arg "typeText") : string))
                           )
                         )) done);
                         ignore (HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ("smc" ^ string_of_int i : string) (string_of_int (HxArray.length (Obj.obj (HxAnon.get entry "metadata"))) : string)));
-                        let _g2 = ref 0 in let _g3 = HxArray.length (Obj.obj (HxAnon.get entry "metadata")) in while !_g2 < _g3 do ignore (let j = let __old_544 = !_g2 in let __new_545 = HxInt.add __old_544 1 in (
-                          ignore (_g2 := __new_545);
-                          __old_544
+                        let _g2 = ref 0 in let _g3 = HxArray.length (Obj.obj (HxAnon.get entry "metadata")) in while !_g2 < _g3 do ignore (let j = let __old_543 = !_g2 in let __new_544 = HxInt.add __old_543 1 in (
+                          ignore (_g2 := __new_544);
+                          __old_543
                         ) in HxArray.push parts (Hxhx_macro_MacroProtocol.encodeLen ((("smd" ^ string_of_int i) ^ "_") ^ string_of_int j : string) (HxArray.get (Obj.magic (Obj.obj (HxAnon.get entry "metadata"))) j : string))) done
                       )) done);
                       HxArray.join parts " " (fun x -> x)
@@ -2260,5 +2257,5 @@ let encodeContextGetTypePayload = fun name -> try let __fallback_result_547 = (
       )
     )
   )
-) in Obj.magic __fallback_result_547 with
-  | HxRuntime.Hx_return __ret_546 -> Obj.obj __ret_546
+) in Obj.magic __fallback_result_546 with
+  | HxRuntime.Hx_return __ret_545 -> Obj.obj __ret_545
