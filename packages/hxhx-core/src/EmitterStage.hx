@@ -2633,6 +2633,37 @@ class EmitterStage {
 						};
 					}
 
+					function fallbackLocalFunctionSig(name:String):Null<EmitterCallSig> {
+						if (currentModuleFilePath == null || currentModuleFilePath.length == 0)
+							return null;
+						try {
+							final source = sys.io.File.getContent(currentModuleFilePath);
+							final parsed = ParserStage.parse(source, currentModuleFilePath);
+							final decl = parsed.getDecl();
+							final moduleTypeName = expectedMainClassFromFilePath(currentModuleFilePath);
+							final currentShortName = currentModuleShortName();
+							for (cls in HxModuleDecl.getClasses(decl)) {
+								final className = HxClassDecl.getName(cls);
+								if (className == null || className.length == 0 || className == "Unknown")
+									continue;
+								if (moduleTypeName != null && moduleTypeName.length > 0) {
+									if (className != moduleTypeName)
+										continue;
+								} else if (currentShortName.length > 0 && className != currentShortName) {
+									continue;
+								}
+								for (fn in HxClassDecl.getFunctions(cls)) {
+									final fnNameRaw = HxFunctionDecl.getName(fn);
+									if (fnNameRaw == null || fnNameRaw.length == 0)
+										continue;
+									if (ocamlValueIdent(fnNameRaw) == name || fnNameRaw == name)
+										return callSigFromFunction(fn);
+								}
+							}
+						} catch (_:haxe.Exception) {} catch (_:String) {}
+						return null;
+					}
+
 					var sig = callSigFor(c);
 					if (sig == null && !receiverPreApplied) {
 						final firstSpace = c.indexOf(" ");
@@ -2640,6 +2671,13 @@ class EmitterStage {
 							sig = callSigFor(c.substr(0, firstSpace));
 						if (sig == null)
 							sig = callSigForExpr(callee);
+						if (sig == null) {
+							switch (callee) {
+								case EIdent(name):
+									sig = fallbackLocalFunctionSig(name);
+								case _:
+							}
+						}
 					}
 
 					// Stage 3 bring-up safety: avoid emitting OCaml that over-applies a function.
