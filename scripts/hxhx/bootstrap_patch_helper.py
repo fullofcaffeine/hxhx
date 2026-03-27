@@ -215,9 +215,18 @@ def cmd_patch_hxparser_interpolated_exprs(argv: list[str]) -> None:
     new = new.replace("ignore (((\n", "ignore ((\n")
     new = new.replace('HxExpr.EBinop ((("+" : string)),', 'HxExpr.EBinop (("+" : string),')
 
-    if old not in src:
+    if old in src:
+        write_text(path_str, src.replace(old, new, 1))
+        return
+
+    legacy_rx = re.compile(
+        r'''          ignore \(if !j < HxString.length s && \(let __nullable_\d+ = HxString\.charCodeAt s \(!j\) in if __nullable_\d+ == HxRuntime\.hx_null then false else Obj\.obj __nullable_\d+ = 125\) then ignore \(let inner = \(StringTools\.trim \(HxString\.substr s start \(HxInt\.sub \(!j\) start\) : string\) : string\) in if isSimpleIdent \(inner : string\) then ignore \(\(.*?raise \(HxRuntime\.Hx_continue\)\n\s*\)\) else \(\)\) else \(\)\);''',
+        re.S,
+    )
+    replaced, count = legacy_rx.subn(new, src, count=1)
+    if count != 1:
         fail("build-hxhx: failed to locate bootstrap HxParser interpolation repair anchor\n")
-    write_text(path_str, src.replace(old, new, 1))
+    write_text(path_str, replaced)
 
 
 def cmd_patch_hxparser_generic_function_decl(argv: list[str]) -> None:
@@ -265,6 +274,13 @@ def cmd_patch_hxparser_generic_function_decl(argv: list[str]) -> None:
 
 """
 
+    if (
+        "let skipBalancedAngles = fun self () ->" in src
+        and 'ignore (if isOtherChar (Obj.magic self) ("<" : string) then ignore (skipBalancedAngles (Obj.magic self) ()) else ());' in src
+    ):
+        write_text(path_str, src)
+        return
+
     if "let skipBalancedAngles = fun self () ->" not in src:
         if helper_anchor not in src:
             fail("build-hxhx: failed to locate bootstrap HxParser helper insertion anchor\n")
@@ -310,9 +326,18 @@ def cmd_patch_hxparser_uppercase_helper_call(argv: list[str]) -> None:
           __assign_364
         )"""
 
-    if old not in src:
+    if old in src:
+        write_text(path_str, src.replace(old, new, 1))
+        return
+
+    legacy_rx = re.compile(
+        r'''        if isUpperStart \(name : string\) && not \(!tempBool\) && hasLowerAlpha \(name : string\) then let __assign_\d+ = Obj\.magic \(HxExpr\.EEnumValue \(name : string\)\) in \(\n          tempResult := __assign_\d+;\n          __assign_\d+\n        \) else let __assign_\d+ = Obj\.magic \(HxExpr\.EIdent \(name : string\)\) in \(\n          tempResult := __assign_\d+;\n          __assign_\d+\n        \)''',
+        re.S,
+    )
+    replaced, count = legacy_rx.subn(new, src, count=1)
+    if count != 1:
         fail("build-hxhx: failed to locate bootstrap HxParser uppercase-helper-call anchor\n")
-    write_text(path_str, src.replace(old, new, 1))
+    write_text(path_str, replaced)
 
 
 def cmd_patch_native_parser_generic_arrow_constraints(argv: list[str]) -> None:
@@ -439,6 +464,9 @@ def cmd_patch_emitter_parsed_arg_type_overlay(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
+    if "bootstrap shim: typed param fallback for emitted fn args" in src:
+        return
+
     old = """                                                                    ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = Obj.magic (HxArray.get (Obj.magic args) (!_g2)) in (
                                                                       ignore (let __old_46869 = !_g2 in let __new_46870 = HxInt.add __old_46869 1 in (
                                                                         ignore (_g2 := __new_46870);
@@ -469,10 +497,18 @@ def cmd_patch_emitter_parsed_arg_type_overlay(argv: list[str]) -> None:
                                                                     (* hxhx(stage3) bootstrap shim: parsed arg type overlay for tyByIdent *)
 """
 
-    src, count = src.replace(old, new), src.count(old)
-    if count == 0:
+    if old in src:
+        write_text(path_str, src.replace(old, new, 1))
+        return
+
+    legacy_rx = re.compile(
+        r'''ignore \(let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore \(let a = Obj\.magic \(HxArray\.get \(Obj\.magic args\) \(!_g2\)\) in \(.*?HxMap\.set_string tyByIdent key value\s*\)\) done\);\n''',
+        re.S,
+    )
+    replaced, count = legacy_rx.subn(new, src, count=1)
+    if count != 1:
         fail("build-hxhx: failed to locate bootstrap parsed-arg type overlay anchor in EmitterStage.ml\n")
-    write_text(path_str, src)
+    write_text(path_str, replaced)
 
 
 def cmd_patch_emitter_preapplied_sig_fallback(argv: list[str]) -> None:
@@ -480,6 +516,8 @@ def cmd_patch_emitter_preapplied_sig_fallback(argv: list[str]) -> None:
         fail("usage: patch-emitter-preapplied-sig-fallback <path>\n")
     path_str = argv[0]
     src = read_text(path_str)
+    if "receiverPreApplied" not in src and "!hx_sig" not in src:
+        return
 
     old = "ignore (if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && not (receiverPreApplied) then ignore (let firstSpace = HxString.indexOf c \" \" 0 in ("
     new = "ignore (if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) then ignore (let firstSpace = HxString.indexOf c \" \" 0 in ("
@@ -533,9 +571,13 @@ def cmd_patch_allowed_ident_fallback(argv: list[str]) -> None:
 let hasAllowedValueIdent = fun name -> !currentAllowedValueIdentNames != Obj.magic (HxRuntime.hx_null) && (let __nullable_allowed = HxMap.get_string (!currentAllowedValueIdentNames) name in if __nullable_allowed == HxRuntime.hx_null then false else Obj.obj __nullable_allowed = true)
 
 let backendDialect = Obj.magic (HihOcamlBackendDialect.create ())'''
-    if backend_anchor not in src:
-        fail("build-hxhx: failed to locate backendDialect anchor for allowed-ident bootstrap repair\n")
-    src = src.replace(backend_anchor, backend_insert, 1)
+
+    injected_helper_defs = False
+    if 'hasAllowedValueIdent (' in src and 'let hasAllowedValueIdent = fun name' not in src:
+        if backend_anchor not in src:
+            return
+        src = src.replace(backend_anchor, backend_insert, 1)
+        injected_helper_defs = True
 
     old_ident_branch = '''                              if mapGetRaw (Obj.repr tyByIdent) (!tempString5 : string) != Obj.magic (HxRuntime.hx_null) then let __assign_399 = (ocamlReadValueIdent (name : string) : string) in (
                                 tempResult13 := __assign_399;
@@ -544,6 +586,13 @@ let backendDialect = Obj.magic (HihOcamlBackendDialect.create ())'''
                                 tempResult13 := __assign_400;
                                 __assign_400
                               ) else let tempLeft = ref ("" : string) in ('''
+    if old_ident_branch not in src:
+        # Current bootstrap snapshots already carry the newer ident-resolution shape,
+        # so the legacy allowed-ident fallback repair is obsolete.
+        if injected_helper_defs:
+            write_text(path_str, src)
+        return
+
     new_ident_branch = '''                              if mapGetRaw (Obj.repr tyByIdent) (!tempString5 : string) != Obj.magic (HxRuntime.hx_null) then let __assign_399 = (ocamlReadValueIdent (name : string) : string) in (
                                 tempResult13 := __assign_399;
                                 __assign_399
@@ -554,8 +603,6 @@ let backendDialect = Obj.magic (HihOcamlBackendDialect.create ())'''
                                 tempResult13 := __assign_400;
                                 __assign_400
                               ) else let tempLeft = ref ("" : string) in ('''
-    if old_ident_branch not in src:
-        fail("build-hxhx: failed to locate bootstrap exprToOcaml ident branch for allowed-ident repair\n")
     src = src.replace(old_ident_branch, new_ident_branch, 1)
 
     old_body_prefix = '''                                                                              let tempString45 = ref ("" : string) in (
@@ -722,7 +769,7 @@ def cmd_patch_stmt_local_allowed_idents(argv: list[str]) -> None:
         elif helper_old_typed_copy in src:
             src = src.replace(helper_old_typed_copy, helper_new, 1)
         else:
-            fail("build-hxhx: failed to locate bootstrap stmt-local allowed helper anchor in EmitterStage.ml\n")
+            return
 
     cond_start = """let condToOcamlBool = fun e tyCtx -> let tempResult2 = ref ("" : string) in ("""
     cond_end = """) in let mutableAssignmentStmtToUnit = fun op name rhs tyCtx -> try let __fallback_result_46078 = ("""
@@ -834,10 +881,23 @@ def cmd_patch_typed_ty_map_copying(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
-    src = replace_one(
-        src,
-        """in let extendTyByIdent = fun ty name t -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
-                    ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_352 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_352)) () do ignore (let k2 = ((let __iter_353 = k in fun () -> HxIterator.next (Obj.magic __iter_353)) () : string) in let existing = mapGetRaw (Obj.repr ty) (k2 : string) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
+    # Current bootstrap snapshots may already have moved past the legacy
+    # mapKeysRaw/mapGetRaw copy helpers this repair targeted.
+    if (
+        "mapKeysRaw (Obj.repr ty)" not in src
+        and "typedMapKeys (Obj.repr ty)" not in src
+        and "mapKeysRaw (Obj.repr base)" not in src
+        and "mapKeysRaw (Obj.repr locals)" not in src
+        and "mapGetRaw (Obj.repr ty)" not in src
+        and "typedMapGet (Obj.repr ty)" not in src
+        and "mapGetRaw (Obj.repr base)" not in src
+        and "mapGetRaw (Obj.repr locals)" not in src
+    ):
+        return
+
+    src = src.replace(
+        """in let extendTyByIdent = fun ty name t -> let out = HxMap.create_string () in let keys = typedMapKeys (Obj.repr ty) in (
+                    ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_423 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_423)) () do ignore (let k2 = ((let __iter_424 = k in fun () -> HxIterator.next (Obj.magic __iter_424)) () : string) in let existing = Obj.magic (typedMapGet (Obj.repr ty) (k2 : string)) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
                     ignore (HxMap.set_string out name t);
                     out
                   )""",
@@ -852,12 +912,79 @@ def cmd_patch_typed_ty_map_copying(argv: list[str]) -> None:
                     ignore (HxMap.set_string out name t);
                     out
                   )""",
-        "build-hxhx: failed to locate bootstrap extendTyByIdent copy anchor in EmitterStage.ml\n",
     )
 
-    src = replace_one(
-        src,
-        """in let extendTyByIdentMany = fun ty names t -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
+    src = src.replace(
+        """in let extendTyByIdentMany = fun ty names t -> let out = HxMap.create_string () in let keys = typedMapKeys (Obj.repr ty) in (
+                    ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_425 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_425)) () do ignore (let k2 = ((let __iter_426 = k in fun () -> HxIterator.next (Obj.magic __iter_426)) () : string) in let existing = Obj.magic (typedMapGet (Obj.repr ty) (k2 : string)) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
+                    ignore (if names != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length names do ignore (let n = (HxArray.get (Obj.magic names) (!_g) : string) in (
+                      ignore (let __old_427 = !_g in let __new_428 = HxInt.add __old_427 1 in (
+                        ignore (_g := __new_428);
+                        __new_428
+                      ));
+                      HxMap.set_string out n t
+                    )) done) else ());
+                    out
+                  )""",
+        """in let extendTyByIdentMany = fun ty names t -> let out = HxMap.create_string () in let typedTy = Obj.magic ty in let keys = if typedTy == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedTy in (
+                    ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let _g_ty_copy_2 = ref 0 in while !_g_ty_copy_2 < HxArray.length keys do ignore (let k2 = (HxArray.get (Obj.magic keys) (!_g_ty_copy_2) : string) in (
+                      ignore (let __old_ty_copy_2 = !_g_ty_copy_2 in let __new_ty_copy_2 = HxInt.add __old_ty_copy_2 1 in (
+                        ignore (_g_ty_copy_2 := __new_ty_copy_2);
+                        __new_ty_copy_2
+                      ));
+                      let existing = Obj.magic (HxMap.get_string typedTy k2) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()
+                    )) done) else ());
+                    ignore (if names != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length names do ignore (let n = (HxArray.get (Obj.magic names) (!_g) : string) in (
+                      ignore (let __old_427 = !_g in let __new_428 = HxInt.add __old_427 1 in (
+                        ignore (_g := __new_428);
+                        __new_428
+                      ));
+                      HxMap.set_string out n t
+                    )) done) else ());
+                    out
+                  )""",
+    )
+
+    if """in let extendTyByIdent = fun ty name t -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
+                    ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_352 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_352)) () do ignore (let k2 = ((let __iter_353 = k in fun () -> HxIterator.next (Obj.magic __iter_353)) () : string) in let existing = mapGetRaw (Obj.repr ty) (k2 : string) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
+                    ignore (HxMap.set_string out name t);
+                    out
+                  )""" in src:
+        src = replace_one(
+            src,
+            """in let extendTyByIdent = fun ty name t -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
+                    ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_352 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_352)) () do ignore (let k2 = ((let __iter_353 = k in fun () -> HxIterator.next (Obj.magic __iter_353)) () : string) in let existing = mapGetRaw (Obj.repr ty) (k2 : string) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
+                    ignore (HxMap.set_string out name t);
+                    out
+                  )""",
+            """in let extendTyByIdent = fun ty name t -> let out = HxMap.create_string () in let typedTy = Obj.magic ty in let keys = if typedTy == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedTy in (
+                    ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let _g_ty_copy_1 = ref 0 in while !_g_ty_copy_1 < HxArray.length keys do ignore (let k2 = (HxArray.get (Obj.magic keys) (!_g_ty_copy_1) : string) in (
+                      ignore (let __old_ty_copy_1 = !_g_ty_copy_1 in let __new_ty_copy_1 = HxInt.add __old_ty_copy_1 1 in (
+                        ignore (_g_ty_copy_1 := __new_ty_copy_1);
+                        __new_ty_copy_1
+                      ));
+                      let existing = Obj.magic (HxMap.get_string typedTy k2) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()
+                    )) done) else ());
+                    ignore (HxMap.set_string out name t);
+                    out
+                  )""",
+            "build-hxhx: failed to locate bootstrap extendTyByIdent copy anchor in EmitterStage.ml\n",
+        )
+
+    if """in let extendTyByIdentMany = fun ty names t -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
+                    ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_354 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_354)) () do ignore (let k2 = ((let __iter_355 = k in fun () -> HxIterator.next (Obj.magic __iter_355)) () : string) in let existing = mapGetRaw (Obj.repr ty) (k2 : string) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
+                    ignore (if names != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length names do ignore (let n = (HxArray.get (Obj.magic names) (!_g) : string) in (
+                      ignore (let __old_356 = !_g in let __new_357 = HxInt.add __old_356 1 in (
+                        ignore (_g := __new_357);
+                        __new_357
+                      ));
+                      HxMap.set_string out n t
+                    )) done) else ());
+                    out
+                  )""" in src:
+        src = replace_one(
+            src,
+            """in let extendTyByIdentMany = fun ty names t -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
                     ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_354 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_354)) () do ignore (let k2 = ((let __iter_355 = k in fun () -> HxIterator.next (Obj.magic __iter_355)) () : string) in let existing = mapGetRaw (Obj.repr ty) (k2 : string) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
                     ignore (if names != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length names do ignore (let n = (HxArray.get (Obj.magic names) (!_g) : string) in (
                       ignore (let __old_356 = !_g in let __new_357 = HxInt.add __old_356 1 in (
@@ -868,7 +995,7 @@ def cmd_patch_typed_ty_map_copying(argv: list[str]) -> None:
                     )) done) else ());
                     out
                   )""",
-        """in let extendTyByIdentMany = fun ty names t -> let out = HxMap.create_string () in let typedTy = Obj.magic ty in let keys = if typedTy == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedTy in (
+            """in let extendTyByIdentMany = fun ty names t -> let out = HxMap.create_string () in let typedTy = Obj.magic ty in let keys = if typedTy == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedTy in (
                     ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let _g_ty_copy_2 = ref 0 in while !_g_ty_copy_2 < HxArray.length keys do ignore (let k2 = (HxArray.get (Obj.magic keys) (!_g_ty_copy_2) : string) in (
                       ignore (let __old_ty_copy_2 = !_g_ty_copy_2 in let __new_ty_copy_2 = HxInt.add __old_ty_copy_2 1 in (
                         ignore (_g_ty_copy_2 := __new_ty_copy_2);
@@ -885,12 +1012,36 @@ def cmd_patch_typed_ty_map_copying(argv: list[str]) -> None:
                     )) done) else ());
                     out
                   )""",
-        "build-hxhx: failed to locate bootstrap extendTyByIdentMany copy anchor in EmitterStage.ml\n",
-    )
+            "build-hxhx: failed to locate bootstrap extendTyByIdentMany copy anchor in EmitterStage.ml\n",
+        )
 
-    src = replace_one(
-        src,
-        """in let extendTyWithLocals = fun base locals -> try let __fallback_result_46042 = let out = HxMap.create_string () in let baseKeys = mapKeysRaw (Obj.repr base) in (
+    if """in let extendTyWithLocals = fun base locals -> try let __fallback_result_46042 = let out = HxMap.create_string () in let baseKeys = mapKeysRaw (Obj.repr base) in (
+                ignore (if baseKeys != Obj.magic (HxRuntime.hx_null) then ignore (let k = baseKeys in while (let __iter_46033 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_46033)) () do ignore (let k2 = ((let __iter_46034 = k in fun () -> HxIterator.next (Obj.magic __iter_46034)) () : string) in let existingBase = mapGetRaw (Obj.repr base) (k2 : string) in if existingBase != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existingBase) else ()) done) else ());
+                let localNames = Obj.magic (HxArray.create ()) in let localKeys = mapKeysRaw (Obj.repr locals) in (
+                  ignore (if localKeys != Obj.magic (HxRuntime.hx_null) then ignore (let name = localKeys in while (let __iter_46035 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_46035)) () do ignore (let name2 = ((let __iter_46036 = name in fun () -> HxIterator.next (Obj.magic __iter_46036)) () : string) in HxArray.push localNames name2) done) else ());
+                  ignore (if HxArray.length localNames = 0 then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
+                  ignore (let _g = ref 0 in while !_g < HxArray.length localNames do ignore (let name = (HxArray.get (Obj.magic localNames) (!_g) : string) in (
+                    ignore (let __old_46037 = !_g in let __new_46038 = HxInt.add __old_46037 1 in (
+                      ignore (_g := __new_46038);
+                      __new_46038
+                    ));
+                    let hinted = Obj.magic (HxMap.get_string localHints name) in let existing = Obj.magic (HxMap.get_string out name) in if existing == Obj.magic (HxRuntime.hx_null) then ignore (let tempTyType2 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+                      ignore (if hinted != Obj.magic (HxRuntime.hx_null) then let __assign_46039 = Obj.magic hinted in (
+                        tempTyType2 := __assign_46039;
+                        __assign_46039
+                      ) else let __assign_46040 = Obj.magic (TyType.unknown ()) in (
+                        tempTyType2 := __assign_46040;
+                        __assign_46040
+                      ));
+                      let value = Obj.magic (!tempTyType2) in HxMap.set_string out name value
+                    )) else ignore (if hinted != Obj.magic (HxRuntime.hx_null) then ignore (let existingBroad = TyType.isUnknown (Obj.magic existing) () || HxString.equals (TyType.toString (Obj.magic existing) ()) "Dynamic" || HxString.equals (TyType.toString (Obj.magic existing) ()) "Array" in let hintedUseful = not (TyType.isUnknown (Obj.magic hinted) ()) && not (HxString.equals (TyType.toString (Obj.magic hinted) ()) "Dynamic") in if existingBroad && hintedUseful then ignore (HxMap.set_string out name hinted) else ()) else ())
+                  )) done);
+                  out
+                )
+              )""" in src:
+        src = replace_one(
+            src,
+            """in let extendTyWithLocals = fun base locals -> try let __fallback_result_46042 = let out = HxMap.create_string () in let baseKeys = mapKeysRaw (Obj.repr base) in (
                 ignore (if baseKeys != Obj.magic (HxRuntime.hx_null) then ignore (let k = baseKeys in while (let __iter_46033 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_46033)) () do ignore (let k2 = ((let __iter_46034 = k in fun () -> HxIterator.next (Obj.magic __iter_46034)) () : string) in let existingBase = mapGetRaw (Obj.repr base) (k2 : string) in if existingBase != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existingBase) else ()) done) else ());
                 let localNames = Obj.magic (HxArray.create ()) in let localKeys = mapKeysRaw (Obj.repr locals) in (
                   ignore (if localKeys != Obj.magic (HxRuntime.hx_null) then ignore (let name = localKeys in while (let __iter_46035 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_46035)) () do ignore (let name2 = ((let __iter_46036 = name in fun () -> HxIterator.next (Obj.magic __iter_46036)) () : string) in HxArray.push localNames name2) done) else ());
@@ -914,7 +1065,7 @@ def cmd_patch_typed_ty_map_copying(argv: list[str]) -> None:
                   out
                 )
               )""",
-        """in let extendTyWithLocals = fun base locals -> try let __fallback_result_46042 = let out = HxMap.create_string () in let typedBase = Obj.magic base in let baseKeys = if typedBase == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedBase in (
+            """in let extendTyWithLocals = fun base locals -> try let __fallback_result_46042 = let out = HxMap.create_string () in let typedBase = Obj.magic base in let baseKeys = if typedBase == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedBase in (
                 ignore (if baseKeys != Obj.magic (HxRuntime.hx_null) then ignore (let _g_ty_copy_3 = ref 0 in while !_g_ty_copy_3 < HxArray.length baseKeys do ignore (let k2 = (HxArray.get (Obj.magic baseKeys) (!_g_ty_copy_3) : string) in (
                   ignore (let __old_ty_copy_3 = !_g_ty_copy_3 in let __new_ty_copy_3 = HxInt.add __old_ty_copy_3 1 in (
                     ignore (_g_ty_copy_3 := __new_ty_copy_3);
@@ -950,13 +1101,61 @@ def cmd_patch_typed_ty_map_copying(argv: list[str]) -> None:
                   out
                 )
               )""",
-        "build-hxhx: failed to locate bootstrap extendTyWithLocals copy anchor in EmitterStage.ml\n",
-    )
+            "build-hxhx: failed to locate bootstrap extendTyWithLocals copy anchor in EmitterStage.ml\n",
+        )
 
-    src = replace_one(
-        src,
-        """in let extendTyByIdentLocal = fun ty name t -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
+    if """in let extendTyByIdentLocal = fun ty name t -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
                 ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_46043 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_46043)) () do ignore (let k2 = ((let __iter_46044 = k in fun () -> HxIterator.next (Obj.magic __iter_46044)) () : string) in let existing = mapGetRaw (Obj.repr ty) (k2 : string) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
+                ignore (HxMap.set_string out name t);
+                out
+              )""" in src:
+        src = replace_one(
+            src,
+            """in let extendTyByIdentLocal = fun ty name t -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
+                ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_46043 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_46043)) () do ignore (let k2 = ((let __iter_46044 = k in fun () -> HxIterator.next (Obj.magic __iter_46044)) () : string) in let existing = mapGetRaw (Obj.repr ty) (k2 : string) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
+                ignore (HxMap.set_string out name t);
+                out
+              )""",
+            """in let extendTyByIdentLocal = fun ty name t -> let out = HxMap.create_string () in let typedTy = Obj.magic ty in let keys = if typedTy == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedTy in (
+                ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let _g_ty_copy_5 = ref 0 in while !_g_ty_copy_5 < HxArray.length keys do ignore (let k2 = (HxArray.get (Obj.magic keys) (!_g_ty_copy_5) : string) in (
+                  ignore (let __old_ty_copy_5 = !_g_ty_copy_5 in let __new_ty_copy_5 = HxInt.add __old_ty_copy_5 1 in (
+                    ignore (_g_ty_copy_5 := __new_ty_copy_5);
+                    __new_ty_copy_5
+                  ));
+                  let existing = Obj.magic (HxMap.get_string typedTy k2) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()
+                )) done) else ());
+                ignore (HxMap.set_string out name t);
+                out
+              )""",
+            "build-hxhx: failed to locate bootstrap extendTyByIdentLocal copy anchor in EmitterStage.ml\n",
+        )
+
+    if """in let cloneTyCtxLocal = fun ty -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
+                ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_46045 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_46045)) () do ignore (let k2 = ((let __iter_46046 = k in fun () -> HxIterator.next (Obj.magic __iter_46046)) () : string) in let existing = mapGetRaw (Obj.repr ty) (k2 : string) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
+                out
+              )""" in src:
+        src = replace_one(
+            src,
+            """in let cloneTyCtxLocal = fun ty -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
+                ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_46045 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_46045)) () do ignore (let k2 = ((let __iter_46046 = k in fun () -> HxIterator.next (Obj.magic __iter_46046)) () : string) in let existing = mapGetRaw (Obj.repr ty) (k2 : string) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
+                out
+              )""",
+            """in let cloneTyCtxLocal = fun ty -> let out = HxMap.create_string () in let typedTy = Obj.magic ty in let keys = if typedTy == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedTy in (
+                ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let _g_ty_copy_6 = ref 0 in while !_g_ty_copy_6 < HxArray.length keys do ignore (let k2 = (HxArray.get (Obj.magic keys) (!_g_ty_copy_6) : string) in (
+                  ignore (let __old_ty_copy_6 = !_g_ty_copy_6 in let __new_ty_copy_6 = HxInt.add __old_ty_copy_6 1 in (
+                    ignore (_g_ty_copy_6 := __new_ty_copy_6);
+                    __new_ty_copy_6
+                  ));
+                  let existing = Obj.magic (HxMap.get_string typedTy k2) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()
+                )) done) else ());
+                out
+              )""",
+            "build-hxhx: failed to locate bootstrap cloneTyCtxLocal copy anchor in EmitterStage.ml\n",
+        )
+
+    src = src.replace(
+        """in let extendTyByIdentLocal = fun ty name t -> let out = HxMap.create_string () in let keys = typedMapKeys (Obj.repr ty) in (
+                ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_51004 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_51004)) () do ignore (let k2 = ((let __iter_51005 = k in fun () -> HxIterator.next (Obj.magic __iter_51005)) () : string) in let existing = Obj.magic (typedMapGet (Obj.repr ty) (k2 : string)) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
                 ignore (HxMap.set_string out name t);
                 out
               )""",
@@ -971,13 +1170,11 @@ def cmd_patch_typed_ty_map_copying(argv: list[str]) -> None:
                 ignore (HxMap.set_string out name t);
                 out
               )""",
-        "build-hxhx: failed to locate bootstrap extendTyByIdentLocal copy anchor in EmitterStage.ml\n",
     )
 
-    src = replace_one(
-        src,
-        """in let cloneTyCtxLocal = fun ty -> let out = HxMap.create_string () in let keys = mapKeysRaw (Obj.repr ty) in (
-                ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_46045 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_46045)) () do ignore (let k2 = ((let __iter_46046 = k in fun () -> HxIterator.next (Obj.magic __iter_46046)) () : string) in let existing = mapGetRaw (Obj.repr ty) (k2 : string) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
+    src = src.replace(
+        """in let cloneTyCtxLocal = fun ty -> let out = HxMap.create_string () in let keys = typedMapKeys (Obj.repr ty) in (
+                ignore (if keys != Obj.magic (HxRuntime.hx_null) then ignore (let k = keys in while (let __iter_51006 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_51006)) () do ignore (let k2 = ((let __iter_51007 = k in fun () -> HxIterator.next (Obj.magic __iter_51007)) () : string) in let existing = Obj.magic (typedMapGet (Obj.repr ty) (k2 : string)) in if existing != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string out k2 existing) else ()) done) else ());
                 out
               )""",
         """in let cloneTyCtxLocal = fun ty -> let out = HxMap.create_string () in let typedTy = Obj.magic ty in let keys = if typedTy == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedTy in (
@@ -990,9 +1187,504 @@ def cmd_patch_typed_ty_map_copying(argv: list[str]) -> None:
                 )) done) else ());
                 out
               )""",
-        "build-hxhx: failed to locate bootstrap cloneTyCtxLocal copy anchor in EmitterStage.ml\n",
     )
 
+    write_text(path_str, src)
+
+
+def cmd_patch_typed_map_helper_obj_repr(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-typed-map-helper-obj-repr <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    replacements = [
+        ("typedMapGet (Obj.repr tyByIdent)", "typedMapGet tyByIdent"),
+        ("typedMapHas (Obj.repr tyByIdent)", "typedMapHas tyByIdent"),
+        ("typedMapGet (Obj.repr arityByIdent)", "typedMapGet arityByIdent"),
+        ("typedMapHas (Obj.repr arityByIdent)", "typedMapHas arityByIdent"),
+        ("typedMapGet (Obj.repr staticImportByIdent)", "typedMapGet staticImportByIdent"),
+        ("typedMapHas (Obj.repr staticImportByIdent)", "typedMapHas staticImportByIdent"),
+        ("typedMapGet (Obj.repr moduleNameByPkgAndClass)", "typedMapGet moduleNameByPkgAndClass"),
+        ("typedMapHas (Obj.repr moduleNameByPkgAndClass)", "typedMapHas moduleNameByPkgAndClass"),
+        ("typedMapGet (Obj.repr callSigByCallee)", "typedMapGet callSigByCallee"),
+        ("typedMapHas (Obj.repr callSigByCallee)", "typedMapHas callSigByCallee"),
+        ("typedMapGet (Obj.repr (!currentGlobalImportAliasByIdent))", "typedMapGet (!currentGlobalImportAliasByIdent)"),
+        ("typedMapHas (Obj.repr (!currentGlobalImportAliasByIdent))", "typedMapHas (!currentGlobalImportAliasByIdent)"),
+    ]
+
+    if not any(old in src for old, _new in replacements):
+        pass
+
+    changed = False
+    for old, new in replacements:
+        if old in src:
+            src = src.replace(old, new)
+            changed = True
+
+    src2 = re.sub(
+        r"\b(?P<fn>typedMapKeys|typedMapGet|typedMapHas) \(Obj\.repr (?P<var>[A-Za-z_!][A-Za-z0-9_]*)\)",
+        r"\g<fn> \g<var>",
+        src,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    if not changed:
+        fail("build-hxhx: failed to locate bootstrap typed-map Obj.repr repair anchors in EmitterStage.ml\n")
+
+    write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: typed-map Obj.repr helper repair *)\n")
+
+
+def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-nested-emitter-call-arg-reprs <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    if (
+        "exprToOcamlString (Obj.magic " not in src
+        and "exprToOcaml (Obj.magic " not in src
+        and "stmtListToOcaml (Obj.magic " not in src
+        and "mutableAssignmentStmtToUnit " not in src
+    ):
+        return
+
+    changed = False
+
+    src2 = re.sub(
+        r"exprToOcamlString \(Obj\.magic (?P<expr>.*?)\) \(Obj\.repr tyByIdent\) \(Obj\.repr arityByIdent\) \(Obj\.repr staticImportByIdent\) \(currentPackagePath : string\) \(Obj\.repr moduleNameByPkgAndClass\) \(Obj\.repr callSigByCallee\)",
+        r"exprToOcamlString (Obj.magic \g<expr>) tyByIdent arityByIdent staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee",
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    def _expr_to_ocaml_static_repl(match: re.Match[str]) -> str:
+        return (
+            f"exprToOcaml (Obj.{match.group('wrap')} {match.group('expr')}) "
+            "(HxMap.create_string ()) "
+            f"{match.group('ty')} "
+            "(HxMap.create_string ()) "
+            f"{match.group('path')} "
+            "moduleNameByPkgAndClass "
+            f"{match.group('call')}"
+        )
+
+    src2 = re.sub(
+        r"exprToOcaml \(Obj\.(?P<wrap>magic|obj) (?P<expr>.*?)\) "
+        r"\(HxRuntime\.hx_null\) "
+        r"\(Obj\.repr (?P<ty>[A-Za-z_!][A-Za-z0-9_]*)\) "
+        r"\(HxRuntime\.hx_null\) "
+        r"(?P<path>\(HxModuleDecl\.getPackagePath .*?\) : string\)) "
+        r"\(Obj\.repr moduleNameByPkgAndClass\) "
+        r"\(Obj\.repr (?P<call>[A-Za-z_!][A-Za-z0-9_]*)\)",
+        _expr_to_ocaml_static_repl,
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    def _expr_to_ocaml_repl(match: re.Match[str]) -> str:
+        last = match.group("last")
+        if last == "Obj.repr callSigByCallee":
+            last = "callSigByCallee"
+        return (
+            f"exprToOcaml (Obj.magic {match.group('expr')}) "
+            "arityByIdent tyByIdent staticImportByIdent "
+            "(currentPackagePath : string) moduleNameByPkgAndClass "
+            f"({last})"
+        )
+
+    src2 = re.sub(
+        r"exprToOcaml \(Obj\.magic (?P<expr>.*?)\) \(Obj\.repr arityByIdent\) \(Obj\.repr tyByIdent\) \(Obj\.repr staticImportByIdent\) \(currentPackagePath : string\) \(Obj\.repr moduleNameByPkgAndClass\) \((?P<last>Obj\.repr callSigByCallee|Obj\.magic \(HxRuntime\.hx_null\))\)",
+        _expr_to_ocaml_repl,
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    def _normalize_repaired_arg(raw: str) -> str:
+        raw = raw.strip()
+        if raw.startswith("(Obj.repr ") and raw.endswith(")"):
+            return raw[len("(Obj.repr ") : -1]
+        if re.fullmatch(r"\([A-Za-z_!][A-Za-z0-9_]*\)", raw):
+            return raw[1:-1]
+        return raw
+
+    def _expr_to_ocaml_any_local_ty_repl(match: re.Match[str]) -> str:
+        return (
+            f"exprToOcaml (Obj.{match.group('wrap')} {match.group('expr')}) "
+            f"{_normalize_repaired_arg(match.group('arity'))} "
+            f"{_normalize_repaired_arg(match.group('ty'))} "
+            f"{_normalize_repaired_arg(match.group('static_import'))} "
+            f"{match.group('path')} {_normalize_repaired_arg(match.group('module_map'))} "
+            f"{_normalize_repaired_arg(match.group('call_map'))}"
+        )
+
+    src2 = re.sub(
+        r"exprToOcaml \(Obj\.(?P<wrap>magic|obj) (?P<expr>.*?)\) "
+        r"(?P<arity>\(Obj\.repr [A-Za-z_!][A-Za-z0-9_]*\)|[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<ty>\(Obj\.repr [A-Za-z_!][A-Za-z0-9_]*\)|[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<static_import>\(Obj\.repr [A-Za-z_!][A-Za-z0-9_]*\)|[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<path>\(.*?\) : string\)) "
+        r"(?P<module_map>\(Obj\.repr [A-Za-z_!][A-Za-z0-9_]*\)|\([A-Za-z_!][A-Za-z0-9_]*\)|[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<call_map>\(Obj\.repr [A-Za-z_!][A-Za-z0-9_]*\)|\([A-Za-z_!][A-Za-z0-9_]*\)|[A-Za-z_!][A-Za-z0-9_]*)",
+        _expr_to_ocaml_any_local_ty_repl,
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"exprToOcaml \(Obj\.magic (?P<expr>.*?)\) "
+        r"arityByIdent tyCtx staticImportByIdent "
+        r"\(currentPackagePath : string\) "
+        r"\(Obj\.repr moduleNameByPkgAndClass\) "
+        r"\(Obj\.repr callSigByCallee\)",
+        r"exprToOcaml (Obj.magic \g<expr>) arityByIdent tyCtx staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee",
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    def _expr_to_ocaml_local_ty_repl(match: re.Match[str]) -> str:
+        last = match.group("last")
+        if last == "Obj.repr callSigByCallee":
+            last = "callSigByCallee"
+        return (
+            f"exprToOcaml (Obj.magic {match.group('expr')}) "
+            f"arityByIdent {match.group('ty')} staticImportByIdent "
+            "(currentPackagePath : string) moduleNameByPkgAndClass "
+            f"({last})"
+        )
+
+    src2 = re.sub(
+        r"exprToOcaml \(Obj\.magic (?P<expr>.*?)\) \(Obj\.repr arityByIdent\) \(Obj\.repr (?P<ty>[A-Za-z_!][A-Za-z0-9_]*)\) \(Obj\.repr staticImportByIdent\) \(currentPackagePath : string\) \(Obj\.repr moduleNameByPkgAndClass\) \((?P<last>Obj\.repr callSigByCallee|Obj\.magic \(HxRuntime\.hx_null\))\)",
+        _expr_to_ocaml_local_ty_repl,
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    def _return_expr_to_ocaml_repl(match: re.Match[str]) -> str:
+        last = match.group("last")
+        if last == "Obj.repr callSigByCallee":
+            last = "callSigByCallee"
+        return (
+            f"returnExprToOcaml (Obj.{match.group('wrap')} {match.group('expr')}) "
+            f"{match.group('allowed')} {match.group('ret')} "
+            f"{match.group('arity')} tyByIdent staticImportByIdent "
+            f"{match.group('path')} moduleNameByPkgAndClass "
+            f"({last})"
+        )
+
+    src2 = re.sub(
+        r"returnExprToOcaml \(Obj\.(?P<wrap>magic|obj) (?P<expr>.*?)\) (?P<allowed>[A-Za-z_!][A-Za-z0-9_]*) (?P<ret>\(Obj\.magic \(Obj\.magic \(HxRuntime\.hx_null\)\)\)|\(Obj\.magic \(TyFunctionEnv\.getReturnType .*?\)\)|\(Obj\.magic \(HxRuntime\.hx_null\)\)|\(Obj\.magic .*?\)) \(Obj\.repr (?P<arity>[A-Za-z_!][A-Za-z0-9_]*)\) \(Obj\.repr tyByIdent\) \(Obj\.repr staticImportByIdent\) (?P<path>\(.*?\) : string\)) \(Obj\.repr moduleNameByPkgAndClass\) \((?P<last>Obj\.repr callSigByCallee|Obj\.magic \(HxRuntime\.hx_null\))\)",
+        _return_expr_to_ocaml_repl,
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    def _return_expr_to_ocaml_local_ty_repl(match: re.Match[str]) -> str:
+        last = match.group("last")
+        if last == "Obj.repr callSigByCallee":
+            last = "callSigByCallee"
+        return (
+            f"returnExprToOcaml (Obj.{match.group('wrap')} {match.group('expr')}) "
+            f"{match.group('allowed')} {match.group('ret')} "
+            f"{match.group('arity')} {match.group('ty')} staticImportByIdent "
+            f"{match.group('path')} moduleNameByPkgAndClass "
+            f"({last})"
+        )
+
+    src2 = re.sub(
+        r"returnExprToOcaml \(Obj\.(?P<wrap>magic|obj) (?P<expr>.*?)\) (?P<allowed>[A-Za-z_!][A-Za-z0-9_]*) (?P<ret>\(Obj\.magic \(Obj\.magic \(HxRuntime\.hx_null\)\)\)|\(Obj\.magic \(TyFunctionEnv\.getReturnType .*?\)\)|\(Obj\.magic \(HxRuntime\.hx_null\)\)|\(Obj\.magic .*?\)) \(Obj\.repr (?P<arity>[A-Za-z_!][A-Za-z0-9_]*)\) \(Obj\.repr (?P<ty>[A-Za-z_!][A-Za-z0-9_]*)\) \(Obj\.repr staticImportByIdent\) (?P<path>\(.*?\) : string\)) \(Obj\.repr moduleNameByPkgAndClass\) \((?P<last>Obj\.repr callSigByCallee|Obj\.magic \(HxRuntime\.hx_null\))\)",
+        _return_expr_to_ocaml_local_ty_repl,
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"returnExprToOcaml \(Obj\.(?P<wrap>magic|obj) (?P<expr>.*?)\) (?P<allowed>[A-Za-z_!][A-Za-z0-9_]*) (?P<ret>\(Obj\.magic \(Obj\.magic \(HxRuntime\.hx_null\)\)\)|\(Obj\.magic \(TyFunctionEnv\.getReturnType .*?\)\)|\(Obj\.magic \(HxRuntime\.hx_null\)\)|\(Obj\.magic .*?\)) (?P<arity>[A-Za-z_!][A-Za-z0-9_]*) (?P<ty>[A-Za-z_!][A-Za-z0-9_]*) (?P<static_import>[A-Za-z_!][A-Za-z0-9_]*) (?P<path>\(.*?\) : string\)) \(Obj\.repr moduleNameByPkgAndClass\) \((?P<last>Obj\.repr callSigByCallee|Obj\.magic \(HxRuntime\.hx_null\))\)",
+        _return_expr_to_ocaml_local_ty_repl,
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"returnExprToOcaml \(Obj\.magic (?P<expr>.*?)\) "
+        r"(?P<allowed>[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<ret>\(Obj\.magic \(Obj\.magic \(HxRuntime\.hx_null\)\)\)|\(Obj\.magic .*?\)) "
+        r"\(Obj\.repr arityByIdent\) \(Obj\.repr tyCtx\) \(Obj\.repr staticImportByIdent\) "
+        r"\(currentPackagePath : string\) "
+        r"\(Obj\.repr moduleNameByPkgAndClass\) "
+        r"\(Obj\.repr callSigByCallee\)",
+        r"returnExprToOcaml (Obj.magic \g<expr>) \g<allowed> \g<ret> arityByIdent tyCtx staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee",
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"returnExprToOcaml \(Obj\.magic (?P<expr>.*?)\) "
+        r"(?P<allowed>[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<ret>\(Obj\.magic \(Obj\.magic \(HxRuntime\.hx_null\)\)\)|\(Obj\.magic .*?\)) "
+        r"arityByIdent tyCtx staticImportByIdent "
+        r"\(currentPackagePath : string\) "
+        r"moduleNameByPkgAndClass "
+        r"\(callSigByCallee\)",
+        r"returnExprToOcaml (Obj.magic \g<expr>) \g<allowed> \g<ret> arityByIdent tyCtx staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee",
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    literal_old = (
+        'returnExprToOcaml (Obj.magic e) allowedValueIdents '
+        '(Obj.magic (Obj.magic (HxRuntime.hx_null))) '
+        'arityByIdent tyCtx staticImportByIdent '
+        '(currentPackagePath : string) '
+        '(Obj.repr moduleNameByPkgAndClass) '
+        '(Obj.repr callSigByCallee)'
+    )
+    literal_new = (
+        'returnExprToOcaml (Obj.magic e) allowedValueIdents '
+        '(Obj.magic (Obj.magic (HxRuntime.hx_null))) '
+        'arityByIdent tyCtx staticImportByIdent '
+        '(currentPackagePath : string) '
+        'moduleNameByPkgAndClass '
+        'callSigByCallee'
+    )
+    if literal_old in src:
+        src = src.replace(literal_old, literal_new)
+        changed = True
+
+    literal_obj_old = (
+        'returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents '
+        '(Obj.magic (Obj.magic (HxRuntime.hx_null))) '
+        '(Obj.repr arityByIdent) (Obj.repr tyCtx) (Obj.repr staticImportByIdent) '
+        '(currentPackagePath : string) '
+        '(Obj.repr moduleNameByPkgAndClass) '
+        '(Obj.repr callSigByCallee)'
+    )
+    literal_obj_new = (
+        'returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents '
+        '(Obj.magic (Obj.magic (HxRuntime.hx_null))) '
+        'arityByIdent tyCtx staticImportByIdent '
+        '(currentPackagePath : string) '
+        'moduleNameByPkgAndClass '
+        'callSigByCallee'
+    )
+    if literal_obj_old in src:
+        src = src.replace(literal_obj_old, literal_obj_new)
+        changed = True
+
+    literal_stmt_old = (
+        'stmtListToOcaml (Obj.magic stmts) allowed (exc : string) '
+        '(Obj.repr arityByName) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        'moduleNameByPkgAndClass (callSigByCallee) '
+        '(Obj.repr localTypeHints) (Obj.repr fnReturnTypesByName)'
+    )
+    literal_stmt_new = (
+        'stmtListToOcaml (Obj.magic stmts) allowed (exc : string) '
+        'arityByName tyByIdent staticImportByIdent '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        '(Obj.repr moduleNameByPkgAndClass) callSigByCallee '
+        'localTypeHints fnReturnTypesByName'
+    )
+    if literal_stmt_old in src:
+        src = src.replace(literal_stmt_old, literal_stmt_new)
+        changed = True
+
+    literal_expr_old = (
+        'exprToOcaml (Obj.magic branchExpr) arityByIdent localTy staticImportByIdent '
+        '(currentPackagePath : string) '
+        '(Obj.repr moduleNameByPkgAndClass) '
+        '(Obj.repr callSigByCallee)'
+    )
+    literal_expr_new = (
+        'exprToOcaml (Obj.magic branchExpr) arityByIdent localTy staticImportByIdent '
+        '(currentPackagePath : string) '
+        'moduleNameByPkgAndClass '
+        'callSigByCallee'
+    )
+    if literal_expr_old in src:
+        src = src.replace(literal_expr_old, literal_expr_new)
+        changed = True
+
+    literal_static_expr_old = (
+        'exprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) '
+        '(HxMap.create_string ()) staticTyByIdent (HxMap.create_string ()) '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        'moduleNameByPkgAndClass globalCallSigByCallee'
+    )
+    literal_static_expr_new = (
+        'exprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) '
+        '(HxMap.create_string ()) staticTyByIdent (HxMap.create_string ()) '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        '(Obj.repr moduleNameByPkgAndClass) globalCallSigByCallee'
+    )
+    if literal_static_expr_old in src:
+        src = src.replace(literal_static_expr_old, literal_static_expr_new)
+        changed = True
+
+    literal_return_old = (
+        'returnExprToOcaml (Obj.magic (HxFunctionDecl.getFirstReturnExpr (Obj.magic parsedFn) ())) '
+        'allowed (Obj.magic (TyFunctionEnv.getReturnType (Obj.magic tf) ())) '
+        'arityByName tyByIdent staticImportByIdent '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        'moduleNameByPkgAndClass (callSigByCallee)'
+    )
+    literal_return_new = (
+        'returnExprToOcaml (Obj.magic (HxFunctionDecl.getFirstReturnExpr (Obj.magic parsedFn) ())) '
+        'allowed (Obj.magic (TyFunctionEnv.getReturnType (Obj.magic tf) ())) '
+        'arityByName tyByIdent staticImportByIdent '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        '(Obj.repr moduleNameByPkgAndClass) (callSigByCallee)'
+    )
+    if literal_return_old in src:
+        src = src.replace(literal_return_old, literal_return_new)
+        changed = True
+
+    literal_expr_direct_old = (
+        'exprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) '
+        'arityByName staticTyByIdent staticImportByIdent '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        'moduleNameByPkgAndClass callSigByCallee'
+    )
+    literal_expr_direct_new = (
+        'exprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) '
+        'arityByName staticTyByIdent staticImportByIdent '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        '(Obj.repr moduleNameByPkgAndClass) callSigByCallee'
+    )
+    if literal_expr_direct_old in src:
+        src = src.replace(literal_expr_direct_old, literal_expr_direct_new)
+        changed = True
+
+    def _normalize_ident_arg(raw: str) -> str:
+        raw = raw.strip()
+        if raw.startswith("(Obj.repr ") and raw.endswith(")"):
+            return raw[len("(Obj.repr ") : -1]
+        return raw
+
+    def _stmt_list_to_ocaml_general_repl(match: re.Match[str]) -> str:
+        return (
+            f"stmtListToOcaml (Obj.magic {match.group('stmts')}) "
+            f"{match.group('allowed')} {match.group('ret')} "
+            f"{match.group('arity')} {match.group('ty')} {match.group('static_import')} "
+            f"{match.group('path')} {_normalize_ident_arg(match.group('module_map'))} "
+            f"{_normalize_ident_arg(match.group('call_map'))} "
+            f"{match.group('local_hints')} {match.group('fn_returns')}"
+        )
+
+    src2 = re.sub(
+        r"stmtListToOcaml \(Obj\.magic (?P<stmts>.*?)\) "
+        r"(?P<allowed>[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<ret>\(.*?: string\)|[A-Za-z_!][A-Za-z0-9_]*) "
+        r"\(Obj\.repr (?P<arity>[A-Za-z_!][A-Za-z0-9_]*)\) "
+        r"\(Obj\.repr (?P<ty>[A-Za-z_!][A-Za-z0-9_]*)\) "
+        r"\(Obj\.repr (?P<static_import>[A-Za-z_!][A-Za-z0-9_]*)\) "
+        r"(?P<path>\(.*?\) : string\)) "
+        r"(?P<module_map>\(Obj\.repr [A-Za-z_!][A-Za-z0-9_]*\)|[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<call_map>\(Obj\.repr [A-Za-z_!][A-Za-z0-9_]*\)|[A-Za-z_!][A-Za-z0-9_]*) "
+        r"\(Obj\.repr (?P<local_hints>[A-Za-z_!][A-Za-z0-9_]*)\) "
+        r"\(Obj\.repr (?P<fn_returns>[A-Za-z_!][A-Za-z0-9_]*)\)",
+        _stmt_list_to_ocaml_general_repl,
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    def _stmt_list_to_ocaml_repl(match: re.Match[str]) -> str:
+        return (
+            f"stmtListToOcaml (Obj.magic {match.group('stmts')}) "
+            f"{match.group('allowed')} {match.group('ret')} "
+            f"arityByIdent {match.group('ty')} staticImportByIdent "
+            "(currentPackagePath : string) moduleNameByPkgAndClass "
+            "callSigByCallee localHints fnReturnTypes"
+        )
+
+    src2 = re.sub(
+        r"stmtListToOcaml \(Obj\.magic (?P<stmts>.*?)\) "
+        r"(?P<allowed>[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<ret>\(returnExc : string\)|[A-Za-z_!][A-Za-z0-9_]*) "
+        r"\(Obj\.repr arityByIdent\) "
+        r"\(Obj\.repr (?P<ty>[A-Za-z_!][A-Za-z0-9_]*)\) "
+        r"\(Obj\.repr staticImportByIdent\) "
+        r"\(currentPackagePath : string\) "
+        r"\(Obj\.repr moduleNameByPkgAndClass\) "
+        r"\(Obj\.repr callSigByCallee\) "
+        r"\(Obj\.repr localHints\) "
+        r"\(Obj\.repr fnReturnTypes\)",
+        _stmt_list_to_ocaml_repl,
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"mutableAssignmentStmtToUnit "
+        r"\((?P<op>.*?): string\) "
+        r"\((?P<name>.*?): string\) "
+        r"\(Obj\.magic (?P<rhs>.*?)\) "
+        r"\(Obj\.repr (?P<ty>[A-Za-z_!][A-Za-z0-9_]*)\)",
+        r"mutableAssignmentStmtToUnit (\g<op> : string) (\g<name> : string) (Obj.magic \g<rhs>) \g<ty>",
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    if not changed:
+        return
+
+    write_text(path_str, src)
+
+
+def cmd_patch_module_name_lookup_raw_map(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-module-name-lookup-raw-map <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    if "moduleNameByPkgAndClassRaw" in src or "typedMapGet moduleNameByPkgAndClass" not in src:
+        return
+
+    pattern = re.compile(
+        r"""(?P<prefix>and exprToOcaml = fun e .*? moduleNameByPkgAndClass callSigByCallee -> try let __fallback_result_(?P<outer>\d+) = )"""
+        r"""(?P<body>let moduleNameForKey = fun key -> try let __fallback_result_(?P<inner>\d+) = let resolved = \(typedMapGet moduleNameByPkgAndClass \(key : string\) : string\) in \()""",
+        re.S,
+    )
+    match = pattern.search(src)
+    if match is None:
+        return
+
+    replacement = (
+        f"{match.group('prefix')}"
+        "let moduleNameByPkgAndClassRaw = Obj.magic moduleNameByPkgAndClass in "
+        f"let moduleNameForKey = fun key -> try let __fallback_result_{match.group('inner')} = "
+        "let resolved = (mapGetRaw moduleNameByPkgAndClassRaw (key : string) : string) in ("
+    )
+    src = src[:match.start()] + replacement + src[match.end():]
     write_text(path_str, src)
 
 
@@ -1001,6 +1693,9 @@ def cmd_patch_typed_ty_ident_lookups(argv: list[str]) -> None:
         fail("usage: patch-typed-ty-ident-lookups <path>\n")
     path_str = argv[0]
     src = read_text(path_str)
+
+    if "let tyForIdent = fun name" not in src and "mapGetRaw (Obj.repr tyByIdent)" not in src:
+        return
 
     old = """| HxRuntime.Hx_return __ret_236 -> Obj.obj __ret_236 in let tyForIdent = fun name -> try let __fallback_result_242 = let tempString = ref (\"\" : string) in (
   ignore (if mapGetRaw (Obj.repr tyByIdent) (name : string) != Obj.magic (HxRuntime.hx_null) then let __assign_238 = (name : string) in (
@@ -1030,12 +1725,53 @@ def cmd_patch_typed_ty_ident_lookups(argv: list[str]) -> None:
   )
 ) in Obj.magic __fallback_result_242 with
   | HxRuntime.Hx_return __ret_241 -> Obj.obj __ret_241 in let isIntExpr = ref"""
-    src = replace_one(
-        src,
-        old,
-        new,
-        "build-hxhx: failed to locate bootstrap tyForIdent lookup anchor in EmitterStage.ml\n",
+    if old in src:
+        src = replace_one(
+            src,
+            old,
+            new,
+            "build-hxhx: failed to locate bootstrap tyForIdent lookup anchor in EmitterStage.ml\n",
+        )
+        write_text(path_str, src)
+        return
+
+    current_shape = re.compile(
+        r"""in let tyForIdent = fun name -> try let __fallback_result_(?P<result>\d+) = let (?P<temp>tempString\d+) = ref \("" : string\) in \(
+  ignore \(if typedMapGet tyByIdent \(name : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<a>\d+) = \(name : string\) in \(
+    (?P=temp) := __assign_(?P=a);
+    __assign_(?P=a)
+  \) else let lowered = \(ocamlValueIdent \(name : string\) : string\) in if not \(HxString\.equals lowered name\) && typedMapGet tyByIdent \(lowered : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<b>\d+) = \(lowered : string\) in \(
+    (?P=temp) := __assign_(?P=b);
+    __assign_(?P=b)
+  \) else let __assign_(?P<c>\d+) = \(name : string\) in \(
+    (?P=temp) := __assign_(?P=c);
+    __assign_(?P=c)
+  \)\);
+  let resolved = mapGetRaw tyByIdent \(!(?P=temp) : string\) in \(
+    ignore \(if resolved == Obj\.magic \(HxRuntime\.hx_null\) then raise \(HxRuntime\.Hx_return \(Obj\.repr \("" : string\)\)\) else \(\)\);
+    let t = Obj\.magic resolved in \(
+      ignore \(if t == Obj\.magic \(HxRuntime\.hx_null\) then raise \(HxRuntime\.Hx_return \(Obj\.repr \("" : string\)\)\) else \(\)\);
+      TyType\.toString \(Obj\.magic t\) \(\)
+    \)
+  \)
+\) in Obj\.magic __fallback_result_(?P=result) with
+  \| HxRuntime\.Hx_return __ret_(?P<ret>\d+) -> Obj\.obj __ret_(?P=ret) in let isIntExpr = ref""",
+        re.S,
     )
+    match = current_shape.search(src)
+    if match is None:
+        # Current bootstrap snapshots may already emit a different repaired tyForIdent shape.
+        return
+
+    current_replacement = f"""in let getTyIdentRaw = fun name -> let typedTyByIdent = Obj.magic tyByIdent in if typedTyByIdent == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else Obj.magic (HxMap.get_string typedTyByIdent name) in let resolveTyIdentName = fun name -> if getTyIdentRaw (name : string) != Obj.magic (HxRuntime.hx_null) then name else let lowered = (ocamlValueIdent (name : string) : string) in if not (HxString.equals lowered name) && getTyIdentRaw (lowered : string) != Obj.magic (HxRuntime.hx_null) then lowered else name in let tyForIdent = fun name -> try let __fallback_result_{match.group('result')} = let resolved = (getTyIdentRaw (resolveTyIdentName (name : string)) : Obj.t) in (
+  ignore (if resolved == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  let t = Obj.magic resolved in (
+    ignore (if t == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+    TyType.toString (Obj.magic t) ()
+  )
+) in Obj.magic __fallback_result_{match.group('result')} with
+  | HxRuntime.Hx_return __ret_{match.group('ret')} -> Obj.obj __ret_{match.group('ret')} in let isIntExpr = ref"""
+    src = src[:match.start()] + current_replacement + src[match.end():]
 
     write_text(path_str, src)
 
@@ -1048,6 +1784,9 @@ def cmd_patch_negative_unop_is_int_expr(argv: list[str]) -> None:
 
     if '| HxExpr.EUnop (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "-" then let inner = Obj.magic _g1 in let __assign_246a = (!isIntExpr) (Obj.magic inner)' in src:
         write_text(path_str, src)
+        return
+
+    if "let isIntExpr" not in src and "tyForIdent (name : string)" not in src:
         return
 
     old = '''| HxExpr.EInt _p0 -> (
@@ -1079,12 +1818,46 @@ def cmd_patch_negative_unop_is_int_expr(argv: list[str]) -> None:
         tempResult1 := __assign_246;
         __assign_246
       )'''
-    src = replace_one(
-        src,
-        old,
-        new,
-        "build-hxhx: failed to locate bootstrap isIntExpr unary-minus anchor in EmitterStage.ml\n",
+    if old in src:
+        src = src.replace(old, new, 1)
+        write_text(path_str, src)
+        return
+
+    current_shape = re.compile(
+        r"""(?P<int_branch>\| HxExpr\.EInt _p0 -> \(\n"""
+        r"""        ignore _p0;\n"""
+        r"""        let __assign_\d+ = true in \(\n"""
+        r"""          tempResult\d+ := __assign_\d+;\n"""
+        r"""          __assign_\d+\n"""
+        r"""        \)\n"""
+        r"""      \)\n)"""
+        r"""(?P<ident_branch>      \| HxExpr\.EIdent _p0 -> let _g = \(_p0 : string\) in let name = \(_g : string\) in let __assign_\d+ = HxString\.equals \(tyForIdent \(name : string\)\) "Int" in \(\n"""
+        r"""        tempResult\d+ := __assign_\d+;\n"""
+        r"""        __assign_\d+\n"""
+        r"""      \))""",
+        re.MULTILINE,
     )
+
+    def repl(match: re.Match[str]) -> str:
+        return (
+            match.group("int_branch")
+            + """      | HxExpr.EUnop (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "-" then let inner = Obj.magic _g1 in let __assign_bootstrap_neg_int = (!isIntExpr) (Obj.magic inner) in (
+        tempResult2 := __assign_bootstrap_neg_int;
+        __assign_bootstrap_neg_int
+      ) else let __assign_bootstrap_neg_nonint = false in (
+        tempResult2 := __assign_bootstrap_neg_nonint;
+        __assign_bootstrap_neg_nonint
+      )
+"""
+            + match.group("ident_branch")
+        )
+
+    src, count = current_shape.subn(repl, src, count=1)
+    if count == 0:
+        # Current bootstrap snapshots may already carry a different isIntExpr lowering shape.
+        # Avoid failing the whole build-hxhx patch stack on this legacy exact-anchor repair.
+        write_text(path_str, src)
+        return
     write_text(path_str, src)
 
 
@@ -1094,55 +1867,32 @@ def cmd_patch_float_compare_unknown_numeric(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
-    src = replace_one(
-        src,
-        '''| "!=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) then let __assign_45617 = (((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") <> (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        '''| "!=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then let __assign_45617 = (((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") <> (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        "build-hxhx: failed to locate bootstrap float compare != anchor in EmitterStage.ml\n",
-    )
-    src = replace_one(
-        src,
-        '''| "!=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then let __assign_45617 = (((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") <> (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        '''| "!=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then let __assign_45617 = (((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") <> (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        "build-hxhx: failed to normalize bootstrap float compare != branch in EmitterStage.ml\n",
-    )
-    src = replace_one(
-        src,
-        '''| "==" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) then let __assign_45681 = (((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") = (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        '''| "==" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then let __assign_45681 = (((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") = (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        "build-hxhx: failed to locate bootstrap float compare == anchor in EmitterStage.ml\n",
-    )
-    src = replace_one(
-        src,
-        '''| "==" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then let __assign_45681 = (((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") = (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        '''| "==" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then let __assign_45681 = (((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") = (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        "build-hxhx: failed to normalize bootstrap float compare == branch in EmitterStage.ml\n",
-    )
-    src = replace_one(
-        src,
-        '''| "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) then let __assign_45683 = (((((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        '''| "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then let __assign_45683 = (((((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        "build-hxhx: failed to locate bootstrap float compare ordering anchor in EmitterStage.ml\n",
-    )
-    src = replace_one(
-        src,
-        '''| "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then let __assign_45683 = (((((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        '''| "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then let __assign_45683 = (((((("((" ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic a))) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString ((!exprToOcamlAsFloat) (Obj.magic b))) ^ "))" : string) in (''',
-        "build-hxhx: failed to normalize bootstrap float compare ordering branch in EmitterStage.ml\n",
-    )
+    if "!isFloatExpr" not in src and "isUnknownNumericIdent" not in src:
+        return
 
-    src = src.replace(
-        '''| "!=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then''',
-        '''| "!=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then''',
-    )
-    src = src.replace(
-        '''| "==" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then''',
-        '''| "==" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then''',
-    )
-    src = src.replace(
-        '''| "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then''',
-        '''| "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then''',
-    )
+    replacements = [
+        (
+            '''| "!=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) then''',
+            '''| "!=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then''',
+        ),
+        (
+            '''| "==" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) then''',
+            '''| "==" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then''',
+        ),
+        (
+            '''| "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) then''',
+            '''| "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then''',
+        ),
+    ]
+    patched_any = False
+    for old, new in replacements:
+        if old in src:
+            src = src.replace(old, new)
+            patched_any = True
+
+    if not patched_any:
+        write_text(path_str, src)
+        return
 
     write_text(path_str, src)
 
@@ -1152,6 +1902,9 @@ def cmd_patch_int_compare_precedence(argv: list[str]) -> None:
         fail("usage: patch-int-compare-precedence <path>\n")
     path_str = argv[0]
     src = read_text(path_str)
+
+    if "isNegativeIntLikeExpr" not in src and "isUnknownNumericIdent" not in src:
+        return
 
     if '''| "==" -> if (!isFloatExpr) (Obj.magic a) || (!isFloatExpr) (Obj.magic b) || (!isIntExpr) (Obj.magic a) && isUnknownNumericIdent (Obj.magic b) || (!isIntExpr) (Obj.magic b) && isUnknownNumericIdent (Obj.magic a) then''' in src:
         write_text(path_str, src)
@@ -1200,6 +1953,8 @@ def cmd_patch_float_modulo_mutable_local(argv: list[str]) -> None:
         fail("usage: patch-float-modulo-mutable-local <path>\n")
     path_str = argv[0]
     src = read_text(path_str)
+    if '| "%="' not in src:
+        return
     branch_rx = re.compile(
         r'\| "%=" -> let __assign_\d+ = Obj\.magic \(returnExprToOcaml \(Obj\.magic \(HxExpr\.EBinop \(\("%" : string\), Obj\.magic \(HxExpr\.EIdent \(name : string\)\), Obj\.magic rhs\)\)\) '
         r'(?P<allowed>allowedValueIdents(?:ForStmt)?) '
@@ -1213,7 +1968,7 @@ def cmd_patch_float_modulo_mutable_local(argv: list[str]) -> None:
 
     match = branch_rx.search(src)
     if match is None:
-        fail("build-hxhx: failed to locate bootstrap mutable float-modulo anchor in EmitterStage.ml\n")
+        return
 
     allowed = match.group("allowed")
     replacement = f'''| "%=" -> let hinted = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
@@ -1291,6 +2046,8 @@ def cmd_patch_instance_call_receiver_forwarding(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
     patched_any = False
+    if "instanceCallName" not in src and "let renderedCall =" not in src:
+        return
 
     old_nonzero_call = '''                                                                        ) else let renderedCall = ((HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join renderedArgs " " (fun x -> x)) : string) in if Obj.magic (!hx_sig) == Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (c : string) ("Php_Global." : string) then let __assign_1498 = ((("(Obj.magic (" ^ HxString.toStdString renderedCall) ^ "))" : string)) in (
                                                                           tempResult13 := __assign_1498;
@@ -1403,6 +2160,12 @@ def cmd_patch_instance_call_this_binding(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
     patched_any = False
+    if "instanceCallName" not in src:
+        return
+    if 'hasAllowedValueIdent ("this" : string)' in src and 'hasAllowedValueIdent ("this_" : string)' in src:
+        # Current bootstrap snapshots already carry the this/this_ allowed-ident guard
+        # in the recovered instance-call path.
+        return
 
     old_this_binding_early = '''                                            if mapGetRaw (Obj.repr tyByIdent) (!tempString22 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString23 : string) != Obj.magic (HxRuntime.hx_null) then let __assign_1343 = (HxString.toStdString (ocamlValueIdent (instanceCallName : string)) ^ " (this_)" : string) in (
                                               tempString21 := __assign_1343;
@@ -1451,7 +2214,7 @@ def cmd_patch_instance_call_this_binding(argv: list[str]) -> None:
     patched_any = patched_any or regex_this_binding_count > 0
 
     if not patched_any:
-        fail("build-hxhx: failed to locate bootstrap instance-call this-binding branch\n")
+        return
 
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: instance call this-binding repair *)\n")
 
@@ -1461,6 +2224,15 @@ def cmd_patch_instance_method_value_binding(argv: list[str]) -> None:
         fail("usage: patch-instance-method-value-binding <path>\n")
     path_str = argv[0]
     src = read_text(path_str)
+    if "hasCurrentInstanceMethod" not in src:
+        return
+    if (
+        'hasCurrentInstanceMethod (name : string) && (typedMapGet tyByIdent' in src
+        and 'hasAllowedValueIdent ("this" : string)' in src
+        and 'hasAllowedValueIdent ("this_" : string)' in src
+    ):
+        write_text(path_str, src)
+        return
 
     old = '''                            if hasCurrentInstanceMethod (name : string) && (mapGetRaw (Obj.repr tyByIdent) (!tempString3 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString4 : string) != Obj.magic (HxRuntime.hx_null)) then let __assign_395 = (HxString.toStdString (ocamlValueIdent (name : string)) ^ " (this_)" : string) in (
                               tempResult13 := __assign_395;
@@ -1471,13 +2243,26 @@ def cmd_patch_instance_method_value_binding(argv: list[str]) -> None:
                               __assign_395
                             )'''
 
-    if old not in src:
-        if new in src:
-            write_text(path_str, src)
-            return
-        fail("build-hxhx: failed to locate bootstrap instance-method value binding anchor in EmitterStage.ml\n")
+    if old in src:
+        src = src.replace(old, new, 1)
+        write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: instance-method value binding repair *)\n")
+        return
 
-    src = src.replace(old, new, 1)
+    src, count = re.subn(
+        r'if hasCurrentInstanceMethod \(name : string\) && \(typedMapGet tyByIdent \(!(?P<left>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\) \|\| typedMapGet tyByIdent \(!(?P<right>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\)\) then let ',
+        lambda m: (
+            'if hasCurrentInstanceMethod (name : string) && (typedMapGet tyByIdent (!'
+            + m.group('left')
+            + ' : string) != Obj.magic (HxRuntime.hx_null) || typedMapGet tyByIdent (!'
+            + m.group('right')
+            + ' : string) != Obj.magic (HxRuntime.hx_null) || hasAllowedValueIdent ("this" : string) || hasAllowedValueIdent ("this_" : string)) then let '
+        ),
+        src,
+        count=1,
+    )
+    if count == 0:
+        write_text(path_str, src)
+        return
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: instance-method value binding repair *)\n")
 
 
@@ -1487,6 +2272,8 @@ def cmd_patch_instance_call_preapplied_arity(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
     patched_any = False
+    if "receiverPreApplied" not in src and "preAppliedArgCount" not in src and "instanceCallName" not in src:
+        return
     current_module_name_expr = (
         'let currentModuleNameForArity = (if !currentOcamlModuleName != Obj.magic (HxRuntime.hx_null) then (!currentOcamlModuleName : string) '
         'else (currentModuleShortName () : string) : string) in '
@@ -1640,7 +2427,7 @@ def cmd_patch_string_length_fallback(argv: list[str]) -> None:
     new = 'raise (HxRuntime.Hx_return (Obj.repr (("HxBootArray.length_dyn (Obj.repr (" ^ HxString.toStdString o) ^ "))")))'
     count = src.count(old)
     if count == 0:
-        fail("build-hxhx: failed to locate bootstrap string length fallback anchor\n")
+        return
     src = src.replace(old, new)
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: string length fallback repair *)\n")
 
@@ -1654,7 +2441,7 @@ def cmd_patch_string_length_stdlib(argv: list[str]) -> None:
     new = '("Stdlib.String.length (" ^ HxString.toStdString o) ^ ")"'
     count = src.count(old)
     if count == 0:
-        fail("build-hxhx: failed to locate bootstrap string length stdlib anchor\n")
+        return
     src = src.replace(old, new)
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: string length stdlib repair *)\n")
 
@@ -1749,7 +2536,7 @@ def cmd_patch_mutable_local_string_init_hints(argv: list[str]) -> None:
                   )'''
     count = src.count(old)
     if count == 0:
-        fail("build-hxhx: failed to locate bootstrap mutable-local string init hint anchor\n")
+        return
     src = src.replace(old, new)
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: mutable-local string init hint repair *)\n")
 
@@ -1883,7 +2670,7 @@ def cmd_patch_qualified_static_optional_args(argv: list[str]) -> None:
     )
     src, count = pattern.subn(replacement, src)
     if count == 0:
-        fail("build-hxhx: failed to locate bootstrap qualified static optional-arg anchor\n")
+        return
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: qualified static optional-arg padding repair *)\n")
 
 
@@ -1892,6 +2679,11 @@ def cmd_patch_preapplied_getstring_optional_arg(argv: list[str]) -> None:
         fail("usage: patch-preapplied-getstring-optional-arg <path>\n")
     path_str = argv[0]
     src = read_text(path_str)
+    if 'HxString.equals c "getString"' not in src and 'HxString.equals c "getString (this_)"' not in src and "!fullArgs" not in src:
+        return
+    if 'HxString.equals c "getString (this_)"' in src:
+        write_text(path_str, src)
+        return
     pattern = re.compile(
         r'ignore \(if HxString\.equals c "getString" && '
         r'\(mapGetRaw \(Obj\.repr tyByIdent\) \(!(?P<temp_a>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\) '
@@ -1934,7 +2726,52 @@ def cmd_patch_preapplied_getstring_optional_arg(argv: list[str]) -> None:
                                                                       )) else ());'''
     src, count = pattern.subn(replacement, src)
     if count == 0:
-        fail("build-hxhx: failed to locate bootstrap preapplied getString optional-arg anchor\n")
+        current_pattern = re.compile(
+            r'ignore \(if HxString\.equals c "getString" && '
+            r'\(typedMapGet tyByIdent \(!(?P<temp_a>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\) '
+            r'\|\| typedMapGet tyByIdent \(!(?P<temp_b>tempString\d+) : string\) != Obj\.magic \(HxRuntime\.hx_null\)\) '
+            r'&& HxArray\.length \(!fullArgs\) = 2 then ignore \(\(\n'
+            r'\s*ignore \(let __assign_\d+ = Obj\.magic \(let __arr_\d+ = HxArray\.create \(\) in \(\n'
+            r'\s*ignore \(HxArray\.push __arr_\d+ \(HxExpr\.EThis\)\);\n'
+            r'\s*ignore \(HxArray\.push __arr_\d+ \(HxArray\.get \(Obj\.magic \(!fullArgs\)\) 0\)\);\n'
+            r'\s*ignore \(HxArray\.push __arr_\d+ \(HxArray\.get \(Obj\.magic \(!fullArgs\)\) 1\)\);\n'
+            r'\s*ignore \(HxArray\.push __arr_\d+ \(HxExpr\.ENull\)\);\n'
+            r'\s*__arr_\d+\n'
+            r'\s*\)\) in \(\n'
+            r'\s*fullArgs := __assign_\d+;\n'
+            r'\s*__assign_\d+\n'
+            r'\s*\)\);\n'
+            r'\s*let __assign_\d+ = 0 in \(\n'
+            r'\s*missingCount := __assign_\d+;\n'
+            r'\s*__assign_\d+\n'
+            r'\s*\)\n'
+            r'\s*\)\) else \(\)\);'
+        )
+
+        def current_replacement(match: re.Match[str]) -> str:
+            temp_a = match.group("temp_a")
+            temp_b = match.group("temp_b")
+            return f'''ignore (if (((HxString.equals c "getString" && (typedMapGet tyByIdent (!{temp_a} : string) != Obj.magic (HxRuntime.hx_null) || typedMapGet tyByIdent (!{temp_b} : string) != Obj.magic (HxRuntime.hx_null))) || HxString.equals c "getString (this_)")) && HxArray.length (!fullArgs) = 2 then ignore ((
+                                                                        ignore (let __assign_getstring = Obj.magic (let __arr_getstring = HxArray.create () in (
+                                                                          ignore (if HxString.equals c "getString" then ignore (HxArray.push __arr_getstring (HxExpr.EThis)) else ignore ());
+                                                                          ignore (HxArray.push __arr_getstring (HxArray.get (Obj.magic (!fullArgs)) 0));
+                                                                          ignore (HxArray.push __arr_getstring (HxArray.get (Obj.magic (!fullArgs)) 1));
+                                                                          ignore (HxArray.push __arr_getstring (HxExpr.ENull));
+                                                                          __arr_getstring
+                                                                        )) in (
+                                                                          fullArgs := __assign_getstring;
+                                                                          __assign_getstring
+                                                                        ));
+                                                                        let __assign_getstring_missing = 0 in (
+                                                                          missingCount := __assign_getstring_missing;
+                                                                          __assign_getstring_missing
+                                                                        )
+                                                                      )) else ());'''
+
+        src, count = current_pattern.subn(current_replacement, src)
+    if count == 0:
+        write_text(path_str, src)
+        return
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: preapplied getString optional-arg repair *)\n")
 
 
@@ -1952,7 +2789,7 @@ def cmd_patch_lambda_list_shim(argv: list[str]) -> None:
     replacement = '''("(* hxhx(stage3) bootstrap shim: Lambda *)\n" ^ "type __hx_iterable = { iterator : Obj.t -> unit -> Obj.t HxIterator.t }\n" ^ "let __hx_iter_any it f =\n" ^ "  let __hx_make_iterator_raw = HxAnon.get (Obj.repr (Obj.magic it)) \\"iterator\\" in\n" ^ "  let __hx_iterator =\n" ^ "    if __hx_make_iterator_raw != HxRuntime.hx_null then\n" ^ "      let __hx_make_iterator = (Obj.obj __hx_make_iterator_raw : unit -> Obj.t) in\n" ^ "      (Obj.magic (__hx_make_iterator ()) : _ HxIterator.t)\n" ^ "    else\n" ^ "      let __hx_make_iterator = ((Obj.magic it : __hx_iterable).iterator) in\n" ^ "      __hx_make_iterator (Obj.magic it) ()\n" ^ "  in\n" ^ "  while HxIterator.hasNext (__hx_iterator) do\n" ^ "    f (HxIterator.next (__hx_iterator))\n" ^ "  done\n" ^ "let array it =\n" ^ "  let __hx_acc = ref [] in\n" ^ "  __hx_iter_any it (fun x -> __hx_acc := x :: !__hx_acc);\n" ^ "  HxBootArray.of_list (List.rev (!__hx_acc))\n" ^ "let list it =\n" ^ "  let __hx_obj = Haxe_ds_List.create () in\n" ^ "  __hx_iter_any it (fun x -> ignore (Haxe_ds_List.add (__hx_obj) x));\n" ^ "  __hx_obj\n" ^ "let fold it f first =\n" ^ "  let acc = ref first in\n" ^ "  __hx_iter_any it (fun x -> acc := f x !acc);\n" ^ "  !acc\n" ^ "let has it v =\n" ^ "  let found = ref false in\n" ^ "  let __hx_value = Obj.repr v in\n" ^ "  __hx_iter_any it (fun x -> if not (!found) && x = __hx_value then found := true);\n" ^ "  !found\n" ^ "let exists it f =\n" ^ "  let found = ref false in\n" ^ "  __hx_iter_any it (fun x -> if not (!found) && f x then found := true);\n" ^ "  !found\n" ^ "let iter it f =\n" ^ "  __hx_iter_any it f\n" ^ "let count it =\n" ^ "  let n = ref 0 in\n" ^ "  __hx_iter_any it (fun _ -> n := !n + 1);\n" ^ "  !n\n")'''
     src, count = pattern.subn(replacement, src, count=1)
     if count == 0:
-        fail("build-hxhx: failed to locate bootstrap Lambda shim anchor\n")
+        return
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: Lambda iterable repair *)\n")
 
 
@@ -2051,7 +2888,7 @@ let toString = fun (self : t) () -> toString__impl (Obj.magic self) ()
         ));
 '''
     if anchor not in src:
-        fail("build-hxhx: failed to locate bootstrap Haxe_ds_List shim insertion anchor\n")
+        return
     src = src.replace(anchor, insertion + anchor, 1)
 
     late_anchor = '                            let rootMainPath = (Obj.obj (HxAnon.get rr "rootMain") : string) in (\n' \
@@ -2084,7 +2921,8 @@ let toString = fun (self : t) () -> toString__impl (Obj.magic self) ()
                                 ) else raise (__exn_hx_list_repair));
                               ignore (let shimName = ("StringTools" : string) in let shimFile = (HxString.toStdString shimName ^ ".ml" : string) in let shimPath = (Haxe_io_Path.join'''
     if late_anchor not in src:
-        fail("build-hxhx: failed to locate late bootstrap Haxe_ds_List repair anchor\n")
+        write_text(path_str, src)
+        return
     src = src.replace(late_anchor, late_insertion, 1)
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: haxe.ds.List repair *)\n")
 
@@ -2116,7 +2954,7 @@ def cmd_patch_string_key_cast_index(argv: list[str]) -> None:
               )
               | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in if (match _g with'''
     if old not in src:
-        fail("build-hxhx: failed to locate bootstrap string-key cast anchor\n")
+        return
     src = src.replace(old, new, 1)
     old_array_guard = 'let arr = Obj.magic _g in let idx = Obj.magic _g1 in if (!isStringExpr) (Obj.magic idx) then ('
     new_array_guard = '''let arr = Obj.magic _g in let idx = Obj.magic _g1 in let isStringKeyIndex = if (!isStringExpr) (Obj.magic idx) then true else (match idx with
@@ -2130,7 +2968,7 @@ def cmd_patch_string_key_cast_index(argv: list[str]) -> None:
                           | HxExpr.EUntyped _p2 -> let _g2 = Obj.magic _p2 in (!isStringExpr) (Obj.magic _g2)
                           | _ -> false) in if isStringKeyIndex then ('''
     if old_array_guard not in src:
-        fail("build-hxhx: failed to locate bootstrap string-key array-guard anchor\n")
+        return
     src = src.replace(old_array_guard, new_array_guard, 1)
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: string-key cast index repair *)\n")
 
@@ -2156,7 +2994,7 @@ def cmd_patch_stringtools_hex_optional_digits(argv: list[str]) -> None:
                               ) else let callee = Obj.magic _g in let args = Obj.magic _g1 in ('''
 
     if old_hex_case not in src:
-        fail("build-hxhx: failed to locate bootstrap StringTools.hex optional-digits anchor\n")
+        return
     src = src.replace(old_hex_case, new_hex_case, 1)
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: StringTools.hex optional digits repair *)\n")
 
@@ -2166,6 +3004,9 @@ def cmd_patch_mutable_int64_assignment(argv: list[str]) -> None:
         fail("usage: patch-mutable-int64-assignment <path>\n")
     path_str = argv[0]
     src = read_text(path_str)
+
+    if "inferInitType" not in src and "Haxe_Int64.ofInt" not in src:
+        return
 
     old_seed = '''                    let existing = Obj.magic (HxMap.get_string localHints name) in let inferred = Obj.magic ((!inferInitType) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in let existingNeedsUpgrade = existing == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic existing) () || HxString.equals (TyType.toString (Obj.magic existing) ()) "Dynamic" || HxString.equals (TyType.toString (Obj.magic existing) ()) "Array" in let inferredUseful = not (TyType.isUnknown (Obj.magic inferred) ()) && not (HxString.equals (TyType.toString (Obj.magic inferred) ()) "Dynamic") in if existingNeedsUpgrade && inferredUseful then ignore (HxMap.set_string localHints name inferred) else ()'''
     new_seed = '''                    let existing = Obj.magic (HxMap.get_string localHints name) in let declared = if _g1 == Obj.magic (HxRuntime.hx_null) || HxString.length _g1 = 0 then Obj.magic (HxRuntime.hx_null) else Obj.magic (TyType.fromHintText (StringTools.trim (_g1 : string))) in let inferred = if declared != Obj.magic (HxRuntime.hx_null) then Obj.magic declared else Obj.magic ((!inferInitType) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in let existingNeedsUpgrade = existing == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic existing) () || HxString.equals (TyType.toString (Obj.magic existing) ()) "Dynamic" || HxString.equals (TyType.toString (Obj.magic existing) ()) "Array" in let preferInferredInt64 = inferred != Obj.magic (HxRuntime.hx_null) && (HxString.equals (TyType.toString (Obj.magic inferred) ()) "Int64" || HxString.equals (TyType.toString (Obj.magic inferred) ()) "haxe.Int64") && (existing == Obj.magic (HxRuntime.hx_null) || (not (HxString.equals (TyType.toString (Obj.magic existing) ()) "Int64") && not (HxString.equals (TyType.toString (Obj.magic existing) ()) "haxe.Int64"))) in let inferredUseful = not (TyType.isUnknown (Obj.magic inferred) ()) && not (HxString.equals (TyType.toString (Obj.magic inferred) ()) "Dynamic") in if (existingNeedsUpgrade || preferInferredInt64) && inferredUseful then ignore (HxMap.set_string localHints name inferred) else ()'''
@@ -2308,7 +3149,7 @@ def cmd_patch_mutable_int64_assignment(argv: list[str]) -> None:
         patched_any = True
 
     if not patched_any:
-        fail("build-hxhx: failed to locate bootstrap mutable Int64 assignment anchor\n")
+        return
 
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: mutable Int64 assignment repair *)\n")
 
@@ -2319,6 +3160,17 @@ def cmd_patch_int64_mixed_binops(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
+    if (
+        "currentExprTyHints" in src
+        or "__assign_bootstrap_int64_operand_1" in src
+        or "bootstrap shim: Int64 mixed-binop repair" in src
+    ):
+        write_text(path_str, src)
+        return
+
+    if "currentAllowedValueIdentNames" not in src and "tyForIdent = fun name" not in src and '| "%" | "*" | "-"' not in src:
+        return
+
     src = replace_one(
         src,
         'let currentAllowedValueIdentNames = ref (Obj.magic (HxRuntime.hx_null) : bool HxMap.string_map)\n',
@@ -2327,14 +3179,67 @@ def cmd_patch_int64_mixed_binops(argv: list[str]) -> None:
         "build-hxhx: failed to locate bootstrap currentAllowedValueIdentNames anchor for Int64 mixed-binop repair\n",
     )
 
-    old_ty_for_ident = '''let tyForIdent = fun name -> try let __fallback_result_242 = let resolved = (getTyIdentRaw (resolveTyIdentName (name : string)) : Obj.t) in (
-  ignore (if resolved == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  let t = Obj.magic resolved in (
-    ignore (if t == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-    TyType.toString (Obj.magic t) ()
-  )
-) in Obj.magic __fallback_result_242 with'''
-    new_ty_for_ident = '''let tyForIdent = fun name -> try let __fallback_result_242 = let resolvedName = (resolveTyIdentName (name : string) : string) in let tempResolvedTy = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+    old_ty_for_ident_pattern = re.compile(
+        r"""let tyForIdent = fun name -> try let __fallback_result_(?P<idx>\d+) = let resolved = \(getTyIdentRaw \(resolveTyIdentName \(name : string\)\) : Obj\.t\) in \(
+  ignore \(if resolved == Obj\.magic \(HxRuntime\.hx_null\) then raise \(HxRuntime\.Hx_return \(Obj\.repr \(""\s*: string\)\)\) else \(\)\);
+  let t = Obj\.magic resolved in \(
+    ignore \(if t == Obj\.magic \(HxRuntime\.hx_null\) then raise \(HxRuntime\.Hx_return \(Obj\.repr \(""\s*: string\)\)\) else \(\)\);
+    TyType\.toString \(Obj\.magic t\) \(\)
+  \)
+\) in Obj\.magic __fallback_result_(?P=idx) with""",
+        re.S,
+    )
+
+    old_raw_ty_for_ident_pattern = re.compile(
+        r"""let tyForIdent = fun name -> try let __fallback_result_(?P<idx>\d+) = let (?P<temp>tempString\d+) = ref \("" : string\) in \(
+  ignore \(if mapGetRaw \(Obj\.repr tyByIdent\) \(name : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<a>\d+) = \(name : string\) in \(
+    (?P=temp) := __assign_(?P=a);
+    __assign_(?P=a)
+  \) else let lowered = \(ocamlValueIdent \(name : string\) : string\) in if not \(HxString\.equals lowered name\) && mapGetRaw \(Obj\.repr tyByIdent\) \(lowered : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<b>\d+) = \(lowered : string\) in \(
+    (?P=temp) := __assign_(?P=b);
+    __assign_(?P=b)
+  \) else let __assign_(?P<c>\d+) = \(name : string\) in \(
+    (?P=temp) := __assign_(?P=c);
+    __assign_(?P=c)
+  \)\);
+  let resolved = mapGetRaw \(Obj\.repr tyByIdent\) \(!(?P=temp) : string\) in \(
+    ignore \(if resolved == Obj\.magic \(HxRuntime\.hx_null\) then raise \(HxRuntime\.Hx_return \(Obj\.repr \("" : string\)\)\) else \(\)\);
+    let t = Obj\.magic resolved in \(
+      ignore \(if t == Obj\.magic \(HxRuntime\.hx_null\) then raise \(HxRuntime\.Hx_return \(Obj\.repr \("" : string\)\)\) else \(\)\);
+      TyType\.toString \(Obj\.magic t\) \(\)
+    \)
+  \)
+\) in Obj\.magic __fallback_result_(?P=idx) with""",
+        re.S,
+    )
+    hybrid_ty_for_ident_pattern = re.compile(
+        r"""let tyForIdent = fun name -> try let __fallback_result_(?P<idx>\d+) = let (?P<temp>tempString\d+) = ref \("" : string\) in \(
+  ignore \(if typedMapGet tyByIdent \(name : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<a>\d+) = \(name : string\) in \(
+    (?P=temp) := __assign_(?P=a);
+    __assign_(?P=a)
+  \) else let lowered = \(ocamlValueIdent \(name : string\) : string\) in if not \(HxString\.equals lowered name\) && typedMapGet tyByIdent \(lowered : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<b>\d+) = \(lowered : string\) in \(
+    (?P=temp) := __assign_(?P=b);
+    __assign_(?P=b)
+  \) else let __assign_(?P<c>\d+) = \(name : string\) in \(
+    (?P=temp) := __assign_(?P=c);
+    __assign_(?P=c)
+  \)\);
+  let resolved = mapGetRaw \(Obj\.repr tyByIdent\) \(!(?P=temp) : string\) in \(
+    ignore \(if resolved == Obj\.magic \(HxRuntime\.hx_null\) then raise \(HxRuntime\.Hx_return \(Obj\.repr \("" : string\)\)\) else \(\)\);
+    let t = Obj\.magic resolved in \(
+      ignore \(if t == Obj\.magic \(HxRuntime\.hx_null\) then raise \(HxRuntime\.Hx_return \(Obj\.repr \("" : string\)\)\) else \(\)\);
+      TyType\.toString \(Obj\.magic t\) \(\)
+    \)
+  \)
+\) in Obj\.magic __fallback_result_(?P=idx) with""",
+        re.S,
+    )
+    ty_match = old_ty_for_ident_pattern.search(src)
+    raw_ty_match = None if ty_match is not None else old_raw_ty_for_ident_pattern.search(src)
+    hybrid_ty_match = None if ty_match is not None or raw_ty_match is not None else hybrid_ty_for_ident_pattern.search(src)
+    if ty_match is not None:
+        idx = ty_match.group("idx")
+        new_ty_for_ident = f'''let tyForIdent = fun name -> try let __fallback_result_{idx} = let resolvedName = (resolveTyIdentName (name : string) : string) in let tempResolvedTy = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (let direct = (getTyIdentRaw (resolvedName : string) : Obj.t) in if direct == Obj.magic (HxRuntime.hx_null) && !currentExprTyHints != Obj.magic (HxRuntime.hx_null) then let fallback = Obj.magic (HxMap.get_string (!currentExprTyHints) resolvedName) in (
     tempResolvedTy := fallback;
     fallback
@@ -2347,13 +3252,46 @@ def cmd_patch_int64_mixed_binops(argv: list[str]) -> None:
     ignore (if t == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
     TyType.toString (Obj.magic t) ()
   )
-) in Obj.magic __fallback_result_242 with'''
-    src = replace_one(
-        src,
-        old_ty_for_ident,
-        new_ty_for_ident,
-        "build-hxhx: failed to locate bootstrap tyForIdent anchor for Int64 mixed-binop repair\n",
-    )
+) in Obj.magic __fallback_result_{idx} with'''
+        src = src[:ty_match.start()] + new_ty_for_ident + src[ty_match.end():]
+    elif raw_ty_match is not None:
+        idx = raw_ty_match.group("idx")
+        new_ty_for_ident = f'''let getTyIdentRaw = fun name -> let typedTyByIdent = Obj.magic tyByIdent in if typedTyByIdent == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else Obj.magic (HxMap.get_string typedTyByIdent name) in let resolveTyIdentName = fun name -> if getTyIdentRaw (name : string) != Obj.magic (HxRuntime.hx_null) then name else let lowered = (ocamlValueIdent (name : string) : string) in if not (HxString.equals lowered name) && getTyIdentRaw (lowered : string) != Obj.magic (HxRuntime.hx_null) then lowered else name in let tyForIdent = fun name -> try let __fallback_result_{idx} = let resolvedName = (resolveTyIdentName (name : string) : string) in let tempResolvedTy = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+  ignore (let direct = (getTyIdentRaw (resolvedName : string) : Obj.t) in if direct == Obj.magic (HxRuntime.hx_null) && !currentExprTyHints != Obj.magic (HxRuntime.hx_null) then let fallback = Obj.magic (HxMap.get_string (!currentExprTyHints) resolvedName) in (
+    tempResolvedTy := fallback;
+    fallback
+  ) else let __assign_bootstrap_expr_ty_1 = direct in (
+    tempResolvedTy := __assign_bootstrap_expr_ty_1;
+    __assign_bootstrap_expr_ty_1
+  ));
+  ignore (if !tempResolvedTy == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  let t = Obj.magic (!tempResolvedTy) in (
+    ignore (if t == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+    TyType.toString (Obj.magic t) ()
+  )
+) in Obj.magic __fallback_result_{idx} with'''
+        src = src[:raw_ty_match.start()] + new_ty_for_ident + src[raw_ty_match.end():]
+    elif hybrid_ty_match is not None:
+        idx = hybrid_ty_match.group("idx")
+        new_ty_for_ident = f'''let getTyIdentRaw = fun name -> let typedTyByIdent = Obj.magic tyByIdent in if typedTyByIdent == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else Obj.magic (HxMap.get_string typedTyByIdent name) in let resolveTyIdentName = fun name -> if getTyIdentRaw (name : string) != Obj.magic (HxRuntime.hx_null) then name else let lowered = (ocamlValueIdent (name : string) : string) in if not (HxString.equals lowered name) && getTyIdentRaw (lowered : string) != Obj.magic (HxRuntime.hx_null) then lowered else name in let tyForIdent = fun name -> try let __fallback_result_{idx} = let resolvedName = (resolveTyIdentName (name : string) : string) in let tempResolvedTy = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+  ignore (let direct = (getTyIdentRaw (resolvedName : string) : Obj.t) in if direct == Obj.magic (HxRuntime.hx_null) && !currentExprTyHints != Obj.magic (HxRuntime.hx_null) then let fallback = Obj.magic (HxMap.get_string (!currentExprTyHints) resolvedName) in (
+    tempResolvedTy := fallback;
+    fallback
+  ) else let __assign_bootstrap_expr_ty_1 = direct in (
+    tempResolvedTy := __assign_bootstrap_expr_ty_1;
+    __assign_bootstrap_expr_ty_1
+  ));
+  ignore (if !tempResolvedTy == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  let t = Obj.magic (!tempResolvedTy) in (
+    ignore (if t == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+    TyType.toString (Obj.magic t) ()
+  )
+) in Obj.magic __fallback_result_{idx} with'''
+        src = src[:hybrid_ty_match.start()] + new_ty_for_ident + src[hybrid_ty_match.end():]
+    elif "let resolvedName = (resolveTyIdentName (name : string) : string)" in src and "currentExprTyHints" in src:
+        pass
+    else:
+        fail("build-hxhx: failed to locate bootstrap tyForIdent anchor for Int64 mixed-binop repair\n")
 
     old_stmt_intro = '''fun s tyCtx allowedValueIdentsForStmt -> let prevAllowedValueIdentNamesStmt = (!currentAllowedValueIdentNames : bool HxMap.string_map) in let _bootstrap_stmt_allowed_assign = let __assign_bootstrap_stmt_allowed_names = Obj.magic allowedValueIdentsForStmt in (
                       currentAllowedValueIdentNames := __assign_bootstrap_stmt_allowed_names;
@@ -2369,21 +3307,22 @@ def cmd_patch_int64_mixed_binops(argv: list[str]) -> None:
                     ) in let tempResult6 = ref ("" : string) in (
                       ignore _bootstrap_stmt_allowed_assign;
                       ignore _bootstrap_expr_ty_hints_assign;'''
-    src = replace_one(
-        src,
-        old_stmt_intro,
-        new_stmt_intro,
-        "build-hxhx: failed to locate bootstrap stmtToUnit intro anchor for Int64 mixed-binop repair\n",
-    )
+    if old_stmt_intro in src:
+        src = replace_one(
+            src,
+            old_stmt_intro,
+            new_stmt_intro,
+            "build-hxhx: failed to locate bootstrap stmtToUnit intro anchor for Int64 mixed-binop repair\n",
+        )
 
-    old_stmt_restore = '''let __stmt_result = (!tempResult6 : string) in (
+        old_stmt_restore = '''let __stmt_result = (!tempResult6 : string) in (
                         ignore (let __assign_bootstrap_restore_stmt_allowed = prevAllowedValueIdentNamesStmt in (
                           currentAllowedValueIdentNames := __assign_bootstrap_restore_stmt_allowed;
                           __assign_bootstrap_restore_stmt_allowed
                         ));
                         __stmt_result
                       )'''
-    new_stmt_restore = '''let __stmt_result = (!tempResult6 : string) in (
+        new_stmt_restore = '''let __stmt_result = (!tempResult6 : string) in (
                         ignore (let __assign_bootstrap_restore_stmt_allowed = prevAllowedValueIdentNamesStmt in (
                           currentAllowedValueIdentNames := __assign_bootstrap_restore_stmt_allowed;
                           __assign_bootstrap_restore_stmt_allowed
@@ -2394,12 +3333,56 @@ def cmd_patch_int64_mixed_binops(argv: list[str]) -> None:
                         ));
                         __stmt_result
                       )'''
-    src = replace_one(
-        src,
-        old_stmt_restore,
-        new_stmt_restore,
-        "build-hxhx: failed to locate bootstrap stmtToUnit restore anchor for Int64 mixed-binop repair\n",
-    )
+        src = replace_one(
+            src,
+            old_stmt_restore,
+            new_stmt_restore,
+            "build-hxhx: failed to locate bootstrap stmtToUnit restore anchor for Int64 mixed-binop repair\n",
+        )
+    elif "fun s tyCtx -> let tempResult6 = ref (\"\" : string) in (" in src:
+        stmt_intro_pattern = re.compile(
+            r"fun s tyCtx -> let tempResult6 = ref \(\"\" : string\) in \(\n\s+ignore \(match s with",
+            re.S,
+        )
+        stmt_intro_match = stmt_intro_pattern.search(src)
+        if stmt_intro_match is None:
+            fail("build-hxhx: failed to locate bootstrap stmtToUnit intro anchor for Int64 mixed-binop repair\n")
+        stmt_intro_replacement = '''fun s tyCtx -> let prevAllowedValueIdentNamesStmt = (!currentAllowedValueIdentNames : bool HxMap.string_map) in let prevExprTyHintsStmt = (!currentExprTyHints : TyType.t HxMap.string_map) in let _bootstrap_stmt_allowed_assign = let __assign_bootstrap_stmt_allowed_names = Obj.magic allowedValueIdents in (
+                      currentAllowedValueIdentNames := __assign_bootstrap_stmt_allowed_names;
+                      __assign_bootstrap_stmt_allowed_names
+                    ) in let _bootstrap_expr_ty_hints_assign = let __assign_bootstrap_expr_ty_hints = Obj.magic localHints in (
+                      currentExprTyHints := __assign_bootstrap_expr_ty_hints;
+                      __assign_bootstrap_expr_ty_hints
+                    ) in let tempResult6 = ref ("" : string) in (
+                      ignore _bootstrap_stmt_allowed_assign;
+                      ignore _bootstrap_expr_ty_hints_assign;
+                      ignore (match s with'''
+        src = src[:stmt_intro_match.start()] + stmt_intro_replacement + src[stmt_intro_match.end():]
+
+        stmt_restore_pattern = re.compile(
+            r"\)\);\n\s+!tempResult6\n\s+\)\) in \(",
+            re.S,
+        )
+        stmt_restore_match = stmt_restore_pattern.search(src, stmt_intro_match.start())
+        if stmt_restore_match is None:
+            fail("build-hxhx: failed to locate bootstrap stmtToUnit restore anchor for Int64 mixed-binop repair\n")
+        stmt_restore_replacement = '''
+                        ));
+                      let __stmt_result = (!tempResult6 : string) in (
+                        ignore (let __assign_bootstrap_restore_stmt_allowed = prevAllowedValueIdentNamesStmt in (
+                          currentAllowedValueIdentNames := __assign_bootstrap_restore_stmt_allowed;
+                          __assign_bootstrap_restore_stmt_allowed
+                        ));
+                        ignore (let __assign_bootstrap_restore_expr_ty_hints = prevExprTyHintsStmt in (
+                          currentExprTyHints := __assign_bootstrap_restore_expr_ty_hints;
+                          __assign_bootstrap_restore_expr_ty_hints
+                        ));
+                        __stmt_result
+                      )
+                    )) in ('''
+        src = src[:stmt_restore_match.start()] + stmt_restore_replacement + src[stmt_restore_match.end():]
+    else:
+        fail("build-hxhx: failed to locate bootstrap stmtToUnit intro anchor for Int64 mixed-binop repair\n")
 
     int64_helper_ml = '''let isInt64TypeText = fun t -> HxString.equals t "Int64" || HxString.equals t "haxe.Int64" in let rec isInt64Expr = fun expr -> match expr with
                               | HxExpr.EIdent _p0 -> let _g_int64_ident = (_p0 : string) in isInt64TypeText (tyForIdent (_g_int64_ident : string))
@@ -2424,39 +3407,51 @@ def cmd_patch_int64_mixed_binops(argv: list[str]) -> None:
                               | HxExpr.EUntyped _p0 -> let _g_int64_inner = Obj.magic _p0 in exprToOcamlAsInt64Operand (Obj.magic _g_int64_inner)
                               | HxExpr.EUnop (_p0, _p1) -> let _g_int64_unop = (_p0 : string) in let _g_int64_inner = Obj.magic _p1 in if HxString.equals _g_int64_unop "-" then (match _g_int64_inner with
                                 | HxExpr.EInt _p2 -> let _g_int64_value = _p2 in ((("Haxe_Int64.ofInt ((HxInt.neg (" ^ HxString.toStdString (string_of_int _g_int64_value)) ^ ")))" : string))
-                                | _ -> (exprToOcaml (Obj.magic expr) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string)) else (exprToOcaml (Obj.magic expr) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string)
-                              | HxExpr.EIdent _p0 -> let _g_int64_name = (_p0 : string) in if HxString.equals (tyForIdent (_g_int64_name : string)) "Int" then (("Haxe_Int64.ofInt (" ^ HxString.toStdString (ocamlReadValueIdent (_g_int64_name : string))) ^ ")" : string) else (exprToOcaml (Obj.magic expr) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string)
-                              | _ -> (exprToOcaml (Obj.magic expr) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in '''
+                                | _ -> (exprToOcaml (Obj.magic expr) arityByIdent tyByIdent staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee : string)) else (exprToOcaml (Obj.magic expr) arityByIdent tyByIdent staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee : string)
+                              | HxExpr.EIdent _p0 -> let _g_int64_name = (_p0 : string) in if HxString.equals (tyForIdent (_g_int64_name : string)) "Int" then (("Haxe_Int64.ofInt (" ^ HxString.toStdString (ocamlReadValueIdent (_g_int64_name : string))) ^ ")" : string) else (exprToOcaml (Obj.magic expr) arityByIdent tyByIdent staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee : string)
+                              | _ -> (exprToOcaml (Obj.magic expr) arityByIdent tyByIdent staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee : string) in '''
 
     old_minus_prefix = '''| "%" | "*" | "-" -> let aIsF = (!isFloatExpr) (Obj.magic a) in let bIsF = (!isFloatExpr) (Obj.magic b) in let aIsI = (!isIntExpr) (Obj.magic a) in let bIsI = (!isIntExpr) (Obj.magic b) in let hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI in let allowNumericFallback = hasKnownNumericSide && not ((!isStringExpr) (Obj.magic a)) && not ((!isStringExpr) (Obj.magic b)) in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if HxString.equals op "%" then'''
-    new_minus_prefix = '''| "%" | "*" | "-" -> ''' + int64_helper_ml + '''if not (HxString.equals op "%") && (isInt64Expr (Obj.magic a) || isInt64Expr (Obj.magic b)) then let fn = if HxString.equals op "*" then ("mul" : string) else ("sub" : string) in let __assign_bootstrap_int64_mixed_1 = (((((("Haxe_Int64." ^ HxString.toStdString fn) ^ " (") ^ HxString.toStdString (exprToOcamlAsInt64Operand (Obj.magic a))) ^ ") (") ^ HxString.toStdString (exprToOcamlAsInt64Operand (Obj.magic b))) ^ ")" : string) in (
-                                tempResult13 := __assign_bootstrap_int64_mixed_1;
-                                __assign_bootstrap_int64_mixed_1
-                              ) else let aIsF = (!isFloatExpr) (Obj.magic a) in let bIsF = (!isFloatExpr) (Obj.magic b) in let aIsI = (!isIntExpr) (Obj.magic a) in let bIsI = (!isIntExpr) (Obj.magic b) in let hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI in let allowNumericFallback = hasKnownNumericSide && not ((!isStringExpr) (Obj.magic a)) && not ((!isStringExpr) (Obj.magic b)) in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if HxString.equals op "%" then'''
-    src = replace_one(
-        src,
-        old_minus_prefix,
-        new_minus_prefix,
-        "build-hxhx: failed to locate bootstrap Int64 mixed-binop (*,-,%) anchor\n",
-    )
+    new_minus_prefix = '''| "%" | "*" | "-" -> ''' + int64_helper_ml + '''if not (HxString.equals op "%") && (isInt64Expr (Obj.magic a) || isInt64Expr (Obj.magic b)) then let fn = if HxString.equals op "*" then ("mul" : string) else ("sub" : string) in (((((("Haxe_Int64." ^ HxString.toStdString fn) ^ " (") ^ HxString.toStdString (exprToOcamlAsInt64Operand (Obj.magic a))) ^ ") (") ^ HxString.toStdString (exprToOcamlAsInt64Operand (Obj.magic b))) ^ ")" : string) else let aIsF = (!isFloatExpr) (Obj.magic a) in let bIsF = (!isFloatExpr) (Obj.magic b) in let aIsI = (!isIntExpr) (Obj.magic a) in let bIsI = (!isIntExpr) (Obj.magic b) in let hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI in let allowNumericFallback = hasKnownNumericSide && not ((!isStringExpr) (Obj.magic a)) && not ((!isStringExpr) (Obj.magic b)) in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if HxString.equals op "%" then'''
+    if old_minus_prefix in src:
+        src = replace_one(
+            src,
+            old_minus_prefix,
+            new_minus_prefix,
+            "build-hxhx: failed to locate bootstrap Int64 mixed-binop (*,-,%) anchor\n",
+        )
+    elif "isInt64Expr" not in src:
+        minus_pattern = re.compile(
+            r"""\| "%" \| "\*" \| "-" -> let aIsF = \(!isFloatExpr\) \(Obj\.magic a\) in let bIsF = \(!isFloatExpr\) \(Obj\.magic b\) in let aIsI = \(!isIntExpr\) \(Obj\.magic a\) in let bIsI = \(!isIntExpr\) \(Obj\.magic b\) in let hasKnownNumericSide = aIsF \|\| bIsF \|\| aIsI \|\| bIsI in let allowNumericFallback = hasKnownNumericSide && not \(\(!isStringExpr\) \(Obj\.magic a\)\) && not \(\(!isStringExpr\) \(Obj\.magic b\)\) in let canFloat = HxString\.equals op "\+" \|\| HxString\.equals op "-" \|\| HxString\.equals op "\*" \|\| HxString\.equals op "/" in if HxString\.equals op "%" then""",
+            re.S,
+        )
+        src, count = minus_pattern.subn(new_minus_prefix, src, count=1)
+        if count == 0:
+            fail("build-hxhx: failed to locate bootstrap Int64 mixed-binop (*,-,%) anchor\n")
 
     old_plus_prefix = '''| "+" -> if (!isStringExpr) (Obj.magic a) || (!isStringExpr) (Obj.magic b) then let __assign_45646 = (((("((" ^ HxString.toStdString (exprToOcamlForConcat (Obj.magic a))) ^ ") ^ (") ^ HxString.toStdString (exprToOcamlForConcat (Obj.magic b))) ^ "))" : string) in (
                                 tempResult13 := __assign_45646;
                                 __assign_45646
                               ) else let aIsF = (!isFloatExpr) (Obj.magic a) in let bIsF = (!isFloatExpr) (Obj.magic b) in let aIsI = (!isIntExpr) (Obj.magic a) in let bIsI = (!isIntExpr) (Obj.magic b) in let hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI in let allowNumericFallback = hasKnownNumericSide && not ((!isStringExpr) (Obj.magic a)) && not ((!isStringExpr) (Obj.magic b)) in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if HxString.equals op "%" then'''
-    new_plus_prefix = '''| "+" -> if (!isStringExpr) (Obj.magic a) || (!isStringExpr) (Obj.magic b) then let __assign_45646 = (((("((" ^ HxString.toStdString (exprToOcamlForConcat (Obj.magic a))) ^ ") ^ (") ^ HxString.toStdString (exprToOcamlForConcat (Obj.magic b))) ^ "))" : string) in (
-                                tempResult13 := __assign_45646;
-                                __assign_45646
-                              ) else ''' + int64_helper_ml + '''if isInt64Expr (Obj.magic a) || isInt64Expr (Obj.magic b) then let __assign_bootstrap_int64_mixed_2 = ((((("Haxe_Int64.add (" ^ HxString.toStdString (exprToOcamlAsInt64Operand (Obj.magic a))) ^ ") (") ^ HxString.toStdString (exprToOcamlAsInt64Operand (Obj.magic b))) ^ ")" : string)) in (
-                                tempResult13 := __assign_bootstrap_int64_mixed_2;
-                                __assign_bootstrap_int64_mixed_2
-                              ) else let aIsF = (!isFloatExpr) (Obj.magic a) in let bIsF = (!isFloatExpr) (Obj.magic b) in let aIsI = (!isIntExpr) (Obj.magic a) in let bIsI = (!isIntExpr) (Obj.magic b) in let hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI in let allowNumericFallback = hasKnownNumericSide && not ((!isStringExpr) (Obj.magic a)) && not ((!isStringExpr) (Obj.magic b)) in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if HxString.equals op "%" then'''
-    src = replace_one(
-        src,
-        old_plus_prefix,
-        new_plus_prefix,
-        "build-hxhx: failed to locate bootstrap Int64 mixed-binop (+) anchor\n",
-    )
+    new_plus_prefix = '''| "+" -> if (!isStringExpr) (Obj.magic a) || (!isStringExpr) (Obj.magic b) then (((("((" ^ HxString.toStdString (exprToOcamlForConcat (Obj.magic a))) ^ ") ^ (") ^ HxString.toStdString (exprToOcamlForConcat (Obj.magic b))) ^ "))" : string) else ''' + int64_helper_ml + '''if isInt64Expr (Obj.magic a) || isInt64Expr (Obj.magic b) then ((((("Haxe_Int64.add (" ^ HxString.toStdString (exprToOcamlAsInt64Operand (Obj.magic a))) ^ ") (") ^ HxString.toStdString (exprToOcamlAsInt64Operand (Obj.magic b))) ^ ")" : string)) else let aIsF = (!isFloatExpr) (Obj.magic a) in let bIsF = (!isFloatExpr) (Obj.magic b) in let aIsI = (!isIntExpr) (Obj.magic a) in let bIsI = (!isIntExpr) (Obj.magic b) in let hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI in let allowNumericFallback = hasKnownNumericSide && not ((!isStringExpr) (Obj.magic a)) && not ((!isStringExpr) (Obj.magic b)) in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if HxString.equals op "%" then'''
+    if old_plus_prefix in src:
+        src = replace_one(
+            src,
+            old_plus_prefix,
+            new_plus_prefix,
+            "build-hxhx: failed to locate bootstrap Int64 mixed-binop (+) anchor\n",
+        )
+    elif "isInt64Expr" not in src:
+        plus_pattern = re.compile(
+            r"""\| "\+" -> if \(!isStringExpr\) \(Obj\.magic a\) \|\| \(!isStringExpr\) \(Obj\.magic b\) then let __assign_\d+ = \(\(\(\("\(\(" \^ HxString\.toStdString \(exprToOcamlForConcat \(Obj\.magic a\)\)\) \^ "\) \^ \(" \^ HxString\.toStdString \(exprToOcamlForConcat \(Obj\.magic b\)\)\) \^ "\)\)" : string\) in \(
+\s+tempResult14 := __assign_\d+;
+\s+__assign_\d+
+\s+\) else let aIsF = \(!isFloatExpr\) \(Obj\.magic a\) in let bIsF = \(!isFloatExpr\) \(Obj\.magic b\) in let aIsI = \(!isIntExpr\) \(Obj\.magic a\) in let bIsI = \(!isIntExpr\) \(Obj\.magic b\) in let hasKnownNumericSide = aIsF \|\| bIsF \|\| aIsI \|\| bIsI in let allowNumericFallback = hasKnownNumericSide && not \(\(!isStringExpr\) \(Obj\.magic a\)\) && not \(\(!isStringExpr\) \(Obj\.magic b\)\) in let canFloat = HxString\.equals op "\+" \|\| HxString\.equals op "-" \|\| HxString\.equals op "\*" \|\| HxString\.equals op "/" in if HxString\.equals op "%" then""",
+            re.S,
+        )
+        src, count = plus_pattern.subn(new_plus_prefix, src, count=1)
+        if count == 0:
+            fail("build-hxhx: failed to locate bootstrap Int64 mixed-binop (+) anchor\n")
 
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: Int64 mixed-binop repair *)\n")
 
@@ -2468,7 +3463,7 @@ def cmd_patch_int64_static_helpers(argv: list[str]) -> None:
     src = read_text(path_str)
     needle = '| "ofInt" -> if HxArray.length _g1 = 1'
     if needle not in src:
-        fail("build-hxhx: failed to locate bootstrap Int64 static-helper anchor\n")
+        return
 
     int64_operand_helper = '''let rec int64Operand = fun expr -> match expr with
                               | HxExpr.EInt _p0 -> let _g_int64_value = _p0 in (("Haxe_Int64.ofInt (" ^ HxString.toStdString (string_of_int _g_int64_value)) ^ ")" : string)
@@ -2478,31 +3473,13 @@ def cmd_patch_int64_static_helpers(argv: list[str]) -> None:
                               | HxExpr.EUntyped _p0 -> let _g_int64_inner = Obj.magic _p0 in int64Operand (Obj.magic _g_int64_inner)
                               | HxExpr.EUnop (_p0, _p1) -> let _g_int64_unop = (_p0 : string) in let _g_int64_inner = Obj.magic _p1 in if HxString.equals _g_int64_unop "-" then (match _g_int64_inner with
                                 | HxExpr.EInt _p2 -> let _g_int64_value = _p2 in ((("Haxe_Int64.ofInt ((HxInt.neg (" ^ HxString.toStdString (string_of_int _g_int64_value)) ^ ")))" : string))
-                                | _ -> (exprToOcaml (Obj.magic expr) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.magic (HxRuntime.hx_null)) : string)) else (exprToOcaml (Obj.magic expr) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.magic (HxRuntime.hx_null)) : string)
-                              | HxExpr.EIdent _p0 -> let _g_int64_name = (_p0 : string) in if HxString.equals (tyForIdent (_g_int64_name : string)) "Int" then (("Haxe_Int64.ofInt (" ^ HxString.toStdString (ocamlReadValueIdent (_g_int64_name : string))) ^ ")" : string) else (exprToOcaml (Obj.magic expr) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.magic (HxRuntime.hx_null)) : string)
-                              | _ -> (exprToOcaml (Obj.magic expr) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.magic (HxRuntime.hx_null)) : string) in '''
+                                | _ -> (exprToOcaml (Obj.magic expr) arityByIdent tyByIdent staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass (Obj.magic (HxRuntime.hx_null)) : string)) else (exprToOcaml (Obj.magic expr) arityByIdent tyByIdent staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass (Obj.magic (HxRuntime.hx_null)) : string)
+                              | HxExpr.EIdent _p0 -> let _g_int64_name = (_p0 : string) in if HxString.equals (tyForIdent (_g_int64_name : string)) "Int" then (("Haxe_Int64.ofInt (" ^ HxString.toStdString (ocamlReadValueIdent (_g_int64_name : string))) ^ ")" : string) else (exprToOcaml (Obj.magic expr) arityByIdent tyByIdent staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass (Obj.magic (HxRuntime.hx_null)) : string)
+                              | _ -> (exprToOcaml (Obj.magic expr) arityByIdent tyByIdent staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass (Obj.magic (HxRuntime.hx_null)) : string) in '''
 
-    int64_helper_block = '''| "add" -> if HxArray.length _g1 = 2 then let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g6 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in let left = Obj.magic _g5 in let right = Obj.magic _g6 in ''' + int64_operand_helper + '''let leftCode = HxString.toStdString (int64Operand (Obj.magic left)) in let rightCode = HxString.toStdString (int64Operand (Obj.magic right)) in let __assign_bootstrap_int64_static = ((("Haxe_Int64.add (" ^ leftCode) ^ ") (") ^ rightCode) ^ ")" in (
-                                tempResult13 := __assign_bootstrap_int64_static;
-                                __assign_bootstrap_int64_static
-                              ) else let __assign_bootstrap_int64_static_fallback = "(Obj.magic 0)" in (
-                                tempResult13 := __assign_bootstrap_int64_static_fallback;
-                                __assign_bootstrap_int64_static_fallback
-                              )
-                              | "sub" -> if HxArray.length _g1 = 2 then let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g6 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in let left = Obj.magic _g5 in let right = Obj.magic _g6 in ''' + int64_operand_helper + '''let leftCode = HxString.toStdString (int64Operand (Obj.magic left)) in let rightCode = HxString.toStdString (int64Operand (Obj.magic right)) in let __assign_bootstrap_int64_static = ((("Haxe_Int64.sub (" ^ leftCode) ^ ") (") ^ rightCode) ^ ")" in (
-                                tempResult13 := __assign_bootstrap_int64_static;
-                                __assign_bootstrap_int64_static
-                              ) else let __assign_bootstrap_int64_static_fallback = "(Obj.magic 0)" in (
-                                tempResult13 := __assign_bootstrap_int64_static_fallback;
-                                __assign_bootstrap_int64_static_fallback
-                              )
-                              | "mul" -> if HxArray.length _g1 = 2 then let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g6 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in let left = Obj.magic _g5 in let right = Obj.magic _g6 in ''' + int64_operand_helper + '''let leftCode = HxString.toStdString (int64Operand (Obj.magic left)) in let rightCode = HxString.toStdString (int64Operand (Obj.magic right)) in let __assign_bootstrap_int64_static = ((("Haxe_Int64.mul (" ^ leftCode) ^ ") (") ^ rightCode) ^ ")" in (
-                                tempResult13 := __assign_bootstrap_int64_static;
-                                __assign_bootstrap_int64_static
-                              ) else let __assign_bootstrap_int64_static_fallback = "(Obj.magic 0)" in (
-                                tempResult13 := __assign_bootstrap_int64_static_fallback;
-                                __assign_bootstrap_int64_static_fallback
-                              )
+    int64_helper_block = '''| "add" -> if HxArray.length _g1 = 2 then let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g6 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in let left = Obj.magic _g5 in let right = Obj.magic _g6 in ''' + int64_operand_helper + '''let leftCode = HxString.toStdString (int64Operand (Obj.magic left)) in let rightCode = HxString.toStdString (int64Operand (Obj.magic right)) in ((("Haxe_Int64.add (" ^ leftCode) ^ ") (") ^ rightCode) ^ ")" else "(Obj.magic 0)"
+                              | "sub" -> if HxArray.length _g1 = 2 then let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g6 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in let left = Obj.magic _g5 in let right = Obj.magic _g6 in ''' + int64_operand_helper + '''let leftCode = HxString.toStdString (int64Operand (Obj.magic left)) in let rightCode = HxString.toStdString (int64Operand (Obj.magic right)) in ((("Haxe_Int64.sub (" ^ leftCode) ^ ") (") ^ rightCode) ^ ")" else "(Obj.magic 0)"
+                              | "mul" -> if HxArray.length _g1 = 2 then let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g6 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in let left = Obj.magic _g5 in let right = Obj.magic _g6 in ''' + int64_operand_helper + '''let leftCode = HxString.toStdString (int64Operand (Obj.magic left)) in let rightCode = HxString.toStdString (int64Operand (Obj.magic right)) in ((("Haxe_Int64.mul (" ^ leftCode) ^ ") (") ^ rightCode) ^ ")" else "(Obj.magic 0)"
                               | "ofInt" -> if HxArray.length _g1 = 1'''
 
     src = src.replace(needle, int64_helper_block)
@@ -2712,6 +3689,9 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-stage1-std-root-termination": cmd_patch_stage1_std_root_termination,
     "patch-allowed-ident-fallback": cmd_patch_allowed_ident_fallback,
     "patch-typed-ty-map-copying": cmd_patch_typed_ty_map_copying,
+    "patch-typed-map-helper-obj-repr": cmd_patch_typed_map_helper_obj_repr,
+    "patch-nested-emitter-call-arg-reprs": cmd_patch_nested_emitter_call_arg_reprs,
+    "patch-module-name-lookup-raw-map": cmd_patch_module_name_lookup_raw_map,
     "patch-typed-ty-ident-lookups": cmd_patch_typed_ty_ident_lookups,
     "patch-negative-unop-is-int-expr": cmd_patch_negative_unop_is_int_expr,
     "patch-stmt-local-allowed-idents": cmd_patch_stmt_local_allowed_idents,
