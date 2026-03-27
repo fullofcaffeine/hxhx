@@ -1691,12 +1691,26 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
         '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
     )
     literal_extend_ty_new = (
-        'extendTyByIdentMany tyByIdent '
+        'extendTyByIdentMany (Obj.magic tyByIdent) '
         '(Obj.magic args) '
         '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
     )
     if literal_extend_ty_old in src:
         src = src.replace(literal_extend_ty_old, literal_extend_ty_new)
+        changed = True
+
+    literal_extend_ty_direct_old = (
+        'extendTyByIdentMany tyByIdent '
+        '(Obj.magic args) '
+        '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
+    )
+    literal_extend_ty_direct_new = (
+        'extendTyByIdentMany (Obj.magic tyByIdent) '
+        '(Obj.magic args) '
+        '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
+    )
+    if literal_extend_ty_direct_old in src:
+        src = src.replace(literal_extend_ty_direct_old, literal_extend_ty_direct_new)
         changed = True
 
     literal_extend_one_old = (
@@ -1705,12 +1719,26 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
         '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
     )
     literal_extend_one_new = (
-        'extendTyByIdent tyByIdent '
+        'extendTyByIdent (Obj.magic tyByIdent) '
         '(name : string) '
         '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
     )
     if literal_extend_one_old in src:
         src = src.replace(literal_extend_one_old, literal_extend_one_new)
+        changed = True
+
+    literal_extend_one_direct_old = (
+        'extendTyByIdent tyByIdent '
+        '(name : string) '
+        '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
+    )
+    literal_extend_one_direct_new = (
+        'extendTyByIdent (Obj.magic tyByIdent) '
+        '(name : string) '
+        '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
+    )
+    if literal_extend_one_direct_old in src:
+        src = src.replace(literal_extend_one_direct_old, literal_extend_one_direct_new)
         changed = True
 
     src2 = re.sub(
@@ -1817,21 +1845,40 @@ def cmd_patch_extend_ty_ident_call_reprs(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
-    if "extendTyByIdent (Obj.repr " not in src and "extendTyByIdentMany (Obj.repr " not in src:
+    if (
+        "extendTyByIdent (Obj.repr " not in src
+        and "extendTyByIdentMany (Obj.repr " not in src
+        and "extendTyByIdent tyByIdent " not in src
+        and "extendTyByIdentMany tyByIdent " not in src
+    ):
         return
 
     changed = False
 
     src2 = src.replace(
         'extendTyByIdentMany (Obj.repr tyByIdent) (Obj.magic args) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
+        'extendTyByIdentMany (Obj.magic tyByIdent) (Obj.magic args) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = src.replace(
         'extendTyByIdentMany tyByIdent (Obj.magic args) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
+        'extendTyByIdentMany (Obj.magic tyByIdent) (Obj.magic args) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
     )
     changed = changed or src2 != src
     src = src2
 
     src2 = src.replace(
         'extendTyByIdent (Obj.repr tyByIdent) (name : string) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
+        'extendTyByIdent (Obj.magic tyByIdent) (name : string) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = src.replace(
         'extendTyByIdent tyByIdent (name : string) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
+        'extendTyByIdent (Obj.magic tyByIdent) (name : string) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
     )
     changed = changed or src2 != src
     src = src2
