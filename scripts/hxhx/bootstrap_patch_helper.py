@@ -1242,12 +1242,38 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
-    if (
-        "exprToOcamlString (Obj.magic " not in src
-        and "exprToOcaml (Obj.magic " not in src
-        and "stmtListToOcaml (Obj.magic " not in src
-        and "mutableAssignmentStmtToUnit " not in src
-    ):
+    stale_nested_call_families = (
+        lambda s: "exprToOcamlString (Obj.magic " in s
+        and " (Obj.repr tyByIdent) (Obj.repr arityByIdent) " in s,
+        lambda s: "exprToOcaml (Obj.magic " in s
+        and (
+            " (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) " in s
+            or " (Obj.repr arityByName) (Obj.repr staticTyByIdent) (Obj.repr staticImportByIdent) " in s
+            or " (Obj.repr arityByName) tyByIdent staticImportByIdent " in s
+            or " arityByIdent tyCtx staticImportByIdent " in s
+        ),
+        lambda s: "stmtListToOcaml (Obj.magic " in s
+        and (
+            " (Obj.repr arityByIdent) (Obj.repr tyCtx) " in s
+            or " arityByIdent tyCtx " in s
+        ),
+        lambda s: "mutableAssignmentStmtToUnit " in s
+        and " (Obj.repr tyCtx)" in s,
+        lambda s: "returnExprToOcaml (Obj.magic " in s
+        and (
+            " (Obj.repr arityByIdent) " in s
+            or " (Obj.repr arityByName) " in s
+            or " arityByIdent tyCtx staticImportByIdent " in s
+        ),
+        lambda s: "returnExprToOcaml (Obj.obj " in s
+        and (
+            " (Obj.repr arityByIdent) " in s
+            or " (Obj.repr arityByName) " in s
+        ),
+        lambda s: "extendTyByIdentMany (Obj.repr " in s,
+    )
+
+    if not any(predicate(src) for predicate in stale_nested_call_families):
         return
 
     changed = False
@@ -1577,6 +1603,28 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
     if literal_expr_direct_old in src:
         src = src.replace(literal_expr_direct_old, literal_expr_direct_new)
         changed = True
+
+    literal_extend_ty_old = (
+        'extendTyByIdentMany (Obj.repr tyByIdent) '
+        '(Obj.magic args) '
+        '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
+    )
+    literal_extend_ty_new = (
+        'extendTyByIdentMany tyByIdent '
+        '(Obj.magic args) '
+        '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
+    )
+    if literal_extend_ty_old in src:
+        src = src.replace(literal_extend_ty_old, literal_extend_ty_new)
+        changed = True
+
+    src2 = re.sub(
+        r"extendTyByIdentMany \(Obj\.repr (?P<tymap>[A-Za-z_!][A-Za-z0-9_]*)\)",
+        r"extendTyByIdentMany \g<tymap>",
+        src,
+    )
+    changed = changed or src2 != src
+    src = src2
 
     def _normalize_ident_arg(raw: str) -> str:
         raw = raw.strip()

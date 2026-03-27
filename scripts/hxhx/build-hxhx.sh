@@ -71,6 +71,17 @@ insert_bootstrap_patch_before_anchor() {
     "$error_message"
 }
 
+file_contains_literal() {
+  local needle="$1"
+  local path="$2"
+
+  if command -v rg >/dev/null 2>&1; then
+    rg -Fq "$needle" "$path"
+  else
+    grep -Fq -- "$needle" "$path"
+  fi
+}
+
 is_true() {
   local v="${1:-}"
   [[ "$v" == "1" || "$v" == "true" || "$v" == "yes" || "$v" == "on" ]]
@@ -132,7 +143,7 @@ patch_bootstrap_emitter_root_sys_stdio() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -153,7 +164,7 @@ patch_bootstrap_emitter_project_generator_helper_calls() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -174,7 +185,7 @@ patch_bootstrap_emitter_load_template_fallback() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -195,7 +206,7 @@ patch_bootstrap_emitter_template_engine_condition() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -216,7 +227,7 @@ patch_bootstrap_emitter_php_syntax_empty_rest_calls() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -237,7 +248,7 @@ patch_bootstrap_emitter_php_boot_float_zero_compare() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -263,7 +274,7 @@ patch_bootstrap_emitter_php_boot_string_key_lookups() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -289,7 +300,7 @@ patch_bootstrap_emitter_haxe_io_eof_presence() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -312,7 +323,7 @@ patch_bootstrap_emitter_array_receiver_chain_lowering() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -331,7 +342,7 @@ patch_bootstrap_emitter_type_create_instance() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -354,7 +365,7 @@ patch_bootstrap_hxparser_interpolated_exprs() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$parser_path"; then
+  if file_contains_literal "$marker" "$parser_path"; then
     return 0
   fi
 
@@ -369,7 +380,7 @@ patch_bootstrap_hxparser_generic_function_decl() {
     return 0
   fi
 
-  if rg -Fq '__enum_param_90001' "$parser_path"; then
+  if file_contains_literal '__enum_param_90001' "$parser_path"; then
     return 0
   fi
 
@@ -384,7 +395,7 @@ patch_bootstrap_hxparser_uppercase_helper_call() {
     return 0
   fi
 
-  if rg -Fq 'hasLowerAlpha (name : string) && HxString.indexOf name "_" 0 = -1' "$parser_path"; then
+  if file_contains_literal 'hasLowerAlpha (name : string) && HxString.indexOf name "_" 0 = -1' "$parser_path"; then
     return 0
   fi
 
@@ -399,7 +410,7 @@ patch_bootstrap_native_parser_generic_arrow_constraints() {
     return 0
   fi
 
-  if rg -Fq "Function type arrows inside generic constraints" "$parser_path"; then
+  if file_contains_literal "Function type arrows inside generic constraints" "$parser_path"; then
     return 0
   fi
 
@@ -414,7 +425,7 @@ patch_bootstrap_native_parser_expr_spacing() {
     return 0
   fi
 
-  if rg -Fq 'let append_token_text (b : Buffer.t) (text : string) : unit =' "$parser_path"; then
+  if file_contains_literal 'let append_token_text (b : Buffer.t) (text : string) : unit =' "$parser_path"; then
     return 0
   fi
 
@@ -429,7 +440,7 @@ patch_bootstrap_emitter_typed_param_fallback() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: typed param fallback for emitted fn args' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: typed param fallback for emitted fn args' "$emitter_path"; then
     return 0
   fi
 
@@ -444,7 +455,7 @@ patch_bootstrap_emitter_parsed_arg_type_overlay() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: parsed arg type overlay for tyByIdent' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: parsed arg type overlay for tyByIdent' "$emitter_path"; then
     return 0
   fi
 
@@ -459,7 +470,7 @@ patch_bootstrap_emitter_preapplied_sig_fallback() {
     return 0
   fi
 
-  if ! rg -Fq '&& not (receiverPreApplied)' "$emitter_path"; then
+  if ! file_contains_literal '&& not (receiverPreApplied)' "$emitter_path"; then
     return 0
   fi
 
@@ -474,7 +485,7 @@ patch_bootstrap_stage1_std_root_termination() {
     return 0
   fi
 
-  if rg -Fq 'StringTools.startsWith (nextDir : string) ("../" : string)' "$stage1_path"; then
+  if file_contains_literal 'StringTools.startsWith (nextDir : string) ("../" : string)' "$stage1_path"; then
     return 0
   fi
 
@@ -489,7 +500,7 @@ patch_bootstrap_emitter_allowed_ident_fallback() {
     return 0
   fi
 
-  if rg -Fq 'let currentAllowedValueIdentNames = ref (Obj.magic (HxRuntime.hx_null) : bool HxMap.string_map)' "$emitter_path"; then
+  if file_contains_literal 'let currentAllowedValueIdentNames = ref (Obj.magic (HxRuntime.hx_null) : bool HxMap.string_map)' "$emitter_path"; then
     return 0
   fi
 
@@ -504,7 +515,7 @@ patch_bootstrap_emitter_stmt_local_allowed_idents() {
     return 0
   fi
 
-  if rg -Fq 'let stmtToUnit = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt -> TyType.t HxMap.string_map -> bool HxMap.string_map -> string) in (' "$emitter_path"; then
+  if file_contains_literal 'let stmtToUnit = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt -> TyType.t HxMap.string_map -> bool HxMap.string_map -> string) in (' "$emitter_path"; then
     return 0
   fi
 
@@ -519,11 +530,66 @@ patch_bootstrap_emitter_typed_ty_map_copying() {
     return 0
   fi
 
-  if rg -Fq 'let typedTy = Obj.magic ty in let keys = if typedTy == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedTy in (' "$emitter_path"; then
+  if file_contains_literal 'let typedTy = Obj.magic ty in let keys = if typedTy == Obj.magic (HxRuntime.hx_null) then Obj.magic (HxRuntime.hx_null) else HxMap.keys_string typedTy in (' "$emitter_path"; then
     return 0
   fi
 
   run_bootstrap_patch_helper patch-typed-ty-map-copying "$emitter_path"
+}
+
+patch_bootstrap_emitter_typed_map_helper_obj_repr() {
+  local build_dir="$1"
+  local emitter_path="$build_dir/EmitterStage.ml"
+
+  if [ ! -f "$emitter_path" ]; then
+    return 0
+  fi
+
+  if file_contains_literal 'bootstrap shim: typed-map Obj.repr helper repair' "$emitter_path"; then
+    return 0
+  fi
+
+  run_bootstrap_patch_helper patch-typed-map-helper-obj-repr "$emitter_path"
+}
+
+patch_bootstrap_emitter_nested_call_arg_reprs() {
+  local build_dir="$1"
+  local emitter_path=""
+  local shard_extend_ty_literal='extendTyByIdentMany (Obj.repr tyByIdent)'
+
+  emitter_path="$build_dir/EmitterStage.ml"
+  if [ -f "$emitter_path" ]; then
+    run_bootstrap_patch_helper patch-nested-emitter-call-arg-reprs "$emitter_path"
+  fi
+
+  for emitter_path in "$build_dir"/EmitterStage.ml.part*; do
+    if [ ! -f "$emitter_path" ]; then
+      continue
+    fi
+    if ! file_contains_literal "$shard_extend_ty_literal" "$emitter_path"; then
+      continue
+    fi
+    run_bootstrap_patch_helper patch-nested-emitter-call-arg-reprs "$emitter_path"
+  done
+
+  if [ ! -f "$build_dir/EmitterStage.ml" ] && ! compgen -G "$build_dir/EmitterStage.ml.part*" >/dev/null; then
+    return 0
+  fi
+}
+
+patch_bootstrap_emitter_module_name_lookup_raw_map() {
+  local build_dir="$1"
+  local emitter_path="$build_dir/EmitterStage.ml"
+
+  if [ ! -f "$emitter_path" ]; then
+    return 0
+  fi
+
+  if file_contains_literal 'moduleNameByPkgAndClassRaw' "$emitter_path"; then
+    return 0
+  fi
+
+  run_bootstrap_patch_helper patch-module-name-lookup-raw-map "$emitter_path"
 }
 
 patch_bootstrap_emitter_typed_ty_ident_lookups() {
@@ -534,7 +600,7 @@ patch_bootstrap_emitter_typed_ty_ident_lookups() {
     return 0
   fi
 
-  if rg -Fq 'let getTyIdentRaw = fun name -> let typedTyByIdent = Obj.magic tyByIdent' "$emitter_path"; then
+  if file_contains_literal 'let getTyIdentRaw = fun name -> let typedTyByIdent = Obj.magic tyByIdent' "$emitter_path"; then
     return 0
   fi
 
@@ -549,11 +615,11 @@ patch_bootstrap_emitter_return_expr_ty_ident_lookups() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: returnExprToOcaml ty lookup repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: returnExprToOcaml ty lookup repair' "$emitter_path"; then
     return 0
   fi
 
-  run_bootstrap_patch_helper patch-return-expr-ty-ident-lookups "$emitter_path"
+  run_bootstrap_patch_helper patch-typed-ty-ident-lookups "$emitter_path"
 }
 
 patch_bootstrap_emitter_expr_ident_ty_reads() {
@@ -564,11 +630,11 @@ patch_bootstrap_emitter_expr_ident_ty_reads() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: exprToOcaml ident read repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: exprToOcaml ident read repair' "$emitter_path"; then
     return 0
   fi
 
-  run_bootstrap_patch_helper patch-expr-ident-ty-reads "$emitter_path"
+  run_bootstrap_patch_helper patch-typed-ty-ident-lookups "$emitter_path"
 }
 
 patch_bootstrap_emitter_negative_unop_is_int_expr() {
@@ -579,7 +645,7 @@ patch_bootstrap_emitter_negative_unop_is_int_expr() {
     return 0
   fi
 
-  if rg -Fq '| HxExpr.EUnop (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "-" then let inner = Obj.magic _g1 in let __assign_246a = (!isIntExpr) (Obj.magic inner)' "$emitter_path"; then
+  if file_contains_literal '| HxExpr.EUnop (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "-" then let inner = Obj.magic _g1 in let __assign_246a = (!isIntExpr) (Obj.magic inner)' "$emitter_path"; then
     return 0
   fi
 
@@ -594,7 +660,7 @@ patch_bootstrap_emitter_instance_call_receiver_forwarding() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: instance call receiver forwarding repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: instance call receiver forwarding repair' "$emitter_path"; then
     return 0
   fi
 
@@ -609,7 +675,7 @@ patch_bootstrap_emitter_instance_call_this_binding() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: instance call this-binding repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: instance call this-binding repair' "$emitter_path"; then
     return 0
   fi
 
@@ -624,7 +690,7 @@ patch_bootstrap_emitter_instance_method_value_binding() {
     return 0
   fi
 
-  if rg -Fq 'hasCurrentInstanceMethod (name : string) && (mapGetRaw (Obj.repr tyByIdent) (!tempString3 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString4 : string) != Obj.magic (HxRuntime.hx_null) || hasAllowedValueIdent ("this" : string) || hasAllowedValueIdent ("this_" : string))' "$emitter_path"; then
+  if file_contains_literal 'hasCurrentInstanceMethod (name : string) && (mapGetRaw (Obj.repr tyByIdent) (!tempString3 : string) != Obj.magic (HxRuntime.hx_null) || mapGetRaw (Obj.repr tyByIdent) (!tempString4 : string) != Obj.magic (HxRuntime.hx_null) || hasAllowedValueIdent ("this" : string) || hasAllowedValueIdent ("this_" : string))' "$emitter_path"; then
     return 0
   fi
 
@@ -639,7 +705,7 @@ patch_bootstrap_emitter_instance_call_preapplied_arity() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: preapplied receiver arity repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: preapplied receiver arity repair' "$emitter_path"; then
     return 0
   fi
 
@@ -654,7 +720,7 @@ patch_bootstrap_emitter_string_length_fallback() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: string length fallback repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: string length fallback repair' "$emitter_path"; then
     return 0
   fi
 
@@ -669,7 +735,7 @@ patch_bootstrap_emitter_string_length_stdlib() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: string length stdlib repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: string length stdlib repair' "$emitter_path"; then
     return 0
   fi
 
@@ -684,7 +750,7 @@ patch_bootstrap_emitter_mutable_local_string_init_hints() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: mutable-local string init hint repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: mutable-local string init hint repair' "$emitter_path"; then
     return 0
   fi
 
@@ -699,7 +765,7 @@ patch_bootstrap_emitter_qualified_static_optional_args() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: qualified static optional-arg padding repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: qualified static optional-arg padding repair' "$emitter_path"; then
     return 0
   fi
 
@@ -714,7 +780,7 @@ patch_bootstrap_emitter_preapplied_getstring_optional_arg() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: preapplied getString optional-arg repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: preapplied getString optional-arg repair' "$emitter_path"; then
     return 0
   fi
 
@@ -729,7 +795,7 @@ patch_bootstrap_emitter_lambda_list_shim() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: Lambda.list repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: Lambda.list repair' "$emitter_path"; then
     return 0
   fi
 
@@ -744,7 +810,7 @@ patch_bootstrap_emitter_haxe_ds_list_shim() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: haxe.ds.List repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: haxe.ds.List repair' "$emitter_path"; then
     return 0
   fi
 
@@ -759,7 +825,7 @@ patch_bootstrap_emitter_string_key_cast_index() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap shim: string-key cast index repair' "$emitter_path"; then
+  if file_contains_literal 'bootstrap shim: string-key cast index repair' "$emitter_path"; then
     return 0
   fi
 
@@ -775,7 +841,7 @@ patch_bootstrap_emitter_stringtools_hex_optional_digits() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -791,7 +857,7 @@ patch_bootstrap_emitter_mutable_int64_assignment() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -807,7 +873,7 @@ patch_bootstrap_emitter_int64_mixed_binops() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -823,7 +889,7 @@ patch_bootstrap_emitter_int64_static_helpers() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -838,7 +904,7 @@ patch_bootstrap_emitter_float_compare_unknown_numeric() {
     return 0
   fi
 
-  if rg -Fq '| "==" -> if (!isIntExpr) (Obj.magic a) && (!isFloatExpr) (Obj.magic a) && isNegativeIntLikeExpr (Obj.magic a)' "$emitter_path"; then
+  if file_contains_literal '| "==" -> if (!isIntExpr) (Obj.magic a) && (!isFloatExpr) (Obj.magic a) && isNegativeIntLikeExpr (Obj.magic a)' "$emitter_path"; then
     return 0
   fi
 
@@ -853,7 +919,7 @@ patch_bootstrap_emitter_int_compare_precedence() {
     return 0
   fi
 
-  if rg -Fq '| "==" -> if (!isIntExpr) (Obj.magic a) && (!isIntExpr) (Obj.magic b)' "$emitter_path"; then
+  if file_contains_literal '| "==" -> if (!isIntExpr) (Obj.magic a) && (!isIntExpr) (Obj.magic b)' "$emitter_path"; then
     return 0
   fi
 
@@ -868,7 +934,7 @@ patch_bootstrap_emitter_float_modulo_mutable_local() {
     return 0
   fi
 
-  if rg -Fq 'bootstrap_float_mod_hint_1' "$emitter_path"; then
+  if file_contains_literal 'bootstrap_float_mod_hint_1' "$emitter_path"; then
     return 0
   fi
 
@@ -884,7 +950,7 @@ patch_bootstrap_emitter_plugin_dune_layout() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -900,7 +966,7 @@ patch_bootstrap_js_target_core_native_js_lib_externs() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$target_core_path"; then
+  if file_contains_literal "$marker" "$target_core_path"; then
     return 0
   fi
 
@@ -915,7 +981,7 @@ patch_bootstrap_clirouting_ocaml_eval_hxml() {
     return 0
   fi
 
-  run_bootstrap_patch_helper patch-clirouting-ocaml-eval-hxml "$clirouting_path"
+  run_bootstrap_patch_helper patch-cli-routing-ocaml-eval-hxml "$clirouting_path"
 }
 
 patch_bootstrap_emitter_interactive_cli_progress() {
@@ -930,7 +996,7 @@ patch_bootstrap_emitter_interactive_cli_progress() {
     return 0
   fi
 
-  if rg -Fq "$marker" "$emitter_path"; then
+  if file_contains_literal "$marker" "$emitter_path"; then
     return 0
   fi
 
@@ -1287,6 +1353,9 @@ if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP
   patch_bootstrap_stage1_std_root_termination "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_allowed_ident_fallback "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_typed_ty_map_copying "$BOOTSTRAP_BUILD_DIR"
+  patch_bootstrap_emitter_typed_map_helper_obj_repr "$BOOTSTRAP_BUILD_DIR"
+  patch_bootstrap_emitter_nested_call_arg_reprs "$BOOTSTRAP_BUILD_DIR"
+  patch_bootstrap_emitter_module_name_lookup_raw_map "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_typed_ty_ident_lookups "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_return_expr_ty_ident_lookups "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_expr_ident_ty_reads "$BOOTSTRAP_BUILD_DIR"
@@ -1295,6 +1364,7 @@ if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP
   patch_bootstrap_emitter_instance_call_receiver_forwarding "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_instance_call_this_binding "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_instance_method_value_binding "$BOOTSTRAP_BUILD_DIR"
+  patch_bootstrap_emitter_allowed_ident_fallback "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_instance_call_preapplied_arity "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_string_length_fallback "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_string_length_stdlib "$BOOTSTRAP_BUILD_DIR"
@@ -1316,6 +1386,7 @@ if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP
   patch_bootstrap_js_target_core_native_js_lib_externs "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_clirouting_ocaml_eval_hxml "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_interactive_cli_progress "$BOOTSTRAP_BUILD_DIR"
+  patch_bootstrap_emitter_nested_call_arg_reprs "$BOOTSTRAP_BUILD_DIR"
 
   if [ -f "$BOOTSTRAP_BUILD_DIR/backend_js_JsTargetCore.ml" ]; then
     python3 "$ROOT/scripts/hxhx/bootstrap_patch_helper.py" \
