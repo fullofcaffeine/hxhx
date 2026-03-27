@@ -1550,7 +1550,7 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
         'stmtListToOcaml (Obj.magic stmts) allowed (exc : string) '
         '(Obj.repr arityByName) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) '
         '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
-        'moduleNameByPkgAndClass (callSigByCallee) '
+        '(Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) '
         '(Obj.repr localTypeHints) (Obj.repr fnReturnTypesByName)'
     )
     literal_stmt_new = (
@@ -1911,9 +1911,32 @@ def cmd_patch_stmt_list_local_hint_reprs(argv: list[str]) -> None:
 
     if (
         "stmtListToOcaml (Obj.magic " not in src
-        or "(Obj.repr localHints) (Obj.repr fnReturnTypes)" not in src
+        or (
+            "(Obj.repr localHints) (Obj.repr fnReturnTypes)" not in src
+            and "(Obj.repr localTypeHints) (Obj.repr fnReturnTypesByName)" not in src
+        )
     ):
         return
+
+    changed = False
+
+    literal_stmt_old = (
+        'stmtListToOcaml (Obj.magic stmts) allowed (exc : string) '
+        '(Obj.repr arityByName) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        '(Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) '
+        '(Obj.repr localTypeHints) (Obj.repr fnReturnTypesByName)'
+    )
+    literal_stmt_new = (
+        'stmtListToOcaml (Obj.magic stmts) allowed (exc : string) '
+        '(Obj.magic arityByName) tyByIdent (Obj.magic staticImportByIdent) '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        '(Obj.repr moduleNameByPkgAndClass) (Obj.magic callSigByCallee) '
+        'localTypeHints fnReturnTypesByName'
+    )
+    if literal_stmt_old in src:
+        src = src.replace(literal_stmt_old, literal_stmt_new)
+        changed = True
 
     def _stmt_list_to_ocaml_repl(match: re.Match[str]) -> str:
         return (
@@ -1940,8 +1963,11 @@ def cmd_patch_stmt_list_local_hint_reprs(argv: list[str]) -> None:
         src,
         flags=re.S,
     )
-    if src2 != src:
-        write_text(path_str, src2)
+    changed = changed or src2 != src
+    src = src2
+
+    if changed:
+        write_text(path_str, src)
 
 
 def cmd_patch_module_name_lookup_raw_map(argv: list[str]) -> None:
