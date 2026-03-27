@@ -107,6 +107,50 @@ resolve_bootstrap_build_dir() {
 
 BOOTSTRAP_BUILD_DIR="$(resolve_bootstrap_build_dir)"
 
+preserve_bootstrap_failure_artifacts() {
+  local build_dir="${1:-}"
+  local failed_target="${2:-}"
+  local failed_code="${3:-1}"
+  local artifact_dir=""
+  local copied=0
+  local path=""
+
+  if [ -z "$build_dir" ] || [ ! -d "$build_dir" ]; then
+    return 0
+  fi
+
+  mkdir -p "$ROOT/.tmp"
+  artifact_dir="$(mktemp -d "$ROOT/.tmp/hxhx-bootstrap-failure.XXXXXX")"
+
+  for path in \
+    "$build_dir/EmitterStage.ml" \
+    "$build_dir/EmitterStage.ml.parts" \
+    "$build_dir"/EmitterStage.ml.part* \
+    "$build_dir/backend_js_JsTargetCore.ml" \
+    "$build_dir/hxhx_CliRouting.ml" \
+    "$build_dir/dune" \
+    "$build_dir/_build/log"
+  do
+    if [ ! -e "$path" ]; then
+      continue
+    fi
+    cp -R "$path" "$artifact_dir/" 2>/dev/null || true
+    copied=1
+  done
+
+  cat >"$artifact_dir/summary.txt" <<EOF
+bootstrap_build_dir=$build_dir
+failed_target=$failed_target
+exit_code=$failed_code
+EOF
+
+  if [ "$copied" = "1" ]; then
+    echo "== bootstrap failure artifacts: $artifact_dir" >&2
+  else
+    echo "== bootstrap failure artifacts: $artifact_dir (summary-only)" >&2
+  fi
+}
+
 create_stage0_log_file() {
   local prefix="$1"
   local template=""
@@ -1335,6 +1379,7 @@ if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP
   rm -rf "$BOOTSTRAP_BUILD_DIR"
   mkdir -p "$BOOTSTRAP_BUILD_DIR"
   (cd "$BOOTSTRAP_DIR" && tar --exclude="_build" --exclude="*.install" -cf - .) | (cd "$BOOTSTRAP_BUILD_DIR" && tar -xf -)
+  echo "== Bootstrap build dir: $BOOTSTRAP_BUILD_DIR" >&2
 
   if find "$BOOTSTRAP_BUILD_DIR" -maxdepth 1 -type f -name "*.ml.parts" | grep -q .; then
     bash "$ROOT/scripts/hxhx/hydrate-bootstrap-shards.sh" "$BOOTSTRAP_BUILD_DIR" >&2
@@ -1422,9 +1467,16 @@ if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP
       else
         code="$?"
         if [ "$code" -eq 124 ]; then
+          preserve_bootstrap_failure_artifacts "$BOOTSTRAP_BUILD_DIR" "./out.exe" "$code"
           exit "$code"
         fi
-        run_bootstrap_dune_build ./out.bc
+        if run_bootstrap_dune_build ./out.bc; then
+          :
+        else
+          code="$?"
+          preserve_bootstrap_failure_artifacts "$BOOTSTRAP_BUILD_DIR" "./out.bc" "$code"
+          exit "$code"
+        fi
       fi
     else
       if run_bootstrap_dune_build ./out.bc; then
@@ -1432,9 +1484,16 @@ if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP
       else
         code="$?"
         if [ "$code" -eq 124 ]; then
+          preserve_bootstrap_failure_artifacts "$BOOTSTRAP_BUILD_DIR" "./out.bc" "$code"
           exit "$code"
         fi
-        run_bootstrap_dune_build ./out.exe
+        if run_bootstrap_dune_build ./out.exe; then
+          :
+        else
+          code="$?"
+          preserve_bootstrap_failure_artifacts "$BOOTSTRAP_BUILD_DIR" "./out.exe" "$code"
+          exit "$code"
+        fi
       fi
     fi
   )
