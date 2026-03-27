@@ -1699,9 +1699,31 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
         src = src.replace(literal_extend_ty_old, literal_extend_ty_new)
         changed = True
 
+    literal_extend_one_old = (
+        'extendTyByIdent (Obj.repr tyByIdent) '
+        '(name : string) '
+        '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
+    )
+    literal_extend_one_new = (
+        'extendTyByIdent tyByIdent '
+        '(name : string) '
+        '(Obj.magic (TyType.fromHintText ("Dynamic" : string)))'
+    )
+    if literal_extend_one_old in src:
+        src = src.replace(literal_extend_one_old, literal_extend_one_new)
+        changed = True
+
     src2 = re.sub(
         r"extendTyByIdentMany \(Obj\.repr (?P<tymap>[A-Za-z_!][A-Za-z0-9_]*)\)",
         r"extendTyByIdentMany (Obj.magic \g<tymap>)",
+        src,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"extendTyByIdent \(Obj\.repr (?P<tymap>[A-Za-z_!][A-Za-z0-9_]*)\)",
+        r"extendTyByIdent (Obj.magic \g<tymap>)",
         src,
     )
     changed = changed or src2 != src
@@ -1787,6 +1809,51 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
         return
 
     write_text(path_str, src)
+
+
+def cmd_patch_extend_ty_ident_call_reprs(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-extend-ty-ident-call-reprs <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    if "extendTyByIdent (Obj.repr " not in src and "extendTyByIdentMany (Obj.repr " not in src:
+        return
+
+    changed = False
+
+    src2 = src.replace(
+        'extendTyByIdentMany (Obj.repr tyByIdent) (Obj.magic args) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
+        'extendTyByIdentMany tyByIdent (Obj.magic args) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = src.replace(
+        'extendTyByIdent (Obj.repr tyByIdent) (name : string) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
+        'extendTyByIdent tyByIdent (name : string) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))',
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"extendTyByIdentMany \(Obj\.repr (?P<tymap>[A-Za-z_!][A-Za-z0-9_]*)\)",
+        r"extendTyByIdentMany (Obj.magic \g<tymap>)",
+        src,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"extendTyByIdent \(Obj\.repr (?P<tymap>[A-Za-z_!][A-Za-z0-9_]*)\)",
+        r"extendTyByIdent (Obj.magic \g<tymap>)",
+        src,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    if changed:
+        write_text(path_str, src)
 
 
 def cmd_patch_module_name_lookup_raw_map(argv: list[str]) -> None:
@@ -3821,6 +3888,7 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-typed-map-helper-obj-repr": cmd_patch_typed_map_helper_obj_repr,
     "patch-fast-emitter-nested-literals": cmd_patch_fast_emitter_nested_literals,
     "patch-nested-emitter-call-arg-reprs": cmd_patch_nested_emitter_call_arg_reprs,
+    "patch-extend-ty-ident-call-reprs": cmd_patch_extend_ty_ident_call_reprs,
     "patch-module-name-lookup-raw-map": cmd_patch_module_name_lookup_raw_map,
     "patch-typed-ty-ident-lookups": cmd_patch_typed_ty_ident_lookups,
     "patch-negative-unop-is-int-expr": cmd_patch_negative_unop_is_int_expr,
