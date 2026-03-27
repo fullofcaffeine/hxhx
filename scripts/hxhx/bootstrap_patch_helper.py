@@ -1564,6 +1564,24 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
         src = src.replace(literal_stmt_old, literal_stmt_new)
         changed = True
 
+    literal_stmt_old_alt = (
+        'stmtListToOcaml (Obj.magic stmts) allowed (exc : string) '
+        '(Obj.repr arityByName) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        'moduleNameByPkgAndClass (callSigByCallee) '
+        '(Obj.repr localTypeHints) (Obj.repr fnReturnTypesByName)'
+    )
+    literal_stmt_new_alt = (
+        'stmtListToOcaml (Obj.magic stmts) allowed (exc : string) '
+        '(Obj.magic arityByName) tyByIdent (Obj.magic staticImportByIdent) '
+        '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
+        '(Obj.repr moduleNameByPkgAndClass) (Obj.magic callSigByCallee) '
+        'localTypeHints fnReturnTypesByName'
+    )
+    if literal_stmt_old_alt in src:
+        src = src.replace(literal_stmt_old_alt, literal_stmt_new_alt)
+        changed = True
+
     literal_expr_old = (
         'exprToOcaml (Obj.magic branchExpr) arityByIdent localTy staticImportByIdent '
         '(currentPackagePath : string) '

@@ -885,14 +885,14 @@ class EmitterStage {
 		final tyByIdentRaw = tyByIdent;
 
 		inline function resolveTyIdentName(name:String):String {
-			if (mapGetRaw(cast tyByIdentRaw, name) != null)
+			if (mapGetRaw(tyByIdentRaw, name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && mapGetRaw(cast tyByIdentRaw, lowered) != null ? lowered : name;
+			return lowered != name && mapGetRaw(tyByIdentRaw, lowered) != null ? lowered : name;
 		}
 
 		inline function tyForIdent(name:String):String {
-			final resolved = mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name));
+			final resolved = mapGetRaw(tyByIdentRaw, resolveTyIdentName(name));
 			if (resolved == null)
 				return "";
 			final t:TyType = cast resolved;
@@ -1003,14 +1003,14 @@ class EmitterStage {
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
 		inline function resolveTyIdentName(name:String):String {
-			if (mapGetRaw(cast tyByIdentRaw, name) != null)
+			if (mapGetRaw(tyByIdentRaw, name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && mapGetRaw(cast tyByIdentRaw, lowered) != null ? lowered : name;
+			return lowered != name && mapGetRaw(tyByIdentRaw, lowered) != null ? lowered : name;
 		}
 
 		inline function hasTyIdent(name:String):Bool {
-			return mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name)) != null;
+			return mapGetRaw(tyByIdentRaw, resolveTyIdentName(name)) != null;
 		}
 
 		inline function hasThisBinding():Bool {
@@ -1018,11 +1018,11 @@ class EmitterStage {
 		}
 
 		inline function hasArity(name:String):Bool {
-			return mapHasRaw(cast arityByIdentRaw, name);
+			return mapHasRaw(arityByIdentRaw, name);
 		}
 
 		inline function arityFor(name:String):Int {
-			final resolved = mapGetRaw(cast arityByIdentRaw, name);
+			final resolved = mapGetRaw(arityByIdentRaw, name);
 			if (resolved == null)
 				return 0;
 			final arity:Int = cast resolved;
@@ -1030,10 +1030,10 @@ class EmitterStage {
 		}
 
 		inline function staticImportModule(name:String):String {
-			final resolved = mapGetRaw(cast staticImportByIdentRaw, name);
+			final resolved = mapGetRaw(staticImportByIdentRaw, name);
 			if (resolved != null)
 				return cast resolved;
-			final globalResolved = mapGetRaw(cast currentGlobalImportAliasByIdent, name);
+			final globalResolved = mapGetRaw(currentGlobalImportAliasByIdent, name);
 			return globalResolved == null ? null : cast globalResolved;
 		}
 
@@ -1042,7 +1042,7 @@ class EmitterStage {
 		}
 
 		function moduleNameForKey(key:String):String {
-			final resolved = mapGetRaw(cast moduleNameByPkgAndClassRaw, key);
+			final resolved = mapGetRaw(moduleNameByPkgAndClassRaw, key);
 			if (resolved != null)
 				return cast resolved;
 			for (entry in currentModuleNameEntries)
@@ -1082,7 +1082,7 @@ class EmitterStage {
 		}
 
 		inline function callSigFor(callee:String):Null<EmitterCallSig> {
-			final resolved = mapGetRaw(cast callSigByCalleeRaw, callee);
+			final resolved = mapGetRaw(callSigByCalleeRaw, callee);
 			return resolved == null ? null : cast resolved;
 		}
 
@@ -1103,7 +1103,7 @@ class EmitterStage {
 		}
 
 		function tyForIdent(name:String):String {
-			final resolved = mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name));
+			final resolved = mapGetRaw(tyByIdentRaw, resolveTyIdentName(name));
 			if (resolved == null)
 				return "";
 			final t:TyType = cast resolved;
@@ -3263,14 +3263,14 @@ class EmitterStage {
 		final staticImportByIdentRaw = staticImportByIdent;
 
 		inline function resolveTyIdentName(name:String):String {
-			if (mapGetRaw(cast tyByIdentRaw, name) != null)
+			if (mapGetRaw(tyByIdentRaw, name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && mapGetRaw(cast tyByIdentRaw, lowered) != null ? lowered : name;
+			return lowered != name && mapGetRaw(tyByIdentRaw, lowered) != null ? lowered : name;
 		}
 
 		inline function hasTyIdent(name:String):Bool {
-			return mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name)) != null;
+			return mapGetRaw(tyByIdentRaw, resolveTyIdentName(name)) != null;
 		}
 
 		inline function hasThisBinding():Bool {
@@ -3278,11 +3278,11 @@ class EmitterStage {
 		}
 
 		inline function hasStaticImport(name:String):Bool {
-			return mapGetRaw(cast staticImportByIdentRaw, name) != null;
+			return mapGetRaw(staticImportByIdentRaw, name) != null;
 		}
 
 		inline function tyForIdent(name:String):String {
-			final resolved = mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name));
+			final resolved = mapGetRaw(tyByIdentRaw, resolveTyIdentName(name));
 			if (resolved == null)
 				return "";
 			final t:TyType = cast resolved;
@@ -4846,6 +4846,32 @@ class EmitterStage {
 				sys.io.File.saveContent(shimPath, readShimTemplate(shimName));
 			}
 			generatedPaths.push(shimName + ".ml");
+		}
+		{
+			// Stage 3 bring-up: stdlib IO helpers lower to `Haxe_io_FPHelper.*`, but ordinary
+			// workloads do not always emit the thin wrapper unit even though the runtime helper
+			// `runtime/HxFPHelper.ml` is present.
+			//
+			// Emit the wrapper unconditionally in the program root so workload outputs stay
+			// link-closed without depending on placeholder std-unit generation.
+			final shimName = "Haxe_io_FPHelper";
+			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+			sys.io.File.saveContent(shimPath,
+				"(* hxhx(stage3) bootstrap shim: haxe.io.FPHelper *)\n"
+				+ "let __reflaxe_ocaml__ = ()\n\n"
+				+ "type t = { __hx_type : Obj.t }\n\n"
+				+ "let create = fun () -> let self = ({ __hx_type = HxType.class_ \"haxe.io.FPHelper\" } : t) in (\n"
+				+ "  ignore ();\n"
+				+ "  self\n"
+				+ ")\n\n"
+				+ "let __empty = fun () -> ({ __hx_type = HxType.class_ \"haxe.io.FPHelper\" } : t)\n\n"
+				+ "let i32ToFloat = fun i -> HxFPHelper.i32ToFloat i\n\n"
+				+ "let floatToI32 = fun f -> HxFPHelper.floatToI32 f\n\n"
+				+ "let i64ToDouble = fun low high -> HxFPHelper.i64ToDouble low high\n\n"
+				+
+				"let doubleToI64 = fun v -> let parts = Obj.magic (HxFPHelper.doubleToI64Parts v) in let x = Obj.magic (Haxe_Int64.make (HxArray.get (Obj.magic parts) 1) (HxArray.get (Obj.magic parts) 0)) in let tempResult = x in tempResult\n");
+			if (generatedPaths.indexOf(shimName + ".ml") == -1)
+				generatedPaths.push(shimName + ".ml");
 		}
 		{
 			final shimName = "Reflect";
