@@ -715,7 +715,7 @@ HX
     fi
   fi
   if [ -f "$tmpdir/out_stage3_helper/Haxe_io_Input.ml" ]; then
-    if grep -q "FPHelper\\.i32ToFloat" "$tmpdir/out_stage3_helper/Haxe_io_Input.ml"; then
+    if grep -Eq '(^|[^A-Za-z0-9_])FPHelper\.i32ToFloat' "$tmpdir/out_stage3_helper/Haxe_io_Input.ml"; then
       echo "Stage3 regression: unqualified FPHelper module reference in Haxe_io_Input.ml (expected Haxe_io_FPHelper)." >&2
       exit 1
     fi
