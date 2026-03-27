@@ -1903,6 +1903,47 @@ def cmd_patch_extend_ty_ident_call_reprs(argv: list[str]) -> None:
         write_text(path_str, src)
 
 
+def cmd_patch_stmt_list_local_hint_reprs(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-stmt-list-local-hint-reprs <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    if (
+        "stmtListToOcaml (Obj.magic " not in src
+        or "(Obj.repr localHints) (Obj.repr fnReturnTypes)" not in src
+    ):
+        return
+
+    def _stmt_list_to_ocaml_repl(match: re.Match[str]) -> str:
+        return (
+            f"stmtListToOcaml (Obj.magic {match.group('stmts')}) "
+            f"{match.group('allowed')} {match.group('ret')} "
+            f"arityByIdent {match.group('ty')} staticImportByIdent "
+            "(currentPackagePath : string) moduleNameByPkgAndClass "
+            "callSigByCallee localHints fnReturnTypes"
+        )
+
+    src2 = re.sub(
+        r"stmtListToOcaml \(Obj\.magic (?P<stmts>.*?)\) "
+        r"(?P<allowed>[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<ret>\(returnExc : string\)|[A-Za-z_!][A-Za-z0-9_]*) "
+        r"\(Obj\.repr arityByIdent\) "
+        r"\(Obj\.repr (?P<ty>[A-Za-z_!][A-Za-z0-9_]*)\) "
+        r"\(Obj\.repr staticImportByIdent\) "
+        r"\(currentPackagePath : string\) "
+        r"\(Obj\.repr moduleNameByPkgAndClass\) "
+        r"\(Obj\.repr callSigByCallee\) "
+        r"\(Obj\.repr localHints\) "
+        r"\(Obj\.repr fnReturnTypes\)",
+        _stmt_list_to_ocaml_repl,
+        src,
+        flags=re.S,
+    )
+    if src2 != src:
+        write_text(path_str, src2)
+
+
 def cmd_patch_module_name_lookup_raw_map(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-module-name-lookup-raw-map <path>\n")
@@ -3936,6 +3977,7 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-fast-emitter-nested-literals": cmd_patch_fast_emitter_nested_literals,
     "patch-nested-emitter-call-arg-reprs": cmd_patch_nested_emitter_call_arg_reprs,
     "patch-extend-ty-ident-call-reprs": cmd_patch_extend_ty_ident_call_reprs,
+    "patch-stmt-list-local-hint-reprs": cmd_patch_stmt_list_local_hint_reprs,
     "patch-module-name-lookup-raw-map": cmd_patch_module_name_lookup_raw_map,
     "patch-typed-ty-ident-lookups": cmd_patch_typed_ty_ident_lookups,
     "patch-negative-unop-is-int-expr": cmd_patch_negative_unop_is_int_expr,

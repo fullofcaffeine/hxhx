@@ -17,6 +17,7 @@ fi
 
 if [ -f "$out_dir/EmitterStage.ml" ]; then
   python3 "$helper" patch-extend-ty-ident-call-reprs "$out_dir/EmitterStage.ml"
+  python3 "$helper" patch-stmt-list-local-hint-reprs "$out_dir/EmitterStage.ml"
 fi
 
 find "$out_dir" -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
