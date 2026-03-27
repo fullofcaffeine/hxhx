@@ -1199,18 +1199,18 @@ def cmd_patch_typed_map_helper_obj_repr(argv: list[str]) -> None:
     src = read_text(path_str)
 
     replacements = [
-        ("typedMapGet (Obj.repr tyByIdent)", "typedMapGet tyByIdent"),
-        ("typedMapHas (Obj.repr tyByIdent)", "typedMapHas tyByIdent"),
-        ("typedMapGet (Obj.repr arityByIdent)", "typedMapGet arityByIdent"),
-        ("typedMapHas (Obj.repr arityByIdent)", "typedMapHas arityByIdent"),
-        ("typedMapGet (Obj.repr staticImportByIdent)", "typedMapGet staticImportByIdent"),
-        ("typedMapHas (Obj.repr staticImportByIdent)", "typedMapHas staticImportByIdent"),
-        ("typedMapGet (Obj.repr moduleNameByPkgAndClass)", "typedMapGet moduleNameByPkgAndClass"),
-        ("typedMapHas (Obj.repr moduleNameByPkgAndClass)", "typedMapHas moduleNameByPkgAndClass"),
-        ("typedMapGet (Obj.repr callSigByCallee)", "typedMapGet callSigByCallee"),
-        ("typedMapHas (Obj.repr callSigByCallee)", "typedMapHas callSigByCallee"),
-        ("typedMapGet (Obj.repr (!currentGlobalImportAliasByIdent))", "typedMapGet (!currentGlobalImportAliasByIdent)"),
-        ("typedMapHas (Obj.repr (!currentGlobalImportAliasByIdent))", "typedMapHas (!currentGlobalImportAliasByIdent)"),
+        ("typedMapGet (Obj.repr tyByIdent)", "typedMapGet (Obj.magic tyByIdent)"),
+        ("typedMapHas (Obj.repr tyByIdent)", "typedMapHas (Obj.magic tyByIdent)"),
+        ("typedMapGet (Obj.repr arityByIdent)", "typedMapGet (Obj.magic arityByIdent)"),
+        ("typedMapHas (Obj.repr arityByIdent)", "typedMapHas (Obj.magic arityByIdent)"),
+        ("typedMapGet (Obj.repr staticImportByIdent)", "typedMapGet (Obj.magic staticImportByIdent)"),
+        ("typedMapHas (Obj.repr staticImportByIdent)", "typedMapHas (Obj.magic staticImportByIdent)"),
+        ("typedMapGet (Obj.repr moduleNameByPkgAndClass)", "typedMapGet (Obj.magic moduleNameByPkgAndClass)"),
+        ("typedMapHas (Obj.repr moduleNameByPkgAndClass)", "typedMapHas (Obj.magic moduleNameByPkgAndClass)"),
+        ("typedMapGet (Obj.repr callSigByCallee)", "typedMapGet (Obj.magic callSigByCallee)"),
+        ("typedMapHas (Obj.repr callSigByCallee)", "typedMapHas (Obj.magic callSigByCallee)"),
+        ("typedMapGet (Obj.repr (!currentGlobalImportAliasByIdent))", "typedMapGet (Obj.magic (!currentGlobalImportAliasByIdent))"),
+        ("typedMapHas (Obj.repr (!currentGlobalImportAliasByIdent))", "typedMapHas (Obj.magic (!currentGlobalImportAliasByIdent))"),
     ]
 
     if not any(old in src for old, _new in replacements):
@@ -1224,7 +1224,7 @@ def cmd_patch_typed_map_helper_obj_repr(argv: list[str]) -> None:
 
     src2 = re.sub(
         r"\b(?P<fn>typedMapKeys|typedMapGet|typedMapHas) \(Obj\.repr (?P<var>[A-Za-z_!][A-Za-z0-9_]*)\)",
-        r"\g<fn> \g<var>",
+        r"\g<fn> (Obj.magic \g<var>)",
         src,
     )
     changed = changed or src2 != src
@@ -1234,6 +1234,25 @@ def cmd_patch_typed_map_helper_obj_repr(argv: list[str]) -> None:
         fail("build-hxhx: failed to locate bootstrap typed-map Obj.repr repair anchors in EmitterStage.ml\n")
 
     write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: typed-map Obj.repr helper repair *)\n")
+
+
+def cmd_patch_fast_emitter_nested_literals(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-fast-emitter-nested-literals <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    changed = False
+    old = "exprToOcamlString (Obj.magic expr) (Obj.repr tyByIdent) (Obj.repr arityByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee)"
+    new = "exprToOcamlString (Obj.magic expr) (Obj.magic tyByIdent) (Obj.magic arityByIdent) (Obj.magic staticImportByIdent) (currentPackagePath : string) (Obj.magic moduleNameByPkgAndClass) (Obj.magic callSigByCallee)"
+    if old in src:
+        src = src.replace(old, new)
+        changed = True
+
+    if not changed:
+        return
+
+    write_text(path_str, src + "\n(* hxhx(stage3) bootstrap shim: fast nested literal repair *)\n")
 
 
 def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
@@ -1277,6 +1296,13 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
         return
 
     changed = False
+
+    src2 = src.replace(
+        "exprToOcamlString (Obj.magic expr) (Obj.repr tyByIdent) (Obj.repr arityByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee)",
+        "exprToOcamlString (Obj.magic expr) tyByIdent arityByIdent staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee",
+    )
+    changed = changed or src2 != src
+    src = src2
 
     src2 = re.sub(
         r"exprToOcamlString \(Obj\.magic (?P<expr>.*?)\) \(Obj\.repr tyByIdent\) \(Obj\.repr arityByIdent\) \(Obj\.repr staticImportByIdent\) \(currentPackagePath : string\) \(Obj\.repr moduleNameByPkgAndClass\) \(Obj\.repr callSigByCallee\)",
@@ -1529,9 +1555,9 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
     )
     literal_stmt_new = (
         'stmtListToOcaml (Obj.magic stmts) allowed (exc : string) '
-        'arityByName tyByIdent staticImportByIdent '
+        '(Obj.magic arityByName) tyByIdent (Obj.magic staticImportByIdent) '
         '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
-        '(Obj.repr moduleNameByPkgAndClass) callSigByCallee '
+        '(Obj.repr moduleNameByPkgAndClass) (Obj.magic callSigByCallee) '
         'localTypeHints fnReturnTypesByName'
     )
     if literal_stmt_old in src:
@@ -1545,7 +1571,7 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
         '(Obj.repr callSigByCallee)'
     )
     literal_expr_new = (
-        'exprToOcaml (Obj.magic branchExpr) arityByIdent localTy staticImportByIdent '
+        'exprToOcaml (Obj.magic branchExpr) arityByIdent (Obj.magic localTy) staticImportByIdent '
         '(currentPackagePath : string) '
         'moduleNameByPkgAndClass '
         'callSigByCallee'
@@ -1553,6 +1579,61 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
     if literal_expr_old in src:
         src = src.replace(literal_expr_old, literal_expr_new)
         changed = True
+
+    src2 = re.sub(
+        r"exprToOcaml \(Obj\.magic branchExpr\) arityByIdent localTy staticImportByIdent "
+        r"\(currentPackagePath : string\) moduleNameByPkgAndClass callSigByCallee",
+        r"exprToOcaml (Obj.magic branchExpr) arityByIdent (Obj.magic localTy) staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee",
+        src,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"exprToOcaml \(Obj\.(?P<wrap>magic|obj) (?P<expr>.*?)\) "
+        r"arityByIdent (?P<tylocal>ty[0-9]+) staticImportByIdent "
+        r"\(currentPackagePath : string\) "
+        r"\(Obj\.repr moduleNameByPkgAndClass\) "
+        r"\(Obj\.magic \(HxRuntime\.hx_null\)\)",
+        r"exprToOcaml (Obj.\g<wrap> \g<expr>) arityByIdent (Obj.magic \g<tylocal>) staticImportByIdent (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.magic (HxRuntime.hx_null))",
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"exprToOcaml \(Obj\.(?P<wrap>magic|obj) (?P<expr>.*?)\) "
+        r"arityByIdent tyCtx staticImportByIdent "
+        r"\(currentPackagePath : string\) "
+        r"moduleNameByPkgAndClass callSigByCallee",
+        r"exprToOcaml (Obj.\g<wrap> \g<expr>) arityByIdent (Obj.magic tyCtx) staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee",
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = re.sub(
+        r"returnExprToOcaml \(Obj\.(?P<wrap>magic|obj) (?P<expr>.*?)\) "
+        r"(?P<allowed>[A-Za-z_!][A-Za-z0-9_]*) "
+        r"(?P<ret>\(Obj\.magic \(Obj\.magic \(HxRuntime\.hx_null\)\)\)|\(Obj\.magic .*?\)) "
+        r"arityByIdent tyCtx staticImportByIdent "
+        r"\(currentPackagePath : string\) "
+        r"moduleNameByPkgAndClass callSigByCallee",
+        r"returnExprToOcaml (Obj.\g<wrap> \g<expr>) \g<allowed> \g<ret> arityByIdent (Obj.magic tyCtx) staticImportByIdent (currentPackagePath : string) moduleNameByPkgAndClass callSigByCallee",
+        src,
+        flags=re.S,
+    )
+    changed = changed or src2 != src
+    src = src2
+
+    src2 = src.replace(
+        "condToOcamlBool (Obj.magic cond) tyCtx",
+        "condToOcamlBool (Obj.magic cond) (Obj.magic tyCtx)",
+    )
+    changed = changed or src2 != src
+    src = src2
 
     literal_static_expr_old = (
         'exprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) '
@@ -1562,9 +1643,9 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
     )
     literal_static_expr_new = (
         'exprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) '
-        '(HxMap.create_string ()) staticTyByIdent (HxMap.create_string ()) '
+        '(Obj.magic (HxMap.create_string ())) (Obj.magic staticTyByIdent) (Obj.magic (HxMap.create_string ())) '
         '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
-        '(Obj.repr moduleNameByPkgAndClass) globalCallSigByCallee'
+        '(Obj.repr moduleNameByPkgAndClass) (Obj.magic globalCallSigByCallee)'
     )
     if literal_static_expr_old in src:
         src = src.replace(literal_static_expr_old, literal_static_expr_new)
@@ -1580,9 +1661,9 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
     literal_return_new = (
         'returnExprToOcaml (Obj.magic (HxFunctionDecl.getFirstReturnExpr (Obj.magic parsedFn) ())) '
         'allowed (Obj.magic (TyFunctionEnv.getReturnType (Obj.magic tf) ())) '
-        'arityByName tyByIdent staticImportByIdent '
+        '(Obj.magic arityByName) (Obj.magic tyByIdent) (Obj.magic staticImportByIdent) '
         '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
-        '(Obj.repr moduleNameByPkgAndClass) (callSigByCallee)'
+        '(Obj.repr moduleNameByPkgAndClass) (Obj.magic callSigByCallee)'
     )
     if literal_return_old in src:
         src = src.replace(literal_return_old, literal_return_new)
@@ -1596,9 +1677,9 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
     )
     literal_expr_direct_new = (
         'exprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) '
-        'arityByName staticTyByIdent staticImportByIdent '
+        '(Obj.magic arityByName) (Obj.magic staticTyByIdent) (Obj.magic staticImportByIdent) '
         '(HxModuleDecl.getPackagePath (Obj.magic decl) : string) '
-        '(Obj.repr moduleNameByPkgAndClass) callSigByCallee'
+        '(Obj.repr moduleNameByPkgAndClass) (Obj.magic callSigByCallee)'
     )
     if literal_expr_direct_old in src:
         src = src.replace(literal_expr_direct_old, literal_expr_direct_new)
@@ -1620,7 +1701,7 @@ def cmd_patch_nested_emitter_call_arg_reprs(argv: list[str]) -> None:
 
     src2 = re.sub(
         r"extendTyByIdentMany \(Obj\.repr (?P<tymap>[A-Za-z_!][A-Za-z0-9_]*)\)",
-        r"extendTyByIdentMany \g<tymap>",
+        r"extendTyByIdentMany (Obj.magic \g<tymap>)",
         src,
     )
     changed = changed or src2 != src
@@ -1785,17 +1866,17 @@ def cmd_patch_typed_ty_ident_lookups(argv: list[str]) -> None:
 
     current_shape = re.compile(
         r"""in let tyForIdent = fun name -> try let __fallback_result_(?P<result>\d+) = let (?P<temp>tempString\d+) = ref \("" : string\) in \(
-  ignore \(if typedMapGet tyByIdent \(name : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<a>\d+) = \(name : string\) in \(
+  ignore \(if typedMapGet (?:tyByIdent|\(Obj\.repr tyByIdent\)) \(name : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<a>\d+) = \(name : string\) in \(
     (?P=temp) := __assign_(?P=a);
     __assign_(?P=a)
-  \) else let lowered = \(ocamlValueIdent \(name : string\) : string\) in if not \(HxString\.equals lowered name\) && typedMapGet tyByIdent \(lowered : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<b>\d+) = \(lowered : string\) in \(
+  \) else let lowered = \(ocamlValueIdent \(name : string\) : string\) in if not \(HxString\.equals lowered name\) && typedMapGet (?:tyByIdent|\(Obj\.repr tyByIdent\)) \(lowered : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<b>\d+) = \(lowered : string\) in \(
     (?P=temp) := __assign_(?P=b);
     __assign_(?P=b)
   \) else let __assign_(?P<c>\d+) = \(name : string\) in \(
     (?P=temp) := __assign_(?P=c);
     __assign_(?P=c)
   \)\);
-  let resolved = mapGetRaw tyByIdent \(!(?P=temp) : string\) in \(
+  let resolved = (?:mapGetRaw tyByIdent|mapGetRaw \(Obj\.repr tyByIdent\)|typedMapGet tyByIdent) \(!(?P=temp) : string\) in \(
     ignore \(if resolved == Obj\.magic \(HxRuntime\.hx_null\) then raise \(HxRuntime\.Hx_return \(Obj\.repr \("" : string\)\)\) else \(\)\);
     let t = Obj\.magic resolved in \(
       ignore \(if t == Obj\.magic \(HxRuntime\.hx_null\) then raise \(HxRuntime\.Hx_return \(Obj\.repr \("" : string\)\)\) else \(\)\);
@@ -3262,10 +3343,10 @@ def cmd_patch_int64_mixed_binops(argv: list[str]) -> None:
     )
     hybrid_ty_for_ident_pattern = re.compile(
         r"""let tyForIdent = fun name -> try let __fallback_result_(?P<idx>\d+) = let (?P<temp>tempString\d+) = ref \("" : string\) in \(
-  ignore \(if typedMapGet tyByIdent \(name : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<a>\d+) = \(name : string\) in \(
+  ignore \(if typedMapGet (?:tyByIdent|\(Obj\.repr tyByIdent\)) \(name : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<a>\d+) = \(name : string\) in \(
     (?P=temp) := __assign_(?P=a);
     __assign_(?P=a)
-  \) else let lowered = \(ocamlValueIdent \(name : string\) : string\) in if not \(HxString\.equals lowered name\) && typedMapGet tyByIdent \(lowered : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<b>\d+) = \(lowered : string\) in \(
+  \) else let lowered = \(ocamlValueIdent \(name : string\) : string\) in if not \(HxString\.equals lowered name\) && typedMapGet (?:tyByIdent|\(Obj\.repr tyByIdent\)) \(lowered : string\) != Obj\.magic \(HxRuntime\.hx_null\) then let __assign_(?P<b>\d+) = \(lowered : string\) in \(
     (?P=temp) := __assign_(?P=b);
     __assign_(?P=b)
   \) else let __assign_(?P<c>\d+) = \(name : string\) in \(
@@ -3738,6 +3819,7 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-allowed-ident-fallback": cmd_patch_allowed_ident_fallback,
     "patch-typed-ty-map-copying": cmd_patch_typed_ty_map_copying,
     "patch-typed-map-helper-obj-repr": cmd_patch_typed_map_helper_obj_repr,
+    "patch-fast-emitter-nested-literals": cmd_patch_fast_emitter_nested_literals,
     "patch-nested-emitter-call-arg-reprs": cmd_patch_nested_emitter_call_arg_reprs,
     "patch-module-name-lookup-raw-map": cmd_patch_module_name_lookup_raw_map,
     "patch-typed-ty-ident-lookups": cmd_patch_typed_ty_ident_lookups,

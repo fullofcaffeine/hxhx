@@ -556,11 +556,7 @@ patch_bootstrap_emitter_nested_call_arg_reprs() {
   local build_dir="$1"
   local emitter_path=""
   local shard_extend_ty_literal='extendTyByIdentMany (Obj.repr tyByIdent)'
-
-  emitter_path="$build_dir/EmitterStage.ml"
-  if [ -f "$emitter_path" ]; then
-    run_bootstrap_patch_helper patch-nested-emitter-call-arg-reprs "$emitter_path"
-  fi
+  local patched_shard=0
 
   for emitter_path in "$build_dir"/EmitterStage.ml.part*; do
     if [ ! -f "$emitter_path" ]; then
@@ -570,7 +566,17 @@ patch_bootstrap_emitter_nested_call_arg_reprs() {
       continue
     fi
     run_bootstrap_patch_helper patch-nested-emitter-call-arg-reprs "$emitter_path"
+    patched_shard=1
   done
+
+  if [ "$patched_shard" = "1" ] && [ -f "$build_dir/EmitterStage.ml.parts" ]; then
+    bash "$ROOT/scripts/hxhx/hydrate-bootstrap-shards.sh" "$build_dir" >&2
+  fi
+
+  emitter_path="$build_dir/EmitterStage.ml"
+  if [ -f "$emitter_path" ] && [ "$patched_shard" != "1" ]; then
+    run_bootstrap_patch_helper patch-fast-emitter-nested-literals "$emitter_path"
+  fi
 
   if [ ! -f "$build_dir/EmitterStage.ml" ] && ! compgen -G "$build_dir/EmitterStage.ml.part*" >/dev/null; then
     return 0
@@ -1387,6 +1393,11 @@ if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP
   patch_bootstrap_clirouting_ocaml_eval_hxml "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_interactive_cli_progress "$BOOTSTRAP_BUILD_DIR"
   patch_bootstrap_emitter_nested_call_arg_reprs "$BOOTSTRAP_BUILD_DIR"
+  patch_bootstrap_emitter_typed_map_helper_obj_repr "$BOOTSTRAP_BUILD_DIR"
+  patch_bootstrap_emitter_module_name_lookup_raw_map "$BOOTSTRAP_BUILD_DIR"
+  patch_bootstrap_emitter_typed_ty_ident_lookups "$BOOTSTRAP_BUILD_DIR"
+  patch_bootstrap_emitter_return_expr_ty_ident_lookups "$BOOTSTRAP_BUILD_DIR"
+  patch_bootstrap_emitter_expr_ident_ty_reads "$BOOTSTRAP_BUILD_DIR"
 
   if [ -f "$BOOTSTRAP_BUILD_DIR/backend_js_JsTargetCore.ml" ]; then
     python3 "$ROOT/scripts/hxhx/bootstrap_patch_helper.py" \
