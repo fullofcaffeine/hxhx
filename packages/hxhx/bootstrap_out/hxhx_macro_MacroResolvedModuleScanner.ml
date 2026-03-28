@@ -1193,7 +1193,7 @@ let scanResolvedModuleTypeSpans = fun path -> try let __fallback_result_410 = le
 ) in Obj.magic __fallback_result_410 with
   | HxRuntime.Hx_return __ret_409 -> Obj.obj __ret_409
 
-let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallbackMain -> let out = Obj.magic (HxArray.create ()) in let seen = HxMap.create_string () in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallbackMain -> let includeFallbackMain = if includeFallbackMain == HxRuntime.hx_null then HxRuntime.box_bool true else includeFallbackMain in let out = Obj.magic (HxArray.create ()) in let seen = HxMap.create_string () in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (if modulePath == Obj.magic (HxRuntime.hx_null) then let __assign_110 = Obj.magic (let __arr_111 = HxArray.create () in __arr_111) in (
     tempArray := __assign_110;
     __assign_110

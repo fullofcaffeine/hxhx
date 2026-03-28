@@ -1646,7 +1646,7 @@ let resolveMacroHostExe = fun () -> try let __fallback_result_50 = let env = (Hx
 
 let resolveMacroHostExePath = fun () -> resolveMacroHostExe ()
 
-let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallbackMain -> Hxhx_macro_MacroResolvedModuleScanner.scanResolvedModuleTypes (modulePath : string) (path : string) (fallbackMainName : string) includeFallbackMain
+let scanResolvedModuleTypes = fun modulePath path fallbackMainName includeFallbackMain -> let includeFallbackMain = if includeFallbackMain == HxRuntime.hx_null then HxRuntime.box_bool true else includeFallbackMain in Hxhx_macro_MacroResolvedModuleScanner.scanResolvedModuleTypes (modulePath : string) (path : string) (fallbackMainName : string) includeFallbackMain
 
 let scanResolvedModuleFields = fun path -> Hxhx_macro_MacroResolvedModuleScanner.scanResolvedModuleFields (path : string)
 

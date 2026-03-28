@@ -7,7 +7,7 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable name : string; mutable typeHint : string; mutable defaultValue : HxDefaultValue.hxdefaultvalue; mutable isOptional : bool; mutable isRest : bool; mutable defaultValueText : string }
 
 let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 defaultValueText2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false; defaultValueText = "" } : t) in (
-  ignore (ignore ((
+  ignore (let isOptional2 = if Obj.repr isOptional2 == HxRuntime.hx_null then false else isOptional2 in let isRest2 = if Obj.repr isRest2 == HxRuntime.hx_null then false else isRest2 in ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
       __assign_1

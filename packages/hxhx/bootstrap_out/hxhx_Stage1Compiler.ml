@@ -221,7 +221,7 @@ let stage1args_expandHxmlArgs = fun args -> try let __fallback_result_57 = let s
 ) in Obj.magic __fallback_result_57 with
   | HxRuntime.Hx_return __ret_56 -> Obj.obj __ret_56
 
-let stage1args_parse = fun args permissive -> try let __fallback_result_23 = let expanded = Obj.magic (stage1args_expandHxmlArgs (Obj.magic args)) in (
+let stage1args_parse = fun args permissive -> let permissive = if Obj.repr permissive == HxRuntime.hx_null then false else permissive in try let __fallback_result_23 = let expanded = Obj.magic (stage1args_expandHxmlArgs (Obj.magic args)) in (
   ignore (if expanded == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   let classPaths2 = Obj.magic (HxArray.create ()) in let main2 = ref ("" : string) in let noOutput2 = ref false in let roots2 = Obj.magic (HxArray.create ()) in let defines2 = Obj.magic (HxArray.create ()) in let libs2 = Obj.magic (HxArray.create ()) in let macros2 = Obj.magic (HxArray.create ()) in let displayRequest2 = ref (Obj.magic (HxRuntime.hx_null) : string) in let cwd2 = ref ("." : string) in let stdRoot = ref ("" : string) in let hadCmd2 = ref false in let i = ref 0 in (
     ignore (try while !i < HxArray.length expanded do try ignore (let a = (HxArray.get (Obj.magic expanded) (!i) : string) in match a with

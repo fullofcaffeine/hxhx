@@ -32,7 +32,7 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "HxLexer"; src = ""; index 
 
 let eof = fun self () -> (Obj.magic self : t).index >= HxString.length ((Obj.magic self : t).src)
 
-let peek = fun self (offset : int) -> let i = HxInt.add ((Obj.magic self : t).index) offset in let tempResult = ref (0 : int) in (
+let peek = fun self (offset : int) -> let offset = if Obj.repr offset == HxRuntime.hx_null then 0 else offset in let i = HxInt.add ((Obj.magic self : t).index) offset in let tempResult = ref (0 : int) in (
   ignore (if i >= HxString.length ((Obj.magic self : t).src) then let __assign_5 = -1 in (
     tempResult := __assign_5;
     __assign_5

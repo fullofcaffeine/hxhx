@@ -48,7 +48,7 @@ let exprlexer___empty = fun () -> ({ __hx_type = HxType.class_ "_HxConditionalCo
 
 let exprlexer_eof = fun self () -> (Obj.magic self : exprlexer_t).i >= HxString.length ((Obj.magic self : exprlexer_t).s)
 
-let exprlexer_peek = fun self (off : int) -> let j = HxInt.add ((Obj.magic self : exprlexer_t).i) off in let tempResult = ref (0 : int) in (
+let exprlexer_peek = fun self (off : int) -> let off = if Obj.repr off == HxRuntime.hx_null then 0 else off in let j = HxInt.add ((Obj.magic self : exprlexer_t).i) off in let tempResult = ref (0 : int) in (
   ignore (if j >= HxString.length ((Obj.magic self : exprlexer_t).s) then let __assign_5 = -1 in (
     tempResult := __assign_5;
     __assign_5

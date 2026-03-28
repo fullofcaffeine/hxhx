@@ -23,10 +23,10 @@ let saveBytes = fun path bytes -> ignore (HxFile.saveBytes (path : string) (HxBy
 
 let copy = fun srcPath dstPath -> ignore (HxFile.copy (srcPath : string) (dstPath : string))
 
-let read = fun path binary -> Sys_io_FileInput.create (HxFileStream.open_in (path : string) binary)
+let read = fun path binary -> let binary = if Obj.repr binary == HxRuntime.hx_null then true else binary in Sys_io_FileInput.create (HxFileStream.open_in (path : string) binary)
 
-let write = fun path binary -> Sys_io_FileOutput.create (HxFileStream.open_out (path : string) binary false false)
+let write = fun path binary -> let binary = if Obj.repr binary == HxRuntime.hx_null then true else binary in Sys_io_FileOutput.create (HxFileStream.open_out (path : string) binary false false)
 
-let append = fun path binary -> Sys_io_FileOutput.create (HxFileStream.open_out (path : string) binary true false)
+let append = fun path binary -> let binary = if Obj.repr binary == HxRuntime.hx_null then true else binary in Sys_io_FileOutput.create (HxFileStream.open_out (path : string) binary true false)
 
-let update = fun path binary -> Sys_io_FileOutput.create (HxFileStream.open_out (path : string) binary false true)
+let update = fun path binary -> let binary = if Obj.repr binary == HxRuntime.hx_null then true else binary in Sys_io_FileOutput.create (HxFileStream.open_out (path : string) binary false true)
