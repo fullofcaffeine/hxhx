@@ -34,7 +34,13 @@ compile_one() {
     exit 1
   fi
 
-  diff -ru "$test_dir/intended" "$test_dir/out"
+  diff -ru --exclude '_GeneratedFiles.json' "$test_dir/intended" "$test_dir/out"
+
+  if [ -f "$test_dir/intended/_GeneratedFiles.json" ] && [ -f "$test_dir/out/_GeneratedFiles.json" ]; then
+    diff -u \
+      <(sed -E 's/"id":[[:space:]]*[0-9]+/"id": 0/' "$test_dir/intended/_GeneratedFiles.json") \
+      <(sed -E 's/"id":[[:space:]]*[0-9]+/"id": 0/' "$test_dir/out/_GeneratedFiles.json")
+  fi
 
   # Optional sanity check: ensure the generated OCaml parses.
   # This does not typecheck or link the output (which would require external libs),

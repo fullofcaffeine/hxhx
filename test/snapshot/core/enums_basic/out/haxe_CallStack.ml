@@ -62,7 +62,7 @@ let parseFileLine = fun line -> try let __fallback_result_13 = let fileNeedle = 
 ) in Obj.magic __fallback_result_13 with
   | HxRuntime.Hx_return __ret_12 -> Obj.magic __ret_12
 
-let nativeToHaxe = fun native skip -> let toSkip = ref (HxInt.add skip (Obj.obj (HxAnon.get native "skip"))) in let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get native "stack")) in (
+let nativeToHaxe = fun native skip -> let skip = if Obj.repr skip == HxRuntime.hx_null then 0 else skip in let toSkip = ref (HxInt.add skip (Obj.obj (HxAnon.get native "skip"))) in let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get native "stack")) in (
   ignore (try while !_g < HxArray.length _g1 do try ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
     ignore (let __old_14 = !_g in let __new_15 = HxInt.add __old_14 1 in (
       ignore (_g := __new_15);
@@ -261,7 +261,7 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
   )
 )
 
-let exceptionStack = fun fullStack -> let eStack = nativeToHaxe (let __anon_19 = HxAnon.create () in (
+let exceptionStack = fun fullStack -> let fullStack = if Obj.repr fullStack == HxRuntime.hx_null then false else fullStack in let eStack = nativeToHaxe (let __anon_19 = HxAnon.create () in (
   ignore (HxAnon.set __anon_19 "skip" (Obj.repr 0));
   ignore (HxAnon.set __anon_19 "stack" (Obj.repr (HxBacktrace.exceptionstack_lines ())));
   __anon_19
