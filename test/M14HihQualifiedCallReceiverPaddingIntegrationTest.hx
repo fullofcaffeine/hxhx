@@ -35,6 +35,12 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 			'  public function equal(left:Dynamic, right:Dynamic):Bool {',
 			'    return true;',
 			'  }',
+			'  public function ping():Int {',
+			'    return 7;',
+			'  }',
+			'  public function callPing():Int {',
+			'    return ping();',
+			'  }',
 			'}',
 			'class Main {',
 			'  public static function equal(left:Dynamic, right:Dynamic):Bool {',
@@ -42,6 +48,7 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 			'  }',
 			'  static function main() {',
 			'    equal(1, 2);',
+			'    new Syntax().callPing();',
 			'  }',
 			'}',
 		].join("\n");
@@ -56,6 +63,7 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 
 			var foundPaddedCall = false;
 			var foundUnpaddedCall = false;
+			var foundDoubleReceiver = false;
 			for (entry in FileSystem.readDirectory(outDir)) {
 				if (!StringTools.endsWith(entry, '.ml'))
 					continue;
@@ -65,10 +73,13 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 					foundPaddedCall = true;
 				if (ocaml.indexOf('.equal (left) (right)') >= 0)
 					foundUnpaddedCall = true;
+				if (ocaml.indexOf('ping (this_) (this_)') >= 0)
+					foundDoubleReceiver = true;
 			}
 
 			assertTrue(foundPaddedCall, 'Expected receiver-padded qualified call not found in emitted OCaml.');
 			assertTrue(!foundUnpaddedCall, 'Found unpadded qualified call shape `.equal (left) (right)` in emitted OCaml.');
+			assertTrue(!foundDoubleReceiver, 'Found duplicated receiver call shape `ping (this_) (this_)` in emitted OCaml.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

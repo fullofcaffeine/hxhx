@@ -2740,7 +2740,7 @@ class EmitterStage {
 							case _:
 								false;
 						};
-						if (forceImplicitThis)
+						if (forceImplicitThis && c.indexOf(" (this_)") == -1)
 							fullArgs.insert(0, EThis);
 
 						// Stage3 widened-closure hardening: some recovered call signatures include an
