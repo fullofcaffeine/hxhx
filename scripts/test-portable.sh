@@ -11,7 +11,7 @@ PORTABLE_FIXTURE_ALLOWLIST_NORM=""
 
 if [ -n "$PORTABLE_FIXTURE_ALLOWLIST" ]; then
   PORTABLE_FIXTURE_ALLOWLIST_NORM=","
-  while IFS= read -r fixture_name; do
+  while IFS= read -r fixture_name || [ -n "$fixture_name" ]; do
     fixture_name="${fixture_name//[[:space:]]/}"
     [ -n "$fixture_name" ] || continue
     PORTABLE_FIXTURE_ALLOWLIST_NORM="${PORTABLE_FIXTURE_ALLOWLIST_NORM}${fixture_name},"
@@ -63,9 +63,37 @@ for dir in "$FIXTURE_ROOT"/*/; do
   out_tmp="$(mktemp)"
   err_tmp="$(mktemp)"
   if [ -f "${dir}stdin.txt" ]; then
-    env -u HX_TEST_ENV_MISSING_REFLAXE_OCAML HX_TEST_ENV=ok "$exe" <"${dir}stdin.txt" >"$out_tmp" 2>"$err_tmp"
+    if env -u HX_TEST_ENV_MISSING_REFLAXE_OCAML HX_TEST_ENV=ok "$exe" <"${dir}stdin.txt" >"$out_tmp" 2>"$err_tmp"; then
+      :
+    else
+      status=$?
+      echo "Portable fixture process failed: ${dir#"$ROOT/"} (exit $status)" >&2
+      if [ -s "$out_tmp" ]; then
+        echo "--- stdout ---" >&2
+        cat "$out_tmp" >&2
+      fi
+      if [ -s "$err_tmp" ]; then
+        echo "--- stderr ---" >&2
+        cat "$err_tmp" >&2
+      fi
+      exit "$status"
+    fi
   else
-    env -u HX_TEST_ENV_MISSING_REFLAXE_OCAML HX_TEST_ENV=ok "$exe" >"$out_tmp" 2>"$err_tmp"
+    if env -u HX_TEST_ENV_MISSING_REFLAXE_OCAML HX_TEST_ENV=ok "$exe" >"$out_tmp" 2>"$err_tmp"; then
+      :
+    else
+      status=$?
+      echo "Portable fixture process failed: ${dir#"$ROOT/"} (exit $status)" >&2
+      if [ -s "$out_tmp" ]; then
+        echo "--- stdout ---" >&2
+        cat "$out_tmp" >&2
+      fi
+      if [ -s "$err_tmp" ]; then
+        echo "--- stderr ---" >&2
+        cat "$err_tmp" >&2
+      fi
+      exit "$status"
+    fi
   fi
 
   diff -u "${dir}expected.stdout" "$out_tmp"
