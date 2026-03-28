@@ -1,0 +1,213 @@
+(* hxhx(stage3) bootstrap shim: ProjectGenerator helper-call repair *)
+                              ignore (try
+                                let _g_load_template_entries = Obj.magic (HxFileSystem.readDirectory (outAbs : string)) in
+                                let _g_load_template_index = ref 0 in while !_g_load_template_index < HxArray.length _g_load_template_entries do
+                                  let entry = (HxArray.get (Obj.magic _g_load_template_entries) (!_g_load_template_index) : string) in (
+                                    ignore (let __old_load_template_index = !_g_load_template_index in let __new_load_template_index = HxInt.add __old_load_template_index 1 in (
+                                      ignore (_g_load_template_index := __new_load_template_index);
+                                      __new_load_template_index
+                                    ));
+                                    if StringTools.endsWith (entry : string) (".ml" : string) then (
+                                      let candidatePath = (Haxe_io_Path.join (Obj.magic (let __arr_load_template_entry = HxArray.create () in (
+                                        ignore (HxArray.push __arr_load_template_entry outAbs);
+                                        ignore (HxArray.push __arr_load_template_entry entry);
+                                        __arr_load_template_entry
+                                      ))) : string) in
+                                      if HxFileSystem.exists candidatePath then (
+                                        let contents = (HxFile.getContent (candidatePath : string) : string) in
+                                        let needsLoadTemplateRepair =
+                                          HxString.indexOf contents "let rec loadTemplate (this_ : _) (templateName : string) : string" 0 <> -1
+                                          && HxString.indexOf contents "let libPath = getLibraryPath ()" 0 <> -1
+                                          && HxString.indexOf contents "let templatePath = (Obj.magic 0)" 0 <> -1
+                                          && HxString.indexOf contents "defaultTemplate ((Obj.magic 0))" 0 <> -1
+                                        in
+                                        if needsLoadTemplateRepair then (
+                                          let repairedDefaultTemplate = StringTools.replace contents "HxReturn_defaultTemplate (Obj.repr ((Obj.magic 0)))" "HxReturn_defaultTemplate (Obj.repr (templateName))" in
+                                          let repairedReceiver = StringTools.replace repairedDefaultTemplate "let libPath = getLibraryPath ()" "let libPath = getLibraryPath (this_)" in
+                                          let repairedPath = StringTools.replace repairedReceiver "let templatePath = (Obj.magic 0)" "let templatePath = HxBootArray.join (HxBootArray.of_list [(Obj.magic (libPath)); (Obj.magic (\"templates\")); (Obj.magic (\"project\")); (Obj.magic (templateName))]) (\"/\") (fun (s : string) -> s)" in
+                                          let repairedFallback = StringTools.replace repairedPath "defaultTemplate ((Obj.magic 0))" "defaultTemplate (this_) (templateName)" in
+                                          let repairedContents = StringTools.replace repairedFallback "raise (HxReturn_loadTemplate (Obj.repr ((Obj.magic 0))))" "raise (HxReturn_loadTemplate (Obj.repr (HxFile.getContent (templatePath))))" in
+                                          if repairedContents <> contents then HxFile.saveContent (candidatePath : string) (repairedContents : string)
+                                        )
+                                      )
+                                    )
+                                  ) done
+                              with _ -> ());
+                              ignore (try
+                                let _g_template_engine_entries = Obj.magic (HxFileSystem.readDirectory (outAbs : string)) in
+                                let _g_template_engine_index = ref 0 in while !_g_template_engine_index < HxArray.length _g_template_engine_entries do
+                                  let entry = (HxArray.get (Obj.magic _g_template_engine_entries) (!_g_template_engine_index) : string) in (
+                                    ignore (let __old_template_engine_index = !_g_template_engine_index in let __new_template_engine_index = HxInt.add __old_template_engine_index 1 in (
+                                      ignore (_g_template_engine_index := __new_template_engine_index);
+                                      __new_template_engine_index
+                                    ));
+                                    if StringTools.endsWith (entry : string) (".ml" : string) then (
+                                      let candidatePath = (Haxe_io_Path.join (Obj.magic (let __arr_template_engine_entry = HxArray.create () in (
+                                        ignore (HxArray.push __arr_template_engine_entry outAbs);
+                                        ignore (HxArray.push __arr_template_engine_entry entry);
+                                        __arr_template_engine_entry
+                                      ))) : string) in
+                                      if HxFileSystem.exists candidatePath then (
+                                        let contents = (HxFile.getContent (candidatePath : string) : string) in
+                                        let needsTemplateEngineRepair =
+                                          HxString.indexOf contents "let rec evaluateCondition (this_ : _) (condition : string) (context : _) : bool" 0 <> -1
+                                          && HxString.indexOf contents "evaluateCondition ((Obj.magic" 0 <> -1
+                                          && HxString.indexOf contents "TemplateContext_TemplateValueTools.truthy" 0 <> -1
+                                        in
+                                        if needsTemplateEngineRepair then (
+                                          let brokenEvaluateCondition = {|let rec evaluateCondition (this_ : _) (condition : string) (context : _) : bool = ((try (let _ = ((raise (HxReturn_evaluateCondition (Obj.repr ((not (evaluateCondition ((Obj.magic ((Obj.magic ((Obj.magic (HxAnon.get (Obj.repr ((Obj.magic 0))) "substr"))) : Obj.t -> Obj.t) (Obj.repr (1))))) ((Obj.magic 0)))))))); (if (((Obj.magic ((Obj.magic ((Obj.magic (HxAnon.get (Obj.repr ((Obj.magic 0))) "indexOf"))) : Obj.t -> Obj.t) (Obj.repr ("=="))))) > (0)) then (let parts = HxString.split ((Obj.magic 0)) ("==") in (ignore parts; (let left = (Obj.magic 0) in (ignore left; (let right = (Obj.magic 0) in (ignore right; (raise (HxReturn_evaluateCondition (Obj.repr ((Obj.magic 0))))))))))) else (()); (if (((Obj.magic ((Obj.magic ((Obj.magic (HxAnon.get (Obj.repr ((Obj.magic 0))) "indexOf"))) : Obj.t -> Obj.t) (Obj.repr ("!="))))) > (0)) then (let parts = HxString.split ((Obj.magic 0)) ("!=") in (ignore parts; (let left = (Obj.magic 0) in (ignore left; (let right = (Obj.magic 0) in (ignore right; (raise (HxReturn_evaluateCondition (Obj.repr ((Obj.magic 0))))))))))) else (()); raise (HxReturn_evaluateCondition (Obj.repr (Reflaxe_elixir_generator_TemplateContext_TemplateValueTools.truthy ((Obj.magic ((Obj.magic ((Obj.magic (HxAnon.get (Obj.repr ((Obj.magic 0))) "get"))) : Obj.t -> Obj.t) (Obj.repr ((Obj.magic 0)))))))))))) in (Obj.magic 0)) with HxReturn_evaluateCondition v -> (Obj.magic v)) : bool)|} in
+                                          let repairedEvaluateCondition = {|let rec evaluateCondition (this_ : _) (condition : string) (context : _) : bool = (if (StringTools.startsWith (condition : string) ("!" : string)) then (not (evaluateCondition (this_) (HxString.substr (condition : string) (1) ((HxString.length (condition : string)) - 1)) (context))) else (if ((HxString.indexOf (condition : string) ("==" : string) 0) > 0) then (let parts = HxString.split (condition : string) ("==" : string) in let left = evaluateExpression (this_) (StringTools.trim ((HxArray.get (Obj.magic parts) 0 : string) : string)) (context) in let right = evaluateExpression (this_) (StringTools.trim ((HxArray.get (Obj.magic parts) 1 : string) : string)) (context) in Reflaxe_elixir_generator_TemplateContext_TemplateValueTools.equals (Obj.magic left) (Obj.magic right)) else (if ((HxString.indexOf (condition : string) ("!=" : string) 0) > 0) then (let parts = HxString.split (condition : string) ("!=" : string) in let left = evaluateExpression (this_) (StringTools.trim ((HxArray.get (Obj.magic parts) 0 : string) : string)) (context) in let right = evaluateExpression (this_) (StringTools.trim ((HxArray.get (Obj.magic parts) 1 : string) : string)) (context) in (not (Reflaxe_elixir_generator_TemplateContext_TemplateValueTools.equals (Obj.magic left) (Obj.magic right)))) else (Reflaxe_elixir_generator_TemplateContext_TemplateValueTools.truthy (Obj.magic (Reflaxe_elixir_generator_TemplateContext.get (Obj.magic context) (condition : string)))))))|} in
+                                          let repairedEvaluateConditionContents = StringTools.replace contents brokenEvaluateCondition repairedEvaluateCondition in
+                                          let brokenProcess = {|let rec process (this_ : _) (content : string) (context : _) : bool = ((try (let _ = raise (HxReturn_process (Obj.repr (evaluateCondition ((Obj.magic 0)) ((Obj.magic 0))))) in (Obj.magic 0)) with HxReturn_process v -> (Obj.magic v)) : bool)|} in
+                                          let repairedProcess = {|let rec process (this_ : _) (content : string) (context : _) : bool = ((try (let _ = raise (HxReturn_process (Obj.repr (evaluateCondition (this_) (content) (context)))) in (Obj.magic 0)) with HxReturn_process v -> (Obj.magic v)) : bool)|} in
+                                          let repairedProcessContents = StringTools.replace repairedEvaluateConditionContents brokenProcess repairedProcess in
+                                          let brokenTransformFilename = {|let rec transformFilename (this_ : _) (filename : string) (replacements : _) : string = processPlaceholders ((Obj.magic 0)) ((Obj.magic 0))|} in
+                                          let repairedTransformFilename = {|let rec transformFilename (this_ : _) (filename : string) (replacements : _) : string = processPlaceholders (this_) (filename) (replacements)|} in
+                                          let repairedContents = StringTools.replace repairedProcessContents brokenTransformFilename repairedTransformFilename in
+                                          if repairedContents <> contents then HxFile.saveContent (candidatePath : string) (repairedContents : string)
+                                        )
+                                      )
+                                    )
+                                  ) done
+                              with _ -> ());
+                              ignore (try
+                                let _g_php_syntax_entries = Obj.magic (HxFileSystem.readDirectory (outAbs : string)) in
+                                let _g_php_syntax_index = ref 0 in while !_g_php_syntax_index < HxArray.length _g_php_syntax_entries do
+                                  let entry = (HxArray.get (Obj.magic _g_php_syntax_entries) (!_g_php_syntax_index) : string) in (
+                                    ignore (let __old_php_syntax_index = !_g_php_syntax_index in let __new_php_syntax_index = HxInt.add __old_php_syntax_index 1 in (
+                                      ignore (_g_php_syntax_index := __new_php_syntax_index);
+                                      __new_php_syntax_index
+                                    ));
+                                    if StringTools.endsWith (entry : string) (".ml" : string) then (
+                                      let candidatePath = (Haxe_io_Path.join (Obj.magic (let __arr_php_syntax_entry = HxArray.create () in (
+                                        ignore (HxArray.push __arr_php_syntax_entry outAbs);
+                                        ignore (HxArray.push __arr_php_syntax_entry entry);
+                                        __arr_php_syntax_entry
+                                      ))) : string) in
+                                      if HxFileSystem.exists candidatePath then (
+                                        let contents = (HxFile.getContent (candidatePath : string) : string) in
+                                        let needsPhpSyntaxRepair =
+                                          (HxString.indexOf contents "Php_Syntax.code (" 0 <> -1
+                                            || HxString.indexOf contents "Php_Syntax.codeLowered (" 0 <> -1
+                                            || HxString.indexOf contents "Php_Syntax.codeDeref (" 0 <> -1)
+                                          && HxString.indexOf contents "HxBootArray.create ()" 0 = -1
+                                        in
+                                        if needsPhpSyntaxRepair then (
+                                          let repairedContents =
+                                            try
+                                              let rx = Str.regexp "\\(Php_Syntax\\.code\\(?:Lowered\\|Deref\\)? (.*)\\)$" in
+                                              let lines = HxString.split contents "\n" in
+                                              let repairedLines = ref [] in (
+                                                ignore (let _g_php_syntax_line = ref 0 in while !_g_php_syntax_line < HxArray.length lines do ignore (let line = (HxArray.get (Obj.magic lines) (!_g_php_syntax_line) : string) in (
+                                                  ignore (let __old_php_syntax_line = !_g_php_syntax_line in let __new_php_syntax_line = HxInt.add __old_php_syntax_line 1 in (
+                                                    ignore (_g_php_syntax_line := __new_php_syntax_line);
+                                                    __new_php_syntax_line
+                                                  ));
+                                                  let repairedLine =
+                                                    if (HxString.indexOf line "Php_Syntax." 0 <> -1)
+                                                      && (HxString.indexOf line "HxBootArray.create ()" 0 = -1)
+                                                      && (try ignore (Str.search_forward rx line 0); true with Not_found -> false)
+                                                    then (line ^ " (HxBootArray.create ())")
+                                                    else line
+                                                  in
+                                                  repairedLines := repairedLine :: !repairedLines
+                                                )) done);
+                                                String.concat "\n" (List.rev (!repairedLines))
+                                              )
+                                            with _ -> contents
+                                          in
+                                          if repairedContents <> contents then HxFile.saveContent (candidatePath : string) (repairedContents : string)
+                                        )
+                                      )
+                                    )
+                                  ) done
+                              with _ -> ());
+                              (* hxhx(stage3) bootstrap shim: Php_Syntax empty-rest repair *)
+                              ignore (try
+                                let phpBootPath = (Haxe_io_Path.join (Obj.magic (let __arr_php_boot_repair = HxArray.create () in (
+                                  ignore (HxArray.push __arr_php_boot_repair outAbs);
+                                  ignore (HxArray.push __arr_php_boot_repair "Php_Boot.ml");
+                                  __arr_php_boot_repair
+                                ))) : string) in
+                                if HxFileSystem.exists phpBootPath then (
+                                  let contents = (HxFile.getContent (phpBootPath : string) : string) in
+                                  let needsRepair =
+                                    (HxString.indexOf contents "let rec divByZero (value : float) : float" 0 <> -1)
+                                    &&
+                                    (
+                                      (HxString.indexOf contents "((value) = (0))" 0 <> -1)
+                                      || (HxString.indexOf contents "((value) < (0))" 0 <> -1)
+                                    )
+                                  in
+                                  if needsRepair then (
+                                    let patchedEq = StringTools.replace contents "((value) = (0))" "((value) = (float_of_int 0))" in
+                                    let patched = StringTools.replace patchedEq "((value) < (0))" "((value) < (float_of_int 0))" in
+                                    if patched <> contents then HxFile.saveContent (phpBootPath : string) (patched : string)
+                                  )
+                                )
+                              with _ -> ());
+                              (* hxhx(stage3) bootstrap shim: Php_Boot float zero compare repair *)
+                              ignore (try
+                                let phpBootPath = (Haxe_io_Path.join (Obj.magic (let __arr_php_boot_string_keys = HxArray.create () in (
+                                  ignore (HxArray.push __arr_php_boot_string_keys outAbs);
+                                  ignore (HxArray.push __arr_php_boot_string_keys "Php_Boot.ml");
+                                  __arr_php_boot_string_keys
+                                ))) : string) in
+                                if HxFileSystem.exists phpBootPath then (
+                                  let contents = (HxFile.getContent (phpBootPath : string) : string) in
+                                  let needsRepair =
+                                    (HxString.indexOf contents "HxBootArray.get (classes) (phpClassName)" 0 <> -1)
+                                    || (HxString.indexOf contents "HxBootArray.get (aliases) ((Obj.magic (HxAnon.get (Obj.repr (hxClass)) \"phpClassName\")))" 0 <> -1)
+                                  in
+                                  if needsRepair then (
+                                    let patchedAliases = StringTools.replace contents "HxBootArray.get (aliases) ((Obj.magic (HxAnon.get (Obj.repr (hxClass)) \"phpClassName\")))" "(Obj.magic (HxAnon.get (Obj.repr (aliases)) ((Obj.magic (HxAnon.get (Obj.repr (hxClass)) \"phpClassName\")))))" in
+                                    let patched = StringTools.replace patchedAliases "HxBootArray.get (classes) (phpClassName)" "(Obj.magic (HxAnon.get (Obj.repr (classes)) (phpClassName)))" in
+                                    if patched <> contents then HxFile.saveContent (phpBootPath : string) (patched : string)
+                                  )
+                                )
+                              with _ -> ());
+                              (* hxhx(stage3) bootstrap shim: Php_Boot string-key lookup repair *)
+                              ignore (try
+                                let providerNeedsEof =
+                                  let candidates = Obj.magic (let __arr_haxe_io_eof_candidates = HxArray.create () in (
+                                    ignore (HxArray.push __arr_haxe_io_eof_candidates "sys_io_Stdio.ml");
+                                    ignore (HxArray.push __arr_haxe_io_eof_candidates "haxe_io_Input.ml");
+                                    ignore (HxArray.push __arr_haxe_io_eof_candidates "haxe_io_Output.ml");
+                                    __arr_haxe_io_eof_candidates
+                                  )) in
+                                  let needs = ref false in (
+                                    ignore (let _g_haxe_io_eof_candidate = ref 0 in while !_g_haxe_io_eof_candidate < HxArray.length candidates do ignore (let entry = (HxArray.get (Obj.magic candidates) (!_g_haxe_io_eof_candidate) : string) in (
+                                      ignore (let __old_haxe_io_eof_candidate = !_g_haxe_io_eof_candidate in let __new_haxe_io_eof_candidate = HxInt.add __old_haxe_io_eof_candidate 1 in (
+                                        ignore (_g_haxe_io_eof_candidate := __new_haxe_io_eof_candidate);
+                                        __new_haxe_io_eof_candidate
+                                      ));
+                                      if not (!needs) then (
+                                        let candidatePath = (Haxe_io_Path.join (Obj.magic (let __arr_haxe_io_eof_path = HxArray.create () in (
+                                          ignore (HxArray.push __arr_haxe_io_eof_path outAbs);
+                                          ignore (HxArray.push __arr_haxe_io_eof_path entry);
+                                          __arr_haxe_io_eof_path
+                                        ))) : string) in
+                                        if HxFileSystem.exists candidatePath then needs := true else ()
+                                      ) else ()
+                                    )) done);
+                                    !needs
+                                  )
+                                in
+                                if providerNeedsEof then (
+                                  let eofPath = (Haxe_io_Path.join (Obj.magic (let __arr_haxe_io_eof_target = HxArray.create () in (
+                                    ignore (HxArray.push __arr_haxe_io_eof_target outAbs);
+                                    ignore (HxArray.push __arr_haxe_io_eof_target "haxe_io_Eof.ml");
+                                    __arr_haxe_io_eof_target
+                                  ))) : string) in
+                                  let hasCreate =
+                                    if HxFileSystem.exists eofPath then (
+                                      let contents = (HxFile.getContent (eofPath : string) : string) in
+                                      (HxString.indexOf contents "let create" 0 <> -1) || (HxString.indexOf contents "let rec create" 0 <> -1)
+                                    ) else false
+                                  in
+                                  if not hasCreate then (
+                                    HxFile.saveContent (eofPath : string) ("(* hxhx(stage3) bootstrap shim: haxe.io.Eof *)\n" ^ "type t = { __hx_type : Obj.t }\n" ^ "let create () : t = { __hx_type = HxType.class_ \"haxe.io.Eof\" }\n" ^ "let __empty () : t = create ()\n" ^ "let new_ () : t = create ()\n" ^ "let toString (_ : t) : string = \"Eof\"\n")
+                                  ) else ()
+                                ) else ()
+                              with _ -> ());
+                              (* hxhx(stage3) bootstrap shim: haxe.io.Eof presence repair *)

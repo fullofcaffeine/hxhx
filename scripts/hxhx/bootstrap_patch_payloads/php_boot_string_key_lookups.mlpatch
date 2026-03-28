@@ -1,0 +1,45 @@
+(* hxhx(stage3) bootstrap shim: Php_Boot string-key lookup repair *)
+                              ignore (try
+                                let providerNeedsEof =
+                                  let candidates = Obj.magic (let __arr_haxe_io_eof_candidates = HxArray.create () in (
+                                    ignore (HxArray.push __arr_haxe_io_eof_candidates "sys_io_Stdio.ml");
+                                    ignore (HxArray.push __arr_haxe_io_eof_candidates "haxe_io_Input.ml");
+                                    ignore (HxArray.push __arr_haxe_io_eof_candidates "haxe_io_Output.ml");
+                                    __arr_haxe_io_eof_candidates
+                                  )) in
+                                  let needs = ref false in (
+                                    ignore (let _g_haxe_io_eof_candidate = ref 0 in while !_g_haxe_io_eof_candidate < HxArray.length candidates do ignore (let entry = (HxArray.get (Obj.magic candidates) (!_g_haxe_io_eof_candidate) : string) in (
+                                      ignore (let __old_haxe_io_eof_candidate = !_g_haxe_io_eof_candidate in let __new_haxe_io_eof_candidate = HxInt.add __old_haxe_io_eof_candidate 1 in (
+                                        ignore (_g_haxe_io_eof_candidate := __new_haxe_io_eof_candidate);
+                                        __new_haxe_io_eof_candidate
+                                      ));
+                                      if not (!needs) then (
+                                        let candidatePath = (Haxe_io_Path.join (Obj.magic (let __arr_haxe_io_eof_path = HxArray.create () in (
+                                          ignore (HxArray.push __arr_haxe_io_eof_path outAbs);
+                                          ignore (HxArray.push __arr_haxe_io_eof_path entry);
+                                          __arr_haxe_io_eof_path
+                                        ))) : string) in
+                                        if HxFileSystem.exists candidatePath then needs := true else ()
+                                      ) else ()
+                                    )) done);
+                                    !needs
+                                  )
+                                in
+                                if providerNeedsEof then (
+                                  let eofPath = (Haxe_io_Path.join (Obj.magic (let __arr_haxe_io_eof_target = HxArray.create () in (
+                                    ignore (HxArray.push __arr_haxe_io_eof_target outAbs);
+                                    ignore (HxArray.push __arr_haxe_io_eof_target "haxe_io_Eof.ml");
+                                    __arr_haxe_io_eof_target
+                                  ))) : string) in
+                                  let hasCreate =
+                                    if HxFileSystem.exists eofPath then (
+                                      let contents = (HxFile.getContent (eofPath : string) : string) in
+                                      (HxString.indexOf contents "let create" 0 <> -1) || (HxString.indexOf contents "let rec create" 0 <> -1)
+                                    ) else false
+                                  in
+                                  if not hasCreate then (
+                                    HxFile.saveContent (eofPath : string) ("(* hxhx(stage3) bootstrap shim: haxe.io.Eof *)\n" ^ "type t = { __hx_type : Obj.t }\n" ^ "let create () : t = { __hx_type = HxType.class_ \"haxe.io.Eof\" }\n" ^ "let __empty () : t = create ()\n" ^ "let new_ () : t = create ()\n" ^ "let toString (_ : t) : string = \"Eof\"\n")
+                                  ) else ()
+                                ) else ()
+                              with _ -> ());
+                              (* hxhx(stage3) bootstrap shim: haxe.io.Eof presence repair *)
