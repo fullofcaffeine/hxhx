@@ -589,6 +589,32 @@ class OcamlBuilder {
 		return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 	}
 
+	inline function paramUsesDirectNullSentinelCompare(t:Type):Bool {
+		return isDynamicLike(t) || nullablePrimitiveKind(t) != null || isTypeParameterType(t) || isNullableEnumType(t) != null;
+	}
+
+	function wrapFunctionArgDefaults(body:OcamlExpr, args:Array<{name:String, t:Type, value:Null<TypedExpr>}>):OcamlExpr {
+		var out = body;
+		final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+		for (i in 0...args.length) {
+			final a = args[args.length - 1 - i];
+			if (a.value == null)
+				continue;
+			switch (unwrap(a.value).expr) {
+				case TConst(TNull):
+					continue;
+				case _:
+			}
+			final name = renameVar(a.name);
+			final paramExpr = OcamlExpr.EIdent(name);
+			final isMissing = OcamlExpr.EBinop(OcamlBinop.PhysEq,
+				paramUsesDirectNullSentinelCompare(a.t) ? paramExpr : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [paramExpr]), hxNull);
+			final normalized = OcamlExpr.EIf(isMissing, coerceForAssignment(a.t, a.value), paramExpr);
+			out = OcamlExpr.ELet(name, normalized, out, false);
+		}
+		return out;
+	}
+
 	static function isHaxeRestType(t:Type):Bool {
 		return switch (followNoAbstracts(unwrapNullType(t))) {
 			case TAbstract(aRef, [_]): final a = aRef.get(); final pack = a.pack ?? []; pack.length == 1 && pack[0] == "haxe" && a.name == "Rest";
@@ -6092,7 +6118,12 @@ class OcamlBuilder {
 			[OcamlExpr.EIdent(returnVarName)]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVarName)]);
 	}
 
-	public function buildFunctionFromArgsAndExpr(args:Array<{id:Int, name:String}>, bodyExpr:TypedExpr, ?expectedReturnType:Null<Type>):OcamlExpr {
+	public function buildFunctionFromArgsAndExpr(args:Array<{
+		id:Int,
+		name:String,
+		t:Type,
+		value:Null<TypedExpr>
+	}>, bodyExpr:TypedExpr, ?expectedReturnType:Null<Type>):OcamlExpr {
 		#if macro
 		final log = ctx.profileLogLine;
 		final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
@@ -6176,6 +6207,7 @@ class OcamlBuilder {
 				body = OcamlExpr.ELet(n, OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EIdent(n)]), body, false);
 			}
 		}
+		body = wrapFunctionArgDefaults(body, args.map(a -> ({name: a.name, t: a.t, value: a.value})));
 		body = ensureParamUsage(body, params);
 
 		currentMutatedLocalIds = prev;
@@ -6246,6 +6278,7 @@ class OcamlBuilder {
 				body = OcamlExpr.ELet(n, OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EIdent(n)]), body, false);
 			}
 		}
+		body = wrapFunctionArgDefaults(body, tfunc.args.map(a -> {name: a.v.name, t: a.v.t, value: a.value}));
 		body = ensureParamUsage(body, params);
 
 		currentMutatedLocalIds = prev;

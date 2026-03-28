@@ -1267,9 +1267,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 			var createParams:Array<OcamlPat> = [OcamlPat.PConst(OcamlConst.CUnit)];
 			var ctorBody:OcamlExpr = OcamlExpr.EConst(OcamlConst.CUnit);
 			if (ctorFunc != null && ctorFunc.expr != null) {
-				final argInfo = ctorFunc.args.map(a -> ({
+				final argInfo:Array<{
+					id:Int,
+					name:String,
+					t:Type,
+					value:Null<TypedExpr>
+				}> = ctorFunc.args.map(a -> ({
 					id: a.tvar != null ? a.tvar.id : -1,
-					name: a.getName()
+					name: a.getName(),
+					t: a.type,
+					value: a.expr
 				}));
 				final ctorReturnType:Type = switch (TypeTools.follow(ctorFunc.field.type)) {
 					case TFun(_, ret): ret;
@@ -1438,9 +1445,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case TFun(fargs, _): fargs;
 						case _: null;
 					}
-					final argInfo = f.args.map(a -> ({
+					final argInfo:Array<{
+						id:Int,
+						name:String,
+						t:Type,
+						value:Null<TypedExpr>
+					}> = f.args.map(a -> ({
 						id: a.tvar != null ? a.tvar.id : -1,
-						name: a.getName()
+						name: a.getName(),
+						t: a.type,
+						value: a.expr
 					}));
 					final methodReturnType:Type = switch (TypeTools.follow(f.field.type)) {
 						case TFun(_, ret): ret;
@@ -1522,9 +1536,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 			#end
 
 			final name = ctx.scopedValueName(classType.module, classType.name, f.field.name);
-			final argInfo = f.args.map(a -> ({
+			final argInfo:Array<{
+				id:Int,
+				name:String,
+				t:Type,
+				value:Null<TypedExpr>
+			}> = f.args.map(a -> ({
 				id: a.tvar != null ? a.tvar.id : -1,
-				name: a.getName()
+				name: a.getName(),
+				t: a.type,
+				value: a.expr
 			}));
 			#if macro
 			final profFieldStartS = (profileVerbose && profClassMatch && profileDetail) ? profileNowS() : 0.0;
