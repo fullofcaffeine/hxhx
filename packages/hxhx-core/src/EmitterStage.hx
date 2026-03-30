@@ -4009,7 +4009,7 @@ class EmitterStage {
 			return out;
 		}
 
-		function extendTyWithLocals(base:Dynamic, locals:Map<String, Bool>):Map<String, TyType> {
+		function extendTyWithLocals<TBase>(base:TBase, locals:Map<String, Bool>):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
 			final baseKeys:Null<Iterator<String>> = base == null ? null : (cast base : Map<String, TyType>).keys();
 			if (baseKeys != null)
@@ -4416,7 +4416,7 @@ class EmitterStage {
 		}
 
 		function stmtToUnit(s:HxStmt, tyCtx:Map<String, TyType>):String {
-			final erasedTyCtx:Dynamic = tyCtx;
+			final erasedTyCtx = cast tyCtx;
 			return switch (s) {
 				case SBlock(ss, _pos):
 					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -6306,10 +6306,10 @@ class EmitterStage {
 										localTypeHints.set(n, l.getType());
 								}
 							}
-							final erasedArityByName:Dynamic = arityByName;
-							final erasedStaticImportByIdent:Dynamic = staticImportByIdent;
-							final erasedModuleNameByPkgAndClass:Dynamic = moduleNameByPkgAndClass;
-							final erasedCallSigByCallee:Dynamic = callSigByCallee;
+							final erasedArityByName = cast arityByName;
+							final erasedStaticImportByIdent = cast staticImportByIdent;
+							final erasedModuleNameByPkgAndClass = cast moduleNameByPkgAndClass;
+							final erasedCallSigByCallee = cast callSigByCallee;
 
 							for (name in allowed.keys())
 								if (tyByIdent.get(name) == null)
