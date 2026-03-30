@@ -3486,8 +3486,7 @@ def cmd_patch_int64_mixed_binops(argv: list[str]) -> None:
     src = read_text(path_str)
 
     if (
-        "currentExprTyHints" in src
-        or "__assign_bootstrap_int64_operand_1" in src
+        "__assign_bootstrap_int64_operand_1" in src
         or "bootstrap shim: Int64 mixed-binop repair" in src
     ):
         write_text(path_str, src)
@@ -3664,21 +3663,28 @@ def cmd_patch_int64_mixed_binops(argv: list[str]) -> None:
             new_stmt_restore,
             "build-hxhx: failed to locate bootstrap stmtToUnit restore anchor for Int64 mixed-binop repair\n",
         )
-    elif "fun s tyCtx -> let tempResult6 = ref (\"\" : string) in (" in src:
+    elif (
+        "fun s tyCtx -> let tempResult6 = ref (\"\" : string) in (" in src
+        or "fun s tyCtx -> let erasedTyCtx = Obj.repr tyCtx in let tempResult6 = ref (\"\" : string) in (" in src
+    ):
         stmt_intro_pattern = re.compile(
-            r"fun s tyCtx -> let tempResult6 = ref \(\"\" : string\) in \(\n\s+ignore \(match s with",
+            r"fun s tyCtx -> (?:(let erasedTyCtx = Obj\.repr tyCtx in )?)let tempResult6 = ref \(\"\" : string\) in \(\n\s+ignore \(match s with",
             re.S,
         )
         stmt_intro_match = stmt_intro_pattern.search(src)
         if stmt_intro_match is None:
             fail("build-hxhx: failed to locate bootstrap stmtToUnit intro anchor for Int64 mixed-binop repair\n")
+        has_erased_tyctx = "let erasedTyCtx = Obj.repr tyCtx in" in stmt_intro_match.group(0)
         stmt_intro_replacement = '''fun s tyCtx -> let prevAllowedValueIdentNamesStmt = (!currentAllowedValueIdentNames : bool HxMap.string_map) in let prevExprTyHintsStmt = (!currentExprTyHints : TyType.t HxMap.string_map) in let _bootstrap_stmt_allowed_assign = let __assign_bootstrap_stmt_allowed_names = Obj.magic allowedValueIdents in (
                       currentAllowedValueIdentNames := __assign_bootstrap_stmt_allowed_names;
                       __assign_bootstrap_stmt_allowed_names
                     ) in let _bootstrap_expr_ty_hints_assign = let __assign_bootstrap_expr_ty_hints = Obj.magic localHints in (
                       currentExprTyHints := __assign_bootstrap_expr_ty_hints;
                       __assign_bootstrap_expr_ty_hints
-                    ) in let tempResult6 = ref ("" : string) in (
+                    ) in '''
+        if has_erased_tyctx:
+            stmt_intro_replacement += '''let erasedTyCtx = Obj.repr tyCtx in '''
+        stmt_intro_replacement += '''let tempResult6 = ref ("" : string) in (
                       ignore _bootstrap_stmt_allowed_assign;
                       ignore _bootstrap_expr_ty_hints_assign;
                       ignore (match s with'''

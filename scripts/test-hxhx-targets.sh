@@ -2221,6 +2221,29 @@ echo "$out" | grep -q "^plugin_cp=ok$"
 echo "$out" | grep -q "^main=ok$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 regression: mutable local refs survive compound assignment and concat"
+tmpstage3sum="$tmpdir/stage3_mutable_local_sum"
+mkdir -p "$tmpstage3sum/src"
+cat >"$tmpstage3sum/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    var sum = 0;
+    for (n in [1, 2, 3, 4]) {
+      sum += n;
+    }
+    Sys.println("native-reflaxe-stage3=ok");
+    Sys.println("sum=" + sum);
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstage3sum/src" -main Main --hxhx-out "$tmpstage3sum/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^native-reflaxe-stage3=ok$"
+echo "$out" | grep -q "^sum=10$"
+grep -q 'sum := __hx_v' "$tmpstage3sum/out/Main.ml"
+grep -q 'HxBootArray.iter' "$tmpstage3sum/out/Main.ml"
+grep -Fq 'print_endline ((("sum=") ^ (' "$tmpstage3sum/out/Main.ml"
+
 echo "== Stage3 bring-up: ingests library -D defines (haxe_libraries/*.hxml)"
 tmpmini="$tmpdir/haxelib_define_fixture"
 mini_src="$tmpmini/src"

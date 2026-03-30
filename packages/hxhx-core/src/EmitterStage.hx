@@ -1120,8 +1120,8 @@ class EmitterStage {
 			return switch (expr) {
 				case EInt(_):
 					true;
-				case EIdent(name):
-					tyForIdent(name) == "Int";
+				case EIdent(name): final t = tyForIdent(name); t == "Int" || (isMutableLocalRefIdent(name)
+						&& (t == "" || t == "Dynamic" || t == "Unknown"));
 				case EBinop(op, a,
 					b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"): // Best-effort: propagate int-ness through arithmetic when both sides look int-ish.
 					isIntExpr(a)
@@ -1140,7 +1140,7 @@ class EmitterStage {
 			// This keeps common patterns like `% modulus` viable when local inference has not yet
 			// propagated a precise type for `modulus`.
 			return switch (expr) {
-				case EIdent(name): final t = tyForIdent(name); t == "" || t == "Dynamic" || t == "Unknown" || t == "Array";
+				case EIdent(name): final t = tyForIdent(name); t == "" || t == "Dynamic" || t == "Unknown" || t == "Array" || isMutableLocalRefIdent(name);
 				case _:
 					false;
 			}
@@ -1609,6 +1609,10 @@ class EmitterStage {
 					ocamlValueIdent(name) + " (this_)";
 				} else if (hasTyIdent(name)) {
 					// Bound identifier (parameter / local / bring-up-allowed static field).
+					readIdent(name);
+				} else if (isMutableLocalRefIdent(name)) {
+					// Reassigned locals are emitted as `ref`s even when best-effort type tracking is
+					// broad. Keep reads live instead of collapsing them to bring-up poison.
 					readIdent(name);
 				} else if (hasArity(name)) {
 					// Static method call within the same generated module becomes a top-level OCaml binding.
@@ -3377,6 +3381,10 @@ class EmitterStage {
 					} else if (hasTyIdent(name)) {
 						// Parameters and bound locals are safe to reference.
 						false;
+					} else if (isMutableLocalRefIdent(name)) {
+						// Reassigned locals are wrapped as `ref`s during statement lowering. They remain
+						// valid bound values even when the best-effort type context misses a later read.
+						false;
 					} else if (allowedValueIdents != null && allowedValueIdents.get(name) == true) {
 						false;
 					} else if (hasStaticImport(name)) {
@@ -3760,10 +3768,9 @@ class EmitterStage {
 		}
 	}
 
-	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, ?arityByIdent:Map<String, Int>,
-			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
-			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>, ?localTypeHints:Map<String, TyType>,
-			?fnReturnTypes:Map<String, TyType>):String {
+	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, arityByIdent:Map<String, Int>,
+			tyByIdent:Map<String, TyType>, staticImportByIdent:Map<String, String>, currentPackagePath:String, moduleNameByPkgAndClass:Map<String, String>,
+			callSigByCallee:Map<String, EmitterCallSig>, localTypeHints:Map<String, TyType>, fnReturnTypes:Map<String, TyType>):String {
 		if (stmts == null || stmts.length == 0)
 			return "()";
 
@@ -3994,12 +4001,20 @@ class EmitterStage {
 			return before;
 		}
 
-		function extendTyWithLocals(base:Map<String, TyType>, locals:Map<String, Bool>):Map<String, TyType> {
+		function cloneAllowedValueIdents(source:Map<String, Bool>):Map<String, Bool> {
+			final out:Map<String, Bool> = new Map();
+			if (source != null)
+				for (k in source.keys())
+					out.set(k, source.get(k));
+			return out;
+		}
+
+		function extendTyWithLocals(base:Dynamic, locals:Map<String, Bool>):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
-			final baseKeys:Null<Iterator<String>> = base == null ? null : base.keys();
+			final baseKeys:Null<Iterator<String>> = base == null ? null : (cast base : Map<String, TyType>).keys();
 			if (baseKeys != null)
 				for (k in baseKeys) {
-					final existingBase = base.get(k);
+					final existingBase = (cast base : Map<String, TyType>).get(k);
 					if (existingBase != null)
 						out.set(k, existingBase);
 				}
@@ -4121,7 +4136,72 @@ class EmitterStage {
 		function mutableAssignmentStmtToUnit(op:String, name:String, rhs:HxExpr, tyCtx:Null<Map<String, TyType>>):Null<String> {
 			if (!isMutableLocalRefIdent(name))
 				return null;
-			final rhsCode:Null<String> = switch (op) {
+			inline function localReadIdent(raw:String):String {
+				return ocamlReadValueIdent(raw);
+			}
+			inline function localTyForIdent(raw:String):String {
+				var key = raw;
+				if (mapGetRaw(tyCtx, key) == null) {
+					final lowered = ocamlValueIdent(raw);
+					if (lowered != raw && mapGetRaw(tyCtx, lowered) != null)
+						key = lowered;
+				}
+				final resolved = mapGetRaw(tyCtx, key);
+				if (resolved == null)
+					return "";
+				final t:TyType = cast resolved;
+				return t == null ? "" : t.toString();
+			}
+			inline function localIntBinopCall(binop:String, left:String, right:String):String {
+				return switch (binop) {
+					case "+":
+						"(HxInt.add (" + left + ") (" + right + "))";
+					case "-":
+						"(HxInt.sub (" + left + ") (" + right + "))";
+					case "*":
+						"(HxInt.mul (" + left + ") (" + right + "))";
+					case "%":
+						"(HxInt.rem (" + left + ") (" + right + "))";
+					case _:
+						"(Obj.magic 0)";
+				}
+			}
+			final lhsCode = localReadIdent(name);
+			final lhsTy = localTyForIdent(name);
+			var rhsRaw = exprToOcaml(rhs, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+			if (rhsRaw == "(Obj.magic 0)")
+				switch (rhs) {
+					case EIdent(rhsName):
+						final lowered = ocamlValueIdent(rhsName);
+						final hasTypedLocal = mapGetRaw(tyCtx, rhsName) != null
+							|| (lowered != rhsName && mapGetRaw(tyCtx, lowered) != null);
+						final hasHintedLocal = localHints.get(rhsName) != null || (lowered != rhsName && localHints.get(lowered) != null);
+						final hasAllowedLocal = (allowedValueIdents != null && allowedValueIdents.get(rhsName) == true)
+							|| (allowedValueIdents != null && lowered != rhsName && allowedValueIdents.get(lowered) == true);
+						if (hasTypedLocal || hasHintedLocal || hasAllowedLocal || isMutableLocalRefIdent(rhsName))
+							rhsRaw = localReadIdent(rhsName);
+					case _:
+				}
+			inline function isIntLikeLocalTy(t:String):Bool {
+				return t == "Int" || t == "" || t == "Dynamic" || t == "Unknown";
+			}
+			if (isIntLikeLocalTy(lhsTy)) {
+				final directIntRhs = switch (op) {
+					case "+=":
+						localIntBinopCall("+", lhsCode, rhsRaw);
+					case "-=":
+						localIntBinopCall("-", lhsCode, rhsRaw);
+					case "*=":
+						localIntBinopCall("*", lhsCode, rhsRaw);
+					case "%=":
+						localIntBinopCall("%", lhsCode, rhsRaw);
+					case _:
+						null;
+				}
+				if (directIntRhs != null)
+					return "(let __hx_v = (" + directIntRhs + ") in (" + ocamlValueIdent(name) + " := __hx_v; ()))";
+			}
+			var rhsCode:Null<String> = switch (op) {
 				case "=":
 					returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 						callSigByCallee);
@@ -4142,6 +4222,24 @@ class EmitterStage {
 						moduleNameByPkgAndClass, callSigByCallee);
 				case _:
 					null;
+			}
+			if (rhsCode == "(Obj.magic 0)") {
+				switch (op) {
+					case "+=":
+						if (lhsTy == "Int" || lhsTy == "" || lhsTy == "Dynamic" || lhsTy == "Unknown") {
+							rhsCode = localIntBinopCall("+", lhsCode, rhsRaw);
+						}
+					case "-=":
+						if (lhsTy == "Int" || lhsTy == "" || lhsTy == "Dynamic" || lhsTy == "Unknown")
+							rhsCode = localIntBinopCall("-", lhsCode, rhsRaw);
+					case "*=":
+						if (lhsTy == "Int" || lhsTy == "" || lhsTy == "Dynamic" || lhsTy == "Unknown")
+							rhsCode = localIntBinopCall("*", lhsCode, rhsRaw);
+					case "%=":
+						if (lhsTy == "Int" || lhsTy == "" || lhsTy == "Dynamic" || lhsTy == "Unknown")
+							rhsCode = localIntBinopCall("%", lhsCode, rhsRaw);
+					case _:
+				}
 			}
 			if (rhsCode == null)
 				return null;
@@ -4318,10 +4416,11 @@ class EmitterStage {
 		}
 
 		function stmtToUnit(s:HxStmt, tyCtx:Map<String, TyType>):String {
+			final erasedTyCtx:Dynamic = tyCtx;
 			return switch (s) {
 				case SBlock(ss, _pos):
 					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-						callSigByCallee, localHints, fnReturnTypes);
+						callSigByCallee, localTypeHintsMap, fnReturnTypesMap);
 				case SVar(_name, _typeHint, _init, _pos):
 					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 					"()";
@@ -4330,7 +4429,8 @@ class EmitterStage {
 				case SThrow(_expr, _pos):
 					"()";
 				case SSwitch(scrutinee, patterns, bodies, _pos):
-					final sw = exprToOcaml(scrutinee, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+					final sw = exprToOcaml(scrutinee, arityByIdent, erasedTyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee);
 					function patternCond(p:HxSwitchPattern):String {
 						return switch (p) {
 							case POr(patterns):
@@ -4382,7 +4482,7 @@ class EmitterStage {
 				case SIf(cond, thenBranch, elseBranch, _pos):
 					final thenUnit = stmtToUnit(thenBranch, tyCtx);
 					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch, tyCtx);
-					final condS = condToOcamlBool(cond, tyCtx);
+					final condS = condToOcamlBool(cond, erasedTyCtx);
 					// Avoid typechecking dead branches in bring-up:
 					// - Unknown conditions are lowered as `true` by default.
 					// - Keeping the unused branch can still constrain types and break compilation
@@ -4395,7 +4495,7 @@ class EmitterStage {
 						"if " + condS + " then (" + thenUnit + ") else (" + elseUnit + ")";
 					}
 				case SWhile(cond, body, _pos):
-					final condS = condToOcamlBool(cond, tyCtx);
+					final condS = condToOcamlBool(cond, erasedTyCtx);
 					final bodyUnit = stmtToUnit(body, tyCtx);
 					if (condS == "false") {
 						"()";
@@ -4404,7 +4504,7 @@ class EmitterStage {
 					}
 				case SDoWhile(body, cond, _pos):
 					final bodyUnit = stmtToUnit(body, tyCtx);
-					final condS = condToOcamlBool(cond, tyCtx);
+					final condS = condToOcamlBool(cond, erasedTyCtx);
 					"(let __hx_do_continue = ref true in "
 					+ "while !__hx_do_continue do "
 					+ "__hx_do_continue := false; "
@@ -4441,12 +4541,20 @@ class EmitterStage {
 							defaultLoopTy;
 					};
 					final bodyTy = extendTyByIdentLocal(tyCtx, name, loopVarTy);
-					final bodyUnit = stmtToUnit(body, cast bodyTy);
+					final loopAllowed = cloneAllowedValueIdents(allowedValueIdents);
+					loopAllowed.set(name, true);
+					final bodyUnit = switch (body) {
+						case SBlock(ss, _):
+							stmtListToOcaml(ss, loopAllowed, returnExc, arityByIdent, bodyTy, staticImportByIdent, currentPackagePath,
+								moduleNameByPkgAndClass, callSigByCallee, localTypeHintsMap, fnReturnTypesMap);
+						case _:
+							stmtToUnit(body, cast bodyTy);
+					};
 					switch (iterable) {
 						case ERange(startExpr, endExpr):
-							final start = exprToOcaml(startExpr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							final start = exprToOcaml(startExpr, arityByIdent, erasedTyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
-							final end = exprToOcaml(endExpr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							final end = exprToOcaml(endExpr, arityByIdent, erasedTyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
 							"(let __start = ("
 							+ start
@@ -4509,7 +4617,7 @@ class EmitterStage {
 		for (i in 0...stmts.length) {
 			final idx = stmts.length - 1 - i;
 			final s = stmts[idx];
-			final tyCtx = extendTyWithLocals(tyByIdent, localsBefore[idx]);
+			final tyCtx:Map<String, TyType> = extendTyWithLocals(cast tyByIdent, localsBefore[idx]);
 			switch (s) {
 				case SVar(name, _typeHint, init, _pos):
 					final rhs = if (init == null) {
@@ -6198,6 +6306,10 @@ class EmitterStage {
 										localTypeHints.set(n, l.getType());
 								}
 							}
+							final erasedArityByName:Dynamic = arityByName;
+							final erasedStaticImportByIdent:Dynamic = staticImportByIdent;
+							final erasedModuleNameByPkgAndClass:Dynamic = moduleNameByPkgAndClass;
+							final erasedCallSigByCallee:Dynamic = callSigByCallee;
 
 							for (name in allowed.keys())
 								if (tyByIdent.get(name) == null)
@@ -6213,8 +6325,9 @@ class EmitterStage {
 								final stmts = HxFunctionDecl.getBody(parsedFn);
 								"((" //
 								+ "try (let _ = "
-								+ stmtListToOcaml(stmts, allowed, exc, arityByName, tyByIdent, staticImportByIdent, HxModuleDecl.getPackagePath(decl),
-									moduleNameByPkgAndClass, callSigByCallee, localTypeHints, fnReturnTypesByName)
+								+ stmtListToOcaml(stmts, allowed, exc, erasedArityByName, tyByIdent, erasedStaticImportByIdent,
+									HxModuleDecl.getPackagePath(decl), erasedModuleNameByPkgAndClass, erasedCallSigByCallee, localTypeHints,
+									fnReturnTypesByName)
 								+ " in (Obj.magic 0)) "
 								+ "with "
 								+ exc
