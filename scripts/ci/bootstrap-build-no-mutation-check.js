@@ -42,8 +42,10 @@ if (!regen.includes('finalize-bootstrap-dir.sh')) {
   fail('scripts/hxhx/regenerate-hxhx-bootstrap.sh must finalize bootstrap_out before sharding')
 }
 
-if (!sanitize.includes('bootstrap_patch_helper.py')) {
-  fail('scripts/hxhx/sanitize-stage3-emit-dir.sh unexpectedly stopped being the explicit source-lane mutation boundary')
+for (const token of forbiddenBuildTokens) {
+  if (sanitize.includes(token)) {
+    fail(`scripts/hxhx/sanitize-stage3-emit-dir.sh must stay cleanup-only for source-lane builds (found: ${token})`)
+  }
 }
 
-console.log('[ci:guards] OK: bootstrap normal build path is mutation-free and regen owns snapshot finalization')
+console.log('[ci:guards] OK: bootstrap normal build path is mutation-free, regen owns snapshot finalization, and sanitize stays cleanup-only')

@@ -837,6 +837,11 @@ class EmitterStage {
 		return keysValue == null ? null : cast keysValue;
 	}
 
+	/** Force a value through an erased boundary where Stage3 helper signatures are still Obj.t-based. */
+	static function eraseBoundary<TIn, TOut>(value:TIn):TOut {
+		return cast value;
+	}
+
 	/**
 		Conservatively treat a trailing `Rest<T>` / `haxe.Rest<T>` parameter like a rest arg.
 
@@ -1324,20 +1329,30 @@ class EmitterStage {
 			return "";
 		}
 
-		function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
+		/** Keep the bootstrap/stage0 call boundary erased here so callers stay typed and generated ML stops wrapping map args with `Obj.repr`. */
+		function extendTyByIdent<TTy>(ty:TTy, name:String, t:TyType):Map<String, TyType> {
 			final out = new Map<String, TyType>();
-			if (ty != null)
-				for (k => existing in ty)
-					out.set(k, existing);
+			final keys = mapKeysRaw(ty);
+			if (keys != null)
+				for (k in keys) {
+					final existing = mapGetRaw(ty, k);
+					if (existing != null)
+						out.set(k, existing);
+				}
 			out.set(name, t);
 			return out;
 		}
 
-		function extendTyByIdentMany(ty:Null<Map<String, TyType>>, names:Array<String>, t:TyType):Map<String, TyType> {
+		/** Keep the bootstrap/stage0 call boundary erased here so callers stay typed and generated ML stops wrapping map args with `Obj.repr`. */
+		function extendTyByIdentMany<TTy>(ty:TTy, names:Array<String>, t:TyType):Map<String, TyType> {
 			final out = new Map<String, TyType>();
-			if (ty != null)
-				for (k => existing in ty)
-					out.set(k, existing);
+			final keys = mapKeysRaw(ty);
+			if (keys != null)
+				for (k in keys) {
+					final existing = mapGetRaw(ty, k);
+					if (existing != null)
+						out.set(k, existing);
+				}
 			if (names != null)
 				for (n in names)
 					out.set(n, t);
@@ -1462,7 +1477,7 @@ class EmitterStage {
 				// - Multi-arg lambdas are supported syntactically as `fun a b -> ...`, which in OCaml
 				//   is sugar for nested single-arg functions.
 				final ocamlArgs = args.map(ocamlValueIdent).join(" ");
-				final ty2 = extendTyByIdentMany(tyByIdent, args, TyType.fromHintText("Dynamic"));
+				final ty2 = extendTyByIdentMany(cast tyByIdent, args, TyType.fromHintText("Dynamic"));
 				"(fun "
 				+ (ocamlArgs.length == 0 ? "_" : ocamlArgs)
 				+ " -> "
@@ -1693,7 +1708,7 @@ class EmitterStage {
 					case _:
 						TyType.fromHintText("Dynamic");
 				};
-				final ty2 = extendTyByIdent(tyByIdent, name, loopTy);
+				final ty2 = extendTyByIdent(cast tyByIdent, name, loopTy);
 				final body = exprToOcaml(yieldExpr, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				return switch (iterable) {
 					case ERange(startExpr, endExpr):
@@ -3161,9 +3176,9 @@ class EmitterStage {
 						final branchExpr = exprs[idx];
 						final localTy = switch (pattern) {
 							case PBind(name):
-								extendTyByIdent(tyByIdent, name, TyType.fromHintText("Dynamic"));
+								extendTyByIdent(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case _:
-								extendTyByIdentMany(tyByIdent, null, TyType.fromHintText("Dynamic"));
+								extendTyByIdentMany(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
 						};
 						final body = exprToOcaml(branchExpr, arityByIdent, localTy, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 							callSigByCallee);
@@ -3260,21 +3275,38 @@ class EmitterStage {
 		}
 	}
 
-	static function returnExprToOcaml(expr:HxExpr, allowedValueIdents:Map<String, Bool>, ?expectedReturnType:TyType, ?arityByIdent:Map<String, Int>,
-			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
-			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
-		final tyByIdentRaw = tyByIdent;
-		final staticImportByIdentRaw = staticImportByIdent;
+	static function returnExprToOcaml<TArity, TTy, TStaticImports, TModuleMap, TCallSigs>(expr:HxExpr, allowedValueIdents:Map<String, Bool>,
+			?expectedReturnType:TyType, ?arityByIdent:TArity, ?tyByIdent:TTy, ?staticImportByIdent:TStaticImports, ?currentPackagePath:String,
+			?moduleNameByPkgAndClass:TModuleMap, ?callSigByCallee:TCallSigs):String {
+		final emissionTyByIdent:Map<String, TyType> = new Map();
+		final tyByIdentRaw:Null<Map<String, TyType>> = cast tyByIdent;
+		final arityByIdentRaw:Null<Map<String, Int>> = cast arityByIdent;
+		final staticImportByIdentRaw:Null<Map<String, String>> = cast staticImportByIdent;
+		final moduleNameByPkgAndClassRaw:Null<Map<String, String>> = cast moduleNameByPkgAndClass;
+		final callSigByCalleeRaw:Null<Map<String, EmitterCallSig>> = cast callSigByCallee;
+		final tyKeys:Null<Iterator<String>> = mapKeysRaw(tyByIdentRaw);
+		if (tyKeys != null)
+			for (name in tyKeys) {
+				final ty = mapGetRaw(tyByIdentRaw, name);
+				if (ty != null)
+					emissionTyByIdent.set(name, ty);
+			}
+		final allowedKeys:Null<Iterator<String>> = allowedValueIdents == null ? null : allowedValueIdents.keys();
+		if (allowedKeys != null)
+			for (name in allowedKeys)
+				if (allowedValueIdents.get(name) == true && emissionTyByIdent.get(name) == null)
+					emissionTyByIdent.set(name, TyType.unknown());
+		final emissionTyByIdentRaw = emissionTyByIdent;
 
 		inline function resolveTyIdentName(name:String):String {
-			if (mapGetRaw(tyByIdentRaw, name) != null)
+			if (mapGetRaw(emissionTyByIdentRaw, name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && mapGetRaw(tyByIdentRaw, lowered) != null ? lowered : name;
+			return lowered != name && mapGetRaw(emissionTyByIdentRaw, lowered) != null ? lowered : name;
 		}
 
 		inline function hasTyIdent(name:String):Bool {
-			return mapGetRaw(tyByIdentRaw, resolveTyIdentName(name)) != null;
+			return mapGetRaw(emissionTyByIdentRaw, resolveTyIdentName(name)) != null;
 		}
 
 		inline function hasThisBinding():Bool {
@@ -3286,7 +3318,7 @@ class EmitterStage {
 		}
 
 		inline function tyForIdent(name:String):String {
-			final resolved = mapGetRaw(tyByIdentRaw, resolveTyIdentName(name));
+			final resolved = mapGetRaw(emissionTyByIdentRaw, resolveTyIdentName(name));
 			if (resolved == null)
 				return "";
 			final t:TyType = cast resolved;
@@ -3499,10 +3531,11 @@ class EmitterStage {
 					case EIdent(name) if (tyForIdent(name) == "Int"):
 						"float_of_int " + ocamlReadValueIdent(name);
 					case EField(_, field) if (field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN"):
-						"(Obj.magic (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-							callSigByCallee) + ") : float)";
+						"(Obj.magic (" + exprToOcaml(e, arityByIdentRaw, eraseBoundary(emissionTyByIdent), staticImportByIdentRaw, currentPackagePath,
+							moduleNameByPkgAndClassRaw, callSigByCalleeRaw) + ") : float)";
 					case _:
-						exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+						exprToOcaml(e, arityByIdentRaw, eraseBoundary(emissionTyByIdent), staticImportByIdentRaw, currentPackagePath,
+							moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 				}
 			}
 			return switch (expr) {
@@ -3511,11 +3544,13 @@ class EmitterStage {
 				case EUnop("-", inner):
 					"(-.(" + asFloatValue(inner) + "))";
 				case _:
-					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+					exprToOcaml(expr, arityByIdentRaw, eraseBoundary(emissionTyByIdent), staticImportByIdentRaw, currentPackagePath,
+						moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 			}
 		}
 
-		return exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+		return exprToOcaml(expr, arityByIdentRaw, eraseBoundary(emissionTyByIdent), staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+			callSigByCalleeRaw);
 	}
 
 	static inline function isAssignmentOpToken(op:String):Bool {
@@ -4009,12 +4044,12 @@ class EmitterStage {
 			return out;
 		}
 
-		function extendTyWithLocals<TBase>(base:TBase, locals:Map<String, Bool>):Map<String, TyType> {
+		function extendTyWithLocals(base:Map<String, TyType>, locals:Map<String, Bool>):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
-			final baseKeys:Null<Iterator<String>> = base == null ? null : (cast base : Map<String, TyType>).keys();
+			final baseKeys:Null<Iterator<String>> = base == null ? null : base.keys();
 			if (baseKeys != null)
 				for (k in baseKeys) {
-					final existingBase = (cast base : Map<String, TyType>).get(k);
+					final existingBase = base.get(k);
 					if (existingBase != null)
 						out.set(k, existingBase);
 				}
@@ -4110,6 +4145,7 @@ class EmitterStage {
 		}
 
 		function condToOcamlBool(e:HxExpr, tyCtx:Map<String, TyType>):String {
+			final erasedReturnTyCtx = cast tyCtx;
 			inline function boolOrTrue(s:String):String {
 				// `returnExprToOcaml` collapses unsupported/unknown subtrees to `(Obj.magic 0)`.
 				// In a condition position we prefer "always true" over emitting an unbound identifier
@@ -4121,10 +4157,10 @@ class EmitterStage {
 				case EBool(v):
 					v ? "true" : "false";
 				case EUnop("!", _):
-					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee));
 				case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
-					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee));
 				case _:
 					// Conservative default: we do not have real typing for conditions yet.
@@ -4136,6 +4172,7 @@ class EmitterStage {
 		function mutableAssignmentStmtToUnit(op:String, name:String, rhs:HxExpr, tyCtx:Null<Map<String, TyType>>):Null<String> {
 			if (!isMutableLocalRefIdent(name))
 				return null;
+			final erasedReturnTyCtx = cast tyCtx;
 			inline function localReadIdent(raw:String):String {
 				return ocamlReadValueIdent(raw);
 			}
@@ -4203,23 +4240,23 @@ class EmitterStage {
 			}
 			var rhsCode:Null<String> = switch (op) {
 				case "=":
-					returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-						callSigByCallee);
+					returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee);
 				case "+=":
-					returnExprToOcaml(EBinop("+", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee);
+					returnExprToOcaml(EBinop("+", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				case "-=":
-					returnExprToOcaml(EBinop("-", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee);
+					returnExprToOcaml(EBinop("-", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				case "*=":
-					returnExprToOcaml(EBinop("*", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee);
+					returnExprToOcaml(EBinop("*", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				case "/=":
-					returnExprToOcaml(EBinop("/", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee);
+					returnExprToOcaml(EBinop("/", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				case "%=":
-					returnExprToOcaml(EBinop("%", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee);
+					returnExprToOcaml(EBinop("%", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				case _:
 					null;
 			}
@@ -4417,6 +4454,7 @@ class EmitterStage {
 
 		function stmtToUnit(s:HxStmt, tyCtx:Map<String, TyType>):String {
 			final erasedTyCtx = cast tyCtx;
+			final erasedReturnTyCtx = cast tyCtx;
 			return switch (s) {
 				case SBlock(ss, _pos):
 					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -4583,8 +4621,8 @@ class EmitterStage {
 					"raise ("
 					+ returnExc
 					+ " (Obj.repr ("
-					+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-						callSigByCallee)
+					+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee)
 					+ ")))";
 				case SExpr(expr, _pos):
 					// Avoid emitting invalid OCaml for unsupported assignment lvalues while still
@@ -4597,17 +4635,17 @@ class EmitterStage {
 							} else if (op == "=") {
 								"()";
 							} else {
-								"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-									moduleNameByPkgAndClass, callSigByCallee) + ")";
+								"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+									currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
 							}
 						case EBinop("=", EField(_, _), _):
-							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-								moduleNameByPkgAndClass, callSigByCallee) + ")";
+							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+								currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
 						case EBinop("=", _l, _r):
 							"()";
 						case _:
-							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-								moduleNameByPkgAndClass, callSigByCallee) + ")";
+							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+								currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
 					}
 			}
 		}
@@ -4630,7 +4668,7 @@ class EmitterStage {
 							case EIdent(n) if (n == name):
 								"(Obj.magic 0)";
 							case _:
-								returnExprToOcaml(init, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+								returnExprToOcaml(init, allowedValueIdents, null, arityByIdent, cast tyCtx, staticImportByIdent, currentPackagePath,
 									moduleNameByPkgAndClass, callSigByCallee);
 						}
 					};
@@ -4678,7 +4716,7 @@ class EmitterStage {
 					final assign = elseBranch == null ? unwrapSingleAssign(thenBranch) : null;
 					if (assign != null && isNullCheckFor(assign.name, cond) && !isMutableLocalRefIdent(assign.name)) {
 						final ident = ocamlValueIdent(assign.name);
-						final rhs = returnExprToOcaml(assign.rhs, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+						final rhs = returnExprToOcaml(assign.rhs, allowedValueIdents, null, arityByIdent, cast tyCtx, staticImportByIdent, currentPackagePath,
 							moduleNameByPkgAndClass, callSigByCallee);
 						out = "(let " + ident + " = (if " + condToOcamlBool(cond, cast tyCtx) + " then (" + rhs + ") else " + ident + ") in (ignore "
 							+ ident + "; (" + out + ")))";
@@ -6306,11 +6344,6 @@ class EmitterStage {
 										localTypeHints.set(n, l.getType());
 								}
 							}
-							final erasedArityByName = cast arityByName;
-							final erasedStaticImportByIdent = cast staticImportByIdent;
-							final erasedModuleNameByPkgAndClass = cast moduleNameByPkgAndClass;
-							final erasedCallSigByCallee = cast callSigByCallee;
-
 							for (name in allowed.keys())
 								if (tyByIdent.get(name) == null)
 									tyByIdent.set(name, TyType.unknown());
@@ -6325,8 +6358,8 @@ class EmitterStage {
 								final stmts = HxFunctionDecl.getBody(parsedFn);
 								"((" //
 								+ "try (let _ = "
-								+ stmtListToOcaml(stmts, allowed, exc, erasedArityByName, tyByIdent, erasedStaticImportByIdent,
-									HxModuleDecl.getPackagePath(decl), erasedModuleNameByPkgAndClass, erasedCallSigByCallee, localTypeHints,
+								+ stmtListToOcaml(stmts, allowed, exc, eraseBoundary(arityByName), tyByIdent, eraseBoundary(staticImportByIdent),
+									HxModuleDecl.getPackagePath(decl), eraseBoundary(moduleNameByPkgAndClass), eraseBoundary(callSigByCallee), localTypeHints,
 									fnReturnTypesByName)
 								+ " in (Obj.magic 0)) "
 								+ "with "
