@@ -47,6 +47,9 @@ During this path, the script copies `bootstrap_out` into an isolated temporary b
 workspace under `.tmp/`, rehydrates any sharded modules there, and runs `dune` in that
 workspace. Set `HXHX_BOOTSTRAP_BUILD_DIR=/absolute/or/relative/path` if you explicitly
 want a persistent bootstrap work directory.
+This default path does not apply semantic patching to generated OCaml. Any bootstrap
+snapshot repair/finalization now happens during regeneration, before the snapshot is
+committed back under `packages/hxhx/bootstrap_out/`.
 
 
 To regenerate the snapshot (requires stage0 `haxe`):
@@ -54,6 +57,10 @@ To regenerate the snapshot (requires stage0 `haxe`):
 ```bash
 HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-bootstrap.sh
 ```
+
+Regeneration now owns the snapshot finalization pass as well: it emits stage0 output,
+copies it into `packages/hxhx/bootstrap_out/`, finalizes that snapshot in place, then
+reshards large modules before the verify build.
 
 Notes:
 

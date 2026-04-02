@@ -74,6 +74,27 @@ let starts_with (s : string) (prefix : string) : bool =
   let pl = Stdlib.String.length prefix in
   sl >= pl && Stdlib.String.sub s 0 pl = prefix
 
+let is_word_char (c : char) : bool =
+  match c with
+  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' -> true
+  | _ -> false
+
+let append_token_text (b : Buffer.t) (text : string) : unit =
+  if text <> "" then (
+    if Buffer.length b > 0 then (
+      let prev = Buffer.nth b (Buffer.length b - 1) in
+      let next = Stdlib.String.get text 0 in
+      let prev_needs_space =
+        is_word_char prev || prev = ')' || prev = ']' || prev = '}' || prev = '"'
+      in
+      let next_needs_space = is_word_char next || next = '"' || next = '~' in
+      let prev_forbids_space =
+        prev = '.' || prev = ':' || prev = '(' || prev = '[' || prev = '{' || prev = ','
+      in
+      if prev_needs_space && next_needs_space && not prev_forbids_space then
+        Buffer.add_char b ' ');
+    Buffer.add_string b text)
+
 let split_non_empty_lines (s : string) : string list =
   let lines = Stdlib.String.split_on_char '\n' s in
   List.filter (fun l -> l <> "") lines
@@ -448,7 +469,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
             Buffer.add_string parts ")";
             bump ()
         | tok ->
-            Buffer.add_string parts (tok_to_text tok);
+            append_token_text parts (tok_to_text tok);
             bump ()
       done;
       let txt = Buffer.contents parts |> Stdlib.String.trim in
@@ -543,7 +564,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
             Buffer.add_string parts ")";
             bump ()
         | tok ->
-            Buffer.add_string parts (tok_to_text tok);
+            append_token_text parts (tok_to_text tok);
             bump ()
       done;
       let s = Buffer.contents parts |> Stdlib.String.trim in
@@ -682,7 +703,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
           Buffer.add_string parts ")";
           bump ()
       | tok ->
-          Buffer.add_string parts (tok_to_text tok);
+          append_token_text parts (tok_to_text tok);
           bump ()
     done;
     let s = Buffer.contents parts |> Stdlib.String.trim in
@@ -738,6 +759,12 @@ let parse_module_from_tokens (src : string) (toks : token array)
       while !depth_a > 0 do
         match cur () with
         | Eof p -> raise (Parse_error (p, "unterminated angle bracket group"))
+        | Sym ('-', _) when token_eq_sym (peek 1) '>' ->
+            (* Function type arrows inside generic constraints, e.g.
+                 Constructible<String -> Void>
+               must not consume the generic depth. *)
+            bump ();
+            bump ()
         | Sym ('<', _) ->
             depth_a := !depth_a + 1;
             bump ()

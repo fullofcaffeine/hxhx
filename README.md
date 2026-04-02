@@ -61,11 +61,18 @@ Build `hxhx` from committed bootstrap snapshots:
 bash scripts/hxhx/build-hxhx.sh
 ```
 
+This default build path only hydrates sharded snapshot files into a temporary bootstrap
+workspace and runs `dune`; it no longer performs semantic patching of generated OCaml
+during the build itself.
+
 Performance tip for heavy bootstrap/source maintenance runs:
 
 ```bash
 # If `which haxe` points to a Lix shim, prefer native stage0 explicitly.
 HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast
+
+# Regeneration owns snapshot finalization before the committed bootstrap snapshot is
+# re-sharded and verified.
 
 # Keep dune worker count deterministic (useful for memory-pressure tuning).
 HXHX_DUNE_JOBS=4 bash scripts/hxhx/build-hxhx.sh

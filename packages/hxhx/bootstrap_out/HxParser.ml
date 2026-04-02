@@ -1674,14 +1674,106 @@ let parseInterpolatedStringExpr = fun self (s : string) -> (
             ignore (j := __new_720);
             __old_719
           )) done);
-          ignore (if !j < HxString.length s && (let __nullable_721 = HxString.charCodeAt s (!j) in if __nullable_721 == HxRuntime.hx_null then false else Obj.obj __nullable_721 = 125) then ignore (let inner = (StringTools.trim (HxString.substr s start (HxInt.sub (!j) start) : string) : string) in if isSimpleIdent (inner : string) then ignore ((
-            ignore (HxArray.push parts (HxExpr.EBinop (("+" : string), Obj.magic (HxExpr.EString ("" : string)), Obj.magic (HxExpr.EIdent (inner : string)))));
-            ignore (let __assign_722 = HxInt.add (!j) 1 in (
-              i := __assign_722;
-              __assign_722
-            ));
-            raise (HxRuntime.Hx_continue)
-          )) else ()) else ());
+          ignore (if !j < HxString.length s && (let __nullable_670 = HxString.charCodeAt s (!j) in if __nullable_670 == HxRuntime.hx_null then false else Obj.obj __nullable_670 = 125) then ignore (let inner = (StringTools.trim (HxString.substr s start (HxInt.sub (!j) start) : string) : string) in if HxString.length inner > 0 then ignore (let emitPartAndContinue = fun part -> (
+              ignore (HxArray.push parts (Obj.magic part));
+              ignore (let __assign_671 = HxInt.add (!j) 1 in (
+                i := __assign_671;
+                __assign_671
+              ));
+              raise (HxRuntime.Hx_continue)
+            ) in let stringifyIdentExpr = fun name -> HxExpr.EBinop (("+" : string), Obj.magic (HxExpr.EString ("" : string)), Obj.magic (HxExpr.EIdent (name : string))) in let rec parseSubsetExpr = fun text -> let trimmed = (StringTools.trim (text : string) : string) in (
+              if HxString.length trimmed = 0 then HxExpr.EUnsupported (trimmed : string) else if HxString.length trimmed >= 2 && (let __nullable_quote_start = HxString.charCodeAt trimmed 0 in if __nullable_quote_start == HxRuntime.hx_null then false else Obj.obj __nullable_quote_start = 34) && (let __nullable_quote_end = HxString.charCodeAt trimmed (HxInt.sub (HxString.length trimmed) 1) in if __nullable_quote_end == HxRuntime.hx_null then false else Obj.obj __nullable_quote_end = 34) then HxExpr.EString ((HxString.substr trimmed 1 (HxInt.sub (HxString.length trimmed) 2) : string)) else let splitTopLevelArgs = fun text2 -> let args = Obj.magic (HxArray.create ()) in let depth = ref 0 in let inString = ref false in let startIdx = ref 0 in let idx = ref 0 in (
+                ignore (try while !idx < HxString.length text2 do try ignore (let code = HxString.charCodeAt text2 (!idx) in (
+                  ignore (if !inString then ignore ((
+                    ignore (if (let __nullable_quote = code in if __nullable_quote == HxRuntime.hx_null then false else Obj.obj __nullable_quote = 34) then inString := false else ());
+                    ignore (idx := HxInt.add (!idx) 1);
+                    raise (HxRuntime.Hx_continue)
+                  )) else ());
+                  ignore (if (let __nullable_quote = code in if __nullable_quote == HxRuntime.hx_null then false else Obj.obj __nullable_quote = 34) then ignore ((
+                    ignore (inString := true);
+                    ignore (idx := HxInt.add (!idx) 1);
+                    raise (HxRuntime.Hx_continue)
+                  )) else ());
+                  ignore (if (let __nullable_open = code in if __nullable_open == HxRuntime.hx_null then false else Obj.obj __nullable_open = 40) then ignore ((
+                    ignore (depth := HxInt.add (!depth) 1);
+                    ignore (idx := HxInt.add (!idx) 1);
+                    raise (HxRuntime.Hx_continue)
+                  )) else ());
+                  ignore (if (let __nullable_close = code in if __nullable_close == HxRuntime.hx_null then false else Obj.obj __nullable_close = 41) then ignore ((
+                    ignore (if !depth > 0 then depth := HxInt.sub (!depth) 1 else ());
+                    ignore (idx := HxInt.add (!idx) 1);
+                    raise (HxRuntime.Hx_continue)
+                  )) else ());
+                  ignore (if !depth = 0 && (let __nullable_comma = code in if __nullable_comma == HxRuntime.hx_null then false else Obj.obj __nullable_comma = 44) then ignore (let chunk = (StringTools.trim (HxString.substr text2 (!startIdx) (HxInt.sub (!idx) (!startIdx)) : string) : string) in (
+                    ignore (if HxString.length chunk > 0 then ignore (HxArray.push args (chunk : string)) else ignore ());
+                    ignore (startIdx := HxInt.add (!idx) 1);
+                    ignore (idx := HxInt.add (!idx) 1);
+                    raise (HxRuntime.Hx_continue)
+                  )) else ());
+                  ignore (idx := HxInt.add (!idx) 1)
+                )) with
+                  | HxRuntime.Hx_continue -> () done with
+                  | HxRuntime.Hx_break -> ());
+                let tail = (StringTools.trim (HxString.substr text2 (!startIdx) (HxInt.sub (HxString.length text2) (!startIdx)) : string) : string) in (
+                  ignore (if HxString.length tail > 0 then ignore (HxArray.push args (tail : string)) else ignore ());
+                  args
+                )
+              ) in let parsePathExpr = fun text2 -> let currentIndex = ref 0 in let segmentCount = ref 0 in let valid = ref true in let out = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let rec loop = fun () -> if !valid && !currentIndex < HxString.length text2 then (
+                let code = HxString.charCodeAt text2 (!currentIndex) in (
+                  if not (let __nullable_code = code in if __nullable_code == HxRuntime.hx_null then false else isIdentStart (Obj.obj __nullable_code)) then valid := false else let startIndex = !currentIndex in (
+                    ignore (let __old_path_index = !currentIndex in let __new_path_index = HxInt.add __old_path_index 1 in (
+                      ignore (currentIndex := __new_path_index);
+                      __old_path_index
+                    ));
+                    ignore (while !currentIndex < HxString.length text2 && isIdentCont (let __nullable_seg = HxString.charCodeAt text2 (!currentIndex) in if __nullable_seg == HxRuntime.hx_null then 0 else Obj.obj __nullable_seg) do ignore (let __old_seg_index = !currentIndex in let __new_seg_index = HxInt.add __old_seg_index 1 in (
+                      ignore (currentIndex := __new_seg_index);
+                      __old_seg_index
+                    )) done);
+                    let segment = (HxString.substr text2 startIndex (HxInt.sub (!currentIndex) startIndex) : string) in (
+                      ignore (if !segmentCount = 0 then out := Obj.repr (HxExpr.EIdent (segment : string)) else out := Obj.repr (HxExpr.EField (Obj.magic (Obj.obj (!out)), (segment : string))));
+                      ignore (segmentCount := HxInt.add (!segmentCount) 1)
+                    );
+                    ignore (if !currentIndex < HxString.length text2 then ignore (if (let __nullable_dot = HxString.charCodeAt text2 (!currentIndex) in if __nullable_dot == HxRuntime.hx_null then false else Obj.obj __nullable_dot = 46) then ignore (let __old_dot = !currentIndex in let __new_dot = HxInt.add __old_dot 1 in (
+                      ignore (currentIndex := __new_dot);
+                      __old_dot
+                    )) else valid := false) else ())
+                  )
+                );
+                loop ()
+              ) else () in (
+                ignore (loop ());
+                if !valid && !segmentCount > 0 then Obj.magic (Obj.obj (!out)) else HxExpr.EUnsupported (text2 : string)
+              ) in let openIndex = HxString.indexOf trimmed "(" 0 in (
+                if openIndex <> -1 && (let __nullable_last = HxString.charCodeAt trimmed (HxInt.sub (HxString.length trimmed) 1) in if __nullable_last == HxRuntime.hx_null then false else Obj.obj __nullable_last = 41) then let calleeText = (StringTools.trim (HxString.substr trimmed 0 openIndex : string) : string) in let argsText = (HxString.substr trimmed (HxInt.add openIndex 1) (HxInt.sub (HxInt.sub (HxString.length trimmed) openIndex) 2) : string) in let calleeExpr = Obj.magic (parsePathExpr (calleeText : string)) in (
+                  match calleeExpr with
+                  | HxExpr.EUnsupported _ -> calleeExpr
+                  | _ ->
+                    let parsedArgs = Obj.magic (HxArray.create ()) in let rawArgs = Obj.magic (splitTopLevelArgs (argsText : string)) in let ok = ref true in (
+                      ignore (let _g_arg = ref 0 in let _g_arg_max = HxArray.length rawArgs in while !_g_arg < _g_arg_max do ignore (let rawArg = HxArray.get (Obj.magic rawArgs) (!_g_arg) in (
+                        ignore (let __old_arg_index = !_g_arg in let __new_arg_index = HxInt.add __old_arg_index 1 in (
+                          ignore (_g_arg := __new_arg_index);
+                          __new_arg_index
+                        ));
+                        ignore (if !ok then let parsedArg = Obj.magic (parseSubsetExpr (rawArg : string)) in (
+                          match parsedArg with
+                          | HxExpr.EUnsupported _ -> ok := false
+                          | _ -> ignore (HxArray.push parsedArgs (Obj.magic parsedArg))
+                        ) else ())
+                      )) done);
+                      if !ok then HxExpr.ECall (Obj.magic calleeExpr, Obj.magic parsedArgs) else HxExpr.EUnsupported (trimmed : string)
+                    )
+                ) else parsePathExpr (trimmed : string)
+              )
+            ) in let parsedInner = Obj.magic (parseSubsetExpr (inner : string)) in (
+              match parsedInner with
+              | HxExpr.EUnsupported _ ->
+                if isSimpleIdent (inner : string) then emitPartAndContinue (stringifyIdentExpr (inner : string)) else emitPartAndContinue (HxExpr.EString (((("${" : string) ^ inner) ^ ("}" : string) : string)))
+              | HxExpr.EIdent _p0 ->
+                let name = (_p0 : string) in emitPartAndContinue (stringifyIdentExpr (name : string))
+              | _ ->
+                emitPartAndContinue (Obj.magic parsedInner)
+            )) else ()) else ());
+          (* hxhx(stage3) bootstrap shim: HxParser interpolation expr repair *)
           ignore (StringBuf.addChar (Obj.magic (!buf)) 36);
           ignore (let __old_723 = !i in let __new_724 = HxInt.add __old_723 1 in (
             ignore (i := __new_724);
@@ -4628,12 +4720,12 @@ let rec parsePrimaryExpr = fun self () -> let _gthis = Obj.magic self in let tem
           tempBool := __assign_413;
           __assign_413
         ));
-        if isUpperStart (name : string) && not (!tempBool) && hasLowerAlpha (name : string) then let __assign_414 = Obj.magic (HxExpr.EEnumValue (name : string)) in (
-          tempResult := __assign_414;
-          __assign_414
-        ) else let __assign_415 = Obj.magic (HxExpr.EIdent (name : string)) in (
-          tempResult := __assign_415;
-          __assign_415
+        if isUpperStart (name : string) && not (!tempBool) && hasLowerAlpha (name : string) && HxString.indexOf name "_" 0 = -1 then let __assign_363 = Obj.magic (HxExpr.EEnumValue (name : string)) in (
+          tempResult := __assign_363;
+          __assign_363
+        ) else let __assign_364 = Obj.magic (HxExpr.EIdent (name : string)) in (
+          tempResult := __assign_364;
+          __assign_364
         )
       )
     )

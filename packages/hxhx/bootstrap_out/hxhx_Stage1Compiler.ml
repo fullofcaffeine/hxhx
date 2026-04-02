@@ -124,13 +124,15 @@ let stage1args_inferStdRootFromHaxerc = fun cwd2 -> try let __fallback_result_40
           previous := __assign_36;
           __assign_36
         ));
-        let __assign_37 = (Haxe_io_Path.normalize (Haxe_io_Path.join (Obj.magic (let __arr_38 = HxArray.create () in (
+        let nextDir = (Haxe_io_Path.normalize (Haxe_io_Path.join (Obj.magic (let __arr_38 = HxArray.create () in (
           ignore (HxArray.push __arr_38 (!dir));
           ignore (HxArray.push __arr_38 "..");
           __arr_38
         ))) : string) : string) in (
-          dir := __assign_37;
-          __assign_37
+          let __assign_37 = (if nextDir == Obj.magic (HxRuntime.hx_null) || HxString.length nextDir = 0 || HxString.equals nextDir "." || HxString.equals nextDir ".." || StringTools.startsWith (nextDir : string) ("../" : string) then (!dir : string) else (nextDir : string)) in (
+            dir := __assign_37;
+            __assign_37
+          )
         )
       )) done);
       ""
