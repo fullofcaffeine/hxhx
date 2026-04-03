@@ -99,6 +99,20 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
   - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-094846/summary.json`
   - Parity classification: `equivalent-fail-mode` (`equivalent_pairs=3/3`, `parity_mode=status-exit`)
   - Recommendation: `profiling-only`
+- `--no-native-parser` (parity-aware)
+  - Baseline median: `9235MB`
+  - Mitigation median: `9196MB`
+  - Median reduction: `0.42%`
+  - Artifact: `.hxhx/profile/stage0-regen-ab/no-native-parser-20260403/summary.json`
+  - Parity classification: `equivalent-fail-mode` (`equivalent_pairs=3/3`, `parity_mode=status-exit`)
+  - Recommendation: `profiling-only`
+- `--no-hx-parser` (parity-aware)
+  - Baseline median: `9229MB`
+  - Mitigation median: `10136MB`
+  - Median reduction: `-9.83%` (regression)
+  - Artifact: `.hxhx/profile/stage0-regen-ab/no-hx-parser-20260403/summary.json`
+  - Parity classification: `equivalent-fail-mode` (`equivalent_pairs=3/3`, `parity_mode=status-exit`)
+  - Recommendation: `rejected`
 
 ## Interpretation
 
@@ -113,6 +127,8 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
 - Extracting `HxParser` source-normalization helpers out of the main parser module shows a parity-equivalent but small win (`~3.5%` median) and remains profiling-only for now.
 - Extracting ParserStage native-protocol decode helpers shows a parity-equivalent but small win (`~1.5%` median) and remains profiling-only for now.
 - Extracting ParserStage scanner helpers shows a parity-equivalent but still modest win (`~4.7%` median) and remains profiling-only for now.
+- Disabling the native parser path is parity-equivalent in this bounded family but effectively neutral (`~0.4%` median), so it remains profiling-only rather than a default mitigation candidate.
+- Trimming the pure-Haxe parser fallback path with `--no-hx-parser` is parity-equivalent in this bounded family but regresses peak RSS materially (`~9.8%` median), so it is rejected as a mitigation candidate.
 - In these sample families, reductions are material in some cases but still do not cross `20%` consistently.
 - Keep this as an explicit troubleshooting/CI-tuning knob, not a global default change yet.
 
