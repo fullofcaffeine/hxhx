@@ -69,6 +69,9 @@ compile_args=(
   -D no_traces
   -D "ocaml_output=$out_dir"
   -D ocaml_dune_layout=plugin
+  -D ocaml_plugin_mode=1
+  -D ocaml_emit_exclude_packages=haxe.iterators
+  -D ocaml_emit_exclude_paths=Any,HxTypeRegistry
   -D ocaml_no_build
 )
 
@@ -85,6 +88,17 @@ for required in \
   "$out_dir/reflaxe_elixir_generator_TemplateEngine.ml"; do
   if [ ! -f "$required" ]; then
     echo "rpmx haxe plugin proof: missing expected generated artifact: $required" >&2
+    exit 1
+  fi
+done
+
+for forbidden in \
+  "$out_dir/Haxe.ml" \
+  "$out_dir/haxe_iterators_ArrayIterator.ml" \
+  "$out_dir/Any.ml" \
+  "$out_dir/HxTypeRegistry.ml"; do
+  if [ -f "$forbidden" ]; then
+    echo "rpmx haxe plugin proof: expected filtered artifact to be absent: $forbidden" >&2
     exit 1
   fi
 done

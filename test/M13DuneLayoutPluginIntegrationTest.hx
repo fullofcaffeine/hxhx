@@ -26,7 +26,7 @@ class M13DuneLayoutPluginIntegrationTest {
 		return s.toLowerCase();
 	}
 
-	static function runCompile(outDir:String, duneLayout:String):M13DuneLayoutPluginCompileResult {
+	static function runCompile(outDir:String, duneLayout:String, extraDefines:Array<String>):M13DuneLayoutPluginCompileResult {
 		final args = [
 			"-cp",
 			"test",
@@ -46,6 +46,10 @@ class M13DuneLayoutPluginIntegrationTest {
 			"-D",
 			"ocaml_dune_layout=" + duneLayout
 		];
+		for (define in extraDefines) {
+			args.push("-D");
+			args.push(define);
+		}
 		final process = new sys.io.Process("haxe", args);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
@@ -58,7 +62,7 @@ class M13DuneLayoutPluginIntegrationTest {
 		final outDir = "out_ocaml_m13_dune_plugin_" + Std.string(Std.int(Date.now().getTime()));
 		sys.FileSystem.createDirectory(outDir);
 
-		final pluginCompile = runCompile(outDir, "plugin");
+		final pluginCompile = runCompile(outDir, "plugin", []);
 		if (pluginCompile.exitCode != 0) {
 			throw "haxe compile failed for ocaml_dune_layout=plugin: " + pluginCompile.exitCode + "\n" + pluginCompile.stderr;
 		}
@@ -95,7 +99,40 @@ class M13DuneLayoutPluginIntegrationTest {
 
 		final invalidOutDir = "out_ocaml_m13_dune_plugin_invalid_" + Std.string(Std.int(Date.now().getTime()));
 		sys.FileSystem.createDirectory(invalidOutDir);
-		final invalidCompile = runCompile(invalidOutDir, "weird");
+		final filteredOutDir = "out_ocaml_m13_dune_plugin_filtered_" + Std.string(Std.int(Date.now().getTime()));
+		sys.FileSystem.createDirectory(filteredOutDir);
+		final filteredCompile = runCompile(filteredOutDir, "plugin", [
+			"ocaml_plugin_mode=1",
+			"ocaml_emit_exclude_packages=haxe.iterators",
+			"ocaml_emit_exclude_paths=Any,HxTypeRegistry"
+		]);
+		if (filteredCompile.exitCode != 0) {
+			throw "haxe compile failed for filtered ocaml_dune_layout=plugin: " + filteredCompile.exitCode + "\n" + filteredCompile.stderr;
+		}
+		final filteredDunePath = filteredOutDir + "/dune";
+		if (!sys.FileSystem.exists(filteredDunePath))
+			throw "missing filtered dune file: " + filteredDunePath;
+		if (sys.FileSystem.exists(filteredOutDir + "/Haxe.ml"))
+			throw "plugin mode should disable package alias emission by default";
+		if (sys.FileSystem.exists(filteredOutDir + "/haxe_iterators_ArrayIterator.ml"))
+			throw "expected excluded package output to be pruned";
+		if (sys.FileSystem.exists(filteredOutDir + "/Any.ml"))
+			throw "expected excluded path output to be pruned (Any.ml)";
+		if (sys.FileSystem.exists(filteredOutDir + "/HxTypeRegistry.ml"))
+			throw "expected excluded path output to be pruned (HxTypeRegistry.ml)";
+		final filteredExeName = exeNameFromOutDir(filteredOutDir);
+		if (!sys.FileSystem.exists(filteredOutDir + "/" + filteredExeName + ".ml"))
+			throw "filtered plugin layout should still emit the plugin entry module";
+		if (Sys.command("sh", ["-c", "command -v dune >/dev/null 2>&1 && command -v ocamlc >/dev/null 2>&1"]) == 0) {
+			final prev = Sys.getCwd();
+			Sys.setCwd(filteredOutDir);
+			final buildCode = Sys.command("dune", ["build", "./" + filteredExeName + ".cma", "./" + filteredExeName + ".cmxs"]);
+			Sys.setCwd(prev);
+			if (buildCode != 0)
+				throw "dune build failed for filtered plugin layout: " + buildCode;
+		}
+
+		final invalidCompile = runCompile(invalidOutDir, "weird", []);
 		if (invalidCompile.exitCode == 0)
 			throw "invalid ocaml_dune_layout should fail";
 		final invalidOutput = invalidCompile.stdout + "\n" + invalidCompile.stderr;

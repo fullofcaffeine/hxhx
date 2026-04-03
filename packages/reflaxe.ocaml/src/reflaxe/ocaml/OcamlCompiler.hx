@@ -1699,6 +1699,150 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#end
 		final outDir = output.outputDir;
 		final useLineDirectives = #if macro !Context.defined("ocaml_no_line_directives") #else false #end;
+		final pluginModeValue = haxe.macro.Context.definedValue("ocaml_plugin_mode");
+		final pluginModeEnabled = haxe.macro.Context.defined("ocaml_plugin_mode")
+			&& (pluginModeValue == null || StringTools.trim(pluginModeValue) != "0");
+
+		/**
+			Plugin packaging can typecheck against the full typed program while omitting selected
+			artifacts from the final output directory.
+
+			Why
+			- Native plugin artifacts are loaded into a host that may already contain compiler/runtime
+			  units such as package aliases or helper registries.
+			- We want a hard-cutover filter that applies only to emitted files, not to typing.
+
+			How
+			- `ocaml_plugin_mode=1` enables plugin-safe defaults (currently: package aliases are off
+			  unless explicitly re-enabled).
+			- `ocaml_emit_exclude_packages=a.b,c.d` drops emitted Haxe module units whose package path
+			  starts with one of the configured prefixes.
+			- `ocaml_emit_exclude_paths=Foo,bar/` prunes emitted artifacts by output-relative path
+			  prefix, which also covers root modules without a package path.
+		**/
+		function normalizeOutputToken(value:String):String {
+			var out = value == null ? "" : StringTools.trim(value);
+			out = StringTools.replace(out, "\\", "/");
+			while (StringTools.startsWith(out, "./"))
+				out = out.substr(2);
+			return out;
+		}
+
+		function parseCsvDefine(name:String):Array<String> {
+			final raw = haxe.macro.Context.definedValue(name);
+			if (raw == null)
+				return [];
+			final out:Array<String> = [];
+			final seen:Map<String, Bool> = [];
+			for (part in raw.split(",")) {
+				final trimmed = normalizeOutputToken(part);
+				if (trimmed.length == 0 || seen.exists(trimmed))
+					continue;
+				seen.set(trimmed, true);
+				out.push(trimmed);
+			}
+			return out;
+		}
+
+		function startsWithOutputPrefix(candidate:String, prefix:String):Bool {
+			final normalizedCandidate = normalizeOutputToken(candidate);
+			final normalizedPrefix = normalizeOutputToken(prefix);
+			if (normalizedCandidate.length == 0 || normalizedPrefix.length == 0)
+				return false;
+			final withoutExt = haxe.io.Path.withoutExtension(normalizedCandidate);
+			final basename = haxe.io.Path.withoutDirectory(withoutExt);
+			return normalizedCandidate == normalizedPrefix
+				|| StringTools.startsWith(normalizedCandidate, normalizedPrefix)
+				|| withoutExt == normalizedPrefix
+				|| StringTools.startsWith(withoutExt, normalizedPrefix)
+				|| basename == normalizedPrefix
+				|| StringTools.startsWith(basename, normalizedPrefix);
+		}
+
+		function modulePackagePath(moduleId:String):String {
+			if (moduleId == null || moduleId.length == 0)
+				return "";
+			final parts = moduleId.split(".");
+			if (parts.length <= 1)
+				return "";
+			parts.pop();
+			return parts.join(".");
+		}
+
+		function shouldExcludeModuleByPackage(moduleId:String, packagePrefixes:Array<String>):Bool {
+			if (packagePrefixes.length == 0)
+				return false;
+			final packagePath = modulePackagePath(moduleId);
+			if (packagePath.length == 0)
+				return false;
+			for (prefix in packagePrefixes) {
+				if (packagePath == prefix || StringTools.startsWith(packagePath, prefix + "."))
+					return true;
+			}
+			return false;
+		}
+
+		function moduleOutputCandidates(moduleId:String):Array<String> {
+			final fileId = ctx.fileIdForModuleId(moduleId);
+			return [
+				moduleId,
+				StringTools.replace(moduleId, ".", "/"),
+				StringTools.replace(moduleId, ".", "_"),
+				fileId,
+				fileId + ".ml"
+			];
+		}
+
+		final emitExcludePackagePrefixes = parseCsvDefine("ocaml_emit_exclude_packages");
+		final emitExcludePathPrefixes = parseCsvDefine("ocaml_emit_exclude_paths");
+
+		function shouldExcludeModuleOutput(moduleId:String):Bool {
+			if (shouldExcludeModuleByPackage(moduleId, emitExcludePackagePrefixes))
+				return true;
+			if (emitExcludePathPrefixes.length == 0)
+				return false;
+			for (candidate in moduleOutputCandidates(moduleId)) {
+				for (prefix in emitExcludePathPrefixes) {
+					if (startsWithOutputPrefix(candidate, prefix))
+						return true;
+				}
+			}
+			return false;
+		}
+
+		function shouldExcludeOutputPath(relPath:String):Bool {
+			if (emitExcludePathPrefixes.length == 0)
+				return false;
+			for (prefix in emitExcludePathPrefixes) {
+				if (startsWithOutputPrefix(relPath, prefix))
+					return true;
+			}
+			return false;
+		}
+
+		function collectOutputFilesRecursive(absDir:String, relBase:String, out:Array<String>):Void {
+			for (entry in sys.FileSystem.readDirectory(absDir)) {
+				final relPath = relBase.length == 0 ? entry : relBase + "/" + entry;
+				final absPath = haxe.io.Path.join([absDir, entry]);
+				if (sys.FileSystem.isDirectory(absPath)) {
+					collectOutputFilesRecursive(absPath, relPath, out);
+				} else {
+					out.push(relPath);
+				}
+			}
+		}
+
+		function pruneEmptyDirectoriesRecursive(absDir:String):Void {
+			for (entry in sys.FileSystem.readDirectory(absDir)) {
+				final child = haxe.io.Path.join([absDir, entry]);
+				if (sys.FileSystem.isDirectory(child))
+					pruneEmptyDirectoriesRecursive(child);
+			}
+			if (absDir == outDir)
+				return;
+			if (sys.FileSystem.readDirectory(absDir).length == 0)
+				sys.FileSystem.deleteDirectory(absDir);
+		}
 
 		/**
 			Reorder multi-type OCaml compilation units to avoid forward type references.
@@ -2059,6 +2203,19 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// reference class values emitted later in the same unit (`create`), so reorder by local deps.
 		reorderMlSegmentsByLocalTypeDeps("haxe.io.ArrayBufferView");
 
+		final excludedModuleIds:Map<String, Bool> = [];
+		for (moduleId => _ in ctx.emittedHaxeModules) {
+			if (!shouldExcludeModuleOutput(moduleId))
+				continue;
+			excludedModuleIds.set(moduleId, true);
+		}
+		for (moduleId => _ in excludedModuleIds) {
+			ctx.emittedHaxeModules.remove(moduleId);
+			final modulePath = haxe.io.Path.join([outDir, ctx.fileIdForModuleId(moduleId) + ".ml"]);
+			if (sys.FileSystem.exists(modulePath) && !sys.FileSystem.isDirectory(modulePath))
+				sys.FileSystem.deleteFile(modulePath);
+		}
+
 		#if macro
 		if (profileEnabled) {
 			final now = profileNowS();
@@ -2074,20 +2231,32 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// small outputs. Expand once upstream suite running is in scope. (bd: haxe.ocaml-eli)
 		{
 			final classNames:Array<String> = [];
-			for (k in ctx.nonStdTypeRegistryClasses.keys())
+			for (k in ctx.nonStdTypeRegistryClasses.keys()) {
+				final modId = ctx.classModuleIdByFullName.get(k);
+				if (modId != null && excludedModuleIds.exists(modId))
+					continue;
 				classNames.push(k);
+			}
 			classNames.sort(Reflect.compare);
 
 			final enumNames:Array<String> = [];
-			for (k in ctx.nonStdTypeRegistryEnums.keys())
+			for (k in ctx.nonStdTypeRegistryEnums.keys()) {
+				final modId = ctx.enumModuleIdByFullName.get(k);
+				if (modId != null && excludedModuleIds.exists(modId))
+					continue;
 				enumNames.push(k);
+			}
 			enumNames.sort(Reflect.compare);
 
 			// Typed catches (M10): runtime tag sets per compiled class, used to implement
 			// `catch (e:T)` when the thrown value is typed as a supertype (or `Dynamic`).
 			final classTagNames:Array<String> = [];
-			for (k in ctx.classTagsByFullName.keys())
+			for (k in ctx.classTagsByFullName.keys()) {
+				final modId = ctx.classModuleIdByFullName.get(k);
+				if (modId != null && excludedModuleIds.exists(modId))
+					continue;
 				classTagNames.push(k);
+			}
 			classTagNames.sort(Reflect.compare);
 
 			function ocamlStringLiteral(s:String):String {
@@ -2375,12 +2544,25 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		// Package alias modules (M8): generate dot-path access helpers unless disabled.
 		final emitAliasesValue = haxe.macro.Context.definedValue("ocaml_emit_package_aliases");
-		final emitAliases = emitAliasesValue == null || emitAliasesValue != "0";
+		final emitAliases = emitAliasesValue != null ? emitAliasesValue != "0" : !pluginModeEnabled;
 		if (emitAliases) {
 			final modules:Array<String> = [];
 			for (m => _ in ctx.emittedHaxeModules)
 				modules.push(m);
 			PackageAliasEmitter.emit(output, modules, (m) -> ctx.ocamlModuleNameForModuleId(m));
+		}
+
+		if (emitExcludePathPrefixes.length > 0) {
+			final outputFiles:Array<String> = [];
+			collectOutputFilesRecursive(outDir, "", outputFiles);
+			for (relPath in outputFiles) {
+				if (!shouldExcludeOutputPath(relPath))
+					continue;
+				final absPath = haxe.io.Path.join([outDir, relPath]);
+				if (sys.FileSystem.exists(absPath) && !sys.FileSystem.isDirectory(absPath))
+					sys.FileSystem.deleteFile(absPath);
+			}
+			pruneEmptyDirectoriesRecursive(outDir);
 		}
 
 		final buildMode = haxe.macro.Context.definedValue("ocaml_build");

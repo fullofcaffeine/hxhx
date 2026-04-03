@@ -126,6 +126,12 @@ Defaults stay `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native` and `HXHX_DUNE_J
 
 Current direction: keep target-core logic reusable so promotion is packaging/load choice, not backend rewrite.
 
+For upstream `haxe` + `reflaxe.ocaml` plugin packaging, `-D ocaml_plugin_mode=1` now enables plugin-safe output defaults and can be combined with:
+- `-D ocaml_emit_exclude_packages=<csv>`
+- `-D ocaml_emit_exclude_paths=<csv>`
+
+Those filters apply at emitted-artifact time so plugin packaging can omit host-provided units without changing typing.
+
 ## Current status (concise)
 
 - Compatibility baseline: **Haxe `4.3.7`**.
