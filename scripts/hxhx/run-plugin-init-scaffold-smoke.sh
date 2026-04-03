@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INIT_SCRIPT="$ROOT/scripts/hxhx/plugin-init.sh"
-BUILD_SCRIPT="$ROOT/scripts/hxhx/build-backend-plugin.sh"
+BUILD_WRAPPER="$ROOT/scripts/hxhx/plugin-build.sh"
+TEST_WRAPPER="$ROOT/scripts/hxhx/plugin-test.sh"
 
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlopt >/dev/null 2>&1; then
   echo "Skipping plugin init scaffold smoke: dune/ocamlopt not found on PATH."
@@ -15,8 +16,13 @@ if [ ! -x "$INIT_SCRIPT" ]; then
   exit 1
 fi
 
-if [ ! -x "$BUILD_SCRIPT" ]; then
-  echo "Missing executable build script: $BUILD_SCRIPT" >&2
+if [ ! -x "$BUILD_WRAPPER" ]; then
+  echo "Missing executable plugin build wrapper: $BUILD_WRAPPER" >&2
+  exit 1
+fi
+
+if [ ! -x "$TEST_WRAPPER" ]; then
+  echo "Missing executable plugin test wrapper: $TEST_WRAPPER" >&2
   exit 1
 fi
 
@@ -52,15 +58,13 @@ test -f "$scaffold_dir/smoke/Main.hx"
 test -f "$scaffold_dir/smoke/build.hxml"
 
 build_out="$tmp_dir/build_out"
-bash "$BUILD_SCRIPT" \
-  --plugin-id "$plugin_id" \
-  --plugin-version "0.1.0" \
-  --kind ocaml-dynlink \
-  --source-dir "$scaffold_dir/plugin/hxhx" \
-  --dune-target "${module_name}.cmxs" \
-  --entry "plugins/${module_name}.cmxs" \
-  --target-id "$target_id" \
-  --out-dir "$build_out"
+build_output="$(bash "$BUILD_WRAPPER" "$scaffold_dir" --out-dir "$build_out")"
+printf '%s\n' "$build_output"
+printf '%s\n' "$build_output" | grep -q '^plugin_build=ok$'
+
+test_output="$(bash "$TEST_WRAPPER" "$scaffold_dir" --out-dir "$build_out")"
+printf '%s\n' "$test_output"
+printf '%s\n' "$test_output" | grep -q '^plugin_test=ok$'
 
 test -f "$build_out/backend-plugin.json"
 test -f "$build_out/plugins/${module_name}.cmxs"

@@ -792,35 +792,15 @@ patch_bootstrap_emitter_mutable_int64_assignment() {
 }
 
 patch_bootstrap_emitter_int64_mixed_binops() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-  local marker='(* hxhx(stage3) bootstrap shim: Int64 mixed-binop repair *)'
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal "$marker" "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-int64-mixed-binops "$emitter_path"
+  # Source-owned Int64 compound/binop lowering superseded this bootstrap-only
+  # structural rewrite. Keep finalization stable by treating it as obsolete.
+  return 0
 }
 
 patch_bootstrap_emitter_int64_static_helpers() {
-  local build_dir="$1"
-  local emitter_path="$build_dir/EmitterStage.ml"
-  local marker='(* hxhx(stage3) bootstrap shim: Int64 static-helper repair *)'
-
-  if [ ! -f "$emitter_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal "$marker" "$emitter_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-int64-static-helpers "$emitter_path"
+  # Source-owned haxe.Int64 helper lowering superseded this bootstrap-only
+  # structural rewrite. Keep finalization stable by treating it as obsolete.
+  return 0
 }
 
 patch_bootstrap_emitter_float_compare_unknown_numeric() {

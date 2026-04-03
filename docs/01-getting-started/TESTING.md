@@ -341,7 +341,7 @@ Notes:
   - `Plugin matrix (strict)` job in `.github/workflows/ci.yml` runs `npm run test:plugins:strict-matrix`
     on every push/PR:
     - native backend plugin build smoke (`npm run test:hxhx:native-plugin-build-smoke`) producing native plugin artifact (`.cmxs`/`.cma`) + manifest
-    - plugin init scaffold smoke (`npm run test:hxhx:plugin-init-scaffold-smoke`) proving one-command generated scaffolds are buildable via `build-backend-plugin.sh`
+    - plugin init scaffold smoke (`npm run test:hxhx:plugin-init-scaffold-smoke`) proving one-command generated scaffolds stay buildable through `hxhx plugin build` / `hxhx plugin test`
     - promotion backend smoke (`npm run test:hxhx:promotion-backend-smoke`) proving promoted provider flow emits a native plugin artifact and compiles/runs through Stage3 backend selection
     - promotion eval smoke (`npm run test:hxhx:promotion-eval-smoke`) proving generated eval adapter artifacts load through `eval.vm.Context.loadPlugin`
       (if local `haxe` and local OCaml toolchain ABI differ, the smoke emits `PROMOTION_EVAL_SMOKE:SKIP_HOST_ABI` and keeps the lane non-blocking)

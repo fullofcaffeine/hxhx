@@ -2221,6 +2221,26 @@ echo "$out" | grep -q "^plugin_cp=ok$"
 echo "$out" | grep -q "^main=ok$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage4 bring-up: plugin CLI wrappers reuse canonical build/test flows"
+tmpplugincli="$tmpdir/plugin_cli_wrapper"
+scaffold_cli="$tmpplugincli/scaffold"
+build_cli="$tmpplugincli/build_out"
+bash "$ROOT/scripts/hxhx/plugin-init.sh" \
+  --out-dir "$scaffold_cli" \
+  --plugin-id "fixture.generated.cli.plugin" \
+  --plugin-version "0.1.0" \
+  --target-name "FixtureCliJsNative" \
+  --target-namespace "fixture.generated.cli" \
+  --target-id "js-native"
+out="$("$HXHX_BIN" plugin build "$scaffold_cli" --out-dir "$build_cli")"
+printf '%s\n' "$out"
+printf '%s\n' "$out" | grep -q '^plugin_build=ok$'
+test -f "$build_cli/backend-plugin.json"
+test -f "$build_cli/plugins/fixture_generated_cli_plugin.cmxs"
+out="$("$HXHX_BIN" plugin test "$scaffold_cli" --out-dir "$build_cli")"
+printf '%s\n' "$out"
+printf '%s\n' "$out" | grep -q '^plugin_test=ok$'
+
 echo "== Stage3 regression: mutable local refs survive compound assignment and concat"
 tmpstage3sum="$tmpdir/stage3_mutable_local_sum"
 mkdir -p "$tmpstage3sum/src"

@@ -1674,7 +1674,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.LibraryResolver" [];
   HxType.register_class_static_fields "hxhx.LibraryResolver" [ "emptySpec"; "findScopedHxml"; "haxelibBin"; "lixBin"; "resolve"; "resolveFromHxml"; "resolveViaProcess"; "tryResolveViaCommand" ];
   HxType.register_class_instance_fields "hxhx.Main" [];
-  HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "findFlagValue"; "findUnsupportedLegacyTarget"; "getDefineValue"; "hasAnyTarget"; "hasDefine"; "hasFlag"; "hasStandardJsTargetFlag"; "hasStandardNonJsTargetFlag"; "isHelpQuery"; "isStrictCliDisallowedFlag"; "isTrueEnv"; "isVersionQuery"; "main"; "printHxhxHelp"; "rmrf"; "runOcamlInterpLike"; "sanitizeName"; "shouldRouteStandardJsToNative"; "stripAll"; "validateStrictCliShimArgs" ];
+  HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "findFlagValue"; "findUnsupportedLegacyTarget"; "getDefineValue"; "handlePluginCommand"; "hasAnyTarget"; "hasDefine"; "hasFlag"; "hasStandardJsTargetFlag"; "hasStandardNonJsTargetFlag"; "hxhxRootDir"; "isHelpQuery"; "isStrictCliDisallowedFlag"; "isTrueEnv"; "isVersionQuery"; "main"; "printHxhxHelp"; "printPluginHelp"; "repoScriptPath"; "rmrf"; "runOcamlInterpLike"; "runRepoScript"; "sanitizeName"; "shouldRouteStandardJsToNative"; "stripAll"; "validateStrictCliShimArgs" ];
   HxType.register_class_instance_fields "hxhx.NativeBackendPluginDynlink" [];
   HxType.register_class_static_fields "hxhx.NativeBackendPluginDynlink" [ "loadAndCapture" ];
   HxType.register_class_instance_fields "hxhx.NativeBackendPluginHost" [];

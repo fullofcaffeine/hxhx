@@ -12,7 +12,7 @@ This page defines how backend selection works **after the CLI cutover**.
   - `--compat`
   - `--js <file>`
 - `--target` is removed.
-- `--target-id` is still valid, but only for plugin scaffold/build tooling (`plugin-init.sh`, `build-backend-plugin.sh`, promotion scripts).
+- `--target-id` is still valid, but only for plugin scaffold/build tooling (`plugin-init.sh`, `hxhx plugin build`, promotion scripts).
 
 ## What is builtin vs plugin
 
@@ -80,6 +80,7 @@ What it validates:
 ## Building plugin artifacts (tooling)
 
 Scaffold and build tooling still uses provider IDs (`--target-id`) because plugin providers identify which backend ID they implement.
+The canonical developer-facing wrappers are `hxhx plugin build` and `hxhx plugin test`; `build-backend-plugin.sh` remains the lower-level implementation detail behind them.
 
 Example:
 
@@ -89,13 +90,10 @@ bash scripts/hxhx/plugin-init.sh \
   --plugin-id demo.native.plugin \
   --target-id js-native
 
-bash scripts/hxhx/build-backend-plugin.sh \
-  --plugin-id demo.native.plugin \
-  --kind ocaml-dynlink \
-  --source-dir .tmp/promotion-demo \
-  --dune-target demo_native_plugin.cmxs \
-  --entry plugins/demo_native_plugin.cmxs \
-  --target-id js-native \
+hxhx plugin build .tmp/promotion-demo \
+  --out-dir .tmp/promotion-demo
+
+hxhx plugin test .tmp/promotion-demo \
   --out-dir .tmp/promotion-demo
 ```
 

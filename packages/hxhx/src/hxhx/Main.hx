@@ -88,6 +88,10 @@ class Main {
 		Sys.println("  --hxhx-parse <File.hx>               parse a file via native parser seam");
 		Sys.println("  --hxhx-selftest                      run internal selftest");
 		Sys.println("");
+		Sys.println("Plugin commands:");
+		Sys.println("  plugin build <dir> [--out-dir <dir>] build a generated native plugin scaffold");
+		Sys.println("  plugin test <dir> [--out-dir <dir>]  validate scaffold build/test markers");
+		Sys.println("");
 		Sys.println("Environment:");
 		Sys.println("  HXHX_FORBID_STAGE0=1                 fail on any stage0 delegation path");
 		Sys.println("  HAXE_BIN=<path>                      stage0 binary path for delegated flows");
@@ -96,6 +100,54 @@ class Main {
 		Sys.println("  - Removed flags: --target / --hxhx-target.");
 		Sys.println("  - Legacy Flash/AS3 targets are intentionally unsupported.");
 		Sys.println("  - Use --compat for explicit stage0 delegation.");
+	}
+
+	static function hxhxRootDir():String {
+		final envRoot = Sys.getEnv("HXHX_ROOT");
+		if (envRoot != null && envRoot.length > 0)
+			return envRoot;
+		return sys.FileSystem.fullPath(".");
+	}
+
+	static function repoScriptPath(relPath:String):String {
+		final scriptPath = haxe.io.Path.join([hxhxRootDir(), relPath]);
+		if (!sys.FileSystem.exists(scriptPath))
+			fatal("hxhx: required repo script not found: " + scriptPath + " (set HXHX_ROOT if running outside repo root)");
+		return scriptPath;
+	}
+
+	static function printPluginHelp():Void {
+		Sys.println("Usage:");
+		Sys.println("  hxhx plugin build <dir> [--out-dir <dir>]");
+		Sys.println("  hxhx plugin test <dir> [--out-dir <dir>]");
+		Sys.println("");
+		Sys.println("Notes:");
+		Sys.println("  - These wrappers are repo-local developer workflows.");
+		Sys.println("  - <dir> may be a plugin scaffold root or a direct plugin/hxhx source dir.");
+		Sys.println("  - Set HXHX_ROOT when invoking from outside the repo root.");
+	}
+
+	static function runRepoScript(scriptRelPath:String, scriptArgs:Array<String>):Void {
+		final scriptPath = repoScriptPath(scriptRelPath);
+		final code = Sys.command("bash", [scriptPath].concat(scriptArgs));
+		Sys.exit(code);
+	}
+
+	static function handlePluginCommand(pluginArgs:Array<String>, strictCliMode:Bool):Void {
+		if (strictCliMode)
+			fatal("hxhx: strict CLI mode rejects non-upstream subcommand: plugin");
+		if (pluginArgs.length == 0 || pluginArgs[0] == "--help" || pluginArgs[0] == "-h" || pluginArgs[0] == "help") {
+			printPluginHelp();
+			return;
+		}
+		switch (pluginArgs[0]) {
+			case "build":
+				runRepoScript("scripts/hxhx/plugin-build.sh", pluginArgs.slice(1));
+			case "test":
+				runRepoScript("scripts/hxhx/plugin-test.sh", pluginArgs.slice(1));
+			case _:
+				fatal("hxhx: unknown plugin subcommand `" + pluginArgs[0] + "`");
+		}
 	}
 
 	static function hasDefine(args:Array<String>, name:String):Bool {
@@ -454,6 +506,11 @@ class Main {
 			validateStrictCliShimArgs(shimArgs);
 			if (sep == -1)
 				forwarded = stripAll(forwarded, "--hxhx-strict-cli");
+		}
+
+		if (args.length >= 1 && args[0] == "plugin") {
+			handlePluginCommand(args.slice(1), strictCliMode);
+			return;
 		}
 
 		// Stage 4 (bring-up): macro host RPC selftest.
