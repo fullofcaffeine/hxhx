@@ -1,3 +1,60 @@
+# [0.15.0](https://github.com/fullofcaffeine/hxhx/compare/v0.14.0...v0.15.0) (2026-04-03)
+
+
+### Bug Fixes
+
+* harden stage0-policy runtime path and version guard ([41f90fa](https://github.com/fullofcaffeine/hxhx/commit/41f90faf83f99b26eb4b36de8023d7d33614a254))
+* **js-native:** lower block-bodied function literals ([4d7cc33](https://github.com/fullofcaffeine/hxhx/commit/4d7cc33bebfc2ede00eac14e118cde41fcd3c3a9))
+* **js-native:** stabilize switch case storage and allow Bytes ctor ([a870d8c](https://github.com/fullofcaffeine/hxhx/commit/a870d8ce6dfde500d4001be06842ef48fa90578e))
+* **js-native:** unblock provider promotion lane ([e2f08db](https://github.com/fullofcaffeine/hxhx/commit/e2f08dbe20313f7476d81bba97498ba801ca482e))
+* **ocaml:** bridge dispatch wrapper types for balanced tree ([d7609e4](https://github.com/fullofcaffeine/hxhx/commit/d7609e4a359f884a23505cade6470fb8b4932969))
+* **ocaml:** enable runtime haxe.rtti portable fixture ([d6343a9](https://github.com/fullofcaffeine/hxhx/commit/d6343a95d9b83157589e2e85ca4e78fe82afb056))
+* **ocaml:** handle Bytes encoding in HttpBase lowering ([3e10d8f](https://github.com/fullofcaffeine/hxhx/commit/3e10d8fb3cc74b0b48d34b2ca91016e92f26df39))
+* **ocaml:** handle stdlib super method dispatch for PosException ([097da3e](https://github.com/fullofcaffeine/hxhx/commit/097da3e914ea4796388a2d5c53b811a583c6ccdb))
+* **ocaml:** normalize class record labels and close haxe.crypto Hmac ([3a97d8c](https://github.com/fullofcaffeine/hxhx/commit/3a97d8c2c3df339ee3a60407175521a01b03bcc0))
+* **ocaml:** normalize value identifiers for crypto parity ([27e1cef](https://github.com/fullofcaffeine/hxhx/commit/27e1cef0bd6d0e961488543ce432cabd3f4429cb))
+* **ocaml:** restore haxe.Template.execute portable parity ([f053b49](https://github.com/fullofcaffeine/hxhx/commit/f053b49859042aa8b7b75fbafe6e457a9612628d))
+* **portable:** restore sys.net runtime fixture coverage ([5cb4ec4](https://github.com/fullofcaffeine/hxhx/commit/5cb4ec4e3021c3d9b4789882660194652ddafcc2))
+* **stage0:** auto-retry when build --connect handoff stalls ([3c36a96](https://github.com/fullofcaffeine/hxhx/commit/3c36a9603c44617c65cfb1b837c19a111b408b72))
+* **stage3:** harden StringTools shim and warning-20 macro shims ([e8d0783](https://github.com/fullofcaffeine/hxhx/commit/e8d07833cc6773ebf2f3545c9b1165f2fbc2d23c))
+* **stage3:** infer std root and harden mixed HxArray push ([1fba5f5](https://github.com/fullofcaffeine/hxhx/commit/1fba5f54ebe883b8c8f5ccdaf5a3a0177377c5fa))
+* **stage3:** infer std root from .haxerc and harden source lane ([80e275c](https://github.com/fullofcaffeine/hxhx/commit/80e275c1035f2dfe71f56dfa09395179bed92b07))
+* **stdlib:** add Xml override and portable fixture ([7e4e91c](https://github.com/fullofcaffeine/hxhx/commit/7e4e91cb737f78d81832a27a0d923678847ff910))
+* **test-portable:** avoid nounset empty-array expansion ([6a963b8](https://github.com/fullofcaffeine/hxhx/commit/6a963b8225bd9e7cad4d698091f506489d1d9db7))
+* unblock stage0 source-lane build typing seams ([a59a4ab](https://github.com/fullofcaffeine/hxhx/commit/a59a4abd40ad1e0794eabd047447d7cc06d8c688))
+
+
+### Features
+
+* add ocaml profile/runtime plan reports ([9327798](https://github.com/fullofcaffeine/hxhx/commit/93277983175ddb2fc1f4a1c8baed50d62f821e50))
+* add stage0 haxe selection policy for bootstrap regen ([dcf9406](https://github.com/fullofcaffeine/hxhx/commit/dcf94063b6d39a0a96172c8e8a3b23b32ede3e1a))
+* **bench:** add portable/metal M14 lanes and microbench workloads ([8738a53](https://github.com/fullofcaffeine/hxhx/commit/8738a5357ef682a1bb12e44f3ee97403df2b4aff))
+* harden stage0 bootstrap regen observability ([1f49aad](https://github.com/fullofcaffeine/hxhx/commit/1f49aad649f900f740692f1948baafb1feb4faf1))
+* **ocaml:** add portable auto-metalization planner report ([0f49949](https://github.com/fullofcaffeine/hxhx/commit/0f4994911f541b0b9d7d5fa1d64bd1b15f8a1ed6))
+* **ocaml:** enable runtime-backed sys.thread portable lane ([bfef0ee](https://github.com/fullofcaffeine/hxhx/commit/bfef0ee81516d1cea07e720f3f485b557ee1e2a0))
+* **ocaml:** harden stage0 profile contract and stdlib parity gates ([6ba908d](https://github.com/fullofcaffeine/hxhx/commit/6ba908dbe32fbd0fcf336dccd0c89deda0ac6bde))
+* **plugin:** hard-cutover manifest kind to ocaml-dynlink ([a6eba86](https://github.com/fullofcaffeine/hxhx/commit/a6eba86bc34abe745def3abf715c215c39f1bc3c))
+* **promotion:** add backend promotion smoke workflow ([99f0226](https://github.com/fullofcaffeine/hxhx/commit/99f0226c36f63756fd09df8d10551e5af041e9cf))
+* **promotion:** add eval adapter generation lane ([6b8408a](https://github.com/fullofcaffeine/hxhx/commit/6b8408afd713ae85ec8f698f6560be5a76836e26))
+* **stage3:** add native plugin host ABI and dynlink loader seam ([f6fb0e9](https://github.com/fullofcaffeine/hxhx/commit/f6fb0e948582cab4043c648d50ef593693c979c3))
+* **stage4:** add native macro-module dynlink ABI and smoke lane ([033b008](https://github.com/fullofcaffeine/hxhx/commit/033b00853a667cb8b2c74ce356faa81f6448135d))
+* **stdlib:** add haxe.atomic portable overrides ([4ba85c0](https://github.com/fullofcaffeine/hxhx/commit/4ba85c06710be539649ee561f6d3e3889b55b956))
+* **stdlib:** close haxe.core-02 portable bucket ([7724f84](https://github.com/fullofcaffeine/hxhx/commit/7724f84a0ab9e998cebe4868246bc76f9c0e8116))
+* **stdlib:** close haxe.display-01 portable bucket ([ad9c2a6](https://github.com/fullofcaffeine/hxhx/commit/ad9c2a6b750a050d339bf95af4510f7b06295ebd))
+* **stdlib:** close haxe.ds portable closure bucket ([8b2151e](https://github.com/fullofcaffeine/hxhx/commit/8b2151efe6722215135974c80c18926df80fd080))
+* **stdlib:** close haxe.format bucket with Json parser/printer coverage ([3550b5e](https://github.com/fullofcaffeine/hxhx/commit/3550b5e4e3cc3924c21c0b5d4a3814f226b07f7a))
+* **stdlib:** close haxe.http portable bucket ([ad77715](https://github.com/fullofcaffeine/hxhx/commit/ad77715acb43be038d857dd9dc8fb64633d4f1a9))
+* **stdlib:** implement Xml.parse in OCaml override ([d7b54ad](https://github.com/fullofcaffeine/hxhx/commit/d7b54ad77f5a56f04c903c54f47d4b57a7d34b5f))
+* switch metal runtime planning to compiler-tracked usage ([59a2588](https://github.com/fullofcaffeine/hxhx/commit/59a2588332922f89d1115c59944c038343cba893))
+
+
+### Performance Improvements
+
+* **ocaml:** reduce portable boundary boxing for Array.join ([99e72dc](https://github.com/fullofcaffeine/hxhx/commit/99e72dc03fe36eab53093dcddaca0e5344109ca4))
+* **runtime:** add adaptive HxArray typed stores with deopt ([65ff852](https://github.com/fullofcaffeine/hxhx/commit/65ff852e5ee4bb131b95d97637857c7c87738f3d))
+* **runtime:** switch HxAnon to shape+slot layout ([3e76084](https://github.com/fullofcaffeine/hxhx/commit/3e76084eed476989a0186ddc7b64364d48085b6a))
+* **tooling:** add HXHX_DUNE_JOBS controls for hxhx builds ([45be243](https://github.com/fullofcaffeine/hxhx/commit/45be2430d46d21c2ce11f1361cc5bd97c717ed3b))
+
 # [0.14.0](https://github.com/fullofcaffeine/hxhx/compare/v0.13.0...v0.14.0) (2026-02-24)
 
 
