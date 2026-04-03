@@ -128,7 +128,7 @@ class PackageAliasEmitter {
 		// Assign module names for each package prefix (file name = module name).
 		final pkgOcamlModule:Map<String, String> = [];
 		for (prefix => _ in childPackages) {
-			final proposed = moduleIdToOcamlModuleName(prefix);
+			final proposed = ocamlModuleNameForHaxeModuleId != null ? ocamlModuleNameForHaxeModuleId(prefix) : moduleIdToOcamlModuleName(prefix);
 			pkgOcamlModule.set(prefix, uniqueAliasModuleName(proposed, used));
 		}
 

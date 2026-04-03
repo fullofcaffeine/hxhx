@@ -1,5 +1,8 @@
 package reflaxe.ocaml;
 
+#if macro
+import haxe.macro.Context;
+#end
 import haxe.macro.Type;
 import reflaxe.ocaml.OcamlNameTools;
 
@@ -211,6 +214,43 @@ class CompilationContext {
 	 */
 	public final fileIdOverrideByModuleId:Map<String, String> = [];
 
+	/**
+		Optional prefix applied to emitted Haxe compilation units.
+
+		Why
+		- Plugin packaging may need multiple generated backends to coexist without OCaml unit-name
+		  collisions.
+		- The stable place to enforce that is the module/file id boundary, not downstream patching.
+
+		How
+		- `-D ocaml_module_prefix=<Prefix_>` is normalized once per compilation.
+		- The prefix is applied to emitted Haxe module units only.
+		- Runtime/host-provided units are not renamed here because they are copied/emitted separately.
+	**/
+	public final modulePrefix:Null<String> = resolveModulePrefix();
+
+	static function sanitizeModulePrefix(raw:String):String {
+		final out = new StringBuf();
+		for (i in 0...raw.length) {
+			final c = raw.charCodeAt(i);
+			final isAlphaNum = (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
+			out.add((isAlphaNum || c == 95) ? String.fromCharCode(c) : "_");
+		}
+		return StringTools.trim(out.toString());
+	}
+
+	static function resolveModulePrefix():Null<String> {
+		#if macro
+		final raw = Context.definedValue("ocaml_module_prefix");
+		if (raw == null)
+			return null;
+		final sanitized = sanitizeModulePrefix(raw);
+		return sanitized.length == 0 ? null : sanitized;
+		#else
+		return null;
+		#end
+	}
+
 	public function fileIdForModuleId(moduleId:String):String {
 		if (moduleId == null || moduleId.length == 0)
 			return "Main";
@@ -219,7 +259,8 @@ class CompilationContext {
 			return existing;
 
 		// Mirror Reflaxe's default `BaseType.moduleId()` behavior for non-overridden modules.
-		final raw = StringTools.replace(moduleId, ".", "_");
+		final base = StringTools.replace(moduleId, ".", "_");
+		final raw = modulePrefix != null ? (modulePrefix + base) : base;
 
 		// Conservative safety margin below common filesystem limits for a single path component.
 		final maxLen = 180;

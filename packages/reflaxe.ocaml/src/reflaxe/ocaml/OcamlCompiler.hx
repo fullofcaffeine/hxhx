@@ -497,7 +497,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return true;
 	}
 
-	static function assertNoModuleNameCollisions(all:CompiledCollection<String>):Void {
+	function assertNoModuleNameCollisions(all:CompiledCollection<String>):Void {
 		// Reflaxe writes output per module using `BaseTypeHelper.moduleId()` as the filename key.
 		// That operation replaces '.' with '_' and keeps original case.
 		//
@@ -521,13 +521,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		for (c in all) {
 			final mod = c.baseType.module;
-			final fileId = c.baseType.moduleId(); // '.' -> '_' (Reflaxe output key)
+			final fileId = ctx.fileIdForModuleId(mod);
 
 			final fileKey = fileId.toLowerCase();
 			addToSet(fileKeyToModules, fileKey, mod);
 			addToSet(fileKeyToFileIds, fileKey, fileId);
 
-			final ocamlName = DuneProjectEmitter.ocamlModuleNameFromHaxeModuleId(fileId);
+			final ocamlName = ctx.ocamlModuleNameForModuleId(mod);
 			addToSet(ocamlNameToModules, ocamlName, mod);
 			addToSet(ocamlNameToFileIds, ocamlName, fileId);
 
@@ -691,7 +691,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// Only apply the override when needed so we don't accidentally diverge from Reflaxe's
 		// default `BaseType.moduleId()` naming for normal modules.
 		final moduleFileId = ctx.fileIdForModuleId(classType.module);
-		if (ctx.fileIdOverrideByModuleId.exists(classType.module)) {
+		if (ctx.fileIdOverrideByModuleId.exists(classType.module) || ctx.modulePrefix != null) {
 			setOutputFileName(moduleFileId);
 		}
 		#if macro
@@ -2651,7 +2651,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		ctx.emittedHaxeModules.set(enumType.module, true);
 		ctx.currentModuleId = enumType.module;
 		final moduleFileId = ctx.fileIdForModuleId(enumType.module);
-		if (ctx.fileIdOverrideByModuleId.exists(enumType.module)) {
+		if (ctx.fileIdOverrideByModuleId.exists(enumType.module) || ctx.modulePrefix != null) {
 			setOutputFileName(moduleFileId);
 		}
 		final fullName = (enumType.pack ?? []).concat([enumType.name]).join(".");

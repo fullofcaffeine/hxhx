@@ -10,6 +10,16 @@ class M13DuneLayoutPluginIntegrationTest {
 			throw label + ": expected to find '" + needle + "'";
 	}
 
+	static function assertExists(path:String, label:String):Void {
+		if (!sys.FileSystem.exists(path))
+			throw label + ": missing " + path;
+	}
+
+	static function assertMissing(path:String, label:String):Void {
+		if (sys.FileSystem.exists(path))
+			throw label + ": expected to be absent " + path;
+	}
+
 	static function exeNameFromOutDir(outDir:String):String {
 		final base = haxe.io.Path.withoutDirectory(haxe.io.Path.normalize(outDir));
 		final out = new StringBuf();
@@ -110,10 +120,8 @@ class M13DuneLayoutPluginIntegrationTest {
 			throw "haxe compile failed for filtered ocaml_dune_layout=plugin: " + filteredCompile.exitCode + "\n" + filteredCompile.stderr;
 		}
 		final filteredDunePath = filteredOutDir + "/dune";
-		if (!sys.FileSystem.exists(filteredDunePath))
-			throw "missing filtered dune file: " + filteredDunePath;
-		if (sys.FileSystem.exists(filteredOutDir + "/Haxe.ml"))
-			throw "plugin mode should disable package alias emission by default";
+		assertExists(filteredDunePath, "filtered plugin dune");
+		assertMissing(filteredOutDir + "/Haxe.ml", "filtered plugin alias module");
 		if (sys.FileSystem.exists(filteredOutDir + "/haxe_iterators_ArrayIterator.ml"))
 			throw "expected excluded package output to be pruned";
 		if (sys.FileSystem.exists(filteredOutDir + "/Any.ml"))
@@ -121,8 +129,7 @@ class M13DuneLayoutPluginIntegrationTest {
 		if (sys.FileSystem.exists(filteredOutDir + "/HxTypeRegistry.ml"))
 			throw "expected excluded path output to be pruned (HxTypeRegistry.ml)";
 		final filteredExeName = exeNameFromOutDir(filteredOutDir);
-		if (!sys.FileSystem.exists(filteredOutDir + "/" + filteredExeName + ".ml"))
-			throw "filtered plugin layout should still emit the plugin entry module";
+		assertExists(filteredOutDir + "/" + filteredExeName + ".ml", "filtered plugin entry module");
 		if (Sys.command("sh", ["-c", "command -v dune >/dev/null 2>&1 && command -v ocamlc >/dev/null 2>&1"]) == 0) {
 			final prev = Sys.getCwd();
 			Sys.setCwd(filteredOutDir);
@@ -131,6 +138,58 @@ class M13DuneLayoutPluginIntegrationTest {
 			if (buildCode != 0)
 				throw "dune build failed for filtered plugin layout: " + buildCode;
 		}
+
+		final prefixedOutDirA = "out_ocaml_m13_dune_plugin_prefixed_a_" + Std.string(Std.int(Date.now().getTime()));
+		sys.FileSystem.createDirectory(prefixedOutDirA);
+		final prefixA = "PluginA_";
+		final prefixedCompileA = runCompile(prefixedOutDirA, "plugin", ["ocaml_module_prefix=" + prefixA]);
+		if (prefixedCompileA.exitCode != 0) {
+			throw "haxe compile failed for prefixed ocaml_dune_layout=plugin: "
+				+ prefixedCompileA.exitCode
+				+ "\n"
+				+ prefixedCompileA.stderr;
+		}
+		assertExists(prefixedOutDirA + "/" + prefixA + "pkg_M13MliMain.ml", "prefixed main module A");
+		assertExists(prefixedOutDirA + "/" + prefixA + "pkg_M13MliHelper.ml", "prefixed helper module A");
+		assertExists(prefixedOutDirA + "/" + prefixA + "Pkg.ml", "prefixed alias package A");
+		assertMissing(prefixedOutDirA + "/pkg_M13MliMain.ml", "unprefixed main module A");
+		assertMissing(prefixedOutDirA + "/pkg_M13MliHelper.ml", "unprefixed helper module A");
+		assertMissing(prefixedOutDirA + "/Pkg.ml", "unprefixed alias package A");
+		final prefixedExeNameA = exeNameFromOutDir(prefixedOutDirA);
+		assertExists(prefixedOutDirA + "/" + prefixedExeNameA + ".ml", "prefixed plugin entry module A");
+		final prefixedEntryA = sys.io.File.getContent(prefixedOutDirA + "/" + prefixedExeNameA + ".ml");
+		assertContains(prefixedEntryA, "let () = ()", "prefixed plugin entry A should be a no-op");
+		if (Sys.command("sh", ["-c", "command -v dune >/dev/null 2>&1 && command -v ocamlc >/dev/null 2>&1"]) == 0) {
+			final prev = Sys.getCwd();
+			Sys.setCwd(prefixedOutDirA);
+			final buildCode = Sys.command("dune", ["build", "./" + prefixedExeNameA + ".cma", "./" + prefixedExeNameA + ".cmxs"]);
+			Sys.setCwd(prev);
+			if (buildCode != 0)
+				throw "dune build failed for prefixed plugin layout A: " + buildCode;
+		}
+
+		final prefixedOutDirB = "out_ocaml_m13_dune_plugin_prefixed_b_" + Std.string(Std.int(Date.now().getTime()));
+		sys.FileSystem.createDirectory(prefixedOutDirB);
+		final prefixB = "PluginB_";
+		final prefixedCompileB = runCompile(prefixedOutDirB, "plugin", ["ocaml_module_prefix=" + prefixB]);
+		if (prefixedCompileB.exitCode != 0) {
+			throw "haxe compile failed for second prefixed ocaml_dune_layout=plugin: "
+				+ prefixedCompileB.exitCode
+				+ "\n"
+				+ prefixedCompileB.stderr;
+		}
+		assertExists(prefixedOutDirB + "/" + prefixB + "pkg_M13MliMain.ml", "prefixed main module B");
+		assertExists(prefixedOutDirB + "/" + prefixB + "pkg_M13MliHelper.ml", "prefixed helper module B");
+		assertExists(prefixedOutDirB + "/" + prefixB + "Pkg.ml", "prefixed alias package B");
+		if (prefixA + "pkg_M13MliMain.ml" == prefixB + "pkg_M13MliMain.ml")
+			throw "distinct ocaml_module_prefix values should produce distinct emitted module filenames";
+		if (prefixA + "Pkg.ml" == prefixB + "Pkg.ml")
+			throw "distinct ocaml_module_prefix values should produce distinct alias module filenames";
+		assertMissing(prefixedOutDirB + "/" + prefixA + "pkg_M13MliMain.ml", "prefix B should not emit prefix A module names");
+		assertMissing(prefixedOutDirB + "/" + prefixA + "Pkg.ml", "prefix B should not emit prefix A alias names");
+
+		if (sys.FileSystem.exists(filteredOutDir + "/Haxe.ml"))
+			throw "plugin mode should disable package alias emission by default";
 
 		final invalidCompile = runCompile(invalidOutDir, "weird", []);
 		if (invalidCompile.exitCode == 0)

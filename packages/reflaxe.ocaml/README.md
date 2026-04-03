@@ -98,6 +98,7 @@ Without `ocaml_output`, OCaml target output is not selected.
 - `-D ocaml_dune_layout=exe|lib|plugin`: choose dune layout.
 - `-D ocaml_dune_exes=name:MainModule[,name2:Main2]`: multi-executable dune stanza.
 - `-D ocaml_plugin_mode=1`: plugin-packaging defaults for `ocaml_dune_layout=plugin` (currently disables package alias helpers unless you explicitly set `-D ocaml_emit_package_aliases=1`).
+- `-D ocaml_module_prefix=<Prefix_>`: prefix emitted Haxe compilation units so multiple plugin outputs can coexist without module-name collisions.
 - `-D ocaml_emit_exclude_packages=a.b,c.d`: omit emitted Haxe module units whose package path starts with one of the configured prefixes.
 - `-D ocaml_emit_exclude_paths=Foo,bar/`: omit emitted artifacts by output-relative path prefix (useful for root modules like `HxTypeRegistry` or `Any`).
 - `-D ocaml_mli` or `-D ocaml_mli=infer|all`: generate `.mli` via `ocamlc -i`.
