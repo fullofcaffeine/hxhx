@@ -21,6 +21,7 @@ Important boundary:
 Decision note:
 
 - `docs/00-project/REFLAXE_OCAML_UPSTREAM_PLUGIN_INTEGRATION_DECISION.md`
+- `docs/00-project/REFLAXE_OCAML_UPSTREAM_COMPILER_TARGET_PLUGIN_PROBE.md`
 
 ## Prerequisites
 

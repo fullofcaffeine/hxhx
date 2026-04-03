@@ -160,10 +160,13 @@ Research-only compiler-target lane:
 
 3. `haxe.ocaml-anoy.4.1` (`P3`)
    - Probe whether upstream Haxe exposes a real compiler-target plugin seam
+   - result recorded in:
+     - `docs/00-project/REFLAXE_OCAML_UPSTREAM_COMPILER_TARGET_PLUGIN_PROBE.md`
    - depends on this decision note staying explicit about the path being unsupported today
 
 ## Related docs
 
 - `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
+- `docs/00-project/REFLAXE_OCAML_UPSTREAM_COMPILER_TARGET_PLUGIN_PROBE.md`
 - `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
 - `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`
