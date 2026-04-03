@@ -13,6 +13,15 @@ Canonical product contract:
 - `reflaxe.ocaml` code generation/runtime.
 - Native OCaml build path via dune.
 
+Important boundary:
+
+- for plugin-shaped native artifacts under upstream Haxe, the supported path is the explicit eval-host adapter lane
+- this repo does not currently claim a true upstream compiler-target/native-target plugin ABI
+
+Decision note:
+
+- `docs/00-project/REFLAXE_OCAML_UPSTREAM_PLUGIN_INTEGRATION_DECISION.md`
+
 ## Prerequisites
 
 - Haxe `4.3.7`
