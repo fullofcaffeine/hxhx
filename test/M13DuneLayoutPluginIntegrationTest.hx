@@ -151,7 +151,7 @@ class M13DuneLayoutPluginIntegrationTest {
 		}
 		assertExists(prefixedOutDirA + "/" + prefixA + "pkg_M13MliMain.ml", "prefixed main module A");
 		assertExists(prefixedOutDirA + "/" + prefixA + "pkg_M13MliHelper.ml", "prefixed helper module A");
-		assertExists(prefixedOutDirA + "/" + prefixA + "Pkg.ml", "prefixed alias package A");
+		assertExists(prefixedOutDirA + "/" + prefixA + "pkg.ml", "prefixed alias package A");
 		assertMissing(prefixedOutDirA + "/pkg_M13MliMain.ml", "unprefixed main module A");
 		assertMissing(prefixedOutDirA + "/pkg_M13MliHelper.ml", "unprefixed helper module A");
 		assertMissing(prefixedOutDirA + "/Pkg.ml", "unprefixed alias package A");
@@ -180,7 +180,7 @@ class M13DuneLayoutPluginIntegrationTest {
 		}
 		assertExists(prefixedOutDirB + "/" + prefixB + "pkg_M13MliMain.ml", "prefixed main module B");
 		assertExists(prefixedOutDirB + "/" + prefixB + "pkg_M13MliHelper.ml", "prefixed helper module B");
-		assertExists(prefixedOutDirB + "/" + prefixB + "Pkg.ml", "prefixed alias package B");
+		assertExists(prefixedOutDirB + "/" + prefixB + "pkg.ml", "prefixed alias package B");
 		if (prefixA + "pkg_M13MliMain.ml" == prefixB + "pkg_M13MliMain.ml")
 			throw "distinct ocaml_module_prefix values should produce distinct emitted module filenames";
 		if (prefixA + "Pkg.ml" == prefixB + "Pkg.ml")
