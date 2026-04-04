@@ -274,17 +274,21 @@ STAGE0_NEKOTOOLS="${NEKOTOOLS_BIN:-}"
 STAGE0_NEKO="${NEKO_BIN:-}"
 
 if [ -z "$STAGE0_NEKOTOOLS" ]; then
-  if command -v nekotools >/dev/null 2>&1; then
-    STAGE0_NEKOTOOLS="$(command -v nekotools)"
-  elif [ -x "$HOME/haxe/neko/nekotools" ]; then
+  if [ -x "$HOME/haxe/neko/nekotools" ]; then
     STAGE0_NEKOTOOLS="$HOME/haxe/neko/nekotools"
+  elif [ -x "$HOME/haxe/neko/versions/$UPSTREAM_REF/nekotools" ]; then
+    STAGE0_NEKOTOOLS="$HOME/haxe/neko/versions/$UPSTREAM_REF/nekotools"
+  elif command -v nekotools >/dev/null 2>&1; then
+    STAGE0_NEKOTOOLS="$(command -v nekotools)"
   fi
 fi
 if [ -z "$STAGE0_NEKO" ]; then
-  if command -v neko >/dev/null 2>&1; then
-    STAGE0_NEKO="$(command -v neko)"
-  elif [ -x "$HOME/haxe/neko/neko" ]; then
+  if [ -x "$HOME/haxe/neko/neko" ]; then
     STAGE0_NEKO="$HOME/haxe/neko/neko"
+  elif [ -x "$HOME/haxe/neko/versions/$UPSTREAM_REF/neko" ]; then
+    STAGE0_NEKO="$HOME/haxe/neko/versions/$UPSTREAM_REF/neko"
+  elif command -v neko >/dev/null 2>&1; then
+    STAGE0_NEKO="$(command -v neko)"
   fi
 fi
 
@@ -309,6 +313,8 @@ resolve_nekopath_dir() {
   fi
   candidates+=("$(cd "$(dirname "$STAGE0_NEKOTOOLS")" && pwd)")
   candidates+=("$(cd "$(dirname "$STAGE0_NEKO")" && pwd)")
+  candidates+=("$HOME/haxe/neko")
+  candidates+=("$HOME/haxe/neko/versions/$UPSTREAM_REF")
   candidates+=("/usr/lib/neko")
   candidates+=("/usr/lib64/neko")
   candidates+=("/usr/lib/x86_64-linux-gnu/neko")
