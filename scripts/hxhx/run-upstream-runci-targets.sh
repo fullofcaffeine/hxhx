@@ -304,6 +304,31 @@ if [ -z "$STAGE0_NEKO" ] || [ ! -x "$STAGE0_NEKO" ]; then
   exit 0
 fi
 
+dir_has_std_ndll() {
+  local candidate="${1:-}"
+  [ -n "$candidate" ] && [ -d "$candidate" ] && [ -f "$candidate/std.ndll" ]
+}
+
+resolve_system_nekopath_dir() {
+  local candidate=""
+  local -a candidates=()
+
+  candidates+=("/usr/lib/neko")
+  candidates+=("/usr/lib64/neko")
+  candidates+=("/usr/lib/x86_64-linux-gnu/neko")
+  candidates+=("/usr/local/lib/neko")
+  candidates+=("/opt/homebrew/lib/neko")
+
+  for candidate in "${candidates[@]}"; do
+    if dir_has_std_ndll "$candidate"; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 resolve_nekopath_dir() {
   local candidate=""
   local -a candidates=()
@@ -331,8 +356,31 @@ resolve_nekopath_dir() {
   return 1
 }
 
-NEKOPATH_DIR="$(resolve_nekopath_dir || true)"
+NEKOPATH_DIR=""
+selected_nekotools_dir="$(cd "$(dirname "$STAGE0_NEKOTOOLS")" && pwd)"
+selected_neko_dir="$(cd "$(dirname "$STAGE0_NEKO")" && pwd)"
+
+if [ -n "${NEKOPATH:-}" ] && dir_has_std_ndll "${NEKOPATH}"; then
+  NEKOPATH_DIR="${NEKOPATH}"
+elif dir_has_std_ndll "$selected_neko_dir"; then
+  NEKOPATH_DIR="$selected_neko_dir"
+elif dir_has_std_ndll "$selected_nekotools_dir"; then
+  NEKOPATH_DIR="$selected_nekotools_dir"
+else
+  system_neko="$(command -v neko 2>/dev/null || true)"
+  system_nekotools="$(command -v nekotools 2>/dev/null || true)"
+  system_nekopath_dir="$(resolve_system_nekopath_dir || true)"
+  if [ -n "$system_neko" ] && [ -x "$system_neko" ] && [ -n "$system_nekotools" ] && [ -x "$system_nekotools" ] && [ -n "$system_nekopath_dir" ]; then
+    STAGE0_NEKO="$system_neko"
+    STAGE0_NEKOTOOLS="$system_nekotools"
+    NEKOPATH_DIR="$system_nekopath_dir"
+  else
+    NEKOPATH_DIR="$(resolve_nekopath_dir || true)"
+  fi
+fi
+
 if [ -n "$NEKOPATH_DIR" ]; then
+  echo "Using Neko binaries: neko=${STAGE0_NEKO} nekotools=${STAGE0_NEKOTOOLS}" >&2
   echo "Using NEKOPATH directory: ${NEKOPATH_DIR}" >&2
 else
   echo "Warning: Could not resolve NEKOPATH directory containing std.ndll; preserving system defaults." >&2

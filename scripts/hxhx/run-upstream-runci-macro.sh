@@ -365,6 +365,31 @@ if [ -z "$STAGE0_NEKO" ] || [ ! -x "$STAGE0_NEKO" ]; then
   exit 0
 fi
 
+dir_has_std_ndll() {
+  local candidate="${1:-}"
+  [ -n "$candidate" ] && [ -d "$candidate" ] && [ -f "$candidate/std.ndll" ]
+}
+
+resolve_system_nekopath_dir() {
+  local candidate=""
+  local -a candidates=()
+
+  candidates+=("/usr/lib/neko")
+  candidates+=("/usr/lib64/neko")
+  candidates+=("/usr/lib/x86_64-linux-gnu/neko")
+  candidates+=("/usr/local/lib/neko")
+  candidates+=("/opt/homebrew/lib/neko")
+
+  for candidate in "${candidates[@]}"; do
+    if dir_has_std_ndll "$candidate"; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 resolve_nekopath_dir() {
   local candidate=""
   local -a candidates=()
@@ -392,11 +417,35 @@ resolve_nekopath_dir() {
   return 1
 }
 
-NEKOPATH_DIR="$(resolve_nekopath_dir || true)"
+NEKOPATH_DIR=""
+selected_nekotools_dir="$(cd "$(dirname "$STAGE0_NEKOTOOLS")" && pwd)"
+selected_neko_dir="$(cd "$(dirname "$STAGE0_NEKO")" && pwd)"
+
+if [ -n "${NEKOPATH:-}" ] && dir_has_std_ndll "${NEKOPATH}"; then
+  NEKOPATH_DIR="${NEKOPATH}"
+elif dir_has_std_ndll "$selected_neko_dir"; then
+  NEKOPATH_DIR="$selected_neko_dir"
+elif dir_has_std_ndll "$selected_nekotools_dir"; then
+  NEKOPATH_DIR="$selected_nekotools_dir"
+else
+  system_neko="$(command -v neko 2>/dev/null || true)"
+  system_nekotools="$(command -v nekotools 2>/dev/null || true)"
+  system_nekopath_dir="$(resolve_system_nekopath_dir || true)"
+  if [ -n "$system_neko" ] && [ -x "$system_neko" ] && [ -n "$system_nekotools" ] && [ -x "$system_nekotools" ] && [ -n "$system_nekopath_dir" ]; then
+    STAGE0_NEKO="$system_neko"
+    STAGE0_NEKOTOOLS="$system_nekotools"
+    NEKOPATH_DIR="$system_nekopath_dir"
+  else
+    NEKOPATH_DIR="$(resolve_nekopath_dir || true)"
+  fi
+fi
+
 if [ -z "$NEKOPATH_DIR" ]; then
   echo "Skipping upstream Gate 2: could not resolve a NEKOPATH directory containing std.ndll." >&2
   exit 0
 fi
+echo "Using Neko binaries: neko=${STAGE0_NEKO} nekotools=${STAGE0_NEKOTOOLS}" >&2
+echo "Using NEKOPATH directory: ${NEKOPATH_DIR}" >&2
 
 # We want the upstream tests to match our compatibility target (default: 4.3.7).
 # Instead of mutating the user's checkout, we run from a temporary git worktree when possible.
@@ -544,6 +593,27 @@ PY
 
 seed_local_haxelib_utest_from_global() {
   seed_local_haxelib_dev_from_global utest "${HXHX_GATE2_SEED_UTEST_FROM_GLOBAL:-1}"
+}
+
+ensure_local_haxelib_git_dependency() {
+  local lib="$1"
+  local repo_url="$2"
+  local ref="${3:-}"
+  local extra="${4:-}"
+
+  if PATH="$WRAP_DIR:$PATH" haxelib path "$lib" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local args=("git" "$lib" "$repo_url")
+  if [ -n "$ref" ]; then
+    args+=("$ref")
+  fi
+  if [ -n "$extra" ]; then
+    args+=("$extra")
+  fi
+
+  PATH="$WRAP_DIR:$PATH" haxelib "${args[@]}"
 }
 
 seed_local_haxelib_dev_from_global() {
@@ -840,6 +910,10 @@ run_stage3_no_emit_direct_macro() {
     echo "== Gate 2 (direct): stop-after stage = $stop_after"
   fi
 
+  # Upstream `RunCi.hx` installs `utest` before dispatch and `haxeserver` before display.
+  # Direct mode bypasses that harness, so we need to provision the same inputs explicitly.
+  ensure_local_haxelib_git_dependency "utest" "https://github.com/haxe-utest/utest" "a94f8812e8786f2b5fec52ce9f26927591d26327" "--always"
+
   if [ "${HXHX_GATE2_SKIP_UNIT:-0}" = "1" ]; then
     echo "Skipping unit stage (HXHX_GATE2_SKIP_UNIT=1)"
     echo "macro_stage=unit status=skipped"
@@ -858,6 +932,8 @@ run_stage3_no_emit_direct_macro() {
       return 0
     fi
   fi
+
+  ensure_local_haxelib_git_dependency "haxeserver" "https://github.com/Simn/haxeserver"
 
   (
     cd "$UPSTREAM_DIR/tests/display"
