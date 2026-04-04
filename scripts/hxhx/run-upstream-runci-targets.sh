@@ -670,13 +670,28 @@ if [ -n "${NEKOPATH_DIR}" ]; then
   export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
 fi
 export HAXELIB_BIN="${WRAP_DIR}/haxelib"
+export LIX_BIN="${WRAP_DIR}/lix"
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
 export HAXE_BIN="${STAGE0_HAXE}"
-exec "${HXHX_BIN}" "\$@"
+exec "${HXHX_BIN}" --compat "\$@"
 EOF
 chmod +x "$WRAP_DIR/haxe"
+
+cat >"$WRAP_DIR/lix" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "\${1:-}" = "run-haxelib" ]; then
+  shift
+  exec "${STAGE0_HAXELIB}" "\$@"
+fi
+if [ -x "${ROOT}/node_modules/.bin/lix" ]; then
+  exec "${ROOT}/node_modules/.bin/lix" "\$@"
+fi
+exec lix "\$@"
+EOF
+chmod +x "$WRAP_DIR/lix"
 
 cat >"$WRAP_DIR/haxelib" <<EOF
 #!/usr/bin/env bash

@@ -361,7 +361,36 @@ if [ -z "$STAGE0_NEKO" ] || [ ! -x "$STAGE0_NEKO" ]; then
   exit 0
 fi
 
-NEKOPATH_DIR="$(cd "$(dirname "$STAGE0_NEKOTOOLS")" && pwd)"
+resolve_nekopath_dir() {
+  local candidate=""
+  local -a candidates=()
+
+  if [ -n "${NEKOPATH:-}" ]; then
+    candidates+=("${NEKOPATH}")
+  fi
+  candidates+=("$(cd "$(dirname "$STAGE0_NEKOTOOLS")" && pwd)")
+  candidates+=("$(cd "$(dirname "$STAGE0_NEKO")" && pwd)")
+  candidates+=("/usr/lib/neko")
+  candidates+=("/usr/lib64/neko")
+  candidates+=("/usr/lib/x86_64-linux-gnu/neko")
+  candidates+=("/usr/local/lib/neko")
+  candidates+=("/opt/homebrew/lib/neko")
+
+  for candidate in "${candidates[@]}"; do
+    if [ -d "$candidate" ] && [ -f "$candidate/std.ndll" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+NEKOPATH_DIR="$(resolve_nekopath_dir || true)"
+if [ -z "$NEKOPATH_DIR" ]; then
+  echo "Skipping upstream Gate 2: could not resolve a NEKOPATH directory containing std.ndll." >&2
+  exit 0
+fi
 
 # We want the upstream tests to match our compatibility target (default: 4.3.7).
 # Instead of mutating the user's checkout, we run from a temporary git worktree when possible.
@@ -1049,6 +1078,7 @@ if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3_n
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
 export HAXELIB_BIN="${WRAP_DIR}/haxelib"
+export LIX_BIN="${WRAP_DIR}/lix"
 if [ -z "\${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:-}" ]; then
   export HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0
 fi
@@ -1069,6 +1099,7 @@ elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "st
 #!/usr/bin/env bash
 set -euo pipefail
 export HAXELIB_BIN="${WRAP_DIR}/haxelib"
+export LIX_BIN="${WRAP_DIR}/lix"
 if [ -n "\${HXHX_GATE2_WRAP_LOG:-}" ]; then
   printf '%s\n' "haxe \$*" >>"\${HXHX_GATE2_WRAP_LOG}"
 fi
@@ -1100,6 +1131,7 @@ else
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
 export HAXELIB_BIN="${WRAP_DIR}/haxelib"
+export LIX_BIN="${WRAP_DIR}/lix"
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
@@ -1111,6 +1143,20 @@ exec "${HXHX_BIN}" "\$@"
 EOF
 fi
 chmod +x "$WRAP_DIR/haxe"
+
+cat >"$WRAP_DIR/lix" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "\${1:-}" = "run-haxelib" ]; then
+  shift
+  exec "${STAGE0_HAXELIB}" "\$@"
+fi
+if [ -x "${ROOT}/node_modules/.bin/lix" ]; then
+  exec "${ROOT}/node_modules/.bin/lix" "\$@"
+fi
+exec lix "\$@"
+EOF
+chmod +x "$WRAP_DIR/lix"
 
 cat >"$WRAP_DIR/haxelib" <<EOF
 #!/usr/bin/env bash
