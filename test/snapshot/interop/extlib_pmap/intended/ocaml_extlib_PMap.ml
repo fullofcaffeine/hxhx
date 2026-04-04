@@ -8,26 +8,26 @@ let _new = fun v -> v
 
 let empty = fun () -> PMap.empty
 
-let is_empty = fun m -> PMap.is_empty (Obj.repr m)
+let is_empty = fun m -> PMap.is_empty m
 
-let create = fun cmp -> PMap.create (Obj.repr cmp)
+let create = fun cmp -> PMap.create cmp
 
-let add = fun k v m -> PMap.add k v (Obj.repr m)
+let add = fun k v m -> PMap.add k v m
 
-let find = fun k m -> Obj.obj (PMap.find k (Obj.repr m))
+let find = fun k m -> PMap.find k m
 
-let remove = fun k m -> PMap.remove k (Obj.repr m)
+let remove = fun k m -> PMap.remove k m
 
-let mem = fun k m -> PMap.mem k (Obj.repr m)
+let mem = fun k m -> PMap.mem k m
 
-let exists = fun k m -> PMap.exists k (Obj.repr m)
+let exists = fun k m -> PMap.exists k m
 
-let iter = fun f m -> ignore (PMap.iter (Obj.repr f) (Obj.repr m))
+let iter = fun f m -> ignore (PMap.iter f m)
 
-let map = fun f m -> PMap.map (Obj.repr f) (Obj.repr m)
+let map = fun f m -> PMap.map f m
 
-let mapi = fun f m -> PMap.mapi (Obj.repr f) (Obj.repr m)
+let mapi = fun f m -> PMap.mapi f m
 
-let fold = fun f m init -> Obj.obj (PMap.fold (Obj.repr f) (Obj.repr m) init)
+let fold = fun f m init -> PMap.fold f m init
 
-let foldi = fun f m init -> Obj.obj (PMap.foldi (Obj.repr f) (Obj.repr m) init)
+let foldi = fun f m init -> PMap.foldi f m init

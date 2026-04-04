@@ -251,6 +251,48 @@ if ! command -v javac >/dev/null 2>&1; then
   exit 0
 fi
 
+probe_haxelib_binary() {
+  local bin="$1"
+  "$bin" help >/dev/null 2>&1 || "$bin" --help >/dev/null 2>&1 || "$bin" version >/dev/null 2>&1
+}
+
+resolve_runnable_haxelib() {
+  local requested="$1"
+  local candidate=""
+  local resolved=""
+  local -a probes=()
+
+  if [ -n "$requested" ]; then
+    probes+=("$requested")
+  fi
+  probes+=("haxelib")
+  probes+=("$ROOT/node_modules/.bin/haxelib")
+  probes+=("$HOME/haxe/versions/$UPSTREAM_REF/haxelib")
+  probes+=("$HOME/haxe/versions/stable/haxelib")
+
+  for candidate in "${probes[@]}"; do
+    if [ -z "$candidate" ]; then
+      continue
+    fi
+    if [[ "$candidate" == */* ]]; then
+      resolved="$candidate"
+    else
+      resolved="$(command -v "$candidate" 2>/dev/null || true)"
+    fi
+    if [ -z "$resolved" ] || [ ! -x "$resolved" ]; then
+      continue
+    fi
+    if ! probe_haxelib_binary "$resolved"; then
+      echo "Rejected non-runnable haxelib candidate: $resolved" >&2
+      continue
+    fi
+    echo "$resolved"
+    return 0
+  done
+
+  return 1
+}
+
 # Resolve stage0 tool paths once so later wrapper scripts don't depend on PATH ordering.
 #
 # Prefer the concrete binaries from the Lix-managed toolchain for our compatibility version.
@@ -267,19 +309,15 @@ else
 fi
 
 #
-# Prefer the user's `haxelib` from PATH (often a Lix shim) over the raw Neko-based
-# `~/haxe/versions/<ver>/haxelib` binary.
+# Prefer a runnable `haxelib`, not just an executable-looking path.
 #
 # Why:
-# - The raw binary relies on dynamic loader setup on macOS and can be brittle.
-# - For Gate2, we care more about robustness than shaving a few ms of wrapper overhead.
+# - CI can expose stale or non-runnable paths like `~/haxe/versions/stable/haxelib`.
+# - Gate 2 shells into upstream worktrees and later wrapper scripts depend on a concrete binary.
 # - We still keep `haxe` itself pinned to the concrete stage0 binary to avoid accidentally
 #   picking up a different toolchain inside upstream worktrees.
-STAGE0_HAXELIB="$(command -v "$HAXELIB_BIN" 2>/dev/null || true)"
-if [ -z "$STAGE0_HAXELIB" ] || [ ! -x "$STAGE0_HAXELIB" ]; then
-  STAGE0_HAXELIB="$(command -v haxelib 2>/dev/null || true)"
-fi
-if [ -z "$STAGE0_HAXELIB" ] || [ ! -x "$STAGE0_HAXELIB" ]; then
+STAGE0_HAXELIB="$(resolve_runnable_haxelib "$HAXELIB_BIN" || true)"
+if [ -z "$STAGE0_HAXELIB" ]; then
   echo "Missing runnable haxelib binary (requested '$HAXELIB_BIN')." >&2
   exit 1
 fi

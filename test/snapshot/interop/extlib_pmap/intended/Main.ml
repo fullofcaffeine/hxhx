@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
 
-let main = fun () -> ignore (let m = PMap.empty in let m = PMap.add (Obj.repr 1) (Obj.repr "one") (Obj.repr m) in (
-  ignore (print_endline (HxString.toStdString (Obj.obj (PMap.find (Obj.repr 1) (Obj.repr m)))));
-  print_endline (HxString.toStdString (string_of_bool (PMap.mem (Obj.repr 2) (Obj.repr m))))
+let main = fun () -> ignore (let m = PMap.empty in let m = PMap.add 1 "one" m in (
+  ignore (print_endline (HxString.toStdString (PMap.find 1 m)));
+  print_endline (HxString.toStdString (string_of_bool (PMap.mem 2 m)))
 ))

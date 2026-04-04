@@ -82,21 +82,21 @@ abstract PMap<K, V>(Dynamic) {
 @:native("PMap")
 extern class PMapNative {
 	// OCaml: `val empty : ('a, 'b) t`
-	static var empty:Dynamic;
+	static var empty:PMap<Dynamic, Dynamic>;
 
-	static function is_empty(m:Dynamic):Bool;
+	static function is_empty<K, V>(m:PMap<K, V>):Bool;
 
 	// OCaml: `val create : ('a -> 'a -> int) -> ('a, 'b) t`
-	static function create(cmp:Dynamic):Dynamic;
+	static function create<K, V>(cmp:K->K->Int):PMap<K, V>;
 
-	static function add(k:Dynamic, v:Dynamic, m:Dynamic):Dynamic;
-	static function find(k:Dynamic, m:Dynamic):Dynamic;
-	static function remove(k:Dynamic, m:Dynamic):Dynamic;
-	static function mem(k:Dynamic, m:Dynamic):Bool;
-	static function exists(k:Dynamic, m:Dynamic):Bool;
-	static function iter(f:Dynamic, m:Dynamic):Void;
-	static function map(f:Dynamic, m:Dynamic):Dynamic;
-	static function mapi(f:Dynamic, m:Dynamic):Dynamic;
-	static function fold(f:Dynamic, m:Dynamic, init:Dynamic):Dynamic;
-	static function foldi(f:Dynamic, m:Dynamic, init:Dynamic):Dynamic;
+	static function add<K, V>(k:K, v:V, m:PMap<K, V>):PMap<K, V>;
+	static function find<K, V>(k:K, m:PMap<K, V>):V;
+	static function remove<K, V>(k:K, m:PMap<K, V>):PMap<K, V>;
+	static function mem<K, V>(k:K, m:PMap<K, V>):Bool;
+	static function exists<K, V>(k:K, m:PMap<K, V>):Bool;
+	static function iter<K, V>(f:K->V->Void, m:PMap<K, V>):Void;
+	static function map<K, V, V2>(f:V->V2, m:PMap<K, V>):PMap<K, V2>;
+	static function mapi<K, V, V2>(f:K->V->V2, m:PMap<K, V>):PMap<K, V2>;
+	static function fold<K, V, A>(f:V->A->A, m:PMap<K, V>, init:A):A;
+	static function foldi<K, V, A>(f:K->V->A->A, m:PMap<K, V>, init:A):A;
 }
