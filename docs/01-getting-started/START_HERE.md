@@ -99,6 +99,7 @@ bash scripts/hxhx/promote-backend-plugin.sh \
 ```
 
 Read:
+- `docs/00-project/REFLAXE_ELIXIR_NATIVE_PATH_DECISION.md`
 - `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
 - `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
 - `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`

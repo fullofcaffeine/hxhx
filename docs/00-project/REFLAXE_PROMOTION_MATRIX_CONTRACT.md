@@ -125,6 +125,8 @@ Implementation-level references live here:
 
 - beginner guide:
   - `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
+- reflaxe.elixir native-path decision:
+  - `docs/00-project/REFLAXE_ELIXIR_NATIVE_PATH_DECISION.md`
 - upstream-Haxe decision boundary:
   - `docs/00-project/REFLAXE_OCAML_UPSTREAM_PLUGIN_INTEGRATION_DECISION.md`
 - host-adapter ABI/layout:
