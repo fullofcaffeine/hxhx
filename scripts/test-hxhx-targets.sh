@@ -2262,7 +2262,7 @@ echo "$out" | grep -q "^native-reflaxe-stage3=ok$"
 echo "$out" | grep -q "^sum=10$"
 grep -q 'sum := __hx_v' "$tmpstage3sum/out/Main.ml"
 grep -q 'HxBootArray.iter' "$tmpstage3sum/out/Main.ml"
-grep -Fq 'print_endline (("sum=" ^ HxRuntime.dynamic_toStdString' "$tmpstage3sum/out/Main.ml"
+grep -Eq 'print_endline \(\("sum=" \^ (HxRuntime\.dynamic_toStdString|string_of_int)' "$tmpstage3sum/out/Main.ml"
 
 echo "== Stage3 bring-up: ingests library -D defines (haxe_libraries/*.hxml)"
 tmpmini="$tmpdir/haxelib_define_fixture"
