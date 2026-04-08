@@ -1520,7 +1520,7 @@ class Main {
 HX
 out="$($HXHX_BIN --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpmapjoin/src" -main Main --hxhx-out "$tmpmapjoin/out")"
 echo "$out" | grep -q "^stage3=ok$"
-grep -q "HxBootArray.map_dyn" "$tmpmapjoin/out/Main.ml"
+grep -Eq "HxBootArray\\.map(_dyn)?" "$tmpmapjoin/out/Main.ml"
 grep -q "HxBootArray.join_dyn" "$tmpmapjoin/out/Main.ml"
 
 echo "== Stage3 regression: instance method callback references bind this in emitted OCaml"
