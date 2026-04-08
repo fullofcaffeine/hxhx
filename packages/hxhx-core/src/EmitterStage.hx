@@ -47,6 +47,16 @@ private typedef EmitterCallSig = {
 	final needsReceiver:Bool;
 }
 
+private class _PortableMetalizationScope {
+	public final previousPlan:Null<backend.ocaml.PortableMetalizationPlan>;
+	public final previousRegionKey:String;
+
+	public function new(previousPlan:Null<backend.ocaml.PortableMetalizationPlan>, previousRegionKey:String) {
+		this.previousPlan = previousPlan;
+		this.previousRegionKey = previousRegionKey;
+	}
+}
+
 private class _EmitterStageDebug {
 	/**
 		Emit a debug trace of computed call signatures.
@@ -147,6 +157,16 @@ private class _ModuleNameEntry {
 	}
 }
 
+private class _LocalTyEntry {
+	public final name:String;
+	public final ty:String;
+
+	public function new(name:String, ty:String) {
+		this.name = name;
+		this.ty = ty;
+	}
+}
+
 class EmitterStage {
 	static var moduleInitTrace:Bool = traceModuleInit();
 
@@ -172,6 +192,10 @@ class EmitterStage {
 	static var currentOcamlModuleName:Null<String> = null;
 
 	static var currentModuleFilePath:Null<String> = null;
+	static var currentFunctionName:Null<String> = null;
+	static var currentFunctionLocalTypeHints:Null<Map<String, TyType>> = null;
+	static var currentStmtTyEntries:Array<_LocalTyEntry> = [];
+	static var currentLocalCallSigCache:Null<Map<String, EmitterCallSig>> = null;
 
 	/**
 		Import-based rewrite for `Int64.<field>` in the current module.
@@ -318,20 +342,17 @@ class EmitterStage {
 	**/
 	static var currentPortableMetalizationPlan:Null<backend.ocaml.PortableMetalizationPlan> = null;
 
-	static var currentPortableMetalizationRegionKey:Null<String> = null;
+	static var currentPortableMetalizationRegionKey:String = "";
 
-	public static function installPortableMetalizationPlan(plan:Null<backend.ocaml.PortableMetalizationPlan>):{previousPlan:Null<backend.ocaml.PortableMetalizationPlan>, previousRegionKey:Null<String>} {
+	public static function installPortableMetalizationPlan(plan:Null<backend.ocaml.PortableMetalizationPlan>):_PortableMetalizationScope {
 		_EmitterStageDebug.traceStage3Phase("portable_plan_install");
-		final scope = {
-			previousPlan: currentPortableMetalizationPlan,
-			previousRegionKey: currentPortableMetalizationRegionKey
-		};
+		final scope = new _PortableMetalizationScope(currentPortableMetalizationPlan, currentPortableMetalizationRegionKey);
 		currentPortableMetalizationPlan = plan;
-		currentPortableMetalizationRegionKey = null;
+		currentPortableMetalizationRegionKey = "";
 		return scope;
 	}
 
-	public static function restorePortableMetalizationPlan(scope:{previousPlan:Null<backend.ocaml.PortableMetalizationPlan>, previousRegionKey:Null<String>}):Void {
+	public static function restorePortableMetalizationPlan(scope:_PortableMetalizationScope):Void {
 		_EmitterStageDebug.traceStage3Phase("portable_plan_restore");
 		currentPortableMetalizationPlan = scope.previousPlan;
 		currentPortableMetalizationRegionKey = scope.previousRegionKey;
@@ -344,7 +365,7 @@ class EmitterStage {
 	static inline function isPortableAutoMetalizedRegionActive():Bool {
 		return currentOcamlProfile == backend.OcamlProfile.toDefineValue(backend.OcamlProfile.Portable)
 			&& currentPortableMetalizationPlan != null
-			&& currentPortableMetalizationRegionKey != null
+			&& currentPortableMetalizationRegionKey.length > 0
 			&& currentPortableMetalizationPlan.isAutoMetalized(currentPortableMetalizationRegionKey);
 	}
 
@@ -381,11 +402,21 @@ class EmitterStage {
 			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_emitToDir");
 			entryPath = emitToDir(p, outDir, emitFullBodies, buildExecutable, ocamlProfile);
 			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_after_emitToDir");
+		} catch (error:haxe.io.Error) {
+			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_catch_io_error");
+			restorePortableMetalizationPlan(scope);
+			throw error;
+		} catch (error:String) {
+			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_catch_string");
+			restorePortableMetalizationPlan(scope);
+			throw error;
 		} catch (error:haxe.Exception) {
+			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_catch_haxe_exception");
 			restorePortableMetalizationPlan(scope);
 			throw error;
 		}
 		restorePortableMetalizationPlan(scope);
+		_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_after_restore");
 		return entryPath;
 	}
 
@@ -855,14 +886,13 @@ class EmitterStage {
 		- Prefer the parser-level rest flag when present.
 		- Otherwise inspect the last parameter type hint and recognize the narrow upstream
 		  forms we need for Haxe 4.3.7 compatibility.
-		- Also accept the lowered compatibility shape used by some extern/runtime surfaces
-		  during bring-up: trailing `args:Array<...>` with dynamic-ish element types.
+		- Do not treat plain trailing dynamic-element array parameters as variadics.
 
-		Why this extra rule is acceptable
-		- It is intentionally narrow: only the final parameter, only `args`/`rest`-style
-		  names, and only dynamic element arrays.
-		- This recovers packaged variadic extern semantics like `php.Syntax.code(...)`
-		  without treating arbitrary trailing arrays as variadics.
+		Why this restriction matters
+		- Upstream reflection APIs like `Type.createInstance(cl, args)` and
+		  `Reflect.callMethod(obj, func, args)` take a normal array argument.
+		- Misclassifying those as rest parameters silently wraps the supplied array one
+		  level deeper at call sites, which then fails OCaml typechecking.
 	**/
 	static inline function isRestLikeArg(arg:HxFunctionArg):Bool {
 		if (arg == null)
@@ -870,40 +900,72 @@ class EmitterStage {
 		if (HxFunctionArg.getIsRest(arg))
 			return true;
 		final hint = StringTools.trim(HxFunctionArg.getTypeHint(arg));
-		final compactHint = StringTools.replace(hint, " ", "");
-		final name = HxFunctionArg.getName(arg);
-		final lowerName = name == null ? "" : name.toLowerCase();
-		final isNamedRestCarrier = lowerName == "args" || lowerName == "rest" || StringTools.startsWith(lowerName, "rest");
-		final dynName = "Dyn" + "amic";
-		final anyName = "Any";
-		final arrayOfDyn = "Array<" + dynName + ">";
-		final arrayOfAny = "Array<" + anyName + ">";
 		return hint == "Rest"
 			|| StringTools.startsWith(hint, "Rest<")
 			|| StringTools.startsWith(hint, "haxe.Rest<")
-			|| StringTools.startsWith(hint, "haxe.extern.Rest<")
-			|| (isNamedRestCarrier && (compactHint == arrayOfDyn || compactHint == arrayOfAny));
+			|| StringTools.startsWith(hint, "haxe.extern.Rest<");
 	}
 
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		final tyByIdentRaw = tyByIdent;
 
-		inline function resolveTyIdentName(name:String):String {
-			if (mapGetRaw(tyByIdentRaw, name) != null)
-				return name;
-			final lowered = ocamlValueIdent(name);
-			return lowered != name && mapGetRaw(tyByIdentRaw, lowered) != null ? lowered : name;
+		function tyLookup(name:String):Null<TyType> {
+			return cast mapGetRaw(tyByIdentRaw, name);
 		}
 
-		inline function tyForIdent(name:String):String {
-			final resolved = mapGetRaw(tyByIdentRaw, resolveTyIdentName(name));
-			if (resolved == null)
+		function stmtTyLookup(name:String):String {
+			if (name == null || name.length == 0)
 				return "";
-			final t:TyType = cast resolved;
-			if (t == null)
-				return "";
-			return t.toString();
+			for (entry in currentStmtTyEntries)
+				if (entry.name == name && entry.ty != null && entry.ty.length > 0)
+					return entry.ty;
+			final lowered = ocamlValueIdent(name);
+			if (lowered != name)
+				for (entry in currentStmtTyEntries)
+					if (entry.name == lowered && entry.ty != null && entry.ty.length > 0)
+						return entry.ty;
+			return "";
+		}
+
+		function localHintLookup(name:String):Null<TyType> {
+			return cast mapGetRaw(cast currentFunctionLocalTypeHints, name);
+		}
+
+		inline function resolveTyIdentName(name:String):String {
+			if (tyLookup(name) != null)
+				return name;
+			final lowered = ocamlValueIdent(name);
+			return lowered != name && tyLookup(lowered) != null ? lowered : name;
+		}
+
+		function tyForIdent(name:String):String {
+			final t = tyLookup(resolveTyIdentName(name));
+			final ts = t == null ? "" : t.toString();
+			final shouldUseLocalHint = t == null || ts.length == 0 || ts == "Dynamic" || ts == "Unknown" || ts == "Array";
+			if (shouldUseLocalHint) {
+				final stmtTy = stmtTyLookup(name);
+				if (stmtTy.length > 0 && stmtTy != "Dynamic" && stmtTy != "Unknown" && stmtTy != "Array")
+					return stmtTy;
+				if (currentFunctionLocalTypeHints != null) {
+					final hinted = localHintLookup(name);
+					if (hinted != null) {
+						final hintedS = hinted.toString();
+						if (hintedS.length > 0 && hintedS != "Dynamic" && hintedS != "Unknown" && hintedS != "Array")
+							return hintedS;
+					}
+					final lowered = ocamlValueIdent(name);
+					if (lowered != name) {
+						final loweredHint = localHintLookup(lowered);
+						if (loweredHint != null) {
+							final loweredHintS = loweredHint.toString();
+							if (loweredHintS.length > 0 && loweredHintS != "Dynamic" && loweredHintS != "Unknown" && loweredHintS != "Array")
+								return loweredHintS;
+						}
+					}
+				}
+			}
+			return ts;
 		}
 
 		inline function condToOcamlBoolForString(cond:HxExpr):String {
@@ -1007,15 +1069,38 @@ class EmitterStage {
 		final staticImportByIdentRaw = staticImportByIdent;
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
+
+		function tyLookup(name:String):Null<TyType> {
+			return cast mapGetRaw(tyByIdentRaw, name);
+		}
+
+		function stmtTyLookup(name:String):String {
+			if (name == null || name.length == 0)
+				return "";
+			for (entry in currentStmtTyEntries)
+				if (entry.name == name && entry.ty != null && entry.ty.length > 0)
+					return entry.ty;
+			final lowered = ocamlValueIdent(name);
+			if (lowered != name)
+				for (entry in currentStmtTyEntries)
+					if (entry.name == lowered && entry.ty != null && entry.ty.length > 0)
+						return entry.ty;
+			return "";
+		}
+
+		function localHintLookup(name:String):Null<TyType> {
+			return cast mapGetRaw(cast currentFunctionLocalTypeHints, name);
+		}
+
 		inline function resolveTyIdentName(name:String):String {
-			if (mapGetRaw(tyByIdentRaw, name) != null)
+			if (tyLookup(name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && mapGetRaw(tyByIdentRaw, lowered) != null ? lowered : name;
+			return lowered != name && tyLookup(lowered) != null ? lowered : name;
 		}
 
 		inline function hasTyIdent(name:String):Bool {
-			return mapGetRaw(tyByIdentRaw, resolveTyIdentName(name)) != null;
+			return tyLookup(resolveTyIdentName(name)) != null;
 		}
 
 		inline function hasThisBinding():Bool {
@@ -1108,17 +1193,72 @@ class EmitterStage {
 		}
 
 		function tyForIdent(name:String):String {
-			final resolved = mapGetRaw(tyByIdentRaw, resolveTyIdentName(name));
-			if (resolved == null)
-				return "";
-			final t:TyType = cast resolved;
-			if (t == null)
-				return "";
-			return t.toString();
+			final t = tyLookup(resolveTyIdentName(name));
+			final ts = t == null ? "" : t.toString();
+			final shouldUseLocalHint = t == null || ts.length == 0 || ts == "Dynamic" || ts == "Unknown" || ts == "Array";
+			if (shouldUseLocalHint) {
+				final stmtTy = stmtTyLookup(name);
+				if (stmtTy.length > 0 && stmtTy != "Dynamic" && stmtTy != "Unknown" && stmtTy != "Array")
+					return stmtTy;
+				if (currentFunctionLocalTypeHints != null) {
+					final hinted = localHintLookup(name);
+					if (hinted != null) {
+						final hintedS = hinted.toString();
+						if (hintedS.length > 0 && hintedS != "Dynamic" && hintedS != "Unknown" && hintedS != "Array")
+							return hintedS;
+					}
+					final lowered = ocamlValueIdent(name);
+					if (lowered != name) {
+						final loweredHint = localHintLookup(lowered);
+						if (loweredHint != null) {
+							final loweredHintS = loweredHint.toString();
+							if (loweredHintS.length > 0 && loweredHintS != "Dynamic" && loweredHintS != "Unknown" && loweredHintS != "Array")
+								return loweredHintS;
+						}
+					}
+				}
+			}
+			return ts;
 		}
 
 		inline function readIdent(name:String):String {
 			return ocamlReadValueIdent(name);
+		}
+
+		inline function isInt64TypeName(t:String):Bool {
+			if (t == null)
+				return false;
+			final trimmed = StringTools.trim(t);
+			if (trimmed.length == 0)
+				return false;
+			return trimmed == "haxe.Int64"
+				|| trimmed == "Int64"
+				|| StringTools.endsWith(trimmed, ".Int64")
+				|| StringTools.endsWith(trimmed, "_Int64")
+				|| trimmed.indexOf("Int64") >= 0;
+		}
+
+		function isInt64Expr(expr:HxExpr):Bool {
+			return switch (expr) {
+				case EIdent(name):
+					isInt64TypeName(tyForIdent(name));
+				case EUnop("!", inner):
+					isInt64Expr(inner);
+				case ECall(EField(EIdent(owner), field), _args): (owner == "Int64" || owner == "haxe.Int64") && (field == "make" || field == "ofInt"
+						|| field == "parseString" || field == "add" || field == "sub" || field == "mul" || field == "neg" || field == "div" || field == "mod"
+						|| field == "divMod");
+				case EField(inner, field): isInt64Expr(inner) && (field == "high" || field == "low" || field == "quotient" || field == "modulus");
+				case EBinop(op, a, b)
+					if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>"
+						|| op == ">>>"): isInt64Expr(a) || isInt64Expr(b);
+				case ETernary(_cond, thenExpr, elseExpr): isInt64Expr(thenExpr) && isInt64Expr(elseExpr);
+				case ECast(inner, _):
+					isInt64Expr(inner);
+				case EUntyped(inner):
+					isInt64Expr(inner);
+				case _:
+					false;
+			}
 		}
 
 		function isIntExpr(expr:HxExpr):Bool {
@@ -1187,7 +1327,7 @@ class EmitterStage {
 				case EBinop("/", a, b): // Division yields Float for numeric Int/Float operands in Haxe.
 					// For non-numeric/abstract cases we collapse emission to bring-up poison, so
 					// we only treat it as float-ish when both sides look numeric.
-					isFloatExpr(a) || isFloatExpr(b) || (isIntExpr(a) && isIntExpr(b));
+					!(isInt64Expr(a) || isInt64Expr(b)) && (isFloatExpr(a) || isFloatExpr(b) || (isIntExpr(a) && isIntExpr(b)));
 				case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*"): // Best-effort: propagate float-ness through arithmetic.
 					isFloatExpr(a) || isFloatExpr(b);
 				case ETernary(_cond, thenExpr, elseExpr): isFloatExpr(thenExpr) && isFloatExpr(elseExpr);
@@ -1235,6 +1375,19 @@ class EmitterStage {
 				case _:
 					false;
 			}
+		}
+
+		inline function emitUnknownLength(o:String):String {
+			return "(let __hx_len_obj = Obj.repr ("
+				+ o
+				+ ") in "
+				+ "if Obj.is_int __hx_len_obj then HxBootArray.length ((Obj.magic "
+				+ o
+				+ " : _ HxBootArray.t)) else if Obj.tag __hx_len_obj = Obj.string_tag then HxString.length ("
+				+ o
+				+ ") else HxBootArray.length ((Obj.magic "
+				+ o
+				+ " : _ HxBootArray.t)))";
 		}
 
 		function isSysIoProcessExpr(expr:HxExpr):Bool {
@@ -1756,25 +1909,22 @@ class EmitterStage {
 				// orchestration code, without committing to a full object layout/runtime.
 				//
 				// - Array.length (via the bootstrap `HxBootArray` shim)
-				// - String.length (OCaml primitive)
+				// - String.length (via the runtime `HxString` shim)
 				if (field == "length") {
 					final o = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 					if (isStringExpr(obj)) {
-						return "String.length (" + o + ")";
+						return "HxString.length (" + o + ")";
 					}
 					switch (obj) {
 						case EArrayDecl(_):
 							return "HxBootArray.length (" + o + ")";
 						case EIdent(name):
 							final t = tyForIdent(name);
+							if (t == "String")
+								return "HxString.length (" + o + ")";
 							if (StringTools.startsWith(t, "Array<"))
 								return "HxBootArray.length (" + o + ")";
-							// Bring-up default:
-							// - In many upstream harness shapes, locals like `args` come from `Sys.args()`.
-							// - Stage3 typing does not always preserve `Array<T>` for these locals, but
-							//   treating `.length` as array length is far safer than collapsing to poison
-							//   (poison in conditions can lead to out-of-bounds access and segfaults).
-							return "HxBootArray.length (" + o + ")";
+							return emitUnknownLength(o);
 						case _:
 					}
 				}
@@ -2645,31 +2795,39 @@ class EmitterStage {
 					function fallbackLocalFunctionSig(name:String):Null<EmitterCallSig> {
 						if (currentModuleFilePath == null || currentModuleFilePath.length == 0)
 							return null;
-						try {
-							final source = sys.io.File.getContent(currentModuleFilePath);
-							final parsed = ParserStage.parse(source, currentModuleFilePath);
-							final decl = parsed.getDecl();
-							final moduleTypeName = expectedMainClassFromFilePath(currentModuleFilePath);
-							final currentShortName = currentModuleShortName();
-							for (cls in HxModuleDecl.getClasses(decl)) {
-								final className = HxClassDecl.getName(cls);
-								if (className == null || className.length == 0 || className == "Unknown")
-									continue;
-								if (moduleTypeName != null && moduleTypeName.length > 0) {
-									if (className != moduleTypeName)
+						if (currentLocalCallSigCache == null) {
+							final cache:Map<String, EmitterCallSig> = new Map();
+							try {
+								final source = sys.io.File.getContent(currentModuleFilePath);
+								final parsed = ParserStage.parse(source, currentModuleFilePath);
+								final decl = parsed.getDecl();
+								final moduleTypeName = expectedMainClassFromFilePath(currentModuleFilePath);
+								final currentShortName = currentModuleShortName();
+								for (cls in HxModuleDecl.getClasses(decl)) {
+									final className = HxClassDecl.getName(cls);
+									if (className == null || className.length == 0 || className == "Unknown")
 										continue;
-								} else if (currentShortName.length > 0 && className != currentShortName) {
-									continue;
-								}
-								for (fn in HxClassDecl.getFunctions(cls)) {
-									final fnNameRaw = HxFunctionDecl.getName(fn);
-									if (fnNameRaw == null || fnNameRaw.length == 0)
+									if (moduleTypeName != null && moduleTypeName.length > 0) {
+										if (className != moduleTypeName)
+											continue;
+									} else if (currentShortName.length > 0 && className != currentShortName) {
 										continue;
-									if (ocamlValueIdent(fnNameRaw) == name || fnNameRaw == name)
-										return callSigFromFunction(fn);
+									}
+									for (fn in HxClassDecl.getFunctions(cls)) {
+										final fnNameRaw = HxFunctionDecl.getName(fn);
+										if (fnNameRaw == null || fnNameRaw.length == 0)
+											continue;
+										final sig = callSigFromFunction(fn);
+										cache.set(fnNameRaw, sig);
+										cache.set(ocamlValueIdent(fnNameRaw), sig);
+									}
 								}
-							}
-						} catch (_:haxe.Exception) {} catch (_:String) {}
+							} catch (_:haxe.Exception) {} catch (_:String) {}
+							currentLocalCallSigCache = cache;
+						}
+						final cached = currentLocalCallSigCache.get(name);
+						if (cached != null)
+							return cached;
 						return null;
 					}
 
@@ -2688,7 +2846,6 @@ class EmitterStage {
 							}
 						}
 					}
-
 					// Stage 3 bring-up safety: avoid emitting OCaml that over-applies a function.
 					//
 					// Why
@@ -2856,9 +3013,14 @@ class EmitterStage {
 						for (_ in 0...missingCount)
 							fullArgs.push(ENull);
 
-						final renderedArgs = fullArgs.map(a -> "("
-							+ exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-							+ ")");
+						final renderedArgs = new Array<String>();
+						for (argIndex in 0...fullArgs.length) {
+							final renderedArg = "("
+								+ exprToOcaml(fullArgs[argIndex], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+									callSigByCallee)
+								+ ")";
+							renderedArgs.push(renderedArg);
+						}
 						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1;
 						final isContextLoadFlattenedCall = c == "Haxe_macro_Context.load" && renderedArgs.length > 2;
 						final isContextLoadFollowupCall = StringTools.startsWith(c, "Haxe_macro_Context.load ") && renderedArgs.length > 0;
@@ -3013,6 +3175,28 @@ class EmitterStage {
 
 				final portableAutoMetalizedRegion = isPortableAutoMetalizedRegionActive();
 				final metalNumeric = isMetalProfileActive() || portableAutoMetalizedRegion;
+				inline function exprToOcamlAsInt64(expr:HxExpr):String {
+					final rendered = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee);
+					return isInt64Expr(expr) ? rendered : ("Haxe_Int64.ofInt (" + rendered + ")");
+				}
+				inline function int64DivModField(field:String):String {
+					return "(Obj.magic (HxAnon.get (Obj.repr (Haxe_Int64.divMod (" + exprToOcamlAsInt64(a) + ") (" + exprToOcamlAsInt64(b) + "))) "
+						+ escapeOcamlString(field) + "))";
+				}
+				inline function int64BinopCall(binop:String):String {
+					final fn = switch (binop) {
+						case "+":
+							"add";
+						case "-":
+							"sub";
+						case "*":
+							"mul";
+						case _:
+							null;
+					}
+					return fn == null ? "(Obj.magic 0)" : ("Haxe_Int64." + fn + " (" + exprToOcamlAsInt64(a) + ") (" + exprToOcamlAsInt64(b) + ")");
+				}
 				switch (op) {
 					case "=":
 						switch (a) {
@@ -3034,71 +3218,86 @@ class EmitterStage {
 					case "+" if (isStringExpr(a) || isStringExpr(b)):
 						"((" + exprToOcamlForConcat(a) + ") ^ (" + exprToOcamlForConcat(b) + "))";
 					case "/":
-						// Bring-up compromise:
-						// - When both sides look numeric (`Int`/`Float`), follow Haxe and emit float division.
-						// - Otherwise, collapse to bring-up poison to avoid type errors for abstract/operator-
-						//   overloaded cases (e.g. upstream Int64 tests).
-						final aIsF = isFloatExpr(a);
-						final bIsF = isFloatExpr(b);
-						final aIsI = isIntExpr(a);
-						final bIsI = isIntExpr(b);
-						final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
-						final allowMetalFallback = metalNumeric && hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
-						if (allowMetalFallback && portableAutoMetalizedRegion && !isMetalProfileActive())
-							markPortableAutoMetalizedLoweringUse("numeric_division_fallback");
-						final allowNumericDivision = (aIsF || bIsF) || (aIsI && bIsI) || allowMetalFallback;
-						allowNumericDivision ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) + "))" : "(Obj.magic 0)";
+						if (isInt64Expr(a) || isInt64Expr(b)) {
+							int64DivModField("quotient");
+						} else {
+							// Bring-up compromise:
+							// - When both sides look numeric (`Int`/`Float`), follow Haxe and emit float division.
+							// - Otherwise, collapse to bring-up poison to avoid type errors for abstract/operator-
+							//   overloaded cases (e.g. upstream Int64 tests).
+							final aIsF = isFloatExpr(a);
+							final bIsF = isFloatExpr(b);
+							final aIsI = isIntExpr(a);
+							final bIsI = isIntExpr(b);
+							final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
+							final allowMetalFallback = metalNumeric && hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
+							if (allowMetalFallback && portableAutoMetalizedRegion && !isMetalProfileActive())
+								markPortableAutoMetalizedLoweringUse("numeric_division_fallback");
+							final allowNumericDivision = (aIsF || bIsF) || (aIsI && bIsI) || allowMetalFallback;
+							allowNumericDivision ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) + "))" : "(Obj.magic 0)";
+						}
 					case "+" | "-" | "*" | "%":
-						// Best-effort numeric lowering:
-						// - if both sides look like floats, use OCaml float operators,
-						// - if both sides look like ints, use OCaml int operators,
-						// - otherwise, collapse to bring-up poison to avoid type errors.
-						final aIsF = isFloatExpr(a);
-						final bIsF = isFloatExpr(b);
-						final aIsI = isIntExpr(a);
-						final bIsI = isIntExpr(b);
-						final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
-						// Portable lane parity: when one side is confidently numeric and the other side
-						// is an expression the current heuristic cannot classify, prefer numeric lowering
-						// over bring-up poison.
-						//
-						// This keeps hot-path arithmetic (`Int + call()`, `Int * call()`, `Int % call()`)
-						// executable in portable mode while still rejecting obvious string concatenations.
-						final allowNumericFallback = hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
-						final canFloat = (op == "+" || op == "-" || op == "*" || op == "/");
-						if (op == "%") {
-							if (aIsF || bIsF) {
+						if (isInt64Expr(a) || isInt64Expr(b)) {
+							switch (op) {
+								case "+" | "-" | "*":
+									int64BinopCall(op);
+								case "%":
+									int64DivModField("modulus");
+								case _:
+									"(Obj.magic 0)";
+							}
+						} else {
+							// Best-effort numeric lowering:
+							// - if both sides look like floats, use OCaml float operators,
+							// - if both sides look like ints, use OCaml int operators,
+							// - otherwise, collapse to bring-up poison to avoid type errors.
+							final aIsF = isFloatExpr(a);
+							final bIsF = isFloatExpr(b);
+							final aIsI = isIntExpr(a);
+							final bIsI = isIntExpr(b);
+							final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
+							// Portable lane parity: when one side is confidently numeric and the other side
+							// is an expression the current heuristic cannot classify, prefer numeric lowering
+							// over bring-up poison.
+							//
+							// This keeps hot-path arithmetic (`Int + call()`, `Int * call()`, `Int % call()`)
+							// executable in portable mode while still rejecting obvious string concatenations.
+							final allowNumericFallback = hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
+							final canFloat = (op == "+" || op == "-" || op == "*" || op == "/");
+							if (op == "%") {
+								if (aIsF || bIsF) {
+									final fa = exprToOcamlAsFloat(a);
+									final fb = exprToOcamlAsFloat(b);
+									"(mod_float (" + fa + ") (" + fb + "))";
+								} else if (aIsI && bIsI) {
+									intBinopCall("%", la, rb);
+								} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
+									intBinopCall("%", la, rb);
+								} else if (allowNumericFallback) {
+									intBinopCall("%", la, rb);
+								} else {
+									"(Obj.magic 0)";
+								}
+							} else if ((aIsF || bIsF) && canFloat) {
+								final fop = switch (op) {
+									case "+": "+.";
+									case "-": "-.";
+									case "*": "*.";
+									case "/": "/.";
+									case _: op;
+								}
 								final fa = exprToOcamlAsFloat(a);
 								final fb = exprToOcamlAsFloat(b);
-								"(mod_float (" + fa + ") (" + fb + "))";
+								"((" + fa + ") " + fop + " (" + fb + "))";
 							} else if (aIsI && bIsI) {
-								intBinopCall("%", la, rb);
+								intBinopCall(op, la, rb);
 							} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
-								intBinopCall("%", la, rb);
+								intBinopCall(op, la, rb);
 							} else if (allowNumericFallback) {
-								intBinopCall("%", la, rb);
+								intBinopCall(op, la, rb);
 							} else {
 								"(Obj.magic 0)";
 							}
-						} else if ((aIsF || bIsF) && canFloat) {
-							final fop = switch (op) {
-								case "+": "+.";
-								case "-": "-.";
-								case "*": "*.";
-								case "/": "/.";
-								case _: op;
-							}
-							final fa = exprToOcamlAsFloat(a);
-							final fb = exprToOcamlAsFloat(b);
-							"((" + fa + ") " + fop + " (" + fb + "))";
-						} else if (aIsI && bIsI) {
-							intBinopCall(op, la, rb);
-						} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
-							intBinopCall(op, la, rb);
-						} else if (allowNumericFallback) {
-							intBinopCall(op, la, rb);
-						} else {
-							"(Obj.magic 0)";
 						}
 					case "==":
 						if (isFloatExpr(a) || isFloatExpr(b)) {
@@ -3317,12 +3516,32 @@ class EmitterStage {
 			return mapGetRaw(staticImportByIdentRaw, name) != null;
 		}
 
-		inline function tyForIdent(name:String):String {
+		function tyForIdent(name:String):String {
 			final resolved = mapGetRaw(emissionTyByIdentRaw, resolveTyIdentName(name));
-			if (resolved == null)
-				return "";
-			final t:TyType = cast resolved;
-			return t == null ? "" : t.toString();
+			final t:Null<TyType> = cast resolved;
+			final ts = t == null ? "" : t.toString();
+			final shouldUseLocalHint = resolved == null || ts.length == 0 || ts == "Dynamic" || ts == "Unknown" || ts == "Array";
+			if (shouldUseLocalHint) {
+				final localHints:Null<Map<String, TyType>> = cast currentFunctionLocalTypeHints;
+				if (localHints != null) {
+					final hinted:Null<TyType> = cast mapGetRaw(localHints, name);
+					if (hinted != null) {
+						final hintedS = hinted.toString();
+						if (hintedS.length > 0 && hintedS != "Dynamic" && hintedS != "Unknown" && hintedS != "Array")
+							return hintedS;
+					}
+					final lowered = ocamlValueIdent(name);
+					if (lowered != name) {
+						final loweredHint:Null<TyType> = cast mapGetRaw(localHints, lowered);
+						if (loweredHint != null) {
+							final loweredHintS = loweredHint.toString();
+							if (loweredHintS.length > 0 && loweredHintS != "Dynamic" && loweredHintS != "Unknown" && loweredHintS != "Array")
+								return loweredHintS;
+						}
+					}
+				}
+			}
+			return ts;
 		}
 
 		// Stage 3 bring-up: if we couldn't parse/type an expression, keep compilation moving.
@@ -3531,11 +3750,11 @@ class EmitterStage {
 					case EIdent(name) if (tyForIdent(name) == "Int"):
 						"float_of_int " + ocamlReadValueIdent(name);
 					case EField(_, field) if (field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN"):
-						"(Obj.magic (" + exprToOcaml(e, arityByIdentRaw, eraseBoundary(emissionTyByIdent), staticImportByIdentRaw, currentPackagePath,
+						"(Obj.magic (" + exprToOcaml(e, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath,
 							moduleNameByPkgAndClassRaw, callSigByCalleeRaw) + ") : float)";
 					case _:
-						exprToOcaml(e, arityByIdentRaw, eraseBoundary(emissionTyByIdent), staticImportByIdentRaw, currentPackagePath,
-							moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+						exprToOcaml(e, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+							callSigByCalleeRaw);
 				}
 			}
 			return switch (expr) {
@@ -3544,12 +3763,12 @@ class EmitterStage {
 				case EUnop("-", inner):
 					"(-.(" + asFloatValue(inner) + "))";
 				case _:
-					exprToOcaml(expr, arityByIdentRaw, eraseBoundary(emissionTyByIdent), staticImportByIdentRaw, currentPackagePath,
-						moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+					exprToOcaml(expr, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+						callSigByCalleeRaw);
 			}
 		}
 
-		return exprToOcaml(expr, arityByIdentRaw, eraseBoundary(emissionTyByIdent), staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+		return exprToOcaml(expr, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
 			callSigByCalleeRaw);
 	}
 
@@ -3876,6 +4095,19 @@ class EmitterStage {
 			return t.toString() == expected;
 		}
 
+		inline function isInt64HintText(t:String):Bool {
+			if (t == null)
+				return false;
+			final trimmed = StringTools.trim(t);
+			if (trimmed.length == 0)
+				return false;
+			return trimmed == "haxe.Int64"
+				|| trimmed == "Int64"
+				|| StringTools.endsWith(trimmed, ".Int64")
+				|| StringTools.endsWith(trimmed, "_Int64")
+				|| trimmed.indexOf("Int64") >= 0;
+		}
+
 		function arrayElemTypeFromTy(t:Null<TyType>):TyType {
 			if (t == null)
 				return TyType.unknown();
@@ -3887,6 +4119,25 @@ class EmitterStage {
 				return TyType.fromHintText(inner);
 			}
 			return TyType.unknown();
+		}
+
+		function hintedTyForIdent(name:String):TyType {
+			if (name == null || name.length == 0)
+				return TyType.unknown();
+			final hinted = localHints.get(name);
+			if (hinted != null)
+				return hinted;
+			var key = name;
+			if (mapGetRaw(cast tyByIdent, key) == null) {
+				final lowered = ocamlValueIdent(name);
+				if (lowered != name && mapGetRaw(cast tyByIdent, lowered) != null)
+					key = lowered;
+			}
+			final resolved = mapGetRaw(cast tyByIdent, key);
+			if (resolved == null)
+				return TyType.unknown();
+			final typed:TyType = cast resolved;
+			return typed == null ? TyType.unknown() : typed;
 		}
 
 		function inferInitType(e:HxExpr, ?boundName:String, ?boundTy:TyType):TyType {
@@ -3904,10 +4155,16 @@ class EmitterStage {
 				case EField(EIdent("Math"), "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY" | "PI"):
 					TyType.fromHintText("Float");
 				case EIdent(name):
-					if (boundName != null && name == boundName && boundTy != null) boundTy; else {
-						final t = localHints.get(name);
-						t == null ? TyType.unknown() : t;
-					}
+					if (boundName != null && name == boundName && boundTy != null) boundTy; else hintedTyForIdent(name);
+				case ECall(EField(_obj, "substr" | "substring" | "toLowerCase" | "toUpperCase" | "trim"), _args):
+					TyType.fromHintText("String");
+				case ECall(EField(_obj, "toString"), []):
+					TyType.fromHintText("String");
+				case ECall(EField(EIdent(owner), field), _args):
+					if ((owner == "Int64" || owner == "haxe.Int64")
+						&& (field == "make" || field == "ofInt" || field == "parseString" || field == "add" || field == "sub" || field == "mul"
+							|| field == "neg" || field == "div" || field == "mod" || field == "divMod")) TyType.fromHintText("haxe.Int64"); else
+						TyType.unknown();
 				case EBinop(op, left, right):
 					final lt = inferInitType(left, boundName, boundTy);
 					final rt = inferInitType(right, boundName, boundTy);
@@ -3915,10 +4172,13 @@ class EmitterStage {
 						&& (isTyNamed(lt,
 							"String") || isTyNamed(rt,
 								"String"))) TyType.fromHintText("String"); else if (op == "/"
+						&& (isInt64HintText(lt.toString()) || isInt64HintText(rt.toString()))) TyType.fromHintText("haxe.Int64"); else if (op == "/"
 						&& ((isTyNamed(lt, "Int") || isTyNamed(lt, "Float"))
 							&& (isTyNamed(rt,
 								"Int") || isTyNamed(rt,
 									"Float")))) TyType.fromHintText("Float"); else if ((op == "+" || op == "-" || op == "*" || op == "%")
+						&& (isInt64HintText(lt.toString()) || isInt64HintText(rt.toString()))) TyType.fromHintText("haxe.Int64"); else if ((op == "+"
+						|| op == "-" || op == "*" || op == "%")
 						&& isTyNamed(lt, "Int")
 						&& isTyNamed(rt,
 							"Int")) TyType.fromHintText("Int"); else if ((op == "+" || op == "-" || op == "*")
@@ -3974,15 +4234,19 @@ class EmitterStage {
 				return;
 			for (s in ss) {
 				switch (s) {
-					case SVar(name, _hint, init, _pos):
+					case SVar(name, hint, init, _pos):
 						if (name == null || name.length == 0)
 							continue;
 						final existing = localHints.get(name);
+						final hinted = hint == null ? TyType.unknown() : TyType.fromHintText(hint);
 						final inferred = inferInitType(init);
 						final existingNeedsUpgrade = existing == null || existing.isUnknown() || existing.toString() == "Dynamic"
 							|| existing.toString() == "Array";
+						final explicitHintUseful = !hinted.isUnknown() && hinted.toString() != "Dynamic";
 						final inferredUseful = !inferred.isUnknown() && inferred.toString() != "Dynamic";
-						if (existingNeedsUpgrade && inferredUseful) {
+						if (existingNeedsUpgrade && explicitHintUseful) {
+							localHints.set(name, hinted);
+						} else if (existingNeedsUpgrade && inferredUseful) {
 							localHints.set(name, inferred);
 						}
 					case _:
@@ -3991,6 +4255,8 @@ class EmitterStage {
 		}
 
 		seedLocalHintsFromStmts(stmts);
+		final previousStmtLocalTypeHints = currentFunctionLocalTypeHints;
+		currentFunctionLocalTypeHints = localHints;
 
 		/**
 			Stage 3 bring-up: compute statement-local "vars in scope before this statement".
@@ -4103,6 +4369,27 @@ class EmitterStage {
 			return out;
 		}
 
+		function buildStmtTyEntries(tyCtx:Map<String, TyType>):Array<_LocalTyEntry> {
+			final out = new Array<_LocalTyEntry>();
+			function pushEntry(name:String, ty:Null<TyType>):Void {
+				if (name == null || name.length == 0 || ty == null)
+					return;
+				final tyS = ty.toString();
+				if (tyS == null || tyS.length == 0)
+					return;
+				for (entry in out)
+					if (entry.name == name)
+						return;
+				out.push(new _LocalTyEntry(name, tyS));
+			}
+			if (tyCtx != null)
+				for (name in tyCtx.keys())
+					pushEntry(name, tyCtx.get(name));
+			for (name in localHints.keys())
+				pushEntry(name, localHints.get(name));
+			return out;
+		}
+
 		final localsBefore = localsInScopeBefore(stmts);
 
 		function stmtAlwaysReturns(s:HxStmt):Bool {
@@ -4176,7 +4463,7 @@ class EmitterStage {
 			inline function localReadIdent(raw:String):String {
 				return ocamlReadValueIdent(raw);
 			}
-			inline function localTyForIdent(raw:String):String {
+			function localTyForIdent(raw:String):String {
 				var key = raw;
 				if (mapGetRaw(tyCtx, key) == null) {
 					final lowered = ocamlValueIdent(raw);
@@ -4184,8 +4471,18 @@ class EmitterStage {
 						key = lowered;
 				}
 				final resolved = mapGetRaw(tyCtx, key);
-				if (resolved == null)
+				if (resolved == null) {
+					final hinted = localHints.get(raw);
+					if (hinted != null)
+						return hinted.toString();
+					final lowered = ocamlValueIdent(raw);
+					if (lowered != raw) {
+						final loweredHint = localHints.get(lowered);
+						if (loweredHint != null)
+							return loweredHint.toString();
+					}
 					return "";
+				}
 				final t:TyType = cast resolved;
 				return t == null ? "" : t.toString();
 			}
@@ -4201,6 +4498,20 @@ class EmitterStage {
 						"(HxInt.rem (" + left + ") (" + right + "))";
 					case _:
 						"(Obj.magic 0)";
+				}
+			}
+			function localExprToOcamlAsFloatValue(expr:HxExpr):String {
+				return switch (expr) {
+					case EInt(v):
+						"float_of_int " + Std.string(v);
+					case EUnop("-", inner):
+						"(-.(" + localExprToOcamlAsFloatValue(inner) + "))";
+					case EIdent(raw) if (localTyForIdent(raw) == "Int"):
+						"float_of_int " + localReadIdent(raw);
+					case EIdent(raw):
+						localReadIdent(raw);
+					case _:
+						exprToOcaml(expr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				}
 			}
 			final lhsCode = localReadIdent(name);
@@ -4221,6 +4532,25 @@ class EmitterStage {
 				}
 			inline function isIntLikeLocalTy(t:String):Bool {
 				return t == "Int" || t == "" || t == "Dynamic" || t == "Unknown";
+			}
+			if (lhsTy == "Float") {
+				final rhsFloat = localExprToOcamlAsFloatValue(rhs);
+				final directFloatRhs = switch (op) {
+					case "+=":
+						"((" + lhsCode + ") +. (" + rhsFloat + "))";
+					case "-=":
+						"((" + lhsCode + ") -. (" + rhsFloat + "))";
+					case "*=":
+						"((" + lhsCode + ") *. (" + rhsFloat + "))";
+					case "/=":
+						"((" + lhsCode + ") /. (" + rhsFloat + "))";
+					case "%=":
+						"(mod_float (" + lhsCode + ") (" + rhsFloat + "))";
+					case _:
+						null;
+				}
+				if (directFloatRhs != null)
+					return "(let __hx_v = (" + directFloatRhs + ") in (" + ocamlValueIdent(name) + " := __hx_v; ()))";
 			}
 			if (isIntLikeLocalTy(lhsTy)) {
 				final directIntRhs = switch (op) {
@@ -4656,6 +4986,8 @@ class EmitterStage {
 			final idx = stmts.length - 1 - i;
 			final s = stmts[idx];
 			final tyCtx:Map<String, TyType> = extendTyWithLocals(cast tyByIdent, localsBefore[idx]);
+			final prevStmtTyEntries = currentStmtTyEntries;
+			currentStmtTyEntries = buildStmtTyEntries(tyCtx);
 			switch (s) {
 				case SVar(name, _typeHint, init, _pos):
 					final rhs = if (init == null) {
@@ -4730,8 +5062,10 @@ class EmitterStage {
 					// a definite `return` in the same block (unreachable in Haxe).
 					out = stmtAlwaysReturns(s) ? stmtToUnit(s, cast tyCtx) : ("(" + stmtToUnit(s, cast tyCtx) + "; " + out + ")");
 			}
+			currentStmtTyEntries = prevStmtTyEntries;
 		}
 		currentMutableLocalRefNames = prevMutableLocalRefNames;
+		currentFunctionLocalTypeHints = previousStmtLocalTypeHints;
 		return out;
 	}
 
@@ -4953,6 +5287,8 @@ class EmitterStage {
 					"(* hxhx(stage3) bootstrap shim: Lambda *)\n"
 					+ "let array it =\n"
 					+ "  HxBootArray.of_list (List.of_seq (it : _ Seq.t))\n"
+					+ "let list it =\n"
+					+ "  List.of_seq (it : _ Seq.t)\n"
 					+ "let fold it f first =\n"
 					+ "  let acc = ref first in\n"
 					+ "  Seq.iter (fun x -> acc := f x !acc) (it : _ Seq.t);\n"
@@ -5105,9 +5441,9 @@ class EmitterStage {
 		}
 
 		_EmitterStageDebug.traceStage3Phase("before_typed_modules");
-		final typedModules = p.getTypedModules();
-		_EmitterStageDebug.traceStage3Phase("after_typed_modules:" + typedModules.length);
-		if (typedModules.length == 0)
+		final typedModulesRaw = p.getTypedModules();
+		_EmitterStageDebug.traceStage3Phase("after_typed_modules_raw:" + typedModulesRaw.length);
+		if (typedModulesRaw.length == 0)
 			throw "stage3 emitter: empty typed module graph";
 
 		// Stage 3 bring-up: avoid emitting placeholder units that shadow the repo-owned runtime.
@@ -5189,6 +5525,28 @@ class EmitterStage {
 			final nm = nm0 == null ? "" : StringTools.trim(nm0);
 			return (nm.length > 0 && nm != "Unknown") ? nm : null;
 		}
+
+		function uniqueTypedModules(mods:Array<TypedModule>):Array<TypedModule> {
+			if (mods == null || mods.length <= 1)
+				return mods;
+			final seen = new Map<String, Bool>();
+			final out = new Array<TypedModule>();
+			for (tm in mods) {
+				if (tm == null)
+					continue;
+				final filePath = tm.getParsed().getFilePath();
+				final moduleTypeName = moduleTypeNameFor(tm);
+				final key = (filePath == null ? "" : filePath) + "::" + (moduleTypeName == null ? "" : moduleTypeName);
+				if (seen.exists(key))
+					continue;
+				seen.set(key, true);
+				out.push(tm);
+			}
+			return out;
+		}
+
+		final typedModules = uniqueTypedModules(typedModulesRaw);
+		_EmitterStageDebug.traceStage3Phase("after_typed_modules_unique:" + typedModules.length);
 
 		inline function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:Null<String>, typeName:String):String {
 			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
@@ -5741,6 +6099,7 @@ class EmitterStage {
 				if (nm == null || nm.length == 0 || nm == "Unknown")
 					return null;
 				final moduleName = moduleNameForDecl(decl, moduleTypeName, nm);
+				_EmitterStageDebug.traceStage3Phase("emit_stub_begin:" + moduleName);
 
 				final prevInt64 = currentImportInt64;
 				currentImportInt64 = importInt64;
@@ -5797,6 +6156,7 @@ class EmitterStage {
 						if (knownType == null || (knownType.isUnknown() && !inferredType.isUnknown()))
 							staticTyByIdent.set(nameRaw, inferredType);
 					}
+					_EmitterStageDebug.traceStage3Phase("emit_stub_after_fields:" + moduleName);
 
 					// Emit function stubs with correct arity to avoid OCaml partial application issues.
 					for (fn in HxClassDecl.getFunctions(cls)) {
@@ -5815,9 +6175,13 @@ class EmitterStage {
 						out.push("let " + ocamlValueIdent(nameRaw) + " " + ocamlArgs + " = (Obj.magic 0)");
 						out.push("");
 					}
+					_EmitterStageDebug.traceStage3Phase("emit_stub_after_functions:" + moduleName);
 
 					final mlPath = haxe.io.Path.join([outAbs, moduleName + ".ml"]);
+					_EmitterStageDebug.traceStage3Phase("emit_stub_before_write:" + moduleName);
 					sys.io.File.saveContent(mlPath, out.join("\n"));
+					_EmitterStageDebug.traceStage3Phase("emit_stub_after_write:" + moduleName);
+					_EmitterStageDebug.traceStage3Phase("emit_stub_done:" + moduleName);
 					currentImportInt64 = prevInt64;
 					return moduleName + ".ml";
 				} catch (e:TyperError) {
@@ -5832,6 +6196,7 @@ class EmitterStage {
 			function emitMainClass():Null<String> {
 				final prevOcamlModule = currentOcamlModuleName;
 				final prevModuleFilePath = currentModuleFilePath;
+				final prevLocalCallSigCache = currentLocalCallSigCache;
 				final prevInt64 = currentImportInt64;
 				final prevInstanceFieldsByTypePath = currentInstanceFieldsByTypePath;
 				final prevInstanceMethodsByTypePath = currentInstanceMethodsByTypePath;
@@ -5839,6 +6204,7 @@ class EmitterStage {
 				final mainClassName = HxClassDecl.getName(mainClass);
 				currentOcamlModuleName = mainModuleName;
 				currentModuleFilePath = moduleFilePath;
+				currentLocalCallSigCache = null;
 				currentImportInt64 = importInt64;
 				try {
 					final parsedFns = HxClassDecl.getFunctions(mainClass);
@@ -6295,6 +6661,10 @@ class EmitterStage {
 							final tf = group[i];
 							final nameRaw = tf.getName();
 							final name = ocamlValueIdent(nameRaw);
+							_EmitterStageDebug.traceStage3Phase("emit_fn_begin:" + mainModuleName + ":" + nameRaw);
+							final previousFunctionName = currentFunctionName;
+							currentFunctionName = nameRaw;
+							final previousFunctionLocalTypeHints = currentFunctionLocalTypeHints;
 							final previousRegionKey = currentPortableMetalizationRegionKey;
 							currentPortableMetalizationRegionKey = backend.ocaml.PortableMetalizationPlanner.functionRegionKey(moduleFilePath, mainClassName,
 								nameRaw);
@@ -6344,6 +6714,17 @@ class EmitterStage {
 										localTypeHints.set(n, l.getType());
 								}
 							}
+							currentFunctionLocalTypeHints = localTypeHints;
+							for (localName in localTypeHints.keys()) {
+								if (localName == null || localName.length == 0)
+									continue;
+								final localTy = localTypeHints.get(localName);
+								if (localTy == null)
+									continue;
+								final existing = tyByIdent.get(localName);
+								if (existing == null || existing.isUnknown() || existing.toString() == "Dynamic" || existing.toString() == "Array")
+									tyByIdent.set(localName, localTy);
+							}
 							for (name in allowed.keys())
 								if (tyByIdent.get(name) == null)
 									tyByIdent.set(name, TyType.unknown());
@@ -6383,10 +6764,14 @@ class EmitterStage {
 								final arg1 = ocamlReadValueIdent(args[1].getName());
 								body = "compare (this_) (" + arg0 + ") (" + arg1 + ")";
 							}
+							_EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + mainModuleName + ":" + nameRaw);
 
 							final kw = i == 0 ? "let rec" : "and";
 							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 							out.push("");
+							_EmitterStageDebug.traceStage3Phase("emit_fn_done:" + mainModuleName + ":" + nameRaw);
+							currentFunctionName = previousFunctionName;
+							currentFunctionLocalTypeHints = previousFunctionLocalTypeHints;
 							currentPortableMetalizationRegionKey = previousRegionKey;
 						}
 					}
@@ -6848,6 +7233,7 @@ class EmitterStage {
 					sys.io.File.saveContent(mlPath, out.join("\n"));
 					currentOcamlModuleName = prevOcamlModule;
 					currentModuleFilePath = prevModuleFilePath;
+					currentLocalCallSigCache = prevLocalCallSigCache;
 					currentImportInt64 = prevInt64;
 					currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
 					currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
@@ -6855,6 +7241,7 @@ class EmitterStage {
 				} catch (e:TyperError) {
 					currentOcamlModuleName = prevOcamlModule;
 					currentModuleFilePath = prevModuleFilePath;
+					currentLocalCallSigCache = prevLocalCallSigCache;
 					currentImportInt64 = prevInt64;
 					currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
 					currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
@@ -6862,6 +7249,7 @@ class EmitterStage {
 				} catch (e:String) {
 					currentOcamlModuleName = prevOcamlModule;
 					currentModuleFilePath = prevModuleFilePath;
+					currentLocalCallSigCache = prevLocalCallSigCache;
 					currentImportInt64 = prevInt64;
 					currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
 					currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
@@ -6871,9 +7259,11 @@ class EmitterStage {
 
 			final files = new Array<String>();
 			var rootMain:Null<String> = null;
+			_EmitterStageDebug.traceStage3Phase("emit_module_begin:" + className);
 
 			// Emit the main class first (typed, optional full bodies).
 			final mainPath = isRuntimeProvided ? null : emitMainClass();
+			_EmitterStageDebug.traceStage3Phase("emit_module_after_main:" + className);
 			if (mainPath != null) {
 				files.push(mainPath);
 				if (isRoot)
@@ -6897,6 +7287,7 @@ class EmitterStage {
 				if (p != null)
 					files.push(p);
 			}
+			_EmitterStageDebug.traceStage3Phase("emit_module_done:" + className + ":" + files.length);
 
 			return {files: files, rootMain: rootMain};
 		}
@@ -6911,10 +7302,12 @@ class EmitterStage {
 			for (f in r.files)
 				emittedModulePaths.push(f);
 		}
+		_EmitterStageDebug.traceStage3Phase("after_emit_deps:" + emittedModulePaths.length);
 		final rr = emitModule(typedModules[0], true);
 		for (f in rr.files)
 			emittedModulePaths.push(f);
 		rootMainPath = rr.rootMain;
+		_EmitterStageDebug.traceStage3Phase("after_emit_root:" + emittedModulePaths.length);
 
 		// Stage 3 bring-up: upstream unit fixtures use `StringTools.hex`, but our Stage3 typing
 		// frequently produces a placeholder `StringTools.ml` compilation unit with no members.
@@ -6988,6 +7381,7 @@ class EmitterStage {
 				}
 			} catch (_:haxe.io.Error) {} catch (_:String) {}
 		}
+		_EmitterStageDebug.traceStage3Phase("after_shim_stringtools");
 
 		// Stage 3 safety: avoid segfault-shaped behavior in generated macro context wrappers.
 		//
@@ -7037,6 +7431,7 @@ class EmitterStage {
 				}
 			}
 		}
+		_EmitterStageDebug.traceStage3Phase("after_shim_macro_context");
 		// Stage 3 warning-20 noise control:
 		// add warning-20 suppression to generated modules where placeholder
 		// arity intentionally diverges during bring-up (macro bridge + syntax shims).
@@ -7058,6 +7453,7 @@ class EmitterStage {
 				} catch (_:haxe.io.Error) {} catch (_:String) {}
 			}
 		}
+		_EmitterStageDebug.traceStage3Phase("after_shim_warning20");
 
 		// Stage 3 bring-up: upstream unit fixtures call `haxe.xml.Parser.parse(...)`, but our Stage3
 		// typing can emit a `Haxe_xml_Parser.ml` unit that only contains placeholder statics
@@ -7087,6 +7483,7 @@ class EmitterStage {
 				}
 			} catch (_:haxe.io.Error) {} catch (_:String) {}
 		}
+		_EmitterStageDebug.traceStage3Phase("after_shim_xml_parser");
 
 		// Stage 3 bring-up: upstream unit fixtures use `Xml.*` helpers (e.g. `Xml.createElement`)
 		// but Stage3 typing doesn't yet guarantee an emitted provider module for `Xml`.
@@ -7129,6 +7526,7 @@ class EmitterStage {
 				generatedPaths.push(shimFile);
 			}
 		}
+		_EmitterStageDebug.traceStage3Phase("after_shim_xml");
 
 		// Stage 3 bring-up: upstream `php/Boot.hx` can emit unary minus over `php.Const.INF`
 		// through expression paths that still infer an int operator, yielding:
@@ -7146,6 +7544,7 @@ class EmitterStage {
 					sys.io.File.saveContent(shimPath, patched);
 			}
 		}
+		_EmitterStageDebug.traceStage3Phase("after_shim_php_boot");
 
 		// Stage 3 bring-up: explicit imports like `import haxe.CallStack;` allow referring to the
 		// type/module as `CallStack` in Haxe source.
@@ -7166,6 +7565,7 @@ class EmitterStage {
 				generatedPaths.push(shimFile);
 			}
 		}
+		_EmitterStageDebug.traceStage3Phase("after_shim_callstack");
 
 		// Stage 3 bring-up: root stdlib `Type.*` calls in emitted runtime code must resolve to the
 		// target runtime helper module (`HxType`), not to `haxe.macro.Type`.
@@ -7181,11 +7581,24 @@ class EmitterStage {
 			final shimName = "Type";
 			final shimFile = shimName + ".ml";
 			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-			final shimBody = "(* hxhx(stage3) bootstrap import shim: Type = HxType *)\n" + "include HxType\n";
+			final shimBody = "(* hxhx(stage3) bootstrap import shim: Type = HxType *)\n"
+				+ "include HxType\n"
+				+ "\n"
+				+ "let getClassName (c : 'a) : string = HxType.getClassName (Obj.repr c)\n"
+				+ "let getEnumName (e : 'a) : string = HxType.getEnumName (Obj.repr e)\n"
+				+ "let getSuperClass (c : 'a) : Obj.t = HxType.getSuperClass (Obj.repr c)\n"
+				+ "let getInstanceFields (c : 'a) : string HxArray.t = HxType.getInstanceFields (Obj.repr c)\n"
+				+ "let getClassFields (c : 'a) : string HxArray.t = HxType.getClassFields (Obj.repr c)\n"
+				+ "let createInstance (c : 'a) (args : Obj.t HxArray.t) : Obj.t = HxType.createInstance (Obj.repr c) args\n"
+				+ "let createEmptyInstance (c : 'a) : Obj.t = HxType.createEmptyInstance (Obj.repr c)\n"
+				+ "let createEnum (e : 'a) (ctor_name : string) (params : Obj.t HxArray.t) : Obj.t = HxType.createEnum (Obj.repr e) ctor_name params\n"
+				+ "let createEnumIndex (e : 'a) (idx : int) (params : Obj.t HxArray.t) : Obj.t = HxType.createEnumIndex (Obj.repr e) idx params\n"
+				+ "let getEnumConstructs (e : 'a) : string HxArray.t = HxType.getEnumConstructs (Obj.repr e)\n";
 			sys.io.File.saveContent(shimPath, shimBody);
 			if (generatedPaths.indexOf(shimFile) == -1)
 				generatedPaths.push(shimFile);
 		}
+		_EmitterStageDebug.traceStage3Phase("after_shim_type");
 
 		// Stage 3 bring-up: explicit import short-name shims.
 		//
@@ -7304,6 +7717,7 @@ class EmitterStage {
 				existing.set(short, true);
 			}
 		}
+		_EmitterStageDebug.traceStage3Phase("after_alias_shims:" + generatedPaths.length);
 
 		final exePath = haxe.io.Path.join([outAbs, "out.exe"]);
 		try {
@@ -7377,6 +7791,10 @@ class EmitterStage {
 		}
 		scanMlDir(outAbs, "");
 		scanMlDir(haxe.io.Path.join([outAbs, "runtime"]), "runtime");
+		var canonicalCount = 0;
+		for (_ in canonicalByLower.keys())
+			canonicalCount++;
+		_EmitterStageDebug.traceStage3Phase("after_scan_ml_dir:" + canonicalCount);
 		function canonicalize(relPath:String):String {
 			if (relPath == null || relPath.length == 0)
 				return relPath;
@@ -7423,7 +7841,9 @@ class EmitterStage {
 
 		final existingMl = listExistingMlUnits();
 		final allMl = uniqCaseInsensitive(existingMl.concat(runtimePaths).concat(generatedPaths).concat(emittedModulePaths).map(canonicalize));
+		_EmitterStageDebug.traceStage3Phase("before_ocamldep_sort:" + allMl.length);
 		final orderedMl = uniqCaseInsensitive(ocamldepSort(allMl).map(canonicalize));
+		_EmitterStageDebug.traceStage3Phase("after_ocamldep_sort:" + orderedMl.length);
 		final orderedNoRoot = new Array<String>();
 		final rootName = rootMainPath;
 		for (f in orderedMl)
@@ -7432,6 +7852,7 @@ class EmitterStage {
 		if (rootName != null)
 			orderedNoRoot.push(rootName);
 		final orderedNoRootUniq = uniqStrings(orderedNoRoot);
+		_EmitterStageDebug.traceStage3Phase("after_ordered_units:" + orderedNoRootUniq.length);
 
 		final args = new Array<String>();
 		// OCaml 5: make the unix stdlib include directory explicit to silence the
@@ -7457,20 +7878,26 @@ class EmitterStage {
 		args.push("dynlink.cmxa");
 		for (p in orderedNoRootUniq)
 			args.push(p);
+		_EmitterStageDebug.traceStage3Phase("before_ocamlopt:" + args.length);
 		final code = try {
 			Sys.command(ocamlopt, args);
 		} catch (e:haxe.io.Error) {
 			Sys.setCwd(prevCwd);
+			_EmitterStageDebug.traceStage3Phase("ocamlopt_io_error");
 			throw e;
 		} catch (e:String) {
 			Sys.setCwd(prevCwd);
+			_EmitterStageDebug.traceStage3Phase("ocamlopt_string_error");
 			throw e;
 		};
 		Sys.setCwd(prevCwd);
+		_EmitterStageDebug.traceStage3Phase("after_ocamlopt:" + code);
 		if (code != 0)
 			throw "stage3 emitter: ocamlopt failed with exit code " + code;
+		_EmitterStageDebug.traceStage3Phase("before_missing_exe_check");
 		if (!sys.FileSystem.exists(exePath))
 			throw "stage3 emitter: missing built executable: " + exePath;
+		_EmitterStageDebug.traceStage3Phase("after_missing_exe_check");
 		return exePath;
 	}
 }
