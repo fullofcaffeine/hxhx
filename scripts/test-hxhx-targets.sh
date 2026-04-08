@@ -1766,7 +1766,7 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpternary/src" -main Main --hxhx-out "$tmpternary/out")"
 echo "$out" | grep -q "^stage3=ok$"
-echo "$out" | grep -q "^>0<$"
+echo "$out" | grep -q "^>hello<$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: string interpolation + hex escapes"
