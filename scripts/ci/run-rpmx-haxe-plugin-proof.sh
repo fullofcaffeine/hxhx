@@ -4,6 +4,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FETCH_SCRIPT="$ROOT/scripts/vendor/fetch-reflaxe-elixir-upstream.sh"
 
+if [ -n "${RPMX_HAXE_PLUGIN_DYLD_LIBRARY_PATH:-}" ]; then
+  export DYLD_LIBRARY_PATH="${RPMX_HAXE_PLUGIN_DYLD_LIBRARY_PATH}${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
+fi
+
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "rpmx haxe plugin proof: missing required command: $1" >&2
@@ -12,7 +16,6 @@ require_cmd() {
 }
 
 require_cmd git
-require_cmd haxe
 require_cmd dune
 require_cmd ocamlc
 require_cmd ocamlopt
@@ -52,11 +55,35 @@ load_stdout="$artifact_root/load.stdout.log"
 load_stderr="$artifact_root/load.stderr.log"
 summary_json="$artifact_root/rpmx-haxe-plugin.summary.json"
 
-host_compiler_path="$(command -v haxe)"
-host_compiler_version="$(haxe --version 2>&1 | tail -n 1)"
-dune_version="$(dune --version)"
-ocamlc_version="$(ocamlc -version)"
-ocamlopt_version="$(ocamlopt -version)"
+host_compiler_default_path="$(command -v haxe)"
+host_compiler_bin="${RPMX_HAXE_PLUGIN_HOST:-$host_compiler_default_path}"
+if [ ! -x "$host_compiler_bin" ]; then
+  echo "rpmx haxe plugin proof: host compiler is not executable: $host_compiler_bin" >&2
+  exit 1
+fi
+host_compiler_path="$(cd "$(dirname "$host_compiler_bin")" && pwd -P)/$(basename "$host_compiler_bin")"
+set +e
+host_compiler_version_output="$("$host_compiler_bin" --version 2>&1)"
+host_compiler_version_status="$?"
+set -e
+if [ "$host_compiler_version_status" -eq 0 ]; then
+  host_compiler_version="$(printf '%s\n' "$host_compiler_version_output" | tail -n 1)"
+else
+  host_compiler_version="<unavailable: exit $host_compiler_version_status>"
+fi
+
+toolchain_mode="${RPMX_HAXE_PLUGIN_OCAML_ENV:-system}"
+case "$toolchain_mode" in
+  system)
+    ;;
+  opam)
+    require_cmd opam
+    ;;
+  *)
+    echo "rpmx haxe plugin proof: unsupported RPMX_HAXE_PLUGIN_OCAML_ENV: $toolchain_mode" >&2
+    exit 1
+    ;;
+esac
 
 compile_args=(
   -cp "$source_repo/src"
@@ -77,7 +104,7 @@ compile_args=(
 
 (
   cd "$ROOT"
-  haxe "${compile_args[@]}"
+  "$host_compiler_bin" "${compile_args[@]}"
 ) >"$compile_stdout" 2>"$compile_stderr"
 
 for required in \
@@ -102,6 +129,21 @@ for forbidden in \
     exit 1
   fi
 done
+
+case "$toolchain_mode" in
+  system)
+    ;;
+  opam)
+    eval "$(opam env --shell=bash)"
+    ;;
+esac
+
+dune_path="$(command -v dune)"
+ocamlc_path="$(command -v ocamlc)"
+ocamlopt_path="$(command -v ocamlopt)"
+dune_version="$(dune --version)"
+ocamlc_version="$(ocamlc -version)"
+ocamlopt_version="$(ocamlopt -version)"
 
 (
   cd "$out_dir"
@@ -145,7 +187,7 @@ load_artifact=""
 for artifact in "$byte_artifact" "$native_artifact"; do
   set +e
   output="$(
-    haxe \
+    "$host_compiler_bin" \
       -cp "$load_fixture" \
       -main Main \
       --interp \
@@ -202,9 +244,15 @@ SOURCE_REPO="$source_repo_abs" \
 SOURCE_COMMIT="$source_commit" \
 HOST_COMPILER_PATH="$host_compiler_path" \
 HOST_COMPILER_VERSION="$host_compiler_version" \
+HOST_COMPILER_VERSION_PROBE_STATUS="$host_compiler_version_status" \
+DYLD_LIBRARY_PATH_ACTIVE="${DYLD_LIBRARY_PATH:-}" \
+DUNE_PATH="$dune_path" \
 DUNE_VERSION="$dune_version" \
+OCAMLC_PATH="$ocamlc_path" \
 OCAMLC_VERSION="$ocamlc_version" \
+OCAMLOPT_PATH="$ocamlopt_path" \
 OCAMLOPT_VERSION="$ocamlopt_version" \
+TOOLCHAIN_MODE="$toolchain_mode" \
 ARTIFACT_ROOT="$artifact_root_abs" \
 OUT_DIR="$out_dir_abs" \
 BYTE_ARTIFACT="$byte_artifact_abs" \
@@ -220,8 +268,14 @@ const summary = {
   host: {
     compilerPath: process.env.HOST_COMPILER_PATH,
     compilerVersion: process.env.HOST_COMPILER_VERSION,
+    compilerVersionProbeStatus: Number(process.env.HOST_COMPILER_VERSION_PROBE_STATUS),
+    toolchainMode: process.env.TOOLCHAIN_MODE,
+    dyldLibraryPathActive: process.env.DYLD_LIBRARY_PATH_ACTIVE || null,
+    dunePath: process.env.DUNE_PATH,
     duneVersion: process.env.DUNE_VERSION,
+    ocamlcPath: process.env.OCAMLC_PATH,
     ocamlcVersion: process.env.OCAMLC_VERSION,
+    ocamloptPath: process.env.OCAMLOPT_PATH,
     ocamloptVersion: process.env.OCAMLOPT_VERSION,
   },
   source: {

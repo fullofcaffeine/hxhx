@@ -119,11 +119,36 @@ The supported upstream path should continue to be validated with:
 3. docs/contracts guardrails
    - `npm run -s ci:guards`
 
+When the upstream host is built in a non-system OCaml toolchain, the proof lane
+must record and use that exact host/toolchain pairing rather than silently
+falling back to the system OCaml stack. The proof script supports that via:
+
+- `RPMX_HAXE_PLUGIN_HOST`
+- `RPMX_HAXE_PLUGIN_OCAML_ENV=opam`
+- `RPMX_HAXE_PLUGIN_DYLD_LIBRARY_PATH` on macOS when host-linked dylibs live
+  outside the system search path
+
 Success criteria for the supported path:
 
 - the build proof records exact host/compiler/artifact provenance
 - eval-host load either passes on a supported ABI-aligned host, or reports ABI-sensitive skip/failure explicitly
 - no workflow or doc claims a true upstream compiler-target plugin path
+
+For matched-host proofs, the lane now supports explicit environment selection instead of relying on whatever
+compiler/toolchain happens to be on `PATH`:
+
+```bash
+RPMX_HAXE_PLUGIN_HOST=/path/to/upstream/haxe \
+RPMX_HAXE_PLUGIN_OCAML_ENV=opam \
+RPMX_HAXE_PLUGIN_DYLD_LIBRARY_PATH="<host-required-lib-paths>" \
+bash scripts/ci/run-rpmx-haxe-plugin-proof.sh
+```
+
+Use this when the successful proof depends on:
+
+- an exact upstream Haxe host binary,
+- the same `opam` OCaml toolchain used to build the plugin artifacts,
+- or macOS dynamic-library paths that would otherwise be stripped when spawning a fresh shell.
 
 ## Phased plan
 
