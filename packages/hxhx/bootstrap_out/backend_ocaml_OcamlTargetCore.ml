@@ -84,7 +84,7 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
               __assign_14
             ));
             ignore (if !tempBool6 then ignore (print_endline "stage3_driver=ocaml_target_core_before_emitter") else ());
-            let planScope = EmitterStage.installPortableMetalizationPlan (Obj.magic portableMetalizationPlan) in let tempString = ref ("" : string) in (
+            let planScope = Obj.magic (EmitterStage.installPortableMetalizationPlan (Obj.magic portableMetalizationPlan)) in let tempString = ref ("" : string) in (
               ignore (try let tempBool7 = ref (false : bool) in (
                 ignore (let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in if raw == Obj.magic (HxRuntime.hx_null) then let __assign_15 = false in (
                   tempBool7 := __assign_15;
@@ -165,18 +165,18 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
                 | HxRuntime.Hx_exception (__exn_v_31, __exn_tags_32) -> if true then let error = (if HxRuntime.tags_has __exn_tags_32 "haxe.Exception" then Obj.obj __exn_v_31 else Obj.magic (Haxe_ValueException.create __exn_v_31 (Obj.magic (HxRuntime.hx_null)) __exn_v_31) : Haxe_Exception.t) in (
                   ignore error;
                   (
-                    ignore (EmitterStage.restorePortableMetalizationPlan planScope);
+                    ignore (EmitterStage.restorePortableMetalizationPlan (Obj.magic planScope));
                     HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"; "haxe.Exception"]
                   )
                 ) else HxRuntime.hx_throw_typed __exn_v_31 __exn_tags_32
                 | __exn_33 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_33) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_33) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_33)) : Haxe_Exception.t) in (
                   ignore error;
                   (
-                    ignore (EmitterStage.restorePortableMetalizationPlan planScope);
+                    ignore (EmitterStage.restorePortableMetalizationPlan (Obj.magic planScope));
                     HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"; "haxe.Exception"]
                   )
                 ) else raise (__exn_33));
-              ignore (EmitterStage.restorePortableMetalizationPlan planScope);
+              ignore (EmitterStage.restorePortableMetalizationPlan (Obj.magic planScope));
               let tempBool14 = ref (false : bool) in (
                 ignore (let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in if raw == Obj.magic (HxRuntime.hx_null) then let __assign_34 = false in (
                   tempBool14 := __assign_34;

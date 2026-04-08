@@ -50,7 +50,9 @@ let init () : unit =
   ignore (HxType.class_ "_EmitterStage._EmitterStageDebug");
   ignore (HxType.class_ "_EmitterStage._InstanceFieldEntry");
   ignore (HxType.class_ "_EmitterStage._InstanceMethodEntry");
+  ignore (HxType.class_ "_EmitterStage._LocalTyEntry");
   ignore (HxType.class_ "_EmitterStage._ModuleNameEntry");
+  ignore (HxType.class_ "_EmitterStage._PortableMetalizationScope");
   ignore (HxType.class_ "_HxConditionalCompilation.ExprLexer");
   ignore (HxType.class_ "_HxConditionalCompilation.ExprParser");
   ignore (HxType.class_ "backend.BackendAbi");
@@ -972,11 +974,23 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'methodNames' for _EmitterStage._InstanceMethodEntry" in
     Obj.repr (EmitterStage._instancemethodentry_create a0 a1)
   );
+  HxType.register_class_ctor "_EmitterStage._LocalTyEntry" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for _EmitterStage._LocalTyEntry" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'ty' for _EmitterStage._LocalTyEntry" in
+    Obj.repr (EmitterStage._localtyentry_create a0 a1)
+  );
   HxType.register_class_ctor "_EmitterStage._ModuleNameEntry" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'key' for _EmitterStage._ModuleNameEntry" in
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'moduleName' for _EmitterStage._ModuleNameEntry" in
     Obj.repr (EmitterStage._modulenameentry_create a0 a1)
+  );
+  HxType.register_class_ctor "_EmitterStage._PortableMetalizationScope" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'previousPlan' for _EmitterStage._PortableMetalizationScope" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'previousRegionKey' for _EmitterStage._PortableMetalizationScope" in
+    Obj.repr (EmitterStage._portablemetalizationscope_create a0 a1)
   );
   HxType.register_class_ctor "_HxConditionalCompilation.ExprLexer" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1390,7 +1404,9 @@ let init () : unit =
   HxType.register_class_empty_ctor "_EmitterStage._EmitterStageDebug" (fun () -> Obj.repr (EmitterStage._emitterstagedebug___empty ()));
   HxType.register_class_empty_ctor "_EmitterStage._InstanceFieldEntry" (fun () -> Obj.repr (EmitterStage._instancefieldentry___empty ()));
   HxType.register_class_empty_ctor "_EmitterStage._InstanceMethodEntry" (fun () -> Obj.repr (EmitterStage._instancemethodentry___empty ()));
+  HxType.register_class_empty_ctor "_EmitterStage._LocalTyEntry" (fun () -> Obj.repr (EmitterStage._localtyentry___empty ()));
   HxType.register_class_empty_ctor "_EmitterStage._ModuleNameEntry" (fun () -> Obj.repr (EmitterStage._modulenameentry___empty ()));
+  HxType.register_class_empty_ctor "_EmitterStage._PortableMetalizationScope" (fun () -> Obj.repr (EmitterStage._portablemetalizationscope___empty ()));
   HxType.register_class_empty_ctor "_HxConditionalCompilation.ExprLexer" (fun () -> Obj.repr (HxConditionalCompilation.exprlexer___empty ()));
   HxType.register_class_empty_ctor "_HxConditionalCompilation.ExprParser" (fun () -> Obj.repr (HxConditionalCompilation.exprparser___empty ()));
   HxType.register_class_empty_ctor "backend.BackendAbi" (fun () -> Obj.repr (Backend_BackendAbi.__empty ()));
@@ -1480,7 +1496,7 @@ let init () : unit =
   HxType.register_class_instance_fields "CompilerDriver" [];
   HxType.register_class_static_fields "CompilerDriver" [ "run" ];
   HxType.register_class_instance_fields "EmitterStage" [];
-  HxType.register_class_static_fields "EmitterStage" [ "backendDialect"; "callSigFromFunction"; "collectAssignedNamesInExprRec"; "collectAssignedNamesInStmtRec"; "collectLocalsForPreludeFromStmtRec"; "constFoldString"; "currentGlobalImportAliasByIdent"; "currentImportInt64"; "currentInstanceFieldsByTypePath"; "currentInstanceFieldsFor"; "currentInstanceMethodsByTypePath"; "currentInstanceMethodsFor"; "currentKnownModuleNames"; "currentModuleFilePath"; "currentModuleNameEntries"; "currentMutableLocalRefNames"; "currentOcamlModuleName"; "currentOcamlProfile"; "currentPortableMetalizationPlan"; "currentPortableMetalizationRegionKey"; "emit"; "emitToDir"; "emitToDirWithPortableMetalizationPlan"; "ensureEmitToDirOutDir"; "eraseBoundary"; "escapeOcamlIdentPart"; "escapeOcamlString"; "expectedMainClassFromFilePath"; "exprToOcaml"; "exprToOcamlString"; "hasCurrentInstanceMethod"; "hasMethodName"; "installEmitToDirProfile"; "installPortableMetalizationPlan"; "isAssignmentOpToken"; "isMetalProfileActive"; "isMutableLocalRefIdent"; "isOcamlKeyword"; "isPortableAutoMetalizedRegionActive"; "isRestLikeArg"; "isRootSysReceiverExpr"; "isTypePathExpr"; "isUpperStart"; "lowerFirst"; "mapGetRaw"; "mapHasRaw"; "mapKeysRaw"; "markPortableAutoMetalizedLoweringUse"; "moduleInitTrace"; "moduleNameForScannedDecl"; "ocamlModuleNameFromTypePath"; "ocamlModuleNameFromTypePathParts"; "ocamlReadValueIdent"; "ocamlTypeFromTy"; "ocamlValueIdent"; "requireEmitToDirOutAbs"; "resolveImportedModuleFileFromContext"; "resolveQualifiedModuleCallSig"; "resolveQualifiedModuleFileFromContext"; "restorePortableMetalizationPlan"; "returnExprToOcaml"; "scanExprForPreludeDepsRec"; "scanStmtForPreludeDepsRec"; "stmtListToOcaml"; "traceEmitToDirEntry"; "traceModuleInit"; "tryExtractTypePathPartsFromExpr"; "upperFirst" ];
+  HxType.register_class_static_fields "EmitterStage" [ "backendDialect"; "callSigFromFunction"; "collectAssignedNamesInExprRec"; "collectAssignedNamesInStmtRec"; "collectLocalsForPreludeFromStmtRec"; "constFoldString"; "currentFunctionLocalTypeHints"; "currentFunctionName"; "currentGlobalImportAliasByIdent"; "currentImportInt64"; "currentInstanceFieldsByTypePath"; "currentInstanceFieldsFor"; "currentInstanceMethodsByTypePath"; "currentInstanceMethodsFor"; "currentKnownModuleNames"; "currentLocalCallSigCache"; "currentModuleFilePath"; "currentModuleNameEntries"; "currentMutableLocalRefNames"; "currentOcamlModuleName"; "currentOcamlProfile"; "currentPortableMetalizationPlan"; "currentPortableMetalizationRegionKey"; "currentStmtTyEntries"; "emit"; "emitToDir"; "emitToDirWithPortableMetalizationPlan"; "ensureEmitToDirOutDir"; "eraseBoundary"; "escapeOcamlIdentPart"; "escapeOcamlString"; "expectedMainClassFromFilePath"; "exprToOcaml"; "exprToOcamlString"; "hasCurrentInstanceMethod"; "hasMethodName"; "installEmitToDirProfile"; "installPortableMetalizationPlan"; "isAssignmentOpToken"; "isMetalProfileActive"; "isMutableLocalRefIdent"; "isOcamlKeyword"; "isPortableAutoMetalizedRegionActive"; "isRestLikeArg"; "isRootSysReceiverExpr"; "isTypePathExpr"; "isUpperStart"; "lowerFirst"; "mapGetRaw"; "mapHasRaw"; "mapKeysRaw"; "markPortableAutoMetalizedLoweringUse"; "moduleInitTrace"; "moduleNameForScannedDecl"; "ocamlModuleNameFromTypePath"; "ocamlModuleNameFromTypePathParts"; "ocamlReadValueIdent"; "ocamlTypeFromTy"; "ocamlValueIdent"; "requireEmitToDirOutAbs"; "resolveImportedModuleFileFromContext"; "resolveQualifiedModuleCallSig"; "resolveQualifiedModuleFileFromContext"; "restorePortableMetalizationPlan"; "returnExprToOcaml"; "scanExprForPreludeDepsRec"; "scanStmtForPreludeDepsRec"; "stmtListToOcaml"; "traceEmitToDirEntry"; "traceModuleInit"; "tryExtractTypePathPartsFromExpr"; "upperFirst" ];
   HxType.register_class_instance_fields "FrontendFixture" [ "expectHasStaticMain"; "expectMainClassName"; "expectPackagePath"; "getExpectHasStaticMain"; "getExpectMainClassName"; "getExpectPackagePath"; "getLabel"; "getSource"; "label"; "source" ];
   HxType.register_class_static_fields "FrontendFixture" [];
   HxType.register_class_instance_fields "HihBackendDialect" [ "dynamicNullValue"; "runtimeDynamicEquals"; "runtimeIsNull" ];
@@ -1571,8 +1587,12 @@ let init () : unit =
   HxType.register_class_static_fields "_EmitterStage._InstanceFieldEntry" [];
   HxType.register_class_instance_fields "_EmitterStage._InstanceMethodEntry" [ "key"; "methodNames" ];
   HxType.register_class_static_fields "_EmitterStage._InstanceMethodEntry" [];
+  HxType.register_class_instance_fields "_EmitterStage._LocalTyEntry" [ "name"; "ty" ];
+  HxType.register_class_static_fields "_EmitterStage._LocalTyEntry" [];
   HxType.register_class_instance_fields "_EmitterStage._ModuleNameEntry" [ "key"; "moduleName" ];
   HxType.register_class_static_fields "_EmitterStage._ModuleNameEntry" [];
+  HxType.register_class_instance_fields "_EmitterStage._PortableMetalizationScope" [ "previousPlan"; "previousRegionKey" ];
+  HxType.register_class_static_fields "_EmitterStage._PortableMetalizationScope" [];
   HxType.register_class_instance_fields "_HxConditionalCompilation.ExprLexer" [ "bump"; "eof"; "i"; "isIdentCont"; "isIdentStart"; "isWs"; "next"; "peek"; "readIdent"; "readString"; "s"; "skipWs" ];
   HxType.register_class_static_fields "_HxConditionalCompilation.ExprLexer" [];
   HxType.register_class_instance_fields "_HxConditionalCompilation.ExprParser" [ "bump"; "cur"; "definedValue"; "defines"; "lex"; "parse"; "parseAnd"; "parseIdentTail"; "parseOr"; "parsePrimary"; "parseStringLit"; "parseUnary" ];
@@ -1811,7 +1831,9 @@ let init () : unit =
   HxType.register_class_tags "_EmitterStage._EmitterStageDebug" [ "_EmitterStage._EmitterStageDebug" ];
   HxType.register_class_tags "_EmitterStage._InstanceFieldEntry" [ "_EmitterStage._InstanceFieldEntry" ];
   HxType.register_class_tags "_EmitterStage._InstanceMethodEntry" [ "_EmitterStage._InstanceMethodEntry" ];
+  HxType.register_class_tags "_EmitterStage._LocalTyEntry" [ "_EmitterStage._LocalTyEntry" ];
   HxType.register_class_tags "_EmitterStage._ModuleNameEntry" [ "_EmitterStage._ModuleNameEntry" ];
+  HxType.register_class_tags "_EmitterStage._PortableMetalizationScope" [ "_EmitterStage._PortableMetalizationScope" ];
   HxType.register_class_tags "_EnumValue.EnumValue_Impl_" [ "_EnumValue.EnumValue_Impl_" ];
   HxType.register_class_tags "_HxConditionalCompilation.ExprLexer" [ "_HxConditionalCompilation.ExprLexer" ];
   HxType.register_class_tags "_HxConditionalCompilation.ExprParser" [ "_HxConditionalCompilation.ExprParser" ];

@@ -1383,9 +1383,9 @@ class EmitterStage {
 				+ ") in "
 				+ "if Obj.is_int __hx_len_obj then HxBootArray.length ((Obj.magic "
 				+ o
-				+ " : _ HxBootArray.t)) else if Obj.tag __hx_len_obj = Obj.string_tag then HxString.length ("
+				+ " : _ HxBootArray.t)) else if Obj.tag __hx_len_obj = Obj.string_tag then HxString.length ((Obj.magic "
 				+ o
-				+ ") else HxBootArray.length ((Obj.magic "
+				+ " : string)) else HxBootArray.length ((Obj.magic "
 				+ o
 				+ " : _ HxBootArray.t)))";
 		}
