@@ -61,6 +61,17 @@ To regenerate the snapshot (requires stage0 `haxe`):
 HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-bootstrap.sh
 ```
 
+The selected strong-self-hosting direction is native self-refresh, not slicing the
+current stage0 Reflaxe payload. The minimal probe for that direction is:
+
+```bash
+npm run hxhx:probe:stage0-free-refresh
+```
+
+That probe builds `hxhx` from committed snapshots with `HXHX_FORBID_STAGE0=1`, emits a
+small repo-owned fixture through Stage3 full-body output, verifies generated OCaml and
+snapshot non-mutation, and removes large temporary build directories by default.
+
 Regeneration now owns the snapshot finalization pass as well: it emits stage0 output,
 copies it into `packages/hxhx/bootstrap_out/`, finalizes that snapshot in place, then
 reshards large modules before the verify build.

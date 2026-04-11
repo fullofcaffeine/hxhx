@@ -6,6 +6,7 @@ AS_OF="$(date -u +%F)"
 
 CI_WORKFLOW="$ROOT/.github/workflows/ci.yml"
 BOOTSTRAP_REGEN="$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh"
+BOOTSTRAP_REFRESH_PROBE="$ROOT/scripts/hxhx/probe-stage0-free-bootstrap-refresh.sh"
 REPLACEMENT_READY="$ROOT/scripts/hxhx/run-replacement-ready.sh"
 
 usage() {
@@ -37,6 +38,7 @@ require_file() {
 
 require_file "$CI_WORKFLOW"
 require_file "$BOOTSTRAP_REGEN"
+require_file "$BOOTSTRAP_REFRESH_PROBE"
 require_file "$REPLACEMENT_READY"
 
 has_text() {
@@ -48,12 +50,14 @@ has_text() {
 status_build_blocked="Not yet"
 status_stage3_blocked="Not yet"
 status_macro_blocked="Not yet"
+status_refresh_probe="Not yet"
 status_bootstrap_stage0_free="Not yet"
 status_replacement_blocked="Partial"
 
 evidence_build="Missing stage0-free smoke build check."
 evidence_stage3="Missing stage0-free stage3 compile check."
 evidence_macro="Missing stage0-free macro selftest check."
+evidence_refresh_probe="Missing stage0-free native refresh probe."
 evidence_bootstrap="Bootstrap regen still uses stage0 emit."
 evidence_replacement="No strict stage0-forbidden replacement-ready lane yet."
 
@@ -65,6 +69,14 @@ if has_text "$CI_WORKFLOW" "stage0-free-smoke:" \
   evidence_stage3=".github/workflows/ci.yml job stage0-free-smoke"
   status_macro_blocked="Pass"
   evidence_macro=".github/workflows/ci.yml job stage0-free-smoke"
+fi
+
+if has_text "$BOOTSTRAP_REFRESH_PROBE" "prototype=stage0-free-native-refresh-minimal" \
+  && has_text "$BOOTSTRAP_REFRESH_PROBE" "HXHX_FORBID_STAGE0=1" \
+  && has_text "$BOOTSTRAP_REFRESH_PROBE" "--hxhx-emit-full-bodies" \
+  && has_text "$BOOTSTRAP_REFRESH_PROBE" "bootstrap_snapshot_diff=clean"; then
+  status_refresh_probe="Pass"
+  evidence_refresh_probe="npm run hxhx:probe:stage0-free-refresh"
 fi
 
 if has_text "$BOOTSTRAP_REGEN" "haxe_args=(build.hxml -D ocaml_emit_only)"; then
@@ -93,5 +105,6 @@ echo "|---|---|---|"
 echo "| Build hxhx with stage0 delegation blocked (HXHX_FORBID_STAGE0=1) | $status_build_blocked | $evidence_build |"
 echo "| Run a stage3 compile path with stage0 blocked | $status_stage3_blocked | $evidence_stage3 |"
 echo "| Run macro host selftest with stage0 blocked | $status_macro_blocked | $evidence_macro |"
+echo "| Prototype native bootstrap refresh on a minimal subset with stage0 blocked | $status_refresh_probe | $evidence_refresh_probe |"
 echo "| Regenerate packages/hxhx/bootstrap_out without stage0 haxe | $status_bootstrap_stage0_free | $evidence_bootstrap |"
 echo "| Replacement-ready gates pass with delegation blocked | $status_replacement_blocked | $evidence_replacement |"

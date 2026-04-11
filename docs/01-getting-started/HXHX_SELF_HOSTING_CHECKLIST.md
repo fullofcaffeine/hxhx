@@ -17,7 +17,7 @@ Related status pages:
 - Portable stdlib parity status:
   - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 
-## Status matrix (as of 2026-02-21)
+## Status matrix (as of 2026-04-11)
 
 Use this table as the short answer for "are we self-hosting yet?"
 
@@ -26,6 +26,7 @@ Use this table as the short answer for "are we self-hosting yet?"
 | Build `hxhx` with stage0 delegation blocked (`HXHX_FORBID_STAGE0=1`) | Proves we can build from committed snapshots without silently falling back to stage0 | Pass | `.github/workflows/ci.yml` job `stage0-free-smoke` |
 | Run a stage3 compile path with stage0 blocked | Proves the compiler can do real work in stage0-forbidden mode | Pass | `.github/workflows/ci.yml` job `stage0-free-smoke` (`--ocaml --hxhx-no-emit`) |
 | Run macro host selftest with stage0 blocked | Proves macro host bootstrap path works in stage0-forbidden mode | Pass | `.github/workflows/ci.yml` job `stage0-free-smoke` (`--hxhx-macro-selftest`) |
+| Prototype native bootstrap refresh on a minimal subset with stage0 blocked | Proves the chosen refresh architecture can emit/build repo-owned Haxe through Stage3 without invoking stage0 | Pass | `npm run hxhx:probe:stage0-free-refresh` |
 | Regenerate `packages/hxhx/bootstrap_out` without stage0 `haxe` | This is the major blocker for strong self-hosting | Not yet | `scripts/hxhx/regenerate-hxhx-bootstrap.sh` still uses stage0 emit |
 | Replacement-ready gates pass with delegation blocked | Needed for strong release confidence | Partial | Criteria command: `HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full`; expected marker: `M7_STRICT_STAGE0:PASS`; current state: strict definition is documented, but full strong-self-hosting closure is still in progress |
 
@@ -85,6 +86,16 @@ This repo tracks the **strong** definition as the real goal.
 2. Stage0-free macro + gate paths as the normal/primary route (not just smoke/partial lanes).
 3. Stable acceptance evidence in replacement gates with stage0 delegation blocked.
 
+## Bootstrap refresh architecture choice
+
+The selected path is **native self-refresh**:
+
+1. Build `hxhx` from committed bootstrap snapshots with `HXHX_FORBID_STAGE0=1`.
+2. Use that binary's Stage3 full-body emitter to generate OCaml from repo-owned Haxe sources.
+3. Only promote output into `packages/hxhx/bootstrap_out` after snapshot parity and guard checks pass.
+
+Payload slicing of the existing stage0 Reflaxe compile graph is intentionally not the release path. It still depends on the stage0 macro/eval typed-payload wall, and it risks creating partially generated artifacts whose equivalence is harder to prove than a fully stage0-forbidden native refresh.
+
 ## Definition of done (practical)
 
 We can call strong self-hosting done when all of this is true:
@@ -103,6 +114,9 @@ npm run status:self-hosting
 
 # Run the same local smoke flow as CI stage0-free-smoke.
 npm run test:self-hosting-smoke
+
+# Prototype the native refresh path on a small repo-owned fixture.
+npm run hxhx:probe:stage0-free-refresh
 
 # Build hxhx without allowing delegation.
 HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used bash scripts/hxhx/build-hxhx.sh

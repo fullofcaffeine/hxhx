@@ -211,6 +211,15 @@ Use this when you want the repo to function as a compiler-bootstrap example:
 - Plain-language self-hosting status/checklist (includes a pass/partial/not-yet matrix):
   - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
 
+- Stage0-free native refresh prototype:
+  - Command: `npm run hxhx:probe:stage0-free-refresh`
+  - Scope: builds `hxhx` from committed snapshots with `HXHX_FORBID_STAGE0=1`, then runs Stage3
+    `--hxhx-emit-full-bodies --hxhx-no-run` on the repo-owned `demo.A` fixture.
+  - Output: `.tmp/stage0-free-bootstrap-refresh-probe/summary.txt`
+  - Artifact hygiene: the probe removes the temporary `hxhx` bootstrap build and Stage3 compiled
+    byproducts by default; set `HXHX_STAGE0_FREE_REFRESH_KEEP_BUILD=1` or
+    `HXHX_STAGE0_FREE_REFRESH_KEEP_DUNE_BUILD=1` only when you need local diagnostics.
+
 - **Stage0**: external `haxe` compiles repo Haxe sources to OCaml.
   - Main maintainer command: `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`
   - Stage0 haxe binary selection policy (regen lane):

@@ -213,6 +213,7 @@
     "hxhx:bench": "bash scripts/hxhx/bench.sh",
     "hxhx:bench:kpi": "bash scripts/hxhx/bench-kpi.sh",
     "hxhx:bench:bootstrap-regen": "bash scripts/hxhx/bench-bootstrap-regen.sh",
+    "hxhx:probe:stage0-free-refresh": "bash scripts/hxhx/probe-stage0-free-bootstrap-refresh.sh",
     "hxhx:profile:stage0-regen": "bash scripts/hxhx/profile-stage0-regen.sh",
     "hxhx:profile:stage0-regen-ab": "bash scripts/hxhx/profile-stage0-regen-ab.sh",
     "hxhx:profile:stage0-summary": "node scripts/hxhx/summarize-stage0-progress.js",

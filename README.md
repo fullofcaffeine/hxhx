@@ -77,6 +77,10 @@ HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-boot
 # Keep dune worker count deterministic (useful for memory-pressure tuning).
 HXHX_DUNE_JOBS=4 bash scripts/hxhx/build-hxhx.sh
 
+# Probe the selected stage0-free native bootstrap refresh direction without retaining
+# large temporary build directories.
+npm run hxhx:probe:stage0-free-refresh
+
 # Compare wrapper vs native stage0 policy and worker counts in one run.
 HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4 HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen
 

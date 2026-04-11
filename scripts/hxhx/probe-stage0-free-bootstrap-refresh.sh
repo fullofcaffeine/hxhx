@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+OUT_ROOT="${HXHX_STAGE0_FREE_REFRESH_OUT:-$ROOT/.tmp/stage0-free-bootstrap-refresh-probe}"
+HAXE_SENTINEL="${HXHX_STAGE0_FREE_REFRESH_HAXE_SENTINEL:-/definitely-not-used}"
+FIXTURE_CP="$ROOT/workloads/hih-compiler/fixtures/src"
+FIXTURE_MAIN="demo.A"
+DUNE_JOBS_FOR_BUILD="${HXHX_DUNE_JOBS:-2}"
+
+if [[ "$OUT_ROOT" != /* ]]; then
+  OUT_ROOT="$ROOT/$OUT_ROOT"
+fi
+
+case "$OUT_ROOT" in
+  ""|"/"|"$ROOT"|"$ROOT/")
+    echo "Unsafe HXHX_STAGE0_FREE_REFRESH_OUT: $OUT_ROOT" >&2
+    exit 2
+    ;;
+esac
+
+BUILD_DIR="$OUT_ROOT/hxhx-bootstrap-build"
+STAGE3_OUT="$OUT_ROOT/stage3_out"
+SUMMARY="$OUT_ROOT/summary.txt"
+BUILD_LOG="$OUT_ROOT/build-hxhx.log"
+STAGE3_LOG="$OUT_ROOT/stage3-emit.log"
+
+KEEP_BOOTSTRAP_BUILD="${HXHX_STAGE0_FREE_REFRESH_KEEP_BUILD:-0}"
+KEEP_DUNE_BUILD="${HXHX_STAGE0_FREE_REFRESH_KEEP_DUNE_BUILD:-0}"
+
+cleanup_probe_artifacts() {
+  local status=$?
+  if [ "$KEEP_BOOTSTRAP_BUILD" != "1" ]; then
+    rm -rf "$BUILD_DIR"
+  fi
+  if [ "$KEEP_DUNE_BUILD" != "1" ]; then
+    rm -rf "$STAGE3_OUT/_build" "$STAGE3_OUT"/*.install
+    find "$STAGE3_OUT" -type f \( \
+      -name '*.cmi' -o \
+      -name '*.cmx' -o \
+      -name '*.o' -o \
+      -name '*.exe' \
+    \) -delete 2>/dev/null || true
+  fi
+  exit "$status"
+}
+
+trap cleanup_probe_artifacts EXIT
+
+need_cmd() {
+  local cmd="$1"
+  local label="$2"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Skipping stage0-free bootstrap refresh probe: missing $label ('$cmd')." >&2
+    exit 0
+  fi
+}
+
+need_cmd dune "dune"
+need_cmd ocamlc "ocaml compiler"
+need_cmd git "git"
+
+rm -rf "$OUT_ROOT"
+mkdir -p "$OUT_ROOT" "$STAGE3_OUT"
+
+echo "== Stage0-free bootstrap refresh probe"
+echo "== Decision: native/self-refresh path; payload slicing remains rejected for release-equivalence risk"
+echo "== Building hxhx from committed snapshots with stage0 delegation forbidden"
+
+set +e
+HXHX_FORBID_STAGE0=1 \
+  HAXE_BIN="$HAXE_SENTINEL" \
+  HXHX_BOOTSTRAP_BUILD_DIR="$BUILD_DIR" \
+  HXHX_DUNE_JOBS="$DUNE_JOBS_FOR_BUILD" \
+  bash "$ROOT/scripts/hxhx/build-hxhx.sh" >"$BUILD_LOG" 2>&1
+build_code=$?
+set -e
+
+if [ "$build_code" -ne 0 ]; then
+  echo "FAILED: stage0-forbidden hxhx build failed; log: $BUILD_LOG" >&2
+  sed -n '1,80p' "$BUILD_LOG" >&2 || true
+  exit "$build_code"
+fi
+
+HXHX_BIN="$(tail -n 1 "$BUILD_LOG" | tr -d '\r')"
+if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+  echo "FAILED: missing hxhx binary from build log: $BUILD_LOG" >&2
+  tail -n 80 "$BUILD_LOG" >&2 || true
+  exit 1
+fi
+
+echo "== Emitting minimal repo-owned fixture via Stage3 full-body path"
+set +e
+HXHX_FORBID_STAGE0=1 \
+  HAXE_BIN="$HAXE_SENTINEL" \
+  "$HXHX_BIN" \
+    --hxhx-stage3 \
+    --hxhx-emit-full-bodies \
+    --hxhx-no-run \
+    -cp "$FIXTURE_CP" \
+    -main "$FIXTURE_MAIN" \
+    --hxhx-out "$STAGE3_OUT" >"$STAGE3_LOG" 2>&1
+stage3_code=$?
+set -e
+
+if [ "$stage3_code" -ne 0 ]; then
+  echo "FAILED: Stage3 full-body emit probe failed; log: $STAGE3_LOG" >&2
+  sed -n '1,120p' "$STAGE3_LOG" >&2 || true
+  exit "$stage3_code"
+fi
+
+if ! grep -q '^stage3=ok$' "$STAGE3_LOG"; then
+  echo "FAILED: Stage3 probe did not emit stage3=ok marker." >&2
+  sed -n '1,120p' "$STAGE3_LOG" >&2 || true
+  exit 1
+fi
+
+generated_ml_count="$(find "$STAGE3_OUT" -type f -name '*.ml' | wc -l | tr -d '[:space:]')"
+if [ "$generated_ml_count" = "0" ]; then
+  echo "FAILED: Stage3 probe emitted no OCaml source files under $STAGE3_OUT." >&2
+  exit 1
+fi
+
+artifact_path="$(sed -n 's/^exe=//p; s/^artifact=//p' "$STAGE3_LOG" | tail -n 1 | tr -d '\r')"
+if [ -z "$artifact_path" ] || [ ! -f "$artifact_path" ]; then
+  echo "FAILED: Stage3 probe did not build the reported artifact." >&2
+  sed -n '1,120p' "$STAGE3_LOG" >&2 || true
+  exit 1
+fi
+
+if ! git -C "$ROOT" diff --quiet -- packages/hxhx/bootstrap_out packages/hxhx-macro-host/bootstrap_out; then
+  echo "FAILED: bootstrap snapshots changed during probe." >&2
+  git -C "$ROOT" status --short -- packages/hxhx/bootstrap_out packages/hxhx-macro-host/bootstrap_out >&2 || true
+  exit 1
+fi
+
+cat >"$SUMMARY" <<EOF
+status=ok
+prototype=stage0-free-native-refresh-minimal
+decision=native_self_refresh
+payload_slicing=rejected_release_equivalence_risk
+stage0_forbidden=1
+haxe_bin=$HAXE_SENTINEL
+hxhx_bin=$HXHX_BIN
+dune_jobs=$DUNE_JOBS_FOR_BUILD
+fixture_cp=$FIXTURE_CP
+fixture_main=$FIXTURE_MAIN
+stage3_out=$STAGE3_OUT
+generated_ml_count=$generated_ml_count
+artifact_path=$artifact_path
+artifact_validated=1
+stage3_marker=stage3=ok
+bootstrap_snapshot_diff=clean
+bootstrap_build_retained=$KEEP_BOOTSTRAP_BUILD
+stage3_compiled_artifacts_retained=$KEEP_DUNE_BUILD
+build_log=$BUILD_LOG
+stage3_log=$STAGE3_LOG
+EOF
+
+echo "OK: stage0-free bootstrap refresh probe"
+echo "summary=$SUMMARY"
