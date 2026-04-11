@@ -60,6 +60,7 @@ Machine-readable reports (`--report-json`) include:
 - `stage0_no_opt` (`0` / `1`)
 - `stage0_no_inline` (`0` / `1`)
 - `stage0_no_internal_tools` (`0` / `1`)
+- `stage0_no_display` (`0` / `1`)
 - `stage0_no_source_normalize_extract` (`0` / `1`)
 - `stage0_no_native_decode_extract` (`0` / `1`)
 - `stage0_no_parser_scan_extract` (`0` / `1`)
@@ -308,6 +309,20 @@ Internal-tool availability contract:
 - Maintained source builds and release/dist builds must keep these internal workflows available:
   `--hxhx-stage1`, `--hxhx-parse`, `--hxhx-selftest`, `--hxhx-ocaml-interp`.
 - `hxhx_stage0_no_internal_tools` is allowed only in profiling A/B runs and must not be enabled in committed bootstrap snapshots or release build lanes.
+
+Additional display graph-trimming mitigation candidate:
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--no-display"
+```
+
+`--no-display` maps to `HXHX_STAGE0_NO_DISPLAY=1` and adds
+`-D hxhx_stage0_no_display`, which compiles out Stage3 display response synthesis paths in profiling runs.
+
+This knob is profiling-only today; do not treat it as lane-equivalent for release snapshots until display workflow parity is explicitly reviewed.
 
 Additional parser-source graph candidate (inline baseline vs extracted helper):
 

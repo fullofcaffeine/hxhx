@@ -77,6 +77,7 @@ Notes:
 - For very verbose stage0 compiler logs (including typing/module loading), set `HXHX_STAGE0_VERBOSE=1` (passes `-v` to stage0 `haxe`).
 - If your terminal/CI truncates logs, you can also capture progress markers to a file by setting `REFLAXE_OCAML_PROGRESS_FILE=/path/to/log.txt`.
 - If you suspect stage0 performance issues are caused by output-shaping prepasses, you can try `HXHX_STAGE0_DISABLE_PREPASSES=1` (disables reflaxe.ocaml expression preprocessors for this stage0 run).
+- For profiling-only display graph trimming, set `HXHX_STAGE0_NO_DISPLAY=1` or use `scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-no-display`; do not use this for release snapshots unless display parity is explicitly reviewed.
 - Stage0 source builds support two `--connect` paths:
   - explicit override: `HAXE_CONNECT=<port>` (highest precedence)
   - helper-backed reuse: `HXHX_STAGE0_USE_REPO_SERVER=1` (starts/reuses `scripts/hxhx/haxe-server.sh` and injects `--connect <port>`)

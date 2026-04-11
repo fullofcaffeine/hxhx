@@ -358,16 +358,23 @@ class Stage3Compiler {
 		return {args: args, stdinBytes: stdinBytes};
 	}
 
+	#if !hxhx_stage0_no_display
 	static function synthesizeDisplayResponse(displayRequest:String, displaySource:String):String {
 		return DisplayResponseSynthesizer.synthesize(displayRequest, displaySource);
 	}
+	#end
 
 	static function runWaitStdioRequest(baseArgs:Array<String>, request:WaitStdioRequest):WaitStdioReply {
 		final displayRequest = findSingleFlagValue(request.args, "--display");
+		#if hxhx_stage0_no_display
+		if (displayRequest != null)
+			return {payload: "hxhx(stage3): display unavailable in stage0 no-display profiling lane", isError: true};
+		#else
 		if (displayRequest != null) {
 			final displaySource = DisplayResponseSynthesizer.readDisplaySource(displayRequest, request.stdinBytes);
 			return {payload: synthesizeDisplayResponse(displayRequest, displaySource), isError: false};
 		}
+		#end
 
 		// Non-display requests: attempt normal Stage3 handling with the server's base args.
 		// If this fails, return a framed error so clients don't hang waiting for a response.
@@ -449,6 +456,11 @@ class Stage3Compiler {
 		}
 	}
 
+	#if hxhx_stage0_no_display
+	static function readConnectDisplayStdin(_args:Array<String>):Null<Bytes> {
+		return null;
+	}
+	#else
 	static function readConnectDisplayStdin(args:Array<String>):Null<Bytes> {
 		if (!hasDefineFlag(args, "display-stdin"))
 			return null;
@@ -479,6 +491,7 @@ class Stage3Compiler {
 			return frame.sub(1, frame.length - 1);
 		return frame;
 	}
+	#end
 
 	static function encodeConnectRequest(args:Array<String>, stdinBytes:Null<Bytes>):String {
 		final out = new StringBuf();
@@ -819,6 +832,7 @@ class Stage3Compiler {
 		- Resolve it against classpaths to derive a dotted module path (`src/a/b/Main.hx` -> `a.b.Main`).
 		- Fallback to file basename when classpath matching is not possible.
 	**/
+	#if !hxhx_stage0_no_display
 	static function inferMainFromDisplayRequest(displayRequest:String, classPaths:Array<String>, cwd:String):String {
 		if (displayRequest == null)
 			return "";
@@ -852,6 +866,7 @@ class Stage3Compiler {
 
 		return Path.withoutExtension(Path.withoutDirectory(displayNorm));
 	}
+	#end
 
 	static function inferRepoRootForScripts():String {
 		final env = Sys.getEnv("HXHX_REPO_ROOT");
@@ -1268,9 +1283,13 @@ class Stage3Compiler {
 		}
 
 		if (roots0.length == 0 && displayRequest != null && displayRequest.length > 0) {
+			#if hxhx_stage0_no_display
+			return error("display requests unavailable in stage0 no-display profiling lane");
+			#else
 			final inferred = inferMainFromDisplayRequest(displayRequest, parsedClassPaths, cwd);
 			if (inferred.length > 0)
 				roots0.push(inferred);
+			#end
 		}
 
 		if (roots0.length == 0) {

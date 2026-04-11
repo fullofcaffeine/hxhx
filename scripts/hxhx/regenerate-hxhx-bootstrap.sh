@@ -59,6 +59,8 @@ Options:
   --stage0-stage3            Disable stage0 no-stage3 override.
   --stage0-no-internal-tools Add `-D hxhx_stage0_no_internal_tools` (trim internal bring-up CLI paths in stage0 compile graph).
   --stage0-internal-tools    Disable stage0 no-internal-tools override.
+  --stage0-no-display        Add `-D hxhx_stage0_no_display` (trim Stage3 display synthesis paths in profiling runs).
+  --stage0-display           Disable stage0 no-display override.
   --stage0-no-source-normalize-extract
                             Add `-D hxhx_stage0_no_source_normalize_extract` (inline HxParser normalization helpers for stage0 A/B only).
   --stage0-source-normalize-extract
@@ -108,6 +110,7 @@ Environment knobs (all optional):
                                      Add `-D hxhx_stage0_no_external_macro_host` for stage0 emit.
   HXHX_STAGE0_NO_STAGE3=1            Add `-D hxhx_stage0_no_stage3` for stage0 emit.
   HXHX_STAGE0_NO_INTERNAL_TOOLS=1    Add `-D hxhx_stage0_no_internal_tools` for stage0 emit.
+  HXHX_STAGE0_NO_DISPLAY=1           Add `-D hxhx_stage0_no_display` for stage0 emit.
   HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT=1
                                      Add `-D hxhx_stage0_no_source_normalize_extract` for stage0 emit.
   HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT=1
@@ -197,6 +200,7 @@ HXHX_STAGE0_NO_EXPR_MACROS="${HXHX_STAGE0_NO_EXPR_MACROS:-0}"
 HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST="${HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST:-0}"
 HXHX_STAGE0_NO_STAGE3="${HXHX_STAGE0_NO_STAGE3:-0}"
 HXHX_STAGE0_NO_INTERNAL_TOOLS="${HXHX_STAGE0_NO_INTERNAL_TOOLS:-0}"
+HXHX_STAGE0_NO_DISPLAY="${HXHX_STAGE0_NO_DISPLAY:-0}"
 HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT="${HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT:-0}"
 HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT="${HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT:-0}"
 HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT="${HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT:-0}"
@@ -328,6 +332,12 @@ while [ $# -gt 0 ]; do
 		--stage0-internal-tools)
 			HXHX_STAGE0_NO_INTERNAL_TOOLS=0
 			;;
+		--stage0-no-display)
+			HXHX_STAGE0_NO_DISPLAY=1
+			;;
+		--stage0-display)
+			HXHX_STAGE0_NO_DISPLAY=0
+			;;
 		--stage0-no-source-normalize-extract)
 			HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT=1
 			;;
@@ -439,6 +449,7 @@ assert_bool_01 "HXHX_STAGE0_NO_EXPR_MACROS" "$HXHX_STAGE0_NO_EXPR_MACROS"
 assert_bool_01 "HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST" "$HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST"
 assert_bool_01 "HXHX_STAGE0_NO_STAGE3" "$HXHX_STAGE0_NO_STAGE3"
 assert_bool_01 "HXHX_STAGE0_NO_INTERNAL_TOOLS" "$HXHX_STAGE0_NO_INTERNAL_TOOLS"
+assert_bool_01 "HXHX_STAGE0_NO_DISPLAY" "$HXHX_STAGE0_NO_DISPLAY"
 assert_bool_01 "HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" "$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT"
 assert_bool_01 "HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT" "$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT"
 assert_bool_01 "HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT" "$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT"
@@ -807,6 +818,7 @@ compute_fingerprint() {
 		echo "stage0_no_external_macro_host=$HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST"
 		echo "stage0_no_stage3=$HXHX_STAGE0_NO_STAGE3"
 		echo "stage0_no_internal_tools=$HXHX_STAGE0_NO_INTERNAL_TOOLS"
+		echo "stage0_no_display=$HXHX_STAGE0_NO_DISPLAY"
 		echo "stage0_no_source_normalize_extract=$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT"
 		echo "stage0_no_native_decode_extract=$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT"
 		echo "stage0_no_parser_scan_extract=$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT"
@@ -880,6 +892,7 @@ write_report_json() {
   "stage0_no_external_macro_host": $HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST,
   "stage0_no_stage3": $HXHX_STAGE0_NO_STAGE3,
   "stage0_no_internal_tools": $HXHX_STAGE0_NO_INTERNAL_TOOLS,
+  "stage0_no_display": $HXHX_STAGE0_NO_DISPLAY,
   "stage0_no_source_normalize_extract": $HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT,
   "stage0_no_native_decode_extract": $HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT,
   "stage0_no_parser_scan_extract": $HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT,
@@ -1185,6 +1198,9 @@ fi
 if [ "$HXHX_STAGE0_NO_INTERNAL_TOOLS" = "1" ]; then
 	echo "== Stage0 compile mode: internal bring-up CLI paths disabled (-D hxhx_stage0_no_internal_tools)"
 fi
+if [ "$HXHX_STAGE0_NO_DISPLAY" = "1" ]; then
+	echo "== Stage0 compile mode: Stage3 display synthesis paths disabled (-D hxhx_stage0_no_display)"
+fi
 if [ "$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" = "1" ]; then
 	echo "== Stage0 compile mode: HxParser normalization helpers inlined (-D hxhx_stage0_no_source_normalize_extract)"
 fi
@@ -1302,6 +1318,9 @@ if [ "$skipped_emit" = "0" ]; then
 	fi
 	if [ "$HXHX_STAGE0_NO_INTERNAL_TOOLS" = "1" ]; then
 		haxe_args+=(-D hxhx_stage0_no_internal_tools)
+	fi
+	if [ "$HXHX_STAGE0_NO_DISPLAY" = "1" ]; then
+		haxe_args+=(-D hxhx_stage0_no_display)
 	fi
 	if [ "$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" = "1" ]; then
 		haxe_args+=(-D hxhx_stage0_no_source_normalize_extract)
