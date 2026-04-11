@@ -1377,17 +1377,40 @@ class EmitterStage {
 			}
 		}
 
+		function isNullableIntExpr(expr:HxExpr):Bool {
+			return switch (expr) {
+				case ENull:
+					true;
+				case ECall(EField(EIdent("Std"), "parseInt"), [_]):
+					true;
+				case ETernary(_cond, thenExpr, elseExpr): isNullableIntExpr(thenExpr) || isNullableIntExpr(elseExpr);
+				case _:
+					false;
+			}
+		}
+
+		function exprToOcamlNullableInt(expr:HxExpr):String {
+			return switch (expr) {
+				case ENull:
+					"HxRuntime.hx_null";
+				case EInt(_):
+					"Obj.repr (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee) + ")";
+				case _:
+					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+			}
+		}
+
 		inline function emitUnknownLength(o:String):String {
+			// Reuse the bound `Obj.t` for dynamic casts instead of re-emitting `o`.
+			// This matters when `o` is the bring-up placeholder `(Obj.magic 0)`: re-emitting it
+			// under a cast can make OCaml infer the placeholder argument itself as `Obj.t`.
 			return "(let __hx_len_obj = Obj.repr ("
 				+ o
 				+ ") in "
-				+ "if Obj.is_int __hx_len_obj then HxBootArray.length ((Obj.magic "
-				+ o
-				+ " : _ HxBootArray.t)) else if Obj.tag __hx_len_obj = Obj.string_tag then HxString.length ((Obj.magic "
-				+ o
-				+ " : string)) else HxBootArray.length ((Obj.magic "
-				+ o
-				+ " : _ HxBootArray.t)))";
+				+ "if Obj.is_int __hx_len_obj then HxBootArray.length ((Obj.obj __hx_len_obj : _ HxBootArray.t)) "
+				+ "else if Obj.tag __hx_len_obj = Obj.string_tag then HxString.length ((Obj.obj __hx_len_obj : string)) "
+				+ "else HxBootArray.length ((Obj.obj __hx_len_obj : _ HxBootArray.t)))";
 		}
 
 		function isSysIoProcessExpr(expr:HxExpr):Bool {
@@ -3330,13 +3353,25 @@ class EmitterStage {
 				// progress to the next missing semantic, not to be correct yet.
 				"(Obj.magic 0)";
 			case ETernary(cond, thenExpr, elseExpr):
-				"(if ("
-				+ exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-				+ ") then ("
-				+ exprToOcaml(thenExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-				+ ") else ("
-				+ exprToOcaml(elseExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-				+ "))";
+				final condCode = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				// Haxe `Std.parseInt` returns `Null<Int>`. In the OCaml runtime that is an
+				// `Obj.t` sentinel-or-boxed-int, so integer fallback branches in ternaries must
+				// be boxed too (e.g. `parts.length > 1 ? Std.parseInt(parts[1]) : 0`).
+				if (isNullableIntExpr(thenExpr) || isNullableIntExpr(elseExpr)) {"(if ("
+					+ condCode
+					+ ") then ("
+					+ exprToOcamlNullableInt(thenExpr)
+					+ ") else ("
+					+ exprToOcamlNullableInt(elseExpr)
+					+ "))";
+				} else {"(if ("
+					+ condCode
+					+ ") then ("
+					+ exprToOcaml(thenExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ") else ("
+					+ exprToOcaml(elseExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ "))";
+				}
 			case ESwitch(scrutinee, patterns, exprs):
 				// Stage 3 bring-up: lower a small structured switch expression subset to nested `if`.
 				//
@@ -3455,11 +3490,15 @@ class EmitterStage {
 					+ ") ("
 					+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 					+ ")))";
-				} else {"HxBootArray.get ("
-					+ exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") ("
-					+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
+				} else {final arrCode = exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+					final idxCode = exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+					// Bind the receiver once before the dynamic array cast. This keeps placeholder
+					// receivers like `(Obj.magic 0)` from being re-inferred as `Obj.t` arguments.
+					"(let __hx_arr_obj = Obj.repr ("
+					+ arrCode
+					+ ") in HxBootArray.get ((Obj.obj __hx_arr_obj : _ HxBootArray.t)) ("
+					+ idxCode
+					+ "))";
 				}
 			case ERange(_start, _end):
 				// Bring-up: ranges are emitted only as iterables in `for-in` lowering. If we see

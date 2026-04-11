@@ -1523,6 +1523,45 @@ echo "$out" | grep -q "^stage3=ok$"
 grep -Eq "HxBootArray\\.map(_dyn)?" "$tmpmapjoin/out/Main.ml"
 grep -q "HxBootArray.join_dyn" "$tmpmapjoin/out/Main.ml"
 
+echo "== Stage3 regression: full-body version parser return lowering compiles"
+tmpversionparser="$tmpdir/full_body_version_parser"
+mkdir -p "$tmpversionparser/src"
+cat >"$tmpversionparser/src/Main.hx" <<'HX'
+class Main {
+  static inline final DEFAULT_COMPILER_VERSION:Int = 40307;
+  static final defines:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
+
+  static function definedValue(name:String):String {
+    return defines.exists(name) ? defines.get(name) : "";
+  }
+
+  static function parseCompilerVersionFromDefines():Int {
+    final raw = definedValue("haxe_ver");
+    if (raw.length == 0)
+      return DEFAULT_COMPILER_VERSION;
+    final parts = raw.split(".");
+    if (parts.length == 0)
+      return DEFAULT_COMPILER_VERSION;
+    final major = Std.parseInt(parts[0]);
+    final minor = parts.length > 1 ? Std.parseInt(parts[1]) : 0;
+    final patch = parts.length > 2 ? Std.parseInt(parts[2]) : 0;
+    if (major == null || minor == null || patch == null)
+      return DEFAULT_COMPILER_VERSION;
+    return (major * 10000) + (minor * 100) + patch;
+  }
+
+  static function main() {
+    defines.set("haxe_ver", "4.3.7");
+    Sys.println(Std.string(parseCompilerVersionFromDefines()));
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpversionparser/src" -main Main --hxhx-out "$tmpversionparser/out")"
+echo "$out" | grep -q "^stage3=ok$"
+exe="$(echo "$out" | sed -n 's/^exe=//p' | tail -n 1)"
+test -n "$exe"
+test -f "$exe"
+
 echo "== Stage3 regression: instance method callback references bind this in emitted OCaml"
 tmpmethodcb="$tmpdir/instance_method_callback"
 mkdir -p "$tmpmethodcb/src"
