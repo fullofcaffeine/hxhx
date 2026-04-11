@@ -69,22 +69,25 @@ let implicitSamePackageDeps = fun source modulePath decl -> try let __fallback_r
               __new_15
             ));
             ignore (if HxString.equals name (!tempMaybeString) then raise (HxRuntime.Hx_continue) else ());
-            let cur = ref (pkg : string) in while HxString.length (!cur) > 0 do ignore ((
-              ignore (HxMap.set_string outSet ((HxString.toStdString (!cur) ^ ".") ^ HxString.toStdString name) true);
-              let lastDot = HxString.lastIndexOf (!cur) "." (HxString.length (!cur)) in let tempRight = ref ("" : string) in (
-                ignore (if lastDot < 0 then let __assign_16 = ("" : string) in (
-                  tempRight := __assign_16;
-                  __assign_16
-                ) else let __assign_17 = (HxString.substr (!cur) 0 lastDot : string) in (
-                  tempRight := __assign_17;
-                  __assign_17
-                ));
-                let __assign_18 = (!tempRight : string) in (
-                  cur := __assign_18;
-                  __assign_18
+            let cur = ref (pkg : string) in (
+              ignore (while HxString.length (!cur) > 0 do ignore ((
+                ignore (HxMap.set_string outSet ((HxString.toStdString (!cur) ^ ".") ^ HxString.toStdString name) true);
+                let lastDot = HxString.lastIndexOf (!cur) "." (HxString.length (!cur)) in let tempRight = ref ("" : string) in (
+                  ignore (if lastDot < 0 then let __assign_16 = ("" : string) in (
+                    tempRight := __assign_16;
+                    __assign_16
+                  ) else let __assign_17 = (HxString.substr (!cur) 0 lastDot : string) in (
+                    tempRight := __assign_17;
+                    __assign_17
+                  ));
+                  let __assign_18 = (!tempRight : string) in (
+                    cur := __assign_18;
+                    __assign_18
+                  )
                 )
-              )
-            )) done
+              )) done);
+              HxMap.set_string outSet name true
+            )
           )) with
             | HxRuntime.Hx_continue -> () done with
             | HxRuntime.Hx_break -> ());

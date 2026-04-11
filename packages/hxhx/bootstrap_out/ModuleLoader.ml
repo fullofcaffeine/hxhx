@@ -582,18 +582,21 @@ let candidateModulePaths = fun typePath packagePath imports -> try let __fallbac
       tempString2 := __assign_124;
       __assign_124
     ));
-    ignore (if HxString.length (!tempString2) > 0 && HxString.indexOf (!tempString) "." 0 = -1 then ignore (let cur = ref (!tempString2 : string) in try while true do try ignore ((
-      ignore (HxArray.push out ((HxString.toStdString (!cur) ^ ".") ^ HxString.toStdString (!tempString)));
-      let lastDot = HxString.lastIndexOf (!cur) "." (HxString.length (!cur)) in (
-        ignore (if lastDot < 0 then raise (HxRuntime.Hx_break) else ());
-        let __assign_125 = (HxString.substr (!cur) 0 lastDot : string) in (
-          cur := __assign_125;
-          __assign_125
+    ignore (if HxString.length (!tempString2) > 0 && HxString.indexOf (!tempString) "." 0 = -1 then ignore (let cur = ref (!tempString2 : string) in (
+      ignore (try while true do try ignore ((
+        ignore (HxArray.push out ((HxString.toStdString (!cur) ^ ".") ^ HxString.toStdString (!tempString)));
+        let lastDot = HxString.lastIndexOf (!cur) "." (HxString.length (!cur)) in (
+          ignore (if lastDot < 0 then raise (HxRuntime.Hx_break) else ());
+          let __assign_125 = (HxString.substr (!cur) 0 lastDot : string) in (
+            cur := __assign_125;
+            __assign_125
+          )
         )
-      )
-    )) with
-      | HxRuntime.Hx_continue -> () done with
-      | HxRuntime.Hx_break -> ()) else ());
+      )) with
+        | HxRuntime.Hx_continue -> () done with
+        | HxRuntime.Hx_break -> ());
+      HxArray.push out (!tempString)
+    )) else ());
     ignore (if HxString.length (!tempString2) = 0 && HxString.indexOf (!tempString) "." 0 = -1 then ignore (HxArray.push out (!tempString)) else ());
     let seen = Obj.magic (HxMap.create_string ()) in let uniq = Obj.magic (HxArray.create ()) in (
       ignore (let _g = ref 0 in try while !_g < HxArray.length out do try ignore (let m = (HxArray.get (Obj.magic out) (!_g) : string) in (

@@ -89,7 +89,8 @@ class ResolverStage {
 			if (name == moduleName)
 				continue;
 			// Real Haxe lookup for unqualified type names walks the current package and then
-			// parent packages (e.g. `package a.b; Util` can resolve to `a.Util`).
+			// parent packages, then the root package (e.g. `package a.b; Util` can resolve to
+			// `a.Util`, and compiler-owned package code can still reference root helpers).
 			//
 			// Emit every candidate path here; parseProjectRoots filters by actual file existence.
 			var cur = pkg;
@@ -98,6 +99,7 @@ class ResolverStage {
 				final lastDot = cur.lastIndexOf(".");
 				cur = lastDot < 0 ? "" : cur.substr(0, lastDot);
 			}
+			outSet.set(name, true);
 		}
 		final out = new Array<String>();
 		for (dep in outSet.keys())

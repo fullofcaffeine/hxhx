@@ -171,8 +171,9 @@ class ModuleLoader extends LazyTypeLoader {
 		//
 		// Why
 		// - Upstream resolves unqualified type names by searching the current package and then
-		//   walking up parent packages. This means code in `a.b` can refer to `Util` and have
-		//   it resolve to `a.Util` without an explicit import, as long as `a.Util` exists.
+		//   walking up parent packages, then root. This means code in `a.b` can refer to `Util`
+		//   and have it resolve to `a.Util` or root `Util` without an explicit import, as long
+		//   as that module exists.
 		//
 		// Example
 		// - `package runci.targets; ... Linux.requireAptPackages(...)` resolves to `runci.Linux`
@@ -187,6 +188,7 @@ class ModuleLoader extends LazyTypeLoader {
 					break;
 				cur = cur.substr(0, lastDot);
 			}
+			out.push(raw);
 		}
 
 		// Root-package candidate.

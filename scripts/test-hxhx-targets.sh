@@ -2101,6 +2101,32 @@ echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^lazy=ok$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 regression: package code can reference root-package helper types"
+tmproothelper="$tmpdir/package_root_helper_type"
+mkdir -p "$tmproothelper/src/p/q"
+cat >"$tmproothelper/src/p/q/Main.hx" <<'HX'
+package p.q;
+
+class Main {
+  static function main() {
+    // No import for RootHelper. Real Haxe can resolve root-package helpers from
+    // package-scoped compiler code, which Stage3 must load and qualify too.
+    Sys.println(Std.string(RootHelper.ping()));
+  }
+}
+HX
+cat >"$tmproothelper/src/RootHelper.hx" <<'HX'
+class RootHelper {
+  public static function ping():Int {
+    return 11;
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmproothelper/src" -main p.q.Main --hxhx-out "$tmproothelper/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^11$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 regression: lazy type loading in root package"
 tmprootlazy="$tmpdir/lazy_module_loading_root_pkg"
 mkdir -p "$tmprootlazy/src"
