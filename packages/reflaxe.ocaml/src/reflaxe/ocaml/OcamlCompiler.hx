@@ -5,6 +5,7 @@ import haxe.io.Path;
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import reflaxe.ocaml.macros.StrictModeEnforcer;
 import sys.io.File;
 import sys.io.FileOutput;
 #end
@@ -211,159 +212,175 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (profileEnabled)
 			profileInit();
 		ctx.profileLogLine = profileEnabled ? ((msg:String) -> profileLogLine(msg)) : null;
-		// Precompute inheritance participants after typing, before codegen starts.
-		//
-		// Why not compute lazily in `compileClassImpl`?
-		// - Base classes can be compiled before derived classes.
-		// - We need base classes to be marked “virtual” (method-field dispatch) before we emit them.
-		Context.onAfterTyping(function(types:Array<haxe.macro.Type.ModuleType>) {
-			if (ctx.virtualTypesComputed)
-				return;
-			ctx.virtualTypesComputed = true;
-
-			#if macro
-			if (profileEnabled) {
-				profileInit();
-				final now = profileNowS();
-				final msg = "reflaxe.ocaml: after typing moduleTypes="
-					+ Std.string(types.length)
-					+ " dt="
-					+ Std.string(Math.round(now - profileStartS))
-					+ "s";
-				Context.warning(msg, Context.currentPos());
-				profileLogLine(msg);
-			}
-			#end
-
-			// Primary-type mapping (naming): keep historical short names stable when a module
-			// only contains a single type, even if that type name differs from the file/module name.
-			final moduleToClasses:Map<String, Array<ClassType>> = [];
-
-			inline function fullNameOf(c:ClassType):String {
-				return (c.pack ?? []).concat([c.name]).join(".");
-			}
-
-			function markChain(c:ClassType):Void {
-				var cur:Null<ClassType> = c;
-				var guard = 0;
-				while (cur != null && guard++ < 64) {
-					ctx.virtualTypes.set(fullNameOf(cur), true);
-					ctx.dispatchTypes.set(fullNameOf(cur), true);
-					cur = cur.superClass != null ? cur.superClass.t.get() : null;
-				}
-			}
-
-			for (t in types) {
-				switch (t) {
-					case TClassDecl(cRef):
-						final c = cRef.get();
-
-						if (!moduleToClasses.exists(c.module))
-							moduleToClasses.set(c.module, []);
-						final list = moduleToClasses.get(c.module);
-						if (list != null)
-							list.push(c);
-
-						if (c.isInterface) {
-							ctx.interfaceTypes.set(fullNameOf(c), true);
-						}
-						if (c.interfaces != null && c.interfaces.length > 0 && !c.isInterface) {
-							ctx.dispatchTypes.set(fullNameOf(c), true);
-						}
-						if (c.superClass != null) {
-							markChain(c);
-						}
-					case _:
-				}
-			}
-
-			for (moduleId => list in moduleToClasses) {
-				if (list == null || list.length == 0)
-					continue;
-				final base = OcamlNameTools.moduleBaseName(moduleId);
-				var primary:Null<String> = null;
-				for (c in list) {
-					if (c.name == base) {
-						primary = c.name;
-						break;
-					}
-				}
-				if (primary == null)
-					primary = list[0].name;
-				if (primary != null)
-					ctx.primaryTypeNameByModule.set(moduleId, primary);
-			}
-
-			// Mutable static field inference (M6+/bd: haxe.ocaml-xgv.3.7).
-			//
-			// Why
-			// - OCaml `let` bindings are immutable, but Haxe `static var` fields can be reassigned.
-			// - We need to know which static fields are written anywhere in the program so we can:
-			//   - emit them as `ref` cells (`let x = ref <init>`)
-			//   - lower reads/writes to `!x` and `x := v`.
-			//
-			// This is a whole-program decision: `MyClass.x = 1` may appear in a different module
-			// than `MyClass` itself.
-			ctx.mutableStaticFields.clear();
-
-			inline function staticKey(c:ClassType, fieldName:String):String {
-				return (c.pack ?? []).concat([c.name, fieldName]).join(".");
-			}
-
-			function markStaticLValue(lhs:TypedExpr):Void {
-				switch (lhs.expr) {
-					case TField(_, FStatic(cRef, cfRef)):
-						final c = cRef.get();
-						final cf = cfRef.get();
-						switch (cf.kind) {
-							case FVar(_, _):
-								ctx.mutableStaticFields.set(staticKey(c, cf.name), true);
-							case _:
-						}
-					case _:
-				}
-			}
-
-			function scan(e:TypedExpr):Void {
-				switch (e.expr) {
-					// TypedExprTools.iter does not descend into function bodies, so we must
-					// explicitly traverse them here. Otherwise, assignments like:
-					//   class C { static var x; function new() x = 1; }
-					// would never be seen and we'd incorrectly emit `let x = <init>` (immutable)
-					// instead of `let x = ref <init>` (mutable). (bd: haxe.ocaml-xgv.3.7)
-					case TFunction(fn):
-						scan(fn.expr);
-					case TBinop(OpAssign, lhs, _):
-						markStaticLValue(lhs);
-					case TBinop(OpAssignOp(_), lhs, _):
-						markStaticLValue(lhs);
-					case TUnop(OpIncrement, _, inner) | TUnop(OpDecrement, _, inner):
-						markStaticLValue(inner);
-					case _:
-				}
-				haxe.macro.TypedExprTools.iter(e, scan);
-			}
-
-			for (t in types) {
-				switch (t) {
-					case TClassDecl(cRef):
-						final c = cRef.get();
-						for (f in c.fields.get()) {
-							final e = f.expr();
-							if (e != null)
-								scan(e);
-						}
-						for (f in c.statics.get()) {
-							final e = f.expr();
-							if (e != null)
-								scan(e);
-						}
-					case _:
-				}
-			}
-		});
 		#end
 	}
+
+	#if macro
+	/**
+		Precompute whole-program OCaml lowering context from Reflaxe's existing typed-module pass.
+
+		Why:
+		- Registering another `Context.onAfterTyping` callback asks stage0 Haxe's eval/macro bridge
+		  to encode the full compiler-sized typed module graph a second time.
+		- Bootstrap profiling showed the retained-memory wall inside macro API type encoding before
+		  Reflaxe output hooks start, so this work must piggyback on Reflaxe's already-materialized
+		  `filterTypes(moduleTypes)` call.
+
+		What:
+		- Preserves the previous virtual dispatch, primary type, and mutable static inference.
+		- Returns the input unchanged so Reflaxe's filtering semantics are untouched.
+	**/
+	public override function filterTypes(moduleTypes:Array<haxe.macro.Type.ModuleType>):Array<haxe.macro.Type.ModuleType> {
+		precomputeWholeProgramContext(moduleTypes);
+		StrictModeEnforcer.enforceRegisteredTypes(moduleTypes);
+		return moduleTypes;
+	}
+
+	function precomputeWholeProgramContext(types:Array<haxe.macro.Type.ModuleType>):Void {
+		if (ctx.virtualTypesComputed)
+			return;
+		ctx.virtualTypesComputed = true;
+
+		if (profileEnabled) {
+			profileInit();
+			final now = profileNowS();
+			final msg = "reflaxe.ocaml: after typing moduleTypes="
+				+ Std.string(types.length)
+				+ " dt="
+				+ Std.string(Math.round(now - profileStartS))
+				+ "s";
+			Context.warning(msg, Context.currentPos());
+			profileLogLine(msg);
+		}
+
+		// Primary-type mapping (naming): keep historical short names stable when a module
+		// only contains a single type, even if that type name differs from the file/module name.
+		final moduleToClasses:Map<String, Array<ClassType>> = [];
+
+		inline function fullNameOf(c:ClassType):String {
+			return (c.pack ?? []).concat([c.name]).join(".");
+		}
+
+		function markChain(c:ClassType):Void {
+			var cur:Null<ClassType> = c;
+			var guard = 0;
+			while (cur != null && guard++ < 64) {
+				ctx.virtualTypes.set(fullNameOf(cur), true);
+				ctx.dispatchTypes.set(fullNameOf(cur), true);
+				cur = cur.superClass != null ? cur.superClass.t.get() : null;
+			}
+		}
+
+		for (t in types) {
+			switch (t) {
+				case TClassDecl(cRef):
+					final c = cRef.get();
+
+					if (!moduleToClasses.exists(c.module))
+						moduleToClasses.set(c.module, []);
+					final list = moduleToClasses.get(c.module);
+					if (list != null)
+						list.push(c);
+
+					if (c.isInterface) {
+						ctx.interfaceTypes.set(fullNameOf(c), true);
+					}
+					if (c.interfaces != null && c.interfaces.length > 0 && !c.isInterface) {
+						ctx.dispatchTypes.set(fullNameOf(c), true);
+					}
+					if (c.superClass != null) {
+						markChain(c);
+					}
+				case _:
+			}
+		}
+
+		for (moduleId => list in moduleToClasses) {
+			if (list == null || list.length == 0)
+				continue;
+			final base = OcamlNameTools.moduleBaseName(moduleId);
+			var primary:Null<String> = null;
+			for (c in list) {
+				if (c.name == base) {
+					primary = c.name;
+					break;
+				}
+			}
+			if (primary == null)
+				primary = list[0].name;
+			if (primary != null)
+				ctx.primaryTypeNameByModule.set(moduleId, primary);
+		}
+
+		// Mutable static field inference (M6+/bd: haxe.ocaml-xgv.3.7).
+		//
+		// Why
+		// - OCaml `let` bindings are immutable, but Haxe `static var` fields can be reassigned.
+		// - We need to know which static fields are written anywhere in the program so we can:
+		//   - emit them as `ref` cells (`let x = ref <init>`)
+		//   - lower reads/writes to `!x` and `x := v`.
+		//
+		// This is a whole-program decision: `MyClass.x = 1` may appear in a different module
+		// than `MyClass` itself.
+		ctx.mutableStaticFields.clear();
+
+		inline function staticKey(c:ClassType, fieldName:String):String {
+			return (c.pack ?? []).concat([c.name, fieldName]).join(".");
+		}
+
+		function markStaticLValue(lhs:TypedExpr):Void {
+			switch (lhs.expr) {
+				case TField(_, FStatic(cRef, cfRef)):
+					final c = cRef.get();
+					final cf = cfRef.get();
+					switch (cf.kind) {
+						case FVar(_, _):
+							ctx.mutableStaticFields.set(staticKey(c, cf.name), true);
+						case _:
+					}
+				case _:
+			}
+		}
+
+		function scan(e:TypedExpr):Void {
+			switch (e.expr) {
+				// TypedExprTools.iter does not descend into function bodies, so we must
+				// explicitly traverse them here. Otherwise, assignments like:
+				//   class C { static var x; function new() x = 1; }
+				// would never be seen and we'd incorrectly emit `let x = <init>` (immutable)
+				// instead of `let x = ref <init>` (mutable). (bd: haxe.ocaml-xgv.3.7)
+				case TFunction(fn):
+					scan(fn.expr);
+				case TBinop(OpAssign, lhs, _):
+					markStaticLValue(lhs);
+				case TBinop(OpAssignOp(_), lhs, _):
+					markStaticLValue(lhs);
+				case TUnop(OpIncrement, _, inner) | TUnop(OpDecrement, _, inner):
+					markStaticLValue(inner);
+				case _:
+			}
+			haxe.macro.TypedExprTools.iter(e, scan);
+		}
+
+		for (t in types) {
+			switch (t) {
+				case TClassDecl(cRef):
+					final c = cRef.get();
+					for (f in c.fields.get()) {
+						final e = f.expr();
+						if (e != null)
+							scan(e);
+					}
+					for (f in c.statics.get()) {
+						final e = f.expr();
+						if (e != null)
+							scan(e);
+					}
+				case _:
+			}
+		}
+	}
+	#end
 
 	public override function generateOutputIterator():Iterator<DataAndFileInfo<reflaxe.output.StringOrBytes>> {
 		// Ensure type declarations (enums/typedefs/abstracts) appear before value

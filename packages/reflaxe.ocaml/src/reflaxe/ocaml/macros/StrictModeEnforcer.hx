@@ -41,6 +41,8 @@ private typedef StrictModeSnapshot = {
 class StrictModeEnforcer {
 	static var initialized = false;
 	static var fallbackAllowed = false;
+	static var configuredProjectRoot:Null<String> = null;
+	static var configuredBuildContext:Null<OcamlBuildContext> = null;
 	static var lastSnapshot:StrictModeSnapshot = {
 		mode: "reflaxe_stage0_macro",
 		enabled: false,
@@ -61,8 +63,24 @@ class StrictModeEnforcer {
 			return;
 
 		fallbackAllowed = buildContext.metalFallbackAllowed;
-		final projectRoot = normalizePath(Sys.getCwd());
-		Context.onAfterTyping(types -> enforce(types, projectRoot, buildContext));
+		configuredProjectRoot = normalizePath(Sys.getCwd());
+		configuredBuildContext = buildContext;
+	}
+
+	/**
+		Run strict-boundary enforcement from the target compiler's existing typed-module pass.
+
+		Why:
+		- `Context.onAfterTyping` callbacks receive the full typed module graph through Haxe's macro
+		  bridge. On compiler-sized stage0 bootstrap runs, each additional callback can force another
+		  large typed-graph encoding pass.
+		- `OcamlCompiler.filterTypes(...)` already receives the graph from Reflaxe's required callback,
+		  so strict-mode policy should consume that payload instead of registering a second callback.
+	**/
+	public static function enforceRegisteredTypes(types:Array<ModuleType>):Void {
+		if (configuredProjectRoot == null || configuredBuildContext == null)
+			return;
+		enforce(types, configuredProjectRoot, configuredBuildContext);
 	}
 
 	public static function snapshot():StrictModeSnapshot {
