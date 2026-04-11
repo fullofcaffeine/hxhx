@@ -218,6 +218,8 @@ Use this when you want the repo to function as a compiler-bootstrap example:
   - Scaling probe: set `HXHX_STAGE0_FREE_REFRESH_SCOPE=hxhx-type-only` to target the real
     `packages/hxhx/src` + `packages/hxhx-core/src` graph in Stage3 type-only mode without writing
     `packages/hxhx/bootstrap_out`.
+  - Full-emission dry-run: set `HXHX_STAGE0_FREE_REFRESH_SCOPE=hxhx-full-emit` to run the same
+    real source graph through Stage3 full-body emit/build without promoting snapshots.
   - Output: `.tmp/stage0-free-bootstrap-refresh-probe/summary.txt`
   - Artifact hygiene: the probe removes the temporary `hxhx` bootstrap build and Stage3 compiled
     byproducts by default; set `HXHX_STAGE0_FREE_REFRESH_KEEP_BUILD=1` or

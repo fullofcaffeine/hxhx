@@ -80,15 +80,28 @@ case "$SCOPE" in
       -main demo.A
     )
     ;;
-  hxhx-type-only)
+  hxhx-type-only|hxhx-full-emit)
     TARGET_LABEL="hxhx-source-type-only"
-    SOURCE_INPUTS="$ROOT/packages/hxhx/src,$ROOT/packages/hxhx-core/src:hxhx.Main"
     EXPECTED_MARKER="stage3=type_only_ok"
     REQUIRE_GENERATED_ML=0
     REQUIRE_ARTIFACT=0
     STAGE3_ARGS=(
       --hxhx-stage3
       --hxhx-type-only
+    )
+    if [ "$SCOPE" = "hxhx-full-emit" ]; then
+      TARGET_LABEL="hxhx-source-full-emit"
+      EXPECTED_MARKER="stage3=ok"
+      REQUIRE_GENERATED_ML=1
+      REQUIRE_ARTIFACT=1
+      STAGE3_ARGS=(
+        --hxhx-stage3
+        --hxhx-emit-full-bodies
+        --hxhx-no-run
+      )
+    fi
+    SOURCE_INPUTS="$ROOT/packages/hxhx/src,$ROOT/packages/hxhx-core/src:hxhx.Main"
+    STAGE3_ARGS+=(
       -cp "$ROOT/packages/hxhx/src"
       -cp "$ROOT/packages/hxhx-core/src"
       -main hxhx.Main
@@ -99,7 +112,7 @@ case "$SCOPE" in
     )
     ;;
   *)
-    echo "Unknown HXHX_STAGE0_FREE_REFRESH_SCOPE=$SCOPE (expected demo or hxhx-type-only)." >&2
+    echo "Unknown HXHX_STAGE0_FREE_REFRESH_SCOPE=$SCOPE (expected demo, hxhx-type-only, or hxhx-full-emit)." >&2
     exit 2
     ;;
 esac

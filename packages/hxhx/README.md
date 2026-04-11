@@ -77,6 +77,12 @@ To probe the real `hxhx` source graph without emitting or promoting snapshots, r
 HXHX_STAGE0_FREE_REFRESH_SCOPE=hxhx-type-only npm run hxhx:probe:stage0-free-refresh
 ```
 
+To dry-run full-body emission for that same graph without promoting snapshots, run:
+
+```bash
+HXHX_STAGE0_FREE_REFRESH_SCOPE=hxhx-full-emit npm run hxhx:probe:stage0-free-refresh
+```
+
 Regeneration now owns the snapshot finalization pass as well: it emits stage0 output,
 copies it into `packages/hxhx/bootstrap_out/`, finalizes that snapshot in place, then
 reshards large modules before the verify build.
