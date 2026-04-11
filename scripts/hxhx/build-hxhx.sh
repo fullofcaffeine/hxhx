@@ -41,6 +41,9 @@ HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
 HXHX_BOOTSTRAP_HEARTBEAT="${HXHX_BOOTSTRAP_HEARTBEAT:-20}"
 HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS="${HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS:-0}"
 HXHX_DUNE_JOBS="${HXHX_DUNE_JOBS:-auto}"
+HXHX_BOOTSTRAP_BUILD_PRUNE="${HXHX_BOOTSTRAP_BUILD_PRUNE:-1}"
+HXHX_BOOTSTRAP_BUILD_RETAIN="${HXHX_BOOTSTRAP_BUILD_RETAIN:-2}"
+HXHX_BOOTSTRAP_BUILD_PRUNE_ONLY="${HXHX_BOOTSTRAP_BUILD_PRUNE_ONLY:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
@@ -48,9 +51,85 @@ BOOTSTRAP_DIR="$HXHX_DIR/bootstrap_out"
 BOOTSTRAP_BUILD_DIR="${HXHX_BOOTSTRAP_BUILD_DIR:-}"
 BOOTSTRAP_BUILD_DIR_AUTOCREATED=0
 HAXE_SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
+BOOTSTRAP_BUILD_PID_FILE=".hxhx-bootstrap-build.pid"
 is_true() {
   local v="${1:-}"
   [[ "$v" == "1" || "$v" == "true" || "$v" == "yes" || "$v" == "on" ]]
+}
+
+bootstrap_build_dir_is_active() {
+  local dir="${1:-}"
+  local pid_file=""
+  local owner_pid=""
+
+  if [ -z "$dir" ] || [ ! -d "$dir" ]; then
+    return 1
+  fi
+  pid_file="$dir/$BOOTSTRAP_BUILD_PID_FILE"
+  if [ ! -f "$pid_file" ]; then
+    return 1
+  fi
+  owner_pid="$(head -n 1 "$pid_file" 2>/dev/null | tr -d '[:space:]' || true)"
+  case "$owner_pid" in
+    ''|*[!0-9]*)
+      return 1
+      ;;
+  esac
+  kill -0 "$owner_pid" >/dev/null 2>&1
+}
+
+prune_stale_bootstrap_build_dirs() {
+  local current_dir="${1:-}"
+  local retain="$HXHX_BOOTSTRAP_BUILD_RETAIN"
+  local kept_inactive=0
+  local pruned=0
+  local dir=""
+  local -a candidates=()
+  local -a sorted_candidates=()
+
+  if [ "$HXHX_BOOTSTRAP_BUILD_PRUNE" != "1" ]; then
+    return 0
+  fi
+  if [ ! -d "$ROOT/.tmp" ]; then
+    return 0
+  fi
+  case "$retain" in
+    ''|*[!0-9]*)
+      retain=2
+      ;;
+  esac
+
+  shopt -s nullglob
+  candidates=("$ROOT/.tmp"/hxhx-bootstrap-build.*)
+  shopt -u nullglob
+  if [ "${#candidates[@]}" -eq 0 ]; then
+    return 0
+  fi
+  while IFS= read -r dir; do
+    sorted_candidates+=("$dir")
+  done < <(ls -dt "${candidates[@]}" 2>/dev/null || true)
+
+  for dir in "${sorted_candidates[@]}"; do
+    if [ ! -d "$dir" ]; then
+      continue
+    fi
+    if [ -n "$current_dir" ] && [ "$dir" = "$current_dir" ]; then
+      continue
+    fi
+    if bootstrap_build_dir_is_active "$dir"; then
+      continue
+    fi
+    kept_inactive="$((kept_inactive + 1))"
+    if [ "$kept_inactive" -le "$retain" ]; then
+      continue
+    fi
+    rm -rf "$dir"
+    pruned="$((pruned + 1))"
+    echo "== Pruned stale bootstrap build dir: $dir" >&2
+  done
+  if [ "$pruned" -gt 0 ]; then
+    echo "== Pruned $pruned stale bootstrap build dir(s); retained newest inactive=$retain" >&2
+  fi
 }
 
 resolve_bootstrap_build_dir() {
@@ -68,8 +147,17 @@ resolve_bootstrap_build_dir() {
   # or mutate the same copied snapshot under later callers.
   BOOTSTRAP_BUILD_DIR_AUTOCREATED=1
   mkdir -p "$ROOT/.tmp"
-  mktemp -d "$ROOT/.tmp/hxhx-bootstrap-build.XXXXXX"
+  prune_stale_bootstrap_build_dirs ""
+  local dir
+  dir="$(mktemp -d "$ROOT/.tmp/hxhx-bootstrap-build.XXXXXX")"
+  printf '%s\n' "$$" >"$dir/$BOOTSTRAP_BUILD_PID_FILE" 2>/dev/null || true
+  echo "$dir"
 }
+
+if [ "$HXHX_BOOTSTRAP_BUILD_PRUNE_ONLY" = "1" ]; then
+  prune_stale_bootstrap_build_dirs ""
+  exit 0
+fi
 
 BOOTSTRAP_BUILD_DIR="$(resolve_bootstrap_build_dir)"
 
@@ -592,6 +680,7 @@ cleanup_bootstrap_build_dir() {
     return 0
   fi
   if [ "$status" -eq 0 ]; then
+    rm -f "$BOOTSTRAP_BUILD_DIR/$BOOTSTRAP_BUILD_PID_FILE" 2>/dev/null || true
     return 0
   fi
   if [ "${HXHX_KEEP_TMP_ON_FAIL:-0}" = "1" ] || [ "${HXHX_KEEP_BOOTSTRAP_BUILD_DIR_ON_FAIL:-0}" = "1" ]; then

@@ -47,6 +47,9 @@ During this path, the script copies `bootstrap_out` into an isolated temporary b
 workspace under `.tmp/`, rehydrates any sharded modules there, and runs `dune` in that
 workspace. Set `HXHX_BOOTSTRAP_BUILD_DIR=/absolute/or/relative/path` if you explicitly
 want a persistent bootstrap work directory.
+Autocreated work directories are pruned on later runs to prevent ignored `.tmp/`
+artifacts from piling up; tune with `HXHX_BOOTSTRAP_BUILD_RETAIN=<n>` (default `2`) or
+disable with `HXHX_BOOTSTRAP_BUILD_PRUNE=0`.
 This default path does not apply semantic patching to generated OCaml. Any bootstrap
 snapshot repair/finalization now happens during regeneration, before the snapshot is
 committed back under `packages/hxhx/bootstrap_out/`.
