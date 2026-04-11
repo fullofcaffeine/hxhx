@@ -215,6 +215,9 @@ Use this when you want the repo to function as a compiler-bootstrap example:
   - Command: `npm run hxhx:probe:stage0-free-refresh`
   - Scope: builds `hxhx` from committed snapshots with `HXHX_FORBID_STAGE0=1`, then runs Stage3
     `--hxhx-emit-full-bodies --hxhx-no-run` on the repo-owned `demo.A` fixture.
+  - Scaling probe: set `HXHX_STAGE0_FREE_REFRESH_SCOPE=hxhx-type-only` to target the real
+    `packages/hxhx/src` + `packages/hxhx-core/src` graph in Stage3 type-only mode without writing
+    `packages/hxhx/bootstrap_out`.
   - Output: `.tmp/stage0-free-bootstrap-refresh-probe/summary.txt`
   - Artifact hygiene: the probe removes the temporary `hxhx` bootstrap build and Stage3 compiled
     byproducts by default; set `HXHX_STAGE0_FREE_REFRESH_KEEP_BUILD=1` or

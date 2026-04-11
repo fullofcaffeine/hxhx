@@ -71,6 +71,11 @@ npm run hxhx:probe:stage0-free-refresh
 That probe builds `hxhx` from committed snapshots with `HXHX_FORBID_STAGE0=1`, emits a
 small repo-owned fixture through Stage3 full-body output, verifies generated OCaml and
 snapshot non-mutation, and removes large temporary build directories by default.
+To probe the real `hxhx` source graph without emitting or promoting snapshots, run:
+
+```bash
+HXHX_STAGE0_FREE_REFRESH_SCOPE=hxhx-type-only npm run hxhx:probe:stage0-free-refresh
+```
 
 Regeneration now owns the snapshot finalization pass as well: it emits stage0 output,
 copies it into `packages/hxhx/bootstrap_out/`, finalizes that snapshot in place, then

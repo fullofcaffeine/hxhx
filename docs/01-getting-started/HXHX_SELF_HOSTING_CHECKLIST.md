@@ -96,6 +96,13 @@ The selected path is **native self-refresh**:
 
 Payload slicing of the existing stage0 Reflaxe compile graph is intentionally not the release path. It still depends on the stage0 macro/eval typed-payload wall, and it risks creating partially generated artifacts whose equivalence is harder to prove than a fully stage0-forbidden native refresh.
 
+Promotion contract for the full path:
+
+1. Stage0 remains blocked for the build and refresh probe (`HXHX_FORBID_STAGE0=1`, sentinel `HAXE_BIN`).
+2. Dry-run output goes under ignored `.tmp/` paths first; committed snapshots are not mutated until validation passes.
+3. The first scaling rung targets the real `hxhx.Main` source graph in Stage3 type-only mode.
+4. Full promotion requires generated source parity checks, shard/finalization checks, and a clean diff review before replacing `packages/hxhx/bootstrap_out`.
+
 ## Definition of done (practical)
 
 We can call strong self-hosting done when all of this is true:
@@ -117,6 +124,9 @@ npm run test:self-hosting-smoke
 
 # Prototype the native refresh path on a small repo-owned fixture.
 npm run hxhx:probe:stage0-free-refresh
+
+# Probe the real hxhx source graph without emitting or promoting snapshots.
+HXHX_STAGE0_FREE_REFRESH_SCOPE=hxhx-type-only npm run hxhx:probe:stage0-free-refresh
 
 # Build hxhx without allowing delegation.
 HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used bash scripts/hxhx/build-hxhx.sh

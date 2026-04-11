@@ -4,8 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUT_ROOT="${HXHX_STAGE0_FREE_REFRESH_OUT:-$ROOT/.tmp/stage0-free-bootstrap-refresh-probe}"
 HAXE_SENTINEL="${HXHX_STAGE0_FREE_REFRESH_HAXE_SENTINEL:-/definitely-not-used}"
-FIXTURE_CP="$ROOT/workloads/hih-compiler/fixtures/src"
-FIXTURE_MAIN="demo.A"
+SCOPE="${HXHX_STAGE0_FREE_REFRESH_SCOPE:-demo}"
 DUNE_JOBS_FOR_BUILD="${HXHX_DUNE_JOBS:-2}"
 
 if [[ "$OUT_ROOT" != /* ]]; then
@@ -27,6 +26,12 @@ STAGE3_LOG="$OUT_ROOT/stage3-emit.log"
 
 KEEP_BOOTSTRAP_BUILD="${HXHX_STAGE0_FREE_REFRESH_KEEP_BUILD:-0}"
 KEEP_DUNE_BUILD="${HXHX_STAGE0_FREE_REFRESH_KEEP_DUNE_BUILD:-0}"
+TARGET_LABEL=""
+SOURCE_INPUTS=""
+EXPECTED_MARKER=""
+REQUIRE_GENERATED_ML=0
+REQUIRE_ARTIFACT=0
+STAGE3_ARGS=()
 
 cleanup_probe_artifacts() {
   local status=$?
@@ -60,11 +65,51 @@ need_cmd dune "dune"
 need_cmd ocamlc "ocaml compiler"
 need_cmd git "git"
 
+case "$SCOPE" in
+  demo)
+    TARGET_LABEL="demo-full-emit"
+    SOURCE_INPUTS="$ROOT/workloads/hih-compiler/fixtures/src:demo.A"
+    EXPECTED_MARKER="stage3=ok"
+    REQUIRE_GENERATED_ML=1
+    REQUIRE_ARTIFACT=1
+    STAGE3_ARGS=(
+      --hxhx-stage3
+      --hxhx-emit-full-bodies
+      --hxhx-no-run
+      -cp "$ROOT/workloads/hih-compiler/fixtures/src"
+      -main demo.A
+    )
+    ;;
+  hxhx-type-only)
+    TARGET_LABEL="hxhx-source-type-only"
+    SOURCE_INPUTS="$ROOT/packages/hxhx/src,$ROOT/packages/hxhx-core/src:hxhx.Main"
+    EXPECTED_MARKER="stage3=type_only_ok"
+    REQUIRE_GENERATED_ML=0
+    REQUIRE_ARTIFACT=0
+    STAGE3_ARGS=(
+      --hxhx-stage3
+      --hxhx-type-only
+      -cp "$ROOT/packages/hxhx/src"
+      -cp "$ROOT/packages/hxhx-core/src"
+      -main hxhx.Main
+      -D hih_native_parser
+      -D reflaxe_ocaml
+      -D no_traces
+      -D no-traces
+    )
+    ;;
+  *)
+    echo "Unknown HXHX_STAGE0_FREE_REFRESH_SCOPE=$SCOPE (expected demo or hxhx-type-only)." >&2
+    exit 2
+    ;;
+esac
+
 rm -rf "$OUT_ROOT"
 mkdir -p "$OUT_ROOT" "$STAGE3_OUT"
 
 echo "== Stage0-free bootstrap refresh probe"
 echo "== Decision: native/self-refresh path; payload slicing remains rejected for release-equivalence risk"
+echo "== Scope: $SCOPE ($TARGET_LABEL)"
 echo "== Building hxhx from committed snapshots with stage0 delegation forbidden"
 
 set +e
@@ -89,16 +134,12 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
   exit 1
 fi
 
-echo "== Emitting minimal repo-owned fixture via Stage3 full-body path"
+echo "== Running Stage3 scope probe"
 set +e
 HXHX_FORBID_STAGE0=1 \
   HAXE_BIN="$HAXE_SENTINEL" \
   "$HXHX_BIN" \
-    --hxhx-stage3 \
-    --hxhx-emit-full-bodies \
-    --hxhx-no-run \
-    -cp "$FIXTURE_CP" \
-    -main "$FIXTURE_MAIN" \
+    "${STAGE3_ARGS[@]}" \
     --hxhx-out "$STAGE3_OUT" >"$STAGE3_LOG" 2>&1
 stage3_code=$?
 set -e
@@ -109,23 +150,28 @@ if [ "$stage3_code" -ne 0 ]; then
   exit "$stage3_code"
 fi
 
-if ! grep -q '^stage3=ok$' "$STAGE3_LOG"; then
-  echo "FAILED: Stage3 probe did not emit stage3=ok marker." >&2
+if ! grep -q "^$EXPECTED_MARKER$" "$STAGE3_LOG"; then
+  echo "FAILED: Stage3 probe did not emit expected marker: $EXPECTED_MARKER." >&2
   sed -n '1,120p' "$STAGE3_LOG" >&2 || true
   exit 1
 fi
 
 generated_ml_count="$(find "$STAGE3_OUT" -type f -name '*.ml' | wc -l | tr -d '[:space:]')"
-if [ "$generated_ml_count" = "0" ]; then
+if [ "$REQUIRE_GENERATED_ML" = "1" ] && [ "$generated_ml_count" = "0" ]; then
   echo "FAILED: Stage3 probe emitted no OCaml source files under $STAGE3_OUT." >&2
   exit 1
 fi
 
-artifact_path="$(sed -n 's/^exe=//p; s/^artifact=//p' "$STAGE3_LOG" | tail -n 1 | tr -d '\r')"
-if [ -z "$artifact_path" ] || [ ! -f "$artifact_path" ]; then
-  echo "FAILED: Stage3 probe did not build the reported artifact." >&2
-  sed -n '1,120p' "$STAGE3_LOG" >&2 || true
-  exit 1
+artifact_path=""
+artifact_validated=0
+if [ "$REQUIRE_ARTIFACT" = "1" ]; then
+  artifact_path="$(sed -n 's/^exe=//p; s/^artifact=//p' "$STAGE3_LOG" | tail -n 1 | tr -d '\r')"
+  if [ -z "$artifact_path" ] || [ ! -f "$artifact_path" ]; then
+    echo "FAILED: Stage3 probe did not build the reported artifact." >&2
+    sed -n '1,120p' "$STAGE3_LOG" >&2 || true
+    exit 1
+  fi
+  artifact_validated=1
 fi
 
 if ! git -C "$ROOT" diff --quiet -- packages/hxhx/bootstrap_out packages/hxhx-macro-host/bootstrap_out; then
@@ -139,17 +185,18 @@ status=ok
 prototype=stage0-free-native-refresh-minimal
 decision=native_self_refresh
 payload_slicing=rejected_release_equivalence_risk
+scope=$SCOPE
+target_label=$TARGET_LABEL
 stage0_forbidden=1
 haxe_bin=$HAXE_SENTINEL
 hxhx_bin=$HXHX_BIN
 dune_jobs=$DUNE_JOBS_FOR_BUILD
-fixture_cp=$FIXTURE_CP
-fixture_main=$FIXTURE_MAIN
+source_inputs=$SOURCE_INPUTS
 stage3_out=$STAGE3_OUT
 generated_ml_count=$generated_ml_count
 artifact_path=$artifact_path
-artifact_validated=1
-stage3_marker=stage3=ok
+artifact_validated=$artifact_validated
+stage3_marker=$EXPECTED_MARKER
 bootstrap_snapshot_diff=clean
 bootstrap_build_retained=$KEEP_BOOTSTRAP_BUILD
 stage3_compiled_artifacts_retained=$KEEP_DUNE_BUILD
