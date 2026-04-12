@@ -66,6 +66,16 @@ need_cmd dune "dune"
 need_cmd ocamlc "ocaml compiler"
 need_cmd git "git"
 
+append_stage3_timeout_diagnostics() {
+  {
+    printf 'generated_ml_count='
+    find "$STAGE3_OUT" -type f -name '*.ml' 2>/dev/null | wc -l | tr -d '[:space:]'
+    printf '\n'
+    echo "recent_stage3_files:"
+    ls -lt "$STAGE3_OUT" 2>/dev/null | sed -n '1,20p' || true
+  } >>"$STAGE3_LOG"
+}
+
 case "$SCOPE" in
   demo)
     TARGET_LABEL="demo-full-emit"
@@ -176,6 +186,7 @@ if [ "$STAGE3_TIMEOUT_SEC" -gt 0 ]; then
           echo "FAILED: Stage3 scope probe timed out after ${STAGE3_TIMEOUT_SEC}s."
           echo "stage3_timeout_sec=$STAGE3_TIMEOUT_SEC"
         } >>"$STAGE3_LOG"
+        append_stage3_timeout_diagnostics
         printf 'timeout\n' >"$timeout_marker"
         pkill -TERM -P "$stage3_pid" 2>/dev/null || true
         kill -TERM "$stage3_pid" 2>/dev/null || true
@@ -209,7 +220,7 @@ set -e
 
 if [ "$stage3_code" -ne 0 ]; then
   echo "FAILED: Stage3 full-body emit probe failed; log: $STAGE3_LOG" >&2
-  sed -n '1,120p' "$STAGE3_LOG" >&2 || true
+  tail -n 120 "$STAGE3_LOG" >&2 || true
   exit "$stage3_code"
 fi
 
