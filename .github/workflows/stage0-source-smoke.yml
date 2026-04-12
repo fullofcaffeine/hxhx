@@ -178,12 +178,24 @@ jobs:
           echo "$targets" | grep -qx "js"
 
           guard_log="$RUNNER_TEMP/stage0_source_guard.log"
-          if HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --version >"$guard_log" 2>&1; then
-            echo "Expected HXHX_FORBID_STAGE0=1 to block stage0 passthrough for source-build smoke." >&2
+          if ! HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --version >"$guard_log" 2>&1; then
+            echo "Expected --version to stay stage0-free under HXHX_FORBID_STAGE0=1." >&2
             sed -n '1,60p' "$guard_log" >&2
             exit 1
           fi
-          grep -q "HXHX_FORBID_STAGE0=1 forbids stage0 delegation" "$guard_log"
+          if ! grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+' "$guard_log"; then
+            echo "Expected semver-style --version output under HXHX_FORBID_STAGE0=1." >&2
+            sed -n '1,60p' "$guard_log" >&2
+            exit 1
+          fi
+
+          delegation_log="$RUNNER_TEMP/stage0_source_delegation_guard.log"
+          if HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --compat --version >"$delegation_log" 2>&1; then
+            echo "Expected HXHX_FORBID_STAGE0=1 to block explicit --compat stage0 delegation." >&2
+            sed -n '1,60p' "$delegation_log" >&2
+            exit 1
+          fi
+          grep -q "HXHX_FORBID_STAGE0=1 forbids --compat" "$delegation_log"
       - name: Upload stage0 smoke build log
         if: always()
         uses: actions/upload-artifact@v4
