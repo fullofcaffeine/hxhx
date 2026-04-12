@@ -113,7 +113,9 @@ private class _EmitterStageDebug {
 		if (!traceStage3Enabled())
 			return;
 		try {
-			Sys.stderr().writeString("stage3_emit_phase=" + label + "\n");
+			final stderr = Sys.stderr();
+			stderr.writeString("stage3_emit_phase=" + label + "\n");
+			stderr.flush();
 		} catch (_:haxe.io.Error) {} catch (_:String) {}
 	}
 
@@ -122,7 +124,9 @@ private class _EmitterStageDebug {
 			return;
 		try {
 			final fileTag = filePath == null ? "<unknown>" : filePath;
-			Sys.stderr().writeString("stage3_emit[" + label + "]=" + moduleName + " file=" + fileTag + "\n");
+			final stderr = Sys.stderr();
+			stderr.writeString("stage3_emit[" + label + "]=" + moduleName + " file=" + fileTag + "\n");
+			stderr.flush();
 		} catch (_:haxe.io.Error) {} catch (_:String) {}
 	}
 }
@@ -5020,7 +5024,29 @@ class EmitterStage {
 		}
 
 		// Fold right so `var` statements can wrap the rest with `let name = init in ...`.
-		var out = "()";
+		//
+		// Why
+		// - The original implementation repeatedly prepended to the already-rendered tail string.
+		// - That is quadratic for large functions; self-emitting `EmitterStage.emitToDir` spends
+		//   minutes allocating and collecting those intermediate strings.
+		//
+		// How
+		// - Keep each right-fold wrapper as a prefix/suffix pair.
+		// - If a statement definitely returns, reset the base and discard wrappers for unreachable
+		//   statements to its right, matching the old lowering.
+		// - Materialize the final OCaml string once at the end with `StringBuf`.
+		var base = "()";
+		final prefixes = new Array<String>();
+		final suffixes = new Array<String>();
+		inline function wrapStatement(prefix:String, suffix:String):Void {
+			prefixes.push(prefix);
+			suffixes.push(suffix);
+		}
+		inline function resetToReturning(rendered:String):Void {
+			base = rendered;
+			prefixes.resize(0);
+			suffixes.resize(0);
+		}
 		for (i in 0...stmts.length) {
 			final idx = stmts.length - 1 - i;
 			final s = stmts[idx];
@@ -5047,8 +5073,11 @@ class EmitterStage {
 					// Keep OCaml warning discipline resilient: Haxe code (especially upstream-ish tests)
 					// can contain locals that are intentionally unused. In OCaml, that triggers warnings
 					// which can become hard errors under `-warn-error`.
-					out = isMutableLocalRefIdent(name) ? ("let " + ident + " = ref (" + rhs + ") in (ignore " + ident + "; (" + out + "))") : ("let "
-						+ ident + " = " + rhs + " in (ignore " + ident + "; (" + out + "))");
+					if (isMutableLocalRefIdent(name)) {
+						wrapStatement("let " + ident + " = ref (" + rhs + ") in (ignore " + ident + "; (", "))");
+					} else {
+						wrapStatement("let " + ident + " = " + rhs + " in (ignore " + ident + "; (", "))");
+					}
 				case SIf(cond, thenBranch, elseBranch, _pos):
 					// Stage 3 bring-up: recognize and SSA-lower the common "null-coalescing assignment"
 					// idiom used by upstream RunCi:
@@ -5089,23 +5118,40 @@ class EmitterStage {
 						final ident = ocamlValueIdent(assign.name);
 						final rhs = returnExprToOcaml(assign.rhs, allowedValueIdents, null, arityByIdent, cast tyCtx, staticImportByIdent, currentPackagePath,
 							moduleNameByPkgAndClass, callSigByCallee);
-						out = "(let " + ident + " = (if " + condToOcamlBool(cond, cast tyCtx) + " then (" + rhs + ") else " + ident + ") in (ignore "
-							+ ident + "; (" + out + ")))";
+						wrapStatement("(let " + ident + " = (if " + condToOcamlBool(cond, cast tyCtx) + " then (" + rhs + ") else " + ident
+							+ ") in (ignore " + ident + "; (",
+							")))");
 					} else {
 						// Default lowering for if-statements.
-						out = stmtAlwaysReturns(s) ? stmtToUnit(s, cast tyCtx) : ("(" + stmtToUnit(s, cast tyCtx) + "; " + out + ")");
+						if (stmtAlwaysReturns(s)) {
+							resetToReturning(stmtToUnit(s, cast tyCtx));
+						} else {
+							wrapStatement("(" + stmtToUnit(s, cast tyCtx) + "; ", ")");
+						}
 					}
 				case _:
 					// Avoid emitting `...; <nonreturning expr>` sequences, which produce warning 21
 					// (nonreturning-statement). This also naturally drops statements that appear after
 					// a definite `return` in the same block (unreachable in Haxe).
-					out = stmtAlwaysReturns(s) ? stmtToUnit(s, cast tyCtx) : ("(" + stmtToUnit(s, cast tyCtx) + "; " + out + ")");
+					if (stmtAlwaysReturns(s)) {
+						resetToReturning(stmtToUnit(s, cast tyCtx));
+					} else {
+						wrapStatement("(" + stmtToUnit(s, cast tyCtx) + "; ", ")");
+					}
 			}
 			currentStmtTyEntries = prevStmtTyEntries;
 		}
 		currentMutableLocalRefNames = prevMutableLocalRefNames;
 		currentFunctionLocalTypeHints = previousStmtLocalTypeHints;
-		return out;
+		final out = new StringBuf();
+		for (i in 0...prefixes.length) {
+			final idx = prefixes.length - 1 - i;
+			out.add(prefixes[idx]);
+		}
+		out.add(base);
+		for (suffix in suffixes)
+			out.add(suffix);
+		return out.toString();
 	}
 
 	/**
