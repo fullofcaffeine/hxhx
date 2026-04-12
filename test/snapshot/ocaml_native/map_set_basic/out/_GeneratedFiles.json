@@ -7,7 +7,6 @@
 		"ocaml_IntMap.ml",
 		"ocaml_Buffer.ml",
 		"haxe_iterators_StringKeyValueIterator.ml",
-		"haxe_iterators_StringIteratorUnicode.ml",
 		"haxe_iterators_StringIterator.ml",
 		"haxe_iterators_ArrayKeyValueIterator.ml",
 		"haxe_iterators_ArrayIterator.ml",
