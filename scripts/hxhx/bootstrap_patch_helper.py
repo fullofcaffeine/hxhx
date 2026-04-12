@@ -1990,6 +1990,119 @@ def cmd_patch_stmt_list_local_hint_reprs(argv: list[str]) -> None:
         write_text(path_str, src)
 
 
+def cmd_patch_stmt_list_string_builder(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-stmt-list-string-builder <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    marker = "let base = ref (\"()\" : string) in let prefixes = ref ([] : string list) in let suffixes = ref ([] : string list)"
+    if marker in src:
+        return
+
+    start_marker = 'let out = ref ("()" : string) in ('
+    start = src.find(start_marker)
+    if start == -1:
+        return
+
+    end_rx = re.compile(
+        r"""ignore \(let __assign_\d+ = Obj\.magic \(!tempArray\) in \(\n"""
+        r"""\s*currentMutableLocalRefNames := __assign_\d+;\n"""
+        r"""\s*__assign_\d+\n"""
+        r"""\s*\)\);\n"""
+        r"""\s*ignore \(let __assign_\d+ = Obj\.repr previousStmtLocalTypeHints in \(\n"""
+        r"""\s*currentFunctionLocalTypeHints := __assign_\d+;\n"""
+        r"""\s*__assign_\d+\n"""
+        r"""\s*\)\);\n"""
+        r"""\s*!out""",
+        re.S,
+    )
+    end_match = end_rx.search(src, start)
+    if end_match is None:
+        fail("build-hxhx: failed to locate stmtListToOcaml generated fold end for string-builder repair\n")
+
+    replacement = '''let base = ref ("()" : string) in let prefixes = ref ([] : string list) in let suffixes = ref ([] : string list) in (
+                        let add_wrap = fun prefix suffix -> (
+                          prefixes := prefix :: !prefixes;
+                          suffixes := suffix :: !suffixes
+                        ) in let reset_to_returning = fun rendered -> (
+                          base := rendered;
+                          prefixes := [];
+                          suffixes := []
+                        ) in (
+                        ignore (let _g = ref 0 in let _g1 = HxArray.length stmts in while !_g < _g1 do ignore (let i = let __old_stmtlist_string_builder_i = !_g in let __new_stmtlist_string_builder_i = HxInt.add __old_stmtlist_string_builder_i 1 in (
+                          ignore (_g := __new_stmtlist_string_builder_i);
+                          __old_stmtlist_string_builder_i
+                        ) in let idx = HxInt.sub (HxInt.sub (HxArray.length stmts) 1) i in let s = Obj.magic (HxArray.get (Obj.magic stmts) idx) in let tyCtx = extendTyWithLocals tyByIdent (HxArray.get (Obj.magic localsBefore) idx) in let prevStmtTyEntries = Obj.magic (!currentStmtTyEntries) in (
+                          ignore (let __assign_stmtlist_string_builder_entries = Obj.magic (buildStmtTyEntries tyCtx) in (
+                            currentStmtTyEntries := __assign_stmtlist_string_builder_entries;
+                            __assign_stmtlist_string_builder_entries
+                          ));
+                          ignore (match s with
+                            | HxStmt.SVar (name, _typeHint, init, _pos) -> (
+                              let rhs = if init == Obj.magic (HxRuntime.hx_null) then ("(Obj.magic 0)" : string) else (
+                                let initExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" init) in match initExpr with
+                                | HxExpr.EIdent n when HxString.equals n name -> ("(Obj.magic 0)" : string)
+                                | _ -> (returnExprToOcaml (Obj.magic initExpr) allowedValueIdents (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.repr arityByIdent) (Obj.repr tyCtx) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string)
+                              ) in let ident = (ocamlValueIdent (name : string) : string) in
+                              if isMutableLocalRefIdent (name : string) then
+                                add_wrap (("let " ^ HxString.toStdString ident) ^ " = ref (" ^ HxString.toStdString rhs ^ ") in (ignore " ^ HxString.toStdString ident ^ "; (" : string) ("))" : string)
+                              else
+                                add_wrap (("let " ^ HxString.toStdString ident) ^ " = " ^ HxString.toStdString rhs ^ " in (ignore " ^ HxString.toStdString ident ^ "; (" : string) ("))" : string)
+                            )
+                            | HxStmt.SIf (cond, thenBranch, elseBranch, _pos) -> (
+                              let rec unwrapSingleAssign = fun b -> match b with
+                                | HxStmt.SExpr (HxExpr.EBinop (op, HxExpr.EIdent name, rhs), _) when HxString.equals op "=" -> Some (name, rhs)
+                                | HxStmt.SBlock (ss, _) when ss != Obj.magic (HxRuntime.hx_null) && HxArray.length ss = 1 ->
+                                  unwrapSingleAssign (Obj.magic (HxArray.get (Obj.magic ss) 0))
+                                | _ -> None
+                              in let isNullCheckFor = fun name c -> match c with
+                                | HxExpr.EBinop (op, HxExpr.EIdent n, HxExpr.ENull) when HxString.equals op "==" -> HxString.equals n name
+                                | HxExpr.EBinop (op, HxExpr.ENull, HxExpr.EIdent n) when HxString.equals op "==" -> HxString.equals n name
+                                | _ -> false
+                              in let assign = if elseBranch == Obj.magic (HxRuntime.hx_null) then unwrapSingleAssign (Obj.magic thenBranch) else None in
+                              match assign with
+                              | Some (assignName, assignRhs) when isNullCheckFor (assignName : string) (Obj.magic cond) && not (isMutableLocalRefIdent (assignName : string)) ->
+                                let ident = (ocamlValueIdent (assignName : string) : string) in
+                                let rhs = (returnExprToOcaml (Obj.magic assignRhs) allowedValueIdents (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.repr arityByIdent) (Obj.repr tyCtx) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in
+                                add_wrap (((((((("(let " ^ HxString.toStdString ident) ^ " = (if ") ^ HxString.toStdString (condToOcamlBool (Obj.magic cond) tyCtx)) ^ " then (") ^ HxString.toStdString rhs) ^ ") else ") ^ HxString.toStdString ident) ^ ") in (ignore " ^ HxString.toStdString ident ^ "; (" : string) (")))" : string)
+                              | _ ->
+                                if (!stmtAlwaysReturns) (Obj.magic s) then
+                                  reset_to_returning (((!stmtToUnit) (Obj.magic s) tyCtx : string))
+                                else
+                                  add_wrap ((("(" ^ HxString.toStdString ((!stmtToUnit) (Obj.magic s) tyCtx)) ^ "; " : string)) (")" : string)
+                            )
+                            | _ -> (
+                              if (!stmtAlwaysReturns) (Obj.magic s) then
+                                reset_to_returning (((!stmtToUnit) (Obj.magic s) tyCtx : string))
+                              else
+                                add_wrap ((("(" ^ HxString.toStdString ((!stmtToUnit) (Obj.magic s) tyCtx)) ^ "; " : string)) (")" : string)
+                            ));
+                          let __assign_stmtlist_string_builder_prev_entries = Obj.magic prevStmtTyEntries in (
+                            currentStmtTyEntries := __assign_stmtlist_string_builder_prev_entries;
+                            __assign_stmtlist_string_builder_prev_entries
+                          )
+                        )) done);
+                        ignore (let __assign_stmtlist_string_builder_mutables = Obj.magic (!tempArray) in (
+                          currentMutableLocalRefNames := __assign_stmtlist_string_builder_mutables;
+                          __assign_stmtlist_string_builder_mutables
+                        ));
+                        ignore (let __assign_stmtlist_string_builder_hints = Obj.repr previousStmtLocalTypeHints in (
+                          currentFunctionLocalTypeHints := __assign_stmtlist_string_builder_hints;
+                          __assign_stmtlist_string_builder_hints
+                        ));
+                        let __stmtlist_string_builder_out = Buffer.create 1024 in (
+                          ignore (List.iter (fun part -> Buffer.add_string __stmtlist_string_builder_out part) (!prefixes));
+                          ignore (Buffer.add_string __stmtlist_string_builder_out (!base));
+                          ignore (List.iter (fun part -> Buffer.add_string __stmtlist_string_builder_out part) (List.rev (!suffixes)));
+                          Buffer.contents __stmtlist_string_builder_out
+                        )
+                        )'''
+
+    src = src[:start] + replacement + src[end_match.end():]
+    write_text(path_str, src)
+
+
 def cmd_patch_module_name_lookup_raw_map(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-module-name-lookup-raw-map <path>\n")
@@ -4200,6 +4313,7 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-nested-emitter-call-arg-reprs": cmd_patch_nested_emitter_call_arg_reprs,
     "patch-extend-ty-ident-call-reprs": cmd_patch_extend_ty_ident_call_reprs,
     "patch-stmt-list-local-hint-reprs": cmd_patch_stmt_list_local_hint_reprs,
+    "patch-stmt-list-string-builder": cmd_patch_stmt_list_string_builder,
     "patch-module-name-lookup-raw-map": cmd_patch_module_name_lookup_raw_map,
     "patch-typed-ty-ident-lookups": cmd_patch_typed_ty_ident_lookups,
     "patch-negative-unop-is-int-expr": cmd_patch_negative_unop_is_int_expr,
