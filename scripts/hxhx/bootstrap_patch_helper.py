@@ -3943,6 +3943,131 @@ def cmd_patch_js_target_core_native_js_lib_externs(argv: list[str]) -> None:
     write_text(path_str, src)
 
 
+def cmd_patch_js_target_core_systools_static_bodies(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-js-target-core-systools-static-bodies <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    marker = "(* hxhx(stage3) bootstrap shim: js target core SysTools static bodies *)"
+    if marker in src or "let emitKnownStaticFunctionBody = fun writer fullName fnName params ->" in src:
+        write_text(path_str, src)
+        return
+
+    helper = r'''
+let emitKnownStaticFunctionBody = fun writer fullName fnName params ->
+  if not (HxString.equals fullName "haxe.SysTools") then false
+  else if HxString.equals fnName "quoteUnixArg" then (
+    if HxArray.length params < 1 then false
+    else let argument = (HxArray.get (Obj.magic params) 0 : string) in (
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((((HxString.toStdString argument ^ " = String(") ^ HxString.toStdString argument) ^ ");") : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("if (" ^ HxString.toStdString argument) ^ " === \"\") return \"''\";") : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (!/[^a-zA-Z0-9_@%+=:,.\\/-]/.test(" ^ HxString.toStdString argument) ^ ")) return ") ^ HxString.toStdString argument) ^ ";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("return \"'\" + " ^ HxString.toStdString argument) ^ ".split(\"'\").join(\"'\\\"'\\\"'\") + \"'\";") : string));
+      true
+    )
+  ) else if HxString.equals fnName "quoteWinArg" then (
+    if HxArray.length params < 2 then false
+    else let argument = (HxArray.get (Obj.magic params) 0 : string) in let escapeMetaCharacters = (HxArray.get (Obj.magic params) 1 : string) in (
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((((HxString.toStdString argument ^ " = String(") ^ HxString.toStdString argument) ^ ");") : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("if (!/^(\\/)?[^ \\t\\/\\\\\"]+$/.test(" ^ HxString.toStdString argument) ^ ")) {") : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var result = \"\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((((("var needquote = " ^ HxString.toStdString argument) ^ ".indexOf(\" \") !== -1 || ") ^ HxString.toStdString argument) ^ ".indexOf(\"\\t\") !== -1 || ") ^ HxString.toStdString argument) ^ " === \"\" || ") ^ HxString.toStdString argument) ^ ".indexOf(\"/\") > 0;" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (needquote) result += \"\\\"\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var bs = \"\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("for (var i = 0; i < " ^ HxString.toStdString argument) ^ ".length; i++) {") : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("var ch = " ^ HxString.toStdString argument) ^ ".charAt(i);") : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (ch === \"\\\\\") {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("bs += \"\\\\\";" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("} else if (ch === \"\\\"\") {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("result += bs + bs + \"\\\\\\\"\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("bs = \"\";" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("} else {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (bs.length > 0) { result += bs; bs = \"\"; }" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("result += ch;" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("result += bs;" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (needquote) { result += bs; result += \"\\\"\"; }" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((HxString.toStdString argument ^ " = result;") : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("if (" ^ HxString.toStdString escapeMetaCharacters) ^ ") {") : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var escaped = \"\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var metas = \" ()%!^\\\"<>&|\\n\\r,;\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("for (var j = 0; j < " ^ HxString.toStdString argument) ^ ".length; j++) {") : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("var metaCh = " ^ HxString.toStdString argument) ^ ".charAt(j);") : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (metas.indexOf(metaCh) >= 0) escaped += \"^\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("escaped += metaCh;" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return escaped;" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("return " ^ HxString.toStdString argument) ^ ";") : string));
+      true
+    )
+  ) else false
+
+(* hxhx(stage3) bootstrap shim: js target core SysTools static bodies *)
+'''
+
+    src = replace_one(
+        src,
+        "\nlet emitClass = fun writer unit classRefs simpleNameRefs ->",
+        "\n" + helper + "\nlet emitClass = fun writer unit classRefs simpleNameRefs ->",
+        "build-hxhx: failed to locate bootstrap JsTargetCore SysTools helper anchor\n",
+    )
+
+    old_call = '''              ignore (try Backend_js_JsStmtEmitter.emitFunctionBody (Obj.magic writer) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) (Obj.magic fnScope) with'''
+    new_call = '''              ignore (if not (emitKnownStaticFunctionBody (Obj.magic writer) (Obj.obj (HxAnon.get unit "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic params)) then try Backend_js_JsStmtEmitter.emitFunctionBody (Obj.magic writer) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) (Obj.magic fnScope) with'''
+    src = replace_one(
+        src,
+        old_call,
+        new_call,
+        "build-hxhx: failed to locate bootstrap JsTargetCore static body emit anchor\n",
+    )
+
+    src = replace_one(
+        src,
+        "                ) else raise (__exn_47));",
+        "                ) else raise (__exn_47) else ());",
+        "build-hxhx: failed to locate bootstrap JsTargetCore static body emit close anchor\n",
+    )
+    write_text(path_str, src)
+
+
+def cmd_patch_hxtype_registry_js_target_core_systools(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-hxtype-registry-js-target-core-systools <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    old = '''HxType.register_class_static_fields "backend.js.JsTargetCore" [ "allowStaticBodyFallback"; "buildClassRefs"; "collectClassUnits"; "emitBridge"; "emitClass"; "emitRuntimePrelude"; "ensureDirectory"; "isNativeJsLibExtern"; "nativeJsLibGlobalRef"; "resolveMainRef"; "simpleName" ]'''
+    new = '''HxType.register_class_static_fields "backend.js.JsTargetCore" [ "allowStaticBodyFallback"; "buildClassRefs"; "collectClassUnits"; "emitBridge"; "emitClass"; "emitKnownStaticFunctionBody"; "emitRuntimePrelude"; "ensureDirectory"; "isNativeJsLibExtern"; "nativeJsLibGlobalRef"; "resolveMainRef"; "simpleName" ]'''
+    if new in src:
+        write_text(path_str, src)
+        return
+    src = replace_one(
+        src,
+        old,
+        new,
+        "build-hxhx: failed to locate HxTypeRegistry JsTargetCore SysTools field anchor\n",
+    )
+    write_text(path_str, src)
+
+
 def cmd_patch_cli_routing_ocaml_eval_hxml(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-cli-routing-ocaml-eval-hxml <path>\n")

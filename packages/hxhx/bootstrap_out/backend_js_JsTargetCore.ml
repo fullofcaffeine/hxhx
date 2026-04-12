@@ -181,6 +181,74 @@ let allowStaticBodyFallback = fun unit fnName reason -> try let __fallback_resul
 ) in Obj.magic __fallback_result_54 with
   | HxRuntime.Hx_return __ret_53 -> Obj.obj __ret_53
 
+
+let emitKnownStaticFunctionBody = fun writer fullName fnName params ->
+  if not (HxString.equals fullName "haxe.SysTools") then false
+  else if HxString.equals fnName "quoteUnixArg" then (
+    if HxArray.length params < 1 then false
+    else let argument = (HxArray.get (Obj.magic params) 0 : string) in (
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((((HxString.toStdString argument ^ " = String(") ^ HxString.toStdString argument) ^ ");") : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("if (" ^ HxString.toStdString argument) ^ " === \"\") return \"''\";") : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (!/[^a-zA-Z0-9_@%+=:,.\\/-]/.test(" ^ HxString.toStdString argument) ^ ")) return ") ^ HxString.toStdString argument) ^ ";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("return \"'\" + " ^ HxString.toStdString argument) ^ ".split(\"'\").join(\"'\\\"'\\\"'\") + \"'\";") : string));
+      true
+    )
+  ) else if HxString.equals fnName "quoteWinArg" then (
+    if HxArray.length params < 2 then false
+    else let argument = (HxArray.get (Obj.magic params) 0 : string) in let escapeMetaCharacters = (HxArray.get (Obj.magic params) 1 : string) in (
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((((HxString.toStdString argument ^ " = String(") ^ HxString.toStdString argument) ^ ");") : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("if (!/^(\\/)?[^ \\t\\/\\\\\"]+$/.test(" ^ HxString.toStdString argument) ^ ")) {") : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var result = \"\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((((("var needquote = " ^ HxString.toStdString argument) ^ ".indexOf(\" \") !== -1 || ") ^ HxString.toStdString argument) ^ ".indexOf(\"\\t\") !== -1 || ") ^ HxString.toStdString argument) ^ " === \"\" || ") ^ HxString.toStdString argument) ^ ".indexOf(\"/\") > 0;" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (needquote) result += \"\\\"\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var bs = \"\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("for (var i = 0; i < " ^ HxString.toStdString argument) ^ ".length; i++) {") : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("var ch = " ^ HxString.toStdString argument) ^ ".charAt(i);") : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (ch === \"\\\\\") {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("bs += \"\\\\\";" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("} else if (ch === \"\\\"\") {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("result += bs + bs + \"\\\\\\\"\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("bs = \"\";" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("} else {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (bs.length > 0) { result += bs; bs = \"\"; }" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("result += ch;" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("result += bs;" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (needquote) { result += bs; result += \"\\\"\"; }" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((HxString.toStdString argument ^ " = result;") : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("if (" ^ HxString.toStdString escapeMetaCharacters) ^ ") {") : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var escaped = \"\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var metas = \" ()%!^\\\"<>&|\\n\\r,;\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("for (var j = 0; j < " ^ HxString.toStdString argument) ^ ".length; j++) {") : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("var metaCh = " ^ HxString.toStdString argument) ^ ".charAt(j);") : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (metas.indexOf(metaCh) >= 0) escaped += \"^\";" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("escaped += metaCh;" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return escaped;" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((("return " ^ HxString.toStdString argument) ^ ";") : string));
+      true
+    )
+  ) else false
+
+(* hxhx(stage3) bootstrap shim: js target core SysTools static bodies *)
+
 let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let tempBool = ref (false : bool) in (
   ignore (let fullName = (Obj.obj (HxAnon.get unit "fullName") : string) in let __assign_30 = fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.lib." : string) in (
     tempBool := __assign_30;
@@ -251,7 +319,7 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let temp
             let suffix = (Backend_js_JsNameMangler.propertySuffix (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
               ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((((HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ HxString.toStdString suffix) ^ " = function(") ^ HxString.toStdString (HxArray.join params ", " (fun x -> x))) ^ ") {" : string));
               ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
-              ignore (try Backend_js_JsStmtEmitter.emitFunctionBody (Obj.magic writer) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) (Obj.magic fnScope) with
+              ignore (if not (emitKnownStaticFunctionBody (Obj.magic writer) (Obj.obj (HxAnon.get unit "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic params)) then try Backend_js_JsStmtEmitter.emitFunctionBody (Obj.magic writer) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) (Obj.magic fnScope) with
                 | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                 | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                 | HxRuntime.Hx_return __ret_44 -> raise (HxRuntime.Hx_return __ret_44)
@@ -268,7 +336,7 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let temp
                 ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_47) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_47) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_47)) : Haxe_Exception.t) in (
                   ignore error;
                   if allowStaticBodyFallback unit (HxFunctionDecl.getName (Obj.magic fn) : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn))) ^ " (static function body)")) ["Dynamic"; "String"])
-                ) else raise (__exn_47));
+                ) else raise (__exn_47) else ());
               ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
               Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string)
             )

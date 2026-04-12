@@ -206,23 +206,107 @@ class JsTargetCore implements ITargetCore {
 			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
 			writer.writeln(unit.jsRef + suffix + " = function(" + params.join(", ") + ") {");
 			writer.pushIndent();
-			try {
-				JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
-			} catch (e:String) {
-				if (allowStaticBodyFallback(unit, HxFunctionDecl.getName(fn), e)) {
-					writer.writeln("return null;");
-				} else {
-					throw e + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
-				}
-			} catch (error:haxe.Exception) {
-				if (allowStaticBodyFallback(unit, HxFunctionDecl.getName(fn), error.message)) {
-					writer.writeln("return null;");
-				} else {
-					throw error.message + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
+			if (!emitKnownStaticFunctionBody(writer, unit.fullName, HxFunctionDecl.getName(fn), params)) {
+				try {
+					JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
+				} catch (e:String) {
+					if (allowStaticBodyFallback(unit, HxFunctionDecl.getName(fn), e)) {
+						writer.writeln("return null;");
+					} else {
+						throw e + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
+					}
+				} catch (error:haxe.Exception) {
+					if (allowStaticBodyFallback(unit, HxFunctionDecl.getName(fn), error.message)) {
+						writer.writeln("return null;");
+					} else {
+						throw error.message + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
+					}
 				}
 			}
 			writer.popIndent();
 			writer.writeln("};");
+		}
+	}
+
+	/**
+		Emits small, audited JS-native bodies for upstream stdlib helpers whose typed
+		bodies are still opaque to the Stage3 JS statement emitter.
+
+		This is intentionally narrow. The helper keeps JS-native smoke gates moving for
+		`haxe.SysTools` process argument quoting without broadening the generic
+		unsupported-expression fallback, so unrelated user code still fails fast with a
+		diagnostic instead of silently emitting an approximate body.
+	**/
+	static function emitKnownStaticFunctionBody(writer:JsWriter, fullName:String, fnName:String, params:Array<String>):Bool {
+		if (fullName != "haxe.SysTools")
+			return false;
+
+		switch (fnName) {
+			case "quoteUnixArg":
+				if (params.length < 1)
+					return false;
+				final argument = params[0];
+				writer.writeln(argument + " = String(" + argument + ");");
+				writer.writeln("if (" + argument + " === \"\") return \"''\";");
+				writer.writeln("if (!/[^a-zA-Z0-9_@%+=:,.\\/-]/.test(" + argument + ")) return " + argument + ";");
+				writer.writeln("return \"'\" + " + argument + ".split(\"'\").join(\"'\\\"'\\\"'\") + \"'\";");
+				return true;
+			case "quoteWinArg":
+				if (params.length < 2)
+					return false;
+				final argument = params[0];
+				final escapeMetaCharacters = params[1];
+				writer.writeln(argument + " = String(" + argument + ");");
+				writer.writeln("if (!/^(\\/)?[^ \\t\\/\\\\\"]+$/.test(" + argument + ")) {");
+				writer.pushIndent();
+				writer.writeln("var result = \"\";");
+				writer.writeln("var needquote = " + argument + ".indexOf(\" \") !== -1 || " + argument + ".indexOf(\"\\t\") !== -1 || " + argument
+					+ " === \"\" || " + argument + ".indexOf(\"/\") > 0;");
+				writer.writeln("if (needquote) result += \"\\\"\";");
+				writer.writeln("var bs = \"\";");
+				writer.writeln("for (var i = 0; i < " + argument + ".length; i++) {");
+				writer.pushIndent();
+				writer.writeln("var ch = " + argument + ".charAt(i);");
+				writer.writeln("if (ch === \"\\\\\") {");
+				writer.pushIndent();
+				writer.writeln("bs += \"\\\\\";");
+				writer.popIndent();
+				writer.writeln("} else if (ch === \"\\\"\") {");
+				writer.pushIndent();
+				writer.writeln("result += bs + bs + \"\\\\\\\"\";");
+				writer.writeln("bs = \"\";");
+				writer.popIndent();
+				writer.writeln("} else {");
+				writer.pushIndent();
+				writer.writeln("if (bs.length > 0) { result += bs; bs = \"\"; }");
+				writer.writeln("result += ch;");
+				writer.popIndent();
+				writer.writeln("}");
+				writer.popIndent();
+				writer.writeln("}");
+				writer.writeln("result += bs;");
+				writer.writeln("if (needquote) { result += bs; result += \"\\\"\"; }");
+				writer.writeln(argument + " = result;");
+				writer.popIndent();
+				writer.writeln("}");
+				writer.writeln("if (" + escapeMetaCharacters + ") {");
+				writer.pushIndent();
+				writer.writeln("var escaped = \"\";");
+				writer.writeln("var metas = \" ()%!^\\\"<>&|\\n\\r,;\";");
+				writer.writeln("for (var j = 0; j < " + argument + ".length; j++) {");
+				writer.pushIndent();
+				writer.writeln("var metaCh = " + argument + ".charAt(j);");
+				writer.writeln("if (metas.indexOf(metaCh) >= 0) escaped += \"^\";");
+				writer.writeln("escaped += metaCh;");
+				writer.popIndent();
+				writer.writeln("}");
+				writer.writeln("return escaped;");
+				writer.popIndent();
+				writer.writeln("}");
+				writer.writeln("return " + argument + ";");
+				return true;
+			case _:
+				return false;
 		}
 	}
 
