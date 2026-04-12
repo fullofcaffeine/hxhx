@@ -178,12 +178,12 @@ stage3_pid=$!
 timeout_pid=""
 if [ "$STAGE3_TIMEOUT_SEC" -gt 0 ]; then
   (
-    deadline_epoch=$(($(date +%s) + STAGE3_TIMEOUT_SEC))
+    elapsed_sec=0
     while kill -0 "$stage3_pid" 2>/dev/null; do
-      now_epoch="$(date +%s)"
-      if [ "$now_epoch" -ge "$deadline_epoch" ]; then
+      if [ "$elapsed_sec" -ge "$STAGE3_TIMEOUT_SEC" ]; then
         {
           echo "FAILED: Stage3 scope probe timed out after ${STAGE3_TIMEOUT_SEC}s."
+          echo "stage3_timeout_elapsed_sec=$elapsed_sec"
           echo "stage3_timeout_sec=$STAGE3_TIMEOUT_SEC"
         } >>"$STAGE3_LOG"
         append_stage3_timeout_diagnostics
@@ -195,14 +195,16 @@ if [ "$STAGE3_TIMEOUT_SEC" -gt 0 ]; then
         kill -KILL "$stage3_pid" 2>/dev/null || true
         break
       fi
-      remaining=$((deadline_epoch - now_epoch))
+      remaining=$((STAGE3_TIMEOUT_SEC - elapsed_sec))
       if [ "$remaining" -gt 5 ]; then
-        sleep 5
+        sleep_step=5
       elif [ "$remaining" -gt 0 ]; then
-        sleep "$remaining"
+        sleep_step="$remaining"
       else
-        sleep 1
+        sleep_step=1
       fi
+      sleep "$sleep_step"
+      elapsed_sec=$((elapsed_sec + sleep_step))
     done
   ) &
   timeout_pid=$!
