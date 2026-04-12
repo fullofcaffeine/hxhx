@@ -565,7 +565,7 @@ let rec inferExprType = fun expr scope ctx pos -> try let __fallback_result_215 
               __assign_134
             )
           )
-          | HxExpr.EIdent _p0 -> let _g4 = (_p0 : string) in let typeName = (_g4 : string) in let c = Obj.magic (TyperContext.resolveType (Obj.magic ctx) (typeName : string)) in if c != Obj.magic (HxRuntime.hx_null) then (
+          | HxExpr.EIdent _p0 -> let _g4 = (_p0 : string) in let typeName = (_g4 : string) in let c = Obj.magic (if isUpperStartName (typeName : string) then TyperContext.resolveType (Obj.magic ctx) (typeName : string) else Obj.magic (HxRuntime.hx_null)) in if c != Obj.magic (HxRuntime.hx_null) then (
             ignore (let _g5 = ref 0 in while !_g5 < HxArray.length args do ignore (let a = Obj.magic (HxArray.get (Obj.magic args) (!_g5)) in (
               ignore (let __old_135 = !_g5 in let __new_136 = HxInt.add __old_135 1 in (
                 ignore (_g5 := __new_136);
@@ -1314,3 +1314,4 @@ let typeResolvedModule = fun m index loader -> let pm = Obj.magic (ResolvedModul
     let classEnv = Obj.magic (TyClassEnv.create (className : string) (Obj.magic typedFns)) in let env = Obj.magic (TyModuleEnv.create (pkg : string) (Obj.magic imports) (Obj.magic classEnv)) in TypedModule.create (Obj.magic pm) (Obj.magic env)
   )
 )
+(* hxhx(stage3) bootstrap shim: lower-case static receiver guard *)

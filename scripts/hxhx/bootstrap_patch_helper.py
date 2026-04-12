@@ -4096,6 +4096,28 @@ def cmd_patch_hxtype_registry_js_target_core_systools(argv: list[str]) -> None:
     write_text(path_str, src)
 
 
+def cmd_patch_typerstage_lowercase_static_receiver_guard(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-typerstage-lowercase-static-receiver-guard <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    marker = "(* hxhx(stage3) bootstrap shim: lower-case static receiver guard *)"
+    if marker in src:
+        write_text(path_str, src)
+        return
+
+    old = '''          | HxExpr.EIdent _p0 -> let _g4 = (_p0 : string) in let typeName = (_g4 : string) in let c = Obj.magic (TyperContext.resolveType (Obj.magic ctx) (typeName : string)) in if c != Obj.magic (HxRuntime.hx_null) then ('''
+    new = '''          | HxExpr.EIdent _p0 -> let _g4 = (_p0 : string) in let typeName = (_g4 : string) in let c = Obj.magic (if isUpperStartName (typeName : string) then TyperContext.resolveType (Obj.magic ctx) (typeName : string) else Obj.magic (HxRuntime.hx_null)) in if c != Obj.magic (HxRuntime.hx_null) then ('''
+    src = replace_one(
+        src,
+        old,
+        new,
+        "build-hxhx: failed to locate TyperStage lower-case static receiver guard anchor\n",
+    )
+    write_text(path_str, src + "\n" + marker + "\n")
+
+
 def cmd_patch_cli_routing_ocaml_eval_hxml(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-cli-routing-ocaml-eval-hxml <path>\n")
@@ -4205,6 +4227,7 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-js-target-core-native-js-lib-externs": cmd_patch_js_target_core_native_js_lib_externs,
     "patch-js-target-core-systools-static-bodies": cmd_patch_js_target_core_systools_static_bodies,
     "patch-hxtype-registry-js-target-core-systools": cmd_patch_hxtype_registry_js_target_core_systools,
+    "patch-typerstage-lowercase-static-receiver-guard": cmd_patch_typerstage_lowercase_static_receiver_guard,
     "patch-cli-routing-ocaml-eval-hxml": cmd_patch_cli_routing_ocaml_eval_hxml,
 }
 

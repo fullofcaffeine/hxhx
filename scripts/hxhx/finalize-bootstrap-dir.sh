@@ -908,6 +908,22 @@ patch_bootstrap_clirouting_ocaml_eval_hxml() {
   run_bootstrap_patch_helper patch-cli-routing-ocaml-eval-hxml "$clirouting_path"
 }
 
+patch_bootstrap_typerstage_lowercase_static_receiver_guard() {
+  local build_dir="$1"
+  local typerstage_path="$build_dir/TyperStage.ml"
+  local marker='(* hxhx(stage3) bootstrap shim: lower-case static receiver guard *)'
+
+  if [ ! -f "$typerstage_path" ]; then
+    return 0
+  fi
+
+  if file_contains_literal "$marker" "$typerstage_path"; then
+    return 0
+  fi
+
+  run_bootstrap_patch_helper patch-typerstage-lowercase-static-receiver-guard "$typerstage_path"
+}
+
 patch_bootstrap_emitter_interactive_cli_progress() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
@@ -993,6 +1009,7 @@ finalize_bootstrap_dir() {
   patch_bootstrap_emitter_plugin_dune_layout "$build_dir"
   patch_bootstrap_js_target_core_native_js_lib_externs "$build_dir"
   patch_bootstrap_js_target_core_systools_static_bodies "$build_dir"
+  patch_bootstrap_typerstage_lowercase_static_receiver_guard "$build_dir"
   patch_bootstrap_clirouting_ocaml_eval_hxml "$build_dir"
   patch_bootstrap_emitter_interactive_cli_progress "$build_dir"
   patch_bootstrap_emitter_nested_call_arg_reprs "$build_dir"

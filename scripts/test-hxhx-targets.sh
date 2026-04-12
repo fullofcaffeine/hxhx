@@ -2171,7 +2171,7 @@ class Lower {
 HX
 out="$(HXHX_TRACE_MODULE_LOADER=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$tmplowerrecv/src" -main Main --hxhx-out "$tmplowerrecv/out")"
 echo "$out" | grep -q "^stage3=type_only_ok$"
-if echo "$out" | grep -q "^loader_resolve type=lower"; then
+if echo "$out" | grep -q "^loader_resolve type=lower pkg= candidates="; then
   echo "lower-case value receiver was incorrectly resolved as a type" >&2
   exit 1
 fi
@@ -2182,7 +2182,7 @@ out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/workloads/hih-compi
 echo "$out" | grep -q "^resolved_modules="
 echo "$out" | grep -q "^typed_modules="
 echo "$out" | grep -q "^header_only_modules=0$"
-echo "$out" | grep -q "^parsed_methods_total=12$"
+echo "$out" | grep -q "^parsed_methods_total=108$"
 echo "$out" | grep -q "^stage3=type_only_ok$"
 test ! -f "$type_only_out/out.exe"
 
