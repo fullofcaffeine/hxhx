@@ -1,5 +1,6 @@
 import sys.FileSystem;
 import sys.io.File;
+import haxe.ds.StringMap;
 
 class M14HxhxStage3ReceiverCallIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
@@ -49,6 +50,18 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 		var thrown:Dynamic = null;
 		try {
 			final parsed = ParserStage.parse(src, mainHx);
+			final resolved = new ResolvedModule("Main", mainHx, parsed);
+			final missingTypeAttempts = new Array<String>();
+			final index = TyperIndex.build([resolved]);
+			final loader = new ModuleLoader([srcDir], new StringMap<String>(), index, function(typePath:String):Bool {
+				missingTypeAttempts.push(typePath);
+				return false;
+			});
+			loader.markResolvedAlready([resolved]);
+			TyperStage.typeResolvedModule(resolved, index, loader);
+			assertTrue(missingTypeAttempts.indexOf("m") < 0, 'Stage3 typer treated lower-case receiver `m` as a type path.');
+			assertTrue(missingTypeAttempts.indexOf("other") < 0, 'Stage3 typer treated lower-case receiver `other` as a type path.');
+
 			final typed = TyperStage.typeModule(parsed);
 			final expanded = MacroStage.expandProgram([typed], []);
 			final exePath = EmitterStage.emitToDir(expanded, outDir, true);

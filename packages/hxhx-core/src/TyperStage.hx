@@ -358,7 +358,10 @@ class TyperStage {
 				if (sym != null) {
 					sym.getType();
 				} else {
-					final t = ctx.resolveType(name);
+					// Only upper-start simple identifiers can be unqualified Haxe type names in this
+					// Stage3 bootstrap model. Treating every lower-case value name as a potential type
+					// makes lazy loading probe parent/root packages for ordinary locals and receivers.
+					final t = isUpperStartName(name) ? ctx.resolveType(name) : null;
 					t != null ? TyType.fromHintText(t.getFullName()) : TyType.unknown();
 				}
 			case EField(obj, _field):
@@ -501,7 +504,7 @@ class TyperStage {
 						// Static call through a type name (imported or same-package): `Util.ping()`.
 						switch (obj) {
 							case EIdent(typeName):
-								final c = ctx.resolveType(typeName);
+								final c = isUpperStartName(typeName) ? ctx.resolveType(typeName) : null;
 								if (c != null) {
 									for (a in args)
 										inferExprType(a, scope, ctx, pos);

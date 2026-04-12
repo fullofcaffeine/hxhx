@@ -78,7 +78,8 @@ HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-boot
 HXHX_DUNE_JOBS=4 bash scripts/hxhx/build-hxhx.sh
 
 # Probe the selected stage0-free native bootstrap refresh direction without retaining
-# large temporary build directories.
+# large temporary build directories. The Stage3 probe is timeout-bounded by default;
+# override with HXHX_STAGE0_FREE_REFRESH_STAGE3_TIMEOUT_SEC=0 only for diagnostics.
 npm run hxhx:probe:stage0-free-refresh
 
 # Compare wrapper vs native stage0 policy and worker counts in one run.

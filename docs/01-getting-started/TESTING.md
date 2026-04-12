@@ -220,6 +220,8 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     `packages/hxhx/bootstrap_out`.
   - Full-emission dry-run: set `HXHX_STAGE0_FREE_REFRESH_SCOPE=hxhx-full-emit` to run the same
     real source graph through Stage3 full-body emit/build without promoting snapshots.
+  - Timeout guard: `HXHX_STAGE0_FREE_REFRESH_STAGE3_TIMEOUT_SEC` bounds the Stage3 probe
+    (defaults: demo `120`, hxhx type-only `900`, hxhx full-emit `1800`; set `0` to disable).
   - Output: `.tmp/stage0-free-bootstrap-refresh-probe/summary.txt`
   - Artifact hygiene: the probe removes the temporary `hxhx` bootstrap build and Stage3 compiled
     byproducts by default; set `HXHX_STAGE0_FREE_REFRESH_KEEP_BUILD=1` or

@@ -26,6 +26,7 @@ STAGE3_LOG="$OUT_ROOT/stage3-emit.log"
 
 KEEP_BOOTSTRAP_BUILD="${HXHX_STAGE0_FREE_REFRESH_KEEP_BUILD:-0}"
 KEEP_DUNE_BUILD="${HXHX_STAGE0_FREE_REFRESH_KEEP_DUNE_BUILD:-0}"
+STAGE3_TIMEOUT_SEC="${HXHX_STAGE0_FREE_REFRESH_STAGE3_TIMEOUT_SEC:-}"
 TARGET_LABEL=""
 SOURCE_INPUTS=""
 EXPECTED_MARKER=""
@@ -72,6 +73,7 @@ case "$SCOPE" in
     EXPECTED_MARKER="stage3=ok"
     REQUIRE_GENERATED_ML=1
     REQUIRE_ARTIFACT=1
+    STAGE3_TIMEOUT_SEC="${STAGE3_TIMEOUT_SEC:-120}"
     STAGE3_ARGS=(
       --hxhx-stage3
       --hxhx-emit-full-bodies
@@ -85,6 +87,7 @@ case "$SCOPE" in
     EXPECTED_MARKER="stage3=type_only_ok"
     REQUIRE_GENERATED_ML=0
     REQUIRE_ARTIFACT=0
+    STAGE3_TIMEOUT_SEC="${STAGE3_TIMEOUT_SEC:-900}"
     STAGE3_ARGS=(
       --hxhx-stage3
       --hxhx-type-only
@@ -94,6 +97,7 @@ case "$SCOPE" in
       EXPECTED_MARKER="stage3=ok"
       REQUIRE_GENERATED_ML=1
       REQUIRE_ARTIFACT=1
+      STAGE3_TIMEOUT_SEC="${HXHX_STAGE0_FREE_REFRESH_STAGE3_TIMEOUT_SEC:-1800}"
       STAGE3_ARGS=(
         --hxhx-stage3
         --hxhx-emit-full-bodies
@@ -113,6 +117,13 @@ case "$SCOPE" in
     ;;
   *)
     echo "Unknown HXHX_STAGE0_FREE_REFRESH_SCOPE=$SCOPE (expected demo, hxhx-type-only, or hxhx-full-emit)." >&2
+    exit 2
+    ;;
+esac
+
+case "$STAGE3_TIMEOUT_SEC" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_STAGE0_FREE_REFRESH_STAGE3_TIMEOUT_SEC: $STAGE3_TIMEOUT_SEC (expected non-negative integer)." >&2
     exit 2
     ;;
 esac
@@ -148,13 +159,40 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
 fi
 
 echo "== Running Stage3 scope probe"
+echo "== Stage3 timeout: ${STAGE3_TIMEOUT_SEC}s (0 disables)"
 set +e
-HXHX_FORBID_STAGE0=1 \
-  HAXE_BIN="$HAXE_SENTINEL" \
-  "$HXHX_BIN" \
-    "${STAGE3_ARGS[@]}" \
-    --hxhx-out "$STAGE3_OUT" >"$STAGE3_LOG" 2>&1
+timeout_marker="$OUT_ROOT/stage3-timeout.marker"
+rm -f "$timeout_marker"
+HXHX_FORBID_STAGE0=1 HAXE_BIN="$HAXE_SENTINEL" "$HXHX_BIN" "${STAGE3_ARGS[@]}" --hxhx-out "$STAGE3_OUT" >"$STAGE3_LOG" 2>&1 &
+stage3_pid=$!
+timeout_pid=""
+if [ "$STAGE3_TIMEOUT_SEC" -gt 0 ]; then
+  (
+    sleep "$STAGE3_TIMEOUT_SEC"
+    if kill -0 "$stage3_pid" 2>/dev/null; then
+      {
+        echo "FAILED: Stage3 scope probe timed out after ${STAGE3_TIMEOUT_SEC}s."
+        echo "stage3_timeout_sec=$STAGE3_TIMEOUT_SEC"
+      } >>"$STAGE3_LOG"
+      printf 'timeout\n' >"$timeout_marker"
+      pkill -TERM -P "$stage3_pid" 2>/dev/null || true
+      kill -TERM "$stage3_pid" 2>/dev/null || true
+      sleep 2
+      pkill -KILL -P "$stage3_pid" 2>/dev/null || true
+      kill -KILL "$stage3_pid" 2>/dev/null || true
+    fi
+  ) &
+  timeout_pid=$!
+fi
+wait "$stage3_pid"
 stage3_code=$?
+if [ -n "$timeout_pid" ]; then
+  kill "$timeout_pid" 2>/dev/null || true
+  wait "$timeout_pid" 2>/dev/null || true
+fi
+if [ -s "$timeout_marker" ]; then
+  stage3_code=124
+fi
 set -e
 
 if [ "$stage3_code" -ne 0 ]; then
@@ -210,6 +248,7 @@ generated_ml_count=$generated_ml_count
 artifact_path=$artifact_path
 artifact_validated=$artifact_validated
 stage3_marker=$EXPECTED_MARKER
+stage3_timeout_sec=$STAGE3_TIMEOUT_SEC
 bootstrap_snapshot_diff=clean
 bootstrap_build_retained=$KEEP_BOOTSTRAP_BUILD
 stage3_compiled_artifacts_retained=$KEEP_DUNE_BUILD

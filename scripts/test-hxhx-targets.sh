@@ -2150,6 +2150,32 @@ echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^7$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 regression: lower-case value receivers do not trigger lazy type loading"
+tmplowerrecv="$tmpdir/lowercase_value_receiver_loader"
+mkdir -p "$tmplowerrecv/src"
+cat >"$tmplowerrecv/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    final lower = new Lower();
+    Sys.println(Std.string(lower.ping()));
+  }
+}
+HX
+cat >"$tmplowerrecv/src/Lower.hx" <<'HX'
+class Lower {
+  public function new() {}
+  public function ping():Int {
+    return 13;
+  }
+}
+HX
+out="$(HXHX_TRACE_MODULE_LOADER=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$tmplowerrecv/src" -main Main --hxhx-out "$tmplowerrecv/out")"
+echo "$out" | grep -q "^stage3=type_only_ok$"
+if echo "$out" | grep -q "^loader_resolve type=lower"; then
+  echo "lower-case value receiver was incorrectly resolved as a type" >&2
+  exit 1
+fi
+
 echo "== Stage3 bring-up: type-only checks full graph"
 type_only_out="$tmpdir/out_stage3_type_only"
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/workloads/hih-compiler/fixtures/src" -main demo.A --hxhx-out "$type_only_out")"
