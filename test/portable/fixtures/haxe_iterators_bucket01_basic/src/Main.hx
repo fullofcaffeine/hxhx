@@ -125,5 +125,6 @@ class Main {
 			stringUnicodeValueSum += pair.value;
 		}
 		Sys.println("string.kvU=" + stringUnicodeKeySum + ":" + stringUnicodeValueSum);
+		Sys.println("html.escape=" + StringTools.htmlEscape("<A&B>", true));
 	}
 }

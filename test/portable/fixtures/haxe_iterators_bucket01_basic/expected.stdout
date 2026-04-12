@@ -10,3 +10,4 @@ string.iter=155
 string.iterU=155
 string.kv=1:155
 string.kvU=1:155
+html.escape=&lt;A&amp;B&gt;

@@ -163,6 +163,29 @@ class StringTools {
 	**/
 	public static function htmlEscape(s:String, ?quotes:Bool):String {
 		var buf = new StringBuf();
+		#if ocaml_output
+		// Keep the OCaml std override acyclic: StringIteratorUnicode itself uses
+		// StringTools, so calling it here creates a dune module dependency cycle.
+		var index = 0;
+		while (index < s.length) {
+			final code = s.charCodeAt(index);
+			switch (code) {
+				case '&'.code:
+					buf.add("&amp;");
+				case '<'.code:
+					buf.add("&lt;");
+				case '>'.code:
+					buf.add("&gt;");
+				case '"'.code if (quotes):
+					buf.add("&quot;");
+				case '\''.code if (quotes):
+					buf.add("&#039;");
+				case _:
+					buf.addChar(code);
+			}
+			index++;
+		}
+		#else
 		for (code in #if neko iterator(s) #else new haxe.iterators.StringIteratorUnicode(s) #end) {
 			switch (code) {
 				case '&'.code:
@@ -179,6 +202,7 @@ class StringTools {
 					buf.addChar(code);
 			}
 		}
+		#end
 		return buf.toString();
 	}
 
