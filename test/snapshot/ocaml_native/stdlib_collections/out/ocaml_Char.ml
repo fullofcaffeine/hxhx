@@ -4,6 +4,6 @@
 
 let __reflaxe_ocaml__ = ()
 
-let _new = fun v -> v
+let char_impl___new = fun v -> v
 
-let ofInt = fun code -> Stdlib.Char.chr code
+let char_impl__ofInt = fun code -> Stdlib.Char.chr code

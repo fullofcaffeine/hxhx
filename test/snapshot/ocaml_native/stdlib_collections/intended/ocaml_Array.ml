@@ -4,20 +4,20 @@
 
 let __reflaxe_ocaml__ = ()
 
-let _new = fun v -> v
+let array_impl___new = fun v -> v
 
-let make = fun len init -> Stdlib.Array.make len init
+let array_impl__make = fun len init -> Stdlib.Array.make len init
 
-let init = fun len f -> Stdlib.Array.init len f
+let array_impl__init = fun len f -> Stdlib.Array.init len f
 
-let length = fun a -> Stdlib.Array.length a
+let array_impl__length = fun a -> Stdlib.Array.length a
 
-let get = fun a i -> Stdlib.Array.get a i
+let array_impl__get = fun a i -> Stdlib.Array.get a i
 
-let set = fun a i v -> ignore (Stdlib.Array.set a i v)
+let array_impl__set = fun a i v -> ignore (Stdlib.Array.set a i v)
 
-let map = fun f a -> Stdlib.Array.map f a
+let array_impl__map = fun f a -> Stdlib.Array.map f a
 
-let iter = fun f a -> ignore (Stdlib.Array.iter f a)
+let array_impl__iter = fun f a -> ignore (Stdlib.Array.iter f a)
 
-let fold_left = fun f init a -> Stdlib.Array.fold_left f init a
+let array_impl__fold_left = fun f init a -> Stdlib.Array.fold_left f init a

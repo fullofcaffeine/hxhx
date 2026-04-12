@@ -4,14 +4,14 @@
 
 let __reflaxe_ocaml__ = ()
 
-let _new = fun v -> v
+let bytes_impl___new = fun v -> v
 
-let make = fun len fill -> Stdlib.Bytes.make len fill
+let bytes_impl__make = fun len fill -> Stdlib.Bytes.make len fill
 
-let length = fun b -> Stdlib.Bytes.length b
+let bytes_impl__length = fun b -> Stdlib.Bytes.length b
 
-let ofString = fun s -> Stdlib.Bytes.of_string (s : string)
+let bytes_impl__ofString = fun s -> Stdlib.Bytes.of_string (s : string)
 
-let toString = fun b -> Stdlib.Bytes.to_string b
+let bytes_impl__toString = fun b -> Stdlib.Bytes.to_string b
 
-let sub = fun b pos len -> Stdlib.Bytes.sub b pos len
+let bytes_impl__sub = fun b pos len -> Stdlib.Bytes.sub b pos len

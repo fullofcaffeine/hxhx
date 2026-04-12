@@ -4,20 +4,20 @@
 
 let __reflaxe_ocaml__ = ()
 
-let _new = fun v -> v
+let seq_impl___new = fun v -> v
 
-let empty = fun () -> Stdlib.Seq.empty
+let seq_impl__empty = fun () -> Stdlib.Seq.empty
 
-let return_ = fun x -> Stdlib.Seq.return x
+let seq_impl__return_ = fun x -> Stdlib.Seq.return x
 
-let cons = fun x xs -> Stdlib.Seq.cons x xs
+let seq_impl__cons = fun x xs -> Stdlib.Seq.cons x xs
 
-let append = fun a b -> Stdlib.Seq.append a b
+let seq_impl__append = fun a b -> Stdlib.Seq.append a b
 
-let map = fun f xs -> Stdlib.Seq.map f xs
+let seq_impl__map = fun f xs -> Stdlib.Seq.map f xs
 
-let filter = fun p xs -> Stdlib.Seq.filter p xs
+let seq_impl__filter = fun p xs -> Stdlib.Seq.filter p xs
 
-let iter = fun f xs -> ignore (Stdlib.Seq.iter f xs)
+let seq_impl__iter = fun f xs -> ignore (Stdlib.Seq.iter f xs)
 
-let foldLeft = fun f init xs -> Stdlib.Seq.fold_left f init xs
+let seq_impl__foldLeft = fun f init xs -> Stdlib.Seq.fold_left f init xs

@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-let _new = fun v -> v
+let hashtbl_impl___new = fun v -> v
 
-let create = fun size random -> let tempHashtbl = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+let hashtbl_impl__create = fun size random -> let tempHashtbl = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (if random == HxRuntime.hx_null then let __assign_1 = Obj.magic (Stdlib.Hashtbl.create size) in (
     tempHashtbl := __assign_1;
     __assign_1
@@ -17,16 +17,16 @@ let create = fun size random -> let tempHashtbl = ref (Obj.magic (HxRuntime.hx_n
   Obj.magic (!tempHashtbl)
 )
 
-let length = fun t -> Stdlib.Hashtbl.length t
+let hashtbl_impl__length = fun t -> Stdlib.Hashtbl.length t
 
-let add = fun t k v -> ignore (Stdlib.Hashtbl.add t k v)
+let hashtbl_impl__add = fun t k v -> ignore (Stdlib.Hashtbl.add t k v)
 
-let replace = fun t k v -> ignore (Stdlib.Hashtbl.replace t k v)
+let hashtbl_impl__replace = fun t k v -> ignore (Stdlib.Hashtbl.replace t k v)
 
-let remove = fun t k -> ignore (Stdlib.Hashtbl.remove t k)
+let hashtbl_impl__remove = fun t k -> ignore (Stdlib.Hashtbl.remove t k)
 
-let mem = fun t k -> Stdlib.Hashtbl.mem t k
+let hashtbl_impl__mem = fun t k -> Stdlib.Hashtbl.mem t k
 
-let find = fun t k -> Stdlib.Hashtbl.find t k
+let hashtbl_impl__find = fun t k -> Stdlib.Hashtbl.find t k
 
-let findOpt = fun t k -> Stdlib.Hashtbl.find_opt t k
+let hashtbl_impl__findOpt = fun t k -> Stdlib.Hashtbl.find_opt t k
