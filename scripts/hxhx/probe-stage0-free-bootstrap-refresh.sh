@@ -168,19 +168,31 @@ stage3_pid=$!
 timeout_pid=""
 if [ "$STAGE3_TIMEOUT_SEC" -gt 0 ]; then
   (
-    sleep "$STAGE3_TIMEOUT_SEC"
-    if kill -0 "$stage3_pid" 2>/dev/null; then
-      {
-        echo "FAILED: Stage3 scope probe timed out after ${STAGE3_TIMEOUT_SEC}s."
-        echo "stage3_timeout_sec=$STAGE3_TIMEOUT_SEC"
-      } >>"$STAGE3_LOG"
-      printf 'timeout\n' >"$timeout_marker"
-      pkill -TERM -P "$stage3_pid" 2>/dev/null || true
-      kill -TERM "$stage3_pid" 2>/dev/null || true
-      sleep 2
-      pkill -KILL -P "$stage3_pid" 2>/dev/null || true
-      kill -KILL "$stage3_pid" 2>/dev/null || true
-    fi
+    deadline_epoch=$(($(date +%s) + STAGE3_TIMEOUT_SEC))
+    while kill -0 "$stage3_pid" 2>/dev/null; do
+      now_epoch="$(date +%s)"
+      if [ "$now_epoch" -ge "$deadline_epoch" ]; then
+        {
+          echo "FAILED: Stage3 scope probe timed out after ${STAGE3_TIMEOUT_SEC}s."
+          echo "stage3_timeout_sec=$STAGE3_TIMEOUT_SEC"
+        } >>"$STAGE3_LOG"
+        printf 'timeout\n' >"$timeout_marker"
+        pkill -TERM -P "$stage3_pid" 2>/dev/null || true
+        kill -TERM "$stage3_pid" 2>/dev/null || true
+        sleep 2
+        pkill -KILL -P "$stage3_pid" 2>/dev/null || true
+        kill -KILL "$stage3_pid" 2>/dev/null || true
+        break
+      fi
+      remaining=$((deadline_epoch - now_epoch))
+      if [ "$remaining" -gt 5 ]; then
+        sleep 5
+      elif [ "$remaining" -gt 0 ]; then
+        sleep "$remaining"
+      else
+        sleep 1
+      fi
+    done
   ) &
   timeout_pid=$!
 fi
