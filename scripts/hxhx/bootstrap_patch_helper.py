@@ -4175,6 +4175,8 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-float-modulo-mutable-local": cmd_patch_float_modulo_mutable_local,
     "patch-plugin-dune-layout": cmd_patch_plugin_dune_layout,
     "patch-js-target-core-native-js-lib-externs": cmd_patch_js_target_core_native_js_lib_externs,
+    "patch-js-target-core-systools-static-bodies": cmd_patch_js_target_core_systools_static_bodies,
+    "patch-hxtype-registry-js-target-core-systools": cmd_patch_hxtype_registry_js_target_core_systools,
     "patch-cli-routing-ocaml-eval-hxml": cmd_patch_cli_routing_ocaml_eval_hxml,
 }
 
