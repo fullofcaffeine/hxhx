@@ -3617,6 +3617,34 @@ def cmd_patch_int64_mixed_binops(argv: list[str]) -> None:
     else:
         fail("build-hxhx: failed to locate bootstrap tyForIdent anchor for Int64 mixed-binop repair\n")
 
+    eident_allowed_fallback = '''else if hasAllowedValueIdent (name : string) then let __assign_bootstrap_allowed_ident = (ocamlReadValueIdent (name : string) : string) in (
+                                tempResult14 := __assign_bootstrap_allowed_ident;
+                                __assign_bootstrap_allowed_ident
+                              ) else if mapHasRaw (Obj.repr arityByIdent) (name : string) then'''
+    if eident_allowed_fallback not in src:
+        eident_allowed_pattern = re.compile(
+            r"""\) else if isMutableLocalRefIdent \(name : string\) then let __assign_(?P<a>\d+) = \(ocamlReadValueIdent \(name : string\) : string\) in \(
+\s+tempResult14 := __assign_(?P=a);
+\s+__assign_(?P=a)
+\s+\) else if mapHasRaw \(Obj\.repr arityByIdent\) \(name : string\) then""",
+            re.S,
+        )
+        eident_allowed_match = eident_allowed_pattern.search(src)
+        if eident_allowed_match is None:
+            fail("build-hxhx: failed to locate bootstrap EIdent allowed-value anchor for Int64 mixed-binop repair\n")
+        src = (
+            src[:eident_allowed_match.start()]
+            + eident_allowed_match.group(0).replace(
+                ") else if mapHasRaw (Obj.repr arityByIdent) (name : string) then",
+                ") else if hasAllowedValueIdent (name : string) then let __assign_bootstrap_allowed_ident = (ocamlReadValueIdent (name : string) : string) in (\n"
+                "                                tempResult14 := __assign_bootstrap_allowed_ident;\n"
+                "                                __assign_bootstrap_allowed_ident\n"
+                "                              ) else if mapHasRaw (Obj.repr arityByIdent) (name : string) then",
+                1,
+            )
+            + src[eident_allowed_match.end():]
+        )
+
     old_stmt_intro = '''fun s tyCtx allowedValueIdentsForStmt -> let prevAllowedValueIdentNamesStmt = (!currentAllowedValueIdentNames : bool HxMap.string_map) in let _bootstrap_stmt_allowed_assign = let __assign_bootstrap_stmt_allowed_names = Obj.magic allowedValueIdentsForStmt in (
                       currentAllowedValueIdentNames := __assign_bootstrap_stmt_allowed_names;
                       __assign_bootstrap_stmt_allowed_names
