@@ -129,6 +129,36 @@ private class _EmitterStageDebug {
 			stderr.flush();
 		} catch (_:haxe.io.Error) {} catch (_:String) {}
 	}
+
+	public static function traceStage3StmtList(phase:String, functionName:Null<String>, idx:Int, total:Int, stmt:HxStmt):Void {
+		if (!traceStage3Enabled())
+			return;
+		final fn = functionName == null ? "" : functionName;
+		final traceEnv = Sys.getEnv("HXHX_TRACE_STAGE3_STMT_LIST");
+		final traceAll = traceEnv == "1" || traceEnv == "true" || traceEnv == "yes";
+		if (!traceAll && fn != "emitToDir")
+			return;
+		final kindAndPos = switch (stmt) {
+			case SBlock(_, pos): {kind: "SBlock", pos: pos};
+			case SVar(_, _, _, pos): {kind: "SVar", pos: pos};
+			case SIf(_, _, _, pos): {kind: "SIf", pos: pos};
+			case SWhile(_, _, pos): {kind: "SWhile", pos: pos};
+			case SDoWhile(_, _, pos): {kind: "SDoWhile", pos: pos};
+			case SForIn(_, _, _, pos): {kind: "SForIn", pos: pos};
+			case STry(_, _, pos): {kind: "STry", pos: pos};
+			case SThrow(_, pos): {kind: "SThrow", pos: pos};
+			case SBreak(pos): {kind: "SBreak", pos: pos};
+			case SContinue(pos): {kind: "SContinue", pos: pos};
+			case SSwitch(_, _, _, pos): {kind: "SSwitch", pos: pos};
+			case SReturnVoid(pos): {kind: "SReturnVoid", pos: pos};
+			case SReturn(_, pos): {kind: "SReturn", pos: pos};
+			case SExpr(_, pos): {kind: "SExpr", pos: pos};
+		}
+		final pos = kindAndPos.pos;
+		final line = pos == null ? 0 : pos.getLine();
+		final col = pos == null ? 0 : pos.getColumn();
+		traceStage3Phase("stmt_list_" + phase + ":" + fn + ":" + idx + "/" + total + ":" + kindAndPos.kind + ":line=" + line + ":col=" + col);
+	}
 }
 
 private class _InstanceFieldEntry {
@@ -5053,6 +5083,7 @@ class EmitterStage {
 			final tyCtx:Map<String, TyType> = extendTyWithLocals(cast tyByIdent, localsBefore[idx]);
 			final prevStmtTyEntries = currentStmtTyEntries;
 			currentStmtTyEntries = buildStmtTyEntries(tyCtx);
+			_EmitterStageDebug.traceStage3StmtList("begin", currentFunctionName, idx, stmts.length, s);
 			switch (s) {
 				case SVar(name, _typeHint, init, _pos):
 					final rhs = if (init == null) {
@@ -5140,6 +5171,7 @@ class EmitterStage {
 					}
 			}
 			currentStmtTyEntries = prevStmtTyEntries;
+			_EmitterStageDebug.traceStage3StmtList("done", currentFunctionName, idx, stmts.length, s);
 		}
 		currentMutableLocalRefNames = prevMutableLocalRefNames;
 		currentFunctionLocalTypeHints = previousStmtLocalTypeHints;

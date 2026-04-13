@@ -2103,6 +2103,46 @@ def cmd_patch_stmt_list_string_builder(argv: list[str]) -> None:
     write_text(path_str, src)
 
 
+def cmd_patch_stmt_list_trace(argv: list[str]) -> None:
+    if len(argv) != 1:
+        fail("usage: patch-stmt-list-trace <path>\n")
+    path_str = argv[0]
+    src = read_text(path_str)
+
+    if "stmt_list_begin:" in src:
+        return
+
+    begin_anchor = """                          ));
+                          ignore (match s with
+"""
+    begin_patch = """                          ));
+                          ignore (if not (!currentFunctionName == Obj.magic (HxRuntime.hx_null)) && HxString.equals (!currentFunctionName) "emitToDir" then _emitterstagedebug_traceStage3Phase (((((("stmt_list_begin:" ^ HxString.toStdString (!currentFunctionName)) ^ ":") ^ string_of_int idx) ^ "/") ^ string_of_int (HxArray.length stmts)) : string) else ());
+                          ignore (match s with
+"""
+    src = replace_one(
+        src,
+        begin_anchor,
+        begin_patch,
+        "build-hxhx: failed to locate stmtListToOcaml generated trace begin anchor\n",
+    )
+
+    done_anchor = """                            ));
+                          let __assign_stmtlist_string_builder_prev_entries = Obj.magic prevStmtTyEntries in (
+"""
+    done_patch = """                            ));
+                          ignore (if not (!currentFunctionName == Obj.magic (HxRuntime.hx_null)) && HxString.equals (!currentFunctionName) "emitToDir" then _emitterstagedebug_traceStage3Phase (((((("stmt_list_done:" ^ HxString.toStdString (!currentFunctionName)) ^ ":") ^ string_of_int idx) ^ "/") ^ string_of_int (HxArray.length stmts)) : string) else ());
+                          let __assign_stmtlist_string_builder_prev_entries = Obj.magic prevStmtTyEntries in (
+"""
+    src = replace_one(
+        src,
+        done_anchor,
+        done_patch,
+        "build-hxhx: failed to locate stmtListToOcaml generated trace done anchor\n",
+    )
+
+    write_text(path_str, src)
+
+
 def cmd_patch_module_name_lookup_raw_map(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-module-name-lookup-raw-map <path>\n")
@@ -4314,6 +4354,7 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-extend-ty-ident-call-reprs": cmd_patch_extend_ty_ident_call_reprs,
     "patch-stmt-list-local-hint-reprs": cmd_patch_stmt_list_local_hint_reprs,
     "patch-stmt-list-string-builder": cmd_patch_stmt_list_string_builder,
+    "patch-stmt-list-trace": cmd_patch_stmt_list_trace,
     "patch-module-name-lookup-raw-map": cmd_patch_module_name_lookup_raw_map,
     "patch-typed-ty-ident-lookups": cmd_patch_typed_ty_ident_lookups,
     "patch-negative-unop-is-int-expr": cmd_patch_negative_unop_is_int_expr,

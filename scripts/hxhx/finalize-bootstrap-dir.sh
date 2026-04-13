@@ -458,6 +458,21 @@ patch_bootstrap_emitter_stmt_list_string_builder() {
   run_bootstrap_patch_helper patch-stmt-list-string-builder "$emitter_path"
 }
 
+patch_bootstrap_emitter_stmt_list_trace() {
+  local build_dir="$1"
+  local emitter_path="$build_dir/EmitterStage.ml"
+
+  if [ ! -f "$emitter_path" ]; then
+    return 0
+  fi
+
+  if file_contains_literal 'stmt_list_begin:' "$emitter_path"; then
+    return 0
+  fi
+
+  run_bootstrap_patch_helper patch-stmt-list-trace "$emitter_path"
+}
+
 patch_bootstrap_emitter_typed_ty_map_copying() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
@@ -1001,6 +1016,7 @@ finalize_bootstrap_dir() {
   patch_bootstrap_emitter_negative_unop_is_int_expr "$build_dir"
   patch_bootstrap_emitter_stmt_local_allowed_idents "$build_dir"
   patch_bootstrap_emitter_stmt_list_string_builder "$build_dir"
+  patch_bootstrap_emitter_stmt_list_trace "$build_dir"
   patch_bootstrap_emitter_instance_call_receiver_forwarding "$build_dir"
   patch_bootstrap_emitter_instance_call_this_binding "$build_dir"
   patch_bootstrap_emitter_instance_method_value_binding "$build_dir"
