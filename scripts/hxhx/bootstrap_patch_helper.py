@@ -4019,6 +4019,17 @@ def cmd_patch_plugin_dune_layout(argv: list[str]) -> None:
         fail("usage: patch-plugin-dune-layout <path>\n")
     path_str = argv[0]
     src = read_text(path_str)
+
+    # Newer regenerated snapshots carry the plugin dune layout in EmitterStage.hx source.
+    # Keep this legacy patch as a no-op once the source-side implementation is present.
+    if (
+        "let emitPluginDuneLayoutIfRequestedForStage3 =" in src
+        and "ocaml_dune_layout=plugin" in src
+        and "out.cma" in src
+    ):
+        write_text(path_str, src)
+        return
+
     needle = '                                  ignore (if not (buildExecutable) then raise (HxRuntime.Hx_return (Obj.repr (exePath : string))) else ());'
     replacement = '''                                  let bootstrapArgs = Obj.magic (HxSys.args ()) in let bootstrapWantsPluginDune = let rec loop idx sawPlugin = if idx >= HxArray.length bootstrapArgs then sawPlugin else let arg = (HxArray.get (Obj.magic bootstrapArgs) idx : string) in if HxString.equals arg "-D" && idx + 1 < HxArray.length bootstrapArgs then let value = (HxArray.get (Obj.magic bootstrapArgs) (idx + 1) : string) in loop (idx + 2) (sawPlugin || HxString.equals value "ocaml_dune_layout=plugin") else loop (idx + 1) sawPlugin in loop 0 false in
                                     ignore (if bootstrapWantsPluginDune then (

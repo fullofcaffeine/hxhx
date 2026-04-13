@@ -1885,15 +1885,15 @@ class EmitterStage {
 		type predicates, so they can live outside the main expression switch.
 
 		What:
-		Handles bring-up-only `Reflect`/`Type`, narrow `StringTools`, `Std`, common
-		extension filesystem calls, and basic print intrinsics. Returns `null` when
-		normal expression lowering must continue.
+		Handles the small Stage3 math/timer intrinsic cluster. Other core bring-up
+		intrinsics live in adjacent helpers so each generated OCaml function remains
+		bounded.
 
 		How:
 		The helper preserves the old branch order and delegates recursive operands
 		back through `exprToOcaml` / `exprToOcamlString` with the same context maps.
 	**/
-	static function tryExprToOcamlStage3CoreIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+	static function tryExprToOcamlStage3MathIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
 		switch (e) {
@@ -1909,16 +1909,6 @@ class EmitterStage {
 				return "(classify_float ("
 					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 					+ ") = FP_infinite)";
-			case ECall(EField(EIdent("Std"), "isOfType"), [valueExpr, typeExpr]):
-				return "Std.isOfType ("
-					+ exprToOcaml(valueExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") (Obj.repr ("
-					+ exprToOcaml(typeExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ "))";
-			case ECall(EField(EIdent("Array"), "wrap"), [arg]):
-				return "(Obj.magic (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
-			case EField(EIdent("String"), "fromCharCode"):
-				return "(fun i -> Stdlib.String.make 1 (Char.chr i))";
 			case ECall(EField(EIdent("Math"), "pow"), [_a, _b]):
 				return "(Obj.magic 0)";
 			case ECall(EField(EIdent("Math"), "floor"), [_arg]):
@@ -1929,6 +1919,23 @@ class EmitterStage {
 				return "(Obj.magic 0)";
 			case ECall(EField(EIdent("Timer"), "stamp"), []):
 				return "(Unix.gettimeofday ())";
+			case EField(EIdent("Math"), "NaN"):
+				return "nan";
+			case EField(EIdent("Math"), "POSITIVE_INFINITY"):
+				return "infinity";
+			case EField(EIdent("Math"), "NEGATIVE_INFINITY"):
+				return "neg_infinity";
+			case EField(EIdent("Math"), "PI"):
+				return "(4.0 *. atan 1.0)";
+			case _:
+		}
+		return null;
+	}
+
+	static function tryExprToOcamlStage3Int64Intrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		switch (e) {
 			case ECall(EField(EIdent("Int64"), "ofInt"), [arg]) | ECall(EField(EIdent("haxe.Int64"), "ofInt"), [arg]):
 				return "Haxe_Int64.ofInt ("
 					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
@@ -1939,6 +1946,15 @@ class EmitterStage {
 					+ ") ("
 					+ exprToOcaml(hi, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 					+ ")";
+			case _:
+		}
+		return null;
+	}
+
+	static function tryExprToOcamlStage3LambdaTryIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		switch (e) {
 			case ELambda(args, body):
 				final ocamlArgs = args.map(ocamlValueIdent).join(" ");
 				final ty2 = extendTyByIdentManyForStage3(cast tyByIdent, args, TyType.fromHintText("Dynamic"));
@@ -1949,14 +1965,15 @@ class EmitterStage {
 					+ ")";
 			case ETryCatchRaw(_raw):
 				return "(Obj.magic 0)";
-			case EField(EIdent("Math"), "NaN"):
-				return "nan";
-			case EField(EIdent("Math"), "POSITIVE_INFINITY"):
-				return "infinity";
-			case EField(EIdent("Math"), "NEGATIVE_INFINITY"):
-				return "neg_infinity";
-			case EField(EIdent("Math"), "PI"):
-				return "(4.0 *. atan 1.0)";
+			case _:
+		}
+		return null;
+	}
+
+	static function tryExprToOcamlStage3ReflectTypeIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		switch (e) {
 			case ECall(EField(EIdent("Reflect"), "fields"), [_obj]):
 				return "(Obj.magic 0)";
 			case ECall(EField(EIdent("Reflect"), "field"), [_obj, _name]):
@@ -1979,6 +1996,25 @@ class EmitterStage {
 				return escapeOcamlString("");
 			case ECall(EField(EIdent("Type"), "typeof"), [_v]):
 				return "(Obj.magic 0)";
+			case _:
+		}
+		return null;
+	}
+
+	static function tryExprToOcamlStage3StdStringIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		switch (e) {
+			case ECall(EField(EIdent("Std"), "isOfType"), [valueExpr, typeExpr]):
+				return "Std.isOfType ("
+					+ exprToOcaml(valueExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") (Obj.repr ("
+					+ exprToOcaml(typeExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ "))";
+			case ECall(EField(EIdent("Array"), "wrap"), [arg]):
+				return "(Obj.magic (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
+			case EField(EIdent("String"), "fromCharCode"):
+				return "(fun i -> Stdlib.String.make 1 (Char.chr i))";
 			case ECall(EField(_obj, "set_low"), [_v]):
 				return "()";
 			case ECall(EField(_obj, "set_high"), [_v]):
@@ -2007,6 +2043,15 @@ class EmitterStage {
 					+ "))";
 			case ECall(EField(EIdent("Std"), "downcast"), [_value, _cls]):
 				return "(Obj.magic HxRuntime.hx_null)";
+			case _:
+		}
+		return null;
+	}
+
+	static function tryExprToOcamlStage3FsPrintIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		switch (e) {
 			case ECall(EField(_obj, "exists"), []):
 				return "true";
 			case ECall(EField(_obj, "readDirectory"), []):
@@ -2026,6 +2071,24 @@ class EmitterStage {
 					+ exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 					+ ")";
 			case _:
+		}
+		return null;
+	}
+
+	static function tryExprToOcamlStage3CoreIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		for (tryIntrinsic in [
+			tryExprToOcamlStage3MathIntrinsic,
+			tryExprToOcamlStage3Int64Intrinsic,
+			tryExprToOcamlStage3LambdaTryIntrinsic,
+			tryExprToOcamlStage3ReflectTypeIntrinsic,
+			tryExprToOcamlStage3StdStringIntrinsic,
+			tryExprToOcamlStage3FsPrintIntrinsic,
+		]) {
+			final code = tryIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+			if (code != null)
+				return code;
 		}
 		return null;
 	}
@@ -5391,17 +5454,20 @@ class EmitterStage {
 		return StringTools.endsWith(file, ".ml") ? file.substr(0, file.length - 3) : file;
 	}
 
-	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
-			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
-		traceEmitToDirEntry("emitToDir_enter");
-		final outAbs = requireEmitToDirOutAbs(outDir);
-		installEmitToDirProfile(ocamlProfile);
-		ensureEmitToDirOutDir(outAbs);
+	/**
+		Emits extra OCaml compilation units requested by macro execution.
 
-		// Stage 4 bring-up: emit macro-generated OCaml modules (if any).
-		//
-		// This is a minimal “generate code” effect: macros can request extra target compilation units
-		// without us implementing full typed AST transforms yet.
+		Why
+		- Stage4 macro bring-up can already request target-side helper modules even though Stage3
+		  does not yet implement full typed-AST macro transforms.
+		- Keeping this out of `emitToDir` reduces the size of the monolithic Stage3 body that the
+		  bootstrap compiler has to lower during hxhx-full-emit.
+
+		What
+		- Writes each non-empty generated module name to `<out>/<name>.ml`.
+		- Returns the relative file names that must be included in the dune compilation unit list.
+	**/
+	static function emitGeneratedOcamlModulesForStage3(p:MacroExpandedProgram, outAbs:String):Array<String> {
 		final generatedPaths = new Array<String>();
 		for (gm in p.getGeneratedOcamlModules()) {
 			if (gm == null)
@@ -5413,241 +5479,194 @@ class EmitterStage {
 			sys.io.File.saveContent(path, gm.source == null ? "" : gm.source);
 			generatedPaths.push(name + ".ml");
 		}
+		return generatedPaths;
+	}
 
-		// Stage 3 bring-up: minimal OCaml-side shims for implicit Haxe std classes.
-		//
-		// Why
-		// - Stage3 resolves *import closure*, not "all referenced modules" like a real typer.
-		// - Upstream-ish code can refer to core std classes like `Std` without an explicit import.
-		// - Without a shim, emitted OCaml can fail immediately with `Unbound module Std`.
-		//
-		// What
-		// - These shims are intentionally tiny and non-semantic: they exist only to keep the
-		//   bring-up compiler compiling further so we can discover the next missing feature.
-		// - They are only emitted when the corresponding `<Name>.ml` is not already present.
-		// Stage 3 bring-up: link the repo-owned OCaml runtime when compiling the emitted program.
-		//
-		// Why
-		// - Gate2's `stage3_emit_runner` rung compiles and runs upstream-shaped Haxe code (tests/RunCi.hx).
-		// - The emitted OCaml references runtime helpers like `HxRuntime.hx_null`, `HxRuntime.dynamic_equals`,
-		//   `Std.string`, and `EReg`.
-		//
-		// Provenance
-		// - These modules live in `packages/reflaxe.ocaml/std/runtime/*.ml` and are authored for this repo.
-		// - They are **not** copied from upstream Haxe compiler sources.
+	/**
+		Copies the repo-owned OCaml runtime into a Stage3 output directory.
+
+		Why
+		- Gate2-shaped workloads compile and run emitted OCaml that references helpers like
+		  `HxRuntime.hx_null`, `HxRuntime.dynamic_equals`, `Std.string`, and `EReg`.
+		- Those helpers live in this repository, not in upstream Haxe compiler sources.
+
+		How
+		- Prefer `packages/reflaxe.ocaml/std/runtime`.
+		- Keep the historical `std/runtime` lookup only as a repo-layout fallback.
+	**/
+	static function copyStage3RuntimeForStage3(outAbs:String):Array<String> {
 		final runtimePaths = new Array<String>();
-		{
-			final root = inferRepoRootForStage3Shims();
-			if (root == null || root.length == 0)
-				throw "stage3 emitter: cannot locate repo root for runtime templates (set HXHX_REPO_ROOT)";
-			final runtimeCandidates = [
-				haxe.io.Path.join([root, "packages", "reflaxe.ocaml", "std", "runtime"]),
-				// Back-compat: older repo layouts used `std/runtime` at the root.
-				haxe.io.Path.join([root, "std", "runtime"]),
-			];
-			var runtimeSrcDir:Null<String> = null;
-			for (candidate in runtimeCandidates) {
-				if (candidate != null && sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate)) {
-					runtimeSrcDir = candidate;
-					break;
-				}
+		final root = inferRepoRootForStage3Shims();
+		if (root == null || root.length == 0)
+			throw "stage3 emitter: cannot locate repo root for runtime templates (set HXHX_REPO_ROOT)";
+		final runtimeCandidates = [
+			haxe.io.Path.join([root, "packages", "reflaxe.ocaml", "std", "runtime"]),
+			haxe.io.Path.join([root, "std", "runtime"]),
+		];
+		var runtimeSrcDir:Null<String> = null;
+		for (candidate in runtimeCandidates) {
+			if (candidate != null && sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate)) {
+				runtimeSrcDir = candidate;
+				break;
 			}
-			if (runtimeSrcDir == null) {
-				throw "stage3 emitter: missing runtime directory (expected one of):\n- " + runtimeCandidates.join("\n- ");
-			}
+		}
+		if (runtimeSrcDir == null)
+			throw "stage3 emitter: missing runtime directory (expected one of):\n- " + runtimeCandidates.join("\n- ");
 
-			final runtimeOutDir = haxe.io.Path.join([outAbs, "runtime"]);
-			if (!sys.FileSystem.exists(runtimeOutDir))
-				sys.FileSystem.createDirectory(runtimeOutDir);
+		final runtimeOutDir = haxe.io.Path.join([outAbs, "runtime"]);
+		if (!sys.FileSystem.exists(runtimeOutDir))
+			sys.FileSystem.createDirectory(runtimeOutDir);
 
-			for (name in sys.FileSystem.readDirectory(runtimeSrcDir)) {
-				if (name == null || !StringTools.endsWith(name, ".ml"))
-					continue;
-				final srcPath = haxe.io.Path.join([runtimeSrcDir, name]);
-				final dstPath = haxe.io.Path.join([runtimeOutDir, name]);
-				sys.io.File.copy(srcPath, dstPath);
-				runtimePaths.push("runtime/" + name);
-			}
+		for (name in sys.FileSystem.readDirectory(runtimeSrcDir)) {
+			if (name == null || !StringTools.endsWith(name, ".ml"))
+				continue;
+			final srcPath = haxe.io.Path.join([runtimeSrcDir, name]);
+			final dstPath = haxe.io.Path.join([runtimeOutDir, name]);
+			sys.io.File.copy(srcPath, dstPath);
+			runtimePaths.push("runtime/" + name);
 		}
+		return runtimePaths;
+	}
 
-		{
-			final shimName = "Lambda";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(shimPath,
-					"(* hxhx(stage3) bootstrap shim: Lambda *)\n"
-					+ "let array it =\n"
-					+ "  HxBootArray.of_list (List.of_seq (it : _ Seq.t))\n"
-					+ "let list it =\n"
-					+ "  List.of_seq (it : _ Seq.t)\n"
-					+ "let fold it f first =\n"
-					+ "  let acc = ref first in\n"
-					+ "  Seq.iter (fun x -> acc := f x !acc) (it : _ Seq.t);\n"
-					+ "  !acc\n"
-					+ "let has _ _ = false\n"
-					+ "let exists _ _ = false\n"
-					+ "let iter _ _ = ()\n"
-					+ "let count _ = 0\n");
-			}
-			// Keep bootstrap shims in the compile unit list even on repeat emits into the same out dir.
-			generatedPaths.push(shimName + ".ml");
-		}
-		{
-			// Stage 3 bring-up: a tiny "array-like" container used only by the bootstrap emitter output.
-			//
-			// Why
-			// - Gate2-shaped orchestration code uses `Array` pervasively and expects mutation (`push`)
-			//   and iteration (`for (x in arr)`).
-			// - The Stage3 bootstrap emitter deliberately does **not** link the full reflaxe.ocaml
-			//   runtime (`packages/reflaxe.ocaml/std/runtime`), so we provide a self-contained OCaml shim here.
-			//
-			// Note
-			// - This is not Haxe-correct `Array<T>` semantics. It is a bring-up convenience to let
-			//   stage3_emit_runner style workloads execute far enough to expose the *next* missing
-			//   frontend/typer/macro feature.
-			final shimName = "HxBootArray";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(shimPath, readStage3ShimTemplate(shimName));
-			}
-			generatedPaths.push(shimName + ".ml");
-		}
-		{
-			final shimName = "HxBootProcess";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(shimPath, readStage3ShimTemplate(shimName));
-			}
-			generatedPaths.push(shimName + ".ml");
-		}
-		{
-			// Stage 3 bring-up: stdlib IO helpers lower to `Haxe_io_FPHelper.*`, but ordinary
-			// workloads do not always emit the thin wrapper unit even though the runtime helper
-			// `runtime/HxFPHelper.ml` is present.
-			//
-			// Emit the wrapper unconditionally in the program root so workload outputs stay
-			// link-closed without depending on placeholder std-unit generation.
-			final shimName = "Haxe_io_FPHelper";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			sys.io.File.saveContent(shimPath,
-				"(* hxhx(stage3) bootstrap shim: haxe.io.FPHelper *)\n"
-				+ "let __reflaxe_ocaml__ = ()\n\n"
-				+ "type t = { __hx_type : Obj.t }\n\n"
-				+ "let create = fun () -> let self = ({ __hx_type = HxType.class_ \"haxe.io.FPHelper\" } : t) in (\n"
-				+ "  ignore ();\n"
-				+ "  self\n"
-				+ ")\n\n"
-				+ "let __empty = fun () -> ({ __hx_type = HxType.class_ \"haxe.io.FPHelper\" } : t)\n\n"
-				+ "let i32ToFloat = fun i -> HxFPHelper.i32ToFloat i\n\n"
-				+ "let floatToI32 = fun f -> HxFPHelper.floatToI32 f\n\n"
-				+ "let i64ToDouble = fun low high -> HxFPHelper.i64ToDouble low high\n\n"
-				+
-				"let doubleToI64 = fun v -> let parts = Obj.magic (HxFPHelper.doubleToI64Parts v) in let x = Obj.magic (Haxe_Int64.make (HxArray.get (Obj.magic parts) 1) (HxArray.get (Obj.magic parts) 0)) in let tempResult = x in tempResult\n");
-			if (generatedPaths.indexOf(shimName + ".ml") == -1)
-				generatedPaths.push(shimName + ".ml");
-		}
-		{
-			final shimName = "Reflect";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(shimPath,
-					"(* hxhx(stage3) bootstrap shim: Reflect *)\n"
-					+ "let field o f = HxAnon.get o f\n"
-					+ "let fields o = HxAnon.fields o\n"
-					+ "let getProperty o f = HxAnon.get o f\n"
-					+ "let setProperty o f v = HxAnon.set o f v\n"
-					+ "let hasField o f = HxAnon.has o f\n"
-					+ "let isFunction = HxReflect.isFunction\n"
-					+ "let isObject = HxReflect.isObject\n"
-					+ "let compare = HxReflect.compare\n"
-					+ "let callMethod = HxReflect.callMethod\n"
-					+ "let makeVarArgs = HxReflect.makeVarArgs\n"
-					+ "let makeVarArgsVoid = HxReflect.makeVarArgsVoid\n"
-					+ "let deleteField o f = HxAnon.delete o f\n"
-					+ "let copy = HxAnon.copy\n");
-			}
-			generatedPaths.push(shimName + ".ml");
-		}
-		{
-			final shimName = "IgnoredFixture";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(shimPath,
-					"(* hxhx(stage3) bootstrap shim: IgnoredFixture *)\n"
-					+ "type t = Obj.t\n"
-					+ "let notIgnored _ = (Obj.magic 0)\n"
-					+ "let ignored _ = (Obj.magic 0)\n");
-			}
-			generatedPaths.push(shimName + ".ml");
-		}
-		{
-			final shimName = "HxPosInfos";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(shimPath,
-					"(* hxhx(stage3) bootstrap shim: haxe.PosInfos *)\n"
-					+ "type t = {\n"
-					+ "  fileName : string;\n"
-					+ "  lineNumber : int;\n"
-					+ "  className : string;\n"
-					+ "  methodName : string;\n"
-					+ "  customParams : Obj.t;\n"
-					+ "}\n");
-			}
-			generatedPaths.push(shimName + ".ml");
-		}
-		{
-			final shimName = "Haxe_Int64";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(shimPath,
-					"(* hxhx(stage3) bootstrap shim: haxe.Int64 (bring-up only) *)\n"
-					+ "\n"
-					+ "(*\n"
-					+ "  This is intentionally not a correct implementation of Haxe Int64 semantics.\n"
-					+ "  It exists so upstream-shaped code can typecheck and link during Stage3.\n"
-					+ "*)\n"
-					+ "\n"
-					+ "type t = int\n"
-					+ "\n"
-					+ "type divmod = { quotient : t; modulus : t }\n"
-					+ "\n"
-					+ "let make (_high : int) (low : int) : t = low\n"
-					+ "let ofInt (i : int) : t = i\n"
-					+ "let fromFloat (_f : _) : _ = Obj.repr 0\n"
-					+ "let parseString (_s : string) : t = 0\n"
-					+ "let toInt (v : t) : int = v\n"
-					+ "let toStr (v : t) : string = string_of_int v\n"
-					+ "let add (a : t) (b : t) : t = a + b\n"
-					+ "let sub (a : t) (b : t) : t = a - b\n"
-					+ "let mul (a : t) (b : t) : t = a * b\n"
-					+ "let neg (a : t) : t = (-a)\n"
-					+ "let eq (_a : _) (_b : _) : bool = true\n"
-					+ "let compare (a : t) (b : t) : int = Stdlib.compare a b\n"
-					+ "let divMod (a : t) (b : t) : divmod =\n"
-					+ "  if b = 0 then { quotient = 0; modulus = 0 } else { quotient = a / b; modulus = a mod b }\n"
-					+ "let isInt64 (_ : Obj.t) : bool = true\n");
-			}
-			generatedPaths.push(shimName + ".ml");
-		}
+	static function writeStage3ShimIfMissing(outAbs:String, shimName:String, source:String):String {
+		final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+		if (!sys.FileSystem.exists(shimPath))
+			sys.io.File.saveContent(shimPath, source);
+		return shimName + ".ml";
+	}
 
-		_EmitterStageDebug.traceStage3Phase("before_typed_modules");
-		final typedModulesRaw = p.getTypedModules();
-		_EmitterStageDebug.traceStage3Phase("after_typed_modules_raw:" + typedModulesRaw.length);
-		if (typedModulesRaw.length == 0)
-			throw "stage3 emitter: empty typed module graph";
+	static function writeStage3TemplateShimIfMissing(outAbs:String, shimName:String):String {
+		return writeStage3ShimIfMissing(outAbs, shimName, readStage3ShimTemplate(shimName));
+	}
 
-		// Stage 3 bring-up: avoid emitting placeholder units that shadow the repo-owned runtime.
-		//
-		// Why
-		// - We copy `packages/reflaxe.ocaml/std/runtime/*.ml` into `out/runtime/` and compile them as part of the Stage3 program.
-		// - The Stage3 typer/emitter can still produce placeholder `*.ml` units for the corresponding
-		//   Haxe std types (e.g. `haxe.CallStack`), which would overwrite the runtime `.cmi` and cause
-		//   downstream "Unbound value" errors.
-		//
-		// How
-		// - Build a set of runtime-provided OCaml module names and skip emitting any typed module whose
-		//   main unit name collides with a runtime unit.
+	static function writeStage3Shim(outAbs:String, shimName:String, source:String):String {
+		final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+		sys.io.File.saveContent(shimPath, source);
+		return shimName + ".ml";
+	}
+
+	/**
+		Emits bootstrap-only root shims required before Stage3 has full std/provider closure.
+
+		Why
+		- Stage3 currently resolves import closure, not every referenced implicit std module.
+		- Upstream-shaped code can refer to root providers such as `Lambda`, `Reflect`, or
+		  `haxe.Int64` without a generated placeholder that is complete enough to link.
+
+		What
+		- These shims are intentionally narrow bring-up aids, not complete Haxe std semantics.
+		- They are returned as generated root units so repeat emits into the same output directory
+		  still compile the shim modules.
+	**/
+	static function emitStage3BootstrapShimsForStage3(outAbs:String):Array<String> {
+		final generatedPaths = new Array<String>();
+
+		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Lambda",
+			"(* hxhx(stage3) bootstrap shim: Lambda *)\n"
+			+ "let array it =\n"
+			+ "  HxBootArray.of_list (List.of_seq (it : _ Seq.t))\n"
+			+ "let list it =\n"
+			+ "  List.of_seq (it : _ Seq.t)\n"
+			+ "let fold it f first =\n"
+			+ "  let acc = ref first in\n"
+			+ "  Seq.iter (fun x -> acc := f x !acc) (it : _ Seq.t);\n"
+			+ "  !acc\n"
+			+ "let has _ _ = false\n"
+			+ "let exists _ _ = false\n"
+			+ "let iter _ _ = ()\n"
+			+ "let count _ = 0\n"));
+
+		generatedPaths.push(writeStage3TemplateShimIfMissing(outAbs, "HxBootArray"));
+		generatedPaths.push(writeStage3TemplateShimIfMissing(outAbs, "HxBootProcess"));
+
+		final fpHelperPath = writeStage3Shim(outAbs, "Haxe_io_FPHelper",
+			"(* hxhx(stage3) bootstrap shim: haxe.io.FPHelper *)\n"
+			+ "let __reflaxe_ocaml__ = ()\n\n"
+			+ "type t = { __hx_type : Obj.t }\n\n"
+			+ "let create = fun () -> let self = ({ __hx_type = HxType.class_ \"haxe.io.FPHelper\" } : t) in (\n"
+			+ "  ignore ();\n"
+			+ "  self\n"
+			+ ")\n\n"
+			+ "let __empty = fun () -> ({ __hx_type = HxType.class_ \"haxe.io.FPHelper\" } : t)\n\n"
+			+ "let i32ToFloat = fun i -> HxFPHelper.i32ToFloat i\n\n"
+			+ "let floatToI32 = fun f -> HxFPHelper.floatToI32 f\n\n"
+			+ "let i64ToDouble = fun low high -> HxFPHelper.i64ToDouble low high\n\n"
+			+
+			"let doubleToI64 = fun v -> let parts = Obj.magic (HxFPHelper.doubleToI64Parts v) in let x = Obj.magic (Haxe_Int64.make (HxArray.get (Obj.magic parts) 1) (HxArray.get (Obj.magic parts) 0)) in let tempResult = x in tempResult\n");
+		if (generatedPaths.indexOf(fpHelperPath) == -1)
+			generatedPaths.push(fpHelperPath);
+
+		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Reflect",
+			"(* hxhx(stage3) bootstrap shim: Reflect *)\n"
+			+ "let field o f = HxAnon.get o f\n"
+			+ "let fields o = HxAnon.fields o\n"
+			+ "let getProperty o f = HxAnon.get o f\n"
+			+ "let setProperty o f v = HxAnon.set o f v\n"
+			+ "let hasField o f = HxAnon.has o f\n"
+			+ "let isFunction = HxReflect.isFunction\n"
+			+ "let isObject = HxReflect.isObject\n"
+			+ "let compare = HxReflect.compare\n"
+			+ "let callMethod = HxReflect.callMethod\n"
+			+ "let makeVarArgs = HxReflect.makeVarArgs\n"
+			+ "let makeVarArgsVoid = HxReflect.makeVarArgsVoid\n"
+			+ "let deleteField o f = HxAnon.delete o f\n"
+			+ "let copy = HxAnon.copy\n"));
+
+		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "IgnoredFixture",
+			"(* hxhx(stage3) bootstrap shim: IgnoredFixture *)\n"
+			+ "type t = Obj.t\n"
+			+ "let notIgnored _ = (Obj.magic 0)\n"
+			+ "let ignored _ = (Obj.magic 0)\n"));
+
+		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "HxPosInfos",
+			"(* hxhx(stage3) bootstrap shim: haxe.PosInfos *)\n"
+			+ "type t = {\n"
+			+ "  fileName : string;\n"
+			+ "  lineNumber : int;\n"
+			+ "  className : string;\n"
+			+ "  methodName : string;\n"
+			+ "  customParams : Obj.t;\n"
+			+ "}\n"));
+
+		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Haxe_Int64",
+			"(* hxhx(stage3) bootstrap shim: haxe.Int64 (bring-up only) *)\n"
+			+ "\n"
+			+ "(*\n"
+			+ "  This is intentionally not a correct implementation of Haxe Int64 semantics.\n"
+			+ "  It exists so upstream-shaped code can typecheck and link during Stage3.\n"
+			+ "*)\n"
+			+ "\n"
+			+ "type t = int\n"
+			+ "\n"
+			+ "type divmod = { quotient : t; modulus : t }\n"
+			+ "\n"
+			+ "let make (_high : int) (low : int) : t = low\n"
+			+ "let ofInt (i : int) : t = i\n"
+			+ "let fromFloat (_f : _) : _ = Obj.repr 0\n"
+			+ "let parseString (_s : string) : t = 0\n"
+			+ "let toInt (v : t) : int = v\n"
+			+ "let toStr (v : t) : string = string_of_int v\n"
+			+ "let add (a : t) (b : t) : t = a + b\n"
+			+ "let sub (a : t) (b : t) : t = a - b\n"
+			+ "let mul (a : t) (b : t) : t = a * b\n"
+			+ "let neg (a : t) : t = (-a)\n"
+			+ "let eq (_a : _) (_b : _) : bool = true\n"
+			+ "let compare (a : t) (b : t) : int = Stdlib.compare a b\n"
+			+ "let divMod (a : t) (b : t) : divmod =\n"
+			+ "  if b = 0 then { quotient = 0; modulus = 0 } else { quotient = a / b; modulus = a mod b }\n"
+			+ "let isInt64 (_ : Obj.t) : bool = true\n"));
+
+		return generatedPaths;
+	}
+
+	/**
+		Builds the set of OCaml modules provided outside the typed-module emitter.
+
+		Why
+		- Runtime modules and bootstrap shims must not be overwritten by placeholder units.
+		- Some root providers are deliberately root-qualified during Stage3 bring-up.
+	**/
+	static function runtimeModuleNamesForStage3(runtimePaths:Array<String>):Map<String, Bool> {
 		final runtimeModuleNames:Map<String, Bool> = new Map();
 		for (p0 in runtimePaths)
 			runtimeModuleNames.set(runtimeModuleNameFromPath(p0), true);
@@ -5655,36 +5674,80 @@ class EmitterStage {
 		for (_ in runtimeModuleNames.keys())
 			runtimeModuleCount++;
 		_EmitterStageDebug.traceStage3Phase("after_runtime_module_names:" + runtimeModuleCount);
-		/**
-			Known root provider units that Stage3 emits or relies on during bootstrap.
-
-			Why
-			- The expression emitter has a same-package fallback for unresolved single-part type paths
-			  like `Util.ping()`, which rewrites them to the current package (for example `Unit_Util`).
-			- Some upstream-facing std providers intentionally stay as root units instead:
-			  `Type`, `Lambda`, import shims like `CallStack`, and small bootstrap helpers like `Xml`.
-			- If these root units are not treated as "known modules", the fallback misqualifies them as
-			  package-local providers (`Unit_Type`, `Unit_Lambda`) and the generated OCaml no longer links.
-
-			How
-			- Seed the known-runtime module map with the safe root provider names that the emitter already
-			  generates or preserves elsewhere in this stage.
-			- This keeps the resolver narrow: we only exempt known root providers, not arbitrary
-			  uppercase identifiers.
-		**/
 		for (rootProvider in ["Type", "Lambda", "CallStack", "Reflect", "Xml", "Sys"])
 			runtimeModuleNames.set(rootProvider, true);
-		// Stage 3 bring-up: keep the `Haxe_Int64.ml` shim authoritative.
-		//
-		// Why
-		// - The bootstrap frontend/typer does not index abstract/operator-heavy std modules well yet,
-		//   so the placeholder provider for `haxe.Int64` can be missing required values like `ofInt`.
-		// - We emit a tiny OCaml shim for `haxe.Int64` earlier in this stage to keep upstream-shaped
-		//   code compiling, but it must not be overwritten by the placeholder emitter.
-		//
-		// How
-		// - Treat `Haxe_Int64` as "runtime provided" so `emitModule` skips emitting the main unit.
 		runtimeModuleNames.set("Haxe_Int64", true);
+		return runtimeModuleNames;
+	}
+
+	static function stage3BootstrapWantsPluginDuneLayout():Bool {
+		final args = Sys.args();
+		var idx = 0;
+		while (idx < args.length) {
+			final arg = args[idx];
+			if (arg == "-D" && idx + 1 < args.length) {
+				if (args[idx + 1] == "ocaml_dune_layout=plugin")
+					return true;
+				idx += 2;
+			} else {
+				idx++;
+			}
+		}
+		return false;
+	}
+
+	/**
+		Emits a minimal plugin-oriented dune layout for bootstrap plugin builds.
+
+		Why
+		- Native Reflaxe/plugin bring-up needs Stage3 output that can be consumed as an OCaml plugin
+		  artifact, not only as `out.exe`.
+		- Older bootstrap snapshots injected this as a generated-OCaml finalizer patch; keeping the
+		  behavior in source makes official regeneration converge without another patch anchor.
+
+		What
+		- Triggered only by `-D ocaml_dune_layout=plugin` in the bootstrap compiler argv.
+		- Writes a small root dune project plus runtime library stanza and returns the expected
+		  plugin artifact path (`out.cma`) before the normal executable path.
+	**/
+	static function emitPluginDuneLayoutIfRequestedForStage3(outAbs:String):Null<String> {
+		if (!stage3BootstrapWantsPluginDuneLayout())
+			return null;
+
+		final runtimeDunePath = haxe.io.Path.join([outAbs, "runtime", "dune"]);
+		final duneProjectPath = haxe.io.Path.join([outAbs, "dune-project"]);
+		final dunePath = haxe.io.Path.join([outAbs, "dune"]);
+		final outMlPath = haxe.io.Path.join([outAbs, "out.ml"]);
+		final pluginArtifactPath = haxe.io.Path.join([outAbs, "out.cma"]);
+		sys.io.File.saveContent(runtimeDunePath,
+			"(library\n (name hx_runtime)\n (wrapped false)\n (modules :standard)\n (libraries unix str threads dynlink))\n\n; Generated by hxhx(stage3)\n");
+		sys.io.File.saveContent(haxe.io.Path.join([outAbs, ".gitignore"]), "_build/\n*.install\n");
+		sys.io.File.saveContent(duneProjectPath, "(lang dune 2.9)\n(name out)\n(wrapped_executables false)\n\n; Generated by hxhx(stage3)\n");
+		sys.io.File.saveContent(dunePath,
+			"(executable\n (name out)\n (modules :standard)\n (libraries hx_runtime unix str threads dynlink)\n (modes (native plugin) (byte plugin)))\n\n; Generated by hxhx(stage3)\n");
+		sys.io.File.saveContent(outMlPath, "let () = ()\n");
+		return pluginArtifactPath;
+	}
+
+	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
+			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
+		traceEmitToDirEntry("emitToDir_enter");
+		final outAbs = requireEmitToDirOutAbs(outDir);
+		installEmitToDirProfile(ocamlProfile);
+		ensureEmitToDirOutDir(outAbs);
+
+		final generatedPaths = emitGeneratedOcamlModulesForStage3(p, outAbs);
+		final runtimePaths = copyStage3RuntimeForStage3(outAbs);
+		for (shimPath in emitStage3BootstrapShimsForStage3(outAbs))
+			generatedPaths.push(shimPath);
+
+		_EmitterStageDebug.traceStage3Phase("before_typed_modules");
+		final typedModulesRaw = p.getTypedModules();
+		_EmitterStageDebug.traceStage3Phase("after_typed_modules_raw:" + typedModulesRaw.length);
+		if (typedModulesRaw.length == 0)
+			throw "stage3 emitter: empty typed module graph";
+
+		final runtimeModuleNames = runtimeModuleNamesForStage3(runtimePaths);
 
 		function uniqueTypedModules(mods:Array<TypedModule>):Array<TypedModule> {
 			if (mods == null || mods.length <= 1)
@@ -7875,6 +7938,9 @@ class EmitterStage {
 		_EmitterStageDebug.traceStage3Phase("after_alias_shims:" + generatedPaths.length);
 
 		final exePath = haxe.io.Path.join([outAbs, "out.exe"]);
+		final pluginArtifactPath = emitPluginDuneLayoutIfRequestedForStage3(outAbs);
+		if (pluginArtifactPath != null)
+			return pluginArtifactPath;
 		try {
 			if (sys.FileSystem.exists(exePath))
 				sys.FileSystem.deleteFile(exePath);
