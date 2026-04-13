@@ -1118,6 +1118,62 @@ class EmitterStage {
 		return currentKnownModuleNames != null && currentKnownModuleNames.exists(name);
 	}
 
+	static function stage3HasTyIdent(name:String, ?tyByIdent:Map<String, TyType>):Bool {
+		return stage3TyLookup(stage3ResolveTyIdentName(name, tyByIdent), tyByIdent) != null;
+	}
+
+	static function stage3HasThisBinding(?tyByIdent:Map<String, TyType>):Bool {
+		return stage3HasTyIdent("this", tyByIdent) || stage3HasTyIdent("this_", tyByIdent);
+	}
+
+	static function stage3HasArity(name:String, ?arityByIdent:Map<String, Int>):Bool {
+		return mapHasRaw(arityByIdent, name);
+	}
+
+	static function stage3ArityFor(name:String, ?arityByIdent:Map<String, Int>):Int {
+		final resolved = mapGetRaw(arityByIdent, name);
+		if (resolved == null)
+			return 0;
+		final arity:Int = cast resolved;
+		return arity;
+	}
+
+	static function callSigForStage3(callee:String, ?callSigByCallee:Map<String, EmitterCallSig>):Null<EmitterCallSig> {
+		final resolved = mapGetRaw(callSigByCallee, callee);
+		return resolved == null ? null : cast resolved;
+	}
+
+	static function resolveQualifiedModuleCallSigByEmittedModuleNameForStage3(moduleName:String, field:String, loweredField:String,
+			?currentPackagePath:String):Null<EmitterCallSig> {
+		if (moduleName == null || moduleName.length == 0 || currentModuleFilePath == null || currentModuleFilePath.length == 0)
+			return null;
+		final currentPkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
+		var bestSamePkg:Null<EmitterCallSig> = null;
+		var bestAny:Null<EmitterCallSig> = null;
+		for (entry in currentModuleNameEntries) {
+			if (entry.moduleName != moduleName)
+				continue;
+			final colon = entry.key.indexOf(":");
+			final pkg = colon < 0 ? "" : entry.key.substr(0, colon);
+			final raw = colon < 0 ? entry.key : entry.key.substr(colon + 1);
+			if (raw.length == 0)
+				continue;
+			final parts = raw.split(".");
+			if (parts.length == 0)
+				continue;
+			final resolved = resolveQualifiedModuleCallSig(currentModuleFilePath, parts, field, loweredField);
+			if (resolved == null)
+				continue;
+			if (pkg == currentPkg)
+				return resolved;
+			if (bestSamePkg == null && StringTools.startsWith(currentPkg, pkg) && pkg.length > 0)
+				bestSamePkg = resolved;
+			if (bestAny == null)
+				bestAny = resolved;
+		}
+		return bestSamePkg != null ? bestSamePkg : bestAny;
+	}
+
 	static function currentModuleShortNameForStage3(?currentPackagePath:String):String {
 		if (currentOcamlModuleName == null)
 			return "";
@@ -2199,83 +2255,6 @@ class EmitterStage {
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
 
-		inline function hasTyIdent(name:String):Bool {
-			return stage3TyLookup(stage3ResolveTyIdentName(name, tyByIdentRaw), tyByIdentRaw) != null;
-		}
-
-		inline function hasThisBinding():Bool {
-			return hasTyIdent("this") || hasTyIdent("this_");
-		}
-
-		inline function hasArity(name:String):Bool {
-			return mapHasRaw(arityByIdentRaw, name);
-		}
-
-		inline function arityFor(name:String):Int {
-			final resolved = mapGetRaw(arityByIdentRaw, name);
-			if (resolved == null)
-				return 0;
-			final arity:Int = cast resolved;
-			return arity;
-		}
-
-		inline function staticImportModule(name:String):String {
-			final resolved = mapGetRaw(staticImportByIdentRaw, name);
-			if (resolved != null)
-				return cast resolved;
-			final globalResolved = mapGetRaw(currentGlobalImportAliasByIdent, name);
-			return globalResolved == null ? null : cast globalResolved;
-		}
-
-		inline function isKnownModuleName(name:String):Bool {
-			return currentKnownModuleNames != null && currentKnownModuleNames.exists(name);
-		}
-
-		function moduleNameForKey(key:String):String {
-			final resolved = mapGetRaw(moduleNameByPkgAndClassRaw, key);
-			if (resolved != null)
-				return cast resolved;
-			for (entry in currentModuleNameEntries)
-				if (entry.key == key)
-					return entry.moduleName;
-			return null;
-		}
-
-		function resolveQualifiedModuleCallSigByEmittedModuleName(moduleName:String, field:String, loweredField:String):Null<EmitterCallSig> {
-			if (moduleName == null || moduleName.length == 0 || currentModuleFilePath == null || currentModuleFilePath.length == 0)
-				return null;
-			final currentPkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
-			var bestSamePkg:Null<EmitterCallSig> = null;
-			var bestAny:Null<EmitterCallSig> = null;
-			for (entry in currentModuleNameEntries) {
-				if (entry.moduleName != moduleName)
-					continue;
-				final colon = entry.key.indexOf(":");
-				final pkg = colon < 0 ? "" : entry.key.substr(0, colon);
-				final raw = colon < 0 ? entry.key : entry.key.substr(colon + 1);
-				if (raw.length == 0)
-					continue;
-				final parts = raw.split(".");
-				if (parts.length == 0)
-					continue;
-				final resolved = resolveQualifiedModuleCallSig(currentModuleFilePath, parts, field, loweredField);
-				if (resolved == null)
-					continue;
-				if (pkg == currentPkg)
-					return resolved;
-				if (bestSamePkg == null && StringTools.startsWith(currentPkg, pkg) && pkg.length > 0)
-					bestSamePkg = resolved;
-				if (bestAny == null)
-					bestAny = resolved;
-			}
-			return bestSamePkg != null ? bestSamePkg : bestAny;
-		}
-
-		inline function callSigFor(callee:String):Null<EmitterCallSig> {
-			final resolved = mapGetRaw(callSigByCalleeRaw, callee);
-			return resolved == null ? null : cast resolved;
-		}
-
 		final coreIntrinsic = tryExprToOcamlStage3CoreIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 			moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		if (coreIntrinsic != null)
@@ -2296,12 +2275,12 @@ class EmitterStage {
 			case EFloat(v): Std.string(v);
 			case EString(v): escapeOcamlString(v);
 			case EIdent(name):
-				exprToOcamlIdentStage3(name, hasCurrentInstanceMethod(name), hasThisBinding(), hasTyIdent(name), isMutableLocalRefIdent(name), hasArity(name),
-					staticImportModule(name));
+				exprToOcamlIdentStage3(name, hasCurrentInstanceMethod(name), stage3HasThisBinding(tyByIdentRaw), stage3HasTyIdent(name, tyByIdentRaw),
+					isMutableLocalRefIdent(name), stage3HasArity(name, arityByIdentRaw), staticImportModuleForStage3(name, staticImportByIdentRaw));
 			case EThis:
 				// Stage 3 full-body bring-up: instance methods bind an explicit `this` parameter.
 				// If we are outside that context, conservatively collapse to poison.
-				hasThisBinding() ? "this_" : "(Obj.magic 0)";
+				stage3HasThisBinding(tyByIdentRaw) ? "this_" : "(Obj.magic 0)";
 			case ESuper:
 				// Stage 3 bring-up: no class hierarchy semantics yet.
 				"(Obj.magic 0)";
@@ -2381,15 +2360,15 @@ class EmitterStage {
 				// append `(Obj.magic 0)` for any missing arguments when the callee is a known in-module
 				// identifier and the call provides fewer args than the declaration.
 				final missing = switch (callee) {
-					case EIdent(name) if (hasArity(name)):
-						final expectedRaw = arityFor(name);
+					case EIdent(name) if (stage3HasArity(name, arityByIdentRaw)):
+						final expectedRaw = stage3ArityFor(name, arityByIdentRaw);
 						final isInstance = hasCurrentInstanceMethod(name);
-						final callerHasThis = hasThisBinding();
+						final callerHasThis = stage3HasThisBinding(tyByIdentRaw);
 						final receiverIsForwarded = isInstance && args.length > 0 && args.length >= expectedRaw && looksLikeForwardedReceiverExpr(args[0]);
 						final expected = (isInstance && callerHasThis && !receiverIsForwarded) ? (expectedRaw - 1) : expectedRaw;
 						expected > args.length ? (expected - args.length) : 0;
-					case EField(EThis, name) if (hasArity(name)):
-						final expectedRaw = arityFor(name);
+					case EField(EThis, name) if (stage3HasArity(name, arityByIdentRaw)):
+						final expectedRaw = stage3ArityFor(name, arityByIdentRaw);
 						final receiverIsForwarded = args.length > 0 && args.length >= expectedRaw && looksLikeForwardedReceiverExpr(args[0]);
 						final expected = receiverIsForwarded ? expectedRaw : (expectedRaw - 1);
 						expected > args.length ? (expected - args.length) : 0;
@@ -2690,7 +2669,9 @@ class EmitterStage {
 				// - the member is known as an instance method in the current module, and
 				// - the receiver is not a type-path/static reference.
 				switch (callee) {
-					case EField(obj, field) if (hasArity(field) && hasCurrentInstanceMethod(field) && !isTypePathExpr(obj)):
+					case EField(obj, field) if (stage3HasArity(field, arityByIdentRaw)
+						&& hasCurrentInstanceMethod(field)
+						&& !isTypePathExpr(obj)):
 						final rendered = new Array<String>();
 						rendered.push("("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
@@ -2712,8 +2693,8 @@ class EmitterStage {
 				};
 
 				final receiverAlreadyForwarded = if (instanceCallName != null && args.length > 0) {
-					if (hasArity(instanceCallName)) {
-						args.length >= arityFor(instanceCallName)
+					if (stage3HasArity(instanceCallName, arityByIdentRaw)) {
+						args.length >= stage3ArityFor(instanceCallName, arityByIdentRaw)
 						&& looksLikeForwardedReceiverExpr(args[0]);
 					} else {
 						// Fallback for bring-up paths where typed arity is unavailable:
@@ -2728,7 +2709,7 @@ class EmitterStage {
 				final c = if (instanceCallName != null) {
 					if (receiverAlreadyForwarded) {
 						ocamlValueIdent(instanceCallName);
-					} else if (hasThisBinding()) {
+					} else if (stage3HasThisBinding(tyByIdentRaw)) {
 						ocamlValueIdent(instanceCallName) + " (this_)";
 					} else {
 						ocamlValueIdent(instanceCallName);
@@ -2779,7 +2760,7 @@ class EmitterStage {
 				// - In some recovered AST paths, implicit receiver insertion can still be skipped,
 				//   yielding partial application in emitted OCaml.
 				// - Emit receiver-aware call form directly for this known shape.
-				if (c == "compare" && hasThisBinding() && args.length == 2) {
+				if (c == "compare" && stage3HasThisBinding(tyByIdentRaw) && args.length == 2) {
 					return c
 						+ " (this_)"
 						+ " ("
@@ -2794,7 +2775,11 @@ class EmitterStage {
 				// - The generic missing-arg filler then inserts poison values and still misses
 				//   the receiver, producing a partial application.
 				// - Recover the known local-param call shape directly when available.
-				if (c == "compare" && hasThisBinding() && args.length == 0 && hasTyIdent("v1") && hasTyIdent("v2")) {
+				if (c == "compare"
+					&& stage3HasThisBinding(tyByIdentRaw)
+					&& args.length == 0
+					&& stage3HasTyIdent("v1", tyByIdentRaw)
+					&& stage3HasTyIdent("v2", tyByIdentRaw)) {
 					return c
 						+ " (this_) ("
 						+ exprToOcaml(EIdent("v1"), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
@@ -2817,26 +2802,26 @@ class EmitterStage {
 						return switch (expr) {
 							case EIdent(name):
 								final lowered = ocamlValueIdent(name);
-								final byLowered = callSigFor(lowered);
-								byLowered != null ? byLowered : callSigFor(name);
+								final byLowered = callSigForStage3(lowered, callSigByCalleeRaw);
+								byLowered != null ? byLowered : callSigForStage3(name, callSigByCalleeRaw);
 							case EField(obj, name):
 								final lowered = ocamlValueIdent(name);
-								final byLowered = callSigFor(lowered);
+								final byLowered = callSigForStage3(lowered, callSigByCalleeRaw);
 								if (byLowered != null) {
 									byLowered;
 								} else {
-									final byName = callSigFor(name);
+									final byName = callSigForStage3(name, callSigByCalleeRaw);
 									if (byName != null) {
 										byName;
 									} else {
 										var qualified:Null<EmitterCallSig> = null;
 										switch (obj) {
 											case EIdent(typeName):
-												final importedModule = staticImportModule(typeName);
+												final importedModule = staticImportModuleForStage3(typeName, staticImportByIdentRaw);
 												if (importedModule != null && importedModule.length > 0) {
-													qualified = callSigFor(importedModule + "." + lowered);
+													qualified = callSigForStage3(importedModule + "." + lowered, callSigByCalleeRaw);
 													if (qualified == null)
-														qualified = callSigFor(importedModule + "." + name);
+														qualified = callSigForStage3(importedModule + "." + name, callSigByCalleeRaw);
 												}
 											case _:
 										}
@@ -2850,7 +2835,7 @@ class EmitterStage {
 													var cur = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
 													while (true) {
 														final key = cur + ":" + raw;
-														final local = moduleNameForKey(key);
+														final local = moduleNameForStage3Key(key, moduleNameByPkgAndClassRaw);
 														if (local != null && local.length > 0) {
 															modName = local;
 															resolvedByModuleIndex = true;
@@ -2862,7 +2847,7 @@ class EmitterStage {
 														cur = lastDot < 0 ? "" : cur.substr(0, lastDot);
 													}
 													if (!resolvedByModuleIndex
-														&& !isKnownModuleName(modName)
+														&& !isKnownModuleNameForStage3(modName)
 														&& modName == ocamlModuleNameFromTypePathParts(parts)
 														&& parts.length == 1) {
 														final curPkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
@@ -2876,11 +2861,12 @@ class EmitterStage {
 												}
 												if (parts.length == 1 && parts[0] == "Int64" && currentImportInt64 != null && currentImportInt64.length > 0)
 													modName = currentImportInt64;
-												qualified = callSigFor(modName + "." + lowered);
+												qualified = callSigForStage3(modName + "." + lowered, callSigByCalleeRaw);
 												if (qualified == null)
-													qualified = callSigFor(modName + "." + name);
+													qualified = callSigForStage3(modName + "." + name, callSigByCalleeRaw);
 												if (qualified == null)
-													qualified = resolveQualifiedModuleCallSigByEmittedModuleName(modName, name, lowered);
+													qualified = resolveQualifiedModuleCallSigByEmittedModuleNameForStage3(modName, name, lowered,
+														currentPackagePath);
 												if (qualified == null && currentModuleFilePath != null && currentModuleFilePath.length > 0)
 													qualified = resolveQualifiedModuleCallSig(currentModuleFilePath, parts, name, lowered);
 											}
@@ -2932,11 +2918,11 @@ class EmitterStage {
 						return null;
 					}
 
-					var sig = callSigFor(c);
+					var sig = callSigForStage3(c, callSigByCalleeRaw);
 					if (sig == null && !receiverPreApplied) {
 						final firstSpace = c.indexOf(" ");
 						if (firstSpace > 0)
-							sig = callSigFor(c.substr(0, firstSpace));
+							sig = callSigForStage3(c.substr(0, firstSpace), callSigByCalleeRaw);
 						if (sig == null)
 							sig = callSigForExpr(callee);
 						if (sig == null) {
@@ -2975,7 +2961,7 @@ class EmitterStage {
 					// Rule
 					// - When the callee is an unqualified in-module identifier and we have a recorded arity,
 					//   collapse over-applications to bring-up poison (unless we know it is a rest-arg call).
-					if (hasArity(c) && args.length > arityFor(c)) {
+					if (stage3HasArity(c, arityByIdentRaw) && args.length > stage3ArityFor(c, arityByIdentRaw)) {
 						if (sig == null || !sig.hasRest)
 							return "(Obj.magic 0)";
 					}
@@ -3012,8 +2998,9 @@ class EmitterStage {
 					} else {
 						var fullArgs = args.copy();
 						final forceImplicitThis = switch (callee) {
-							case EIdent(name): hasThisBinding() && hasArity(name) && (args.length + 1) == arityFor(name);
-							case EField(EThis, name): hasArity(name) && (args.length + 1) == arityFor(name);
+							case EIdent(name): stage3HasThisBinding(tyByIdentRaw) && stage3HasArity(name,
+									arityByIdentRaw) && (args.length + 1) == stage3ArityFor(name, arityByIdentRaw);
+							case EField(EThis, name): stage3HasArity(name, arityByIdentRaw) && (args.length + 1) == stage3ArityFor(name, arityByIdentRaw);
 							case _:
 								false;
 						};
@@ -3027,7 +3014,7 @@ class EmitterStage {
 						// - In instance contexts, forward `this`.
 						// - Outside instance contexts (for static/qualified call-shapes), use a sentinel.
 						if (sig != null && sig.needsReceiver && fullArgs.length < sig.required) {
-							fullArgs.insert(0, hasThisBinding() ? EThis : ENull);
+							fullArgs.insert(0, stage3HasThisBinding(tyByIdentRaw) ? EThis : ENull);
 						}
 
 						var missingCount = missing;
@@ -3107,7 +3094,7 @@ class EmitterStage {
 						// Native parser recovery can miss the implicit receiver/optional insertion
 						// for this unqualified call shape, yielding partial application at OCaml link-time.
 						// Normalize to the receiver-aware call form here.
-						if (c == "getString" && hasThisBinding() && fullArgs.length == 2) {
+						if (c == "getString" && stage3HasThisBinding(tyByIdentRaw) && fullArgs.length == 2) {
 							fullArgs = [EThis, fullArgs[0], fullArgs[1], ENull];
 							missingCount = 0;
 						}
@@ -3173,12 +3160,14 @@ class EmitterStage {
 						} else if (renderedArgs.length == 0) {
 							var appendUnit = true;
 							switch (callee) {
-								case EIdent(name) if (hasArity(name)):
-									if (hasCurrentInstanceMethod(name) && hasThisBinding() && arityFor(name) <= 1) {
+								case EIdent(name) if (stage3HasArity(name, arityByIdentRaw)):
+									if (hasCurrentInstanceMethod(name)
+										&& stage3HasThisBinding(tyByIdentRaw)
+										&& stage3ArityFor(name, arityByIdentRaw) <= 1) {
 										appendUnit = false;
 									}
-								case EField(EThis, name) if (hasArity(name)):
-									if (arityFor(name) <= 1) appendUnit = false;
+								case EField(EThis, name) if (stage3HasArity(name, arityByIdentRaw)):
+									if (stage3ArityFor(name, arityByIdentRaw) <= 1) appendUnit = false;
 								case _:
 							}
 							final renderedCall = appendUnit ? (c + " ()") : c;
