@@ -1896,6 +1896,14 @@ class EmitterStage {
 	static function tryExprToOcamlStage3MathIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		var code = tryExprToOcamlStage3MathCallIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+		if (code != null)
+			return code;
+		return tryExprToOcamlStage3MathFieldIntrinsic(e);
+	}
+
+	static function tryExprToOcamlStage3MathCallIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>):Null<String> {
 		switch (e) {
 			case ECall(EField(EIdent("Math"), "isNaN"), [arg]):
 				return "(classify_float ("
@@ -1919,17 +1927,24 @@ class EmitterStage {
 				return "(Obj.magic 0)";
 			case ECall(EField(EIdent("Timer"), "stamp"), []):
 				return "(Unix.gettimeofday ())";
-			case EField(EIdent("Math"), "NaN"):
-				return "nan";
-			case EField(EIdent("Math"), "POSITIVE_INFINITY"):
-				return "infinity";
-			case EField(EIdent("Math"), "NEGATIVE_INFINITY"):
-				return "neg_infinity";
-			case EField(EIdent("Math"), "PI"):
-				return "(4.0 *. atan 1.0)";
 			case _:
 		}
 		return null;
+	}
+
+	static function tryExprToOcamlStage3MathFieldIntrinsic(e:HxExpr):Null<String> {
+		return switch (e) {
+			case EField(EIdent("Math"), "NaN"):
+				"nan";
+			case EField(EIdent("Math"), "POSITIVE_INFINITY"):
+				"infinity";
+			case EField(EIdent("Math"), "NEGATIVE_INFINITY"):
+				"neg_infinity";
+			case EField(EIdent("Math"), "PI"):
+				"(4.0 *. atan 1.0)";
+			case _:
+				null;
+		}
 	}
 
 	static function tryExprToOcamlStage3Int64Intrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
