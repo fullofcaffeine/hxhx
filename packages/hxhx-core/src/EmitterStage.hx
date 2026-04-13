@@ -1878,6 +1878,23 @@ class EmitterStage {
 		return null;
 	}
 
+	static function stage3RootCallArgs(e:HxExpr, owner:String, field:String, arity:Int):Null<Array<HxExpr>> {
+		return switch (e) {
+			case ECall(EField(EIdent(actualOwner), actualField), args) if (actualOwner == owner && actualField == field && args.length == arity):
+				args;
+			case _:
+				null;
+		}
+	}
+
+	static function stage3RootField(e:HxExpr, owner:String, field:String):Bool {
+		return switch (e) {
+			case EField(EIdent(actualOwner), actualField): actualOwner == owner && actualField == field;
+			case _:
+				false;
+		}
+	}
+
 	/**
 		Why:
 		The Stage3 full-emit trace repeatedly lands in the large core-intrinsic
@@ -1904,47 +1921,50 @@ class EmitterStage {
 
 	static function tryExprToOcamlStage3MathCallIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>):Null<String> {
-		switch (e) {
-			case ECall(EField(EIdent("Math"), "isNaN"), [arg]):
-				return "(classify_float ("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") = FP_nan)";
-			case ECall(EField(EIdent("Math"), "isFinite"), [arg]):
-				return "(match classify_float ("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") with | FP_nan | FP_infinite -> false | _ -> true)";
-			case ECall(EField(EIdent("Math"), "isInfinite"), [arg]):
-				return "(classify_float ("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") = FP_infinite)";
-			case ECall(EField(EIdent("Math"), "pow"), [_a, _b]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Math"), "floor"), [_arg]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Math"), "log"), [_arg]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Math"), "fround"), [_arg]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Timer"), "stamp"), []):
-				return "(Unix.gettimeofday ())";
-			case _:
+		final isNaNArgs = stage3RootCallArgs(e, "Math", "isNaN", 1);
+		if (isNaNArgs != null) {
+			final arg = isNaNArgs[0];
+			return "(classify_float ("
+				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+				+ ") = FP_nan)";
 		}
+		final isFiniteArgs = stage3RootCallArgs(e, "Math", "isFinite", 1);
+		if (isFiniteArgs != null) {
+			final arg = isFiniteArgs[0];
+			return "(match classify_float ("
+				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+				+ ") with | FP_nan | FP_infinite -> false | _ -> true)";
+		}
+		final isInfiniteArgs = stage3RootCallArgs(e, "Math", "isInfinite", 1);
+		if (isInfiniteArgs != null) {
+			final arg = isInfiniteArgs[0];
+			return "(classify_float ("
+				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+				+ ") = FP_infinite)";
+		}
+		if (stage3RootCallArgs(e, "Math", "pow", 2) != null)
+			return "(Obj.magic 0)";
+		if (stage3RootCallArgs(e, "Math", "floor", 1) != null)
+			return "(Obj.magic 0)";
+		if (stage3RootCallArgs(e, "Math", "log", 1) != null)
+			return "(Obj.magic 0)";
+		if (stage3RootCallArgs(e, "Math", "fround", 1) != null)
+			return "(Obj.magic 0)";
+		if (stage3RootCallArgs(e, "Timer", "stamp", 0) != null)
+			return "(Unix.gettimeofday ())";
 		return null;
 	}
 
 	static function tryExprToOcamlStage3MathFieldIntrinsic(e:HxExpr):Null<String> {
-		return switch (e) {
-			case EField(EIdent("Math"), "NaN"):
-				"nan";
-			case EField(EIdent("Math"), "POSITIVE_INFINITY"):
-				"infinity";
-			case EField(EIdent("Math"), "NEGATIVE_INFINITY"):
-				"neg_infinity";
-			case EField(EIdent("Math"), "PI"):
-				"(4.0 *. atan 1.0)";
-			case _:
-				null;
-		}
+		if (stage3RootField(e, "Math", "NaN"))
+			return "nan";
+		if (stage3RootField(e, "Math", "POSITIVE_INFINITY"))
+			return "infinity";
+		if (stage3RootField(e, "Math", "NEGATIVE_INFINITY"))
+			return "neg_infinity";
+		if (stage3RootField(e, "Math", "PI"))
+			return "(4.0 *. atan 1.0)";
+		return null;
 	}
 
 	static function tryExprToOcamlStage3Int64Intrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
