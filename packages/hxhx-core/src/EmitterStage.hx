@@ -1147,6 +1147,21 @@ class EmitterStage {
 		return out;
 	}
 
+	static function extendTyByIdentManyForStage3<TTy>(ty:TTy, names:Array<String>, t:TyType):Map<String, TyType> {
+		final out = new Map<String, TyType>();
+		final keys = mapKeysRaw(ty);
+		if (keys != null)
+			for (k in keys) {
+				final existing = mapGetRaw(ty, k);
+				if (existing != null)
+					out.set(k, existing);
+			}
+		if (names != null)
+			for (name in names)
+				out.set(name, t);
+		return out;
+	}
+
 	/**
 		Why:
 		Static/module field access is a large hot branch while Stage3 full-emits
@@ -1399,6 +1414,66 @@ class EmitterStage {
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
 		switch (e) {
+			case ECall(EField(EIdent("Math"), "isNaN"), [arg]):
+				return "(classify_float ("
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") = FP_nan)";
+			case ECall(EField(EIdent("Math"), "isFinite"), [arg]):
+				return "(match classify_float ("
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") with | FP_nan | FP_infinite -> false | _ -> true)";
+			case ECall(EField(EIdent("Math"), "isInfinite"), [arg]):
+				return "(classify_float ("
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") = FP_infinite)";
+			case ECall(EField(EIdent("Std"), "isOfType"), [valueExpr, typeExpr]):
+				return "Std.isOfType ("
+					+ exprToOcaml(valueExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") (Obj.repr ("
+					+ exprToOcaml(typeExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ "))";
+			case ECall(EField(EIdent("Array"), "wrap"), [arg]):
+				return "(Obj.magic (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
+			case EField(EIdent("String"), "fromCharCode"):
+				return "(fun i -> Stdlib.String.make 1 (Char.chr i))";
+			case ECall(EField(EIdent("Math"), "pow"), [_a, _b]):
+				return "(Obj.magic 0)";
+			case ECall(EField(EIdent("Math"), "floor"), [_arg]):
+				return "(Obj.magic 0)";
+			case ECall(EField(EIdent("Math"), "log"), [_arg]):
+				return "(Obj.magic 0)";
+			case ECall(EField(EIdent("Math"), "fround"), [_arg]):
+				return "(Obj.magic 0)";
+			case ECall(EField(EIdent("Timer"), "stamp"), []):
+				return "(Unix.gettimeofday ())";
+			case ECall(EField(EIdent("Int64"), "ofInt"), [arg]) | ECall(EField(EIdent("haxe.Int64"), "ofInt"), [arg]):
+				return "Haxe_Int64.ofInt ("
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case ECall(EField(EIdent("Int64"), "make"), [lo, hi]) | ECall(EField(EIdent("haxe.Int64"), "make"), [lo, hi]):
+				return "Haxe_Int64.make ("
+					+ exprToOcaml(lo, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") ("
+					+ exprToOcaml(hi, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case ELambda(args, body):
+				final ocamlArgs = args.map(ocamlValueIdent).join(" ");
+				final ty2 = extendTyByIdentManyForStage3(cast tyByIdent, args, TyType.fromHintText("Dynamic"));
+				return "(fun "
+					+ (ocamlArgs.length == 0 ? "_" : ocamlArgs)
+					+ " -> "
+					+ exprToOcaml(body, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case ETryCatchRaw(_raw):
+				return "(Obj.magic 0)";
+			case EField(EIdent("Math"), "NaN"):
+				return "nan";
+			case EField(EIdent("Math"), "POSITIVE_INFINITY"):
+				return "infinity";
+			case EField(EIdent("Math"), "NEGATIVE_INFINITY"):
+				return "neg_infinity";
+			case EField(EIdent("Math"), "PI"):
+				return "(4.0 *. atan 1.0)";
 			case ECall(EField(EIdent("Reflect"), "fields"), [_obj]):
 				return "(Obj.magic 0)";
 			case ECall(EField(EIdent("Reflect"), "field"), [_obj, _name]):
@@ -2104,118 +2179,21 @@ class EmitterStage {
 			return coreIntrinsic;
 
 		return switch (e) {
-			// Stage 3 bring-up: map a tiny set of Haxe `Math` statics to OCaml primitives.
-			//
-			// Why
-			// - Upstream Haxe unit code frequently calls `Math.isNaN`/`Math.isFinite`.
-			// - Stage 3 emits "plain OCaml" (no Haxe runtime), so `Math.*` would otherwise
-			//   fail to compile with `Unbound module Math`.
-			//
-			// What
-			// - This is intentionally narrow and **not** a full stdlib mapping layer.
-			// - These rewrites exist only to keep bring-up moving; Stage1/Stage4 must
-			//   eventually implement real semantics in the proper backend/runtime.
-			case ECall(EField(EIdent("Math"), "isNaN"), [arg]):
-				"(classify_float (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
-					moduleNameByPkgAndClass) + ") = FP_nan)";
-			case ECall(EField(EIdent("Math"), "isFinite"), [arg]):
-				"(match classify_float (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
-					moduleNameByPkgAndClass) + ") with | FP_nan | FP_infinite -> false | _ -> true)";
-			case ECall(EField(EIdent("Math"), "isInfinite"), [arg]):
-				"(classify_float (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
-					moduleNameByPkgAndClass) + ") = FP_infinite)";
-			case ECall(EField(EIdent("Std"), "isOfType"), [valueExpr, typeExpr]):
-				// Stage 3 bring-up: runtime `Std.isOfType` expects the second operand as a dynamic
-				// descriptor (`Obj.t`), so wrap whichever surface form we currently emit.
-				"Std.isOfType ("
-				+ exprToOcaml(valueExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ") (Obj.repr ("
-				+ exprToOcaml(typeExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ "))";
-			case ECall(EField(EIdent("Array"), "wrap"), [arg]):
-				// Stage 3 bring-up: `Array.wrap(...)` appears in upstream php helpers.
-				//
-				// The bootstrap Array module does not provide this static helper yet; preserve
-				// compileability by treating it as an identity cast to the target array shape.
-				"(Obj.magic (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
 			case ECall(EField(EIdent("Math"), "abs"), [arg]):
 				// Best-effort numeric abs. Prefer float when the expression looks float-typed.
 				(isFloatExpr(arg) ? "abs_float " : (isIntExpr(arg) ? "abs " : "abs_float "))
 					+ "("
 					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 					+ ")";
-			case EField(EIdent("String"), "fromCharCode"):
-				// Stage 3 bring-up: map Haxe `String.fromCharCode(int)` to an OCaml function value.
-				// This is used in upstream-ish stdlib code as `var fcc = String.fromCharCode;`.
-				"(fun i -> Stdlib.String.make 1 (Char.chr i))";
-			case ECall(EField(EIdent("Math"), "pow"), [_a, _b]):
-				// Bring-up: avoid pulling in correct float/int coercions for exponentiation.
-				"(Obj.magic 0)";
 			case ECall(EField(EIdent("Math"), "round"), [arg]):
 				// Bring-up: good-enough rounding for positive values (used by RunCi timing logs).
 				//
 				// NOTE: Haxe's `Math.round` handles negatives differently; for Gate bring-up the
 				// upstream harness uses `Timer.stamp()` deltas which are non-negative.
 				"(int_of_float (floor ((" + exprToOcamlAsFloatValue(arg) + ") +. 0.5)))";
-			case ECall(EField(EIdent("Math"), "floor"), [_arg]):
+			case ELambda(_, _), ETryCatchRaw(_):
+				// Exhaustiveness fallback; normal handling returns from the pre-switch intrinsic helper.
 				"(Obj.magic 0)";
-			case ECall(EField(EIdent("Math"), "log"), [_arg]):
-				"(Obj.magic 0)";
-			case ECall(EField(EIdent("Math"), "fround"), [_arg]):
-				"(Obj.magic 0)";
-			case ECall(EField(EIdent("Timer"), "stamp"), []):
-				// Bring-up: map `haxe.Timer.stamp()` to wall-clock time.
-				"(Unix.gettimeofday ())";
-			// Stage 3 bring-up: map a tiny slice of `haxe.Int64` construction helpers.
-			//
-			// Why
-			// - Upstream `haxe.io.FPHelper` initializes `static var i64tmp = Int64.ofInt(0);`.
-			// - OCaml's `Int64` module uses snake_case (`of_int`), and in bootstrap we model
-			//   `haxe.Int64` as a small record (`Haxe_Int64.t`), not as OCaml's native int64.
-			//
-			// What
-			// - Lower `Int64.ofInt(i)` to our shim `Haxe_Int64.ofInt(i)`.
-			// - Lower `Int64.make(lo, hi)` to `Haxe_Int64.make(lo, hi)`.
-			case ECall(EField(EIdent("Int64"), "ofInt"), [arg]) | ECall(EField(EIdent("haxe.Int64"), "ofInt"), [arg]):
-				"Haxe_Int64.ofInt (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
-			case ECall(EField(EIdent("Int64"), "make"), [lo, hi]) | ECall(EField(EIdent("haxe.Int64"), "make"), [lo, hi]):
-				"Haxe_Int64.make ("
-				+ exprToOcaml(lo, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ") ("
-				+ exprToOcaml(hi, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ")";
-			case ELambda(args, body):
-				// Stage 3 bring-up: emit a direct OCaml closure.
-				//
-				// Notes
-				// - We don't model Haxe function typing yet; this is purely syntactic lowering.
-				// - Multi-arg lambdas are supported syntactically as `fun a b -> ...`, which in OCaml
-				//   is sugar for nested single-arg functions.
-				final ocamlArgs = args.map(ocamlValueIdent).join(" ");
-				final ty2 = extendTyByIdentMany(cast tyByIdent, args, TyType.fromHintText("Dynamic"));
-				"(fun "
-				+ (ocamlArgs.length == 0 ? "_" : ocamlArgs)
-				+ " -> "
-				+ exprToOcaml(body, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ")";
-			case ETryCatchRaw(_raw):
-				// Stage 3 bring-up: avoid committing to an exception model yet.
-				//
-				// Correct semantics depend on:
-				// - which exceptions are thrown by the runtime and user code,
-				// - how we map Haxe `catch(e:Dynamic)` to OCaml exceptions,
-				// - and how block-expression values are represented.
-				//
-				// For now, keep the emitted OCaml type-correct by returning a polymorphic placeholder.
-				"(Obj.magic 0)";
-			case EField(EIdent("Math"), "NaN"):
-				"nan";
-			case EField(EIdent("Math"), "POSITIVE_INFINITY"):
-				"infinity";
-			case EField(EIdent("Math"), "NEGATIVE_INFINITY"):
-				"neg_infinity";
-			case EField(EIdent("Math"), "PI"):
-				"(4.0 *. atan 1.0)";
 
 			case ECall(EField(obj, "toString"), []) if (isStringExpr(obj)):
 				// Bring-up: in Haxe, `String.toString()` is an identity; mapping this avoids
