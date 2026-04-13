@@ -1096,6 +1096,326 @@ class EmitterStage {
 		return emitStringExpr(e);
 	}
 
+	static function staticImportModuleForStage3(name:String, ?staticImportByIdent:Map<String, String>):String {
+		final resolved = mapGetRaw(staticImportByIdent, name);
+		if (resolved != null)
+			return cast resolved;
+		final globalResolved = mapGetRaw(currentGlobalImportAliasByIdent, name);
+		return globalResolved == null ? null : cast globalResolved;
+	}
+
+	static function moduleNameForStage3Key(key:String, ?moduleNameByPkgAndClass:Map<String, String>):String {
+		final resolved = mapGetRaw(moduleNameByPkgAndClass, key);
+		if (resolved != null)
+			return cast resolved;
+		for (entry in currentModuleNameEntries)
+			if (entry.key == key)
+				return entry.moduleName;
+		return null;
+	}
+
+	static function isKnownModuleNameForStage3(name:String):Bool {
+		return currentKnownModuleNames != null && currentKnownModuleNames.exists(name);
+	}
+
+	static function currentModuleShortNameForStage3(?currentPackagePath:String):String {
+		if (currentOcamlModuleName == null)
+			return "";
+		final moduleName = currentOcamlModuleName;
+		var prefix = "";
+		if (currentPackagePath != null) {
+			final pkg = StringTools.trim(currentPackagePath);
+			if (pkg.length > 0)
+				prefix = ocamlModuleNameFromTypePathParts(pkg.split(".")) + "_";
+		}
+		if (prefix.length > 0 && StringTools.startsWith(moduleName, prefix))
+			return moduleName.substr(prefix.length);
+		final lastUnderscore = moduleName.lastIndexOf("_");
+		return lastUnderscore < 0 ? moduleName : moduleName.substr(lastUnderscore + 1);
+	}
+
+	static function extendTyByIdentForStage3<TTy>(ty:TTy, name:String, t:TyType):Map<String, TyType> {
+		final out = new Map<String, TyType>();
+		final keys = mapKeysRaw(ty);
+		if (keys != null)
+			for (k in keys) {
+				final existing = mapGetRaw(ty, k);
+				if (existing != null)
+					out.set(k, existing);
+			}
+		out.set(name, t);
+		return out;
+	}
+
+	/**
+		Why:
+		Static/module field access is a large hot branch while Stage3 full-emits
+		this emitter. Keeping the package-walk logic out of the local `EField`
+		case reduces the body shape the bootstrap emitter has to lower.
+
+		What:
+		Returns OCaml for `<type path>.field` access when the receiver is known to
+		be a static/module path. Returns `null` for normal instance-field fallback.
+
+		How:
+		This mirrors the previous local resolution order: static imports first,
+		then module-local helper providers, then package-relative type-path lookup
+		with the existing same-package fallback and Int64 import override.
+	**/
+	static function tryExprToOcamlStage3StaticField(obj:HxExpr, field:String, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
+			?moduleNameByPkgAndClass:Map<String, String>):Null<String> {
+		switch (obj) {
+			case EIdent(typeName):
+				final importedModule = staticImportModuleForStage3(typeName, staticImportByIdent);
+				if (importedModule != null && importedModule.length > 0) {
+					return (currentOcamlModuleName != null
+						&& importedModule == currentOcamlModuleName) ? ocamlValueIdent(field) : (importedModule + "." + ocamlValueIdent(field));
+				}
+				if (currentOcamlModuleName != null && isUpperStart(typeName)) {
+					final inCurrentModule = currentInstanceFieldsFor(typeName) != null || currentInstanceMethodsFor(typeName) != null;
+					if (inCurrentModule && typeName != currentModuleShortNameForStage3(currentPackagePath)) {
+						final localHelperModule = currentOcamlModuleName + "_" + typeName;
+						return localHelperModule + "." + ocamlValueIdent(field);
+					}
+				}
+			case _:
+		}
+
+		final parts = tryExtractTypePathPartsFromExpr(obj);
+		if (parts == null || parts.length == 0 || !isUpperStart(parts[parts.length - 1]))
+			return null;
+
+		var modName = ocamlModuleNameFromTypePathParts(parts);
+		var resolvedByModuleIndex = false;
+		if (moduleNameByPkgAndClass != null) {
+			final raw = parts.join(".");
+			var cur = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
+			while (true) {
+				final key = cur + ":" + raw;
+				final local = moduleNameForStage3Key(key, moduleNameByPkgAndClass);
+				if (local != null && local.length > 0) {
+					modName = local;
+					resolvedByModuleIndex = true;
+					break;
+				}
+				if (cur.length == 0)
+					break;
+				final lastDot = cur.lastIndexOf(".");
+				cur = lastDot < 0 ? "" : cur.substr(0, lastDot);
+			}
+
+			if (!resolvedByModuleIndex
+				&& !isKnownModuleNameForStage3(modName)
+				&& modName == ocamlModuleNameFromTypePathParts(parts)
+				&& parts.length == 1) {
+				final curPkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
+				if (curPkg.length > 0) {
+					final qualifiedParts = curPkg.split(".");
+					for (p in parts)
+						qualifiedParts.push(p);
+					modName = ocamlModuleNameFromTypePathParts(qualifiedParts);
+				}
+			}
+		}
+		if (parts.length == 1 && parts[0] == "Int64" && currentImportInt64 != null && currentImportInt64.length > 0) {
+			modName = currentImportInt64;
+		}
+		return (currentOcamlModuleName != null && modName == currentOcamlModuleName) ? ocamlValueIdent(field) : (modName + "." + ocamlValueIdent(field));
+	}
+
+	/**
+		Why:
+		Array-comprehension lowering is independent from `exprToOcaml`'s local type
+		predicates but previously lived directly in the already-large expression
+		switch. Pulling it out keeps the self-emitted expression body smaller.
+
+		What:
+		Lowers the small Stage3-supported subset of Haxe array comprehensions:
+		range loops and array-like iterables that append each yielded value.
+
+		How:
+		The loop variable is added to a cloned type context before lowering the
+		yield expression, preserving the old local branch behavior.
+	**/
+	static function exprToOcamlArrayComprehension(name:String, iterable:HxExpr, yieldExpr:HxExpr, ?arityByIdent:Map<String, Int>,
+			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
+			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		final out = "__arr_comp_out";
+		final v = ocamlValueIdent(name);
+		final loopTy = switch (iterable) {
+			case ERange(_, _):
+				TyType.fromHintText("Int");
+			case _:
+				TyType.fromHintText("Dynamic");
+		};
+		final ty2 = extendTyByIdentForStage3(cast tyByIdent, name, loopTy);
+		final body = exprToOcaml(yieldExpr, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+		return switch (iterable) {
+			case ERange(startExpr, endExpr):
+				final start = exprToOcaml(startExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee);
+				final end = exprToOcaml(endExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				"(let "
+				+ out
+				+ " = HxBootArray.create () in "
+				+ "let __start = ("
+				+ start
+				+ ") in "
+				+ "let __end = ("
+				+ end
+				+ ") in "
+				+ "(if (__end <= __start) then () else (for "
+				+ v
+				+ " = __start to (__end - 1) do ignore (HxBootArray.push "
+				+ out
+				+ " ("
+				+ body
+				+ ")) done)); "
+				+ out
+				+ ")";
+			case _:
+				final it = exprToOcaml(iterable, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				"(let "
+				+ out
+				+ " = HxBootArray.create () in "
+				+ "HxBootArray.iter ("
+				+ it
+				+ ") (fun "
+				+ v
+				+ " -> ignore (HxBootArray.push "
+				+ out
+				+ " ("
+				+ body
+				+ "))); "
+				+ out
+				+ ")";
+		};
+	}
+
+	/**
+		Why:
+		Stage3 full-body emission lowers this source file with the current committed
+		bootstrap compiler, so large local switch bodies inside `exprToOcaml` become
+		a direct bootstrap cost. These early runtime intrinsics are independent of
+		the local expression-lowering closures, which makes them safe to keep in a
+		plain static helper.
+
+		What:
+		Returns OCaml for known Stage3 bring-up calls backed by repo-owned runtime
+		shims, or `null` when normal expression lowering should continue.
+
+		How:
+		Keep this helper limited to cases that do not depend on `exprToOcaml`'s
+		local type predicates. Cases that need local statement/type context stay in
+		the caller so behavior does not change.
+	**/
+	static function tryExprToOcamlStage3RuntimeIntrinsic(callee:HxExpr, args:Array<HxExpr>, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		switch (callee) {
+			// Upstream `tests/runci/Config.hx` declares `macro function isCi()` and uses it in
+			// runtime code. Real Haxe expands it to a constant; Stage3 approximates it as the
+			// same GitHub Actions environment probe used by the upstream helper.
+			case EIdent("isCi") if (args.length == 0):
+				return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
+			case EField(EIdent("Config"), "isCi") if (args.length == 0):
+				return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
+			case EField(EIdent("runci.Config"), "isCi") if (args.length == 0):
+				return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
+
+			// Stage3 emit-runner bring-up: map `sys.FileSystem` statics used by RunCi to the
+			// repo-owned OCaml runtime implementation.
+			case EField(EIdent("FileSystem"), "fullPath") if (args.length == 1):
+				return "HxFileSystem.fullPath ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("FileSystem"), "absolutePath") if (args.length == 1):
+				return "HxFileSystem.absolutePath ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("FileSystem"), "exists") if (args.length == 1):
+				return "HxFileSystem.exists ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("FileSystem"), "isDirectory") if (args.length == 1):
+				return "HxFileSystem.isDirectory ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("FileSystem"), "readDirectory") if (args.length == 1):
+				return "HxFileSystem.readDirectory ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("FileSystem"), "createDirectory") if (args.length == 1):
+				return "HxFileSystem.createDirectory ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("FileSystem"), "deleteFile") if (args.length == 1):
+				return "HxFileSystem.deleteFile ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("FileSystem"), "deleteDirectory") if (args.length == 1):
+				return "HxFileSystem.deleteDirectory ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("FileSystem"), "rename") if (args.length == 2):
+				return "HxFileSystem.rename ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") ("
+					+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+
+			// Stage3 emit-runner bring-up: map `sys.io.File` statics used by RunCi targets to
+			// the repo-owned OCaml runtime implementation.
+			case EField(EIdent("File"), "getContent") if (args.length == 1):
+				return "HxFile.getContent ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("File"), "saveContent") if (args.length == 2):
+				return "HxFile.saveContent ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") ("
+					+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("File"), "getBytes") if (args.length == 1):
+				return "HxFile.getBytes ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("File"), "saveBytes") if (args.length == 2):
+				return "HxFile.saveBytes ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") ("
+					+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case EField(EIdent("File"), "copy") if (args.length == 2):
+				return "HxFile.copy ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") ("
+					+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+
+			// Gate2 bring-up: avoid depending on the std `Xml` implementation while still
+			// compiling upstream harness code that parses remote appcasts.
+			case EField(EIdent("Xml"), "parse") if (args.length == 1):
+				return "(Obj.magic 0)";
+
+			// Path helpers used by upstream RunCi config and Flash harness paths.
+			case EField(EIdent("Path"), "join") if (args.length == 1):
+				return "HxBootArray.join ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") (\"/\") (fun (s : string) -> s)";
+			case EField(EIdent("Path"), "normalize") if (args.length == 1):
+				return "HxFileSystem.normalize_path ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ")";
+			case EField(EIdent("Path"), "directory") if (args.length == 1):
+				return "Filename.dirname ("
+					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ")";
+			case _:
+		}
+		return null;
+	}
+
 	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		final tyByIdentRaw = tyByIdent;
@@ -1907,60 +2227,8 @@ class EmitterStage {
 								+ "; __hx_obj)";
 						})();
 			case EArrayComprehension(name, iterable, yieldExpr):
-				// Lower `[for (x in it) e]` to a small imperative builder.
-				//
-				// Note: for now we only support array/range iterables (matching bring-up needs).
-				final out = "__arr_comp_out";
-				final v = ocamlValueIdent(name);
-				final loopTy = switch (iterable) {
-					case ERange(_, _):
-						TyType.fromHintText("Int");
-					case _:
-						TyType.fromHintText("Dynamic");
-				};
-				final ty2 = extendTyByIdent(cast tyByIdent, name, loopTy);
-				final body = exprToOcaml(yieldExpr, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-				return switch (iterable) {
-					case ERange(startExpr, endExpr):
-						final start = exprToOcaml(startExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-							callSigByCallee);
-						final end = exprToOcaml(endExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-							callSigByCallee);
-						"(let "
-						+ out
-						+ " = HxBootArray.create () in "
-						+ "let __start = ("
-						+ start
-						+ ") in "
-						+ "let __end = ("
-						+ end
-						+ ") in "
-						+ "(if (__end <= __start) then () else (for "
-						+ v
-						+ " = __start to (__end - 1) do ignore (HxBootArray.push "
-						+ out
-						+ " ("
-						+ body
-						+ ")) done)); "
-						+ out
-						+ ")";
-					case _:
-						final it = exprToOcaml(iterable, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-						"(let "
-						+ out
-						+ " = HxBootArray.create () in "
-						+ "HxBootArray.iter ("
-						+ it
-						+ ") (fun "
-						+ v
-						+ " -> ignore (HxBootArray.push "
-						+ out
-						+ " ("
-						+ body
-						+ "))); "
-						+ out
-						+ ")";
-				};
+				exprToOcamlArrayComprehension(name, iterable, yieldExpr, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
+					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 			case EField(obj, field):
 				// Stage 3 bring-up: model a couple of common "instance field" shapes that appear in
 				// orchestration code, without committing to a full object layout/runtime.
@@ -1998,115 +2266,12 @@ class EmitterStage {
 						+ ")";
 				}
 
-				// Stage 3 bring-up: treat `<type path>.field` as a static/module access.
-				//
-				// Why
-				// - Upstream Haxe code refers to types as fully-qualified paths like `runci.targets.Macro`.
-				// - Our emitter represents each Haxe module as a single OCaml compilation unit, so we can
-				//   map `a.b.C.field` to `A_b_C.field` deterministically.
-				//
-				// Non-goal
-				// - Instance field semantics (requires real class/object layouts).
-				switch (obj) {
-					case EIdent(typeName):
-						final importedModule = staticImportModule(typeName);
-						if (importedModule != null && importedModule.length > 0) {
-							return (currentOcamlModuleName != null
-								&& importedModule == currentOcamlModuleName) ? ocamlValueIdent(field) : (importedModule + "." + ocamlValueIdent(field));
-						}
-						// Module-local helper fallback for unqualified type references.
-						//
-						// Example:
-						// - Haxe (same file): `Helper.ANSWER`
-						// - Emitted helper provider: `Main_Helper`
-						//
-						// We only apply this when that helper provider is known in the module index,
-						// so unrelated uppercase identifiers still flow through the normal resolver.
-						if (currentOcamlModuleName != null && isUpperStart(typeName)) {
-							final inCurrentModule = currentInstanceFieldsFor(typeName) != null
-								|| currentInstanceMethodsFor(typeName) != null;
-							if (inCurrentModule && typeName != currentModuleShortName()) {
-								final localHelperModule = currentOcamlModuleName + "_" + typeName;
-								return localHelperModule + "." + ocamlValueIdent(field);
-							}
-						}
-					case _:
-				}
-				final parts = tryExtractTypePathPartsFromExpr(obj);
-				if (parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) {
-					var modName = ocamlModuleNameFromTypePathParts(parts);
-					var resolvedByModuleIndex = false;
-					// If the type path is relative to the current package, prefer resolving it within the
-					// current package (or its parent packages) when we know a matching emitted module exists.
-					//
-					// Example:
-					// - Haxe: `package demo; class A { static function f() Util.ping(); }`
-					// - OCaml: `Demo_Util.ping ()` (not `Util.ping ()`)
-					//
-					// Also covers module-local helper types referenced as `Module.Helper`:
-					// - Haxe: `package unit; ... MyMacro.MyRestMacro.testRest1(...)`
-					// - OCaml: `Unit_MyMacro_MyRestMacro.testRest1 ...`
-					//
-					// Upstream also resolves unqualified type names by walking up parent packages.
-					// Example:
-					// - `package runci.targets; ... Linux.requireAptPackages(...)` resolves to `runci.Linux`
-					//   even without an explicit import.
-					if (moduleNameByPkgAndClassRaw != null) {
-						final raw = parts.join(".");
-						var cur = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
-						while (true) {
-							final key = cur + ":" + raw;
-							final local = moduleNameForKey(key);
-							if (local != null && local.length > 0) {
-								modName = local;
-								resolvedByModuleIndex = true;
-								break;
-							}
-							if (cur.length == 0)
-								break;
-							final lastDot = cur.lastIndexOf(".");
-							cur = lastDot < 0 ? "" : cur.substr(0, lastDot);
-						}
-
-						// Fallback for native-frontend bring-up when the typed-module index does not
-						// expose a short-name mapping for a same-package type path.
-						//
-						// Example:
-						// - Haxe (package haxe.io): `FPHelper.i32ToFloat(...)`
-						// - Expected OCaml provider: `Haxe_io_FPHelper.i32ToFloat ...`
-						//
-						// Without this fallback we can emit bare `FPHelper.*`, which fails to link
-						// because the emitted provider module is package-qualified.
-						if (!resolvedByModuleIndex
-							&& !isKnownModuleName(modName)
-							&& modName == ocamlModuleNameFromTypePathParts(parts)
-							&& parts.length == 1) {
-							final curPkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
-							if (curPkg.length > 0) {
-								final qualifiedParts = curPkg.split(".");
-								for (p in parts)
-									qualifiedParts.push(p);
-								modName = ocamlModuleNameFromTypePathParts(qualifiedParts);
-							}
-						}
-					}
-					// Import-based resolution for type short names that would otherwise collide
-					// with OCaml stdlib modules.
-					//
-					// Example (upstream unit suite):
-					// - Haxe: `import haxe.Int64.*; Int64.mul(a, b);`
-					// - OCaml: `Haxe_Int64.mul a b` (not `Int64.mul a b` from stdlib)
-					if (parts.length == 1 && parts[0] == "Int64" && currentImportInt64 != null && currentImportInt64.length > 0) {
-						modName = currentImportInt64;
-					}
-					(currentOcamlModuleName != null && modName == currentOcamlModuleName) ? ocamlValueIdent(field) : (modName + "." + ocamlValueIdent(field));
-				} else { // Stage3 object bring-up: represent instance state through HxAnon maps.
-					"(Obj.magic (HxAnon.get (Obj.repr ("
+				final staticField = tryExprToOcamlStage3StaticField(obj, field, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw);
+				staticField != null ? staticField : ("(Obj.magic (HxAnon.get (Obj.repr ("
 					+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 					+ ")) "
 					+ escapeOcamlString(field)
-					+ "))";
-				}
+					+ "))");
 			case ECall(EIdent("__ocaml__"), [arg]):
 				// Stage 3 bring-up escape hatch: embed raw OCaml expression text.
 				//
@@ -2184,127 +2349,14 @@ class EmitterStage {
 						0;
 				}
 
-				// Special-case a tiny slice of `Sys` I/O so bring-up server binaries can function
-				// before the full runtime is modeled.
+				final runtimeIntrinsic = tryExprToOcamlStage3RuntimeIntrinsic(callee, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
+					currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+				if (runtimeIntrinsic != null)
+					return runtimeIntrinsic;
+
+				// Special-case a tiny slice of runtime I/O so bring-up server binaries can function
+				// before the full runtime is modeled. Cases that need local type predicates stay here.
 				switch (callee) {
-					// Upstream `tests/runci/Config.hx` declares `macro function isCi()` and uses it in
-					// runtime code (e.g. `if (!isCi() && ...)`).
-					//
-					// In real Haxe, that macro call expands to a constant expression, so there is no
-					// runtime dependency on a macro execution model.
-					//
-					// Stage3 bring-up doesn't execute macros, so we approximate `isCi()` as a simple
-					// env probe (matches the upstream definition of `ci` for GitHub Actions).
-					case EIdent("isCi") if (args.length == 0):
-						return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
-					case EField(EIdent("Config"), "isCi") if (args.length == 0):
-						return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
-					case EField(EIdent("runci.Config"), "isCi") if (args.length == 0):
-						return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
-					// Stage 3 emit-runner bring-up: map `sys.FileSystem` statics used by RunCi to the
-					// repo-owned OCaml runtime implementation (`packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml`).
-					//
-					// Why
-					// - Upstream `tests/runci/Config.hx` imports `sys.FileSystem` and then calls
-					//   `FileSystem.fullPath(...)` in static initializers.
-					// - Our bootstrap emitter doesn't yet resolve imported type short-names to OCaml
-					//   module paths, so it would otherwise emit `FileSystem.fullPath` (unbound).
-					//
-					// Scope
-					// - Minimal set needed by Gate2 bring-up; expand as upstream workloads demand.
-					case EField(EIdent("FileSystem"), "fullPath") if (args.length == 1):
-						return "HxFileSystem.fullPath ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("FileSystem"), "absolutePath") if (args.length == 1):
-						return "HxFileSystem.absolutePath ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("FileSystem"), "exists") if (args.length == 1):
-						return "HxFileSystem.exists ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("FileSystem"), "isDirectory") if (args.length == 1):
-						return "HxFileSystem.isDirectory ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("FileSystem"), "readDirectory") if (args.length == 1):
-						return "HxFileSystem.readDirectory ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("FileSystem"), "createDirectory") if (args.length == 1):
-						return "HxFileSystem.createDirectory ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("FileSystem"), "deleteFile") if (args.length == 1):
-						return "HxFileSystem.deleteFile ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("FileSystem"), "deleteDirectory") if (args.length == 1):
-						return "HxFileSystem.deleteDirectory ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("FileSystem"), "rename") if (args.length == 2):
-						return "HxFileSystem.rename ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					// Stage 3 emit-runner bring-up: map `sys.io.File` statics used by RunCi targets to
-					// the repo-owned OCaml runtime implementation (`packages/reflaxe.ocaml/std/runtime/HxFile.ml`).
-					//
-					// Why
-					// - Upstream runci targets often `import sys.io.File;` and then call `File.saveContent(...)`.
-					// - The bootstrap emitter does not yet emit the full std `sys.io.File` module, so we
-					//   treat a small set of whole-file operations as intrinsics backed by `HxFile`.
-					case EField(EIdent("File"), "getContent") if (args.length == 1):
-						return "HxFile.getContent ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("File"), "saveContent") if (args.length == 2):
-						return "HxFile.saveContent ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("File"), "getBytes") if (args.length == 1):
-						return "HxFile.getBytes ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("File"), "saveBytes") if (args.length == 2):
-						return "HxFile.saveBytes ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("File"), "copy") if (args.length == 2):
-						return "HxFile.copy ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					// Gate2 bring-up: avoid depending on the std `Xml` implementation while still compiling
-					// upstream harness code that parses remote appcasts.
-					//
-					// Stage3 emit-runner does not execute these code paths on most platforms, but it must
-					// successfully compile the RunCi harness (which references Flash target helpers).
-					case EField(EIdent("Xml"), "parse") if (args.length == 1):
-						return "(Obj.magic 0)";
-					// Path joining (haxe.io.Path), used by upstream RunCi config.
-					case EField(EIdent("Path"), "join") if (args.length == 1):
-						return "HxBootArray.join ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") (\"/\") (fun (s : string) -> s)";
-					// Bring-up: `haxe.io.Path.normalize(path)` (used by Flash target).
-					case EField(EIdent("Path"), "normalize") if (args.length == 1):
-						return "HxFileSystem.normalize_path ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-							+ ")";
-					// Bring-up: `haxe.io.Path.directory(path)` and `using haxe.io.Path; path.directory()`.
-					case EField(EIdent("Path"), "directory") if (args.length == 1):
-						return "Filename.dirname ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-							+ ")";
 					// Stage 3 bring-up: string instance methods used by upstream-ish harness code.
 					//
 					// Note
@@ -5204,80 +5256,151 @@ class EmitterStage {
 		  expressions from the parsed AST (we only support simple return shapes).
 		- Builds using `ocamlopt` (override via `OCAMLOPT` env var) when `buildExecutable=true`.
 	**/
+	static function uniqStrings(xs:Array<String>):Array<String> {
+		if (xs == null || xs.length <= 1)
+			return xs;
+		final seen = new Map<String, Bool>();
+		final out = new Array<String>();
+		for (x in xs) {
+			if (x == null)
+				continue;
+			if (seen.exists(x))
+				continue;
+			seen.set(x, true);
+			out.push(x);
+		}
+		return out;
+	}
+
+	static function ocamldepSort(mlFiles:Array<String>):Array<String> {
+		if (mlFiles == null || mlFiles.length <= 1)
+			return mlFiles;
+
+		final ocamldep = {
+			final v = Sys.getEnv("OCAMLDEP");
+			(v == null || v.length == 0) ? "ocamldep" : v;
+		}
+
+		final p = new sys.io.Process(ocamldep, [
+			"-I",
+			"runtime",
+			"-I",
+			"+unix",
+			"-I",
+			"+str",
+			"-I",
+			"+threads",
+			"-I",
+			"+dynlink",
+			"-sort"
+		].concat(mlFiles));
+		final chunks = new Array<String>();
+		try {
+			while (true) {
+				chunks.push(p.stdout.readLine());
+			}
+		} catch (_:haxe.io.Eof) {}
+
+		final code = p.exitCode();
+		p.close();
+		if (code != 0)
+			throw "stage3 emitter: ocamldep -sort failed with exit code " + code;
+
+		final sorted = new Array<String>();
+		for (c in chunks) {
+			for (t in c.split(" ")) {
+				final s = StringTools.trim(t);
+				if (s.length == 0)
+					continue;
+				if (!StringTools.endsWith(s, ".ml"))
+					continue;
+				sorted.push(s);
+			}
+		}
+
+		// Best-effort: if ocamldep output looks empty or incomplete, fall back to caller order.
+		if (sorted.length == 0)
+			return mlFiles;
+		return sorted;
+	}
+
+	static function inferRepoRootForStage3Shims():String {
+		final env = Sys.getEnv("HXHX_REPO_ROOT");
+		if (env != null && env.length > 0) {
+			final candidate = haxe.io.Path.join([env, "packages", "hxhx-core", "shims"]);
+			if (sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate))
+				return env;
+		}
+
+		final prog = Sys.programPath();
+		if (prog == null || prog.length == 0)
+			return "";
+		final abs = try sys.FileSystem.fullPath(prog) catch (_:haxe.io.Error) prog catch (_:String) prog;
+		var dir = try haxe.io.Path.directory(abs) catch (_:String) "";
+		if (dir == null || dir.length == 0)
+			return "";
+
+		for (_ in 0...10) {
+			final shimsDir = haxe.io.Path.join([dir, "packages", "hxhx-core", "shims"]);
+			if (sys.FileSystem.exists(shimsDir) && sys.FileSystem.isDirectory(shimsDir))
+				return dir;
+			final parent = haxe.io.Path.normalize(haxe.io.Path.join([dir, ".."]));
+			if (parent == dir)
+				break;
+			dir = parent;
+		}
+		return "";
+	}
+
+	static function readStage3ShimTemplate(shimName:String):String {
+		final root = inferRepoRootForStage3Shims();
+		if (root == null || root.length == 0)
+			throw "stage3 emitter: cannot locate repo root for shim templates (set HXHX_REPO_ROOT)";
+		final path = haxe.io.Path.join([root, "packages", "hxhx-core", "shims", shimName + ".ml"]);
+		if (!sys.FileSystem.exists(path))
+			throw "stage3 emitter: missing shim template: " + path;
+		return sys.io.File.getContent(path);
+	}
+
+	static inline function runtimeModuleNameFromPath(path:String):String {
+		final file = haxe.io.Path.withoutDirectory(path);
+		final base = StringTools.endsWith(file, ".ml") ? file.substr(0, file.length - 3) : file;
+		return upperFirst(base);
+	}
+
+	static inline function expectedMainClassFromFile(filePath:Null<String>):Null<String> {
+		if (filePath == null || filePath.length == 0)
+			return null;
+		final name = haxe.io.Path.withoutDirectory(filePath);
+		final dot = name.lastIndexOf(".");
+		return dot <= 0 ? name : name.substr(0, dot);
+	}
+
+	static inline function moduleTypeNameFor(tm:TypedModule):Null<String> {
+		// In Haxe, the module name is the file base name (not "the first class we happened to parse").
+		final fromFile = expectedMainClassFromFile(tm == null ? null : tm.getParsed().getFilePath());
+		if (fromFile != null && fromFile.length > 0)
+			return fromFile;
+
+		// Fallback (in-memory modules): use the parsed main class name when available.
+		final decl = tm == null ? null : tm.getParsed().getDecl();
+		final main = decl == null ? null : HxModuleDecl.getMainClass(decl);
+		final nm0 = main == null ? null : HxClassDecl.getName(main);
+		final nm = nm0 == null ? "" : StringTools.trim(nm0);
+		return (nm.length > 0 && nm != "Unknown") ? nm : null;
+	}
+
+	static inline function baseModuleName(path:String):String {
+		final file = haxe.io.Path.withoutDirectory(path);
+		return StringTools.endsWith(file, ".ml") ? file.substr(0, file.length - 3) : file;
+	}
+
 	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
 			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
 		traceEmitToDirEntry("emitToDir_enter");
 		final outAbs = requireEmitToDirOutAbs(outDir);
 		installEmitToDirProfile(ocamlProfile);
 		ensureEmitToDirOutDir(outAbs);
-
-		function uniqStrings(xs:Array<String>):Array<String> {
-			if (xs == null || xs.length <= 1)
-				return xs;
-			final seen = new Map<String, Bool>();
-			final out = new Array<String>();
-			for (x in xs) {
-				if (x == null)
-					continue;
-				if (seen.exists(x))
-					continue;
-				seen.set(x, true);
-				out.push(x);
-			}
-			return out;
-		}
-
-		function ocamldepSort(mlFiles:Array<String>):Array<String> {
-			if (mlFiles == null || mlFiles.length <= 1)
-				return mlFiles;
-
-			final ocamldep = {
-				final v = Sys.getEnv("OCAMLDEP");
-				(v == null || v.length == 0) ? "ocamldep" : v;
-			}
-
-			final p = new sys.io.Process(ocamldep, [
-				"-I",
-				"runtime",
-				"-I",
-				"+unix",
-				"-I",
-				"+str",
-				"-I",
-				"+threads",
-				"-I",
-				"+dynlink",
-				"-sort"
-			].concat(mlFiles));
-			final chunks = new Array<String>();
-			try {
-				while (true) {
-					chunks.push(p.stdout.readLine());
-				}
-			} catch (_:haxe.io.Eof) {}
-
-			final code = p.exitCode();
-			p.close();
-			if (code != 0)
-				throw "stage3 emitter: ocamldep -sort failed with exit code " + code;
-
-			final sorted = new Array<String>();
-			for (c in chunks) {
-				for (t in c.split(" ")) {
-					final s = StringTools.trim(t);
-					if (s.length == 0)
-						continue;
-					if (!StringTools.endsWith(s, ".ml"))
-						continue;
-					sorted.push(s);
-				}
-			}
-
-			// Best-effort: if ocamldep output looks empty or incomplete, fall back to caller order.
-			if (sorted.length == 0)
-				return mlFiles;
-			return sorted;
-		}
 
 		// Stage 4 bring-up: emit macro-generated OCaml modules (if any).
 		//
@@ -5306,51 +5429,6 @@ class EmitterStage {
 		// - These shims are intentionally tiny and non-semantic: they exist only to keep the
 		//   bring-up compiler compiling further so we can discover the next missing feature.
 		// - They are only emitted when the corresponding `<Name>.ml` is not already present.
-		var shimRepoRoot = "";
-		function inferRepoRootForShims():String {
-			if (shimRepoRoot.length > 0)
-				return shimRepoRoot;
-			final env = Sys.getEnv("HXHX_REPO_ROOT");
-			if (env != null && env.length > 0) {
-				final candidate = haxe.io.Path.join([env, "packages", "hxhx-core", "shims"]);
-				if (sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate)) {
-					shimRepoRoot = env;
-					return shimRepoRoot;
-				}
-			}
-
-			final prog = Sys.programPath();
-			if (prog == null || prog.length == 0)
-				return "";
-			final abs = try sys.FileSystem.fullPath(prog) catch (_:haxe.io.Error) prog catch (_:String) prog;
-			var dir = try haxe.io.Path.directory(abs) catch (_:String) "";
-			if (dir == null || dir.length == 0)
-				return "";
-
-			for (_ in 0...10) {
-				final shimsDir = haxe.io.Path.join([dir, "packages", "hxhx-core", "shims"]);
-				if (sys.FileSystem.exists(shimsDir) && sys.FileSystem.isDirectory(shimsDir)) {
-					shimRepoRoot = dir;
-					return shimRepoRoot;
-				}
-				final parent = haxe.io.Path.normalize(haxe.io.Path.join([dir, ".."]));
-				if (parent == dir)
-					break;
-				dir = parent;
-			}
-			return "";
-		}
-
-		function readShimTemplate(shimName:String):String {
-			final root = inferRepoRootForShims();
-			if (root == null || root.length == 0)
-				throw "stage3 emitter: cannot locate repo root for shim templates (set HXHX_REPO_ROOT)";
-			final path = haxe.io.Path.join([root, "packages", "hxhx-core", "shims", shimName + ".ml"]);
-			if (!sys.FileSystem.exists(path))
-				throw "stage3 emitter: missing shim template: " + path;
-			return sys.io.File.getContent(path);
-		}
-
 		// Stage 3 bring-up: link the repo-owned OCaml runtime when compiling the emitted program.
 		//
 		// Why
@@ -5363,7 +5441,7 @@ class EmitterStage {
 		// - They are **not** copied from upstream Haxe compiler sources.
 		final runtimePaths = new Array<String>();
 		{
-			final root = inferRepoRootForShims();
+			final root = inferRepoRootForStage3Shims();
 			if (root == null || root.length == 0)
 				throw "stage3 emitter: cannot locate repo root for runtime templates (set HXHX_REPO_ROOT)";
 			final runtimeCandidates = [
@@ -5434,7 +5512,7 @@ class EmitterStage {
 			final shimName = "HxBootArray";
 			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
 			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(shimPath, readShimTemplate(shimName));
+				sys.io.File.saveContent(shimPath, readStage3ShimTemplate(shimName));
 			}
 			generatedPaths.push(shimName + ".ml");
 		}
@@ -5442,7 +5520,7 @@ class EmitterStage {
 			final shimName = "HxBootProcess";
 			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
 			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(shimPath, readShimTemplate(shimName));
+				sys.io.File.saveContent(shimPath, readStage3ShimTemplate(shimName));
 			}
 			generatedPaths.push(shimName + ".ml");
 		}
@@ -5574,11 +5652,6 @@ class EmitterStage {
 		// How
 		// - Build a set of runtime-provided OCaml module names and skip emitting any typed module whose
 		//   main unit name collides with a runtime unit.
-		inline function runtimeModuleNameFromPath(path:String):String {
-			final file = haxe.io.Path.withoutDirectory(path);
-			final base = StringTools.endsWith(file, ".ml") ? file.substr(0, file.length - 3) : file;
-			return upperFirst(base);
-		}
 		final runtimeModuleNames:Map<String, Bool> = new Map();
 		for (p0 in runtimePaths)
 			runtimeModuleNames.set(runtimeModuleNameFromPath(p0), true);
@@ -5616,32 +5689,6 @@ class EmitterStage {
 		// How
 		// - Treat `Haxe_Int64` as "runtime provided" so `emitModule` skips emitting the main unit.
 		runtimeModuleNames.set("Haxe_Int64", true);
-
-		inline function expectedMainClassFromFile(filePath:Null<String>):Null<String> {
-			if (filePath == null || filePath.length == 0)
-				return null;
-			final name = haxe.io.Path.withoutDirectory(filePath);
-			final dot = name.lastIndexOf(".");
-			return dot <= 0 ? name : name.substr(0, dot);
-		}
-
-		inline function moduleTypeNameFor(tm:TypedModule):Null<String> {
-			// In Haxe, the module name is the file base name (not "the first class we happened to parse").
-			//
-			// This matters for multi-type modules like upstream `unit/MyAbstract.hx`, where helper types are
-			// addressed as `unit.MyAbstract.HelperType` regardless of which class the frontend surfaced as
-			// the "main class" during bring-up.
-			final fromFile = expectedMainClassFromFile(tm == null ? null : tm.getParsed().getFilePath());
-			if (fromFile != null && fromFile.length > 0)
-				return fromFile;
-
-			// Fallback (in-memory modules): use the parsed main class name when available.
-			final decl = tm == null ? null : tm.getParsed().getDecl();
-			final main = decl == null ? null : HxModuleDecl.getMainClass(decl);
-			final nm0 = main == null ? null : HxClassDecl.getName(main);
-			final nm = nm0 == null ? "" : StringTools.trim(nm0);
-			return (nm.length > 0 && nm != "Unknown") ? nm : null;
-		}
 
 		function uniqueTypedModules(mods:Array<TypedModule>):Array<TypedModule> {
 			if (mods == null || mods.length <= 1)
@@ -7735,11 +7782,6 @@ class EmitterStage {
 		//   - repo-owned runtime units (`runtime/*.ml`),
 		//   - or OCaml stdlib modules commonly used by our runtime.
 		{
-			inline function baseModuleName(path:String):String {
-				final file = haxe.io.Path.withoutDirectory(path);
-				return StringTools.endsWith(file, ".ml") ? file.substr(0, file.length - 3) : file;
-			}
-
 			final existing:Map<String, Bool> = new Map();
 			for (p in runtimePaths)
 				existing.set(baseModuleName(p), true);

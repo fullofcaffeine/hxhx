@@ -12,12 +12,12 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.InPro
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.InProcMacroRuntime" } : t)
 
-let openSession = fun () -> let impl = Obj.magic (Hxhx_macro_InProcMacroSession.inprocmacrosession_create ()) in let __anon_1 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_1 "run" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.inprocmacrosession_run impl a0)));
-  ignore (HxAnon.set __anon_1 "runHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.inprocmacrosession_runHook impl a0 a1)));
-  ignore (HxAnon.set __anon_1 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.inprocmacrosession_runTypeNotFoundHook impl a0 a1)));
-  ignore (HxAnon.set __anon_1 "expandExpr" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.inprocmacrosession_expandExpr impl a0)));
-  ignore (HxAnon.set __anon_1 "close" (Obj.repr (fun () -> Hxhx_macro_InProcMacroSession.inprocmacrosession_close impl ())));
+let openSession = fun () -> let impl = Obj.magic (Hxhx_macro_InProcMacroSession.create ()) in let __anon_1 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_1 "run" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.run impl a0)));
+  ignore (HxAnon.set __anon_1 "runHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.runHook impl a0 a1)));
+  ignore (HxAnon.set __anon_1 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.runTypeNotFoundHook impl a0 a1)));
+  ignore (HxAnon.set __anon_1 "expandExpr" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.expandExpr impl a0)));
+  ignore (HxAnon.set __anon_1 "close" (Obj.repr (fun () -> Hxhx_macro_InProcMacroSession.close impl ())));
   __anon_1
 )
 

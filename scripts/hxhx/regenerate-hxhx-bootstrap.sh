@@ -977,34 +977,31 @@ run_stage0_emit() {
 			echo "== To inspect progress manually: tail -f \"$log_file\""
 		fi
 
-		local start_hb
-		start_hb="$(now_ts)"
-		local last_status_ts="$start_hb"
-		while kill -0 "$pid" >/dev/null 2>&1; do
-			sleep 1 || true
-			local now
-			now="$(now_ts)"
-			if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
-				local elapsed
-				elapsed="$((now - start_hb))"
-				if [ "$elapsed" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
-					echo "Stage0 emit exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
-					kill -9 "$pid" >/dev/null 2>&1 || true
-					echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
+			local elapsed_hb=0
+			local status_elapsed=0
+			while kill -0 "$pid" >/dev/null 2>&1; do
+				sleep 1 || true
+				elapsed_hb="$((elapsed_hb + 1))"
+				status_elapsed="$((status_elapsed + 1))"
+				if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
+					if [ "$elapsed_hb" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
+						echo "Stage0 emit exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
+						kill -9 "$pid" >/dev/null 2>&1 || true
+						echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
 					tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
 					printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
 					exit 1
 				fi
 			fi
-			if [ "$interval" = "0" ]; then
-				continue
-			fi
-			if [ "$((now - last_status_ts))" -lt "$interval" ]; then
-				continue
-			fi
-			last_status_ts="$now"
+				if [ "$interval" = "0" ]; then
+					continue
+				fi
+				if [ "$status_elapsed" -lt "$interval" ]; then
+					continue
+				fi
+				status_elapsed=0
 
-			local child_pid
+				local child_pid
 			child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
 			local rss_probe_pid="$pid"
 			if [ -n "$child_pid" ]; then
@@ -1035,19 +1032,19 @@ run_stage0_emit() {
 				if [ "$rss_mb" -gt "$heartbeat_peak_rss_mb_local" ]; then
 					heartbeat_peak_rss_mb_local="$rss_mb"
 				fi
-				printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
-				if [ -n "$child_pid" ]; then
-					echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid child=$child_pid$heartbeat_suffix"
+					printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
+					if [ -n "$child_pid" ]; then
+						echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s rss=${rss_mb}MB pid=$pid child=$child_pid$heartbeat_suffix"
+					else
+						echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s rss=${rss_mb}MB pid=$pid$heartbeat_suffix"
+					fi
 				else
-					echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid$heartbeat_suffix"
+					if [ -n "$child_pid" ]; then
+						echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s pid=$pid child=$child_pid$heartbeat_suffix"
+					else
+						echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s pid=$pid$heartbeat_suffix"
+					fi
 				fi
-			else
-				if [ -n "$child_pid" ]; then
-					echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s pid=$pid child=$child_pid$heartbeat_suffix"
-				else
-					echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s pid=$pid$heartbeat_suffix"
-				fi
-			fi
 			if [ -n "${HXHX_STAGE0_HEARTBEAT_TAIL_LINES}" ] && [ "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" != "0" ]; then
 				if [ -s "$log_file" ]; then
 					echo "== Stage0 emit log tail (last $HXHX_STAGE0_HEARTBEAT_TAIL_LINES lines):"

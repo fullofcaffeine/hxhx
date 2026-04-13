@@ -466,11 +466,15 @@ patch_bootstrap_emitter_stmt_list_trace() {
     return 0
   fi
 
-  if file_contains_literal 'stmt_list_begin:' "$emitter_path"; then
-    return 0
-  fi
+	if file_contains_literal 'stmt_list_begin:' "$emitter_path"; then
+		return 0
+	fi
 
-  run_bootstrap_patch_helper patch-stmt-list-trace "$emitter_path"
+	if file_contains_literal '_emitterstagedebug_traceStage3StmtList ("begin"' "$emitter_path"; then
+		return 0
+	fi
+
+	run_bootstrap_patch_helper patch-stmt-list-trace "$emitter_path"
 }
 
 patch_bootstrap_emitter_typed_ty_map_copying() {
@@ -947,11 +951,15 @@ patch_bootstrap_typerstage_lowercase_static_receiver_guard() {
     return 0
   fi
 
-  if file_contains_literal "$marker" "$typerstage_path"; then
-    return 0
-  fi
+	if file_contains_literal "$marker" "$typerstage_path"; then
+		return 0
+	fi
 
-  run_bootstrap_patch_helper patch-typerstage-lowercase-static-receiver-guard "$typerstage_path"
+	if file_contains_literal 'if isUpperStartName (typeName : string) then' "$typerstage_path"; then
+		return 0
+	fi
+
+	run_bootstrap_patch_helper patch-typerstage-lowercase-static-receiver-guard "$typerstage_path"
 }
 
 patch_bootstrap_emitter_interactive_cli_progress() {

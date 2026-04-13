@@ -19,6 +19,7 @@
 		"hxhx_macro_MacroProtocol.ml",
 		"hxhx_macro_MacroLocalImports.ml",
 		"hxhx_macro_MacroHostClient.ml",
+		"hxhx_macro_InProcMacroSession.ml",
 		"hxhx_macro_InProcMacroRuntime.ml",
 		"hxhx_macro_InProcGeneratedEntrypoints.ml",
 		"hxhx_macro_BuildFieldSnapshotPayload.ml",
