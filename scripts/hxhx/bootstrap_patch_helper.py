@@ -2116,7 +2116,23 @@ def cmd_patch_stmt_list_trace(argv: list[str]) -> None:
                           ignore (match s with
 """
     begin_patch = """                          ));
-                          ignore (if not (!currentFunctionName == Obj.magic (HxRuntime.hx_null)) && HxString.equals (!currentFunctionName) "emitToDir" then _emitterstagedebug_traceStage3Phase (((((("stmt_list_begin:" ^ HxString.toStdString (!currentFunctionName)) ^ ":") ^ string_of_int idx) ^ "/") ^ string_of_int (HxArray.length stmts)) : string) else ());
+                          let __stmtlist_trace_kind_pos = match s with
+                            | HxStmt.SBlock (_, pos) -> ("SBlock", pos)
+                            | HxStmt.SVar (_, _, _, pos) -> ("SVar", pos)
+                            | HxStmt.SIf (_, _, _, pos) -> ("SIf", pos)
+                            | HxStmt.SForIn (_, _, _, pos) -> ("SForIn", pos)
+                            | HxStmt.SWhile (_, _, pos) -> ("SWhile", pos)
+                            | HxStmt.SDoWhile (_, _, pos) -> ("SDoWhile", pos)
+                            | HxStmt.SSwitch (_, _, _, pos) -> ("SSwitch", pos)
+                            | HxStmt.STry (_, _, pos) -> ("STry", pos)
+                            | HxStmt.SBreak pos -> ("SBreak", pos)
+                            | HxStmt.SContinue pos -> ("SContinue", pos)
+                            | HxStmt.SThrow (_, pos) -> ("SThrow", pos)
+                            | HxStmt.SReturnVoid pos -> ("SReturnVoid", pos)
+                            | HxStmt.SReturn (_, pos) -> ("SReturn", pos)
+                            | HxStmt.SExpr (_, pos) -> ("SExpr", pos)
+                          in let (__stmtlist_trace_kind, __stmtlist_trace_pos) = __stmtlist_trace_kind_pos in let __stmtlist_trace_line = HxPos.getLine (Obj.magic __stmtlist_trace_pos) () in let __stmtlist_trace_col = HxPos.getColumn (Obj.magic __stmtlist_trace_pos) () in
+                          ignore (if not (!currentFunctionName == Obj.magic (HxRuntime.hx_null)) && HxString.equals (!currentFunctionName) "emitToDir" then _emitterstagedebug_traceStage3Phase (((((((((("stmt_list_begin:" ^ HxString.toStdString (!currentFunctionName)) ^ ":") ^ string_of_int idx) ^ "/") ^ string_of_int (HxArray.length stmts)) ^ ":") ^ __stmtlist_trace_kind) ^ ":line=") ^ string_of_int __stmtlist_trace_line) ^ ":col=" ^ string_of_int __stmtlist_trace_col : string) else ());
                           ignore (match s with
 """
     src = replace_one(
@@ -2130,7 +2146,7 @@ def cmd_patch_stmt_list_trace(argv: list[str]) -> None:
                           let __assign_stmtlist_string_builder_prev_entries = Obj.magic prevStmtTyEntries in (
 """
     done_patch = """                            ));
-                          ignore (if not (!currentFunctionName == Obj.magic (HxRuntime.hx_null)) && HxString.equals (!currentFunctionName) "emitToDir" then _emitterstagedebug_traceStage3Phase (((((("stmt_list_done:" ^ HxString.toStdString (!currentFunctionName)) ^ ":") ^ string_of_int idx) ^ "/") ^ string_of_int (HxArray.length stmts)) : string) else ());
+                          ignore (if not (!currentFunctionName == Obj.magic (HxRuntime.hx_null)) && HxString.equals (!currentFunctionName) "emitToDir" then _emitterstagedebug_traceStage3Phase (((((((((("stmt_list_done:" ^ HxString.toStdString (!currentFunctionName)) ^ ":") ^ string_of_int idx) ^ "/") ^ string_of_int (HxArray.length stmts)) ^ ":") ^ __stmtlist_trace_kind) ^ ":line=") ^ string_of_int __stmtlist_trace_line) ^ ":col=" ^ string_of_int __stmtlist_trace_col : string) else ());
                           let __assign_stmtlist_string_builder_prev_entries = Obj.magic prevStmtTyEntries in (
 """
     src = replace_one(

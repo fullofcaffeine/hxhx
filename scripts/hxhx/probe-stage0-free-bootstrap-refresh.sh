@@ -175,47 +175,41 @@ timeout_marker="$OUT_ROOT/stage3-timeout.marker"
 rm -f "$timeout_marker"
 HXHX_FORBID_STAGE0=1 HAXE_BIN="$HAXE_SENTINEL" "$HXHX_BIN" "${STAGE3_ARGS[@]}" --hxhx-out "$STAGE3_OUT" >"$STAGE3_LOG" 2>&1 &
 stage3_pid=$!
-timeout_pid=""
+stage3_timed_out=0
 if [ "$STAGE3_TIMEOUT_SEC" -gt 0 ]; then
-  (
-    elapsed_sec=0
-    while kill -0 "$stage3_pid" 2>/dev/null; do
-      if [ "$elapsed_sec" -ge "$STAGE3_TIMEOUT_SEC" ]; then
-        {
-          echo "FAILED: Stage3 scope probe timed out after ${STAGE3_TIMEOUT_SEC}s."
-          echo "stage3_timeout_elapsed_sec=$elapsed_sec"
-          echo "stage3_timeout_sec=$STAGE3_TIMEOUT_SEC"
-        } >>"$STAGE3_LOG"
-        append_stage3_timeout_diagnostics
-        printf 'timeout\n' >"$timeout_marker"
-        pkill -TERM -P "$stage3_pid" 2>/dev/null || true
-        kill -TERM "$stage3_pid" 2>/dev/null || true
-        sleep 2
-        pkill -KILL -P "$stage3_pid" 2>/dev/null || true
-        kill -KILL "$stage3_pid" 2>/dev/null || true
-        break
-      fi
-      remaining=$((STAGE3_TIMEOUT_SEC - elapsed_sec))
-      if [ "$remaining" -gt 5 ]; then
-        sleep_step=5
-      elif [ "$remaining" -gt 0 ]; then
-        sleep_step="$remaining"
-      else
-        sleep_step=1
-      fi
-      sleep "$sleep_step"
-      elapsed_sec=$((elapsed_sec + sleep_step))
-    done
-  ) &
-  timeout_pid=$!
+  elapsed_sec=0
+  while jobs -pr | grep -qx "$stage3_pid"; do
+    if [ "$elapsed_sec" -ge "$STAGE3_TIMEOUT_SEC" ]; then
+      {
+        echo "FAILED: Stage3 scope probe timed out after ${STAGE3_TIMEOUT_SEC}s."
+        echo "stage3_timeout_elapsed_sec=$elapsed_sec"
+        echo "stage3_timeout_sec=$STAGE3_TIMEOUT_SEC"
+      } >>"$STAGE3_LOG"
+      append_stage3_timeout_diagnostics
+      printf 'timeout\n' >"$timeout_marker"
+      stage3_timed_out=1
+      pkill -TERM -P "$stage3_pid" 2>/dev/null || true
+      kill -TERM "$stage3_pid" 2>/dev/null || true
+      sleep 2
+      pkill -KILL -P "$stage3_pid" 2>/dev/null || true
+      kill -KILL "$stage3_pid" 2>/dev/null || true
+      break
+    fi
+    remaining=$((STAGE3_TIMEOUT_SEC - elapsed_sec))
+    if [ "$remaining" -gt 5 ]; then
+      sleep_step=5
+    elif [ "$remaining" -gt 0 ]; then
+      sleep_step="$remaining"
+    else
+      sleep_step=1
+    fi
+    sleep "$sleep_step"
+    elapsed_sec=$((elapsed_sec + sleep_step))
+  done
 fi
-wait "$stage3_pid"
+wait "$stage3_pid" 2>/dev/null
 stage3_code=$?
-if [ -n "$timeout_pid" ]; then
-  kill "$timeout_pid" 2>/dev/null || true
-  wait "$timeout_pid" 2>/dev/null || true
-fi
-if [ -s "$timeout_marker" ]; then
+if [ "$stage3_timed_out" = "1" ] || [ -s "$timeout_marker" ]; then
   stage3_code=124
 fi
 set -e
