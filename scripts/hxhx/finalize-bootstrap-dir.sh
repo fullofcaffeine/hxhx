@@ -248,6 +248,10 @@ patch_bootstrap_emitter_array_receiver_chain_lowering() {
     return 0
   fi
 
+  if file_contains_literal 'let rec stage3IsLikelyArrayExpr = fun' "$emitter_path" && ! file_contains_literal '(!isLikelyArrayExpr)' "$emitter_path"; then
+    return 0
+  fi
+
   run_bootstrap_patch_helper patch-array-receiver-chain-lowering "$emitter_path"
 }
 

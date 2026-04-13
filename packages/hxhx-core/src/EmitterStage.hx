@@ -1238,6 +1238,47 @@ class EmitterStage {
 		return (currentOcamlModuleName != null && modName == currentOcamlModuleName) ? ocamlValueIdent(field) : (modName + "." + ocamlValueIdent(field));
 	}
 
+	static function exprToOcamlStage3FieldAccess(obj:HxExpr, field:String, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):String {
+		if (field == "length") {
+			final o = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+			if (stage3IsStringExpr(obj, tyByIdent)) {
+				return "HxString.length (" + o + ")";
+			}
+			switch (obj) {
+				case EArrayDecl(_):
+					return "HxBootArray.length (" + o + ")";
+				case EIdent(name):
+					final t = stage3TyForIdent(name, tyByIdent);
+					if (t == "String")
+						return "HxString.length (" + o + ")";
+					if (StringTools.startsWith(t, "Array<"))
+						return "HxBootArray.length (" + o + ")";
+					return emitUnknownLengthStage3(o);
+				case _:
+			}
+		}
+
+		if (field == "stdout" && stage3IsSysIoProcessExpr(obj, tyByIdent)) {
+			return "HxBootProcess.stdout ("
+				+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+				+ ")";
+		}
+		if (field == "stderr" && stage3IsSysIoProcessExpr(obj, tyByIdent)) {
+			return "HxBootProcess.stderr ("
+				+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+				+ ")";
+		}
+
+		final staticField = tryExprToOcamlStage3StaticField(obj, field, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+		return staticField != null ? staticField : ("(Obj.magic (HxAnon.get (Obj.repr ("
+			+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+			+ ")) "
+			+ escapeOcamlString(field)
+			+ "))");
+	}
+
 	/**
 		Why:
 		Array-comprehension lowering is independent from `exprToOcaml`'s local type
@@ -1393,6 +1434,392 @@ class EmitterStage {
 			+ (initStmts.length == 0 ? "" : (initStmts.join("; ") + "; "))
 			+ ctorCall
 			+ "; __hx_obj)";
+	}
+
+	static function stage3StmtTyLookup(name:String):String {
+		if (name == null || name.length == 0)
+			return "";
+		for (entry in currentStmtTyEntries)
+			if (entry.name == name && entry.ty != null && entry.ty.length > 0)
+				return entry.ty;
+		final lowered = ocamlValueIdent(name);
+		if (lowered != name)
+			for (entry in currentStmtTyEntries)
+				if (entry.name == lowered && entry.ty != null && entry.ty.length > 0)
+					return entry.ty;
+		return "";
+	}
+
+	static function stage3LocalHintLookup(name:String):Null<TyType> {
+		return cast mapGetRaw(cast currentFunctionLocalTypeHints, name);
+	}
+
+	static function stage3TyLookup(name:String, ?tyByIdent:Map<String, TyType>):Null<TyType> {
+		return cast mapGetRaw(tyByIdent, name);
+	}
+
+	static function stage3ResolveTyIdentName(name:String, ?tyByIdent:Map<String, TyType>):String {
+		if (stage3TyLookup(name, tyByIdent) != null)
+			return name;
+		final lowered = ocamlValueIdent(name);
+		return lowered != name && stage3TyLookup(lowered, tyByIdent) != null ? lowered : name;
+	}
+
+	/**
+		Why:
+		Stage3 full-emit currently spends most of its time lowering this emitter's
+		large `exprToOcaml` body. Numeric and string fast paths need the same local
+		type hints as `exprToOcaml`, but they do not need to live as nested closures.
+
+		What:
+		Returns the best known Haxe type text for an identifier using the same map,
+		statement-entry, and current-function local-hint order used by the old local
+		helper.
+
+		How:
+		Keep the lookup behavior centralized so extracted Stage3 helpers can stay
+		source-level and avoid generated-OCaml patching.
+	**/
+	static function stage3TyForIdent(name:String, ?tyByIdent:Map<String, TyType>):String {
+		final t = stage3TyLookup(stage3ResolveTyIdentName(name, tyByIdent), tyByIdent);
+		final ts = t == null ? "" : t.toString();
+		final shouldUseLocalHint = t == null || ts.length == 0 || ts == "Dynamic" || ts == "Unknown" || ts == "Array";
+		if (shouldUseLocalHint) {
+			final stmtTy = stage3StmtTyLookup(name);
+			if (stmtTy.length > 0 && stmtTy != "Dynamic" && stmtTy != "Unknown" && stmtTy != "Array")
+				return stmtTy;
+			if (currentFunctionLocalTypeHints != null) {
+				final hinted = stage3LocalHintLookup(name);
+				if (hinted != null) {
+					final hintedS = hinted.toString();
+					if (hintedS.length > 0 && hintedS != "Dynamic" && hintedS != "Unknown" && hintedS != "Array")
+						return hintedS;
+				}
+				final lowered = ocamlValueIdent(name);
+				if (lowered != name) {
+					final loweredHint = stage3LocalHintLookup(lowered);
+					if (loweredHint != null) {
+						final loweredHintS = loweredHint.toString();
+						if (loweredHintS.length > 0 && loweredHintS != "Dynamic" && loweredHintS != "Unknown" && loweredHintS != "Array")
+							return loweredHintS;
+					}
+				}
+			}
+		}
+		return ts;
+	}
+
+	static function stage3IsInt64TypeName(t:String):Bool {
+		if (t == null)
+			return false;
+		final trimmed = StringTools.trim(t);
+		if (trimmed.length == 0)
+			return false;
+		return trimmed == "haxe.Int64"
+			|| trimmed == "Int64"
+			|| StringTools.endsWith(trimmed, ".Int64")
+			|| StringTools.endsWith(trimmed, "_Int64")
+			|| trimmed.indexOf("Int64") >= 0;
+	}
+
+	static function stage3IsInt64Expr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		return switch (expr) {
+			case EIdent(name):
+				stage3IsInt64TypeName(stage3TyForIdent(name, tyByIdent));
+			case EUnop("!", inner):
+				stage3IsInt64Expr(inner, tyByIdent);
+			case ECall(EField(EIdent(owner), field), _args): (owner == "Int64" || owner == "haxe.Int64") && (field == "make" || field == "ofInt"
+					|| field == "parseString" || field == "add" || field == "sub" || field == "mul" || field == "neg" || field == "div" || field == "mod"
+					|| field == "divMod");
+			case EField(inner, field): stage3IsInt64Expr(inner, tyByIdent) && (field == "high" || field == "low" || field == "quotient" || field == "modulus");
+			case EBinop(op, a, b)
+				if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>"
+					|| op == ">>>"): stage3IsInt64Expr(a, tyByIdent) || stage3IsInt64Expr(b, tyByIdent);
+			case ETernary(_cond, thenExpr, elseExpr): stage3IsInt64Expr(thenExpr, tyByIdent) && stage3IsInt64Expr(elseExpr, tyByIdent);
+			case ECast(inner, _):
+				stage3IsInt64Expr(inner, tyByIdent);
+			case EUntyped(inner):
+				stage3IsInt64Expr(inner, tyByIdent);
+			case _:
+				false;
+		}
+	}
+
+	static function stage3IsInfNanFieldExpr(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EField(_, field): field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN";
+			case ECast(inner, _):
+				stage3IsInfNanFieldExpr(inner);
+			case EUntyped(inner):
+				stage3IsInfNanFieldExpr(inner);
+			case _:
+				false;
+		}
+	}
+
+	static function stage3IsPositiveInfinityFieldExpr(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EField(_, field): field == "iNF" || field == "INF" || field == "inf";
+			case ECast(inner, _):
+				stage3IsPositiveInfinityFieldExpr(inner);
+			case EUntyped(inner):
+				stage3IsPositiveInfinityFieldExpr(inner);
+			case _:
+				false;
+		}
+	}
+
+	static function stage3IsIntExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		return switch (expr) {
+			case EInt(_):
+				true;
+			case EIdent(name): final t = stage3TyForIdent(name,
+					tyByIdent); t == "Int" || (isMutableLocalRefIdent(name) && (t == "" || t == "Dynamic" || t == "Unknown"));
+			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"): stage3IsIntExpr(a,
+					tyByIdent) && stage3IsIntExpr(b, tyByIdent);
+			case ETernary(_cond, thenExpr, elseExpr): stage3IsIntExpr(thenExpr, tyByIdent) && stage3IsIntExpr(elseExpr, tyByIdent);
+			case _:
+				false;
+		}
+	}
+
+	static function stage3IsFloatExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		return switch (expr) {
+			case EFloat(_):
+				true;
+			case _ if (stage3IsInfNanFieldExpr(expr)):
+				true;
+			case EIdent(name):
+				stage3TyForIdent(name, tyByIdent) == "Float";
+			case EBinop("/", a, b): !(stage3IsInt64Expr(a,
+					tyByIdent) || stage3IsInt64Expr(b,
+						tyByIdent)) && (stage3IsFloatExpr(a, tyByIdent)
+					|| stage3IsFloatExpr(b, tyByIdent)
+					|| (stage3IsIntExpr(a, tyByIdent) && stage3IsIntExpr(b, tyByIdent)));
+			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*"): stage3IsFloatExpr(a, tyByIdent) || stage3IsFloatExpr(b, tyByIdent);
+			case ETernary(_cond, thenExpr, elseExpr): stage3IsFloatExpr(thenExpr, tyByIdent) && stage3IsFloatExpr(elseExpr, tyByIdent);
+			case _:
+				false;
+		}
+	}
+
+	static function stage3IsStringExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		return switch (expr) {
+			case EString(_):
+				true;
+			case ECall(EField(EIdent("Std"), "string"), _):
+				true;
+			case ECall(EField(_obj, "toString"), []):
+				true;
+			case ECall(EField(EIdent("StringTools"), "hex"), _):
+				true;
+			case EIdent(name):
+				stage3TyForIdent(name, tyByIdent) == "String";
+			case EBinop("+", a, b): stage3IsStringExpr(a, tyByIdent) || stage3IsStringExpr(b, tyByIdent);
+			case ETernary(_cond, thenExpr, elseExpr): stage3IsStringExpr(thenExpr, tyByIdent) && stage3IsStringExpr(elseExpr, tyByIdent);
+			case _:
+				false;
+		}
+	}
+
+	static function stage3IsBoolExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		return switch (expr) {
+			case EBool(_):
+				true;
+			case EIdent(name):
+				stage3TyForIdent(name, tyByIdent) == "Bool";
+			case EUnop("!", inner):
+				stage3IsBoolExpr(inner, tyByIdent);
+			case EBinop(op, _, _): op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=" || op == "&&" || op == "||";
+			case ETernary(_cond, thenExpr, elseExpr): stage3IsBoolExpr(thenExpr, tyByIdent) && stage3IsBoolExpr(elseExpr, tyByIdent);
+			case _:
+				false;
+		}
+	}
+
+	static function stage3IsUnknownNumericIdent(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		return switch (expr) {
+			case EIdent(name): final t = stage3TyForIdent(name,
+					tyByIdent); t == "" || t == "Dynamic" || t == "Unknown" || t == "Array" || isMutableLocalRefIdent(name);
+			case _:
+				false;
+		}
+	}
+
+	static function stage3IsNullableIntExpr(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ENull:
+				true;
+			case ECall(EField(EIdent("Std"), "parseInt"), [_]):
+				true;
+			case ETernary(_cond, thenExpr, elseExpr): stage3IsNullableIntExpr(thenExpr) || stage3IsNullableIntExpr(elseExpr);
+			case _:
+				false;
+		}
+	}
+
+	static function exprToOcamlNullableIntStage3(expr:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):String {
+		return switch (expr) {
+			case ENull:
+				"HxRuntime.hx_null";
+			case EInt(_):
+				"Obj.repr (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee) + ")";
+			case _:
+				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+		}
+	}
+
+	static function emitUnknownLengthStage3(o:String):String {
+		// Reuse the bound `Obj.t` for dynamic casts instead of re-emitting `o`.
+		return "(let __hx_len_obj = Obj.repr ("
+			+ o
+			+ ") in "
+			+ "if Obj.is_int __hx_len_obj then HxBootArray.length ((Obj.obj __hx_len_obj : _ HxBootArray.t)) "
+			+ "else if Obj.tag __hx_len_obj = Obj.string_tag then HxString.length ((Obj.obj __hx_len_obj : string)) "
+			+ "else HxBootArray.length ((Obj.obj __hx_len_obj : _ HxBootArray.t)))";
+	}
+
+	static function stage3IsSysIoProcessExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		return switch (expr) {
+			case EIdent(name): final t = stage3TyForIdent(name, tyByIdent); t == "sys.io.Process" || t == "sys.io.Process.Process";
+			case ECast(inner, _hint):
+				stage3IsSysIoProcessExpr(inner, tyByIdent);
+			case _:
+				false;
+		}
+	}
+
+	static function intBinopCallStage3(op:String, left:String, right:String):String {
+		return switch (op) {
+			case "+":
+				"(HxInt.add (" + left + ") (" + right + "))";
+			case "-":
+				"(HxInt.sub (" + left + ") (" + right + "))";
+			case "*":
+				"(HxInt.mul (" + left + ") (" + right + "))";
+			case "%":
+				"(HxInt.rem (" + left + ") (" + right + "))";
+			case _:
+				"(Obj.magic 0)";
+		}
+	}
+
+	static function exprToOcamlForConcatStage3(expr:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):String {
+		// Best-effort: keep concatenation type-safe by stringifying obvious primitives.
+		return switch (expr) {
+			case EInt(_), EFloat(_), EBool(_), EIdent(_):
+				exprToOcamlString(expr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+			case _:
+				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+		}
+	}
+
+	static function stage3IsLikelyArrayExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		return switch (expr) {
+			case EArrayDecl(_):
+				true;
+			case EIdent(name): final t = stage3TyForIdent(name, tyByIdent); t == "Array" || StringTools.startsWith(t, "Array<");
+			case ECall(EField(inner, "toArray"), []):
+				stage3IsLikelyArrayExpr(inner, tyByIdent);
+			case ECall(EField(inner, "copy"), []):
+				stage3IsLikelyArrayExpr(inner, tyByIdent);
+			case ECall(EField(inner, "concat"), [_]):
+				stage3IsLikelyArrayExpr(inner, tyByIdent);
+			case ECall(EField(inner, "map"), [_]):
+				stage3IsLikelyArrayExpr(inner, tyByIdent);
+			case _:
+				false;
+		}
+	}
+
+	static function stage3IsStringArrayTypeText(rawType:String):Bool {
+		if (rawType == null || rawType.length == 0)
+			return false;
+		final normalized = StringTools.replace(rawType, " ", "");
+		return normalized == "Array<String>" || StringTools.startsWith(normalized, "Array<String>");
+	}
+
+	static function stage3IsLikelyStringArrayExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		return switch (expr) {
+			case EArrayDecl(values):
+				if (values == null || values.length == 0) {
+					true;
+				} else {
+					var allString = true;
+					for (valueExpr in values)
+						if (!stage3IsStringExpr(valueExpr, tyByIdent)) {
+							allString = false;
+							break;
+						}
+					allString;
+				}
+			case EIdent(name):
+				stage3IsStringArrayTypeText(stage3TyForIdent(name, tyByIdent));
+			case ECall(EField(inner, "toArray"), []):
+				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
+			case ECall(EField(inner, "copy"), []):
+				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
+			case ECall(EField(inner, "concat"), [other]): stage3IsLikelyStringArrayExpr(inner, tyByIdent) && stage3IsLikelyStringArrayExpr(other, tyByIdent);
+			case ECast(inner, _):
+				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
+			case EUntyped(inner):
+				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
+			case _:
+				false;
+		}
+	}
+
+	static function stage3MetalArrayLiteralCategory(expr:HxExpr, ?tyByIdent:Map<String, TyType>):String {
+		if (stage3IsStringExpr(expr, tyByIdent))
+			return "string";
+		if (stage3IsFloatExpr(expr, tyByIdent))
+			return "float";
+		if (stage3IsIntExpr(expr, tyByIdent))
+			return "int";
+		if (stage3IsBoolExpr(expr, tyByIdent))
+			return "bool";
+		return "";
+	}
+
+	static function exprToOcamlAsFloatValueStage3(expr:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>):String {
+		return switch (expr) {
+			case EInt(v):
+				"float_of_int " + Std.string(v);
+			case EUnop("-", inner):
+				"(-.(" + exprToOcamlAsFloatValueStage3(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
+			case EIdent(name) if (stage3TyForIdent(name, tyByIdent) == "Int"):
+				"float_of_int " + ocamlReadValueIdent(name);
+			case _ if (stage3IsInfNanFieldExpr(expr)):
+				"(Obj.magic (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ") : float)";
+			case _:
+				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+		}
+	}
+
+	static function tryExprToOcamlStage3NumericStringIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>):Null<String> {
+		switch (e) {
+			case ECall(EField(EIdent("Math"), "abs"), [arg]):
+				final absFn = stage3IsFloatExpr(arg, tyByIdent) ? "abs_float " : (stage3IsIntExpr(arg, tyByIdent) ? "abs " : "abs_float ");
+				return absFn
+					+ "("
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case ECall(EField(EIdent("Math"), "round"), [arg]):
+				return "(int_of_float (floor (("
+					+ exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") +. 0.5)))";
+			case ECall(EField(obj, "toString"), []) if (stage3IsStringExpr(obj, tyByIdent)):
+				return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+			case _:
+		}
+		return null;
 	}
 
 	/**
@@ -1679,37 +2106,8 @@ class EmitterStage {
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
 
-		function tyLookup(name:String):Null<TyType> {
-			return cast mapGetRaw(tyByIdentRaw, name);
-		}
-
-		function stmtTyLookup(name:String):String {
-			if (name == null || name.length == 0)
-				return "";
-			for (entry in currentStmtTyEntries)
-				if (entry.name == name && entry.ty != null && entry.ty.length > 0)
-					return entry.ty;
-			final lowered = ocamlValueIdent(name);
-			if (lowered != name)
-				for (entry in currentStmtTyEntries)
-					if (entry.name == lowered && entry.ty != null && entry.ty.length > 0)
-						return entry.ty;
-			return "";
-		}
-
-		function localHintLookup(name:String):Null<TyType> {
-			return cast mapGetRaw(cast currentFunctionLocalTypeHints, name);
-		}
-
-		inline function resolveTyIdentName(name:String):String {
-			if (tyLookup(name) != null)
-				return name;
-			final lowered = ocamlValueIdent(name);
-			return lowered != name && tyLookup(lowered) != null ? lowered : name;
-		}
-
 		inline function hasTyIdent(name:String):Bool {
-			return tyLookup(resolveTyIdentName(name)) != null;
+			return stage3TyLookup(stage3ResolveTyIdentName(name, tyByIdentRaw), tyByIdentRaw) != null;
 		}
 
 		inline function hasThisBinding():Bool {
@@ -1785,420 +2183,20 @@ class EmitterStage {
 			return resolved == null ? null : cast resolved;
 		}
 
-		function currentModuleShortName():String {
-			if (currentOcamlModuleName == null)
-				return "";
-			final moduleName = currentOcamlModuleName;
-			var prefix = "";
-			if (currentPackagePath != null) {
-				final pkg = StringTools.trim(currentPackagePath);
-				if (pkg.length > 0)
-					prefix = ocamlModuleNameFromTypePathParts(pkg.split(".")) + "_";
-			}
-			if (prefix.length > 0 && StringTools.startsWith(moduleName, prefix))
-				return moduleName.substr(prefix.length);
-			final lastUnderscore = moduleName.lastIndexOf("_");
-			return lastUnderscore < 0 ? moduleName : moduleName.substr(lastUnderscore + 1);
-		}
-
-		function tyForIdent(name:String):String {
-			final t = tyLookup(resolveTyIdentName(name));
-			final ts = t == null ? "" : t.toString();
-			final shouldUseLocalHint = t == null || ts.length == 0 || ts == "Dynamic" || ts == "Unknown" || ts == "Array";
-			if (shouldUseLocalHint) {
-				final stmtTy = stmtTyLookup(name);
-				if (stmtTy.length > 0 && stmtTy != "Dynamic" && stmtTy != "Unknown" && stmtTy != "Array")
-					return stmtTy;
-				if (currentFunctionLocalTypeHints != null) {
-					final hinted = localHintLookup(name);
-					if (hinted != null) {
-						final hintedS = hinted.toString();
-						if (hintedS.length > 0 && hintedS != "Dynamic" && hintedS != "Unknown" && hintedS != "Array")
-							return hintedS;
-					}
-					final lowered = ocamlValueIdent(name);
-					if (lowered != name) {
-						final loweredHint = localHintLookup(lowered);
-						if (loweredHint != null) {
-							final loweredHintS = loweredHint.toString();
-							if (loweredHintS.length > 0 && loweredHintS != "Dynamic" && loweredHintS != "Unknown" && loweredHintS != "Array")
-								return loweredHintS;
-						}
-					}
-				}
-			}
-			return ts;
-		}
-
-		inline function readIdent(name:String):String {
-			return ocamlReadValueIdent(name);
-		}
-
-		inline function isInt64TypeName(t:String):Bool {
-			if (t == null)
-				return false;
-			final trimmed = StringTools.trim(t);
-			if (trimmed.length == 0)
-				return false;
-			return trimmed == "haxe.Int64"
-				|| trimmed == "Int64"
-				|| StringTools.endsWith(trimmed, ".Int64")
-				|| StringTools.endsWith(trimmed, "_Int64")
-				|| trimmed.indexOf("Int64") >= 0;
-		}
-
-		function isInt64Expr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EIdent(name):
-					isInt64TypeName(tyForIdent(name));
-				case EUnop("!", inner):
-					isInt64Expr(inner);
-				case ECall(EField(EIdent(owner), field), _args): (owner == "Int64" || owner == "haxe.Int64") && (field == "make" || field == "ofInt"
-						|| field == "parseString" || field == "add" || field == "sub" || field == "mul" || field == "neg" || field == "div" || field == "mod"
-						|| field == "divMod");
-				case EField(inner, field): isInt64Expr(inner) && (field == "high" || field == "low" || field == "quotient" || field == "modulus");
-				case EBinop(op, a, b)
-					if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>"
-						|| op == ">>>"): isInt64Expr(a) || isInt64Expr(b);
-				case ETernary(_cond, thenExpr, elseExpr): isInt64Expr(thenExpr) && isInt64Expr(elseExpr);
-				case ECast(inner, _):
-					isInt64Expr(inner);
-				case EUntyped(inner):
-					isInt64Expr(inner);
-				case _:
-					false;
-			}
-		}
-
-		function isIntExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EInt(_):
-					true;
-				case EIdent(name): final t = tyForIdent(name); t == "Int" || (isMutableLocalRefIdent(name)
-						&& (t == "" || t == "Dynamic" || t == "Unknown"));
-				case EBinop(op, a,
-					b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"): // Best-effort: propagate int-ness through arithmetic when both sides look int-ish.
-					isIntExpr(a)
-					&& isIntExpr(b);
-				case ETernary(_cond, thenExpr, elseExpr): isIntExpr(thenExpr) && isIntExpr(elseExpr);
-				case _:
-					false;
-			}
-		}
-
-		function isUnknownNumericIdent(expr:HxExpr):Bool {
-			// Stage3 bring-up heuristic:
-			// when one side of an arithmetic op is definitely `Int` and the other side is an
-			// identifier we only know as broad/unknown, prefer integer lowering over poison.
-			//
-			// This keeps common patterns like `% modulus` viable when local inference has not yet
-			// propagated a precise type for `modulus`.
-			return switch (expr) {
-				case EIdent(name): final t = tyForIdent(name); t == "" || t == "Dynamic" || t == "Unknown" || t == "Array" || isMutableLocalRefIdent(name);
-				case _:
-					false;
-			}
-		}
-
-		function isInfNanFieldExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EField(_, field): field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN";
-				case ECast(inner, _):
-					isInfNanFieldExpr(inner);
-				case EUntyped(inner):
-					isInfNanFieldExpr(inner);
-				case _:
-					false;
-			}
-		}
-
-		function isPositiveInfinityFieldExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EField(_, field): field == "iNF" || field == "INF" || field == "inf";
-				case ECast(inner, _):
-					isPositiveInfinityFieldExpr(inner);
-				case EUntyped(inner):
-					isPositiveInfinityFieldExpr(inner);
-				case _:
-					false;
-			}
-		}
-
-		function isFloatExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EFloat(_):
-					true;
-				case _ if (isInfNanFieldExpr(expr)):
-					// Stage 3 bring-up: INF/NAN-style constants (e.g. `php.Const.INF`) are float-typed.
-					true;
-				case EIdent(name):
-					tyForIdent(name) == "Float";
-				case EBinop("/", a, b): // Division yields Float for numeric Int/Float operands in Haxe.
-					// For non-numeric/abstract cases we collapse emission to bring-up poison, so
-					// we only treat it as float-ish when both sides look numeric.
-					!(isInt64Expr(a) || isInt64Expr(b)) && (isFloatExpr(a) || isFloatExpr(b) || (isIntExpr(a) && isIntExpr(b)));
-				case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*"): // Best-effort: propagate float-ness through arithmetic.
-					isFloatExpr(a) || isFloatExpr(b);
-				case ETernary(_cond, thenExpr, elseExpr): isFloatExpr(thenExpr) && isFloatExpr(elseExpr);
-				case _:
-					false;
-			}
-		}
-
-		function isStringExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EString(_):
-					true;
-				case ECall(EField(EIdent("Std"), "string"), _):
-					// `Std.string(...)` is the canonical "stringify anything" helper in Haxe.
-					// Treat it as string-y so `Std.string(a) + Std.string(b)` lowers to `^`.
-					true;
-				case ECall(EField(_obj, "toString"), []):
-					// `x.toString()` always yields a string in Haxe.
-					true;
-				case ECall(EField(EIdent("StringTools"), "hex"), _):
-					// Stage 3 bring-up: treat `StringTools.hex(...)` as string-y so `+` concatenations
-					// lower to OCaml `^` instead of numeric `+`.
-					true;
-				case EIdent(name):
-					tyForIdent(name) == "String";
-				case EBinop("+", a, b): // String concatenation is represented as `+` in Haxe, but Stage3 typing info is often
-					// incomplete for nested expressions. Recursing avoids emitting OCaml `+` between strings.
-					isStringExpr(a) || isStringExpr(b);
-				case ETernary(_cond, thenExpr, elseExpr): isStringExpr(thenExpr) && isStringExpr(elseExpr);
-				case _:
-					false;
-			}
-		}
-
-		function isBoolExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EBool(_):
-					true;
-				case EIdent(name):
-					tyForIdent(name) == "Bool";
-				case EUnop("!", inner):
-					isBoolExpr(inner);
-				case EBinop(op, _, _): op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=" || op == "&&" || op == "||";
-				case ETernary(_cond, thenExpr, elseExpr): isBoolExpr(thenExpr) && isBoolExpr(elseExpr);
-				case _:
-					false;
-			}
-		}
-
-		function isNullableIntExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case ENull:
-					true;
-				case ECall(EField(EIdent("Std"), "parseInt"), [_]):
-					true;
-				case ETernary(_cond, thenExpr, elseExpr): isNullableIntExpr(thenExpr) || isNullableIntExpr(elseExpr);
-				case _:
-					false;
-			}
-		}
-
-		function exprToOcamlNullableInt(expr:HxExpr):String {
-			return switch (expr) {
-				case ENull:
-					"HxRuntime.hx_null";
-				case EInt(_):
-					"Obj.repr (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-						callSigByCallee) + ")";
-				case _:
-					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-			}
-		}
-
-		inline function emitUnknownLength(o:String):String {
-			// Reuse the bound `Obj.t` for dynamic casts instead of re-emitting `o`.
-			// This matters when `o` is the bring-up placeholder `(Obj.magic 0)`: re-emitting it
-			// under a cast can make OCaml infer the placeholder argument itself as `Obj.t`.
-			return "(let __hx_len_obj = Obj.repr ("
-				+ o
-				+ ") in "
-				+ "if Obj.is_int __hx_len_obj then HxBootArray.length ((Obj.obj __hx_len_obj : _ HxBootArray.t)) "
-				+ "else if Obj.tag __hx_len_obj = Obj.string_tag then HxString.length ((Obj.obj __hx_len_obj : string)) "
-				+ "else HxBootArray.length ((Obj.obj __hx_len_obj : _ HxBootArray.t)))";
-		}
-
-		function isSysIoProcessExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EIdent(name): final t = tyForIdent(name); t == "sys.io.Process" || t == "sys.io.Process.Process";
-				case ECast(inner, _hint):
-					isSysIoProcessExpr(inner);
-				case _:
-					false;
-			}
-		}
-
-		inline function intBinopCall(op:String, left:String, right:String):String {
-			return switch (op) {
-				case "+":
-					"(HxInt.add (" + left + ") (" + right + "))";
-				case "-":
-					"(HxInt.sub (" + left + ") (" + right + "))";
-				case "*":
-					"(HxInt.mul (" + left + ") (" + right + "))";
-				case "%":
-					"(HxInt.rem (" + left + ") (" + right + "))";
-				case _:
-					"(Obj.magic 0)";
-			}
-		}
-
-		function isLikelyArrayExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EArrayDecl(_):
-					true;
-				case EIdent(name): final t = tyForIdent(name); t == "Array" || StringTools.startsWith(t, "Array<");
-				case ECall(EField(inner, "toArray"), []):
-					isLikelyArrayExpr(inner);
-				case ECall(EField(inner, "copy"), []):
-					isLikelyArrayExpr(inner);
-				case ECall(EField(inner, "concat"), [_]):
-					isLikelyArrayExpr(inner);
-				case ECall(EField(inner, "map"), [_]):
-					isLikelyArrayExpr(inner);
-				case _:
-					false;
-			}
-		}
-
-		function isStringArrayTypeText(rawType:String):Bool {
-			if (rawType == null || rawType.length == 0)
-				return false;
-			final normalized = StringTools.replace(rawType, " ", "");
-			return normalized == "Array<String>" || StringTools.startsWith(normalized, "Array<String>");
-		}
-
-		function isLikelyStringArrayExpr(expr:HxExpr):Bool {
-			return switch (expr) {
-				case EArrayDecl(values):
-					if (values == null || values.length == 0) {
-						true;
-					} else {
-						var allString = true;
-						for (valueExpr in values)
-							if (!isStringExpr(valueExpr)) {
-								allString = false;
-								break;
-							}
-						allString;
-					}
-				case EIdent(name):
-					isStringArrayTypeText(tyForIdent(name));
-				case ECall(EField(inner, "toArray"), []):
-					isLikelyStringArrayExpr(inner);
-				case ECall(EField(inner, "copy"), []):
-					isLikelyStringArrayExpr(inner);
-				case ECall(EField(inner, "concat"), [other]): isLikelyStringArrayExpr(inner) && isLikelyStringArrayExpr(other);
-				case ECast(inner, _):
-					isLikelyStringArrayExpr(inner);
-				case EUntyped(inner):
-					isLikelyStringArrayExpr(inner);
-				case _:
-					false;
-			}
-		}
-
-		function metalArrayLiteralCategory(expr:HxExpr):String {
-			if (isStringExpr(expr))
-				return "string";
-			if (isFloatExpr(expr))
-				return "float";
-			if (isIntExpr(expr))
-				return "int";
-			if (isBoolExpr(expr))
-				return "bool";
-			return "";
-		}
-
-		/** Keep the bootstrap/stage0 call boundary erased here so callers stay typed and generated ML stops wrapping map args with `Obj.repr`. */
-		function extendTyByIdent<TTy>(ty:TTy, name:String, t:TyType):Map<String, TyType> {
-			final out = new Map<String, TyType>();
-			final keys = mapKeysRaw(ty);
-			if (keys != null)
-				for (k in keys) {
-					final existing = mapGetRaw(ty, k);
-					if (existing != null)
-						out.set(k, existing);
-				}
-			out.set(name, t);
-			return out;
-		}
-
-		/** Keep the bootstrap/stage0 call boundary erased here so callers stay typed and generated ML stops wrapping map args with `Obj.repr`. */
-		function extendTyByIdentMany<TTy>(ty:TTy, names:Array<String>, t:TyType):Map<String, TyType> {
-			final out = new Map<String, TyType>();
-			final keys = mapKeysRaw(ty);
-			if (keys != null)
-				for (k in keys) {
-					final existing = mapGetRaw(ty, k);
-					if (existing != null)
-						out.set(k, existing);
-				}
-			if (names != null)
-				for (n in names)
-					out.set(n, t);
-			return out;
-		}
-
-		function exprToOcamlForConcat(expr:HxExpr):String {
-			// Best-effort: keep concatenation type-safe by stringifying obvious primitives.
-			// For complex expressions we assume the caller is already producing a string.
-			return switch (expr) {
-				case EInt(_), EFloat(_), EBool(_), EIdent(_):
-					exprToOcamlString(expr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-				case _:
-					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-			}
-		}
-
-		function exprToOcamlAsFloatValue(expr:HxExpr):String {
-			// Best-effort numeric coercion: promote obvious Ints to float.
-			return switch (expr) {
-				case EInt(v):
-					"float_of_int " + Std.string(v);
-				case EUnop("-", inner):
-					// Make sure negative int literals become floats in float contexts.
-					"(-.(" + exprToOcamlAsFloatValue(inner) + "))";
-				case EIdent(name) if (tyForIdent(name) == "Int"):
-					"float_of_int " + readIdent(name);
-				case _ if (isInfNanFieldExpr(expr)):
-					"(Obj.magic (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass) + ") : float)";
-				case _:
-					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-			}
-		}
-
 		final coreIntrinsic = tryExprToOcamlStage3CoreIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 			moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		if (coreIntrinsic != null)
 			return coreIntrinsic;
 
+		final numericStringIntrinsic = tryExprToOcamlStage3NumericStringIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
+			currentPackagePath, moduleNameByPkgAndClassRaw);
+		if (numericStringIntrinsic != null)
+			return numericStringIntrinsic;
+
 		return switch (e) {
-			case ECall(EField(EIdent("Math"), "abs"), [arg]):
-				// Best-effort numeric abs. Prefer float when the expression looks float-typed.
-				(isFloatExpr(arg) ? "abs_float " : (isIntExpr(arg) ? "abs " : "abs_float "))
-					+ "("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case ECall(EField(EIdent("Math"), "round"), [arg]):
-				// Bring-up: good-enough rounding for positive values (used by RunCi timing logs).
-				//
-				// NOTE: Haxe's `Math.round` handles negatives differently; for Gate bring-up the
-				// upstream harness uses `Timer.stamp()` deltas which are non-negative.
-				"(int_of_float (floor ((" + exprToOcamlAsFloatValue(arg) + ") +. 0.5)))";
 			case ELambda(_, _), ETryCatchRaw(_):
 				// Exhaustiveness fallback; normal handling returns from the pre-switch intrinsic helper.
 				"(Obj.magic 0)";
-
-			case ECall(EField(obj, "toString"), []) if (isStringExpr(obj)):
-				// Bring-up: in Haxe, `String.toString()` is an identity; mapping this avoids
-				// poisoning common patterns like `input.readAll().toString()`.
-				exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 
 			case EBool(v): v ? "true" : "false";
 			case EInt(v): Std.string(v);
@@ -2227,48 +2225,8 @@ class EmitterStage {
 				exprToOcamlArrayComprehension(name, iterable, yieldExpr, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 			case EField(obj, field):
-				// Stage 3 bring-up: model a couple of common "instance field" shapes that appear in
-				// orchestration code, without committing to a full object layout/runtime.
-				//
-				// - Array.length (via the bootstrap `HxBootArray` shim)
-				// - String.length (via the runtime `HxString` shim)
-				if (field == "length") {
-					final o = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-					if (isStringExpr(obj)) {
-						return "HxString.length (" + o + ")";
-					}
-					switch (obj) {
-						case EArrayDecl(_):
-							return "HxBootArray.length (" + o + ")";
-						case EIdent(name):
-							final t = tyForIdent(name);
-							if (t == "String")
-								return "HxString.length (" + o + ")";
-							if (StringTools.startsWith(t, "Array<"))
-								return "HxBootArray.length (" + o + ")";
-							return emitUnknownLength(o);
-						case _:
-					}
-				}
-
-				// Stage 3 bring-up: treat a few `sys.io.Process` fields as intrinsic accessors.
-				if (field == "stdout" && isSysIoProcessExpr(obj)) {
-					return "HxBootProcess.stdout ("
-						+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-						+ ")";
-				}
-				if (field == "stderr" && isSysIoProcessExpr(obj)) {
-					return "HxBootProcess.stderr ("
-						+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-						+ ")";
-				}
-
-				final staticField = tryExprToOcamlStage3StaticField(obj, field, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw);
-				staticField != null ? staticField : ("(Obj.magic (HxAnon.get (Obj.repr ("
-					+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-					+ ")) "
-					+ escapeOcamlString(field)
-					+ "))");
+				exprToOcamlStage3FieldAccess(obj, field, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
+					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 			case ECall(EIdent("__ocaml__"), [arg]):
 				// Stage 3 bring-up escape hatch: embed raw OCaml expression text.
 				//
@@ -2308,7 +2266,7 @@ class EmitterStage {
 						case EThis:
 							true;
 						case EIdent(name):
-							final t = tyForIdent(name);
+							final t = stage3TyForIdent(name, tyByIdentRaw);
 							!(t == "Int" || t == "Float" || t == "Bool" || t == "String");
 						case EField(_, _):
 							true;
@@ -2366,7 +2324,7 @@ class EmitterStage {
 							+ ") ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
-					case EField(obj, "directory") if (args.length == 0 && isStringExpr(obj)):
+					case EField(obj, "directory") if (args.length == 0 && stage3IsStringExpr(obj, tyByIdentRaw)):
 						return "Filename.dirname ("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ ")";
@@ -2394,7 +2352,7 @@ class EmitterStage {
 							+ ") ("
 							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
-					case EField(obj, "indexOf") if (args.length == 2 && isStringExpr(obj)):
+					case EField(obj, "indexOf") if (args.length == 2 && stage3IsStringExpr(obj, tyByIdentRaw)):
 						return "HxString.indexOf ("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ") ("
@@ -2402,7 +2360,7 @@ class EmitterStage {
 							+ ") ("
 							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
-					case EField(obj, "lastIndexOf") if (args.length == 2 && isStringExpr(obj)):
+					case EField(obj, "lastIndexOf") if (args.length == 2 && stage3IsStringExpr(obj, tyByIdentRaw)):
 						return "HxString.lastIndexOf ("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ") ("
@@ -2499,36 +2457,37 @@ class EmitterStage {
 							+ "else \"Linux\")";
 					// Stage 3 bring-up: `sys.io.Process.exitCode()` is used pervasively by RunCi to test
 					// whether subcommands succeeded. Map it to our bootstrap shim.
-					case EField(proc, "exitCode") if ((args.length == 0 || args.length == 1) && isSysIoProcessExpr(proc)):
+					case EField(proc, "exitCode") if ((args.length == 0 || args.length == 1)
+						&& stage3IsSysIoProcessExpr(proc, tyByIdentRaw)):
 						return "HxBootProcess.exitCode ("
 							+ exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
 					// Bring-up: `sys.io.Process.close()` exists for resource cleanup; our shim is eager
 					// and now flushes process state deterministically.
-					case EField(proc, "close") if (args.length == 0 && isSysIoProcessExpr(proc)):
+					case EField(proc, "close") if (args.length == 0 && stage3IsSysIoProcessExpr(proc, tyByIdentRaw)):
 						return "HxBootProcess.close ("
 							+ exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
 					// Bring-up: support terminating long-running server processes in RunCi orchestration.
-					case EField(proc, "kill") if (args.length == 0 && isSysIoProcessExpr(proc)):
+					case EField(proc, "kill") if (args.length == 0 && stage3IsSysIoProcessExpr(proc, tyByIdentRaw)):
 						return "HxBootProcess.kill ("
 							+ exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
 					// Bring-up: allow reading process output as a single string.
-					case EField(EField(proc, "stdout"), "readAll") if (args.length == 0 && isSysIoProcessExpr(proc)):
+					case EField(EField(proc, "stdout"), "readAll") if (args.length == 0 && stage3IsSysIoProcessExpr(proc, tyByIdentRaw)):
 						return "HxBootProcess.stdoutReadAll ("
 							+ exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
-					case EField(EField(proc, "stderr"), "readAll") if (args.length == 0 && isSysIoProcessExpr(proc)):
+					case EField(EField(proc, "stderr"), "readAll") if (args.length == 0 && stage3IsSysIoProcessExpr(proc, tyByIdentRaw)):
 						return "HxBootProcess.stderrReadAll ("
 							+ exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
 					// Bring-up: allow line-wise reads used by upstream `runci.System.getHaxelibPath`.
-					case EField(EField(proc, "stdout"), "readLine") if (args.length == 0 && isSysIoProcessExpr(proc)):
+					case EField(EField(proc, "stdout"), "readLine") if (args.length == 0 && stage3IsSysIoProcessExpr(proc, tyByIdentRaw)):
 						return "HxBootProcess.stdoutReadLine ("
 							+ exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
-					case EField(EField(proc, "stderr"), "readLine") if (args.length == 0 && isSysIoProcessExpr(proc)):
+					case EField(EField(proc, "stderr"), "readLine") if (args.length == 0 && stage3IsSysIoProcessExpr(proc, tyByIdentRaw)):
 						return "HxBootProcess.stderrReadLine ("
 							+ exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
@@ -2536,9 +2495,9 @@ class EmitterStage {
 					// commonly chained. Our shim returns a string already, so treat it as identity.
 					case EField(obj, "toString") if (args.length == 0):
 						switch (obj) {
-							case ECall(EField(EField(proc, "stdout"), "readAll"), []) if (isSysIoProcessExpr(proc)):
+							case ECall(EField(EField(proc, "stdout"), "readAll"), []) if (stage3IsSysIoProcessExpr(proc, tyByIdentRaw)):
 								return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-							case ECall(EField(EField(proc, "stderr"), "readAll"), []) if (isSysIoProcessExpr(proc)):
+							case ECall(EField(EField(proc, "stderr"), "readAll"), []) if (stage3IsSysIoProcessExpr(proc, tyByIdentRaw)):
 								return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 							case _:
 						}
@@ -2554,7 +2513,7 @@ class EmitterStage {
 								return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 									callSigByCallee);
 							case EIdent(name):
-								final t = tyForIdent(name);
+								final t = stage3TyForIdent(name, tyByIdentRaw);
 								if (t == "Array" || StringTools.startsWith(t, "Array<")) {
 									return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 										callSigByCallee);
@@ -2570,7 +2529,7 @@ class EmitterStage {
 									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 									+ ")";
 							case EIdent(name):
-								final t = tyForIdent(name);
+								final t = stage3TyForIdent(name, tyByIdentRaw);
 								if (StringTools.startsWith(t, "Array<")) {
 									return "HxBootArray.push ("
 										+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
@@ -2587,7 +2546,7 @@ class EmitterStage {
 									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 									+ ")";
 							case EIdent(name):
-								final t = tyForIdent(name);
+								final t = stage3TyForIdent(name, tyByIdentRaw);
 								if (StringTools.startsWith(t, "Array<")) {
 									return "HxBootArray.copy ("
 										+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
@@ -2606,7 +2565,7 @@ class EmitterStage {
 										callSigByCallee)
 									+ ")";
 							case EIdent(name):
-								final t = tyForIdent(name);
+								final t = stage3TyForIdent(name, tyByIdentRaw);
 								if (StringTools.startsWith(t, "Array<")) {
 									return "HxBootArray.concat ("
 										+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -2622,12 +2581,13 @@ class EmitterStage {
 						// Stage3 emit-runner: treat array `map` calls as runtime intrinsics so
 						// OCaml sees a direct function call instead of dynamic-field invocation
 						// with warning-as-error over-application.
-						if (isLikelyArrayExpr(obj)) {
+						if (stage3IsLikelyArrayExpr(obj, tyByIdentRaw)) {
 							final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
 							final mapper = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
-							final usePortableAutoMetalTypedMap = isPortableAutoMetalizedRegionActive() && isLikelyStringArrayExpr(obj);
+							final usePortableAutoMetalTypedMap = isPortableAutoMetalizedRegionActive()
+								&& stage3IsLikelyStringArrayExpr(obj, tyByIdentRaw);
 							if (isMetalProfileActive() || usePortableAutoMetalTypedMap) {
 								if (usePortableAutoMetalTypedMap)
 									markPortableAutoMetalizedLoweringUse("array_map_typed");
@@ -2636,14 +2596,15 @@ class EmitterStage {
 							return "HxBootArray.map_dyn (Obj.magic (" + receiver + ")) (Obj.repr (" + mapper + "))";
 						}
 					case EField(obj, "join") if (args.length == 1):
-						if (isLikelyArrayExpr(obj)) {
+						if (stage3IsLikelyArrayExpr(obj, tyByIdentRaw)) {
 							final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
 							final separator = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
-							final usePortableAutoMetalTypedJoin = isPortableAutoMetalizedRegionActive() && isLikelyStringArrayExpr(obj);
+							final usePortableAutoMetalTypedJoin = isPortableAutoMetalizedRegionActive()
+								&& stage3IsLikelyStringArrayExpr(obj, tyByIdentRaw);
 							if (isMetalProfileActive()) {
-								if (!isLikelyStringArrayExpr(obj)) {
+								if (!stage3IsLikelyStringArrayExpr(obj, tyByIdentRaw)) {
 									throw "stage3 emitter: metal profile unsupported semantics: Array.join requires Array<String> receiver";
 								}
 								return "HxBootArray.join_strict (" + receiver + ") (" + separator + ") (fun (s : string) -> s)";
@@ -2652,14 +2613,14 @@ class EmitterStage {
 								markPortableAutoMetalizedLoweringUse("array_join_typed");
 								return "HxBootArray.join_strict (" + receiver + ") (" + separator + ") (fun (s : string) -> s)";
 							}
-							if (isLikelyStringArrayExpr(obj)) {
+							if (stage3IsLikelyStringArrayExpr(obj, tyByIdentRaw)) {
 								return "HxBootArray.join (" + receiver + ") (" + separator + ") (fun (s : string) -> s)";
 							}
 							// Stage3 emit-runner: fallback for array-like receivers where type
 							// inference did not preserve `Array<String>` shape through chained calls.
 							return "HxBootArray.join_dyn (Obj.magic (" + receiver + ")) (" + separator + ")";
 						}
-					case EField(obj, "indexOf") if (args.length == 2 && isLikelyArrayExpr(obj)):
+					case EField(obj, "indexOf") if (args.length == 2 && stage3IsLikelyArrayExpr(obj, tyByIdentRaw)):
 						return "HxBootArray.indexOf ("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ ") ("
@@ -2667,7 +2628,7 @@ class EmitterStage {
 							+ ") ("
 							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ ")";
-					case EField(obj, "lastIndexOf") if (args.length == 2 && isLikelyArrayExpr(obj)):
+					case EField(obj, "lastIndexOf") if (args.length == 2 && stage3IsLikelyArrayExpr(obj, tyByIdentRaw)):
 						return "HxBootArray.lastIndexOf ("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ ") ("
@@ -2675,7 +2636,7 @@ class EmitterStage {
 							+ ") ("
 							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ ")";
-					case EField(obj, "slice") if (args.length == 2 && isLikelyArrayExpr(obj)):
+					case EField(obj, "slice") if (args.length == 2 && stage3IsLikelyArrayExpr(obj, tyByIdentRaw)):
 						return "HxBootArray.slice ("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ ") ("
@@ -2908,7 +2869,7 @@ class EmitterStage {
 								final parsed = ParserStage.parse(source, currentModuleFilePath);
 								final decl = parsed.getDecl();
 								final moduleTypeName = expectedMainClassFromFilePath(currentModuleFilePath);
-								final currentShortName = currentModuleShortName();
+								final currentShortName = currentModuleShortNameForStage3(currentPackagePath);
 								for (cls in HxModuleDecl.getClasses(decl)) {
 									final className = HxClassDecl.getName(cls);
 									if (className == null || className.length == 0 || className == "Unknown")
@@ -3207,7 +3168,7 @@ class EmitterStage {
 						"(not (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
 					case "-":
 						switch (expr) {
-							case _ if (isPositiveInfinityFieldExpr(expr)):
+							case _ if (stage3IsPositiveInfinityFieldExpr(expr)):
 								"neg_infinity";
 							case EField(EIdent("Math"), "POSITIVE_INFINITY"):
 								"neg_infinity";
@@ -3216,7 +3177,7 @@ class EmitterStage {
 								// parsed shape isn't reliably inferred as `Float` yet.
 								//
 								// Keep unary minus type-correct for INF/NAN-style constants used in php boot code.
-								final forceFloatUnop = isInfNanFieldExpr(expr) || switch (expr) {
+								final forceFloatUnop = stage3IsInfNanFieldExpr(expr) || switch (expr) {
 									case EField(EIdent("Math"), "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY"):
 										true;
 									case _:
@@ -3228,9 +3189,9 @@ class EmitterStage {
 								// (e.g. `addSuccesses(-x)` where `x` is currently lowered through Obj.magic).
 								final renderedExpr = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
 									moduleNameByPkgAndClass);
-								if (forceFloatUnop || isFloatExpr(expr)) {
+								if (forceFloatUnop || stage3IsFloatExpr(expr, tyByIdentRaw)) {
 									"(-.(" + renderedExpr + "))";
-								} else if (isIntExpr(expr)) {
+								} else if (stage3IsIntExpr(expr, tyByIdentRaw)) {
 									"(HxInt.neg (" + renderedExpr + "))";
 								} else {
 									"(-(" + renderedExpr + "))";
@@ -3256,8 +3217,8 @@ class EmitterStage {
 						case EUnop("-", inner):
 							// Promote negative int literals/expressions to float too.
 							"(-.(" + exprToOcamlAsFloat(inner) + "))";
-						case EIdent(name) if (tyForIdent(name) == "Int"):
-							"float_of_int " + readIdent(name);
+						case EIdent(name) if (stage3TyForIdent(name, tyByIdentRaw) == "Int"):
+							"float_of_int " + ocamlReadValueIdent(name);
 						case EField(_obj, "length"):
 							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 						case _:
@@ -3284,7 +3245,7 @@ class EmitterStage {
 				inline function exprToOcamlAsInt64(expr:HxExpr):String {
 					final rendered = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 						callSigByCallee);
-					return isInt64Expr(expr) ? rendered : ("Haxe_Int64.ofInt (" + rendered + ")");
+					return stage3IsInt64Expr(expr, tyByIdentRaw) ? rendered : ("Haxe_Int64.ofInt (" + rendered + ")");
 				}
 				inline function int64DivModField(field:String):String {
 					return "(Obj.magic (HxAnon.get (Obj.repr (Haxe_Int64.divMod (" + exprToOcamlAsInt64(a) + ") (" + exprToOcamlAsInt64(b) + "))) "
@@ -3321,29 +3282,38 @@ class EmitterStage {
 							case _:
 								"(Obj.magic 0)";
 						}
-					case "+" if (isStringExpr(a) || isStringExpr(b)):
-						"((" + exprToOcamlForConcat(a) + ") ^ (" + exprToOcamlForConcat(b) + "))";
+					case "+" if (stage3IsStringExpr(a, tyByIdentRaw) || stage3IsStringExpr(b, tyByIdentRaw)):
+						"(("
+						+ exprToOcamlForConcatStage3(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							callSigByCallee)
+						+ ") ^ ("
+						+ exprToOcamlForConcatStage3(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							callSigByCallee)
+						+ "))";
 					case "/":
-						if (isInt64Expr(a) || isInt64Expr(b)) {
+						if (stage3IsInt64Expr(a, tyByIdentRaw) || stage3IsInt64Expr(b, tyByIdentRaw)) {
 							int64DivModField("quotient");
 						} else {
 							// Bring-up compromise:
 							// - When both sides look numeric (`Int`/`Float`), follow Haxe and emit float division.
 							// - Otherwise, collapse to bring-up poison to avoid type errors for abstract/operator-
 							//   overloaded cases (e.g. upstream Int64 tests).
-							final aIsF = isFloatExpr(a);
-							final bIsF = isFloatExpr(b);
-							final aIsI = isIntExpr(a);
-							final bIsI = isIntExpr(b);
+							final aIsF = stage3IsFloatExpr(a, tyByIdentRaw);
+							final bIsF = stage3IsFloatExpr(b, tyByIdentRaw);
+							final aIsI = stage3IsIntExpr(a, tyByIdentRaw);
+							final bIsI = stage3IsIntExpr(b, tyByIdentRaw);
 							final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
-							final allowMetalFallback = metalNumeric && hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
+							final allowMetalFallback = metalNumeric
+								&& hasKnownNumericSide
+								&& !stage3IsStringExpr(a, tyByIdentRaw)
+								&& !stage3IsStringExpr(b, tyByIdentRaw);
 							if (allowMetalFallback && portableAutoMetalizedRegion && !isMetalProfileActive())
 								markPortableAutoMetalizedLoweringUse("numeric_division_fallback");
 							final allowNumericDivision = (aIsF || bIsF) || (aIsI && bIsI) || allowMetalFallback;
 							allowNumericDivision ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) + "))" : "(Obj.magic 0)";
 						}
 					case "+" | "-" | "*" | "%":
-						if (isInt64Expr(a) || isInt64Expr(b)) {
+						if (stage3IsInt64Expr(a, tyByIdentRaw) || stage3IsInt64Expr(b, tyByIdentRaw)) {
 							switch (op) {
 								case "+" | "-" | "*":
 									int64BinopCall(op);
@@ -3357,10 +3327,10 @@ class EmitterStage {
 							// - if both sides look like floats, use OCaml float operators,
 							// - if both sides look like ints, use OCaml int operators,
 							// - otherwise, collapse to bring-up poison to avoid type errors.
-							final aIsF = isFloatExpr(a);
-							final bIsF = isFloatExpr(b);
-							final aIsI = isIntExpr(a);
-							final bIsI = isIntExpr(b);
+							final aIsF = stage3IsFloatExpr(a, tyByIdentRaw);
+							final bIsF = stage3IsFloatExpr(b, tyByIdentRaw);
+							final aIsI = stage3IsIntExpr(a, tyByIdentRaw);
+							final bIsI = stage3IsIntExpr(b, tyByIdentRaw);
 							final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
 							// Portable lane parity: when one side is confidently numeric and the other side
 							// is an expression the current heuristic cannot classify, prefer numeric lowering
@@ -3368,7 +3338,9 @@ class EmitterStage {
 							//
 							// This keeps hot-path arithmetic (`Int + call()`, `Int * call()`, `Int % call()`)
 							// executable in portable mode while still rejecting obvious string concatenations.
-							final allowNumericFallback = hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
+							final allowNumericFallback = hasKnownNumericSide
+								&& !stage3IsStringExpr(a, tyByIdentRaw)
+								&& !stage3IsStringExpr(b, tyByIdentRaw);
 							final canFloat = (op == "+" || op == "-" || op == "*" || op == "/");
 							if (op == "%") {
 								if (aIsF || bIsF) {
@@ -3376,11 +3348,12 @@ class EmitterStage {
 									final fb = exprToOcamlAsFloat(b);
 									"(mod_float (" + fa + ") (" + fb + "))";
 								} else if (aIsI && bIsI) {
-									intBinopCall("%", la, rb);
-								} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
-									intBinopCall("%", la, rb);
+									intBinopCallStage3("%", la, rb);
+								} else if ((aIsI && stage3IsUnknownNumericIdent(b, tyByIdentRaw))
+									|| (bIsI && stage3IsUnknownNumericIdent(a, tyByIdentRaw))) {
+									intBinopCallStage3("%", la, rb);
 								} else if (allowNumericFallback) {
-									intBinopCall("%", la, rb);
+									intBinopCallStage3("%", la, rb);
 								} else {
 									"(Obj.magic 0)";
 								}
@@ -3396,29 +3369,30 @@ class EmitterStage {
 								final fb = exprToOcamlAsFloat(b);
 								"((" + fa + ") " + fop + " (" + fb + "))";
 							} else if (aIsI && bIsI) {
-								intBinopCall(op, la, rb);
-							} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
-								intBinopCall(op, la, rb);
+								intBinopCallStage3(op, la, rb);
+							} else if ((aIsI && stage3IsUnknownNumericIdent(b, tyByIdentRaw))
+								|| (bIsI && stage3IsUnknownNumericIdent(a, tyByIdentRaw))) {
+								intBinopCallStage3(op, la, rb);
 							} else if (allowNumericFallback) {
-								intBinopCall(op, la, rb);
+								intBinopCallStage3(op, la, rb);
 							} else {
 								"(Obj.magic 0)";
 							}
 						}
 					case "==":
-						if (isFloatExpr(a) || isFloatExpr(b)) {
+						if (stage3IsFloatExpr(a, tyByIdentRaw) || stage3IsFloatExpr(b, tyByIdentRaw)) {
 							"((" + exprToOcamlAsFloat(a) + ") = (" + exprToOcamlAsFloat(b) + "))";
 						} else {
 							"((" + la + ") = (" + rb + "))";
 						}
 					case "!=":
-						if (isFloatExpr(a) || isFloatExpr(b)) {
+						if (stage3IsFloatExpr(a, tyByIdentRaw) || stage3IsFloatExpr(b, tyByIdentRaw)) {
 							"((" + exprToOcamlAsFloat(a) + ") <> (" + exprToOcamlAsFloat(b) + "))";
 						} else {
 							"((" + la + ") <> (" + rb + "))";
 						}
 					case "<" | ">" | "<=" | ">=":
-						if (isFloatExpr(a) || isFloatExpr(b)) {
+						if (stage3IsFloatExpr(a, tyByIdentRaw) || stage3IsFloatExpr(b, tyByIdentRaw)) {
 							"((" + exprToOcamlAsFloat(a) + ") " + op + " (" + exprToOcamlAsFloat(b) + "))";
 						} else {
 							"((" + la + ") " + op + " (" + rb + "))";
@@ -3440,12 +3414,14 @@ class EmitterStage {
 				// Haxe `Std.parseInt` returns `Null<Int>`. In the OCaml runtime that is an
 				// `Obj.t` sentinel-or-boxed-int, so integer fallback branches in ternaries must
 				// be boxed too (e.g. `parts.length > 1 ? Std.parseInt(parts[1]) : 0`).
-				if (isNullableIntExpr(thenExpr) || isNullableIntExpr(elseExpr)) {"(if ("
+				if (stage3IsNullableIntExpr(thenExpr) || stage3IsNullableIntExpr(elseExpr)) {"(if ("
 					+ condCode
 					+ ") then ("
-					+ exprToOcamlNullableInt(thenExpr)
+					+ exprToOcamlNullableIntStage3(thenExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee)
 					+ ") else ("
-					+ exprToOcamlNullableInt(elseExpr)
+					+ exprToOcamlNullableIntStage3(elseExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee)
 					+ "))";
 				} else {"(if ("
 					+ condCode
@@ -3493,9 +3469,9 @@ class EmitterStage {
 						final branchExpr = exprs[idx];
 						final localTy = switch (pattern) {
 							case PBind(name):
-								extendTyByIdent(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
+								extendTyByIdentForStage3(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case _:
-								extendTyByIdentMany(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
 						};
 						final body = exprToOcaml(branchExpr, arityByIdent, localTy, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 							callSigByCallee);
@@ -3537,7 +3513,7 @@ class EmitterStage {
 						var expectedCategory:Null<String> = null;
 						final elems = new Array<String>();
 						for (valueExpr in values) {
-							final category = metalArrayLiteralCategory(valueExpr);
+							final category = stage3MetalArrayLiteralCategory(valueExpr, tyByIdentRaw);
 							if (category.length == 0) {
 								throw "stage3 emitter: metal profile unsupported semantics: array literals must use concrete element categories (string|int|float|bool)";
 							}
@@ -3565,7 +3541,7 @@ class EmitterStage {
 				//
 				// Route obvious string-key access through `HxAnon.get`; keep numeric/other
 				// indexing on the array shim.
-				if (isStringExpr(idx)) {if (isMetalProfileActive()) {
+				if (stage3IsStringExpr(idx, tyByIdentRaw)) {if (isMetalProfileActive()) {
 					throw "stage3 emitter: metal profile unsupported semantics: string-key indexing is not supported";
 				}
 					"(Obj.magic (HxAnon.get ("

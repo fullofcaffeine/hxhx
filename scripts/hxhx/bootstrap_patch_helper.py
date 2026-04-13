@@ -2775,7 +2775,7 @@ def cmd_patch_instance_call_preapplied_arity(argv: list[str]) -> None:
         return
     current_module_name_expr = (
         'let currentModuleNameForArity = (if !currentOcamlModuleName != Obj.magic (HxRuntime.hx_null) then (!currentOcamlModuleName : string) '
-        'else (currentModuleShortName () : string) : string) in '
+        'else (currentModuleShortNameForStage3 currentPackagePath : string) : string) in '
     )
 
     src, receiver_count = re.subn(
