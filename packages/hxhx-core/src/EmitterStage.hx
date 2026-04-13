@@ -2098,6 +2098,99 @@ class EmitterStage {
 		return null;
 	}
 
+	/**
+		Why:
+		Stage3 bootstrap emission is sensitive to large nested string-concat
+		expressions inside the emitter source. String call intrinsics are made of
+		repeated OCaml application shapes, so spelling each case as one long concat
+		creates avoidable lowering work.
+
+		What:
+		Small formatting helpers for OCaml function applications with already
+		lowered argument strings.
+
+		How:
+		Callers do recursive expression lowering first, then pass the resulting
+		OCaml snippets here. The helpers only assemble fixed application syntax and
+		do not inspect Haxe AST or type state.
+	**/
+	static function stage3OcamlCall1(fn:String, arg0:String):String {
+		return fn + " (" + arg0 + ")";
+	}
+
+	static function stage3OcamlCall2(fn:String, arg0:String, arg1:String):String {
+		return fn + " (" + arg0 + ") (" + arg1 + ")";
+	}
+
+	static function stage3OcamlCall3(fn:String, arg0:String, arg1:String, arg2:String):String {
+		return fn + " (" + arg0 + ") (" + arg1 + ") (" + arg2 + ")";
+	}
+
+	/**
+		Why:
+		The string-call intrinsic cluster is on the current `hxhx-full-emit`
+		timeout path. Keeping it inside the main `exprToOcaml` `ECall` switch
+		makes the Stage3 bootstrap compiler lower more nested branch logic before
+		it can make progress on the rest of `emitToDir`.
+
+		What:
+		Lowers the small set of String/StringTools instance calls that the Stage3
+		bring-up emitter already treats as repo-owned OCaml runtime intrinsics.
+
+		How:
+		This helper preserves the existing call order and uses the same recursive
+		`exprToOcaml` entry point as the old inline cases, but moves the pattern
+		matching and string assembly into a static helper so the main `ECall` body
+		stays smaller during bootstrap emission.
+	**/
+	static function tryExprToOcamlStage3StringCallIntrinsic(callee:HxExpr, args:Array<HxExpr>, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		switch (callee) {
+			case EField(obj, "split") if (args.length == 1):
+				final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final separator = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return stage3OcamlCall2("HxString.split", receiver, separator);
+			case EField(obj, "directory") if (args.length == 0 && stage3IsStringExpr(obj, tyByIdent)):
+				final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				return stage3OcamlCall1("Filename.dirname", receiver);
+			case EField(obj, "toLowerCase") if (args.length == 0):
+				final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return stage3OcamlCall1("HxString.toLowerCase", receiver) + " ()";
+			case EField(obj, "toUpperCase") if (args.length == 0):
+				final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return stage3OcamlCall1("HxString.toUpperCase", receiver) + " ()";
+			case EField(obj, "trim") if (args.length == 0):
+				final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return stage3OcamlCall1("Stdlib.String.trim", receiver);
+			case EField(EIdent("StringTools"), "trim") if (args.length == 1):
+				final value = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return stage3OcamlCall1("Stdlib.String.trim", value);
+			case EField(obj, "substr") if (args.length == 2):
+				final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final pos = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final len = exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return stage3OcamlCall3("HxString.substr", receiver, pos, len);
+			case EField(obj, "indexOf") if (args.length == 2 && stage3IsStringExpr(obj, tyByIdent)):
+				final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final needle = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final start = exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return stage3OcamlCall3("HxString.indexOf", receiver, needle, start);
+			case EField(obj, "lastIndexOf") if (args.length == 2 && stage3IsStringExpr(obj, tyByIdent)):
+				final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final needle = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final start = exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return stage3OcamlCall3("HxString.lastIndexOf", receiver, needle, start);
+			case EField(obj, "substring") if (args.length == 2):
+				final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final start = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final stop = exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return stage3OcamlCall3("HxString.substring", receiver, start, stop);
+			case _:
+		}
+		return null;
+	}
+
 	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		final tyByIdentRaw = tyByIdent;
@@ -2309,73 +2402,14 @@ class EmitterStage {
 				if (runtimeIntrinsic != null)
 					return runtimeIntrinsic;
 
+				final stringCallIntrinsic = tryExprToOcamlStage3StringCallIntrinsic(callee, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
+					currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+				if (stringCallIntrinsic != null)
+					return stringCallIntrinsic;
+
 				// Special-case a tiny slice of runtime I/O so bring-up server binaries can function
 				// before the full runtime is modeled. Cases that need local type predicates stay here.
 				switch (callee) {
-					// Stage 3 bring-up: string instance methods used by upstream-ish harness code.
-					//
-					// Note
-					// - Haxe lowers `s.split(",")` as an instance call.
-					// - Our Stage3 emitter does not implement general instance dispatch yet, so we treat
-					//   a few String methods as intrinsics backed by the repo-owned OCaml runtime.
-					case EField(obj, "split") if (args.length == 1):
-						return "HxString.split ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(obj, "directory") if (args.length == 0 && stage3IsStringExpr(obj, tyByIdentRaw)):
-						return "Filename.dirname ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-							+ ")";
-					case EField(obj, "toLowerCase") if (args.length == 0):
-						return "HxString.toLowerCase ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ()";
-					case EField(obj, "toUpperCase") if (args.length == 0):
-						return "HxString.toUpperCase ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ()";
-					case EField(obj, "trim") if (args.length == 0):
-						return "Stdlib.String.trim ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(EIdent("StringTools"), "trim") if (args.length == 1):
-						return "Stdlib.String.trim ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(obj, "substr") if (args.length == 2):
-						return "HxString.substr ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(obj, "indexOf") if (args.length == 2 && stage3IsStringExpr(obj, tyByIdentRaw)):
-						return "HxString.indexOf ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(obj, "lastIndexOf") if (args.length == 2 && stage3IsStringExpr(obj, tyByIdentRaw)):
-						return "HxString.lastIndexOf ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
-					case EField(obj, "substring") if (args.length == 2):
-						return "HxString.substring ("
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")";
 					case EField(sysObj, "println") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
 						return "print_endline ("
 							+ exprToOcamlString(args[0], tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
