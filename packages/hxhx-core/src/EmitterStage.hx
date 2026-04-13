@@ -1294,6 +1294,186 @@ class EmitterStage {
 
 	/**
 		Why:
+		Bare identifier lowering sits directly on the current hxhx-full-emit hot path
+		while this emitter self-emits. Keeping the branch body in a static helper
+		reduces the expression switch shape without changing identifier semantics.
+
+		What:
+		Lowers one `EIdent` using caller-computed context predicates. The helper
+		distinguishes bound method captures, locals, static methods, static imports,
+		uppercase value/type names, and final bring-up poison fallback.
+
+		How:
+		The caller owns context-sensitive lookups such as local type maps and mutable
+		ref tracking; this helper only applies the established precedence order and
+		emits the same OCaml snippets as the former inline switch branch.
+	**/
+	static function exprToOcamlIdentStage3(name:String, hasCurrentInstanceMethod:Bool, hasThisBinding:Bool, hasTyIdent:Bool, isMutableLocalRef:Bool,
+			hasArity:Bool, staticImportModule:String):String {
+		if (hasCurrentInstanceMethod && hasThisBinding) {
+			return ocamlValueIdent(name) + " (this_)";
+		}
+		if (hasTyIdent || isMutableLocalRef) {
+			return ocamlReadValueIdent(name);
+		}
+		if (hasArity) {
+			return ocamlValueIdent(name);
+		}
+		if (staticImportModule != null) {
+			return staticImportModule + "." + ocamlValueIdent(name);
+		}
+		if (isUpperStart(name)) {
+			return "(Obj.magic 0)";
+		}
+		return "(Obj.magic 0)";
+	}
+
+	/**
+		Why:
+		`ENew` lowering is another bulky expression-switch branch encountered while
+		Stage3 emits this file. Pulling it out keeps the self-emitted `exprToOcaml`
+		body smaller and avoids adding another generated-OCaml patch seam.
+
+		What:
+		Lowers the current Stage3-supported allocation subset: empty arrays,
+		`sys.io.Process`, and best-effort construction of current-module anonymous
+		object records with optional constructor invocation.
+
+		How:
+		Runtime-backed constructors use dedicated shims. Current-module class-like
+		constructors allocate `HxAnon`, initialize declared fields to null, then call
+		the generated `new` method when present, preserving the previous inline order.
+	**/
+	static function exprToOcamlNewStage3(typePath:String, args:Array<HxExpr>, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):String {
+		if (typePath == "Array" && args.length == 0) {
+			return "HxBootArray.create ()";
+		}
+		if ((typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && (args.length == 2 || args.length == 3)) {
+			return "HxBootProcess.spawn ("
+				+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+				+ ") ("
+				+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+				+ ")";
+		}
+		final fields = currentInstanceFieldsFor(typePath);
+		if (fields == null)
+			return "(Obj.magic 0)";
+		final ctorMethods = currentInstanceMethodsFor(typePath);
+		final ctorName = ocamlValueIdent("new");
+		final argCodes = args.map(a -> "("
+			+ exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+			+ ")");
+		final ctorCall = hasMethodName(ctorMethods,
+			"new") ? ("ignore (" + ctorName + " (__hx_obj)" + (argCodes.length == 0 ? "" : (" " + argCodes.join(" "))) + ")") : "()";
+		final initStmts = new Array<String>();
+		for (f in fields) {
+			final fieldName = HxFieldDecl.getName(f);
+			if (fieldName == null || fieldName.length == 0)
+				continue;
+			initStmts.push("HxAnon.set (Obj.repr __hx_obj) " + escapeOcamlString(fieldName) + " HxRuntime.hx_null");
+		}
+		return "(let __hx_obj = HxAnon.create () in "
+			+ (initStmts.length == 0 ? "" : (initStmts.join("; ") + "; "))
+			+ ctorCall
+			+ "; __hx_obj)";
+	}
+
+	/**
+		Why:
+		The Stage3 full-emit trace repeatedly lands in the large core-intrinsic
+		cluster inside `exprToOcaml`. These rewrites do not need the caller's local
+		type predicates, so they can live outside the main expression switch.
+
+		What:
+		Handles bring-up-only `Reflect`/`Type`, narrow `StringTools`, `Std`, common
+		extension filesystem calls, and basic print intrinsics. Returns `null` when
+		normal expression lowering must continue.
+
+		How:
+		The helper preserves the old branch order and delegates recursive operands
+		back through `exprToOcaml` / `exprToOcamlString` with the same context maps.
+	**/
+	static function tryExprToOcamlStage3CoreIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		switch (e) {
+			case ECall(EField(EIdent("Reflect"), "fields"), [_obj]):
+				return "(Obj.magic 0)";
+			case ECall(EField(EIdent("Reflect"), "field"), [_obj, _name]):
+				return "(Obj.magic 0)";
+			case ECall(EField(EIdent("Reflect"), "getProperty"), [_obj, _name]):
+				return "(Obj.magic 0)";
+			case ECall(EField(EIdent("Reflect"), "setProperty"), [_obj, _name, _value]):
+				return "(Obj.magic 0)";
+			case ECall(EField(EIdent("Reflect"), "hasField"), [_obj, _name]):
+				return "false";
+			case ECall(EField(EIdent("Reflect"), "isFunction"), [_obj]):
+				return "true";
+			case ECall(EField(EIdent("Type"), "getClass"), [_obj]):
+				return "(Obj.magic 0)";
+			case ECall(EField(EIdent("Type"), "getInstanceFields"), [_cls]):
+				return "(Obj.magic 0)";
+			case ECall(EField(EIdent("Type"), "getClassName"), [_cls]):
+				return escapeOcamlString("");
+			case ECall(EField(EIdent("Type"), "getEnumName"), [_enm]):
+				return escapeOcamlString("");
+			case ECall(EField(EIdent("Type"), "typeof"), [_v]):
+				return "(Obj.magic 0)";
+			case ECall(EField(_obj, "set_low"), [_v]):
+				return "()";
+			case ECall(EField(_obj, "set_high"), [_v]):
+				return "()";
+			case ECall(EField(EIdent("StringTools"), "fastCodeAt"), [s, idx]) | ECall(EField(EIdent("StringTools"), "unsafeCodeAt"), [s, idx]):
+				final s2 = exprToOcaml(s, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final i2 = exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				return "(let __s = ("
+					+ s2
+					+ ") in "
+					+ "let __i = ("
+					+ i2
+					+ ") in "
+					+ "if (__i < 0) || (__i >= Stdlib.String.length __s) then (-1) else (Char.code (Stdlib.String.get __s __i)))";
+			case ECall(EField(EIdent("StringTools"), "hex"), [n]):
+				return "StringTools.hex ("
+					+ exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ") (0)";
+			case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
+				return escapeOcamlString("");
+			case ECall(EField(EIdent("Std"), "is"), [_v, _t]):
+				return "true";
+			case ECall(EField(EIdent("Std"), "string"), [arg]):
+				return "Std.string (Obj.repr ("
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ "))";
+			case ECall(EField(EIdent("Std"), "downcast"), [_value, _cls]):
+				return "(Obj.magic HxRuntime.hx_null)";
+			case ECall(EField(_obj, "exists"), []):
+				return "true";
+			case ECall(EField(_obj, "readDirectory"), []):
+				return "(Obj.magic 0)";
+			case ECall(EField(_obj, "isDirectory"), []):
+				return "false";
+			case ECall(EIdent("trace"), [arg]):
+				return "print_endline ("
+					+ exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ")";
+			case ECall(EField(EIdent("Sys"), "println"), [arg]):
+				return "print_endline ("
+					+ exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ")";
+			case ECall(EField(EIdent("Sys"), "print"), [arg]):
+				return "print_string ("
+					+ exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ")";
+			case _:
+		}
+		return null;
+	}
+
+	/**
+		Why:
 		Stage3 full-body emission lowers this source file with the current committed
 		bootstrap compiler, so large local switch bodies inside `exprToOcaml` become
 		a direct bootstrap cost. These early runtime intrinsics are independent of
@@ -1918,6 +2098,11 @@ class EmitterStage {
 			}
 		}
 
+		final coreIntrinsic = tryExprToOcamlStage3CoreIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
+			moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+		if (coreIntrinsic != null)
+			return coreIntrinsic;
+
 		return switch (e) {
 			// Stage 3 bring-up: map a tiny set of Haxe `Math` statics to OCaml primitives.
 			//
@@ -2032,109 +2217,6 @@ class EmitterStage {
 			case EField(EIdent("Math"), "PI"):
 				"(4.0 *. atan 1.0)";
 
-			// Stage 3 bring-up: avoid emitting unbound `Reflect.*` / `Type.*` calls in the bootstrap
-			// emitter output. Upstream-ish unit code (e.g. utest) uses reflection helpers heavily.
-			//
-			// This is not semantic; it exists only to keep the emit+build rung compiling so we can
-			// iterate on the real backend/typer/macro model.
-			case ECall(EField(EIdent("Reflect"), "fields"), [_obj]):
-				"(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "field"), [_obj, _name]):
-				"(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "getProperty"), [_obj, _name]):
-				"(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "setProperty"), [_obj, _name, _value]):
-				"(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "hasField"), [_obj, _name]):
-				"false";
-			case ECall(EField(EIdent("Reflect"), "isFunction"), [_obj]):
-				"true";
-			case ECall(EField(EIdent("Type"), "getClass"), [_obj]):
-				"(Obj.magic 0)";
-			case ECall(EField(EIdent("Type"), "getInstanceFields"), [_cls]):
-				"(Obj.magic 0)";
-			case ECall(EField(EIdent("Type"), "getClassName"), [_cls]):
-				escapeOcamlString("");
-			case ECall(EField(EIdent("Type"), "getEnumName"), [_enm]):
-				escapeOcamlString("");
-			case ECall(EField(EIdent("Type"), "typeof"), [_v]):
-				"(Obj.magic 0)";
-
-			case ECall(EField(_obj, "set_low"), [_v]):
-				"()";
-			case ECall(EField(_obj, "set_high"), [_v]):
-				"()";
-
-			// Stage 3 bring-up: `haxe.io.Bytes` and other stdlib code frequently call
-			// `StringTools.fastCodeAt(s, i)` / `StringTools.unsafeCodeAt(s, i)`.
-			//
-			// In upstream Haxe these are typically `inline` and lower to a target primitive,
-			// but the Stage3 bootstrap compiler does not implement inlining.
-			//
-			// Instead of requiring a full `StringTools` module in the emitted program,
-			// map them to OCaml primitives directly.
-			case ECall(EField(EIdent("StringTools"), "fastCodeAt"), [s, idx]), ECall(EField(EIdent("StringTools"), "unsafeCodeAt"), [s, idx]):
-				final s2 = exprToOcaml(s, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-				final i2 = exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-				"(let __s = ("
-				+ s2
-				+ ") in "
-				+ "let __i = ("
-				+ i2
-				+ ") in "
-				+ "if (__i < 0) || (__i >= Stdlib.String.length __s) then (-1) else (Char.code (Stdlib.String.get __s __i)))";
-
-			// Stage 3 bring-up: `StringTools.hex(n)` is used in upstream unit code but our
-			// bootstrap emitter doesn't model optional parameters.
-			//
-			// Haxe: `hex(n, ?digits)` defaults `digits` to 0.
-			// OCaml: we emit a fixed-arity `StringTools.hex n digits`, so supply `0` when omitted.
-			case ECall(EField(EIdent("StringTools"), "hex"), [n]):
-				"StringTools.hex (" + exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee) + ") (0)";
-
-			case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
-				// Bring-up: avoid needing a real `StringTools` implementation in the Stage3 emitter output.
-				escapeOcamlString("");
-
-			case ECall(EField(EIdent("Std"), "is"), [_v, _t]):
-				// Bring-up: type tests require RTTI/runtime; keep compilation moving.
-				"true";
-			case ECall(EField(EIdent("Std"), "string"), [arg]):
-				// Stage 3 bring-up: generated `Std.string` expects an `Obj.t`.
-				//
-				// Without this explicit `Obj.repr`, primitive-typed placeholder shims (e.g. Int64)
-				// can trigger type mismatches in upstream-shaped tests that call `Std.string(...)`.
-				"Std.string (Obj.repr (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee) + "))";
-			case ECall(EField(EIdent("Std"), "downcast"), [_value, _cls]):
-				// Bring-up: `Std.downcast` requires RTTI/class objects. We don't model those in the
-				// Stage3 emitter output yet, so collapse to `null`.
-				"(Obj.magic HxRuntime.hx_null)";
-
-			// Bring-up: extension-method style filesystem calls (via `using sys.FileSystem`) appear
-			// in macro code. The Stage3 emitter doesn't implement `using`, so we rewrite these
-			// instance-call shapes to stubs to keep OCaml compilation moving.
-			case ECall(EField(_obj, "exists"), []):
-				"true";
-			case ECall(EField(_obj, "readDirectory"), []):
-				"(Obj.magic 0)";
-			case ECall(EField(_obj, "isDirectory"), []):
-				"false";
-
-			// Stage 3 "full body" rung: map common output calls to OCaml printing.
-			//
-			// This is *not* a real stdlib/runtime mapping; it's a bootstrap convenience so we can
-			// observe that emitted function bodies are actually executing.
-			case ECall(EIdent("trace"), [arg]):
-				"print_endline (" + exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee) + ")";
-			case ECall(EField(EIdent("Sys"), "println"), [arg]):
-				"print_endline (" + exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee) + ")";
-			case ECall(EField(EIdent("Sys"), "print"), [arg]):
-				"print_string (" + exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee) + ")";
 			case ECall(EField(obj, "toString"), []) if (isStringExpr(obj)):
 				// Bring-up: in Haxe, `String.toString()` is an identity; mapping this avoids
 				// poisoning common patterns like `input.readAll().toString()`.
@@ -2145,41 +2227,8 @@ class EmitterStage {
 			case EFloat(v): Std.string(v);
 			case EString(v): escapeOcamlString(v);
 			case EIdent(name):
-				if (hasCurrentInstanceMethod(name) && hasThisBinding()) {
-					// Instance-method value reference (e.g. `fields.map(printField)` inside an
-					// instance method) must capture `this`.
-					//
-					// Emit a partially-applied function (`printField this_`) so OCaml sees the same
-					// callback arity as Haxe's bound-method semantics.
-					ocamlValueIdent(name) + " (this_)";
-				} else if (hasTyIdent(name)) {
-					// Bound identifier (parameter / local / bring-up-allowed static field).
-					readIdent(name);
-				} else if (isMutableLocalRefIdent(name)) {
-					// Reassigned locals are emitted as `ref`s even when best-effort type tracking is
-					// broad. Keep reads live instead of collapsing them to bring-up poison.
-					readIdent(name);
-				} else if (hasArity(name)) {
-					// Static method call within the same generated module becomes a top-level OCaml binding.
-					ocamlValueIdent(name);
-				} else if (staticImportModule(name) != null) {
-					// Stage 3 bring-up: approximate `import Foo.Bar.*` (static wildcard imports).
-					final moduleName = staticImportModule(name);
-					moduleName + "." + ocamlValueIdent(name);
-				} else if (isUpperStart(name)) {
-					// Stage 3 bring-up: a bare uppercase identifier is almost always an enum constructor
-					// or class/abstract value in Haxe (e.g. `UTF8`). OCaml treats this as a data
-					// constructor and will fail with "Unbound constructor" unless we model the type.
-					//
-					// For the bootstrap emitter, collapse these to the escape hatch. Module/static
-					// references like `String.fromCharCode` are handled by `EField(EIdent("String"), ...)`.
-					"(Obj.magic 0)";
-				} else {
-					// Stage 3 bring-up: unqualified instance fields (e.g. `length` inside `haxe.io.Bytes`)
-					// parse as identifiers, but OCaml needs an explicit binding. Until we model `this`
-					// field access, collapse free identifiers to a bootstrap escape hatch.
-					"(Obj.magic 0)";
-				}
+				exprToOcamlIdentStage3(name, hasCurrentInstanceMethod(name), hasThisBinding(), hasTyIdent(name), isMutableLocalRefIdent(name), hasArity(name),
+					staticImportModule(name));
 			case EThis:
 				// Stage 3 full-body bring-up: instance methods bind an explicit `this` parameter.
 				// If we are outside that context, conservatively collapse to poison.
@@ -2194,38 +2243,8 @@ class EmitterStage {
 				// Bring-up: lower enum-like value tags (e.g. `Macro`) to a stable string.
 				escapeOcamlString(name);
 			case ENew(typePath, args):
-				// Stage 3 bring-up: support a tiny subset of allocations used by orchestration code.
-				//
-				// Today we special-case `sys.io.Process` so RunCi-like workloads can actually spawn
-				// the `haxe` subcommands (routed through the Gate2 wrapper).
-				(typePath == "Array" && args.length == 0) ? "HxBootArray.create ()" : (typePath == "sys.io.Process" || typePath == "sys.io.Process.Process")
-					&& (args.length == 2 || args.length == 3) ? ("HxBootProcess.spawn ("
-						+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-						+ ") ("
-						+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-						+ ")") : (function() {
-							final fields = currentInstanceFieldsFor(typePath);
-							if (fields == null)
-								return "(Obj.magic 0)";
-							final ctorMethods = currentInstanceMethodsFor(typePath);
-							final ctorName = ocamlValueIdent("new");
-							final argCodes = args.map(a -> "("
-								+ exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-								+ ")");
-							final ctorCall = (hasMethodName(ctorMethods,
-								"new")) ? ("ignore (" + ctorName + " (__hx_obj)" + (argCodes.length == 0 ? "" : (" " + argCodes.join(" "))) + ")") : "()";
-							final initStmts = new Array<String>();
-							for (f in fields) {
-								final fieldName = HxFieldDecl.getName(f);
-								if (fieldName == null || fieldName.length == 0)
-									continue;
-								initStmts.push("HxAnon.set (Obj.repr __hx_obj) " + escapeOcamlString(fieldName) + " HxRuntime.hx_null");
-							}
-							return "(let __hx_obj = HxAnon.create () in "
-								+ (initStmts.length == 0 ? "" : (initStmts.join("; ") + "; "))
-								+ ctorCall
-								+ "; __hx_obj)";
-						})();
+				exprToOcamlNewStage3(typePath, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+					callSigByCalleeRaw);
 			case EArrayComprehension(name, iterable, yieldExpr):
 				exprToOcamlArrayComprehension(name, iterable, yieldExpr, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);

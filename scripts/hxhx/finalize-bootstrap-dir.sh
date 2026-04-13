@@ -267,6 +267,13 @@ patch_bootstrap_emitter_type_create_instance() {
     return 0
   fi
 
+  # The payload is marker-only. Newer source-shaped output can legitimately move
+  # or remove the old getClass anchor, so do not fail bootstrap finalization just
+  # to insert a non-semantic marker.
+  if ! file_contains_literal "$anchor" "$emitter_path"; then
+    return 0
+  fi
+
   insert_bootstrap_patch_before_anchor \
     "$emitter_path" \
     "$temp_path" \
