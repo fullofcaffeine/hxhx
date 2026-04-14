@@ -1714,7 +1714,7 @@ class Stage3Compiler {
 		final typerIndex = TyperIndex.build(resolvedForTyping);
 		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex, function(typePath:String):Bool {
 			return dispatchOnTypeNotFoundHooks(macroSession, typePath);
-		});
+		}, !noEmit);
 		moduleLoader.markResolvedAlready(resolvedForTyping);
 
 		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.

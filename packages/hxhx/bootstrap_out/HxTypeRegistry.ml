@@ -840,7 +840,8 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'defines' for ModuleLoader" in
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'index' for ModuleLoader" in
     let a3 = if len > 3 then (HxArray.get args 3) else HxRuntime.hx_null in
-    Obj.repr (ModuleLoader.create a0 a1 a2 a3)
+    let a4 = if len > 4 then (HxArray.get args 4) else HxRuntime.hx_null in
+    Obj.repr (ModuleLoader.create a0 a1 a2 a3 a4)
   );
   HxType.register_class_ctor "ParsedModule" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1536,7 +1537,7 @@ let init () : unit =
   HxType.register_class_static_fields "MacroExpandedProgram" [];
   HxType.register_class_instance_fields "MacroStage" [];
   HxType.register_class_static_fields "MacroStage" [ "expand"; "expandProgram" ];
-  HxType.register_class_instance_fields "ModuleLoader" [ "classPaths"; "defines"; "depsForParsedModule"; "dirEntryCache"; "drainNewModules"; "ensureTypeAvailable"; "index"; "invokeOnMissingType"; "loadModuleByPath"; "markResolvedAlready"; "onMissingType"; "pending"; "resolveModuleFile"; "typeNotFoundTried"; "visited" ];
+  HxType.register_class_instance_fields "ModuleLoader" [ "classPaths"; "defines"; "depsForParsedModule"; "dirEntryCache"; "drainNewModules"; "ensureTypeAvailable"; "expandDependencies"; "index"; "invokeOnMissingType"; "loadModuleByPath"; "markResolvedAlready"; "onMissingType"; "pending"; "resolveModuleFile"; "typeNotFoundTried"; "visited" ];
   HxType.register_class_static_fields "ModuleLoader" [ "candidateModulePaths"; "implicitQualifiedTypeDeps"; "normalizeImport" ];
   HxType.register_class_instance_fields "ParsedModule" [ "decl"; "filePath"; "getDecl"; "getFilePath"; "getSource"; "source" ];
   HxType.register_class_static_fields "ParsedModule" [];

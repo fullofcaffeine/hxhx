@@ -45,6 +45,16 @@ class ModuleLoader extends LazyTypeLoader {
 	final index:TyperIndex;
 	final onMissingType:Null<MissingTypeHook>;
 
+	/**
+		Whether lazily loaded modules should recursively pull their direct dependencies.
+
+		Why
+		- Real emit lanes need dependency expansion so generated OCaml has every referenced unit.
+		- No-emit parity lanes only need the modules demanded by typing, so recursive link-safety
+		  expansion is avoidable compiler latency.
+	**/
+	final expandDependencies:Bool;
+
 	// Directory listing cache used for exact-case path checks on case-insensitive filesystems.
 	final dirEntryCache:haxe.ds.StringMap<haxe.ds.StringMap<Bool>>;
 
@@ -55,12 +65,14 @@ class ModuleLoader extends LazyTypeLoader {
 	// Newly loaded modules (drained by the Stage3 driver).
 	final pending:Array<ResolvedModule>;
 
-	public function new(classPaths:Array<String>, defines:haxe.ds.StringMap<String>, index:TyperIndex, ?onMissingType:String->Bool) {
+	public function new(classPaths:Array<String>, defines:haxe.ds.StringMap<String>, index:TyperIndex, ?onMissingType:String->Bool,
+			?expandDependencies:Bool = true) {
 		super();
 		this.classPaths = classPaths == null ? [] : classPaths;
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		this.index = index;
 		this.onMissingType = onMissingType == null ? null : {invoke: onMissingType};
+		this.expandDependencies = expandDependencies;
 		this.dirEntryCache = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
 		this.visited = new haxe.ds.StringMap<Bool>();
 		this.typeNotFoundTried = new haxe.ds.StringMap<Bool>();
@@ -304,13 +316,15 @@ class ModuleLoader extends LazyTypeLoader {
 		// What
 		// - Follow explicit imports (including module-type fallback) and fully-qualified type path
 		//   references found in source bodies (e.g. `pkg.Type.member(...)`).
-		final decl = parsed.getDecl();
-		for (dep in depsForParsedModule(filtered, decl)) {
-			if (dep == null || dep.length == 0)
-				continue;
-			if (resolveModuleFile(dep) == null)
-				continue;
-			loadModuleByPath(dep);
+		if (expandDependencies) {
+			final decl = parsed.getDecl();
+			for (dep in depsForParsedModule(filtered, decl)) {
+				if (dep == null || dep.length == 0)
+					continue;
+				if (resolveModuleFile(dep) == null)
+					continue;
+				loadModuleByPath(dep);
+			}
 		}
 	}
 
