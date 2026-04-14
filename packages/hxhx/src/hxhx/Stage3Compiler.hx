@@ -1863,10 +1863,32 @@ class Stage3Compiler {
 
 		// Stage3 "real compiler" rung: type the full resolved graph (best-effort),
 		// then emit/build an executable from the typed program.
+		//
+		// No-emit is a compiler-latency and semantic marker lane, not an emission preparation lane:
+		// keep it closer to upstream `--no-output` by typing explicit roots plus anything the lazy
+		// loader discovers. `--hxhx-type-only` remains the exhaustive full-graph diagnostic rung.
+		final initialModulesToType = if (noEmit) {
+			final rootSet = new Map<String, Bool>();
+			for (root in roots)
+				if (root != null && root.length > 0)
+					rootSet.set(root, true);
+			final rootModules = new Array<ResolvedModule>();
+			for (m in resolvedForTyping) {
+				final modulePath = ResolvedModule.getModulePath(m);
+				if (rootSet.exists(modulePath))
+					rootModules.push(m);
+			}
+			if (rootModules.length > 0)
+				rootModules
+			else
+				[resolvedForTyping[0]];
+		} else {
+			resolvedForTyping.copy();
+		}
 		final typedModules = new Array<TypedModule>();
 		// Worklist so the typer can lazily load modules on demand. Newly loaded modules are typed and
 		// included in the emitted program so `dune build` does not fail on missing modules.
-		final toType = resolvedForTyping.copy();
+		final toType = initialModulesToType.copy();
 		var cursor = 0;
 		while (cursor < toType.length) {
 			final m = toType[cursor];
@@ -1951,15 +1973,15 @@ class Stage3Compiler {
 			var unsupportedRawCount = 0;
 			var unsupportedFnCount = 0;
 			var unsupportedFileIndex = 0;
-			for (m in resolvedForTyping) {
-				final pm = ResolvedModule.getParsed(m);
+			for (typed in typedModules) {
+				final pm = typed.getParsed();
 				if (HxModuleDecl.getHeaderOnly(pm.getDecl()))
 					headerOnlyCount += 1;
 				final unsupportedInFile = countUnsupportedExprsInModule(pm);
 				unsupportedExprsTotal += unsupportedInFile;
 				if (unsupportedInFile > 0) {
 					unsupportedFilesCount += 1;
-					Sys.println("unsupported_file[" + unsupportedFileIndex + "]=" + ResolvedModule.getFilePath(m) + " header_only="
+					Sys.println("unsupported_file[" + unsupportedFileIndex + "]=" + pm.getFilePath() + " header_only="
 						+ bool01(HxModuleDecl.getHeaderOnly(pm.getDecl())) + " unsupported_exprs=" + unsupportedInFile);
 					unsupportedFileIndex += 1;
 					if (traceUnsupported) {
@@ -1968,7 +1990,7 @@ class Stage3Compiler {
 							final fnUnsupported = countUnsupportedExprsInFunction(fn);
 							if (fnUnsupported <= 0)
 								continue;
-							Sys.println("unsupported_fn[" + unsupportedFnCount + "]=" + ResolvedModule.getFilePath(m) + ":" + HxFunctionDecl.getName(fn)
+							Sys.println("unsupported_fn[" + unsupportedFnCount + "]=" + pm.getFilePath() + ":" + HxFunctionDecl.getName(fn)
 								+ " unsupported_exprs=" + fnUnsupported);
 							unsupportedFnCount += 1;
 							if (unsupportedFnCount >= 50)
@@ -1976,7 +1998,7 @@ class Stage3Compiler {
 						}
 						for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
 							final escaped = escapeOneLine(raw);
-							Sys.println("unsupported_expr[" + unsupportedRawCount + "]=" + ResolvedModule.getFilePath(m) + ":raw=" + escaped + " len="
+							Sys.println("unsupported_expr[" + unsupportedRawCount + "]=" + pm.getFilePath() + ":raw=" + escaped + " len="
 								+ (raw == null ? 0 : raw.length));
 							unsupportedRawCount += 1;
 							if (unsupportedRawCount >= 50)
