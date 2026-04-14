@@ -60,6 +60,16 @@ That sub-contract distinguishes the contract-definition marker
 `FULL1_MACRO_PARITY:PASS`, `FULL1_EVAL_NATIVE:PASS`, and
 `FULL1_MACRO_EVAL_PARITY:PASS`.
 
+Performance parity has its own explicit sub-contract:
+
+- `docs/00-project/FULL1_PERF_PARITY_POLICY.md`
+
+That sub-contract distinguishes the contract-definition marker
+`FULL1_PERF_POLICY:PASS` from the measured runtime evidence marker
+`FULL1_PERF_PARITY:PASS`. Stage0 bootstrap regeneration memory is maintenance
+evidence only; Full 1.0 performance evidence must compare stage0-free `hxhx`
+runtime lanes against upstream Haxe 4.3.7.
+
 ## Non-goals policy
 
 Anything not explicitly declared in the scope manifest is out-of-scope for the claim.

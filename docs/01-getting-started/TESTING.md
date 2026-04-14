@@ -227,6 +227,14 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     byproducts by default; set `HXHX_STAGE0_FREE_REFRESH_KEEP_BUILD=1` or
     `HXHX_STAGE0_FREE_REFRESH_KEEP_DUNE_BUILD=1` only when you need local diagnostics.
 
+- Full 1.0 performance policy:
+  - Policy doc: `docs/00-project/FULL1_PERF_PARITY_POLICY.md`
+  - Guard: `npm run guard:full1-perf-policy`
+  - Contract marker: `FULL1_PERF_POLICY:PASS`
+  - Measured evidence marker: `FULL1_PERF_PARITY:PASS`
+  - Boundary: Full 1.0 performance evidence compares stage0-free `hxhx` runtime lanes against
+    upstream Haxe 4.3.7. Stage0 bootstrap regeneration memory is maintenance-only evidence.
+
 - **Stage0**: external `haxe` compiles repo Haxe sources to OCaml.
   - Main maintainer command: `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`
   - Stage0 haxe binary selection policy (regen lane):

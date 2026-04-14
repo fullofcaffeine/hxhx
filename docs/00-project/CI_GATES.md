@@ -167,6 +167,15 @@ Full1 macro/eval aggregate marker:
 
 - `FULL1_MACRO_EVAL_PARITY:PASS` (`.github/workflows/gate-full1.yml`)
 
+Full1 performance policy marker:
+
+- `FULL1_PERF_POLICY:PASS` (`scripts/ci/full1-perf-policy-check.js`)
+
+Full1 measured performance parity marker:
+
+- `FULL1_PERF_PARITY:PASS` (planned blocking evaluator; policy source:
+  `docs/00-project/FULL1_PERF_PARITY_POLICY.md`)
+
 Gate Full1 also requires green reusable jobs from:
 
 - `.github/workflows/macro-runtime-parity-weekly.yml`

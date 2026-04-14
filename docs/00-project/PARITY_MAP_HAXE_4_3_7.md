@@ -28,6 +28,8 @@ Scope manifests used by this map:
 | PM-13 | Macro runtime parity matrix (unit macro + runci macro + display/protocol checks) | Native Stage3 macro runtime parity | `Macro` | runtime mode matrix (`external-host`,`inproc`) | `.github/workflows/macro-runtime-parity-weekly.yml` (standalone + reusable inside `.github/workflows/gate-full1.yml`) | `MACRO_RUNTIME_PARITY_UNIT_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_UNIT_INPROC:PASS`, `MACRO_RUNTIME_PARITY_RUNCI_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_RUNCI_INPROC:PASS`, `MACRO_RUNTIME_PARITY_DISPLAY_PROTOCOL_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_DISPLAY_PROTOCOL_INPROC:PASS`, `MACRO_RUNTIME_PARITY_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_INPROC:PASS`, `MACRO_RUNTIME_PARITY_WEEKLY:PASS`, `FULL1_MACRO_PARITY:PASS` |
 | PM-14 | Native eval/interp baseline (`tests/unit/compile-macro.hxml`) | Native strict eval | `Eval` | stage0-forbidden | `.github/workflows/full1-eval-native.yml` (standalone + reusable inside `.github/workflows/gate-full1.yml`) | `FULL1_EVAL_NATIVE:PASS` |
 | PM-15 | Full1 macro/eval closure aggregate | Full1 aggregate | `Macro,Eval` | scheduled/release | `.github/workflows/gate-full1.yml` | `FULL1_MACRO_EVAL_PARITY:PASS` |
+| PM-16 | Full1 performance policy contract | Full1 performance contract | `perf` | policy guard | `scripts/ci/full1-perf-policy-check.js` | `FULL1_PERF_POLICY:PASS` |
+| PM-17 | Full1 measured performance parity | Full1 performance evidence | `perf` | stage0-free hxhx vs upstream Haxe 4.3.7 | planned blocking evaluator / `.github/workflows/gate-perf-full1.yml` | `FULL1_PERF_PARITY:PASS` |
 
 ## Marker Registry
 
@@ -61,6 +63,8 @@ These are the canonical marker strings used for parity statements in logs:
 - `FULL1_EVAL_NATIVE:PASS`
 - `FULL1_MACRO_EVAL_PARITY:PASS`
 - `FULL1_MACRO_EVAL_CONTRACT:PASS`
+- `FULL1_PERF_POLICY:PASS`
+- `FULL1_PERF_PARITY:PASS`
 
 ## Claim Rules
 
@@ -73,3 +77,7 @@ These are the canonical marker strings used for parity statements in logs:
   - `FULL1_EVAL_NATIVE:PASS`
   - `FULL1_MACRO_EVAL_PARITY:PASS`
   - `docs/00-project/MACRO_EVAL_PARITY_CONTRACT.md` as the contract-definition source.
+- For Full1 performance claims, include:
+  - `FULL1_PERF_POLICY:PASS` as the contract-definition source.
+  - `FULL1_PERF_PARITY:PASS` only when the stage0-free `hxhx` vs upstream Haxe 4.3.7 evaluator passes.
+  - `docs/00-project/FULL1_PERF_PARITY_POLICY.md` as the policy source.

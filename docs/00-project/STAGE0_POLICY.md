@@ -10,6 +10,15 @@ The policy goal is simple:
 - Runtime behavior should be stage0-free for native lanes.
 - Stage0 is allowed only for explicit bootstrap maintenance tasks.
 
+Full 1.0 performance parity uses the same boundary:
+
+- measured Full 1.0 compiler performance evidence must compare stage0-free
+  `hxhx` runtime lanes against upstream Haxe 4.3.7,
+- stage0 bootstrap regeneration RSS/wall-time evidence is maintenance-only
+  and cannot emit `FULL1_PERF_PARITY:PASS`,
+- the canonical Full 1.0 performance policy is
+  `docs/00-project/FULL1_PERF_PARITY_POLICY.md`.
+
 ## Bootstrap Stage0 Binary Selection (Regen Lane)
 
 Bootstrap regeneration now records and enforces an explicit stage0-haxe selection policy:

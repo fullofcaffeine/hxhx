@@ -198,6 +198,18 @@
     },
     {
       "id": "F1-PM-12",
+      "suite": "full-perf-policy",
+      "lane": "full",
+      "targets": [
+        "perf"
+      ],
+      "profile": "contract",
+      "marker": "FULL1_PERF_POLICY:PASS",
+      "workflow": "scripts/ci/full1-perf-policy-check.js",
+      "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-12A",
       "suite": "full-perf-parity",
       "lane": "full",
       "targets": [
