@@ -102,11 +102,11 @@ let decode_len_value (part : string) : string =
 let split_spaces (s : string) : string list =
   s
   |> Stdlib.String.split_on_char ' '
-  |> List.filter (fun x -> x <> "")
+  |> Stdlib.List.filter (fun x -> x <> "")
 
 let kv_get (tail : string) (key : string) : string =
   tail |> split_spaces
-  |> List.find_opt (fun p -> Stdlib.String.length p >= Stdlib.String.length key + 1 && Stdlib.String.sub p 0 (Stdlib.String.length key + 1) = key ^ "=")
+  |> Stdlib.List.find_opt (fun p -> Stdlib.String.length p >= Stdlib.String.length key + 1 && Stdlib.String.sub p 0 (Stdlib.String.length key + 1) = key ^ "=")
   |> function
   | None -> ""
   | Some part -> decode_len_value part

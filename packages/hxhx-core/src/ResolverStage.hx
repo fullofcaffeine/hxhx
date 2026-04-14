@@ -266,7 +266,7 @@ class ResolverStage {
 
 			for (rawImport in HxModuleDecl.getImports(decl)) {
 				final imp = normalizeImport(rawImport);
-				if (imp == null)
+				if (imp.length == 0)
 					continue;
 
 				// Haxe import paths can be relative to the current package. In upstream code it's common
@@ -341,12 +341,12 @@ class ResolverStage {
 		return out;
 	}
 
-	static function normalizeImport(raw:String):Null<String> {
+	static function normalizeImport(raw:String):String {
 		if (raw == null)
-			return null;
+			return "";
 		var s = StringTools.trim(raw);
 		if (s.length == 0)
-			return null;
+			return "";
 
 		// Native parser may provide "using Foo" (future-proofing).
 		if (StringTools.startsWith(s, "using ")) {
@@ -358,7 +358,7 @@ class ResolverStage {
 		if (asIdx >= 0)
 			s = StringTools.trim(s.substr(0, asIdx));
 
-		return s.length == 0 ? null : s;
+		return s;
 	}
 
 	static function resolveModuleFile(classPaths:Array<String>, modulePath:String):Null<String> {

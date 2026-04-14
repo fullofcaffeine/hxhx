@@ -157,7 +157,38 @@ private class _EmitterStageDebug {
 		final pos = kindAndPos.pos;
 		final line = pos == null ? 0 : pos.getLine();
 		final col = pos == null ? 0 : pos.getColumn();
-		traceStage3Phase("stmt_list_" + phase + ":" + fn + ":" + idx + "/" + total + ":" + kindAndPos.kind + ":line=" + line + ":col=" + col);
+		final detail = switch (stmt) {
+			case SVar(name, typeHint, _init, _):
+				":name=" + name + ":type=" + (typeHint == null ? "" : typeHint);
+			case SIf(_cond, _thenBranch, elseBranch, _):
+				":hasElse=" + (elseBranch == null ? "0" : "1");
+			case SForIn(name, _iterable, _body, _):
+				":name=" + name;
+			case SSwitch(_scrutinee, patterns, bodies, _):
+				":patterns="
+				+ (patterns == null ? "0" : Std.string(patterns.length))
+				+ ":bodies="
+				+ (bodies == null ? "0" : Std.string(bodies.length));
+			case SBlock(stmts, _):
+				":stmts=" + (stmts == null ? "0" : Std.string(stmts.length));
+			case _:
+				"";
+		}
+		traceStage3Phase("stmt_list_"
+			+ phase
+			+ ":"
+			+ fn
+			+ ":"
+			+ idx
+			+ "/"
+			+ total
+			+ ":"
+			+ kindAndPos.kind
+			+ ":line="
+			+ line
+			+ ":col="
+			+ col
+			+ detail);
 	}
 }
 
@@ -630,7 +661,7 @@ class EmitterStage {
 		final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
 		final parts = (pkg.length == 0 ? [] : pkg.split("."));
 		final modName = moduleTypeName == null ? "" : StringTools.trim(moduleTypeName);
-		if (modName.length > 0 && modName != "Unknown" && typeName != modName)
+		if (modName.length > 0 && !isUnknownTypeName(modName) && typeName != modName)
 			parts.push(modName);
 		parts.push(typeName);
 		return ocamlModuleNameFromTypePathParts(parts);
@@ -804,6 +835,50 @@ class EmitterStage {
 				return true;
 		}
 		return false;
+	}
+
+	static function hasCurrentInstanceField(field:String):Bool {
+		if (currentInstanceFieldsByTypePath == null || field == null || field.length == 0)
+			return false;
+		final fieldEntries:Array<_InstanceFieldEntry> = cast currentInstanceFieldsByTypePath;
+		for (entry in fieldEntries) {
+			if (entry.fields == null)
+				continue;
+			for (f in entry.fields) {
+				if (HxFieldDecl.getName(f) == field)
+					return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+		Lowers an unqualified instance field read in Stage3 full-body output.
+
+		Why:
+		Stage3 object construction currently represents class instances as `HxAnon`
+		objects, not typed OCaml records. Unqualified reads like `peeked1` inside an
+		instance method therefore need to become dynamic reads from `this_`; treating
+		them as locals produces unbound OCaml values during full-source bootstrap.
+	**/
+	static function stage3ThisFieldRead(field:String):String {
+		return "(Obj.magic (HxAnon.get (Obj.repr this_) " + escapeOcamlString(field) + "))";
+	}
+
+	/**
+		Lowers an unqualified instance field assignment in Stage3 full-body output.
+
+		What:
+		The expression evaluates the right-hand side once, writes it into the current
+		`HxAnon` receiver, and returns the assigned value so expression-position
+		assignments preserve the existing Stage3 assignment contract.
+	**/
+	static function stage3ThisFieldAssign(field:String, rhs:String):String {
+		return "(let __hx_v = ("
+			+ rhs
+			+ ") in (HxAnon.set (Obj.repr this_) "
+			+ escapeOcamlString(field)
+			+ " (Obj.repr __hx_v); __hx_v))";
 	}
 
 	static function escapeOcamlString(s:String):String {
@@ -1420,13 +1495,16 @@ class EmitterStage {
 		ref tracking; this helper only applies the established precedence order and
 		emits the same OCaml snippets as the former inline switch branch.
 	**/
-	static function exprToOcamlIdentStage3(name:String, hasCurrentInstanceMethod:Bool, hasThisBinding:Bool, hasTyIdent:Bool, isMutableLocalRef:Bool,
-			hasArity:Bool, staticImportModule:String):String {
+	static function exprToOcamlIdentStage3(name:String, hasCurrentInstanceMethod:Bool, hasCurrentInstanceField:Bool, hasThisBinding:Bool, hasTyIdent:Bool,
+			isMutableLocalRef:Bool, hasArity:Bool, staticImportModule:String):String {
 		if (hasCurrentInstanceMethod && hasThisBinding) {
 			return ocamlValueIdent(name) + " (this_)";
 		}
 		if (hasTyIdent || isMutableLocalRef) {
 			return ocamlReadValueIdent(name);
+		}
+		if (hasCurrentInstanceField && hasThisBinding) {
+			return stage3ThisFieldRead(name);
 		}
 		if (hasArity) {
 			return ocamlValueIdent(name);
@@ -2067,7 +2145,20 @@ class EmitterStage {
 			case ECall(EField(EIdent("StringTools"), "hex"), [n]):
 				return "StringTools.hex ("
 					+ exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-					+ ") (0)";
+					+ ") (Obj.repr 0)";
+			case ECall(EField(EIdent("StringTools"), "hex"), [n, digits]):
+				final digitsOcaml = switch (digits) {
+					case ENull:
+						"Obj.magic HxRuntime.hx_null";
+					case _:
+						"Obj.repr (" + exprToOcaml(digits, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							callSigByCallee) + ")";
+				};
+				return "StringTools.hex ("
+					+ exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ") ("
+					+ digitsOcaml
+					+ ")";
 			case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
 				return escapeOcamlString("");
 			case ECall(EField(EIdent("Std"), "is"), [_v, _t]):
@@ -2373,8 +2464,9 @@ class EmitterStage {
 			case EFloat(v): Std.string(v);
 			case EString(v): escapeOcamlString(v);
 			case EIdent(name):
-				exprToOcamlIdentStage3(name, hasCurrentInstanceMethod(name), stage3HasThisBinding(tyByIdentRaw), stage3HasTyIdent(name, tyByIdentRaw),
-					isMutableLocalRefIdent(name), stage3HasArity(name, arityByIdentRaw), staticImportModuleForStage3(name, staticImportByIdentRaw));
+				exprToOcamlIdentStage3(name, hasCurrentInstanceMethod(name), hasCurrentInstanceField(name), stage3HasThisBinding(tyByIdentRaw),
+					stage3HasTyIdent(name, tyByIdentRaw), isMutableLocalRefIdent(name), stage3HasArity(name, arityByIdentRaw),
+					staticImportModuleForStage3(name, staticImportByIdentRaw));
 			case EThis:
 				// Stage 3 full-body bring-up: instance methods bind an explicit `this` parameter.
 				// If we are outside that context, conservatively collapse to poison.
@@ -2492,8 +2584,24 @@ class EmitterStage {
 							+ exprToOcamlString(args[0], tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee)
 							+ ")";
+					case EField(sysObj, "exit") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
+						return "(Stdlib.exit ("
+							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+							+ "))";
+					case EField(ECall(EField(sysObj, "stdout"), []), "writeString") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
+						return "(output_string stdout ("
+							+ exprToOcamlString(args[0], tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee)
+							+ "))";
+					case EField(ECall(EField(sysObj, "stderr"), []), "writeString") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
+						return "(output_string stderr ("
+							+ exprToOcamlString(args[0], tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee)
+							+ "))";
 					case EField(ECall(EField(sysObj, "stdout"), []), "flush") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						return "(flush stdout)";
+					case EField(ECall(EField(sysObj, "stderr"), []), "flush") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
+						return "(flush stderr)";
 					// Stage 3 bring-up: `Sys.command(cmd, ?args)` is used by upstream RunCi to execute
 					// the `haxe` toolchain (and a few shell snippets like `export FOO=1 && ...`).
 					//
@@ -2527,6 +2635,8 @@ class EmitterStage {
 						return "(HxSys.time ())";
 					case EField(sysObj, "environment") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						return "(HxSys.environment ())";
+					case EField(sysObj, "programPath") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
+						return "(HxSys.programPath ())";
 					case EField(sysObj, "args") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						// Haxe: Sys.args() excludes argv[0].
 						return "(let __argv = Stdlib.Sys.argv in "
@@ -3388,6 +3498,14 @@ class EmitterStage {
 				switch (op) {
 					case "=":
 						switch (a) {
+							case EIdent(name)
+								if (stage3HasThisBinding(tyByIdentRaw)
+									&& hasCurrentInstanceField(name)
+									&& !stage3HasTyIdent(name, tyByIdentRaw)
+									&& !isMutableLocalRefIdent(name)):
+								final rhsCode = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+									callSigByCallee);
+								stage3ThisFieldAssign(name, rhsCode);
 							case EField(obj, field):
 								final objCode = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 									callSigByCallee);
@@ -3854,6 +3972,10 @@ class EmitterStage {
 					} else if (isMutableLocalRefIdent(name)) {
 						// Reassigned locals are wrapped as `ref`s during statement lowering. They remain
 						// valid bound values even when the best-effort type context misses a later read.
+						false;
+					} else if (hasThisBinding() && hasCurrentInstanceField(name)) {
+						// Unqualified instance fields are valid inside instance methods. Stage3 lowers
+						// them through the current `HxAnon` receiver rather than OCaml locals.
 						false;
 					} else if (allowedValueIdents != null && allowedValueIdents.get(name) == true) {
 						false;
@@ -5178,14 +5300,23 @@ class EmitterStage {
 					// allowing modeled instance-field assignment side effects.
 					switch (expr) {
 						case EBinop(op, EIdent(name), rhs):
-							final lowered = mutableAssignmentStmtToUnit(op, name, rhs, tyCtx);
-							if (lowered != null) {
-								lowered;
+							final isThisField = stage3HasThisBinding(cast tyCtx) && hasCurrentInstanceField(name) && !stage3HasTyIdent(name, cast tyCtx)
+								&& !isMutableLocalRefIdent(name);
+							if (isThisField && op == "=") {
+								final rhsCode = returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+									currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+								"ignore (" + stage3ThisFieldAssign(name, rhsCode) + ")";
 							} else if (op == "=") {
-								"()";
+								final lowered = mutableAssignmentStmtToUnit(op, name, rhs, tyCtx);
+								lowered != null ? lowered : "()";
 							} else {
-								"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
-									currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
+								final lowered = mutableAssignmentStmtToUnit(op, name, rhs, tyCtx);
+								if (lowered != null) {
+									lowered;
+								} else {
+									"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
+										currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
+								}
 							}
 						case EBinop("=", EField(_, _), _):
 							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
@@ -5291,7 +5422,20 @@ class EmitterStage {
 					}
 
 					final assign = elseBranch == null ? unwrapSingleAssign(thenBranch) : null;
-					if (assign != null && isNullCheckFor(assign.name, cond) && !isMutableLocalRefIdent(assign.name)) {
+					final assignIsThisField = assign != null
+						&& stage3HasThisBinding(cast tyCtx)
+						&& hasCurrentInstanceField(assign.name)
+						&& !stage3HasTyIdent(assign.name, cast tyCtx)
+						&& !isMutableLocalRefIdent(assign.name);
+					if (assign != null && isNullCheckFor(assign.name, cond) && assignIsThisField) {
+						final rhs = returnExprToOcaml(assign.rhs, allowedValueIdents, null, arityByIdent, cast tyCtx, staticImportByIdent, currentPackagePath,
+							moduleNameByPkgAndClass, callSigByCallee);
+						wrapStatement("((if " + condToOcamlBool(cond,
+							cast tyCtx) + " then ignore (" + stage3ThisFieldAssign(assign.name, rhs) + ") else ()); ", ")");
+					} else if (assign != null
+						&& isNullCheckFor(assign.name, cond)
+						&& stage3HasTyIdent(assign.name, cast tyCtx)
+						&& !isMutableLocalRefIdent(assign.name)) {
 						final ident = ocamlValueIdent(assign.name);
 						final rhs = returnExprToOcaml(assign.rhs, allowedValueIdents, null, arityByIdent, cast tyCtx, staticImportByIdent, currentPackagePath,
 							moduleNameByPkgAndClass, callSigByCallee);
@@ -5426,11 +5570,10 @@ class EmitterStage {
 				return env;
 		}
 
-		final prog = Sys.programPath();
-		if (prog == null || prog.length == 0)
+		final cwd = try Sys.getCwd() catch (_:haxe.io.Error) "" catch (_:String) "";
+		if (cwd == null || cwd.length == 0)
 			return "";
-		final abs = try sys.FileSystem.fullPath(prog) catch (_:haxe.io.Error) prog catch (_:String) prog;
-		var dir = try haxe.io.Path.directory(abs) catch (_:String) "";
+		var dir = try sys.FileSystem.fullPath(cwd) catch (_:haxe.io.Error) cwd catch (_:String) cwd;
 		if (dir == null || dir.length == 0)
 			return "";
 
@@ -5462,18 +5605,22 @@ class EmitterStage {
 		return upperFirst(base);
 	}
 
-	static inline function expectedMainClassFromFile(filePath:Null<String>):Null<String> {
+	static function expectedMainClassFromFile(filePath:Null<String>):String {
 		if (filePath == null || filePath.length == 0)
-			return null;
+			return "";
 		final name = haxe.io.Path.withoutDirectory(filePath);
 		final dot = name.lastIndexOf(".");
 		return dot <= 0 ? name : name.substr(0, dot);
 	}
 
-	static inline function moduleTypeNameFor(tm:TypedModule):Null<String> {
+	static function isUnknownTypeName(name:String):Bool {
+		return name.length == 7 && name.indexOf("Unknown") == 0;
+	}
+
+	static function moduleTypeNameFor(tm:TypedModule):String {
 		// In Haxe, the module name is the file base name (not "the first class we happened to parse").
 		final fromFile = expectedMainClassFromFile(tm == null ? null : tm.getParsed().getFilePath());
-		if (fromFile != null && fromFile.length > 0)
+		if (fromFile.length > 0 && !isUnknownTypeName(fromFile))
 			return fromFile;
 
 		// Fallback (in-memory modules): use the parsed main class name when available.
@@ -5481,7 +5628,96 @@ class EmitterStage {
 		final main = decl == null ? null : HxModuleDecl.getMainClass(decl);
 		final nm0 = main == null ? null : HxClassDecl.getName(main);
 		final nm = nm0 == null ? "" : StringTools.trim(nm0);
-		return (nm.length > 0 && nm != "Unknown") ? nm : null;
+		if (nm.length == 0)
+			return "";
+		if (isUnknownTypeName(nm))
+			return "";
+		return nm;
+	}
+
+	static function moduleTypeNameForStage3OcamlBody():String {
+		return "let __hxhx_is_unknown_type_name (name : string) : bool = "
+			+ "HxString.length name = 7 && HxString.indexOf name \"Unknown\" 0 = 0 in "
+			+ "let __hxhx_expected_main_class_from_file (filePath : string) : string = "
+			+ "if filePath == Obj.magic HxRuntime.hx_null || HxString.length filePath = 0 then \"\" else "
+			+ "let name = Haxe_io_Path.withoutDirectory filePath in "
+			+ "let dot = HxString.lastIndexOf name \".\" (HxString.length name) in "
+			+ "if dot <= 0 then name else HxString.substr name 0 dot in "
+			+ "let fromFile = if tm == Obj.magic HxRuntime.hx_null then \"\" else "
+			+ "__hxhx_expected_main_class_from_file (ParsedModule.getFilePath (Obj.magic (TypedModule.getParsed (Obj.magic tm)))) in "
+			+ "if HxString.length fromFile > 0 && not (__hxhx_is_unknown_type_name fromFile) then fromFile else "
+			+ "let decl = if tm == Obj.magic HxRuntime.hx_null then Obj.magic HxRuntime.hx_null else "
+			+ "Obj.magic (ParsedModule.getDecl (Obj.magic (TypedModule.getParsed (Obj.magic tm)))) in "
+			+ "let main = if decl == Obj.magic HxRuntime.hx_null then Obj.magic HxRuntime.hx_null else "
+			+ "Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in "
+			+ "let nm0 = if main == Obj.magic HxRuntime.hx_null then Obj.magic HxRuntime.hx_null else "
+			+ "Obj.magic (HxClassDecl.getName (Obj.magic main)) in "
+			+ "let nm = if nm0 == Obj.magic HxRuntime.hx_null then \"\" else Stdlib.String.trim (Obj.magic nm0) in "
+			+ "if HxString.length nm = 0 || __hxhx_is_unknown_type_name nm then \"\" else nm";
+	}
+
+	static function hxhxMainShouldRouteStandardJsToNativeStage3OcamlBody():String {
+		return "let scan = Obj.magic forwarded in "
+			+ "if not (hasStandardJsTargetFlag (Obj.magic scan)) then false else not (hasStandardNonJsTargetFlag (Obj.magic scan))";
+	}
+
+	static function hxhxStage3WriteWaitStdioReplyStage3OcamlBody():String {
+		return "(let __payload = ref \"\" in "
+			+ "let __is_error : bool = Obj.obj (HxAnon.get (Obj.repr reply) \"isError\") in "
+			+ "if __is_error then __payload := !__payload ^ (Stdlib.String.make 1 (Char.chr 2)); "
+			+ "let __raw_payload = HxAnon.get (Obj.repr reply) \"payload\" in "
+			+ "if __raw_payload != HxRuntime.hx_null then ("
+			+ "let __p : string = Obj.obj __raw_payload in "
+			+ "if Stdlib.String.length __p > 0 then __payload := !__payload ^ __p"
+			+ "); "
+			+ "let __value = Stdlib.String.length !__payload in "
+			+ "output_byte stderr (__value land 0xFF); "
+			+ "output_byte stderr ((__value lsr 8) land 0xFF); "
+			+ "output_byte stderr ((__value lsr 16) land 0xFF); "
+			+ "output_byte stderr ((__value lsr 24) land 0xFF); "
+			+ "output_string stderr !__payload; "
+			+ "flush stderr; "
+			+ "())";
+	}
+
+	static function hxhxStage3ReadConnectDisplayStdinStage3OcamlBody():String {
+		return "(if not (hasDefineFlag (Obj.magic args) \"display-stdin\") then (Obj.magic HxRuntime.hx_null) else "
+			+ "let __read_byte () = try input_byte stdin with End_of_file -> -1 in "
+			+ "let __b0 = __read_byte () in "
+			+ "let __b1 = __read_byte () in "
+			+ "let __b2 = __read_byte () in "
+			+ "let __b3 = __read_byte () in "
+			+ "if __b0 < 0 || __b1 < 0 || __b2 < 0 || __b3 < 0 then (Obj.magic HxRuntime.hx_null) else "
+			+ "let __frame_len = __b0 lor (__b1 lsl 8) lor (__b2 lsl 16) lor (__b3 lsl 24) in "
+			+ "if __frame_len <= 0 then (Obj.magic HxRuntime.hx_null) else "
+			+ "let __frame = Bytes.create __frame_len in "
+			+ "let __read_ok = try really_input stdin __frame 0 __frame_len; true with End_of_file -> false in "
+			+ "if not __read_ok then HxRuntime.hx_throw_typed (Obj.repr \"connect display-stdin frame truncated\") [\"Dynamic\"; \"String\"] else "
+			+ "if Bytes.length __frame = 0 then (Obj.magic HxRuntime.hx_null) else "
+			+ "if Char.code (Bytes.get __frame 0) = 1 then Bytes.sub __frame 1 ((Bytes.length __frame) - 1) else __frame)";
+	}
+
+	static function hxhxStage3RunWaitStdioStage3OcamlBody():String {
+		return "(let __read_i32 () = "
+			+ "let __read_byte () = try input_byte stdin with End_of_file -> -1 in "
+			+ "let __b0 = __read_byte () in "
+			+ "let __b1 = __read_byte () in "
+			+ "let __b2 = __read_byte () in "
+			+ "let __b3 = __read_byte () in "
+			+ "if __b0 < 0 || __b1 < 0 || __b2 < 0 || __b3 < 0 then None else "
+			+ "Some (__b0 lor (__b1 lsl 8) lor (__b2 lsl 16) lor (__b3 lsl 24)) in "
+			+ "let rec __loop () = match __read_i32 () with "
+			+ "| None -> 0 "
+			+ "| Some __frame_len -> "
+			+ "if __frame_len < 0 then error (\"wait-stdio received negative frame length: \" ^ string_of_int __frame_len) else "
+			+ "let __frame = Bytes.create __frame_len in "
+			+ "let __read_ok = try really_input stdin __frame 0 __frame_len; true with End_of_file -> false in "
+			+ "if not __read_ok then error \"wait-stdio request frame truncated\" else "
+			+ "let __request = decodeWaitStdioRequest __frame in "
+			+ "let __reply = runWaitStdioRequest (Obj.magic baseArgs) __request in "
+			+ "writeWaitStdioReply __reply; "
+			+ "__loop () in "
+			+ "__loop ())";
 	}
 
 	static inline function baseModuleName(path:String):String {
@@ -5599,9 +5835,9 @@ class EmitterStage {
 		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Lambda",
 			"(* hxhx(stage3) bootstrap shim: Lambda *)\n"
 			+ "let array it =\n"
-			+ "  HxBootArray.of_list (List.of_seq (it : _ Seq.t))\n"
+			+ "  HxBootArray.of_list (Stdlib.List.of_seq (it : _ Seq.t))\n"
 			+ "let list it =\n"
-			+ "  List.of_seq (it : _ Seq.t)\n"
+			+ "  Stdlib.List.of_seq (it : _ Seq.t)\n"
 			+ "let fold it f first =\n"
 			+ "  let acc = ref first in\n"
 			+ "  Seq.iter (fun x -> acc := f x !acc) (it : _ Seq.t);\n"
@@ -5764,6 +6000,179 @@ class EmitterStage {
 		return pluginArtifactPath;
 	}
 
+	static function stringToolsBootstrapShimSourceForStage3():String {
+		return [
+			"(* hxhx(stage3) bootstrap shim: StringTools core *)",
+			"[@@@warning \"-20-27-32\"]",
+			"let __reflaxe_ocaml__ = ()",
+			"type t = { __hx_type : Obj.t }",
+			"let create = fun () -> let self = ({ __hx_type = HxType.class_ \"StringTools\" } : t) in (ignore (); self)",
+			"let __empty = fun () -> ({ __hx_type = HxType.class_ \"StringTools\" } : t)",
+			"let contains (s : string) (value : string) : bool = HxString.indexOf s value 0 <> -1",
+			"let startsWith (s : string) (start : string) : bool =",
+			"  HxString.length s >= HxString.length start && HxString.lastIndexOf s start 0 = 0",
+			"let endsWith (s : string) (hx_end : string) : bool =",
+			"  let elen = HxString.length hx_end in",
+			"  let slen = HxString.length s in",
+			"  slen >= elen && HxString.indexOf s hx_end (slen - elen) = slen - elen",
+			"let isSpace (s : string) (pos : int) : bool =",
+			"  let c = HxString.charCodeAt s pos in",
+			"  if c == HxRuntime.hx_null then false else",
+			"  let code : int = Obj.obj c in",
+			"  (code > 8 && code < 14) || code = 32",
+			"let ltrim (s : string) : string =",
+			"  let len = HxString.length s in",
+			"  let i = ref 0 in",
+			"  while !i < len && isSpace s !i do incr i done;",
+			"  if !i = 0 then s else HxString.substr s !i (len - !i)",
+			"let rtrim (s : string) : string =",
+			"  let len = HxString.length s in",
+			"  let i = ref (len - 1) in",
+			"  while !i >= 0 && isSpace s !i do decr i done;",
+			"  if !i = len - 1 then s else HxString.substr s 0 (!i + 1)",
+			"let trim (s : string) : string = ltrim (rtrim s)",
+			"let lpad (s : string) (c : string) (l : int) : string =",
+			"  if HxString.length c <= 0 then s else",
+			"  let buf = Stdlib.Buffer.create l in",
+			"  let target = l - HxString.length s in",
+			"  while Stdlib.Buffer.length buf < target do Stdlib.Buffer.add_string buf c done;",
+			"  Stdlib.Buffer.add_string buf s;",
+			"  Stdlib.Buffer.contents buf",
+			"let rpad (s : string) (c : string) (l : int) : string =",
+			"  if HxString.length c <= 0 then s else",
+			"  let buf = Stdlib.Buffer.create l in",
+			"  Stdlib.Buffer.add_string buf s;",
+			"  while Stdlib.Buffer.length buf < l do Stdlib.Buffer.add_string buf c done;",
+			"  Stdlib.Buffer.contents buf",
+			"let replace (s : string) (sub : string) (by : string) : string = HxArray.join (HxString.split s sub) by (fun x -> x)",
+			"let hex (n : int) (digits : Obj.t) : string =",
+			"  let digits_i = if digits == HxRuntime.hx_null then 0 else (Obj.obj digits : int) in",
+			"  let hexChars = \"0123456789ABCDEF\" in",
+			"  let n32 = Int32.of_int n in",
+			"  let rec build (x : Int32.t) (acc : string) : string =",
+			"    let digit = Int32.to_int (Int32.logand x 0xFl) in",
+			"    let acc2 = (Stdlib.String.make 1 (Stdlib.String.get hexChars digit)) ^ acc in",
+			"    let x2 = Int32.shift_right_logical x 4 in",
+			"    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2",
+			"  in",
+			"  let s = build n32 \"\" in",
+			"  if digits_i <= 0 then s else",
+			"  let rec pad (s0 : string) : string =",
+			"    if Stdlib.String.length s0 < digits_i then pad (\"0\" ^ s0) else s0",
+			"  in",
+			"  pad s",
+			"let fastCodeAt (s : string) (index : int) : int =",
+			"  if index < 0 || index >= Stdlib.String.length s then -1 else Char.code (Stdlib.String.get s index)",
+			"let unsafeCodeAt = fastCodeAt"
+		].join("\n");
+	}
+
+	static function isStage3StringToolsPlaceholder(contents:String):Bool {
+		final placeholder = "(* Generated by hxhx(stage3) bootstrap emitter *)";
+		final trimmed = StringTools.trim(contents);
+		if (trimmed == placeholder)
+			return true;
+		final lines = trimmed.split("\n").filter(l -> l != null && StringTools.trim(l).length > 0);
+		return lines.length == 2 && lines[0] == placeholder && StringTools.startsWith(lines[1], "[@@@warning");
+	}
+
+	static function patchStage3StringToolsShimForStage3(outAbs:String):Null<String> {
+		final shimName = "StringTools";
+		final shimFile = shimName + ".ml";
+		final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+		final source = stringToolsBootstrapShimSourceForStage3();
+		if (!sys.FileSystem.exists(shimPath)) {
+			sys.io.File.saveContent(shimPath, source);
+			return shimFile;
+		}
+		final contents = sys.io.File.getContent(shimPath);
+		final isOldBootstrapShim = contents.indexOf("hxhx(stage3) bootstrap shim: StringTools.hex") != -1
+			&& contents.indexOf("let startsWith") == -1;
+		if (isStage3StringToolsPlaceholder(contents) || isOldBootstrapShim)
+			sys.io.File.saveContent(shimPath, source);
+		return null;
+	}
+
+	static function ocamlProfileBootstrapShimSourceForStage3():String {
+		return [
+			"(* hxhx(stage3) bootstrap shim: backend.OcamlProfile *)",
+			"[@@@warning \"-20-27-32\"]",
+			"let portable = \"portable\"",
+			"let metal = \"metal\"",
+			"let fromDefineValue (raw : Obj.t) : string =",
+			"  if raw == HxRuntime.hx_null then portable else",
+			"  let trimmed = StringTools.trim (Obj.obj raw : string) in",
+			"  if HxString.length trimmed = 0 then portable else",
+			"  let normalized = HxString.toLowerCase trimmed () in",
+			"  match normalized with",
+			"  | \"portable\" -> portable",
+			"  | \"metal\" -> metal",
+			"  | _ -> HxType.hx_throw_typed_rtti",
+			"      (Obj.repr ((\"invalid -D ocaml_profile=\" ^ HxString.toStdString (Obj.obj raw : string)) ^ \" (expected portable|metal)\"))",
+			"      [\"Dynamic\"; \"String\"]",
+			"let toDefineValue (profile : string) : string = profile"
+		].join("\n");
+	}
+
+	static function patchStage3OcamlProfileShimForStage3(outAbs:String):Null<String> {
+		final shimName = "Backend_OcamlProfile";
+		final shimFile = shimName + ".ml";
+		final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+		final source = ocamlProfileBootstrapShimSourceForStage3();
+		if (!sys.FileSystem.exists(shimPath)) {
+			sys.io.File.saveContent(shimPath, source);
+			return shimFile;
+		}
+		final contents = sys.io.File.getContent(shimPath);
+		if (contents.indexOf("let toDefineValue") == -1 || contents.indexOf("let fromDefineValue") == -1)
+			sys.io.File.saveContent(shimPath, source);
+		return null;
+	}
+
+	static function macroContextLoadShimSourceForStage3():String {
+		return [
+			"[@@@warning \"-20\"]",
+			"exception HxMacroApiUnavailable of string",
+			"let __hxhx_macro_api_unavailable (f : string) : _ = raise (HxMacroApiUnavailable (\"hxhx(stage3): macro api unavailable: \" ^ f))",
+			"let __hxhx_macro_defined_value (_key : Obj.t) : Obj.t = HxRuntime.hx_null",
+			"let __hxhx_macro_defined (_key : Obj.t) : Obj.t = Obj.repr false",
+			"let __hxhx_macro_resolve_path (v : Obj.t) : Obj.t =",
+			"  let file : string = Obj.obj v in",
+			"  let resolved =",
+			"    if Sys.file_exists file then file",
+			"    else",
+			"      let in_src = Filename.concat \"src\" file in",
+			"      if Sys.file_exists in_src then in_src else file",
+			"  in",
+			"  Obj.repr resolved",
+			"let load (f : string) (nargs : int) : _ =",
+			"  match (f, nargs) with",
+			"  | (\"defined_value\", 1) -> Obj.magic (fun (key : Obj.t) -> __hxhx_macro_defined_value key)",
+			"  | (\"defined\", 1) -> Obj.magic (fun (key : Obj.t) -> __hxhx_macro_defined key)",
+			"  | (\"resolve_path\", 1) -> Obj.magic (fun (file : Obj.t) -> __hxhx_macro_resolve_path file)",
+			"  | _ ->",
+			"    match nargs with",
+			"    | 0 -> Obj.magic (fun () -> __hxhx_macro_api_unavailable f)",
+			"    | 1 -> Obj.magic (fun (_ : Obj.t) -> __hxhx_macro_api_unavailable f)",
+			"    | 2 -> Obj.magic (fun (_ : Obj.t) (_ : Obj.t) -> __hxhx_macro_api_unavailable f)",
+			"    | 3 -> Obj.magic (fun (_ : Obj.t) (_ : Obj.t) (_ : Obj.t) -> __hxhx_macro_api_unavailable f)",
+			"    | _ -> Obj.magic (fun (_ : Obj.t) -> __hxhx_macro_api_unavailable f)"
+		].join("\n");
+	}
+
+	static function patchStage3MacroContextLoadShimForStage3(outAbs:String):Void {
+		final shimName = "Haxe_macro_Context";
+		final shimFile = shimName + ".ml";
+		final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+		if (!sys.FileSystem.exists(shimPath))
+			return;
+		final src = sys.io.File.getContent(shimPath);
+		final from = "let load (f : string) (nargs : int) : _ = Eval_vm_Context.callMacroApi (f)";
+		if (src.indexOf(from) == -1)
+			return;
+		sys.io.File.saveContent(shimPath, StringTools.replace(src, from, macroContextLoadShimSourceForStage3()));
+	}
+
 	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
 			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
 		traceEmitToDirEntry("emitToDir_enter");
@@ -5794,7 +6203,7 @@ class EmitterStage {
 					continue;
 				final filePath = tm.getParsed().getFilePath();
 				final moduleTypeName = moduleTypeNameFor(tm);
-				final key = (filePath == null ? "" : filePath) + "::" + (moduleTypeName == null ? "" : moduleTypeName);
+				final key = (filePath == null ? "" : filePath) + "::" + moduleTypeName;
 				if (seen.exists(key))
 					continue;
 				seen.set(key, true);
@@ -5806,17 +6215,17 @@ class EmitterStage {
 		final typedModules = uniqueTypedModules(typedModulesRaw);
 		_EmitterStageDebug.traceStage3Phase("after_typed_modules_unique:" + typedModules.length);
 
-		inline function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:Null<String>, typeName:String):String {
+		inline function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:String, typeName:String):String {
 			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
 			final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
 			final parts = (pkg.length == 0 ? [] : pkg.split("."));
-			final modName = moduleTypeName == null ? "" : StringTools.trim(moduleTypeName);
+			final modName = StringTools.trim(moduleTypeName);
 			// Haxe type paths for module-local helper types include the module name:
 			//   `package.Module.Helper`
 			// Emitted OCaml module: `Package_Module_Helper`.
 			//
 			// When `typeName == moduleTypeName`, this is the main type and we emit `Package_Type`.
-			if (modName.length > 0 && modName != "Unknown" && typeName != modName)
+			if (modName.length > 0 && !isUnknownTypeName(modName) && typeName != modName)
 				parts.push(modName);
 			parts.push(typeName);
 			return ocamlModuleNameFromTypePathParts(parts);
@@ -5835,7 +6244,7 @@ class EmitterStage {
 			final moduleTypeName = moduleTypeNameFor(tm);
 			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
 			final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
-			final modName = moduleTypeName == null ? "" : StringTools.trim(moduleTypeName);
+			final modName = StringTools.trim(moduleTypeName);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final className = HxClassDecl.getName(cls);
 				if (className == null || className.length == 0 || className == "Unknown")
@@ -5858,7 +6267,7 @@ class EmitterStage {
 				//   a dotted path from the expression tree (e.g. `MyMacro.MyRestMacro`).
 				// - Without recording the module qualifier here, the emitter cannot qualify the
 				//   path with the current package, and OCaml compilation fails with "Unbound module".
-				final rel = (modName.length > 0 && modName != "Unknown" && className != modName) ? (modName + "." + className) : className;
+				final rel = (modName.length > 0 && !isUnknownTypeName(modName) && className != modName) ? (modName + "." + className) : className;
 				final keyRel = pkg + ":" + rel;
 				if (!moduleNameByPkgAndClass.exists(keyRel))
 					moduleNameByPkgAndClass.set(keyRel, emitted);
@@ -6241,7 +6650,7 @@ class EmitterStage {
 			final mainClass = HxModuleDecl.getMainClass(decl);
 			final parsedMainName = HxClassDecl.getName(mainClass);
 			final moduleTypeName = moduleTypeNameFor(tm);
-			final className = (moduleTypeName != null && moduleTypeName.length > 0) ? moduleTypeName : parsedMainName;
+			final className = moduleTypeName.length > 0 ? moduleTypeName : parsedMainName;
 			if (className == null || className.length == 0 || className == "Unknown")
 				return {files: [], rootMain: null};
 			final mainModuleName = moduleNameForDecl(decl, moduleTypeName, className);
@@ -6369,29 +6778,12 @@ class EmitterStage {
 					out.push("[@@@warning \"-21-26\"]");
 					out.push("");
 
-					// Stage 3 bring-up: upstream unit fixtures call `StringTools.hex`, but our parser
-					// frequently fails to parse the full stdlib `StringTools.hx` at this rung, so the
-					// stub class would otherwise be empty and calls would fail at link time.
-					//
-					// Provide a tiny, self-contained implementation that is "close enough" for bootstrapping.
+					// Stage 3 bring-up: hxhx full output uses a narrow StringTools surface before
+					// Stage3 can reliably emit the full std module.
 					final hasStringToolsHex = moduleName == "StringTools";
 					if (hasStringToolsHex) {
-						out.push("(* hxhx(stage3) bootstrap shim: StringTools.hex *)");
-						out.push("let hex (n : int) (digits : int) : string =");
-						out.push("  let hexChars = \"0123456789ABCDEF\" in");
-						out.push("  let n32 = Int32.of_int n in");
-						out.push("  let rec build (x : Int32.t) (acc : string) : string =");
-						out.push("    let digit = Int32.to_int (Int32.logand x 0xFl) in");
-						out.push("    let acc2 = (Stdlib.String.make 1 (Stdlib.String.get hexChars digit)) ^ acc in");
-						out.push("    let x2 = Int32.shift_right_logical x 4 in");
-						out.push("    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2");
-						out.push("  in");
-						out.push("  let s = build n32 \"\" in");
-						out.push("  if digits <= 0 then s else");
-						out.push("    let rec pad (s0 : string) : string =");
-						out.push("      if Stdlib.String.length s0 < digits then pad (\"0\" ^ s0) else s0");
-						out.push("    in");
-						out.push("    pad s");
+						for (line in stringToolsBootstrapShimSourceForStage3().split("\n"))
+							out.push(line);
 						out.push("");
 					}
 
@@ -6987,7 +7379,25 @@ class EmitterStage {
 								if (tyByIdent.get(name) == null)
 									tyByIdent.set(name, TyType.unknown());
 
-							var body = if (parsedFn == null) {
+							final useStage3ModuleTypeNameBody = mainModuleName == "EmitterStage" && nameRaw == "moduleTypeNameFor";
+							final useStage3HxhxMainJsRouteBody = mainModuleName == "Hxhx_Main"
+								&& nameRaw == "shouldRouteStandardJsToNative";
+							final useStage3WriteWaitStdioReplyBody = mainModuleName == "Hxhx_Stage3Compiler"
+								&& nameRaw == "writeWaitStdioReply";
+							final useStage3ReadConnectDisplayStdinBody = mainModuleName == "Hxhx_Stage3Compiler"
+								&& nameRaw == "readConnectDisplayStdin";
+							final useStage3RunWaitStdioBody = mainModuleName == "Hxhx_Stage3Compiler" && nameRaw == "runWaitStdio";
+							var body = if (useStage3ModuleTypeNameBody) {
+								moduleTypeNameForStage3OcamlBody();
+							} else if (useStage3HxhxMainJsRouteBody) {
+								hxhxMainShouldRouteStandardJsToNativeStage3OcamlBody();
+							} else if (useStage3WriteWaitStdioReplyBody) {
+								hxhxStage3WriteWaitStdioReplyStage3OcamlBody();
+							} else if (useStage3ReadConnectDisplayStdinBody) {
+								hxhxStage3ReadConnectDisplayStdinStage3OcamlBody();
+							} else if (useStage3RunWaitStdioBody) {
+								hxhxStage3RunWaitStdioStage3OcamlBody();
+							} else if (parsedFn == null) {
 								"()";
 							} else if (!moduleEmitBodies) {
 								returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(), arityByName, tyByIdent, staticImportByIdent,
@@ -7567,79 +7977,14 @@ class EmitterStage {
 		rootMainPath = rr.rootMain;
 		_EmitterStageDebug.traceStage3Phase("after_emit_root:" + emittedModulePaths.length);
 
-		// Stage 3 bring-up: upstream unit fixtures use `StringTools.hex`, but our Stage3 typing
-		// frequently produces a placeholder `StringTools.ml` compilation unit with no members.
-		//
-		// Emit a minimal provider implementation when we detect the placeholder unit, so calls
-		// like `StringTools.hex(n)` can link.
-		{
-			final shimName = "StringTools";
-			final shimFile = shimName + ".ml";
-			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-			final placeholder = "(* Generated by hxhx(stage3) bootstrap emitter *)";
-			try {
-				if (sys.FileSystem.exists(shimPath)) {
-					final contents = sys.io.File.getContent(shimPath);
-					final trimmed = StringTools.trim(contents);
-					// The placeholder unit shape changed once we started emitting a file-local warning
-					// suppression directive (to keep bring-up output warning-clean under strict dune).
-					//
-					// Treat both of these as "empty placeholder" modules:
-					// - just the header comment
-					// - header comment + a single `[@@@warning "..."]` line
-					var isPlaceholder = false;
-					if (trimmed == placeholder) {
-						isPlaceholder = true;
-					} else {
-						final lines = trimmed.split("\n").filter(l -> l != null && StringTools.trim(l).length > 0);
-						if (lines.length == 2 && lines[0] == placeholder && StringTools.startsWith(lines[1], "[@@@warning")) {
-							isPlaceholder = true;
-						}
-					}
-					if (isPlaceholder) {
-						sys.io.File.saveContent(shimPath,
-							"(* hxhx(stage3) bootstrap shim: StringTools.hex *)\n"
-							+ "\n"
-							+ "let hex (n : int) (digits : int) : string =\n"
-							+ "  let hexChars = \"0123456789ABCDEF\" in\n"
-							+ "  let n32 = Int32.of_int n in\n"
-							+ "  let rec build (x : Int32.t) (acc : string) : string =\n"
-							+ "    let digit = Int32.to_int (Int32.logand x 0xFl) in\n"
-							+ "    let acc2 = (Stdlib.String.make 1 (Stdlib.String.get hexChars digit)) ^ acc in\n"
-							+ "    let x2 = Int32.shift_right_logical x 4 in\n"
-							+ "    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2\n"
-							+ "  in\n"
-							+ "  let s = build n32 \"\" in\n"
-							+ "  if digits <= 0 then s else\n"
-							+ "    let rec pad (s0 : string) : string =\n"
-							+ "      if Stdlib.String.length s0 < digits then pad (\"0\" ^ s0) else s0\n"
-							+ "    in\n"
-							+ "    pad s\n");
-					}
-				} else {
-					sys.io.File.saveContent(shimPath,
-						"(* hxhx(stage3) bootstrap shim: StringTools.hex *)\n"
-						+ "\n"
-						+ "let hex (n : int) (digits : int) : string =\n"
-						+ "  let hexChars = \"0123456789ABCDEF\" in\n"
-						+ "  let n32 = Int32.of_int n in\n"
-						+ "  let rec build (x : Int32.t) (acc : string) : string =\n"
-						+ "    let digit = Int32.to_int (Int32.logand x 0xFl) in\n"
-						+ "    let acc2 = (Stdlib.String.make 1 (Stdlib.String.get hexChars digit)) ^ acc in\n"
-						+ "    let x2 = Int32.shift_right_logical x 4 in\n"
-						+ "    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2\n"
-						+ "  in\n"
-						+ "  let s = build n32 \"\" in\n"
-						+ "  if digits <= 0 then s else\n"
-						+ "    let rec pad (s0 : string) : string =\n"
-						+ "      if Stdlib.String.length s0 < digits then pad (\"0\" ^ s0) else s0\n"
-						+ "    in\n"
-						+ "    pad s\n");
-					generatedPaths.push(shimFile);
-				}
-			} catch (_:haxe.io.Error) {} catch (_:String) {}
-		}
+		final stringToolsShimPath = try patchStage3StringToolsShimForStage3(outAbs) catch (_:haxe.io.Error) null catch (_:String) null;
+		if (stringToolsShimPath != null)
+			generatedPaths.push(stringToolsShimPath);
 		_EmitterStageDebug.traceStage3Phase("after_shim_stringtools");
+		final ocamlProfileShimPath = try patchStage3OcamlProfileShimForStage3(outAbs) catch (_:haxe.io.Error) null catch (_:String) null;
+		if (ocamlProfileShimPath != null)
+			generatedPaths.push(ocamlProfileShimPath);
+		_EmitterStageDebug.traceStage3Phase("after_shim_ocaml_profile");
 
 		// Stage 3 safety: avoid segfault-shaped behavior in generated macro context wrappers.
 		//
@@ -7651,44 +7996,7 @@ class EmitterStage {
 		// What
 		// - Rewrite the generated `Haxe_macro_Context.load` binding to return arity-aware
 		//   fail-fast closures that raise a deterministic exception instead of crashing.
-		{
-			final shimName = "Haxe_macro_Context";
-			final shimFile = shimName + ".ml";
-			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-			if (sys.FileSystem.exists(shimPath)) {
-				final src = sys.io.File.getContent(shimPath);
-				final from = "let load (f : string) (nargs : int) : _ = Eval_vm_Context.callMacroApi (f)";
-				if (src.indexOf(from) != -1) {
-					final to = "[@@@warning \"-20\"]\n"
-						+ "exception HxMacroApiUnavailable of string\n"
-						+ "let __hxhx_macro_api_unavailable (f : string) : _ = raise (HxMacroApiUnavailable (\"hxhx(stage3): macro api unavailable: \" ^ f))\n"
-						+ "let __hxhx_macro_defined_value (_key : Obj.t) : Obj.t = HxRuntime.hx_null\n"
-						+ "let __hxhx_macro_defined (_key : Obj.t) : Obj.t = Obj.repr false\n"
-						+ "let __hxhx_macro_resolve_path (v : Obj.t) : Obj.t =\n"
-						+ "  let file : string = Obj.obj v in\n"
-						+ "  let resolved =\n"
-						+ "    if Sys.file_exists file then file\n"
-						+ "    else\n"
-						+ "      let in_src = Filename.concat \"src\" file in\n"
-						+ "      if Sys.file_exists in_src then in_src else file\n"
-						+ "  in\n"
-						+ "  Obj.repr resolved\n"
-						+ "let load (f : string) (nargs : int) : _ =\n"
-						+ "  match (f, nargs) with\n"
-						+ "  | (\"defined_value\", 1) -> Obj.magic (fun (key : Obj.t) -> __hxhx_macro_defined_value key)\n"
-						+ "  | (\"defined\", 1) -> Obj.magic (fun (key : Obj.t) -> __hxhx_macro_defined key)\n"
-						+ "  | (\"resolve_path\", 1) -> Obj.magic (fun (file : Obj.t) -> __hxhx_macro_resolve_path file)\n"
-						+ "  | _ ->\n"
-						+ "    match nargs with\n"
-						+ "    | 0 -> Obj.magic (fun () -> __hxhx_macro_api_unavailable f)\n"
-						+ "    | 1 -> Obj.magic (fun (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
-						+ "    | 2 -> Obj.magic (fun (_ : Obj.t) (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
-						+ "    | 3 -> Obj.magic (fun (_ : Obj.t) (_ : Obj.t) (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
-						+ "    | _ -> Obj.magic (fun (_ : Obj.t) -> __hxhx_macro_api_unavailable f)";
-					sys.io.File.saveContent(shimPath, StringTools.replace(src, from, to));
-				}
-			}
-		}
+		patchStage3MacroContextLoadShimForStage3(outAbs);
 		_EmitterStageDebug.traceStage3Phase("after_shim_macro_context");
 		// Stage 3 warning-20 noise control:
 		// add warning-20 suppression to generated modules where placeholder

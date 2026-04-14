@@ -245,7 +245,7 @@ class ExprMacroExpander {
 				if (trace) {
 					final calleePath = renderCalleePath(rc);
 					final argKinds = rargs.map(a -> exprKind(a)).join(",");
-					Sys.println("expr_macro_visit callee=" + (calleePath == null ? exprKind(rc) : calleePath) + " args=[" + argKinds + "]");
+					Sys.println("expr_macro_visit callee=" + (calleePath.length == 0 ? exprKind(rc) : calleePath) + " args=[" + argKinds + "]");
 				}
 
 				final candidate = renderSimpleCall(rc, rargs);
@@ -476,15 +476,15 @@ class ExprMacroExpander {
 		return parts[parts.length - 2] + "." + parts[parts.length - 1] + tail;
 	}
 
-	static function renderCalleePath(e:HxExpr):Null<String> {
+	static function renderCalleePath(e:HxExpr):String {
 		return switch (e) {
 			case EIdent(name):
 				name;
 			case EField(obj, field):
 				final base = renderCalleePath(obj);
-				base == null ? null : (base + "." + field);
+				base.length == 0 ? "" : (base + "." + field);
 			case _:
-				null;
+				"";
 		}
 	}
 
@@ -506,7 +506,7 @@ class ExprMacroExpander {
 		if (callee == null)
 			return null;
 		final path = renderCalleePath(callee);
-		if (path == null || path.length == 0)
+		if (path.length == 0)
 			return null;
 
 		if (args == null || args.length == 0)

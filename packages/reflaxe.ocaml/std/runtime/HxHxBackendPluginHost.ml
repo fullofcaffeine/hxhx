@@ -37,7 +37,7 @@ let register_provider_type (plugin_id : string) (provider_type : string) : unit 
   let plugin_id = normalize_token ~field:"plugin_id" plugin_id in
   let provider_type = normalize_token ~field:"provider_type" provider_type in
   let duplicate =
-    List.exists
+    Stdlib.List.exists
       (fun row -> row.plugin_id = plugin_id && row.provider_type = provider_type)
       !registrations
   in
@@ -56,11 +56,11 @@ let snapshot () : string =
   let lines = Buffer.create 256 in
   Buffer.add_string lines snapshot_version;
   Buffer.add_char lines '\n';
-  List.iter
+  Stdlib.List.iter
     (fun row ->
       Buffer.add_string lines row.plugin_id;
       Buffer.add_char lines '\t';
       Buffer.add_string lines row.provider_type;
       Buffer.add_char lines '\n')
-    (List.rev !registrations);
+    (Stdlib.List.rev !registrations);
   Buffer.contents lines

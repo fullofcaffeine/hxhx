@@ -52,10 +52,23 @@ file_contains_literal() {
   fi
 }
 
+bootstrap_emitter_shim_patch_anchor() {
+  local emitter_path="$1"
+  local source_helper_anchor='ignore (patchStage3MacroContextLoadShimForStage3 (outAbs : string));'
+  local legacy_inline_anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
+
+  if file_contains_literal "$source_helper_anchor" "$emitter_path"; then
+    printf '%s\n' "$source_helper_anchor"
+  else
+    printf '%s\n' "$legacy_inline_anchor"
+  fi
+}
+
 patch_bootstrap_emitter_root_sys_stdio() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
-  local anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
+  local anchor
+  anchor="$(bootstrap_emitter_shim_patch_anchor "$emitter_path")"
   local marker='(* hxhx(stage3) bootstrap shim: root Sys stdio repair *)'
   local temp_path="$emitter_path.tmp"
   local payload_path="$BOOTSTRAP_PATCH_PAYLOAD_DIR/root_sys_stdio.mlpatch"
@@ -76,7 +89,8 @@ patch_bootstrap_emitter_root_sys_stdio() {
 patch_bootstrap_emitter_project_generator_helper_calls() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
-  local anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
+  local anchor
+  anchor="$(bootstrap_emitter_shim_patch_anchor "$emitter_path")"
   local marker='(* hxhx(stage3) bootstrap shim: ProjectGenerator helper-call repair *)'
   local temp_path="$emitter_path.project_generator_helpers.tmp"
   local payload_path="$BOOTSTRAP_PATCH_PAYLOAD_DIR/project_generator_helper_calls.mlpatch"
@@ -97,7 +111,8 @@ patch_bootstrap_emitter_project_generator_helper_calls() {
 patch_bootstrap_emitter_load_template_fallback() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
-  local anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
+  local anchor
+  anchor="$(bootstrap_emitter_shim_patch_anchor "$emitter_path")"
   local marker='(* hxhx(stage3) bootstrap shim: loadTemplate fallback repair *)'
   local temp_path="$emitter_path.load_template.tmp"
   local payload_path="$BOOTSTRAP_PATCH_PAYLOAD_DIR/load_template_fallback.mlpatch"
@@ -118,7 +133,8 @@ patch_bootstrap_emitter_load_template_fallback() {
 patch_bootstrap_emitter_template_engine_condition() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
-  local anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
+  local anchor
+  anchor="$(bootstrap_emitter_shim_patch_anchor "$emitter_path")"
   local marker='(* hxhx(stage3) bootstrap shim: TemplateEngine.evaluateCondition repair *)'
   local temp_path="$emitter_path.template_engine.tmp"
   local payload_path="$BOOTSTRAP_PATCH_PAYLOAD_DIR/template_engine_condition.mlpatch"
@@ -139,7 +155,8 @@ patch_bootstrap_emitter_template_engine_condition() {
 patch_bootstrap_emitter_php_syntax_empty_rest_calls() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
-  local anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
+  local anchor
+  anchor="$(bootstrap_emitter_shim_patch_anchor "$emitter_path")"
   local marker='(* hxhx(stage3) bootstrap shim: Php_Syntax empty-rest repair *)'
   local temp_path="$emitter_path.php_syntax.tmp"
   local payload_path="$BOOTSTRAP_PATCH_PAYLOAD_DIR/php_syntax_empty_rest_calls.mlpatch"
@@ -160,7 +177,8 @@ patch_bootstrap_emitter_php_syntax_empty_rest_calls() {
 patch_bootstrap_emitter_php_boot_float_zero_compare() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
-  local anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
+  local anchor
+  anchor="$(bootstrap_emitter_shim_patch_anchor "$emitter_path")"
   local marker='(* hxhx(stage3) bootstrap shim: Php_Boot float zero compare repair *)'
   local temp_path="$emitter_path.php_boot_float_zero.tmp"
   local payload_path="$BOOTSTRAP_PATCH_PAYLOAD_DIR/php_boot_float_zero_compare.mlpatch"
@@ -186,7 +204,8 @@ patch_bootstrap_emitter_php_boot_float_zero_compare() {
 patch_bootstrap_emitter_php_boot_string_key_lookups() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
-  local anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
+  local anchor
+  anchor="$(bootstrap_emitter_shim_patch_anchor "$emitter_path")"
   local marker='(* hxhx(stage3) bootstrap shim: Php_Boot string-key lookup repair *)'
   local temp_path="$emitter_path.php_boot_string_keys.tmp"
   local payload_path="$BOOTSTRAP_PATCH_PAYLOAD_DIR/php_boot_string_key_lookups.mlpatch"
@@ -212,7 +231,8 @@ patch_bootstrap_emitter_php_boot_string_key_lookups() {
 patch_bootstrap_emitter_haxe_io_eof_presence() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
-  local anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
+  local anchor
+  anchor="$(bootstrap_emitter_shim_patch_anchor "$emitter_path")"
   local marker='(* hxhx(stage3) bootstrap shim: haxe.io.Eof presence repair *)'
   local temp_path="$emitter_path.haxe_io_eof_presence.tmp"
   local payload_path="$BOOTSTRAP_PATCH_PAYLOAD_DIR/haxe_io_eof_presence.mlpatch"
@@ -976,7 +996,8 @@ patch_bootstrap_typerstage_lowercase_static_receiver_guard() {
 patch_bootstrap_emitter_interactive_cli_progress() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
-  local anchor='ignore (let shimName = ("Haxe_macro_Context" : string)'
+  local anchor
+  anchor="$(bootstrap_emitter_shim_patch_anchor "$emitter_path")"
   local marker='(* hxhx(stage3) bootstrap shim: InteractiveCLI.showProgress repair *)'
   local temp_path="$emitter_path.interactive_cli.tmp"
   local payload_path="$BOOTSTRAP_PATCH_PAYLOAD_DIR/interactive_cli_progress.mlpatch"

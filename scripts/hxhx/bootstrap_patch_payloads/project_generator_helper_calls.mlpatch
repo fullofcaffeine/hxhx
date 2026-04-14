@@ -112,7 +112,7 @@
                                                   in
                                                   repairedLines := repairedLine :: !repairedLines
                                                 )) done);
-                                                String.concat "\n" (List.rev (!repairedLines))
+                                                String.concat "\n" (Stdlib.List.rev (!repairedLines))
                                               )
                                             with _ -> contents
                                           in

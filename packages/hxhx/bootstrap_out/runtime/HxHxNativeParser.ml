@@ -97,7 +97,7 @@ let append_token_text (b : Buffer.t) (text : string) : unit =
 
 let split_non_empty_lines (s : string) : string list =
   let lines = Stdlib.String.split_on_char '\n' s in
-  List.filter (fun l -> l <> "") lines
+  Stdlib.List.filter (fun l -> l <> "") lines
 
 let escape_payload (s : string) : string =
   let b = Buffer.create (Stdlib.String.length s) in
@@ -192,7 +192,7 @@ let decode_lexer_stream (s : string) :
   | _header :: rest ->
       let toks = ref [] in
       let err = ref None in
-      List.iter
+      Stdlib.List.iter
         (fun l ->
           if starts_with l "tok " then toks := !toks @ [ parse_tok_line l ]
           else if starts_with l "err " then err := Some l
@@ -1027,14 +1027,14 @@ let parse_module_from_tokens (src : string) (toks : token array)
 
   let pick_last (xs : (string * bool * method_decl list * field_decl list) list) :
       (string * bool * method_decl list * field_decl list) option =
-    match List.rev xs with [] -> None | x :: _ -> Some x
+    match Stdlib.List.rev xs with [] -> None | x :: _ -> Some x
   in
 
   let selected =
     match (expected_main_class, !classes) with
     | None, xs -> pick_last xs
     | Some expected, xs -> (
-        match List.find_opt (fun (n, _, _, _) -> n = expected) xs with
+        match Stdlib.List.find_opt (fun (n, _, _, _) -> n = expected) xs with
         | Some x -> Some x
         | None -> pick_last xs)
   in
@@ -1182,9 +1182,9 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
 
   let picked =
     match expected_main_class with
-    | Some expected when List.mem expected !class_names -> expected
+    | Some expected when Stdlib.List.mem expected !class_names -> expected
     | _ -> (
-        match List.rev !class_names with [] -> "Unknown" | x :: _ -> x)
+        match Stdlib.List.rev !class_names with [] -> "Unknown" | x :: _ -> x)
   in
 
   (!package_path, !imports, !has_toplevel_main, picked)
@@ -1209,16 +1209,16 @@ let encode_ast_lines (package_path : string) (imports : string list)
     ]
   in
   let method_lines =
-    List.map
+    Stdlib.List.map
       (fun (m : method_decl) ->
         let vis =
           match m.visibility with Public -> "public" | Private -> "private"
         in
         let static_s = if m.is_static then "1" else "0" in
-        let args_payload = Stdlib.String.concat "," (List.map fst m.args) in
+        let args_payload = Stdlib.String.concat "," (Stdlib.List.map fst m.args) in
         let argtypes_payload =
           m.args
-          |> List.filter_map (fun (n, t) ->
+          |> Stdlib.List.filter_map (fun (n, t) ->
                  match t with None -> None | Some ty -> Some (n ^ ":" ^ ty))
           |> Stdlib.String.concat ","
         in
@@ -1259,14 +1259,14 @@ let encode_ast_lines (package_path : string) (imports : string list)
   in
   let field_lines =
     fields
-    |> List.map (fun (f : field_decl) ->
+    |> Stdlib.List.map (fun (f : field_decl) ->
            let enc = escape_payload (encode_field_payload f) in
            Printf.sprintf "ast field %d:%s" (Stdlib.String.length enc) enc)
   in
   let static_final_lines =
     fields
-    |> List.filter (fun (f : field_decl) -> f.is_static)
-    |> List.map (fun (f : field_decl) ->
+    |> Stdlib.List.filter (fun (f : field_decl) -> f.is_static)
+    |> Stdlib.List.map (fun (f : field_decl) ->
            let vis =
              match f.visibility with Public -> "public" | Private -> "private"
            in
@@ -1284,7 +1284,7 @@ let encode_ast_lines (package_path : string) (imports : string list)
   in
   let body_lines =
     methods
-    |> List.filter_map (fun (m : method_decl) ->
+    |> Stdlib.List.filter_map (fun (m : method_decl) ->
            match m.body_src with
            | None -> None
            | Some body ->
@@ -1308,7 +1308,7 @@ let encode_err_line (p : pos) (msg : string) : string =
 let strip_terminal_ok (lex_stream : string) : string =
   let lines = split_non_empty_lines lex_stream in
   let kept =
-    List.filter
+    Stdlib.List.filter
       (fun l -> l <> "ok" && not (starts_with l "hxhx_frontend_v="))
       lines
   in

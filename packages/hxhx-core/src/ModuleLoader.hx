@@ -314,18 +314,18 @@ class ModuleLoader extends LazyTypeLoader {
 		}
 	}
 
-	static function normalizeImport(raw:String):Null<String> {
+	static function normalizeImport(raw:String):String {
 		if (raw == null)
-			return null;
+			return "";
 		var s = StringTools.trim(raw);
 		if (s.length == 0)
-			return null;
+			return "";
 		if (StringTools.startsWith(s, "using "))
 			s = StringTools.trim(s.substr("using ".length));
 		final asIdx = s.indexOf(" as ");
 		if (asIdx >= 0)
 			s = StringTools.trim(s.substr(0, asIdx));
-		return s.length == 0 ? null : s;
+		return s;
 	}
 
 	static function implicitQualifiedTypeDeps(source:String):Array<String> {
@@ -372,7 +372,7 @@ class ModuleLoader extends LazyTypeLoader {
 		final modulePkg = HxModuleDecl.getPackagePath(decl);
 		for (rawImport in HxModuleDecl.getImports(decl)) {
 			final imp = normalizeImport(rawImport);
-			if (imp == null)
+			if (imp.length == 0)
 				continue;
 
 			final resolvedImp = {

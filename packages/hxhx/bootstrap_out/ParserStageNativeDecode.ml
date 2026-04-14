@@ -12,6 +12,45 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "ParserStageNativ
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "ParserStageNativeDecode" } : t)
 
+let stripNewTypeParams = fun raw -> try let __fallback_result_116 = let tempString = ref ("" : string) in (
+  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_100 = ("" : string) in (
+    tempString := __assign_100;
+    __assign_100
+  ) else let __assign_101 = (StringTools.trim (raw : string) : string) in (
+    tempString := __assign_101;
+    __assign_101
+  ));
+  ignore (if not (StringTools.startsWith (!tempString : string) ("new" : string)) then raise (HxRuntime.Hx_return (Obj.repr (!tempString : string))) else ());
+  ignore (if HxString.length (!tempString) > 3 then ignore (let c3 = HxString.charCodeAt (!tempString) 3 in let isWs = (let __nullable_102 = c3 in if __nullable_102 == HxRuntime.hx_null then false else Obj.obj __nullable_102 = 32) || (let __nullable_103 = c3 in if __nullable_103 == HxRuntime.hx_null then false else Obj.obj __nullable_103 = 9) || (let __nullable_104 = c3 in if __nullable_104 == HxRuntime.hx_null then false else Obj.obj __nullable_104 = 10) || (let __nullable_105 = c3 in if __nullable_105 == HxRuntime.hx_null then false else Obj.obj __nullable_105 = 13) in if not (isWs) then ignore (let __assign_106 = ("new " ^ HxString.toStdString (HxString.substr (!tempString) 3 (-1)) : string) in (
+    tempString := __assign_106;
+    __assign_106
+  )) else ()) else ());
+  ignore (if not (StringTools.startsWith (!tempString : string) ("new " : string)) then raise (HxRuntime.Hx_return (Obj.repr (!tempString : string))) else ());
+  let lt = HxString.indexOf (!tempString) "<" 0 in let lp = HxString.indexOf (!tempString) "(" 0 in (
+    ignore (if lt < 0 || lp < 0 || lt > lp then raise (HxRuntime.Hx_return (Obj.repr (!tempString : string))) else ());
+    let depth = ref 0 in let i = ref lt in (
+      ignore (while !i < HxString.length (!tempString) do ignore (let c = HxString.charCodeAt (!tempString) (!i) in (
+        ignore (if let __nullable_107 = c in if __nullable_107 == HxRuntime.hx_null then false else Obj.obj __nullable_107 = 60 then ignore (let __old_108 = !depth in let __new_109 = HxInt.add __old_108 1 in (
+          ignore (depth := __new_109);
+          __old_108
+        )) else ignore (if let __nullable_110 = c in if __nullable_110 == HxRuntime.hx_null then false else Obj.obj __nullable_110 = 62 then ignore ((
+          ignore (let __old_111 = !depth in let __new_112 = HxInt.add __old_111 (-1) in (
+            ignore (depth := __new_112);
+            __old_111
+          ));
+          if !depth = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.toStdString (HxString.substr (!tempString) 0 lt) ^ HxString.toStdString (HxString.substr (!tempString) (HxInt.add (!i) 1) (-1)) : string))) else ()
+        )) else ()));
+        let __old_113 = !i in let __new_114 = HxInt.add __old_113 1 in (
+          ignore (i := __new_114);
+          __old_113
+        )
+      )) done);
+      !tempString
+    )
+  )
+) in Obj.magic __fallback_result_116 with
+  | HxRuntime.Hx_return __ret_115 -> Obj.obj __ret_115
+
 let parseRegexLiteral = fun source -> try let __fallback_result_164 = (
   ignore (if not (StringTools.startsWith (source : string) ("~/" : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   let index = ref 2 in let escaped = ref false in (
@@ -64,61 +103,20 @@ let parseRegexLiteral = fun source -> try let __fallback_result_164 = (
 ) in Obj.magic __fallback_result_164 with
   | HxRuntime.Hx_return __ret_163 -> Obj.magic __ret_163
 
-let parseReturnExprText = fun raw -> try let __fallback_result_141 = let stripNewTypeParams = fun s -> try let __fallback_result_116 = let tempString = ref ("" : string) in (
-  ignore (if s == Obj.magic (HxRuntime.hx_null) then let __assign_100 = ("" : string) in (
-    tempString := __assign_100;
-    __assign_100
-  ) else let __assign_101 = (StringTools.trim (s : string) : string) in (
-    tempString := __assign_101;
-    __assign_101
-  ));
-  let t = (!tempString : string) in (
-    ignore (if not (StringTools.startsWith (t : string) ("new" : string)) then raise (HxRuntime.Hx_return (Obj.repr (s : string))) else ());
-    let norm = ref (t : string) in (
-      ignore (if HxString.length (!norm) > 3 then ignore (let c3 = HxString.charCodeAt (!norm) 3 in let isWs = (let __nullable_102 = c3 in if __nullable_102 == HxRuntime.hx_null then false else Obj.obj __nullable_102 = 32) || (let __nullable_103 = c3 in if __nullable_103 == HxRuntime.hx_null then false else Obj.obj __nullable_103 = 9) || (let __nullable_104 = c3 in if __nullable_104 == HxRuntime.hx_null then false else Obj.obj __nullable_104 = 10) || (let __nullable_105 = c3 in if __nullable_105 == HxRuntime.hx_null then false else Obj.obj __nullable_105 = 13) in if not (isWs) then ignore (let __assign_106 = ("new " ^ HxString.toStdString (HxString.substr (!norm) 3 (-1)) : string) in (
-        norm := __assign_106;
-        __assign_106
-      )) else ()) else ());
-      ignore (if not (StringTools.startsWith (!norm : string) ("new " : string)) then raise (HxRuntime.Hx_return (Obj.repr (!norm : string))) else ());
-      let lt = HxString.indexOf (!norm) "<" 0 in let lp = HxString.indexOf (!norm) "(" 0 in (
-        ignore (if lt < 0 || lp < 0 || lt > lp then raise (HxRuntime.Hx_return (Obj.repr (s : string))) else ());
-        let depth = ref 0 in let i = ref lt in (
-          ignore (while !i < HxString.length (!norm) do ignore (let c = HxString.charCodeAt (!norm) (!i) in (
-            ignore (if let __nullable_107 = c in if __nullable_107 == HxRuntime.hx_null then false else Obj.obj __nullable_107 = 60 then ignore (let __old_108 = !depth in let __new_109 = HxInt.add __old_108 1 in (
-              ignore (depth := __new_109);
-              __old_108
-            )) else ignore (if let __nullable_110 = c in if __nullable_110 == HxRuntime.hx_null then false else Obj.obj __nullable_110 = 62 then ignore ((
-              ignore (let __old_111 = !depth in let __new_112 = HxInt.add __old_111 (-1) in (
-                ignore (depth := __new_112);
-                __old_111
-              ));
-              if !depth = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.toStdString (HxString.substr (!norm) 0 lt) ^ HxString.toStdString (HxString.substr (!norm) (HxInt.add (!i) 1) (-1)) : string))) else ()
-            )) else ()));
-            let __old_113 = !i in let __new_114 = HxInt.add __old_113 1 in (
-              ignore (i := __new_114);
-              __old_113
-            )
-          )) done);
-          !norm
-        )
-      )
-    )
-  )
-) in Obj.magic __fallback_result_116 with
-  | HxRuntime.Hx_return __ret_115 -> Obj.obj __ret_115 in let s = (StringTools.trim (raw : string) : string) in let s = (stripNewTypeParams (s : string) : string) in (
-  ignore (if HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EUnsupported ("<empty-return-expr>" : string))))) else ());
-  let regexLiteral = parseRegexLiteral (s : string) in (
+let parseReturnExprText = fun raw -> try let __fallback_result_141 = let exprText = (StringTools.trim (raw : string) : string) in let exprText = (stripNewTypeParams (exprText : string) : string) in (
+  ignore (if HxString.length exprText = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EUnsupported ("<empty-return-expr>" : string))))) else ());
+  let regexLiteral = parseRegexLiteral (exprText : string) in (
     ignore (if regexLiteral != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.ENew (("EReg" : string), Obj.magic (let __arr_117 = HxArray.create () in (
       ignore (HxArray.push __arr_117 (HxExpr.EString (Obj.obj (HxAnon.get regexLiteral "pattern") : string)));
       ignore (HxArray.push __arr_117 (HxExpr.EString (Obj.obj (HxAnon.get regexLiteral "flags") : string)));
       __arr_117
     ))))))) else ());
-    ignore (if HxString.equals s "null" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.ENull)))) else ());
-    ignore (if HxString.equals s "true" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EBool true)))) else ());
-    ignore (if HxString.equals s "false" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EBool false)))) else ());
-    ignore (if HxString.length s >= 2 && StringTools.startsWith (s : string) ("\"" : string) && StringTools.endsWith (s : string) ("\"" : string) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EString (HxString.substr s 1 (HxInt.sub (HxString.length s) 2) : string))))) else ());
-    ignore (let i = ref 0 in let sign = ref 1 in (
-      ignore (if HxString.length s > 0 && (let __nullable_118 = HxString.charCodeAt s 0 in if __nullable_118 == HxRuntime.hx_null then false else Obj.obj __nullable_118 = 45) then ignore ((
+    ignore (if HxString.equals exprText "null" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.ENull)))) else ());
+    ignore (if HxString.equals exprText "true" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EBool true)))) else ());
+    ignore (if HxString.equals exprText "false" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EBool false)))) else ());
+    ignore (if HxString.length exprText >= 2 && StringTools.startsWith (exprText : string) ("\"" : string) && StringTools.endsWith (exprText : string) ("\"" : string) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EString (HxString.substr exprText 1 (HxInt.sub (HxString.length exprText) 2) : string))))) else ());
+    let i = ref 0 in let sign = ref 1 in (
+      ignore (if HxString.length exprText > 0 && (let __nullable_118 = HxString.charCodeAt exprText 0 in if __nullable_118 == HxRuntime.hx_null then false else Obj.obj __nullable_118 = 45) then ignore ((
         ignore (let __assign_119 = -1 in (
           sign := __assign_119;
           __assign_119
@@ -129,7 +127,7 @@ let parseReturnExprText = fun raw -> try let __fallback_result_141 = let stripNe
         )
       )) else ());
       let value = ref 0 in let saw = ref false in (
-        ignore (try while !i < HxString.length s do try ignore (let c = HxString.charCodeAt s (!i) in (
+        ignore (try while !i < HxString.length exprText do try ignore (let c = HxString.charCodeAt exprText (!i) in (
           ignore (if (let __nullable_121 = c in let __nullable_122 = 48 in if __nullable_121 == HxRuntime.hx_null then false else Obj.obj __nullable_121 < __nullable_122) || (let __nullable_123 = c in let __nullable_124 = 57 in if __nullable_123 == HxRuntime.hx_null then false else Obj.obj __nullable_123 > __nullable_124) then ignore ((
             ignore (let __assign_125 = false in (
               saw := __assign_125;
@@ -152,45 +150,45 @@ let parseReturnExprText = fun raw -> try let __fallback_result_141 = let stripNe
         )) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
-        if !saw && !i = HxString.length s then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EInt (HxInt.mul (!sign) (!value)))))) else ()
+        ignore (if !saw && !i = HxString.length exprText then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EInt (HxInt.mul (!sign) (!value)))))) else ());
+        ignore (if HxString.indexOf exprText "." 0 <> -1 then ignore (let f = Std.parseFloat (exprText : string) in if not (Math.isNaN f) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EFloat f)))) else ()) else ());
+        let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
+          ignore (try let __assign_131 = Obj.magic (HxParser.parseExprText (exprText : string)) in (
+            tempResult := __assign_131;
+            __assign_131
+          ) with
+            | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+            | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+            | HxRuntime.Hx_return __ret_132 -> raise (HxRuntime.Hx_return __ret_132)
+            | HxRuntime.Hx_exception (__exn_v_133, __exn_tags_134) -> if HxRuntime.tags_has __exn_tags_134 "HxParseError" then let _hx = (Obj.obj __exn_v_133 : HxParseError.t) in (
+              ignore _hx;
+              let __assign_136 = Obj.magic (HxExpr.EUnsupported (exprText : string)) in (
+                tempResult := __assign_136;
+                __assign_136
+              )
+            ) else if HxRuntime.tags_has __exn_tags_134 "String" then let _hx = (Obj.obj __exn_v_133 : string) in (
+              ignore _hx;
+              let __assign_135 = Obj.magic (HxExpr.EUnsupported (exprText : string)) in (
+                tempResult := __assign_135;
+                __assign_135
+              )
+            ) else HxRuntime.hx_throw_typed __exn_v_133 __exn_tags_134
+            | __exn_137 -> if HxRuntime.tags_has ["OcamlExn"] "HxParseError" then let _hx = (Obj.obj (Obj.repr __exn_137) : HxParseError.t) in (
+              ignore _hx;
+              let __assign_139 = Obj.magic (HxExpr.EUnsupported (exprText : string)) in (
+                tempResult := __assign_139;
+                __assign_139
+              )
+            ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_137) : string) in (
+              ignore _hx;
+              let __assign_138 = Obj.magic (HxExpr.EUnsupported (exprText : string)) in (
+                tempResult := __assign_138;
+                __assign_138
+              )
+            ) else raise (__exn_137));
+          !tempResult
+        )
       )
-    ));
-    ignore (if HxString.indexOf s "." 0 <> -1 then ignore (let f = Std.parseFloat (s : string) in if not (Math.isNaN f) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EFloat f)))) else ()) else ());
-    let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
-      ignore (try let __assign_131 = Obj.magic (HxParser.parseExprText (s : string)) in (
-        tempResult := __assign_131;
-        __assign_131
-      ) with
-        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_132 -> raise (HxRuntime.Hx_return __ret_132)
-        | HxRuntime.Hx_exception (__exn_v_133, __exn_tags_134) -> if HxRuntime.tags_has __exn_tags_134 "HxParseError" then let _hx = (Obj.obj __exn_v_133 : HxParseError.t) in (
-          ignore _hx;
-          let __assign_136 = Obj.magic (HxExpr.EUnsupported (s : string)) in (
-            tempResult := __assign_136;
-            __assign_136
-          )
-        ) else if HxRuntime.tags_has __exn_tags_134 "String" then let _hx = (Obj.obj __exn_v_133 : string) in (
-          ignore _hx;
-          let __assign_135 = Obj.magic (HxExpr.EUnsupported (s : string)) in (
-            tempResult := __assign_135;
-            __assign_135
-          )
-        ) else HxRuntime.hx_throw_typed __exn_v_133 __exn_tags_134
-        | __exn_137 -> if HxRuntime.tags_has ["OcamlExn"] "HxParseError" then let _hx = (Obj.obj (Obj.repr __exn_137) : HxParseError.t) in (
-          ignore _hx;
-          let __assign_139 = Obj.magic (HxExpr.EUnsupported (s : string)) in (
-            tempResult := __assign_139;
-            __assign_139
-          )
-        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_137) : string) in (
-          ignore _hx;
-          let __assign_138 = Obj.magic (HxExpr.EUnsupported (s : string)) in (
-            tempResult := __assign_138;
-            __assign_138
-          )
-        ) else raise (__exn_137));
-      !tempResult
     )
   )
 ) in Obj.magic __fallback_result_141 with

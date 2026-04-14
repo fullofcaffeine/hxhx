@@ -95,8 +95,8 @@ let parse_args (request : string) : string list =
   in
   request |> (fun _ -> before_stdin)
   |> Stdlib.String.split_on_char '\n'
-  |> List.map trim_cr
-  |> List.filter (fun s -> s <> "")
+  |> Stdlib.List.map trim_cr
+  |> Stdlib.List.filter (fun s -> s <> "")
 
 let rec find_display_arg = function
   | "--display" :: value :: _ -> Some value

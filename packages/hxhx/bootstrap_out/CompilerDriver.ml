@@ -24,7 +24,7 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
     ignore (HxArray.push __arr_3 (!tempString));
     __arr_3
   )) in let mainModule = ("demo.A" : string) in let resolved = Obj.magic (ResolverStage.parseProject (Obj.magic classPaths) (mainModule : string)) in (
-    ignore (ResolvedModule.create);
+    ignore (ResolvedModule.getParsed);
     let root = Obj.magic (HxArray.get (Obj.magic resolved) 0) in let ast = Obj.magic (ResolvedModule.getParsed (Obj.magic root)) in let decl = Obj.magic (ParsedModule.getDecl (Obj.magic ast) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let imports = Obj.magic (HxModuleDecl.getImports (Obj.magic decl)) in let mainClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in (
       ignore (print_endline "parse=ok");
       ignore (print_endline ("modules=" ^ string_of_int (HxArray.length resolved)));

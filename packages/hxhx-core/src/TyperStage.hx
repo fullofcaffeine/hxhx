@@ -293,43 +293,43 @@ class TyperStage {
 		return out == null ? TyType.unknown() : out;
 	}
 
+	/**
+		Best-effort: extract a dotted name from a field chain expression.
+
+		Why
+		- Stage3 must recognize fully-qualified type paths used directly in expressions, e.g.:
+		  `runci.targets.Macro.run(args)` (no import for `runci.targets.Macro`).
+		- The lazy ModuleLoader can load such modules on-demand, but only if we call
+		  `ctx.resolveType(...)` with the dotted type path.
+
+		What
+		- Converts `EIdent("runci")`, `EField(_, "targets")`, `EField(_, "Macro")` into:
+		  `"runci.targets.Macro"`.
+
+		How
+		- Conservative: only supports `EIdent` + `EField` chains.
+		- Returns an empty string for non-chain expressions.
+	**/
+	static function dottedFieldPath(e:HxExpr):String {
+		return switch (e) {
+			case EIdent(name):
+				name == null ? "" : name;
+			case EField(obj, field):
+				final base = dottedFieldPath(obj);
+				base.length == 0 ? "" : (base + "." + field);
+			case _:
+				"";
+		}
+	}
+
+	static function isUpperStartName(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		final c = name.charCodeAt(0);
+		return c >= "A".code && c <= "Z".code;
+	}
+
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
-		/**
-			Best-effort: extract a dotted name from a field chain expression.
-
-			Why
-			- Stage3 must recognize fully-qualified type paths used directly in expressions, e.g.:
-			  `runci.targets.Macro.run(args)` (no import for `runci.targets.Macro`).
-			- The lazy ModuleLoader can load such modules on-demand, but only if we call
-			  `ctx.resolveType(...)` with the dotted type path.
-
-			What
-			- Converts `EIdent("runci")`, `EField(_, "targets")`, `EField(_, "Macro")` into:
-			  `"runci.targets.Macro"`.
-
-			How
-			- Conservative: only supports `EIdent` + `EField` chains.
-			- Returns `null` for non-chain expressions.
-		**/
-		function dottedFieldPath(e:HxExpr):Null<String> {
-			return switch (e) {
-				case EIdent(name):
-					name;
-				case EField(obj, field):
-					final base = dottedFieldPath(obj);
-					base == null ? null : (base + "." + field);
-				case _:
-					null;
-			}
-		}
-
-		function isUpperStartName(name:String):Bool {
-			if (name == null || name.length == 0)
-				return false;
-			final c = name.charCodeAt(0);
-			return c >= "A".code && c <= "Z".code;
-		}
-
 		return switch (expr) {
 			case ENull:
 				TyType.fromHintText("Null");
@@ -401,7 +401,7 @@ class TyperStage {
 				//   (UpperStart), ask the context to resolve it as a type.
 				// - This triggers ModuleLoader-based on-demand loading.
 				final dotted = dottedFieldPath(obj);
-				if (dotted != null) {
+				if (dotted.length > 0) {
 					final parts = dotted.split(".");
 					final last = parts.length == 0 ? "" : parts[parts.length - 1];
 					if (isUpperStartName(last)) {
@@ -479,6 +479,10 @@ class TyperStage {
 						for (a in args)
 							inferExprType(a, scope, ctx, pos);
 						return TyType.fromHintText("String");
+					case EField(EIdent("Sys"), "programPath"):
+						for (a in args)
+							inferExprType(a, scope, ctx, pos);
+						return TyType.fromHintText("String");
 					case EField(EIdent("Sys"), "args"):
 						for (a in args)
 							inferExprType(a, scope, ctx, pos);
@@ -540,7 +544,7 @@ class TyperStage {
 								// The upstream RunCi harness uses this shape heavily without imports,
 								// so we must resolve the type path and let the ModuleLoader pull it in.
 								final dotted = dottedFieldPath(obj);
-								if (dotted != null) {
+								if (dotted.length > 0) {
 									final parts = dotted.split(".");
 									final last = parts.length == 0 ? "" : parts[parts.length - 1];
 									if (isUpperStartName(last)) {

@@ -28,7 +28,7 @@ let register_expr_handler (plugin_id : string) (expr : string)
   let plugin_id = normalize_token ~field:"plugin_id" plugin_id in
   let expr = normalize_token ~field:"expr" expr in
   let duplicate =
-    List.exists
+    Stdlib.List.exists
       (fun row -> row.plugin_id = plugin_id && row.expr = expr)
       !registrations
   in
@@ -50,13 +50,13 @@ let snapshot () : string =
   Buffer.add_char lines '\n';
   Buffer.add_string lines ("macroApiVersion=" ^ string_of_int macro_api_version);
   Buffer.add_char lines '\n';
-  List.iter
+  Stdlib.List.iter
     (fun row ->
       Buffer.add_string lines row.plugin_id;
       Buffer.add_char lines '\t';
       Buffer.add_string lines row.expr;
       Buffer.add_char lines '\n')
-    (List.rev !registrations);
+    (Stdlib.List.rev !registrations);
   Buffer.contents lines
 
 let run_expr (expr : string) : string =

@@ -43,7 +43,7 @@ let iter (a : 'a t) (f : 'a -> unit) : unit =
 
 let of_list (xs : 'a list) : 'a t =
   let a = create () in
-  List.iter (fun x -> ignore (push a x)) xs;
+  Stdlib.List.iter (fun x -> ignore (push a x)) xs;
   a
 
 let to_list (a : 'a t) : 'a list =

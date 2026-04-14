@@ -314,7 +314,7 @@ class ParserStageNativeDecode {
 		return decodeFieldPayload(payload);
 	}
 
-	static function parseReturnExprText(raw:String):HxExpr {
+	static function stripNewTypeParams(raw:String):String {
 		// Bring-up: the native frontend transmits some expression text without fully parsing it.
 		//
 		// A common upstream pattern is `new Array<T>()` or `new Map<K,V>()`. In plain expression
@@ -323,75 +323,75 @@ class ParserStageNativeDecode {
 		//
 		// For Stage3 emission, we do not need to preserve the type parameters, only the allocation
 		// shape, so we strip the `<...>` group when it appears immediately after a `new Type`.
-		function stripNewTypeParams(s:String):String {
-			final t = s == null ? "" : StringTools.trim(s);
-			// The native protocol's expression capture concatenates tokens without spaces, so
-			// `new Array<T>()` can arrive as `newArray<T>()`. Normalize that first.
-			if (!StringTools.startsWith(t, "new"))
-				return s;
-			var norm = t;
-			if (norm.length > 3) {
-				final c3 = norm.charCodeAt(3);
-				final isWs = c3 == " ".code || c3 == "\t".code || c3 == "\n".code || c3 == "\r".code;
-				if (!isWs)
-					norm = "new " + norm.substr(3);
-			}
-			if (!StringTools.startsWith(norm, "new "))
-				return norm;
-			final lt = norm.indexOf("<");
-			final lp = norm.indexOf("(");
-			if (lt < 0 || lp < 0 || lt > lp)
-				return s;
-			var depth = 0;
-			var i = lt;
-			while (i < norm.length) {
-				final c = norm.charCodeAt(i);
-				if (c == "<".code)
-					depth++;
-				else if (c == ">".code) {
-					depth--;
-					if (depth == 0) {
-						return norm.substr(0, lt) + norm.substr(i + 1);
-					}
-				}
-				i++;
-			}
-			return norm;
+		final text = raw == null ? "" : StringTools.trim(raw);
+		// The native protocol's expression capture concatenates tokens without spaces, so
+		// `new Array<T>()` can arrive as `newArray<T>()`. Normalize that first.
+		if (!StringTools.startsWith(text, "new"))
+			return text;
+		var norm = text;
+		if (norm.length > 3) {
+			final c3 = norm.charCodeAt(3);
+			final isWs = c3 == " ".code || c3 == "\t".code || c3 == "\n".code || c3 == "\r".code;
+			if (!isWs)
+				norm = "new " + norm.substr(3);
 		}
+		if (!StringTools.startsWith(norm, "new "))
+			return norm;
+		final lt = norm.indexOf("<");
+		final lp = norm.indexOf("(");
+		if (lt < 0 || lp < 0 || lt > lp)
+			return text;
+		var depth = 0;
+		var i = lt;
+		while (i < norm.length) {
+			final c = norm.charCodeAt(i);
+			if (c == "<".code)
+				depth++;
+			else if (c == ">".code) {
+				depth--;
+				if (depth == 0) {
+					return norm.substr(0, lt) + norm.substr(i + 1);
+				}
+			}
+			i++;
+		}
+		return norm;
+	}
 
-		var s = StringTools.trim(raw);
-		s = stripNewTypeParams(s);
-		if (s.length == 0)
+	static function parseReturnExprText(raw:String):HxExpr {
+		var exprText = StringTools.trim(raw);
+		exprText = stripNewTypeParams(exprText);
+		if (exprText.length == 0)
 			return EUnsupported("<empty-return-expr>");
 
-		final regexLiteral = parseRegexLiteral(s);
+		final regexLiteral = parseRegexLiteral(exprText);
 		if (regexLiteral != null)
 			return ENew("EReg", [EString(regexLiteral.pattern), EString(regexLiteral.flags)]);
 
-		if (s == "null")
+		if (exprText == "null")
 			return ENull;
-		if (s == "true")
+		if (exprText == "true")
 			return EBool(true);
-		if (s == "false")
+		if (exprText == "false")
 			return EBool(false);
 
-		if (s.length >= 2 && StringTools.startsWith(s, "\"") && StringTools.endsWith(s, "\"")) {
-			return EString(s.substr(1, s.length - 2));
+		if (exprText.length >= 2 && StringTools.startsWith(exprText, "\"") && StringTools.endsWith(exprText, "\"")) {
+			return EString(exprText.substr(1, exprText.length - 2));
 		}
 
 		// Integers: [-]?[0-9]+ (manual parse to avoid Null<Int> pitfalls in bootstrap output).
 		{
 			var i = 0;
 			var sign = 1;
-			if (s.length > 0 && s.charCodeAt(0) == "-".code) {
+			if (exprText.length > 0 && exprText.charCodeAt(0) == "-".code) {
 				sign = -1;
 				i = 1;
 			}
 
 			var value = 0;
 			var saw = false;
-			while (i < s.length) {
-				final c = s.charCodeAt(i);
+			while (i < exprText.length) {
+				final c = exprText.charCodeAt(i);
 				if (c < "0".code || c > "9".code) {
 					saw = false;
 					break;
@@ -401,30 +401,30 @@ class ParserStageNativeDecode {
 				i++;
 			}
 
-			if (saw && i == s.length)
+			if (saw && i == exprText.length)
 				return EInt(sign * value);
 		}
 
 		// Floats: best-effort via parseFloat if it contains '.'.
-		if (s.indexOf(".") != -1) {
-			final f = Std.parseFloat(s);
+		if (exprText.indexOf(".") != -1) {
+			final f = Std.parseFloat(exprText);
 			if (!Math.isNaN(f))
 				return EFloat(f);
 		}
 
 		#if hxhx_stage0_no_hx_parser
 		// Stage0 profiling lane: avoid pulling the pure-Haxe parser fallback surface.
-		return EUnsupported(s);
+		return EUnsupported(exprText);
 		#else
 		// Fallback: try to parse a small field/call chain (e.g. `Util.ping()`).
 		return try {
-			HxParser.parseExprText(s);
+			HxParser.parseExprText(exprText);
 		} catch (_:HxParseError) {
 			// Last resort: treat as unsupported so emitters don't attempt to print raw Haxe text as OCaml.
-			EUnsupported(s);
+			EUnsupported(exprText);
 		} catch (_:String) {
 			// Last resort: treat as unsupported so emitters don't attempt to print raw Haxe text as OCaml.
-			EUnsupported(s);
+			EUnsupported(exprText);
 		}
 		#end
 	}
