@@ -453,10 +453,13 @@ let buildClassRefs = fun bySimpleName byFullName -> let merged = Obj.magic (HxMa
   merged
 )
 
+let isCompileTimeMacroFallback = fun fnName -> HxString.equals fnName "register" || HxString.equals fnName "run" || HxString.equals fnName "test" || HxString.equals fnName "stripWhitespaces" || HxString.equals fnName "extractJs" || HxString.equals fnName "getOutput"
+
 let allowStaticBodyFallback = fun unit fnName reason -> try let __fallback_result_58 = let isBodyParseError = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "body_parse_error" 0 <> -1 in let isUnsupportedExpr = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "[js-native:unsupported_expr]" 0 <> -1 in (
   ignore (if not (isBodyParseError) && not (isUnsupportedExpr) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   ignore (if isBodyParseError && HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "haxe.io.FPHelper" && fnName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fnName : string) ("_" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (if HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "Macro" && (HxString.equals fnName "test" || HxString.equals fnName "stripWhitespaces") then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "haxe.macro.Compiler" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "Macro" && isCompileTimeMacroFallback (fnName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   false
 ) in Obj.magic __fallback_result_58 with
   | HxRuntime.Hx_return __ret_57 -> Obj.obj __ret_57

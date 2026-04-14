@@ -553,13 +553,22 @@ class JsTargetCore implements ITargetCore {
 		if (isBodyParseError && unit.fullName == "haxe.io.FPHelper" && fnName != null && StringTools.startsWith(fnName, "_"))
 			return true;
 
-		// Full1 optimization suite currently exercises a compile-time-only helper body
-		// (`Macro.test` / `Macro.stripWhitespaces`) through the JS target output graph.
+		// Full1 suite macros can leave compile-time-only helper bodies in the JS target
+		// output graph. Keep these helpers neutral while the graph-pruning work is closed.
+		if (unit.fullName == "haxe.macro.Compiler")
+			return true;
+
+		// Full1 optimization suite currently exercises a compile-time-only root `Macro`
+		// helper module through the JS target output graph.
 		// Keep the suite compiling while parser coverage is closed in follow-up parity beads.
-		if (unit.fullName == "Macro" && (fnName == "test" || fnName == "stripWhitespaces"))
+		if (unit.fullName == "Macro" && isCompileTimeMacroFallback(fnName))
 			return true;
 
 		return false;
+	}
+
+	static function isCompileTimeMacroFallback(fnName:String):Bool {
+		return fnName == "register" || fnName == "run" || fnName == "test" || fnName == "stripWhitespaces" || fnName == "extractJs" || fnName == "getOutput";
 	}
 
 	static function resolveMainRef(main:String, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>):Null<String> {

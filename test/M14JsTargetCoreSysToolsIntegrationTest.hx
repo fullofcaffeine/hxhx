@@ -71,12 +71,26 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function macroModule():TypedModule {
 		final inputArg = new HxFunctionArg("input", "String", HxDefaultValue.NoDefault);
+		final metadataArg = new HxFunctionArg("meta", "Metadata", HxDefaultValue.NoDefault);
 		final macroClass = new HxClassDecl("Macro", false, [
+			new HxFunctionDecl("register", HxVisibility.Public, true, [inputArg], "Void", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("run", HxVisibility.Public, true, [], "Void", unsupportedBody("body_parse_error"), ""),
 			new HxFunctionDecl("test", HxVisibility.Public, true, [], "Void", unsupportedBody("body_parse_error"), ""),
-			new HxFunctionDecl("stripWhitespaces", HxVisibility.Public, true, [inputArg], "String", unsupportedBody("[js-native:unsupported_expr]"), "")
+			new HxFunctionDecl("stripWhitespaces", HxVisibility.Public, true, [inputArg], "String", unsupportedBody("[js-native:unsupported_expr]"), ""),
+			new HxFunctionDecl("extractJs", HxVisibility.Public, true, [metadataArg], "String", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("getOutput", HxVisibility.Public, true, [inputArg], "String", unsupportedBody("body_parse_error"), "")
 		]);
 		final decl = new HxModuleDecl("", [], macroClass, [macroClass], false, false);
 		return typedModule("", decl, "Macro.hx");
+	}
+
+	static function macroCompilerModule():TypedModule {
+		final flagArg = new HxFunctionArg("flag", "String", HxDefaultValue.NoDefault);
+		final compilerClass = new HxClassDecl("Compiler", false, [
+			new HxFunctionDecl("getDefine", HxVisibility.Public, true, [flagArg], "String", unsupportedBody("[js-native:unsupported_expr]"), "")
+		]);
+		final decl = new HxModuleDecl("haxe.macro", [], compilerClass, [compilerClass], false, false);
+		return typedModule("", decl, "haxe/macro/Compiler.hx");
 	}
 
 	static function mainModule(source:String):TypedModule {
@@ -116,7 +130,13 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"  }",
 				"}"
 			].join("\n");
-			final program = new MacroExpandedProgram([mainModule(source), sysToolsModule(), pathModule(), macroModule()], false);
+			final program = new MacroExpandedProgram([
+				mainModule(source),
+				sysToolsModule(),
+				pathModule(),
+				macroModule(),
+				macroCompilerModule()
+			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
 			final context = new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
@@ -127,6 +147,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_SysTools.quoteWinArg = function", "SysTools quoteWinArg shim should emit");
 			assertContains(js, "__hx_cls_haxe_io_Path.normalize = function", "Path normalize shim should emit");
 			assertContains(js, "__hx_cls_Macro.stripWhitespaces = function", "compile-time Macro fallback should emit");
+			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");
+			assertContains(js, "__hx_cls_haxe_macro_Compiler.getDefine = function", "compile-time macro Compiler fallback should emit");
 
 			final stdout = runNodeScript(artifactPath);
 			assertContains(stdout, "'a b'", "quoteUnixArg should quote shell-unsafe spaces");
