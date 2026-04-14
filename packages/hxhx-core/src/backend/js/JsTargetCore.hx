@@ -233,11 +233,14 @@ class JsTargetCore implements ITargetCore {
 		bodies are still opaque to the Stage3 JS statement emitter.
 
 		This is intentionally narrow. The helper keeps JS-native smoke gates moving for
-		`haxe.SysTools` process argument quoting without broadening the generic
-		unsupported-expression fallback, so unrelated user code still fails fast with a
-		diagnostic instead of silently emitting an approximate body.
+		selected upstream stdlib helpers without broadening the generic unsupported-
+		expression fallback, so unrelated user code still fails fast with a diagnostic
+		instead of silently emitting an approximate body.
 	**/
 	static function emitKnownStaticFunctionBody(writer:JsWriter, fullName:String, fnName:String, params:Array<String>):Bool {
+		if (fullName == "haxe.io.Path")
+			return emitPathStaticFunctionBody(writer, fnName, params);
+
 		if (fullName != "haxe.SysTools")
 			return false;
 
@@ -310,6 +313,220 @@ class JsTargetCore implements ITargetCore {
 		}
 	}
 
+	static function emitPathStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "withoutExtension":
+				if (params.length < 1)
+					return false;
+				emitPathWithoutExtensionBody(writer, params[0]);
+				return true;
+			case "withoutDirectory":
+				if (params.length < 1)
+					return false;
+				emitPathWithoutDirectoryBody(writer, params[0]);
+				return true;
+			case "directory":
+				if (params.length < 1)
+					return false;
+				emitPathDirectoryBody(writer, params[0]);
+				return true;
+			case "extension":
+				if (params.length < 1)
+					return false;
+				emitPathExtensionBody(writer, params[0]);
+				return true;
+			case "withExtension":
+				if (params.length < 2)
+					return false;
+				emitPathWithExtensionBody(writer, params[0], params[1]);
+				return true;
+			case "join":
+				if (params.length < 1)
+					return false;
+				emitPathJoinBody(writer, params[0]);
+				return true;
+			case "normalize":
+				if (params.length < 1)
+					return false;
+				emitPathNormalizeBody(writer, params[0]);
+				return true;
+			case "addTrailingSlash":
+				if (params.length < 1)
+					return false;
+				emitPathAddTrailingSlashBody(writer, params[0]);
+				return true;
+			case "removeTrailingSlashes":
+				if (params.length < 1)
+					return false;
+				emitPathRemoveTrailingSlashesBody(writer, params[0]);
+				return true;
+			case "isAbsolute":
+				if (params.length < 1)
+					return false;
+				emitPathIsAbsoluteBody(writer, params[0]);
+				return true;
+			case "unescape":
+				if (params.length < 1)
+					return false;
+				emitPathUnescapeBody(writer, params[0]);
+				return true;
+			case "escape":
+				if (params.length < 2)
+					return false;
+				emitPathEscapeBody(writer, params[0], params[1]);
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitPathFileStemSetup(writer:JsWriter, path:String):Void {
+		writer.writeln(path + " = String(" + path + ");");
+		writer.writeln("var __hx_slash = Math.max(" + path + ".lastIndexOf(\"/\"), " + path + ".lastIndexOf(\"\\\\\"));");
+		writer.writeln("var __hx_dot = " + path + ".lastIndexOf(\".\");");
+	}
+
+	static function emitPathWithoutExtensionBody(writer:JsWriter, path:String):Void {
+		emitPathFileStemSetup(writer, path);
+		writer.writeln("return (__hx_dot <= __hx_slash) ? " + path + " : " + path + ".substr(0, __hx_dot);");
+	}
+
+	static function emitPathWithoutDirectoryBody(writer:JsWriter, path:String):Void {
+		writer.writeln(path + " = String(" + path + ");");
+		writer.writeln("var __hx_slash = Math.max(" + path + ".lastIndexOf(\"/\"), " + path + ".lastIndexOf(\"\\\\\"));");
+		writer.writeln("return __hx_slash < 0 ? " + path + " : " + path + ".substr(__hx_slash + 1);");
+	}
+
+	static function emitPathDirectoryBody(writer:JsWriter, path:String):Void {
+		writer.writeln(path + " = String(" + path + ");");
+		writer.writeln("var __hx_slash = Math.max(" + path + ".lastIndexOf(\"/\"), " + path + ".lastIndexOf(\"\\\\\"));");
+		writer.writeln("return __hx_slash < 0 ? \"\" : " + path + ".substr(0, __hx_slash);");
+	}
+
+	static function emitPathExtensionBody(writer:JsWriter, path:String):Void {
+		writer.writeln(path + " = String(" + path + ");");
+		writer.writeln("var __hx_slash = Math.max(" + path + ".lastIndexOf(\"/\"), " + path + ".lastIndexOf(\"\\\\\"));");
+		writer.writeln("var __hx_dot = " + path + ".lastIndexOf(\".\");");
+		writer.writeln("return (__hx_dot <= __hx_slash) ? \"\" : " + path + ".substr(__hx_dot + 1);");
+	}
+
+	static function emitPathWithExtensionBody(writer:JsWriter, path:String, ext:String):Void {
+		emitPathFileStemSetup(writer, path);
+		writer.writeln(ext + " = String(" + ext + ");");
+		writer.writeln("var __hx_base = (__hx_dot <= __hx_slash) ? " + path + " : " + path + ".substr(0, __hx_dot);");
+		writer.writeln("return " + ext + " === \"\" ? __hx_base : __hx_base + \".\" + " + ext + ";");
+	}
+
+	static function emitPathJoinBody(writer:JsWriter, paths:String):Void {
+		writer.writeln("var __hx_joined = \"\";");
+		writer.writeln("for (var __hx_i = 0; __hx_i < " + paths + ".length; __hx_i++) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_part = " + paths + "[__hx_i];");
+		writer.writeln("if (__hx_part == null || __hx_part === \"\") continue;");
+		writer.writeln("__hx_part = String(__hx_part);");
+		writer.writeln("if (__hx_joined === \"\") {");
+		writer.pushIndent();
+		writer.writeln("__hx_joined = __hx_part;");
+		writer.popIndent();
+		writer.writeln("} else if (__hx_joined.charAt(__hx_joined.length - 1) === \"/\" || __hx_part.charAt(0) === \"/\") {");
+		writer.pushIndent();
+		writer.writeln("__hx_joined += __hx_part;");
+		writer.popIndent();
+		writer.writeln("} else {");
+		writer.pushIndent();
+		writer.writeln("__hx_joined += \"/\" + __hx_part;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return __hx_cls_haxe_io_Path.normalize(__hx_joined);");
+	}
+
+	static function emitPathNormalizeBody(writer:JsWriter, path:String):Void {
+		writer.writeln(path + " = String(" + path + ");");
+		writer.writeln("if (" + path + " === \"\") return \".\";");
+		writer.writeln("var __hx_path = " + path + ".split(\"\\\\\").join(\"/\");");
+		writer.writeln("var __hx_prefix = \"\";");
+		writer.writeln("if (__hx_path.length >= 2 && __hx_path.charAt(1) === \":\") {");
+		writer.pushIndent();
+		writer.writeln("__hx_prefix = __hx_path.substr(0, 2);");
+		writer.writeln("__hx_path = __hx_path.substr(2);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("var __hx_absolute = __hx_path.charAt(0) === \"/\";");
+		writer.writeln("var __hx_parts = __hx_path.split(\"/\");");
+		writer.writeln("var __hx_out = [];");
+		writer.writeln("for (var __hx_i = 0; __hx_i < __hx_parts.length; __hx_i++) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_part = __hx_parts[__hx_i];");
+		writer.writeln("if (__hx_part === \"\" || __hx_part === \".\") continue;");
+		writer.writeln("if (__hx_part === \"..\") {");
+		writer.pushIndent();
+		writer.writeln("if (__hx_out.length > 0 && __hx_out[__hx_out.length - 1] !== \"..\") {");
+		writer.pushIndent();
+		writer.writeln("__hx_out.pop();");
+		writer.popIndent();
+		writer.writeln("} else if (!__hx_absolute) {");
+		writer.pushIndent();
+		writer.writeln("__hx_out.push(__hx_part);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("continue;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("__hx_out.push(__hx_part);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("var __hx_norm = (__hx_absolute ? \"/\" : \"\") + __hx_out.join(\"/\");");
+		writer.writeln("if (__hx_norm === \"\") __hx_norm = __hx_absolute ? \"/\" : \".\";");
+		writer.writeln("return __hx_prefix + __hx_norm;");
+	}
+
+	static function emitPathAddTrailingSlashBody(writer:JsWriter, path:String):Void {
+		writer.writeln(path + " = String(" + path + ");");
+		writer.writeln("if (" + path + " === \"\") return \"/\";");
+		writer.writeln("var __hx_last = " + path + ".charAt(" + path + ".length - 1);");
+		writer.writeln("return (__hx_last === \"/\" || __hx_last === \"\\\\\") ? " + path + " : " + path + " + \"/\";");
+	}
+
+	static function emitPathRemoveTrailingSlashesBody(writer:JsWriter, path:String):Void {
+		writer.writeln(path + " = String(" + path + ");");
+		writer.writeln("var __hx_end = " + path + ".length;");
+		writer.writeln("while (__hx_end > 0) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_ch = " + path + ".charAt(__hx_end - 1);");
+		writer.writeln("if (__hx_ch !== \"/\" && __hx_ch !== \"\\\\\") break;");
+		writer.writeln("__hx_end--;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return " + path + ".substr(0, __hx_end);");
+	}
+
+	static function emitPathIsAbsoluteBody(writer:JsWriter, path:String):Void {
+		writer.writeln(path + " = String(" + path + ");");
+		writer.writeln("return " + path + ".charAt(0) === \"/\" || " + path + ".charAt(0) === \"\\\\\" || (" + path + ".length >= 2 && " + path
+			+ ".charAt(1) === \":\");");
+	}
+
+	static function emitPathUnescapeBody(writer:JsWriter, path:String):Void {
+		writer.writeln(path + " = String(" + path + ");");
+		writer.writeln("try {");
+		writer.pushIndent();
+		writer.writeln("return decodeURIComponent(" + path + ");");
+		writer.popIndent();
+		writer.writeln("} catch (__hx_error) {");
+		writer.pushIndent();
+		writer.writeln("return " + path + ";");
+		writer.popIndent();
+		writer.writeln("}");
+	}
+
+	static function emitPathEscapeBody(writer:JsWriter, path:String, allowSlashes:String):Void {
+		writer.writeln(path + " = String(" + path + ");");
+		writer.writeln("var __hx_encoded = encodeURIComponent(" + path + ");");
+		writer.writeln("return " + allowSlashes + " ? __hx_encoded.split(\"%2F\").join(\"/\").split(\"%2f\").join(\"/\") : __hx_encoded;");
+	}
+
 	static function buildClassRefs(bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
 		final merged = new haxe.ds.StringMap<String>();
 		for (fullName => jsRef in byFullName) {
@@ -329,16 +546,17 @@ class JsTargetCore implements ITargetCore {
 		// Keep compileability for scoped JS-native workflows by falling back to a neutral return
 		// in these private helper bodies. Public/user unsupported expressions still fail fast.
 		final isBodyParseError = reason != null && reason.indexOf("body_parse_error") != -1;
-		if (!isBodyParseError)
+		final isUnsupportedExpr = reason != null && reason.indexOf("[js-native:unsupported_expr]") != -1;
+		if (!isBodyParseError && !isUnsupportedExpr)
 			return false;
 
-		if (unit.fullName == "haxe.io.FPHelper" && fnName != null && StringTools.startsWith(fnName, "_"))
+		if (isBodyParseError && unit.fullName == "haxe.io.FPHelper" && fnName != null && StringTools.startsWith(fnName, "_"))
 			return true;
 
 		// Full1 optimization suite currently exercises a compile-time-only helper body
-		// (`Macro.test`) that still parses as opaque in the native parser path.
+		// (`Macro.test` / `Macro.stripWhitespaces`) through the JS target output graph.
 		// Keep the suite compiling while parser coverage is closed in follow-up parity beads.
-		if (unit.fullName == "Macro" && fnName == "test")
+		if (unit.fullName == "Macro" && (fnName == "test" || fnName == "stripWhitespaces"))
 			return true;
 
 		return false;

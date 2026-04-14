@@ -166,7 +166,218 @@ let emitRuntimePrelude = fun writer -> ignore ((
   Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string)
 ))
 
+let emitPathFileStemSetup = fun writer path -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var __hx_slash = Math.max(" ^ HxString.toStdString path) ^ ".lastIndexOf(\"/\"), ") ^ HxString.toStdString path) ^ ".lastIndexOf(\"\\\\\"));" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (("var __hx_dot = " ^ HxString.toStdString path) ^ ".lastIndexOf(\".\");" : string)
+))
+
+let emitPathWithoutExtensionBody = fun writer path -> ignore ((
+  ignore (emitPathFileStemSetup (Obj.magic writer) (path : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (((("return (__hx_dot <= __hx_slash) ? " ^ HxString.toStdString path) ^ " : ") ^ HxString.toStdString path) ^ ".substr(0, __hx_dot);" : string)
+))
+
+let emitPathWithoutDirectoryBody = fun writer path -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var __hx_slash = Math.max(" ^ HxString.toStdString path) ^ ".lastIndexOf(\"/\"), ") ^ HxString.toStdString path) ^ ".lastIndexOf(\"\\\\\"));" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (((("return __hx_slash < 0 ? " ^ HxString.toStdString path) ^ " : ") ^ HxString.toStdString path) ^ ".substr(__hx_slash + 1);" : string)
+))
+
+let emitPathDirectoryBody = fun writer path -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var __hx_slash = Math.max(" ^ HxString.toStdString path) ^ ".lastIndexOf(\"/\"), ") ^ HxString.toStdString path) ^ ".lastIndexOf(\"\\\\\"));" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (("return __hx_slash < 0 ? \"\" : " ^ HxString.toStdString path) ^ ".substr(0, __hx_slash);" : string)
+))
+
+let emitPathExtensionBody = fun writer path -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var __hx_slash = Math.max(" ^ HxString.toStdString path) ^ ".lastIndexOf(\"/\"), ") ^ HxString.toStdString path) ^ ".lastIndexOf(\"\\\\\"));" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var __hx_dot = " ^ HxString.toStdString path) ^ ".lastIndexOf(\".\");" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (("return (__hx_dot <= __hx_slash) ? \"\" : " ^ HxString.toStdString path) ^ ".substr(__hx_dot + 1);" : string)
+))
+
+let emitPathWithExtensionBody = fun writer path ext -> ignore ((
+  ignore (emitPathFileStemSetup (Obj.magic writer) (path : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString ext ^ " = String(") ^ HxString.toStdString ext) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var __hx_base = (__hx_dot <= __hx_slash) ? " ^ HxString.toStdString path) ^ " : ") ^ HxString.toStdString path) ^ ".substr(0, __hx_dot);" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (((("return " ^ HxString.toStdString ext) ^ " === \"\" ? __hx_base : __hx_base + \".\" + ") ^ HxString.toStdString ext) ^ ";" : string)
+))
+
+let emitPathJoinBody = fun writer paths -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_joined = \"\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("for (var __hx_i = 0; __hx_i < " ^ HxString.toStdString paths) ^ ".length; __hx_i++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var __hx_part = " ^ HxString.toStdString paths) ^ "[__hx_i];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_part == null || __hx_part === \"\") continue;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_part = String(__hx_part);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_joined === \"\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_joined = __hx_part;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("} else if (__hx_joined.charAt(__hx_joined.length - 1) === \"/\" || __hx_part.charAt(0) === \"/\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_joined += __hx_part;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("} else {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_joined += \"/\" + __hx_part;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("return __hx_cls_haxe_io_Path.normalize(__hx_joined);" : string)
+))
+
+let emitPathNormalizeBody = fun writer path -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (" ^ HxString.toStdString path) ^ " === \"\") return \".\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var __hx_path = " ^ HxString.toStdString path) ^ ".split(\"\\\\\").join(\"/\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_prefix = \"\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_path.length >= 2 && __hx_path.charAt(1) === \":\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_prefix = __hx_path.substr(0, 2);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_path = __hx_path.substr(2);" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_absolute = __hx_path.charAt(0) === \"/\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_parts = __hx_path.split(\"/\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_out = [];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var __hx_i = 0; __hx_i < __hx_parts.length; __hx_i++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_part = __hx_parts[__hx_i];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_part === \"\" || __hx_part === \".\") continue;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_part === \"..\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_out.length > 0 && __hx_out[__hx_out.length - 1] !== \"..\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_out.pop();" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("} else if (!__hx_absolute) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_out.push(__hx_part);" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("continue;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_out.push(__hx_part);" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_norm = (__hx_absolute ? \"/\" : \"\") + __hx_out.join(\"/\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_norm === \"\") __hx_norm = __hx_absolute ? \"/\" : \".\";" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("return __hx_prefix + __hx_norm;" : string)
+))
+
+let emitPathAddTrailingSlashBody = fun writer path -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (" ^ HxString.toStdString path) ^ " === \"\") return \"/\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var __hx_last = " ^ HxString.toStdString path) ^ ".charAt(") ^ HxString.toStdString path) ^ ".length - 1);" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (((("return (__hx_last === \"/\" || __hx_last === \"\\\\\") ? " ^ HxString.toStdString path) ^ " : ") ^ HxString.toStdString path) ^ " + \"/\";" : string)
+))
+
+let emitPathRemoveTrailingSlashesBody = fun writer path -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var __hx_end = " ^ HxString.toStdString path) ^ ".length;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("while (__hx_end > 0) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var __hx_ch = " ^ HxString.toStdString path) ^ ".charAt(__hx_end - 1);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_ch !== \"/\" && __hx_ch !== \"\\\\\") break;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_end--;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (("return " ^ HxString.toStdString path) ^ ".substr(0, __hx_end);" : string)
+))
+
+let emitPathIsAbsoluteBody = fun writer path -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (((((((("return " ^ HxString.toStdString path) ^ ".charAt(0) === \"/\" || ") ^ HxString.toStdString path) ^ ".charAt(0) === \"\\\\\" || (") ^ HxString.toStdString path) ^ ".length >= 2 && ") ^ HxString.toStdString path) ^ ".charAt(1) === \":\");" : string)
+))
+
+let emitPathUnescapeBody = fun writer path -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("try {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("return decodeURIComponent(" ^ HxString.toStdString path) ^ ");" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("} catch (__hx_error) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("return " ^ HxString.toStdString path) ^ ";" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string)
+))
+
+let emitPathEscapeBody = fun writer path allowSlashes -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var __hx_encoded = encodeURIComponent(" ^ HxString.toStdString path) ^ ");" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (("return " ^ HxString.toStdString allowSlashes) ^ " ? __hx_encoded.split(\"%2F\").join(\"/\").split(\"%2f\").join(\"/\") : __hx_encoded;" : string)
+))
+
+let emitPathStaticFunctionBody = fun writer fnName params -> try let __fallback_result_52 = match fnName with
+  | "addTrailingSlash" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathAddTrailingSlashBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "directory" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathDirectoryBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "escape" -> ignore ((
+    ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathEscapeBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "extension" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathExtensionBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "isAbsolute" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathIsAbsoluteBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "join" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathJoinBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "normalize" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathNormalizeBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "removeTrailingSlashes" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathRemoveTrailingSlashesBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "unescape" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathUnescapeBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "withExtension" -> ignore ((
+    ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathWithExtensionBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "withoutDirectory" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathWithoutDirectoryBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "withoutExtension" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitPathWithoutExtensionBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_52 with
+  | HxRuntime.Hx_return __ret_51 -> Obj.obj __ret_51
+
 let emitKnownStaticFunctionBody = fun writer fullName fnName params -> try let __fallback_result_50 = (
+  ignore (if HxString.equals fullName "haxe.io.Path" then raise (HxRuntime.Hx_return (Obj.repr (emitPathStaticFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params)))) else ());
   ignore (if not (HxString.equals fullName "haxe.SysTools") then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   match fnName with
     | "quoteUnixArg" -> ignore ((
@@ -237,18 +448,18 @@ let emitKnownStaticFunctionBody = fun writer fullName fnName params -> try let _
   | HxRuntime.Hx_return __ret_49 -> Obj.obj __ret_49
 
 let buildClassRefs = fun bySimpleName byFullName -> let merged = Obj.magic (HxMap.create_string ()) in (
-  ignore (let _g = HxIterator.of_array (HxMap.pairs_string byFullName) in while (let __iter_51 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_51)) () do ignore (let _g2 = (let __iter_52 = _g in fun () -> HxIterator.next (Obj.magic __iter_52)) () in let fullName = (fst _g2 : string) in let jsRef = (snd _g2 : string) in HxMap.set_string merged fullName jsRef) done);
-  ignore (let _g = HxIterator.of_array (HxMap.pairs_string bySimpleName) in while (let __iter_53 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_53)) () do ignore (let _g2 = (let __iter_54 = _g in fun () -> HxIterator.next (Obj.magic __iter_54)) () in let simpleName = (fst _g2 : string) in let jsRef = (snd _g2 : string) in if not (HxMap.exists_string merged simpleName) then ignore (HxMap.set_string merged simpleName jsRef) else ()) done);
+  ignore (let _g = HxIterator.of_array (HxMap.pairs_string byFullName) in while (let __iter_53 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_53)) () do ignore (let _g2 = (let __iter_54 = _g in fun () -> HxIterator.next (Obj.magic __iter_54)) () in let fullName = (fst _g2 : string) in let jsRef = (snd _g2 : string) in HxMap.set_string merged fullName jsRef) done);
+  ignore (let _g = HxIterator.of_array (HxMap.pairs_string bySimpleName) in while (let __iter_55 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_55)) () do ignore (let _g2 = (let __iter_56 = _g in fun () -> HxIterator.next (Obj.magic __iter_56)) () in let simpleName = (fst _g2 : string) in let jsRef = (snd _g2 : string) in if not (HxMap.exists_string merged simpleName) then ignore (HxMap.set_string merged simpleName jsRef) else ()) done);
   merged
 )
 
-let allowStaticBodyFallback = fun unit fnName reason -> try let __fallback_result_56 = let isBodyParseError = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "body_parse_error" 0 <> -1 in (
-  ignore (if not (isBodyParseError) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  ignore (if HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "haxe.io.FPHelper" && fnName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fnName : string) ("_" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (if HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "Macro" && HxString.equals fnName "test" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+let allowStaticBodyFallback = fun unit fnName reason -> try let __fallback_result_58 = let isBodyParseError = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "body_parse_error" 0 <> -1 in let isUnsupportedExpr = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "[js-native:unsupported_expr]" 0 <> -1 in (
+  ignore (if not (isBodyParseError) && not (isUnsupportedExpr) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if isBodyParseError && HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "haxe.io.FPHelper" && fnName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fnName : string) ("_" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "Macro" && (HxString.equals fnName "test" || HxString.equals fnName "stripWhitespaces") then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   false
-) in Obj.magic __fallback_result_56 with
-  | HxRuntime.Hx_return __ret_55 -> Obj.obj __ret_55
+) in Obj.magic __fallback_result_58 with
+  | HxRuntime.Hx_return __ret_57 -> Obj.obj __ret_57
 
 let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let tempBool = ref (false : bool) in (
   ignore (let fullName = (Obj.obj (HxAnon.get unit "fullName") : string) in let __assign_30 = fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.lib." : string) in (
@@ -351,7 +562,7 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let temp
 ) with
   | HxRuntime.Hx_return __ret_48 -> Obj.obj __ret_48)
 
-let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_result_58 = (
+let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_result_60 = (
   ignore (if main == Obj.magic (HxRuntime.hx_null) || HxString.length main = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let direct = (HxMap.get_string byFullName main : string) in (
     ignore (if direct != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (direct : string))) else ());
@@ -360,8 +571,8 @@ let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_resu
       HxMap.get_string bySimpleName (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1))
     )
   )
-) in Obj.magic __fallback_result_58 with
-  | HxRuntime.Hx_return __ret_57 -> Obj.obj __ret_57
+) in Obj.magic __fallback_result_60 with
+  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59
 
 let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Backend_BackendContext.t) -> (
   ignore self;

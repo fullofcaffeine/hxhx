@@ -4264,7 +4264,7 @@ def cmd_patch_hxtype_registry_js_target_core_systools(argv: list[str]) -> None:
 
     old = '''HxType.register_class_static_fields "backend.js.JsTargetCore" [ "allowStaticBodyFallback"; "buildClassRefs"; "collectClassUnits"; "emitBridge"; "emitClass"; "emitRuntimePrelude"; "ensureDirectory"; "isNativeJsLibExtern"; "nativeJsLibGlobalRef"; "resolveMainRef"; "simpleName" ]'''
     new = '''HxType.register_class_static_fields "backend.js.JsTargetCore" [ "allowStaticBodyFallback"; "buildClassRefs"; "collectClassUnits"; "emitBridge"; "emitClass"; "emitKnownStaticFunctionBody"; "emitRuntimePrelude"; "ensureDirectory"; "isNativeJsLibExtern"; "nativeJsLibGlobalRef"; "resolveMainRef"; "simpleName" ]'''
-    if new in src:
+    if '"emitKnownStaticFunctionBody"' in src:
         write_text(path_str, src)
         return
     src = replace_one(
