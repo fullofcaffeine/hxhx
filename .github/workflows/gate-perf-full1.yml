@@ -21,6 +21,7 @@ env:
   HXHX_KPI_REPS: "5"
   HXHX_KPI_RUN_MACRO_LANE: "1"
   HXHX_FORBID_STAGE0: "1"
+  HXHX_BOOTSTRAP_PREFER_NATIVE: "1"
 
 jobs:
   perf-parity:

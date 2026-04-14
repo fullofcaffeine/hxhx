@@ -241,6 +241,8 @@ run_compile_lane "js_builtin" "$builtin_js_cmd"
 run_compile_lane "js_provider" "$plugin_js_cmd"
 
 run_incremental_lane "ocaml_portable_builtin" "$portable_cmd"
+run_incremental_lane "ocaml_metal_builtin" "$metal_cmd"
+run_incremental_lane "upstream_haxe" "$upstream_cmd"
 
 if [ "$RUN_MACRO_LANE" = "1" ]; then
 	upstream_macro_base_cmd="\"$HAXE_BIN\" --no-output -cp \"$WORK_DIR/src\" -main Main"
