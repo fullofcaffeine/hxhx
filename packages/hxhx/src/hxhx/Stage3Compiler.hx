@@ -1519,7 +1519,12 @@ class Stage3Compiler {
 		}
 
 		final roots = roots0.concat(hxhx.macro.MacroState.listIncludedModules());
-		final resolved = try ResolverStage.parseProjectRoots(classPaths, roots, definesMap) catch (e:TyperError) {
+		final resolved = try {
+			if (noEmit && !typeOnly)
+				ResolverStage.parseProjectRootsShallow(classPaths, roots, definesMap)
+			else
+				ResolverStage.parseProjectRoots(classPaths, roots, definesMap);
+		} catch (e:TyperError) {
 			closeMacroSession();
 			return error("resolve failed: " + formatException(e));
 		} catch (e:String) {

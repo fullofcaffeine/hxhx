@@ -162,6 +162,86 @@ class ResolverStage {
 	}
 
 	/**
+		Resolve only the explicit root modules, without walking import or heuristic dependency closure.
+
+		Why
+		- Stage3 `--hxhx-no-emit` is a no-output compiler-latency lane. It should behave closer to
+		  upstream `--no-output`, where dependency loading is driven by typing and macro needs rather
+		  than by preparing an emission-safe whole-program module set.
+		- The exhaustive import-closure path remains the default for emit and `--hxhx-type-only`.
+
+		How
+		- Parse/filter each root exactly as `parseProjectRoots` does.
+		- Do not enqueue imports, same-package heuristics, or qualified type-path heuristics.
+		- `ModuleLoader` can still load dependencies on demand while typing the root surface.
+	**/
+	public static function parseProjectRootsShallow(classPaths:Array<String>, roots:Array<String>, ?defines:haxe.ds.StringMap<String>):Array<ResolvedModule> {
+		final out = new Array<ResolvedModule>();
+		final visited = new Map<String, Bool>();
+		final definesMap = defines == null ? new haxe.ds.StringMap<String>() : defines;
+
+		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
+			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro."))
+				return true;
+			if (filePath == null || filePath.length == 0)
+				return false;
+			return filePath.indexOf("/haxe/macro/") != -1 || filePath.indexOf("\\haxe\\macro\\") != -1;
+		}
+
+		function cloneDefines(src:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
+			final out = new haxe.ds.StringMap<String>();
+			if (src != null)
+				for (k in src.keys())
+					out.set(k, src.get(k));
+			return out;
+		}
+
+		if (roots == null)
+			return out;
+		for (root in roots) {
+			if (root == null)
+				continue;
+			final modulePath = StringTools.trim(root);
+			if (modulePath.length == 0 || visited.exists(modulePath))
+				continue;
+			visited.set(modulePath, true);
+
+			final filePath = resolveModuleFile(classPaths, modulePath);
+			if (filePath == null)
+				throw "import_missing " + modulePath;
+
+			final source = try {
+				sys.io.File.getContent(filePath);
+			} catch (_:haxe.io.Error) {
+				null;
+			} catch (_:String) {
+				null;
+			}
+			if (source == null)
+				throw "import_unreadable " + filePath;
+
+			final effectiveDefines = isMacroStdModule(modulePath, filePath) ? (() -> {
+				final m = cloneDefines(definesMap);
+				if (!m.exists("macro"))
+					m.set("macro", "1");
+				if (!m.exists("eval"))
+					m.set("eval", "1");
+				m;
+			})() : definesMap;
+			final filteredSource = HxConditionalCompilation.filterSource(source, effectiveDefines);
+			final parsed = try {
+				ParserStage.parse(filteredSource, filePath);
+			} catch (e:HxParseError) {
+				throw "parse_failed " + filePath + ": " + e.message;
+			} catch (e:String) {
+				throw "parse_failed " + filePath + ": " + e;
+			}
+			out.push(new ResolvedModule(modulePath, filePath, parsed));
+		}
+		return out;
+	}
+
+	/**
 		Resolve a project from multiple root modules.
 
 		Why
