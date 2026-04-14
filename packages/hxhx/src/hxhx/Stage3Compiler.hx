@@ -1925,6 +1925,75 @@ class Stage3Compiler {
 			}
 		}
 
+		// Diagnostic rung: stop after macros + typing so we can iterate Stage4 macro model and Stage3 typer
+		// coverage without paying backend setup/IR expansion costs that cannot affect a no-output result.
+		if (noEmit) {
+			final selectedNoEmit = BackendRegistry.descriptorForTarget(backendId);
+			if (selectedNoEmit == null) {
+				closeMacroSession();
+				return error("backend descriptor not found after selection: " + backendId);
+			}
+			if (selectedNoEmit.capabilities.supportsNoEmit != true) {
+				closeMacroSession();
+				return error("backend does not support --hxhx-no-emit: " + backendId);
+			}
+
+			for (name in hxhx.macro.MacroState.listDefineNames()) {
+				if (StringTools.startsWith(name, "HXHX_")) {
+					Sys.println("macro_define2[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
+				}
+			}
+
+			var headerOnlyCount = 0;
+			var unsupportedExprsTotal = 0;
+			var unsupportedFilesCount = 0;
+			final traceUnsupported = isTrueEnv("HXHX_TRACE_UNSUPPORTED");
+			var unsupportedRawCount = 0;
+			var unsupportedFnCount = 0;
+			var unsupportedFileIndex = 0;
+			for (m in resolvedForTyping) {
+				final pm = ResolvedModule.getParsed(m);
+				if (HxModuleDecl.getHeaderOnly(pm.getDecl()))
+					headerOnlyCount += 1;
+				final unsupportedInFile = countUnsupportedExprsInModule(pm);
+				unsupportedExprsTotal += unsupportedInFile;
+				if (unsupportedInFile > 0) {
+					unsupportedFilesCount += 1;
+					Sys.println("unsupported_file[" + unsupportedFileIndex + "]=" + ResolvedModule.getFilePath(m) + " header_only="
+						+ bool01(HxModuleDecl.getHeaderOnly(pm.getDecl())) + " unsupported_exprs=" + unsupportedInFile);
+					unsupportedFileIndex += 1;
+					if (traceUnsupported) {
+						final cls = HxModuleDecl.getMainClass(pm.getDecl());
+						for (fn in HxClassDecl.getFunctions(cls)) {
+							final fnUnsupported = countUnsupportedExprsInFunction(fn);
+							if (fnUnsupported <= 0)
+								continue;
+							Sys.println("unsupported_fn[" + unsupportedFnCount + "]=" + ResolvedModule.getFilePath(m) + ":" + HxFunctionDecl.getName(fn)
+								+ " unsupported_exprs=" + fnUnsupported);
+							unsupportedFnCount += 1;
+							if (unsupportedFnCount >= 50)
+								break;
+						}
+						for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
+							final escaped = escapeOneLine(raw);
+							Sys.println("unsupported_expr[" + unsupportedRawCount + "]=" + ResolvedModule.getFilePath(m) + ":raw=" + escaped + " len="
+								+ (raw == null ? 0 : raw.length));
+							unsupportedRawCount += 1;
+							if (unsupportedRawCount >= 50)
+								break;
+						}
+					}
+				}
+			}
+			closeMacroSession();
+			Sys.println("typed_modules=" + typedModules.length);
+			Sys.println("header_only_modules=" + headerOnlyCount);
+			Sys.println("unsupported_exprs_total=" + unsupportedExprsTotal);
+			Sys.println("unsupported_files=" + unsupportedFilesCount);
+			Sys.println("stage3=no_emit_ok");
+			return 0;
+		}
+
 		// Collect generated modules after hooks.
 		final generated = new Array<MacroExpandedModule.GeneratedOcamlModule>();
 		for (name in hxhx.macro.MacroState.listOcamlModuleNames()) {
@@ -1983,7 +2052,6 @@ class Stage3Compiler {
 			return error("backend descriptor not found after selection: " + backendId);
 		}
 		final backendCaps = selected.capabilities;
-		final supportsNoEmit:Bool = backendCaps.supportsNoEmit == true;
 		final supportsCustomOutputFile:Bool = backendCaps.supportsCustomOutputFile == true;
 		final supportsBuildExecutable:Bool = backendCaps.supportsBuildExecutable == true;
 
@@ -1992,63 +2060,6 @@ class Stage3Compiler {
 			if (StringTools.startsWith(name, "HXHX_")) {
 				Sys.println("macro_define2[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
 			}
-		}
-
-		// Diagnostic rung: stop after macros + typing so we can iterate Stage4 macro model and Stage3 typer
-		// coverage without being blocked by the bootstrap emitter/codegen.
-		if (noEmit) {
-			if (!supportsNoEmit) {
-				closeMacroSession();
-				return error("backend does not support --hxhx-no-emit: " + backendId);
-			}
-			var headerOnlyCount = 0;
-			var unsupportedExprsTotal = 0;
-			var unsupportedFilesCount = 0;
-			final traceUnsupported = isTrueEnv("HXHX_TRACE_UNSUPPORTED");
-			var unsupportedRawCount = 0;
-			var unsupportedFnCount = 0;
-			var unsupportedFileIndex = 0;
-			for (m in resolvedForTyping) {
-				final pm = ResolvedModule.getParsed(m);
-				if (HxModuleDecl.getHeaderOnly(pm.getDecl()))
-					headerOnlyCount += 1;
-				final unsupportedInFile = countUnsupportedExprsInModule(pm);
-				unsupportedExprsTotal += unsupportedInFile;
-				if (unsupportedInFile > 0) {
-					unsupportedFilesCount += 1;
-					Sys.println("unsupported_file[" + unsupportedFileIndex + "]=" + ResolvedModule.getFilePath(m) + " header_only="
-						+ bool01(HxModuleDecl.getHeaderOnly(pm.getDecl())) + " unsupported_exprs=" + unsupportedInFile);
-					unsupportedFileIndex += 1;
-					if (traceUnsupported) {
-						final cls = HxModuleDecl.getMainClass(pm.getDecl());
-						for (fn in HxClassDecl.getFunctions(cls)) {
-							final fnUnsupported = countUnsupportedExprsInFunction(fn);
-							if (fnUnsupported <= 0)
-								continue;
-							Sys.println("unsupported_fn[" + unsupportedFnCount + "]=" + ResolvedModule.getFilePath(m) + ":" + HxFunctionDecl.getName(fn)
-								+ " unsupported_exprs=" + fnUnsupported);
-							unsupportedFnCount += 1;
-							if (unsupportedFnCount >= 50)
-								break;
-						}
-						for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
-							final escaped = escapeOneLine(raw);
-							Sys.println("unsupported_expr[" + unsupportedRawCount + "]=" + ResolvedModule.getFilePath(m) + ":raw=" + escaped + " len="
-								+ (raw == null ? 0 : raw.length));
-							unsupportedRawCount += 1;
-							if (unsupportedRawCount >= 50)
-								break;
-						}
-					}
-				}
-			}
-			closeMacroSession();
-			Sys.println("typed_modules=" + typedModules.length);
-			Sys.println("header_only_modules=" + headerOnlyCount);
-			Sys.println("unsupported_exprs_total=" + unsupportedExprsTotal);
-			Sys.println("unsupported_files=" + unsupportedFilesCount);
-			Sys.println("stage3=no_emit_ok");
-			return 0;
 		}
 
 		var emitted = new EmitResult("", [], false);

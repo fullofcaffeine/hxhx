@@ -218,6 +218,13 @@ let findUnsupportedLegacyTarget = fun args -> try let __fallback_result_45 = let
 ) in Obj.magic __fallback_result_45 with
   | HxRuntime.Hx_return __ret_44 -> Obj.obj __ret_44
 
+let findSourceHostReflaxeTarget = fun args -> try let __fallback_result_47 = let reflaxeTarget = (getDefineValue (Obj.magic args) ("reflaxe-target" : string) : string) in (
+  ignore (if reflaxeTarget != Obj.magic (HxRuntime.hx_null) && HxString.length reflaxeTarget > 0 && not (HxString.equals reflaxeTarget "ocaml") then raise (HxRuntime.Hx_return (Obj.repr (reflaxeTarget : string))) else ());
+  ignore (if getDefineValue (Obj.magic args) ("elixir_output" : string) != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("elixir" : string))) else ());
+  Obj.magic (HxRuntime.hx_null)
+) in Obj.magic __fallback_result_47 with
+  | HxRuntime.Hx_return __ret_46 -> Obj.obj __ret_46
+
 let plan = fun shimArgs forwarded -> try let __fallback_result_10 = (
   ignore (if hasFlag (Obj.magic shimArgs) ("--target" : string) || hasFlag (Obj.magic shimArgs) ("--hxhx-target" : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "--target removed; use --ocaml, --ocaml-eval, Haxe --js <file>, or --compat") ["Dynamic"; "String"]) else ());
   let compatRequested = hasFlag (Obj.magic shimArgs) ("--compat" : string) in let ocamlRequested = hasFlag (Obj.magic shimArgs) ("--ocaml" : string) in let ocamlEvalRequested = hasFlag (Obj.magic shimArgs) ("--ocaml-eval" : string) in (
@@ -298,7 +305,10 @@ let plan = fun shimArgs forwarded -> try let __fallback_result_10 = (
       )) else ());
       ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get targetScan "hasLegacy") then ignore (let legacy = (findUnsupportedLegacyTarget (Obj.magic baseForwarded) : string) in if legacy != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("Target \"" ^ HxString.toStdString legacy) ^ "\" is not supported in this implementation. Legacy Flash/AS3 targets are intentionally unsupported.")) ["Dynamic"; "String"]) else ()) else ());
       ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get targetScan "hasNonJs") then ignore (HxType.hx_throw_typed_rtti (Obj.repr "Target not supported natively; rerun with --compat.") ["Dynamic"; "String"]) else ());
-      HxType.hx_throw_typed_rtti (Obj.repr "No target selected; use --ocaml, Haxe --js <file>, --ocaml-eval, or --compat.") ["Dynamic"; "String"]
+      let sourceHostTarget = (findSourceHostReflaxeTarget (Obj.magic (planningTargetArgs (Obj.magic baseForwarded))) : string) in (
+        ignore (if sourceHostTarget != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("Native source-host Reflaxe target \"" ^ HxString.toStdString sourceHostTarget) ^ "\" is not implemented; use the promoted host-adapter/plugin path or --compat for stage0 passthrough.")) ["Dynamic"; "String"]) else ());
+        HxType.hx_throw_typed_rtti (Obj.repr "No target selected; use --ocaml, Haxe --js <file>, --ocaml-eval, or --compat.") ["Dynamic"; "String"]
+      )
     )
   )
 ) in Obj.magic __fallback_result_10 with
