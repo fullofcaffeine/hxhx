@@ -686,9 +686,9 @@ class JsTargetCore implements ITargetCore {
 		if (isBodyParseError && unit.fullName == "haxe.io.FPHelper" && fnName != null && StringTools.startsWith(fnName, "_"))
 			return true;
 
-		// Full1 suite macros can leave compile-time-only helper bodies in the JS target
-		// output graph. Keep these helpers neutral while the graph-pruning work is closed.
-		if (unit.fullName == "haxe.macro.Compiler" || unit.fullName == "haxe.macro.Context")
+		// Full1 suite macros can leave compile-time-only haxe.macro API bodies in the JS
+		// target output graph. Keep these helpers neutral while graph-pruning work is closed.
+		if (isCompileTimeMacroApi(unit.fullName))
 			return true;
 
 		// Full1 optimization suite currently exercises a compile-time-only root `Macro`
@@ -704,7 +704,11 @@ class JsTargetCore implements ITargetCore {
 		final isUnsupportedExpr = reason != null && reason.indexOf("[js-native:unsupported_expr]") != -1;
 		if (!isUnsupportedExpr)
 			return false;
-		return unit.fullName == "haxe.macro.Compiler" || unit.fullName == "haxe.macro.Context";
+		return isCompileTimeMacroApi(unit.fullName);
+	}
+
+	static function isCompileTimeMacroApi(fullName:String):Bool {
+		return fullName != null && StringTools.startsWith(fullName, "haxe.macro.");
 	}
 
 	static function isCompileTimeMacroFallback(fnName:String):Bool {

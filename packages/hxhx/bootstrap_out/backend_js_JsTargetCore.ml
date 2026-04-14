@@ -566,11 +566,13 @@ let buildClassRefs = fun bySimpleName byFullName -> let merged = Obj.magic (HxMa
   merged
 )
 
+let isCompileTimeMacroApi = fun fullName -> fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("haxe.macro." : string)
+
 let allowStaticFieldFallback = fun unit fieldName reason -> (
   ignore fieldName;
   try let __fallback_result_66 = let isUnsupportedExpr = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "[js-native:unsupported_expr]" 0 <> -1 in (
     ignore (if not (isUnsupportedExpr) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-    HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "haxe.macro.Compiler" || HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "haxe.macro.Context"
+    isCompileTimeMacroApi (Obj.obj (HxAnon.get unit "fullName") : string)
   ) in Obj.magic __fallback_result_66 with
     | HxRuntime.Hx_return __ret_65 -> Obj.obj __ret_65
 )
@@ -580,7 +582,7 @@ let isCompileTimeMacroFallback = fun fnName -> HxString.equals fnName "register"
 let allowStaticBodyFallback = fun unit fnName reason -> try let __fallback_result_64 = let isBodyParseError = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "body_parse_error" 0 <> -1 in let isUnsupportedExpr = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "[js-native:unsupported_expr]" 0 <> -1 in (
   ignore (if not (isBodyParseError) && not (isUnsupportedExpr) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   ignore (if isBodyParseError && HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "haxe.io.FPHelper" && fnName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fnName : string) ("_" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (if HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "haxe.macro.Compiler" || HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "haxe.macro.Context" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if isCompileTimeMacroApi (Obj.obj (HxAnon.get unit "fullName") : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "Macro" && isCompileTimeMacroFallback (fnName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   false
 ) in Obj.magic __fallback_result_64 with

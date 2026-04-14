@@ -116,6 +116,14 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "haxe/macro/Context.hx");
 	}
 
+	static function macroTypeToolsModule():TypedModule {
+		final typeToolsClass = new HxClassDecl("TypeTools", false, [
+			new HxFunctionDecl("toField", HxVisibility.Public, true, [], "Dynamic", unsupportedBody("[js-native:unsupported_expr] kind=ETryCatchRaw"), "")
+		]);
+		final decl = new HxModuleDecl("haxe.macro", [], typeToolsClass, [typeToolsClass], false, false);
+		return typedModule("", decl, "haxe/macro/TypeTools.hx");
+	}
+
 	static function mainModule(source:String):TypedModule {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		return TyperStage.typeModule(parsed);
@@ -162,7 +170,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				lambdaModule(),
 				macroModule(),
 				macroCompilerModule(),
-				macroContextModule()
+				macroContextModule(),
+				macroTypeToolsModule()
 			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
@@ -177,6 +186,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.getDefine = function", "compile-time macro Compiler fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Context.getLocalClass = function", "compile-time macro Context fallback should emit");
+			assertContains(js, "__hx_cls_haxe_macro_TypeTools.toField = function", "compile-time macro TypeTools fallback should emit");
 			assertContains(js, "__hx_cls_Lambda.flatten = function", "Lambda flatten shim should emit");
 			assertContains(js, "__hx_cls_Lambda.filter = function", "Lambda filter shim should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
