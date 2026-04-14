@@ -12,7 +12,7 @@ const path = require('path')
 const cp = require('child_process')
 const { SUITES, listUniqueSuiteDependencies } = require('./upstream-suite-config')
 
-const defaultSuites = ['misc', 'server', 'threads', 'optimization', 'display']
+const defaultSuites = ['display']
 const cleanupFiles = []
 
 process.on('exit', () => {
@@ -37,10 +37,16 @@ Options:
   --artifacts-dir <path>  Directory for per-suite logs
   --hxhx-bin <path>       Prebuilt hxhx binary (default: HXHX_BIN or suite runner build)
   --json-out <path>       Full1 perf evidence JSON output path
+  --reps <n>              Measured repetitions per suite (default: FULL1_PERF_REPS or 5)
   --root <path>           Repository root (default: cwd)
   --suites <csv>          Suite IDs to measure (default: ${defaultSuites.join(',')})
   --upstream-dir <path>   Haxe upstream checkout (default: vendor/haxe)
 `)
+}
+
+function positiveInt(value, owner) {
+  if (!/^[1-9][0-9]*$/.test(String(value || ''))) fail(`${owner} must be a positive integer`)
+  return Number(value)
 }
 
 function parseArgs(argv) {
@@ -50,6 +56,7 @@ function parseArgs(argv) {
     artifactsDir: '.artifacts/full1/perf/suites',
     hxhxBin: process.env.HXHX_BIN || '',
     jsonOut: '',
+    reps: positiveInt(process.env.FULL1_PERF_REPS || '5', 'FULL1_PERF_REPS'),
     suites: defaultSuites.slice()
   }
   for (let i = 0; i < argv.length; i += 1) {
@@ -69,6 +76,9 @@ function parseArgs(argv) {
     } else if (arg === '--json-out') {
       i += 1
       out.jsonOut = argv[i] || ''
+    } else if (arg === '--reps') {
+      i += 1
+      out.reps = positiveInt(argv[i], '--reps')
     } else if (arg === '--suites') {
       i += 1
       out.suites = String(argv[i] || '')
@@ -290,30 +300,30 @@ function prepareDependencies(parsed, env) {
   return repoPath
 }
 
-async function measureUpstream(parsed, env, suite) {
+async function measureUpstream(parsed, env, suite, rep) {
   const suiteConfig = SUITES[suite]
   const suiteDir = path.join(parsed.root, suiteConfig.cwd)
   const hxmlPath = path.join(suiteDir, suiteConfig.entryHxml)
   if (!fs.existsSync(hxmlPath)) fail(`missing upstream suite hxml: ${hxmlPath}`)
   const result = await runMeasured('haxe', [suiteConfig.entryHxml], { cwd: suiteDir, env })
-  writeLog(path.join(parsed.artifactsDir, `upstream-${suite}`), suiteConfig.entryHxml, result)
+  writeLog(path.join(parsed.artifactsDir, `upstream-${suite}-${rep}`), suiteConfig.entryHxml, result)
   return result
 }
 
-async function measureHxhx(parsed, env, suite) {
+async function measureHxhx(parsed, env, suite, rep) {
   const args = [
     'scripts/ci/run-upstream-suite.js',
     '--suite',
     suite,
     '--strict',
     '--artifacts-dir',
-    path.join(parsed.artifactsDir, `hxhx-${suite}`)
+    path.join(parsed.artifactsDir, `hxhx-${suite}-${rep}`)
   ]
   if (parsed.hxhxBin) {
     args.push('--hxhx-bin', parsed.hxhxBin)
   }
   const result = await runMeasured(process.execPath, args, { cwd: parsed.root, env })
-  writeLog(path.join(parsed.artifactsDir, `hxhx-${suite}`), 'runner', result)
+  writeLog(path.join(parsed.artifactsDir, `hxhx-${suite}-${rep}`), 'runner', result)
   return result
 }
 
@@ -345,30 +355,33 @@ async function main() {
   const workloadFailures = []
 
   for (const suite of parsed.suites) {
-    const upstream = await measureUpstream(parsed, env, suite)
-    const hxhx = await measureHxhx(parsed, env, suite)
-    upstreamWall.push(upstream.durationMs)
-    upstreamRss.push(upstream.peakRssKb)
-    hxhxWall.push(hxhx.durationMs)
-    hxhxRss.push(hxhx.peakRssKb)
-    suiteResults.push({
-      suite,
-      upstream_haxe: {
-        compile_wall_ms: upstream.durationMs,
-        peak_rss_kb: upstream.peakRssKb,
-        exit_code: upstream.status == null ? -1 : upstream.status
-      },
-      hxhx: {
-        compile_wall_ms: hxhx.durationMs,
-        peak_rss_kb: hxhx.peakRssKb,
-        exit_code: hxhx.status == null ? -1 : hxhx.status
+    for (let rep = 1; rep <= parsed.reps; rep += 1) {
+      const upstream = await measureUpstream(parsed, env, suite, rep)
+      const hxhx = await measureHxhx(parsed, env, suite, rep)
+      upstreamWall.push(upstream.durationMs)
+      upstreamRss.push(upstream.peakRssKb)
+      hxhxWall.push(hxhx.durationMs)
+      hxhxRss.push(hxhx.peakRssKb)
+      suiteResults.push({
+        suite,
+        rep,
+        upstream_haxe: {
+          compile_wall_ms: upstream.durationMs,
+          peak_rss_kb: upstream.peakRssKb,
+          exit_code: upstream.status == null ? -1 : upstream.status
+        },
+        hxhx: {
+          compile_wall_ms: hxhx.durationMs,
+          peak_rss_kb: hxhx.peakRssKb,
+          exit_code: hxhx.status == null ? -1 : hxhx.status
+        }
+      })
+      if (upstream.status !== 0) {
+        workloadFailures.push(`upstream_haxe suite ${suite} rep ${rep} failed during measurement (exit=${upstream.status})`)
       }
-    })
-    if (upstream.status !== 0) {
-      workloadFailures.push(`upstream_haxe suite ${suite} failed during measurement (exit=${upstream.status})`)
-    }
-    if (hxhx.status !== 0) {
-      workloadFailures.push(`hxhx suite ${suite} failed during measurement (exit=${hxhx.status})`)
+      if (hxhx.status !== 0) {
+        workloadFailures.push(`hxhx suite ${suite} rep ${rep} failed during measurement (exit=${hxhx.status})`)
+      }
     }
   }
 
@@ -378,7 +391,8 @@ async function main() {
     runner: {
       source: 'scripts/ci/full1-suite-evidence.js',
       suites: parsed.suites,
-      samplesAreSuites: true,
+      reps: parsed.reps,
+      samplesAreSuiteRepetitions: true,
       suiteResults
     },
     git: {

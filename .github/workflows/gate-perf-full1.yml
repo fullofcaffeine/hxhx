@@ -140,6 +140,7 @@ jobs:
           node scripts/ci/full1-suite-evidence.js \
             --artifacts-dir "$raw_dir/suites" \
             --json-out "$raw_dir/full1-suites.evidence.json" \
+            --reps "$FULL1_PERF_REPS" \
             --hxhx-bin "$HXHX_BIN"
 
           node scripts/ci/full1-perf-evaluator.js \

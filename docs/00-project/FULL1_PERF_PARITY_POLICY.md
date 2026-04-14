@@ -96,6 +96,9 @@ does not drift from runnable repo surfaces:
   - command: `npm run test:full1:suites:strict`
   - source: `scripts/ci/run-upstream-suite.js`
   - Full1 evidence adapter: `scripts/ci/full1-suite-evidence.js`
+  - evidence scope: measured repetitions of the stable `display` suite
+    workload by default; the full strict suite matrix remains the separate
+    correctness gate for `FULL1_SUITE_MATRIX:PASS`
   - required aggregate marker source: `FULL1_SUITE_MATRIX:PASS`
 
 The future blocking evaluator may add larger project workloads, but it must not
