@@ -82,6 +82,8 @@ does not drift from runnable repo surfaces:
   - command: `npm run hxhx:bench:kpi`
   - source: `scripts/hxhx/bench-kpi.sh`
   - report-only workflow today: `.github/workflows/hxhx-kpi-report.yml`
+  - blocking workflow: `.github/workflows/gate-perf-full1.yml`
+  - Full1 evidence adapter: `scripts/ci/full1-kpi-evidence.js`
   - expected schema today: `hxhx.kpi.v1`
 - Native eval/interp latency probe:
   - command: `npm run test:full1:eval-native`
@@ -120,6 +122,16 @@ with:
 Synthetic evaluator fixtures are validated by:
 
 - `scripts/ci/full1-perf-evaluator-fixture-test.js`
+- `scripts/ci/full1-kpi-evidence-fixture-test.js`
+
+The first raw workload adapter is:
+
+- `scripts/ci/full1-kpi-evidence.js`
+
+It converts the existing `hxhx.kpi.v1` report into
+`full1-perf-evidence.v1`. Missing policy workloads or required metrics must
+make `scripts/ci/full1-perf-evaluator.js` fail; partial evidence must never
+emit `FULL1_PERF_PARITY:PASS`.
 
 ## Guard
 
@@ -135,6 +147,7 @@ The guard parses the machine-readable policy block below and validates:
 - every required workload references an existing source file,
 - every required workload command maps to an existing `package.json` script,
 - report-only workflow references still exist.
+- the release-blocking workflow and evidence adapters exist.
 
 <!-- FULL1_PERF_POLICY_JSON_START -->
 ```json
@@ -163,7 +176,9 @@ The guard parses the machine-readable policy block below and validates:
       "id": "full1-kpi-compile-and-macro",
       "npmScript": "hxhx:bench:kpi",
       "source": "scripts/hxhx/bench-kpi.sh",
-      "workflow": ".github/workflows/hxhx-kpi-report.yml",
+      "workflow": ".github/workflows/gate-perf-full1.yml",
+      "reportOnlyWorkflow": ".github/workflows/hxhx-kpi-report.yml",
+      "adapter": "scripts/ci/full1-kpi-evidence.js",
       "schema": "hxhx.kpi.v1",
       "requiredMetrics": [
         "compile_wall_ms",

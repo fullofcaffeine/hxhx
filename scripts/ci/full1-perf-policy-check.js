@@ -82,6 +82,12 @@ function checkWorkload(workload, packageScripts) {
   if (workload.workflow && !fs.existsSync(workload.workflow)) {
     fail(`${owner} references missing workflow: ${workload.workflow}`)
   }
+  if (workload.reportOnlyWorkflow && !fs.existsSync(workload.reportOnlyWorkflow)) {
+    fail(`${owner} references missing report-only workflow: ${workload.reportOnlyWorkflow}`)
+  }
+  if (workload.adapter && !fs.existsSync(workload.adapter)) {
+    fail(`${owner} references missing adapter: ${workload.adapter}`)
+  }
   if (workload.npmScript && !packageScripts[workload.npmScript]) {
     fail(`${owner} references missing package.json script: ${workload.npmScript}`)
   }
@@ -102,9 +108,12 @@ function main() {
     'Haxe 4.3.7',
     'stage0-free hxhx',
     'scripts/ci/full1-perf-policy-check.js',
+    'scripts/ci/full1-perf-evaluator.js',
+    'scripts/ci/full1-kpi-evidence.js',
     'npm run hxhx:bench:kpi',
     'npm run test:full1:eval-native',
     'npm run test:full1:suites:strict',
+    '.github/workflows/gate-perf-full1.yml',
     '.github/workflows/hxhx-kpi-report.yml'
   ]) {
     requireIncludes(policyDocPath, policyDoc, snippet)

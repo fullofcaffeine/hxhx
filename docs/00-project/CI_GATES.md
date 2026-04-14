@@ -107,12 +107,13 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Full1 / Suite Runners Strict` | `.github/workflows/full1-suite-runners.yml` | Full1 strict suite runners for `misc`, `server`, `threads`, `optimization`, `display` with per-suite log + summary artifacts. | **Nightly/scheduled** | weekly schedule, manual |
 | `Full1 / Source-Build Probe` | `.github/workflows/full1-source-probe.yml` | Non-blocking diagnostic lane: force source build (`HXHX_FORCE_STAGE0=1`) and run narrowed strict suites (`server`, `optimization`) to detect bootstrap-lagged fixes without destabilizing the primary matrix. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
 | `Full1 / Bootstrap-Source Reconciliation` | `.github/workflows/full1-bootstrap-source-reconcile.yml` | Diagnostic evidence lane that runs `server` + `optimization` in both bootstrap-built and source-built lanes on the same commit, then classifies each blocker as bootstrap lag vs source-build instability vs real parity bug. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
-
-Heavy Full1 workflows use event+ref scoped concurrency and cancel stale in-progress reruns so manual retries and scheduled evidence runs do not pile up behind obsolete work.
+| `Gate Perf Full1 / HXHX vs Haxe` | `.github/workflows/gate-perf-full1.yml` | Release-blocking Full1 performance parity lane. Uploads raw KPI evidence plus evaluated Full1 perf summary and emits `FULL1_PERF_PARITY:PASS` only through the evaluator after the policy passes. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Gate Full1 / Strict Matrix + Macro Eval Parity` | `.github/workflows/gate-full1.yml` | Full1 aggregate gate that composes strict suite runners, strict extended Gate3, reusable macro runtime parity, and reusable native eval. It emits `FULL1_SUITE_MATRIX:PASS` for strict matrix success and `FULL1_MACRO_EVAL_PARITY:PASS` for macro+eval closure. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Gate M7 / Replacement Bundle` | `.github/workflows/gate-m7.yml` | Strict replacement-readiness lane (scheduled/manual + release-event verification). | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Stdlib Portable / Full` | `.github/workflows/stdlib-portable-full.yml` | Full portable stdlib conformance lane. | **Nightly/scheduled** | weekly schedule, manual |
 | `Smoke / Stage0 Source Build` | `.github/workflows/stage0-source-smoke.yml` | Source-only stage0 smoke path integrity check. | **Nightly/scheduled** | daily schedule, manual |
+
+Heavy Full1 workflows use event+ref scoped concurrency and cancel stale in-progress reruns so manual retries and scheduled evidence runs do not pile up behind obsolete work.
 
 `Gate M7` release/scheduled runs force strict settings:
 - `HXHX_M7_PROFILE=full`
@@ -173,7 +174,8 @@ Full1 performance policy marker:
 
 Full1 measured performance parity marker:
 
-- `FULL1_PERF_PARITY:PASS` (planned blocking evaluator; policy source:
+- `FULL1_PERF_PARITY:PASS` (`.github/workflows/gate-perf-full1.yml`;
+  evaluator: `scripts/ci/full1-perf-evaluator.js`; policy source:
   `docs/00-project/FULL1_PERF_PARITY_POLICY.md`)
 
 Gate Full1 also requires green reusable jobs from:

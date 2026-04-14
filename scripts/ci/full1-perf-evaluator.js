@@ -227,6 +227,36 @@ function evaluateEvidence(policy, evidence, sourcePath) {
   }
 }
 
+function evaluateRequiredCoverage(policy, evidenceResults) {
+  const failures = []
+  const workloadResultsById = new Map()
+  for (const evidenceResult of evidenceResults) {
+    for (const workloadResult of evidenceResult.workloads || []) {
+      if (workloadResultsById.has(workloadResult.id)) {
+        failures.push(`duplicate workload evidence for ${workloadResult.id}`)
+        continue
+      }
+      workloadResultsById.set(workloadResult.id, workloadResult)
+    }
+  }
+
+  for (const workloadSpec of Array.isArray(policy.workloads) ? policy.workloads : []) {
+    const id = workloadSpec.id
+    const workloadResult = workloadResultsById.get(id)
+    if (!workloadResult) {
+      failures.push(`missing required workload ${id}`)
+      continue
+    }
+
+    const seenMetrics = new Set((workloadResult.metrics || []).map(result => result.metric))
+    for (const metric of Array.isArray(workloadSpec.requiredMetrics) ? workloadSpec.requiredMetrics : []) {
+      if (!seenMetrics.has(metric)) failures.push(`${id}: missing required metric ${metric}`)
+    }
+  }
+
+  return failures
+}
+
 function main() {
   const parsed = parseArgs(process.argv.slice(2))
   const policy = loadPolicy(parsed.policyDoc)
@@ -235,6 +265,7 @@ function main() {
   for (const result of evidenceResults) {
     for (const failure of result.failures || []) failures.push(failure)
   }
+  for (const failure of evaluateRequiredCoverage(policy, evidenceResults)) failures.push(failure)
   const decision = failures.length === 0 ? 'pass' : 'fail'
   const summary = {
     schema: 'full1-perf-evaluation.v1',
@@ -260,4 +291,3 @@ function main() {
 }
 
 main()
-

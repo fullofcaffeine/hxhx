@@ -29,7 +29,7 @@ Scope manifests used by this map:
 | PM-14 | Native eval/interp baseline (`tests/unit/compile-macro.hxml`) | Native strict eval | `Eval` | stage0-forbidden | `.github/workflows/full1-eval-native.yml` (standalone + reusable inside `.github/workflows/gate-full1.yml`) | `FULL1_EVAL_NATIVE:PASS` |
 | PM-15 | Full1 macro/eval closure aggregate | Full1 aggregate | `Macro,Eval` | scheduled/release | `.github/workflows/gate-full1.yml` | `FULL1_MACRO_EVAL_PARITY:PASS` |
 | PM-16 | Full1 performance policy contract | Full1 performance contract | `perf` | policy guard | `scripts/ci/full1-perf-policy-check.js` | `FULL1_PERF_POLICY:PASS` |
-| PM-17 | Full1 measured performance parity | Full1 performance evidence | `perf` | stage0-free hxhx vs upstream Haxe 4.3.7 | planned blocking evaluator / `.github/workflows/gate-perf-full1.yml` | `FULL1_PERF_PARITY:PASS` |
+| PM-17 | Full1 measured performance parity | Full1 performance evidence | `perf` | stage0-free hxhx vs upstream Haxe 4.3.7 | `.github/workflows/gate-perf-full1.yml` (`scripts/ci/full1-perf-evaluator.js`) | `FULL1_PERF_PARITY:PASS` |
 
 ## Marker Registry
 

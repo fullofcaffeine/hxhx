@@ -9,7 +9,9 @@
     "native-js-smoke",
     "plugin-matrix-strict",
     "m7-strict-replacement",
-    "full1-gate3-extended-strict"
+    "full1-gate3-extended-strict",
+    "full-perf-policy",
+    "full-perf-parity"
   ],
   "entries": [
     {
@@ -206,7 +208,7 @@
       "profile": "contract",
       "marker": "FULL1_PERF_POLICY:PASS",
       "workflow": "scripts/ci/full1-perf-policy-check.js",
-      "enforcement": "planned"
+      "enforcement": "required_now"
     },
     {
       "id": "F1-PM-12A",
@@ -218,7 +220,7 @@
       "profile": "scheduled-release",
       "marker": "FULL1_PERF_PARITY:PASS",
       "workflow": ".github/workflows/gate-perf-full1.yml",
-      "enforcement": "planned"
+      "enforcement": "required_now"
     },
     {
       "id": "F1-PM-13",

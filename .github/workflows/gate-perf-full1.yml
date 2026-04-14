@@ -1,0 +1,147 @@
+name: Gate Perf Full1 / HXHX vs Haxe
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly Full1 performance parity evidence.
+    - cron: "0 13 * * 6"
+  release:
+    types: [published]
+
+concurrency:
+  group: gate-perf-full1-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+  HXHX_KPI_REPS: "5"
+  HXHX_KPI_RUN_MACRO_LANE: "1"
+  HXHX_FORBID_STAGE0: "1"
+
+jobs:
+  perf-parity:
+    name: Full1 perf parity evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Run and evaluate Full1 perf evidence
+        id: perf
+        run: |
+          set -euo pipefail
+          raw_dir="$RUNNER_TEMP/full1_perf/raw"
+          evaluated_dir="$RUNNER_TEMP/full1_perf/evaluated"
+          mkdir -p "$raw_dir" "$evaluated_dir"
+          echo "raw_dir=$raw_dir" >> "$GITHUB_OUTPUT"
+          echo "evaluated_dir=$evaluated_dir" >> "$GITHUB_OUTPUT"
+
+          HXHX_KPI_REPORT_DIR="$raw_dir/kpi" npm run hxhx:bench:kpi
+          node scripts/ci/full1-kpi-evidence.js \
+            --kpi-report "$raw_dir/kpi/report.json" \
+            --json-out "$raw_dir/full1-kpi.evidence.json"
+
+          node scripts/ci/full1-perf-evaluator.js \
+            --evidence "$raw_dir/full1-kpi.evidence.json" \
+            --json-out "$evaluated_dir/full1-perf-evaluation.json"
+
+      - name: Add Full1 perf summary
+        if: always()
+        run: |
+          set -euo pipefail
+          summary="$GITHUB_STEP_SUMMARY"
+          raw_dir="$RUNNER_TEMP/full1_perf/raw"
+          evaluated_dir="$RUNNER_TEMP/full1_perf/evaluated"
+          evaluation="$evaluated_dir/full1-perf-evaluation.json"
+          {
+            echo "### Full1 performance parity"
+            echo ""
+            echo "- Workflow: \`Gate Perf Full1 / HXHX vs Haxe\`"
+            echo "- Marker source: \`scripts/ci/full1-perf-evaluator.js\`"
+            echo "- Pass marker prefix: \`FULL1_PERF_PARITY\`"
+            echo "- Raw artifacts: \`$raw_dir\`"
+            echo "- Evaluated artifacts: \`$evaluated_dir\`"
+            echo ""
+          } >> "$summary"
+          if [ -f "$evaluation" ]; then
+            node -e 'const fs=require("fs"); const p=process.argv[1]; const s=JSON.parse(fs.readFileSync(p,"utf8")); console.log(`- Decision: \`${s.decision}\``); console.log(`- Marker: \`${s.marker || "not emitted"}\``); if (Array.isArray(s.failures) && s.failures.length) { console.log(""); console.log("Failures:"); for (const failure of s.failures) console.log(`- ${failure}`); }' "$evaluation" >> "$summary"
+          else
+            echo "- Decision: \`no evaluation artifact written\`" >> "$summary"
+          fi
+
+      - name: Upload raw Full1 perf artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-perf-raw-${{ github.run_id }}
+          path: ${{ runner.temp }}/full1_perf/raw
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload evaluated Full1 perf artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-perf-evaluated-${{ github.run_id }}
+          path: ${{ runner.temp }}/full1_perf/evaluated
+          if-no-files-found: warn
+          retention-days: 14
