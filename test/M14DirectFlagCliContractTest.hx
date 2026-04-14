@@ -91,6 +91,8 @@ class M14DirectFlagCliContractTest {
 		expectThrowMessage(function() plan(["--js"]), "Missing value after --js/ -js");
 		expectThrowMessage(function() plan(["--ocaml-eval", "--js", "out.js"]), "--ocaml-eval is the target; remove other targets.");
 		expectThrowMessage(function() plan(["--compat", "--ocaml"]), "--compat is pure upstream passthrough.");
+		expectThrowMessage(function() plan(["-D", "elixir_output=out", "-main", "Main"]), 'Native source-host Reflaxe target "elixir" is not implemented');
+		expectThrowMessage(function() plan(["-D", "reflaxe-target=elixir", "-main", "Main"]), 'Native source-host Reflaxe target "elixir" is not implemented');
 
 		final nativeOcaml = plan(["--ocaml", "-cp", "src", "-main", "Main"]);
 		assertEquals(nativeOcaml.lane, "native-ocaml", "native ocaml lane");

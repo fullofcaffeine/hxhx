@@ -137,6 +137,13 @@ class CliRouting {
 			throw "Target not supported natively; rerun with --compat.";
 		}
 
+		final sourceHostTarget = findSourceHostReflaxeTarget(planningTargetArgs(baseForwarded));
+		if (sourceHostTarget != null) {
+			throw 'Native source-host Reflaxe target "'
+				+ sourceHostTarget
+				+ '" is not implemented; use the promoted host-adapter/plugin path or --compat for stage0 passthrough.';
+		}
+
 		throw "No target selected; use --ocaml, Haxe --js <file>, --ocaml-eval, or --compat.";
 	}
 
@@ -311,6 +318,15 @@ class CliRouting {
 				case _:
 			}
 		}
+		return null;
+	}
+
+	static function findSourceHostReflaxeTarget(args:Array<String>):Null<String> {
+		final reflaxeTarget = getDefineValue(args, "reflaxe-target");
+		if (reflaxeTarget != null && reflaxeTarget.length > 0 && reflaxeTarget != "ocaml")
+			return reflaxeTarget;
+		if (getDefineValue(args, "elixir_output") != null)
+			return "elixir";
 		return null;
 	}
 }
