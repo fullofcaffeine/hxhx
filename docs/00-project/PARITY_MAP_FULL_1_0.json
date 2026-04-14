@@ -172,6 +172,19 @@
       "enforcement": "planned"
     },
     {
+      "id": "F1-PM-10B",
+      "suite": "full1-macro-eval-contract",
+      "lane": "full",
+      "targets": [
+        "Macro",
+        "Eval"
+      ],
+      "profile": "contract",
+      "marker": "FULL1_MACRO_EVAL_CONTRACT:PASS",
+      "workflow": "scripts/ci/full1-macro-eval-contract-check.js",
+      "enforcement": "planned"
+    },
+    {
       "id": "F1-PM-11",
       "suite": "full-plugin-parity",
       "lane": "full",

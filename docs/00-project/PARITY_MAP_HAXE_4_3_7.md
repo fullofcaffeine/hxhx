@@ -60,6 +60,7 @@ These are the canonical marker strings used for parity statements in logs:
 - `FULL1_MACRO_PARITY:PASS`
 - `FULL1_EVAL_NATIVE:PASS`
 - `FULL1_MACRO_EVAL_PARITY:PASS`
+- `FULL1_MACRO_EVAL_CONTRACT:PASS`
 
 ## Claim Rules
 
@@ -71,3 +72,4 @@ These are the canonical marker strings used for parity statements in logs:
   - `FULL1_MACRO_PARITY:PASS`
   - `FULL1_EVAL_NATIVE:PASS`
   - `FULL1_MACRO_EVAL_PARITY:PASS`
+  - `docs/00-project/MACRO_EVAL_PARITY_CONTRACT.md` as the contract-definition source.

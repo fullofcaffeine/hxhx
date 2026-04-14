@@ -51,6 +51,15 @@ They are valuable for fast diagnosis and iteration, but they do not replace upst
 
 Planned Full 1.0 markers are listed in `full-1.0-scope.json` under `full.requiredMarkersPlanned`.
 
+Macro/eval closure has its own explicit sub-contract:
+
+- `docs/00-project/MACRO_EVAL_PARITY_CONTRACT.md`
+
+That sub-contract distinguishes the contract-definition marker
+`FULL1_MACRO_EVAL_CONTRACT:PASS` from the runtime evidence markers
+`FULL1_MACRO_PARITY:PASS`, `FULL1_EVAL_NATIVE:PASS`, and
+`FULL1_MACRO_EVAL_PARITY:PASS`.
+
 ## Non-goals policy
 
 Anything not explicitly declared in the scope manifest is out-of-scope for the claim.
