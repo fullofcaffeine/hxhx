@@ -238,6 +238,9 @@ class JsTargetCore implements ITargetCore {
 		instead of silently emitting an approximate body.
 	**/
 	static function emitKnownStaticFunctionBody(writer:JsWriter, fullName:String, fnName:String, params:Array<String>):Bool {
+		if (fullName == "Lambda")
+			return emitLambdaStaticFunctionBody(writer, fnName, params);
+
 		if (fullName == "haxe.io.Path")
 			return emitPathStaticFunctionBody(writer, fnName, params);
 
@@ -311,6 +314,92 @@ class JsTargetCore implements ITargetCore {
 			case _:
 				return false;
 		}
+	}
+
+	static function emitLambdaStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "flatten":
+				if (params.length < 1)
+					return false;
+				emitLambdaFlattenBody(writer, params[0]);
+				return true;
+			case "flatMap":
+				if (params.length < 2)
+					return false;
+				emitLambdaFlatMapBody(writer, params[0], params[1]);
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitLambdaPushIterable(writer:JsWriter, iterable:String, iteratorName:String, indexName:String, itemName:String):Void {
+		writer.writeln("var " + iteratorName + " = (" + iterable + " != null && typeof " + iterable + ".iterator === \"function\") ? " + iterable
+			+ ".iterator() : null;");
+		writer.writeln("if (" + iteratorName + " != null) {");
+		writer.pushIndent();
+		writer.writeln("while (" + iteratorName + ".hasNext()) __hx_out.push(" + iteratorName + ".next());");
+		writer.popIndent();
+		writer.writeln("} else if (Array.isArray(" + iterable + ")) {");
+		writer.pushIndent();
+		writer.writeln("for (var " + indexName + " = 0; " + indexName + " < " + iterable + ".length; " + indexName + "++) __hx_out.push(" + iterable + "["
+			+ indexName + "]);");
+		writer.popIndent();
+		writer.writeln("}");
+	}
+
+	static function emitLambdaFlattenBody(writer:JsWriter, iterable:String):Void {
+		writer.writeln("var __hx_out = [];");
+		writer.writeln("var __hx_outer = (" + iterable + " != null && typeof " + iterable + ".iterator === \"function\") ? " + iterable +
+			".iterator() : null;");
+		writer.writeln("if (__hx_outer != null) {");
+		writer.pushIndent();
+		writer.writeln("while (__hx_outer.hasNext()) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_inner = __hx_outer.next();");
+		emitLambdaPushIterable(writer, "__hx_inner", "__hx_inner_it", "__hx_inner_i", "__hx_value");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("} else if (Array.isArray(" + iterable + ")) {");
+		writer.pushIndent();
+		writer.writeln("for (var __hx_outer_i = 0; __hx_outer_i < " + iterable + ".length; __hx_outer_i++) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_inner = " + iterable + "[__hx_outer_i];");
+		emitLambdaPushIterable(writer, "__hx_inner", "__hx_inner_it", "__hx_inner_i", "__hx_value");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return __hx_out;");
+	}
+
+	static function emitLambdaFlatMapBody(writer:JsWriter, iterable:String, mapper:String):Void {
+		writer.writeln("var __hx_out = [];");
+		writer.writeln("var __hx_outer = (" + iterable + " != null && typeof " + iterable + ".iterator === \"function\") ? " + iterable +
+			".iterator() : null;");
+		writer.writeln("if (__hx_outer != null) {");
+		writer.pushIndent();
+		writer.writeln("while (__hx_outer.hasNext()) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_item = __hx_outer.next();");
+		writer.writeln("var __hx_mapped = " + mapper + "(__hx_item);");
+		emitLambdaPushIterable(writer, "__hx_mapped", "__hx_inner_it", "__hx_inner_i", "__hx_value");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("} else if (Array.isArray(" + iterable + ")) {");
+		writer.pushIndent();
+		writer.writeln("for (var __hx_outer_i = 0; __hx_outer_i < " + iterable + ".length; __hx_outer_i++) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_item = " + iterable + "[__hx_outer_i];");
+		writer.writeln("var __hx_mapped = " + mapper + "(__hx_item);");
+		emitLambdaPushIterable(writer, "__hx_mapped", "__hx_inner_it", "__hx_inner_i", "__hx_value");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return __hx_out;");
 	}
 
 	static function emitPathStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
@@ -555,7 +644,7 @@ class JsTargetCore implements ITargetCore {
 
 		// Full1 suite macros can leave compile-time-only helper bodies in the JS target
 		// output graph. Keep these helpers neutral while the graph-pruning work is closed.
-		if (unit.fullName == "haxe.macro.Compiler")
+		if (unit.fullName == "haxe.macro.Compiler" || unit.fullName == "haxe.macro.Context")
 			return true;
 
 		// Full1 optimization suite currently exercises a compile-time-only root `Macro`
