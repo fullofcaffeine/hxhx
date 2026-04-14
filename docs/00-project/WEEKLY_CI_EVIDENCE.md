@@ -1,6 +1,6 @@
 # Weekly CI Evidence Runbook
 
-Last audited: 2026-03-03
+Last audited: 2026-04-14
 
 This runbook defines how maintainers audit scheduled CI health each week and what to do when a gate regresses.
 
@@ -52,7 +52,15 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
 9. Download KPI artifact and compare `report.json` against:
    - `docs/benchmarks/kpi/hxhx-kpi-thresholds.v1.json`
    - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
-10. Record evidence links and outcomes in the weekly ops note/bead comment.
+10. Check GitHub branch protection for `main` and compare it with the `PR required` table in `docs/00-project/CI_GATES.md`.
+11. Record evidence links and outcomes in the weekly ops note/bead comment.
+
+## GitHub UI Interpretation
+
+- Use the current head SHA when deciding whether the push/PR baseline is green.
+- Treat cancelled runs on older commits as superseded when a newer push reused the same workflow concurrency group.
+- Treat `Release / Semantic Publish` skipped runs as expected when the triggering `CI / Core PR Checks` run was cancelled, superseded, or otherwise did not meet the release workflow condition.
+- Treat report-only performance workflows as advisory even though they run on push/PR for visibility.
 
 ## Triage matrix
 

@@ -37,6 +37,14 @@ For lane/profile context, use the canonical beginner truth table:
 - **Release**: strict release-readiness lanes used for publish confidence.
 - **Manual**: maintainer-triggered diagnostics or targeted reruns.
 
+## Interpreting GitHub UI State
+
+`PR required` is the repository merge-policy classification for this project. It is the set of workflows maintainers should treat as blocking for ordinary merges, even when a checkout, fork, or private repository instance does not currently enforce GitHub branch-protection rules.
+
+When GitHub branch protection is enabled, it should require the PR-required fast lanes listed below. When branch protection is disabled, the docs remain the source of truth for the intended baseline, and maintainers must verify these workflows manually before merging release-relevant work.
+
+Cancelled runs on older commits are not baseline failures when they were superseded by a newer push under the same concurrency group. Evaluate the latest run for the current head SHA. A skipped `Release / Semantic Publish` workflow-run after a non-successful or superseded `CI / Core PR Checks` run is also expected and does not count as a release-lane failure by itself.
+
 ## Release policy (Scoped 1.0)
 
 - `Release / Semantic Publish` (`.github/workflows/release.yml`) is the automation lane for normal semantic releases.
