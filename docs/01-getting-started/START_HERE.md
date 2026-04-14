@@ -101,6 +101,8 @@ bash scripts/hxhx/promote-backend-plugin.sh \
 Read:
 - `docs/00-project/REFLAXE_ELIXIR_NATIVE_PATH_DECISION.md`
 - `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
+- `docs/00-project/REFLAXE_PROMOTION_MATRIX_TRADEOFFS.md`
+- `docs/01-getting-started/CHOOSE_A_REFLAXE_PROMOTION_PATH.md`
 - `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
 - `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`
 - `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`

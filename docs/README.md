@@ -12,6 +12,7 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - Beginner status snapshot: `docs/01-getting-started/WHAT_WORKS_TODAY.md`
 - Use upstream `haxe` + `reflaxe.ocaml`: `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
 - `reflaxe.ocaml` production install/use/troubleshooting: `docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md`
+- Choose a Reflaxe promotion path: `docs/01-getting-started/CHOOSE_A_REFLAXE_PROMOTION_PATH.md`
 - Promote Reflaxe backends to native plugin artifacts: `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
 - Validate native (non-delegating) `hxhx` lanes: `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
 - Promote Reflaxe compilers/backends to native plugins: `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`
@@ -26,6 +27,7 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - `reflaxe.ocaml` runtime/stdlib closure audit: `docs/00-project/REFLAXE_OCAML_RUNTIME_STDLIB_CLOSURE_AUDIT.md`
 - `reflaxe.ocaml` performance credibility baseline: `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`
 - Reflaxe promotion matrix contract: `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
+- Reflaxe promotion matrix tradeoffs: `docs/00-project/REFLAXE_PROMOTION_MATRIX_TRADEOFFS.md`
 - Public `Scoped 1.0` / `Full 1.0` claim checklist: `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 - Weekly scheduled-gate audit runbook: `docs/00-project/WEEKLY_CI_EVIDENCE.md`
 - Delegated vs native execution modes: `docs/02-user-guide/concepts/execution_modes.md`
