@@ -213,6 +213,9 @@ run_macro_overhead_lane() {
 		IFS=$'\t' read -r base_ms base_rss <<<"$baseline_measured"
 		IFS=$'\t' read -r macro_ms macro_rss <<<"$macro_measured"
 		overhead=$((macro_ms - base_ms))
+		if [ "$overhead" -lt 0 ]; then
+			overhead=0
+		fi
 		record_sample "macro_baseline_compile_ms" "$lane" "$rep" "$base_ms"
 		record_sample "macro_enabled_compile_ms" "$lane" "$rep" "$macro_ms"
 		record_sample "macro_overhead_ms" "$lane" "$rep" "$overhead"
