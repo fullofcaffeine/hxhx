@@ -90,10 +90,12 @@ does not drift from runnable repo surfaces:
 - Native eval/interp latency probe:
   - command: `npm run test:full1:eval-native`
   - source: `scripts/ci/run-full1-eval-native.js`
+  - Full1 evidence adapter: `scripts/ci/full1-eval-evidence.js`
   - required marker source: `FULL1_EVAL_NATIVE:PASS`
 - Strict upstream suite compiler workloads:
   - command: `npm run test:full1:suites:strict`
   - source: `scripts/ci/run-upstream-suite.js`
+  - Full1 evidence adapter: `scripts/ci/full1-suite-evidence.js`
   - required aggregate marker source: `FULL1_SUITE_MATRIX:PASS`
 
 The future blocking evaluator may add larger project workloads, but it must not
@@ -129,6 +131,11 @@ Synthetic evaluator fixtures are validated by:
 The first raw workload adapter is:
 
 - `scripts/ci/full1-kpi-evidence.js`
+
+Additional Full1 evidence adapters are:
+
+- `scripts/ci/full1-eval-evidence.js`
+- `scripts/ci/full1-suite-evidence.js`
 
 It converts the existing `hxhx.kpi.v1` report into
 `full1-perf-evidence.v1`. Missing policy workloads or required metrics must
@@ -197,6 +204,7 @@ The guard parses the machine-readable policy block below and validates:
       "id": "full1-native-eval-latency",
       "npmScript": "test:full1:eval-native",
       "source": "scripts/ci/run-full1-eval-native.js",
+      "adapter": "scripts/ci/full1-eval-evidence.js",
       "marker": "FULL1_EVAL_NATIVE:PASS",
       "requiredMetrics": [
         "compile_wall_ms"
@@ -206,6 +214,7 @@ The guard parses the machine-readable policy block below and validates:
       "id": "full1-upstream-suite-compiler-workloads",
       "npmScript": "test:full1:suites:strict",
       "source": "scripts/ci/run-upstream-suite.js",
+      "adapter": "scripts/ci/full1-suite-evidence.js",
       "marker": "FULL1_SUITE_MATRIX:PASS",
       "requiredMetrics": [
         "compile_wall_ms",

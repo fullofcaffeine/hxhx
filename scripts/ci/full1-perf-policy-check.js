@@ -110,6 +110,8 @@ function main() {
     'scripts/ci/full1-perf-policy-check.js',
     'scripts/ci/full1-perf-evaluator.js',
     'scripts/ci/full1-kpi-evidence.js',
+    'scripts/ci/full1-eval-evidence.js',
+    'scripts/ci/full1-suite-evidence.js',
     'npm run hxhx:bench:kpi',
     'npm run test:full1:eval-native',
     'npm run test:full1:suites:strict',

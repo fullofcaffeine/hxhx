@@ -19,6 +19,7 @@ env:
   NODE_VERSION: "20"
   HAXE_VERSION: "4.3.7"
   HXHX_KPI_REPS: "5"
+  FULL1_PERF_REPS: "5"
   HXHX_KPI_RUN_MACRO_LANE: "1"
   HXHX_FORBID_STAGE0: "1"
   HXHX_BOOTSTRAP_PREFER_NATIVE: "1"
@@ -86,6 +87,9 @@ jobs:
       - name: Download Haxe libraries (lix)
         run: npx lix download
 
+      - name: Fetch upstream Haxe checkout (vendor/haxe)
+        run: bash scripts/vendor/fetch-haxe-upstream.sh
+
       - name: Run and evaluate Full1 perf evidence
         id: perf
         run: |
@@ -96,13 +100,52 @@ jobs:
           echo "raw_dir=$raw_dir" >> "$GITHUB_OUTPUT"
           echo "evaluated_dir=$evaluated_dir" >> "$GITHUB_OUTPUT"
 
+          echo "== Build shared hxhx binaries"
+          if ! bash scripts/hxhx/build-hxhx.sh >"$raw_dir/build-hxhx.stdout.log" 2>"$raw_dir/build-hxhx.stderr.log"; then
+            cat "$raw_dir/build-hxhx.stderr.log" >&2
+            exit 1
+          fi
+          cat "$raw_dir/build-hxhx.stderr.log"
+          hxhx_bin="$(awk 'NF { line=$0 } END { print line }' "$raw_dir/build-hxhx.stdout.log")"
+          if [ -z "$hxhx_bin" ] || [ ! -f "$hxhx_bin" ]; then
+            echo "build-hxhx.sh did not produce a valid binary path: ${hxhx_bin:-<empty>}" >&2
+            exit 1
+          fi
+          chmod +x "$hxhx_bin" || true
+          export HXHX_BIN="$hxhx_bin"
+
+          if ! bash scripts/hxhx/build-hxhx-macro-host.sh >"$raw_dir/build-hxhx-macro-host.stdout.log" 2>"$raw_dir/build-hxhx-macro-host.stderr.log"; then
+            cat "$raw_dir/build-hxhx-macro-host.stderr.log" >&2
+            exit 1
+          fi
+          cat "$raw_dir/build-hxhx-macro-host.stderr.log"
+          macro_host_bin="$(awk 'NF { line=$0 } END { print line }' "$raw_dir/build-hxhx-macro-host.stdout.log")"
+          if [ -z "$macro_host_bin" ] || [ ! -f "$macro_host_bin" ]; then
+            echo "build-hxhx-macro-host.sh did not produce a valid binary path: ${macro_host_bin:-<empty>}" >&2
+            exit 1
+          fi
+          chmod +x "$macro_host_bin" || true
+          export HXHX_MACRO_HOST_EXE="$macro_host_bin"
+
           HXHX_KPI_REPORT_DIR="$raw_dir/kpi" npm run hxhx:bench:kpi
           node scripts/ci/full1-kpi-evidence.js \
             --kpi-report "$raw_dir/kpi/report.json" \
             --json-out "$raw_dir/full1-kpi.evidence.json"
 
+          node scripts/ci/full1-eval-evidence.js \
+            --artifacts-dir "$raw_dir/eval-native" \
+            --json-out "$raw_dir/full1-eval.evidence.json" \
+            --reps "$FULL1_PERF_REPS"
+
+          node scripts/ci/full1-suite-evidence.js \
+            --artifacts-dir "$raw_dir/suites" \
+            --json-out "$raw_dir/full1-suites.evidence.json" \
+            --hxhx-bin "$HXHX_BIN"
+
           node scripts/ci/full1-perf-evaluator.js \
             --evidence "$raw_dir/full1-kpi.evidence.json" \
+            --evidence "$raw_dir/full1-eval.evidence.json" \
+            --evidence "$raw_dir/full1-suites.evidence.json" \
             --json-out "$evaluated_dir/full1-perf-evaluation.json"
 
       - name: Add Full1 perf summary
