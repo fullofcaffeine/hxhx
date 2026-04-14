@@ -185,9 +185,17 @@ class JsTargetCore implements ITargetCore {
 				try {
 					JsExprEmitter.emit(init, staticScope.exprScope());
 				} catch (e:String) {
-					throw e + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (static field init)";
+					if (allowStaticFieldFallback(unit, HxFieldDecl.getName(field), e)) {
+						"null";
+					} else {
+						throw e + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (static field init)";
+					}
 				} catch (error:haxe.Exception) {
-					throw error.message + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (static field init)";
+					if (allowStaticFieldFallback(unit, HxFieldDecl.getName(field), error.message)) {
+						"null";
+					} else {
+						throw error.message + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (static field init)";
+					}
 				}
 			};
 			writer.writeln(unit.jsRef + suffix + " = " + value + ";");
@@ -323,6 +331,11 @@ class JsTargetCore implements ITargetCore {
 					return false;
 				emitLambdaFlattenBody(writer, params[0]);
 				return true;
+			case "filter":
+				if (params.length < 2)
+					return false;
+				emitLambdaFilterBody(writer, params[0], params[1]);
+				return true;
 			case "flatMap":
 				if (params.length < 2)
 					return false;
@@ -367,6 +380,37 @@ class JsTargetCore implements ITargetCore {
 		writer.pushIndent();
 		writer.writeln("var __hx_inner = " + iterable + "[__hx_outer_i];");
 		emitLambdaPushIterable(writer, "__hx_inner", "__hx_inner_it", "__hx_inner_i", "__hx_value");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return __hx_out;");
+	}
+
+	static function emitLambdaFilterBody(writer:JsWriter, iterable:String, predicate:String):Void {
+		writer.writeln("var __hx_out = [];");
+		writer.writeln("var __hx_it = ("
+			+ iterable
+			+ " != null && typeof "
+			+ iterable
+			+ ".iterator === \"function\") ? "
+			+ iterable
+			+ ".iterator() : null;");
+		writer.writeln("if (__hx_it != null) {");
+		writer.pushIndent();
+		writer.writeln("while (__hx_it.hasNext()) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_item = __hx_it.next();");
+		writer.writeln("if (" + predicate + "(__hx_item)) __hx_out.push(__hx_item);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("} else if (Array.isArray(" + iterable + ")) {");
+		writer.pushIndent();
+		writer.writeln("for (var __hx_i = 0; __hx_i < " + iterable + ".length; __hx_i++) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_item = " + iterable + "[__hx_i];");
+		writer.writeln("if (" + predicate + "(__hx_item)) __hx_out.push(__hx_item);");
 		writer.popIndent();
 		writer.writeln("}");
 		writer.popIndent();
@@ -654,6 +698,13 @@ class JsTargetCore implements ITargetCore {
 			return true;
 
 		return false;
+	}
+
+	static function allowStaticFieldFallback(unit:JsClassUnit, fieldName:String, reason:String):Bool {
+		final isUnsupportedExpr = reason != null && reason.indexOf("[js-native:unsupported_expr]") != -1;
+		if (!isUnsupportedExpr)
+			return false;
+		return unit.fullName == "haxe.macro.Compiler" || unit.fullName == "haxe.macro.Context";
 	}
 
 	static function isCompileTimeMacroFallback(fnName:String):Bool {

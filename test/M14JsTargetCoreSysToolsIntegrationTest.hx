@@ -71,9 +71,12 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function lambdaModule():TypedModule {
 		final iterableArg = new HxFunctionArg("it", "Array<Array<Int>>", HxDefaultValue.NoDefault);
+		final filterIterableArg = new HxFunctionArg("it", "Array<Int>", HxDefaultValue.NoDefault);
+		final predicateArg = new HxFunctionArg("f", "Int->Bool", HxDefaultValue.NoDefault);
 		final mapperArg = new HxFunctionArg("f", "Int->Array<Int>", HxDefaultValue.NoDefault);
 		final lambdaClass = new HxClassDecl("Lambda", false, [
 			new HxFunctionDecl("flatten", HxVisibility.Public, true, [iterableArg], "Array<Int>", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("filter", HxVisibility.Public, true, [filterIterableArg, predicateArg], "Array<Int>", unsupportedBody("if_missing_else"), ""),
 			new HxFunctionDecl("flatMap", HxVisibility.Public, true, [iterableArg, mapperArg], "Array<Int>", unsupportedBody("body_parse_error"), "")
 		]);
 		final decl = new HxModuleDecl("", [], lambdaClass, [lambdaClass], false, false);
@@ -97,9 +100,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function macroCompilerModule():TypedModule {
 		final flagArg = new HxFunctionArg("flag", "String", HxDefaultValue.NoDefault);
+		final ident = new HxFieldDecl("ident", HxVisibility.Private, true, "Dynamic", HxExpr.EUnsupported("[js-native:unsupported_expr]"));
 		final compilerClass = new HxClassDecl("Compiler", false, [
 			new HxFunctionDecl("getDefine", HxVisibility.Public, true, [flagArg], "String", unsupportedBody("[js-native:unsupported_expr]"), "")
-		]);
+		], [ident]);
 		final decl = new HxModuleDecl("haxe.macro", [], compilerClass, [compilerClass], false, false);
 		return typedModule("", decl, "haxe/macro/Compiler.hx");
 	}
@@ -147,6 +151,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(Path.withoutExtension("dir/name.txt"));',
 				'    Sys.println(Path.join(["foo", "bar", "..", "baz"]));',
 				'    Sys.println(Lambda.flatten([[1, 2], [3]]).join(","));',
+				'    Sys.println(Lambda.filter([1, 2, 3, 4], function(i) return i > 2).join(","));',
 				"  }",
 				"}"
 			].join("\n");
@@ -173,6 +178,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.getDefine = function", "compile-time macro Compiler fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Context.getLocalClass = function", "compile-time macro Context fallback should emit");
 			assertContains(js, "__hx_cls_Lambda.flatten = function", "Lambda flatten shim should emit");
+			assertContains(js, "__hx_cls_Lambda.filter = function", "Lambda filter shim should emit");
+			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
 
 			final stdout = runNodeScript(artifactPath);
 			assertContains(stdout, "'a b'", "quoteUnixArg should quote shell-unsafe spaces");
@@ -184,6 +191,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "dir/name", "Path.withoutExtension should remove the final file extension");
 			assertContains(stdout, "foo/baz", "Path.join should combine and normalize segments");
 			assertContains(stdout, "1,2,3", "Lambda.flatten should concatenate nested iterables");
+			assertContains(stdout, "3,4", "Lambda.filter should preserve matching items");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
