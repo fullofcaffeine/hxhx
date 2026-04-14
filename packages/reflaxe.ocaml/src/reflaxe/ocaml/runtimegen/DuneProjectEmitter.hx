@@ -139,7 +139,7 @@ class DuneProjectEmitter {
 			final entryBody = if (mainModuleName != null) {
 				[
 					"let () =",
-					"  HxTypeRegistry.init ();",
+					"  HxType.set_registry_init_hook HxTypeRegistry.init;",
 					"  ignore (" + mainModuleName + ".main ())",
 					""
 				].join("\n");

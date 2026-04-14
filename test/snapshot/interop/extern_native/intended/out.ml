@@ -1,4 +1,4 @@
 # 1 "out.ml"
 let () =
-  HxTypeRegistry.init ();
+  HxType.set_registry_init_hook HxTypeRegistry.init;
   ignore (Main.main ())

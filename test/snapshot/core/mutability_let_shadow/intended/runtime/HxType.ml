@@ -9,7 +9,7 @@
    - Class/enum values are represented as opaque `Obj.t` values created and
      interned by this module.
    - `resolveClass/resolveEnum` perform lookup in a runtime registry that is
-     populated at program start by generated code (`HxTypeRegistry.init()`).
+     populated lazily by generated code (`HxTypeRegistry.init()`).
 
    Non-goals (yet)
    - Full reflection (fields, RTTI, `typeof`, `enumEq`, etc.). *)
@@ -49,6 +49,27 @@ let enum_ctor_fns : (string, Obj.t HxArray.t -> Obj.t) Hashtbl.t = Hashtbl.creat
 let enum_ctor_key (enum_name : string) (ctor_name : string) : string =
   enum_name ^ "." ^ ctor_name
 
+(* Generated programs install their `HxTypeRegistry.init` function before
+   calling `main`. Most programs never use reflection or typed runtime tag
+   lookups, so the registry should not be populated on startup. The first API
+   that needs generated metadata forces initialization instead.
+
+   Registration helpers intentionally do not call `ensure_registry_initialized`:
+   `HxTypeRegistry.init` is implemented in terms of those helpers, and forcing
+   from them would make initialization reentrant. *)
+let registry_init_hook : (unit -> unit) option ref = ref None
+let registry_initialized : bool ref = ref false
+
+let set_registry_init_hook (f : unit -> unit) : unit =
+  registry_init_hook := Some f
+
+let ensure_registry_initialized () : unit =
+  if not !registry_initialized then (
+    registry_initialized := true;
+    match !registry_init_hook with
+    | Some f -> f ()
+    | None -> ())
+
 let class_ (name : string) : Obj.t =
   match Hashtbl.find_opt classes name with
   | Some v -> v
@@ -78,11 +99,13 @@ let getEnumName (e : Obj.t) : string =
     type_value_name enum_marker e
 
 let resolveClass (name : string) : Obj.t =
+  ensure_registry_initialized ();
   match Hashtbl.find_opt classes name with
   | Some v -> v
   | None -> HxRuntime.hx_null
 
 let resolveEnum (name : string) : Obj.t =
+  ensure_registry_initialized ();
   match Hashtbl.find_opt enums name with
   | Some v -> v
   | None -> HxRuntime.hx_null
@@ -122,6 +145,7 @@ let register_class_super (name : string) (super_ : Obj.t) : unit =
   Hashtbl.replace class_supers name super_
 
 let getSuperClass (c : Obj.t) : Obj.t =
+  ensure_registry_initialized ();
   if HxRuntime.is_null c then
     HxRuntime.hx_null
   else
@@ -180,6 +204,7 @@ let register_class_empty_ctor (name : string) (ctor : unit -> Obj.t) : unit =
   Hashtbl.replace class_empty_ctors name ctor
 
 let createInstance (c : Obj.t) (args : Obj.t HxArray.t) : Obj.t =
+  ensure_registry_initialized ();
   if HxRuntime.is_null c then
     HxRuntime.hx_null
   else
@@ -192,6 +217,7 @@ let createInstance (c : Obj.t) (args : Obj.t HxArray.t) : Obj.t =
       | None -> HxRuntime.hx_null
 
 let createEmptyInstance (c : Obj.t) : Obj.t =
+  ensure_registry_initialized ();
   if HxRuntime.is_null c then
     HxRuntime.hx_null
   else
@@ -209,6 +235,7 @@ let fields_to_hx_array (fields : string list) : string HxArray.t =
   a
 
 let getInstanceFields (c : Obj.t) : string HxArray.t =
+  ensure_registry_initialized ();
   if HxRuntime.is_null c then
     fields_to_hx_array []
   else
@@ -221,6 +248,7 @@ let getInstanceFields (c : Obj.t) : string HxArray.t =
       | None -> fields_to_hx_array []
 
 let getClassFields (c : Obj.t) : string HxArray.t =
+  ensure_registry_initialized ();
   if HxRuntime.is_null c then
     fields_to_hx_array []
   else
@@ -255,6 +283,7 @@ let register_enum_ctor (enum_name : string) (ctor_name : string)
   Hashtbl.replace enum_ctor_fns (enum_ctor_key enum_name ctor_name) f
 
 let createEnum (e : Obj.t) (ctor_name : string) (params : Obj.t HxArray.t) : Obj.t =
+  ensure_registry_initialized ();
   if HxRuntime.is_null e then
     HxRuntime.hx_null
   else if is_type_value enum_marker e then
@@ -266,6 +295,7 @@ let createEnum (e : Obj.t) (ctor_name : string) (params : Obj.t HxArray.t) : Obj
     HxRuntime.hx_null
 
 let createEnumIndex (e : Obj.t) (idx : int) (params : Obj.t HxArray.t) : Obj.t =
+  ensure_registry_initialized ();
   if HxRuntime.is_null e then
     HxRuntime.hx_null
   else if is_type_value enum_marker e then
@@ -282,6 +312,7 @@ let createEnumIndex (e : Obj.t) (idx : int) (params : Obj.t HxArray.t) : Obj.t =
     HxRuntime.hx_null
 
 let getEnumConstructs (e : Obj.t) : string HxArray.t =
+  ensure_registry_initialized ();
   if HxRuntime.is_null e then
     fields_to_hx_array []
   else
@@ -350,6 +381,7 @@ let enumParameters (o : Obj.t) : Obj.t HxArray.t =
       out)
 
 let enumConstructor (o : Obj.t) : string =
+  ensure_registry_initialized ();
   if HxRuntime.is_null o then
     hx_null_string
   else
@@ -412,6 +444,7 @@ let getClass (o : Obj.t) : Obj.t =
       HxRuntime.hx_null
 
 let tags_for_value (o : Obj.t) : string list =
+  ensure_registry_initialized ();
   if HxRuntime.is_null o then
     []
   else if HxRuntime.is_boxed_bool o then
@@ -454,6 +487,7 @@ let tags_for_value (o : Obj.t) : string list =
    - When tag info is missing, we fall back to exact-class equality.
 *)
 let isOfType (v : Obj.t) (t : Obj.t) : bool =
+  ensure_registry_initialized ();
   if HxRuntime.is_null v || HxRuntime.is_null t then
     false
   else if is_type_value class_marker t then

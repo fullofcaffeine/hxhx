@@ -1,3 +1,3 @@
 let () =
-  HxTypeRegistry.init ();
+  HxType.set_registry_init_hook HxTypeRegistry.init;
   ignore (Hxhx_Main.main ())
