@@ -11,6 +11,18 @@ const fs = require('fs')
 const path = require('path')
 const cp = require('child_process')
 
+const cleanupFiles = []
+
+process.on('exit', () => {
+  for (const filePath of cleanupFiles) {
+    try {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+    } catch (_) {
+      // Best-effort cleanup only; the original test failure should remain visible.
+    }
+  }
+})
+
 function fail(message, code = 2) {
   console.error(`[full1-eval-evidence] ERROR: ${message}`)
   process.exit(code)
@@ -98,19 +110,62 @@ function writeLog(dir, name, result) {
   fs.writeFileSync(path.join(dir, `${name}.stderr.log`), result.stderr || '', 'utf8')
 }
 
+function parseHaxelibPathLines(outputText) {
+  return String(outputText || '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+}
+
+function haxelibPathToHxmlLines(lines, lib) {
+  const out = []
+  for (const line of lines) {
+    if (/^-lib\s+\S+\s+is missing\b/.test(line)) {
+      fail(`haxelib path ${lib} reported missing library: ${line}`)
+    }
+    if (
+      line.startsWith('-D ')
+      || line.startsWith('--macro ')
+      || line.startsWith('-cp ')
+      || line.startsWith('--class-path ')
+      || line.startsWith('-')
+    ) {
+      out.push(line)
+      continue
+    }
+    out.push(`-cp ${line}`)
+  }
+  if (out.length === 0) fail(`haxelib path ${lib} produced no usable hxml lines`)
+  return out
+}
+
+function writeTemporaryLibraryHxml(root, lib, lines) {
+  const hxmlDir = path.join(root, 'haxe_libraries')
+  const hxmlPath = path.join(hxmlDir, `${lib}.hxml`)
+  if (fs.existsSync(hxmlPath)) return
+  ensureDir(hxmlDir)
+  fs.writeFileSync(hxmlPath, haxelibPathToHxmlLines(lines, lib).join('\n') + '\n', 'utf8')
+  cleanupFiles.push(hxmlPath)
+}
+
 function ensureUtest(parsed, env) {
   const haxelib = env.HAXELIB_BIN || 'haxelib'
   const list = run(haxelib, ['list'], { cwd: parsed.root, env })
-  if (list.status === 0 && /^utest:/m.test(list.stdout || '')) return
-  const install = run(
-    haxelib,
-    ['--always', 'git', 'utest', 'https://github.com/haxe-utest/utest', 'a94f8812e8786f2b5fec52ce9f26927591d26327'],
-    { cwd: parsed.root, env }
-  )
-  if (install.status !== 0) {
-    writeLog(parsed.artifactsDir, 'utest-install', install)
-    fail(`failed to install pinned utest dependency (exit=${install.status})`)
+  if (list.status !== 0 || !/^utest:/m.test(list.stdout || '')) {
+    const install = run(
+      haxelib,
+      ['--always', 'git', 'utest', 'https://github.com/haxe-utest/utest', 'a94f8812e8786f2b5fec52ce9f26927591d26327'],
+      { cwd: parsed.root, env }
+    )
+    if (install.status !== 0) {
+      writeLog(parsed.artifactsDir, 'utest-install', install)
+      fail(`failed to install pinned utest dependency (exit=${install.status})`)
+    }
   }
+  const probe = run(haxelib, ['--always', 'path', 'utest'], { cwd: parsed.root, env })
+  writeLog(parsed.artifactsDir, 'utest-path', probe)
+  if (probe.status !== 0) fail(`failed to resolve pinned utest dependency path (exit=${probe.status})`)
+  writeTemporaryLibraryHxml(parsed.root, 'utest', parseHaxelibPathLines(probe.stdout || ''))
 }
 
 function measureUpstream(parsed, env) {

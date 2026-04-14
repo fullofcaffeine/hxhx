@@ -10,9 +10,20 @@
 const fs = require('fs')
 const path = require('path')
 const cp = require('child_process')
-const { SUITES } = require('./upstream-suite-config')
+const { SUITES, listUniqueSuiteDependencies } = require('./upstream-suite-config')
 
 const defaultSuites = ['misc', 'server', 'threads', 'optimization', 'display']
+const cleanupFiles = []
+
+process.on('exit', () => {
+  for (const filePath of cleanupFiles) {
+    try {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+    } catch (_) {
+      // Best-effort cleanup only; the original test failure should remain visible.
+    }
+  }
+})
 
 function fail(message, code = 2) {
   console.error(`[full1-suite-evidence] ERROR: ${message}`)
@@ -199,6 +210,57 @@ function runSync(command, args, options) {
   })
 }
 
+function parseHaxelibPathLines(outputText) {
+  return String(outputText || '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+}
+
+function haxelibPathToHxmlLines(lines, lib) {
+  const out = []
+  for (const line of lines) {
+    if (/^-lib\s+\S+\s+is missing\b/.test(line)) {
+      fail(`haxelib path ${lib} reported missing library: ${line}`)
+    }
+    if (
+      line.startsWith('-D ')
+      || line.startsWith('--macro ')
+      || line.startsWith('-cp ')
+      || line.startsWith('--class-path ')
+      || line.startsWith('-')
+    ) {
+      out.push(line)
+      continue
+    }
+    out.push(`-cp ${line}`)
+  }
+  if (out.length === 0) fail(`haxelib path ${lib} produced no usable hxml lines`)
+  return out
+}
+
+function writeTemporaryLibraryHxml(root, lib, lines) {
+  const hxmlDir = path.join(root, 'haxe_libraries')
+  const hxmlPath = path.join(hxmlDir, `${lib}.hxml`)
+  if (fs.existsSync(hxmlPath)) return
+  ensureDir(hxmlDir)
+  fs.writeFileSync(hxmlPath, haxelibPathToHxmlLines(lines, lib).join('\n') + '\n', 'utf8')
+  cleanupFiles.push(hxmlPath)
+}
+
+function writeRootLibraryHxmls(parsed, env) {
+  const haxelib = env.HAXELIB_BIN || 'haxelib'
+  for (const dep of listUniqueSuiteDependencies(parsed.suites)) {
+    const result = runSync(haxelib, ['--always', 'path', dep.name], {
+      cwd: parsed.root,
+      env
+    })
+    writeLog(parsed.artifactsDir, `${dep.name}-path`, result)
+    if (result.status !== 0) fail(`failed to resolve suite dependency path for ${dep.name} (exit=${result.status})`)
+    writeTemporaryLibraryHxml(parsed.root, dep.name, parseHaxelibPathLines(result.stdout || ''))
+  }
+}
+
 function prepareDependencies(parsed, env) {
   const repoPath = path.join(parsed.artifactsDir, 'haxelib_repo')
   const summaryPath = path.join(parsed.artifactsDir, 'haxelib_repo.summary.json')
@@ -220,6 +282,11 @@ function prepareDependencies(parsed, env) {
   })
   writeLog(parsed.artifactsDir, 'prepare-suite-haxelib-deps', result)
   if (result.status !== 0) fail(`failed to prepare suite haxelib dependencies (exit=${result.status})`)
+  const preparedEnv = {
+    ...env,
+    HAXELIB_PATH: repoPath
+  }
+  writeRootLibraryHxmls(parsed, preparedEnv)
   return repoPath
 }
 
