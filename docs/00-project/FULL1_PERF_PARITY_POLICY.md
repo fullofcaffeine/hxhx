@@ -65,6 +65,8 @@ The blocking evaluator must use:
 - at least `1` warmup run before measured repetitions,
 - median aggregation for pass/fail ratios,
 - coefficient-of-variation warning threshold of `15%`,
+- near-zero delta metrics may ignore relative CV only when the `hxhx` median is
+  both below the configured near-zero bound and no worse than upstream,
 - one automatic retry for a workload whose first sample set is over threshold
   but also noisy,
 - runner class pinned in the artifact metadata (`os`, `arch`, CPU model when
@@ -169,6 +171,10 @@ The guard parses the machine-readable policy block below and validates:
     "measuredRepetitions": 5,
     "aggregation": "median",
     "maxCoefficientOfVariationPct": 15,
+    "nearZeroDeltaMetrics": [
+      "macro_overhead_ms"
+    ],
+    "nearZeroDeltaMetricsMaxMedianMs": 5,
     "retryNoisyWorkloads": 1
   },
   "workloads": [

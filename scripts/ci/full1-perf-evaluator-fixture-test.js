@@ -114,6 +114,19 @@ function main() {
   )
   if (passSummary.marker !== 'FULL1_PERF_PARITY:PASS') fail('pass summary marker mismatch')
 
+  runCase(
+    tmpDir,
+    'near-zero-delta-pass',
+    evidence([
+      ['compile_wall_ms', [100, 101, 99, 100, 100], [90, 91, 89, 90, 90]],
+      ['peak_rss_kb', [1000, 1001, 999, 1000, 1000], [900, 901, 899, 900, 900]],
+      ['incremental_rebuild_ms', [50, 51, 49, 50, 50], [45, 46, 44, 45, 45]],
+      ['macro_overhead_ms', [53, 55, 52, 54, 53], [0, 2, 1, 0, 3]]
+    ]),
+    0,
+    'pass'
+  )
+
   const thresholdSummary = runCase(
     tmpDir,
     'threshold-fail',

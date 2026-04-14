@@ -161,6 +161,12 @@ function main() {
     requirePositiveNumber(policy.noise, 'retryNoisyWorkloads', 'noise')
     if (policy.noise.aggregation !== 'median') fail('noise.aggregation must be median')
     if (policy.noise.measuredRepetitions < 5) fail('noise.measuredRepetitions must be at least 5')
+    if (!Array.isArray(policy.noise.nearZeroDeltaMetrics)) {
+      fail('noise.nearZeroDeltaMetrics must be an array')
+    } else if (!policy.noise.nearZeroDeltaMetrics.includes('macro_overhead_ms')) {
+      fail('noise.nearZeroDeltaMetrics must include macro_overhead_ms')
+    }
+    requirePositiveNumber(policy.noise, 'nearZeroDeltaMetricsMaxMedianMs', 'noise')
   }
 
   const packageScripts = packageJson && packageJson.scripts ? packageJson.scripts : {}

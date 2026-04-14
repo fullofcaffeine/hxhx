@@ -124,6 +124,16 @@ function hardCeilingForMetric(policy, metric) {
   return policy.thresholds.requiredWorkloadHardCeilingRatio
 }
 
+function allowsNearZeroDeltaNoise(policy, metric, upstreamMedian, hxhxMedian) {
+  const noise = policy.noise || {}
+  const metrics = Array.isArray(noise.nearZeroDeltaMetrics) ? noise.nearZeroDeltaMetrics : []
+  if (!metrics.includes(metric)) return false
+  const maxMedianMs = Number(noise.nearZeroDeltaMetricsMaxMedianMs)
+  if (!Number.isFinite(maxMedianMs) || maxMedianMs < 0) return false
+  if (hxhxMedian === null || upstreamMedian === null) return false
+  return hxhxMedian <= maxMedianMs && hxhxMedian <= upstreamMedian
+}
+
 function evaluateMetric(policy, workload, metric) {
   const upstream = sampleFor(workload, metric, 'upstream_haxe')
   const hxhx = sampleFor(workload, metric, 'hxhx')
@@ -152,7 +162,10 @@ function evaluateMetric(policy, workload, metric) {
   const upstreamCv = coefficientOfVariationPct(upstreamValues)
   const hxhxCv = coefficientOfVariationPct(hxhxValues)
   const maxCv = Math.max(upstreamCv || 0, hxhxCv || 0)
-  if (maxCv > policy.noise.maxCoefficientOfVariationPct) {
+  if (
+    maxCv > policy.noise.maxCoefficientOfVariationPct
+    && !allowsNearZeroDeltaNoise(policy, metric, upstreamMedian, hxhxMedian)
+  ) {
     failures.push(`${metric} is noisy: max coefficient of variation ${round(maxCv)}% exceeds ${policy.noise.maxCoefficientOfVariationPct}%`)
   }
 
