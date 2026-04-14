@@ -97,7 +97,11 @@ remove these baseline references without updating this policy and guard.
 
 ## Artifact Contract
 
-The blocking evaluator for `FULL1_PERF_PARITY:PASS` must write a JSON summary
+The blocking evaluator for `FULL1_PERF_PARITY:PASS` is:
+
+- `scripts/ci/full1-perf-evaluator.js`
+
+It must write a JSON summary
 with:
 
 - `schema`
@@ -113,6 +117,9 @@ with:
 - `decision`
 
 `decision` must be `pass` before `FULL1_PERF_PARITY:PASS` is printed.
+Synthetic evaluator fixtures are validated by:
+
+- `scripts/ci/full1-perf-evaluator-fixture-test.js`
 
 ## Guard
 
@@ -188,4 +195,3 @@ The guard parses the machine-readable policy block below and validates:
 }
 ```
 <!-- FULL1_PERF_POLICY_JSON_END -->
-
