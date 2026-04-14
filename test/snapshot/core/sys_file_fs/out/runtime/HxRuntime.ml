@@ -194,7 +194,7 @@ let dynamic_toStdString (v : Obj.t) : string =
       "<object>"
 
 let tags_has (tags : string list) (tag : string) : bool =
-  List.exists (fun t -> t = tag) tags
+  Stdlib.List.exists (fun t -> t = tag) tags
 
 let hx_throw_typed (v : Obj.t) (tags : string list) : 'a =
   raise (Hx_exception (v, tags))

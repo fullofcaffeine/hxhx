@@ -53,7 +53,7 @@ let env_array_filtered () : string array =
           let v = Stdlib.String.sub entry (idx + 1) (Stdlib.String.length entry - (idx + 1)) in
           if v = hx_unset_sentinel then () else keep := entry :: !keep)
     raw;
-  Stdlib.Array.of_list (List.rev !keep)
+  Stdlib.Array.of_list (Stdlib.List.rev !keep)
 
 let environment () : string HxMap.string_map =
   let out = HxMap.create_string () in

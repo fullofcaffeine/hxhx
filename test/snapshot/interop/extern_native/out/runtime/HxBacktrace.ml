@@ -17,11 +17,11 @@ let () = Printexc.record_backtrace true
 let split_lines (s : string) : string list =
   (* Normalize to non-empty lines. `Printexc.*_to_string` uses `\n` line breaks. *)
   let raw = Stdlib.String.split_on_char '\n' s in
-  List.filter (fun line -> Stdlib.String.length line > 0) raw
+  Stdlib.List.filter (fun line -> Stdlib.String.length line > 0) raw
 
 let to_hx_array (lines : string list) : string HxArray.t =
   let a = HxArray.create () in
-  List.iter (fun line -> ignore (HxArray.push a line)) lines;
+  Stdlib.List.iter (fun line -> ignore (HxArray.push a line)) lines;
   a
 
 let callstack_lines (depth : int) : string HxArray.t =

@@ -205,7 +205,7 @@ let createEmptyInstance (c : Obj.t) : Obj.t =
 
 let fields_to_hx_array (fields : string list) : string HxArray.t =
   let a = HxArray.create () in
-  List.iter (fun f -> ignore (HxArray.push a f)) fields;
+  Stdlib.List.iter (fun f -> ignore (HxArray.push a f)) fields;
   a
 
 let getInstanceFields (c : Obj.t) : string HxArray.t =
@@ -273,10 +273,10 @@ let createEnumIndex (e : Obj.t) (idx : int) (params : Obj.t HxArray.t) : Obj.t =
     match Hashtbl.find_opt enum_ctors enum_name with
     | None -> HxRuntime.hx_null
     | Some ctors ->
-        if idx < 0 || idx >= List.length ctors then
+        if idx < 0 || idx >= Stdlib.List.length ctors then
           HxRuntime.hx_null
         else
-          let ctor_name = List.nth ctors idx in
+          let ctor_name = Stdlib.List.nth ctors idx in
           createEnum e ctor_name params
   else
     HxRuntime.hx_null
@@ -366,11 +366,11 @@ let enumConstructor (o : Obj.t) : string =
         match Hashtbl.find_opt enum_ctors name with
         | None -> hx_null_string
         | Some ctors -> (
-            try List.nth ctors idx with _ -> hx_null_string)
+            try Stdlib.List.nth ctors idx with _ -> hx_null_string)
 
 let merge_tags (a : string list) (b : string list) : string list =
   let seen : (string, unit) Hashtbl.t =
-    Hashtbl.create (max 7 (List.length a + List.length b))
+    Hashtbl.create (max 7 (Stdlib.List.length a + Stdlib.List.length b))
   in
   let add (acc : string list) (t : string) : string list =
     if Hashtbl.mem seen t then acc
@@ -378,9 +378,9 @@ let merge_tags (a : string list) (b : string list) : string list =
       Hashtbl.add seen t ();
       t :: acc)
   in
-  let acc = List.fold_left add [] a in
-  let acc = List.fold_left add acc b in
-  List.rev acc
+  let acc = Stdlib.List.fold_left add [] a in
+  let acc = Stdlib.List.fold_left add acc b in
+  Stdlib.List.rev acc
 
 (* Runtime class identity for `Type.getClass`.
 
@@ -462,10 +462,10 @@ let isOfType (v : Obj.t) (t : Obj.t) : bool =
       false
     else
       let tags = tags_for_value v in
-      if List.length tags = 0 then
+      if Stdlib.List.length tags = 0 then
         getClassName (getClass v) = target
       else
-        List.exists (fun x -> x = target) tags
+        Stdlib.List.exists (fun x -> x = target) tags
   else if is_type_value enum_marker t then
     let target = getEnumName t in
     if HxRuntime.is_null (Obj.repr target) then

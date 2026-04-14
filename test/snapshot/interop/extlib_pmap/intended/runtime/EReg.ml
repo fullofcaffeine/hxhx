@@ -99,7 +99,7 @@ let collect_groups () : (int * int) array =
       let e = Str.group_end i in
       loop (i + 1) ((b, e) :: acc)
     with _ ->
-      Stdlib.Array.of_list (List.rev acc)
+      Stdlib.Array.of_list (Stdlib.List.rev acc)
   in
   loop 0 []
 

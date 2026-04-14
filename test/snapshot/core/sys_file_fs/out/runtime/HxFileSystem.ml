@@ -64,7 +64,7 @@ let normalize_path (p : string) : string =
       )
     | x :: rest -> step (x :: stack) rest
   in
-  let rev = List.rev (step [] parts) in
+  let rev = Stdlib.List.rev (step [] parts) in
   let body = Stdlib.String.concat "/" rev in
   if is_abs then "/" ^ body else body
 

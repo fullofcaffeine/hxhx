@@ -55,7 +55,7 @@ let get_exn (id : int) : proc =
 let hx_array_to_list (a : string HxArray.t) : string list =
   let n = HxArray.length a in
   let rec loop i acc =
-    if i >= n then List.rev acc else loop (i + 1) (HxArray.get a i :: acc)
+    if i >= n then Stdlib.List.rev acc else loop (i + 1) (HxArray.get a i :: acc)
   in
   loop 0 []
 
