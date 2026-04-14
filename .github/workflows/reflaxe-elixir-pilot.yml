@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       reflaxe_ref:
-        description: "External reflaxe.elixir ref (tag/branch/commit)"
+        description: "External reflaxe.elixir pinned commit SHA"
         required: false
-        default: "main"
+        default: "5b322236e0627f8322394e819cf28ba6c1271a83"
         type: string
 
 permissions:
@@ -81,7 +81,7 @@ jobs:
 
       - name: Run reflaxe.elixir todo-app promotion pilot
         env:
-          REFLAXE_ELIXIR_REF: ${{ github.event.inputs.reflaxe_ref || 'main' }}
+          REFLAXE_ELIXIR_REF: ${{ github.event.inputs.reflaxe_ref || '5b322236e0627f8322394e819cf28ba6c1271a83' }}
           HXHX_PILOT_STRICT: "1"
         run: |
           set -euo pipefail

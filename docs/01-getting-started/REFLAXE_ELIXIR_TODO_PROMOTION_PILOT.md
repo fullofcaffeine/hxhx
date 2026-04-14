@@ -20,11 +20,16 @@ npm run test:hxhx:reflaxe-elixir-todo-pilot
 Optional pinned reference:
 
 ```bash
-REFLAXE_ELIXIR_REF=<tag-or-commit> npm run test:hxhx:reflaxe-elixir-todo-pilot
+REFLAXE_ELIXIR_REF=<40-character-commit-sha> npm run test:hxhx:reflaxe-elixir-todo-pilot
 ```
+
+`REFLAXE_ELIXIR_REF` must be a full commit SHA. Branches, tags, and symbolic refs such as `main`
+fail before any checkout is created so CI evidence cannot drift.
 
 Expected terminal markers:
 
+- source pin marker:
+  - `REFLAXE_ELIXIR_PINNED:PASS`
 - backend selection marker:
   - `backend_selected_impl=provider/js-native-wrapper`
 - success markers:
@@ -73,7 +78,7 @@ We evaluated three options for referencing `reflaxe.elixir/examples/todo-app/src
 | --- | --- | --- | --- |
 | Git submodule | Pinned ref, discoverable in tree | Extra clone/init steps; easy to drift in contributor workflows; keeps external history wiring in main repo | Not selected |
 | Git subtree | Single-repo checkout UX | Copies external code into this repo; high update friction; poor provenance boundary for this monorepo | Not selected |
-| Scripted fetch (pinned ref support) | Clean provenance boundary, no vendored code, easy ref pinning in CI/manual runs | Requires network access and fetch time | **Selected default** |
+| Scripted fetch (commit-SHA pin required) | Clean provenance boundary, no vendored code, deterministic CI/manual inputs | Requires network access and fetch time | **Selected default** |
 
 Selected default implementation:
 
@@ -81,6 +86,7 @@ Selected default implementation:
 - `scripts/hxhx/run-reflaxe-elixir-todo-promotion-pilot.sh`
 
 The fetched checkout is kept under `vendor/reflaxe-elixir` (git-ignored by default) unless `REFLAXE_ELIXIR_DIR` is provided.
+The default pilot source pin is `5b322236e0627f8322394e819cf28ba6c1271a83`.
 
 ## CI mode
 
