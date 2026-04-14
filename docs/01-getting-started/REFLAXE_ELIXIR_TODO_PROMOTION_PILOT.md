@@ -36,6 +36,7 @@ Expected terminal markers:
   - `TODO_PILOT:sum=6`
   - `pilot_sample_hash=<hash>`
   - `PILOT_REFLAXE_ELIXIR_TODO:PASS`
+  - `REFLAXE_ELIXIR_PROMOTION_NATIVE:PASS`
 - compile regressions fail by default (`HXHX_PILOT_STRICT=1` default).
 
 ## What the pilot proves
@@ -44,6 +45,27 @@ Expected terminal markers:
 - Pilot verifies a stable todo-app sample module hash (`server/services/MockOAuthIdentity.hx`) from the fetched checkout.
 - Promotion scaffolding/build/load are stable with a deterministic output check.
 - Stage3 backend selection can be driven by promoted plugin manifest input.
+
+## Evidence artifacts
+
+Local runs delete temporary build output by default. To retain the small evidence bundle without keeping the
+full temporary build tree, provide an artifact directory:
+
+```bash
+HXHX_PILOT_ARTIFACT_DIR=.artifacts/xbnp/reflaxe-elixir-todo-pilot/manual \
+  npm run test:hxhx:reflaxe-elixir-todo-pilot
+```
+
+The artifact bundle contains promotion and load evidence:
+
+- `backend-plugin.json`
+- `backend-plugin.sha256`
+- `plugin-artifact.sha256`
+- `promotion.env`
+- `compile.stdout.log`
+- `node.stdout.log`
+- `todo_pilot.js`
+- `reflaxe-elixir-promotion-native.summary.json`
 
 ## Legacy report-only blocker mode
 
@@ -93,7 +115,8 @@ The default pilot source pin is `5b322236e0627f8322394e819cf28ba6c1271a83`.
 This pilot is intentionally **non-required** for PR merges.
 
 - Local/manual lane: `npm run test:hxhx:reflaxe-elixir-todo-pilot`
-- GitHub manual lane: `.github/workflows/reflaxe-elixir-pilot.yml`
+- GitHub scheduled/manual lane: `.github/workflows/reflaxe-elixir-pilot.yml`
+- CI uploads the evidence bundle as `reflaxe-elixir-promotion-native-<run-id>` with 14-day retention.
 
 This keeps core CI fast while preserving a repeatable promotion pilot lane for maintainers.
 

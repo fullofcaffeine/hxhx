@@ -374,7 +374,8 @@ Notes:
     - `npm run test:hxhx:reflaxe-elixir-todo-pilot`
     - fetches external todo-app Haxe sources, promotes a native plugin artifact, and compiles/runs a deterministic marker sample through Stage3 backend selection.
     - this is the current official native `hxhx` surface for external `reflaxe-elixir` pressure testing.
-    - writes retained artifacts under `.artifacts/xbnp/reflaxe-elixir-todo-pilot/<run-id>/` including `reflaxe-elixir-todo-pilot.summary.json`
+    - local runs clean temporary build output by default; set `HXHX_PILOT_ARTIFACT_DIR=.artifacts/xbnp/reflaxe-elixir-todo-pilot/manual` to retain the small evidence bundle
+    - the scheduled/manual GitHub lane uploads `reflaxe-elixir-promotion-native-<run-id>` with `reflaxe-elixir-promotion-native.summary.json`, promotion checksums, compile log, and node output
     - detailed guide: `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`
   - external repo-harness verifier (manual/non-required):
     - `npm run test:hxhx:reflaxe-elixir-native-verify`

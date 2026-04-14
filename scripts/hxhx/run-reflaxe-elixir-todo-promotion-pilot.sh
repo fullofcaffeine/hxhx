@@ -6,6 +6,7 @@ FETCH_SCRIPT="$ROOT/scripts/vendor/fetch-reflaxe-elixir-upstream.sh"
 PROMOTE_SCRIPT="$ROOT/scripts/hxhx/promote-backend-plugin.sh"
 OCAMLOPT_WRAPPER="$ROOT/scripts/hxhx/ocamlopt-with-threads.sh"
 PILOT_STRICT="${HXHX_PILOT_STRICT:-1}"
+ARTIFACT_DIR="${HXHX_PILOT_ARTIFACT_DIR:-}"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -31,6 +32,10 @@ fi
 
 if [ -z "${OCAMLOPT:-}" ] && [ -x "$OCAMLOPT_WRAPPER" ]; then
   export OCAMLOPT="$OCAMLOPT_WRAPPER"
+fi
+
+if [ -n "$ARTIFACT_DIR" ]; then
+  mkdir -p "$ARTIFACT_DIR"
 fi
 
 source_repo="${REFLAXE_ELIXIR_DIR:-}"
@@ -91,6 +96,19 @@ if [ ! -f "$manifest" ] || [ ! -f "$artifact" ]; then
   echo "reflaxe-elixir todo pilot: missing promoted artifacts" >&2
   exit 2
 fi
+manifest_sha256="$(shasum -a 256 "$manifest" | awk '{print $1}')"
+artifact_sha256="$(shasum -a 256 "$artifact" | awk '{print $1}')"
+if [ -n "$ARTIFACT_DIR" ]; then
+  cp "$manifest" "$ARTIFACT_DIR/backend-plugin.json"
+  printf '%s  %s\n' "$manifest_sha256" "backend-plugin.json" >"$ARTIFACT_DIR/backend-plugin.sha256"
+  printf '%s  %s\n' "$artifact_sha256" "$(basename "$artifact")" >"$ARTIFACT_DIR/plugin-artifact.sha256"
+  {
+    echo "plugin_manifest=$manifest"
+    echo "plugin_artifact=$artifact"
+    echo "plugin_artifact_ext=$artifact_ext"
+    echo "plugin_artifact_sha256=$artifact_sha256"
+  } >"$ARTIFACT_DIR/promotion.env"
+fi
 
 harness_src="$tmp_root/harness"
 mkdir -p "$harness_src"
@@ -126,6 +144,9 @@ compile_output="$(
 compile_code="$?"
 set -e
 printf '%s\n' "$compile_output"
+if [ -n "$ARTIFACT_DIR" ]; then
+  printf '%s\n' "$compile_output" >"$ARTIFACT_DIR/compile.stdout.log"
+fi
 if [ "$compile_code" -ne 0 ]; then
   if printf '%s\n' "$compile_output" | grep -q 'js-native:unsupported_expr.*detail=function'; then
     echo "pilot_blocker=js-native function-expression lowering is not yet available in this Stage3 lane"
@@ -144,6 +165,10 @@ printf '%s\n' "$compile_output" | grep -q '^backend_selected_impl=provider/js-na
 node_output="$(node "$out_dir/todo_pilot.js")"
 printf '%s\n' "$node_output"
 printf '%s\n' "$node_output" | grep -q '^TODO_PILOT:sum=6$'
+if [ -n "$ARTIFACT_DIR" ]; then
+  printf '%s\n' "$node_output" >"$ARTIFACT_DIR/node.stdout.log"
+  cp "$out_dir/todo_pilot.js" "$ARTIFACT_DIR/todo_pilot.js"
+fi
 
 sample_module="$todo_src/server/services/MockOAuthIdentity.hx"
 if [ ! -f "$sample_module" ]; then
@@ -151,6 +176,23 @@ if [ ! -f "$sample_module" ]; then
   exit 2
 fi
 sample_hash="$(shasum -a 256 "$sample_module" | awk '{print $1}' | cut -c1-16)"
+if [ -n "$ARTIFACT_DIR" ]; then
+  {
+    echo "{"
+    echo "  \"status\": \"pass\","
+    echo "  \"marker\": \"REFLAXE_ELIXIR_PROMOTION_NATIVE:PASS\","
+    echo "  \"sourceRepo\": \"$source_repo\","
+    echo "  \"sourceCommit\": \"$source_commit\","
+    echo "  \"todoSrc\": \"$todo_src\","
+    echo "  \"sampleModule\": \"$sample_module\","
+    echo "  \"sampleHash\": \"$sample_hash\","
+    echo "  \"hxhxBin\": \"$HXHX_BIN_RESOLVED\","
+    echo "  \"pluginManifestSha256\": \"$manifest_sha256\","
+    echo "  \"pluginArtifactSha256\": \"$artifact_sha256\","
+    echo "  \"nodeOutput\": \"TODO_PILOT:sum=6\""
+    echo "}"
+  } >"$ARTIFACT_DIR/reflaxe-elixir-promotion-native.summary.json"
+fi
 
 echo "pilot_reflaxe_elixir_repo=$source_repo"
 echo "pilot_reflaxe_elixir_commit=$source_commit"
@@ -159,4 +201,8 @@ echo "pilot_sample_module=$sample_module"
 echo "pilot_sample_hash=$sample_hash"
 echo "pilot_plugin_manifest=$manifest"
 echo "pilot_plugin_artifact=$artifact"
+if [ -n "$ARTIFACT_DIR" ]; then
+  echo "pilot_artifact_dir=$ARTIFACT_DIR"
+fi
 echo "PILOT_REFLAXE_ELIXIR_TODO:PASS"
+echo "REFLAXE_ELIXIR_PROMOTION_NATIVE:PASS"

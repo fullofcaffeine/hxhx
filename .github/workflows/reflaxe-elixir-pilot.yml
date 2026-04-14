@@ -1,6 +1,8 @@
 name: Pilot / Reflaxe.Elixir Todo Promotion
 
 on:
+  schedule:
+    - cron: "17 8 * * 2"
   workflow_dispatch:
     inputs:
       reflaxe_ref:
@@ -81,9 +83,19 @@ jobs:
 
       - name: Run reflaxe.elixir todo-app promotion pilot
         env:
-          REFLAXE_ELIXIR_REF: ${{ github.event.inputs.reflaxe_ref || '5b322236e0627f8322394e819cf28ba6c1271a83' }}
+          REFLAXE_ELIXIR_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.reflaxe_ref || '5b322236e0627f8322394e819cf28ba6c1271a83' }}
           HXHX_PILOT_STRICT: "1"
+          HXHX_PILOT_ARTIFACT_DIR: .artifacts/xbnp/reflaxe-elixir-todo-pilot/${{ github.run_id }}
         run: |
           set -euo pipefail
           echo "REFLAXE_ELIXIR_REF=${REFLAXE_ELIXIR_REF}"
           npm run test:hxhx:reflaxe-elixir-todo-pilot
+
+      - name: Upload reflaxe.elixir promotion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflaxe-elixir-promotion-native-${{ github.run_id }}
+          path: .artifacts/xbnp/reflaxe-elixir-todo-pilot/${{ github.run_id }}/
+          if-no-files-found: warn
+          retention-days: 14
