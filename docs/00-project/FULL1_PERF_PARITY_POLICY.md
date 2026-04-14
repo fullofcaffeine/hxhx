@@ -1,6 +1,6 @@
 # Full1 Performance Parity Policy
 
-Last audited: 2026-03-05
+Last audited: 2026-04-14
 
 This document defines the Full 1.0 performance policy for `hxhx` against
 upstream Haxe 4.3.7.
@@ -34,7 +34,10 @@ performance evidence.
 The blocking evaluator must capture these metrics where the workload can expose
 them deterministically:
 
-- `compile_wall_ms`: elapsed compiler wall time per invocation.
+- `compile_wall_ms`: elapsed compiler wall time per invocation. For workloads
+  whose correctness runner performs downstream target emit/build/run steps, the
+  measured command must isolate the compiler-bound lane and keep the
+  end-to-end correctness marker as separate evidence.
 - `incremental_rebuild_ms`: second-run compiler wall time after a warm build
   cache or unchanged input graph.
 - `macro_overhead_ms`: compile-time overhead added by enabled macro callbacks.
@@ -91,6 +94,11 @@ does not drift from runnable repo surfaces:
   - command: `npm run test:full1:eval-native`
   - source: `scripts/ci/run-full1-eval-native.js`
   - Full1 evidence adapter: `scripts/ci/full1-eval-evidence.js`
+  - measured compiler-latency source:
+    `scripts/hxhx/run-upstream-unit-macro-stage3-no-emit.sh`
+  - evidence scope: one strict native eval marker verification plus measured
+    repetitions of the stage0-free Stage3 no-emit macro/typer path, so
+    `compile_wall_ms` does not include OCaml target build/run time
   - required marker source: `FULL1_EVAL_NATIVE:PASS`
 - Strict upstream suite compiler workloads:
   - command: `npm run test:full1:suites:strict`
@@ -209,6 +217,7 @@ The guard parses the machine-readable policy block below and validates:
       "id": "full1-native-eval-latency",
       "npmScript": "test:full1:eval-native",
       "source": "scripts/ci/run-full1-eval-native.js",
+      "measuredSource": "scripts/hxhx/run-upstream-unit-macro-stage3-no-emit.sh",
       "adapter": "scripts/ci/full1-eval-evidence.js",
       "marker": "FULL1_EVAL_NATIVE:PASS",
       "requiredMetrics": [

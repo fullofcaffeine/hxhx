@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /**
- * Measure native eval/interp latency for Full1 perf evidence.
+ * Measure native eval/interp compiler latency for Full1 perf evidence.
  *
- * This runner compares upstream Haxe's `tests/unit/compile-macro.hxml` against
- * the stage0-free native hxhx eval runner. It writes evaluator-ready
+ * This runner compares upstream Haxe's `tests/unit/compile-macro.hxml` against a
+ * stage0-free hxhx Stage3 no-emit macro/typer invocation. The full native
+ * eval runner is still executed once as the correctness marker source, but the
+ * measured `compile_wall_ms` samples deliberately exclude target OCaml
+ * emit/build/run time. It writes evaluator-ready
  * full1-perf-evidence.v1 JSON for the `full1-native-eval-latency` workload.
  */
 
@@ -110,6 +113,57 @@ function writeLog(dir, name, result) {
   fs.writeFileSync(path.join(dir, `${name}.stderr.log`), result.stderr || '', 'utf8')
 }
 
+function lastNonEmptyLine(text) {
+  const lines = String(text || '').trim().split(/\r?\n/).filter(Boolean)
+  return lines.length > 0 ? lines[lines.length - 1].trim() : ''
+}
+
+function resolveExecutable(root, maybePath) {
+  const text = String(maybePath || '').trim()
+  if (!text) return ''
+  return path.isAbsolute(text) ? text : path.resolve(root, text)
+}
+
+function isExecutable(filePath) {
+  try {
+    fs.accessSync(filePath, fs.constants.X_OK)
+    return true
+  } catch (_) {
+    return false
+  }
+}
+
+function resolveHxhxRunner(parsed, env) {
+  let hxhxBin = resolveExecutable(parsed.root, env.HXHX_BIN || '')
+  if (!hxhxBin || !fs.existsSync(hxhxBin)) {
+    const result = run('bash', ['scripts/hxhx/build-hxhx.sh'], { cwd: parsed.root, env })
+    writeLog(path.join(parsed.artifactsDir, 'build-hxhx'), 'build-hxhx', result)
+    if (result.status !== 0) fail(`failed to build hxhx for eval evidence (exit=${result.status})`)
+    hxhxBin = lastNonEmptyLine(result.stdout)
+  }
+  if (!hxhxBin || !fs.existsSync(hxhxBin)) {
+    fail(`hxhx build did not produce a valid binary path: ${hxhxBin || '<empty>'}`)
+  }
+  env.HXHX_BIN = hxhxBin
+  if (isExecutable(hxhxBin)) return { command: hxhxBin, args: [], bin: hxhxBin }
+  return { command: 'ocamlrun', args: [hxhxBin], bin: hxhxBin }
+}
+
+function ensureMacroHost(parsed, env) {
+  let macroHost = resolveExecutable(parsed.root, env.HXHX_MACRO_HOST_EXE || '')
+  if (!macroHost || !fs.existsSync(macroHost)) {
+    const result = run('bash', ['scripts/hxhx/build-hxhx-macro-host.sh'], { cwd: parsed.root, env })
+    writeLog(path.join(parsed.artifactsDir, 'build-hxhx-macro-host'), 'build-hxhx-macro-host', result)
+    if (result.status !== 0) fail(`failed to build hxhx macro host for eval evidence (exit=${result.status})`)
+    macroHost = lastNonEmptyLine(result.stdout)
+  }
+  if (!macroHost || !fs.existsSync(macroHost)) {
+    fail(`hxhx macro-host build did not produce a valid binary path: ${macroHost || '<empty>'}`)
+  }
+  env.HXHX_MACRO_HOST_EXE = macroHost
+  return macroHost
+}
+
 function parseHaxelibPathLines(outputText) {
   return String(outputText || '')
     .split(/\r?\n/)
@@ -165,7 +219,9 @@ function ensureUtest(parsed, env) {
   const probe = run(haxelib, ['--always', 'path', 'utest'], { cwd: parsed.root, env })
   writeLog(parsed.artifactsDir, 'utest-path', probe)
   if (probe.status !== 0) fail(`failed to resolve pinned utest dependency path (exit=${probe.status})`)
-  writeTemporaryLibraryHxml(parsed.root, 'utest', parseHaxelibPathLines(probe.stdout || ''))
+  const pathLines = parseHaxelibPathLines(probe.stdout || '')
+  writeTemporaryLibraryHxml(parsed.root, 'utest', pathLines)
+  writeTemporaryLibraryHxml(path.join(parsed.upstreamDir, 'tests/unit'), 'utest', pathLines)
 }
 
 function measureUpstream(parsed, env) {
@@ -184,24 +240,74 @@ function measureUpstream(parsed, env) {
 
 function measureHxhx(parsed, env) {
   const values = []
+  const hxhxEnv = {
+    ...env,
+    HAXE_BIN: '__hxhx_stage0_disabled__',
+    HXHX_FORBID_STAGE0: '1',
+    HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES: env.HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES || '1'
+  }
+  delete hxhxEnv.HXHX_ALLOW_STAGE0
+  delete hxhxEnv.HXHX_FORCE_STAGE0
+  delete hxhxEnv.HXHX_MACRO_HOST_FORCE_STAGE0
+  delete hxhxEnv.HXHX_MACRO_HOST_ENTRYPOINTS
+  delete hxhxEnv.HXHX_MACRO_HOST_EXTRA_CP
+  delete hxhxEnv.HXHX_EXPR_MACROS
+
+  if (!hxhxEnv.HAXE_STD_PATH && fs.existsSync(path.join(parsed.upstreamDir, 'std'))) {
+    hxhxEnv.HAXE_STD_PATH = path.join(parsed.upstreamDir, 'std')
+  }
+
+  const runner = resolveHxhxRunner(parsed, hxhxEnv)
+  ensureMacroHost(parsed, hxhxEnv)
+  const cwd = path.join(parsed.upstreamDir, 'tests/unit')
   for (let rep = 1; rep <= parsed.reps; rep += 1) {
     const artifactsDir = path.join(parsed.artifactsDir, `hxhx-${rep}`)
+    const outDir = path.join(artifactsDir, 'stage3-no-emit-out')
+    fs.rmSync(outDir, { recursive: true, force: true })
+    ensureDir(outDir)
     const result = run(
-      process.execPath,
-      ['scripts/ci/run-full1-eval-native.js', '--upstream-dir', parsed.upstreamDir, '--artifacts-dir', artifactsDir],
-      { cwd: parsed.root, env }
+      runner.command,
+      [
+        ...runner.args,
+        '--hxhx-stage3',
+        '--hxhx-no-emit',
+        'compile-macro.hxml',
+        '--hxhx-out',
+        outDir
+      ],
+      { cwd, env: hxhxEnv }
     )
-    writeLog(artifactsDir, 'runner', result)
+    writeLog(artifactsDir, 'stage3-no-emit', result)
     if (result.status !== 0) fail(`hxhx eval rep ${rep} failed (exit=${result.status})`)
+    const stdout = String(result.stdout || '')
+    if (!/^macro_run\[0\]=ok$/m.test(stdout)) fail(`hxhx eval rep ${rep} did not report macro_run[0]=ok`)
+    if (!/^hook_onGenerate\[0\]=ok$/m.test(stdout)) fail(`hxhx eval rep ${rep} did not report hook_onGenerate[0]=ok`)
+    if (!/^stage3=no_emit_ok$/m.test(stdout)) fail(`hxhx eval rep ${rep} did not report stage3=no_emit_ok`)
     values.push(result.durationMs)
   }
   return values
+}
+
+function verifyNativeEvalMarker(parsed, env) {
+  const artifactsDir = path.join(parsed.artifactsDir, 'native-marker')
+  const result = run(
+    process.execPath,
+    ['scripts/ci/run-full1-eval-native.js', '--upstream-dir', parsed.upstreamDir, '--artifacts-dir', artifactsDir],
+    { cwd: parsed.root, env }
+  )
+  writeLog(artifactsDir, 'runner', result)
+  if (result.status !== 0) fail(`native eval marker verification failed (exit=${result.status})`)
+  if (!/FULL1_EVAL_NATIVE:PASS/.test(`${result.stdout || ''}\n${result.stderr || ''}`)) {
+    fail('native eval marker verification did not emit FULL1_EVAL_NATIVE:PASS')
+  }
 }
 
 function main() {
   const parsed = parseArgs(process.argv.slice(2))
   ensureDir(parsed.artifactsDir)
   ensureDir(path.dirname(parsed.jsonOut))
+  const upstreamHxml = path.join(parsed.upstreamDir, 'tests/unit/compile-macro.hxml')
+  if (!fs.existsSync(upstreamHxml)) fail(`missing upstream eval hxml: ${upstreamHxml}`)
   const env = {
     ...process.env,
     HAXE_UPSTREAM_DIR: parsed.upstreamDir,
@@ -209,7 +315,12 @@ function main() {
   }
   delete env.HXHX_ALLOW_STAGE0
   ensureUtest(parsed, env)
+  // Resolve shared bootstrap binaries in the parent process so the correctness
+  // marker and measured compiler samples do not perform duplicate builds.
+  resolveHxhxRunner(parsed, env)
+  ensureMacroHost(parsed, env)
 
+  verifyNativeEvalMarker(parsed, env)
   const upstreamValues = measureUpstream(parsed, env)
   const hxhxValues = measureHxhx(parsed, env)
   const evidence = {
@@ -218,6 +329,8 @@ function main() {
     runner: {
       source: 'scripts/ci/full1-eval-evidence.js',
       upstreamEntrypoint: 'tests/unit/compile-macro.hxml',
+      hxhxMeasuredEntrypoint: 'hxhx --hxhx-stage3 --hxhx-no-emit tests/unit/compile-macro.hxml',
+      nativeMarkerVerification: 'scripts/ci/run-full1-eval-native.js',
       reps: parsed.reps
     },
     git: {

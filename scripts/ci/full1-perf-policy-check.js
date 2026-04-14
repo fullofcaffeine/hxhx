@@ -79,6 +79,9 @@ function checkWorkload(workload, packageScripts) {
   if (workload.source && !fs.existsSync(workload.source)) {
     fail(`${owner} references missing source file: ${workload.source}`)
   }
+  if (workload.measuredSource && !fs.existsSync(workload.measuredSource)) {
+    fail(`${owner} references missing measured source file: ${workload.measuredSource}`)
+  }
   if (workload.workflow && !fs.existsSync(workload.workflow)) {
     fail(`${owner} references missing workflow: ${workload.workflow}`)
   }
