@@ -12,9 +12,7 @@ Beginner summary:
 
 ## Open blockers
 
-| Blocker ID | Gap | Why it matters | Tracking |
-| --- | --- | --- | --- |
-| MRP-B3 | Macro runtime parity is not yet a release-blocking Full1 input. Current parity evidence exists, but Gate/RC wiring still does not require the final macro parity markers. | Regressions can still hide between scheduled parity runs unless Full1 gate and release enforcement consume macro parity explicitly. | `haxe.ocaml-bxlg.9.6` |
+No scoped macro runtime parity blockers remain open for the declared Full1 surface.
 ## Exit criteria to clear this list
 
 1. `inproc` runs the same macro surfaces as `external-host` for the scoped compatibility matrix.
@@ -43,7 +41,7 @@ Beginner summary:
     `test:m14:runtime-build-fields`
 - Upstream Haxe 4.3.7 remains the compatibility oracle. Sibling Reflaxe repos remain pressure tests only.
 - Residual synthetic-fidelity improvements that are not required for honest Full1 closure are now tracked as post-1.0 work in `haxe.ocaml-8nv.11.6`.
-- The next real blocker is `MRP-B3` release/gate wiring under `haxe.ocaml-bxlg.9.6`.
+- `MRP-B3` release/gate wiring is closed: macro runtime parity is reusable, release-aware, and consumed by Gate Full1.
 
 ## Recently resolved
 
@@ -51,4 +49,5 @@ Beginner summary:
 | --- | --- | --- |
 | MRP-B1 | Inproc runtime now mirrors the current exact-string generated entrypoint set used by the Stage4 bring-up fixtures instead of stopping at builtin macros only. | `haxe.ocaml-bxlg.9.4` |
 | MRP-B2 | External-host/runtime macro API coverage is now sufficient for the declared Full1 scope. The remaining previously material seams (typedef/abstract payload reconstruction, component/slot signature introspection, balanced inline-markup parsing, anonymous complex-type roundtrip, typed lambda parsing, and build-field snapshot fidelity) all have focused direct regressions and no longer require keeping the semantic closure bead open. Residual synthetic-fidelity polish moved to post-1.0 follow-up `haxe.ocaml-8nv.11.6`. | `haxe.ocaml-bxlg.9.5` |
+| MRP-B3 | Macro runtime parity is now a release-aware reusable workflow and Gate Full1 consumes it before emitting Full1 aggregate pass markers. | `haxe.ocaml-bxlg.9.6` |
 | MRP-B4 | Default runtime mode flipped to `inproc`; fallback/rollback policy documented (`HXHX_MACRO_RUNTIME_MODE=external-host` or `--hxhx-macro-runtime external-host`). | `haxe.ocaml-bxlg.9.3` |
