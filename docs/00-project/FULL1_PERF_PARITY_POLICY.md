@@ -117,6 +117,8 @@ with:
 - `git`
 - `workloads[]`
 - `workloads[].samples[]`
+- `workloads[].failures[]` for measured workload failures that must force a
+  failing evaluation while still preserving artifacts and coverage diagnostics
 - `workloads[].ratios`
 - `thresholds`
 - `noise`

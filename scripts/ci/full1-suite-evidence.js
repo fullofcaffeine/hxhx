@@ -297,7 +297,6 @@ async function measureUpstream(parsed, env, suite) {
   if (!fs.existsSync(hxmlPath)) fail(`missing upstream suite hxml: ${hxmlPath}`)
   const result = await runMeasured('haxe', [suiteConfig.entryHxml], { cwd: suiteDir, env })
   writeLog(path.join(parsed.artifactsDir, `upstream-${suite}`), suiteConfig.entryHxml, result)
-  if (result.status !== 0) fail(`upstream_haxe suite ${suite} failed (exit=${result.status})`)
   return result
 }
 
@@ -315,7 +314,6 @@ async function measureHxhx(parsed, env, suite) {
   }
   const result = await runMeasured(process.execPath, args, { cwd: parsed.root, env })
   writeLog(path.join(parsed.artifactsDir, `hxhx-${suite}`), 'runner', result)
-  if (result.status !== 0) fail(`hxhx suite ${suite} failed (exit=${result.status})`)
   return result
 }
 
@@ -344,6 +342,7 @@ async function main() {
   const hxhxWall = []
   const hxhxRss = []
   const suiteResults = []
+  const workloadFailures = []
 
   for (const suite of parsed.suites) {
     const upstream = await measureUpstream(parsed, env, suite)
@@ -356,13 +355,21 @@ async function main() {
       suite,
       upstream_haxe: {
         compile_wall_ms: upstream.durationMs,
-        peak_rss_kb: upstream.peakRssKb
+        peak_rss_kb: upstream.peakRssKb,
+        exit_code: upstream.status == null ? -1 : upstream.status
       },
       hxhx: {
         compile_wall_ms: hxhx.durationMs,
-        peak_rss_kb: hxhx.peakRssKb
+        peak_rss_kb: hxhx.peakRssKb,
+        exit_code: hxhx.status == null ? -1 : hxhx.status
       }
     })
+    if (upstream.status !== 0) {
+      workloadFailures.push(`upstream_haxe suite ${suite} failed during measurement (exit=${upstream.status})`)
+    }
+    if (hxhx.status !== 0) {
+      workloadFailures.push(`hxhx suite ${suite} failed during measurement (exit=${hxhx.status})`)
+    }
   }
 
   const evidence = {
@@ -383,6 +390,7 @@ async function main() {
     workloads: [
       {
         id: 'full1-upstream-suite-compiler-workloads',
+        failures: workloadFailures,
         samples: [
           {
             metric: 'compile_wall_ms',

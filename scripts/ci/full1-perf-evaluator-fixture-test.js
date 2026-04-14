@@ -20,7 +20,7 @@ function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, JSON.stringify(payload, null, 2) + '\n')
 }
 
-function workload(workloadId, metricPairs) {
+function workload(workloadId, metricPairs, extra) {
   const samples = []
   for (const [metric, upstreamValues, hxhxValues] of metricPairs) {
     samples.push({
@@ -36,7 +36,8 @@ function workload(workloadId, metricPairs) {
   }
   return {
     id: workloadId,
-    samples
+    samples,
+    ...(extra || {})
   }
 }
 
@@ -162,6 +163,20 @@ function main() {
   const partialSummary = runCase(tmpDir, 'partial-fail', partialEvidence(), 1, 'fail')
   if (!JSON.stringify(partialSummary.failures).includes('missing required workload')) {
     fail('partial fail summary did not record missing required workload failure')
+  }
+
+  const workloadFailurePayload = evidence()
+  workloadFailurePayload.workloads[2] = workload(
+    'full1-upstream-suite-compiler-workloads',
+    [
+      ['compile_wall_ms', [100, 101, 99, 100, 100], [90, 91, 89, 90, 90]],
+      ['peak_rss_kb', [1000, 1001, 999, 1000, 1000], [900, 901, 899, 900, 900]]
+    ],
+    { failures: ['upstream_haxe suite misc failed during measurement (exit=28)'] }
+  )
+  const workloadFailureSummary = runCase(tmpDir, 'workload-failure', workloadFailurePayload, 1, 'fail')
+  if (!JSON.stringify(workloadFailureSummary.failures).includes('suite misc failed')) {
+    fail('workload failure summary did not record workload-provided failure')
   }
 
   fs.rmSync(tmpDir, { recursive: true, force: true })

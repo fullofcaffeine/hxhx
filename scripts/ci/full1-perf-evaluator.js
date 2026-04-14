@@ -193,6 +193,11 @@ function evaluateWorkload(policy, workload) {
   if (!workload || typeof workload.id !== 'string' || workload.id.length === 0) {
     failures.push('workload must include id')
   }
+  if (workload && Array.isArray(workload.failures)) {
+    for (const failure of workload.failures) {
+      if (typeof failure === 'string' && failure.length > 0) failures.push(failure)
+    }
+  }
   const metrics = metricNames(workload)
   if (metrics.length === 0) failures.push('workload must include metric samples')
 
