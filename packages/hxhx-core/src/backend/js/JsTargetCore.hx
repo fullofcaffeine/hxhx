@@ -171,7 +171,7 @@ class JsTargetCore implements ITargetCore {
 		} else if (unit.fullName == "EReg") {
 			emitERegConstructor(writer, unit.jsRef);
 		} else {
-			writer.writeln("var " + unit.jsRef + " = {};");
+			emitPlainClassConstructor(writer, unit, classRefs);
 		}
 		writer.writeln(unit.jsRef + ".__hx_name = " + JsNameMangler.quoteString(unit.fullName) + ";");
 		writer.writeln("__hx_classes[" + JsNameMangler.quoteString(unit.fullName) + "] = " + unit.jsRef + ";");
@@ -220,14 +220,13 @@ class JsTargetCore implements ITargetCore {
 				continue;
 
 			final fnScope = new JsFunctionScope(classRefs);
-			final params = new Array<String>();
-			for (a in HxFunctionDecl.getArgs(fn)) {
-				params.push(fnScope.declareLocal(HxFunctionArg.getName(a)));
-			}
+			final args = HxFunctionDecl.getArgs(fn);
+			final params = declareFunctionParams(args, fnScope);
 
 			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
 			writer.writeln(unit.jsRef + suffix + " = function(" + params.join(", ") + ") {");
 			writer.pushIndent();
+			emitDefaultArgGuards(writer, args, params, fnScope);
 			if (shouldEmitNeutralStaticFunctionBody(unit.fullName, HxFunctionDecl.getName(fn))) {
 				writer.writeln("return null;");
 			} else if (!emitKnownStaticFunctionBody(writer, unit.fullName, HxFunctionDecl.getName(fn), params)) {
@@ -249,6 +248,119 @@ class JsTargetCore implements ITargetCore {
 			}
 			writer.popIndent();
 			writer.writeln("};");
+		}
+
+		if (unit.fullName != "EReg")
+			emitPlainClassPrototypeMethods(writer, unit, classRefs);
+	}
+
+	static function emitPlainClassConstructor(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
+		final ctor = findConstructor(unit.decl);
+		final instanceFields = instanceFieldRefs(unit.decl);
+		final scope = new JsFunctionScope(classRefs, instanceFields);
+		final args = ctor == null ? [] : HxFunctionDecl.getArgs(ctor);
+		final params = declareFunctionParams(args, scope);
+
+		writer.writeln("var " + unit.jsRef + " = function(" + params.join(", ") + ") {");
+		writer.pushIndent();
+		writer.writeln("this.__class__ = " + unit.jsRef + ";");
+		emitDefaultArgGuards(writer, args, params, scope);
+		emitInstanceFieldInitializers(writer, unit, scope);
+		if (ctor != null) {
+			try {
+				JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(ctor), scope);
+			} catch (e:String) {
+				throw e + " in " + unit.fullName + ".new (constructor body)";
+			} catch (error:haxe.Exception) {
+				throw error.message + " in " + unit.fullName + ".new (constructor body)";
+			}
+		}
+		writer.popIndent();
+		writer.writeln("};");
+	}
+
+	static function emitPlainClassPrototypeMethods(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
+		final instanceFields = instanceFieldRefs(unit.decl);
+		for (fn in HxClassDecl.getFunctions(unit.decl)) {
+			if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
+				continue;
+
+			final fnScope = new JsFunctionScope(classRefs, instanceFields);
+			final args = HxFunctionDecl.getArgs(fn);
+			final params = declareFunctionParams(args, fnScope);
+			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
+			writer.writeln(unit.jsRef + ".prototype" + suffix + " = function(" + params.join(", ") + ") {");
+			writer.pushIndent();
+			emitDefaultArgGuards(writer, args, params, fnScope);
+			try {
+				JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
+			} catch (e:String) {
+				throw e + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (instance function body)";
+			} catch (error:haxe.Exception) {
+				throw error.message + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (instance function body)";
+			}
+			writer.popIndent();
+			writer.writeln("};");
+		}
+	}
+
+	static function emitInstanceFieldInitializers(writer:JsWriter, unit:JsClassUnit, scope:JsFunctionScope):Void {
+		for (field in HxClassDecl.getFields(unit.decl)) {
+			if (HxFieldDecl.getIsStatic(field))
+				continue;
+			final fieldRef = "this" + JsNameMangler.propertySuffix(HxFieldDecl.getName(field));
+			final init = HxFieldDecl.getInit(field);
+			final value = if (init == null) {
+				"null";
+			} else {
+				try {
+					JsExprEmitter.emit(init, scope.exprScope());
+				} catch (e:String) {
+					throw e + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (instance field init)";
+				} catch (error:haxe.Exception) {
+					throw error.message + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (instance field init)";
+				}
+			};
+			writer.writeln(fieldRef + " = " + value + ";");
+		}
+	}
+
+	static function findConstructor(decl:HxClassDecl):Null<HxFunctionDecl> {
+		for (fn in HxClassDecl.getFunctions(decl)) {
+			if (!HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "new")
+				return fn;
+		}
+		return null;
+	}
+
+	static function instanceFieldRefs(decl:HxClassDecl):haxe.ds.StringMap<String> {
+		final fields = new haxe.ds.StringMap<String>();
+		for (field in HxClassDecl.getFields(decl)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				fields.set(HxFieldDecl.getName(field), "this" + JsNameMangler.propertySuffix(HxFieldDecl.getName(field)));
+		}
+		return fields;
+	}
+
+	static function declareFunctionParams(args:Array<HxFunctionArg>, scope:JsFunctionScope):Array<String> {
+		final params = new Array<String>();
+		for (a in args)
+			params.push(scope.declareLocal(HxFunctionArg.getName(a)));
+		return params;
+	}
+
+	static function emitDefaultArgGuards(writer:JsWriter, args:Array<HxFunctionArg>, params:Array<String>, scope:JsFunctionScope):Void {
+		final count = args.length < params.length ? args.length : params.length;
+		for (i in 0...count) {
+			final arg = args[i];
+			final param = params[i];
+			switch (HxFunctionArg.getDefaultValue(arg)) {
+				case NoDefault:
+					if (HxFunctionArg.getIsRest(arg))
+						writer.writeln("if (" + param + " == null) " + param + " = [];");
+				case Default(expr):
+					writer.writeln("if (" + param + " == null) " + param + " = " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+			}
 		}
 	}
 

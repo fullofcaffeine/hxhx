@@ -11,10 +11,12 @@ class JsFunctionScope {
 	final locals:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	final used:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap();
 	final classRefs:haxe.ds.StringMap<String>;
+	final instanceFields:haxe.ds.StringMap<String>;
 	var tempCounter:Int = 0;
 
-	public function new(classRefs:haxe.ds.StringMap<String>) {
+	public function new(classRefs:haxe.ds.StringMap<String>, ?instanceFields:haxe.ds.StringMap<String>) {
 		this.classRefs = classRefs == null ? new haxe.ds.StringMap<String>() : classRefs;
+		this.instanceFields = instanceFields == null ? new haxe.ds.StringMap<String>() : instanceFields;
 	}
 
 	function reserve(name:String):String {
@@ -43,7 +45,10 @@ class JsFunctionScope {
 	}
 
 	public function resolveLocal(raw:String):Null<String> {
-		return locals.get(raw);
+		final local = locals.get(raw);
+		if (local != null)
+			return local;
+		return instanceFields.get(raw);
 	}
 
 	public function resolveClassRef(raw:String):Null<String> {

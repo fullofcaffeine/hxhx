@@ -261,6 +261,23 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "EReg.hx");
 	}
 
+	static function counterModule():TypedModule {
+		final seedArg = new HxFunctionArg("seed", "Int", HxDefaultValue.Default(HxExpr.EInt(2)));
+		final deltaArg = new HxFunctionArg("delta", "Int", HxDefaultValue.Default(HxExpr.EInt(3)));
+		final valueField = new HxFieldDecl("value", HxVisibility.Public, false, "Int", HxExpr.EInt(1));
+		final counterClass = new HxClassDecl("Counter", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [seedArg], "Void", [
+				HxStmt.SExpr(HxExpr.EBinop("=", HxExpr.EIdent("value"), HxExpr.EBinop("+", HxExpr.EIdent("value"), HxExpr.EIdent("seed"))), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("add", HxVisibility.Public, false, [deltaArg], "Int", [
+				HxStmt.SExpr(HxExpr.EBinop("+=", HxExpr.EIdent("value"), HxExpr.EIdent("delta")), HxPos.unknown()),
+				HxStmt.SReturn(HxExpr.EIdent("value"), HxPos.unknown())
+			], "")
+		], [valueField]);
+		final decl = new HxModuleDecl("", [], counterClass, [counterClass], false, false);
+		return typedModule("", decl, "Counter.hx");
+	}
+
 	static function mainModule(source:String):TypedModule {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		return TyperStage.typeModule(parsed);
@@ -349,6 +366,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    var splitter = new EReg(",", "g");',
 				'    Sys.println(splitter.split("a,b,c").join("|"));',
 				'    Sys.println(EReg.escape("a+b"));',
+				"    var counter = new Counter(4);",
+				"    Sys.println(counter.add(5));",
+				"    Sys.println(counter.add());",
 				"  }",
 				"}"
 			].join("\n");
@@ -368,7 +388,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				utestReportToolsModule(),
 				jsBootModule(),
 				dateToolsModule(),
-				eRegModule()
+				eRegModule(),
+				counterModule()
 			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
@@ -409,6 +430,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg", "compile-time macro Compiler ident regex should construct EReg");
 			assertTrue(js.indexOf("var __hx_cls_EReg = function") < js.indexOf("__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg"),
 				"EReg constructor should emit before static fields that instantiate it");
+			assertContains(js, "var __hx_cls_Counter = function", "ordinary classes should emit constructible functions");
+			assertContains(js, "this.value = 1", "ordinary class instance fields should initialize on this");
+			assertContains(js, "__hx_cls_Counter.prototype.add = function", "ordinary class instance methods should emit on the prototype");
+			assertContains(js, "if (delta == null) delta = 3", "ordinary class default arguments should lower inside instance methods");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
 			final stdout = runNodeScript(artifactPath);
@@ -439,6 +464,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "true\nabc_12\nfalse", "EReg should construct and preserve match state");
 			assertContains(stdout, "a|b|c", "EReg split should delegate to JS regular expressions");
 			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");
+			assertContains(stdout, "10\n13", "ordinary JS classes should construct, mutate instance fields, and apply default args");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
