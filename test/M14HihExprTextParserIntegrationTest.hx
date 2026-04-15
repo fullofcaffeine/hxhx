@@ -164,6 +164,18 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local return function to lower to lambda call body");
 		}
 
+		final inlineLocalFunctionStmts = HxParser.parseFunctionBodyText("inline function check(a:haxe.Int64, str:String) { eq(toHex(a), str); } check(x, \"0x21\");");
+		assertTrue(inlineLocalFunctionStmts.length == 2, "expected inline local function plus call statement");
+		switch (inlineLocalFunctionStmts[0]) {
+			case SVar(name, _, ELambda(args, _), _):
+				assertTrue(name == "check", "expected inline local function name to parse");
+				assertTrue(args.length == 2 && args[0] == "a" && args[1] == "str", "expected inline local function args");
+			case SExpr(EUnsupported(raw), _):
+				fail("inline local function declaration parsed as unsupported: " + raw);
+			case _:
+				fail("expected inline local function to lower to SVar lambda");
+		}
+
 		final localIfThrowStmts = HxParser.parseFunctionBodyText("function negativeOnly(i:Int) { if(i >= 0) throw new ArgumentException('i'); } negativeOnly(10);");
 		assertTrue(localIfThrowStmts.length == 2, "expected local if/throw function plus call statement");
 		switch (localIfThrowStmts[0]) {

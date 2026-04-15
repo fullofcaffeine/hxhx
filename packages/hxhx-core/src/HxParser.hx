@@ -2285,6 +2285,16 @@ class HxParser {
 			case TKeyword(KReturn):
 				bump();
 				parseReturnStmt(pos);
+			case TKeyword(KInline):
+				// Local `inline function name(...) ...` is a modifier on a local helper.
+				// Stage3 does not model inlining here; it lowers to the same lambda binding
+				// as a normal local function so the body remains executable.
+				bump();
+				if (cur.kind.match(TKeyword(KFunction))) {
+					parseLocalFunctionStmt(pos);
+				} else {
+					SExpr(EUnsupported("inline"), pos);
+				}
 			case TKeyword(KFunction):
 				parseLocalFunctionStmt(pos);
 			case TKeyword(KVar):
