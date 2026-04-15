@@ -558,6 +558,9 @@ if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
 export HAXE_BIN="${STAGE0_HAXE}"
+if [ "\${HXHX_FORBID_STAGE0:-0}" = "1" ]; then
+  exec "${HXHX_BIN}" "\$@"
+fi
 exec "${HXHX_BIN}" --compat "\$@"
 EOF
 chmod +x "$WRAP_DIR/haxe"
@@ -756,8 +759,13 @@ run_target_attempt_with_watch() {
   if [ "$target_heartbeat_sec" -gt 0 ]; then
     (
       local elapsed=0
+      local watch_sleep_pid=""
+      trap 'if [ -n "${watch_sleep_pid:-}" ]; then kill "$watch_sleep_pid" 2>/dev/null || true; fi; exit 0' TERM INT
       while kill -0 "$target_pid" 2>/dev/null; do
-        sleep "$target_heartbeat_sec"
+        sleep "$target_heartbeat_sec" &
+        watch_sleep_pid="$!"
+        wait "$watch_sleep_pid" || exit 0
+        watch_sleep_pid=""
         elapsed=$((elapsed + target_heartbeat_sec))
         if kill -0 "$target_pid" 2>/dev/null; then
           echo "gate3_target_heartbeat target=${target} attempt=${attempt}/${max_attempts} elapsed=${elapsed}s"
@@ -769,7 +777,12 @@ run_target_attempt_with_watch() {
 
   if [ "$target_timeout_sec" -gt 0 ]; then
     (
-      sleep "$target_timeout_sec"
+      local watch_sleep_pid=""
+      trap 'if [ -n "${watch_sleep_pid:-}" ]; then kill "$watch_sleep_pid" 2>/dev/null || true; fi; exit 0' TERM INT
+      sleep "$target_timeout_sec" &
+      watch_sleep_pid="$!"
+      wait "$watch_sleep_pid" || exit 0
+      watch_sleep_pid=""
       if kill -0 "$target_pid" 2>/dev/null; then
         echo "Gate3 target timeout: target=${target} attempt=${attempt}/${max_attempts} exceeded ${target_timeout_sec}s." >&2
         if [ -n "$timeout_marker" ]; then
