@@ -152,7 +152,7 @@
     "test:m14:js-expr-qualified-ctor": "haxe test/m14_js_expr_emitter_qualified_ctor_integration_test.hxml",
     "test:m14:js-expr-function-literal": "haxe test/m14_js_expr_emitter_function_literal_integration_test.hxml",
     "test:m14:js-target-core-js-lib-runtime": "haxe test/m14_js_target_core_js_lib_extern_runtime_integration_test.hxml",
-    "test:m14:js-target-core-systools": "haxe test/m14_js_target_core_systools_integration_test.hxml",
+    "test:m14:js-target-core-systools": "haxe test/m14_js_target_core_systools_integration_test.hxml && neko .tmp/m14_js_target_core_systools_integration_test.n",
     "test:m14:js-unsupported-diagnostics": "haxe test/m14_js_native_unsupported_diagnostics_integration_test.hxml",
     "test:m14:js-expr-range": "haxe test/m14_js_expr_emitter_range_expr_integration_test.hxml",
     "test:m14:js-expr-array-comprehension": "haxe test/m14_js_expr_emitter_array_comprehension_integration_test.hxml",

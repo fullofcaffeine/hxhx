@@ -121,6 +121,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "Macro.hx");
 	}
 
+	static function upstreamUnitHelperMacrosModule():TypedModule {
+		final helperClass = new HxClassDecl("HelperMacros", false, [
+			new HxFunctionDecl("getCompilationDate", HxVisibility.Public, true, [], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=5"), "")
+		]);
+		final decl = new HxModuleDecl("unit", [], helperClass, [helperClass], false, false);
+		return typedModule("", decl, "unit/HelperMacros.hx");
+	}
+
 	static function macroCompilerModule():TypedModule {
 		final flagArg = new HxFunctionArg("flag", "String", HxDefaultValue.NoDefault);
 		final ident = new HxFieldDecl("ident", HxVisibility.Private, true, "Dynamic",
@@ -600,6 +609,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				sysIoFileModule(),
 				lambdaModule(),
 				macroModule(),
+				upstreamUnitHelperMacrosModule(),
 				macroCompilerModule(),
 				macroContextModule(),
 				macroTypeToolsModule(),
@@ -641,6 +651,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "try {  return \"try-ok\";", "try expression should lower to a returning IIFE");
 			assertContains(js, "__hx_cls_Macro.stripWhitespaces = function", "compile-time Macro fallback should emit");
 			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");
+			assertContains(js, "__hx_cls_unit_HelperMacros.getCompilationDate = function", "upstream unit macro helper should emit a neutral static stub");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.getDefine = function", "compile-time macro Compiler fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.excludeFile = function", "parsed compile-time macro Compiler body should emit neutral function");
 			assertContains(js, "__hx_cls_haxe_macro_Context.getLocalClass = function", "compile-time macro Context fallback should emit");
@@ -724,6 +735,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "this.hasSetupError = true;", "utest FixtureResult add should preserve setup error flags");
 			assertNotContains(js, "unsupported-testhandler", "utest TestHandler unsupported bodies should not leak into JS");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
+			assertNotContains(js, "detail=5", "compile-time-only helper unsupported payload should not leak into JS");
 
 			final stdout = runNodeScript(artifactPath);
 			assertContains(stdout, "'a b'", "quoteUnixArg should quote shell-unsafe spaces");

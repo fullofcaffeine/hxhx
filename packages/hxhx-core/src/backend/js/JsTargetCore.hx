@@ -1875,6 +1875,8 @@ class JsTargetCore implements ITargetCore {
 	static function shouldEmitNeutralStaticFunctionBody(fullName:String, fnName:String):Bool {
 		if (isCompileTimeMacroApi(fullName))
 			return true;
+		if (isUpstreamUnitMacroHelper(fullName))
+			return true;
 		return fullName == "Macro" && isCompileTimeMacroFallback(fnName);
 	}
 
@@ -1922,6 +1924,13 @@ class JsTargetCore implements ITargetCore {
 
 	static function isCompileTimeMacroFallback(fnName:String):Bool {
 		return fnName == "register" || fnName == "run" || fnName == "test" || fnName == "stripWhitespaces" || fnName == "extractJs" || fnName == "getOutput";
+	}
+
+	static function isUpstreamUnitMacroHelper(fullName:String):Bool {
+		// Upstream unit tests keep compile-time helper macros in `unit.HelperMacros`.
+		// JS-native can see that module in the output graph after macro expansion, but
+		// its macro bodies are not runtime code and should not be lowered into JS.
+		return fullName == "unit.HelperMacros";
 	}
 
 	static function resolveMainRef(main:String, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>):Null<String> {
