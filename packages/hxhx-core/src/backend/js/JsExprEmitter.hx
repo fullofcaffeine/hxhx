@@ -210,9 +210,10 @@ class JsExprEmitter {
 	}
 
 	static function blockToReturningJs(body:String):String {
-		var trimmed = body == null ? "" : StringTools.trim(body);
+		var trimmed = sanitizeRawHaxeExpressionSyntax(body == null ? "" : StringTools.trim(body));
 		while (StringTools.endsWith(trimmed, ";"))
 			trimmed = StringTools.trim(trimmed.substr(0, trimmed.length - 1));
+		trimmed = sanitizeRawHaxeExpressionSyntax(trimmed);
 		if (trimmed.length == 0)
 			return "return null;";
 		if (StringTools.startsWith(trimmed, "return ") || StringTools.startsWith(trimmed, "throw "))
@@ -226,6 +227,117 @@ class JsExprEmitter {
 		if (StringTools.startsWith(expr, "var ") || StringTools.startsWith(expr, "let ") || StringTools.startsWith(expr, "const "))
 			return trimmed + "; return null;";
 		return prefix + " return " + expr + ";";
+	}
+
+	static function sanitizeRawHaxeExpressionSyntax(raw:String):String {
+		return stripExpressionCastHints(stripExpressionMetadata(raw));
+	}
+
+	static function stripExpressionMetadata(raw:String):String {
+		if (raw == null || raw.indexOf("@:") < 0)
+			return raw;
+
+		final out = new StringBuf();
+		var i = 0;
+		while (i < raw.length) {
+			if (raw.substr(i, 2) == "@:") {
+				var j = i + 2;
+				while (j < raw.length && isMetadataPathChar(raw.charCodeAt(j)))
+					j++;
+				if (j > i + 2) {
+					i = j;
+					continue;
+				}
+			}
+			out.addChar(raw.charCodeAt(i));
+			i++;
+		}
+		return out.toString();
+	}
+
+	static function stripExpressionCastHints(raw:String):String {
+		if (raw == null || raw.indexOf(":") < 0)
+			return raw;
+
+		final out = new StringBuf();
+		final parenStack = new Array<Int>();
+		var i = 0;
+		while (i < raw.length) {
+			final code = raw.charCodeAt(i);
+			switch (code) {
+				case "(".code:
+					parenStack.push(i);
+				case ")".code:
+					if (parenStack.length > 0)
+						parenStack.pop();
+				case ":".code if (parenStack.length > 0):
+					final open = parenStack[parenStack.length - 1];
+					final close = findMatching(raw, open, "(".code, ")".code);
+					if (close > i && isRawTypeHintSegment(raw.substring(i + 1, close)) && !hasTopLevelQuestion(raw, open + 1, i)) {
+						i = close;
+						continue;
+					}
+				case _:
+			}
+			out.addChar(code);
+			i++;
+		}
+		return out.toString();
+	}
+
+	static function isMetadataPathChar(code:Int):Bool {
+		return (code >= "a".code && code <= "z".code)
+			|| (code >= "A".code && code <= "Z".code)
+			|| (code >= "0".code && code <= "9".code)
+			|| code == "_".code
+			|| code == ".".code;
+	}
+
+	static function isRawTypeHintSegment(segment:String):Bool {
+		final trimmed = segment == null ? "" : StringTools.trim(segment);
+		if (trimmed.length == 0)
+			return false;
+		for (i in 0...trimmed.length) {
+			final code = trimmed.charCodeAt(i);
+			if ((code >= "a".code && code <= "z".code) || (code >= "A".code && code <= "Z".code) || (code >= "0".code && code <= "9".code))
+				continue;
+			switch (code) {
+				case "_".code | ".".code | "<".code | ">".code | ",".code | "?".code | "!".code | "[".code | "]".code | " ".code | "\t".code:
+				case _:
+					return false;
+			}
+		}
+		return true;
+	}
+
+	static function hasTopLevelQuestion(source:String, start:Int, end:Int):Bool {
+		var parenDepth = 0;
+		var braceDepth = 0;
+		var bracketDepth = 0;
+		for (i in start...end) {
+			switch (source.charCodeAt(i)) {
+				case "(".code:
+					parenDepth++;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth--;
+				case "{".code:
+					braceDepth++;
+				case "}".code:
+					if (braceDepth > 0)
+						braceDepth--;
+				case "[".code:
+					bracketDepth++;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth--;
+				case "?".code:
+					if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0)
+						return true;
+				case _:
+			}
+		}
+		return false;
 	}
 
 	static function findMatching(source:String, openIndex:Int, openCode:Int, closeCode:Int):Int {

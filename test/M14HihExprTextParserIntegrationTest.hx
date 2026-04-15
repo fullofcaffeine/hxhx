@@ -8,6 +8,21 @@ class M14HihExprTextParserIntegrationTest {
 			fail(msg);
 	}
 
+	static function assertPushTryCatchRaw(stmts:Array<HxStmt>, msg:String):Void {
+		assertTrue(stmts.length == 1, msg + ": expected one push statement");
+		switch (stmts[0]) {
+			case SExpr(ECall(EField(EIdent(receiver), field), [ETryCatchRaw(raw)]), _):
+				assertTrue(receiver == "result", msg + ": expected result.push receiver");
+				assertTrue(field == "push", msg + ": expected push call");
+				assertTrue(raw.indexOf("try{") == 0, msg + ": expected canonical try raw, got " + raw);
+				assertTrue(raw.indexOf("catch(e:Exception)") >= 0, msg + ": expected typed catch signature, got " + raw);
+			case SExpr(EUnsupported(raw), _):
+				fail(msg + ": try/catch expression parsed as unsupported: " + raw);
+			case _:
+				fail(msg + ": expected push call with raw try/catch expression");
+		}
+	}
+
 	static function main() {
 		// Native parser payloads can compact escaped quote strings to `"""`.
 		// This should still parse as a normal string literal (`"`).
@@ -195,5 +210,10 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("expected privateAccess expression statement to parse");
 		}
+
+		assertPushTryCatchRaw(HxParser.parseFunctionBodyText("result.push(try throw new Exception('') catch(e:Exception) e.stack);"),
+			"single-expression try throw");
+		assertPushTryCatchRaw(HxParser.parseFunctionBodyText("result.push(try throw @:privateAccess (Exception.thrown(''):Exception) catch(e:Exception) e.stack);"),
+			"single-expression try throw privateAccess cast");
 	}
 }

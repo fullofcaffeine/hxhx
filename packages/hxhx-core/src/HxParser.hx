@@ -1902,7 +1902,8 @@ class HxParser {
 				case TIdent(name):
 					name;
 				case TKeyword(k):
-					keywordText(k);
+					final text = keywordText(k);
+					if (text == "new" || text == "throw" || text == "return" || text == "var" || text == "final") text + " "; else text;
 				case TString(s):
 					"\"" + s + "\"";
 				case TInt(v):
@@ -1986,25 +1987,63 @@ class HxParser {
 			}
 		}
 
+		function consumeExpressionBlock(untilCatch:Bool):Void {
+			raw.add("{");
+			var parenDepth = 0;
+			var braceDepth = 0;
+			var bracketDepth = 0;
+			while (!cur.kind.match(TEof)) {
+				if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
+					if (untilCatch && cur.kind.match(TKeyword(KCatch)))
+						break;
+					if (!untilCatch && stop())
+						break;
+				}
+				switch (cur.kind) {
+					case TLParen:
+						parenDepth++;
+					case TRParen:
+						if (parenDepth > 0)
+							parenDepth--;
+					case TLBrace:
+						braceDepth++;
+					case TRBrace:
+						if (braceDepth > 0)
+							braceDepth--;
+					case TOther(c) if (c == "[".code):
+						bracketDepth++;
+					case TOther(c) if (c == "]".code):
+						if (bracketDepth > 0)
+							bracketDepth--;
+					case _:
+				}
+				raw.add(tokText());
+				bump();
+			}
+			raw.add(";}");
+		}
+
 		// `try`
 		raw.add("try");
 		bump();
 
-		// `{ ... }`
-		if (!cur.kind.match(TLBrace))
-			return EUnsupported("try_missing_block");
-		consumeBalancedBraces();
+		// `{ ... }` or single-expression `try expr catch(...) expr`.
+		if (cur.kind.match(TLBrace)) {
+			consumeBalancedBraces();
+		} else {
+			consumeExpressionBlock(true);
+		}
 
 		// One or more `catch (...) { ... }`.
 		while (!stop() && cur.kind.match(TKeyword(KCatch))) {
 			raw.add("catch");
 			bump();
 			consumeBalancedParens();
-			if (!cur.kind.match(TLBrace)) {
-				// Bring-up: malformed catch; stop consuming so outer parsing can recover.
-				break;
+			if (cur.kind.match(TLBrace)) {
+				consumeBalancedBraces();
+			} else {
+				consumeExpressionBlock(false);
 			}
-			consumeBalancedBraces();
 		}
 
 		return ETryCatchRaw(raw.toString());
