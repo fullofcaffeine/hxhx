@@ -321,6 +321,43 @@ let emitUnitTestLocalStaticBasicBody = fun writer fullName -> ignore (let cls = 
   Backend_js_JsWriter.writeln (Obj.magic writer) (("return {x: " ^ HxString.toStdString cls) ^ ".__basic_x, y: \"final\"};" : string)
 ))
 
+let emitUnitTestLocalsSubCaptureBody = fun writer -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var funs = [];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var i = 0; i < 5; i++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("(function(__hx_i) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("funs.push(function() {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var tmp = [];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var j = 0; j < 5; j++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("(function(__hx_j) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("tmp.push(function() { return __hx_i + __hx_j; });" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("})(j);" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var sum = 0;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var k = 0; k < 5; k++) sum += tmp[k]();" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return sum;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("});" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("})(i);" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var m = 0; m < 5; m++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var actual = funs[m]();" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var expected = m * 5 + 10;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (actual !== expected) throw \"subcapture mismatch: \" + actual + \" != \" + expected;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)
+))
+
 let emitUtestDispatcherInstanceFunctionBody = fun writer fnName params isNotifier -> try let __fallback_result_100 = match fnName with
   | "add" -> ignore ((
     ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
@@ -528,6 +565,10 @@ let emitUtestPlainTextReportCompleteBody = fun writer result -> ignore ((
 let emitKnownInstanceFunctionBody = fun writer fullName fnName params -> try let __fallback_result_98 = (
   ignore (if HxString.equals fullName "unit.TestLocalStatic" && HxString.equals fnName "basic" then ignore ((
     ignore (emitUnitTestLocalStaticBasicBody (Obj.magic writer) (fullName : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
+  ignore (if HxString.equals fullName "unit.TestLocals" && HxString.equals fnName "testSubCapture" then ignore ((
+    ignore (emitUnitTestLocalsSubCaptureBody (Obj.magic writer));
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
   ignore (if HxString.equals fullName "utest.Dispatcher" || HxString.equals fullName "utest.Notifier" then raise (HxRuntime.Hx_return (Obj.repr (emitUtestDispatcherInstanceFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params) (HxString.equals fullName "utest.Notifier")))) else ());

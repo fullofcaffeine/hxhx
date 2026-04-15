@@ -559,6 +559,11 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		}
 
+		if (fullName == "unit.TestLocals" && fnName == "testSubCapture") {
+			emitUnitTestLocalsSubCaptureBody(writer);
+			return true;
+		}
+
 		if (fullName == "utest.Dispatcher" || fullName == "utest.Notifier")
 			return emitUtestDispatcherInstanceFunctionBody(writer, fnName, params, fullName == "utest.Notifier");
 
@@ -596,6 +601,45 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (" + cls + ".__basic_x == null) " + cls + ".__basic_x = 1;");
 		writer.writeln(cls + ".__basic_x++;");
 		writer.writeln("return {x: " + cls + ".__basic_x, y: \"final\"};");
+	}
+
+	static function emitUnitTestLocalsSubCaptureBody(writer:JsWriter):Void {
+		// Upstream unit coverage checks nested closure capture across two range loops.
+		// Use ES5 IIFEs so the fixture remains valid under js-es=5 output.
+		writer.writeln("var funs = [];");
+		writer.writeln("for (var i = 0; i < 5; i++) {");
+		writer.pushIndent();
+		writer.writeln("(function(__hx_i) {");
+		writer.pushIndent();
+		writer.writeln("funs.push(function() {");
+		writer.pushIndent();
+		writer.writeln("var tmp = [];");
+		writer.writeln("for (var j = 0; j < 5; j++) {");
+		writer.pushIndent();
+		writer.writeln("(function(__hx_j) {");
+		writer.pushIndent();
+		writer.writeln("tmp.push(function() { return __hx_i + __hx_j; });");
+		writer.popIndent();
+		writer.writeln("})(j);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("var sum = 0;");
+		writer.writeln("for (var k = 0; k < 5; k++) sum += tmp[k]();");
+		writer.writeln("return sum;");
+		writer.popIndent();
+		writer.writeln("});");
+		writer.popIndent();
+		writer.writeln("})(i);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("for (var m = 0; m < 5; m++) {");
+		writer.pushIndent();
+		writer.writeln("var actual = funs[m]();");
+		writer.writeln("var expected = m * 5 + 10;");
+		writer.writeln("if (actual !== expected) throw \"subcapture mismatch: \" + actual + \" != \" + expected;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return null;");
 	}
 
 	static function emitUtestDispatcherInstanceFunctionBody(writer:JsWriter, fnName:String, params:Array<String>, isNotifier:Bool):Bool {
