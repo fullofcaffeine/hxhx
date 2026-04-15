@@ -623,6 +623,11 @@ class JsTargetCore implements ITargetCore {
 					return false;
 				emitJsBootStringRecBody(writer, params[0], params[1]);
 				return true;
+			case "__instanceof":
+				if (params.length < 2)
+					return false;
+				emitJsBootInstanceofBody(writer, params[0], params[1]);
+				return true;
 			case _:
 				return false;
 		}
@@ -689,6 +694,36 @@ class JsTargetCore implements ITargetCore {
 		writer.popIndent();
 		writer.writeln("}");
 		writer.writeln("return __hx_out + \"\\n\" + " + indent + " + \"}\";");
+	}
+
+	static function emitJsBootInstanceofBody(writer:JsWriter, value:String, cls:String):Void {
+		writer.writeln("if (" + cls + " == null) return false;");
+		writer.writeln("var __hx_name = null;");
+		writer.writeln("if (typeof " + cls + " === \"string\") __hx_name = " + cls + ";");
+		writer.writeln("else if (" + cls + ".__hx_name != null) __hx_name = String(" + cls + ".__hx_name);");
+		writer.writeln("else if (" + cls + ".__name__ != null) __hx_name = Array.isArray(" + cls + ".__name__) ? " + cls + ".__name__.join(\".\") : String("
+			+ cls + ".__name__);");
+		writer.writeln("else if (" + cls + ".name != null) __hx_name = String(" + cls + ".name);");
+		writer.writeln("if (__hx_name === \"Int\") return typeof " + value + " === \"number\" && ((" + value + " | 0) === " + value + ");");
+		writer.writeln("if (__hx_name === \"Float\") return typeof " + value + " === \"number\";");
+		writer.writeln("if (__hx_name === \"Bool\") return typeof " + value + " === \"boolean\";");
+		writer.writeln("if (__hx_name === \"String\") return typeof " + value + " === \"string\";");
+		writer.writeln("if (__hx_name === \"Array\") return Array.isArray(" + value + ");");
+		writer.writeln("if (__hx_name === \"Dynamic\") return " + value + " != null;");
+		writer.writeln("if (" + value + " == null) return false;");
+		writer.writeln("if (typeof " + cls + " === \"function\") {");
+		writer.pushIndent();
+		writer.writeln("try { if (" + value + " instanceof " + cls + ") return true; } catch (__hx_error) {}");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + value + " === \"object\") {");
+		writer.pushIndent();
+		writer.writeln("if (" + value + ".__class__ === " + cls + ") return true;");
+		writer.writeln("if (" + value + ".constructor === " + cls + ") return true;");
+		writer.writeln("if (__hx_name != null && " + value + ".__hx_name === __hx_name) return true;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return false;");
 	}
 
 	static function emitFileSystemStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {

@@ -450,11 +450,47 @@ let emitJsBootStringRecBody = fun writer value indent -> ignore ((
   Backend_js_JsWriter.writeln (Obj.magic writer) (("return __hx_out + \"\\n\" + " ^ HxString.toStdString indent) ^ " + \"}\";" : string)
 ))
 
-let emitJsBootStaticFunctionBody = fun writer fnName params -> try let __fallback_result_63 = if HxString.equals fnName "__string_rec" then ignore ((
-  ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  ignore (emitJsBootStringRecBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string));
-  raise (HxRuntime.Hx_return (Obj.repr true))
-)) else raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_63 with
+let emitJsBootInstanceofBody = fun writer value cls -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (" ^ HxString.toStdString cls) ^ " == null) return false;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_name = null;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (typeof " ^ HxString.toStdString cls) ^ " === \"string\") __hx_name = ") ^ HxString.toStdString cls) ^ ";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("else if (" ^ HxString.toStdString cls) ^ ".__hx_name != null) __hx_name = String(") ^ HxString.toStdString cls) ^ ".__hx_name);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((((("else if (" ^ HxString.toStdString cls) ^ ".__name__ != null) __hx_name = Array.isArray(") ^ HxString.toStdString cls) ^ ".__name__) ? ") ^ HxString.toStdString cls) ^ ".__name__.join(\".\") : String(") ^ HxString.toStdString cls) ^ ".__name__);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("else if (" ^ HxString.toStdString cls) ^ ".name != null) __hx_name = String(") ^ HxString.toStdString cls) ^ ".name);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((("if (__hx_name === \"Int\") return typeof " ^ HxString.toStdString value) ^ " === \"number\" && ((") ^ HxString.toStdString value) ^ " | 0) === ") ^ HxString.toStdString value) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (__hx_name === \"Float\") return typeof " ^ HxString.toStdString value) ^ " === \"number\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (__hx_name === \"Bool\") return typeof " ^ HxString.toStdString value) ^ " === \"boolean\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (__hx_name === \"String\") return typeof " ^ HxString.toStdString value) ^ " === \"string\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (__hx_name === \"Array\") return Array.isArray(" ^ HxString.toStdString value) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (__hx_name === \"Dynamic\") return " ^ HxString.toStdString value) ^ " != null;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (" ^ HxString.toStdString value) ^ " == null) return false;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString cls) ^ " === \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("try { if (" ^ HxString.toStdString value) ^ " instanceof ") ^ HxString.toStdString cls) ^ ") return true; } catch (__hx_error) {}" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString value) ^ " === \"object\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (" ^ HxString.toStdString value) ^ ".__class__ === ") ^ HxString.toStdString cls) ^ ") return true;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (" ^ HxString.toStdString value) ^ ".constructor === ") ^ HxString.toStdString cls) ^ ") return true;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (__hx_name != null && " ^ HxString.toStdString value) ^ ".__hx_name === __hx_name) return true;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("return false;" : string)
+))
+
+let emitJsBootStaticFunctionBody = fun writer fnName params -> try let __fallback_result_63 = match fnName with
+  | "__instanceof" -> ignore ((
+    ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitJsBootInstanceofBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "__string_rec" -> ignore ((
+    ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitJsBootStringRecBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_63 with
   | HxRuntime.Hx_return __ret_62 -> Obj.obj __ret_62
 
 let emitFileSystemStaticFunctionBody = fun writer fnName params -> try let __fallback_result_65 = match fnName with
