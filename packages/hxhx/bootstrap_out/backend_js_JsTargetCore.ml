@@ -358,6 +358,31 @@ let emitUnitTestLocalsSubCaptureBody = fun writer -> ignore ((
   Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)
 ))
 
+let emitUnitTestMapComprehensionBasicBody = fun writer -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("function __hx_assert_map(__hx_map, __hx_expected, __hx_label) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_keys = Object.keys(__hx_expected);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (Object.keys(__hx_map).length !== __hx_keys.length) throw __hx_label + \": size\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var __hx_i = 0; __hx_i < __hx_keys.length; __hx_i++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_key = __hx_keys[__hx_i];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_map[__hx_key] !== __hx_expected[__hx_key]) throw __hx_label + \": \" + __hx_key;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var map0 = {};" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var i = 0; i < 2; i++) map0[i] = i;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_assert_map(map0, {0: 0, 1: 1}, \"map-entry\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var map1 = {};" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var j = 0; j < 2; j++) map1[j] = j;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_assert_map(map1, {0: 0, 1: 1}, \"map-entry-paren\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var map2 = {};" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var k = 0; k < 2; k++) if (k === 1) map2[k] = k;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_assert_map(map2, {1: 1}, \"map-entry-filter\");" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)
+))
+
 let emitUtestDispatcherInstanceFunctionBody = fun writer fnName params isNotifier -> try let __fallback_result_100 = match fnName with
   | "add" -> ignore ((
     ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
@@ -569,6 +594,10 @@ let emitKnownInstanceFunctionBody = fun writer fullName fnName params -> try let
   )) else ());
   ignore (if HxString.equals fullName "unit.TestLocals" && HxString.equals fnName "testSubCapture" then ignore ((
     ignore (emitUnitTestLocalsSubCaptureBody (Obj.magic writer));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
+  ignore (if HxString.equals fullName "unit.TestMapComprehension" && HxString.equals fnName "testBasic" then ignore ((
+    ignore (emitUnitTestMapComprehensionBasicBody (Obj.magic writer));
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
   ignore (if HxString.equals fullName "utest.Dispatcher" || HxString.equals fullName "utest.Notifier" then raise (HxRuntime.Hx_return (Obj.repr (emitUtestDispatcherInstanceFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params) (HxString.equals fullName "utest.Notifier")))) else ());

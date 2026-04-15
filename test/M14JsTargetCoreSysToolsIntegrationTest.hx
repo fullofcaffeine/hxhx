@@ -166,6 +166,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "unit/TestLocals.hx");
 	}
 
+	static function upstreamUnitTestMapComprehensionModule():TypedModule {
+		final testClass = new HxClassDecl("TestMapComprehension", false, [
+			new HxFunctionDecl("testBasic", HxVisibility.Public, false, [], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
+		]);
+		final decl = new HxModuleDecl("unit", [], testClass, [testClass], false, false);
+		return typedModule("", decl, "unit/TestMapComprehension.hx");
+	}
+
 	static function macroCompilerModule():TypedModule {
 		final flagArg = new HxFunctionArg("flag", "String", HxDefaultValue.NoDefault);
 		final ident = new HxFieldDecl("ident", HxVisibility.Private, true, "Dynamic",
@@ -650,6 +659,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				upstreamUnitDefaultTypeParametersModule(),
 				upstreamUnitTestLocalStaticModule(),
 				upstreamUnitTestLocalsModule(),
+				upstreamUnitTestMapComprehensionModule(),
 				macroCompilerModule(),
 				macroContextModule(),
 				macroTypeToolsModule(),
@@ -702,6 +712,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "tmp.push(function() { return __hx_i + __hx_j; });", "nested closure capture fixture should preserve both captured loop values");
 			assertContains(js, "if (actual !== expected) throw \"subcapture mismatch: \" + actual + \" != \" + expected;",
 				"nested closure capture fixture should fail if capture semantics regress");
+			assertContains(js, "__hx_cls_unit_TestMapComprehension.prototype.testBasic = function", "map-comprehension fixture should emit a known body");
+			assertContains(js, "__hx_assert_map(map2, {1: 1}, \"map-entry-filter\");", "map-comprehension fixture should validate filtered map entries");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.getDefine = function", "compile-time macro Compiler fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.excludeFile = function", "parsed compile-time macro Compiler body should emit neutral function");
 			assertContains(js, "__hx_cls_haxe_macro_Context.getLocalClass = function", "compile-time macro Context fallback should emit");
