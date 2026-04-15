@@ -1370,6 +1370,12 @@ let emitPlainClassPrototypeMethods = fun writer unit classRefs -> ignore (let in
 
 let isNativeJsPrototypeClass = fun fullName -> HxString.equals fullName "Array"
 
+let shouldSkipInstancePrototypeEmission = fun fullName -> try let __fallback_result_118 = (
+  ignore (if fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("haxe." : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  isNativeJsPrototypeClass (fullName : string)
+) in Obj.magic __fallback_result_118 with
+  | HxRuntime.Hx_return __ret_117 -> Obj.obj __ret_117
+
 let isCompileTimeMacroApi = fun fullName -> fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("haxe.macro." : string)
 
 let allowStaticFieldFallback = fun unit fieldName reason -> (
@@ -1501,14 +1507,14 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let temp
         )) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
-        if not (HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "EReg") && not (isNativeJsPrototypeClass (Obj.obj (HxAnon.get unit "fullName") : string)) then ignore (emitPlainClassPrototypeMethods (Obj.magic writer) unit (Obj.magic classRefs)) else ()
+        if not (HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "EReg") && not (shouldSkipInstancePrototypeEmission (Obj.obj (HxAnon.get unit "fullName") : string)) then ignore (emitPlainClassPrototypeMethods (Obj.magic writer) unit (Obj.magic classRefs)) else ()
       )
     )
   )
 ) with
   | HxRuntime.Hx_return __ret_53 -> Obj.obj __ret_53)
 
-let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_result_118 = (
+let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_result_120 = (
   ignore (if main == Obj.magic (HxRuntime.hx_null) || HxString.length main = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let direct = (HxMap.get_string byFullName main : string) in (
     ignore (if direct != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (direct : string))) else ());
@@ -1517,8 +1523,8 @@ let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_resu
       HxMap.get_string bySimpleName (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1))
     )
   )
-) in Obj.magic __fallback_result_118 with
-  | HxRuntime.Hx_return __ret_117 -> Obj.obj __ret_117
+) in Obj.magic __fallback_result_120 with
+  | HxRuntime.Hx_return __ret_119 -> Obj.obj __ret_119
 
 let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Backend_BackendContext.t) -> (
   ignore self;

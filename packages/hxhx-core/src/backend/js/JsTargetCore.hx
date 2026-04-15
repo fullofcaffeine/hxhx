@@ -250,7 +250,7 @@ class JsTargetCore implements ITargetCore {
 			writer.writeln("};");
 		}
 
-		if (unit.fullName != "EReg" && !isNativeJsPrototypeClass(unit.fullName))
+		if (unit.fullName != "EReg" && !shouldSkipInstancePrototypeEmission(unit.fullName))
 			emitPlainClassPrototypeMethods(writer, unit, classRefs);
 	}
 
@@ -1580,6 +1580,12 @@ class JsTargetCore implements ITargetCore {
 
 	static function shouldEmitNeutralInstanceFunctionBody(fullName:String, fnName:String):Bool {
 		return fullName == "utest.Runner" && fnName == "addCases";
+	}
+
+	static function shouldSkipInstancePrototypeEmission(fullName:String):Bool {
+		if (fullName != null && StringTools.startsWith(fullName, "haxe."))
+			return true;
+		return isNativeJsPrototypeClass(fullName);
 	}
 
 	static function isNativeJsPrototypeClass(fullName:String):Bool {

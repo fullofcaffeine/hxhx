@@ -300,6 +300,24 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "utest/Runner.hx");
 	}
 
+	static function haxeIoInputModule():TypedModule {
+		final inputClass = new HxClassDecl("Input", false, [
+			new HxFunctionDecl("readByte", HxVisibility.Public, false, [], "Int",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=throw"), "")
+		]);
+		final decl = new HxModuleDecl("haxe.io", [], inputClass, [inputClass], false, false);
+		return typedModule("", decl, "haxe/io/Input.hx");
+	}
+
+	static function haxeFormatJsonParserModule():TypedModule {
+		final parserClass = new HxClassDecl("JsonParser", false, [
+			new HxFunctionDecl("doParse", HxVisibility.Public, false, [], "Dynamic",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
+		]);
+		final decl = new HxModuleDecl("haxe.format", [], parserClass, [parserClass], false, false);
+		return typedModule("", decl, "haxe/format/JsonParser.hx");
+	}
+
 	static function mainModule(source:String):TypedModule {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		return TyperStage.typeModule(parsed);
@@ -414,7 +432,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				eRegModule(),
 				counterModule(),
 				arrayModule(),
-				utestRunnerModule()
+				utestRunnerModule(),
+				haxeIoInputModule(),
+				haxeFormatJsonParserModule()
 			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
@@ -460,6 +480,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_Counter.prototype.add = function", "ordinary class instance methods should emit on the prototype");
 			assertContains(js, "if (delta == null) delta = 3", "ordinary class default arguments should lower inside instance methods");
 			assertNotContains(js, "__hx_cls_Array.prototype.filter", "native JS Array prototype methods should not be re-emitted");
+			assertNotContains(js, "__hx_cls_haxe_io_Input.prototype.readByte", "haxe.io std support prototypes should not block JS smoke emit");
+			assertNotContains(js, "__hx_cls_haxe_format_JsonParser.prototype.doParse", "haxe.format std support prototypes should not block JS smoke emit");
 			assertContains(js, "__hx_cls_utest_Runner.prototype.addCases = function", "utest Runner addCases macro method should emit a neutral runtime stub");
 			assertContains(js, "if (recursive == null) recursive = true;", "utest Runner addCases should keep default args");
 			assertContains(js, "return null;", "utest Runner addCases should avoid compiling macro body into runtime JS");
