@@ -15,6 +15,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			throw label + " (missing `" + needle + "`)";
 	}
 
+	static function assertNotContains(haystack:String, needle:String, label:String):Void {
+		if (haystack.indexOf(needle) >= 0)
+			throw label + " (unexpected `" + needle + "`)";
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -111,7 +116,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final flagArg = new HxFunctionArg("flag", "String", HxDefaultValue.NoDefault);
 		final ident = new HxFieldDecl("ident", HxVisibility.Private, true, "Dynamic", HxExpr.EUnsupported("[js-native:unsupported_expr]"));
 		final compilerClass = new HxClassDecl("Compiler", false, [
-			new HxFunctionDecl("getDefine", HxVisibility.Public, true, [flagArg], "String", unsupportedBody("[js-native:unsupported_expr]"), "")
+			new HxFunctionDecl("getDefine", HxVisibility.Public, true, [flagArg], "String", unsupportedBody("[js-native:unsupported_expr]"), ""),
+			new HxFunctionDecl("excludeFile", HxVisibility.Public, true, [flagArg], "Void",
+				[HxStmt.SReturn(HxExpr.EString("should-not-emit"), HxPos.unknown())], "")
 		], [ident]);
 		final decl = new HxModuleDecl("haxe.macro", [], compilerClass, [compilerClass], false, false);
 		return typedModule("", decl, "haxe/macro/Compiler.hx");
@@ -200,11 +207,13 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_Macro.stripWhitespaces = function", "compile-time Macro fallback should emit");
 			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.getDefine = function", "compile-time macro Compiler fallback should emit");
+			assertContains(js, "__hx_cls_haxe_macro_Compiler.excludeFile = function", "parsed compile-time macro Compiler body should emit neutral function");
 			assertContains(js, "__hx_cls_haxe_macro_Context.getLocalClass = function", "compile-time macro Context fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_TypeTools.toField = function", "compile-time macro TypeTools fallback should emit");
 			assertContains(js, "__hx_cls_Lambda.flatten = function", "Lambda flatten shim should emit");
 			assertContains(js, "__hx_cls_Lambda.filter = function", "Lambda filter shim should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
+			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
 			final stdout = runNodeScript(artifactPath);
 			assertContains(stdout, "'a b'", "quoteUnixArg should quote shell-unsafe spaces");

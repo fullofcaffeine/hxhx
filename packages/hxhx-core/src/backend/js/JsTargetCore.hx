@@ -214,7 +214,9 @@ class JsTargetCore implements ITargetCore {
 			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
 			writer.writeln(unit.jsRef + suffix + " = function(" + params.join(", ") + ") {");
 			writer.pushIndent();
-			if (!emitKnownStaticFunctionBody(writer, unit.fullName, HxFunctionDecl.getName(fn), params)) {
+			if (shouldEmitNeutralStaticFunctionBody(unit.fullName, HxFunctionDecl.getName(fn))) {
+				writer.writeln("return null;");
+			} else if (!emitKnownStaticFunctionBody(writer, unit.fullName, HxFunctionDecl.getName(fn), params)) {
 				try {
 					JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
 				} catch (e:String) {
@@ -766,6 +768,12 @@ class JsTargetCore implements ITargetCore {
 		if (!isUnsupportedExpr)
 			return false;
 		return isCompileTimeMacroApi(unit.fullName);
+	}
+
+	static function shouldEmitNeutralStaticFunctionBody(fullName:String, fnName:String):Bool {
+		if (isCompileTimeMacroApi(fullName))
+			return true;
+		return fullName == "Macro" && isCompileTimeMacroFallback(fnName);
 	}
 
 	static function isCompileTimeMacroApi(fullName:String):Bool {
