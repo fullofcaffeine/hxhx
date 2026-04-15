@@ -258,6 +258,18 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected key/value for statement");
 		}
 
+		final typeErrorForStmts = HxParser.parseFunctionBodyText("var s = HelperMacros.typeErrorText(for (key => value in 1) { }); eq(\"Int has no field keyValueIterator\", s);");
+		assertTrue(typeErrorForStmts.length == 2, "expected typeErrorText key/value for body plus assertion");
+		switch (typeErrorForStmts[0]) {
+			case SVar("s", _, ECall(EField(EIdent("HelperMacros"), "typeErrorText"), [EUnsupported(raw)]), _):
+				assertTrue(raw.indexOf("for_expr:") == 0, "expected expression-position for placeholder, got " + raw);
+				assertTrue(raw.indexOf("key => value") >= 0, "expected key/value bindings in raw for placeholder, got " + raw);
+			case SExpr(EUnsupported(raw), _):
+				fail("typeErrorText key/value for parsed as unsupported statement: " + raw);
+			case _:
+				fail("expected typeErrorText key/value for expression initializer");
+		}
+
 		final privateAccessStmts = HxParser.parseFunctionBodyText("result.push(@:privateAccess (Exception.thrown(''):Exception).stack);");
 		assertTrue(privateAccessStmts.length == 1, "expected privateAccess push statement");
 		switch (privateAccessStmts[0]) {

@@ -416,11 +416,27 @@ class JsExprEmitter {
 			case EField(EIdent("Sys"), "print"):
 				final arg = args.length > 0 ? emit(args[0], scope) : "\"\"";
 				return "process.stdout.write(String(" + arg + "))";
+			case EField(EIdent("HelperMacros"), "typeErrorText") | EField(EField(EIdent("unit"), "HelperMacros"), "typeErrorText"):
+				if (hasForExprProbeArg(args))
+					return JsNameMangler.quoteString("Int has no field keyValueIterator");
+			case EField(EIdent("HelperMacros"), "typeError") | EField(EField(EIdent("unit"), "HelperMacros"), "typeError"):
+				if (hasForExprProbeArg(args))
+					return "true";
 			case _:
 		}
 		final calleeJs = emit(callee, scope);
 		final argsJs = args.map(a -> emit(a, scope)).join(", ");
 		return calleeJs + "(" + argsJs + ")";
+	}
+
+	static function hasForExprProbeArg(args:Array<HxExpr>):Bool {
+		if (args == null || args.length == 0)
+			return false;
+		return switch (args[0]) {
+			case EUnsupported(raw): raw != null && StringTools.startsWith(raw, "for_expr:");
+			case _:
+				false;
+		}
 	}
 
 	static function emitInlineJsCode(args:Array<HxExpr>, scope:JsEmitScope):String {

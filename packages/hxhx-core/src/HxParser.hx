@@ -728,6 +728,8 @@ class HxParser {
 							ENew(typePath, args);
 						}
 					}
+				} else if (k == KFor) {
+					parseForExprRaw();
 				} else if (k == KThrow) {
 					bump();
 					final thrown = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)
@@ -2089,6 +2091,65 @@ class HxParser {
 		}
 
 		return ETryCatchRaw(raw.toString());
+	}
+
+	function parseForExprRaw():HxExpr {
+		// Expression-position `for` is most commonly seen inside compile-time macro probes,
+		// e.g. `HelperMacros.typeError(for (...) { })`. We do not model statement ASTs inside
+		// HxExpr yet, so consume the full construct and leave a targeted placeholder for the
+		// macro-call lowering seam instead of letting the body parser drift.
+		if (!cur.kind.match(TKeyword(KFor)))
+			return EUnsupported("for_expr");
+
+		final start = currentIndex();
+		bump(); // `for`
+
+		if (cur.kind.match(TLParen))
+			consumeBalancedParensForExpr();
+
+		if (cur.kind.match(TLBrace)) {
+			consumeBalancedBracesForExpr();
+		} else {
+			while (!cur.kind.match(TEof) && !cur.kind.match(TComma) && !cur.kind.match(TRParen) && !cur.kind.match(TSemicolon) && !cur.kind.match(TRBrace))
+				bump();
+		}
+
+		final raw = StringTools.trim(sliceSource(start, currentIndex()));
+		return EUnsupported("for_expr:" + raw);
+	}
+
+	function consumeBalancedParensForExpr():Void {
+		expect(TLParen, "'('");
+		var depth = 1;
+		while (depth > 0 && !cur.kind.match(TEof)) {
+			switch (cur.kind) {
+				case TLParen:
+					depth++;
+					bump();
+				case TRParen:
+					depth--;
+					bump();
+				case _:
+					bump();
+			}
+		}
+	}
+
+	function consumeBalancedBracesForExpr():Void {
+		expect(TLBrace, "'{'");
+		var depth = 1;
+		while (depth > 0 && !cur.kind.match(TEof)) {
+			switch (cur.kind) {
+				case TLBrace:
+					depth++;
+					bump();
+				case TRBrace:
+					depth--;
+					bump();
+				case _:
+					bump();
+			}
+		}
 	}
 
 	function parseReturnStmt(pos:HxPos):HxStmt {

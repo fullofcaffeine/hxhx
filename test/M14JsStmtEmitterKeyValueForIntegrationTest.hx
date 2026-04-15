@@ -35,5 +35,15 @@ class M14JsStmtEmitterKeyValueForIntegrationTest {
 		assertContains(switchJs, "var l = __sw_0.__hx_params[2];", "enum extractor should bind third constructor arg");
 		assertContains(switchJs, "__sw_1.__hx_ctor === \"Method\"", "nested enum extractor should compare nested constructor");
 		assertContains(switchJs, "var m = __sw_1.__hx_params[1];", "nested enum extractor should bind nested arg");
+
+		final typeErrorBody = HxParser.parseFunctionBodyText("var s = HelperMacros.typeErrorText(for (key => value in 1) { }); t(HelperMacros.typeError(for (key => value in new MyNotIterator()) { }));");
+		final typeErrorWriter = new JsWriter();
+		final typeErrorScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
+		JsStmtEmitter.emitFunctionBody(typeErrorWriter, typeErrorBody, typeErrorScope);
+		final typeErrorJs = typeErrorWriter.toString();
+
+		assertContains(typeErrorJs, "var s = \"Int has no field keyValueIterator\";",
+			"HelperMacros.typeErrorText key/value for probe should fold to diagnostic text");
+		assertContains(typeErrorJs, "t(true);", "HelperMacros.typeError key/value for probe should fold to true");
 	}
 }
