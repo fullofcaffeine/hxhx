@@ -167,6 +167,19 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "haxe/macro/Error.hx");
 	}
 
+	static function haxeNotImplementedExceptionModule():TypedModule {
+		final messageArg = new HxFunctionArg("message", "String", HxDefaultValue.Default(HxExpr.EString("Not implemented")));
+		final previousArg = new HxFunctionArg("previous", "Dynamic", HxDefaultValue.NoDefault);
+		final posArg = new HxFunctionArg("pos", "Dynamic", HxDefaultValue.NoDefault);
+		final exceptionClass = new HxClassDecl("NotImplementedException", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [messageArg, previousArg, posArg], "Void", [
+				HxStmt.SExpr(HxExpr.ECall(HxExpr.ESuper, [HxExpr.EIdent("message"), HxExpr.EIdent("previous"), HxExpr.EIdent("pos")]), HxPos.unknown())
+			], "")
+		]);
+		final decl = new HxModuleDecl("haxe.exceptions", [], exceptionClass, [exceptionClass], false, false);
+		return typedModule("", decl, "haxe/exceptions/NotImplementedException.hx");
+	}
+
 	static function utestAssertModule():TypedModule {
 		final valueArg = new HxFunctionArg("v", "Dynamic", HxDefaultValue.NoDefault);
 		final expectedArg = new HxFunctionArg("expected", "Dynamic", HxDefaultValue.NoDefault);
@@ -185,7 +198,14 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	static function utestHtmlReportModule():TypedModule {
 		final platform = new HxFieldDecl("platform", HxVisibility.Private, true, "String",
 			HxExpr.EUnsupported('[js-native:unsupported_expr] kind=EUnsupported detail=if php "php"#elseif cpp "cpp"#elseif js "javascript"#elseif flash "flash"#else "unknown"'));
-		final reportClass = new HxClassDecl("HtmlReport", false, [], [platform]);
+		final bufArg = new HxFunctionArg("buf", "Dynamic", HxDefaultValue.NoDefault);
+		final resultArg = new HxFunctionArg("result", "Dynamic", HxDefaultValue.NoDefault);
+		final nameArg = new HxFunctionArg("name", "String", HxDefaultValue.NoDefault);
+		final isOkArg = new HxFunctionArg("isOk", "Bool", HxDefaultValue.NoDefault);
+		final reportClass = new HxClassDecl("HtmlReport", false, [
+			new HxFunctionDecl("addFixture", HxVisibility.Private, false, [bufArg, resultArg, nameArg, isOkArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
+		], [platform]);
 		final decl = new HxModuleDecl("utest.ui.text", [], reportClass, [reportClass], false, false);
 		return typedModule("", decl, "utest/ui/text/HtmlReport.hx");
 	}
@@ -487,6 +507,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				macroContextModule(),
 				macroTypeToolsModule(),
 				macroErrorModule(),
+				haxeNotImplementedExceptionModule(),
 				utestAssertModule(),
 				utestHtmlReportModule(),
 				utestReportToolsModule(),
@@ -521,12 +542,17 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_macro_TypeTools.toField = function", "compile-time macro TypeTools fallback should emit");
 			assertContains(js, "var __hx_cls_haxe_macro_Error = function", "compile-time macro Error constructor should emit");
 			assertNotContains(js, "super(message, previous)", "compile-time macro constructors should not emit raw JS super calls");
+			assertContains(js, "var __hx_cls_haxe_exceptions_NotImplementedException = function",
+				"stdlib exception constructors should still emit constructible functions");
+			assertNotContains(js, "super(message, previous, pos)", "stdlib exception constructors should not emit raw JS super calls");
 			assertContains(js, "__hx_cls_Lambda.flatten = function", "Lambda flatten shim should emit");
 			assertContains(js, "__hx_cls_Lambda.filter = function", "Lambda filter shim should emit");
 			assertContains(js, "__hx_cls_utest_Assert.getTypeName = function", "utest Assert getTypeName shim should emit");
 			assertContains(js, "__hx_cls_utest_Assert.sameAs = function", "utest Assert sameAs shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_text_HtmlReport.platform = \"javascript\"",
 				"utest HtmlReport platform static initializer should resolve for JS");
+			assertContains(js, "__hx_cls_utest_ui_text_HtmlReport.prototype.addFixture = function",
+				"utest HtmlReport addFixture should emit a neutral runtime stub");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasHeader = function", "utest ReportTools hasHeader shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.skipResult = function", "utest ReportTools skipResult shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasOutput = function", "utest ReportTools hasOutput shim should emit");

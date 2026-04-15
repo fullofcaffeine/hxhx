@@ -1726,11 +1726,13 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function shouldEmitNeutralConstructorBody(fullName:String):Bool {
-		return isCompileTimeMacroApi(fullName);
+		return isCompileTimeMacroApi(fullName) || isStdExceptionClass(fullName);
 	}
 
 	static function shouldEmitNeutralInstanceFunctionBody(fullName:String, fnName:String):Bool {
 		if (fullName == "utest.Runner" && fnName == "addCases")
+			return true;
+		if (fullName == "utest.ui.text.HtmlReport" && fnName == "addFixture")
 			return true;
 		return fullName == "utest.TestHandler";
 	}
@@ -1747,6 +1749,10 @@ class JsTargetCore implements ITargetCore {
 
 	static function isCompileTimeMacroApi(fullName:String):Bool {
 		return fullName != null && StringTools.startsWith(fullName, "haxe.macro.");
+	}
+
+	static function isStdExceptionClass(fullName:String):Bool {
+		return fullName == "haxe.Exception" || (fullName != null && StringTools.startsWith(fullName, "haxe.exceptions."));
 	}
 
 	static function isCompileTimeMacroFallback(fnName:String):Bool {

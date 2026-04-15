@@ -1434,6 +1434,7 @@ let buildClassRefs = fun bySimpleName byFullName -> let merged = Obj.magic (HxMa
 
 let shouldEmitNeutralInstanceFunctionBody = fun fullName fnName -> try let __fallback_result_122 = (
   ignore (if HxString.equals fullName "utest.Runner" && HxString.equals fnName "addCases" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if HxString.equals fullName "utest.ui.text.HtmlReport" && HxString.equals fnName "addFixture" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   HxString.equals fullName "utest.TestHandler"
 ) in Obj.magic __fallback_result_122 with
   | HxRuntime.Hx_return __ret_121 -> Obj.obj __ret_121
@@ -1492,7 +1493,9 @@ let allowStaticFieldFallback = fun unit fieldName reason -> (
     | HxRuntime.Hx_return __ret_117 -> Obj.obj __ret_117
 )
 
-let shouldEmitNeutralConstructorBody = fun fullName -> isCompileTimeMacroApi (fullName : string)
+let isStdExceptionClass = fun fullName -> HxString.equals fullName "haxe.Exception" || fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("haxe.exceptions." : string)
+
+let shouldEmitNeutralConstructorBody = fun fullName -> isCompileTimeMacroApi (fullName : string) || isStdExceptionClass (fullName : string)
 
 let emitPlainClassConstructor = fun writer unit classRefs -> ignore (let ctor = Obj.magic (findConstructor (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in let instanceFields = Obj.magic (instanceFieldRefs (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in let scope = Obj.magic (Backend_js_JsFunctionScope.create (Obj.magic classRefs) (Obj.magic instanceFields)) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionArg.t HxArray.t) in (
   ignore (if ctor == Obj.magic (HxRuntime.hx_null) then let __assign_54 = Obj.magic (let __arr_55 = HxArray.create () in __arr_55) in (
