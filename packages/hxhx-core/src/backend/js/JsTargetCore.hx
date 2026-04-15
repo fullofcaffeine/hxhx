@@ -266,7 +266,7 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("this.__class__ = " + unit.jsRef + ";");
 		emitDefaultArgGuards(writer, args, params, scope);
 		emitInstanceFieldInitializers(writer, unit, scope);
-		if (ctor != null) {
+		if (ctor != null && !shouldEmitNeutralConstructorBody(unit.fullName)) {
 			try {
 				JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(ctor), scope);
 			} catch (e:String) {
@@ -292,7 +292,9 @@ class JsTargetCore implements ITargetCore {
 			writer.writeln(unit.jsRef + ".prototype" + suffix + " = function(" + params.join(", ") + ") {");
 			writer.pushIndent();
 			emitDefaultArgGuards(writer, args, params, fnScope);
-			if (shouldEmitNeutralInstanceFunctionBody(unit.fullName, HxFunctionDecl.getName(fn))) {
+			if (emitKnownInstanceFunctionBody(writer, unit.fullName, HxFunctionDecl.getName(fn), params)) {
+				// Known body emitted above.
+			} else if (shouldEmitNeutralInstanceFunctionBody(unit.fullName, HxFunctionDecl.getName(fn))) {
 				writer.writeln("return null;");
 			} else {
 				try {
@@ -491,6 +493,151 @@ class JsTargetCore implements ITargetCore {
 			case _:
 				return false;
 		}
+	}
+
+	static function emitKnownInstanceFunctionBody(writer:JsWriter, fullName:String, fnName:String, params:Array<String>):Bool {
+		if (fullName == "utest.Dispatcher" || fullName == "utest.Notifier")
+			return emitUtestDispatcherInstanceFunctionBody(writer, fnName, params, fullName == "utest.Notifier");
+
+		if (fullName == "utest.TestHandler" && fnName == "execute") {
+			emitUtestTestHandlerExecuteBody(writer);
+			return true;
+		}
+
+		return false;
+	}
+
+	static function emitUtestDispatcherInstanceFunctionBody(writer:JsWriter, fnName:String, params:Array<String>, isNotifier:Bool):Bool {
+		switch (fnName) {
+			case "add":
+				if (params.length < 1)
+					return false;
+				writer.writeln("if (this.handlers == null) this.handlers = [];");
+				writer.writeln("this.handlers.push(" + params[0] + ");");
+				writer.writeln("return " + params[0] + ";");
+				return true;
+			case "remove":
+				if (params.length < 1)
+					return false;
+				writer.writeln("if (this.handlers == null) return null;");
+				writer.writeln("for (var __hx_i = 0; __hx_i < this.handlers.length; __hx_i++) {");
+				writer.pushIndent();
+				writer.writeln("if (this.handlers[__hx_i] === " + params[0] + ") return this.handlers.splice(__hx_i, 1)[0];");
+				writer.popIndent();
+				writer.writeln("}");
+				writer.writeln("return null;");
+				return true;
+			case "clear":
+				writer.writeln("this.handlers = [];");
+				writer.writeln("return null;");
+				return true;
+			case "dispatch":
+				if (!isNotifier && params.length < 1)
+					return false;
+				writer.writeln("try {");
+				writer.pushIndent();
+				writer.writeln("var __hx_handlers = this.handlers == null ? [] : this.handlers.slice();");
+				writer.writeln("for (var __hx_i = 0; __hx_i < __hx_handlers.length; __hx_i++) {");
+				writer.pushIndent();
+				if (isNotifier)
+					writer.writeln("__hx_handlers[__hx_i]();");
+				else
+					writer.writeln("__hx_handlers[__hx_i](" + params[0] + ");");
+				writer.popIndent();
+				writer.writeln("}");
+				writer.writeln("return true;");
+				writer.popIndent();
+				writer.writeln("} catch (__hx_error) {");
+				writer.pushIndent();
+				writer.writeln("return false;");
+				writer.popIndent();
+				writer.writeln("}");
+				return true;
+			case "has":
+				writer.writeln("return this.handlers != null && this.handlers.length > 0;");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitUtestTestHandlerExecuteBody(writer:JsWriter):Void {
+		final assertRef = JsNameMangler.classVarName("utest.Assert");
+		writer.writeln("var __hx_handler = this;");
+		writer.writeln("var __hx_fixture = this.fixture;");
+		writer.writeln("this.startTime = (typeof Date.now === \"function\" ? Date.now() : new Date().getTime()) / 1000;");
+		writer.writeln("function __hx_resultLength(list) {");
+		writer.pushIndent();
+		writer.writeln("if (list == null) return 0;");
+		writer.writeln("if (typeof list.length === \"number\") return list.length;");
+		writer.writeln("var count = 0;");
+		writer.writeln("if (typeof list.iterator === \"function\") {");
+		writer.pushIndent();
+		writer.writeln("var it = list.iterator();");
+		writer.writeln("while (it.hasNext()) { it.next(); count++; }");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return count;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("function __hx_addResult(value) {");
+		writer.pushIndent();
+		writer.writeln("if (__hx_handler.results == null) __hx_handler.results = [];");
+		writer.writeln("if (typeof __hx_handler.results.add === \"function\") __hx_handler.results.add(value);");
+		writer.writeln("else if (typeof __hx_handler.results.push === \"function\") __hx_handler.results.push(value);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("function __hx_dispatch(dispatcher) {");
+		writer.pushIndent();
+		writer.writeln("if (dispatcher != null && typeof dispatcher.dispatch === \"function\") dispatcher.dispatch(__hx_handler);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("function __hx_bindAssert() {");
+		writer.pushIndent();
+		writer.writeln("var __hx_assert = typeof " + assertRef + " !== \"undefined\" ? " + assertRef + " : null;");
+		writer.writeln("if (__hx_assert == null) return;");
+		writer.writeln("__hx_assert.results = __hx_handler.results;");
+		writer.writeln("__hx_assert.createAsync = function(f, timeout) { return function() { if (typeof f === \"function\") return f(); return null; }; };");
+		writer.writeln("__hx_assert.createEvent = function(f, timeout) { return function(e) { if (typeof f === \"function\") return f(e); return null; }; };");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("function __hx_callFixtureMethod(name, args) {");
+		writer.pushIndent();
+		writer.writeln("if (__hx_fixture == null || name == null) return null;");
+		writer.writeln("var target = __hx_fixture.target;");
+		writer.writeln("if (target == null) return null;");
+		writer.writeln("var fn = target[name];");
+		writer.writeln("if (typeof fn !== \"function\") return null;");
+		writer.writeln("__hx_bindAssert();");
+		writer.writeln("return fn.apply(target, args == null ? [] : args);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("try {");
+		writer.pushIndent();
+		writer.writeln("if (__hx_fixture != null && __hx_fixture.ignoringInfo != null && __hx_fixture.ignoringInfo.isIgnored === true) {");
+		writer.pushIndent();
+		writer.writeln("__hx_addResult({ __hx_ctor: \"Ignore\", __hx_index: 5, __hx_params: [__hx_fixture.ignoringInfo.ignoreReason] });");
+		writer.popIndent();
+		writer.writeln("} else {");
+		writer.pushIndent();
+		writer.writeln("__hx_callFixtureMethod(__hx_fixture == null ? null : __hx_fixture.setup, []);");
+		writer.writeln("__hx_callFixtureMethod(__hx_fixture == null ? null : __hx_fixture.method, []);");
+		writer.writeln("__hx_callFixtureMethod(__hx_fixture == null ? null : __hx_fixture.teardown, []);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("} catch (__hx_error) {");
+		writer.pushIndent();
+		writer.writeln("__hx_addResult({ __hx_ctor: \"Error\", __hx_index: 2, __hx_params: [__hx_error, []] });");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("__hx_dispatch(this.onPrecheck);");
+		writer.writeln("if (__hx_resultLength(this.results) === 0) __hx_addResult({ __hx_ctor: \"Warning\", __hx_index: 1, __hx_params: [\"no assertions\"] });");
+		writer.writeln("__hx_dispatch(this.onTested);");
+		writer.writeln("this.finished = true;");
+		writer.writeln("this.executionTime = ((typeof Date.now === \"function\" ? Date.now() : new Date().getTime()) / 1000 - this.startTime) * 1000;");
+		writer.writeln("__hx_dispatch(this.onComplete);");
+		writer.writeln("return null;");
 	}
 
 	/**
@@ -1578,8 +1725,14 @@ class JsTargetCore implements ITargetCore {
 		return fullName == "Macro" && isCompileTimeMacroFallback(fnName);
 	}
 
+	static function shouldEmitNeutralConstructorBody(fullName:String):Bool {
+		return isCompileTimeMacroApi(fullName);
+	}
+
 	static function shouldEmitNeutralInstanceFunctionBody(fullName:String, fnName:String):Bool {
-		return fullName == "utest.Runner" && fnName == "addCases";
+		if (fullName == "utest.Runner" && fnName == "addCases")
+			return true;
+		return fullName == "utest.TestHandler";
 	}
 
 	static function shouldSkipInstancePrototypeEmission(fullName:String):Bool {

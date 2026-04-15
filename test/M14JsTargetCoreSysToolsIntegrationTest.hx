@@ -150,6 +150,23 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "haxe/macro/TypeTools.hx");
 	}
 
+	static function macroErrorModule():TypedModule {
+		final messageArg = new HxFunctionArg("message", "String", HxDefaultValue.NoDefault);
+		final posArg = new HxFunctionArg("pos", "Dynamic", HxDefaultValue.NoDefault);
+		final previousArg = new HxFunctionArg("previous", "Dynamic", HxDefaultValue.NoDefault);
+		final errorClass = new HxClassDecl("Error", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [messageArg, posArg, previousArg], "Void", [
+				HxStmt.SExpr(HxExpr.ECall(HxExpr.ESuper, [HxExpr.EIdent("message"), HxExpr.EIdent("previous")]), HxPos.unknown()),
+				HxStmt.SExpr(HxExpr.EBinop("=", HxExpr.EIdent("pos"), HxExpr.EIdent("pos")), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("pos", HxVisibility.Public, false, "Dynamic", null),
+			new HxFieldDecl("childErrors", HxVisibility.Public, false, "Dynamic", null)
+		]);
+		final decl = new HxModuleDecl("haxe.macro", [], errorClass, [errorClass], false, false);
+		return typedModule("", decl, "haxe/macro/Error.hx");
+	}
+
 	static function utestAssertModule():TypedModule {
 		final valueArg = new HxFunctionArg("v", "Dynamic", HxDefaultValue.NoDefault);
 		final expectedArg = new HxFunctionArg("expected", "Dynamic", HxDefaultValue.NoDefault);
@@ -300,6 +317,31 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "utest/Runner.hx");
 	}
 
+	static function utestTestHandlerModule():TypedModule {
+		final fixtureArg = new HxFunctionArg("fixture", "Dynamic", HxDefaultValue.NoDefault);
+		final timeoutArg = new HxFunctionArg("timeout", "Int", HxDefaultValue.Default(HxExpr.EInt(250)));
+		final fnArg = new HxFunctionArg("f", "Dynamic", HxDefaultValue.NoDefault);
+		final handlerClass = new HxClassDecl("TestHandler", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [fixtureArg], "Void", [], ""),
+			new HxFunctionDecl("execute", HxVisibility.Public, false, [], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("addAsync", HxVisibility.Public, false, [fnArg, timeoutArg], "Dynamic",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=async-body"), "")
+		], [
+			new HxFieldDecl("fixture", HxVisibility.Public, false, "Dynamic", null),
+			new HxFieldDecl("results", HxVisibility.Public, false, "Dynamic", null),
+			new HxFieldDecl("finished", HxVisibility.Public, false, "Bool", HxExpr.EBool(false)),
+			new HxFieldDecl("executionTime", HxVisibility.Public, false, "Float", HxExpr.EFloat(0)),
+			new HxFieldDecl("startTime", HxVisibility.Private, false, "Float", HxExpr.EFloat(0)),
+			new HxFieldDecl("onTested", HxVisibility.Public, false, "Dynamic", null),
+			new HxFieldDecl("onTimeout", HxVisibility.Public, false, "Dynamic", null),
+			new HxFieldDecl("onComplete", HxVisibility.Public, false, "Dynamic", null),
+			new HxFieldDecl("onPrecheck", HxVisibility.Public, false, "Dynamic", null)
+		]);
+		final decl = new HxModuleDecl("utest", [], handlerClass, [handlerClass], false, false);
+		return typedModule("", decl, "utest/TestHandler.hx");
+	}
+
 	static function haxeIoInputModule():TypedModule {
 		final inputClass = new HxClassDecl("Input", false, [
 			new HxFunctionDecl("readByte", HxVisibility.Public, false, [], "Int",
@@ -345,6 +387,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"import sys.FileSystem;",
 				"import js.Boot;",
 				"import utest.Assert;",
+				"import utest.TestHandler;",
 				"import utest.ui.common.ReportTools;",
 				"class Main {",
 				"  static function main() {",
@@ -410,6 +453,25 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"    Sys.println(counter.add(5));",
 				"    Sys.println(counter.add());",
 				"    Sys.println([1, 2, 3].filter(function(i) return i > 1).join(\",\"));",
+				"    var called = { value: false };",
+				"    var handler = new TestHandler(null);",
+				"    handler.fixture = {",
+				"      ignoringInfo: { isIgnored: false, ignoreReason: null },",
+				"      target: { testOk: function() { called.value = true; Sys.println(\"fixture-called\"); } },",
+				"      method: \"testOk\",",
+				"      setup: null,",
+				"      setupAsync: null,",
+				"      teardown: null,",
+				"      teardownAsync: null",
+				"    };",
+				"    handler.results = [];",
+				"    handler.onPrecheck = { dispatch: function(h) Sys.println(\"precheck\") };",
+				"    handler.onTested = { dispatch: function(h) Sys.println(\"tested\") };",
+				"    handler.onComplete = { dispatch: function(h) Sys.println(\"complete\") };",
+				"    handler.execute();",
+				"    Sys.println(called.value);",
+				"    Sys.println(handler.finished);",
+				"    Sys.println(handler.results.length);",
 				"  }",
 				"}"
 			].join("\n");
@@ -424,6 +486,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				macroCompilerModule(),
 				macroContextModule(),
 				macroTypeToolsModule(),
+				macroErrorModule(),
 				utestAssertModule(),
 				utestHtmlReportModule(),
 				utestReportToolsModule(),
@@ -433,6 +496,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				counterModule(),
 				arrayModule(),
 				utestRunnerModule(),
+				utestTestHandlerModule(),
 				haxeIoInputModule(),
 				haxeFormatJsonParserModule()
 			], false);
@@ -455,6 +519,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.excludeFile = function", "parsed compile-time macro Compiler body should emit neutral function");
 			assertContains(js, "__hx_cls_haxe_macro_Context.getLocalClass = function", "compile-time macro Context fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_TypeTools.toField = function", "compile-time macro TypeTools fallback should emit");
+			assertContains(js, "var __hx_cls_haxe_macro_Error = function", "compile-time macro Error constructor should emit");
+			assertNotContains(js, "super(message, previous)", "compile-time macro constructors should not emit raw JS super calls");
 			assertContains(js, "__hx_cls_Lambda.flatten = function", "Lambda flatten shim should emit");
 			assertContains(js, "__hx_cls_Lambda.filter = function", "Lambda filter shim should emit");
 			assertContains(js, "__hx_cls_utest_Assert.getTypeName = function", "utest Assert getTypeName shim should emit");
@@ -485,6 +551,12 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_utest_Runner.prototype.addCases = function", "utest Runner addCases macro method should emit a neutral runtime stub");
 			assertContains(js, "if (recursive == null) recursive = true;", "utest Runner addCases should keep default args");
 			assertContains(js, "return null;", "utest Runner addCases should avoid compiling macro body into runtime JS");
+			assertContains(js, "__hx_cls_utest_TestHandler.prototype.execute = function",
+				"utest TestHandler execute should emit a JS-native sync runtime body");
+			assertContains(js, "target[name]", "utest TestHandler execute should dispatch fixture methods by name");
+			assertContains(js, "__hx_cls_utest_TestHandler.prototype.addAsync = function",
+				"utest TestHandler helper methods should still emit prototype stubs");
+			assertNotContains(js, "unsupported-testhandler", "utest TestHandler unsupported bodies should not leak into JS");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
 			final stdout = runNodeScript(artifactPath);
@@ -517,6 +589,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");
 			assertContains(stdout, "10\n13", "ordinary JS classes should construct, mutate instance fields, and apply default args");
 			assertContains(stdout, "2,3", "native JS Array prototype methods should remain available");
+			assertContains(stdout, "fixture-called\nprecheck\ntested\ncomplete\ntrue\ntrue\n1",
+				"utest TestHandler execute should run a synchronous fixture and dispatch completion hooks");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
