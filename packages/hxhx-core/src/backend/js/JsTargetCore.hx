@@ -281,6 +281,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "utest.ui.common.ReportTools")
 			return emitUtestReportToolsStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "js.Boot")
+			return emitJsBootStaticFunctionBody(writer, fnName, params);
+
 		if (fullName != "haxe.SysTools")
 			return false;
 
@@ -604,6 +607,88 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (__hx_success === \"AlwaysShowSuccessResults\") return false;");
 		writer.writeln("if (__hx_success === \"ShowSuccessResultsWithNoErrors\") return !" + isOk + ";");
 		writer.writeln("return false;");
+	}
+
+	/**
+		Emits the JS std `Boot.__string_rec` helper used by `Std.string`.
+
+		The implementation is deliberately behavior-level: it preserves the observable
+		stringification shape needed by Haxe JS runtimes without depending on the
+		upstream compiler's internal JS syntax helpers.
+	**/
+	static function emitJsBootStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "__string_rec":
+				if (params.length < 2)
+					return false;
+				emitJsBootStringRecBody(writer, params[0], params[1]);
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitJsBootStringRecBody(writer:JsWriter, value:String, indent:String):Void {
+		writer.writeln("if (" + value + " == null) return \"null\";");
+		writer.writeln(indent + " = " + indent + " == null ? \"\" : String(" + indent + ");");
+		writer.writeln("if (" + indent + ".length >= 5) return \"<...>\";");
+		writer.writeln("var __hx_type = typeof " + value + ";");
+		writer.writeln("if (__hx_type === \"string\") return " + value + ";");
+		writer.writeln("if (__hx_type === \"function\") return \"<function>\";");
+		writer.writeln("if (__hx_type !== \"object\") return String(" + value + ");");
+		writer.writeln("var __hx_nextIndent = " + indent + " + \"\\t\";");
+		writer.writeln("if (" + value + ".__hx_ctor != null) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_params = Array.isArray(" + value + ".__hx_params) ? " + value + ".__hx_params : [];");
+		writer.writeln("if (__hx_params.length === 0) return String(" + value + ".__hx_ctor);");
+		writer.writeln("var __hx_enumParts = [];");
+		writer.writeln("for (var __hx_ep = 0; __hx_ep < __hx_params.length; __hx_ep++) {");
+		writer.pushIndent();
+		writer.writeln("__hx_enumParts.push(" + JsNameMangler.classVarName("js.Boot") + ".__string_rec(__hx_params[__hx_ep], __hx_nextIndent));");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return String(" + value + ".__hx_ctor) + \"(\" + __hx_enumParts.join(\",\") + \")\";");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (Array.isArray(" + value + ")) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_items = [];");
+		writer.writeln("for (var __hx_i = 0; __hx_i < " + value + ".length; __hx_i++) {");
+		writer.pushIndent();
+		writer.writeln("__hx_items.push(" + JsNameMangler.classVarName("js.Boot") + ".__string_rec(" + value + "[__hx_i], __hx_nextIndent));");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return \"[\" + __hx_items.join(\",\") + \"]\";");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("try {");
+		writer.pushIndent();
+		writer.writeln("var __hx_toString = " + value + ".toString;");
+		writer.writeln("if (__hx_toString != null && __hx_toString !== Object.prototype.toString && typeof __hx_toString === \"function\") {");
+		writer.pushIndent();
+		writer.writeln("var __hx_string = __hx_toString.call(" + value + ");");
+		writer.writeln("if (__hx_string !== \"[object Object]\") return __hx_string;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("} catch (__hx_error) {");
+		writer.pushIndent();
+		writer.writeln("return \"???\";");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("var __hx_out = \"{\\n\";");
+		writer.writeln("var __hx_first = true;");
+		writer.writeln("for (var __hx_key in " + value + ") {");
+		writer.pushIndent();
+		writer.writeln("if (Object.prototype.hasOwnProperty.call(" + value + ", __hx_key) === false) continue;");
+		writer.writeln("if (__hx_key === \"prototype\" || __hx_key === \"__class__\" || __hx_key === \"__super__\" || __hx_key === \"__interfaces__\" || __hx_key === \"__properties__\") continue;");
+		writer.writeln("if (!__hx_first) __hx_out += \", \\n\";");
+		writer.writeln("__hx_first = false;");
+		writer.writeln("__hx_out += __hx_nextIndent + __hx_key + \" : \" + " + JsNameMangler.classVarName("js.Boot") + ".__string_rec(" + value
+			+ "[__hx_key], __hx_nextIndent);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return __hx_out + \"\\n\" + " + indent + " + \"}\";");
 	}
 
 	static function emitFileSystemStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {

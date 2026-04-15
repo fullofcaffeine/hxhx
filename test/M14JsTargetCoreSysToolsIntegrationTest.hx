@@ -176,6 +176,17 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "utest/ui/common/ReportTools.hx");
 	}
 
+	static function jsBootModule():TypedModule {
+		final valueArg = new HxFunctionArg("o", "Dynamic", HxDefaultValue.NoDefault);
+		final indentArg = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
+		final bootClass = new HxClassDecl("Boot", false, [
+			new HxFunctionDecl("__string_rec", HxVisibility.Public, true, [valueArg, indentArg], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=ETryCatchRaw detail=opaque_block_expr"), "")
+		]);
+		final decl = new HxModuleDecl("js", [], bootClass, [bootClass], false, false);
+		return typedModule("", decl, "js/Boot.hx");
+	}
+
 	static function mainModule(source:String):TypedModule {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		return TyperStage.typeModule(parsed);
@@ -201,6 +212,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		try {
 			final source = [
 				"import sys.FileSystem;",
+				"import js.Boot;",
 				"import utest.Assert;",
 				"import utest.ui.common.ReportTools;",
 				"class Main {",
@@ -233,6 +245,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"    Sys.println(ReportTools.hasHeader(report, badStats));",
 				"    Sys.println(ReportTools.skipResult(report, okStats, true));",
 				"    Sys.println(ReportTools.hasOutput(report, okStats));",
+				'    Sys.println(Boot.__string_rec({ name: "hxhx", items: [1, null] }, ""));',
 				"  }",
 				"}"
 			].join("\n");
@@ -248,7 +261,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				macroTypeToolsModule(),
 				utestAssertModule(),
 				utestHtmlReportModule(),
-				utestReportToolsModule()
+				utestReportToolsModule(),
+				jsBootModule()
 			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
@@ -276,6 +290,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasHeader = function", "utest ReportTools hasHeader shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.skipResult = function", "utest ReportTools skipResult shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasOutput = function", "utest ReportTools hasOutput shim should emit");
+			assertContains(js, "__hx_cls_js_Boot.__string_rec = function", "js Boot string recursion shim should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
@@ -299,6 +314,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "Array", "utest Assert.getTypeName should name array values");
 			assertContains(stdout, "expected \"utest\" but it is \"other\"", "utest Assert.sameAs should report nested field mismatch");
 			assertContains(stdout, "false\ntrue\ntrue\nfalse", "utest ReportTools should preserve header/output display policy");
+			assertContains(stdout, "name : hxhx", "js Boot string recursion should render object fields");
+			assertContains(stdout, "items : [1,null]", "js Boot string recursion should render arrays recursively");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
