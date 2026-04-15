@@ -364,6 +364,24 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "utest/TestHandler.hx");
 	}
 
+	static function utestResultModules():Array<TypedModule> {
+		final errorsArg = new HxFunctionArg("errorsHavePriority", "Bool", HxDefaultValue.Default(HxExpr.EBool(true)));
+		final classResult = new HxClassDecl("ClassResult", false, [
+			new HxFunctionDecl("methodNames", HxVisibility.Public, false, [errorsArg], "Array<String>",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
+		]);
+		final packageResult = new HxClassDecl("PackageResult", false, [
+			new HxFunctionDecl("classNames", HxVisibility.Public, false, [errorsArg], "Array<String>",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("packageNames", HxVisibility.Public, false, [errorsArg], "Array<String>",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
+		]);
+		return [
+			typedModule("", new HxModuleDecl("utest.ui.common", [], classResult, [classResult], false, false), "utest/ui/common/ClassResult.hx"),
+			typedModule("", new HxModuleDecl("utest.ui.common", [], packageResult, [packageResult], false, false), "utest/ui/common/PackageResult.hx")
+		];
+	}
+
 	static function haxeIoInputModule():TypedModule {
 		final inputClass = new HxClassDecl("Input", false, [
 			new HxFunctionDecl("readByte", HxVisibility.Public, false, [], "Int",
@@ -497,7 +515,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"  }",
 				"}"
 			].join("\n");
-			final program = new MacroExpandedProgram([
+			final modules = [
 				mainModule(source),
 				sysToolsModule(),
 				pathModule(),
@@ -522,7 +540,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				utestTestHandlerModule(),
 				haxeIoInputModule(),
 				haxeFormatJsonParserModule()
-			], false);
+			];
+			for (module in utestResultModules())
+				modules.push(module);
+			final program = new MacroExpandedProgram(modules, false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
 			final context = new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
@@ -586,6 +607,12 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "target[name]", "utest TestHandler execute should dispatch fixture methods by name");
 			assertContains(js, "__hx_cls_utest_TestHandler.prototype.addAsync = function",
 				"utest TestHandler helper methods should still emit prototype stubs");
+			assertContains(js, "__hx_cls_utest_ui_common_ClassResult.prototype.methodNames = function",
+				"utest ClassResult methodNames should emit a neutral runtime stub");
+			assertContains(js, "__hx_cls_utest_ui_common_PackageResult.prototype.classNames = function",
+				"utest PackageResult classNames should emit a neutral runtime stub");
+			assertContains(js, "__hx_cls_utest_ui_common_PackageResult.prototype.packageNames = function",
+				"utest PackageResult packageNames should emit a neutral runtime stub");
 			assertNotContains(js, "unsupported-testhandler", "utest TestHandler unsupported bodies should not leak into JS");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 

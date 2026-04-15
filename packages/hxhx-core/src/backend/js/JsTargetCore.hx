@@ -1734,6 +1734,10 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		if (fullName == "utest.ui.text.HtmlReport")
 			return true;
+		if (fullName == "utest.ui.common.ClassResult" && fnName == "methodNames")
+			return true;
+		if (fullName == "utest.ui.common.PackageResult" && (fnName == "classNames" || fnName == "packageNames"))
+			return true;
 		return fullName == "utest.TestHandler";
 	}
 
