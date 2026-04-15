@@ -152,6 +152,18 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local function declaration to lower to SVar lambda");
 		}
 
+		final localReturnFunctionStmts = HxParser.parseFunctionBodyText("function capture() return Int64.compare(a, Int64.make(1, 2)); eq(capture(), 0);");
+		assertTrue(localReturnFunctionStmts.length == 2, "expected local return function plus call statement");
+		switch (localReturnFunctionStmts[0]) {
+			case SVar(name, _, ELambda(args, ECall(EField(EIdent("Int64"), "compare"), [EIdent("a"), ECall(EField(EIdent("Int64"), "make"), _)])), _):
+				assertTrue(name == "capture", "expected local return function name to parse");
+				assertTrue(args.length == 0, "expected zero-arg local return function");
+			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
+				fail("local return function body parsed as unsupported: " + raw);
+			case _:
+				fail("expected local return function to lower to lambda call body");
+		}
+
 		final localIfThrowStmts = HxParser.parseFunctionBodyText("function negativeOnly(i:Int) { if(i >= 0) throw new ArgumentException('i'); } negativeOnly(10);");
 		assertTrue(localIfThrowStmts.length == 2, "expected local if/throw function plus call statement");
 		switch (localIfThrowStmts[0]) {

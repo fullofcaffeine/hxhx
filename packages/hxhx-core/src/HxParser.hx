@@ -899,8 +899,14 @@ class HxParser {
 		final bodyExpr = if (cur.kind.match(TLBrace)) {
 			bump();
 			lambdaBodyExprFromStmts(parseFunctionBodyStatements());
+		} else if (acceptKeyword(KReturn)) {
+			final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+			syncToStmtEnd();
+			expr;
 		} else {
-			parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+			final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+			syncToStmtEnd();
+			expr;
 		}
 
 		return SVar(name, "", ELambda(args, bodyExpr), pos);
