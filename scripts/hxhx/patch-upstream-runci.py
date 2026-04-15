@@ -196,6 +196,80 @@ def patch_sourcemaps_skip_sourcemap_install_if_present(upstream_dir: str) -> Non
     write_text(path, src.replace(needle, replacement, 1))
 
 
+def patch_node_echo_server(upstream_dir: str) -> None:
+    """Replace the shared Neko HTTP fixture with a stage0-free Node harness.
+
+    Gate3 target runs compile and start a tiny echo server before each target.
+    The upstream fixture builds that server with `haxe -neko`, which blocks all
+    strict native target lanes before they reach the target under test. This
+    patch keeps the observable harness behavior (echo POST body after a short
+    delay) while avoiding stage0 Haxe and Neko bytecode compilation.
+    """
+
+    run_ci = upstream_path(upstream_dir, "tests/RunCi.hx")
+    echo_dir = upstream_path(upstream_dir, "tests/echoServer")
+    if not run_ci.is_file() or not echo_dir.is_dir():
+        return
+
+    node_server = echo_dir / "hxhx_node_echo_server.js"
+    write_text(
+        node_server,
+        """const http = require('http');
+
+const server = http.createServer((req, res) => {
+  const chunks = [];
+  req.on('data', chunk => chunks.push(chunk));
+  req.on('end', () => {
+    setTimeout(() => {
+      res.statusCode = 200;
+      res.setHeader('content-type', 'text/plain');
+      res.end(Buffer.concat(chunks));
+    }, 300);
+  });
+});
+
+server.listen(20200);
+
+function shutdown() {
+  server.close(() => process.exit(0));
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+""",
+    )
+
+    src = read_text(run_ci)
+    marker = "HXHX_GATE3_NODE_ECHO_SERVER"
+    if marker in src:
+        return
+
+    build_needle = "\t\tif (isCi()) {\n\t\t\tchangeDirectory('echoServer');\n\t\t\trunCommand('haxe', ['build.hxml']);\n\t\t\tchangeDirectory(cwd);\n\t\t}\n"
+    build_replacement = (
+        "\t\tif (isCi() && Sys.getEnv(\"HXHX_GATE3_NODE_ECHO_SERVER\") != \"1\") {\n"
+        "\t\t\tchangeDirectory('echoServer');\n"
+        "\t\t\trunCommand('haxe', ['build.hxml']);\n"
+        "\t\t\tchangeDirectory(cwd);\n"
+        "\t\t}\n"
+    )
+    if build_needle not in src:
+        fail("RunCi.hx echoServer build block not found")
+    src = src.replace(build_needle, build_replacement, 1)
+
+    process_needle = "\t\t\t//run neko-based http echo server\n\t\t\tvar echoServer = new sys.io.Process('nekotools', ['server', '-d', 'echoServer/www/', '-p', '20200']);\n"
+    process_replacement = (
+        "\t\t\t// HXHX Gate runner: strict native lanes use a stage0-free Node echo harness.\n"
+        "\t\t\tvar echoServer = if (Sys.getEnv(\"HXHX_GATE3_NODE_ECHO_SERVER\") == \"1\") {\n"
+        "\t\t\t\tnew sys.io.Process('node', ['echoServer/hxhx_node_echo_server.js']);\n"
+        "\t\t\t} else {\n"
+        "\t\t\t\tnew sys.io.Process('nekotools', ['server', '-d', 'echoServer/www/', '-p', '20200']);\n"
+        "\t\t\t};\n"
+    )
+    if process_needle not in src:
+        fail("RunCi.hx echoServer process block not found")
+    write_text(run_ci, src.replace(process_needle, process_replacement, 1))
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("command")
@@ -213,6 +287,7 @@ def main(argv: list[str]) -> None:
         "macro-skip-haxeserver-install-if-present": lambda: patch_macro_skip_haxeserver_install_if_present(args.upstream_dir),
         "macro-optional-skip-party": lambda: patch_macro_optional_skip_party(args.upstream_dir),
         "sourcemaps-skip-sourcemap-install-if-present": lambda: patch_sourcemaps_skip_sourcemap_install_if_present(args.upstream_dir),
+        "node-echo-server": lambda: patch_node_echo_server(args.upstream_dir),
     }
     command = commands.get(args.command)
     if command is None:

@@ -478,6 +478,15 @@ patch_sourcemaps_skip_sourcemap_install_if_present() {
   python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" sourcemaps-skip-sourcemap-install-if-present --upstream-dir "$UPSTREAM_DIR"
 }
 
+patch_runci_node_echo_server() {
+  local run_ci="$UPSTREAM_DIR/tests/RunCi.hx"
+  local echo_dir="$UPSTREAM_DIR/tests/echoServer"
+  [ -f "$run_ci" ] || return 0
+  [ -d "$echo_dir" ] || return 0
+
+  python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" node-echo-server --upstream-dir "$UPSTREAM_DIR"
+}
+
 preflight_target() {
   local t="$1"
   # Normalize: allow "Macro" or "macro".
@@ -666,8 +675,10 @@ echo "== Gate 3 Python policy: install_fallback=${python_allow_install} (0=no-in
 
 echo "== Gate 3 target watch: heartbeat=${target_heartbeat_sec}s timeout=${target_timeout_sec}s (0 disables each)"
 
+strict_node_echo_server="${HXHX_GATE3_NODE_ECHO_SERVER:-${HXHX_FORBID_STAGE0:-0}}"
 want_macro_patches=0
 want_js_patches=0
+want_node_echo_patch=0
 for t in "${targets[@]}"; do
   t_norm="$(echo "$t" | tr '[:upper:]' '[:lower:]')"
   if [ "$t_norm" = "macro" ]; then
@@ -676,6 +687,9 @@ for t in "${targets[@]}"; do
   if [ "$t_norm" = "js" ]; then
     want_js_patches=1
   fi
+  if [ "$strict_node_echo_server" = "1" ] && { [ "$t_norm" != "macro" ] || [ "$macro_mode" = "stage0_shim" ]; }; then
+    want_node_echo_patch=1
+  fi
 done
 
 if [ "$want_macro_patches" = "1" ]; then
@@ -683,6 +697,10 @@ if [ "$want_macro_patches" = "1" ]; then
 fi
 if [ "$want_js_patches" = "1" ] && [ "$(uname -s)" = "Darwin" ] && [ "${HXHX_GATE3_FORCE_JS_SERVER:-0}" != "1" ]; then
   need_cmd python3 "patch upstream runci Js/server async timeouts for macOS stability"
+fi
+if [ "$want_node_echo_patch" = "1" ]; then
+  need_cmd python3 "patch upstream runci to use the stage0-free Node echo harness"
+  need_cmd node "run the stage0-free Gate3 echo harness"
 fi
 
 (
@@ -694,6 +712,9 @@ fi
   patch_runci_skip_sys_on_macos
   if [ "$want_js_patches" = "1" ]; then
     patch_runci_js_server_timeouts_on_macos
+  fi
+  if [ "$want_node_echo_patch" = "1" ]; then
+    patch_runci_node_echo_server
   fi
 
   if [ "$want_macro_patches" = "1" ]; then
@@ -732,7 +753,7 @@ run_target_attempt() {
       if [ -n "${STAGE0_STD_PATH:-}" ]; then
         export HAXE_STD_PATH="${STAGE0_STD_PATH}"
       fi
-      TEST="$target" PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
+      HXHX_GATE3_NODE_ECHO_SERVER="$strict_node_echo_server" TEST="$target" PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
     )
   fi
 }
