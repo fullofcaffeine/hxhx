@@ -313,6 +313,8 @@ class JsExprEmitter {
 			return "undefined";
 		return switch (args[0]) {
 			case EString(code):
+				for (i in 1...args.length)
+					code = StringTools.replace(code, "{" + (i - 1) + "}", emit(args[i], scope));
 				code;
 			case _:
 				emit(args[0], scope);
