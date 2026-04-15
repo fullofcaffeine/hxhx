@@ -182,5 +182,18 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("expected key/value for statement");
 		}
+
+		final privateAccessStmts = HxParser.parseFunctionBodyText("result.push(@:privateAccess (Exception.thrown(''):Exception).stack);");
+		assertTrue(privateAccessStmts.length == 1, "expected privateAccess push statement");
+		switch (privateAccessStmts[0]) {
+			case SExpr(ECall(EField(EIdent(receiver), field), [EField(_, stackField)]), _):
+				assertTrue(receiver == "result", "expected result.push receiver");
+				assertTrue(field == "push", "expected push call");
+				assertTrue(stackField == "stack", "expected privateAccess expression field");
+			case SExpr(EUnsupported(raw), _):
+				fail("privateAccess expression parsed as unsupported: " + raw);
+			case _:
+				fail("expected privateAccess expression statement to parse");
+		}
 	}
 }

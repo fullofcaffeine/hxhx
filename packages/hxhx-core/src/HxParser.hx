@@ -1414,12 +1414,17 @@ class HxParser {
 					bump();
 					if (cur.kind.match(TColon))
 						bump();
+					var metaName = "";
 					switch (cur.kind) {
-						case TIdent(_), TKeyword(_):
+						case TIdent(name):
+							metaName = name;
+							bump();
+						case TKeyword(k):
+							metaName = keywordText(k);
 							bump();
 						case _:
 					}
-					if (cur.kind.match(TLParen)) {
+					if (cur.kind.match(TLParen) && metaName != "privateAccess") {
 						bump();
 						try
 							skipBalancedParens()
