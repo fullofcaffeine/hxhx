@@ -139,5 +139,15 @@ class M14DirectFlagCliContractTest {
 		assertIntEquals(countDefine(evalFromHxml.forwarded, "ocaml_output=custom_out"), 0, "ocaml eval hxml avoids duplicate explicit output define");
 		assertTrue(!hasToken(evalFromHxml.forwarded, "--no-output"), "ocaml eval hxml avoids duplicate no-output token");
 		assertTrue(hasDefine(evalFromHxml.forwarded, "reflaxe-target=ocaml"), "ocaml eval hxml still injects reflaxe target define");
+
+		final multiHxmlPath = tmpDir + "/multi-target.hxml";
+		File.saveContent(multiHxmlPath, "-cp src\n--each\n--python py_out\n--next\n--java java_out\n");
+		expectThrowMessage(function() plan([multiHxmlPath]), "Target not supported natively");
+
+		final jsEachHxmlPath = tmpDir + "/js-each.hxml";
+		File.saveContent(jsEachHxmlPath, "-cp src\n--each\n--js a.js\n-main A\n--next\n--js b.js\n-main B\n");
+		final jsEach = plan([jsEachHxmlPath]);
+		assertEquals(jsEach.lane, "native-js", "multi-unit js hxml lane");
+		assertTrue(hasDefine(jsEach.forwarded, "js"), "multi-unit js hxml define");
 	}
 }

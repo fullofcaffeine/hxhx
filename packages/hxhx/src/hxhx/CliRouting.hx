@@ -1,7 +1,5 @@
 package hxhx;
 
-import hxhx.Stage1Compiler.Stage1Args;
-
 typedef CliRoutePlan = {
 	final lane:String;
 	final backendId:Null<String>;
@@ -304,8 +302,15 @@ class CliRouting {
 	}
 
 	static function planningTargetArgs(forwarded:Array<String>):Array<String> {
-		final expanded = Stage1Args.expandHxmlArgs(forwarded);
-		return expanded == null ? forwarded : expanded;
+		final units = Hxml.expandArgsToUnits(forwarded);
+		if (units == null)
+			return forwarded;
+		final out = new Array<String>();
+		for (unit in units) {
+			for (arg in unit)
+				out.push(arg);
+		}
+		return out;
 	}
 
 	static function findUnsupportedLegacyTarget(args:Array<String>):Null<String> {

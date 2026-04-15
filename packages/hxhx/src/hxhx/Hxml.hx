@@ -18,11 +18,11 @@ import haxe.io.Path;
 	  - `#` comments (at start of line, or after whitespace)
 	  - one or more tokens per line (e.g. `-main Main`)
 	  - basic quoting with `'...'` / `"..."` (to allow paths with spaces)
-	- Explicitly rejects `--next`/`--each` for now (multi-unit `.hxml` is a later stage).
+	  - multi-unit `--each` / `--next` expansion through `parseFileUnits` / `expandArgsToUnits`
 
 	How
 	- We tokenize each line with a tiny state machine (quote/no-quote + backslash escapes),
-	  then concatenate the resulting tokens.
+	  then concatenate or split the resulting tokens depending on the caller.
 
 	Notes
 	- This is intentionally not a full reimplementation of upstream `hxml` parsing.

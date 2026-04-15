@@ -192,22 +192,32 @@ let stripRoutingFlags = fun args -> let out = Obj.magic (HxArray.create ()) in l
   out
 )
 
-let planningTargetArgs = fun forwarded -> let expanded = Obj.magic (Hxhx_Stage1Compiler.stage1args_expandHxmlArgs (Obj.magic forwarded)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-  ignore (if expanded == Obj.magic (HxRuntime.hx_null) then let __assign_40 = Obj.magic forwarded in (
-    tempResult := __assign_40;
-    __assign_40
-  ) else let __assign_41 = Obj.magic expanded in (
-    tempResult := __assign_41;
-    __assign_41
-  ));
-  !tempResult
-)
+let planningTargetArgs = fun forwarded -> try let __fallback_result_45 = let units = Obj.magic (Hxhx_Hxml.expandArgsToUnits (Obj.magic forwarded)) in (
+  ignore (if units == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic forwarded))) else ());
+  let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+    ignore (while !_g < HxArray.length units do ignore (let unit = Obj.magic (HxArray.get (Obj.magic units) (!_g)) in (
+      ignore (let __old_40 = !_g in let __new_41 = HxInt.add __old_40 1 in (
+        ignore (_g := __new_41);
+        __new_41
+      ));
+      let _g2 = ref 0 in while !_g2 < HxArray.length unit do ignore (let arg = (HxArray.get (Obj.magic unit) (!_g2) : string) in (
+        ignore (let __old_42 = !_g2 in let __new_43 = HxInt.add __old_42 1 in (
+          ignore (_g2 := __new_43);
+          __new_43
+        ));
+        HxArray.push out arg
+      )) done
+    )) done);
+    out
+  )
+) in Obj.magic __fallback_result_45 with
+  | HxRuntime.Hx_return __ret_44 -> Obj.obj __ret_44
 
-let findUnsupportedLegacyTarget = fun args -> try let __fallback_result_45 = let _g = ref 0 in (
+let findUnsupportedLegacyTarget = fun args -> try let __fallback_result_49 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get (Obj.magic args) (!_g) : string) in (
-    ignore (let __old_42 = !_g in let __new_43 = HxInt.add __old_42 1 in (
-      ignore (_g := __new_43);
-      __new_43
+    ignore (let __old_46 = !_g in let __new_47 = HxInt.add __old_46 1 in (
+      ignore (_g := __new_47);
+      __new_47
     ));
     match a with
       | "--as3" | "-as3" -> raise (HxRuntime.Hx_return (Obj.repr ("as3" : string)))
@@ -215,15 +225,15 @@ let findUnsupportedLegacyTarget = fun args -> try let __fallback_result_45 = let
       | _ -> ignore ()
   )) done);
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_45 with
-  | HxRuntime.Hx_return __ret_44 -> Obj.obj __ret_44
+) in Obj.magic __fallback_result_49 with
+  | HxRuntime.Hx_return __ret_48 -> Obj.obj __ret_48
 
-let findSourceHostReflaxeTarget = fun args -> try let __fallback_result_47 = let reflaxeTarget = (getDefineValue (Obj.magic args) ("reflaxe-target" : string) : string) in (
+let findSourceHostReflaxeTarget = fun args -> try let __fallback_result_51 = let reflaxeTarget = (getDefineValue (Obj.magic args) ("reflaxe-target" : string) : string) in (
   ignore (if reflaxeTarget != Obj.magic (HxRuntime.hx_null) && HxString.length reflaxeTarget > 0 && not (HxString.equals reflaxeTarget "ocaml") then raise (HxRuntime.Hx_return (Obj.repr (reflaxeTarget : string))) else ());
   ignore (if getDefineValue (Obj.magic args) ("elixir_output" : string) != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("elixir" : string))) else ());
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_47 with
-  | HxRuntime.Hx_return __ret_46 -> Obj.obj __ret_46
+) in Obj.magic __fallback_result_51 with
+  | HxRuntime.Hx_return __ret_50 -> Obj.obj __ret_50
 
 let plan = fun shimArgs forwarded -> try let __fallback_result_10 = (
   ignore (if hasFlag (Obj.magic shimArgs) ("--target" : string) || hasFlag (Obj.magic shimArgs) ("--hxhx-target" : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "--target removed; use --ocaml, --ocaml-eval, Haxe --js <file>, or --compat") ["Dynamic"; "String"]) else ());
