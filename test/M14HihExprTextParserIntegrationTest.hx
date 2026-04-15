@@ -126,5 +126,27 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("expected local function declaration to lower to SVar lambda");
 		}
+
+		final contextualAsStmts = HxParser.parseFunctionBodyText('var as = new unit.MyAbstract.MyAbstractSetter(); as.value = "foo"; eq(as.value, "foo");');
+		assertTrue(contextualAsStmts.length == 3, "expected contextual `as` local plus two statements");
+		switch (contextualAsStmts[0]) {
+			case SVar(name, _, ENew(path, _), _):
+				assertTrue(name == "as", "expected `as` to parse as a local variable name");
+				assertTrue(path == "unit.MyAbstract.MyAbstractSetter", "expected constructor path after `as` local to parse");
+			case SExpr(EUnsupported(raw), _):
+				fail("contextual `as` local parsed as unsupported: " + raw);
+			case _:
+				fail("expected contextual `as` local declaration to parse");
+		}
+		switch (contextualAsStmts[1]) {
+			case SExpr(EBinop("=", EField(EIdent(name), field), EString(value)), _):
+				assertTrue(name == "as", "expected `as.value` assignment receiver to parse as identifier");
+				assertTrue(field == "value", "expected `as.value` assignment field to parse");
+				assertTrue(value == "foo", "expected assignment value to parse");
+			case SExpr(EUnsupported(raw), _):
+				fail("contextual `as` assignment parsed as unsupported: " + raw);
+			case _:
+				fail("expected contextual `as` assignment to parse");
+		}
 	}
 }

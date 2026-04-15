@@ -405,6 +405,12 @@ class HxParser {
 			case TIdent(name):
 				bump();
 				name;
+			case TKeyword(KAs):
+				// `as` is a keyword for import aliases, but upstream code can still use it as a
+				// value-level identifier. Keep the lexer keyworded and contextualize only where an
+				// identifier is explicitly expected.
+				bump();
+				"as";
 			case _:
 				fail("Expected " + label);
 		}
@@ -687,6 +693,9 @@ class HxParser {
 							ENew(typePath, args);
 						}
 					}
+				} else if (k == KAs) {
+					bump();
+					EIdent("as");
 				} else {
 					// Best-effort: capture the keyword as a string.
 					final raw = keywordText(k);
