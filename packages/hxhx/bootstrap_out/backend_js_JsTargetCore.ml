@@ -184,11 +184,145 @@ let emitUtestAssertGetTypeNameBody = fun writer value -> ignore ((
   Backend_js_JsWriter.writeln (Obj.magic writer) ("return \"`Unknown`\";" : string)
 ))
 
-let emitUtestAssertStaticFunctionBody = fun writer fnName params -> try let __fallback_result_56 = if HxString.equals fnName "getTypeName" then ignore ((
-  ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  ignore (emitUtestAssertGetTypeNameBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
-  raise (HxRuntime.Hx_return (Obj.repr true))
-)) else raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_56 with
+let emitUtestAssertSameAsBody = fun writer expected value status approx -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_typeName = function(v) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (v == null) return \"`null`\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (typeof v === \"boolean\") return \"Bool\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (typeof v === \"number\") return ((v | 0) === v) ? \"Int\" : \"Float\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (typeof v === \"function\") return \"function\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (typeof v === \"string\") return \"String\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (Array.isArray(v)) return \"Array\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (typeof v === \"object\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (v.__hx_enum_name != null) return String(v.__hx_enum_name);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (v.__hx_name != null) return String(v.__hx_name);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (v.constructor != null && v.constructor.__hx_name != null) return String(v.constructor.__hx_name);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return \"Object\";" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return \"`Unknown`\";" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_q = function(v) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (typeof v === \"string\") return \"\\\"\" + v.split(\"\\\"\").join(\"\\\\\\\"\") + \"\\\"\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("try { var s = JSON.stringify(v); return s == null ? String(v) : s; } catch (__hx_err) { return String(v); }" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_floatEquals = function(a, b) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (Number.isNaN(a)) return Number.isNaN(b);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (Number.isNaN(b)) return false;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (!Number.isFinite(a) && !Number.isFinite(b)) return (a > 0) === (b > 0);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var tolerance = " ^ HxString.toStdString approx) ^ " == null ? 1e-5 : ") ^ HxString.toStdString approx) ^ ";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return Math.abs(a - b) <= tolerance;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_setError = function(message) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((HxString.toStdString status ^ ".error = message + (") ^ HxString.toStdString status) ^ ".path === \"\" ? \"\" : \" for field \" + ") ^ HxString.toStdString status) ^ ".path);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return false;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_compare = function(e, v) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString status ^ ".expectedValue = e;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString status ^ ".actualValue = v;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var te = __hx_typeName(e);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var tv = __hx_typeName(v);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var numericPair = (te === \"Int\" && tv === \"Float\") || (te === \"Float\" && tv === \"Int\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (te !== tv && !numericPair) return __hx_setError(\"expected type \" + te + \" but it is \" + tv);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (te === \"Int\" || te === \"Float\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (!__hx_floatEquals(e, v)) return __hx_setError(\"expected \" + __hx_q(e) + \" but it is \" + __hx_q(v));" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return true;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (te === \"`null`\" || te === \"Bool\" || te === \"String\" || te === \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (e !== v) return __hx_setError(\"expected \" + __hx_q(e) + \" but it is \" + __hx_q(v));" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return true;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (Array.isArray(e)) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (!Array.isArray(v)) return __hx_setError(\"expected Array but it is \" + tv);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (" ^ HxString.toStdString status) ^ ".recursive || ") ^ HxString.toStdString status) ^ ".path === \"\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (e.length !== v.length) return __hx_setError(\"expected \" + e.length + \" elements but they are \" + v.length);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var arrayPath = " ^ HxString.toStdString status) ^ ".path;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var i = 0; i < e.length; i++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString status ^ ".path = arrayPath === \"\" ? \"array[\" + i + \"]\" : arrayPath + \"[\" + i + \"]\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (!__hx_compare(e[i], v[i])) return false;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString status ^ ".path = arrayPath;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return true;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (typeof e === \"object\" && e != null) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (typeof v !== \"object\" || v == null) return __hx_setError(\"expected Object but it is \" + tv);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (e.__hx_ctor != null || v.__hx_ctor != null) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (e.__hx_ctor !== v.__hx_ctor || (e.__hx_index | 0) !== (v.__hx_index | 0)) return __hx_setError(\"expected enum constructor \" + __hx_q(e.__hx_ctor) + \" but it is \" + __hx_q(v.__hx_ctor));" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var ep = Array.isArray(e.__hx_params) ? e.__hx_params : [];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var vp = Array.isArray(v.__hx_params) ? v.__hx_params : [];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (ep.length !== vp.length) return __hx_setError(\"expected \" + ep.length + \" enum params but they are \" + vp.length);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var enumPath = " ^ HxString.toStdString status) ^ ".path;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var ei = 0; ei < ep.length; ei++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString status ^ ".path = enumPath === \"\" ? \"enum[\" + ei + \"]\" : enumPath + \"[\" + ei + \"]\";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (!__hx_compare(ep[ei], vp[ei])) return false;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString status ^ ".path = enumPath;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return true;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (" ^ HxString.toStdString status) ^ ".recursive || ") ^ HxString.toStdString status) ^ ".path === \"\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var keys = Object.keys(e).filter(function(k) { return k.indexOf(\"__hx_\") !== 0 && typeof e[k] !== \"function\"; });" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var valueKeys = Object.keys(v).filter(function(k) { return k.indexOf(\"__hx_\") !== 0 && typeof v[k] !== \"function\"; });" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var objectPath = " ^ HxString.toStdString status) ^ ".path;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var ki = 0; ki < keys.length; ki++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var key = keys[ki];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (!Object.prototype.hasOwnProperty.call(v, key)) return __hx_setError(\"expected field \" + (objectPath === \"\" ? key : objectPath + \".\" + key) + \" does not exist in \" + __hx_q(v));" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString status ^ ".path = objectPath === \"\" ? key : objectPath + \".\" + key;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (!__hx_compare(e[key], v[key])) return false;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString status ^ ".path = objectPath;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var extras = valueKeys.filter(function(k) { return keys.indexOf(k) < 0; });" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (extras.length > 0) return __hx_setError(\"the tested object has extra field(s) (\" + extras.join(\", \") + \") not included in the expected ones\");" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return true;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return e === v;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (((("return __hx_compare(" ^ HxString.toStdString expected) ^ ", ") ^ HxString.toStdString value) ^ ");" : string)
+))
+
+let emitUtestAssertStaticFunctionBody = fun writer fnName params -> try let __fallback_result_56 = match fnName with
+  | "getTypeName" -> ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitUtestAssertGetTypeNameBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "sameAs" -> ignore ((
+    ignore (if HxArray.length params < 4 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitUtestAssertSameAsBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string) (HxArray.get (Obj.magic params) 2 : string) (HxArray.get (Obj.magic params) 3 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_56 with
   | HxRuntime.Hx_return __ret_55 -> Obj.obj __ret_55
 
 let emitFileSystemStaticFunctionBody = fun writer fnName params -> try let __fallback_result_58 = match fnName with

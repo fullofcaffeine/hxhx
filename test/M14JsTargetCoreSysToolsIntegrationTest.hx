@@ -142,8 +142,14 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function utestAssertModule():TypedModule {
 		final valueArg = new HxFunctionArg("v", "Dynamic", HxDefaultValue.NoDefault);
+		final expectedArg = new HxFunctionArg("expected", "Dynamic", HxDefaultValue.NoDefault);
+		final actualArg = new HxFunctionArg("value", "Dynamic", HxDefaultValue.NoDefault);
+		final statusArg = new HxFunctionArg("status", "Dynamic", HxDefaultValue.NoDefault);
+		final approxArg = new HxFunctionArg("approx", "Float", HxDefaultValue.NoDefault);
 		final assertClass = new HxClassDecl("Assert", false, [
-			new HxFunctionDecl("getTypeName", HxVisibility.Public, true, [valueArg], "String", unsupportedBody("body_parse_error"), "")
+			new HxFunctionDecl("getTypeName", HxVisibility.Public, true, [valueArg], "String", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("sameAs", HxVisibility.Public, true, [expectedArg, actualArg, statusArg, approxArg], "Bool",
+				unsupportedBody("body_parse_error"), "")
 		]);
 		final decl = new HxModuleDecl("utest", [], assertClass, [assertClass], false, false);
 		return typedModule("", decl, "utest/Assert.hx");
@@ -194,6 +200,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(Assert.getTypeName(12.5));',
 				'    Sys.println(Assert.getTypeName("hi"));',
 				'    Sys.println(Assert.getTypeName([1, 2]));',
+				'    var sameStatus = { recursive: true, path: "", error: null, expectedValue: null, actualValue: null };',
+				'    Sys.println(Assert.sameAs({ name: "utest", values: [1, 2] }, { name: "utest", values: [1, 2] }, sameStatus, 1e-5));',
+				'    Sys.println(Assert.sameAs({ name: "utest" }, { name: "other" }, sameStatus, 1e-5));',
+				'    Sys.println(sameStatus.error);',
 				"  }",
 				"}"
 			].join("\n");
@@ -229,6 +239,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_Lambda.flatten = function", "Lambda flatten shim should emit");
 			assertContains(js, "__hx_cls_Lambda.filter = function", "Lambda filter shim should emit");
 			assertContains(js, "__hx_cls_utest_Assert.getTypeName = function", "utest Assert getTypeName shim should emit");
+			assertContains(js, "__hx_cls_utest_Assert.sameAs = function", "utest Assert sameAs shim should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
@@ -250,6 +261,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "Float", "utest Assert.getTypeName should name float values");
 			assertContains(stdout, "String", "utest Assert.getTypeName should name string values");
 			assertContains(stdout, "Array", "utest Assert.getTypeName should name array values");
+			assertContains(stdout, "expected \"utest\" but it is \"other\"", "utest Assert.sameAs should report nested field mismatch");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
