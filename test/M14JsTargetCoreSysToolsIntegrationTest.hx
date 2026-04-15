@@ -213,8 +213,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	}
 
 	static function utestPlainTextReportModule():TypedModule {
+		final resultArg = new HxFunctionArg("result", "Dynamic", HxDefaultValue.NoDefault);
 		final reportClass = new HxClassDecl("PlainTextReport", false, [
 			new HxFunctionDecl("getResults", HxVisibility.Public, false, [], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("complete", HxVisibility.Private, false, [resultArg], "Void",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
 		]);
 		final decl = new HxModuleDecl("utest.ui.text", [], reportClass, [reportClass], false, false);
@@ -597,6 +600,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_utest_ui_text_PlainTextReport.prototype.getResults = function",
 				"utest PlainTextReport getResults should emit a string-safe runtime stub");
 			assertContains(js, "return \"\";", "utest PlainTextReport getResults should return a string");
+			assertContains(js, "__hx_cls_utest_ui_text_PlainTextReport.prototype.complete = function",
+				"utest PlainTextReport complete should emit JS-native completion logic");
+			assertContains(js, "process.exit(__hx_ok ? 0 : 1)", "utest PlainTextReport complete should preserve Node exit status");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasHeader = function", "utest ReportTools hasHeader shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.skipResult = function", "utest ReportTools skipResult shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasOutput = function", "utest ReportTools hasOutput shim should emit");

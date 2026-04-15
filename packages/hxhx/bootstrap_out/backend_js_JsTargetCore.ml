@@ -463,6 +463,14 @@ let emitUtestFixtureResultAddBody = fun writer assertation -> ignore ((
   Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)
 ))
 
+let emitUtestPlainTextReportCompleteBody = fun writer result -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("this.result = " ^ HxString.toStdString result) ^ ";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (this.handler != null) this.handler(this);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((("var __hx_ok = " ^ HxString.toStdString result) ^ " != null && ") ^ HxString.toStdString result) ^ ".stats != null && ") ^ HxString.toStdString result) ^ ".stats.isOk === true;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (typeof process !== \"undefined\" && process != null && typeof process.exit === \"function\") process.exit(__hx_ok ? 0 : 1);" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)
+))
+
 let emitKnownInstanceFunctionBody = fun writer fullName fnName params -> try let __fallback_result_92 = (
   ignore (if HxString.equals fullName "utest.Dispatcher" || HxString.equals fullName "utest.Notifier" then raise (HxRuntime.Hx_return (Obj.repr (emitUtestDispatcherInstanceFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params) (HxString.equals fullName "utest.Notifier")))) else ());
   ignore (if HxString.equals fullName "utest.TestHandler" && HxString.equals fnName "execute" then ignore ((
@@ -476,6 +484,11 @@ let emitKnownInstanceFunctionBody = fun writer fullName fnName params -> try let
   )) else ());
   ignore (if HxString.equals fullName "utest.ui.text.PlainTextReport" && HxString.equals fnName "getResults" then ignore ((
     ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return \"\";" : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
+  ignore (if HxString.equals fullName "utest.ui.text.PlainTextReport" && HxString.equals fnName "complete" then ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitUtestPlainTextReportCompleteBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
   false

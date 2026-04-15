@@ -516,6 +516,13 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		}
 
+		if (fullName == "utest.ui.text.PlainTextReport" && fnName == "complete") {
+			if (params.length < 1)
+				return false;
+			emitUtestPlainTextReportCompleteBody(writer, params[0]);
+			return true;
+		}
+
 		return false;
 	}
 
@@ -717,6 +724,14 @@ class JsTargetCore implements ITargetCore {
 		writer.popIndent();
 		writer.popIndent();
 		writer.writeln("}");
+		writer.writeln("return null;");
+	}
+
+	static function emitUtestPlainTextReportCompleteBody(writer:JsWriter, result:String):Void {
+		writer.writeln("this.result = " + result + ";");
+		writer.writeln("if (this.handler != null) this.handler(this);");
+		writer.writeln("var __hx_ok = " + result + " != null && " + result + ".stats != null && " + result + ".stats.isOk === true;");
+		writer.writeln("if (typeof process !== \"undefined\" && process != null && typeof process.exit === \"function\") process.exit(__hx_ok ? 0 : 1);");
 		writer.writeln("return null;");
 	}
 
