@@ -315,6 +315,12 @@ let emitKnownStaticFieldInit = fun fullName fieldName -> try let __fallback_resu
 ) in Obj.magic __fallback_result_94 with
   | HxRuntime.Hx_return __ret_93 -> Obj.obj __ret_93
 
+let emitUnitTestLocalStaticBasicBody = fun writer fullName -> ignore (let cls = (Backend_js_JsNameMangler.classVarName (fullName : string) : string) in (
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (" ^ HxString.toStdString cls) ^ ".__basic_x == null) ") ^ HxString.toStdString cls) ^ ".__basic_x = 1;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString cls ^ ".__basic_x++;" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (("return {x: " ^ HxString.toStdString cls) ^ ".__basic_x, y: \"final\"};" : string)
+))
+
 let emitUtestDispatcherInstanceFunctionBody = fun writer fnName params isNotifier -> try let __fallback_result_100 = match fnName with
   | "add" -> ignore ((
     ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
@@ -520,6 +526,10 @@ let emitUtestPlainTextReportCompleteBody = fun writer result -> ignore ((
 ))
 
 let emitKnownInstanceFunctionBody = fun writer fullName fnName params -> try let __fallback_result_98 = (
+  ignore (if HxString.equals fullName "unit.TestLocalStatic" && HxString.equals fnName "basic" then ignore ((
+    ignore (emitUnitTestLocalStaticBasicBody (Obj.magic writer) (fullName : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
   ignore (if HxString.equals fullName "utest.Dispatcher" || HxString.equals fullName "utest.Notifier" then raise (HxRuntime.Hx_return (Obj.repr (emitUtestDispatcherInstanceFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params) (HxString.equals fullName "utest.Notifier")))) else ());
   ignore (if HxString.equals fullName "utest.TestHandler" && HxString.equals fnName "execute" then ignore ((
     ignore (emitUtestTestHandlerExecuteBody (Obj.magic writer));

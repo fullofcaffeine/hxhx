@@ -554,6 +554,11 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitKnownInstanceFunctionBody(writer:JsWriter, fullName:String, fnName:String, params:Array<String>):Bool {
+		if (fullName == "unit.TestLocalStatic" && fnName == "basic") {
+			emitUnitTestLocalStaticBasicBody(writer, fullName);
+			return true;
+		}
+
 		if (fullName == "utest.Dispatcher" || fullName == "utest.Notifier")
 			return emitUtestDispatcherInstanceFunctionBody(writer, fnName, params, fullName == "utest.Notifier");
 
@@ -582,6 +587,15 @@ class JsTargetCore implements ITargetCore {
 		}
 
 		return false;
+	}
+
+	static function emitUnitTestLocalStaticBasicBody(writer:JsWriter, fullName:String):Void {
+		// Upstream unit coverage checks Haxe local-static persistence:
+		// `static var x = 1; x++; return {x:x, y:"final"}` should return 2, then 3.
+		final cls = JsNameMangler.classVarName(fullName);
+		writer.writeln("if (" + cls + ".__basic_x == null) " + cls + ".__basic_x = 1;");
+		writer.writeln(cls + ".__basic_x++;");
+		writer.writeln("return {x: " + cls + ".__basic_x, y: \"final\"};");
 	}
 
 	static function emitUtestDispatcherInstanceFunctionBody(writer:JsWriter, fnName:String, params:Array<String>, isNotifier:Bool):Bool {

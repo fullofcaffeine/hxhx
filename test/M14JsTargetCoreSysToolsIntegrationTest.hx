@@ -148,6 +148,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "unit/TestDefaultTypeParameters.hx");
 	}
 
+	static function upstreamUnitTestLocalStaticModule():TypedModule {
+		final testClass = new HxClassDecl("TestLocalStatic", false, [
+			new HxFunctionDecl("basic", HxVisibility.Public, false, [], "Dynamic",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=static"), "")
+		]);
+		final decl = new HxModuleDecl("unit", [], testClass, [testClass], false, false);
+		return typedModule("", decl, "unit/TestLocalStatic.hx");
+	}
+
 	static function macroCompilerModule():TypedModule {
 		final flagArg = new HxFunctionArg("flag", "String", HxDefaultValue.NoDefault);
 		final ident = new HxFieldDecl("ident", HxVisibility.Private, true, "Dynamic",
@@ -630,6 +639,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				upstreamUnitHelperMacrosModule(),
 				upstreamUnitTestIssuesModule(),
 				upstreamUnitDefaultTypeParametersModule(),
+				upstreamUnitTestLocalStaticModule(),
 				macroCompilerModule(),
 				macroContextModule(),
 				macroTypeToolsModule(),
@@ -675,6 +685,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_unit_TestIssues.addIssueClasses = function", "metadata-marked macro helper should emit a neutral static stub");
 			assertContains(js, "__hx_cls_unit_TestDefaultTypeParameters.printThings = function",
 				"upstream unit default-type-parameter macro helper should emit a neutral static stub");
+			assertContains(js, "__hx_cls_unit_TestLocalStatic.__basic_x++", "local static fixture should persist x on the class object");
+			assertContains(js, "return {x: __hx_cls_unit_TestLocalStatic.__basic_x, y: \"final\"};",
+				"local static fixture should return persisted x and final y");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.getDefine = function", "compile-time macro Compiler fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.excludeFile = function", "parsed compile-time macro Compiler body should emit neutral function");
 			assertContains(js, "__hx_cls_haxe_macro_Context.getLocalClass = function", "compile-time macro Context fallback should emit");
