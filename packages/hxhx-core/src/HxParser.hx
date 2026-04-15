@@ -1503,7 +1503,7 @@ class HxParser {
 				bump();
 				bump();
 				EBinop(op, parseUnaryExpr(stop), EInt(1));
-			case TOther(c) if (c == "!".code || c == "-".code || c == "+".code):
+			case TOther(c) if (c == "!".code || c == "-".code || c == "+".code || c == "~".code):
 				final op = String.fromCharCode(c);
 				bump();
 				EUnop(op, parseUnaryExpr(stop));

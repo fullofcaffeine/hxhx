@@ -12161,7 +12161,7 @@ and parseUnaryExpr = fun self (stop : unit -> bool) -> try let __fallback_result
                 __assign_1422
               )
             )
-          ) else let c2 = _g2 in if c2 = 33 || c2 = 45 || c2 = 43 then let op = (HxString.fromCharCode c2 : string) in (
+          ) else let c2 = _g2 in if c2 = 33 || c2 = 45 || c2 = 43 || c2 = 126 then let op = (HxString.fromCharCode c2 : string) in (
             ignore (if (Obj.magic self : t).peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
               ignore (let __assign_1423 = Obj.magic ((Obj.magic self : t).peeked1) in (
                 (Obj.magic self : t).cur <- __assign_1423;
