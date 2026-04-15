@@ -1952,15 +1952,59 @@ class Stage3Compiler {
 			}
 		}
 
-		// Diagnostic rung: stop after macros + typing so we can iterate Stage4 macro model and Stage3 typer
-		// coverage without paying backend setup/IR expansion costs that cannot affect a no-output result.
-		if (noEmit) {
-			final selectedNoEmit = BackendRegistry.descriptorForTarget(backendId);
-			if (selectedNoEmit == null) {
-				closeMacroSession();
-				return error("backend descriptor not found after selection: " + backendId);
+		final providerDefines = allDefines.copy();
+		for (name in hxhx.macro.MacroState.listDefineNames()) {
+			final value = hxhx.macro.MacroState.definedValue(name);
+			if (value == null || value.length == 0 || value == "1") {
+				providerDefines.push(name);
+			} else {
+				providerDefines.push(name + "=" + value);
 			}
-			if (selectedNoEmit.capabilities.supportsNoEmit != true) {
+		}
+		try {
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=before_load_dynamic_backend_providers");
+			}
+			loadDynamicBackendProviders(providerDefines);
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=after_load_dynamic_backend_providers");
+			}
+		} catch (e:String) {
+			closeMacroSession();
+			return error("backend provider setup failed: " + e);
+		}
+		final backend = try {
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=before_resolve_builtin_backend id=" + backendId);
+			}
+			resolveBuiltinBackend(backendId);
+		} catch (e:String) {
+			closeMacroSession();
+			return error("backend setup failed: " + e);
+		}
+		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+			Sys.println("stage3_driver=after_resolve_builtin_backend");
+		}
+		final selected = BackendRegistry.descriptorForTarget(backendId);
+		if (isTrueEnv("HXHX_TRACE_BACKEND_SELECTION")) {
+			if (selected == null) {
+				Sys.println("backend_selected_impl=<unknown>");
+			} else {
+				Sys.println("backend_selected_impl=" + selected.implId);
+			}
+		}
+		if (selected == null) {
+			closeMacroSession();
+			return error("backend descriptor not found after selection: " + backendId);
+		}
+		final backendCaps = selected.capabilities;
+		final supportsCustomOutputFile:Bool = backendCaps.supportsCustomOutputFile == true;
+		final supportsBuildExecutable:Bool = backendCaps.supportsBuildExecutable == true;
+
+		// Diagnostic rung: stop after macros, typing, and backend selection so we can iterate Stage4
+		// macro model and Stage3 typer coverage without paying IR expansion or backend emit costs.
+		if (noEmit) {
+			if (backendCaps.supportsNoEmit != true) {
 				closeMacroSession();
 				return error("backend does not support --hxhx-no-emit: " + backendId);
 			}
@@ -2033,54 +2077,6 @@ class Stage3Compiler {
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 			Sys.println("stage3_driver=after_expand");
 		}
-		final providerDefines = allDefines.copy();
-		for (name in hxhx.macro.MacroState.listDefineNames()) {
-			final value = hxhx.macro.MacroState.definedValue(name);
-			if (value == null || value.length == 0 || value == "1") {
-				providerDefines.push(name);
-			} else {
-				providerDefines.push(name + "=" + value);
-			}
-		}
-		try {
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=before_load_dynamic_backend_providers");
-			}
-			loadDynamicBackendProviders(providerDefines);
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=after_load_dynamic_backend_providers");
-			}
-		} catch (e:String) {
-			closeMacroSession();
-			return error("backend provider setup failed: " + e);
-		}
-		final backend = try {
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=before_resolve_builtin_backend id=" + backendId);
-			}
-			resolveBuiltinBackend(backendId);
-		} catch (e:String) {
-			closeMacroSession();
-			return error("backend setup failed: " + e);
-		}
-		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=after_resolve_builtin_backend");
-		}
-		final selected = BackendRegistry.descriptorForTarget(backendId);
-		if (isTrueEnv("HXHX_TRACE_BACKEND_SELECTION")) {
-			if (selected == null) {
-				Sys.println("backend_selected_impl=<unknown>");
-			} else {
-				Sys.println("backend_selected_impl=" + selected.implId);
-			}
-		}
-		if (selected == null) {
-			closeMacroSession();
-			return error("backend descriptor not found after selection: " + backendId);
-		}
-		final backendCaps = selected.capabilities;
-		final supportsCustomOutputFile:Bool = backendCaps.supportsCustomOutputFile == true;
-		final supportsBuildExecutable:Bool = backendCaps.supportsBuildExecutable == true;
 
 		// Bring-up diagnostics: dump HXHX_* defines again after hooks.
 		for (name in hxhx.macro.MacroState.listDefineNames()) {
