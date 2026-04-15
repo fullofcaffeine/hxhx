@@ -1691,9 +1691,12 @@ let allowStaticBodyFallback = fun unit fnName reason -> try let __fallback_resul
 
 let isUpstreamUnitMacroHelper = fun fullName -> HxString.equals fullName "unit.HelperMacros"
 
+let isUpstreamUnitCompileTimeMacroHelper = fun fullName fnName -> HxString.equals fullName "unit.TestDefaultTypeParameters" && HxString.equals fnName "printThings"
+
 let shouldEmitNeutralStaticFunctionBody = fun fullName fnName -> try let __fallback_result_126 = (
   ignore (if isCompileTimeMacroApi (fullName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if isUpstreamUnitMacroHelper (fullName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if isUpstreamUnitCompileTimeMacroHelper (fullName : string) (fnName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   HxString.equals fullName "Macro" && isCompileTimeMacroFallback (fnName : string)
 ) in Obj.magic __fallback_result_126 with
   | HxRuntime.Hx_return __ret_125 -> Obj.obj __ret_125

@@ -130,6 +130,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "unit/HelperMacros.hx");
 	}
 
+	static function upstreamUnitDefaultTypeParametersModule():TypedModule {
+		final testClass = new HxClassDecl("TestDefaultTypeParameters", false, [
+			new HxFunctionDecl("printThings", HxVisibility.Public, true, [], "Array<String>",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=5"), "")
+		]);
+		final decl = new HxModuleDecl("unit", [], testClass, [testClass], false, false);
+		return typedModule("", decl, "unit/TestDefaultTypeParameters.hx");
+	}
+
 	static function macroCompilerModule():TypedModule {
 		final flagArg = new HxFunctionArg("flag", "String", HxDefaultValue.NoDefault);
 		final ident = new HxFieldDecl("ident", HxVisibility.Private, true, "Dynamic",
@@ -610,6 +619,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				lambdaModule(),
 				macroModule(),
 				upstreamUnitHelperMacrosModule(),
+				upstreamUnitDefaultTypeParametersModule(),
 				macroCompilerModule(),
 				macroContextModule(),
 				macroTypeToolsModule(),
@@ -652,6 +662,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_Macro.stripWhitespaces = function", "compile-time Macro fallback should emit");
 			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");
 			assertContains(js, "__hx_cls_unit_HelperMacros.getCompilationDate = function", "upstream unit macro helper should emit a neutral static stub");
+			assertContains(js, "__hx_cls_unit_TestDefaultTypeParameters.printThings = function",
+				"upstream unit default-type-parameter macro helper should emit a neutral static stub");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.getDefine = function", "compile-time macro Compiler fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.excludeFile = function", "parsed compile-time macro Compiler body should emit neutral function");
 			assertContains(js, "__hx_cls_haxe_macro_Context.getLocalClass = function", "compile-time macro Context fallback should emit");

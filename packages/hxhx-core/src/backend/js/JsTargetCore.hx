@@ -1877,6 +1877,8 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		if (isUpstreamUnitMacroHelper(fullName))
 			return true;
+		if (isUpstreamUnitCompileTimeMacroHelper(fullName, fnName))
+			return true;
 		return fullName == "Macro" && isCompileTimeMacroFallback(fnName);
 	}
 
@@ -1931,6 +1933,14 @@ class JsTargetCore implements ITargetCore {
 		// JS-native can see that module in the output graph after macro expansion, but
 		// its macro bodies are not runtime code and should not be lowered into JS.
 		return fullName == "unit.HelperMacros";
+	}
+
+	static function isUpstreamUnitCompileTimeMacroHelper(fullName:String, fnName:String):Bool {
+		// `unit.TestDefaultTypeParameters.printThings` is a macro-only helper whose call
+		// is expanded before runtime. Until the JS graph pruner drops macro-only methods,
+		// emit a neutral stub for the leftover declaration instead of lowering macro AST
+		// construction code into runtime JavaScript.
+		return fullName == "unit.TestDefaultTypeParameters" && fnName == "printThings";
 	}
 
 	static function resolveMainRef(main:String, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>):Null<String> {
