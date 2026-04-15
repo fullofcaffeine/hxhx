@@ -166,6 +166,12 @@ let emitRuntimePrelude = fun writer -> ignore ((
   Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string)
 ))
 
+let emitKnownStaticFieldInit = fun fullName fieldName -> try let __fallback_result_55 = (
+  ignore (if HxString.equals fullName "utest.ui.text.HtmlReport" && HxString.equals fieldName "platform" then raise (HxRuntime.Hx_return (Obj.repr (Backend_js_JsNameMangler.quoteString ("javascript" : string) : string))) else ());
+  Obj.magic (HxRuntime.hx_null)
+) in Obj.magic __fallback_result_55 with
+  | HxRuntime.Hx_return __ret_54 -> Obj.obj __ret_54
+
 let emitUtestAssertGetTypeNameBody = fun writer value -> ignore ((
   ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (" ^ HxString.toStdString value) ^ " == null) return \"`null`\";" : string));
   ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString value) ^ " === \"boolean\") return \"Bool\";" : string));
@@ -311,7 +317,7 @@ let emitUtestAssertSameAsBody = fun writer expected value status approx -> ignor
   Backend_js_JsWriter.writeln (Obj.magic writer) (((("return __hx_compare(" ^ HxString.toStdString expected) ^ ", ") ^ HxString.toStdString value) ^ ");" : string)
 ))
 
-let emitUtestAssertStaticFunctionBody = fun writer fnName params -> try let __fallback_result_56 = match fnName with
+let emitUtestAssertStaticFunctionBody = fun writer fnName params -> try let __fallback_result_59 = match fnName with
   | "getTypeName" -> ignore ((
     ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     ignore (emitUtestAssertGetTypeNameBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
@@ -322,10 +328,10 @@ let emitUtestAssertStaticFunctionBody = fun writer fnName params -> try let __fa
     ignore (emitUtestAssertSameAsBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string) (HxArray.get (Obj.magic params) 2 : string) (HxArray.get (Obj.magic params) 3 : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   ))
-  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_56 with
-  | HxRuntime.Hx_return __ret_55 -> Obj.obj __ret_55
+  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_59 with
+  | HxRuntime.Hx_return __ret_58 -> Obj.obj __ret_58
 
-let emitFileSystemStaticFunctionBody = fun writer fnName params -> try let __fallback_result_58 = match fnName with
+let emitFileSystemStaticFunctionBody = fun writer fnName params -> try let __fallback_result_61 = match fnName with
   | "absolutePath" | "fullPath" -> ignore ((
     ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let path = (HxArray.get (Obj.magic params) 0 : string) in (
@@ -384,8 +390,8 @@ let emitFileSystemStaticFunctionBody = fun writer fnName params -> try let __fal
     ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   ))
-  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_58 with
-  | HxRuntime.Hx_return __ret_57 -> Obj.obj __ret_57
+  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_61 with
+  | HxRuntime.Hx_return __ret_60 -> Obj.obj __ret_60
 
 let emitLambdaPushIterable = fun writer iterable iteratorName indexName itemName -> (
   ignore itemName;
@@ -480,7 +486,7 @@ let emitLambdaFlatMapBody = fun writer iterable mapper -> ignore ((
   Backend_js_JsWriter.writeln (Obj.magic writer) ("return __hx_out;" : string)
 ))
 
-let emitLambdaStaticFunctionBody = fun writer fnName params -> try let __fallback_result_60 = match fnName with
+let emitLambdaStaticFunctionBody = fun writer fnName params -> try let __fallback_result_63 = match fnName with
   | "filter" -> ignore ((
     ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     ignore (emitLambdaFilterBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string));
@@ -496,8 +502,8 @@ let emitLambdaStaticFunctionBody = fun writer fnName params -> try let __fallbac
     ignore (emitLambdaFlattenBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   ))
-  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_60 with
-  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59
+  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_63 with
+  | HxRuntime.Hx_return __ret_62 -> Obj.obj __ret_62
 
 let emitPathFileStemSetup = fun writer path -> ignore ((
   ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString path ^ " = String(") ^ HxString.toStdString path) ^ ");" : string));
@@ -645,7 +651,7 @@ let emitPathEscapeBody = fun writer path allowSlashes -> ignore ((
   Backend_js_JsWriter.writeln (Obj.magic writer) (("return " ^ HxString.toStdString allowSlashes) ^ " ? __hx_encoded.split(\"%2F\").join(\"/\").split(\"%2f\").join(\"/\") : __hx_encoded;" : string)
 ))
 
-let emitPathStaticFunctionBody = fun writer fnName params -> try let __fallback_result_62 = match fnName with
+let emitPathStaticFunctionBody = fun writer fnName params -> try let __fallback_result_65 = match fnName with
   | "addTrailingSlash" -> ignore ((
     ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     ignore (emitPathAddTrailingSlashBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
@@ -706,10 +712,10 @@ let emitPathStaticFunctionBody = fun writer fnName params -> try let __fallback_
     ignore (emitPathWithoutExtensionBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   ))
-  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_62 with
-  | HxRuntime.Hx_return __ret_61 -> Obj.obj __ret_61
+  | _ -> raise (HxRuntime.Hx_return (Obj.repr false)) in Obj.magic __fallback_result_65 with
+  | HxRuntime.Hx_return __ret_64 -> Obj.obj __ret_64
 
-let emitKnownStaticFunctionBody = fun writer fullName fnName params -> try let __fallback_result_54 = (
+let emitKnownStaticFunctionBody = fun writer fullName fnName params -> try let __fallback_result_57 = (
   ignore (if HxString.equals fullName "Lambda" then raise (HxRuntime.Hx_return (Obj.repr (emitLambdaStaticFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params)))) else ());
   ignore (if HxString.equals fullName "haxe.io.Path" then raise (HxRuntime.Hx_return (Obj.repr (emitPathStaticFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params)))) else ());
   ignore (if HxString.equals fullName "sys.FileSystem" then raise (HxRuntime.Hx_return (Obj.repr (emitFileSystemStaticFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params)))) else ());
@@ -780,12 +786,12 @@ let emitKnownStaticFunctionBody = fun writer fullName fnName params -> try let _
       )
     ))
     | _ -> raise (HxRuntime.Hx_return (Obj.repr false))
-) in Obj.magic __fallback_result_54 with
-  | HxRuntime.Hx_return __ret_53 -> Obj.obj __ret_53
+) in Obj.magic __fallback_result_57 with
+  | HxRuntime.Hx_return __ret_56 -> Obj.obj __ret_56
 
 let buildClassRefs = fun bySimpleName byFullName -> let merged = Obj.magic (HxMap.create_string ()) in (
-  ignore (let _g = HxIterator.of_array (HxMap.pairs_string byFullName) in while (let __iter_63 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_63)) () do ignore (let _g2 = (let __iter_64 = _g in fun () -> HxIterator.next (Obj.magic __iter_64)) () in let fullName = (fst _g2 : string) in let jsRef = (snd _g2 : string) in HxMap.set_string merged fullName jsRef) done);
-  ignore (let _g = HxIterator.of_array (HxMap.pairs_string bySimpleName) in while (let __iter_65 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_65)) () do ignore (let _g2 = (let __iter_66 = _g in fun () -> HxIterator.next (Obj.magic __iter_66)) () in let simpleName = (fst _g2 : string) in let jsRef = (snd _g2 : string) in if not (HxMap.exists_string merged simpleName) then ignore (HxMap.set_string merged simpleName jsRef) else ()) done);
+  ignore (let _g = HxIterator.of_array (HxMap.pairs_string byFullName) in while (let __iter_66 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_66)) () do ignore (let _g2 = (let __iter_67 = _g in fun () -> HxIterator.next (Obj.magic __iter_67)) () in let fullName = (fst _g2 : string) in let jsRef = (snd _g2 : string) in HxMap.set_string merged fullName jsRef) done);
+  ignore (let _g = HxIterator.of_array (HxMap.pairs_string bySimpleName) in while (let __iter_68 = _g in fun () -> HxIterator.hasNext (Obj.magic __iter_68)) () do ignore (let _g2 = (let __iter_69 = _g in fun () -> HxIterator.next (Obj.magic __iter_69)) () in let simpleName = (fst _g2 : string) in let jsRef = (snd _g2 : string) in if not (HxMap.exists_string merged simpleName) then ignore (HxMap.set_string merged simpleName jsRef) else ()) done);
   merged
 )
 
@@ -793,29 +799,29 @@ let isCompileTimeMacroApi = fun fullName -> fullName != Obj.magic (HxRuntime.hx_
 
 let allowStaticFieldFallback = fun unit fieldName reason -> (
   ignore fieldName;
-  try let __fallback_result_70 = let isUnsupportedExpr = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "[js-native:unsupported_expr]" 0 <> -1 in (
+  try let __fallback_result_73 = let isUnsupportedExpr = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "[js-native:unsupported_expr]" 0 <> -1 in (
     ignore (if not (isUnsupportedExpr) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     isCompileTimeMacroApi (Obj.obj (HxAnon.get unit "fullName") : string)
-  ) in Obj.magic __fallback_result_70 with
-    | HxRuntime.Hx_return __ret_69 -> Obj.obj __ret_69
+  ) in Obj.magic __fallback_result_73 with
+    | HxRuntime.Hx_return __ret_72 -> Obj.obj __ret_72
 )
 
 let isCompileTimeMacroFallback = fun fnName -> HxString.equals fnName "register" || HxString.equals fnName "run" || HxString.equals fnName "test" || HxString.equals fnName "stripWhitespaces" || HxString.equals fnName "extractJs" || HxString.equals fnName "getOutput"
 
-let allowStaticBodyFallback = fun unit fnName reason -> try let __fallback_result_68 = let isBodyParseError = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "body_parse_error" 0 <> -1 in let isUnsupportedExpr = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "[js-native:unsupported_expr]" 0 <> -1 in (
+let allowStaticBodyFallback = fun unit fnName reason -> try let __fallback_result_71 = let isBodyParseError = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "body_parse_error" 0 <> -1 in let isUnsupportedExpr = reason != Obj.magic (HxRuntime.hx_null) && HxString.indexOf reason "[js-native:unsupported_expr]" 0 <> -1 in (
   ignore (if not (isBodyParseError) && not (isUnsupportedExpr) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   ignore (if isBodyParseError && HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "haxe.io.FPHelper" && fnName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fnName : string) ("_" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if isCompileTimeMacroApi (Obj.obj (HxAnon.get unit "fullName") : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxString.equals (Obj.obj (HxAnon.get unit "fullName")) "Macro" && isCompileTimeMacroFallback (fnName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   false
-) in Obj.magic __fallback_result_68 with
-  | HxRuntime.Hx_return __ret_67 -> Obj.obj __ret_67
+) in Obj.magic __fallback_result_71 with
+  | HxRuntime.Hx_return __ret_70 -> Obj.obj __ret_70
 
-let shouldEmitNeutralStaticFunctionBody = fun fullName fnName -> try let __fallback_result_72 = (
+let shouldEmitNeutralStaticFunctionBody = fun fullName fnName -> try let __fallback_result_75 = (
   ignore (if isCompileTimeMacroApi (fullName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   HxString.equals fullName "Macro" && isCompileTimeMacroFallback (fnName : string)
-) in Obj.magic __fallback_result_72 with
-  | HxRuntime.Hx_return __ret_71 -> Obj.obj __ret_71
+) in Obj.magic __fallback_result_75 with
+  | HxRuntime.Hx_return __ret_74 -> Obj.obj __ret_74
 
 let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let tempBool = ref (false : bool) in (
   ignore (let fullName = (Obj.obj (HxAnon.get unit "fullName") : string) in let __assign_30 = fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.lib." : string) in (
@@ -840,59 +846,62 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let temp
             __new_33
           ));
           ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) then raise (HxRuntime.Hx_continue) else ());
-          let suffix = (Backend_js_JsNameMangler.propertySuffix (HxFieldDecl.getName (Obj.magic field) : string) : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in let tempString = ref ("" : string) in (
-            ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_34 = ("null" : string) in (
-              tempString := __assign_34;
+          let suffix = (Backend_js_JsNameMangler.propertySuffix (HxFieldDecl.getName (Obj.magic field) : string) : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in let knownInit = (emitKnownStaticFieldInit (Obj.obj (HxAnon.get unit "fullName") : string) (HxFieldDecl.getName (Obj.magic field) : string) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+            ignore (if knownInit != Obj.magic (HxRuntime.hx_null) then let __assign_34 = Obj.magic (knownInit : string) in (
+              tempMaybeString := __assign_34;
               __assign_34
-            ) else try let __assign_35 = (Backend_js_JsExprEmitter.emit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Backend_js_JsFunctionScope.exprScope (Obj.magic staticScope) ()) : string) in (
-              tempString := __assign_35;
+            ) else if init == Obj.magic (HxRuntime.hx_null) then let __assign_35 = Obj.magic ("null" : string) in (
+              tempMaybeString := __assign_35;
               __assign_35
+            ) else try let __assign_36 = Obj.magic (Backend_js_JsExprEmitter.emit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Backend_js_JsFunctionScope.exprScope (Obj.magic staticScope) ()) : string) in (
+              tempMaybeString := __assign_36;
+              __assign_36
             ) with
               | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
               | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-              | HxRuntime.Hx_return __ret_36 -> raise (HxRuntime.Hx_return __ret_36)
-              | HxRuntime.Hx_exception (__exn_v_37, __exn_tags_38) -> if HxRuntime.tags_has __exn_tags_38 "String" then let e = (Obj.obj __exn_v_37 : string) in (
+              | HxRuntime.Hx_return __ret_37 -> raise (HxRuntime.Hx_return __ret_37)
+              | HxRuntime.Hx_exception (__exn_v_38, __exn_tags_39) -> if HxRuntime.tags_has __exn_tags_39 "String" then let e = (Obj.obj __exn_v_38 : string) in (
                 ignore e;
-                if allowStaticFieldFallback unit (HxFieldDecl.getName (Obj.magic field) : string) (e : string) then let __assign_40 = ("null" : string) in (
-                  tempString := __assign_40;
+                if allowStaticFieldFallback unit (HxFieldDecl.getName (Obj.magic field) : string) (e : string) then let __assign_41 = Obj.magic ("null" : string) in (
+                  tempMaybeString := __assign_41;
+                  __assign_41
+                ) else HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString e ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFieldDecl.getName (Obj.magic field))) ^ " (static field init)")) ["Dynamic"; "String"]
+              ) else if true then let error = (if HxRuntime.tags_has __exn_tags_39 "haxe.Exception" then Obj.obj __exn_v_38 else Obj.magic (Haxe_ValueException.create __exn_v_38 (Obj.magic (HxRuntime.hx_null)) __exn_v_38) : Haxe_Exception.t) in (
+                ignore error;
+                if allowStaticFieldFallback unit (HxFieldDecl.getName (Obj.magic field) : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string) then let __assign_40 = Obj.magic ("null" : string) in (
+                  tempMaybeString := __assign_40;
                   __assign_40
-                ) else HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString e ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFieldDecl.getName (Obj.magic field))) ^ " (static field init)")) ["Dynamic"; "String"]
-              ) else if true then let error = (if HxRuntime.tags_has __exn_tags_38 "haxe.Exception" then Obj.obj __exn_v_37 else Obj.magic (Haxe_ValueException.create __exn_v_37 (Obj.magic (HxRuntime.hx_null)) __exn_v_37) : Haxe_Exception.t) in (
-                ignore error;
-                if allowStaticFieldFallback unit (HxFieldDecl.getName (Obj.magic field) : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string) then let __assign_39 = ("null" : string) in (
-                  tempString := __assign_39;
-                  __assign_39
                 ) else HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFieldDecl.getName (Obj.magic field))) ^ " (static field init)")) ["Dynamic"; "String"]
-              ) else HxRuntime.hx_throw_typed __exn_v_37 __exn_tags_38
-              | __exn_41 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_41) : string) in (
+              ) else HxRuntime.hx_throw_typed __exn_v_38 __exn_tags_39
+              | __exn_42 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_42) : string) in (
                 ignore e;
-                if allowStaticFieldFallback unit (HxFieldDecl.getName (Obj.magic field) : string) (e : string) then let __assign_43 = ("null" : string) in (
-                  tempString := __assign_43;
-                  __assign_43
+                if allowStaticFieldFallback unit (HxFieldDecl.getName (Obj.magic field) : string) (e : string) then let __assign_44 = Obj.magic ("null" : string) in (
+                  tempMaybeString := __assign_44;
+                  __assign_44
                 ) else HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString e ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFieldDecl.getName (Obj.magic field))) ^ " (static field init)")) ["Dynamic"; "String"]
-              ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_41) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_41) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_41)) : Haxe_Exception.t) in (
+              ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_42) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_42) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_42)) : Haxe_Exception.t) in (
                 ignore error;
-                if allowStaticFieldFallback unit (HxFieldDecl.getName (Obj.magic field) : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string) then let __assign_42 = ("null" : string) in (
-                  tempString := __assign_42;
-                  __assign_42
+                if allowStaticFieldFallback unit (HxFieldDecl.getName (Obj.magic field) : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string) then let __assign_43 = Obj.magic ("null" : string) in (
+                  tempMaybeString := __assign_43;
+                  __assign_43
                 ) else HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFieldDecl.getName (Obj.magic field))) ^ " (static field init)")) ["Dynamic"; "String"]
-              ) else raise (__exn_41));
-            let value = (!tempString : string) in Backend_js_JsWriter.writeln (Obj.magic writer) ((((HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ HxString.toStdString suffix) ^ " = ") ^ HxString.toStdString value) ^ ";" : string)
+              ) else raise (__exn_42));
+            let value = (!tempMaybeString : string) in Backend_js_JsWriter.writeln (Obj.magic writer) ((((HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ HxString.toStdString suffix) ^ " = ") ^ HxString.toStdString value) ^ ";" : string)
           )
         )) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
         let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-          ignore (let __old_44 = !_g in let __new_45 = HxInt.add __old_44 1 in (
-            ignore (_g := __new_45);
-            __new_45
+          ignore (let __old_45 = !_g in let __new_46 = HxInt.add __old_45 1 in (
+            ignore (_g := __new_46);
+            __new_46
           ));
           ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) then raise (HxRuntime.Hx_continue) else ());
           let fnScope = Obj.magic (Backend_js_JsFunctionScope.create (Obj.magic classRefs)) in let params = Obj.magic (HxArray.create ()) in (
             ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in while !_g2 < HxArray.length _g3 do ignore (let a = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-              ignore (let __old_46 = !_g2 in let __new_47 = HxInt.add __old_46 1 in (
-                ignore (_g2 := __new_47);
-                __new_47
+              ignore (let __old_47 = !_g2 in let __new_48 = HxInt.add __old_47 1 in (
+                ignore (_g2 := __new_48);
+                __new_48
               ));
               HxArray.push params (Backend_js_JsFunctionScope.declareLocal (Obj.magic fnScope) (HxFunctionArg.getName (Obj.magic a) : string))
             )) done);
@@ -902,21 +911,21 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let temp
               ignore (if shouldEmitNeutralStaticFunctionBody (Obj.obj (HxAnon.get unit "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (if not (emitKnownStaticFunctionBody (Obj.magic writer) (Obj.obj (HxAnon.get unit "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic params)) then ignore (try Backend_js_JsStmtEmitter.emitFunctionBody (Obj.magic writer) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) (Obj.magic fnScope) with
                 | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                 | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                | HxRuntime.Hx_return __ret_48 -> raise (HxRuntime.Hx_return __ret_48)
-                | HxRuntime.Hx_exception (__exn_v_49, __exn_tags_50) -> if HxRuntime.tags_has __exn_tags_50 "String" then let e = (Obj.obj __exn_v_49 : string) in (
+                | HxRuntime.Hx_return __ret_49 -> raise (HxRuntime.Hx_return __ret_49)
+                | HxRuntime.Hx_exception (__exn_v_50, __exn_tags_51) -> if HxRuntime.tags_has __exn_tags_51 "String" then let e = (Obj.obj __exn_v_50 : string) in (
                   ignore e;
                   if allowStaticBodyFallback unit (HxFunctionDecl.getName (Obj.magic fn) : string) (e : string) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString e ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn))) ^ " (static function body)")) ["Dynamic"; "String"])
-                ) else if true then let error = (if HxRuntime.tags_has __exn_tags_50 "haxe.Exception" then Obj.obj __exn_v_49 else Obj.magic (Haxe_ValueException.create __exn_v_49 (Obj.magic (HxRuntime.hx_null)) __exn_v_49) : Haxe_Exception.t) in (
+                ) else if true then let error = (if HxRuntime.tags_has __exn_tags_51 "haxe.Exception" then Obj.obj __exn_v_50 else Obj.magic (Haxe_ValueException.create __exn_v_50 (Obj.magic (HxRuntime.hx_null)) __exn_v_50) : Haxe_Exception.t) in (
                   ignore error;
                   if allowStaticBodyFallback unit (HxFunctionDecl.getName (Obj.magic fn) : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn))) ^ " (static function body)")) ["Dynamic"; "String"])
-                ) else HxRuntime.hx_throw_typed __exn_v_49 __exn_tags_50
-                | __exn_51 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_51) : string) in (
+                ) else HxRuntime.hx_throw_typed __exn_v_50 __exn_tags_51
+                | __exn_52 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_52) : string) in (
                   ignore e;
                   if allowStaticBodyFallback unit (HxFunctionDecl.getName (Obj.magic fn) : string) (e : string) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString e ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn))) ^ " (static function body)")) ["Dynamic"; "String"])
-                ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_51) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_51) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_51)) : Haxe_Exception.t) in (
+                ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_52) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_52) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_52)) : Haxe_Exception.t) in (
                   ignore error;
                   if allowStaticBodyFallback unit (HxFunctionDecl.getName (Obj.magic fn) : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn))) ^ " (static function body)")) ["Dynamic"; "String"])
-                ) else raise (__exn_51)) else ()));
+                ) else raise (__exn_52)) else ()));
               ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
               Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string)
             )
@@ -928,9 +937,9 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let temp
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_52 -> Obj.obj __ret_52)
+  | HxRuntime.Hx_return __ret_53 -> Obj.obj __ret_53)
 
-let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_result_74 = (
+let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_result_77 = (
   ignore (if main == Obj.magic (HxRuntime.hx_null) || HxString.length main = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let direct = (HxMap.get_string byFullName main : string) in (
     ignore (if direct != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (direct : string))) else ());
@@ -939,8 +948,8 @@ let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_resu
       HxMap.get_string bySimpleName (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1))
     )
   )
-) in Obj.magic __fallback_result_74 with
-  | HxRuntime.Hx_return __ret_73 -> Obj.obj __ret_73
+) in Obj.magic __fallback_result_77 with
+  | HxRuntime.Hx_return __ret_76 -> Obj.obj __ret_76
 
 let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Backend_BackendContext.t) -> (
   ignore self;

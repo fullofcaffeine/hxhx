@@ -155,6 +155,14 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "utest/Assert.hx");
 	}
 
+	static function utestHtmlReportModule():TypedModule {
+		final platform = new HxFieldDecl("platform", HxVisibility.Private, true, "String",
+			HxExpr.EUnsupported('[js-native:unsupported_expr] kind=EUnsupported detail=if php "php"#elseif cpp "cpp"#elseif js "javascript"#elseif flash "flash"#else "unknown"'));
+		final reportClass = new HxClassDecl("HtmlReport", false, [], [platform]);
+		final decl = new HxModuleDecl("utest.ui.text", [], reportClass, [reportClass], false, false);
+		return typedModule("", decl, "utest/ui/text/HtmlReport.hx");
+	}
+
 	static function mainModule(source:String):TypedModule {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		return TyperStage.typeModule(parsed);
@@ -217,7 +225,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				macroCompilerModule(),
 				macroContextModule(),
 				macroTypeToolsModule(),
-				utestAssertModule()
+				utestAssertModule(),
+				utestHtmlReportModule()
 			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
@@ -240,6 +249,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_Lambda.filter = function", "Lambda filter shim should emit");
 			assertContains(js, "__hx_cls_utest_Assert.getTypeName = function", "utest Assert getTypeName shim should emit");
 			assertContains(js, "__hx_cls_utest_Assert.sameAs = function", "utest Assert sameAs shim should emit");
+			assertContains(js, "__hx_cls_utest_ui_text_HtmlReport.platform = \"javascript\"",
+				"utest HtmlReport platform static initializer should resolve for JS");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 

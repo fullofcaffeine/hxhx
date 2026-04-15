@@ -179,7 +179,10 @@ class JsTargetCore implements ITargetCore {
 				continue;
 			final suffix = JsNameMangler.propertySuffix(HxFieldDecl.getName(field));
 			final init = HxFieldDecl.getInit(field);
-			final value = if (init == null) {
+			final knownInit = emitKnownStaticFieldInit(unit.fullName, HxFieldDecl.getName(field));
+			final value = if (knownInit != null) {
+				knownInit;
+			} else if (init == null) {
 				"null";
 			} else {
 				try {
@@ -236,6 +239,21 @@ class JsTargetCore implements ITargetCore {
 			writer.popIndent();
 			writer.writeln("};");
 		}
+	}
+
+	/**
+		Provides audited replacements for static initializers the bootstrap parser cannot
+		lower yet, but whose value is target-constant in the JS lane.
+
+		`utest.ui.text.HtmlReport.platform` is declared with a compile-time conditional
+		chain (`#if js "javascript" ...`). Full1 server compiles that module for JS, so
+		emitting the resolved JS value is narrower and safer than allowing a generic
+		unsupported-expression fallback for all runtime static fields.
+	**/
+	static function emitKnownStaticFieldInit(fullName:String, fieldName:String):Null<String> {
+		if (fullName == "utest.ui.text.HtmlReport" && fieldName == "platform")
+			return JsNameMangler.quoteString("javascript");
+		return null;
 	}
 
 	/**
