@@ -1570,14 +1570,26 @@ let buildClassRefs = fun bySimpleName byFullName -> let merged = Obj.magic (HxMa
   merged
 )
 
-let shouldEmitNeutralInstanceFunctionBody = fun fullName fnName -> try let __fallback_result_128 = (
+let hasFunctionMetadata = fun fn marker -> try let __fallback_result_130 = let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn)) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let meta = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+    ignore (let __old_127 = !_g in let __new_128 = HxInt.add __old_127 1 in (
+      ignore (_g := __new_128);
+      __new_128
+    ));
+    if HxString.equals meta marker then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+  )) done);
+  false
+) in Obj.magic __fallback_result_130 with
+  | HxRuntime.Hx_return __ret_129 -> Obj.obj __ret_129
+
+let shouldEmitNeutralInstanceFunctionBody = fun fullName fnName -> try let __fallback_result_132 = (
   ignore (if HxString.equals fullName "utest.Runner" && HxString.equals fnName "addCases" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxString.equals fullName "utest.ui.text.HtmlReport" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxString.equals fullName "utest.ui.common.ClassResult" && HxString.equals fnName "methodNames" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxString.equals fullName "utest.ui.common.PackageResult" && (HxString.equals fnName "classNames" || HxString.equals fnName "packageNames") then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   HxString.equals fullName "utest.TestHandler"
-) in Obj.magic __fallback_result_128 with
-  | HxRuntime.Hx_return __ret_127 -> Obj.obj __ret_127
+) in Obj.magic __fallback_result_132 with
+  | HxRuntime.Hx_return __ret_131 -> Obj.obj __ret_131
 
 let emitPlainClassPrototypeMethods = fun writer unit classRefs -> ignore (let instanceFields = Obj.magic (instanceFieldRefs (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
   ignore (let __old_65 = !_g in let __new_66 = HxInt.add __old_65 1 in (
@@ -1618,13 +1630,13 @@ let isNativeJsPrototypeClass = fun fullName -> HxString.equals fullName "Array"
 
 let isNativeJsExternPrototypeClass = fun fullName -> fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.node." : string)
 
-let shouldSkipInstancePrototypeEmission = fun fullName -> try let __fallback_result_130 = (
+let shouldSkipInstancePrototypeEmission = fun fullName -> try let __fallback_result_134 = (
   ignore (if fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("haxe." : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.lib." : string) || fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.html." : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if isNativeJsExternPrototypeClass (fullName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   isNativeJsPrototypeClass (fullName : string)
-) in Obj.magic __fallback_result_130 with
-  | HxRuntime.Hx_return __ret_129 -> Obj.obj __ret_129
+) in Obj.magic __fallback_result_134 with
+  | HxRuntime.Hx_return __ret_133 -> Obj.obj __ret_133
 
 let isCompileTimeMacroApi = fun fullName -> fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("haxe.macro." : string)
 
@@ -1693,7 +1705,8 @@ let isUpstreamUnitMacroHelper = fun fullName -> HxString.equals fullName "unit.H
 
 let isUpstreamUnitCompileTimeMacroHelper = fun fullName fnName -> HxString.equals fullName "unit.TestDefaultTypeParameters" && HxString.equals fnName "printThings"
 
-let shouldEmitNeutralStaticFunctionBody = fun fullName fnName -> try let __fallback_result_126 = (
+let shouldEmitNeutralStaticFunctionBody = fun fullName fn -> try let __fallback_result_126 = let fnName = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
+  ignore (if hasFunctionMetadata (Obj.magic fn) ("macro" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if isCompileTimeMacroApi (fullName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if isUpstreamUnitMacroHelper (fullName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if isUpstreamUnitCompileTimeMacroHelper (fullName : string) (fnName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
@@ -1780,7 +1793,7 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let temp
             ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((((HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ HxString.toStdString suffix) ^ " = function(") ^ HxString.toStdString (HxArray.join params ", " (fun x -> x))) ^ ") {" : string));
             ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
             ignore (emitDefaultArgGuards (Obj.magic writer) (Obj.magic args) (Obj.magic params) (Obj.magic fnScope));
-            ignore (if shouldEmitNeutralStaticFunctionBody (Obj.obj (HxAnon.get unit "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (if not (emitKnownStaticFunctionBody (Obj.magic writer) (Obj.obj (HxAnon.get unit "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic params)) then ignore (try Backend_js_JsStmtEmitter.emitFunctionBody (Obj.magic writer) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) (Obj.magic fnScope) with
+            ignore (if shouldEmitNeutralStaticFunctionBody (Obj.obj (HxAnon.get unit "fullName") : string) (Obj.magic fn) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (if not (emitKnownStaticFunctionBody (Obj.magic writer) (Obj.obj (HxAnon.get unit "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic params)) then ignore (try Backend_js_JsStmtEmitter.emitFunctionBody (Obj.magic writer) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) (Obj.magic fnScope) with
               | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
               | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
               | HxRuntime.Hx_return __ret_51 -> raise (HxRuntime.Hx_return __ret_51)
@@ -1811,7 +1824,7 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let temp
 ) with
   | HxRuntime.Hx_return __ret_55 -> Obj.obj __ret_55)
 
-let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_result_132 = (
+let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_result_136 = (
   ignore (if main == Obj.magic (HxRuntime.hx_null) || HxString.length main = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let direct = (HxMap.get_string byFullName main : string) in (
     ignore (if direct != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (direct : string))) else ());
@@ -1820,8 +1833,8 @@ let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_resu
       HxMap.get_string bySimpleName (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1))
     )
   )
-) in Obj.magic __fallback_result_132 with
-  | HxRuntime.Hx_return __ret_131 -> Obj.obj __ret_131
+) in Obj.magic __fallback_result_136 with
+  | HxRuntime.Hx_return __ret_135 -> Obj.obj __ret_135
 
 let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Backend_BackendContext.t) -> (
   ignore self;

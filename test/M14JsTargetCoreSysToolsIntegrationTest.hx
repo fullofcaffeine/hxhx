@@ -130,6 +130,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "unit/HelperMacros.hx");
 	}
 
+	static function upstreamUnitTestIssuesModule():TypedModule {
+		final helperClass = new HxClassDecl("TestIssues", false, [
+			new HxFunctionDecl("addIssueClasses", HxVisibility.Public, true, [], "Dynamic",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=5"), "", ["macro"])
+		]);
+		final decl = new HxModuleDecl("unit", [], helperClass, [helperClass], false, false);
+		return typedModule("", decl, "unit/TestIssues.hx");
+	}
+
 	static function upstreamUnitDefaultTypeParametersModule():TypedModule {
 		final testClass = new HxClassDecl("TestDefaultTypeParameters", false, [
 			new HxFunctionDecl("printThings", HxVisibility.Public, true, [], "Array<String>",
@@ -619,6 +628,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				lambdaModule(),
 				macroModule(),
 				upstreamUnitHelperMacrosModule(),
+				upstreamUnitTestIssuesModule(),
 				upstreamUnitDefaultTypeParametersModule(),
 				macroCompilerModule(),
 				macroContextModule(),
@@ -662,6 +672,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_Macro.stripWhitespaces = function", "compile-time Macro fallback should emit");
 			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");
 			assertContains(js, "__hx_cls_unit_HelperMacros.getCompilationDate = function", "upstream unit macro helper should emit a neutral static stub");
+			assertContains(js, "__hx_cls_unit_TestIssues.addIssueClasses = function", "metadata-marked macro helper should emit a neutral static stub");
 			assertContains(js, "__hx_cls_unit_TestDefaultTypeParameters.printThings = function",
 				"upstream unit default-type-parameter macro helper should emit a neutral static stub");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.getDefine = function", "compile-time macro Compiler fallback should emit");

@@ -2909,6 +2909,21 @@ class HxParser {
 							// declaration, while bare `final name = ...` can be parsed as a field below.
 							sawFinal = true;
 							keep = true;
+						} else {
+							switch (cur.kind) {
+								case TIdent(name) if (name == "macro"):
+									// `macro` is context-sensitive in Haxe. Preserve it as function metadata
+									// so targets can keep compile-time-only bodies out of runtime output.
+									metadata.push("macro");
+									bump();
+									keep = true;
+								case TIdent(name) if (name == "extern" || name == "override"):
+									// These context-sensitive modifiers are accepted at class-member scope but
+									// are not modeled in the current bring-up AST.
+									bump();
+									keep = true;
+								case _:
+							}
 						}
 					}
 

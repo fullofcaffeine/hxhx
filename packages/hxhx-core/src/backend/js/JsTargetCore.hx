@@ -246,7 +246,7 @@ class JsTargetCore implements ITargetCore {
 			writer.writeln(unit.jsRef + suffix + " = function(" + params.join(", ") + ") {");
 			writer.pushIndent();
 			emitDefaultArgGuards(writer, args, params, fnScope);
-			if (shouldEmitNeutralStaticFunctionBody(unit.fullName, HxFunctionDecl.getName(fn))) {
+			if (shouldEmitNeutralStaticFunctionBody(unit.fullName, fn)) {
 				writer.writeln("return null;");
 			} else if (!emitKnownStaticFunctionBody(writer, unit.fullName, HxFunctionDecl.getName(fn), params)) {
 				try {
@@ -1872,7 +1872,10 @@ class JsTargetCore implements ITargetCore {
 		return isCompileTimeMacroApi(unit.fullName);
 	}
 
-	static function shouldEmitNeutralStaticFunctionBody(fullName:String, fnName:String):Bool {
+	static function shouldEmitNeutralStaticFunctionBody(fullName:String, fn:HxFunctionDecl):Bool {
+		final fnName = HxFunctionDecl.getName(fn);
+		if (hasFunctionMetadata(fn, "macro"))
+			return true;
 		if (isCompileTimeMacroApi(fullName))
 			return true;
 		if (isUpstreamUnitMacroHelper(fullName))
@@ -1880,6 +1883,14 @@ class JsTargetCore implements ITargetCore {
 		if (isUpstreamUnitCompileTimeMacroHelper(fullName, fnName))
 			return true;
 		return fullName == "Macro" && isCompileTimeMacroFallback(fnName);
+	}
+
+	static function hasFunctionMetadata(fn:HxFunctionDecl, marker:String):Bool {
+		for (meta in HxFunctionDecl.getMetadata(fn)) {
+			if (meta == marker)
+				return true;
+		}
+		return false;
 	}
 
 	static function shouldEmitNeutralConstructorBody(fullName:String):Bool {
