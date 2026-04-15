@@ -1568,8 +1568,11 @@ let emitPlainClassPrototypeMethods = fun writer unit classRefs -> ignore (let in
 
 let isNativeJsPrototypeClass = fun fullName -> HxString.equals fullName "Array"
 
+let isNativeJsExternPrototypeClass = fun fullName -> fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.node." : string)
+
 let shouldSkipInstancePrototypeEmission = fun fullName -> try let __fallback_result_124 = (
   ignore (if fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("haxe." : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if isNativeJsExternPrototypeClass (fullName : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   isNativeJsPrototypeClass (fullName : string)
 ) in Obj.magic __fallback_result_124 with
   | HxRuntime.Hx_return __ret_123 -> Obj.obj __ret_123

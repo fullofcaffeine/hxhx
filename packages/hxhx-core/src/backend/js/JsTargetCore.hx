@@ -1839,11 +1839,17 @@ class JsTargetCore implements ITargetCore {
 	static function shouldSkipInstancePrototypeEmission(fullName:String):Bool {
 		if (fullName != null && StringTools.startsWith(fullName, "haxe."))
 			return true;
+		if (isNativeJsExternPrototypeClass(fullName))
+			return true;
 		return isNativeJsPrototypeClass(fullName);
 	}
 
 	static function isNativeJsPrototypeClass(fullName:String):Bool {
 		return fullName == "Array";
+	}
+
+	static function isNativeJsExternPrototypeClass(fullName:String):Bool {
+		return fullName != null && StringTools.startsWith(fullName, "js.node.");
 	}
 
 	static function isCompileTimeMacroApi(fullName:String):Bool {
