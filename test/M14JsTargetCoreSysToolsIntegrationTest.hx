@@ -83,6 +83,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "sys/FileSystem.hx");
 	}
 
+	static function sysIoFileModule():TypedModule {
+		final copyBufLen = new HxFieldDecl("copyBufLen", HxVisibility.Private, true, "Int", HxExpr.EInt(65536));
+		final copyBuf = new HxFieldDecl("copyBuf", HxVisibility.Private, true, "Dynamic",
+			HxExpr.EUnsupported("[js-native:unsupported_expr] kind=EUnsupported detail=js.node.Buffer.alloc(copyBufLen)"));
+		final fileClass = new HxClassDecl("File", false, [], [copyBufLen, copyBuf]);
+		final decl = new HxModuleDecl("sys.io", [], fileClass, [fileClass], false, false);
+		return typedModule("", decl, "sys/io/File.hx");
+	}
+
 	static function lambdaModule():TypedModule {
 		final iterableArg = new HxFunctionArg("it", "Array<Array<Int>>", HxDefaultValue.NoDefault);
 		final filterIterableArg = new HxFunctionArg("it", "Array<Int>", HxDefaultValue.NoDefault);
@@ -348,6 +357,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				sysToolsModule(),
 				pathModule(),
 				fileSystemModule(),
+				sysIoFileModule(),
 				lambdaModule(),
 				macroModule(),
 				macroCompilerModule(),
@@ -370,6 +380,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_SysTools.quoteWinArg = function", "SysTools quoteWinArg shim should emit");
 			assertContains(js, "__hx_cls_haxe_io_Path.normalize = function", "Path normalize shim should emit");
 			assertContains(js, "__hx_cls_sys_FileSystem.exists = function", "FileSystem exists shim should emit");
+			assertContains(js, "__hx_cls_sys_io_File.copyBuf = (typeof Buffer !== \"undefined\" ? Buffer : require(\"buffer\").Buffer).alloc(65536)",
+				"sys.io.File copy buffer should use Node Buffer global without unresolved js.node path");
 			assertContains(js, "try {  return \"try-ok\";", "try expression should lower to a returning IIFE");
 			assertContains(js, "__hx_cls_Macro.stripWhitespaces = function", "compile-time Macro fallback should emit");
 			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");

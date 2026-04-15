@@ -266,6 +266,8 @@ class JsTargetCore implements ITargetCore {
 			return JsNameMangler.quoteString("javascript");
 		if (fullName == "EReg" && fieldName == "escapeRe")
 			return "new RegExp(\"[.*+?^${}()|[\\\\]\\\\\\\\]\", \"g\")";
+		if (fullName == "sys.io.File" && fieldName == "copyBuf")
+			return "(typeof Buffer !== \"undefined\" ? Buffer : require(\"buffer\").Buffer).alloc(65536)";
 		return null;
 	}
 
