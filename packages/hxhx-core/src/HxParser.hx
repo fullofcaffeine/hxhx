@@ -1045,6 +1045,14 @@ class HxParser {
 		}
 
 		final values = new Array<HxExpr>();
+		final mapNames = new Array<String>();
+		final mapValues = new Array<HxExpr>();
+		var sawMapEntry = false;
+
+		inline function isFatArrowStart():Bool {
+			return cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code));
+		}
+
 		if (cur.kind.match(TOther("]".code))) {
 			bump();
 			return EArrayDecl(values);
@@ -1054,8 +1062,16 @@ class HxParser {
 				bump();
 				break;
 			}
-			final value = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
-			values.push(value);
+			final value = parseExpr(() -> isFatArrowStart() || cur.kind.match(TComma) || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
+			if (isFatArrowStart()) {
+				sawMapEntry = true;
+				bump(); // '='
+				bump(); // '>'
+				mapNames.push(mapLiteralKeyName(value));
+				mapValues.push(parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof)));
+			} else {
+				values.push(value);
+			}
 			if (cur.kind.match(TComma)) {
 				bump();
 				continue;
@@ -1076,7 +1092,22 @@ class HxParser {
 				break;
 			}
 		}
+		if (sawMapEntry)
+			return EAnon(mapNames, mapValues);
 		return EArrayDecl(values);
+	}
+
+	function mapLiteralKeyName(expr:HxExpr):String {
+		return switch (expr) {
+			case EString(v): v;
+			case EInt(v): Std.string(v);
+			case EFloat(v): Std.string(v);
+			case EBool(v): v ? "true" : "false";
+			case EIdent(name): name;
+			case EEnumValue(name): name;
+			case _:
+				"__hx_key";
+		}
 	}
 
 	function parseBraceExpr():HxExpr {
@@ -1279,6 +1310,8 @@ class HxParser {
 			return arrow;
 
 		return switch (cur.kind) {
+			case TKeyword(k) if (k == KSwitch):
+				parseSwitchExpr(stop);
 			case TOther("@".code):
 				// Expression-level metadata: `@:meta expr`.
 				//
@@ -1553,6 +1586,11 @@ class HxParser {
 					ETernary(e, thenExpr, elseExpr);
 			}
 		}
+		if (!stop() && cur.kind.match(TColon)) {
+			bump();
+			readTypeHintText(() -> stop() || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TSemicolon)
+				|| cur.kind.match(TEof));
+		}
 		return e;
 	}
 
@@ -1622,13 +1660,37 @@ class HxParser {
 		final args = new Array<String>();
 		if (rawArgs.length > 0) {
 			for (part in rawArgs.split(",")) {
-				final arg = StringTools.trim(part);
-				if (!isValidLambdaArgName(arg))
+				final arg = parseLambdaArgName(part);
+				if (arg == null)
 					return null;
 				args.push(arg);
 			}
 		}
 		return {args: args, endIndex: j + 2};
+	}
+
+	function parseLambdaArgName(raw:String):Null<String> {
+		var arg = StringTools.trim(raw == null ? "" : raw);
+		if (arg.length == 0)
+			return null;
+		if (StringTools.startsWith(arg, "?"))
+			arg = StringTools.trim(arg.substr(1));
+		final end = lambdaArgNameEnd(arg);
+		if (end <= 0)
+			return null;
+		final name = StringTools.trim(arg.substr(0, end));
+		return isValidLambdaArgName(name) ? name : null;
+	}
+
+	function lambdaArgNameEnd(arg:String):Int {
+		for (i in 0...arg.length) {
+			switch (arg.charCodeAt(i)) {
+				case ":".code | "=".code | " ".code | "\t".code | "\n".code | "\r".code:
+					return i;
+				case _:
+			}
+		}
+		return arg.length;
 	}
 
 	function isValidLambdaArgName(name:String):Bool {
@@ -2002,6 +2064,10 @@ class HxParser {
 	function parseStmtInto(out:Array<HxStmt>, stop:() -> Bool):Void {
 		if (out == null || stop())
 			return;
+		if (cur.kind.match(TOther("#".code))) {
+			consumePreprocessorLine();
+			return;
+		}
 		final isVarDecl = cur.kind.match(TKeyword(KVar)) || cur.kind.match(TKeyword(KFinal));
 		if (isVarDecl) {
 			final pos = cur.pos;
@@ -2012,6 +2078,12 @@ class HxParser {
 			return;
 		}
 		out.push(parseStmt(stop));
+	}
+
+	function consumePreprocessorLine():Void {
+		final line = cur.pos.getLine();
+		while (!cur.kind.match(TEof) && cur.pos.getLine() == line)
+			bump();
 	}
 
 	function parseStmt(stop:() -> Bool):HxStmt {

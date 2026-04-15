@@ -32,6 +32,27 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(assignedArrowJs, "maybe = function()", "assignment RHS arrow literal parses as a lambda");
 		assertContains(assignedArrowJs, "Math.random() > 0.5", "assignment RHS arrow keeps comparison body");
 
+		final optionalArrow = HxParser.parseExprText("f = (?a:Int=1, b:String) -> a + b.length");
+		final optionalArrowJs = JsExprEmitter.emit(optionalArrow, exprScope);
+		assertContains(optionalArrowJs, "f = function(a, b)", "optional/typed/default arrow args keep runtime arg names");
+		assertContains(optionalArrowJs, "a + b.length", "optional/typed/default arrow body is preserved");
+
+		final ascribedArrow = HxParser.parseExprText("f0 = (() -> 1:()->Int)");
+		final ascribedArrowJs = JsExprEmitter.emit(ascribedArrow, exprScope);
+		assertContains(ascribedArrowJs, "f0 = function()", "ascribed arrow expression parses as a lambda");
+		assertContains(ascribedArrowJs, "return 1", "ascribed arrow expression keeps body and consumes type hint");
+
+		final mapArrow = HxParser.parseExprText("map = [1 => a -> a + a, 2 => b -> b + b]");
+		final mapArrowJs = JsExprEmitter.emit(mapArrow, exprScope);
+		assertContains(mapArrowJs, "map = {\"1\": function(a)", "map-literal arrow value parses without a stray fat-arrow token");
+		assertContains(mapArrowJs, "\"2\": function(b)", "map-literal keeps each arrow value");
+
+		final switchArrow = HxParser.parseExprText("f7 = switch maybe() { case true: f -> f; case false: f -> g -> f(g); }");
+		final switchArrowJs = JsExprEmitter.emit(switchArrow, exprScope);
+		assertContains(switchArrowJs, "f7 = (function () {", "assignment RHS switch expression parses structurally");
+		assertContains(switchArrowJs, "return function(f)", "switch cases can return arrow functions");
+		assertContains(switchArrowJs, "return function(g)", "nested arrow function inside switch case parses");
+
 		final blockBody = HxParser.parseExprText("function(x) { var y = x + 1; return y; }");
 		final blockBodyJs = JsExprEmitter.emit(blockBody, exprScope);
 		assertContains(blockBodyJs, "function(", "block-body function literal parses");
