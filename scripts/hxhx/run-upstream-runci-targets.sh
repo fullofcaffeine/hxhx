@@ -409,37 +409,7 @@ patch_runci_skip_sys_on_macos() {
   local system_hx="$UPSTREAM_DIR/tests/runci/System.hx"
   [ -f "$system_hx" ] || return 0
 
-  python3 - <<'PY'
-import os
-import sys
-
-path = os.environ["UPSTREAM_DIR"] + "/tests/runci/System.hx"
-with open(path, "r", encoding="utf-8") as f:
-    src = f.read()
-
-needle = "static public function runSysTest(cmd:String, ?args:Array<String>) {"
-if needle not in src:
-    sys.exit(0)
-
-if "HXHX Gate runner" in src:
-    # already patched
-    sys.exit(0)
-
-insert = (
-    needle
-    + "\n\t\t// HXHX Gate runner: upstream tests/sys contains unicode filename fixtures that are invalid on macOS/APFS.\n"
-    + "\t\t// Skip sys tests on macOS to keep runci usable for other stages.\n"
-    + "\t\t// Override with: HXHX_RUNCi_FORCE_SYS=1\n"
-    + "\t\tif (Sys.systemName() == \"Mac\" && Sys.getEnv(\"HXHX_RUNCi_FORCE_SYS\") != \"1\") {\n"
-    + "\t\t\tinfoMsg(\"Skipping sys tests on Mac (HXHX Gate runner; macOS/APFS unicode filename fixtures unsupported)\");\n"
-    + "\t\t\treturn;\n"
-    + "\t\t}\n"
-)
-
-src = src.replace(needle, insert)
-with open(path, "w", encoding="utf-8") as f:
-    f.write(src)
-PY
+  python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-sys-on-macos --upstream-dir "$UPSTREAM_DIR"
 }
 
 
@@ -457,46 +427,7 @@ patch_runci_js_server_timeouts_on_macos() {
   [ -f "$test_builder" ] || return 0
   [ -f "$test_case" ] || return 0
 
-  python3 - <<'PY'
-import os
-import re
-
-root = os.environ["UPSTREAM_DIR"]
-timeout = os.environ["HXHX_GATE3_JS_SERVER_TIMEOUT_MS"]
-tb_path = root + "/tests/server/src/utils/macro/TestBuilder.macro.hx"
-tc_path = root + "/tests/server/src/TestCase.hx"
-marker = "HXHX Gate runner: relaxed Js server timeouts on macOS"
-
-with open(tb_path, "r", encoding="utf-8") as f:
-    tb_src = f.read()
-if marker not in tb_src:
-    base_line = "$i{asyncName}.setTimeout(20000);"
-    replaced_line = "$i{asyncName}.setTimeout(" + timeout + ");"
-    if base_line in tb_src:
-        tb_src = tb_src.replace(base_line, "// " + marker + "\n\t\t\t\t" + replaced_line, 1)
-    else:
-        tb_src = re.sub(
-            r'\$i\{asyncName\}\.setTimeout\(\d+\);',
-            "// " + marker + "\n\t\t\t\t" + replaced_line,
-            tb_src,
-            count=1
-        )
-    with open(tb_path, "w", encoding="utf-8") as f:
-        f.write(tb_src)
-
-with open(tc_path, "r", encoding="utf-8") as f:
-    tc_src = f.read()
-if marker not in tc_src:
-    needle = "public function setup(async:utest.Async) {\n"
-    if needle in tc_src:
-        tc_src = tc_src.replace(
-            needle,
-            needle + "\t\t// " + marker + "\n\t\tasync.setTimeout(" + timeout + ");\n",
-            1
-        )
-        with open(tc_path, "w", encoding="utf-8") as f:
-            f.write(tc_src)
-PY
+  python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" js-server-timeouts-on-macos --upstream-dir "$UPSTREAM_DIR" --timeout-ms "$HXHX_GATE3_JS_SERVER_TIMEOUT_MS"
 }
 patch_runci_skip_utest_install_if_present() {
   local run_ci="$UPSTREAM_DIR/tests/RunCi.hx"
@@ -504,33 +435,7 @@ patch_runci_skip_utest_install_if_present() {
 
   # Upstream RunCi installs utest via network. If utest is already available in the local
   # `.haxelib/` repo, skip the install.
-  python3 - <<'PY'
-import os
-
-path = os.environ["UPSTREAM_DIR"] + "/tests/RunCi.hx"
-needle = 'haxelibInstallGit("haxe-utest", "utest", "a94f8812e8786f2b5fec52ce9f26927591d26327", "--always");'
-
-with open(path, "r", encoding="utf-8") as f:
-    lines = f.readlines()
-
-out = []
-changed = False
-for line in lines:
-    if needle in line:
-        indent = line.split("haxelibInstallGit", 1)[0]
-        out.append(indent + "try {\n")
-        out.append(indent + "\trunCommand(\"haxelib\", [\"path\", \"utest\"]);\n")
-        out.append(indent + "} catch (e:Dynamic) {\n")
-        out.append(indent + "\t" + needle + "\n")
-        out.append(indent + "}\n")
-        changed = True
-    else:
-        out.append(line)
-
-if changed:
-    with open(path, "w", encoding="utf-8") as f:
-        f.writelines(out)
-PY
+  python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-utest-install-if-present --upstream-dir "$UPSTREAM_DIR"
 }
 
 seed_local_haxelib_dev_from_global() {
@@ -554,69 +459,14 @@ patch_runci_macro_skip_haxeserver_install_if_present() {
   local macro_target="$UPSTREAM_DIR/tests/runci/targets/Macro.hx"
   [ -f "$macro_target" ] || return 0
 
-  python3 - <<'PY'
-import os
-
-path = os.environ["UPSTREAM_DIR"] + "/tests/runci/targets/Macro.hx"
-needle = 'haxelibInstallGit("Simn", "haxeserver");'
-
-with open(path, "r", encoding="utf-8") as f:
-    lines = f.readlines()
-
-out = []
-changed = False
-for line in lines:
-    if needle in line:
-        indent = line.split("haxelibInstallGit", 1)[0]
-        out.append(indent + "try {\n")
-        out.append(indent + "\trunCommand(\"haxelib\", [\"path\", \"haxeserver\"]);\n")
-        out.append(indent + "} catch (e:Dynamic) {\n")
-        out.append(indent + "\t" + needle + "\n")
-        out.append(indent + "}\n")
-        changed = True
-    else:
-        out.append(line)
-
-if changed:
-    with open(path, "w", encoding="utf-8") as f:
-        f.writelines(out)
-PY
+  python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-skip-haxeserver-install-if-present --upstream-dir "$UPSTREAM_DIR"
 }
 
 patch_runci_macro_optional_skip_party() {
   local macro_target="$UPSTREAM_DIR/tests/runci/targets/Macro.hx"
   [ -f "$macro_target" ] || return 0
 
-  python3 - <<'PY'
-import os
-
-path = os.environ["UPSTREAM_DIR"] + "/tests/runci/targets/Macro.hx"
-needle = "deleteDirectoryRecursively(partyDir);"
-
-with open(path, "r", encoding="utf-8") as f:
-    lines = f.readlines()
-
-out = []
-changed = False
-already = False
-for line in lines:
-    if "HXHX_GATE2_SKIP_PARTY" in line:
-        already = True
-    if needle in line and not already:
-        indent = line.split(needle, 1)[0]
-        out.append(indent + "if (Sys.getEnv(\"HXHX_GATE2_SKIP_PARTY\") == \"1\") {\n")
-        out.append(indent + "\tinfoMsg(\"Skipping party stage (HXHX Gate runner; set HXHX_GATE2_SKIP_PARTY=0 to enable)\");\n")
-        out.append(indent + "\treturn;\n")
-        out.append(indent + "}\n")
-        out.append(line)
-        changed = True
-    else:
-        out.append(line)
-
-if changed:
-    with open(path, "w", encoding="utf-8") as f:
-        f.writelines(out)
-PY
+  python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-optional-skip-party --upstream-dir "$UPSTREAM_DIR"
 }
 
 patch_sourcemaps_skip_sourcemap_install_if_present() {
@@ -625,28 +475,7 @@ patch_sourcemaps_skip_sourcemap_install_if_present() {
 
   # Upstream sourcemaps tests unconditionally do `haxelib install sourcemap`. If the lib is
   # already available in the local `.haxelib/` repo, skip the install.
-  python3 - <<'PY'
-import os
-
-path = os.environ["UPSTREAM_DIR"] + "/tests/sourcemaps/src/Test.hx"
-needle = "Sys.command('haxelib', ['install', 'sourcemap']);"
-
-with open(path, "r", encoding="utf-8") as f:
-    src = f.read()
-
-if needle not in src:
-    raise SystemExit(0)
-
-replacement = (
-    "if (Sys.command('haxelib', ['path', 'sourcemap']) != 0) {\n"
-    "\t\t\tSys.command('haxelib', ['install', 'sourcemap']);\n"
-    "\t\t}"
-)
-
-src = src.replace(needle, replacement)
-with open(path, "w", encoding="utf-8") as f:
-    f.write(src)
-PY
+  python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" sourcemaps-skip-sourcemap-install-if-present --upstream-dir "$UPSTREAM_DIR"
 }
 
 preflight_target() {
