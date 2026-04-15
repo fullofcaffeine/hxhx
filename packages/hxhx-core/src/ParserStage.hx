@@ -87,10 +87,44 @@ class ParserStage {
 							return cls;
 
 						final scannedFnStaticByName:Map<String, Bool> = new Map();
+						final scannedFnByName:Map<String, HxFunctionDecl> = new Map();
 						for (fn in HxClassDecl.getFunctions(scanned)) {
 							final fnName = HxFunctionDecl.getName(fn);
-							if (fnName != null && fnName.length > 0)
+							if (fnName != null && fnName.length > 0) {
 								scannedFnStaticByName.set(fnName, HxFunctionDecl.getIsStatic(fn));
+								scannedFnByName.set(fnName, fn);
+							}
+						}
+
+						function hasMetadata(values:Array<String>, marker:String):Bool {
+							if (values == null)
+								return false;
+							for (value in values) {
+								if (value == marker)
+									return true;
+							}
+							return false;
+						}
+
+						function mergeScannedMetadata(fn:HxFunctionDecl, scannedFn:Null<HxFunctionDecl>):Array<String> {
+							final out = HxFunctionDecl.getMetadata(fn).copy();
+							if (scannedFn != null
+								&& hasMetadata(HxFunctionDecl.getMetadata(scannedFn), "macro")
+								&& !hasMetadata(out, "macro"))
+								out.push("macro");
+							return out;
+						}
+
+						function sameMetadata(left:Array<String>, right:Array<String>):Bool {
+							if (left == null || right == null)
+								return left == right;
+							if (left.length != right.length)
+								return false;
+							for (i in 0...left.length) {
+								if (left[i] != right[i])
+									return false;
+							}
+							return true;
 						}
 
 						var changed = false;
@@ -100,14 +134,20 @@ class ParserStage {
 							final fnName = HxFunctionDecl.getName(fn);
 							final scannedStatic = fnName == null ? null : scannedFnStaticByName.get(fnName);
 							final isStatic = scannedStatic == null ? HxFunctionDecl.getIsStatic(fn) : scannedStatic;
+							final scannedFn = fnName == null ? null : scannedFnByName.get(fnName);
+							final metadata = mergeScannedMetadata(fn, scannedFn);
+							final metadataChanged = !sameMetadata(metadata, HxFunctionDecl.getMetadata(fn));
 							if (isStatic != HxFunctionDecl.getIsStatic(fn))
+								changed = true;
+							if (metadataChanged)
 								changed = true;
 							if (fnName != null && fnName.length > 0)
 								existingFnNames.set(fnName, true);
-							patchedFns.push(isStatic == HxFunctionDecl.getIsStatic(fn) ? fn : new HxFunctionDecl(HxFunctionDecl.getName(fn),
-								HxFunctionDecl.getVisibility(fn), isStatic, HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn),
-								HxFunctionDecl.getBody(fn), HxFunctionDecl.getReturnStringLiteral(fn), HxFunctionDecl.getMetadata(fn),
-								HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), HxFunctionDecl.getBodyText(fn)));
+							patchedFns.push(isStatic == HxFunctionDecl.getIsStatic(fn)
+								&& !metadataChanged ? fn : new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), isStatic,
+									HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn), HxFunctionDecl.getBody(fn),
+									HxFunctionDecl.getReturnStringLiteral(fn), metadata, HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn),
+									HxFunctionDecl.getBodyText(fn)));
 						}
 						for (fn in HxClassDecl.getFunctions(scanned)) {
 							final fnName = HxFunctionDecl.getName(fn);
@@ -976,6 +1016,7 @@ class ParserStage {
 		var i = start;
 
 		var sawStatic = false;
+		var sawMacro = false;
 		var vis:HxVisibility = HxVisibility.Public;
 
 		while (true) {
@@ -996,6 +1037,7 @@ class ParserStage {
 						if (depth == 1) {
 							// Declarations are terminated; reset modifiers.
 							sawStatic = false;
+							sawMacro = false;
 							vis = HxVisibility.Public;
 						}
 					case _:
@@ -1013,7 +1055,9 @@ class ParserStage {
 					vis = HxVisibility.Private;
 				case "static":
 					sawStatic = true;
-				case "inline" | "macro" | "extern" | "override":
+				case "macro":
+					sawMacro = true;
+				case "inline" | "extern" | "override":
 					// Keep scanning; these can appear between `static` and the declaration keyword.
 				case "var" | "final":
 					// `final` can introduce either:
@@ -1107,6 +1151,7 @@ class ParserStage {
 					}
 
 					sawStatic = false;
+					sawMacro = false;
 					vis = HxVisibility.Public;
 				case "function":
 					// Best-effort: collect function name + arity + static flag from the scanned class body.
@@ -1206,10 +1251,12 @@ class ParserStage {
 					}
 
 					if (fnName.length > 0 && fnName != "new") {
-						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", [], ""));
+						final metadata = sawMacro ? ["macro"] : null;
+						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", [], "", metadata));
 					}
 
 					sawStatic = false;
+					sawMacro = false;
 					vis = HxVisibility.Public;
 				case _:
 			}

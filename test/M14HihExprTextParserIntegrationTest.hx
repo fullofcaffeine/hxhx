@@ -176,13 +176,18 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected inline local function to lower to SVar lambda");
 		}
 
-		final macroDecl = new HxParser("package unit; class TestIssues { macro static public function addIssueClasses(dir:String, pack:String) { return null; } }")
-			.parseModule("TestIssues");
+		final macroSource = "package unit; class TestIssues { macro static public function addIssueClasses(dir:String, pack:String) { return null; } }";
+		final macroDecl = new HxParser(macroSource).parseModule("TestIssues");
 		final macroFuncs = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(macroDecl));
 		assertTrue(macroFuncs.length == 1, "expected macro static function to parse");
 		assertTrue(HxFunctionDecl.getName(macroFuncs[0]) == "addIssueClasses", "expected macro function name to parse");
 		assertTrue(HxFunctionDecl.getIsStatic(macroFuncs[0]), "expected macro static modifier to parse");
 		assertTrue(HxFunctionDecl.getMetadata(macroFuncs[0]).indexOf("macro") >= 0, "expected macro modifier metadata");
+		final scannedMacroClasses = ParserStageScanHelpers.scanModuleLocalHelperClasses(macroSource, null);
+		assertTrue(scannedMacroClasses.length == 1, "expected scanner to find macro helper class");
+		final scannedMacroFuncs = HxClassDecl.getFunctions(scannedMacroClasses[0]);
+		assertTrue(scannedMacroFuncs.length == 1, "expected scanner to find macro helper function");
+		assertTrue(HxFunctionDecl.getMetadata(scannedMacroFuncs[0]).indexOf("macro") >= 0, "expected scanner macro modifier metadata");
 
 		final localIfThrowStmts = HxParser.parseFunctionBodyText("function negativeOnly(i:Int) { if(i >= 0) throw new ArgumentException('i'); } negativeOnly(10);");
 		assertTrue(localIfThrowStmts.length == 2, "expected local if/throw function plus call statement");

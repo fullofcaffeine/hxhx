@@ -663,6 +663,7 @@ class ParserStageScanHelpers {
 		var i = start;
 
 		var sawStatic = false;
+		var sawMacro = false;
 		var vis:HxVisibility = HxVisibility.Public;
 
 		while (true) {
@@ -683,6 +684,7 @@ class ParserStageScanHelpers {
 						if (depth == 1) {
 							// Declarations are terminated; reset modifiers.
 							sawStatic = false;
+							sawMacro = false;
 							vis = HxVisibility.Public;
 						}
 					case _:
@@ -700,7 +702,9 @@ class ParserStageScanHelpers {
 					vis = HxVisibility.Private;
 				case "static":
 					sawStatic = true;
-				case "inline" | "macro" | "extern" | "override":
+				case "macro":
+					sawMacro = true;
+				case "inline" | "extern" | "override":
 					// Keep scanning; these can appear between `static` and the declaration keyword.
 				case "var" | "final":
 					// `final` can introduce either:
@@ -794,6 +798,7 @@ class ParserStageScanHelpers {
 					}
 
 					sawStatic = false;
+					sawMacro = false;
 					vis = HxVisibility.Public;
 				case "function":
 					// Best-effort: collect function name + arity + static flag from the scanned class body.
@@ -893,10 +898,12 @@ class ParserStageScanHelpers {
 					}
 
 					if (fnName.length > 0 && fnName != "new") {
-						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", [], ""));
+						final metadata = sawMacro ? ["macro"] : null;
+						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", [], "", metadata));
 					}
 
 					sawStatic = false;
+					sawMacro = false;
 					vis = HxVisibility.Public;
 				case _:
 			}
