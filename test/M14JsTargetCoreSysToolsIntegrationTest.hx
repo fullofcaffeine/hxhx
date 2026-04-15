@@ -376,9 +376,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			new HxFunctionDecl("packageNames", HxVisibility.Public, false, [errorsArg], "Array<String>",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
 		]);
+		final assertationArg = new HxFunctionArg("assertation", "Dynamic", HxDefaultValue.NoDefault);
+		final fixtureResult = new HxClassDecl("FixtureResult", false, [
+			new HxFunctionDecl("add", HxVisibility.Public, false, [assertationArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
+		]);
 		return [
 			typedModule("", new HxModuleDecl("utest.ui.common", [], classResult, [classResult], false, false), "utest/ui/common/ClassResult.hx"),
-			typedModule("", new HxModuleDecl("utest.ui.common", [], packageResult, [packageResult], false, false), "utest/ui/common/PackageResult.hx")
+			typedModule("", new HxModuleDecl("utest.ui.common", [], packageResult, [packageResult], false, false), "utest/ui/common/PackageResult.hx"),
+			typedModule("", new HxModuleDecl("utest.ui.common", [], fixtureResult, [fixtureResult], false, false), "utest/ui/common/FixtureResult.hx")
 		];
 	}
 
@@ -613,6 +619,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"utest PackageResult classNames should emit a neutral runtime stub");
 			assertContains(js, "__hx_cls_utest_ui_common_PackageResult.prototype.packageNames = function",
 				"utest PackageResult packageNames should emit a neutral runtime stub");
+			assertContains(js, "__hx_cls_utest_ui_common_FixtureResult.prototype.add = function",
+				"utest FixtureResult add should emit a JS-native result aggregation body");
+			assertContains(js, "case \"SetupError\":", "utest FixtureResult add should classify setup errors by enum constructor");
+			assertContains(js, "this.hasSetupError = true;", "utest FixtureResult add should preserve setup error flags");
 			assertNotContains(js, "unsupported-testhandler", "utest TestHandler unsupported bodies should not leak into JS");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 

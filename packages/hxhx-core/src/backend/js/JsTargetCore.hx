@@ -504,6 +504,13 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		}
 
+		if (fullName == "utest.ui.common.FixtureResult" && fnName == "add") {
+			if (params.length < 1)
+				return false;
+			emitUtestFixtureResultAddBody(writer, params[0]);
+			return true;
+		}
+
 		return false;
 	}
 
@@ -640,8 +647,76 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("return null;");
 	}
 
+	static function emitUtestFixtureResultAddBody(writer:JsWriter, assertation:String):Void {
+		writer.writeln("var __hx_assertation = " + assertation + ";");
+		writer.writeln("if (this.list == null) this.list = [];");
+		writer.writeln("if (typeof this.list.add === \"function\") this.list.add(__hx_assertation);");
+		writer.writeln("else if (typeof this.list.push === \"function\") this.list.push(__hx_assertation);");
+		writer.writeln("var __hx_ctor = __hx_assertation == null ? null : __hx_assertation.__hx_ctor;");
+		writer.writeln("var __hx_stats = this.stats;");
+		writer.writeln("function __hx_addStat(name) {");
+		writer.pushIndent();
+		writer.writeln("if (__hx_stats != null && typeof __hx_stats[name] === \"function\") __hx_stats[name](1);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("switch (__hx_ctor) {");
+		writer.pushIndent();
+		writer.writeln("case \"Success\":");
+		writer.pushIndent();
+		writer.writeln("__hx_addStat(\"addSuccesses\");");
+		writer.writeln("break;");
+		writer.popIndent();
+		writer.writeln("case \"Failure\":");
+		writer.pushIndent();
+		writer.writeln("__hx_addStat(\"addFailures\");");
+		writer.writeln("break;");
+		writer.popIndent();
+		writer.writeln("case \"Error\":");
+		writer.pushIndent();
+		writer.writeln("__hx_addStat(\"addErrors\");");
+		writer.writeln("break;");
+		writer.popIndent();
+		writer.writeln("case \"SetupError\":");
+		writer.pushIndent();
+		writer.writeln("__hx_addStat(\"addErrors\");");
+		writer.writeln("this.hasSetupError = true;");
+		writer.writeln("break;");
+		writer.popIndent();
+		writer.writeln("case \"TeardownError\":");
+		writer.pushIndent();
+		writer.writeln("__hx_addStat(\"addErrors\");");
+		writer.writeln("this.hasTeardownError = true;");
+		writer.writeln("break;");
+		writer.popIndent();
+		writer.writeln("case \"TimeoutError\":");
+		writer.pushIndent();
+		writer.writeln("__hx_addStat(\"addErrors\");");
+		writer.writeln("this.hasTimeoutError = true;");
+		writer.writeln("break;");
+		writer.popIndent();
+		writer.writeln("case \"AsyncError\":");
+		writer.pushIndent();
+		writer.writeln("__hx_addStat(\"addErrors\");");
+		writer.writeln("this.hasAsyncError = true;");
+		writer.writeln("break;");
+		writer.popIndent();
+		writer.writeln("case \"Warning\":");
+		writer.pushIndent();
+		writer.writeln("__hx_addStat(\"addWarnings\");");
+		writer.writeln("break;");
+		writer.popIndent();
+		writer.writeln("case \"Ignore\":");
+		writer.pushIndent();
+		writer.writeln("__hx_addStat(\"addIgnores\");");
+		writer.writeln("break;");
+		writer.popIndent();
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return null;");
+	}
+
 	/**
-		Emits a constructible JS-native `EReg` wrapper.
+			Emits a constructible JS-native `EReg` wrapper.
 
 		Why
 		- Upstream stdlib and macro helper code stores `new EReg(...)` in static fields

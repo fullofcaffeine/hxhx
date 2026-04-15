@@ -395,10 +395,83 @@ let emitUtestTestHandlerExecuteBody = fun writer -> ignore (let assertRef = (Bac
   Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)
 ))
 
+let emitUtestFixtureResultAddBody = fun writer assertation -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var __hx_assertation = " ^ HxString.toStdString assertation) ^ ";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (this.list == null) this.list = [];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (typeof this.list.add === \"function\") this.list.add(__hx_assertation);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("else if (typeof this.list.push === \"function\") this.list.push(__hx_assertation);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_ctor = __hx_assertation == null ? null : __hx_assertation.__hx_ctor;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_stats = this.stats;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("function __hx_addStat(name) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_stats != null && typeof __hx_stats[name] === \"function\") __hx_stats[name](1);" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("switch (__hx_ctor) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("case \"Success\":" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_addStat(\"addSuccesses\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("break;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("case \"Failure\":" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_addStat(\"addFailures\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("break;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("case \"Error\":" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_addStat(\"addErrors\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("break;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("case \"SetupError\":" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_addStat(\"addErrors\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("this.hasSetupError = true;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("break;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("case \"TeardownError\":" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_addStat(\"addErrors\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("this.hasTeardownError = true;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("break;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("case \"TimeoutError\":" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_addStat(\"addErrors\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("this.hasTimeoutError = true;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("break;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("case \"AsyncError\":" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_addStat(\"addErrors\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("this.hasAsyncError = true;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("break;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("case \"Warning\":" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_addStat(\"addWarnings\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("break;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("case \"Ignore\":" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("__hx_addStat(\"addIgnores\");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("break;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)
+))
+
 let emitKnownInstanceFunctionBody = fun writer fullName fnName params -> try let __fallback_result_92 = (
   ignore (if HxString.equals fullName "utest.Dispatcher" || HxString.equals fullName "utest.Notifier" then raise (HxRuntime.Hx_return (Obj.repr (emitUtestDispatcherInstanceFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params) (HxString.equals fullName "utest.Notifier")))) else ());
   ignore (if HxString.equals fullName "utest.TestHandler" && HxString.equals fnName "execute" then ignore ((
     ignore (emitUtestTestHandlerExecuteBody (Obj.magic writer));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
+  ignore (if HxString.equals fullName "utest.ui.common.FixtureResult" && HxString.equals fnName "add" then ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitUtestFixtureResultAddBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
   false
