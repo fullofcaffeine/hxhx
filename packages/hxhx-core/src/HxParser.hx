@@ -804,6 +804,56 @@ class HxParser {
 		return ELambda(args, bodyExpr);
 	}
 
+	function parseLocalFunctionStmt(pos:HxPos):HxStmt {
+		// Local function declaration: `function name(args)[:Ret] { ... }`.
+		//
+		// Bring-up lowering
+		// - Model it as a local binding to an `ELambda`, which is sufficient for
+		//   Stage3 JS-native bodies that define a helper and immediately call it.
+		if (!acceptKeyword(KFunction))
+			fail("Expected 'function'");
+		final name = readIdent("local function name");
+		expect(TLParen, "'('");
+
+		final args = new Array<String>();
+		if (!cur.kind.match(TRParen)) {
+			while (true) {
+				acceptOtherChar("?");
+				final argName = readIdent("argument name");
+				args.push(argName);
+
+				if (cur.kind.match(TColon)) {
+					bump();
+					readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
+				}
+
+				if (acceptOtherChar("="))
+					parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
+
+				if (cur.kind.match(TComma)) {
+					bump();
+					continue;
+				}
+				break;
+			}
+		}
+		expect(TRParen, "')'");
+
+		if (cur.kind.match(TColon)) {
+			bump();
+			readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+		}
+
+		final bodyExpr = if (cur.kind.match(TLBrace)) {
+			bump();
+			lambdaBodyExprFromStmts(parseFunctionBodyStatements());
+		} else {
+			parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+		}
+
+		return SVar(name, "", ELambda(args, bodyExpr), pos);
+	}
+
 	function lambdaBodyExprFromStmts(stmts:Array<HxStmt>):HxExpr {
 		if (stmts == null || stmts.length == 0)
 			return ENull;
@@ -2115,6 +2165,8 @@ class HxParser {
 			case TKeyword(KReturn):
 				bump();
 				parseReturnStmt(pos);
+			case TKeyword(KFunction):
+				parseLocalFunctionStmt(pos);
 			case TKeyword(KVar):
 				bump();
 				parseVarStmt(pos);

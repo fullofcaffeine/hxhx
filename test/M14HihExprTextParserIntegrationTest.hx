@@ -114,5 +114,17 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("quoted-key object literal should parse as EAnon");
 		}
+
+		final localFunctionStmts = HxParser.parseFunctionBodyText("function helper(v:Int):String { return Std.string(v); } eq(helper(3), \"3\");");
+		assertTrue(localFunctionStmts.length == 2, "expected local function plus call statement");
+		switch (localFunctionStmts[0]) {
+			case SVar(name, _, ELambda(args, _), _):
+				assertTrue(name == "helper", "expected local function to lower to helper binding");
+				assertTrue(args.length == 1 && args[0] == "v", "expected local function arg to be preserved");
+			case SExpr(EUnsupported(raw), _):
+				fail("local function declaration parsed as unsupported: " + raw);
+			case _:
+				fail("expected local function declaration to lower to SVar lambda");
+		}
 	}
 }
