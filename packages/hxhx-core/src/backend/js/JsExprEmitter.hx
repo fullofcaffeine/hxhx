@@ -79,8 +79,8 @@ class JsExprEmitter {
 				emitSwitchExpr(scrutinee, patterns, exprs, scope);
 			case ESwitchRaw(_):
 				unsupported("ESwitchRaw");
-			case ETryCatchRaw(_):
-				unsupported("ETryCatchRaw");
+			case ETryCatchRaw(raw):
+				emitTryCatchRaw(raw);
 			case ERange(startExpr, endExpr):
 				emitRangeExpr(startExpr, endExpr, scope);
 			case EArrayComprehension(name, iterable, yieldExpr):
@@ -90,6 +90,176 @@ class JsExprEmitter {
 			case EUnsupported(raw):
 				unsupported("EUnsupported", raw);
 		}
+	}
+
+	/**
+		Lower the parser's token-preserving `try` expression placeholder into valid JS.
+
+		Why
+		- Haxe allows `try/catch` in expression position.
+		- JavaScript only has statement-level `try/catch`, so expression-position use needs
+		  an IIFE and explicit returns from the successful/catch blocks.
+		- The Stage3 parser intentionally keeps this shape as raw text to avoid an OCaml
+		  bootstrap module cycle between `HxExpr` and `HxStmt`.
+
+		What / How
+		- Handles the common simple shape captured by the parser:
+		  `try { ... } catch(name:Type) { ... }`.
+		- Removes Haxe catch type hints for JS syntax.
+		- Converts the last top-level expression in each block into `return <expr>;`.
+		- Falls back to a syntax-preserving IIFE for more complex raw shapes.
+	**/
+	static function emitTryCatchRaw(raw:String):String {
+		if (raw == null || raw.length == 0 || raw == "opaque_block_expr")
+			unsupported("ETryCatchRaw", raw);
+
+		final rewritten = rewriteSimpleTryCatchRaw(raw);
+		if (rewritten != null)
+			return rewritten;
+
+		var js = sanitizeCatchTypeHints(raw);
+		if (js.indexOf("catch") < 0 && js.indexOf("finally") < 0)
+			js += "catch(__hx_err){throw __hx_err;}";
+		return "(function () { " + js + " })()";
+	}
+
+	static function rewriteSimpleTryCatchRaw(raw:String):Null<String> {
+		if (!StringTools.startsWith(raw, "try{"))
+			return null;
+
+		final tryOpen = raw.indexOf("{");
+		final tryClose = findMatching(raw, tryOpen, "{".code, "}".code);
+		if (tryClose < 0)
+			return null;
+
+		final catchStart = tryClose + 1;
+		if (raw.substr(catchStart, 6) != "catch")
+			return null;
+		final catchParenOpen = catchStart + 5;
+		if (catchParenOpen >= raw.length || raw.charCodeAt(catchParenOpen) != "(".code)
+			return null;
+		final catchParenClose = findMatching(raw, catchParenOpen, "(".code, ")".code);
+		if (catchParenClose < 0)
+			return null;
+
+		final catchBodyOpen = catchParenClose + 1;
+		if (catchBodyOpen >= raw.length || raw.charCodeAt(catchBodyOpen) != "{".code)
+			return null;
+		final catchBodyClose = findMatching(raw, catchBodyOpen, "{".code, "}".code);
+		if (catchBodyClose < 0)
+			return null;
+
+		final trailing = StringTools.trim(raw.substr(catchBodyClose + 1));
+		if (trailing.length != 0)
+			return null;
+
+		final catchName = sanitizeCatchName(raw.substring(catchParenOpen + 1, catchParenClose));
+		final tryBody = blockToReturningJs(raw.substring(tryOpen + 1, tryClose));
+		final catchBody = blockToReturningJs(raw.substring(catchBodyOpen + 1, catchBodyClose));
+		return "(function () { try { " + tryBody + " } catch (" + catchName + ") { " + catchBody + " } })()";
+	}
+
+	static function sanitizeCatchTypeHints(raw:String):String {
+		final out = new StringBuf();
+		var offset = 0;
+		while (offset < raw.length) {
+			final catchIndex = raw.indexOf("catch(", offset);
+			if (catchIndex < 0) {
+				out.add(raw.substr(offset));
+				break;
+			}
+			out.add(raw.substring(offset, catchIndex));
+			final parenOpen = catchIndex + 5;
+			final parenClose = findMatching(raw, parenOpen, "(".code, ")".code);
+			if (parenClose < 0) {
+				out.add(raw.substr(catchIndex));
+				break;
+			}
+			out.add("catch(");
+			out.add(sanitizeCatchName(raw.substring(parenOpen + 1, parenClose)));
+			out.add(")");
+			offset = parenClose + 1;
+		}
+		return out.toString();
+	}
+
+	static function sanitizeCatchName(signature:String):String {
+		var name = signature == null ? "" : StringTools.trim(signature);
+		final colon = name.indexOf(":");
+		if (colon >= 0)
+			name = StringTools.trim(name.substr(0, colon));
+		if (name.length == 0)
+			return "__hx_err";
+		return JsNameMangler.identifier(name);
+	}
+
+	static function blockToReturningJs(body:String):String {
+		var trimmed = body == null ? "" : StringTools.trim(body);
+		while (StringTools.endsWith(trimmed, ";"))
+			trimmed = StringTools.trim(trimmed.substr(0, trimmed.length - 1));
+		if (trimmed.length == 0)
+			return "return null;";
+		if (StringTools.startsWith(trimmed, "return ") || StringTools.startsWith(trimmed, "throw "))
+			return trimmed + ";";
+
+		final lastSemi = findLastTopLevelSemicolon(trimmed);
+		final prefix = lastSemi >= 0 ? trimmed.substr(0, lastSemi + 1) : "";
+		final expr = StringTools.trim(lastSemi >= 0 ? trimmed.substr(lastSemi + 1) : trimmed);
+		if (expr.length == 0)
+			return prefix + " return null;";
+		if (StringTools.startsWith(expr, "var ") || StringTools.startsWith(expr, "let ") || StringTools.startsWith(expr, "const "))
+			return trimmed + "; return null;";
+		return prefix + " return " + expr + ";";
+	}
+
+	static function findMatching(source:String, openIndex:Int, openCode:Int, closeCode:Int):Int {
+		if (source == null || openIndex < 0 || openIndex >= source.length || source.charCodeAt(openIndex) != openCode)
+			return -1;
+		var depth = 1;
+		var i = openIndex + 1;
+		while (i < source.length) {
+			final code = source.charCodeAt(i);
+			if (code == openCode) {
+				depth++;
+			} else if (code == closeCode) {
+				depth--;
+				if (depth == 0)
+					return i;
+			}
+			i++;
+		}
+		return -1;
+	}
+
+	static function findLastTopLevelSemicolon(source:String):Int {
+		var parenDepth = 0;
+		var braceDepth = 0;
+		var bracketDepth = 0;
+		var last = -1;
+		for (i in 0...source.length) {
+			switch (source.charCodeAt(i)) {
+				case "(".code:
+					parenDepth++;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth--;
+				case "{".code:
+					braceDepth++;
+				case "}".code:
+					if (braceDepth > 0)
+						braceDepth--;
+				case "[".code:
+					bracketDepth++;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth--;
+				case ";".code:
+					if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0)
+						last = i;
+				case _:
+			}
+		}
+		return last;
 	}
 
 	static function resolveIdent(name:String, scope:JsEmitScope):String {

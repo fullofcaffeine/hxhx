@@ -252,6 +252,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "haxe.io.Path")
 			return emitPathStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "sys.FileSystem")
+			return emitFileSystemStaticFunctionBody(writer, fnName, params);
+
 		if (fullName != "haxe.SysTools")
 			return false;
 
@@ -318,6 +321,64 @@ class JsTargetCore implements ITargetCore {
 				writer.popIndent();
 				writer.writeln("}");
 				writer.writeln("return " + argument + ";");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitFileSystemStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "exists":
+				if (params.length < 1)
+					return false;
+				final path = params[0];
+				writer.writeln("return require(\"fs\").existsSync(" + path + ");");
+				return true;
+			case "isDirectory":
+				if (params.length < 1)
+					return false;
+				final path = params[0];
+				writer.writeln("return require(\"fs\").statSync(" + path + ").isDirectory();");
+				return true;
+			case "readDirectory":
+				if (params.length < 1)
+					return false;
+				final path = params[0];
+				writer.writeln("return require(\"fs\").readdirSync(" + path + ");");
+				return true;
+			case "createDirectory":
+				if (params.length < 1)
+					return false;
+				final path = params[0];
+				writer.writeln("require(\"fs\").mkdirSync(" + path + ", { recursive: true });");
+				writer.writeln("return null;");
+				return true;
+			case "deleteFile":
+				if (params.length < 1)
+					return false;
+				final path = params[0];
+				writer.writeln("require(\"fs\").unlinkSync(" + path + ");");
+				writer.writeln("return null;");
+				return true;
+			case "deleteDirectory":
+				if (params.length < 1)
+					return false;
+				final path = params[0];
+				writer.writeln("require(\"fs\").rmdirSync(" + path + ");");
+				writer.writeln("return null;");
+				return true;
+			case "rename":
+				if (params.length < 2)
+					return false;
+				writer.writeln("require(\"fs\").renameSync(" + params[0] + ", " + params[1] + ");");
+				writer.writeln("return null;");
+				return true;
+			case "fullPath" | "absolutePath":
+				if (params.length < 1)
+					return false;
+				final path = params[0];
+				writer.writeln("return require(\"path\").resolve(" + path + ");");
 				return true;
 			case _:
 				return false;

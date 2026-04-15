@@ -69,6 +69,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "haxe/io/Path.hx");
 	}
 
+	static function fileSystemModule():TypedModule {
+		final pathArg = new HxFunctionArg("path", "String", HxDefaultValue.NoDefault);
+		final fsClass = new HxClassDecl("FileSystem", false, [
+			new HxFunctionDecl("exists", HxVisibility.Public, true, [pathArg], "Bool", unsupportedBody("[js-native:unsupported_expr] kind=ETryCatchRaw"), "")
+		]);
+		final decl = new HxModuleDecl("sys", [], fsClass, [fsClass], false, false);
+		return typedModule("", decl, "sys/FileSystem.hx");
+	}
+
 	static function lambdaModule():TypedModule {
 		final iterableArg = new HxFunctionArg("it", "Array<Array<Int>>", HxDefaultValue.NoDefault);
 		final filterIterableArg = new HxFunctionArg("it", "Array<Int>", HxDefaultValue.NoDefault);
@@ -148,6 +157,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		var failure:Null<String> = null;
 		try {
 			final source = [
+				"import sys.FileSystem;",
 				"class Main {",
 				"  static function main() {",
 				'    Sys.println(SysTools.quoteUnixArg("a b"));',
@@ -160,6 +170,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(Path.join(["foo", "bar", "..", "baz"]));',
 				'    Sys.println(Lambda.flatten([[1, 2], [3]]).join(","));',
 				'    Sys.println(Lambda.filter([1, 2, 3, 4], function(i) return i > 2).join(","));',
+				'    Sys.println(FileSystem.exists("."));',
+				'    Sys.println(try { "try-ok"; } catch (e:Dynamic) { "try-fail"; });',
 				"  }",
 				"}"
 			].join("\n");
@@ -167,6 +179,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				mainModule(source),
 				sysToolsModule(),
 				pathModule(),
+				fileSystemModule(),
 				lambdaModule(),
 				macroModule(),
 				macroCompilerModule(),
@@ -182,6 +195,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_SysTools.quoteUnixArg = function", "SysTools quoteUnixArg shim should emit");
 			assertContains(js, "__hx_cls_haxe_SysTools.quoteWinArg = function", "SysTools quoteWinArg shim should emit");
 			assertContains(js, "__hx_cls_haxe_io_Path.normalize = function", "Path normalize shim should emit");
+			assertContains(js, "__hx_cls_sys_FileSystem.exists = function", "FileSystem exists shim should emit");
+			assertContains(js, "try {  return \"try-ok\";", "try expression should lower to a returning IIFE");
 			assertContains(js, "__hx_cls_Macro.stripWhitespaces = function", "compile-time Macro fallback should emit");
 			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.getDefine = function", "compile-time macro Compiler fallback should emit");
@@ -202,6 +217,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "foo/baz", "Path.join should combine and normalize segments");
 			assertContains(stdout, "1,2,3", "Lambda.flatten should concatenate nested iterables");
 			assertContains(stdout, "3,4", "Lambda.filter should preserve matching items");
+			assertContains(stdout, "true", "FileSystem.exists should use Node fs existsSync");
+			assertContains(stdout, "try-ok", "try expression should return the successful branch value");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
