@@ -11,6 +11,7 @@ enum HxTokenKind {
 	TString(value:String);
 	TInt(value:Int);
 	TFloat(value:Float);
+	TRegex(pattern:String, flags:String);
 	TKeyword(k:HxKeyword);
 	TLBrace; // {
 	TRBrace; // }

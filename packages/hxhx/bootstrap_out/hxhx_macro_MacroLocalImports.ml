@@ -53,16 +53,17 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
           | HxTokenKind.TString _ -> 2
           | HxTokenKind.TInt _ -> 3
           | HxTokenKind.TFloat _ -> 4
-          | HxTokenKind.TKeyword _ -> 5
-          | HxTokenKind.TLBrace -> 6
-          | HxTokenKind.TRBrace -> 7
-          | HxTokenKind.TLParen -> 8
-          | HxTokenKind.TRParen -> 9
-          | HxTokenKind.TSemicolon -> 10
-          | HxTokenKind.TColon -> 11
-          | HxTokenKind.TDot -> 12
-          | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 5 then let _g2 = Obj.magic (match _g with
+          | HxTokenKind.TRegex (_, _) -> 5
+          | HxTokenKind.TKeyword _ -> 6
+          | HxTokenKind.TLBrace -> 7
+          | HxTokenKind.TRBrace -> 8
+          | HxTokenKind.TLParen -> 9
+          | HxTokenKind.TRParen -> 10
+          | HxTokenKind.TSemicolon -> 11
+          | HxTokenKind.TColon -> 12
+          | HxTokenKind.TDot -> 13
+          | HxTokenKind.TComma -> 14
+          | HxTokenKind.TOther _ -> 15) = 6 then let _g2 = Obj.magic (match _g with
           | HxTokenKind.TKeyword __enum_param_14 -> __enum_param_14
           | _ -> failwith "Unexpected enum parameter") in let actual = Obj.magic _g2 in if actual = expected then (
           ignore (let __assign_15 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
@@ -88,16 +89,17 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
           | HxTokenKind.TString _ -> 2
           | HxTokenKind.TInt _ -> 3
           | HxTokenKind.TFloat _ -> 4
-          | HxTokenKind.TKeyword _ -> 5
-          | HxTokenKind.TLBrace -> 6
-          | HxTokenKind.TRBrace -> 7
-          | HxTokenKind.TLParen -> 8
-          | HxTokenKind.TRParen -> 9
-          | HxTokenKind.TSemicolon -> 10
-          | HxTokenKind.TColon -> 11
-          | HxTokenKind.TDot -> 12
-          | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 1 then let _g2 = (match _g with
+          | HxTokenKind.TRegex (_, _) -> 5
+          | HxTokenKind.TKeyword _ -> 6
+          | HxTokenKind.TLBrace -> 7
+          | HxTokenKind.TRBrace -> 8
+          | HxTokenKind.TLParen -> 9
+          | HxTokenKind.TRParen -> 10
+          | HxTokenKind.TSemicolon -> 11
+          | HxTokenKind.TColon -> 12
+          | HxTokenKind.TDot -> 13
+          | HxTokenKind.TComma -> 14
+          | HxTokenKind.TOther _ -> 15) = 1 then let _g2 = (match _g with
           | HxTokenKind.TIdent __enum_param_19 -> __enum_param_19
           | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let token = let __anon_20 = HxAnon.create () in (
           ignore (HxAnon.set __anon_20 "name" (Obj.repr name));
@@ -144,16 +146,17 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
               | HxTokenKind.TString _ -> 2
               | HxTokenKind.TInt _ -> 3
               | HxTokenKind.TFloat _ -> 4
-              | HxTokenKind.TKeyword _ -> 5
-              | HxTokenKind.TLBrace -> 6
-              | HxTokenKind.TRBrace -> 7
-              | HxTokenKind.TLParen -> 8
-              | HxTokenKind.TRParen -> 9
-              | HxTokenKind.TSemicolon -> 10
-              | HxTokenKind.TColon -> 11
-              | HxTokenKind.TDot -> 12
-              | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 12 then ignore ((
+              | HxTokenKind.TRegex (_, _) -> 5
+              | HxTokenKind.TKeyword _ -> 6
+              | HxTokenKind.TLBrace -> 7
+              | HxTokenKind.TRBrace -> 8
+              | HxTokenKind.TLParen -> 9
+              | HxTokenKind.TRParen -> 10
+              | HxTokenKind.TSemicolon -> 11
+              | HxTokenKind.TColon -> 12
+              | HxTokenKind.TDot -> 13
+              | HxTokenKind.TComma -> 14
+              | HxTokenKind.TOther _ -> 15) = 13 then ignore ((
               ignore (let __assign_27 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
                 cur := __assign_27;
                 __assign_27
@@ -215,16 +218,17 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
               | HxTokenKind.TString _ -> 2
               | HxTokenKind.TInt _ -> 3
               | HxTokenKind.TFloat _ -> 4
-              | HxTokenKind.TKeyword _ -> 5
-              | HxTokenKind.TLBrace -> 6
-              | HxTokenKind.TRBrace -> 7
-              | HxTokenKind.TLParen -> 8
-              | HxTokenKind.TRParen -> 9
-              | HxTokenKind.TSemicolon -> 10
-              | HxTokenKind.TColon -> 11
-              | HxTokenKind.TDot -> 12
-              | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 10 then ignore (let __assign_37 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+              | HxTokenKind.TRegex (_, _) -> 5
+              | HxTokenKind.TKeyword _ -> 6
+              | HxTokenKind.TLBrace -> 7
+              | HxTokenKind.TRBrace -> 8
+              | HxTokenKind.TLParen -> 9
+              | HxTokenKind.TRParen -> 10
+              | HxTokenKind.TSemicolon -> 11
+              | HxTokenKind.TColon -> 12
+              | HxTokenKind.TDot -> 13
+              | HxTokenKind.TComma -> 14
+              | HxTokenKind.TOther _ -> 15) = 11 then ignore (let __assign_37 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
               cur := __assign_37;
               __assign_37
             )) else ignore (skipToSemicolon ()));
@@ -321,16 +325,17 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
           | HxTokenKind.TString _ -> 2
           | HxTokenKind.TInt _ -> 3
           | HxTokenKind.TFloat _ -> 4
-          | HxTokenKind.TKeyword _ -> 5
-          | HxTokenKind.TLBrace -> 6
-          | HxTokenKind.TRBrace -> 7
-          | HxTokenKind.TLParen -> 8
-          | HxTokenKind.TRParen -> 9
-          | HxTokenKind.TSemicolon -> 10
-          | HxTokenKind.TColon -> 11
-          | HxTokenKind.TDot -> 12
-          | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 5 then ignore (let _g2 = Obj.magic (match _g with
+          | HxTokenKind.TRegex (_, _) -> 5
+          | HxTokenKind.TKeyword _ -> 6
+          | HxTokenKind.TLBrace -> 7
+          | HxTokenKind.TRBrace -> 8
+          | HxTokenKind.TLParen -> 9
+          | HxTokenKind.TRParen -> 10
+          | HxTokenKind.TSemicolon -> 11
+          | HxTokenKind.TColon -> 12
+          | HxTokenKind.TDot -> 13
+          | HxTokenKind.TComma -> 14
+          | HxTokenKind.TOther _ -> 15) = 6 then ignore (let _g2 = Obj.magic (match _g with
           | HxTokenKind.TKeyword __enum_param_56 -> __enum_param_56
           | _ -> failwith "Unexpected enum parameter") in match _g2 with
           | HxKeyword.KImport -> ignore ((

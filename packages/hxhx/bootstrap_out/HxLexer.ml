@@ -1473,353 +1473,574 @@ let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let __fallback
 ) in Obj.magic __fallback_result_512 with
   | HxRuntime.Hx_return __ret_511 -> Obj.obj __ret_511
 
-let next = fun self () -> try let __fallback_result_647 = (
+let readRegexLiteral = fun self (startPos : HxPos.t) -> try let __fallback_result_572 = (
+  ignore (let tempNumber = ref (0 : int) in (
+    ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_513 = -1 in (
+      tempNumber := __assign_513;
+      __assign_513
+    ) else let __assign_514 = let __nullable_int_515 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_515 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_515 in (
+      tempNumber := __assign_514;
+      __assign_514
+    ));
+    let c = !tempNumber in (
+      ignore (let __obj_516 = self in let __old_517 = (Obj.magic __obj_516 : t).index in let __new_518 = HxInt.add __old_517 1 in (
+        ignore ((Obj.magic __obj_516 : t).index <- __new_518);
+        __old_517
+      ));
+      ignore (if c = 10 then ignore ((
+        ignore (let __obj_519 = self in let __old_520 = (Obj.magic __obj_519 : t).line in let __new_521 = HxInt.add __old_520 1 in (
+          ignore ((Obj.magic __obj_519 : t).line <- __new_521);
+          __old_520
+        ));
+        let __assign_522 = 1 in (
+          (Obj.magic self : t).column <- __assign_522;
+          __assign_522
+        )
+      )) else ignore (if c <> 13 then ignore (let __obj_523 = self in let __old_524 = (Obj.magic __obj_523 : t).column in let __new_525 = HxInt.add __old_524 1 in (
+        ignore ((Obj.magic __obj_523 : t).column <- __new_525);
+        __old_524
+      )) else ()));
+      c
+    )
+  ));
+  ignore (let tempNumber1 = ref (0 : int) in (
+    ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_526 = -1 in (
+      tempNumber1 := __assign_526;
+      __assign_526
+    ) else let __assign_527 = let __nullable_int_528 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_528 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_528 in (
+      tempNumber1 := __assign_527;
+      __assign_527
+    ));
+    let c = !tempNumber1 in (
+      ignore (let __obj_529 = self in let __old_530 = (Obj.magic __obj_529 : t).index in let __new_531 = HxInt.add __old_530 1 in (
+        ignore ((Obj.magic __obj_529 : t).index <- __new_531);
+        __old_530
+      ));
+      ignore (if c = 10 then ignore ((
+        ignore (let __obj_532 = self in let __old_533 = (Obj.magic __obj_532 : t).line in let __new_534 = HxInt.add __old_533 1 in (
+          ignore ((Obj.magic __obj_532 : t).line <- __new_534);
+          __old_533
+        ));
+        let __assign_535 = 1 in (
+          (Obj.magic self : t).column <- __assign_535;
+          __assign_535
+        )
+      )) else ignore (if c <> 13 then ignore (let __obj_536 = self in let __old_537 = (Obj.magic __obj_536 : t).column in let __new_538 = HxInt.add __old_537 1 in (
+        ignore ((Obj.magic __obj_536 : t).column <- __new_538);
+        __old_537
+      )) else ()));
+      c
+    )
+  ));
+  let pattern = Obj.magic (StringBuf.create ()) in let escaped = ref false in (
+    ignore (try while (Obj.magic self : t).index < HxString.length ((Obj.magic self : t).src) do try ignore (let tempNumber2 = ref (0 : int) in (
+      ignore (let tempNumber3 = ref (0 : int) in (
+        ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_539 = -1 in (
+          tempNumber3 := __assign_539;
+          __assign_539
+        ) else let __assign_540 = let __nullable_int_541 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_541 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_541 in (
+          tempNumber3 := __assign_540;
+          __assign_540
+        ));
+        let c = !tempNumber3 in (
+          ignore (let __obj_542 = self in let __old_543 = (Obj.magic __obj_542 : t).index in let __new_544 = HxInt.add __old_543 1 in (
+            ignore ((Obj.magic __obj_542 : t).index <- __new_544);
+            __old_543
+          ));
+          ignore (if c = 10 then ignore ((
+            ignore (let __obj_545 = self in let __old_546 = (Obj.magic __obj_545 : t).line in let __new_547 = HxInt.add __old_546 1 in (
+              ignore ((Obj.magic __obj_545 : t).line <- __new_547);
+              __old_546
+            ));
+            let __assign_548 = 1 in (
+              (Obj.magic self : t).column <- __assign_548;
+              __assign_548
+            )
+          )) else ignore (if c <> 13 then ignore (let __obj_549 = self in let __old_550 = (Obj.magic __obj_549 : t).column in let __new_551 = HxInt.add __old_550 1 in (
+            ignore ((Obj.magic __obj_549 : t).column <- __new_551);
+            __old_550
+          )) else ()));
+          let __assign_552 = c in (
+            tempNumber2 := __assign_552;
+            __assign_552
+          )
+        )
+      ));
+      let c = !tempNumber2 in (
+        ignore (if !escaped then ignore ((
+          ignore (StringBuf.addChar (Obj.magic pattern) c);
+          ignore (let __assign_553 = false in (
+            escaped := __assign_553;
+            __assign_553
+          ));
+          raise (HxRuntime.Hx_continue)
+        )) else ());
+        ignore (if c = 92 then ignore ((
+          ignore (StringBuf.addChar (Obj.magic pattern) c);
+          ignore (let __assign_554 = true in (
+            escaped := __assign_554;
+            __assign_554
+          ));
+          raise (HxRuntime.Hx_continue)
+        )) else ());
+        ignore (if c = 47 then ignore (let flags = Obj.magic (StringBuf.create ()) in (
+          ignore (try while (Obj.magic self : t).index < HxString.length ((Obj.magic self : t).src) do try ignore (let tempNumber4 = ref (0 : int) in (
+            ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_555 = -1 in (
+              tempNumber4 := __assign_555;
+              __assign_555
+            ) else let __assign_556 = let __nullable_int_557 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_557 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_557 in (
+              tempNumber4 := __assign_556;
+              __assign_556
+            ));
+            let f = !tempNumber4 in let isLower = f >= 97 && f <= 122 in let isUpper = f >= 65 && f <= 90 in (
+              ignore (if not (isLower) && not (isUpper) then raise (HxRuntime.Hx_break) else ());
+              let tempNumber6 = ref (0 : int) in (
+                ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_558 = -1 in (
+                  tempNumber6 := __assign_558;
+                  __assign_558
+                ) else let __assign_559 = let __nullable_int_560 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_560 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_560 in (
+                  tempNumber6 := __assign_559;
+                  __assign_559
+                ));
+                let c2 = !tempNumber6 in (
+                  ignore (let __obj_561 = self in let __old_562 = (Obj.magic __obj_561 : t).index in let __new_563 = HxInt.add __old_562 1 in (
+                    ignore ((Obj.magic __obj_561 : t).index <- __new_563);
+                    __old_562
+                  ));
+                  ignore (if c2 = 10 then ignore ((
+                    ignore (let __obj_564 = self in let __old_565 = (Obj.magic __obj_564 : t).line in let __new_566 = HxInt.add __old_565 1 in (
+                      ignore ((Obj.magic __obj_564 : t).line <- __new_566);
+                      __old_565
+                    ));
+                    let __assign_567 = 1 in (
+                      (Obj.magic self : t).column <- __assign_567;
+                      __assign_567
+                    )
+                  )) else ignore (if c2 <> 13 then ignore (let __obj_568 = self in let __old_569 = (Obj.magic __obj_568 : t).column in let __new_570 = HxInt.add __old_569 1 in (
+                    ignore ((Obj.magic __obj_568 : t).column <- __new_570);
+                    __old_569
+                  )) else ()));
+                  let tempNumber5 = c2 in StringBuf.addChar (Obj.magic flags) tempNumber5
+                )
+              )
+            )
+          )) with
+            | HxRuntime.Hx_continue -> () done with
+            | HxRuntime.Hx_break -> ());
+          raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (Obj.magic (HxTokenKind.TRegex ((StringBuf.toString (Obj.magic pattern) () : string), (StringBuf.toString (Obj.magic flags) () : string)))) (Obj.magic startPos))))
+        )) else ());
+        StringBuf.addChar (Obj.magic pattern) c
+      )
+    )) with
+      | HxRuntime.Hx_continue -> () done with
+      | HxRuntime.Hx_break -> ());
+    HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create ("Unterminated regex literal" : string) (Obj.magic startPos))) ["Dynamic"; "HxParseError"]
+  )
+) in Obj.magic __fallback_result_572 with
+  | HxRuntime.Hx_return __ret_571 -> Obj.obj __ret_571
+
+let next = fun self () -> try let __fallback_result_727 = (
   ignore (skipWhitespaceAndComments (Obj.magic self) ());
   let p = Obj.magic (HxPos.create ((Obj.magic self : t).index) ((Obj.magic self : t).line) ((Obj.magic self : t).column)) in (
     ignore (if (Obj.magic self : t).index >= HxString.length ((Obj.magic self : t).src) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TEof)) (Obj.magic p))))) else ());
     let tempNumber = ref (0 : int) in (
-      ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_513 = -1 in (
-        tempNumber := __assign_513;
-        __assign_513
-      ) else let __assign_514 = let __nullable_int_515 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_515 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_515 in (
-        tempNumber := __assign_514;
-        __assign_514
+      ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_573 = -1 in (
+        tempNumber := __assign_573;
+        __assign_573
+      ) else let __assign_574 = let __nullable_int_575 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_575 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_575 in (
+        tempNumber := __assign_574;
+        __assign_574
       ));
       let c = !tempNumber in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxToken.t) in (
         ignore (match c with
-          | 34 -> let __assign_532 = Obj.magic (readString (Obj.magic self) (Obj.magic p)) in (
-            tempResult := __assign_532;
-            __assign_532
+          | 34 -> let __assign_592 = Obj.magic (readString (Obj.magic self) (Obj.magic p)) in (
+            tempResult := __assign_592;
+            __assign_592
           )
-          | 39 -> let __assign_533 = Obj.magic (readSingleQuotedString (Obj.magic self) (Obj.magic p)) in (
-            tempResult := __assign_533;
-            __assign_533
+          | 39 -> let __assign_593 = Obj.magic (readSingleQuotedString (Obj.magic self) (Obj.magic p)) in (
+            tempResult := __assign_593;
+            __assign_593
           )
           | 40 -> (
             ignore (let tempNumber1 = ref (0 : int) in (
-              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_534 = -1 in (
-                tempNumber1 := __assign_534;
-                __assign_534
-              ) else let __assign_535 = let __nullable_int_536 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_536 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_536 in (
-                tempNumber1 := __assign_535;
-                __assign_535
+              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_594 = -1 in (
+                tempNumber1 := __assign_594;
+                __assign_594
+              ) else let __assign_595 = let __nullable_int_596 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_596 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_596 in (
+                tempNumber1 := __assign_595;
+                __assign_595
               ));
               let c2 = !tempNumber1 in (
-                ignore (let __obj_537 = self in let __old_538 = (Obj.magic __obj_537 : t).index in let __new_539 = HxInt.add __old_538 1 in (
-                  ignore ((Obj.magic __obj_537 : t).index <- __new_539);
-                  __old_538
+                ignore (let __obj_597 = self in let __old_598 = (Obj.magic __obj_597 : t).index in let __new_599 = HxInt.add __old_598 1 in (
+                  ignore ((Obj.magic __obj_597 : t).index <- __new_599);
+                  __old_598
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_540 = self in let __old_541 = (Obj.magic __obj_540 : t).line in let __new_542 = HxInt.add __old_541 1 in (
-                    ignore ((Obj.magic __obj_540 : t).line <- __new_542);
-                    __old_541
+                  ignore (let __obj_600 = self in let __old_601 = (Obj.magic __obj_600 : t).line in let __new_602 = HxInt.add __old_601 1 in (
+                    ignore ((Obj.magic __obj_600 : t).line <- __new_602);
+                    __old_601
                   ));
-                  let __assign_543 = 1 in (
-                    (Obj.magic self : t).column <- __assign_543;
-                    __assign_543
+                  let __assign_603 = 1 in (
+                    (Obj.magic self : t).column <- __assign_603;
+                    __assign_603
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_544 = self in let __old_545 = (Obj.magic __obj_544 : t).column in let __new_546 = HxInt.add __old_545 1 in (
-                  ignore ((Obj.magic __obj_544 : t).column <- __new_546);
-                  __old_545
+                )) else ignore (if c2 <> 13 then ignore (let __obj_604 = self in let __old_605 = (Obj.magic __obj_604 : t).column in let __new_606 = HxInt.add __old_605 1 in (
+                  ignore ((Obj.magic __obj_604 : t).column <- __new_606);
+                  __old_605
                 )) else ()));
                 c2
               )
             ));
-            let __assign_547 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TLParen)) (Obj.magic p)) in (
-              tempResult := __assign_547;
-              __assign_547
+            let __assign_607 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TLParen)) (Obj.magic p)) in (
+              tempResult := __assign_607;
+              __assign_607
             )
           )
           | 41 -> (
             ignore (let tempNumber2 = ref (0 : int) in (
-              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_548 = -1 in (
-                tempNumber2 := __assign_548;
-                __assign_548
-              ) else let __assign_549 = let __nullable_int_550 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_550 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_550 in (
-                tempNumber2 := __assign_549;
-                __assign_549
+              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_608 = -1 in (
+                tempNumber2 := __assign_608;
+                __assign_608
+              ) else let __assign_609 = let __nullable_int_610 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_610 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_610 in (
+                tempNumber2 := __assign_609;
+                __assign_609
               ));
               let c2 = !tempNumber2 in (
-                ignore (let __obj_551 = self in let __old_552 = (Obj.magic __obj_551 : t).index in let __new_553 = HxInt.add __old_552 1 in (
-                  ignore ((Obj.magic __obj_551 : t).index <- __new_553);
-                  __old_552
+                ignore (let __obj_611 = self in let __old_612 = (Obj.magic __obj_611 : t).index in let __new_613 = HxInt.add __old_612 1 in (
+                  ignore ((Obj.magic __obj_611 : t).index <- __new_613);
+                  __old_612
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_554 = self in let __old_555 = (Obj.magic __obj_554 : t).line in let __new_556 = HxInt.add __old_555 1 in (
-                    ignore ((Obj.magic __obj_554 : t).line <- __new_556);
-                    __old_555
+                  ignore (let __obj_614 = self in let __old_615 = (Obj.magic __obj_614 : t).line in let __new_616 = HxInt.add __old_615 1 in (
+                    ignore ((Obj.magic __obj_614 : t).line <- __new_616);
+                    __old_615
                   ));
-                  let __assign_557 = 1 in (
-                    (Obj.magic self : t).column <- __assign_557;
-                    __assign_557
+                  let __assign_617 = 1 in (
+                    (Obj.magic self : t).column <- __assign_617;
+                    __assign_617
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_558 = self in let __old_559 = (Obj.magic __obj_558 : t).column in let __new_560 = HxInt.add __old_559 1 in (
-                  ignore ((Obj.magic __obj_558 : t).column <- __new_560);
-                  __old_559
+                )) else ignore (if c2 <> 13 then ignore (let __obj_618 = self in let __old_619 = (Obj.magic __obj_618 : t).column in let __new_620 = HxInt.add __old_619 1 in (
+                  ignore ((Obj.magic __obj_618 : t).column <- __new_620);
+                  __old_619
                 )) else ()));
                 c2
               )
             ));
-            let __assign_561 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TRParen)) (Obj.magic p)) in (
-              tempResult := __assign_561;
-              __assign_561
+            let __assign_621 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TRParen)) (Obj.magic p)) in (
+              tempResult := __assign_621;
+              __assign_621
             )
           )
           | 44 -> (
             ignore (let tempNumber3 = ref (0 : int) in (
-              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_562 = -1 in (
-                tempNumber3 := __assign_562;
-                __assign_562
-              ) else let __assign_563 = let __nullable_int_564 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_564 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_564 in (
-                tempNumber3 := __assign_563;
-                __assign_563
+              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_622 = -1 in (
+                tempNumber3 := __assign_622;
+                __assign_622
+              ) else let __assign_623 = let __nullable_int_624 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_624 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_624 in (
+                tempNumber3 := __assign_623;
+                __assign_623
               ));
               let c2 = !tempNumber3 in (
-                ignore (let __obj_565 = self in let __old_566 = (Obj.magic __obj_565 : t).index in let __new_567 = HxInt.add __old_566 1 in (
-                  ignore ((Obj.magic __obj_565 : t).index <- __new_567);
-                  __old_566
+                ignore (let __obj_625 = self in let __old_626 = (Obj.magic __obj_625 : t).index in let __new_627 = HxInt.add __old_626 1 in (
+                  ignore ((Obj.magic __obj_625 : t).index <- __new_627);
+                  __old_626
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_568 = self in let __old_569 = (Obj.magic __obj_568 : t).line in let __new_570 = HxInt.add __old_569 1 in (
-                    ignore ((Obj.magic __obj_568 : t).line <- __new_570);
-                    __old_569
+                  ignore (let __obj_628 = self in let __old_629 = (Obj.magic __obj_628 : t).line in let __new_630 = HxInt.add __old_629 1 in (
+                    ignore ((Obj.magic __obj_628 : t).line <- __new_630);
+                    __old_629
                   ));
-                  let __assign_571 = 1 in (
-                    (Obj.magic self : t).column <- __assign_571;
-                    __assign_571
+                  let __assign_631 = 1 in (
+                    (Obj.magic self : t).column <- __assign_631;
+                    __assign_631
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_572 = self in let __old_573 = (Obj.magic __obj_572 : t).column in let __new_574 = HxInt.add __old_573 1 in (
-                  ignore ((Obj.magic __obj_572 : t).column <- __new_574);
-                  __old_573
+                )) else ignore (if c2 <> 13 then ignore (let __obj_632 = self in let __old_633 = (Obj.magic __obj_632 : t).column in let __new_634 = HxInt.add __old_633 1 in (
+                  ignore ((Obj.magic __obj_632 : t).column <- __new_634);
+                  __old_633
                 )) else ()));
                 c2
               )
             ));
-            let __assign_575 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TComma)) (Obj.magic p)) in (
-              tempResult := __assign_575;
-              __assign_575
+            let __assign_635 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TComma)) (Obj.magic p)) in (
+              tempResult := __assign_635;
+              __assign_635
             )
           )
           | 46 -> (
             ignore (let tempNumber4 = ref (0 : int) in (
-              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_576 = -1 in (
-                tempNumber4 := __assign_576;
-                __assign_576
-              ) else let __assign_577 = let __nullable_int_578 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_578 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_578 in (
-                tempNumber4 := __assign_577;
-                __assign_577
+              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_636 = -1 in (
+                tempNumber4 := __assign_636;
+                __assign_636
+              ) else let __assign_637 = let __nullable_int_638 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_638 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_638 in (
+                tempNumber4 := __assign_637;
+                __assign_637
               ));
               let c2 = !tempNumber4 in (
-                ignore (let __obj_579 = self in let __old_580 = (Obj.magic __obj_579 : t).index in let __new_581 = HxInt.add __old_580 1 in (
-                  ignore ((Obj.magic __obj_579 : t).index <- __new_581);
-                  __old_580
+                ignore (let __obj_639 = self in let __old_640 = (Obj.magic __obj_639 : t).index in let __new_641 = HxInt.add __old_640 1 in (
+                  ignore ((Obj.magic __obj_639 : t).index <- __new_641);
+                  __old_640
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_582 = self in let __old_583 = (Obj.magic __obj_582 : t).line in let __new_584 = HxInt.add __old_583 1 in (
-                    ignore ((Obj.magic __obj_582 : t).line <- __new_584);
-                    __old_583
+                  ignore (let __obj_642 = self in let __old_643 = (Obj.magic __obj_642 : t).line in let __new_644 = HxInt.add __old_643 1 in (
+                    ignore ((Obj.magic __obj_642 : t).line <- __new_644);
+                    __old_643
                   ));
-                  let __assign_585 = 1 in (
-                    (Obj.magic self : t).column <- __assign_585;
-                    __assign_585
+                  let __assign_645 = 1 in (
+                    (Obj.magic self : t).column <- __assign_645;
+                    __assign_645
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_586 = self in let __old_587 = (Obj.magic __obj_586 : t).column in let __new_588 = HxInt.add __old_587 1 in (
-                  ignore ((Obj.magic __obj_586 : t).column <- __new_588);
-                  __old_587
+                )) else ignore (if c2 <> 13 then ignore (let __obj_646 = self in let __old_647 = (Obj.magic __obj_646 : t).column in let __new_648 = HxInt.add __old_647 1 in (
+                  ignore ((Obj.magic __obj_646 : t).column <- __new_648);
+                  __old_647
                 )) else ()));
                 c2
               )
             ));
-            let __assign_589 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TDot)) (Obj.magic p)) in (
-              tempResult := __assign_589;
-              __assign_589
+            let __assign_649 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TDot)) (Obj.magic p)) in (
+              tempResult := __assign_649;
+              __assign_649
             )
           )
           | 58 -> (
             ignore (let tempNumber5 = ref (0 : int) in (
-              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_590 = -1 in (
-                tempNumber5 := __assign_590;
-                __assign_590
-              ) else let __assign_591 = let __nullable_int_592 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_592 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_592 in (
-                tempNumber5 := __assign_591;
-                __assign_591
+              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_650 = -1 in (
+                tempNumber5 := __assign_650;
+                __assign_650
+              ) else let __assign_651 = let __nullable_int_652 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_652 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_652 in (
+                tempNumber5 := __assign_651;
+                __assign_651
               ));
               let c2 = !tempNumber5 in (
-                ignore (let __obj_593 = self in let __old_594 = (Obj.magic __obj_593 : t).index in let __new_595 = HxInt.add __old_594 1 in (
-                  ignore ((Obj.magic __obj_593 : t).index <- __new_595);
-                  __old_594
+                ignore (let __obj_653 = self in let __old_654 = (Obj.magic __obj_653 : t).index in let __new_655 = HxInt.add __old_654 1 in (
+                  ignore ((Obj.magic __obj_653 : t).index <- __new_655);
+                  __old_654
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_596 = self in let __old_597 = (Obj.magic __obj_596 : t).line in let __new_598 = HxInt.add __old_597 1 in (
-                    ignore ((Obj.magic __obj_596 : t).line <- __new_598);
-                    __old_597
+                  ignore (let __obj_656 = self in let __old_657 = (Obj.magic __obj_656 : t).line in let __new_658 = HxInt.add __old_657 1 in (
+                    ignore ((Obj.magic __obj_656 : t).line <- __new_658);
+                    __old_657
                   ));
-                  let __assign_599 = 1 in (
-                    (Obj.magic self : t).column <- __assign_599;
-                    __assign_599
+                  let __assign_659 = 1 in (
+                    (Obj.magic self : t).column <- __assign_659;
+                    __assign_659
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_600 = self in let __old_601 = (Obj.magic __obj_600 : t).column in let __new_602 = HxInt.add __old_601 1 in (
-                  ignore ((Obj.magic __obj_600 : t).column <- __new_602);
-                  __old_601
+                )) else ignore (if c2 <> 13 then ignore (let __obj_660 = self in let __old_661 = (Obj.magic __obj_660 : t).column in let __new_662 = HxInt.add __old_661 1 in (
+                  ignore ((Obj.magic __obj_660 : t).column <- __new_662);
+                  __old_661
                 )) else ()));
                 c2
               )
             ));
-            let __assign_603 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TColon)) (Obj.magic p)) in (
-              tempResult := __assign_603;
-              __assign_603
+            let __assign_663 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TColon)) (Obj.magic p)) in (
+              tempResult := __assign_663;
+              __assign_663
             )
           )
           | 59 -> (
             ignore (let tempNumber6 = ref (0 : int) in (
-              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_604 = -1 in (
-                tempNumber6 := __assign_604;
-                __assign_604
-              ) else let __assign_605 = let __nullable_int_606 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_606 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_606 in (
-                tempNumber6 := __assign_605;
-                __assign_605
+              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_664 = -1 in (
+                tempNumber6 := __assign_664;
+                __assign_664
+              ) else let __assign_665 = let __nullable_int_666 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_666 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_666 in (
+                tempNumber6 := __assign_665;
+                __assign_665
               ));
               let c2 = !tempNumber6 in (
-                ignore (let __obj_607 = self in let __old_608 = (Obj.magic __obj_607 : t).index in let __new_609 = HxInt.add __old_608 1 in (
-                  ignore ((Obj.magic __obj_607 : t).index <- __new_609);
-                  __old_608
+                ignore (let __obj_667 = self in let __old_668 = (Obj.magic __obj_667 : t).index in let __new_669 = HxInt.add __old_668 1 in (
+                  ignore ((Obj.magic __obj_667 : t).index <- __new_669);
+                  __old_668
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_610 = self in let __old_611 = (Obj.magic __obj_610 : t).line in let __new_612 = HxInt.add __old_611 1 in (
-                    ignore ((Obj.magic __obj_610 : t).line <- __new_612);
-                    __old_611
+                  ignore (let __obj_670 = self in let __old_671 = (Obj.magic __obj_670 : t).line in let __new_672 = HxInt.add __old_671 1 in (
+                    ignore ((Obj.magic __obj_670 : t).line <- __new_672);
+                    __old_671
                   ));
-                  let __assign_613 = 1 in (
-                    (Obj.magic self : t).column <- __assign_613;
-                    __assign_613
+                  let __assign_673 = 1 in (
+                    (Obj.magic self : t).column <- __assign_673;
+                    __assign_673
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_614 = self in let __old_615 = (Obj.magic __obj_614 : t).column in let __new_616 = HxInt.add __old_615 1 in (
-                  ignore ((Obj.magic __obj_614 : t).column <- __new_616);
-                  __old_615
+                )) else ignore (if c2 <> 13 then ignore (let __obj_674 = self in let __old_675 = (Obj.magic __obj_674 : t).column in let __new_676 = HxInt.add __old_675 1 in (
+                  ignore ((Obj.magic __obj_674 : t).column <- __new_676);
+                  __old_675
                 )) else ()));
                 c2
               )
             ));
-            let __assign_617 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TSemicolon)) (Obj.magic p)) in (
-              tempResult := __assign_617;
-              __assign_617
+            let __assign_677 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TSemicolon)) (Obj.magic p)) in (
+              tempResult := __assign_677;
+              __assign_677
             )
           )
           | 123 -> (
             ignore (let tempNumber7 = ref (0 : int) in (
-              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_618 = -1 in (
-                tempNumber7 := __assign_618;
-                __assign_618
-              ) else let __assign_619 = let __nullable_int_620 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_620 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_620 in (
-                tempNumber7 := __assign_619;
-                __assign_619
+              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_678 = -1 in (
+                tempNumber7 := __assign_678;
+                __assign_678
+              ) else let __assign_679 = let __nullable_int_680 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_680 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_680 in (
+                tempNumber7 := __assign_679;
+                __assign_679
               ));
               let c2 = !tempNumber7 in (
-                ignore (let __obj_621 = self in let __old_622 = (Obj.magic __obj_621 : t).index in let __new_623 = HxInt.add __old_622 1 in (
-                  ignore ((Obj.magic __obj_621 : t).index <- __new_623);
-                  __old_622
+                ignore (let __obj_681 = self in let __old_682 = (Obj.magic __obj_681 : t).index in let __new_683 = HxInt.add __old_682 1 in (
+                  ignore ((Obj.magic __obj_681 : t).index <- __new_683);
+                  __old_682
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_624 = self in let __old_625 = (Obj.magic __obj_624 : t).line in let __new_626 = HxInt.add __old_625 1 in (
-                    ignore ((Obj.magic __obj_624 : t).line <- __new_626);
-                    __old_625
+                  ignore (let __obj_684 = self in let __old_685 = (Obj.magic __obj_684 : t).line in let __new_686 = HxInt.add __old_685 1 in (
+                    ignore ((Obj.magic __obj_684 : t).line <- __new_686);
+                    __old_685
                   ));
-                  let __assign_627 = 1 in (
-                    (Obj.magic self : t).column <- __assign_627;
-                    __assign_627
+                  let __assign_687 = 1 in (
+                    (Obj.magic self : t).column <- __assign_687;
+                    __assign_687
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_628 = self in let __old_629 = (Obj.magic __obj_628 : t).column in let __new_630 = HxInt.add __old_629 1 in (
-                  ignore ((Obj.magic __obj_628 : t).column <- __new_630);
-                  __old_629
+                )) else ignore (if c2 <> 13 then ignore (let __obj_688 = self in let __old_689 = (Obj.magic __obj_688 : t).column in let __new_690 = HxInt.add __old_689 1 in (
+                  ignore ((Obj.magic __obj_688 : t).column <- __new_690);
+                  __old_689
                 )) else ()));
                 c2
               )
             ));
-            let __assign_631 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TLBrace)) (Obj.magic p)) in (
-              tempResult := __assign_631;
-              __assign_631
+            let __assign_691 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TLBrace)) (Obj.magic p)) in (
+              tempResult := __assign_691;
+              __assign_691
             )
           )
           | 125 -> (
             ignore (let tempNumber8 = ref (0 : int) in (
-              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_632 = -1 in (
-                tempNumber8 := __assign_632;
-                __assign_632
-              ) else let __assign_633 = let __nullable_int_634 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_634 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_634 in (
-                tempNumber8 := __assign_633;
-                __assign_633
+              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_692 = -1 in (
+                tempNumber8 := __assign_692;
+                __assign_692
+              ) else let __assign_693 = let __nullable_int_694 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_694 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_694 in (
+                tempNumber8 := __assign_693;
+                __assign_693
               ));
               let c2 = !tempNumber8 in (
-                ignore (let __obj_635 = self in let __old_636 = (Obj.magic __obj_635 : t).index in let __new_637 = HxInt.add __old_636 1 in (
-                  ignore ((Obj.magic __obj_635 : t).index <- __new_637);
-                  __old_636
+                ignore (let __obj_695 = self in let __old_696 = (Obj.magic __obj_695 : t).index in let __new_697 = HxInt.add __old_696 1 in (
+                  ignore ((Obj.magic __obj_695 : t).index <- __new_697);
+                  __old_696
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_638 = self in let __old_639 = (Obj.magic __obj_638 : t).line in let __new_640 = HxInt.add __old_639 1 in (
-                    ignore ((Obj.magic __obj_638 : t).line <- __new_640);
-                    __old_639
+                  ignore (let __obj_698 = self in let __old_699 = (Obj.magic __obj_698 : t).line in let __new_700 = HxInt.add __old_699 1 in (
+                    ignore ((Obj.magic __obj_698 : t).line <- __new_700);
+                    __old_699
                   ));
-                  let __assign_641 = 1 in (
-                    (Obj.magic self : t).column <- __assign_641;
-                    __assign_641
+                  let __assign_701 = 1 in (
+                    (Obj.magic self : t).column <- __assign_701;
+                    __assign_701
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_642 = self in let __old_643 = (Obj.magic __obj_642 : t).column in let __new_644 = HxInt.add __old_643 1 in (
-                  ignore ((Obj.magic __obj_642 : t).column <- __new_644);
-                  __old_643
+                )) else ignore (if c2 <> 13 then ignore (let __obj_702 = self in let __old_703 = (Obj.magic __obj_702 : t).column in let __new_704 = HxInt.add __old_703 1 in (
+                  ignore ((Obj.magic __obj_702 : t).column <- __new_704);
+                  __old_703
                 )) else ()));
                 c2
               )
             ));
-            let __assign_645 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TRBrace)) (Obj.magic p)) in (
-              tempResult := __assign_645;
-              __assign_645
+            let __assign_705 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TRBrace)) (Obj.magic p)) in (
+              tempResult := __assign_705;
+              __assign_705
             )
           )
-          | _ -> if c >= 48 && c <= 57 then let __assign_516 = Obj.magic (readNumber (Obj.magic self) (Obj.magic p)) in (
-            tempResult := __assign_516;
-            __assign_516
-          ) else if c >= 65 && c <= 90 || c >= 97 && c <= 122 || c = 95 then let __assign_517 = Obj.magic (readIdent (Obj.magic self) (Obj.magic p)) in (
-            tempResult := __assign_517;
-            __assign_517
-          ) else let tempNumber9 = ref (0 : int) in (
-            ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_518 = -1 in (
-              tempNumber9 := __assign_518;
-              __assign_518
-            ) else let __assign_519 = let __nullable_int_520 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_520 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_520 in (
-              tempNumber9 := __assign_519;
-              __assign_519
+          | 126 -> if c >= 48 && c <= 57 then let __assign_706 = Obj.magic (readNumber (Obj.magic self) (Obj.magic p)) in (
+            tempResult := __assign_706;
+            __assign_706
+          ) else if c >= 65 && c <= 90 || c >= 97 && c <= 122 || c = 95 then let __assign_707 = Obj.magic (readIdent (Obj.magic self) (Obj.magic p)) in (
+            tempResult := __assign_707;
+            __assign_707
+          ) else let tempLeft = ref (0 : int) in (
+            ignore (let i = HxInt.add ((Obj.magic self : t).index) 1 in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_708 = -1 in (
+              tempLeft := __assign_708;
+              __assign_708
+            ) else let __assign_709 = let __nullable_int_710 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_710 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_710 in (
+              tempLeft := __assign_709;
+              __assign_709
             ));
-            let c1 = !tempNumber9 in (
-              ignore (let __obj_521 = self in let __old_522 = (Obj.magic __obj_521 : t).index in let __new_523 = HxInt.add __old_522 1 in (
-                ignore ((Obj.magic __obj_521 : t).index <- __new_523);
-                __old_522
-              ));
-              ignore (if c1 = 10 then ignore ((
-                ignore (let __obj_524 = self in let __old_525 = (Obj.magic __obj_524 : t).line in let __new_526 = HxInt.add __old_525 1 in (
-                  ignore ((Obj.magic __obj_524 : t).line <- __new_526);
-                  __old_525
+            if !tempLeft = 47 then let __assign_711 = Obj.magic (readRegexLiteral (Obj.magic self) (Obj.magic p)) in (
+              tempResult := __assign_711;
+              __assign_711
+            ) else (
+              ignore (let tempNumber9 = ref (0 : int) in (
+                ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_712 = -1 in (
+                  tempNumber9 := __assign_712;
+                  __assign_712
+                ) else let __assign_713 = let __nullable_int_714 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_714 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_714 in (
+                  tempNumber9 := __assign_713;
+                  __assign_713
                 ));
-                let __assign_527 = 1 in (
-                  (Obj.magic self : t).column <- __assign_527;
-                  __assign_527
+                let c1 = !tempNumber9 in (
+                  ignore (let __obj_715 = self in let __old_716 = (Obj.magic __obj_715 : t).index in let __new_717 = HxInt.add __old_716 1 in (
+                    ignore ((Obj.magic __obj_715 : t).index <- __new_717);
+                    __old_716
+                  ));
+                  ignore (if c1 = 10 then ignore ((
+                    ignore (let __obj_718 = self in let __old_719 = (Obj.magic __obj_718 : t).line in let __new_720 = HxInt.add __old_719 1 in (
+                      ignore ((Obj.magic __obj_718 : t).line <- __new_720);
+                      __old_719
+                    ));
+                    let __assign_721 = 1 in (
+                      (Obj.magic self : t).column <- __assign_721;
+                      __assign_721
+                    )
+                  )) else ignore (if c1 <> 13 then ignore (let __obj_722 = self in let __old_723 = (Obj.magic __obj_722 : t).column in let __new_724 = HxInt.add __old_723 1 in (
+                    ignore ((Obj.magic __obj_722 : t).column <- __new_724);
+                    __old_723
+                  )) else ()));
+                  c1
                 )
-              )) else ignore (if c1 <> 13 then ignore (let __obj_528 = self in let __old_529 = (Obj.magic __obj_528 : t).column in let __new_530 = HxInt.add __old_529 1 in (
-                ignore ((Obj.magic __obj_528 : t).column <- __new_530);
-                __old_529
-              )) else ()));
-              ignore c1;
-              let __assign_531 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TOther c)) (Obj.magic p)) in (
-                tempResult := __assign_531;
-                __assign_531
+              ));
+              let __assign_725 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TOther c)) (Obj.magic p)) in (
+                tempResult := __assign_725;
+                __assign_725
               )
+            )
+          )
+          | _ -> if c >= 48 && c <= 57 then let __assign_576 = Obj.magic (readNumber (Obj.magic self) (Obj.magic p)) in (
+            tempResult := __assign_576;
+            __assign_576
+          ) else if c >= 65 && c <= 90 || c >= 97 && c <= 122 || c = 95 then let __assign_577 = Obj.magic (readIdent (Obj.magic self) (Obj.magic p)) in (
+            tempResult := __assign_577;
+            __assign_577
+          ) else (
+            ignore (let tempNumber10 = ref (0 : int) in (
+              ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_578 = -1 in (
+                tempNumber10 := __assign_578;
+                __assign_578
+              ) else let __assign_579 = let __nullable_int_580 = HxString.charCodeAt ((Obj.magic self : t).src) i in if __nullable_int_580 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_580 in (
+                tempNumber10 := __assign_579;
+                __assign_579
+              ));
+              let c1 = !tempNumber10 in (
+                ignore (let __obj_581 = self in let __old_582 = (Obj.magic __obj_581 : t).index in let __new_583 = HxInt.add __old_582 1 in (
+                  ignore ((Obj.magic __obj_581 : t).index <- __new_583);
+                  __old_582
+                ));
+                ignore (if c1 = 10 then ignore ((
+                  ignore (let __obj_584 = self in let __old_585 = (Obj.magic __obj_584 : t).line in let __new_586 = HxInt.add __old_585 1 in (
+                    ignore ((Obj.magic __obj_584 : t).line <- __new_586);
+                    __old_585
+                  ));
+                  let __assign_587 = 1 in (
+                    (Obj.magic self : t).column <- __assign_587;
+                    __assign_587
+                  )
+                )) else ignore (if c1 <> 13 then ignore (let __obj_588 = self in let __old_589 = (Obj.magic __obj_588 : t).column in let __new_590 = HxInt.add __old_589 1 in (
+                  ignore ((Obj.magic __obj_588 : t).column <- __new_590);
+                  __old_589
+                )) else ()));
+                c1
+              )
+            ));
+            let __assign_591 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TOther c)) (Obj.magic p)) in (
+              tempResult := __assign_591;
+              __assign_591
             )
           ));
         !tempResult
       )
     )
   )
-) in Obj.magic __fallback_result_647 with
-  | HxRuntime.Hx_return __ret_646 -> Obj.obj __ret_646
+) in Obj.magic __fallback_result_727 with
+  | HxRuntime.Hx_return __ret_726 -> Obj.obj __ret_726
 
 let isSpace = fun c -> c = 9 || c = 10 || c = 13 || c = 32
 

@@ -7,6 +7,7 @@ type hxtokenkind =
 | TString of string
 | TInt of int
 | TFloat of float
+| TRegex of string * string
 | TKeyword of HxKeyword.hxkeyword
 | TLBrace
 | TRBrace

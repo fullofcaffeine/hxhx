@@ -246,12 +246,28 @@ class HxParser {
 		- This is best-effort and only supports the current Stage 3 statement subset.
 	**/
 	public static function parseFunctionBodyText(bodySource:String):Array<HxStmt> {
-		final src = "{\n" + (bodySource == null ? "" : bodySource) + "\n}";
+		final src = "{\n" + normalizeInlineJsConditionalMarkers(bodySource == null ? "" : bodySource) + "\n}";
 		final p = new HxParser(src);
 		if (!p.cur.kind.match(TLBrace))
 			return [];
 		p.bump(); // consume '{'
 		return p.parseFunctionBodyStatementsBestEffort();
+	}
+
+	static function normalizeInlineJsConditionalMarkers(bodySource:String):String {
+		// Stage3 body slices can still contain inline conditional-compilation markers,
+		// notably upstream JS-specific assertions shaped like:
+		//   expr #if js || js.Browser... #end
+		//
+		// Top-level directive lines are handled by statement parsing, but inline markers
+		// appear in the middle of an expression and otherwise surface as `body_parse_error`.
+		// Keep this intentionally narrow for the JS-native Gate3 path: remove only the
+		// marker text and preserve the guarded JS expression tokens.
+		if (bodySource == null || bodySource.indexOf("#") < 0)
+			return bodySource == null ? "" : bodySource;
+		var normalized = StringTools.replace(bodySource, "#if js", " ");
+		normalized = StringTools.replace(normalized, "#end", " ");
+		return normalized;
 	}
 
 	inline function bump():Void {
@@ -556,6 +572,9 @@ class HxParser {
 				case TFloat(v):
 					parts.push(Std.string(v));
 					bump();
+				case TRegex(pattern, flags):
+					parts.push("~/" + pattern + "/" + flags);
+					bump();
 				case TLParen:
 					parts.push("(");
 					parenDepth++;
@@ -711,6 +730,9 @@ class HxParser {
 			case TFloat(v):
 				bump();
 				EFloat(v);
+			case TRegex(pattern, flags):
+				bump();
+				ENew("EReg", [EString(pattern), EString(flags)]);
 			case TIdent(name):
 				bump();
 				// Stage 3 bring-up: treat some uppercase-start identifiers as enum-like value
@@ -1881,6 +1903,8 @@ class HxParser {
 					Std.string(v);
 				case TFloat(v):
 					Std.string(v);
+				case TRegex(pattern, flags):
+					"~/" + pattern + "/" + flags;
 				case TLParen:
 					"(";
 				case TRParen:
@@ -2525,6 +2549,7 @@ class HxParser {
 				case TString(_): "string";
 				case TInt(_): "int";
 				case TFloat(_): "float";
+				case TRegex(_, _): "regex";
 				case TKeyword(k): "kw(" + keywordText(k) + ")";
 				case TOther(c): "other(" + String.fromCharCode(c) + ")";
 			};

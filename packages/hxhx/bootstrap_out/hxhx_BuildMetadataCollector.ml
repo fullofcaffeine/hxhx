@@ -61,31 +61,33 @@ let findBuildMacroExprs = fun source -> try let __fallback_result_18 = let out =
             | HxTokenKind.TString _ -> 2
             | HxTokenKind.TInt _ -> 3
             | HxTokenKind.TFloat _ -> 4
-            | HxTokenKind.TKeyword _ -> 5
-            | HxTokenKind.TLBrace -> 6
-            | HxTokenKind.TRBrace -> 7
-            | HxTokenKind.TLParen -> 8
-            | HxTokenKind.TRParen -> 9
-            | HxTokenKind.TSemicolon -> 10
-            | HxTokenKind.TColon -> 11
-            | HxTokenKind.TDot -> 12
-            | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 11 then if (match _g1 with
+            | HxTokenKind.TRegex (_, _) -> 5
+            | HxTokenKind.TKeyword _ -> 6
+            | HxTokenKind.TLBrace -> 7
+            | HxTokenKind.TRBrace -> 8
+            | HxTokenKind.TLParen -> 9
+            | HxTokenKind.TRParen -> 10
+            | HxTokenKind.TSemicolon -> 11
+            | HxTokenKind.TColon -> 12
+            | HxTokenKind.TDot -> 13
+            | HxTokenKind.TComma -> 14
+            | HxTokenKind.TOther _ -> 15) = 12 then if (match _g1 with
             | HxTokenKind.TEof -> 0
             | HxTokenKind.TIdent _ -> 1
             | HxTokenKind.TString _ -> 2
             | HxTokenKind.TInt _ -> 3
             | HxTokenKind.TFloat _ -> 4
-            | HxTokenKind.TKeyword _ -> 5
-            | HxTokenKind.TLBrace -> 6
-            | HxTokenKind.TRBrace -> 7
-            | HxTokenKind.TLParen -> 8
-            | HxTokenKind.TRParen -> 9
-            | HxTokenKind.TSemicolon -> 10
-            | HxTokenKind.TColon -> 11
-            | HxTokenKind.TDot -> 12
-            | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 1 then let _g5 = (match _g1 with
+            | HxTokenKind.TRegex (_, _) -> 5
+            | HxTokenKind.TKeyword _ -> 6
+            | HxTokenKind.TLBrace -> 7
+            | HxTokenKind.TRBrace -> 8
+            | HxTokenKind.TLParen -> 9
+            | HxTokenKind.TRParen -> 10
+            | HxTokenKind.TSemicolon -> 11
+            | HxTokenKind.TColon -> 12
+            | HxTokenKind.TDot -> 13
+            | HxTokenKind.TComma -> 14
+            | HxTokenKind.TOther _ -> 15) = 1 then let _g5 = (match _g1 with
             | HxTokenKind.TIdent __enum_param_1 -> __enum_param_1
             | _ -> failwith "Unexpected enum parameter" : string) in match _g5 with
             | "autoBuild" -> if (match _g4 with
@@ -94,16 +96,17 @@ let findBuildMacroExprs = fun source -> try let __fallback_result_18 = let out =
               | HxTokenKind.TString _ -> 2
               | HxTokenKind.TInt _ -> 3
               | HxTokenKind.TFloat _ -> 4
-              | HxTokenKind.TKeyword _ -> 5
-              | HxTokenKind.TLBrace -> 6
-              | HxTokenKind.TRBrace -> 7
-              | HxTokenKind.TLParen -> 8
-              | HxTokenKind.TRParen -> 9
-              | HxTokenKind.TSemicolon -> 10
-              | HxTokenKind.TColon -> 11
-              | HxTokenKind.TDot -> 12
-              | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 8 then let __assign_3 = true in (
+              | HxTokenKind.TRegex (_, _) -> 5
+              | HxTokenKind.TKeyword _ -> 6
+              | HxTokenKind.TLBrace -> 7
+              | HxTokenKind.TRBrace -> 8
+              | HxTokenKind.TLParen -> 9
+              | HxTokenKind.TRParen -> 10
+              | HxTokenKind.TSemicolon -> 11
+              | HxTokenKind.TColon -> 12
+              | HxTokenKind.TDot -> 13
+              | HxTokenKind.TComma -> 14
+              | HxTokenKind.TOther _ -> 15) = 9 then let __assign_3 = true in (
               tempBool := __assign_3;
               __assign_3
             ) else let __assign_4 = false in (
@@ -116,16 +119,17 @@ let findBuildMacroExprs = fun source -> try let __fallback_result_18 = let out =
               | HxTokenKind.TString _ -> 2
               | HxTokenKind.TInt _ -> 3
               | HxTokenKind.TFloat _ -> 4
-              | HxTokenKind.TKeyword _ -> 5
-              | HxTokenKind.TLBrace -> 6
-              | HxTokenKind.TRBrace -> 7
-              | HxTokenKind.TLParen -> 8
-              | HxTokenKind.TRParen -> 9
-              | HxTokenKind.TSemicolon -> 10
-              | HxTokenKind.TColon -> 11
-              | HxTokenKind.TDot -> 12
-              | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 8 then let __assign_5 = true in (
+              | HxTokenKind.TRegex (_, _) -> 5
+              | HxTokenKind.TKeyword _ -> 6
+              | HxTokenKind.TLBrace -> 7
+              | HxTokenKind.TRBrace -> 8
+              | HxTokenKind.TLParen -> 9
+              | HxTokenKind.TRParen -> 10
+              | HxTokenKind.TSemicolon -> 11
+              | HxTokenKind.TColon -> 12
+              | HxTokenKind.TDot -> 13
+              | HxTokenKind.TComma -> 14
+              | HxTokenKind.TOther _ -> 15) = 9 then let __assign_5 = true in (
               tempBool := __assign_5;
               __assign_5
             ) else let __assign_6 = false in (

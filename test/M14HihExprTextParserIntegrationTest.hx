@@ -148,5 +148,26 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("expected contextual `as` assignment to parse");
 		}
+
+		final regexStmts = HxParser.parseFunctionBodyText('var r = ~/a+(b)?(c*)a+/; t( ~/\n/.match("\\n") ); var g = ~/cat/g; eq( ~/a+/g.replace("aabbccaa", "x"), "xbbccx" );');
+		assertTrue(regexStmts.length == 4, "expected regex literal declarations/calls to parse");
+		switch (regexStmts[0]) {
+			case SVar(name, _, ENew(path, args), _):
+				assertTrue(name == "r", "expected regex local name to parse");
+				assertTrue(path == "EReg", "expected regex literal to lower to EReg constructor");
+				assertTrue(args.length == 2, "expected regex pattern and flags constructor args");
+			case SExpr(EUnsupported(raw), _):
+				fail("regex literal declaration parsed as unsupported: " + raw);
+			case _:
+				fail("expected regex literal declaration to parse");
+		}
+
+		final inlineConditionalStmts = HxParser.parseFunctionBodyText("t(r.matched(1) == null #if js || js.Browser.supported #end);");
+		assertTrue(inlineConditionalStmts.length == 1, "expected inline JS conditional marker statement to parse");
+		switch (inlineConditionalStmts[0]) {
+			case SExpr(EUnsupported(raw), _):
+				fail("inline JS conditional marker parsed as unsupported: " + raw);
+			case _:
+		}
 	}
 }

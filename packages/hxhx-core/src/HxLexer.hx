@@ -369,6 +369,48 @@ class HxLexer {
 		throw new HxParseError("Unterminated string literal", startPos);
 	}
 
+	function readRegexLiteral(startPos:HxPos):HxToken {
+		// Regex literal: `~/pattern/flags`.
+		//
+		// Why this lives in the lexer
+		// - Regex bodies can contain `//` and escaped slashes. If the parser tries to
+		//   consume those characters through normal tokenization, the lexer can classify
+		//   part of the regex as a line comment.
+		// - Returning a single token preserves the exact pattern text and keeps postfix
+		//   parsing (`~/x/.match(...)`) in the normal expression parser.
+		bump(); // '~'
+		bump(); // '/'
+		final pattern = new StringBuf();
+		var escaped = false;
+		while (!eof()) {
+			final c = bump();
+			if (escaped) {
+				pattern.addChar(c);
+				escaped = false;
+				continue;
+			}
+			if (c == "\\".code) {
+				pattern.addChar(c);
+				escaped = true;
+				continue;
+			}
+			if (c == "/".code) {
+				final flags = new StringBuf();
+				while (!eof()) {
+					final f = peek(0);
+					final isLower = f >= "a".code && f <= "z".code;
+					final isUpper = f >= "A".code && f <= "Z".code;
+					if (!isLower && !isUpper)
+						break;
+					flags.addChar(bump());
+				}
+				return new HxToken(TRegex(pattern.toString(), flags.toString()), startPos);
+			}
+			pattern.addChar(c);
+		}
+		throw new HxParseError("Unterminated regex literal", startPos);
+	}
+
 	public function next():HxToken {
 		skipWhitespaceAndComments();
 		final p = pos();
@@ -405,6 +447,7 @@ class HxLexer {
 			case 39: readSingleQuotedString(p); // '
 			case _ if (isDigit(c)): readNumber(p);
 			case _ if (isIdentStart(c)): readIdent(p);
+			case 126 if (peek(1) == 47): readRegexLiteral(p); // ~/
 			case _:
 				// Bootstrap behavior: do not fail on unknown punctuation yet.
 				// We only need enough tokenization to skip bodies and find top-level

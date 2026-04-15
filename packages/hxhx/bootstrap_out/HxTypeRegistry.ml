@@ -158,7 +158,7 @@ let init () : unit =
   HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KInline"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KIn"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
   HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SWhile"; "SDoWhile"; "SSwitch"; "STry"; "SBreak"; "SContinue"; "SThrow"; "SReturnVoid"; "SReturn"; "SExpr" ];
   HxType.register_enum_ctors "HxSwitchPattern" [ "PNull"; "PWildcard"; "PString"; "PInt"; "PEnumValue"; "PBind"; "POr" ];
-  HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
+  HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TRegex"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
   HxType.register_enum_ctors "HxVisibility" [ "Public"; "Private" ];
   HxType.register_enum_ctors "_HxConditionalCompilation.Token" [ "TIdent"; "TString"; "TNot"; "TAnd"; "TOr"; "TLParen"; "TRParen"; "TEq"; "TNeq"; "TEof" ];
   HxType.register_enum_ctors "haxe.StackItem" [ "CFunction"; "Module"; "FilePos"; "Method"; "LocalFunction" ];
@@ -568,6 +568,12 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxTokenKind.TFloat" in
     Obj.repr (HxTokenKind.TFloat a0)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TRegex" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pattern' for HxTokenKind.TRegex" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'flags' for HxTokenKind.TRegex" in
+    Obj.repr (HxTokenKind.TRegex (a0, a1))
   );
   HxType.register_enum_ctor "HxTokenKind" "TKeyword" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1516,14 +1522,14 @@ let init () : unit =
   HxType.register_class_static_fields "HxFunctionArg" [ "getDefaultValue"; "getDefaultValueText"; "getIsOptional"; "getIsRest"; "getName"; "getTypeHint" ];
   HxType.register_class_instance_fields "HxFunctionDecl" [ "args"; "body"; "bodyText"; "endPos"; "getFirstReturnExpr"; "isStatic"; "metadata"; "name"; "pos"; "returnStringLiteral"; "returnTypeHint"; "visibility" ];
   HxType.register_class_static_fields "HxFunctionDecl" [ "getArgs"; "getBody"; "getBodyText"; "getEndPos"; "getIsStatic"; "getMetadata"; "getName"; "getPos"; "getReturnStringLiteral"; "getReturnTypeHint"; "getVisibility" ];
-  HxType.register_class_instance_fields "HxLexer" [ "bump"; "column"; "eof"; "index"; "line"; "next"; "peek"; "pos"; "readIdent"; "readNumber"; "readSingleQuotedString"; "readString"; "skipWhitespaceAndComments"; "src" ];
+  HxType.register_class_instance_fields "HxLexer" [ "bump"; "column"; "eof"; "index"; "line"; "next"; "peek"; "pos"; "readIdent"; "readNumber"; "readRegexLiteral"; "readSingleQuotedString"; "readString"; "skipWhitespaceAndComments"; "src" ];
   HxType.register_class_static_fields "HxLexer" [ "isDigit"; "isIdentCont"; "isIdentStart"; "isSpace" ];
   HxType.register_class_instance_fields "HxModuleDecl" [ "classes"; "hasToplevelMain"; "headerOnly"; "imports"; "mainClass"; "packagePath" ];
   HxType.register_class_static_fields "HxModuleDecl" [ "getClasses"; "getHasToplevelMain"; "getHeaderOnly"; "getImports"; "getMainClass"; "getPackagePath" ];
   HxType.register_class_instance_fields "HxParseError" [ "message"; "pos"; "toString" ];
   HxType.register_class_static_fields "HxParseError" [];
   HxType.register_class_instance_fields "HxParser" [ "acceptKeyword"; "acceptOtherChar"; "bump"; "capturedReturnStringLiteral"; "consumeBinop"; "consumePreprocessorLine"; "consumeUntilIndex"; "cur"; "currentIndex"; "expect"; "fail"; "isOtherChar"; "isValidLambdaArgName"; "lambdaArgNameEnd"; "lambdaBodyExprFromStmts"; "lex"; "mapLiteralKeyName"; "nextIsAdjacentOther"; "parseAnonExpr"; "parseAnonExprAfterOpen"; "parseArrayDeclExpr"; "parseBinaryExpr"; "parseBraceExpr"; "parseClassMembers"; "parseExpr"; "parseFunctionBodyStatements"; "parseFunctionBodyStatementsBestEffort"; "parseFunctionDecl"; "parseFunctionExpr"; "parseInterpolatedStringExpr"; "parseLambdaArgName"; "parseLocalFunctionStmt"; "parseMetadataText"; "parseModule"; "parsePostfixExpr"; "parsePrimaryExpr"; "parseReturnStmt"; "parseStmt"; "parseStmtInto"; "parseSwitchExpr"; "parseSwitchPattern"; "parseTryCatchExpr"; "parseUnaryExpr"; "parseVarDecls"; "parseVarStmt"; "peek"; "peek2"; "peek3"; "peekBinop"; "peekKind"; "peekKind2"; "peekKind3"; "peeked1"; "peeked2"; "peeked3"; "posIndex"; "readAnonFieldName"; "readDottedPath"; "readIdent"; "readImportPath"; "readPropertyAccessorText"; "readTypeHintText"; "skipBalancedAngles"; "skipBalancedBraces"; "skipBalancedParens"; "sliceSource"; "source"; "syncToStmtEnd"; "tryReadArrowLambdaExpr"; "tryReadParenthesizedLambdaArgs" ];
-  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "debugBodyLabel"; "isAssignmentBinop"; "isRightAssoc"; "isUpperStart"; "keywordText"; "parseExprText"; "parseFunctionBodyText" ];
+  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "debugBodyLabel"; "isAssignmentBinop"; "isRightAssoc"; "isUpperStart"; "keywordText"; "normalizeInlineJsConditionalMarkers"; "parseExprText"; "parseFunctionBodyText" ];
   HxType.register_class_instance_fields "HxParserSourceNormalize" [];
   HxType.register_class_static_fields "HxParserSourceNormalize" [ "normalizeDenseEscapedQuotes"; "normalizeDenseKeywordSpacing" ];
   HxType.register_class_instance_fields "HxPos" [ "column"; "getColumn"; "getIndex"; "getLine"; "index"; "line"; "toString" ];
