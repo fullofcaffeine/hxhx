@@ -198,6 +198,22 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "js/Boot.hx");
 	}
 
+	static function dateToolsModule():TypedModule {
+		final dateArg = new HxFunctionArg("d", "Dynamic", HxDefaultValue.NoDefault);
+		final tokenArg = new HxFunctionArg("e", "String", HxDefaultValue.NoDefault);
+		final formatArg = new HxFunctionArg("f", "String", HxDefaultValue.NoDefault);
+		final dateToolsClass = new HxClassDecl("DateTools", false, [
+			new HxFunctionDecl("__format_get", HxVisibility.Private, true, [dateArg, tokenArg], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("__format", HxVisibility.Private, true, [dateArg, formatArg], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("format", HxVisibility.Public, true, [dateArg, formatArg], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
+		]);
+		final decl = new HxModuleDecl("", [], dateToolsClass, [dateToolsClass], false, false);
+		return typedModule("", decl, "DateTools.hx");
+	}
+
 	static function mainModule(source:String):TypedModule {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		return TyperStage.typeModule(parsed);
@@ -268,6 +284,17 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"    Sys.println(Boot.__interfLoop(cls, iface));",
 				"    Sys.println(Boot.__implements(obj, iface));",
 				"    Sys.println(Boot.__downcastCheck(obj, iface));",
+				"    var date = {",
+				"      getDay: function() return 4,",
+				"      getMonth: function() return 0,",
+				"      getFullYear: function() return 2020,",
+				"      getDate: function() return 2,",
+				"      getHours: function() return 3,",
+				"      getMinutes: function() return 4,",
+				"      getSeconds: function() return 5,",
+				"      getTime: function() return 1577934245000.0",
+				"    };",
+				'    Sys.println(DateTools.format(date, "%Y-%m-%d %H:%M:%S %a %b"));',
 				"  }",
 				"}"
 			].join("\n");
@@ -284,7 +311,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				utestAssertModule(),
 				utestHtmlReportModule(),
 				utestReportToolsModule(),
-				jsBootModule()
+				jsBootModule(),
+				dateToolsModule()
 			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
@@ -315,6 +343,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_js_Boot.__string_rec = function", "js Boot string recursion shim should emit");
 			assertContains(js, "__hx_cls_js_Boot.__instanceof = function", "js Boot instanceof shim should emit");
 			assertContains(js, "__hx_cls_js_Boot.__downcastCheck = function", "js Boot downcast shim should emit");
+			assertContains(js, "__hx_cls_DateTools.__format_get = function", "DateTools format token shim should emit");
+			assertContains(js, "__hx_cls_DateTools.__format = function", "DateTools format scanner shim should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
@@ -342,6 +372,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "items : [1,null]", "js Boot string recursion should render arrays recursively");
 			assertContains(stdout, "true\ntrue\ntrue\ntrue\nfalse", "js Boot instanceof should classify primitive and array values");
 			assertContains(stdout, "true\ntrue\ntrue", "js Boot interface/downcast helpers should recognize direct interface matches");
+			assertContains(stdout, "2020-01-02 03:04:05 Thu Jan", "DateTools.format should resolve common strftime tokens");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {

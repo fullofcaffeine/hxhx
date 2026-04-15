@@ -284,6 +284,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "js.Boot")
 			return emitJsBootStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "DateTools")
+			return emitDateToolsStaticFunctionBody(writer, fnName, params);
+
 		if (fullName != "haxe.SysTools")
 			return false;
 
@@ -777,6 +780,101 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (" + value + ".__class__ === " + cls + " || " + value + ".constructor === " + cls + ") return true;");
 		writer.writeln("if (" + cls + ".__isInterface__ === true) return " + bootRef + ".__implements(" + value + ", " + cls + ");");
 		writer.writeln("return false;");
+	}
+
+	/**
+		Emits DateTools' strftime-style formatting helpers for JS-native output.
+
+		The implementation is intentionally expressed against the public Date getter
+		contract and local padding logic, so it remains a behavior-level replacement for
+		the runtime helper rather than depending on unsupported switch/body lowering.
+	**/
+	static function emitDateToolsStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "__format_get":
+				if (params.length < 2)
+					return false;
+				emitDateToolsFormatGetBody(writer, params[0], params[1]);
+				return true;
+			case "__format":
+				if (params.length < 2)
+					return false;
+				emitDateToolsFormatBody(writer, params[0], params[1]);
+				return true;
+			case "format":
+				if (params.length < 2)
+					return false;
+				writer.writeln("return " + JsNameMangler.classVarName("DateTools") + ".__format(" + params[0] + ", " + params[1] + ");");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitDateToolsFormatGetBody(writer:JsWriter, date:String, token:String):Void {
+		final dateToolsRef = JsNameMangler.classVarName("DateTools");
+		writer.writeln("function __hx_pad(value, ch, len) {");
+		writer.pushIndent();
+		writer.writeln("var out = String(value);");
+		writer.writeln("while (out.length < len) out = ch + out;");
+		writer.writeln("return out;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("var __hx_dayShort = [\"Sun\", \"Mon\", \"Tue\", \"Wed\", \"Thu\", \"Fri\", \"Sat\"];");
+		writer.writeln("var __hx_dayNames = [\"Sunday\", \"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\"];");
+		writer.writeln("var __hx_monthShort = [\"Jan\", \"Feb\", \"Mar\", \"Apr\", \"May\", \"Jun\", \"Jul\", \"Aug\", \"Sep\", \"Oct\", \"Nov\", \"Dec\"];");
+		writer.writeln("var __hx_monthNames = [\"January\", \"February\", \"March\", \"April\", \"May\", \"June\", \"July\", \"August\", \"September\", \"October\", \"November\", \"December\"];");
+		writer.writeln("switch (" + token + ") {");
+		writer.pushIndent();
+		writer.writeln("case \"%\": return \"%\";");
+		writer.writeln("case \"a\": return __hx_dayShort[" + date + ".getDay()];");
+		writer.writeln("case \"A\": return __hx_dayNames[" + date + ".getDay()];");
+		writer.writeln("case \"b\": case \"h\": return __hx_monthShort[" + date + ".getMonth()];");
+		writer.writeln("case \"B\": return __hx_monthNames[" + date + ".getMonth()];");
+		writer.writeln("case \"C\": return __hx_pad(Math.floor(" + date + ".getFullYear() / 100), \"0\", 2);");
+		writer.writeln("case \"d\": return __hx_pad(" + date + ".getDate(), \"0\", 2);");
+		writer.writeln("case \"D\": return " + dateToolsRef + ".__format(" + date + ", \"%m/%d/%y\");");
+		writer.writeln("case \"e\": return String(" + date + ".getDate());");
+		writer.writeln("case \"F\": return " + dateToolsRef + ".__format(" + date + ", \"%Y-%m-%d\");");
+		writer.writeln("case \"H\": return __hx_pad(" + date + ".getHours(), \"0\", 2);");
+		writer.writeln("case \"k\": return __hx_pad(" + date + ".getHours(), \" \", 2);");
+		writer.writeln("case \"I\": { var h = " + date + ".getHours() % 12; return __hx_pad(h === 0 ? 12 : h, \"0\", 2); }");
+		writer.writeln("case \"l\": { var h2 = " + date + ".getHours() % 12; return __hx_pad(h2 === 0 ? 12 : h2, \" \", 2); }");
+		writer.writeln("case \"m\": return __hx_pad(" + date + ".getMonth() + 1, \"0\", 2);");
+		writer.writeln("case \"M\": return __hx_pad(" + date + ".getMinutes(), \"0\", 2);");
+		writer.writeln("case \"n\": return \"\\n\";");
+		writer.writeln("case \"p\": return " + date + ".getHours() > 11 ? \"PM\" : \"AM\";");
+		writer.writeln("case \"r\": return " + dateToolsRef + ".__format(" + date + ", \"%I:%M:%S %p\");");
+		writer.writeln("case \"R\": return " + dateToolsRef + ".__format(" + date + ", \"%H:%M\");");
+		writer.writeln("case \"s\": return String(Math.floor(" + date + ".getTime() / 1000));");
+		writer.writeln("case \"S\": return __hx_pad(" + date + ".getSeconds(), \"0\", 2);");
+		writer.writeln("case \"t\": return \"\\t\";");
+		writer.writeln("case \"T\": return " + dateToolsRef + ".__format(" + date + ", \"%H:%M:%S\");");
+		writer.writeln("case \"u\": { var day = " + date + ".getDay(); return day === 0 ? \"7\" : String(day); }");
+		writer.writeln("case \"w\": return String(" + date + ".getDay());");
+		writer.writeln("case \"y\": return __hx_pad(" + date + ".getFullYear() % 100, \"0\", 2);");
+		writer.writeln("case \"Y\": return String(" + date + ".getFullYear());");
+		writer.writeln("default: throw \"Date.format %\" + " + token + " + \"- not implemented yet.\";");
+		writer.popIndent();
+		writer.writeln("}");
+	}
+
+	static function emitDateToolsFormatBody(writer:JsWriter, date:String, format:String):Void {
+		final dateToolsRef = JsNameMangler.classVarName("DateTools");
+		writer.writeln(format + " = String(" + format + ");");
+		writer.writeln("var out = \"\";");
+		writer.writeln("var pos = 0;");
+		writer.writeln("while (true) {");
+		writer.pushIndent();
+		writer.writeln("var next = " + format + ".indexOf(\"%\", pos);");
+		writer.writeln("if (next < 0) break;");
+		writer.writeln("out += " + format + ".substring(pos, next);");
+		writer.writeln("out += " + dateToolsRef + ".__format_get(" + date + ", " + format + ".substr(next + 1, 1));");
+		writer.writeln("pos = next + 2;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("out += " + format + ".substring(pos);");
+		writer.writeln("return out;");
 	}
 
 	static function emitFileSystemStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
