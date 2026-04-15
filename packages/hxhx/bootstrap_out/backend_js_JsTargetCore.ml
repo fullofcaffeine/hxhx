@@ -474,6 +474,10 @@ let emitKnownInstanceFunctionBody = fun writer fullName fnName params -> try let
     ignore (emitUtestFixtureResultAddBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
+  ignore (if HxString.equals fullName "utest.ui.text.PlainTextReport" && HxString.equals fnName "getResults" then ignore ((
+    ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return \"\";" : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
   false
 ) in Obj.magic __fallback_result_92 with
   | HxRuntime.Hx_return __ret_91 -> Obj.obj __ret_91

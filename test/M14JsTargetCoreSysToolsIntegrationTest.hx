@@ -212,6 +212,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "utest/ui/text/HtmlReport.hx");
 	}
 
+	static function utestPlainTextReportModule():TypedModule {
+		final reportClass = new HxClassDecl("PlainTextReport", false, [
+			new HxFunctionDecl("getResults", HxVisibility.Public, false, [], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
+		]);
+		final decl = new HxModuleDecl("utest.ui.text", [], reportClass, [reportClass], false, false);
+		return typedModule("", decl, "utest/ui/text/PlainTextReport.hx");
+	}
+
 	static function utestReportToolsModule():TypedModule {
 		final reportArg = new HxFunctionArg("report", "Dynamic", HxDefaultValue.NoDefault);
 		final statsArg = new HxFunctionArg("stats", "Dynamic", HxDefaultValue.NoDefault);
@@ -536,6 +545,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				haxeNotImplementedExceptionModule(),
 				utestAssertModule(),
 				utestHtmlReportModule(),
+				utestPlainTextReportModule(),
 				utestReportToolsModule(),
 				jsBootModule(),
 				dateToolsModule(),
@@ -584,6 +594,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"utest HtmlReport addFixture should emit a neutral runtime stub");
 			assertContains(js, "__hx_cls_utest_ui_text_HtmlReport.prototype.getTextResults = function",
 				"utest HtmlReport text output should emit a neutral runtime stub");
+			assertContains(js, "__hx_cls_utest_ui_text_PlainTextReport.prototype.getResults = function",
+				"utest PlainTextReport getResults should emit a string-safe runtime stub");
+			assertContains(js, "return \"\";", "utest PlainTextReport getResults should return a string");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasHeader = function", "utest ReportTools hasHeader shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.skipResult = function", "utest ReportTools skipResult shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasOutput = function", "utest ReportTools hasOutput shim should emit");

@@ -511,6 +511,11 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		}
 
+		if (fullName == "utest.ui.text.PlainTextReport" && fnName == "getResults") {
+			writer.writeln("return \"\";");
+			return true;
+		}
+
 		return false;
 	}
 
