@@ -628,6 +628,21 @@ class JsTargetCore implements ITargetCore {
 					return false;
 				emitJsBootInstanceofBody(writer, params[0], params[1]);
 				return true;
+			case "__interfLoop":
+				if (params.length < 2)
+					return false;
+				emitJsBootInterfLoopBody(writer, params[0], params[1]);
+				return true;
+			case "__implements":
+				if (params.length < 2)
+					return false;
+				emitJsBootImplementsBody(writer, params[0], params[1]);
+				return true;
+			case "__downcastCheck":
+				if (params.length < 2)
+					return false;
+				emitJsBootDowncastCheckBody(writer, params[0], params[1]);
+				return true;
 			case _:
 				return false;
 		}
@@ -723,6 +738,44 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (__hx_name != null && " + value + ".__hx_name === __hx_name) return true;");
 		writer.popIndent();
 		writer.writeln("}");
+		writer.writeln("return false;");
+	}
+
+	static function emitJsBootInterfLoopBody(writer:JsWriter, current:String, iface:String):Void {
+		final bootRef = JsNameMangler.classVarName("js.Boot");
+		writer.writeln("if (" + current + " == null) return false;");
+		writer.writeln("if (" + current + " === " + iface + ") return true;");
+		writer.writeln("var __hx_interfaces = " + current + ".__interfaces__;");
+		writer.writeln("if (Array.isArray(__hx_interfaces)) {");
+		writer.pushIndent();
+		writer.writeln("for (var __hx_i = 0; __hx_i < __hx_interfaces.length; __hx_i++) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_iface = __hx_interfaces[__hx_i];");
+		writer.writeln("if (__hx_iface === " + iface + " || " + bootRef + ".__interfLoop(__hx_iface, " + iface + ")) return true;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return " + bootRef + ".__interfLoop(" + current + ".__super__, " + iface + ");");
+	}
+
+	static function emitJsBootImplementsBody(writer:JsWriter, value:String, iface:String):Void {
+		final bootRef = JsNameMangler.classVarName("js.Boot");
+		writer.writeln("if (" + value + " == null || " + iface + " == null) return false;");
+		writer.writeln("var __hx_class = " + value + ".__class__ != null ? " + value + ".__class__ : " + value + ".constructor;");
+		writer.writeln("return " + bootRef + ".__interfLoop(__hx_class, " + iface + ");");
+	}
+
+	static function emitJsBootDowncastCheckBody(writer:JsWriter, value:String, cls:String):Void {
+		final bootRef = JsNameMangler.classVarName("js.Boot");
+		writer.writeln("if (" + value + " == null || " + cls + " == null) return false;");
+		writer.writeln("if (typeof " + cls + " === \"function\") {");
+		writer.pushIndent();
+		writer.writeln("try { if (" + value + " instanceof " + cls + ") return true; } catch (__hx_error) {}");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (" + value + ".__class__ === " + cls + " || " + value + ".constructor === " + cls + ") return true;");
+		writer.writeln("if (" + cls + ".__isInterface__ === true) return " + bootRef + ".__implements(" + value + ", " + cls + ");");
 		writer.writeln("return false;");
 	}
 

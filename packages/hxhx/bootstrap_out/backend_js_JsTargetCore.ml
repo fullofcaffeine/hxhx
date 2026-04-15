@@ -479,10 +479,60 @@ let emitJsBootInstanceofBody = fun writer value cls -> ignore ((
   Backend_js_JsWriter.writeln (Obj.magic writer) ("return false;" : string)
 ))
 
+let emitJsBootInterfLoopBody = fun writer current iface -> ignore (let bootRef = (Backend_js_JsNameMangler.classVarName ("js.Boot" : string) : string) in (
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (" ^ HxString.toStdString current) ^ " == null) return false;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (" ^ HxString.toStdString current) ^ " === ") ^ HxString.toStdString iface) ^ ") return true;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var __hx_interfaces = " ^ HxString.toStdString current) ^ ".__interfaces__;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (Array.isArray(__hx_interfaces)) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var __hx_i = 0; __hx_i < __hx_interfaces.length; __hx_i++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_iface = __hx_interfaces[__hx_i];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((("if (__hx_iface === " ^ HxString.toStdString iface) ^ " || ") ^ HxString.toStdString bootRef) ^ ".__interfLoop(__hx_iface, ") ^ HxString.toStdString iface) ^ ")) return true;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (((((("return " ^ HxString.toStdString bootRef) ^ ".__interfLoop(") ^ HxString.toStdString current) ^ ".__super__, ") ^ HxString.toStdString iface) ^ ");" : string)
+))
+
+let emitJsBootImplementsBody = fun writer value iface -> ignore (let bootRef = (Backend_js_JsNameMangler.classVarName ("js.Boot" : string) : string) in (
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (" ^ HxString.toStdString value) ^ " == null || ") ^ HxString.toStdString iface) ^ " == null) return false;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((("var __hx_class = " ^ HxString.toStdString value) ^ ".__class__ != null ? ") ^ HxString.toStdString value) ^ ".__class__ : ") ^ HxString.toStdString value) ^ ".constructor;" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) (((("return " ^ HxString.toStdString bootRef) ^ ".__interfLoop(__hx_class, ") ^ HxString.toStdString iface) ^ ");" : string)
+))
+
+let emitJsBootDowncastCheckBody = fun writer value cls -> ignore (let bootRef = (Backend_js_JsNameMangler.classVarName ("js.Boot" : string) : string) in (
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("if (" ^ HxString.toStdString value) ^ " == null || ") ^ HxString.toStdString cls) ^ " == null) return false;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString cls) ^ " === \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("try { if (" ^ HxString.toStdString value) ^ " instanceof ") ^ HxString.toStdString cls) ^ ") return true; } catch (__hx_error) {}" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((((("if (" ^ HxString.toStdString value) ^ ".__class__ === ") ^ HxString.toStdString cls) ^ " || ") ^ HxString.toStdString value) ^ ".constructor === ") ^ HxString.toStdString cls) ^ ") return true;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((((("if (" ^ HxString.toStdString cls) ^ ".__isInterface__ === true) return ") ^ HxString.toStdString bootRef) ^ ".__implements(") ^ HxString.toStdString value) ^ ", ") ^ HxString.toStdString cls) ^ ");" : string));
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("return false;" : string)
+))
+
 let emitJsBootStaticFunctionBody = fun writer fnName params -> try let __fallback_result_63 = match fnName with
+  | "__downcastCheck" -> ignore ((
+    ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitJsBootDowncastCheckBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "__implements" -> ignore ((
+    ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitJsBootImplementsBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
   | "__instanceof" -> ignore ((
     ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     ignore (emitJsBootInstanceofBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
+  | "__interfLoop" -> ignore ((
+    ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (emitJsBootInterfLoopBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string) (HxArray.get (Obj.magic params) 1 : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   ))
   | "__string_rec" -> ignore ((

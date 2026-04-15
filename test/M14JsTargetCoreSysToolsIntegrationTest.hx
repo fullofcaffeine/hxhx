@@ -180,11 +180,19 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final valueArg = new HxFunctionArg("o", "Dynamic", HxDefaultValue.NoDefault);
 		final indentArg = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
 		final classArg = new HxFunctionArg("cl", "Dynamic", HxDefaultValue.NoDefault);
+		final currentArg = new HxFunctionArg("cc", "Dynamic", HxDefaultValue.NoDefault);
+		final ifaceArg = new HxFunctionArg("iface", "Dynamic", HxDefaultValue.NoDefault);
 		final bootClass = new HxClassDecl("Boot", false, [
 			new HxFunctionDecl("__string_rec", HxVisibility.Public, true, [valueArg, indentArg], "String",
 				unsupportedBody("[js-native:unsupported_expr] kind=ETryCatchRaw detail=opaque_block_expr"), ""),
 			new HxFunctionDecl("__instanceof", HxVisibility.Public, true, [valueArg, classArg], "Bool",
-				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("__interfLoop", HxVisibility.Public, true, [currentArg, ifaceArg], "Bool",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("__implements", HxVisibility.Public, true, [valueArg, ifaceArg], "Bool",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("__downcastCheck", HxVisibility.Public, true, [valueArg, classArg], "Bool",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=inline"), "")
 		]);
 		final decl = new HxModuleDecl("js", [], bootClass, [bootClass], false, false);
 		return typedModule("", decl, "js/Boot.hx");
@@ -254,6 +262,12 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(Boot.__instanceof("hxhx", "String"));',
 				'    Sys.println(Boot.__instanceof([1], "Array"));',
 				'    Sys.println(Boot.__instanceof(null, "Dynamic"));',
+				"    var iface = { __isInterface__: true };",
+				"    var cls = { __interfaces__: [iface], __super__: null };",
+				"    var obj = { __class__: cls };",
+				"    Sys.println(Boot.__interfLoop(cls, iface));",
+				"    Sys.println(Boot.__implements(obj, iface));",
+				"    Sys.println(Boot.__downcastCheck(obj, iface));",
 				"  }",
 				"}"
 			].join("\n");
@@ -300,6 +314,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasOutput = function", "utest ReportTools hasOutput shim should emit");
 			assertContains(js, "__hx_cls_js_Boot.__string_rec = function", "js Boot string recursion shim should emit");
 			assertContains(js, "__hx_cls_js_Boot.__instanceof = function", "js Boot instanceof shim should emit");
+			assertContains(js, "__hx_cls_js_Boot.__downcastCheck = function", "js Boot downcast shim should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
@@ -326,6 +341,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "name : hxhx", "js Boot string recursion should render object fields");
 			assertContains(stdout, "items : [1,null]", "js Boot string recursion should render arrays recursively");
 			assertContains(stdout, "true\ntrue\ntrue\ntrue\nfalse", "js Boot instanceof should classify primitive and array values");
+			assertContains(stdout, "true\ntrue\ntrue", "js Boot interface/downcast helpers should recognize direct interface matches");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
