@@ -1274,6 +1274,10 @@ class HxParser {
 	}
 
 	function parseUnaryExpr(stop:() -> Bool):HxExpr {
+		final arrow = tryReadArrowLambdaExpr(stop);
+		if (arrow != null)
+			return arrow;
+
 		return switch (cur.kind) {
 			case TOther("@".code):
 				// Expression-level metadata: `@:meta expr`.
@@ -1470,25 +1474,9 @@ class HxParser {
 		//   - `() -> expr`
 		// - Parameter forms remain identifier-only. Typed/default/pattern args are future work.
 		if (!stop()) {
-			switch (cur.kind) {
-				case TLParen:
-					final parenLambda = tryReadParenthesizedLambdaArgs();
-					if (parenLambda != null) {
-						consumeUntilIndex(parenLambda.endIndex);
-						final body = parseExpr(stop);
-						return ELambda(parenLambda.args, body);
-					}
-				case TIdent(name):
-					if (peekKind().match(TOther("-".code)) && peekKind2().match(TOther(">".code))) {
-						// Consume `name ->`.
-						bump(); // ident
-						bump(); // '-'
-						bump(); // '>'
-						final body = parseExpr(stop);
-						return ELambda([name], body);
-					}
-				case _:
-			}
+			final arrow = tryReadArrowLambdaExpr(stop);
+			if (arrow != null)
+				return arrow;
 		}
 
 		// Stage 3 expansion: `try { ... } catch(...) { ... }` as an *expression*.
@@ -1566,6 +1554,31 @@ class HxParser {
 			}
 		}
 		return e;
+	}
+
+	function tryReadArrowLambdaExpr(stop:() -> Bool):Null<HxExpr> {
+		if (stop())
+			return null;
+		switch (cur.kind) {
+			case TLParen:
+				final parenLambda = tryReadParenthesizedLambdaArgs();
+				if (parenLambda != null) {
+					consumeUntilIndex(parenLambda.endIndex);
+					final body = parseExpr(stop);
+					return ELambda(parenLambda.args, body);
+				}
+			case TIdent(name):
+				if (peekKind().match(TOther("-".code)) && peekKind2().match(TOther(">".code))) {
+					// Consume `name ->`.
+					bump(); // ident
+					bump(); // '-'
+					bump(); // '>'
+					final body = parseExpr(stop);
+					return ELambda([name], body);
+				}
+			case _:
+		}
+		return null;
 	}
 
 	function tryReadParenthesizedLambdaArgs():Null<{args:Array<String>, endIndex:Int}> {

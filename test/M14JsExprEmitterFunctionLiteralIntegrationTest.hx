@@ -27,6 +27,11 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(noArgsJs, "function()", "no-arg function literal keeps empty parameter list");
 		assertContains(noArgsJs, "return 7", "no-arg function literal body preserved");
 
+		final assignedArrow = HxParser.parseExprText("maybe = () -> Math.random() > 0.5");
+		final assignedArrowJs = JsExprEmitter.emit(assignedArrow, exprScope);
+		assertContains(assignedArrowJs, "maybe = function()", "assignment RHS arrow literal parses as a lambda");
+		assertContains(assignedArrowJs, "Math.random() > 0.5", "assignment RHS arrow keeps comparison body");
+
 		final blockBody = HxParser.parseExprText("function(x) { var y = x + 1; return y; }");
 		final blockBodyJs = JsExprEmitter.emit(blockBody, exprScope);
 		assertContains(blockBodyJs, "function(", "block-body function literal parses");
