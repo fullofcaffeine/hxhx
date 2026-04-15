@@ -266,7 +266,9 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("this.__class__ = " + unit.jsRef + ";");
 		emitDefaultArgGuards(writer, args, params, scope);
 		emitInstanceFieldInitializers(writer, unit, scope);
-		if (ctor != null && !shouldEmitNeutralConstructorBody(unit.fullName)) {
+		if (ctor != null && emitKnownConstructorBody(writer, unit.fullName, params)) {
+			// Known constructor body emitted above.
+		} else if (ctor != null && !shouldEmitNeutralConstructorBody(unit.fullName)) {
 			try {
 				JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(ctor), scope);
 			} catch (e:String) {
@@ -277,6 +279,20 @@ class JsTargetCore implements ITargetCore {
 		}
 		writer.popIndent();
 		writer.writeln("};");
+	}
+
+	static function emitKnownConstructorBody(writer:JsWriter, fullName:String, params:Array<String>):Bool {
+		if (fullName == "utest.ui.text.PrintReport") {
+			if (params.length < 1)
+				return false;
+			final baseRef = JsNameMangler.classVarName("utest.ui.text.PlainTextReport");
+			writer.writeln("if (typeof " + baseRef + " === \"function\") " + baseRef + ".call(this, " + params[0] + ", this._handler);");
+			writer.writeln("this.newline = \"\\n\";");
+			writer.writeln("this.indent = \"  \";");
+			return true;
+		}
+
+		return false;
 	}
 
 	static function emitPlainClassPrototypeMethods(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
