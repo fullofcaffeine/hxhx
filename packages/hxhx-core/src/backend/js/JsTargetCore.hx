@@ -105,6 +105,25 @@ class JsTargetCore implements ITargetCore {
 		return fullName != null && StringTools.startsWith(fullName, "js.lib.");
 	}
 
+	static inline function isNativeJsHtmlExtern(fullName:String):Bool {
+		return fullName != null && StringTools.startsWith(fullName, "js.html.");
+	}
+
+	static inline function isNativeJsGlobalExtern(fullName:String):Bool {
+		return isNativeJsLibExtern(fullName) || isNativeJsHtmlExtern(fullName);
+	}
+
+	static function nativeJsGlobalExternRef(fullName:String):String {
+		if (isNativeJsHtmlExtern(fullName))
+			return nativeJsSimpleGlobalRef(simpleName(fullName));
+		return nativeJsLibGlobalRef(fullName);
+	}
+
+	static function nativeJsSimpleGlobalRef(globalName:String):String {
+		final quoted = JsNameMangler.quoteString(globalName);
+		return "((globalThis != null && globalThis[" + quoted + "] != null) ? globalThis[" + quoted + "] : {})";
+	}
+
 	static function nativeJsLibGlobalRef(fullName:String):String {
 		final suffix = fullName.substr("js.lib.".length);
 		final parts = suffix.split(".");
@@ -166,8 +185,8 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
-		if (isNativeJsLibExtern(unit.fullName)) {
-			writer.writeln("var " + unit.jsRef + " = " + nativeJsLibGlobalRef(unit.fullName) + ";");
+		if (isNativeJsGlobalExtern(unit.fullName)) {
+			writer.writeln("var " + unit.jsRef + " = " + nativeJsGlobalExternRef(unit.fullName) + ";");
 		} else if (unit.fullName == "EReg") {
 			emitERegConstructor(writer, unit.jsRef);
 		} else {
@@ -1854,6 +1873,8 @@ class JsTargetCore implements ITargetCore {
 
 	static function shouldSkipInstancePrototypeEmission(fullName:String):Bool {
 		if (fullName != null && StringTools.startsWith(fullName, "haxe."))
+			return true;
+		if (isNativeJsGlobalExtern(fullName))
 			return true;
 		if (isNativeJsExternPrototypeClass(fullName))
 			return true;

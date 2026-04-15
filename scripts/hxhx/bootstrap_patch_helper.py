@@ -4058,12 +4058,17 @@ def cmd_patch_js_target_core_native_js_lib_externs(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
-    # Newer regenerated bootstrap snapshots already carry the source-side js.lib extern
+    # Newer regenerated bootstrap snapshots already carry the source-side native JS extern
     # lowering directly. In that case there is nothing left for this compatibility patch to
     # inject, so treat the helper as a no-op instead of failing on stale anchors.
     if (
-        "let nativeJsLibGlobalRef = fun fullName ->" in src
-        and "nativeJsLibGlobalRef (Obj.obj (HxAnon.get unit \"fullName\") : string)" in src
+        ((
+            "let nativeJsGlobalExternRef = fun fullName ->" in src
+            and "nativeJsGlobalExternRef (Obj.obj (HxAnon.get unit \"fullName\") : string)" in src
+        ) or (
+            "let nativeJsLibGlobalRef = fun fullName ->" in src
+            and "nativeJsLibGlobalRef (Obj.obj (HxAnon.get unit \"fullName\") : string)" in src
+        ))
         and "tempLeft <> emitNative" in src
     ):
         write_text(path_str, src)

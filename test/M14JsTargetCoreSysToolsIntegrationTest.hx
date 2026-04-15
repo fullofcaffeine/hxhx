@@ -362,6 +362,23 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "js/node/Process.hx");
 	}
 
+	static function jsHtmlBlobModule():TypedModule {
+		final blobPartsArg = new HxFunctionArg("blobParts", "Dynamic", HxDefaultValue.NoDefault);
+		final eitherArg = new HxFunctionArg("haxe", "Dynamic", HxDefaultValue.NoDefault);
+		final duplicateEitherArg = new HxFunctionArg("haxe", "Dynamic", HxDefaultValue.NoDefault);
+		final parsedStringArg = new HxFunctionArg("String", "Dynamic", HxDefaultValue.NoDefault);
+		final optionsArg = new HxFunctionArg("options", "Dynamic", HxDefaultValue.NoDefault);
+		final startArg = new HxFunctionArg("start", "Int", HxDefaultValue.NoDefault);
+		final blobClass = new HxClassDecl("Blob", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [blobPartsArg, eitherArg, duplicateEitherArg, parsedStringArg, optionsArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=native-extern-constructor"), ""),
+			new HxFunctionDecl("slice", HxVisibility.Public, false, [startArg], "js.html.Blob",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=native-extern-prototype"), "")
+		]);
+		final decl = new HxModuleDecl("js.html", [], blobClass, [blobClass], false, false);
+		return typedModule("", decl, "js/html/Blob.hx");
+	}
+
 	static function utestRunnerModule():TypedModule {
 		final selfArg = new HxFunctionArg("eThis", "Dynamic", HxDefaultValue.NoDefault);
 		final pathArg = new HxFunctionArg("path", "Dynamic", HxDefaultValue.NoDefault);
@@ -580,6 +597,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				counterModule(),
 				arrayModule(),
 				jsNodeProcessModule(),
+				jsHtmlBlobModule(),
 				utestRunnerModule(),
 				utestTestHandlerModule(),
 				haxeIoInputModule(),
@@ -651,6 +669,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "if (delta == null) delta = 3", "ordinary class default arguments should lower inside instance methods");
 			assertNotContains(js, "__hx_cls_Array.prototype.filter", "native JS Array prototype methods should not be re-emitted");
 			assertNotContains(js, "__hx_cls_js_node_Process.prototype.initgroups", "native js.node extern prototype methods should not be re-emitted");
+			assertContains(js, "var __hx_cls_js_html_Blob = ((globalThis != null && globalThis[\"Blob\"] != null) ? globalThis[\"Blob\"] : {})",
+				"native js.html externs should bind to browser/Node globals instead of emitted Haxe constructors");
+			assertNotContains(js, "var __hx_cls_js_html_Blob = function(blobParts", "native js.html extern constructors should not be emitted");
+			assertNotContains(js, "__hx_cls_js_html_Blob.prototype.slice", "native js.html extern prototype methods should not be re-emitted");
 			assertNotContains(js, "__hx_cls_haxe_io_Input.prototype.readByte", "haxe.io std support prototypes should not block JS smoke emit");
 			assertNotContains(js, "__hx_cls_haxe_format_JsonParser.prototype.doParse", "haxe.format std support prototypes should not block JS smoke emit");
 			assertContains(js, "__hx_cls_utest_Runner.prototype.addCases = function", "utest Runner addCases macro method should emit a neutral runtime stub");
