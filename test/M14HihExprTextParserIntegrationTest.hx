@@ -229,6 +229,24 @@ class M14HihExprTextParserIntegrationTest {
 		assertPushTryCatchRaw(HxParser.parseFunctionBodyText("result.push(try throw @:privateAccess (Exception.thrown(''):Exception) catch(e:Exception) e.stack);"),
 			"single-expression try throw privateAccess cast");
 
+		final switchThrowExpr = HxParser.parseExprText("switch s { case v: throw 'unknown value $v'; }");
+		switch (switchThrowExpr) {
+			case ESwitch(_, patterns, exprs):
+				assertTrue(patterns.length == 1, "expected one switch throw pattern");
+				switch (exprs[0]) {
+					case ECall(EIdent(throwName), [_]):
+						assertTrue(throwName == "__hxhx_throw", "expected switch throw branch to lower to throw sentinel");
+					case EUnsupported(raw):
+						fail("switch throw expression parsed as unsupported: " + raw);
+					case _:
+						fail("expected switch throw branch to lower to sentinel call");
+				}
+			case EUnsupported(raw):
+				fail("switch throw expression parsed as unsupported: " + raw);
+			case _:
+				fail("expected switch expression with throw branch");
+		}
+
 		final enumExtractStmts = HxParser.parseFunctionBodyText("var result = {}; switch item { case FilePos(s, f, l, _): result.file = f; result.line = l; switch s { case Method(_, m): result.method = m; case _: } case _: } return result;");
 		assertTrue(enumExtractStmts.length == 3, "expected result local, switch, return");
 		switch (enumExtractStmts[1]) {

@@ -728,6 +728,11 @@ class HxParser {
 							ENew(typePath, args);
 						}
 					}
+				} else if (k == KThrow) {
+					bump();
+					final thrown = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)
+						|| cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault)) || cur.kind.match(TComma) || cur.kind.match(TRParen));
+					ECall(EIdent("__hxhx_throw"), [thrown]);
 				} else if (k == KAs) {
 					bump();
 					EIdent("as");

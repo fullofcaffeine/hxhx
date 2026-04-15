@@ -23,5 +23,10 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		final bindJs = JsExprEmitter.emit(bind, exprScope);
 		assertContains(bindJs, "var __sw_bind_value = __sw;", "bind pattern should define branch-local alias");
 		assertContains(bindJs, "return (__sw_bind_value + 1);", "bind alias should be used in emitted expression");
+
+		final throwExpr = HxParser.parseExprText("switch (value) { case label: throw 'unknown value $label'; }");
+		final throwJs = JsExprEmitter.emit(throwExpr, exprScope);
+		assertContains(throwJs, "(function(){ throw", "switch expression throw branch should lower to throwing IIFE");
+		assertContains(throwJs, "unknown value", "switch expression throw branch should keep message text");
 	}
 }
