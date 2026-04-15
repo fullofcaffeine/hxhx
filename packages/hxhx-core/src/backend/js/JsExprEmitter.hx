@@ -124,25 +124,28 @@ class JsExprEmitter {
 	}
 
 	static function rewriteSimpleTryCatchRaw(raw:String):Null<String> {
-		if (!StringTools.startsWith(raw, "try{"))
+		raw = StringTools.trim(raw);
+		if (!StringTools.startsWith(raw, "try"))
 			return null;
 
-		final tryOpen = raw.indexOf("{");
+		final tryOpen = skipWhitespace(raw, 3);
+		if (tryOpen >= raw.length || raw.charCodeAt(tryOpen) != "{".code)
+			return null;
 		final tryClose = findMatching(raw, tryOpen, "{".code, "}".code);
 		if (tryClose < 0)
 			return null;
 
-		final catchStart = tryClose + 1;
-		if (raw.substr(catchStart, 6) != "catch")
+		final catchStart = skipWhitespace(raw, tryClose + 1);
+		if (raw.substr(catchStart, 5) != "catch")
 			return null;
-		final catchParenOpen = catchStart + 5;
+		final catchParenOpen = skipWhitespace(raw, catchStart + 5);
 		if (catchParenOpen >= raw.length || raw.charCodeAt(catchParenOpen) != "(".code)
 			return null;
 		final catchParenClose = findMatching(raw, catchParenOpen, "(".code, ")".code);
 		if (catchParenClose < 0)
 			return null;
 
-		final catchBodyOpen = catchParenClose + 1;
+		final catchBodyOpen = skipWhitespace(raw, catchParenClose + 1);
 		if (catchBodyOpen >= raw.length || raw.charCodeAt(catchBodyOpen) != "{".code)
 			return null;
 		final catchBodyClose = findMatching(raw, catchBodyOpen, "{".code, "}".code);
@@ -157,6 +160,19 @@ class JsExprEmitter {
 		final tryBody = blockToReturningJs(raw.substring(tryOpen + 1, tryClose));
 		final catchBody = blockToReturningJs(raw.substring(catchBodyOpen + 1, catchBodyClose));
 		return "(function () { try { " + tryBody + " } catch (" + catchName + ") { " + catchBody + " } })()";
+	}
+
+	static function skipWhitespace(source:String, start:Int):Int {
+		var i = start;
+		while (i < source.length) {
+			switch (source.charCodeAt(i)) {
+				case 9 | 10 | 11 | 12 | 13 | 32:
+					i++;
+				case _:
+					return i;
+			}
+		}
+		return i;
 	}
 
 	static function sanitizeCatchTypeHints(raw:String):String {

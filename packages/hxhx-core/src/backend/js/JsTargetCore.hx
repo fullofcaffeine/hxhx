@@ -161,6 +161,8 @@ class JsTargetCore implements ITargetCore {
 	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
 		if (isNativeJsLibExtern(unit.fullName)) {
 			writer.writeln("var " + unit.jsRef + " = " + nativeJsLibGlobalRef(unit.fullName) + ";");
+		} else if (unit.fullName == "EReg") {
+			emitERegConstructor(writer, unit.jsRef);
 		} else {
 			writer.writeln("var " + unit.jsRef + " = {};");
 		}
@@ -172,6 +174,8 @@ class JsTargetCore implements ITargetCore {
 		}
 		if (isNativeJsLibExtern(unit.fullName))
 			return;
+		if (unit.fullName == "EReg")
+			emitERegPrototypeRuntime(writer, unit.jsRef);
 		final staticScope = new JsFunctionScope(classRefs);
 
 		for (field in HxClassDecl.getFields(unit.decl)) {
@@ -253,6 +257,8 @@ class JsTargetCore implements ITargetCore {
 	static function emitKnownStaticFieldInit(fullName:String, fieldName:String):Null<String> {
 		if (fullName == "utest.ui.text.HtmlReport" && fieldName == "platform")
 			return JsNameMangler.quoteString("javascript");
+		if (fullName == "EReg" && fieldName == "escapeRe")
+			return "new RegExp(\"[.*+?^${}()|[\\\\]\\\\\\\\]\", \"g\")";
 		return null;
 	}
 
@@ -286,6 +292,9 @@ class JsTargetCore implements ITargetCore {
 
 		if (fullName == "DateTools")
 			return emitDateToolsStaticFunctionBody(writer, fnName, params);
+
+		if (fullName == "EReg")
+			return emitERegStaticFunctionBody(writer, fnName, params);
 
 		if (fullName != "haxe.SysTools")
 			return false;
@@ -353,6 +362,126 @@ class JsTargetCore implements ITargetCore {
 				writer.popIndent();
 				writer.writeln("}");
 				writer.writeln("return " + argument + ";");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	/**
+		Emits a constructible JS-native `EReg` wrapper.
+
+		Why
+		- Upstream stdlib and macro helper code stores `new EReg(...)` in static fields
+		  before runtime execution reaches user code. Plain object class placeholders are
+		  therefore insufficient: generated JS must be callable with `new`.
+		- The implementation is behavior-level over JavaScript's public `RegExp` API and
+		  avoids broadening constructor support for unrelated classes.
+	**/
+	static function emitERegConstructor(writer:JsWriter, ref:String):Void {
+		writer.writeln("var " + ref + " = function(__hx_pattern, __hx_options) {");
+		writer.pushIndent();
+		writer.writeln("__hx_options = __hx_options == null ? \"\" : String(__hx_options).split(\"u\").join(\"\");");
+		writer.writeln("this.r = new RegExp(String(__hx_pattern), __hx_options);");
+		writer.writeln("this.r.m = null;");
+		writer.writeln("this.r.s = null;");
+		writer.popIndent();
+		writer.writeln("};");
+	}
+
+	static function emitERegPrototypeRuntime(writer:JsWriter, ref:String):Void {
+		writer.writeln(ref + ".prototype.match = function(__hx_s) {");
+		writer.pushIndent();
+		writer.writeln("__hx_s = String(__hx_s);");
+		writer.writeln("if (this.r.global) this.r.lastIndex = 0;");
+		writer.writeln("this.r.m = this.r.exec(__hx_s);");
+		writer.writeln("this.r.s = __hx_s;");
+		writer.writeln("return this.r.m != null;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.writeln(ref + ".prototype.matched = function(__hx_n) {");
+		writer.pushIndent();
+		writer.writeln("if (this.r.m != null && __hx_n >= 0 && __hx_n < this.r.m.length) return this.r.m[__hx_n];");
+		writer.writeln("throw \"EReg::matched\";");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.writeln(ref + ".prototype.matchedLeft = function() {");
+		writer.pushIndent();
+		writer.writeln("if (this.r.m == null) throw \"No string matched\";");
+		writer.writeln("return this.r.s.substr(0, this.r.m.index);");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.writeln(ref + ".prototype.matchedRight = function() {");
+		writer.pushIndent();
+		writer.writeln("if (this.r.m == null) throw \"No string matched\";");
+		writer.writeln("var __hx_end = this.r.m.index + this.r.m[0].length;");
+		writer.writeln("return this.r.s.substr(__hx_end);");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.writeln(ref + ".prototype.matchedPos = function() {");
+		writer.pushIndent();
+		writer.writeln("if (this.r.m == null) throw \"No string matched\";");
+		writer.writeln("return { pos: this.r.m.index, len: this.r.m[0].length };");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.writeln(ref + ".prototype.matchSub = function(__hx_s, __hx_pos, __hx_len) {");
+		writer.pushIndent();
+		writer.writeln("__hx_s = String(__hx_s);");
+		writer.writeln("__hx_pos = __hx_pos | 0;");
+		writer.writeln("if (__hx_len == null) __hx_len = -1;");
+		writer.writeln("if (this.r.global) {");
+		writer.pushIndent();
+		writer.writeln("this.r.lastIndex = __hx_pos;");
+		writer.writeln("this.r.m = this.r.exec(__hx_len < 0 ? __hx_s : __hx_s.substr(0, __hx_pos + __hx_len));");
+		writer.writeln("if (this.r.m != null) this.r.s = __hx_s;");
+		writer.writeln("return this.r.m != null;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("var __hx_part = __hx_len < 0 ? __hx_s.substr(__hx_pos) : __hx_s.substr(__hx_pos, __hx_len);");
+		writer.writeln("var __hx_ok = this.match(__hx_part);");
+		writer.writeln("if (__hx_ok) { this.r.s = __hx_s; this.r.m.index += __hx_pos; }");
+		writer.writeln("return __hx_ok;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.writeln(ref + ".prototype.split = function(__hx_s) {");
+		writer.pushIndent();
+		writer.writeln("return String(__hx_s).split(this.r);");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.writeln(ref + ".prototype.replace = function(__hx_s, __hx_by) {");
+		writer.pushIndent();
+		writer.writeln("return String(__hx_s).replace(this.r, String(__hx_by));");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.writeln(ref + ".prototype.map = function(__hx_s, __hx_f) {");
+		writer.pushIndent();
+		writer.writeln("__hx_s = String(__hx_s);");
+		writer.writeln("var __hx_offset = 0;");
+		writer.writeln("var __hx_out = \"\";");
+		writer.writeln("do {");
+		writer.pushIndent();
+		writer.writeln("if (__hx_offset >= __hx_s.length) break;");
+		writer.writeln("if (!this.matchSub(__hx_s, __hx_offset, -1)) { __hx_out += __hx_s.substr(__hx_offset); break; }");
+		writer.writeln("var __hx_pos = this.matchedPos();");
+		writer.writeln("__hx_out += __hx_s.substr(__hx_offset, __hx_pos.pos - __hx_offset);");
+		writer.writeln("__hx_out += __hx_f(this);");
+		writer.writeln("if (__hx_pos.len === 0) { __hx_out += __hx_s.substr(__hx_pos.pos, 1); __hx_offset = __hx_pos.pos + 1; }");
+		writer.writeln("else __hx_offset = __hx_pos.pos + __hx_pos.len;");
+		writer.popIndent();
+		writer.writeln("} while (this.r.global);");
+		writer.writeln("if (!this.r.global && __hx_offset > 0 && __hx_offset < __hx_s.length) __hx_out += __hx_s.substr(__hx_offset);");
+		writer.writeln("return __hx_out;");
+		writer.popIndent();
+		writer.writeln("};");
+	}
+
+	static function emitERegStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "escape":
+				if (params.length < 1)
+					return false;
+				writer.writeln("var __hx_escapeRe = new RegExp(\"[.*+?^${}()|[\\\\]\\\\\\\\]\", \"g\");");
+				writer.writeln("return String(" + params[0] + ").replace(__hx_escapeRe, \"\\\\$&\");");
 				return true;
 			case _:
 				return false;

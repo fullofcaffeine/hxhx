@@ -214,6 +214,43 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "DateTools.hx");
 	}
 
+	static function eRegModule():TypedModule {
+		final patternArg = new HxFunctionArg("r", "String", HxDefaultValue.NoDefault);
+		final optionsArg = new HxFunctionArg("opt", "String", HxDefaultValue.NoDefault);
+		final stringArg = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
+		final matchedArg = new HxFunctionArg("n", "Int", HxDefaultValue.NoDefault);
+		final replaceArg = new HxFunctionArg("by", "String", HxDefaultValue.NoDefault);
+		final mapArg = new HxFunctionArg("f", "Dynamic", HxDefaultValue.NoDefault);
+		final posArg = new HxFunctionArg("pos", "Int", HxDefaultValue.NoDefault);
+		final lenArg = new HxFunctionArg("len", "Int", HxDefaultValue.NoDefault);
+		final eRegClass = new HxClassDecl("EReg", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [patternArg, optionsArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=ctor_body"), ""),
+			new HxFunctionDecl("match", HxVisibility.Public, false, [stringArg], "Bool",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("matched", HxVisibility.Public, false, [matchedArg], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("matchedLeft", HxVisibility.Public, false, [], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("matchedRight", HxVisibility.Public, false, [], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("matchedPos", HxVisibility.Public, false, [], "Dynamic",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("matchSub", HxVisibility.Public, false, [stringArg, posArg, lenArg], "Bool",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("split", HxVisibility.Public, false, [stringArg], "Array<String>",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("replace", HxVisibility.Public, false, [stringArg, replaceArg], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("map", HxVisibility.Public, false, [stringArg, mapArg], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("escape", HxVisibility.Public, true, [stringArg], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
+		]);
+		final decl = new HxModuleDecl("", [], eRegClass, [eRegClass], false, false);
+		return typedModule("", decl, "EReg.hx");
+	}
+
 	static function mainModule(source:String):TypedModule {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		return TyperStage.typeModule(parsed);
@@ -295,6 +332,13 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"      getTime: function() return 1577934245000.0",
 				"    };",
 				'    Sys.println(DateTools.format(date, "%Y-%m-%d %H:%M:%S %a %b"));',
+				'    var ident = new EReg("^[A-Za-z_][A-Za-z0-9_]*$", "");',
+				'    Sys.println(ident.match("abc_12"));',
+				'    Sys.println(ident.matched(0));',
+				'    Sys.println(ident.match("12abc"));',
+				'    var splitter = new EReg(",", "g");',
+				'    Sys.println(splitter.split("a,b,c").join("|"));',
+				'    Sys.println(EReg.escape("a+b"));',
 				"  }",
 				"}"
 			].join("\n");
@@ -312,7 +356,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				utestHtmlReportModule(),
 				utestReportToolsModule(),
 				jsBootModule(),
-				dateToolsModule()
+				dateToolsModule(),
+				eRegModule()
 			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
@@ -345,6 +390,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_js_Boot.__downcastCheck = function", "js Boot downcast shim should emit");
 			assertContains(js, "__hx_cls_DateTools.__format_get = function", "DateTools format token shim should emit");
 			assertContains(js, "__hx_cls_DateTools.__format = function", "DateTools format scanner shim should emit");
+			assertContains(js, "var __hx_cls_EReg = function", "EReg should emit a constructible regex wrapper");
+			assertContains(js, "__hx_cls_EReg.prototype.match = function", "EReg match prototype method should emit");
+			assertContains(js, "__hx_cls_EReg.escape = function", "EReg escape helper should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
@@ -373,6 +421,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "true\ntrue\ntrue\ntrue\nfalse", "js Boot instanceof should classify primitive and array values");
 			assertContains(stdout, "true\ntrue\ntrue", "js Boot interface/downcast helpers should recognize direct interface matches");
 			assertContains(stdout, "2020-01-02 03:04:05 Thu Jan", "DateTools.format should resolve common strftime tokens");
+			assertContains(stdout, "true\nabc_12\nfalse", "EReg should construct and preserve match state");
+			assertContains(stdout, "a|b|c", "EReg split should delegate to JS regular expressions");
+			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
