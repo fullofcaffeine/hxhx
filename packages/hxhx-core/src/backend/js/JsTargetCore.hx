@@ -278,6 +278,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "utest.Assert")
 			return emitUtestAssertStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "utest.ui.common.ReportTools")
+			return emitUtestReportToolsStaticFunctionBody(writer, fnName, params);
+
 		if (fullName != "haxe.SysTools")
 			return false;
 
@@ -520,6 +523,87 @@ class JsTargetCore implements ITargetCore {
 		writer.popIndent();
 		writer.writeln("};");
 		writer.writeln("return __hx_compare(" + expected + ", " + value + ");");
+	}
+
+	/**
+		Emits utest's report-display predicates for JS-native server-suite output.
+
+		Why
+		- `utest.ui.common.ReportTools` is used by the text/html reports built by the
+		  upstream server suite.
+		- The helpers are runtime policy, not compile-time-only macro scaffolding, so
+		  replacing them with neutral returns would hide report behavior bugs.
+
+		How
+		- Preserve the source-level switch semantics over `HeaderDisplayMode` and
+		  `SuccessResultsDisplayMode`.
+		- Accept both current Stage3 enum-like strings and object values carrying
+		  `__hx_ctor`, so the helper remains correct as enum lowering gets richer.
+	**/
+	static function emitUtestReportToolsStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "hasHeader":
+				if (params.length < 2)
+					return false;
+				emitUtestReportToolsHasHeaderBody(writer, params[0], params[1]);
+				return true;
+			case "skipResult":
+				if (params.length < 3)
+					return false;
+				emitUtestReportToolsSkipResultBody(writer, params[0], params[1], params[2]);
+				return true;
+			case "hasOutput":
+				if (params.length < 2)
+					return false;
+				writer.writeln("if (!" + params[1] + ".isOk) return true;");
+				writer.writeln("return "
+					+ JsNameMangler.classVarName("utest.ui.common.ReportTools")
+					+ ".hasHeader("
+					+ params[0]
+					+ ", "
+					+ params[1]
+					+ ");");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitUtestReportToolsEnumName(writer:JsWriter):Void {
+		writer.writeln("function __hx_enumName(v) {");
+		writer.pushIndent();
+		writer.writeln("if (v == null) return \"\";");
+		writer.writeln("if (typeof v === \"string\") return v;");
+		writer.writeln("if (typeof v === \"object\" && v.__hx_ctor != null) return String(v.__hx_ctor);");
+		writer.writeln("return String(v);");
+		writer.popIndent();
+		writer.writeln("}");
+	}
+
+	static function emitUtestReportToolsHasHeaderBody(writer:JsWriter, report:String, stats:String):Void {
+		emitUtestReportToolsEnumName(writer);
+		writer.writeln("var __hx_header = __hx_enumName(" + report + ".displayHeader);");
+		writer.writeln("if (__hx_header === \"NeverShowHeader\") return false;");
+		writer.writeln("if (__hx_header === \"AlwaysShowHeader\") return true;");
+		writer.writeln("if (__hx_header === \"ShowHeaderWithResults\") {");
+		writer.pushIndent();
+		writer.writeln("if (!" + stats + ".isOk) return true;");
+		writer.writeln("var __hx_success = __hx_enumName(" + report + ".displaySuccessResults);");
+		writer.writeln("if (__hx_success === \"NeverShowSuccessResults\") return false;");
+		writer.writeln("if (__hx_success === \"AlwaysShowSuccessResults\" || __hx_success === \"ShowSuccessResultsWithNoErrors\") return true;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return false;");
+	}
+
+	static function emitUtestReportToolsSkipResultBody(writer:JsWriter, report:String, stats:String, isOk:String):Void {
+		emitUtestReportToolsEnumName(writer);
+		writer.writeln("if (!" + stats + ".isOk) return false;");
+		writer.writeln("var __hx_success = __hx_enumName(" + report + ".displaySuccessResults);");
+		writer.writeln("if (__hx_success === \"NeverShowSuccessResults\") return true;");
+		writer.writeln("if (__hx_success === \"AlwaysShowSuccessResults\") return false;");
+		writer.writeln("if (__hx_success === \"ShowSuccessResultsWithNoErrors\") return !" + isOk + ";");
+		writer.writeln("return false;");
 	}
 
 	static function emitFileSystemStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {

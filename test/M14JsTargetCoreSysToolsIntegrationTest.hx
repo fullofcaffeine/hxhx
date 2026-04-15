@@ -163,6 +163,19 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "utest/ui/text/HtmlReport.hx");
 	}
 
+	static function utestReportToolsModule():TypedModule {
+		final reportArg = new HxFunctionArg("report", "Dynamic", HxDefaultValue.NoDefault);
+		final statsArg = new HxFunctionArg("stats", "Dynamic", HxDefaultValue.NoDefault);
+		final isOkArg = new HxFunctionArg("isOk", "Bool", HxDefaultValue.NoDefault);
+		final toolsClass = new HxClassDecl("ReportTools", false, [
+			new HxFunctionDecl("hasHeader", HxVisibility.Public, true, [reportArg, statsArg], "Bool", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("skipResult", HxVisibility.Public, true, [reportArg, statsArg, isOkArg], "Bool", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("hasOutput", HxVisibility.Public, true, [reportArg, statsArg], "Bool", unsupportedBody("body_parse_error"), "")
+		]);
+		final decl = new HxModuleDecl("utest.ui.common", [], toolsClass, [toolsClass], false, false);
+		return typedModule("", decl, "utest/ui/common/ReportTools.hx");
+	}
+
 	static function mainModule(source:String):TypedModule {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		return TyperStage.typeModule(parsed);
@@ -189,6 +202,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			final source = [
 				"import sys.FileSystem;",
 				"import utest.Assert;",
+				"import utest.ui.common.ReportTools;",
 				"class Main {",
 				"  static function main() {",
 				'    Sys.println(SysTools.quoteUnixArg("a b"));',
@@ -212,6 +226,13 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(Assert.sameAs({ name: "utest", values: [1, 2] }, { name: "utest", values: [1, 2] }, sameStatus, 1e-5));',
 				'    Sys.println(Assert.sameAs({ name: "utest" }, { name: "other" }, sameStatus, 1e-5));',
 				'    Sys.println(sameStatus.error);',
+				'    var report = { displayHeader: "ShowHeaderWithResults", displaySuccessResults: "NeverShowSuccessResults" };',
+				'    var okStats = { isOk: true };',
+				'    var badStats = { isOk: false };',
+				"    Sys.println(ReportTools.hasHeader(report, okStats));",
+				"    Sys.println(ReportTools.hasHeader(report, badStats));",
+				"    Sys.println(ReportTools.skipResult(report, okStats, true));",
+				"    Sys.println(ReportTools.hasOutput(report, okStats));",
 				"  }",
 				"}"
 			].join("\n");
@@ -226,7 +247,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				macroContextModule(),
 				macroTypeToolsModule(),
 				utestAssertModule(),
-				utestHtmlReportModule()
+				utestHtmlReportModule(),
+				utestReportToolsModule()
 			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
@@ -251,6 +273,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_utest_Assert.sameAs = function", "utest Assert sameAs shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_text_HtmlReport.platform = \"javascript\"",
 				"utest HtmlReport platform static initializer should resolve for JS");
+			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasHeader = function", "utest ReportTools hasHeader shim should emit");
+			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.skipResult = function", "utest ReportTools skipResult shim should emit");
+			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasOutput = function", "utest ReportTools hasOutput shim should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
@@ -273,6 +298,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "String", "utest Assert.getTypeName should name string values");
 			assertContains(stdout, "Array", "utest Assert.getTypeName should name array values");
 			assertContains(stdout, "expected \"utest\" but it is \"other\"", "utest Assert.sameAs should report nested field mismatch");
+			assertContains(stdout, "false\ntrue\ntrue\nfalse", "utest ReportTools should preserve header/output display policy");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
