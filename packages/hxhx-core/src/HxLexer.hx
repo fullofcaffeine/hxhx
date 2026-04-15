@@ -178,7 +178,7 @@ class HxLexer {
 		}
 
 		var isFloat = false;
-		if (!eof() && peek(0) == ".".code && isDigit(peek(1))) {
+		if (!eof() && peek(0) == ".".code && peek(1) != ".".code && (isDigit(peek(1)) || !isIdentStart(peek(1)))) {
 			isFloat = true;
 			bump(); // '.'
 			while (!eof() && isDigit(peek(0)))

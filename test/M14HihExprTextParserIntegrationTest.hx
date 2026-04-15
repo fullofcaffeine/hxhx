@@ -86,5 +86,16 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("compact constructor expression should parse as ENew");
 		}
+
+		// Haxe accepts float literals with a trailing decimal point. Upstream math
+		// tests use this shape in call arguments, so the lexer must not leave the
+		// dot behind and make the body parser recover with `body_parse_error`.
+		final trailingDotStmts = HxParser.parseFunctionBodyText("eq(Math.floor(-10000000000.7)*1.0, -10000000001.);");
+		assertTrue(trailingDotStmts.length == 1, "expected trailing-dot float statement to parse as one statement");
+		switch (trailingDotStmts[0]) {
+			case SExpr(EUnsupported(raw), _):
+				fail("trailing-dot float statement parsed as unsupported: " + raw);
+			case _:
+		}
 	}
 }
