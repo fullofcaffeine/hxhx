@@ -81,6 +81,13 @@ class JsTargetCore implements ITargetCore {
 				});
 			}
 		}
+		units.sort(function(a, b) {
+			if (a.fullName == "EReg" && b.fullName != "EReg")
+				return -1;
+			if (b.fullName == "EReg" && a.fullName != "EReg")
+				return 1;
+			return 0;
+		});
 
 		return {
 			units: units,

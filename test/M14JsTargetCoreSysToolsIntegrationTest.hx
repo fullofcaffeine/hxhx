@@ -114,7 +114,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function macroCompilerModule():TypedModule {
 		final flagArg = new HxFunctionArg("flag", "String", HxDefaultValue.NoDefault);
-		final ident = new HxFieldDecl("ident", HxVisibility.Private, true, "Dynamic", HxExpr.EUnsupported("[js-native:unsupported_expr]"));
+		final ident = new HxFieldDecl("ident", HxVisibility.Private, true, "Dynamic",
+			HxExpr.ENew("EReg", [HxExpr.EString("^[A-Za-z_][A-Za-z0-9_]*$"), HxExpr.EString("")]));
 		final compilerClass = new HxClassDecl("Compiler", false, [
 			new HxFunctionDecl("getDefine", HxVisibility.Public, true, [flagArg], "String", unsupportedBody("[js-native:unsupported_expr]"), ""),
 			new HxFunctionDecl("excludeFile", HxVisibility.Public, true, [flagArg], "Void",
@@ -393,7 +394,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "var __hx_cls_EReg = function", "EReg should emit a constructible regex wrapper");
 			assertContains(js, "__hx_cls_EReg.prototype.match = function", "EReg match prototype method should emit");
 			assertContains(js, "__hx_cls_EReg.escape = function", "EReg escape helper should emit");
-			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
+			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg", "compile-time macro Compiler ident regex should construct EReg");
+			assertTrue(js.indexOf("var __hx_cls_EReg = function") < js.indexOf("__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg"),
+				"EReg constructor should emit before static fields that instantiate it");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
 			final stdout = runNodeScript(artifactPath);
