@@ -1732,7 +1732,7 @@ class JsTargetCore implements ITargetCore {
 	static function shouldEmitNeutralInstanceFunctionBody(fullName:String, fnName:String):Bool {
 		if (fullName == "utest.Runner" && fnName == "addCases")
 			return true;
-		if (fullName == "utest.ui.text.HtmlReport" && fnName == "addFixture")
+		if (fullName == "utest.ui.text.HtmlReport")
 			return true;
 		return fullName == "utest.TestHandler";
 	}

@@ -204,6 +204,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final isOkArg = new HxFunctionArg("isOk", "Bool", HxDefaultValue.NoDefault);
 		final reportClass = new HxClassDecl("HtmlReport", false, [
 			new HxFunctionDecl("addFixture", HxVisibility.Private, false, [bufArg, resultArg, nameArg, isOkArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
+			new HxFunctionDecl("getTextResults", HxVisibility.Public, false, [], "String",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), "")
 		], [platform]);
 		final decl = new HxModuleDecl("utest.ui.text", [], reportClass, [reportClass], false, false);
@@ -553,6 +555,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"utest HtmlReport platform static initializer should resolve for JS");
 			assertContains(js, "__hx_cls_utest_ui_text_HtmlReport.prototype.addFixture = function",
 				"utest HtmlReport addFixture should emit a neutral runtime stub");
+			assertContains(js, "__hx_cls_utest_ui_text_HtmlReport.prototype.getTextResults = function",
+				"utest HtmlReport text output should emit a neutral runtime stub");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasHeader = function", "utest ReportTools hasHeader shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.skipResult = function", "utest ReportTools skipResult shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasOutput = function", "utest ReportTools hasOutput shim should emit");

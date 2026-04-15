@@ -1434,7 +1434,7 @@ let buildClassRefs = fun bySimpleName byFullName -> let merged = Obj.magic (HxMa
 
 let shouldEmitNeutralInstanceFunctionBody = fun fullName fnName -> try let __fallback_result_122 = (
   ignore (if HxString.equals fullName "utest.Runner" && HxString.equals fnName "addCases" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (if HxString.equals fullName "utest.ui.text.HtmlReport" && HxString.equals fnName "addFixture" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if HxString.equals fullName "utest.ui.text.HtmlReport" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   HxString.equals fullName "utest.TestHandler"
 ) in Obj.magic __fallback_result_122 with
   | HxRuntime.Hx_return __ret_121 -> Obj.obj __ret_121
