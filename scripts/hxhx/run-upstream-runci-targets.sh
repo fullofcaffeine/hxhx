@@ -365,6 +365,17 @@ resolve_system_nekotools_bin() {
   return 1
 }
 
+is_lix_neko_shim() {
+  case "${1:-}" in
+    */node_modules/.bin/neko|*/lix/bin/nekoshim.js)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 resolve_nekopath_dir() {
   local candidate=""
   local -a candidates=()
@@ -393,6 +404,7 @@ resolve_nekopath_dir() {
 }
 
 NEKOPATH_DIR=""
+NEKO_WRAPPER_EXPORT_NEKOPATH=1
 selected_nekotools_dir="$(cd "$(dirname "$STAGE0_NEKOTOOLS")" && pwd)"
 selected_neko_dir="$(cd "$(dirname "$STAGE0_NEKO")" && pwd)"
 
@@ -403,15 +415,20 @@ elif dir_has_std_ndll "$selected_neko_dir"; then
 elif dir_has_std_ndll "$selected_nekotools_dir"; then
   NEKOPATH_DIR="$selected_nekotools_dir"
 else
-  system_neko="$(resolve_system_neko_bin || true)"
-  system_nekotools="$(resolve_system_nekotools_bin || true)"
-  system_nekopath_dir="$(resolve_system_nekopath_dir || true)"
-  if [ -n "$system_neko" ] && [ -x "$system_neko" ] && [ -n "$system_nekotools" ] && [ -x "$system_nekotools" ] && [ -n "$system_nekopath_dir" ]; then
-    STAGE0_NEKO="$system_neko"
-    STAGE0_NEKOTOOLS="$system_nekotools"
-    NEKOPATH_DIR="$system_nekopath_dir"
-  else
+  if is_lix_neko_shim "$STAGE0_NEKO"; then
     NEKOPATH_DIR="$(resolve_nekopath_dir || true)"
+    NEKO_WRAPPER_EXPORT_NEKOPATH=0
+  else
+    system_neko="$(resolve_system_neko_bin || true)"
+    system_nekotools="$(resolve_system_nekotools_bin || true)"
+    system_nekopath_dir="$(resolve_system_nekopath_dir || true)"
+    if [ -n "$system_neko" ] && [ -x "$system_neko" ] && [ -n "$system_nekotools" ] && [ -x "$system_nekotools" ] && [ -n "$system_nekopath_dir" ]; then
+      STAGE0_NEKO="$system_neko"
+      STAGE0_NEKOTOOLS="$system_nekotools"
+      NEKOPATH_DIR="$system_nekopath_dir"
+    else
+      NEKOPATH_DIR="$(resolve_nekopath_dir || true)"
+    fi
   fi
 fi
 
@@ -681,11 +698,16 @@ chmod +x "$WRAP_DIR/nekotools"
 cat >"$WRAP_DIR/neko" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-if [ -n "${NEKOPATH_DIR}" ]; then
+if [ "${NEKO_WRAPPER_EXPORT_NEKOPATH}" = "1" ] && [ -n "${NEKOPATH_DIR}" ]; then
   export NEKOPATH="${NEKOPATH_DIR}"
   export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
   export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
   export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
+else
+  unset NEKOPATH
+  unset LD_LIBRARY_PATH
+  unset DYLD_LIBRARY_PATH
+  unset DYLD_FALLBACK_LIBRARY_PATH
 fi
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
