@@ -380,6 +380,10 @@ class JsTargetCore implements ITargetCore {
 			if (!HxFieldDecl.getIsStatic(field))
 				fields.set(HxFieldDecl.getName(field), "this" + JsNameMangler.propertySuffix(HxFieldDecl.getName(field)));
 		}
+		for (fn in HxClassDecl.getFunctions(decl)) {
+			if (!HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) != "new")
+				fields.set(HxFunctionDecl.getName(fn), "this" + JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn)) + ".bind(this)");
+		}
 		return fields;
 	}
 

@@ -379,6 +379,21 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "js/html/Blob.hx");
 	}
 
+	static function utestResultAggregatorModule():TypedModule {
+		final runnerArg = new HxFunctionArg("runner", "Dynamic", HxDefaultValue.NoDefault);
+		final aggregatorClass = new HxClassDecl("ResultAggregator", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [runnerArg], "Void", [
+				HxStmt.SExpr(HxExpr.ECall(HxExpr.EField(HxExpr.EField(HxExpr.EIdent("runner"), "onStart"), "add"), [HxExpr.EIdent("start")]), HxPos.unknown())
+			],
+				""),
+			new HxFunctionDecl("start", HxVisibility.Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("progress", HxVisibility.Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("complete", HxVisibility.Public, false, [], "Void", [], "")
+		]);
+		final decl = new HxModuleDecl("utest.ui.common", [], aggregatorClass, [aggregatorClass], false, false);
+		return typedModule("", decl, "utest/ui/common/ResultAggregator.hx");
+	}
+
 	static function utestRunnerModule():TypedModule {
 		final selfArg = new HxFunctionArg("eThis", "Dynamic", HxDefaultValue.NoDefault);
 		final pathArg = new HxFunctionArg("path", "Dynamic", HxDefaultValue.NoDefault);
@@ -601,6 +616,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				arrayModule(),
 				jsNodeProcessModule(),
 				jsHtmlBlobModule(),
+				utestResultAggregatorModule(),
 				utestRunnerModule(),
 				utestTestHandlerModule(),
 				haxeIoInputModule(),
@@ -678,6 +694,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertNotContains(js, "__hx_cls_js_html_Blob.prototype.slice", "native js.html extern prototype methods should not be re-emitted");
 			assertNotContains(js, "__js__(\"typeof window", "inline JS intrinsics should lower to raw JavaScript expressions");
 			assertNotContains(js, "require({0})", "inline JS intrinsic placeholders should be replaced with emitted arguments");
+			assertContains(js, "runner.onStart.add(this.start.bind(this))",
+				"unqualified instance method references should lower to bound this-method closures");
 			assertNotContains(js, "__hx_cls_haxe_io_Input.prototype.readByte", "haxe.io std support prototypes should not block JS smoke emit");
 			assertNotContains(js, "__hx_cls_haxe_format_JsonParser.prototype.doParse", "haxe.format std support prototypes should not block JS smoke emit");
 			assertContains(js, "__hx_cls_utest_Runner.prototype.addCases = function", "utest Runner addCases macro method should emit a neutral runtime stub");
