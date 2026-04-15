@@ -145,6 +145,7 @@ private class _EmitterStageDebug {
 			case SWhile(_, _, pos): {kind: "SWhile", pos: pos};
 			case SDoWhile(_, _, pos): {kind: "SDoWhile", pos: pos};
 			case SForIn(_, _, _, pos): {kind: "SForIn", pos: pos};
+			case SForKeyValue(_, _, _, _, pos): {kind: "SForKeyValue", pos: pos};
 			case STry(_, _, pos): {kind: "STry", pos: pos};
 			case SThrow(_, pos): {kind: "SThrow", pos: pos};
 			case SBreak(pos): {kind: "SBreak", pos: pos};
@@ -164,6 +165,8 @@ private class _EmitterStageDebug {
 				":hasElse=" + (elseBranch == null ? "0" : "1");
 			case SForIn(name, _iterable, _body, _):
 				":name=" + name;
+			case SForKeyValue(keyName, valueName, _iterable, _body, _):
+				":key=" + keyName + ":value=" + valueName;
 			case SSwitch(_scrutinee, patterns, bodies, _):
 				":patterns="
 				+ (patterns == null ? "0" : Std.string(patterns.length))
@@ -4199,6 +4202,9 @@ class EmitterStage {
 			case SForIn(_name, iterable, body, _pos):
 				collectAssignedNamesInExprRec(iterable, out);
 				collectAssignedNamesInStmtRec(body, out);
+			case SForKeyValue(_keyName, _valueName, iterable, body, _pos):
+				collectAssignedNamesInExprRec(iterable, out);
+				collectAssignedNamesInStmtRec(body, out);
 			case STry(tryBody, catches, _pos):
 				collectAssignedNamesInStmtRec(tryBody, out);
 				if (catches != null)
@@ -4239,6 +4245,12 @@ class EmitterStage {
 			case SForIn(name, _, body, _):
 				if (name != null && name.length > 0)
 					locals.set(name, true);
+				collectLocalsForPreludeFromStmtRec(body, locals);
+			case SForKeyValue(keyName, valueName, _, body, _):
+				if (keyName != null && keyName.length > 0)
+					locals.set(keyName, true);
+				if (valueName != null && valueName.length > 0)
+					locals.set(valueName, true);
 				collectLocalsForPreludeFromStmtRec(body, locals);
 			case SSwitch(_, _patterns, bodies, _):
 				if (bodies != null)
@@ -4350,6 +4362,16 @@ class EmitterStage {
 			case SForIn(_name, iterable, body, _):
 				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
 				scanStmtForPreludeDepsRec(body, locals, calls, idents);
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				final nestedLocals:Map<String, Bool> = new Map();
+				for (k in locals.keys())
+					nestedLocals.set(k, true);
+				if (keyName != null && keyName.length > 0)
+					nestedLocals.set(keyName, true);
+				if (valueName != null && valueName.length > 0)
+					nestedLocals.set(valueName, true);
+				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
+				scanStmtForPreludeDepsRec(body, nestedLocals, calls, idents);
 			case SSwitch(scrutinee, _patterns, bodies, _):
 				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
 				if (bodies != null)
@@ -5106,6 +5128,8 @@ class EmitterStage {
 					bodyHintsIntLoopVar(body, loopVarName);
 				case SForIn(_name, _iterable, body, _):
 					bodyHintsIntLoopVar(body, loopVarName);
+				case SForKeyValue(_keyName, _valueName, _iterable, body, _):
+					bodyHintsIntLoopVar(body, loopVarName);
 				case SSwitch(_scrutinee, _patterns, bodies, _):
 					if (bodies == null) {
 						false;
@@ -5286,6 +5310,10 @@ class EmitterStage {
 							+ bodyUnit
 							+ ")";
 					}
+				case SForKeyValue(_keyName, _valueName, _iterable, _body, _pos):
+					// Stage3 OCaml bootstrap lowering does not yet model map/key iterators.
+					// Keep the non-JS path compiling while js-native handles this syntax precisely.
+					"()";
 				case SReturnVoid(_pos):
 					"raise (" + returnExc + " (Obj.repr ()))";
 				case SReturn(expr, _pos):
@@ -7568,6 +7596,11 @@ class EmitterStage {
 										if (cond != null)
 											exprWorklist.push(cond);
 									case SForIn(_name, iterable, body, _):
+										if (iterable != null)
+											exprWorklist.push(iterable);
+										if (body != null)
+											stmtWorklist.push(body);
+									case SForKeyValue(_keyName, _valueName, iterable, body, _):
 										if (iterable != null)
 											exprWorklist.push(iterable);
 										if (body != null)

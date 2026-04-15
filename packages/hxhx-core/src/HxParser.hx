@@ -898,6 +898,7 @@ class HxParser {
 				case SVar(_, _, _, _): "var";
 				case SIf(_, _, _, _): "if";
 				case SForIn(_, _, _, _): "for_in";
+				case SForKeyValue(_, _, _, _, _): "for_key_value";
 				case SWhile(_, _, _): "while";
 				case SDoWhile(_, _, _): "do_while";
 				case SSwitch(_, _, _, _): "switch";
@@ -2423,6 +2424,14 @@ class HxParser {
 				}
 
 				final name = readIdent("for-in loop variable");
+				var keyName:Null<String> = null;
+				var valueName = name;
+				if (cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code))) {
+					keyName = name;
+					bump(); // '='
+					bump(); // '>'
+					valueName = readIdent("for key/value loop value variable");
+				}
 				if (!acceptKeyword(KIn)) {
 					// Not a `for-in` loop (future work). Consume the remainder best-effort.
 					try
@@ -2463,7 +2472,7 @@ class HxParser {
 					bump();
 
 				final body = parseStmt(stop);
-				SForIn(name, iterable, body, pos);
+				keyName == null ? SForIn(valueName, iterable, body, pos) : SForKeyValue(keyName, valueName, iterable, body, pos);
 			case TKeyword(KDo):
 				// Stage 3 bring-up: structured do/while support.
 				bump(); // `do`

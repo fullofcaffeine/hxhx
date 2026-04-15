@@ -169,5 +169,18 @@ class M14HihExprTextParserIntegrationTest {
 				fail("inline JS conditional marker parsed as unsupported: " + raw);
 			case _:
 		}
+
+		final keyValueForStmts = HxParser.parseFunctionBodyText("var data = ['left' => [1], 'right' => [2]]; for(label => stacks in data) { t(stacks.length > 0, label); }");
+		assertTrue(keyValueForStmts.length == 2, "expected map literal plus key/value for statement");
+		switch (keyValueForStmts[1]) {
+			case SForKeyValue(keyName, valueName, EIdent(iterable), SBlock(_, _), _):
+				assertTrue(keyName == "label", "expected key binding to parse");
+				assertTrue(valueName == "stacks", "expected value binding to parse");
+				assertTrue(iterable == "data", "expected iterable identifier to parse");
+			case SExpr(EUnsupported(raw), _):
+				fail("key/value for parsed as unsupported: " + raw);
+			case _:
+				fail("expected key/value for statement");
+		}
 	}
 }

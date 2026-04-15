@@ -129,6 +129,9 @@ class MetalProfileVerifier {
 			case SForIn(_, iterable, body, pos):
 				verifyExpr(filePath, className, fnName, pos, iterable, violations);
 				verifyStmt(filePath, className, fnName, body, violations);
+			case SForKeyValue(_, _, iterable, body, pos):
+				verifyExpr(filePath, className, fnName, pos, iterable, violations);
+				verifyStmt(filePath, className, fnName, body, violations);
 			case SWhile(cond, body, pos):
 				verifyExpr(filePath, className, fnName, pos, cond, violations);
 				verifyStmt(filePath, className, fnName, body, violations);

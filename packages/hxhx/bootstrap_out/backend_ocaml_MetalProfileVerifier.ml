@@ -331,6 +331,14 @@ let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (ma
       verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic body) (Obj.magic violations)
     )
   ))
+  | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> ignore ((
+    ignore _p0;
+    ignore _p1;
+    let _g3 = Obj.magic _p2 in let _g1 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let iterable = Obj.magic _g3 in let body = Obj.magic _g1 in let pos = Obj.magic _g4 in (
+      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic iterable) (Obj.magic violations));
+      verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic body) (Obj.magic violations)
+    )
+  ))
   | HxStmt.SWhile (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let body = Obj.magic _g1 in let pos = Obj.magic _g2 in (
     ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic cond) (Obj.magic violations));
     verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic body) (Obj.magic violations)

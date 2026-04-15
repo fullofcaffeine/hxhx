@@ -156,7 +156,7 @@ let init () : unit =
   HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
   HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported" ];
   HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KInline"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KIn"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
-  HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SWhile"; "SDoWhile"; "SSwitch"; "STry"; "SBreak"; "SContinue"; "SThrow"; "SReturnVoid"; "SReturn"; "SExpr" ];
+  HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SForKeyValue"; "SWhile"; "SDoWhile"; "SSwitch"; "STry"; "SBreak"; "SContinue"; "SThrow"; "SReturnVoid"; "SReturn"; "SExpr" ];
   HxType.register_enum_ctors "HxSwitchPattern" [ "PNull"; "PWildcard"; "PString"; "PInt"; "PEnumValue"; "PBind"; "POr" ];
   HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TRegex"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
   HxType.register_enum_ctors "HxVisibility" [ "Public"; "Private" ];
@@ -452,6 +452,15 @@ let init () : unit =
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'body' for HxStmt.SForIn" in
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SForIn" in
     Obj.repr (HxStmt.SForIn (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "HxStmt" "SForKeyValue" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'keyName' for HxStmt.SForKeyValue" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'valueName' for HxStmt.SForKeyValue" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'iterable' for HxStmt.SForKeyValue" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'body' for HxStmt.SForKeyValue" in
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SForKeyValue" in
+    Obj.repr (HxStmt.SForKeyValue (a0, a1, a2, a3, a4))
   );
   HxType.register_enum_ctor "HxStmt" "SWhile" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1637,7 +1646,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.js.JsNameMangler" [];
   HxType.register_class_static_fields "backend.js.JsNameMangler" [ "classVarName"; "identifier"; "isReserved"; "propertySuffix"; "quoteString" ];
   HxType.register_class_instance_fields "backend.js.JsStmtEmitter" [];
-  HxType.register_class_static_fields "backend.js.JsStmtEmitter" [ "emitCatchCondition"; "emitForIn"; "emitFunctionBody"; "emitStmt"; "emitStmtBlockContent"; "emitSwitch"; "emitTry"; "normalizeCatchType"; "simpleTypeName" ];
+  HxType.register_class_static_fields "backend.js.JsStmtEmitter" [ "emitCatchCondition"; "emitForIn"; "emitForKeyValue"; "emitFunctionBody"; "emitStmt"; "emitStmtBlockContent"; "emitSwitch"; "emitTry"; "normalizeCatchType"; "simpleTypeName" ];
   HxType.register_class_instance_fields "backend.js.JsSwitchPatternLowering" [];
   HxType.register_class_static_fields "backend.js.JsSwitchPatternLowering" [ "lower" ];
   HxType.register_class_instance_fields "backend.js.JsTargetCore" [ "coreId"; "emit" ];

@@ -696,6 +696,9 @@ class Stage3Compiler {
 			case SForIn(_name, iterable, body, _pos):
 				collectUnsupportedExprRawInExpr(iterable, out, max);
 				collectUnsupportedExprRawInStmt(body, out, max);
+			case SForKeyValue(_keyName, _valueName, iterable, body, _pos):
+				collectUnsupportedExprRawInExpr(iterable, out, max);
+				collectUnsupportedExprRawInStmt(body, out, max);
 			case STry(tryBody, catches, _pos):
 				collectUnsupportedExprRawInStmt(tryBody, out, max);
 				for (c in catches)
@@ -747,6 +750,8 @@ class Stage3Compiler {
 			case SDoWhile(body, cond, _pos):
 				countUnsupportedExprsInStmt(body) + countUnsupportedExprsInExpr(cond);
 			case SForIn(_name, iterable, body, _pos):
+				countUnsupportedExprsInExpr(iterable) + countUnsupportedExprsInStmt(body);
+			case SForKeyValue(_keyName, _valueName, iterable, body, _pos):
 				countUnsupportedExprsInExpr(iterable) + countUnsupportedExprsInStmt(body);
 			case STry(tryBody, catches, _pos):
 				var c = countUnsupportedExprsInStmt(tryBody);

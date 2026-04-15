@@ -83,6 +83,20 @@ enum HxStmt {
 	SForIn(name:String, iterable:HxExpr, body:HxStmt, pos:HxPos);
 
 	/**
+		Key/value for-in loop: `for (key => value in iterable) body`.
+
+		Why
+		- Haxe map literals and map-like iteration use this syntax in upstream unit tests.
+		- Modeling both bindings explicitly avoids smuggling parser state through one
+		  synthetic identifier and keeps backend lowering honest.
+
+		What
+		- Stores the key binding, value binding, iterable expression, and body.
+		- Backends can lower map-like values with target-native key iteration.
+	**/
+	SForKeyValue(keyName:String, valueName:String, iterable:HxExpr, body:HxStmt, pos:HxPos);
+
+	/**
 		While loop: `while (cond) body`.
 
 		Why

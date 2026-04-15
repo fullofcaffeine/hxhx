@@ -91,16 +91,17 @@ let rec emitStmtBlockContent = fun writer stmt scope -> ignore (if (match stmt w
   | HxStmt.SVar (_, _, _, _) -> 1
   | HxStmt.SIf (_, _, _, _) -> 2
   | HxStmt.SForIn (_, _, _, _) -> 3
-  | HxStmt.SWhile (_, _, _) -> 4
-  | HxStmt.SDoWhile (_, _, _) -> 5
-  | HxStmt.SSwitch (_, _, _, _) -> 6
-  | HxStmt.STry (_, _, _) -> 7
-  | HxStmt.SBreak _ -> 8
-  | HxStmt.SContinue _ -> 9
-  | HxStmt.SThrow (_, _) -> 10
-  | HxStmt.SReturnVoid _ -> 11
-  | HxStmt.SReturn (_, _) -> 12
-  | HxStmt.SExpr (_, _) -> 13) = 0 then ignore (let _g = Obj.magic (match stmt with
+  | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
+  | HxStmt.SWhile (_, _, _) -> 5
+  | HxStmt.SDoWhile (_, _, _) -> 6
+  | HxStmt.SSwitch (_, _, _, _) -> 7
+  | HxStmt.STry (_, _, _) -> 8
+  | HxStmt.SBreak _ -> 9
+  | HxStmt.SContinue _ -> 10
+  | HxStmt.SThrow (_, _) -> 11
+  | HxStmt.SReturnVoid _ -> 12
+  | HxStmt.SReturn (_, _) -> 13
+  | HxStmt.SExpr (_, _) -> 14) = 0 then ignore (let _g = Obj.magic (match stmt with
   | HxStmt.SBlock (__enum_param_3, _) -> __enum_param_3
   | _ -> failwith "Unexpected enum parameter") in (
   ignore (match stmt with
@@ -157,6 +158,10 @@ and emitStmt = fun writer stmt scope -> ignore (match stmt with
   | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in (
     ignore _p3;
     let name = (_g : string) in let iterable = Obj.magic _g1 in let body = Obj.magic _g2 in emitForIn (Obj.magic writer) (name : string) (Obj.magic iterable) (Obj.magic body) (Obj.magic scope)
+  ))
+  | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in (
+    ignore _p4;
+    let keyName = (_g : string) in let valueName = (_g1 : string) in let iterable = Obj.magic _g2 in let body = Obj.magic _g3 in emitForKeyValue (Obj.magic writer) (keyName : string) (valueName : string) (Obj.magic iterable) (Obj.magic body) (Obj.magic scope)
   ))
   | HxStmt.SWhile (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
     ignore _p2;
@@ -295,6 +300,17 @@ and emitForIn = fun writer name iterable body scope -> ignore (if (match iterabl
   ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
   Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string)
 )))
+and emitForKeyValue = fun writer keyName valueName iterable body scope -> ignore (let sourceVar = (Backend_js_JsFunctionScope.freshTemp (Obj.magic scope) ("__iter" : string) : string) in let keysVar = (Backend_js_JsFunctionScope.freshTemp (Obj.magic scope) ("__keys" : string) : string) in let indexVar = (Backend_js_JsFunctionScope.freshTemp (Obj.magic scope) ("__i" : string) : string) in let keyLocal = (Backend_js_JsFunctionScope.declareLocal (Obj.magic scope) (keyName : string) : string) in let valueLocal = (Backend_js_JsFunctionScope.declareLocal (Obj.magic scope) (valueName : string) : string) in (
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var " ^ HxString.toStdString sourceVar) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.magic iterable) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) ()))) ^ ";" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var " ^ HxString.toStdString keysVar) ^ " = Object.keys(") ^ HxString.toStdString sourceVar) ^ ");" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((((("for (var " ^ HxString.toStdString indexVar) ^ " = 0; ") ^ HxString.toStdString indexVar) ^ " < ") ^ HxString.toStdString keysVar) ^ ".length; ") ^ HxString.toStdString indexVar) ^ "++) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((("var " ^ HxString.toStdString keyLocal) ^ " = ") ^ HxString.toStdString keysVar) ^ "[") ^ HxString.toStdString indexVar) ^ "];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((("var " ^ HxString.toStdString valueLocal) ^ " = ") ^ HxString.toStdString sourceVar) ^ "[") ^ HxString.toStdString keyLocal) ^ "];" : string));
+  ignore (emitStmtBlockContent (Obj.magic writer) (Obj.magic body) (Obj.magic scope));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string)
+))
 and emitSwitch = fun writer scrutinee patterns bodies scope -> ignore (let scrutineeVar = (Backend_js_JsFunctionScope.freshTemp (Obj.magic scope) ("__sw" : string) : string) in (
   ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("var " ^ HxString.toStdString scrutineeVar) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.magic scrutinee) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) ()))) ^ ";" : string));
   let isFirst = ref true in let tempNumber = ref (0 : int) in (

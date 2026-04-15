@@ -244,6 +244,11 @@ class TyperStage {
 					}
 					scope.declareLocal(name, loopTy);
 					typeStmt(body);
+				case SForKeyValue(keyName, valueName, iterable, body, pos):
+					inferExprType(iterable, scope, ctx, pos);
+					scope.declareLocal(keyName, TyType.fromHintText("String"));
+					scope.declareLocal(valueName, TyType.fromHintText("Dynamic"));
+					typeStmt(body);
 				case SVar(name, typeHint, init, pos):
 					// Declare first so subsequent statements can reference the symbol deterministically.
 					final hinted = typeFromHintInContext(typeHint, ctx);

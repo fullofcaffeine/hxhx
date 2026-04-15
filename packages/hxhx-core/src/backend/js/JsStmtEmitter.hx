@@ -71,6 +71,8 @@ class JsStmtEmitter {
 				emitTry(writer, tryBody, catches, scope);
 			case SForIn(name, iterable, body, _):
 				emitForIn(writer, name, iterable, body, scope);
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				emitForKeyValue(writer, keyName, valueName, iterable, body, scope);
 			case SSwitch(scrutinee, patterns, bodies, _):
 				emitSwitch(writer, scrutinee, patterns, bodies, scope);
 			case SReturnVoid(_):
@@ -216,6 +218,23 @@ class JsStmtEmitter {
 				writer.popIndent();
 				writer.writeln("}");
 		}
+	}
+
+	static function emitForKeyValue(writer:JsWriter, keyName:String, valueName:String, iterable:HxExpr, body:HxStmt, scope:JsFunctionScope):Void {
+		final sourceVar = scope.freshTemp("__iter");
+		final keysVar = scope.freshTemp("__keys");
+		final indexVar = scope.freshTemp("__i");
+		final keyLocal = scope.declareLocal(keyName);
+		final valueLocal = scope.declareLocal(valueName);
+		writer.writeln("var " + sourceVar + " = " + JsExprEmitter.emit(iterable, scope.exprScope()) + ";");
+		writer.writeln("var " + keysVar + " = Object.keys(" + sourceVar + ");");
+		writer.writeln("for (var " + indexVar + " = 0; " + indexVar + " < " + keysVar + ".length; " + indexVar + "++) {");
+		writer.pushIndent();
+		writer.writeln("var " + keyLocal + " = " + keysVar + "[" + indexVar + "];");
+		writer.writeln("var " + valueLocal + " = " + sourceVar + "[" + keyLocal + "];");
+		emitStmtBlockContent(writer, body, scope);
+		writer.popIndent();
+		writer.writeln("}");
 	}
 
 	static function emitSwitch(writer:JsWriter, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, scope:JsFunctionScope):Void {

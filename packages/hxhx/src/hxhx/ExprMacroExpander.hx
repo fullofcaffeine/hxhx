@@ -181,6 +181,10 @@ class ExprMacroExpander {
 				final rIt = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 				final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
 				(rIt != iterable || rBody != body) ? SForIn(name, rIt, rBody, pos) : s;
+			case SForKeyValue(keyName, valueName, iterable, body, pos):
+				final rIt = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+				final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+				(rIt != iterable || rBody != body) ? SForKeyValue(keyName, valueName, rIt, rBody, pos) : s;
 			case STry(tryBody, catches, pos):
 				final rTry = rewriteStmt(tryBody, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
 				var changed = rTry != tryBody;
