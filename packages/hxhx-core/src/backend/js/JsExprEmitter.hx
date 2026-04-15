@@ -292,6 +292,8 @@ class JsExprEmitter {
 
 	static function emitCall(callee:HxExpr, args:Array<HxExpr>, scope:JsEmitScope):String {
 		switch (callee) {
+			case EIdent("__js__") | EField(EField(EIdent("js"), "Syntax"), "code"):
+				return emitInlineJsCode(args, scope);
 			case EIdent("trace"):
 				return "console.log(" + args.map(a -> emit(a, scope)).join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):
@@ -304,6 +306,17 @@ class JsExprEmitter {
 		final calleeJs = emit(callee, scope);
 		final argsJs = args.map(a -> emit(a, scope)).join(", ");
 		return calleeJs + "(" + argsJs + ")";
+	}
+
+	static function emitInlineJsCode(args:Array<HxExpr>, scope:JsEmitScope):String {
+		if (args.length == 0)
+			return "undefined";
+		return switch (args[0]) {
+			case EString(code):
+				code;
+			case _:
+				emit(args[0], scope);
+		}
 	}
 
 	static function emitNew(typePath:String, args:Array<HxExpr>, scope:JsEmitScope):String {

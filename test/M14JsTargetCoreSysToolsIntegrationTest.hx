@@ -501,6 +501,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(Lambda.filter([1, 2, 3, 4], function(i) return i > 2).join(","));',
 				'    Sys.println(FileSystem.exists("."));',
 				'    Sys.println(try { "try-ok"; } catch (e:Dynamic) { "try-fail"; });',
+				"    Sys.println(untyped __js__(\"typeof window != 'undefined'\"));",
 				'    Sys.println(Assert.getTypeName(null));',
 				'    Sys.println(Assert.getTypeName(12));',
 				'    Sys.println(Assert.getTypeName(12.5));',
@@ -673,6 +674,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"native js.html externs should bind to browser/Node globals instead of emitted Haxe constructors");
 			assertNotContains(js, "var __hx_cls_js_html_Blob = function(blobParts", "native js.html extern constructors should not be emitted");
 			assertNotContains(js, "__hx_cls_js_html_Blob.prototype.slice", "native js.html extern prototype methods should not be re-emitted");
+			assertNotContains(js, "__js__(\"typeof window", "inline JS intrinsics should lower to raw JavaScript expressions");
 			assertNotContains(js, "__hx_cls_haxe_io_Input.prototype.readByte", "haxe.io std support prototypes should not block JS smoke emit");
 			assertNotContains(js, "__hx_cls_haxe_format_JsonParser.prototype.doParse", "haxe.format std support prototypes should not block JS smoke emit");
 			assertContains(js, "__hx_cls_utest_Runner.prototype.addCases = function", "utest Runner addCases macro method should emit a neutral runtime stub");
@@ -709,6 +711,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "3,4", "Lambda.filter should preserve matching items");
 			assertContains(stdout, "true", "FileSystem.exists should use Node fs existsSync");
 			assertContains(stdout, "try-ok", "try expression should return the successful branch value");
+			assertContains(stdout, "try-ok\nfalse\n`null`", "inline JS intrinsic should execute the raw JavaScript expression under Node");
 			assertContains(stdout, "`null`", "utest Assert.getTypeName should name null values");
 			assertContains(stdout, "Int", "utest Assert.getTypeName should name integer values");
 			assertContains(stdout, "Float", "utest Assert.getTypeName should name float values");

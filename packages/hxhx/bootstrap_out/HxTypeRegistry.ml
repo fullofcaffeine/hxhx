@@ -1625,7 +1625,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.js.JsBackend" [ "capabilities"; "delegate"; "describe"; "emit"; "id"; "registrations" ];
   HxType.register_class_static_fields "backend.js.JsBackend" [ "capabilitiesStatic"; "descriptor"; "emitBridge"; "providerDescriptor"; "providerRegistrations"; "targetCore"; "targetCoreEmit" ];
   HxType.register_class_instance_fields "backend.js.JsExprEmitter" [];
-  HxType.register_class_static_fields "backend.js.JsExprEmitter" [ "blockToReturningJs"; "emit"; "emitAnon"; "emitArrayComprehension"; "emitBinop"; "emitCall"; "emitLambda"; "emitNew"; "emitRangeExpr"; "emitSwitchExpr"; "emitTryCatchRaw"; "findLastTopLevelSemicolon"; "findMatching"; "nestedScope"; "resolveIdent"; "rewriteSimpleTryCatchRaw"; "sanitizeCatchName"; "sanitizeCatchTypeHints"; "skipWhitespace"; "unsupported" ];
+  HxType.register_class_static_fields "backend.js.JsExprEmitter" [ "blockToReturningJs"; "emit"; "emitAnon"; "emitArrayComprehension"; "emitBinop"; "emitCall"; "emitInlineJsCode"; "emitLambda"; "emitNew"; "emitRangeExpr"; "emitSwitchExpr"; "emitTryCatchRaw"; "findLastTopLevelSemicolon"; "findMatching"; "nestedScope"; "resolveIdent"; "rewriteSimpleTryCatchRaw"; "sanitizeCatchName"; "sanitizeCatchTypeHints"; "skipWhitespace"; "unsupported" ];
   HxType.register_class_instance_fields "backend.js.JsFunctionScope" [ "classRefs"; "declareLocal"; "exprScope"; "freshTemp"; "instanceFields"; "locals"; "reserve"; "resolveClassRef"; "resolveLocal"; "tempCounter"; "used" ];
   HxType.register_class_static_fields "backend.js.JsFunctionScope" [];
   HxType.register_class_instance_fields "backend.js.JsNameMangler" [];
