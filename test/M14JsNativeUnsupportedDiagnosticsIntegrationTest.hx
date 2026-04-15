@@ -28,9 +28,10 @@ class M14JsNativeUnsupportedDiagnosticsIntegrationTest {
 		assertContains(switchRawError, "[js-native:unsupported_expr]", "switch raw prefix");
 		assertContains(switchRawError, "kind=ESwitchRaw", "switch raw kind");
 
-		final tryRawError = captureUnsupported(ETryCatchRaw("opaque_try"));
+		final tryRawError = captureUnsupported(ETryCatchRaw("opaque_block_expr"));
 		assertContains(tryRawError, "[js-native:unsupported_expr]", "try raw prefix");
 		assertContains(tryRawError, "kind=ETryCatchRaw", "try raw kind");
+		assertContains(tryRawError, "detail=opaque_block_expr", "try raw detail");
 
 		final opaqueError = captureUnsupported(EUnsupported("opaque_payload"));
 		assertContains(opaqueError, "[js-native:unsupported_expr]", "unsupported payload prefix");
