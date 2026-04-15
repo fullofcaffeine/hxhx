@@ -46,9 +46,9 @@ python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-skip-haxeserver-insta
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-optional-skip-party --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" sourcemaps-skip-sourcemap-install-if-present --upstream-dir "$fixture"
 
-rg -q 'runCommand\("haxelib", \["path", "utest"\]\)' "$fixture/tests/RunCi.hx"
-rg -q 'runCommand\("haxelib", \["path", "haxeserver"\]\)' "$fixture/tests/runci/targets/Macro.hx"
-rg -q "HXHX_GATE2_SKIP_PARTY" "$fixture/tests/runci/targets/Macro.hx"
-rg -q "\['path', 'sourcemap'\]" "$fixture/tests/sourcemaps/src/Test.hx"
+grep -Fq 'runCommand("haxelib", ["path", "utest"])' "$fixture/tests/RunCi.hx"
+grep -Fq 'runCommand("haxelib", ["path", "haxeserver"])' "$fixture/tests/runci/targets/Macro.hx"
+grep -Fq "HXHX_GATE2_SKIP_PARTY" "$fixture/tests/runci/targets/Macro.hx"
+grep -Fq "['path', 'sourcemap']" "$fixture/tests/sourcemaps/src/Test.hx"
 
 echo "gate3 patch helper fixture OK"
