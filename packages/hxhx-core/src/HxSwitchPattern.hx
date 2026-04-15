@@ -14,6 +14,7 @@
 	  - wildcard `_`
 	  - string/int literals
 	  - bare enum-like values (Stage3: a bare uppercase identifier such as `Macro`)
+	  - enum constructor extractors with simple argument binders/wildcards
 	  - binder patterns (`case name:`) used as a catch-all.
 
 	How
@@ -21,7 +22,8 @@
 	  - no guards (`if`),
 	  - limited multiple patterns (`case a | b:`) are supported, but only as a
 		shallow OR of simple literals (no guards, no extractors).
-	  - no structural patterns / extractors.
+	  - enum constructor extractors only model constructor name + positional params;
+		guards and rich structural matching remain out of scope.
 	- It is intentionally “bring-up friendly” so we can run unmodified upstream
 	  harnesses without copying or translating upstream compiler code.
 **/
@@ -31,6 +33,7 @@ enum HxSwitchPattern {
 	PString(value:String);
 	PInt(value:Int);
 	PEnumValue(name:String);
+	PEnumExtract(name:String, args:Array<HxSwitchPattern>);
 	PBind(name:String);
 
 	/**

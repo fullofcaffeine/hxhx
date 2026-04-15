@@ -250,9 +250,9 @@ class JsStmtEmitter {
 			final head = isFirst ? "if" : "else if";
 			writer.writeln(head + " (" + lowered.cond + ") {");
 			writer.pushIndent();
-			if (lowered.bindName != null) {
-				final bind = scope.declareLocal(lowered.bindName);
-				writer.writeln("var " + bind + " = " + scrutineeVar + ";");
+			for (binding in lowered.bindings) {
+				final bind = scope.declareLocal(binding.name);
+				writer.writeln("var " + bind + " = " + binding.expr + ";");
 			}
 			emitStmtBlockContent(writer, body, scope);
 			writer.popIndent();

@@ -335,13 +335,21 @@ and emitSwitch = fun writer scrutinee patterns bodies scope -> ignore (let scrut
       let head = (!tempString : string) in (
         ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString head ^ " (") ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") {" : string));
         ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
-        ignore (if Obj.obj (HxAnon.get lowered "bindName") != Obj.magic (HxRuntime.hx_null) then ignore (let bind = (Backend_js_JsFunctionScope.declareLocal (Obj.magic scope) (Obj.obj (HxAnon.get lowered "bindName") : string) : string) in Backend_js_JsWriter.writeln (Obj.magic writer) (((("var " ^ HxString.toStdString bind) ^ " = ") ^ HxString.toStdString scrutineeVar) ^ ";" : string)) else ());
-        ignore (emitStmtBlockContent (Obj.magic writer) (Obj.magic body) (Obj.magic scope));
-        ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
-        ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
-        let __assign_39 = false in (
-          isFirst := __assign_39;
-          __assign_39
+        let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get lowered "bindings")) in (
+          ignore (while !_g2 < HxArray.length _g3 do ignore (let binding = HxArray.get (Obj.magic _g3) (!_g2) in (
+            ignore (let __old_39 = !_g2 in let __new_40 = HxInt.add __old_39 1 in (
+              ignore (_g2 := __new_40);
+              __new_40
+            ));
+            let bind = (Backend_js_JsFunctionScope.declareLocal (Obj.magic scope) (Obj.obj (HxAnon.get binding "name") : string) : string) in Backend_js_JsWriter.writeln (Obj.magic writer) (((("var " ^ HxString.toStdString bind) ^ " = ") ^ HxString.toStdString (Obj.obj (HxAnon.get binding "expr"))) ^ ";" : string)
+          )) done);
+          ignore (emitStmtBlockContent (Obj.magic writer) (Obj.magic body) (Obj.magic scope));
+          ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+          ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+          let __assign_41 = false in (
+            isFirst := __assign_41;
+            __assign_41
+          )
         )
       )
     )) done

@@ -22,5 +22,18 @@ class M14JsStmtEmitterKeyValueForIntegrationTest {
 		assertContains(js, "var label = __keys_1[__i_2];", "key binding should read current key");
 		assertContains(js, "var stacks = __iter_0[label];", "value binding should read by key");
 		assertContains(js, "console.log(((label + \":\") + stacks.length));", "loop body should resolve key and value locals");
+
+		final switchBody = HxParser.parseFunctionBodyText("var result = {}; switch item { case FilePos(s, f, l, _): result.file = f; result.line = l; switch s { case Method(_, m): result.method = m; case _: } case _: } return result;");
+		final switchWriter = new JsWriter();
+		final switchScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
+		JsStmtEmitter.emitFunctionBody(switchWriter, switchBody, switchScope);
+		final switchJs = switchWriter.toString();
+
+		assertContains(switchJs, "__sw_0.__hx_ctor === \"FilePos\"", "enum extractor should compare constructor name");
+		assertContains(switchJs, "var s = __sw_0.__hx_params[0];", "enum extractor should bind first constructor arg");
+		assertContains(switchJs, "var f = __sw_0.__hx_params[1];", "enum extractor should bind second constructor arg");
+		assertContains(switchJs, "var l = __sw_0.__hx_params[2];", "enum extractor should bind third constructor arg");
+		assertContains(switchJs, "__sw_1.__hx_ctor === \"Method\"", "nested enum extractor should compare nested constructor");
+		assertContains(switchJs, "var m = __sw_1.__hx_params[1];", "nested enum extractor should bind nested arg");
 	}
 }

@@ -300,7 +300,23 @@ class HxParser {
 					PInt(v);
 				case TIdent(name):
 					bump();
-					isUpperStart(name) ? PEnumValue(name) : PBind(name);
+					if (isUpperStart(name) && cur.kind.match(TLParen)) {
+						bump();
+						final args = new Array<HxSwitchPattern>();
+						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) {
+							args.push(parseAtom());
+							if (cur.kind.match(TComma)) {
+								bump();
+								continue;
+							}
+							break;
+						}
+						if (cur.kind.match(TRParen))
+							bump();
+						PEnumExtract(name, args);
+					} else {
+						isUpperStart(name) ? PEnumValue(name) : PBind(name);
+					}
 				case _:
 					// Best-effort: consume one token and treat it as a wildcard.
 					bump();

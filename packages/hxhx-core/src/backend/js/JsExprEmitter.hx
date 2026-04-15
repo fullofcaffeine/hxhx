@@ -566,12 +566,16 @@ class JsExprEmitter {
 
 			var branchScope = scope;
 			var bindPrefix = "";
-			if (lowered.bindName != null) {
+			if (lowered.bindings.length > 0) {
 				final locals = new haxe.ds.StringMap<String>();
-				final bindSafe = "__sw_bind_" + JsNameMangler.identifier(lowered.bindName);
-				locals.set(lowered.bindName, bindSafe);
+				final bindParts = new Array<String>();
+				for (binding in lowered.bindings) {
+					final bindSafe = "__sw_bind_" + JsNameMangler.identifier(binding.name);
+					locals.set(binding.name, bindSafe);
+					bindParts.push("var " + bindSafe + " = " + binding.expr + ";");
+				}
 				branchScope = nestedScope(scope, locals);
-				bindPrefix = "var " + bindSafe + " = __sw; ";
+				bindPrefix = bindParts.join(" ") + " ";
 			}
 
 			out.push(head + " (" + lowered.cond + ") { " + bindPrefix + "return " + emit(branchExpr, branchScope) + "; }");

@@ -52,6 +52,24 @@ class TyperStage {
 		}
 	}
 
+	static function declarePatternBindings(scope:TyFunctionEnv, pattern:HxSwitchPattern, baseTy:TyType):Void {
+		switch (pattern) {
+			case PBind(name):
+				scope.declareLocal(name, baseTy == null || baseTy.isUnknown() ? TyType.fromHintText("Dynamic") : baseTy);
+			case PEnumExtract(_name, args):
+				if (args != null) {
+					for (arg in args)
+						declarePatternBindings(scope, arg, TyType.fromHintText("Dynamic"));
+				}
+			case POr(patterns):
+				if (patterns != null) {
+					for (p in patterns)
+						declarePatternBindings(scope, p, baseTy);
+				}
+			case _:
+		}
+	}
+
 	/**
 		Type a parsed module into a minimal `TypedModule`.
 
@@ -199,11 +217,7 @@ class TyperStage {
 						for (i in 0...count) {
 							final pattern = patterns[i];
 							final body = bodies[i];
-							switch (pattern) {
-								case PBind(name):
-									scope.declareLocal(name, scrutTy.isUnknown() ? TyType.fromHintText("Dynamic") : scrutTy);
-								case _:
-							}
+							declarePatternBindings(scope, pattern, scrutTy);
 							typeStmt(body);
 						}
 					}
@@ -616,15 +630,10 @@ class TyperStage {
 						final pattern = patterns[i];
 						final branchExpr = exprs[i];
 						var branchTy:TyType = TyType.unknown();
-						switch (pattern) {
-							case PBind(name):
-								// Bring-up: we do not model nested scopes yet; declare the binder as
-								// a best-effort local so the case body can type its references.
-								scope.declareLocal(name, scrutTy.isUnknown() ? TyType.fromHintText("Dynamic") : scrutTy);
-								branchTy = inferExprType(branchExpr, scope, ctx, pos);
-							case _:
-								branchTy = inferExprType(branchExpr, scope, ctx, pos);
-						}
+						// Bring-up: we do not model nested scopes yet; declare pattern binders as
+						// best-effort locals so case bodies can type their references.
+						declarePatternBindings(scope, pattern, scrutTy);
+						branchTy = inferExprType(branchExpr, scope, ctx, pos);
 
 						if (out.isUnknown())
 							out = branchTy;

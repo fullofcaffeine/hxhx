@@ -157,7 +157,7 @@ let init () : unit =
   HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported" ];
   HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KInline"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KIn"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
   HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SForKeyValue"; "SWhile"; "SDoWhile"; "SSwitch"; "STry"; "SBreak"; "SContinue"; "SThrow"; "SReturnVoid"; "SReturn"; "SExpr" ];
-  HxType.register_enum_ctors "HxSwitchPattern" [ "PNull"; "PWildcard"; "PString"; "PInt"; "PEnumValue"; "PBind"; "POr" ];
+  HxType.register_enum_ctors "HxSwitchPattern" [ "PNull"; "PWildcard"; "PString"; "PInt"; "PEnumValue"; "PEnumExtract"; "PBind"; "POr" ];
   HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TRegex"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
   HxType.register_enum_ctors "HxVisibility" [ "Public"; "Private" ];
   HxType.register_enum_ctors "_HxConditionalCompilation.Token" [ "TIdent"; "TString"; "TNot"; "TAnd"; "TOr"; "TLParen"; "TRParen"; "TEq"; "TNeq"; "TEof" ];
@@ -544,6 +544,12 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxSwitchPattern.PEnumValue" in
     Obj.repr (HxSwitchPattern.PEnumValue a0)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PEnumExtract" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxSwitchPattern.PEnumExtract" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'args' for HxSwitchPattern.PEnumExtract" in
+    Obj.repr (HxSwitchPattern.PEnumExtract (a0, a1))
   );
   HxType.register_enum_ctor "HxSwitchPattern" "PBind" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1596,7 +1602,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TyperIndexBuild" [];
   HxType.register_class_static_fields "TyperIndexBuild" [ "classFullName"; "classFullNameInModule"; "expectedModuleNameFromFile"; "fromResolvedModule" ];
   HxType.register_class_instance_fields "TyperStage" [];
-  HxType.register_class_static_fields "TyperStage" [ "arrayElementType"; "dottedFieldPath"; "inferExprType"; "inferReturnType"; "isAssignmentBinop"; "isStrict"; "isUpperStartName"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
+  HxType.register_class_static_fields "TyperStage" [ "arrayElementType"; "declarePatternBindings"; "dottedFieldPath"; "inferExprType"; "inferReturnType"; "isAssignmentBinop"; "isStrict"; "isUpperStartName"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
   HxType.register_class_instance_fields "_EmitterStage._EmitterStageDebug" [];
   HxType.register_class_static_fields "_EmitterStage._EmitterStageDebug" [ "traceCallSig"; "traceStage3Enabled"; "traceStage3Module"; "traceStage3Phase"; "traceStage3StmtList" ];
   HxType.register_class_instance_fields "_EmitterStage._InstanceFieldEntry" [ "fields"; "key" ];
@@ -1648,7 +1654,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.js.JsStmtEmitter" [];
   HxType.register_class_static_fields "backend.js.JsStmtEmitter" [ "emitCatchCondition"; "emitForIn"; "emitForKeyValue"; "emitFunctionBody"; "emitStmt"; "emitStmtBlockContent"; "emitSwitch"; "emitTry"; "normalizeCatchType"; "simpleTypeName" ];
   HxType.register_class_instance_fields "backend.js.JsSwitchPatternLowering" [];
-  HxType.register_class_static_fields "backend.js.JsSwitchPatternLowering" [ "lower" ];
+  HxType.register_class_static_fields "backend.js.JsSwitchPatternLowering" [ "lower"; "lowerEnumExtract" ];
   HxType.register_class_instance_fields "backend.js.JsTargetCore" [ "coreId"; "emit" ];
   HxType.register_class_static_fields "backend.js.JsTargetCore" [ "allowStaticBodyFallback"; "allowStaticFieldFallback"; "buildClassRefs"; "collectClassUnits"; "declareFunctionParams"; "emitBridge"; "emitClass"; "emitDateToolsFormatBody"; "emitDateToolsFormatGetBody"; "emitDateToolsStaticFunctionBody"; "emitDefaultArgGuards"; "emitERegConstructor"; "emitERegPrototypeRuntime"; "emitERegStaticFunctionBody"; "emitFileSystemStaticFunctionBody"; "emitInstanceFieldInitializers"; "emitJsBootDowncastCheckBody"; "emitJsBootImplementsBody"; "emitJsBootInstanceofBody"; "emitJsBootInterfLoopBody"; "emitJsBootStaticFunctionBody"; "emitJsBootStringRecBody"; "emitKnownConstructorBody"; "emitKnownInstanceFunctionBody"; "emitKnownStaticFieldInit"; "emitKnownStaticFunctionBody"; "emitLambdaFilterBody"; "emitLambdaFlatMapBody"; "emitLambdaFlattenBody"; "emitLambdaPushIterable"; "emitLambdaStaticFunctionBody"; "emitPathAddTrailingSlashBody"; "emitPathDirectoryBody"; "emitPathEscapeBody"; "emitPathExtensionBody"; "emitPathFileStemSetup"; "emitPathIsAbsoluteBody"; "emitPathJoinBody"; "emitPathNormalizeBody"; "emitPathRemoveTrailingSlashesBody"; "emitPathStaticFunctionBody"; "emitPathUnescapeBody"; "emitPathWithExtensionBody"; "emitPathWithoutDirectoryBody"; "emitPathWithoutExtensionBody"; "emitPlainClassConstructor"; "emitPlainClassPrototypeMethods"; "emitRuntimePrelude"; "emitUtestAssertGetTypeNameBody"; "emitUtestAssertSameAsBody"; "emitUtestAssertStaticFunctionBody"; "emitUtestDispatcherInstanceFunctionBody"; "emitUtestFixtureResultAddBody"; "emitUtestPlainTextReportCompleteBody"; "emitUtestReportToolsEnumName"; "emitUtestReportToolsHasHeaderBody"; "emitUtestReportToolsSkipResultBody"; "emitUtestReportToolsStaticFunctionBody"; "emitUtestTestHandlerExecuteBody"; "ensureDirectory"; "findConstructor"; "instanceFieldRefs"; "isCompileTimeMacroApi"; "isCompileTimeMacroFallback"; "isNativeJsExternPrototypeClass"; "isNativeJsGlobalExtern"; "isNativeJsHtmlExtern"; "isNativeJsLibExtern"; "isNativeJsPrototypeClass"; "isStdExceptionClass"; "isUpstreamUnitCompileTimeMacroHelper"; "isUpstreamUnitMacroHelper"; "nativeJsGlobalExternRef"; "nativeJsLibGlobalRef"; "nativeJsSimpleGlobalRef"; "resolveMainRef"; "shouldEmitNeutralConstructorBody"; "shouldEmitNeutralInstanceFunctionBody"; "shouldEmitNeutralStaticFunctionBody"; "shouldSkipInstancePrototypeEmission"; "simpleName" ];
   HxType.register_class_instance_fields "backend.js.JsWriter" [ "indent"; "out"; "popIndent"; "pushIndent"; "toString"; "unit"; "writeln" ];

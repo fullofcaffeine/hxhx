@@ -3700,6 +3700,8 @@ class EmitterStage {
 							backendDialect.runtimeDynamicEquals("__sw", Std.string(v));
 						case PEnumValue(name):
 							backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(name));
+						case PEnumExtract(name, _args):
+							backendDialect.runtimeDynamicEquals("(Type.enumConstructor __sw)", escapeOcamlString(name));
 					};
 				}
 				var chain = backendDialect.dynamicNullValue();
@@ -3712,6 +3714,8 @@ class EmitterStage {
 						final localTy = switch (pattern) {
 							case PBind(name):
 								extendTyByIdentForStage3(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
+							case PEnumExtract(_name, _args):
+								extendTyByIdentForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
 							case _:
 								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
 						};
@@ -3726,6 +3730,8 @@ class EmitterStage {
 						final thenExpr = switch (pattern) {
 							case PBind(name):
 								"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyAsDynamic + "))";
+							case PEnumExtract(_name, _args):
+								"(" + bodyAsDynamic + ")";
 							case _:
 								"(" + bodyAsDynamic + ")";
 						};
@@ -5185,6 +5191,8 @@ class EmitterStage {
 								backendDialect.runtimeDynamicEquals("__sw", Std.string(v));
 							case PEnumValue(name):
 								backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(name));
+							case PEnumExtract(name, _args):
+								backendDialect.runtimeDynamicEquals("(Type.enumConstructor __sw)", escapeOcamlString(name));
 						};
 					}
 					var chain = "()";
@@ -5197,6 +5205,8 @@ class EmitterStage {
 							final caseTy = switch (pattern) {
 								case PBind(name):
 									extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
+								case PEnumExtract(_name, _args):
+									cloneTyCtxLocal(tyCtx);
 								case _:
 									cloneTyCtxLocal(tyCtx);
 							};
@@ -5204,6 +5214,8 @@ class EmitterStage {
 							final thenUnit = switch (pattern) {
 								case PBind(name):
 									"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
+								case PEnumExtract(_name, _args):
+									"(" + bodyUnit + ")";
 								case _:
 									"(" + bodyUnit + ")";
 							};

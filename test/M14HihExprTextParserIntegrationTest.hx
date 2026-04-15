@@ -215,5 +215,54 @@ class M14HihExprTextParserIntegrationTest {
 			"single-expression try throw");
 		assertPushTryCatchRaw(HxParser.parseFunctionBodyText("result.push(try throw @:privateAccess (Exception.thrown(''):Exception) catch(e:Exception) e.stack);"),
 			"single-expression try throw privateAccess cast");
+
+		final enumExtractStmts = HxParser.parseFunctionBodyText("var result = {}; switch item { case FilePos(s, f, l, _): result.file = f; result.line = l; switch s { case Method(_, m): result.method = m; case _: } case _: } return result;");
+		assertTrue(enumExtractStmts.length == 3, "expected result local, switch, return");
+		switch (enumExtractStmts[1]) {
+			case SSwitch(EIdent(scrutinee), patterns, bodies, _):
+				assertTrue(scrutinee == "item", "expected switch scrutinee to parse");
+				assertTrue(patterns.length == 2, "expected enum extractor plus wildcard case");
+				switch (patterns[0]) {
+					case PEnumExtract(name, args):
+						assertTrue(name == "FilePos", "expected FilePos extractor pattern");
+						assertTrue(args.length == 4, "expected FilePos extractor args");
+						switch (args[0]) {
+							case PBind(bindName):
+								assertTrue(bindName == "s", "expected first extractor arg binder");
+							case _:
+								fail("expected first extractor arg to bind s");
+						}
+						switch (args[3]) {
+							case PWildcard:
+							case _:
+								fail("expected fourth extractor arg to be wildcard");
+						}
+					case _:
+						fail("expected enum extractor switch pattern");
+				}
+				switch (bodies[0]) {
+					case SBlock(branchStmts, _):
+						assertTrue(branchStmts.length == 3, "expected FilePos case statements");
+						switch (branchStmts[2]) {
+							case SSwitch(EIdent(nestedScrutinee), nestedPatterns, _, _):
+								assertTrue(nestedScrutinee == "s", "expected nested switch over extracted binder");
+								switch (nestedPatterns[0]) {
+									case PEnumExtract(nestedName, nestedArgs):
+										assertTrue(nestedName == "Method", "expected nested Method extractor");
+										assertTrue(nestedArgs.length == 2, "expected Method extractor args");
+									case _:
+										fail("expected nested enum extractor pattern");
+								}
+							case _:
+								fail("expected nested switch in FilePos branch");
+						}
+					case _:
+						fail("expected FilePos case body block");
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("enum extractor switch parsed as unsupported: " + raw);
+			case _:
+				fail("expected enum extractor switch statement");
+		}
 	}
 }

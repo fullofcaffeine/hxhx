@@ -7,5 +7,6 @@ type hxswitchpattern =
 | PString of string
 | PInt of int
 | PEnumValue of string
+| PEnumExtract of string * hxswitchpattern HxArray.t
 | PBind of string
 | POr of hxswitchpattern HxArray.t

@@ -841,21 +841,30 @@ and emitSwitchExpr = fun scrutinee patterns exprs scope -> let out = Obj.magic (
           __assign_227
         ));
         let head = (!tempString : string) in let branchScope = ref scope in let bindPrefix = ref ("" : string) in (
-          ignore (if Obj.obj (HxAnon.get lowered "bindName") != Obj.magic (HxRuntime.hx_null) then ignore (let locals = Obj.magic (HxMap.create_string ()) in let bindSafe = ("__sw_bind_" ^ HxString.toStdString (Backend_js_JsNameMangler.identifier (Obj.obj (HxAnon.get lowered "bindName") : string)) : string) in (
-            ignore (HxMap.set_string locals (Obj.obj (HxAnon.get lowered "bindName")) bindSafe);
-            ignore (let __assign_228 = Obj.magic (nestedScope scope (Obj.magic locals)) in (
-              branchScope := __assign_228;
-              __assign_228
+          ignore (if HxArray.length (Obj.obj (HxAnon.get lowered "bindings")) > 0 then ignore (let locals = Obj.magic (HxMap.create_string ()) in let bindParts = Obj.magic (HxArray.create ()) in let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get lowered "bindings")) in (
+            ignore (while !_g2 < HxArray.length _g3 do ignore (let binding = HxArray.get (Obj.magic _g3) (!_g2) in (
+              ignore (let __old_228 = !_g2 in let __new_229 = HxInt.add __old_228 1 in (
+                ignore (_g2 := __new_229);
+                __new_229
+              ));
+              let bindSafe = ("__sw_bind_" ^ HxString.toStdString (Backend_js_JsNameMangler.identifier (Obj.obj (HxAnon.get binding "name") : string)) : string) in (
+                ignore (HxMap.set_string locals (Obj.obj (HxAnon.get binding "name")) bindSafe);
+                HxArray.push bindParts (((("var " ^ HxString.toStdString bindSafe) ^ " = ") ^ HxString.toStdString (Obj.obj (HxAnon.get binding "expr"))) ^ ";")
+              )
+            )) done);
+            ignore (let __assign_230 = Obj.magic (nestedScope scope (Obj.magic locals)) in (
+              branchScope := __assign_230;
+              __assign_230
             ));
-            let __assign_229 = (("var " ^ HxString.toStdString bindSafe) ^ " = __sw; " : string) in (
-              bindPrefix := __assign_229;
-              __assign_229
+            let __assign_231 = (HxString.toStdString (HxArray.join bindParts " " (fun x -> x)) ^ " " : string) in (
+              bindPrefix := __assign_231;
+              __assign_231
             )
           )) else ());
           ignore (HxArray.push out (((((((HxString.toStdString head ^ " (") ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") { ") ^ HxString.toStdString (!bindPrefix)) ^ "return ") ^ HxString.toStdString (emit (Obj.magic branchExpr) (Obj.magic (!branchScope)))) ^ "; }"));
-          let __assign_230 = false in (
-            isFirst := __assign_230;
-            __assign_230
+          let __assign_232 = false in (
+            isFirst := __assign_232;
+            __assign_232
           )
         )
       )) done);
