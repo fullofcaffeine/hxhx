@@ -1126,6 +1126,8 @@ class HxParser {
 		final isAnonLiteral = switch (cur.kind) {
 			case TIdent(_):
 				peekKind().match(TColon);
+			case TString(_):
+				peekKind().match(TColon);
 			case _:
 				false;
 		}
@@ -1168,7 +1170,7 @@ class HxParser {
 				bump();
 				break;
 			}
-			final name = readIdent("field name");
+			final name = readAnonFieldName();
 			expect(TColon, "':'");
 			final value = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
 			names.push(name);
@@ -1194,6 +1196,16 @@ class HxParser {
 			}
 		}
 		return EAnon(names, values);
+	}
+
+	function readAnonFieldName():String {
+		return switch (cur.kind) {
+			case TString(s):
+				bump();
+				s;
+			case _:
+				readIdent("field name");
+		}
 	}
 
 	static function binopPrec(op:String):Int {

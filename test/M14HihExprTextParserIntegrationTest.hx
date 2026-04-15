@@ -97,5 +97,22 @@ class M14HihExprTextParserIntegrationTest {
 				fail("trailing-dot float statement parsed as unsupported: " + raw);
 			case _:
 		}
+
+		final quotedKeyExpr = HxParser.parseExprText('{ "new": "test" }');
+		switch (quotedKeyExpr) {
+			case EAnon(names, values):
+				assertTrue(names.length == 1, "expected one quoted-key object field");
+				assertTrue(names[0] == "new", "expected quoted object key to be preserved");
+				switch (values[0]) {
+					case EString(v):
+						assertTrue(v == "test", "expected quoted-key object value to parse");
+					case _:
+						fail("expected quoted-key object value to parse as string");
+				}
+			case ETryCatchRaw(raw):
+				fail("quoted-key object literal degraded to opaque block: " + raw);
+			case _:
+				fail("quoted-key object literal should parse as EAnon");
+		}
 	}
 }
