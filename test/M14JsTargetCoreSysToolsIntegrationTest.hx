@@ -215,6 +215,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	static function utestPlainTextReportModule():TypedModule {
 		final resultArg = new HxFunctionArg("result", "Dynamic", HxDefaultValue.NoDefault);
 		final reportClass = new HxClassDecl("PlainTextReport", false, [
+			new HxFunctionDecl("start", HxVisibility.Private, false, [], "Void", [], ""),
 			new HxFunctionDecl("getResults", HxVisibility.Public, false, [], "String",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
 			new HxFunctionDecl("complete", HxVisibility.Private, false, [resultArg], "Void",
@@ -665,8 +666,13 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_utest_ui_text_PlainTextReport.prototype.complete = function",
 				"utest PlainTextReport complete should emit JS-native completion logic");
 			assertContains(js, "process.exit(__hx_ok ? 0 : 1)", "utest PlainTextReport complete should preserve Node exit status");
-			assertContains(js, "__hx_cls_utest_ui_text_PlainTextReport.call(this, runner, this._handler)",
+			assertContains(js, "__hx_cls_utest_ui_text_PlainTextReport.call(this, runner, (this._handler",
 				"utest PrintReport constructor should lower super call through the PlainTextReport constructor");
+			assertContains(js, "for (var __hx_key in __hx_base_proto)",
+				"utest PrintReport constructor should copy PlainTextReport prototype methods before the base constructor runs");
+			assertContains(js, "this._handler.bind(this)", "utest PrintReport constructor should pass a bound output handler to PlainTextReport");
+			assertContains(js, "this.__class__ = __hx_cls_utest_ui_text_PrintReport",
+				"utest PrintReport constructor should restore the derived runtime class after the base constructor call");
 			assertNotContains(js, "super(runner", "utest PrintReport constructor should not emit raw JS super syntax");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasHeader = function", "utest ReportTools hasHeader shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.skipResult = function", "utest ReportTools skipResult shim should emit");

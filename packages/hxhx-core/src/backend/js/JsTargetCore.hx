@@ -305,7 +305,26 @@ class JsTargetCore implements ITargetCore {
 			if (params.length < 1)
 				return false;
 			final baseRef = JsNameMangler.classVarName("utest.ui.text.PlainTextReport");
-			writer.writeln("if (typeof " + baseRef + " === \"function\") " + baseRef + ".call(this, " + params[0] + ", this._handler);");
+			final selfRef = JsNameMangler.classVarName(fullName);
+			writer.writeln("if (typeof " + baseRef + " === \"function\") {");
+			writer.pushIndent();
+			writer.writeln("var __hx_base_proto = " + baseRef + ".prototype;");
+			writer.writeln("if (__hx_base_proto != null) {");
+			writer.pushIndent();
+			writer.writeln("for (var __hx_key in __hx_base_proto) {");
+			writer.pushIndent();
+			writer.writeln("if (this[__hx_key] == null) this[__hx_key] = __hx_base_proto[__hx_key];");
+			writer.popIndent();
+			writer.writeln("}");
+			writer.popIndent();
+			writer.writeln("}");
+			writer.writeln(baseRef
+				+ ".call(this, "
+				+ params[0]
+				+ ", (this._handler != null && typeof this._handler.bind === \"function\" ? this._handler.bind(this) : this._handler));");
+			writer.writeln("this.__class__ = " + selfRef + ";");
+			writer.popIndent();
+			writer.writeln("}");
 			writer.writeln("this.newline = \"\\n\";");
 			writer.writeln("this.indent = \"  \";");
 			return true;

@@ -187,8 +187,23 @@ let emitRuntimePrelude = fun writer -> ignore ((
 let emitKnownConstructorBody = fun writer fullName params -> try let __fallback_result_64 = (
   ignore (if HxString.equals fullName "utest.ui.text.PrintReport" then ignore ((
     ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-    let baseRef = (Backend_js_JsNameMangler.classVarName ("utest.ui.text.PlainTextReport" : string) : string) in (
-      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((("if (typeof " ^ HxString.toStdString baseRef) ^ " === \"function\") ") ^ HxString.toStdString baseRef) ^ ".call(this, ") ^ HxString.toStdString (HxArray.get (Obj.magic params) 0)) ^ ", this._handler);" : string));
+    let baseRef = (Backend_js_JsNameMangler.classVarName ("utest.ui.text.PlainTextReport" : string) : string) in let selfRef = (Backend_js_JsNameMangler.classVarName (fullName : string) : string) in (
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString baseRef) ^ " === \"function\") {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var __hx_base_proto = " ^ HxString.toStdString baseRef) ^ ".prototype;" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_base_proto != null) {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("for (var __hx_key in __hx_base_proto) {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (this[__hx_key] == null) this[__hx_key] = __hx_base_proto[__hx_key];" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((HxString.toStdString baseRef ^ ".call(this, ") ^ HxString.toStdString (HxArray.get (Obj.magic params) 0)) ^ ", (this._handler != null && typeof this._handler.bind === \"function\" ? this._handler.bind(this) : this._handler));" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("this.__class__ = " ^ HxString.toStdString selfRef) ^ ";" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
       ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("this.newline = \"\\n\";" : string));
       ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("this.indent = \"  \";" : string));
       raise (HxRuntime.Hx_return (Obj.repr true))
