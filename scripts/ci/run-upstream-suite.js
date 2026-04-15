@@ -107,6 +107,44 @@ function runCommand(command, args, options) {
   })
 }
 
+function expectedGeneratedArtifacts(command) {
+  if (!command || command.kind !== 'hxhx') {
+    return []
+  }
+
+  const out = []
+  const targetFlags = new Set(['-js', '-python', '-lua', '-php', '-cpp', '-cs', '-java', '-swf', '-neko', '-hl'])
+  for (let i = 0; i < command.argv.length - 1; i += 1) {
+    if (targetFlags.has(command.argv[i])) {
+      out.push(command.argv[i + 1])
+      i += 1
+    }
+  }
+  return out
+}
+
+function copyFailureGeneratedArtifacts(command, commandIndex, suiteDir, artifactsDir, suite) {
+  const expected = expectedGeneratedArtifacts(command)
+  if (expected.length === 0) {
+    return []
+  }
+
+  const generatedDir = path.join(artifactsDir, 'generated')
+  const copied = []
+  for (const output of expected) {
+    const sourcePath = path.resolve(suiteDir, output)
+    if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
+      continue
+    }
+    ensureDir(generatedDir)
+    const safeBase = path.basename(output).replace(/[^A-Za-z0-9_.-]/g, '_')
+    const destPath = path.join(generatedDir, `${suite}-command-${commandIndex}-${safeBase}`)
+    fs.copyFileSync(sourcePath, destPath)
+    copied.push(destPath)
+  }
+  return copied
+}
+
 function resolveHaxelibBin() {
   const configured = String(process.env.HAXELIB_BIN || '').trim()
   return configured || 'haxelib'
@@ -494,6 +532,7 @@ function main() {
   const commandRuns = []
   let failedCommandIndex = -1
   let suiteExitCode = 0
+  const generatedFailureArtifacts = []
 
   for (let i = 0; i < suiteCommands.length; i += 1) {
     const command = suiteCommands[i]
@@ -522,11 +561,13 @@ function main() {
     if (result.error) {
       failedCommandIndex = i
       suiteExitCode = 1
+      generatedFailureArtifacts.push(...copyFailureGeneratedArtifacts(command, i, suiteDir, parsed.artifactsDir, parsed.suite))
       break
     }
     if (commandExit !== 0) {
       failedCommandIndex = i
       suiteExitCode = commandExit || 1
+      generatedFailureArtifacts.push(...copyFailureGeneratedArtifacts(command, i, suiteDir, parsed.artifactsDir, parsed.suite))
       break
     }
   }
@@ -592,6 +633,7 @@ function main() {
     hxhx_bin: hxhxBin,
     artifacts: {
       log: logPath,
+      generated_failure_files: generatedFailureArtifacts,
     },
     started_at: startedAt.toISOString(),
     ended_at: endedAt.toISOString(),

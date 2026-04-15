@@ -269,4 +269,5 @@ jobs:
           path: |
             .artifacts/full1/suites/${{ matrix.suite }}.log
             .artifacts/full1/suites/${{ matrix.suite }}.summary.json
+            .artifacts/full1/suites/generated/${{ matrix.suite }}-*
           if-no-files-found: warn
