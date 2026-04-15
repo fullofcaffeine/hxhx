@@ -329,6 +329,42 @@ resolve_system_nekopath_dir() {
   return 1
 }
 
+resolve_system_neko_bin() {
+  local candidate=""
+  local -a candidates=()
+
+  candidates+=("/usr/bin/neko")
+  candidates+=("/usr/local/bin/neko")
+  candidates+=("/opt/homebrew/bin/neko")
+
+  for candidate in "${candidates[@]}"; do
+    if [ -x "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+resolve_system_nekotools_bin() {
+  local candidate=""
+  local -a candidates=()
+
+  candidates+=("/usr/bin/nekotools")
+  candidates+=("/usr/local/bin/nekotools")
+  candidates+=("/opt/homebrew/bin/nekotools")
+
+  for candidate in "${candidates[@]}"; do
+    if [ -x "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 resolve_nekopath_dir() {
   local candidate=""
   local -a candidates=()
@@ -367,8 +403,8 @@ elif dir_has_std_ndll "$selected_neko_dir"; then
 elif dir_has_std_ndll "$selected_nekotools_dir"; then
   NEKOPATH_DIR="$selected_nekotools_dir"
 else
-  system_neko="$(command -v neko 2>/dev/null || true)"
-  system_nekotools="$(command -v nekotools 2>/dev/null || true)"
+  system_neko="$(resolve_system_neko_bin || true)"
+  system_nekotools="$(resolve_system_nekotools_bin || true)"
   system_nekopath_dir="$(resolve_system_nekopath_dir || true)"
   if [ -n "$system_neko" ] && [ -x "$system_neko" ] && [ -n "$system_nekotools" ] && [ -x "$system_nekotools" ] && [ -n "$system_nekopath_dir" ]; then
     STAGE0_NEKO="$system_neko"
