@@ -961,6 +961,21 @@ class HxParser {
 						index--;
 					}
 					acc;
+				case SIf(cond, thenBranch, elseBranch, _):
+					final thenExpr = lowerStmtWithContinuation(thenBranch, continuation);
+					if (thenExpr == null)
+						return null;
+					final elseExpr = if (elseBranch == null) {
+						continuation;
+					} else {
+						final loweredElse = lowerStmtWithContinuation(elseBranch, continuation);
+						if (loweredElse == null)
+							return null;
+						loweredElse;
+					}
+					ETernary(cond, thenExpr, elseExpr);
+				case SThrow(expr, _):
+					ECall(EIdent("__hxhx_throw"), [expr]);
 				case _:
 					unsupportedStmtKind = stmtKindText(stmt);
 					null;

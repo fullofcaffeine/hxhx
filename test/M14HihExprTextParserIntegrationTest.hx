@@ -142,6 +142,19 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local function declaration to lower to SVar lambda");
 		}
 
+		final localIfThrowStmts = HxParser.parseFunctionBodyText("function negativeOnly(i:Int) { if(i >= 0) throw new ArgumentException('i'); } negativeOnly(10);");
+		assertTrue(localIfThrowStmts.length == 2, "expected local if/throw function plus call statement");
+		switch (localIfThrowStmts[0]) {
+			case SVar(name, _, ELambda(args, ETernary(_, ECall(EIdent(throwName), [_]), ENull)), _):
+				assertTrue(name == "negativeOnly", "expected local function name to parse");
+				assertTrue(args.length == 1 && args[0] == "i", "expected local function arg to parse");
+				assertTrue(throwName == "__hxhx_throw", "expected throw statement to lower to throw sentinel");
+			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
+				fail("local if/throw function body parsed as unsupported: " + raw);
+			case _:
+				fail("expected local if/throw function to lower to lambda ternary");
+		}
+
 		final contextualAsStmts = HxParser.parseFunctionBodyText('var as = new unit.MyAbstract.MyAbstractSetter(); as.value = "foo"; eq(as.value, "foo");');
 		assertTrue(contextualAsStmts.length == 3, "expected contextual `as` local plus two statements");
 		switch (contextualAsStmts[0]) {

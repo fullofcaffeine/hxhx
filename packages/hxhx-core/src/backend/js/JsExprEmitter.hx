@@ -406,6 +406,9 @@ class JsExprEmitter {
 		switch (callee) {
 			case EIdent("__js__") | EField(EField(EIdent("js"), "Syntax"), "code"):
 				return emitInlineJsCode(args, scope);
+			case EIdent("__hxhx_throw"):
+				final thrown = args.length > 0 ? emit(args[0], scope) : "null";
+				return "(function(){ throw " + thrown + "; })()";
 			case EIdent("trace"):
 				return "console.log(" + args.map(a -> emit(a, scope)).join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):

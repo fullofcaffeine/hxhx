@@ -31,5 +31,18 @@ class M14JsStmtEmitterTryThrowIntegrationTest {
 		assertContains(js, "var err = __hx_err;", "catch block should bind catch variable");
 		assertContains(js, "console.log(err);", "catch body should emit contained statements");
 		assertContains(js, "throw __hx_err;", "catch dispatch should preserve fallback rethrow");
+
+		final functionBody = HxParser.parseFunctionBodyText("function negativeOnly(i:Int) { if(i >= 0) throw new ArgumentException('i'); } negativeOnly(10);");
+		final functionWriter = new JsWriter();
+		final classRefs = new haxe.ds.StringMap<String>();
+		classRefs.set("ArgumentException", "ArgumentException");
+		final functionScope = new JsFunctionScope(classRefs);
+		JsStmtEmitter.emitFunctionBody(functionWriter, functionBody, functionScope);
+		final functionJs = functionWriter.toString();
+
+		assertContains(functionJs, "var negativeOnly = function(i)", "local function should lower to a JS function value");
+		assertContains(functionJs, "((i >= 0) ? (function(){ throw new ArgumentException(\"i\"); })() : null)",
+			"if/throw body should lower to a throw expression");
+		assertContains(functionJs, "negativeOnly(10);", "local function call should emit after declaration");
 	}
 }
