@@ -250,7 +250,7 @@ class JsTargetCore implements ITargetCore {
 			writer.writeln("};");
 		}
 
-		if (unit.fullName != "EReg")
+		if (unit.fullName != "EReg" && !isNativeJsPrototypeClass(unit.fullName))
 			emitPlainClassPrototypeMethods(writer, unit, classRefs);
 	}
 
@@ -292,12 +292,16 @@ class JsTargetCore implements ITargetCore {
 			writer.writeln(unit.jsRef + ".prototype" + suffix + " = function(" + params.join(", ") + ") {");
 			writer.pushIndent();
 			emitDefaultArgGuards(writer, args, params, fnScope);
-			try {
-				JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
-			} catch (e:String) {
-				throw e + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (instance function body)";
-			} catch (error:haxe.Exception) {
-				throw error.message + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (instance function body)";
+			if (shouldEmitNeutralInstanceFunctionBody(unit.fullName, HxFunctionDecl.getName(fn))) {
+				writer.writeln("return null;");
+			} else {
+				try {
+					JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
+				} catch (e:String) {
+					throw e + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (instance function body)";
+				} catch (error:haxe.Exception) {
+					throw error.message + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (instance function body)";
+				}
 			}
 			writer.popIndent();
 			writer.writeln("};");
@@ -1572,6 +1576,14 @@ class JsTargetCore implements ITargetCore {
 		if (isCompileTimeMacroApi(fullName))
 			return true;
 		return fullName == "Macro" && isCompileTimeMacroFallback(fnName);
+	}
+
+	static function shouldEmitNeutralInstanceFunctionBody(fullName:String, fnName:String):Bool {
+		return fullName == "utest.Runner" && fnName == "addCases";
+	}
+
+	static function isNativeJsPrototypeClass(fullName:String):Bool {
+		return fullName == "Array";
 	}
 
 	static function isCompileTimeMacroApi(fullName:String):Bool {

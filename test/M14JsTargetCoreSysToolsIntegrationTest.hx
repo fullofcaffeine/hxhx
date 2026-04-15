@@ -278,6 +278,28 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "Counter.hx");
 	}
 
+	static function arrayModule():TypedModule {
+		final predicateArg = new HxFunctionArg("f", "Dynamic", HxDefaultValue.NoDefault);
+		final arrayClass = new HxClassDecl("Array", false, [
+			new HxFunctionDecl("filter", HxVisibility.Public, false, [predicateArg], "Array<Dynamic>",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=if_missing_else"), "")
+		]);
+		final decl = new HxModuleDecl("", [], arrayClass, [arrayClass], false, false);
+		return typedModule("", decl, "Array.hx");
+	}
+
+	static function utestRunnerModule():TypedModule {
+		final selfArg = new HxFunctionArg("eThis", "Dynamic", HxDefaultValue.NoDefault);
+		final pathArg = new HxFunctionArg("path", "Dynamic", HxDefaultValue.NoDefault);
+		final recursiveArg = new HxFunctionArg("recursive", "Bool", HxDefaultValue.Default(HxExpr.EBool(true)));
+		final runnerClass = new HxClassDecl("Runner", false, [
+			new HxFunctionDecl("addCases", HxVisibility.Public, false, [selfArg, pathArg, recursiveArg], "Dynamic",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=5"), "")
+		]);
+		final decl = new HxModuleDecl("utest", [], runnerClass, [runnerClass], false, false);
+		return typedModule("", decl, "utest/Runner.hx");
+	}
+
 	static function mainModule(source:String):TypedModule {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		return TyperStage.typeModule(parsed);
@@ -369,6 +391,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"    var counter = new Counter(4);",
 				"    Sys.println(counter.add(5));",
 				"    Sys.println(counter.add());",
+				"    Sys.println([1, 2, 3].filter(function(i) return i > 1).join(\",\"));",
 				"  }",
 				"}"
 			].join("\n");
@@ -389,7 +412,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				jsBootModule(),
 				dateToolsModule(),
 				eRegModule(),
-				counterModule()
+				counterModule(),
+				arrayModule(),
+				utestRunnerModule()
 			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
@@ -434,6 +459,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "this.value = 1", "ordinary class instance fields should initialize on this");
 			assertContains(js, "__hx_cls_Counter.prototype.add = function", "ordinary class instance methods should emit on the prototype");
 			assertContains(js, "if (delta == null) delta = 3", "ordinary class default arguments should lower inside instance methods");
+			assertNotContains(js, "__hx_cls_Array.prototype.filter", "native JS Array prototype methods should not be re-emitted");
+			assertContains(js, "__hx_cls_utest_Runner.prototype.addCases = function", "utest Runner addCases macro method should emit a neutral runtime stub");
+			assertContains(js, "if (recursive == null) recursive = true;", "utest Runner addCases should keep default args");
+			assertContains(js, "return null;", "utest Runner addCases should avoid compiling macro body into runtime JS");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
 			final stdout = runNodeScript(artifactPath);
@@ -465,6 +494,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "a|b|c", "EReg split should delegate to JS regular expressions");
 			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");
 			assertContains(stdout, "10\n13", "ordinary JS classes should construct, mutate instance fields, and apply default args");
+			assertContains(stdout, "2,3", "native JS Array prototype methods should remain available");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
