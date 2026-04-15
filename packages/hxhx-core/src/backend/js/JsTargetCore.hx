@@ -257,6 +257,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "sys.FileSystem")
 			return emitFileSystemStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "utest.Assert")
+			return emitUtestAssertStaticFunctionBody(writer, fnName, params);
+
 		if (fullName != "haxe.SysTools")
 			return false;
 
@@ -327,6 +330,46 @@ class JsTargetCore implements ITargetCore {
 			case _:
 				return false;
 		}
+	}
+
+	/**
+		Emits the runtime type-name helper used by `utest.Assert.same`.
+
+		Why
+		- The upstream server suite compiles utest for JS and exercises this private
+		  helper through assertion support code.
+		- Unlike haxe.macro APIs, this is real runtime behavior, so it must preserve
+		  useful Haxe-style names instead of falling back to a neutral `null`.
+	**/
+	static function emitUtestAssertStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "getTypeName":
+				if (params.length < 1)
+					return false;
+				emitUtestAssertGetTypeNameBody(writer, params[0]);
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitUtestAssertGetTypeNameBody(writer:JsWriter, value:String):Void {
+		writer.writeln("if (" + value + " == null) return \"`null`\";");
+		writer.writeln("if (typeof " + value + " === \"boolean\") return \"Bool\";");
+		writer.writeln("if (typeof " + value + " === \"number\") return ((" + value + " | 0) === " + value + ") ? \"Int\" : \"Float\";");
+		writer.writeln("if (typeof " + value + " === \"function\") return \"function\";");
+		writer.writeln("if (typeof " + value + " === \"string\") return \"String\";");
+		writer.writeln("if (Array.isArray(" + value + ")) return \"Array\";");
+		writer.writeln("if (typeof " + value + " === \"object\") {");
+		writer.pushIndent();
+		writer.writeln("if (" + value + ".__hx_enum_name != null) return String(" + value + ".__hx_enum_name);");
+		writer.writeln("if (" + value + ".__hx_name != null) return String(" + value + ".__hx_name);");
+		writer.writeln("if (" + value + ".constructor != null && " + value + ".constructor.__hx_name != null) return String(" + value
+			+ ".constructor.__hx_name);");
+		writer.writeln("return \"Object\";");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return \"`Unknown`\";");
 	}
 
 	static function emitFileSystemStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {

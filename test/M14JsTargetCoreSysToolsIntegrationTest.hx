@@ -140,6 +140,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "haxe/macro/TypeTools.hx");
 	}
 
+	static function utestAssertModule():TypedModule {
+		final valueArg = new HxFunctionArg("v", "Dynamic", HxDefaultValue.NoDefault);
+		final assertClass = new HxClassDecl("Assert", false, [
+			new HxFunctionDecl("getTypeName", HxVisibility.Public, true, [valueArg], "String", unsupportedBody("body_parse_error"), "")
+		]);
+		final decl = new HxModuleDecl("utest", [], assertClass, [assertClass], false, false);
+		return typedModule("", decl, "utest/Assert.hx");
+	}
+
 	static function mainModule(source:String):TypedModule {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		return TyperStage.typeModule(parsed);
@@ -165,6 +174,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		try {
 			final source = [
 				"import sys.FileSystem;",
+				"import utest.Assert;",
 				"class Main {",
 				"  static function main() {",
 				'    Sys.println(SysTools.quoteUnixArg("a b"));',
@@ -179,6 +189,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(Lambda.filter([1, 2, 3, 4], function(i) return i > 2).join(","));',
 				'    Sys.println(FileSystem.exists("."));',
 				'    Sys.println(try { "try-ok"; } catch (e:Dynamic) { "try-fail"; });',
+				'    Sys.println(Assert.getTypeName(null));',
+				'    Sys.println(Assert.getTypeName(12));',
+				'    Sys.println(Assert.getTypeName(12.5));',
+				'    Sys.println(Assert.getTypeName("hi"));',
+				'    Sys.println(Assert.getTypeName([1, 2]));',
 				"  }",
 				"}"
 			].join("\n");
@@ -191,7 +206,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				macroModule(),
 				macroCompilerModule(),
 				macroContextModule(),
-				macroTypeToolsModule()
+				macroTypeToolsModule(),
+				utestAssertModule()
 			], false);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
@@ -212,6 +228,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_macro_TypeTools.toField = function", "compile-time macro TypeTools fallback should emit");
 			assertContains(js, "__hx_cls_Lambda.flatten = function", "Lambda flatten shim should emit");
 			assertContains(js, "__hx_cls_Lambda.filter = function", "Lambda filter shim should emit");
+			assertContains(js, "__hx_cls_utest_Assert.getTypeName = function", "utest Assert getTypeName shim should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = null", "compile-time macro Compiler field fallback should emit");
 			assertNotContains(js, "should-not-emit", "compile-time macro API function bodies should be neutralized before regular JS emission");
 
@@ -228,6 +245,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "3,4", "Lambda.filter should preserve matching items");
 			assertContains(stdout, "true", "FileSystem.exists should use Node fs existsSync");
 			assertContains(stdout, "try-ok", "try expression should return the successful branch value");
+			assertContains(stdout, "`null`", "utest Assert.getTypeName should name null values");
+			assertContains(stdout, "Int", "utest Assert.getTypeName should name integer values");
+			assertContains(stdout, "Float", "utest Assert.getTypeName should name float values");
+			assertContains(stdout, "String", "utest Assert.getTypeName should name string values");
+			assertContains(stdout, "Array", "utest Assert.getTypeName should name array values");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
