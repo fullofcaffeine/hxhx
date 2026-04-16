@@ -223,7 +223,8 @@ class JsTargetCore implements ITargetCore {
 			return;
 		if (unit.fullName == "EReg")
 			emitERegPrototypeRuntime(writer, unit.jsRef);
-		final staticScope = new JsFunctionScope(classRefs);
+		final staticRefs = staticMemberRefs(unit);
+		final staticScope = new JsFunctionScope(classRefs, staticRefs);
 
 		for (field in HxClassDecl.getFields(unit.decl)) {
 			if (!HxFieldDecl.getIsStatic(field))
@@ -259,7 +260,7 @@ class JsTargetCore implements ITargetCore {
 			if (!HxFunctionDecl.getIsStatic(fn))
 				continue;
 
-			final fnScope = new JsFunctionScope(classRefs);
+			final fnScope = new JsFunctionScope(classRefs, staticRefs);
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
 
@@ -423,6 +424,19 @@ class JsTargetCore implements ITargetCore {
 		for (fn in HxClassDecl.getFunctions(decl)) {
 			if (!HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) != "new")
 				fields.set(HxFunctionDecl.getName(fn), "this" + JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn)) + ".bind(this)");
+		}
+		return fields;
+	}
+
+	static function staticMemberRefs(unit:JsClassUnit):haxe.ds.StringMap<String> {
+		final fields = new haxe.ds.StringMap<String>();
+		for (field in HxClassDecl.getFields(unit.decl)) {
+			if (HxFieldDecl.getIsStatic(field))
+				fields.set(HxFieldDecl.getName(field), unit.jsRef + JsNameMangler.propertySuffix(HxFieldDecl.getName(field)));
+		}
+		for (fn in HxClassDecl.getFunctions(unit.decl)) {
+			if (HxFunctionDecl.getIsStatic(fn))
+				fields.set(HxFunctionDecl.getName(fn), unit.jsRef + JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn)));
 		}
 		return fields;
 	}

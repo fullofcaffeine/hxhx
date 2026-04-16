@@ -541,6 +541,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "haxe/io/Bytes.hx");
 	}
 
+	static function haxeCryptoBase64Module():TypedModule {
+		final charsField = new HxFieldDecl("CHARS", HxVisibility.Private, true, "String", HxExpr.EString("abc"));
+		final bytesField = new HxFieldDecl("BYTES", HxVisibility.Private, true, "String",
+			HxExpr.ECall(HxExpr.EField(HxExpr.EField(HxExpr.EField(HxExpr.EIdent("haxe"), "io"), "Bytes"), "ofString"), [HxExpr.EIdent("CHARS")]));
+		final base64Class = new HxClassDecl("Base64", false, [], [charsField, bytesField]);
+		final decl = new HxModuleDecl("haxe.crypto", [], base64Class, [base64Class], false, false);
+		return typedModule("", decl, "haxe/crypto/Base64.hx");
+	}
+
 	static function haxeFormatJsonParserModule():TypedModule {
 		final parserClass = new HxClassDecl("JsonParser", false, [
 			new HxFunctionDecl("doParse", HxVisibility.Public, false, [], "Dynamic",
@@ -643,6 +652,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(splitter.split("a,b,c").join("|"));',
 				'    Sys.println(EReg.escape("a+b"));',
 				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref"));',
+				'    Sys.println(haxe.crypto.Base64.BYTES);',
 				"    var counter = new Counter(4);",
 				"    Sys.println(counter.add(5));",
 				"    Sys.println(counter.add());",
@@ -707,6 +717,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				utestTestHandlerModule(),
 				haxeIoInputModule(),
 				haxeIoBytesModule(),
+				haxeCryptoBase64Module(),
 				haxeFormatJsonParserModule()
 			];
 			for (module in utestResultModules())
@@ -793,6 +804,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
 			assertContains(js, "__hx_cls_haxe_io_Bytes.ofString(\"bytes-ref\")", "qualified package static refs should resolve to class bindings");
 			assertNotContains(js, "haxe.io.Bytes.ofString", "qualified package static refs should not leak raw namespace access");
+			assertContains(js, "__hx_cls_haxe_crypto_Base64.BYTES = __hx_cls_haxe_io_Bytes.ofString(__hx_cls_haxe_crypto_Base64.CHARS)",
+				"same-class static field refs should resolve to class bindings");
+			assertNotContains(js, "__hx_cls_haxe_io_Bytes.ofString(CHARS)", "same-class static field refs should not leak as globals");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg", "compile-time macro Compiler ident regex should construct EReg");
 			assertTrue(js.indexOf("var __hx_cls_EReg = function") < js.indexOf("__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg"),
 				"EReg constructor should emit before static fields that instantiate it");
@@ -864,6 +878,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "a|b|c", "EReg split should delegate to JS regular expressions");
 			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");
 			assertContains(stdout, "bytes-ref", "qualified package static refs should execute through class bindings");
+			assertContains(stdout, "abc", "same-class static field refs should execute through class bindings");
 			assertContains(stdout, "10\n13", "ordinary JS classes should construct, mutate instance fields, and apply default args");
 			assertContains(stdout, "2,3", "native JS Array prototype methods should remain available");
 			assertContains(stdout, "true,4,5,false", "runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
