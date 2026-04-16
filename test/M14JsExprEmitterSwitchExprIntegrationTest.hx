@@ -76,6 +76,11 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		assertContains(switchIfElseSemicolonJs, "var __sw_bind_x = __sw.__hx_params[0];", "if/else branch switch should bind enum arg");
 		assertContains(switchIfElseSemicolonJs, "((__sw_bind_x === null) ? \"null\" : \"not null\")", "semicolon before else should still lower as ternary");
 
+		final emptyCaseSwitchJs = JsExprEmitter.emit(HxParser.parseExprText('switch true { case true: case false: }'), exprScope);
+		assertContains(emptyCaseSwitchJs, "if (__sw === true)", "boolean literal switch pattern should lower true test");
+		assertContains(emptyCaseSwitchJs, "else if (__sw === false)", "boolean literal switch pattern should lower false test");
+		assertContains(emptyCaseSwitchJs, "return null;", "empty switch case body should return null");
+
 		final macroStringJs = JsExprEmitter.emit(HxParser.parseExprText('macro "bar"'), exprScope);
 		assertContains(macroStringJs, "__hx_ctor: \"EConst\"", "macro string quote should emit EConst expression def");
 		assertContains(macroStringJs, "__hx_ctor: \"CString\"", "macro string quote should emit CString constant");

@@ -3694,6 +3694,8 @@ class EmitterStage {
 							backendDialect.runtimeIsNull("__sw");
 						case PWildcard, PBind(_):
 							"true";
+						case PBool(v):
+							backendDialect.runtimeDynamicEquals("__sw", v ? "true" : "false");
 						case PString(v):
 							backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(v));
 						case PInt(v):
@@ -5209,6 +5211,8 @@ class EmitterStage {
 								backendDialect.runtimeIsNull("__sw");
 							case PWildcard, PBind(_):
 								"true";
+							case PBool(v):
+								backendDialect.runtimeDynamicEquals("__sw", v ? "true" : "false");
 							case PString(v):
 								backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(v));
 							case PInt(v):

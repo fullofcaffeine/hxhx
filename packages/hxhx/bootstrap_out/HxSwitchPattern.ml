@@ -4,6 +4,7 @@
 type hxswitchpattern =
 | PNull
 | PWildcard
+| PBool of bool
 | PString of string
 | PInt of int
 | PEnumValue of string

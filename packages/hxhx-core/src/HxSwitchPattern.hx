@@ -33,6 +33,7 @@
 enum HxSwitchPattern {
 	PNull;
 	PWildcard;
+	PBool(value:Bool);
 	PString(value:String);
 	PInt(value:Int);
 	PEnumValue(name:String);

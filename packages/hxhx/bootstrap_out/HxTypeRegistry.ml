@@ -157,7 +157,7 @@ let init () : unit =
   HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "EMacroExpr"; "EMacroType"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported" ];
   HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KInline"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KIn"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
   HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SForKeyValue"; "SWhile"; "SDoWhile"; "SSwitch"; "STry"; "SBreak"; "SContinue"; "SThrow"; "SReturnVoid"; "SReturn"; "SExpr" ];
-  HxType.register_enum_ctors "HxSwitchPattern" [ "PNull"; "PWildcard"; "PString"; "PInt"; "PEnumValue"; "PEnumExtract"; "PObject"; "PCapture"; "PArray"; "PLengthGuard"; "PStartsWithGuard"; "PIntEqualsGuard"; "PUnsupportedGuard"; "PBind"; "POr" ];
+  HxType.register_enum_ctors "HxSwitchPattern" [ "PNull"; "PWildcard"; "PBool"; "PString"; "PInt"; "PEnumValue"; "PEnumExtract"; "PObject"; "PCapture"; "PArray"; "PLengthGuard"; "PStartsWithGuard"; "PIntEqualsGuard"; "PUnsupportedGuard"; "PBind"; "POr" ];
   HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TRegex"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
   HxType.register_enum_ctors "HxVisibility" [ "Public"; "Private" ];
   HxType.register_enum_ctors "_HxConditionalCompilation.Token" [ "TIdent"; "TString"; "TNot"; "TAnd"; "TOr"; "TLParen"; "TRParen"; "TEq"; "TNeq"; "TEof" ];
@@ -540,6 +540,11 @@ let init () : unit =
   );
   HxType.register_enum_ctor "HxSwitchPattern" "PWildcard" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (HxSwitchPattern.PWildcard)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PBool" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxSwitchPattern.PBool" in
+    Obj.repr (HxSwitchPattern.PBool a0)
   );
   HxType.register_enum_ctor "HxSwitchPattern" "PString" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in

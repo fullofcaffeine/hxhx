@@ -24,6 +24,8 @@ class JsSwitchPatternLowering {
 				{cond: scrutineeVar + " == null", bindings: []};
 			case PWildcard:
 				{cond: "true", bindings: []};
+			case PBool(value):
+				{cond: scrutineeVar + " === " + (value ? "true" : "false"), bindings: []};
 			case PString(value):
 				{cond: scrutineeVar + " === " + JsNameMangler.quoteString(value), bindings: []};
 			case PInt(value):

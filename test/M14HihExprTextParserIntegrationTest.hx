@@ -506,6 +506,27 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected switch expression with if/else branch");
 		}
 
+		final emptyCaseSwitchExpr = HxParser.parseExprText('switch true { case true: case false: }');
+		switch (emptyCaseSwitchExpr) {
+			case ESwitch(EBool(true), patterns, exprs):
+				assertTrue(patterns.length == 2, "expected empty switch cases to preserve two patterns");
+				assertTrue(exprs.length == 2, "expected empty switch cases to synthesize two branch expressions");
+				switch (patterns[0]) {
+					case PBool(true):
+					case _:
+						fail("expected true literal switch pattern");
+				}
+				switch (exprs[0]) {
+					case ENull:
+					case _:
+						fail("expected empty switch case body to lower to null expression");
+				}
+			case EUnsupported(raw):
+				fail("empty switch case expression parsed as unsupported: " + raw);
+			case _:
+				fail("expected switch expression with empty case bodies");
+		}
+
 		final macroQuoteCalls = HxParser.parseFunctionBodyText('eq("bar", switchNormal(macro "bar")); eq("bar", switchNormal(macro ("bar"))); eq("bar", switchNormal(macro untyped "bar")); eq("foo", switchNormal(macro null.foo)); eq("22", switchNormal(macro null[22])); eq("in", switchNormal(macro 1 in 0));');
 		assertTrue(macroQuoteCalls.length == 6, "expected macro quote call statements to parse");
 		for (stmt in macroQuoteCalls) {

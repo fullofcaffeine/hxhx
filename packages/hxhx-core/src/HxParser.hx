@@ -342,6 +342,12 @@ class HxParser {
 			case TKeyword(KNull):
 				bump();
 				PNull;
+			case TKeyword(KTrue):
+				bump();
+				PBool(true);
+			case TKeyword(KFalse):
+				bump();
+				PBool(false);
 			case TKeyword(KVar):
 				bump();
 				switch (cur.kind) {
@@ -2061,8 +2067,12 @@ class HxParser {
 			}
 			expect(TColon, "':'");
 			// Case body as a single expression; stop before the next `case`/`}`.
-			final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof) || cur.kind.match(TKeyword(KCase))
-				|| cur.kind.match(TKeyword(KDefault)));
+			final expr:HxExpr = if (cur.kind.match(TRBrace) || cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault))) {
+				HxExpr.ENull;
+			} else {
+				parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof) || cur.kind.match(TKeyword(KCase))
+					|| cur.kind.match(TKeyword(KDefault)));
+			}
 			if (cur.kind.match(TSemicolon))
 				bump();
 			patterns.push(pat);
