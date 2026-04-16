@@ -121,6 +121,19 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "Macro.hx");
 	}
 
+	static function reservedParamModule():TypedModule {
+		final callbackArg = new HxFunctionArg("callback", "Dynamic", HxDefaultValue.NoDefault);
+		final argumentsArg = new HxFunctionArg("arguments", "Dynamic", HxDefaultValue.NoDefault);
+		final evalArg = new HxFunctionArg("eval", "Dynamic", HxDefaultValue.NoDefault);
+		final reservedParam = new HxClassDecl("ReservedParam", false, [
+			new HxFunctionDecl("call_user_func", HxVisibility.Public, true, [callbackArg, argumentsArg], "Dynamic",
+				[HxStmt.SReturn(HxExpr.EIdent("arguments"), HxPos.unknown())], ""),
+			new HxFunctionDecl("call_eval", HxVisibility.Public, true, [evalArg], "Dynamic", [HxStmt.SReturn(HxExpr.EIdent("eval"), HxPos.unknown())], "")
+		]);
+		final decl = new HxModuleDecl("", [], reservedParam, [reservedParam], false, false);
+		return typedModule("", decl, "ReservedParam.hx");
+	}
+
 	static function upstreamUnitHelperMacrosModule():TypedModule {
 		final helperClass = new HxClassDecl("HelperMacros", false, [
 			new HxFunctionDecl("getCompilationDate", HxVisibility.Public, true, [], "String",
@@ -654,6 +667,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				sysIoFileModule(),
 				lambdaModule(),
 				macroModule(),
+				reservedParamModule(),
 				upstreamUnitHelperMacrosModule(),
 				upstreamUnitTestIssuesModule(),
 				upstreamUnitDefaultTypeParametersModule(),
@@ -701,6 +715,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "try {  return \"try-ok\";", "try expression should lower to a returning IIFE");
 			assertContains(js, "__hx_cls_Macro.stripWhitespaces = function", "compile-time Macro fallback should emit");
 			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");
+			assertContains(js, "__hx_cls_ReservedParam.call_user_func = function(callback, arguments_)",
+				"strict-mode reserved static function parameters should be renamed");
+			assertContains(js, "return arguments_;", "reserved static parameter body references should use the renamed argument");
+			assertContains(js, "__hx_cls_ReservedParam.call_eval = function(eval_)", "strict-mode eval static parameter should be renamed");
+			assertContains(js, "return eval_;", "eval static parameter body reference should use the renamed argument");
 			assertContains(js, "__hx_cls_unit_HelperMacros.getCompilationDate = function", "upstream unit macro helper should emit a neutral static stub");
 			assertContains(js, "__hx_cls_unit_TestIssues.addIssueClasses = function", "metadata-marked macro helper should emit a neutral static stub");
 			assertContains(js, "__hx_cls_unit_TestDefaultTypeParameters.printThings = function",

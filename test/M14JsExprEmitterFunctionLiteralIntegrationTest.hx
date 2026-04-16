@@ -27,6 +27,16 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(typedArgJs, "function(", "typed-arg function literal parses");
 		assertContains(typedArgJs, "return ", "typed-arg function literal emits return");
 
+		final reservedArg = HxParser.parseExprText("function(arguments) return arguments");
+		final reservedArgJs = JsExprEmitter.emit(reservedArg, exprScope);
+		assertContains(reservedArgJs, "function(arguments_)", "strict-mode reserved lambda arg should be renamed");
+		assertContains(reservedArgJs, "return arguments_", "strict-mode reserved lambda body reference should use the renamed arg");
+
+		final evalArg = HxParser.parseExprText("function(eval) return eval");
+		final evalArgJs = JsExprEmitter.emit(evalArg, exprScope);
+		assertContains(evalArgJs, "function(eval_)", "strict-mode eval lambda arg should be renamed");
+		assertContains(evalArgJs, "return eval_", "strict-mode eval lambda body reference should use the renamed arg");
+
 		final noArgs = HxParser.parseExprText("function() return 7");
 		final noArgsJs = JsExprEmitter.emit(noArgs, exprScope);
 		assertContains(noArgsJs, "function()", "no-arg function literal keeps empty parameter list");
