@@ -26,6 +26,133 @@ class ParserStage {
 		return dot <= 0 ? name : name.substr(0, dot);
 	}
 
+	static function isIdentCode(code:Int):Bool {
+		return (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || (code >= 48 && code <= 57) || code == 95;
+	}
+
+	static function startsWithWord(source:String, index:Int, word:String):Bool {
+		if (index < 0 || index + word.length > source.length)
+			return false;
+		if (source.substr(index, word.length) != word)
+			return false;
+		final beforeOk = index == 0 || !isIdentCode(source.charCodeAt(index - 1));
+		final after = index + word.length;
+		final afterOk = after >= source.length || !isIdentCode(source.charCodeAt(after));
+		return beforeOk && afterOk;
+	}
+
+	static function skipSpaces(source:String, index:Int):Int {
+		var i = index;
+		while (i < source.length) {
+			switch (source.charCodeAt(i)) {
+				case 9 | 10 | 13 | 32:
+					i++;
+				case _:
+					return i;
+			}
+		}
+		return i;
+	}
+
+	static function findMatchingBrace(source:String, openIndex:Int):Int {
+		var depth = 1;
+		var i = openIndex + 1;
+		var stringQuote = 0;
+		var escaped = false;
+		var lineComment = false;
+		var blockComment = false;
+		while (i < source.length) {
+			final code = source.charCodeAt(i);
+			final next = i + 1 < source.length ? source.charCodeAt(i + 1) : -1;
+			if (lineComment) {
+				if (code == 10 || code == 13)
+					lineComment = false;
+				i++;
+				continue;
+			}
+			if (blockComment) {
+				if (code == 42 && next == 47) {
+					blockComment = false;
+					i += 2;
+				} else {
+					i++;
+				}
+				continue;
+			}
+			if (stringQuote != 0) {
+				if (escaped) {
+					escaped = false;
+				} else if (code == 92) {
+					escaped = true;
+				} else if (code == stringQuote) {
+					stringQuote = 0;
+				}
+				i++;
+				continue;
+			}
+			if (code == 47 && next == 47) {
+				lineComment = true;
+				i += 2;
+				continue;
+			}
+			if (code == 47 && next == 42) {
+				blockComment = true;
+				i += 2;
+				continue;
+			}
+			if (code == 34 || code == 39) {
+				stringQuote = code;
+				i++;
+				continue;
+			}
+			if (code == 123) {
+				depth++;
+			} else if (code == 125) {
+				depth--;
+				if (depth == 0)
+					return i;
+			}
+			i++;
+		}
+		return -1;
+	}
+
+	static function scanToplevelMainFunction(source:String):Null<HxFunctionDecl> {
+		if (source == null || source.length == 0)
+			return null;
+		var index = 0;
+		while (index < source.length) {
+			final found = source.indexOf("function", index);
+			if (found < 0)
+				return null;
+			index = found + "function".length;
+			if (!startsWithWord(source, found, "function"))
+				continue;
+			final nameStart = skipSpaces(source, index);
+			if (!startsWithWord(source, nameStart, "main"))
+				continue;
+			final open = source.indexOf("{", nameStart + "main".length);
+			if (open < 0)
+				return null;
+			final close = findMatchingBrace(source, open);
+			if (close < 0)
+				return null;
+			final bodyText = source.substring(open + 1, close);
+			var body:Array<HxStmt> = [];
+			#if !hxhx_stage0_no_hx_parser
+			try {
+				body = HxParser.parseFunctionBodyText(bodyText);
+			} catch (_:HxParseError) {
+				body = [];
+			} catch (_:String) {
+				body = [];
+			}
+			#end
+			return new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", body, "", null, HxPos.unknown(), HxPos.unknown(), bodyText);
+		}
+		return null;
+	}
+
 	public static function parse(source:String, ?filePath:String):ParsedModule {
 		final expectedMainClass = expectedMainClassFromFile(filePath);
 		final decl =
@@ -206,6 +333,27 @@ class ParserStage {
 						if (!tryPickMainFrom(enumDeclsAll)) {
 							if (!tryPickMainFrom(typedefDeclsAll))
 								tryPickMainFrom(abstractDeclsAll);
+						}
+					}
+
+					if (HxModuleDecl.getHasToplevelMain(nativeDecl) && expectedMainClass != null && expectedMainClass.length > 0) {
+						final topMain = scanToplevelMainFunction(source);
+						if (topMain != null) {
+							var mainHasMain = false;
+							for (fn in HxClassDecl.getFunctions(main)) {
+								if (HxFunctionDecl.getName(fn) == "main") {
+									mainHasMain = true;
+									break;
+								}
+							}
+							if (mainName == null || mainName.length == 0 || mainName == "Unknown" || mainName != expectedMainClass) {
+								main = new HxClassDecl(expectedMainClass, true, [topMain], []);
+								mainName = expectedMainClass;
+							} else if (!mainHasMain) {
+								final functions = HxClassDecl.getFunctions(main).copy();
+								functions.push(topMain);
+								main = new HxClassDecl(HxClassDecl.getName(main), true, functions, HxClassDecl.getFields(main));
+							}
 						}
 					}
 

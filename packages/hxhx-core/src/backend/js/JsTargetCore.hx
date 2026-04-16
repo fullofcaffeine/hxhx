@@ -12,6 +12,7 @@ private typedef JsClassUnit = {
 	final fullName:String;
 	final jsRef:String;
 	final decl:HxClassDecl;
+	final exposeToplevelMain:Bool;
 };
 
 /**
@@ -65,6 +66,9 @@ class JsTargetCore implements ITargetCore {
 			final pm = typed.getParsed();
 			final decl = pm.getDecl();
 			final pkg = HxModuleDecl.getPackagePath(decl);
+			final mainClass = HxModuleDecl.getMainClass(decl);
+			final mainClassName = HxClassDecl.getName(mainClass);
+			final hasToplevelMain = HxModuleDecl.getHasToplevelMain(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final className = HxClassDecl.getName(cls);
 				final fullName = (pkg == null || pkg.length == 0) ? className : (pkg + "." + className);
@@ -77,8 +81,8 @@ class JsTargetCore implements ITargetCore {
 				units.push({
 					fullName: fullName,
 					jsRef: jsRef,
-					decl: cls
-				});
+					decl: cls,
+					exposeToplevelMain: hasToplevelMain && className == mainClassName});
 			}
 		}
 		units = orderClassUnitsByStaticInitDeps(units, byFullName);
@@ -278,8 +282,25 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitRuntimePrelude(writer:JsWriter):Void {
+		writer.writeln("var __hx_exports = (typeof exports !== \"undefined\") ? exports : ((typeof globalThis !== \"undefined\") ? globalThis : {});");
 		writer.writeln("var __hx_classes = Object.create(null);");
 		writer.writeln("var __hx_type_placeholders = Object.create(null);");
+		writer.writeln("function __hx_export_path(path, value) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_parts = String(path).split(\".\");");
+		writer.writeln("var __hx_target = __hx_exports;");
+		writer.writeln("for (var __hx_i = 0; __hx_i < __hx_parts.length - 1; __hx_i++) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_part = __hx_parts[__hx_i];");
+		writer.writeln("if (__hx_part === \"\") continue;");
+		writer.writeln("if (__hx_target[__hx_part] == null) __hx_target[__hx_part] = {};");
+		writer.writeln("__hx_target = __hx_target[__hx_part];");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("__hx_target[__hx_parts[__hx_parts.length - 1]] = value;");
+		writer.writeln("return value;");
+		writer.popIndent();
+		writer.writeln("}");
 		writer.writeln("function __hx_type_ref(name) {");
 		writer.pushIndent();
 		writer.writeln("if (Object.prototype.hasOwnProperty.call(__hx_classes, name)) return __hx_classes[name];");
@@ -449,6 +470,11 @@ class JsTargetCore implements ITargetCore {
 			}
 			writer.popIndent();
 			writer.writeln("};");
+			var exposePath = exposePathForFunction(unit.fullName, fn);
+			if (exposePath == null && unit.exposeToplevelMain && HxFunctionDecl.getName(fn) == "main")
+				exposePath = unit.fullName + ".main";
+			if (exposePath != null)
+				writer.writeln("__hx_export_path(" + JsNameMangler.quoteString(exposePath) + ", " + unit.jsRef + suffix + ");");
 		}
 	}
 
@@ -2275,6 +2301,34 @@ class JsTargetCore implements ITargetCore {
 				return true;
 		}
 		return false;
+	}
+
+	static function exposePathForFunction(fullName:String, fn:HxFunctionDecl):Null<String> {
+		for (meta in HxFunctionDecl.getMetadata(fn)) {
+			final trimmed = StringTools.trim(meta);
+			final isExpose = trimmed == "expose"
+				|| trimmed == "@expose"
+				|| trimmed == "@:expose"
+				|| StringTools.startsWith(trimmed, "expose(")
+				|| StringTools.startsWith(trimmed, "@expose(")
+				|| StringTools.startsWith(trimmed, "@:expose(");
+			if (!isExpose)
+				continue;
+			final open = trimmed.indexOf("(");
+			if (open < 0)
+				return fullName.length == 0 ? HxFunctionDecl.getName(fn) : fullName + "." + HxFunctionDecl.getName(fn);
+			final close = trimmed.lastIndexOf(")");
+			final payloadEnd = close > open ? close : trimmed.length;
+			var payload = StringTools.trim(trimmed.substring(open + 1, payloadEnd));
+			if (payload.length >= 2) {
+				final first = payload.charAt(0);
+				final last = payload.charAt(payload.length - 1);
+				if ((first == "\"" && last == "\"") || (first == "'" && last == "'"))
+					payload = payload.substring(1, payload.length - 1);
+			}
+			return payload.length == 0 ? (fullName.length == 0 ? HxFunctionDecl.getName(fn) : fullName + "." + HxFunctionDecl.getName(fn)) : payload;
+		}
+		return null;
 	}
 
 	static function shouldEmitNeutralConstructorBody(fullName:String):Bool {

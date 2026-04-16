@@ -641,6 +641,28 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return StringTools.trim(stdout);
 	}
 
+	static function runNodeRequireScript(jsPath:String):String {
+		final script = "const m = require(require('path').resolve(process.argv[1]));"
+			+ "if (!m.unit || !m.unit.TestMain || typeof m.unit.TestMain.main !== 'function') throw new Error('missing unit.TestMain.main export');"
+			+ "m.unit.TestMain.main();";
+		final process = new sys.io.Process("node", ["-e", script, jsPath]);
+		final stdout = process.stdout.readAll().toString();
+		final stderr = process.stderr.readAll().toString();
+		final exitCode = process.exitCode();
+		process.close();
+		assertTrue(exitCode == 0, "node require execution failed for " + jsPath + " with exit " + exitCode + ": " + stderr);
+		return StringTools.trim(stdout);
+	}
+
+	static function upstreamUnitTestMainModule():TypedModule {
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			HxStmt.SExpr(HxExpr.ECall(HxExpr.EField(HxExpr.EIdent("Sys"), "println"), [HxExpr.EString("require-main")]), HxPos.unknown())
+		], "");
+		final testMain = new HxClassDecl("TestMain", true, [mainFn]);
+		final decl = new HxModuleDecl("unit", [], testMain, [testMain], false, true);
+		return typedModule("", decl, "unit/TestMain.hx");
+	}
+
 	static function main():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_js_target_core_systools_" + Std.string(Date.now().getTime()));
 		final outDir = Path.join([tmpRoot, "out"]);
@@ -792,6 +814,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				haxeIoBytesModule(),
 				haxeCryptoBase64Module(),
 				stringToolsModule(),
+				upstreamUnitTestMainModule(),
 				upstreamUnitTestReflectModule(),
 				phpBootModule(),
 				phpNativeAssocArrayModule(),
@@ -907,6 +930,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_unit_TestReflect.u = function", "same-class static helper should emit before static field calls");
 			assertContains(js, "__hx_cls_unit_TestReflect.TNAMES = [__hx_cls_unit_TestReflect.u(\"haxe.ds.StringMap\")",
 				"same-class static helper calls in static field initializers should use class bindings");
+			assertContains(js, "__hx_export_path(\"unit.TestMain.main\", __hx_cls_unit_TestMain.main);",
+				"module-level main functions should populate the CommonJS export namespace");
 			assertNotContains(js, " unit.MyInterface", "qualified value type refs should not leak raw namespace access");
 			assertTrue(js.indexOf("var __hx_cls_php_NativeAssocArray = function") < js.indexOf("__hx_cls_php_Boot.aliases = new __hx_cls_php_NativeAssocArray()"),
 				"classes constructed by static field initializers should emit before dependent static fields");
@@ -998,6 +1023,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "true,4,5,false", "runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
 			assertContains(stdout, "fixture-called\nprecheck\ntested\ncomplete\ntrue\ntrue\n1",
 				"utest TestHandler execute should run a synchronous fixture and dispatch completion hooks");
+			final requireStdout = runNodeRequireScript(artifactPath);
+			assertContains(requireStdout, "require-main", "CommonJS require should expose unit.TestMain.main without breaking direct execution");
 		} catch (message:String) {
 			failure = message;
 		} catch (error:haxe.Exception) {
