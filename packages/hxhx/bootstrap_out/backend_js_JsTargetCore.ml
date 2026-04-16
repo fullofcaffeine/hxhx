@@ -181,7 +181,28 @@ let emitRuntimePrelude = fun writer -> ignore ((
   ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
   ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
   ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
-  Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string)
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (Array.prototype.iterator == null) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("Object.defineProperty(Array.prototype, \"iterator\", {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("value: function() {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_array = this;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var __hx_index = 0;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("hasNext: function() { return __hx_index < __hx_array.length; }," : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("next: function() { return __hx_array[__hx_index++]; }" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}," : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("configurable: true" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("});" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string)
 ))
 
 let emitKnownConstructorBody = fun writer fullName params -> try let __fallback_result_64 = (

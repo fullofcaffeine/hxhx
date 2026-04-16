@@ -637,6 +637,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"    Sys.println(counter.add(5));",
 				"    Sys.println(counter.add());",
 				"    Sys.println([1, 2, 3].filter(function(i) return i > 1).join(\",\"));",
+				'    Sys.println(untyped __js__("(function(){ var it = [4,5].iterator(); return [it.hasNext(), it.next(), it.next(), it.hasNext()].join(\\",\\"); })()"));',
 				"    var called = { value: false };",
 				"    var handler = new TestHandler(null);",
 				"    handler.fixture = {",
@@ -777,6 +778,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "var __hx_cls_EReg = function", "EReg should emit a constructible regex wrapper");
 			assertContains(js, "__hx_cls_EReg.prototype.match = function", "EReg match prototype method should emit");
 			assertContains(js, "__hx_cls_EReg.escape = function", "EReg escape helper should emit");
+			assertContains(js, "Object.defineProperty(Array.prototype, \"iterator\"",
+				"runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg", "compile-time macro Compiler ident regex should construct EReg");
 			assertTrue(js.indexOf("var __hx_cls_EReg = function") < js.indexOf("__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg"),
 				"EReg constructor should emit before static fields that instantiate it");
@@ -849,6 +852,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");
 			assertContains(stdout, "10\n13", "ordinary JS classes should construct, mutate instance fields, and apply default args");
 			assertContains(stdout, "2,3", "native JS Array prototype methods should remain available");
+			assertContains(stdout, "true,4,5,false", "runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
 			assertContains(stdout, "fixture-called\nprecheck\ntested\ncomplete\ntrue\ntrue\n1",
 				"utest TestHandler execute should run a synchronous fixture and dispatch completion hooks");
 		} catch (message:String) {

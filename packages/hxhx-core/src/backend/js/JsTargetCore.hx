@@ -182,6 +182,27 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("}");
 		writer.popIndent();
 		writer.writeln("};");
+		writer.writeln("if (Array.prototype.iterator == null) {");
+		writer.pushIndent();
+		writer.writeln("Object.defineProperty(Array.prototype, \"iterator\", {");
+		writer.pushIndent();
+		writer.writeln("value: function() {");
+		writer.pushIndent();
+		writer.writeln("var __hx_array = this;");
+		writer.writeln("var __hx_index = 0;");
+		writer.writeln("return {");
+		writer.pushIndent();
+		writer.writeln("hasNext: function() { return __hx_index < __hx_array.length; },");
+		writer.writeln("next: function() { return __hx_array[__hx_index++]; }");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("},");
+		writer.writeln("configurable: true");
+		writer.popIndent();
+		writer.writeln("});");
+		writer.popIndent();
+		writer.writeln("}");
 	}
 
 	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
