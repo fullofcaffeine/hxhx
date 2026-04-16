@@ -2458,7 +2458,7 @@ class EmitterStage {
 			return numericStringIntrinsic;
 
 		return switch (e) {
-			case ELambda(_, _), ETryCatchRaw(_):
+			case ELambda(_, _), EMacroExpr(_, _), ETryCatchRaw(_):
 				// Exhaustiveness fallback; normal handling returns from the pre-switch intrinsic helper.
 				"(Obj.magic 0)";
 
@@ -3702,6 +3702,14 @@ class EmitterStage {
 							backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(name));
 						case PEnumExtract(name, _args):
 							backendDialect.runtimeDynamicEquals("(Type.enumConstructor __sw)", escapeOcamlString(name));
+						case PObject(_fieldNames, _fieldPatterns):
+							"false";
+						case PCapture(_name, inner):
+							patternCond(inner);
+						case PArray(_items):
+							"false";
+						case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PUnsupportedGuard(inner):
+							patternCond(inner);
 					};
 				}
 				var chain = backendDialect.dynamicNullValue();
@@ -3714,8 +3722,16 @@ class EmitterStage {
 						final localTy = switch (pattern) {
 							case PBind(name):
 								extendTyByIdentForStage3(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
+							case PCapture(name, _inner):
+								extendTyByIdentForStage3(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
+							case PArray(_items):
+								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
+							case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PUnsupportedGuard(_):
+								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
 							case PEnumExtract(_name, _args):
 								extendTyByIdentForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
+							case PObject(_fieldNames, _fieldPatterns):
+								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
 							case _:
 								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
 						};
@@ -3730,7 +3746,15 @@ class EmitterStage {
 						final thenExpr = switch (pattern) {
 							case PBind(name):
 								"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyAsDynamic + "))";
+							case PCapture(name, _inner):
+								"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyAsDynamic + "))";
+							case PArray(_items):
+								"(" + bodyAsDynamic + ")";
+							case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PUnsupportedGuard(_):
+								"(" + bodyAsDynamic + ")";
 							case PEnumExtract(_name, _args):
+								"(" + bodyAsDynamic + ")";
+							case PObject(_fieldNames, _fieldPatterns):
 								"(" + bodyAsDynamic + ")";
 							case _:
 								"(" + bodyAsDynamic + ")";
@@ -5193,6 +5217,14 @@ class EmitterStage {
 								backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(name));
 							case PEnumExtract(name, _args):
 								backendDialect.runtimeDynamicEquals("(Type.enumConstructor __sw)", escapeOcamlString(name));
+							case PObject(_fieldNames, _fieldPatterns):
+								"false";
+							case PCapture(_name, inner):
+								patternCond(inner);
+							case PArray(_items):
+								"false";
+							case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PUnsupportedGuard(inner):
+								patternCond(inner);
 						};
 					}
 					var chain = "()";
@@ -5205,7 +5237,15 @@ class EmitterStage {
 							final caseTy = switch (pattern) {
 								case PBind(name):
 									extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
+								case PCapture(name, _inner):
+									extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
+								case PArray(_items):
+									cloneTyCtxLocal(tyCtx);
+								case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PUnsupportedGuard(_):
+									cloneTyCtxLocal(tyCtx);
 								case PEnumExtract(_name, _args):
+									cloneTyCtxLocal(tyCtx);
+								case PObject(_fieldNames, _fieldPatterns):
 									cloneTyCtxLocal(tyCtx);
 								case _:
 									cloneTyCtxLocal(tyCtx);
@@ -5214,7 +5254,15 @@ class EmitterStage {
 							final thenUnit = switch (pattern) {
 								case PBind(name):
 									"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
+								case PCapture(name, _inner):
+									"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
+								case PArray(_items):
+									"(" + bodyUnit + ")";
+								case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PUnsupportedGuard(_):
+									"(" + bodyUnit + ")";
 								case PEnumExtract(_name, _args):
+									"(" + bodyUnit + ")";
+								case PObject(_fieldNames, _fieldPatterns):
 									"(" + bodyUnit + ")";
 								case _:
 									"(" + bodyUnit + ")";

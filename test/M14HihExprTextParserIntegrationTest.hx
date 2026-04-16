@@ -354,5 +354,124 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("expected enum extractor switch statement");
 		}
+
+		final objectPatternStmts = HxParser.parseFunctionBodyText("var out = null; switch payload { case EParenthesis({ expr : EConst(CString(s)) }) | EUntyped({ expr : EConst(CString(s)) }): out = s; case EArray(_, { expr : EConst(CInt(i) | CFloat(i)) }): out = Std.string(i); case _: out = \"none\"; } return out;");
+		assertTrue(objectPatternStmts.length == 3, "expected object-pattern switch statement");
+		switch (objectPatternStmts[1]) {
+			case SSwitch(EIdent(scrutinee), patterns, _, _):
+				assertTrue(scrutinee == "payload", "expected object-pattern switch scrutinee");
+				assertTrue(patterns.length == 3, "expected object-pattern switch cases");
+				switch (patterns[0]) {
+					case POr(alternatives):
+						assertTrue(alternatives.length == 2, "expected parenthesis/untyped OR alternatives");
+						switch (alternatives[0]) {
+							case PEnumExtract("EParenthesis", [PObject(fieldNames, fieldPatterns)]):
+								assertTrue(fieldNames.length == 1 && fieldNames[0] == "expr", "expected expr object field in first OR branch");
+								switch (fieldPatterns[0]) {
+									case PEnumExtract("EConst", [PEnumExtract("CString", [PBind("s")])]):
+									case _:
+										fail("expected nested CString binder in object pattern");
+								}
+							case _:
+								fail("expected first OR branch to be EParenthesis object pattern");
+						}
+					case _:
+						fail("expected first object-pattern case to parse as OR");
+				}
+				switch (patterns[1]) {
+					case PEnumExtract("EArray", [PWildcard, PObject(fieldNames, fieldPatterns)]):
+						assertTrue(fieldNames.length == 1 && fieldNames[0] == "expr", "expected EArray index expr object field");
+						switch (fieldPatterns[0]) {
+							case PEnumExtract("EConst", [POr(numberPatterns)]):
+								assertTrue(numberPatterns.length == 2, "expected numeric constant OR pattern");
+							case _:
+								fail("expected nested numeric constant OR pattern");
+						}
+					case _:
+						fail("expected second object-pattern case to parse as EArray extractor");
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("object-pattern switch parsed as unsupported: " + raw);
+			case _:
+				fail("expected object-pattern switch statement");
+		}
+
+		final objectPatternReturnStmts = HxParser.parseFunctionBodyText("return switch (payload.expr) { case Wrap(Text(s)): s; case Group({ value : Wrap(Text(s)) }) | Raw({ value : Wrap(Text(s)) }): s; case Pick(_, name): name; case At(_, { value : Wrap(IntText(i) | FloatText(i)) }): Std.string(i); case InOp(In, _, { value : inner, pos : _ }): Std.string(inner); case _: \"none\"; };");
+		assertTrue(objectPatternReturnStmts.length == 1, "expected object-pattern switch return statement");
+		switch (objectPatternReturnStmts[0]) {
+			case SReturn(ESwitch(EField(EIdent(receiver), field), patterns, exprs), _):
+				assertTrue(receiver == "payload" && field == "expr", "expected expression switch scrutinee field access");
+				assertTrue(patterns.length == 6, "expected expression switch cases");
+				assertTrue(exprs.length == 6, "expected expression switch branch expressions");
+			case SExpr(EUnsupported(raw), _):
+				fail("object-pattern return switch parsed as unsupported: " + raw);
+			case SReturn(EUnsupported(raw), _):
+				fail("object-pattern return switch expression parsed as unsupported: " + raw);
+			case _:
+				fail("expected return switch expression with object patterns");
+		}
+
+		final capturePatternExpr = HxParser.parseExprText('switch payload { case Wrap(captured = (Text("hello") | IntText("9"))): Std.string(captured); case _: "none"; }');
+		switch (capturePatternExpr) {
+			case ESwitch(EIdent("payload"), patterns, _):
+				assertTrue(patterns.length == 2, "expected capture switch cases");
+				switch (patterns[0]) {
+					case PEnumExtract("Wrap", [PCapture(name, POr(alternatives))]):
+						assertTrue(name == "captured", "expected capture pattern name");
+						assertTrue(alternatives.length == 2, "expected capture inner OR alternatives");
+					case _:
+						fail("expected enum extractor argument capture pattern");
+				}
+			case EUnsupported(raw):
+				fail("capture switch expression parsed as unsupported: " + raw);
+			case _:
+				fail("expected capture switch expression");
+		}
+
+		final arrayPatternExpr = HxParser.parseExprText('switch values { case []: "empty"; case [one]: one; case [left, right]: left + right; case _: "many"; }');
+		switch (arrayPatternExpr) {
+			case ESwitch(EIdent("values"), patterns, _):
+				assertTrue(patterns.length == 4, "expected array switch cases");
+				switch (patterns[0]) {
+					case PArray(items):
+						assertTrue(items.length == 0, "expected empty array pattern");
+					case _:
+						fail("expected empty array pattern");
+				}
+				switch (patterns[2]) {
+					case PArray([PBind("left"), PBind("right")]):
+					case _:
+						fail("expected two-item array pattern with binders");
+				}
+			case EUnsupported(raw):
+				fail("array switch expression parsed as unsupported: " + raw);
+			case _:
+				fail("expected array switch expression");
+		}
+
+		final guardedPatternExpr = HxParser.parseExprText('switch values { case var rest if (rest.length == 3): Std.string(rest.length); case _: "other"; }');
+		switch (guardedPatternExpr) {
+			case ESwitch(EIdent("values"), patterns, _):
+				assertTrue(patterns.length == 2, "expected guarded switch cases");
+				switch (patterns[0]) {
+					case PLengthGuard(PBind("rest"), "rest", 3):
+					case _:
+						fail("expected guarded bind pattern with length comparison");
+				}
+			case EUnsupported(raw):
+				fail("guarded switch expression parsed as unsupported: " + raw);
+			case _:
+				fail("expected guarded switch expression");
+		}
+
+		final macroQuoteCalls = HxParser.parseFunctionBodyText('eq("bar", switchNormal(macro "bar")); eq("bar", switchNormal(macro ("bar"))); eq("bar", switchNormal(macro untyped "bar")); eq("foo", switchNormal(macro null.foo)); eq("22", switchNormal(macro null[22])); eq("in", switchNormal(macro 1 in 0));');
+		assertTrue(macroQuoteCalls.length == 6, "expected macro quote call statements to parse");
+		for (stmt in macroQuoteCalls) {
+			switch (stmt) {
+				case SExpr(EUnsupported(raw), _):
+					fail("macro quote call parsed as unsupported: " + raw);
+				case _:
+			}
+		}
 	}
 }

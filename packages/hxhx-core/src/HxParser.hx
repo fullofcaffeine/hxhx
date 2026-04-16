@@ -282,56 +282,152 @@ class HxParser {
 	}
 
 	function parseSwitchPattern():HxSwitchPattern {
-		// Bring-up: support a very small pattern subset (see HxSwitchPattern docs),
-		// including a shallow OR pattern (`case a | b:`) used by upstream harnesses.
-		function parseAtom():HxSwitchPattern {
-			return switch (cur.kind) {
-				case TKeyword(KNull):
+		// Bring-up: support the pattern subset documented in HxSwitchPattern. This
+		// intentionally remains smaller than full Haxe matching, but it is recursive
+		// enough for macro-expression shapes such as `{ expr : EConst(CString(s)) }`.
+		final pattern = parseSwitchPatternOr();
+		if (acceptKeyword(KIf)) {
+			final guard = if (cur.kind.match(TLParen)) {
+				bump();
+				final expr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				if (cur.kind.match(TRParen))
 					bump();
-					PNull;
-				case TIdent("_"):
-					bump();
-					PWildcard;
-				case TString(s):
-					bump();
-					PString(s);
-				case TInt(v):
-					bump();
-					PInt(v);
-				case TIdent(name):
-					bump();
-					if (isUpperStart(name) && cur.kind.match(TLParen)) {
-						bump();
-						final args = new Array<HxSwitchPattern>();
-						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) {
-							args.push(parseAtom());
-							if (cur.kind.match(TComma)) {
-								bump();
-								continue;
-							}
-							break;
-						}
-						if (cur.kind.match(TRParen))
-							bump();
-						PEnumExtract(name, args);
-					} else {
-						isUpperStart(name) ? PEnumValue(name) : PBind(name);
-					}
-				case _:
-					// Best-effort: consume one token and treat it as a wildcard.
-					bump();
-					PWildcard;
+				expr;
+			} else {
+				parseExpr(() -> cur.kind.match(TColon) || cur.kind.match(TEof));
 			}
+			return switchPatternWithGuard(pattern, guard);
 		}
+		return pattern;
+	}
 
-		final first = parseAtom();
+	function switchPatternWithGuard(pattern:HxSwitchPattern, guard:HxExpr):HxSwitchPattern {
+		return switch (guard) {
+			case EBinop("==", EField(EIdent(name), "length"), EInt(length)):
+				PLengthGuard(pattern, name, length);
+			case ECall(EField(EIdent("StringTools"), "startsWith"), [EIdent(name), EString(prefix)]):
+				PStartsWithGuard(pattern, name, prefix);
+			case _:
+				PUnsupportedGuard(pattern);
+		}
+	}
+
+	function parseSwitchPatternOr():HxSwitchPattern {
+		final first = parseSwitchPatternAtom();
 		var ors:Null<Array<HxSwitchPattern>> = null;
 		while (acceptOtherChar("|")) {
 			if (ors == null)
 				ors = [first];
-			ors.push(parseAtom());
+			ors.push(parseSwitchPatternAtom());
 		}
 		return ors == null ? first : POr(ors);
+	}
+
+	function parseSwitchPatternAtom():HxSwitchPattern {
+		return switch (cur.kind) {
+			case TKeyword(KNull):
+				bump();
+				PNull;
+			case TKeyword(KVar):
+				bump();
+				switch (cur.kind) {
+					case TIdent(name):
+						bump();
+						PBind(name);
+					case _:
+						PWildcard;
+				}
+			case TIdent("_"):
+				bump();
+				PWildcard;
+			case TLBrace:
+				bump();
+				final fieldNames = new Array<String>();
+				final fieldPatterns = new Array<HxSwitchPattern>();
+				while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+					final fieldName = switch (cur.kind) {
+						case TIdent(name):
+							bump();
+							name;
+						case TString(name):
+							bump();
+							name;
+						case _:
+							bump();
+							null;
+					}
+					if (fieldName == null) {
+						if (cur.kind.match(TComma)) {
+							bump();
+							continue;
+						}
+						break;
+					}
+					if (cur.kind.match(TColon))
+						bump();
+					final fieldPattern = parseSwitchPatternOr();
+					fieldNames.push(fieldName);
+					fieldPatterns.push(fieldPattern);
+					if (cur.kind.match(TComma)) {
+						bump();
+						continue;
+					}
+				}
+				if (cur.kind.match(TRBrace))
+					bump();
+				PObject(fieldNames, fieldPatterns);
+			case TLParen:
+				bump();
+				final inner = parseSwitchPatternOr();
+				if (cur.kind.match(TRParen))
+					bump();
+				inner;
+			case TOther(c) if (c == "[".code):
+				bump();
+				final items = new Array<HxSwitchPattern>();
+				while (!cur.kind.match(TOther("]".code)) && !cur.kind.match(TEof)) {
+					items.push(parseSwitchPatternOr());
+					if (cur.kind.match(TComma)) {
+						bump();
+						continue;
+					}
+					break;
+				}
+				if (cur.kind.match(TOther("]".code)))
+					bump();
+				PArray(items);
+			case TString(s):
+				bump();
+				PString(s);
+			case TInt(v):
+				bump();
+				PInt(v);
+			case TIdent(name):
+				bump();
+				if (isUpperStart(name) && cur.kind.match(TLParen)) {
+					bump();
+					final args = new Array<HxSwitchPattern>();
+					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) {
+						args.push(parseSwitchPatternOr());
+						if (cur.kind.match(TComma)) {
+							bump();
+							continue;
+						}
+						break;
+					}
+					if (cur.kind.match(TRParen))
+						bump();
+					PEnumExtract(name, args);
+				} else if (!isUpperStart(name) && acceptOtherChar("=")) {
+					PCapture(name, parseSwitchPatternAtom());
+				} else {
+					isUpperStart(name) ? PEnumValue(name) : PBind(name);
+				}
+			case _:
+				// Best-effort: consume one token and treat it as a wildcard.
+				bump();
+				PWildcard;
+		}
 	}
 
 	inline function peek():HxToken {
@@ -1448,6 +1544,9 @@ class HxParser {
 			return arrow;
 
 		return switch (cur.kind) {
+			case TIdent(name) if (name == "macro"):
+				bump();
+				parseMacroQuoteExpr(stop);
 			case TKeyword(k) if (k == KSwitch):
 				parseSwitchExpr(stop);
 			case TOther("@".code):
@@ -1518,6 +1617,36 @@ class HxParser {
 			case _:
 				parsePostfixExpr(stop);
 		}
+	}
+
+	function parseMacroQuoteExpr(stop:() -> Bool):HxExpr {
+		final wrappers = new Array<String>();
+		if (cur.kind.match(TKeyword(KUntyped))) {
+			bump();
+			wrappers.push("untyped");
+		}
+
+		final quoted = if (cur.kind.match(TLParen)) {
+			bump();
+			wrappers.push("parenthesis");
+			final inner = parseMacroQuotePayload(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+			if (cur.kind.match(TRParen))
+				bump();
+			inner;
+		} else {
+			parseMacroQuotePayload(stop);
+		}
+		return HxExpr.EMacroExpr(quoted, wrappers);
+	}
+
+	function parseMacroQuotePayload(stop:() -> Bool):HxExpr {
+		final left = parseExpr(() -> stop() || cur.kind.match(TKeyword(KIn)));
+		if (cur.kind.match(TKeyword(KIn))) {
+			bump();
+			final right = parseExpr(stop);
+			return EBinop("in", left, right);
+		}
+		return left;
 	}
 
 	function peekBinop(stop:() -> Bool):Null<{op:String, len:Int}> {

@@ -61,6 +61,21 @@ class TyperStage {
 					for (arg in args)
 						declarePatternBindings(scope, arg, TyType.fromHintText("Dynamic"));
 				}
+			case PObject(_fieldNames, fieldPatterns):
+				if (fieldPatterns != null) {
+					for (fieldPattern in fieldPatterns)
+						declarePatternBindings(scope, fieldPattern, TyType.fromHintText("Dynamic"));
+				}
+			case PCapture(name, inner):
+				scope.declareLocal(name, baseTy == null || baseTy.isUnknown() ? TyType.fromHintText("Dynamic") : baseTy);
+				declarePatternBindings(scope, inner, baseTy);
+			case PArray(items):
+				if (items != null) {
+					for (item in items)
+						declarePatternBindings(scope, item, TyType.fromHintText("Dynamic"));
+				}
+			case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PUnsupportedGuard(inner):
+				declarePatternBindings(scope, inner, baseTy);
 			case POr(patterns):
 				if (patterns != null) {
 					for (p in patterns)
@@ -610,6 +625,9 @@ class TyperStage {
 				final nested = new TyFunctionEnv("<lambda>", combinedParams, combinedLocals, TyType.unknown(), TyType.unknown());
 				inferExprType(body, nested, ctx, pos);
 				TyType.fromHintText("Dynamic");
+			case EMacroExpr(inner, _wrappers):
+				inferExprType(inner, scope, ctx, pos);
+				TyType.fromHintText("haxe.macro.Expr");
 			case ETryCatchRaw(_raw):
 				// Stage 3 bring-up: we only preserve the shape of `try/catch` in the expression tree.
 				// Correct semantics are Stage 4+ work, so we type it as `Dynamic` here.

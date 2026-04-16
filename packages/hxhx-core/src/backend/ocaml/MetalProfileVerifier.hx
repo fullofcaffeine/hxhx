@@ -190,6 +190,8 @@ class MetalProfileVerifier {
 				verifyExpr(filePath, className, fnName, stmtPos, callee, violations);
 				for (arg in args)
 					verifyExpr(filePath, className, fnName, stmtPos, arg, violations);
+			case EMacroExpr(inner, _wrappers):
+				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);
 			case EField(obj, _):
 				verifyExpr(filePath, className, fnName, stmtPos, obj, violations);
 			case EUnop(_, inner):

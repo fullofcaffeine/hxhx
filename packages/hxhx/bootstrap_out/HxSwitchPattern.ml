@@ -8,5 +8,11 @@ type hxswitchpattern =
 | PInt of int
 | PEnumValue of string
 | PEnumExtract of string * hxswitchpattern HxArray.t
+| PObject of string HxArray.t * hxswitchpattern HxArray.t
+| PCapture of string * hxswitchpattern
+| PArray of hxswitchpattern HxArray.t
+| PLengthGuard of hxswitchpattern * string * int
+| PStartsWithGuard of hxswitchpattern * string * string
+| PUnsupportedGuard of hxswitchpattern
 | PBind of string
 | POr of hxswitchpattern HxArray.t

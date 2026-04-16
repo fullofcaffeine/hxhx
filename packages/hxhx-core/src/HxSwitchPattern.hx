@@ -14,16 +14,19 @@
 	  - wildcard `_`
 	  - string/int literals
 	  - bare enum-like values (Stage3: a bare uppercase identifier such as `Macro`)
-	  - enum constructor extractors with simple argument binders/wildcards
+	  - enum constructor extractors with nested argument patterns
+	  - object-field patterns such as `{ expr : EConst(c) }`
+	  - capture/alias patterns such as `value = CString("x")`
+	  - exact-length array patterns such as `[]` and `[head, tail]`
+	  - guarded patterns for currently supported guard forms
 	  - binder patterns (`case name:`) used as a catch-all.
 
 	How
 	- This is *not* full Haxe `switch` semantics:
 	  - no guards (`if`),
-	  - limited multiple patterns (`case a | b:`) are supported, but only as a
-		shallow OR of simple literals (no guards, no extractors).
+	  - limited multiple patterns (`case a | b:`) are supported without guards.
 	  - enum constructor extractors only model constructor name + positional params;
-		guards and rich structural matching remain out of scope.
+		guards and richer pattern forms remain out of scope.
 	- It is intentionally “bring-up friendly” so we can run unmodified upstream
 	  harnesses without copying or translating upstream compiler code.
 **/
@@ -34,14 +37,21 @@ enum HxSwitchPattern {
 	PInt(value:Int);
 	PEnumValue(name:String);
 	PEnumExtract(name:String, args:Array<HxSwitchPattern>);
+	PObject(fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>);
+	PCapture(name:String, pattern:HxSwitchPattern);
+	PArray(items:Array<HxSwitchPattern>);
+	PLengthGuard(pattern:HxSwitchPattern, bindingName:String, length:Int);
+	PStartsWithGuard(pattern:HxSwitchPattern, bindingName:String, prefix:String);
+	PUnsupportedGuard(pattern:HxSwitchPattern);
 	PBind(name:String);
 
 	/**
 		OR-pattern list: `case a | b | c:`
 
 		Bring-up constraint
-		- This is parsed and lowered as a simple boolean OR of each sub-pattern’s
-		  condition against the scrutinee.
+		- This is parsed and lowered as a boolean OR of each sub-pattern’s
+		  condition against the scrutinee. Backends may preserve bindings when all
+		  alternatives bind the same names from the same value paths.
 		- This is *not* the full upstream pattern algebra; it exists primarily to
 		  support harness-style code like:
 		  `case 'Linux' | 'Windows': ...`

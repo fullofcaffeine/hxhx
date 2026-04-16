@@ -337,6 +337,9 @@ class ExprMacroExpander {
 			case EUntyped(expr):
 				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				re != expr ? EUntyped(re) : e;
+			case EMacroExpr(expr, wrappers):
+				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				re != expr ? EMacroExpr(re, wrappers) : e;
 			case _:
 				e;
 		}
@@ -349,6 +352,7 @@ class ExprMacroExpander {
 			case EFloat(_): "Float";
 			case EString(_): "String";
 			case EEnumValue(_): "EnumValue";
+			case EMacroExpr(_, _): "MacroExpr";
 			case ELambda(_, _): "Lambda";
 			case ETryCatchRaw(_): "TryCatch";
 			case ESwitchRaw(_): "Switch";

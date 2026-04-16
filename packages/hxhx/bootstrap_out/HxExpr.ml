@@ -13,6 +13,7 @@ type hxexpr =
 | EIdent of string
 | EField of hxexpr * string
 | ECall of hxexpr * hxexpr HxArray.t
+| EMacroExpr of hxexpr * string HxArray.t
 | ELambda of string HxArray.t * hxexpr
 | ETryCatchRaw of string
 | ESwitchRaw of string

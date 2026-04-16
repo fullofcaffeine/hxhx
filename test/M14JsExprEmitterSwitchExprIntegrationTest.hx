@@ -28,5 +28,52 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		final throwJs = JsExprEmitter.emit(throwExpr, exprScope);
 		assertContains(throwJs, "(function(){ throw", "switch expression throw branch should lower to throwing IIFE");
 		assertContains(throwJs, "unknown value", "switch expression throw branch should keep message text");
+
+		final objectPattern = HxParser.parseExprText("switch (payload.expr) { case Wrap(Text(s)): s; case Group({ value : Wrap(Text(s)) }) | Raw({ value : Wrap(Text(s)) }): s; case Pick(_, name): name; case At(_, { value : Wrap(IntText(i) | FloatText(i)) }): Std.string(i); case InOp(In, _, { value : inner, pos : _ }): Std.string(inner); case _: \"none\"; }");
+		final objectPatternJs = JsExprEmitter.emit(objectPattern, exprScope);
+		assertContains(objectPatternJs, "__sw.__hx_ctor === \"Group\"", "expression switch should test structural OR first constructor");
+		assertContains(objectPatternJs, "__sw.__hx_params[0].value.__hx_ctor === \"Wrap\"", "expression switch should match object field nested constructor");
+		assertContains(objectPatternJs, "var __sw_bind_s = __sw.__hx_params[0].value.__hx_params[0].__hx_params[0];",
+			"expression OR alternatives with matching bind paths should bind shared value");
+		assertContains(objectPatternJs, "__sw.__hx_params[1].value.__hx_params[0].__hx_ctor === \"IntText\"",
+			"expression switch should test first nested numeric OR constructor");
+		assertContains(objectPatternJs, "__sw.__hx_params[1].value.__hx_params[0].__hx_ctor === \"FloatText\"",
+			"expression switch should test second nested numeric OR constructor");
+		assertContains(objectPatternJs, "var __sw_bind_i = __sw.__hx_params[1].value.__hx_params[0].__hx_params[0];",
+			"expression switch should bind nested OR value");
+
+		final capturePattern = HxParser.parseExprText('switch payload { case Wrap(captured = (Text("hello") | IntText("9"))): Std.string(captured); case _: "none"; }');
+		final capturePatternJs = JsExprEmitter.emit(capturePattern, exprScope);
+		assertContains(capturePatternJs, "__sw.__hx_params[0].__hx_ctor === \"Text\"", "capture pattern should test first inner constructor");
+		assertContains(capturePatternJs, "__sw.__hx_params[0].__hx_params[0] === \"hello\"", "capture pattern should test first literal value");
+		assertContains(capturePatternJs, "__sw.__hx_params[0].__hx_ctor === \"IntText\"", "capture pattern should test second inner constructor");
+		assertContains(capturePatternJs, "var __sw_bind_captured = __sw.__hx_params[0];", "capture pattern should bind matched value");
+
+		final arrayPattern = HxParser.parseExprText('switch values { case []: "empty"; case [one]: one; case [left, right]: left + right; case _: "many"; }');
+		final arrayPatternJs = JsExprEmitter.emit(arrayPattern, exprScope);
+		assertContains(arrayPatternJs, "Array.isArray(__sw) && __sw.length === 0", "empty array pattern should test array length");
+		assertContains(arrayPatternJs, "Array.isArray(__sw) && __sw.length === 1", "single-item array pattern should test array length");
+		assertContains(arrayPatternJs, "var __sw_bind_one = __sw[0];", "single-item array pattern should bind item");
+		assertContains(arrayPatternJs, "Array.isArray(__sw) && __sw.length === 2", "two-item array pattern should test array length");
+		assertContains(arrayPatternJs, "var __sw_bind_left = __sw[0];", "two-item array pattern should bind first item");
+		assertContains(arrayPatternJs, "var __sw_bind_right = __sw[1];", "two-item array pattern should bind second item");
+
+		final guardedPattern = HxParser.parseExprText('switch values { case var rest if (rest.length == 3): Std.string(rest.length); case _: "other"; }');
+		final guardedPatternJs = JsExprEmitter.emit(guardedPattern, exprScope);
+		assertContains(guardedPatternJs, "if ((true) && (__sw.length === 3))", "guarded bind pattern should lower length guard");
+		assertContains(guardedPatternJs, "var __sw_bind_rest = __sw;", "guarded bind pattern should bind scrutinee");
+
+		final macroStringJs = JsExprEmitter.emit(HxParser.parseExprText('macro "bar"'), exprScope);
+		assertContains(macroStringJs, "__hx_ctor: \"EConst\"", "macro string quote should emit EConst expression def");
+		assertContains(macroStringJs, "__hx_ctor: \"CString\"", "macro string quote should emit CString constant");
+		assertContains(macroStringJs, "\"bar\"", "macro string quote should preserve literal");
+
+		final macroFieldJs = JsExprEmitter.emit(HxParser.parseExprText("macro null.foo"), exprScope);
+		assertContains(macroFieldJs, "__hx_ctor: \"EField\"", "macro field quote should emit EField expression def");
+		assertContains(macroFieldJs, "\"foo\"", "macro field quote should preserve field name");
+
+		final macroInJs = JsExprEmitter.emit(HxParser.parseExprText("macro 1 in 0"), exprScope);
+		assertContains(macroInJs, "__hx_ctor: \"EBinop\"", "macro in quote should emit EBinop expression def");
+		assertContains(macroInJs, "__hx_ctor: \"OpIn\"", "macro in quote should emit OpIn operator");
 	}
 }

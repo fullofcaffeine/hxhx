@@ -36,6 +36,24 @@ class M14JsStmtEmitterKeyValueForIntegrationTest {
 		assertContains(switchJs, "__sw_1.__hx_ctor === \"Method\"", "nested enum extractor should compare nested constructor");
 		assertContains(switchJs, "var m = __sw_1.__hx_params[1];", "nested enum extractor should bind nested arg");
 
+		final objectPatternBody = HxParser.parseFunctionBodyText("var out = null; switch payload { case EParenthesis({ expr : EConst(CString(s)) }) | EUntyped({ expr : EConst(CString(s)) }): out = s; case EArray(_, { expr : EConst(CInt(i) | CFloat(i)) }): out = Std.string(i); case _: out = \"none\"; } return out;");
+		final objectPatternWriter = new JsWriter();
+		final objectPatternScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
+		JsStmtEmitter.emitFunctionBody(objectPatternWriter, objectPatternBody, objectPatternScope);
+		final objectPatternJs = objectPatternWriter.toString();
+
+		assertContains(objectPatternJs, "__sw_0.__hx_ctor === \"EParenthesis\"", "OR object pattern should test first constructor");
+		assertContains(objectPatternJs, "__sw_0.__hx_ctor === \"EUntyped\"", "OR object pattern should test second constructor");
+		assertContains(objectPatternJs, "__sw_0.__hx_params[0].expr.__hx_ctor === \"EConst\"", "object pattern should match nested expr field");
+		assertContains(objectPatternJs, "var s = __sw_0.__hx_params[0].expr.__hx_params[0].__hx_params[0];",
+			"OR alternatives with identical bind paths should bind shared string value");
+		assertContains(objectPatternJs, "__sw_0.__hx_ctor === \"EArray\"", "object pattern should keep following enum extractor cases");
+		assertContains(objectPatternJs, "__sw_0.__hx_params[1].expr.__hx_params[0].__hx_ctor === \"CInt\"", "nested OR should test first numeric constructor");
+		assertContains(objectPatternJs, "__sw_0.__hx_params[1].expr.__hx_params[0].__hx_ctor === \"CFloat\"",
+			"nested OR should test second numeric constructor");
+		assertContains(objectPatternJs, "var i = __sw_0.__hx_params[1].expr.__hx_params[0].__hx_params[0];",
+			"nested OR alternatives with identical bind paths should bind shared numeric value");
+
 		final typeErrorBody = HxParser.parseFunctionBodyText("var s = HelperMacros.typeErrorText(for (key => value in 1) { }); t(HelperMacros.typeError(for (key => value in new MyNotIterator()) { }));");
 		final typeErrorWriter = new JsWriter();
 		final typeErrorScope = new JsFunctionScope(new haxe.ds.StringMap<String>());

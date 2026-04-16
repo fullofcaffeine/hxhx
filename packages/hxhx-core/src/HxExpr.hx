@@ -72,6 +72,22 @@ enum HxExpr {
 	ECall(callee:HxExpr, args:Array<HxExpr>);
 
 	/**
+		Expression-position macro quote: `macro expr`.
+
+		Why
+		- Upstream unit tests pass macro-quoted expressions to helper functions at
+		  runtime, e.g. `switchNormal(macro "x")`.
+		- Native JS bring-up needs to parse and lower these quotes into the small
+		  `haxe.macro.Expr` object shape used by those helpers.
+
+		What
+		- `expr` is the parsed quoted expression payload.
+		- `wrappers` records quote-only wrappers that the normal expression AST
+		  otherwise erases, currently `parenthesis` and `untyped`.
+	**/
+	EMacroExpr(expr:HxExpr, wrappers:Array<String>);
+
+	/**
 		Arrow-function / lambda expression (Stage 3 expansion): `arg -> expr`.
 
 		Why

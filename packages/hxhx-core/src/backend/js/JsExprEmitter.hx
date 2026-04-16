@@ -51,6 +51,8 @@ class JsExprEmitter {
 				emit(obj, scope) + JsNameMangler.propertySuffix(field);
 			case ECall(callee, args):
 				emitCall(callee, args, scope);
+			case EMacroExpr(inner, wrappers):
+				emitMacroExpr(inner, wrappers, scope);
 			case EUnop(op, inner):
 				"(" + op + emit(inner, scope) + ")";
 			case EBinop(op, left, right):
@@ -501,6 +503,68 @@ class JsExprEmitter {
 			case _: op;
 		}
 		return "(" + emit(left, scope) + " " + normalized + " " + emit(right, scope) + ")";
+	}
+
+	static function emitMacroExpr(expr:HxExpr, wrappers:Array<String>, scope:JsEmitScope):String {
+		var exprDef = macroExprDef(expr, scope);
+		if (wrappers != null) {
+			var i = wrappers.length;
+			while (i > 0) {
+				i--;
+				exprDef = switch (wrappers[i]) {
+					case "parenthesis":
+						macroEnum("EParenthesis", [macroExprObject(exprDef)]);
+					case "untyped":
+						macroEnum("EUntyped", [macroExprObject(exprDef)]);
+					case _:
+						exprDef;
+				}
+			}
+		}
+		return macroExprObject(exprDef);
+	}
+
+	static function macroExprObject(exprDef:String):String {
+		return "({expr: " + exprDef + ", pos: null})";
+	}
+
+	static function macroEnum(name:String, params:Array<String>):String {
+		final paramText = params == null ? "" : params.join(", ");
+		return "({__hx_ctor: " + JsNameMangler.quoteString(name) + ", __hx_index: 0, __hx_params: [" + paramText + "]})";
+	}
+
+	static function macroExprDef(expr:HxExpr, scope:JsEmitScope):String {
+		return switch (expr) {
+			case EString(v):
+				macroEnum("EConst", [macroEnum("CString", [JsNameMangler.quoteString(v)])]);
+			case EInt(v):
+				macroEnum("EConst", [macroEnum("CInt", [JsNameMangler.quoteString(Std.string(v))])]);
+			case EFloat(v):
+				macroEnum("EConst", [macroEnum("CFloat", [JsNameMangler.quoteString(Std.string(v))])]);
+			case ENull:
+				macroEnum("EConst", [macroEnum("CIdent", [JsNameMangler.quoteString("null")])]);
+			case EIdent(name):
+				macroEnum("EConst", [macroEnum("CIdent", [JsNameMangler.quoteString(name)])]);
+			case EField(obj, field):
+				macroEnum("EField", [emitMacroExpr(obj, [], scope), JsNameMangler.quoteString(field)]);
+			case EArrayAccess(array, index):
+				macroEnum("EArray", [emitMacroExpr(array, [], scope), emitMacroExpr(index, [], scope)]);
+			case EArrayDecl(values):
+				final items = values == null ? [] : values.map(v -> emitMacroExpr(v, [], scope));
+				macroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
+			case EBinop("in", left, right):
+				macroEnum("EBinop", [
+					macroEnum("OpIn", []),
+					emitMacroExpr(left, [], scope),
+					emitMacroExpr(right, [], scope)
+				]);
+			case EUntyped(inner):
+				macroEnum("EUntyped", [emitMacroExpr(inner, [], scope)]);
+			case EUnop(op, inner):
+				macroEnum("EUnop", [JsNameMangler.quoteString(op), emitMacroExpr(inner, [], scope)]);
+			case _:
+				macroEnum("EConst", [macroEnum("CIdent", [JsNameMangler.quoteString(emit(expr, scope))])]);
+		}
 	}
 
 	static function emitAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>, scope:JsEmitScope):String {
