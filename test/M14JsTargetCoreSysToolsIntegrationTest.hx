@@ -556,6 +556,26 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "StringTools.hx");
 	}
 
+	static function upstreamUnitTestReflectModule():TypedModule {
+		final nameArg = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
+		final pkgArg = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
+		final typeArg = new HxFunctionArg("s2", "String", HxDefaultValue.NoDefault);
+		final typesField = new HxFieldDecl("TYPES", HxVisibility.Public, true, "Array<Dynamic>",
+			HxExpr.EArrayDecl([HxExpr.EField(HxExpr.EIdent("unit"), "MyInterface")]));
+		final namesField = new HxFieldDecl("TNAMES", HxVisibility.Public, true, "Array<String>", HxExpr.EArrayDecl([
+			HxExpr.ECall(HxExpr.EIdent("u"), [HxExpr.EString("haxe.ds.StringMap")]),
+			HxExpr.ECall(HxExpr.EIdent("u2"), [HxExpr.EString("unit"), HxExpr.EString("MyInterface")])
+		]));
+		final testReflectClass = new HxClassDecl("TestReflect", false, [
+			new HxFunctionDecl("u", HxVisibility.Private, true, [nameArg], "String", [HxStmt.SReturn(HxExpr.EIdent("s"), HxPos.unknown())], ""),
+			new HxFunctionDecl("u2", HxVisibility.Private, true, [pkgArg, typeArg], "String", [
+				HxStmt.SReturn(HxExpr.EBinop("+", HxExpr.EBinop("+", HxExpr.EIdent("s"), HxExpr.EString(".")), HxExpr.EIdent("s2")), HxPos.unknown())
+			], "")
+		], [typesField, namesField]);
+		final decl = new HxModuleDecl("unit", [], testReflectClass, [testReflectClass], false, false);
+		return typedModule("", decl, "unit/TestReflect.hx");
+	}
+
 	static function haxeFormatJsonParserModule():TypedModule {
 		final parserClass = new HxClassDecl("JsonParser", false, [
 			new HxFunctionDecl("doParse", HxVisibility.Public, false, [], "Dynamic",
@@ -660,6 +680,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref"));',
 				'    Sys.println(haxe.crypto.Base64.BYTES);',
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
+				'    Sys.println(unit.TestReflect.TYPES[0].__hx_name);',
+				'    Sys.println(unit.TestReflect.TNAMES.join(","));',
 				"    var counter = new Counter(4);",
 				"    Sys.println(counter.add(5));",
 				"    Sys.println(counter.add());",
@@ -726,6 +748,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				haxeIoBytesModule(),
 				haxeCryptoBase64Module(),
 				stringToolsModule(),
+				upstreamUnitTestReflectModule(),
 				haxeFormatJsonParserModule()
 			];
 			for (module in utestResultModules())
@@ -817,6 +840,12 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertNotContains(js, "__hx_cls_haxe_io_Bytes.ofString(CHARS)", "same-class static field refs should not leak as globals");
 			assertContains(js, "__hx_cls_StringTools.fastCodeAt = function", "StringTools.fastCodeAt shim should emit");
 			assertContains(js, "return String(s).charCodeAt(index);", "StringTools.fastCodeAt should lower to JS charCodeAt");
+			assertContains(js, "__hx_cls_unit_TestReflect.TYPES = [__hx_type_ref(\"unit.MyInterface\")]",
+				"unresolved qualified value type refs should lower to runtime type placeholders");
+			assertContains(js, "__hx_cls_unit_TestReflect.u = function", "same-class static helper should emit before static field calls");
+			assertContains(js, "__hx_cls_unit_TestReflect.TNAMES = [__hx_cls_unit_TestReflect.u(\"haxe.ds.StringMap\")",
+				"same-class static helper calls in static field initializers should use class bindings");
+			assertNotContains(js, " unit.MyInterface", "qualified value type refs should not leak raw namespace access");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg", "compile-time macro Compiler ident regex should construct EReg");
 			assertTrue(js.indexOf("var __hx_cls_EReg = function") < js.indexOf("__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg"),
 				"EReg constructor should emit before static fields that instantiate it");
@@ -890,6 +919,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "bytes-ref", "qualified package static refs should execute through class bindings");
 			assertContains(stdout, "abc", "same-class static field refs should execute through class bindings");
 			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
+			assertContains(stdout, "unit.MyInterface", "unresolved qualified value type refs should preserve runtime type names");
+			assertContains(stdout, "haxe.ds.StringMap,unit.MyInterface", "same-class static helper calls should execute during static field initialization");
 			assertContains(stdout, "10\n13", "ordinary JS classes should construct, mutate instance fields, and apply default args");
 			assertContains(stdout, "2,3", "native JS Array prototype methods should remain available");
 			assertContains(stdout, "true,4,5,false", "runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");

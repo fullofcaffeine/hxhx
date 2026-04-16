@@ -624,6 +624,12 @@ class JsExprEmitter {
 				final classRef = scope.resolveClassRef(fullPath);
 				if (classRef != null)
 					return classRef;
+				final fallbackRef = resolvePackageQualifiedSimpleClass(fullPath, EField(obj, field), scope);
+				if (fallbackRef != null)
+					return fallbackRef;
+				final placeholderRef = resolvePackageQualifiedTypePlaceholder(fullPath, EField(obj, field), scope);
+				if (placeholderRef != null)
+					return placeholderRef;
 			}
 		}
 
@@ -867,6 +873,77 @@ class JsExprEmitter {
 			case _:
 				null;
 		}
+	}
+
+	static function rootIdentName(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EIdent(name) | EEnumValue(name):
+				name;
+			case EField(owner, _):
+				rootIdentName(owner);
+			case _:
+				null;
+		}
+	}
+
+	static function resolvePackageQualifiedSimpleClass(fullPath:String, expr:HxExpr, scope:JsEmitScope):Null<String> {
+		final dot = fullPath == null ? -1 : fullPath.lastIndexOf(".");
+		if (dot <= 0 || dot + 1 >= fullPath.length)
+			return null;
+		final root = rootIdentName(expr);
+		if (!isLikelyPackageRoot(root))
+			return null;
+		if (scope.resolveLocal(root) != null)
+			return null;
+		return scope.resolveClassRef(fullPath.substr(dot + 1));
+	}
+
+	static function resolvePackageQualifiedTypePlaceholder(fullPath:String, expr:HxExpr, scope:JsEmitScope):Null<String> {
+		final dot = fullPath == null ? -1 : fullPath.lastIndexOf(".");
+		if (dot <= 0 || dot + 1 >= fullPath.length)
+			return null;
+		switch (expr) {
+			case EField(owner, _):
+				final ownerPath = typeTestName(owner);
+				if (hasClassRefForTypePath(ownerPath, owner, scope))
+					return null;
+			case _:
+		}
+		final root = rootIdentName(expr);
+		if (!isLikelyPackageRoot(root))
+			return null;
+		if (scope.resolveLocal(root) != null)
+			return null;
+		final simple = fullPath.substr(dot + 1);
+		if (!isUpperStart(simple))
+			return null;
+		return "__hx_type_ref(" + JsNameMangler.quoteString(fullPath) + ")";
+	}
+
+	static function hasClassRefForTypePath(path:String, expr:HxExpr, scope:JsEmitScope):Bool {
+		if (path == null || scope == null)
+			return false;
+		if (scope.resolveClassRef(path) != null)
+			return true;
+		final dot = path.lastIndexOf(".");
+		if (dot <= 0 || dot + 1 >= path.length)
+			return false;
+		final root = rootIdentName(expr);
+		return isLikelyPackageRoot(root) && scope.resolveLocal(root) == null && scope.resolveClassRef(path.substr(dot + 1)) != null;
+	}
+
+	static function isLikelyPackageRoot(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		final code = name.charCodeAt(0);
+		return code >= "a".code && code <= "z".code;
+	}
+
+	static function isUpperStart(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		final code = name.charCodeAt(0);
+		return code >= "A".code && code <= "Z".code;
 	}
 
 	static function emitIsTypeTest(left:HxExpr, right:HxExpr, scope:JsEmitScope):String {

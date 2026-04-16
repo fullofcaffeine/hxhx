@@ -145,6 +145,21 @@ class JsTargetCore implements ITargetCore {
 
 	static function emitRuntimePrelude(writer:JsWriter):Void {
 		writer.writeln("var __hx_classes = Object.create(null);");
+		writer.writeln("var __hx_type_placeholders = Object.create(null);");
+		writer.writeln("function __hx_type_ref(name) {");
+		writer.pushIndent();
+		writer.writeln("if (Object.prototype.hasOwnProperty.call(__hx_classes, name)) return __hx_classes[name];");
+		writer.writeln("var __hx_last_dot = String(name).lastIndexOf(\".\");");
+		writer.writeln("var __hx_simple = __hx_last_dot >= 0 ? String(name).substr(__hx_last_dot + 1) : String(name);");
+		writer.writeln("if (Object.prototype.hasOwnProperty.call(__hx_classes, __hx_simple)) return __hx_classes[__hx_simple];");
+		writer.writeln("if (Object.prototype.hasOwnProperty.call(__hx_type_placeholders, name)) return __hx_type_placeholders[name];");
+		writer.writeln("var __hx_placeholder = function() {};");
+		writer.writeln("__hx_placeholder.__hx_name = String(name);");
+		writer.writeln("__hx_type_placeholders[name] = __hx_placeholder;");
+		writer.writeln("__hx_classes[name] = __hx_placeholder;");
+		writer.writeln("return __hx_placeholder;");
+		writer.popIndent();
+		writer.writeln("}");
 		writer.writeln("var Type = {");
 		writer.pushIndent();
 		writer.writeln("resolveClass: function (name) {");
@@ -224,8 +239,17 @@ class JsTargetCore implements ITargetCore {
 		if (unit.fullName == "EReg")
 			emitERegPrototypeRuntime(writer, unit.jsRef);
 		final staticRefs = staticMemberRefs(unit);
-		final staticScope = new JsFunctionScope(classRefs, staticRefs);
 
+		emitStaticFunctions(writer, unit, classRefs, staticRefs);
+		emitStaticFields(writer, unit, classRefs, staticRefs);
+		emitKnownClassRuntimeComplements(writer, unit.fullName, unit.jsRef);
+
+		if (unit.fullName != "EReg" && !shouldSkipInstancePrototypeEmission(unit.fullName))
+			emitPlainClassPrototypeMethods(writer, unit, classRefs);
+	}
+
+	static function emitStaticFields(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, staticRefs:haxe.ds.StringMap<String>):Void {
+		final staticScope = new JsFunctionScope(classRefs, staticRefs);
 		for (field in HxClassDecl.getFields(unit.decl)) {
 			if (!HxFieldDecl.getIsStatic(field))
 				continue;
@@ -255,7 +279,9 @@ class JsTargetCore implements ITargetCore {
 			};
 			writer.writeln(unit.jsRef + suffix + " = " + value + ";");
 		}
+	}
 
+	static function emitStaticFunctions(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, staticRefs:haxe.ds.StringMap<String>):Void {
 		for (fn in HxClassDecl.getFunctions(unit.decl)) {
 			if (!HxFunctionDecl.getIsStatic(fn))
 				continue;
@@ -290,10 +316,6 @@ class JsTargetCore implements ITargetCore {
 			writer.popIndent();
 			writer.writeln("};");
 		}
-		emitKnownClassRuntimeComplements(writer, unit.fullName, unit.jsRef);
-
-		if (unit.fullName != "EReg" && !shouldSkipInstancePrototypeEmission(unit.fullName))
-			emitPlainClassPrototypeMethods(writer, unit, classRefs);
 	}
 
 	static function emitPlainClassConstructor(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
