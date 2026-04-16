@@ -295,6 +295,19 @@ class M14HihExprTextParserIntegrationTest {
 			}
 		}
 
+		final numericSuffixStmts = HxParser.parseFunctionBodyText('eq(7i32, 7); eq(-1u32, (-1 : UInt)); eq(3000000000000i64 + "", "3000000000000"); eq(0xFFFFFFFFu32, (0xFFFFFFFF : UInt));');
+		assertTrue(numericSuffixStmts.length == 4, "expected numeric suffix statements to parse");
+		for (stmt in numericSuffixStmts) {
+			switch (stmt) {
+				case SExpr(EUnsupported(raw), _):
+					fail("numeric suffix statement parsed as unsupported: " + raw);
+				case SExpr(ECall(_, args), _):
+					assertTrue(args.length == 2, "expected numeric suffix call to keep two args");
+				case _:
+					fail("expected numeric suffix call statement");
+			}
+		}
+
 		final arrowComprehensionStmts = HxParser.parseFunctionBodyText("arr = [for (i in 0...5) value -> value * i];");
 		assertTrue(arrowComprehensionStmts.length == 1, "expected range comprehension arrow assignment");
 		switch (arrowComprehensionStmts[0]) {

@@ -626,7 +626,7 @@ let consumeNumericSuffix = fun self () -> let start = (Obj.magic self : t).index
       tempNumber := __assign_495;
       __assign_495
     ));
-    let c = !tempNumber in let __assign_497 = c = 105 || c = 73 || c = 102 || c = 70 in (
+    let c = !tempNumber in let __assign_497 = c = 105 || c = 73 || c = 117 || c = 85 || c = 102 || c = 70 in (
       tempRight := __assign_497;
       __assign_497
     )
@@ -1284,7 +1284,7 @@ let isHexDigit = fun c -> c >= 48 && c <= 57 || c >= 97 && c <= 102 || c >= 65 &
 
 let isNumericSeparator = fun c -> c = 95
 
-let isNumericSuffixStart = fun c -> c = 105 || c = 73 || c = 102 || c = 70
+let isNumericSuffixStart = fun c -> c = 105 || c = 73 || c = 117 || c = 85 || c = 102 || c = 70
 
 let normalizeNumberText = fun text -> let tempString = ref ("" : string) in (
   ignore (if text == Obj.magic (HxRuntime.hx_null) then let __assign_885 = ("" : string) in (

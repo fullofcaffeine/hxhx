@@ -80,7 +80,7 @@ class HxLexer {
 	}
 
 	static inline function isNumericSuffixStart(c:Int):Bool {
-		return c == "i".code || c == "I".code || c == "f".code || c == "F".code;
+		return c == "i".code || c == "I".code || c == "u".code || c == "U".code || c == "f".code || c == "F".code;
 	}
 
 	static function normalizeNumberText(text:String):String {
