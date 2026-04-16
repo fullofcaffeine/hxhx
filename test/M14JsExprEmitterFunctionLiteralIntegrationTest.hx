@@ -53,6 +53,12 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(mapComprehensionJs, "__hxhx_pair[0]", "map comprehension should use the yielded key");
 		assertContains(mapComprehensionJs, "x.toUpperCase()", "map comprehension should emit the yielded value expression");
 
+		final forExprFunction = HxParser.parseExprText("function() for (x in xml) null");
+		final forExprFunctionJs = JsExprEmitter.emit(forExprFunction, exprScope);
+		assertContains(forExprFunctionJs, "function()", "expression-position for-in should stay inside the callback");
+		assertContains(forExprFunctionJs, "for (var __i = 0; __i < __iter.length; __i++)", "expression-position for-in should emit an iteration IIFE");
+		assertContains(forExprFunctionJs, "return null", "expression-position for-in should preserve the null continuation");
+
 		final switchArrow = HxParser.parseExprText("f7 = switch maybe() { case true: f -> f; case false: f -> g -> f(g); }");
 		final switchArrowJs = JsExprEmitter.emit(switchArrow, exprScope);
 		assertContains(switchArrowJs, "f7 = (function () {", "assignment RHS switch expression parses structurally");

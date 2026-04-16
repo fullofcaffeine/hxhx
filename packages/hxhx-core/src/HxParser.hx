@@ -2571,6 +2571,36 @@ class HxParser {
 		if (!cur.kind.match(TKeyword(KFor)))
 			return EUnsupported("for_expr");
 
+		inline function isIdentKind(kind:HxTokenKind):Bool {
+			return switch (kind) {
+				case TIdent(_): true;
+				case _: false;
+			};
+		}
+
+		if (peekKind().match(TLParen) && isIdentKind(peekKind2()) && peekKind3().match(TKeyword(KIn))) {
+			bump(); // `for`
+			expect(TLParen, "'('");
+			final name = readIdent("expression for-in loop variable");
+			expect(TKeyword(KIn), "'in'");
+			inline function isTripleDotStart():Bool {
+				return cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
+			}
+			final startExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof) || isTripleDotStart());
+			var iterable:HxExpr = startExpr;
+			if (isTripleDotStart()) {
+				expect(TDot, "'.'");
+				expect(TDot, "'.'");
+				expect(TDot, "'.'");
+				final endExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				iterable = ERange(startExpr, endExpr);
+			}
+			expect(TRParen, "')'");
+			final body = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace)
+				|| cur.kind.match(TEof));
+			return ECall(EIdent("__hxhx_for_in"), [iterable, ELambda([name], body), ENull]);
+		}
+
 		final start = currentIndex();
 		bump(); // `for`
 

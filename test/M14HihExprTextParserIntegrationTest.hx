@@ -541,6 +541,20 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected typeErrorText key/value for expression initializer");
 		}
 
+		final valueForExprStmts = HxParser.parseFunctionBodyText("exc(function() for (x in xml) null);");
+		assertTrue(valueForExprStmts.length == 1, "expected expression-position for-in callback");
+		switch (valueForExprStmts[0]) {
+			case SExpr(ECall(EIdent("exc"), [
+				ELambda(fnArgs, ECall(EIdent("__hxhx_for_in"), [EIdent("xml"), ELambda(loopArgs, _), ENull]))
+			]), _):
+				assertTrue(fnArgs.length == 0, "expected zero-arg callback");
+				assertTrue(loopArgs.length == 1 && loopArgs[0] == "x", "expected expression for-in loop binding");
+			case SExpr(EUnsupported(raw), _):
+				fail("expression-position for-in parsed as unsupported: " + raw);
+			case _:
+				fail("expected expression-position for-in to lower to helper");
+		}
+
 		final privateAccessStmts = HxParser.parseFunctionBodyText("result.push(@:privateAccess (Exception.thrown(''):Exception).stack);");
 		assertTrue(privateAccessStmts.length == 1, "expected privateAccess push statement");
 		switch (privateAccessStmts[0]) {
