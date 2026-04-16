@@ -163,6 +163,9 @@ class JsTargetCore implements ITargetCore {
 				for (arg in args)
 					collectStaticInitClassDeps(arg, deps, byFullName, bySimpleFullName);
 			case EField(obj, _):
+				final dep = resolveStaticInitTypePath(staticInitExprTypePath(obj), byFullName, bySimpleFullName);
+				if (dep != null)
+					deps.push(dep);
 				collectStaticInitClassDeps(obj, deps, byFullName, bySimpleFullName);
 			case ECall(callee, args):
 				collectStaticInitClassDeps(callee, deps, byFullName, bySimpleFullName);
@@ -215,6 +218,16 @@ class JsTargetCore implements ITargetCore {
 			return null;
 		final fullName = bySimpleFullName.get(typePath);
 		return fullName == null || fullName.length == 0 ? null : fullName;
+	}
+
+	static function staticInitExprTypePath(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EIdent(name) | EEnumValue(name):
+				name;
+			case EField(owner, field): final prefix = staticInitExprTypePath(owner); prefix == null || prefix.length == 0 ? field : (prefix + "." + field);
+			case _:
+				null;
+		};
 	}
 
 	static function simpleName(fullName:String):String {
