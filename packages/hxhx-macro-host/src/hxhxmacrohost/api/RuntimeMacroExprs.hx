@@ -659,7 +659,8 @@ class RuntimeMacroExprs {
 				EUnop(parseUnop(op), false, convert(inner, pos));
 			case EBinop(op, left, right):
 				EBinop(parseBinop(op), convert(left, pos), convert(right, pos));
-			case ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) | ERange(_, _) | EUnsupported(_):
+			case EMacroExpr(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) | ERange(_, _) |
+				EUnsupported(_):
 				throw "runtime macro parse: unsupported parsed expression shape";
 		};
 	}
