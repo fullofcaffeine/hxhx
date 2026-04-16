@@ -81,6 +81,9 @@ class JsStmtEmitter {
 				writer.writeln("return " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 			case SThrow(expr, _):
 				writer.writeln("throw " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+			case SExpr(ECall(ESuper, _), _):
+				// Stage3 does not retain class hierarchy metadata yet; keep emitted JS parseable.
+				writer.writeln("/* base constructor call omitted */");
 			case SBreak(_):
 				writer.writeln("break;");
 			case SContinue(_):

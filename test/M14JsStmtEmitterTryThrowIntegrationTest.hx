@@ -9,6 +9,12 @@ class M14JsStmtEmitterTryThrowIntegrationTest {
 		}
 	}
 
+	static function assertNotContains(haystack:String, needle:String, label:String):Void {
+		if (haystack != null && haystack.indexOf(needle) >= 0) {
+			throw label + ": unexpected substring '" + needle + "' in '" + haystack + "'";
+		}
+	}
+
 	static function main() {
 		final pos = HxPos.unknown();
 		final tryStmt:HxStmt = STry(SBlock([SThrow(EString("boom"), pos)], pos), [
@@ -44,5 +50,12 @@ class M14JsStmtEmitterTryThrowIntegrationTest {
 		assertContains(functionJs, "((i >= 0) ? (function(){ throw new ArgumentException(\"i\"); })() : null)",
 			"if/throw body should lower to a throw expression");
 		assertContains(functionJs, "negativeOnly(10);", "local function call should emit after declaration");
+
+		final superWriter = new JsWriter();
+		final superScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
+		JsStmtEmitter.emitFunctionBody(superWriter, [SExpr(ECall(ESuper, [EIdent("message"), EIdent("previous")]), pos)], superScope);
+		final superJs = superWriter.toString();
+		assertContains(superJs, "base constructor call omitted", "function-style constructors should lower super calls to valid JS");
+		assertNotContains(superJs, "super(", "function-style constructors cannot emit raw JS super syntax");
 	}
 }
