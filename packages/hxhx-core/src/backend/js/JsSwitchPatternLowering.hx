@@ -43,6 +43,9 @@ class JsSwitchPatternLowering {
 				{cond: lowered.cond, bindings: bindings};
 			case PArray(items):
 				lowerArray(items, scrutineeVar);
+			case PExtractor(_, resultPattern):
+				final lowered = lower(resultPattern, scrutineeVar);
+				{cond: "false", bindings: lowered.bindings};
 			case PLengthGuard(inner, bindingName, length):
 				final lowered = lower(inner, scrutineeVar);
 				final guardCond = lowerGuardBindingValue(bindingName, lowered.bindings) + ".length === " + length;

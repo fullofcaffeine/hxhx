@@ -18,6 +18,8 @@
 	  - object-field patterns such as `{ expr : EConst(c) }`
 	  - capture/alias patterns such as `value = CString("x")`
 	  - exact-length array patterns such as `[]` and `[head, tail]`
+	  - extractor patterns such as `extract(_) => Some(value)` as a parsed,
+		bring-up-safe shape
 	  - guarded patterns for currently supported guard forms
 	  - binder patterns (`case name:`) used as a catch-all.
 
@@ -41,6 +43,7 @@ enum HxSwitchPattern {
 	PObject(fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>);
 	PCapture(name:String, pattern:HxSwitchPattern);
 	PArray(items:Array<HxSwitchPattern>);
+	PExtractor(extractorText:String, resultPattern:HxSwitchPattern);
 	PLengthGuard(pattern:HxSwitchPattern, bindingName:String, length:Int);
 	PStartsWithGuard(pattern:HxSwitchPattern, bindingName:String, prefix:String);
 	PIntEqualsGuard(pattern:HxSwitchPattern, bindingName:String, value:Int);

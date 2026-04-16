@@ -120,6 +120,10 @@ let rec declarePatternBindings = fun scope pattern baseTy -> ignore (match patte
     ));
     declarePatternBindings (Obj.magic scope) (Obj.magic item) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))
   )) done) else ())
+  | HxSwitchPattern.PExtractor (_p0, _p1) -> ignore ((
+    ignore _p0;
+    let _g2 = Obj.magic _p1 in let resultPattern = Obj.magic _g2 in declarePatternBindings (Obj.magic scope) (Obj.magic resultPattern) (Obj.magic (TyType.fromHintText ("Dynamic" : string)))
+  ))
   | HxSwitchPattern.PLengthGuard (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in (
     ignore _p1;
     ignore _p2;

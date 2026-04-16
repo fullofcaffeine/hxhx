@@ -338,6 +338,10 @@ class HxParser {
 	}
 
 	function parseSwitchPatternAtom():HxSwitchPattern {
+		final extractor = tryParseSwitchExtractorPattern();
+		if (extractor != null)
+			return extractor;
+
 		return switch (cur.kind) {
 			case TKeyword(KNull):
 				bump();
@@ -448,6 +452,56 @@ class HxParser {
 				bump();
 				PWildcard;
 		}
+	}
+
+	function isLikelyExtractorPatternStart():Bool {
+		return switch (cur.kind) {
+			case TIdent("_"):
+				peekKind().match(TDot);
+			case TIdent(name) if (!isUpperStart(name)): final nextKind = peekKind(); nextKind.match(TLParen) || nextKind.match(TDot);
+			case _:
+				false;
+		}
+	}
+
+	function tryParseSwitchExtractorPattern():Null<HxSwitchPattern> {
+		if (!isLikelyExtractorPatternStart())
+			return null;
+		final start = currentIndex();
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var braceDepth = 0;
+		while (!cur.kind.match(TEof)) {
+			final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0;
+			if (atTop && (cur.kind.match(TColon) || cur.kind.match(TRParen) || cur.kind.match(TRBrace)))
+				break;
+			if (atTop && cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code))) {
+				final extractorText = StringTools.trim(sliceSource(start, currentIndex()));
+				bump(); // `=`
+				bump(); // `>`
+				return PExtractor(extractorText, parseSwitchPatternOr());
+			}
+			switch (cur.kind) {
+				case TLParen:
+					parenDepth++;
+				case TRParen:
+					if (parenDepth > 0)
+						parenDepth--;
+				case TLBrace:
+					braceDepth++;
+				case TRBrace:
+					if (braceDepth > 0)
+						braceDepth--;
+				case TOther(c) if (c == "[".code):
+					bracketDepth++;
+				case TOther(c) if (c == "]".code):
+					if (bracketDepth > 0)
+						bracketDepth--;
+				case _:
+			}
+			bump();
+		}
+		return PUnsupportedGuard(PWildcard);
 	}
 
 	inline function peek():HxToken {
@@ -983,6 +1037,8 @@ class HxParser {
 		if (!acceptKeyword(KFunction))
 			fail("Expected 'function'");
 		final name = readIdent("local function name");
+		if (isOtherChar("<"))
+			skipBalancedAngles();
 		expect(TLParen, "'('");
 
 		final args = new Array<String>();
@@ -1011,7 +1067,7 @@ class HxParser {
 
 		if (cur.kind.match(TColon)) {
 			bump();
-			readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+			readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TSemicolon) || cur.kind.match(TEof));
 		}
 
 		final bodyExpr = if (cur.kind.match(TLBrace)) {

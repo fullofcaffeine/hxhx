@@ -164,6 +164,21 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local return function to lower to lambda call body");
 		}
 
+		final localGenericReturnFunctionStmts = HxParser.parseFunctionBodyText("function box<T>(value:T):Box<T> return { get: function() return value; }; box(1);");
+		assertTrue(localGenericReturnFunctionStmts.length == 2, "expected local generic return function plus call statement");
+		switch (localGenericReturnFunctionStmts[0]) {
+			case SVar(name, _, ELambda(args, EAnon(names, _)), _):
+				assertTrue(name == "box", "expected local generic function name to parse");
+				assertTrue(args.length == 1 && args[0] == "value", "expected local generic function arg to parse");
+				assertTrue(names.length == 1 && names[0] == "get", "expected expression-bodied return object to parse");
+			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
+				fail("local generic return function body parsed as unsupported: " + raw);
+			case SExpr(EUnsupported(raw), _):
+				fail("local generic return function declaration parsed as unsupported: " + raw);
+			case _:
+				fail("expected local generic return function to lower to lambda object body");
+		}
+
 		final inlineLocalFunctionStmts = HxParser.parseFunctionBodyText("inline function check(a:haxe.Int64, str:String) { eq(toHex(a), str); } check(x, \"0x21\");");
 		assertTrue(inlineLocalFunctionStmts.length == 2, "expected inline local function plus call statement");
 		switch (inlineLocalFunctionStmts[0]) {
@@ -482,6 +497,25 @@ class M14HihExprTextParserIntegrationTest {
 				fail("grouped switch expression parsed as unsupported: " + raw);
 			case _:
 				fail("expected grouped switch expression");
+		}
+
+		final extractorPatternExpr = HxParser.parseExprText('switch i { case _.isEven() => true: "even"; case pick(_) => Some(v): v; case _: "other"; }');
+		switch (extractorPatternExpr) {
+			case ESwitch(EIdent("i"), patterns, _):
+				switch (patterns[0]) {
+					case PExtractor("_.isEven()", PBool(true)):
+					case _:
+						fail("expected wildcard method extractor pattern");
+				}
+				switch (patterns[1]) {
+					case PExtractor("pick(_)", PEnumExtract("Some", [PBind("v")])):
+					case _:
+						fail("expected function-call extractor pattern with result binding");
+				}
+			case EUnsupported(raw):
+				fail("extractor switch parsed as unsupported: " + raw);
+			case _:
+				fail("expected switch expression with extractor patterns");
 		}
 
 		final switchIfElseSemicolonExpr = HxParser.parseExprText('switch v { case A(x): if (x == null) "null"; else "not null"; }');

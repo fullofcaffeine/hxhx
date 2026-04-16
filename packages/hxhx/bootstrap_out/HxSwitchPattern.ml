@@ -12,6 +12,7 @@ type hxswitchpattern =
 | PObject of string HxArray.t * hxswitchpattern HxArray.t
 | PCapture of string * hxswitchpattern
 | PArray of hxswitchpattern HxArray.t
+| PExtractor of string * hxswitchpattern
 | PLengthGuard of hxswitchpattern * string * int
 | PStartsWithGuard of hxswitchpattern * string * string
 | PIntEqualsGuard of hxswitchpattern * string * int

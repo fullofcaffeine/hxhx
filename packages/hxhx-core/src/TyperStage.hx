@@ -74,6 +74,8 @@ class TyperStage {
 					for (item in items)
 						declarePatternBindings(scope, item, TyType.fromHintText("Dynamic"));
 				}
+			case PExtractor(_, resultPattern):
+				declarePatternBindings(scope, resultPattern, TyType.fromHintText("Dynamic"));
 			case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PUnsupportedGuard(inner):
 				declarePatternBindings(scope, inner, baseTy);
 			case POr(patterns):

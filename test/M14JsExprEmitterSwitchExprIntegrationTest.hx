@@ -70,6 +70,11 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		assertContains(groupedPatternJs, "(__sw === 5)", "integer equality guard should use captured scrutinee value");
 		assertContains(groupedPatternJs, "var __sw_bind_val = __sw;", "captured guard branch should bind the capture");
 
+		final extractorPatternJs = JsExprEmitter.emit(HxParser.parseExprText('switch i { case _.isEven() => true: "even"; case pick(_) => Some(v): v; case _: "other"; }'),
+			exprScope);
+		assertContains(extractorPatternJs, "if (false)", "extractor patterns should parse and lower to a conservative disabled branch during bring-up");
+		assertContains(extractorPatternJs, "return \"even\";", "extractor branch bodies should still emit");
+
 		final switchIfElseSemicolon = HxParser.parseExprText('switch v { case A(x): if (x == null) "null"; else "not null"; }');
 		final switchIfElseSemicolonJs = JsExprEmitter.emit(switchIfElseSemicolon, exprScope);
 		assertContains(switchIfElseSemicolonJs, "__sw.__hx_ctor === \"A\"", "if/else branch switch should match enum constructor");
