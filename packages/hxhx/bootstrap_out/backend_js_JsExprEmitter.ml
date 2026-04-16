@@ -1105,7 +1105,7 @@ and emitNew = fun typePath args scope -> try let __fallback_result_223 = let _g 
 ) in Obj.magic __fallback_result_223 with
   | HxRuntime.Hx_return __ret_222 -> Obj.obj __ret_222
 and emitBinop = fun op left right scope -> try let __fallback_result_228 = (
-  ignore (if HxString.equals op "??" then ignore (let l = (emit (Obj.magic left) scope : string) in let r = (emit (Obj.magic right) scope : string) in raise (HxRuntime.Hx_return (Obj.repr (((((("((" ^ HxString.toStdString l) ^ " != null) ? ") ^ HxString.toStdString l) ^ " : ") ^ HxString.toStdString r) ^ ")")))) else ());
+  ignore (if HxString.equals op "??" then ignore (let l = (emit (Obj.magic left) scope : string) in let r = (emit (Obj.magic right) scope : string) in raise (HxRuntime.Hx_return (Obj.repr (((("(function(__hx_coalesce){ return (__hx_coalesce != null) ? __hx_coalesce : " ^ HxString.toStdString r) ^ "; })(") ^ HxString.toStdString l) ^ ")")))) else ());
   let tempString = ref ("" : string) in (
     ignore (match op with
       | "!=" -> let __assign_225 = ("!==" : string) in (

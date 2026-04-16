@@ -1553,8 +1553,9 @@ class HxParser {
 
 	static function binopPrec(op:String):Int {
 		return switch (op) {
-			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=": 1;
+			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=" | "??=": 1;
 			case "?": 2;
+			case "??": 2;
 			case "||": 2;
 			case "|": 2;
 			case "&&": 3;
@@ -1572,7 +1573,7 @@ class HxParser {
 
 	static function isAssignmentBinop(op:String):Bool {
 		return switch (op) {
-			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=":
+			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=" | "??=":
 				true;
 			case _:
 				false;
@@ -1852,6 +1853,12 @@ class HxParser {
 							{op: "||", len: 2};
 						} else {
 							nextIsOther("=".code) ? {op: "|=", len: 2} : {op: "|", len: 1};
+						}
+					case "?".code:
+						if (nextIsOther("?".code)) {
+							next2IsOther("=".code) ? {op: "??=", len: 3} : {op: "??", len: 2};
+						} else {
+							null;
 						}
 					case "^".code:
 						nextIsOther("=".code) ? {op: "^=", len: 2} : {op: "^", len: 1};

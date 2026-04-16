@@ -500,7 +500,7 @@ class JsExprEmitter {
 		if (op == "??") {
 			final l = emit(left, scope);
 			final r = emit(right, scope);
-			return "((" + l + " != null) ? " + l + " : " + r + ")";
+			return "(function(__hx_coalesce){ return (__hx_coalesce != null) ? __hx_coalesce : " + r + "; })(" + l + ")";
 		}
 		final normalized = switch (op) {
 			case "==": "===";

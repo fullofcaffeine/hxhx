@@ -246,6 +246,30 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local expression throw function to lower to throwing lambda");
 		}
 
+		final nullCoalescingStmts = HxParser.parseFunctionBodyText('var value = left ?? right; left ??= fallback; final notNull = (one : Null<Float>) ?? throw "";');
+		assertTrue(nullCoalescingStmts.length == 3, "expected null coalescing statements");
+		switch (nullCoalescingStmts[0]) {
+			case SVar("value", _, EBinop("??", EIdent("left"), EIdent("right")), _):
+			case SVar(_, _, EUnsupported(raw), _):
+				fail("null coalescing value parsed as unsupported: " + raw);
+			case _:
+				fail("expected null coalescing value expression");
+		}
+		switch (nullCoalescingStmts[1]) {
+			case SExpr(EBinop("??=", EIdent("left"), EIdent("fallback")), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("null coalescing assignment parsed as unsupported: " + raw);
+			case _:
+				fail("expected null coalescing assignment expression");
+		}
+		switch (nullCoalescingStmts[2]) {
+			case SVar("notNull", _, EBinop("??", EIdent("one"), ECall(EIdent("__hxhx_throw"), [EString("")])), _):
+			case SVar(_, _, EUnsupported(raw), _):
+				fail("null coalescing throw fallback parsed as unsupported: " + raw);
+			case _:
+				fail("expected null coalescing throw fallback expression");
+		}
+
 		final contextualAsStmts = HxParser.parseFunctionBodyText('var as = new unit.MyAbstract.MyAbstractSetter(); as.value = "foo"; eq(as.value, "foo");');
 		assertTrue(contextualAsStmts.length == 3, "expected contextual `as` local plus two statements");
 		switch (contextualAsStmts[0]) {

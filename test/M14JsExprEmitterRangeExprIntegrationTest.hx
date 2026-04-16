@@ -19,5 +19,14 @@ class M14JsExprEmitterRangeExprIntegrationTest {
 		assertContains(js, "var __range_end = 5;", "range expression captures end once");
 		assertContains(js, "for (var __range_i = __range_start; __range_i < __range_end; __range_i++) {", "range expression lowers to deterministic for loop");
 		assertContains(js, "__range_out.push(__range_i);", "range expression appends current loop value");
+
+		final coalesceJs = JsExprEmitter.emit(HxParser.parseExprText("left() ?? right()"), exprScope);
+		assertContains(coalesceJs, "function(__hx_coalesce)", "null coalescing should capture left once");
+		assertContains(coalesceJs, "__hx_coalesce != null", "null coalescing should check the captured left value");
+		assertContains(coalesceJs, ": right();", "null coalescing fallback should emit right expression lazily");
+		assertContains(coalesceJs, ")(left())", "null coalescing should evaluate the left expression as the IIFE argument");
+
+		final coalesceAssignJs = JsExprEmitter.emit(HxParser.parseExprText("target ??= fallback"), exprScope);
+		assertContains(coalesceAssignJs, "(target ??= fallback)", "null coalescing assignment should parse and emit as an assignment");
 	}
 }
