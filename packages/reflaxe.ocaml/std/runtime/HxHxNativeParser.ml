@@ -324,14 +324,24 @@ let parse_module_from_tokens (src : string) (toks : token array)
     let cur_type_parts : string list ref = ref [] in
     let cur_default_hint : string option ref = ref None in
     let reading_type = ref false in
+    let type_angle = ref 0 in
+    let type_bracket = ref 0 in
+    let type_brace = ref 0 in
     let rest_next = ref false in
+
+    let type_hint_top_level () =
+      !type_angle = 0 && !type_bracket = 0 && !type_brace = 0
+    in
 
     let flush_arg () =
       match !cur_name with
       | None ->
           cur_type_parts := [];
           cur_default_hint := None;
-          reading_type := false
+          reading_type := false;
+          type_angle := 0;
+          type_bracket := 0;
+          type_brace := 0
       | Some name ->
           let ty_raw = Stdlib.String.concat "" !cur_type_parts |> Stdlib.String.trim in
           let ty =
@@ -342,7 +352,10 @@ let parse_module_from_tokens (src : string) (toks : token array)
           cur_name := None;
           cur_type_parts := [];
           cur_default_hint := None;
-          reading_type := false
+          reading_type := false;
+          type_angle := 0;
+          type_bracket := 0;
+          type_brace := 0
     in
 
     while !paren > 0 do
@@ -378,8 +391,33 @@ let parse_module_from_tokens (src : string) (toks : token array)
             if !reading_type then cur_type_parts := !cur_type_parts @ [ ")" ];
             paren := !paren - 1;
             bump ())
-      | Sym (',', _) when !paren = 1 ->
+      | Sym (',', _)
+        when !paren = 1 && (not !reading_type || type_hint_top_level ()) ->
           flush_arg ();
+          bump ()
+      | Sym ('<', _) when !reading_type ->
+          type_angle := !type_angle + 1;
+          cur_type_parts := !cur_type_parts @ [ "<" ];
+          bump ()
+      | Sym ('>', _) when !reading_type ->
+          if !type_angle > 0 then type_angle := !type_angle - 1;
+          cur_type_parts := !cur_type_parts @ [ ">" ];
+          bump ()
+      | Sym ('[', _) when !reading_type ->
+          type_bracket := !type_bracket + 1;
+          cur_type_parts := !cur_type_parts @ [ "[" ];
+          bump ()
+      | Sym (']', _) when !reading_type ->
+          if !type_bracket > 0 then type_bracket := !type_bracket - 1;
+          cur_type_parts := !cur_type_parts @ [ "]" ];
+          bump ()
+      | Sym ('{', _) when !reading_type ->
+          type_brace := !type_brace + 1;
+          cur_type_parts := !cur_type_parts @ [ "{" ];
+          bump ()
+      | Sym ('}', _) when !reading_type && !type_brace > 0 ->
+          type_brace := !type_brace - 1;
+          cur_type_parts := !cur_type_parts @ [ "}" ];
           bump ()
       | Sym (':', _) when !paren = 1 && !cur_name <> None && not !reading_type
         ->

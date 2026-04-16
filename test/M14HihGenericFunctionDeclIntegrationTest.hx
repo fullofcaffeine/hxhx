@@ -75,5 +75,13 @@ class M14HihGenericFunctionDeclIntegrationTest {
 		assertArg(fold, 0, "init", "A");
 		assertArg(fold, 1, "f", "A->T->A");
 		assertEqString(HxFunctionDecl.getReturnTypeHint(fold), "A", "fold return type");
+
+		final srcWithNestedComma = 'class PairMapChecks {\n' + '  function compare<K, V>(left:Map<K, V>, right:Map<K, V>, ?pos:haxe.PosInfos) {}\n' + '}\n';
+		final nestedDecl = new HxParser(srcWithNestedComma).parseModule("PairMapChecks");
+		final compare = findFunction(findClass(nestedDecl, "PairMapChecks"), "compare");
+		assertEqInt(HxFunctionDecl.getArgs(compare).length, 3, "nested generic comma arg count");
+		assertArg(compare, 0, "left", "Map<K,V>");
+		assertArg(compare, 1, "right", "Map<K,V>");
+		assertArg(compare, 2, "pos", "haxe.PosInfos");
 	}
 }

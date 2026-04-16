@@ -50,6 +50,16 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertTrue(snapshot.indexOf("skipBalancedAngles (Obj.magic self) ()") >= 0, "bootstrap parser snapshot must skip method type parameter groups");
 	}
 
+	static function assertBootstrapNativeParserKeepsNestedTypeHintCommas():Void {
+		final snapshotPath = "packages/hxhx/bootstrap_out/runtime/HxHxNativeParser.ml";
+		final snapshot = readOptional(snapshotPath);
+		assertTrue(snapshot != null, "missing committed bootstrap native parser snapshot at " + snapshotPath);
+		assertTrue(snapshot.indexOf("let type_hint_top_level () =") >= 0, "bootstrap native parser snapshot must track nested type hints");
+		assertTrue(snapshot.indexOf("Sym (',', _)") >= 0 && snapshot.indexOf("type_hint_top_level ()") >= 0,
+			"bootstrap native parser snapshot must only split top-level parameter commas");
+		assertTrue(snapshot.indexOf("Sym ('<', _) when !reading_type") >= 0, "bootstrap native parser snapshot must track generic type hint angle depth");
+	}
+
 	static function assertParsedGenericMethods(decl:HxModuleDecl, sourceLabel:String):Void {
 		final cls = findClass(decl, "GenericMethods");
 
@@ -88,6 +98,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 
 	static function main() {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
+		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
 
 		final src = '@:generic class GenericMethods<T> {\n'
 			+ '  public function new() {}\n'
