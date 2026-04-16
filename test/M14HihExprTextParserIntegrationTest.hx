@@ -282,6 +282,19 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected numeric-cast-style block body to remain a single block");
 		}
 
+		final numericSeparatorStmts = HxParser.parseFunctionBodyText('eq(12_0, 120); eq(0x12_0, 0x120); feq(.3_4, .34); feq(1_2e3_4, 12e34); feq(1_2f64, 12f64); eq(12_0_i32, 120i32);');
+		assertTrue(numericSeparatorStmts.length == 6, "expected numeric separator statements to parse");
+		for (stmt in numericSeparatorStmts) {
+			switch (stmt) {
+				case SExpr(EUnsupported(raw), _):
+					fail("numeric separator statement parsed as unsupported: " + raw);
+				case SExpr(ECall(_, args), _):
+					assertTrue(args.length == 2, "expected numeric separator call to keep two args");
+				case _:
+					fail("expected numeric separator call statement");
+			}
+		}
+
 		final contextualAsStmts = HxParser.parseFunctionBodyText('var as = new unit.MyAbstract.MyAbstractSetter(); as.value = "foo"; eq(as.value, "foo");');
 		assertTrue(contextualAsStmts.length == 3, "expected contextual `as` local plus two statements");
 		switch (contextualAsStmts[0]) {

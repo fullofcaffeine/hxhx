@@ -71,6 +71,22 @@ class HxLexer {
 		return c >= 48 && c <= 57;
 	}
 
+	static inline function isHexDigit(c:Int):Bool {
+		return isDigit(c) || (c >= "a".code && c <= "f".code) || (c >= "A".code && c <= "F".code);
+	}
+
+	static inline function isNumericSeparator(c:Int):Bool {
+		return c == "_".code;
+	}
+
+	static inline function isNumericSuffixStart(c:Int):Bool {
+		return c == "i".code || c == "I".code || c == "f".code || c == "F".code;
+	}
+
+	static function normalizeNumberText(text:String):String {
+		return StringTools.replace(text == null ? "" : text, "_", "");
+	}
+
 	function skipWhitespaceAndComments():Void {
 		while (!eof()) {
 			final c = peek(0);
@@ -154,7 +170,7 @@ class HxLexer {
 
 	function readNumber(startPos:HxPos):HxToken {
 		final start = index;
-		while (!eof() && isDigit(peek(0)))
+		while (!eof() && (isDigit(peek(0)) || isNumericSeparator(peek(0))))
 			bump();
 
 		// Hex integer literals (Stage 3 expansion): `0xFF`, `0X7fffff`.
@@ -167,12 +183,13 @@ class HxLexer {
 			bump(); // 'x' or 'X'
 			while (!eof()) {
 				final c = peek(0);
-				final isHex = (c >= "0".code && c <= "9".code) || (c >= "a".code && c <= "f".code) || (c >= "A".code && c <= "F".code);
-				if (!isHex)
+				if (!isHexDigit(c) && !isNumericSeparator(c))
 					break;
 				bump();
 			}
-			final text = src.substring(start, index);
+			final numericEnd = index;
+			consumeNumericSuffix();
+			final text = normalizeNumberText(src.substring(start, numericEnd));
 			final value = Std.parseInt(text);
 			return new HxToken(TInt(value == null ? 0 : value), startPos);
 		}
@@ -181,7 +198,7 @@ class HxLexer {
 		if (!eof() && peek(0) == ".".code && peek(1) != ".".code && (isDigit(peek(1)) || !isIdentStart(peek(1)))) {
 			isFloat = true;
 			bump(); // '.'
-			while (!eof() && isDigit(peek(0)))
+			while (!eof() && (isDigit(peek(0)) || isNumericSeparator(peek(0))))
 				bump();
 		}
 
@@ -201,18 +218,56 @@ class HxLexer {
 				bump(); // 'e' or 'E'
 				if (peek(0) == "+".code || peek(0) == "-".code)
 					bump();
-				while (!eof() && isDigit(peek(0)))
+				while (!eof() && (isDigit(peek(0)) || isNumericSeparator(peek(0))))
 					bump();
 			}
 		}
 
-		final text = src.substring(start, index);
-		if (isFloat) {
+		final numericEnd = index;
+		final suffix = consumeNumericSuffix();
+		final text = normalizeNumberText(src.substring(start, numericEnd));
+		if (isFloat || StringTools.startsWith(suffix.toLowerCase(), "f")) {
 			final value = Std.parseFloat(text);
 			return new HxToken(TFloat(value), startPos);
 		}
 		final value = Std.parseInt(text);
 		return new HxToken(TInt(value == null ? 0 : value), startPos);
+	}
+
+	function readLeadingDotNumber(startPos:HxPos):HxToken {
+		final start = index;
+		bump(); // '.'
+		while (!eof() && (isDigit(peek(0)) || isNumericSeparator(peek(0))))
+			bump();
+
+		if (!eof() && (peek(0) == "e".code || peek(0) == "E".code)) {
+			var off = 1;
+			final sign = peek(1);
+			if (sign == "+".code || sign == "-".code)
+				off = 2;
+			if (isDigit(peek(off))) {
+				bump(); // 'e' or 'E'
+				if (peek(0) == "+".code || peek(0) == "-".code)
+					bump();
+				while (!eof() && (isDigit(peek(0)) || isNumericSeparator(peek(0))))
+					bump();
+			}
+		}
+
+		final numericEnd = index;
+		consumeNumericSuffix();
+		final text = normalizeNumberText(src.substring(start, numericEnd));
+		return new HxToken(TFloat(Std.parseFloat(text)), startPos);
+	}
+
+	function consumeNumericSuffix():String {
+		final start = index;
+		if (!eof() && isNumericSuffixStart(peek(0))) {
+			bump();
+			while (!eof() && isIdentCont(peek(0)))
+				bump();
+		}
+		return src.substring(start, index);
 	}
 
 	function readString(startPos:HxPos):HxToken {
@@ -437,6 +492,8 @@ class HxLexer {
 			case 58:
 				bump();
 				new HxToken(TColon, p); // :
+			case 46 if (isDigit(peek(1))):
+				readLeadingDotNumber(p);
 			case 46:
 				bump();
 				new HxToken(TDot, p); // .
