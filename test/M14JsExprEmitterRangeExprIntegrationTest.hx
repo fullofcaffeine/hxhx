@@ -29,6 +29,13 @@ class M14JsExprEmitterRangeExprIntegrationTest {
 		final coalesceAssignJs = JsExprEmitter.emit(HxParser.parseExprText("target ??= fallback"), exprScope);
 		assertContains(coalesceAssignJs, "(target ??= fallback)", "null coalescing assignment should parse and emit as an assignment");
 
+		final nullEqJs = JsExprEmitter.emit(HxParser.parseExprText("pattern == null && globalPattern == null"), exprScope);
+		assertContains(nullEqJs, "(pattern == null)", "null equality should treat omitted optional args as null-like");
+		assertContains(nullEqJs, "(globalPattern == null)", "null equality should use loose null checks for both sides");
+
+		final valueEqJs = JsExprEmitter.emit(HxParser.parseExprText("left == right"), exprScope);
+		assertContains(valueEqJs, "(left === right)", "non-null equality should keep strict JS equality");
+
 		final typeTestJs = JsExprEmitter.emit(HxParser.parseExprText("1f64 is Float"), exprScope);
 		assertContains(typeTestJs, "function(__hx_is)", "type-test should evaluate the value once");
 		assertContains(typeTestJs, 'typeof __hx_is === "number"', "Float type-test should lower to a JS number check");

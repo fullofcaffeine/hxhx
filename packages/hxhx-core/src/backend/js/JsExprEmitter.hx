@@ -1025,12 +1025,23 @@ class JsExprEmitter {
 			final r = emit(right, scope);
 			return "(function(__hx_coalesce){ return (__hx_coalesce != null) ? __hx_coalesce : " + r + "; })(" + l + ")";
 		}
+		if ((op == "==" || op == "!=") && (isNullLiteral(left) || isNullLiteral(right))) {
+			final nullAwareOp = op == "==" ? "==" : "!=";
+			return "(" + emit(left, scope) + " " + nullAwareOp + " " + emit(right, scope) + ")";
+		}
 		final normalized = switch (op) {
 			case "==": "===";
 			case "!=": "!==";
 			case _: op;
 		}
 		return "(" + emit(left, scope) + " " + normalized + " " + emit(right, scope) + ")";
+	}
+
+	static function isNullLiteral(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ENull: true;
+			case _: false;
+		}
 	}
 
 	static function emitMacroExpr(expr:HxExpr, wrappers:Array<String>, scope:JsEmitScope):String {
