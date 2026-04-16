@@ -147,6 +147,47 @@ class HxParser {
 		return StringTools.trim(sliceSource(start, currentIndex()));
 	}
 
+	function readMetadataHead():{name:String, endIndex:Int} {
+		var metaName = "";
+		var endIndex = currentIndex();
+		switch (cur.kind) {
+			case TIdent(name):
+				final start = currentIndex();
+				metaName = name;
+				endIndex = start + name.length;
+				bump();
+			case TKeyword(k):
+				final start = currentIndex();
+				metaName = keywordText(k);
+				endIndex = start + metaName.length;
+				bump();
+			case _:
+		}
+		while (cur.kind.match(TDot)) {
+			bump();
+			switch (cur.kind) {
+				case TIdent(segment):
+					final start = currentIndex();
+					metaName += "." + segment;
+					endIndex = start + segment.length;
+					bump();
+				case TKeyword(k):
+					final start = currentIndex();
+					final segment = keywordText(k);
+					metaName += "." + segment;
+					endIndex = start + segment.length;
+					bump();
+				case _:
+					break;
+			}
+		}
+		return {name: metaName, endIndex: endIndex};
+	}
+
+	function hasAttachedMetadataArgs(metaName:String, metaEndIndex:Int):Bool {
+		return metaName != "privateAccess" && cur.kind.match(TLParen) && currentIndex() == metaEndIndex;
+	}
+
 	function readPropertyAccessorText():String {
 		return switch (cur.kind) {
 			case TIdent(name):
@@ -1633,17 +1674,8 @@ class HxParser {
 					bump();
 					if (cur.kind.match(TColon))
 						bump();
-					var metaName = "";
-					switch (cur.kind) {
-						case TIdent(name):
-							metaName = name;
-							bump();
-						case TKeyword(k):
-							metaName = keywordText(k);
-							bump();
-						case _:
-					}
-					if (cur.kind.match(TLParen) && metaName != "privateAccess") {
+					final meta = readMetadataHead();
+					if (hasAttachedMetadataArgs(meta.name, meta.endIndex)) {
 						bump();
 						try
 							skipBalancedParens()
@@ -2693,17 +2725,9 @@ class HxParser {
 					// Optional `:` in `@:meta`.
 					if (cur.kind.match(TColon))
 						bump();
-					// Meta name.
-					switch (cur.kind) {
-						case TIdent(_):
-							bump();
-						case TKeyword(_):
-							// Some meta-like tokens are keywords in our lexer; accept them best-effort.
-							bump();
-						case _:
-					}
-					// Optional meta args: `@:meta(...)`.
-					if (cur.kind.match(TLParen)) {
+					final meta = readMetadataHead();
+					// Optional attached meta args: `@:meta(...)`.
+					if (hasAttachedMetadataArgs(meta.name, meta.endIndex)) {
 						bump();
 						try
 							skipBalancedParens()
