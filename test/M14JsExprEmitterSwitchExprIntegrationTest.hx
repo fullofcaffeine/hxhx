@@ -99,6 +99,10 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		assertContains(macroInJs, "__hx_ctor: \"EBinop\"", "macro in quote should emit EBinop expression def");
 		assertContains(macroInJs, "__hx_ctor: \"OpIn\"", "macro in quote should emit OpIn operator");
 
+		final macroCallSpliceJs = JsExprEmitter.emit(HxParser.parseExprText('macro deq(0, $$i{name}(0))'), exprScope);
+		assertContains(macroCallSpliceJs, "__hx_ctor: \"ECall\"", "macro call quote should emit ECall expression def");
+		assertContains(macroCallSpliceJs, "String(name)", "macro identifier splice should use runtime identifier name");
+
 		final macroIfNoElseJs = JsExprEmitter.emit(HxParser.parseExprText("macro if (1) 2"), exprScope);
 		assertContains(macroIfNoElseJs, "__hx_ctor: \"EIf\"", "macro if without else should emit EIf expression def");
 		assertContains(macroIfNoElseJs, ", null]", "macro if without else should preserve null else branch");

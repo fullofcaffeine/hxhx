@@ -467,6 +467,8 @@ class HxParser {
 			case TInt(v):
 				bump();
 				PInt(v);
+			case TIdent(name) if (name == "macro" && peekKind().match(TColon)):
+				parseMacroTypeSwitchPattern();
 			case TIdent(name):
 				bump();
 				if (isUpperStart(name) && cur.kind.match(TLParen)) {
@@ -493,6 +495,24 @@ class HxParser {
 				bump();
 				PWildcard;
 		}
+	}
+
+	function parseMacroTypeSwitchPattern():HxSwitchPattern {
+		// `case macro:Type:` has two colons: one belongs to the macro complex-type
+		// quote and the next one separates the case body. Consume only the quoted
+		// type payload here so `parseSwitchExpr`/`parseStmt` can consume the case
+		// separator normally.
+		switch (cur.kind) {
+			case TIdent("macro"):
+				bump();
+			case _:
+				return PWildcard;
+		}
+		if (cur.kind.match(TColon))
+			bump();
+		final typeText = readTypeHintText(() -> cur.kind.match(TColon) || cur.kind.match(TComma) || cur.kind.match(TRBrace) || cur.kind.match(TEof)
+			|| cur.kind.match(TKeyword(KIf)) || isOtherChar("|"));
+		return PEnumValue("macro:" + typeText);
 	}
 
 	function isLikelyExtractorPatternStart():Bool {
@@ -995,6 +1015,8 @@ class HxParser {
 				(isUpperStart(name) && !cur.kind.match(TDot) && hasLowerAlpha(name)) ? EEnumValue(name) : EIdent(name);
 			case TOther(c) if (c == "[".code):
 				parseArrayDeclExpr();
+			case TOther(c) if (c == "$".code):
+				parseMacroReificationExpr();
 			case TOther(c):
 				final raw = String.fromCharCode(c);
 				bump();
@@ -1004,6 +1026,45 @@ class HxParser {
 				final raw = Std.string(cur.kind);
 				bump();
 				EUnsupported(raw);
+		}
+	}
+
+	function parseMacroReificationExpr():HxExpr {
+		// Macro reification splice: `$i{name}`, `$e{expr}`, `$b{expr}`, ...
+		//
+		// Bring-up scope
+		// - Consume the balanced splice payload so macro quotes don't throw and
+		//   become `body_parse_error`.
+		// - Model identifier splices explicitly because generator code commonly uses
+		//   `$i{name}(...)` to build calls to generated fields.
+		if (!acceptOtherChar("$"))
+			return EUnsupported("$");
+		final spliceKind = switch (cur.kind) {
+			case TIdent(name):
+				bump();
+				name;
+			case _:
+				"expr";
+		}
+		final payload = if (cur.kind.match(TLBrace)) {
+			bump();
+			final inner = parseExpr(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
+			if (cur.kind.match(TRBrace))
+				bump();
+			inner;
+		} else {
+			parseUnaryExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TSemicolon)
+				|| cur.kind.match(TEof));
+		}
+		return switch (spliceKind) {
+			case "i":
+				ECall(EIdent("__hxhx_macro_ident_splice"), [payload]);
+			case "b":
+				ECall(EIdent("__hxhx_macro_block_splice"), [payload]);
+			case "e":
+				ECall(EIdent("__hxhx_macro_expr_splice"), [payload]);
+			case other:
+				ECall(EIdent("__hxhx_macro_" + other + "_splice"), [payload]);
 		}
 	}
 
@@ -1744,6 +1805,9 @@ class HxParser {
 			return HxExpr.EMacroType(readTypeHintText(stop));
 		}
 
+		if (cur.kind.match(TKeyword(KClass)))
+			return parseMacroClassQuoteExpr();
+
 		final quoted = if (cur.kind.match(TLParen)) {
 			bump();
 			wrappers.push("parenthesis");
@@ -1755,6 +1819,54 @@ class HxParser {
 			parseMacroQuotePayload(stop);
 		}
 		return HxExpr.EMacroExpr(quoted, wrappers);
+	}
+
+	function parseMacroClassQuoteExpr():HxExpr {
+		// `macro class Name ... { ... }` produces a `haxe.macro.TypeDefinition`, not
+		// a normal expression quote. Stage3 only needs to consume the balanced class
+		// quote and expose the object fields used by generator code (`name`, `fields`).
+		if (!acceptKeyword(KClass))
+			fail("Expected 'class'");
+
+		var className = "__hxhx_macro_class";
+		switch (cur.kind) {
+			case TIdent(name):
+				className = name;
+				bump();
+			case _:
+				// Anonymous macro class quotes are valid; keep a stable placeholder name.
+		}
+
+		while (!cur.kind.match(TLBrace) && !cur.kind.match(TEof)) {
+			switch (cur.kind) {
+				case TLParen:
+					bump();
+					skipBalancedParens();
+				case TOther(c) if (c == "<".code):
+					skipBalancedAngles();
+				case _:
+					bump();
+			}
+		}
+		if (cur.kind.match(TLBrace)) {
+			bump();
+			skipBalancedBraces();
+		}
+
+		return EAnon(["pack", "name", "pos", "meta", "params", "isExtern", "kind", "fields"], [
+			EArrayDecl([]),
+			EString(className),
+			ENull,
+			EArrayDecl([]),
+			EArrayDecl([]),
+			EBool(false),
+			EAnon(["__hx_ctor", "__hx_index", "__hx_params"], [
+				EString("TDClass"),
+				EInt(0),
+				EArrayDecl([ENull, EArrayDecl([]), EBool(false), EBool(false), EBool(false)])
+			]),
+			EArrayDecl([])
+		]);
 	}
 
 	function parseMacroQuotePayload(stop:() -> Bool):HxExpr {

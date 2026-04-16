@@ -653,6 +653,64 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected macro if with else to preserve else expression");
 		}
 
+		final macroClassVars = HxParser.parseFunctionBodyText('var td = macro class Generated extends Base { static function build():Int return 1; }; td.fields.push(field); (macro class Helper { public function run() {} }).fields;');
+		assertTrue(macroClassVars.length == 3, "expected macro class quote body to parse");
+		switch (macroClassVars[0]) {
+			case SVar("td", _, EAnon(names, values), _):
+				assertTrue(names.indexOf("name") >= 0, "expected macro class placeholder to expose a name field");
+				assertTrue(names.indexOf("fields") >= 0, "expected macro class placeholder to expose fields");
+				switch (values[names.indexOf("name")]) {
+					case EString("Generated"):
+					case _:
+						fail("expected macro class placeholder name to match the quoted class");
+				}
+			case SVar(_, _, EUnsupported(raw), _):
+				fail("macro class quote parsed as unsupported: " + raw);
+			case _:
+				fail("expected macro class quote to parse as a type-definition placeholder");
+		}
+		switch (macroClassVars[1]) {
+			case SExpr(ECall(EField(EField(EIdent("td"), "fields"), "push"), [EIdent("field")]), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("macro class follow-up field push parsed as unsupported: " + raw);
+			case _:
+				fail("expected macro class follow-up field push to parse");
+		}
+		switch (macroClassVars[2]) {
+			case SExpr(EField(EAnon(names, _), "fields"), _):
+				assertTrue(names.indexOf("fields") >= 0, "expected parenthesized macro class quote to expose fields");
+			case SExpr(EUnsupported(raw), _):
+				fail("parenthesized macro class field access parsed as unsupported: " + raw);
+			case _:
+				fail("expected parenthesized macro class field access to parse");
+		}
+
+		final macroTypePatternStmts = HxParser.parseFunctionBodyText('var info = switch (ct) { case macro:Sample<Int>: { name: "sample" }; case _: throw false; };');
+		assertTrue(macroTypePatternStmts.length == 1, "expected macro type pattern switch var to parse");
+		switch (macroTypePatternStmts[0]) {
+			case SVar("info", _, ESwitch(_, [PEnumValue("macro:Sample<Int>"), PWildcard], [EAnon(names, _), ECall(EIdent("__hxhx_throw"), [EBool(false)])]), _):
+				assertTrue(names.indexOf("name") >= 0, "expected macro type pattern switch body to parse anon object");
+			case SVar(_, _, EUnsupported(raw), _):
+				fail("macro type pattern switch parsed as unsupported: " + raw);
+			case _:
+				fail("expected macro type pattern switch expression");
+		}
+
+		final macroIdentSpliceStmts = HxParser.parseFunctionBodyText('tests.push(macro deq(0, $$i{name}(0)));');
+		assertTrue(macroIdentSpliceStmts.length == 1, "expected macro identifier splice push to parse");
+		switch (macroIdentSpliceStmts[0]) {
+			case SExpr(ECall(EField(EIdent("tests"), "push"), [
+				EMacroExpr(ECall(EIdent("deq"), [
+					EInt(0),
+					ECall(ECall(EIdent("__hxhx_macro_ident_splice"), [EIdent("name")]), [EInt(0)])
+				]), _)
+			]), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("macro identifier splice push parsed as unsupported: " + raw);
+			case _:
+				fail("expected macro identifier splice push expression");
+		}
+
 		final exprMetaCalls = HxParser.parseFunctionBodyText('eq(readMeta(@tag ("value")).name, "tag"); eq(readMeta(@tag("arg") "value").args.length, 1);');
 		assertTrue(exprMetaCalls.length == 2, "expected expression metadata calls to parse");
 		switch (exprMetaCalls[0]) {
