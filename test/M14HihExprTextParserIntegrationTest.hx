@@ -217,6 +217,35 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local if/throw function to lower to lambda ternary");
 		}
 
+		final localBlockThrowFunctionStmts = HxParser.parseFunctionBodyText('function failBlock():String { throw "never"; }; var s = try failBlock() catch(e:String) e; eq(s, "never");');
+		assertTrue(localBlockThrowFunctionStmts.length == 3, "expected local block throw function, var, and assertion");
+		switch (localBlockThrowFunctionStmts[0]) {
+			case SVar("failBlock", _, ELambda([], ECall(EIdent("__hxhx_throw"), [EString("never")])), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("local block throw function parsed as unsupported: " + raw);
+			case _:
+				fail("expected local block throw function to lower to throwing lambda");
+		}
+		switch (localBlockThrowFunctionStmts[1]) {
+			case SVar("s", _, ETryCatchRaw(_), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("try/catch after local block throw function parsed as unsupported: " + raw);
+			case _:
+				fail("expected statement after local block throw function to remain aligned");
+		}
+
+		final localExprThrowFunctionStmts = HxParser.parseFunctionBodyText('function failExpr():String throw "never"; var s = try failExpr() catch(e:String) e; eq(s, "never");');
+		assertTrue(localExprThrowFunctionStmts.length == 3, "expected local expression throw function, var, and assertion");
+		switch (localExprThrowFunctionStmts[0]) {
+			case SVar("failExpr", _, ELambda([], ECall(EIdent("__hxhx_throw"), [EString("never")])), _):
+			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
+				fail("local expression throw function body parsed as unsupported: " + raw);
+			case SExpr(EUnsupported(raw), _):
+				fail("local expression throw function parsed as unsupported: " + raw);
+			case _:
+				fail("expected local expression throw function to lower to throwing lambda");
+		}
+
 		final contextualAsStmts = HxParser.parseFunctionBodyText('var as = new unit.MyAbstract.MyAbstractSetter(); as.value = "foo"; eq(as.value, "foo");');
 		assertTrue(contextualAsStmts.length == 3, "expected contextual `as` local plus two statements");
 		switch (contextualAsStmts[0]) {

@@ -1054,7 +1054,8 @@ class HxParser {
 
 		if (cur.kind.match(TColon)) {
 			bump();
-			readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+			readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
+				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
 		}
 
 		final bodyExpr = if (acceptKeyword(KReturn)) {
@@ -1108,7 +1109,8 @@ class HxParser {
 
 		if (cur.kind.match(TColon)) {
 			bump();
-			readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+			readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
+				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
 		}
 
 		final bodyExpr = if (cur.kind.match(TLBrace)) {
@@ -1124,6 +1126,8 @@ class HxParser {
 			expr;
 		}
 
+		if (cur.kind.match(TSemicolon))
+			bump();
 		return SVar(name, "", ELambda(args, bodyExpr), pos);
 	}
 
@@ -3147,7 +3151,7 @@ class HxParser {
 		if (cur.kind.match(TColon)) {
 			bump();
 			returnType = readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TSemicolon) || cur.kind.match(TEof)
-				|| cur.kind.match(TKeyword(KReturn)));
+				|| cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow)));
 		}
 
 		final body = new Array<HxStmt>();
