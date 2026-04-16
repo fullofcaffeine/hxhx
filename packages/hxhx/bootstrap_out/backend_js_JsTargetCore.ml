@@ -2279,6 +2279,8 @@ let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_resu
 ) in Obj.magic __fallback_result_173 with
   | HxRuntime.Hx_return __ret_172 -> Obj.obj __ret_172
 
+let placeholderSourceMap = fun outputPath -> ("{\"version\":3,\"file\":" ^ HxString.toStdString (Backend_js_JsNameMangler.quoteString (Haxe_io_Path.withoutDirectory (outputPath : string) : string))) ^ ",\"sources\":[],\"names\":[],\"mappings\":\"\"}"
+
 let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Backend_BackendContext.t) -> (
   ignore self;
   let hint = ((Obj.magic context : Backend_BackendContext.t).outputFileHint : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
@@ -2331,10 +2333,12 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
               ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
               Backend_js_JsWriter.writeln (Obj.magic writer) ("})();" : string)
             )) else ());
-            let content = (Backend_js_JsWriter.toString (Obj.magic writer) () : string) in (
-              ignore (HxFile.saveContent (!tempMaybeString : string) (content : string));
+            ignore (let content = (Backend_js_JsWriter.toString (Obj.magic writer) () : string) in HxFile.saveContent (!tempMaybeString : string) (content : string));
+            let sourceMapPath = (HxString.toStdString (!tempMaybeString) ^ ".map" : string) in (
+              ignore (let content = (placeholderSourceMap (!tempMaybeString : string) : string) in HxFile.saveContent (sourceMapPath : string) (content : string));
               Backend_EmitResult.create (!tempMaybeString : string) (Obj.magic (let __arr_9 = HxArray.create () in (
                 ignore (HxArray.push __arr_9 (Backend_EmitArtifact.create ("entry_js" : string) (!tempMaybeString : string)));
+                ignore (HxArray.push __arr_9 (Backend_EmitArtifact.create ("source_map" : string) (sourceMapPath : string)));
                 __arr_9
               ))) false
             )

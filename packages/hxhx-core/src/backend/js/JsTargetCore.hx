@@ -2352,6 +2352,10 @@ class JsTargetCore implements ITargetCore {
 		return bySimpleName.get(parts[parts.length - 1]);
 	}
 
+	static function placeholderSourceMap(outputPath:String):String {
+		return "{\"version\":3,\"file\":" + JsNameMangler.quoteString(Path.withoutDirectory(outputPath)) + ",\"sources\":[],\"names\":[],\"mappings\":\"\"}";
+	}
+
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		final hint = context.outputFileHint;
 		final outputPath = (hint != null && hint.length > 0) ? hint : Path.join([context.outputDir, "out.js"]);
@@ -2392,6 +2396,11 @@ class JsTargetCore implements ITargetCore {
 		}
 
 		sys.io.File.saveContent(outputPath, writer.toString());
-		return new EmitResult(outputPath, [new EmitArtifact("entry_js", outputPath)], false);
+		final sourceMapPath = outputPath + ".map";
+		sys.io.File.saveContent(sourceMapPath, placeholderSourceMap(outputPath));
+		return new EmitResult(outputPath, [
+			new EmitArtifact("entry_js", outputPath),
+			new EmitArtifact("source_map", sourceMapPath)
+		], false);
 	}
 }

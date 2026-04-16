@@ -807,7 +807,19 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
 			final context = new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
-			new JsBackend().emit(program, context);
+			final result = new JsBackend().emit(program, context);
+
+			final sourceMapPath = artifactPath + ".map";
+			var hasSourceMapArtifact = false;
+			for (artifact in result.artifacts) {
+				if (artifact.kind == "source_map" && artifact.path == sourceMapPath)
+					hasSourceMapArtifact = true;
+			}
+			assertTrue(FileSystem.exists(sourceMapPath), "JS backend should emit a source-map sidecar for runci artifact collection");
+			assertTrue(hasSourceMapArtifact, "JS backend should report the source-map sidecar in EmitResult artifacts");
+			final sourceMap = File.getContent(sourceMapPath);
+			assertContains(sourceMap, "\"version\":3", "source-map sidecar should be valid sourcemap JSON");
+			assertContains(sourceMap, "\"file\":\"main.js\"", "source-map sidecar should name the emitted JS file");
 
 			final js = File.getContent(artifactPath);
 			assertContains(js, "__hx_cls_haxe_SysTools.quoteUnixArg = function", "SysTools quoteUnixArg shim should emit");
