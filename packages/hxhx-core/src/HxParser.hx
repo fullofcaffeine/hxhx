@@ -1855,6 +1855,8 @@ class HxParser {
 				bump();
 
 			final thenExpr = parseExpr(() -> cur.kind.match(TKeyword(KElse)) || cur.kind.match(TEof));
+			if (cur.kind.match(TSemicolon) && peekKind().match(TKeyword(KElse)))
+				bump();
 			if (!acceptKeyword(KElse))
 				return EUnsupported("if_missing_else");
 			final elseExpr = parseExpr(stop);

@@ -484,6 +484,28 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected grouped switch expression");
 		}
 
+		final switchIfElseSemicolonExpr = HxParser.parseExprText('switch v { case A(x): if (x == null) "null"; else "not null"; }');
+		switch (switchIfElseSemicolonExpr) {
+			case ESwitch(EIdent("v"), patterns, exprs):
+				assertTrue(patterns.length == 1, "expected single enum extractor case");
+				switch (patterns[0]) {
+					case PEnumExtract("A", [PBind("x")]):
+					case _:
+						fail("expected enum extractor with binder");
+				}
+				switch (exprs[0]) {
+					case ETernary(_, EString("null"), EString("not null")):
+					case EUnsupported(raw):
+						fail("switch if/else semicolon branch parsed as unsupported: " + raw);
+					case _:
+						fail("expected switch branch to parse as ternary expression");
+				}
+			case EUnsupported(raw):
+				fail("switch if/else semicolon expression parsed as unsupported: " + raw);
+			case _:
+				fail("expected switch expression with if/else branch");
+		}
+
 		final macroQuoteCalls = HxParser.parseFunctionBodyText('eq("bar", switchNormal(macro "bar")); eq("bar", switchNormal(macro ("bar"))); eq("bar", switchNormal(macro untyped "bar")); eq("foo", switchNormal(macro null.foo)); eq("22", switchNormal(macro null[22])); eq("in", switchNormal(macro 1 in 0));');
 		assertTrue(macroQuoteCalls.length == 6, "expected macro quote call statements to parse");
 		for (stmt in macroQuoteCalls) {
