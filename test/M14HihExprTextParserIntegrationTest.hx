@@ -183,6 +183,28 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local key/value function declaration to lower to SVar lambda");
 		}
 
+		final spreadCallStmts = HxParser.parseFunctionBodyText("function spreadRest(r:Array<Int>) { return rest(...r); } var a = rest(...[1, 2, 3]); var b = new Parent(...[1, 2, 3]);");
+		assertTrue(spreadCallStmts.length == 3, "expected local spread function plus spread call and constructor");
+		switch (spreadCallStmts[0]) {
+			case SVar(name, _, ELambda(args, ECall(EIdent("rest"), [ECall(EIdent("__hxhx_spread"), [EIdent("r")])])), _):
+				assertTrue(name == "spreadRest", "expected local spread function name to parse");
+				assertTrue(args.length == 1 && args[0] == "r", "expected local spread function arg");
+			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
+				fail("local spread function body parsed as unsupported: " + raw);
+			case SExpr(EUnsupported(raw), _):
+				fail("local spread function parsed as unsupported statement: " + raw);
+			case _:
+				fail("expected local spread function declaration to lower to SVar lambda");
+		}
+		switch (spreadCallStmts[1]) {
+			case SVar("a", _, ECall(EIdent("rest"), [ECall(EIdent("__hxhx_spread"), [EArrayDecl(values)])]), _):
+				assertTrue(values.length == 3, "expected spread array literal to parse");
+			case SVar(_, _, EUnsupported(raw), _):
+				fail("spread call initializer parsed as unsupported: " + raw);
+			case _:
+				fail("expected spread call initializer");
+		}
+
 		final localReturnFunctionStmts = HxParser.parseFunctionBodyText("function capture() return Int64.compare(a, Int64.make(1, 2)); eq(capture(), 0);");
 		assertTrue(localReturnFunctionStmts.length == 2, "expected local return function plus call statement");
 		switch (localReturnFunctionStmts[0]) {

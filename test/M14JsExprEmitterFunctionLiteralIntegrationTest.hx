@@ -64,5 +64,11 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		final jsLibCtorJs = JsExprEmitter.emit(jsLibCtor, exprScope);
 		assertContains(jsLibCtorJs, "new DataView(", "js.lib.DataView constructor lowers to native DataView");
 		assertContains(jsLibCtorJs, "new ArrayBuffer(8)", "nested js.lib.ArrayBuffer constructor lowers to native ArrayBuffer");
+
+		final spreadCallJs = JsExprEmitter.emit(HxParser.parseExprText("rest(...r)"), exprScope);
+		assertContains(spreadCallJs, "rest(...r)", "call argument spread should lower to JS spread syntax");
+
+		final spreadCtorJs = JsExprEmitter.emit(HxParser.parseExprText("new Array(...values)"), exprScope);
+		assertContains(spreadCtorJs, "new Array(...values)", "constructor argument spread should lower to JS spread syntax");
 	}
 }

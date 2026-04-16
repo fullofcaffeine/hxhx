@@ -947,7 +947,7 @@ class HxParser {
 							ENew(typePath, args);
 						} else {
 							while (true) {
-								final arg = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
+								final arg = parseCallArg(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
 								args.push(arg);
 								if (cur.kind.match(TComma)) {
 									bump();
@@ -1525,6 +1525,16 @@ class HxParser {
 		}
 	}
 
+	function parseCallArg(stop:() -> Bool):HxExpr {
+		if (cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot)) {
+			bump();
+			bump();
+			bump();
+			return ECall(EIdent("__hxhx_spread"), [parseExpr(stop)]);
+		}
+		return parseExpr(stop);
+	}
+
 	function parseBraceExpr():HxExpr {
 		// Expression-level `{ ... }` has two common shapes in upstream code:
 		// - anonymous object literal: `{ field: value }`
@@ -1693,7 +1703,7 @@ class HxParser {
 						continue;
 					}
 					while (true) {
-						final arg = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
+						final arg = parseCallArg(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
 						args.push(arg);
 						if (cur.kind.match(TComma)) {
 							bump();

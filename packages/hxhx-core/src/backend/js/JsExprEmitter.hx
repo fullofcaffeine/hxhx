@@ -416,10 +416,12 @@ class JsExprEmitter {
 			case EIdent("__hxhx_throw"):
 				final thrown = args.length > 0 ? emit(args[0], scope) : "null";
 				return "(function(){ throw " + thrown + "; })()";
+			case EIdent("__hxhx_spread"):
+				return args.length > 0 ? "..." + emit(args[0], scope) : "";
 			case EIdent("trace"):
-				return "console.log(" + args.map(a -> emit(a, scope)).join(", ") + ")";
+				return "console.log(" + args.map(a -> emitCallArg(a, scope)).join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):
-				return "console.log(" + args.map(a -> emit(a, scope)).join(", ") + ")";
+				return "console.log(" + args.map(a -> emitCallArg(a, scope)).join(", ") + ")";
 			case EField(EIdent("Sys"), "print"):
 				final arg = args.length > 0 ? emit(args[0], scope) : "\"\"";
 				return "process.stdout.write(String(" + arg + "))";
@@ -434,8 +436,17 @@ class JsExprEmitter {
 			case _:
 		}
 		final calleeJs = emit(callee, scope);
-		final argsJs = args.map(a -> emit(a, scope)).join(", ");
+		final argsJs = args.map(a -> emitCallArg(a, scope)).join(", ");
 		return calleeJs + "(" + argsJs + ")";
+	}
+
+	static function emitCallArg(arg:HxExpr, scope:JsEmitScope):String {
+		return switch (arg) {
+			case ECall(EIdent("__hxhx_spread"), [inner]):
+				"..." + emit(inner, scope);
+			case _:
+				emit(arg, scope);
+		}
 	}
 
 	static function emitForKeyValueExpr(args:Array<HxExpr>, scope:JsEmitScope):String {
@@ -478,7 +489,7 @@ class JsExprEmitter {
 	}
 
 	static function emitNew(typePath:String, args:Array<HxExpr>, scope:JsEmitScope):String {
-		final argsJs = args.map(a -> emit(a, scope)).join(", ");
+		final argsJs = args.map(a -> emitCallArg(a, scope)).join(", ");
 		switch (typePath) {
 			case "Array":
 				if (args.length == 0)
