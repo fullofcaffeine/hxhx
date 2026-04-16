@@ -327,6 +327,40 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("return (cls && cls.__hx_name != null) ? String(cls.__hx_name) : null;");
 		writer.popIndent();
 		writer.writeln("},");
+		writer.writeln("getClass: function (value) {");
+		writer.pushIndent();
+		writer.writeln("if (value == null) return null;");
+		writer.writeln("if (value.__class__ != null) return value.__class__;");
+		writer.writeln("if (value.constructor != null && value.constructor.__hx_name != null) return value.constructor;");
+		writer.writeln("return null;");
+		writer.popIndent();
+		writer.writeln("},");
+		writer.writeln("getInstanceFields: function (cls) {");
+		writer.pushIndent();
+		writer.writeln("if (cls == null || cls.prototype == null) return [];");
+		writer.writeln("var __hx_fields = [];");
+		writer.writeln("for (var __hx_key in cls.prototype) {");
+		writer.pushIndent();
+		writer.writeln("if (__hx_key === \"constructor\" || __hx_key.indexOf(\"__hx_\") === 0) continue;");
+		writer.writeln("if (typeof cls.prototype[__hx_key] === \"function\") __hx_fields.push(__hx_key);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return __hx_fields;");
+		writer.popIndent();
+		writer.writeln("},");
+		writer.writeln("getClassFields: function (cls) {");
+		writer.pushIndent();
+		writer.writeln("if (cls == null) return [];");
+		writer.writeln("var __hx_fields = [];");
+		writer.writeln("for (var __hx_key in cls) {");
+		writer.pushIndent();
+		writer.writeln("if (__hx_key === \"prototype\" || __hx_key.indexOf(\"__hx_\") === 0) continue;");
+		writer.writeln("if (typeof cls[__hx_key] === \"function\") __hx_fields.push(__hx_key);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return __hx_fields;");
+		writer.popIndent();
+		writer.writeln("},");
 		writer.writeln("enumConstructor: function (value) {");
 		writer.pushIndent();
 		writer.writeln("if (value == null) return null;");
@@ -707,6 +741,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "Reflect")
 			return emitReflectStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "Type")
+			return emitTypeStaticFunctionBody(writer, fnName, params);
+
 		if (fullName == "unit.UnitBuilder" && fnName == "generateSpec") {
 			// Full1 upstream unit smoke executes TestMain after macro expansion should have
 			// replaced this compile-time scan with concrete spec cases. Until native macro
@@ -787,8 +824,51 @@ class JsTargetCore implements ITargetCore {
 		}
 	}
 
+	static function emitTypeStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "resolveClass":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return Type.resolveClass(" + params[0] + ");");
+				return true;
+			case "getClassName":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return Type.getClassName(" + params[0] + ");");
+				return true;
+			case "getClass":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return Type.getClass(" + params[0] + ");");
+				return true;
+			case "getInstanceFields":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return Type.getInstanceFields(" + params[0] + ");");
+				return true;
+			case "getClassFields":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return Type.getClassFields(" + params[0] + ");");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
 	static function emitReflectStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
 		switch (fnName) {
+			case "field":
+				if (params.length < 2)
+					return false;
+				writer.writeln("if (" + params[0] + " == null) return null;");
+				writer.writeln("return " + params[0] + "[" + params[1] + "];");
+				return true;
+			case "isFunction":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return typeof " + params[0] + " === \"function\";");
+				return true;
 			case "isObject":
 				if (params.length < 1)
 					return false;

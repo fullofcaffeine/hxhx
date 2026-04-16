@@ -402,12 +402,37 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function reflectModule():TypedModule {
 		final valueArg = new HxFunctionArg("v", "Dynamic", HxDefaultValue.NoDefault);
+		final fieldArg = new HxFunctionArg("field", "String", HxDefaultValue.NoDefault);
 		final reflectClass = new HxClassDecl("Reflect", false, [
+			new HxFunctionDecl("field", HxVisibility.Public, true, [valueArg, fieldArg], "Dynamic",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-reflect"), ""),
+			new HxFunctionDecl("isFunction", HxVisibility.Public, true, [valueArg], "Bool",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-reflect"), ""),
 			new HxFunctionDecl("isObject", HxVisibility.Public, true, [valueArg], "Bool",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-reflect"), "")
 		]);
 		final decl = new HxModuleDecl("", [], reflectClass, [reflectClass], false, false);
 		return typedModule("", decl, "Reflect.hx");
+	}
+
+	static function typeModule():TypedModule {
+		final nameArg = new HxFunctionArg("name", "String", HxDefaultValue.NoDefault);
+		final valueArg = new HxFunctionArg("o", "Dynamic", HxDefaultValue.NoDefault);
+		final classArg = new HxFunctionArg("c", "Dynamic", HxDefaultValue.NoDefault);
+		final typeClass = new HxClassDecl("Type", false, [
+			new HxFunctionDecl("resolveClass", HxVisibility.Public, true, [nameArg], "Dynamic",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-type"), ""),
+			new HxFunctionDecl("getClassName", HxVisibility.Public, true, [classArg], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-type"), ""),
+			new HxFunctionDecl("getClass", HxVisibility.Public, true, [valueArg], "Dynamic",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-type"), ""),
+			new HxFunctionDecl("getInstanceFields", HxVisibility.Public, true, [classArg], "Array<String>",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-type"), ""),
+			new HxFunctionDecl("getClassFields", HxVisibility.Public, true, [classArg], "Array<String>",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-type"), "")
+		]);
+		final decl = new HxModuleDecl("", [], typeClass, [typeClass], false, false);
+		return typedModule("", decl, "Type.hx");
 	}
 
 	static function counterModule():TypedModule {
@@ -761,6 +786,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(splitter.split("a,b,c").join("|"));',
 				'    Sys.println(EReg.escape("a+b"));',
 				'    Sys.println("reflect-is-object=" + Reflect.isObject({x: 1}) + "," + Reflect.isObject("s") + "," + Reflect.isObject(function() return 1) + "," + Reflect.isObject(null));',
+				'    var reflectedCounter = new Counter(1);',
+				'    var reflectedFields = Type.getInstanceFields(Type.getClass(reflectedCounter));',
+				'    Sys.println("type-fields=" + Type.getClassName(Type.getClass(reflectedCounter)) + ":" + reflectedFields.join("|") + ":" + Reflect.isFunction(Reflect.field(reflectedCounter, "add")));',
 				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref"));',
 				'    Sys.println(haxe.crypto.Base64.BYTES);',
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
@@ -829,6 +857,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				dateToolsModule(),
 				eRegModule(),
 				reflectModule(),
+				typeModule(),
 				counterModule(),
 				arrayModule(),
 				jsNodeProcessModule(),
@@ -944,6 +973,13 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "var __hx_cls_EReg = function", "EReg should emit a constructible regex wrapper");
 			assertContains(js, "__hx_cls_EReg.prototype.match = function", "EReg match prototype method should emit");
 			assertContains(js, "__hx_cls_EReg.escape = function", "EReg escape helper should emit");
+			assertContains(js, "getClass: function (value)", "Type.getClass runtime helper should emit");
+			assertContains(js, "getInstanceFields: function (cls)", "Type.getInstanceFields runtime helper should emit");
+			assertContains(js, "__hx_cls_Type.getClass = function", "Type.getClass std shim should emit");
+			assertContains(js, "__hx_cls_Type.getInstanceFields = function", "Type.getInstanceFields std shim should emit");
+			assertContains(js, "return Type.getInstanceFields(c);", "Type.getInstanceFields std shim should delegate to runtime helper");
+			assertContains(js, "__hx_cls_Reflect.field = function", "Reflect field shim should emit");
+			assertContains(js, "__hx_cls_Reflect.isFunction = function", "Reflect isFunction shim should emit");
 			assertContains(js, "__hx_cls_Reflect.isObject = function", "Reflect isObject shim should emit");
 			assertContains(js, "typeof v === \"object\" || typeof v === \"string\"", "Reflect isObject should match Haxe JS object/string semantics");
 			assertContains(js, "Object.defineProperty(Array.prototype, \"iterator\"",
@@ -1041,6 +1077,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "a|b|c", "EReg split should delegate to JS regular expressions");
 			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");
 			assertContains(stdout, "reflect-is-object=true,true,false,false", "Reflect.isObject should match Haxe JS behavior");
+			assertContains(stdout, "type-fields=Counter:add:true", "Type/Reflect helpers should expose prototype test methods for utest-style discovery");
 			assertContains(stdout, "bytes-ref", "qualified package static refs should execute through class bindings");
 			assertContains(stdout, "abc", "same-class static field refs should execute through class bindings");
 			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
