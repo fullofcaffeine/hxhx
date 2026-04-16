@@ -1273,6 +1273,11 @@ class HxParser {
 					ETernary(cond, thenExpr, elseExpr);
 				case SThrow(expr, _):
 					ECall(EIdent("__hxhx_throw"), [expr]);
+				case SForKeyValue(keyName, valueName, iterable, body, _):
+					final bodyExpr = lowerStmtWithContinuation(body, ENull);
+					if (bodyExpr == null)
+						return null;
+					ECall(EIdent("__hxhx_for_key_value"), [iterable, ELambda([keyName, valueName], bodyExpr), continuation]);
 				case _:
 					unsupportedStmtKind = stmtKindText(stmt);
 					null;

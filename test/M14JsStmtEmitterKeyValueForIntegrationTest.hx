@@ -23,6 +23,19 @@ class M14JsStmtEmitterKeyValueForIntegrationTest {
 		assertContains(js, "var stacks = __iter_0[label];", "value binding should read by key");
 		assertContains(js, "console.log(((label + \":\") + stacks.length));", "loop body should resolve key and value locals");
 
+		final localFunctionBody = HxParser.parseFunctionBodyText("function collect(r:Array<Int>) { var keys = []; var values = []; for (k => v in r) { keys.push(k); values.push(v); } return {keys: keys, values: values}; } var got = collect([3, 2]);");
+		final localFunctionWriter = new JsWriter();
+		final localFunctionScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
+		JsStmtEmitter.emitFunctionBody(localFunctionWriter, localFunctionBody, localFunctionScope);
+		final localFunctionJs = localFunctionWriter.toString();
+
+		assertContains(localFunctionJs, "Object.keys(__iter)", "local key/value function should enumerate keys in expression-lambda lowering");
+		assertContains(localFunctionJs, "Array.isArray(__iter)", "local key/value function should normalize array keys to Int values");
+		assertContains(localFunctionJs, "function(k, v) {", "local key/value function should emit a two-argument loop callback");
+		assertContains(localFunctionJs, "keys.push(k)", "local key/value function should preserve key push side effect");
+		assertContains(localFunctionJs, "values.push(v)", "local key/value function should preserve value push side effect");
+		assertContains(localFunctionJs, "return {\"keys\": keys, \"values\": values};", "local key/value function should run the continuation after the loop");
+
 		final switchBody = HxParser.parseFunctionBodyText("var result = {}; switch item { case FilePos(s, f, l, _): result.file = f; result.line = l; switch s { case Method(_, m): result.method = m; case _: } case _: } return result;");
 		final switchWriter = new JsWriter();
 		final switchScope = new JsFunctionScope(new haxe.ds.StringMap<String>());

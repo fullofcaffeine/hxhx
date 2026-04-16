@@ -166,6 +166,23 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local rest function declaration to lower to SVar lambda");
 		}
 
+		final localKeyValueFunctionStmts = HxParser.parseFunctionBodyText("function collect(r:Array<Int>) { var keys = []; var values = []; for (k => v in r) { keys.push(k); values.push(v); } return {keys: keys, values: values}; } var got = collect([3, 2]);");
+		assertTrue(localKeyValueFunctionStmts.length == 2, "expected local key/value function plus call statement");
+		switch (localKeyValueFunctionStmts[0]) {
+			case SVar(name, _, ELambda(args, body), _):
+				assertTrue(name == "collect", "expected local key/value function name to parse");
+				assertTrue(args.length == 1 && args[0] == "r", "expected local key/value function arg");
+				switch (body) {
+					case EUnsupported(raw):
+						fail("local key/value function body parsed as unsupported: " + raw);
+					case _:
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("local key/value function parsed as unsupported statement: " + raw);
+			case _:
+				fail("expected local key/value function declaration to lower to SVar lambda");
+		}
+
 		final localReturnFunctionStmts = HxParser.parseFunctionBodyText("function capture() return Int64.compare(a, Int64.make(1, 2)); eq(capture(), 0);");
 		assertTrue(localReturnFunctionStmts.length == 2, "expected local return function plus call statement");
 		switch (localReturnFunctionStmts[0]) {

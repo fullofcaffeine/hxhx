@@ -429,11 +429,29 @@ class JsExprEmitter {
 			case EField(EIdent("HelperMacros"), "typeError") | EField(EField(EIdent("unit"), "HelperMacros"), "typeError"):
 				if (hasForExprProbeArg(args))
 					return "true";
+			case EIdent("__hxhx_for_key_value"):
+				return emitForKeyValueExpr(args, scope);
 			case _:
 		}
 		final calleeJs = emit(callee, scope);
 		final argsJs = args.map(a -> emit(a, scope)).join(", ");
 		return calleeJs + "(" + argsJs + ")";
+	}
+
+	static function emitForKeyValueExpr(args:Array<HxExpr>, scope:JsEmitScope):String {
+		if (args == null || args.length < 3)
+			unsupported("ECall", "__hxhx_for_key_value");
+		final iterable = emit(args[0], scope);
+		final body = emit(args[1], scope);
+		final continuation = emit(args[2], scope);
+		return "(function(){ var __iter = "
+			+ iterable
+			+ "; var __body = "
+			+ body
+			+
+			"; var __keys = Object.keys(__iter); for (var __i = 0; __i < __keys.length; __i++) { var __raw_key = __keys[__i]; var __key = Array.isArray(__iter) ? (__raw_key | 0) : __raw_key; __body(__key, __iter[__raw_key]); } return "
+			+ continuation
+			+ "; })()";
 	}
 
 	static function hasForExprProbeArg(args:Array<HxExpr>):Bool {

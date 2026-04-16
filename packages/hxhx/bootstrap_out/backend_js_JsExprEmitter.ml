@@ -927,6 +927,7 @@ and emitCall = fun callee args scope -> try let __fallback_result_205 = (
       let params = Obj.magic (!tempArray) in raise (HxRuntime.Hx_return (Obj.repr (macroEnum (name : string) (Obj.magic params))))
     ))
     | HxExpr.EIdent _p0 -> ignore (let _g = (_p0 : string) in match _g with
+      | "__hxhx_for_key_value" -> raise (HxRuntime.Hx_return (Obj.repr (emitForKeyValueExpr (Obj.magic args) scope : string)))
       | "__hxhx_throw" -> ignore (let tempString = ref ("" : string) in (
         ignore (if HxArray.length args > 0 then let __assign_187 = (emit (Obj.magic (HxArray.get (Obj.magic args) 0)) scope : string) in (
           tempString := __assign_187;
@@ -1048,6 +1049,10 @@ and emitCall = fun callee args scope -> try let __fallback_result_205 = (
   )
 ) in Obj.magic __fallback_result_205 with
   | HxRuntime.Hx_return __ret_204 -> Obj.obj __ret_204
+and emitForKeyValueExpr = fun args scope -> (
+  ignore (if args == Obj.magic (HxRuntime.hx_null) || HxArray.length args < 3 then ignore (unsupported ("ECall" : string) ("__hxhx_for_key_value" : string)) else ());
+  let iterable = (emit (Obj.magic (HxArray.get (Obj.magic args) 0)) scope : string) in let body = (emit (Obj.magic (HxArray.get (Obj.magic args) 1)) scope : string) in let continuation = (emit (Obj.magic (HxArray.get (Obj.magic args) 2)) scope : string) in ((((("(function(){ var __iter = " ^ HxString.toStdString iterable) ^ "; var __body = ") ^ HxString.toStdString body) ^ "; var __keys = Object.keys(__iter); for (var __i = 0; __i < __keys.length; __i++) { var __raw_key = __keys[__i]; var __key = Array.isArray(__iter) ? (__raw_key | 0) : __raw_key; __body(__key, __iter[__raw_key]); } return ") ^ HxString.toStdString continuation) ^ "; })()"
+)
 and emitInlineJsCode = fun args scope -> try let __fallback_result_218 = (
   ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr ("undefined" : string))) else ());
   let tempResult = ref ("" : string) in (
