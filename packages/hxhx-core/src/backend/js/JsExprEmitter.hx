@@ -618,6 +618,15 @@ class JsExprEmitter {
 	}
 
 	static function emitField(obj:HxExpr, field:String, scope:JsEmitScope):String {
+		if (scope != null) {
+			final fullPath = typeTestName(EField(obj, field));
+			if (fullPath != null) {
+				final classRef = scope.resolveClassRef(fullPath);
+				if (classRef != null)
+					return classRef;
+			}
+		}
+
 		final receiver = switch (obj) {
 			case EInt(_) | EFloat(_):
 				"(" + emit(obj, scope) + ")";

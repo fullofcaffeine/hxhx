@@ -532,6 +532,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "haxe/io/Input.hx");
 	}
 
+	static function haxeIoBytesModule():TypedModule {
+		final stringArg = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
+		final bytesClass = new HxClassDecl("Bytes", false, [
+			new HxFunctionDecl("ofString", HxVisibility.Public, true, [stringArg], "String", [HxStmt.SReturn(HxExpr.EIdent("s"), HxPos.unknown())], "")
+		]);
+		final decl = new HxModuleDecl("haxe.io", [], bytesClass, [bytesClass], false, false);
+		return typedModule("", decl, "haxe/io/Bytes.hx");
+	}
+
 	static function haxeFormatJsonParserModule():TypedModule {
 		final parserClass = new HxClassDecl("JsonParser", false, [
 			new HxFunctionDecl("doParse", HxVisibility.Public, false, [], "Dynamic",
@@ -633,6 +642,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    var splitter = new EReg(",", "g");',
 				'    Sys.println(splitter.split("a,b,c").join("|"));',
 				'    Sys.println(EReg.escape("a+b"));',
+				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref"));',
 				"    var counter = new Counter(4);",
 				"    Sys.println(counter.add(5));",
 				"    Sys.println(counter.add());",
@@ -696,6 +706,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				utestRunnerModule(),
 				utestTestHandlerModule(),
 				haxeIoInputModule(),
+				haxeIoBytesModule(),
 				haxeFormatJsonParserModule()
 			];
 			for (module in utestResultModules())
@@ -780,6 +791,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_EReg.escape = function", "EReg escape helper should emit");
 			assertContains(js, "Object.defineProperty(Array.prototype, \"iterator\"",
 				"runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
+			assertContains(js, "__hx_cls_haxe_io_Bytes.ofString(\"bytes-ref\")", "qualified package static refs should resolve to class bindings");
+			assertNotContains(js, "haxe.io.Bytes.ofString", "qualified package static refs should not leak raw namespace access");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg", "compile-time macro Compiler ident regex should construct EReg");
 			assertTrue(js.indexOf("var __hx_cls_EReg = function") < js.indexOf("__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg"),
 				"EReg constructor should emit before static fields that instantiate it");
@@ -850,6 +863,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "true\nabc_12\nfalse", "EReg should construct and preserve match state");
 			assertContains(stdout, "a|b|c", "EReg split should delegate to JS regular expressions");
 			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");
+			assertContains(stdout, "bytes-ref", "qualified package static refs should execute through class bindings");
 			assertContains(stdout, "10\n13", "ordinary JS classes should construct, mutate instance fields, and apply default args");
 			assertContains(stdout, "2,3", "native JS Array prototype methods should remain available");
 			assertContains(stdout, "true,4,5,false", "runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
