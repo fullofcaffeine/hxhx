@@ -83,6 +83,13 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(forInBodyJs, "__body(__iter[__i])", "block-body function for-in helper should pass each value");
 		assertContains(forInBodyJs, "return out;", "block-body function for-in helper should run the continuation after the loop");
 
+		final switchBody = HxParser.parseExprText('function(kind) { var out = ""; switch (kind) { case "a": out = "A"; default: out = "X"; } return out; }');
+		final switchBodyJs = JsExprEmitter.emit(switchBody, exprScope);
+		assertContains(switchBodyJs, "var __sw = kind", "block-body function switch should lower to expression switch");
+		assertContains(switchBodyJs, 'if (__sw === "a")', "block-body function switch should preserve string case");
+		assertContains(switchBodyJs, 'out = "A"', "block-body function switch should preserve case body side effect");
+		assertContains(switchBodyJs, "return out;", "block-body function switch should run the continuation after the switch");
+
 		final inlineExprJs = JsExprEmitter.emit(HxParser.parseExprText("inline helper(value, max - 1)"), exprScope);
 		assertContains(inlineExprJs, "helper(value, (max - 1))", "expression-position inline should lower to the wrapped call");
 	}

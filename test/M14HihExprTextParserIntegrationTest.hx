@@ -200,6 +200,23 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local for-in function declaration to lower to SVar lambda");
 		}
 
+		final localSwitchFunctionStmts = HxParser.parseFunctionBodyText("function label(kind:String) { var out = \"\"; switch (kind) { case \"a\": out = \"A\"; default: out = \"X\"; } return out; } var got = label(\"a\");");
+		assertTrue(localSwitchFunctionStmts.length == 2, "expected local switch function plus call statement");
+		switch (localSwitchFunctionStmts[0]) {
+			case SVar(name, _, ELambda(args, body), _):
+				assertTrue(name == "label", "expected local switch function name to parse");
+				assertTrue(args.length == 1 && args[0] == "kind", "expected local switch function arg");
+				switch (body) {
+					case EUnsupported(raw):
+						fail("local switch function body parsed as unsupported: " + raw);
+					case _:
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("local switch function parsed as unsupported statement: " + raw);
+			case _:
+				fail("expected local switch function declaration to lower to SVar lambda");
+		}
+
 		final spreadCallStmts = HxParser.parseFunctionBodyText("function spreadRest(r:Array<Int>) { return rest(...r); } var a = rest(...[1, 2, 3]); var b = new Parent(...[1, 2, 3]);");
 		assertTrue(spreadCallStmts.length == 3, "expected local spread function plus spread call and constructor");
 		switch (spreadCallStmts[0]) {

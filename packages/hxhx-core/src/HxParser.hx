@@ -1274,6 +1274,29 @@ class HxParser {
 						loweredElse;
 					}
 					ETernary(cond, thenExpr, elseExpr);
+				case SSwitch(scrutinee, patterns, bodies, _):
+					final loweredPatterns = new Array<HxSwitchPattern>();
+					final loweredExprs = new Array<HxExpr>();
+					var hasDefault = false;
+					final count = patterns.length < bodies.length ? patterns.length : bodies.length;
+					for (i in 0...count) {
+						final pattern = patterns[i];
+						switch (pattern) {
+							case PWildcard:
+								hasDefault = true;
+							case _:
+						}
+						final branchExpr = lowerStmtWithContinuation(bodies[i], continuation);
+						if (branchExpr == null)
+							return null;
+						loweredPatterns.push(pattern);
+						loweredExprs.push(branchExpr);
+					}
+					if (!hasDefault) {
+						loweredPatterns.push(PWildcard);
+						loweredExprs.push(continuation);
+					}
+					ESwitch(scrutinee, loweredPatterns, loweredExprs);
 				case SThrow(expr, _):
 					ECall(EIdent("__hxhx_throw"), [expr]);
 				case SForKeyValue(keyName, valueName, iterable, body, _):
