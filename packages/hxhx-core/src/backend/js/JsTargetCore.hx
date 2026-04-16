@@ -58,7 +58,7 @@ class JsTargetCore implements ITargetCore {
 	static function collectClassUnits(program:GenIrProgram):{units:Array<JsClassUnit>, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>} {
 		final bySimpleName = new haxe.ds.StringMap<String>();
 		final byFullName = new haxe.ds.StringMap<String>();
-		final units = new Array<JsClassUnit>();
+		var units = new Array<JsClassUnit>();
 		final typedModules:Array<TypedModule> = program.getTypedModules();
 
 		for (typed in typedModules) {
@@ -81,19 +81,140 @@ class JsTargetCore implements ITargetCore {
 				});
 			}
 		}
-		units.sort(function(a, b) {
-			if (a.fullName == "EReg" && b.fullName != "EReg")
-				return -1;
-			if (b.fullName == "EReg" && a.fullName != "EReg")
-				return 1;
-			return 0;
-		});
+		units = orderClassUnitsByStaticInitDeps(units, byFullName);
 
 		return {
 			units: units,
 			bySimpleName: bySimpleName,
 			byFullName: byFullName
 		};
+	}
+
+	static function orderClassUnitsByStaticInitDeps(units:Array<JsClassUnit>, byFullName:haxe.ds.StringMap<String>):Array<JsClassUnit> {
+		final bySimpleFullName = new haxe.ds.StringMap<String>();
+		for (unit in units) {
+			final simple = simpleName(unit.fullName);
+			if (!bySimpleFullName.exists(simple)) {
+				bySimpleFullName.set(simple, unit.fullName);
+			} else {
+				bySimpleFullName.set(simple, "");
+			}
+		}
+
+		final remaining = units.copy();
+		final ordered = new Array<JsClassUnit>();
+		final emitted = new haxe.ds.StringMap<Bool>();
+		while (remaining.length > 0) {
+			var progressed = false;
+			var index = 0;
+			while (index < remaining.length) {
+				final unit = remaining[index];
+				if (staticInitDepsReady(unit, emitted, byFullName, bySimpleFullName)) {
+					ordered.push(unit);
+					emitted.set(unit.fullName, true);
+					remaining.splice(index, 1);
+					progressed = true;
+				} else {
+					index++;
+				}
+			}
+			if (!progressed) {
+				for (unit in remaining)
+					ordered.push(unit);
+				break;
+			}
+		}
+		return ordered;
+	}
+
+	static function staticInitDepsReady(unit:JsClassUnit, emitted:haxe.ds.StringMap<Bool>, byFullName:haxe.ds.StringMap<String>,
+			bySimpleFullName:haxe.ds.StringMap<String>):Bool {
+		final deps = staticInitClassDeps(unit, byFullName, bySimpleFullName);
+		for (dep in deps) {
+			if (dep == unit.fullName)
+				continue;
+			if (!byFullName.exists(dep))
+				continue;
+			if (!emitted.exists(dep))
+				return false;
+		}
+		return true;
+	}
+
+	static function staticInitClassDeps(unit:JsClassUnit, byFullName:haxe.ds.StringMap<String>, bySimpleFullName:haxe.ds.StringMap<String>):Array<String> {
+		final deps = new Array<String>();
+		for (field in HxClassDecl.getFields(unit.decl)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				continue;
+			collectStaticInitClassDeps(HxFieldDecl.getInit(field), deps, byFullName, bySimpleFullName);
+		}
+		return deps;
+	}
+
+	static function collectStaticInitClassDeps(expr:HxExpr, deps:Array<String>, byFullName:haxe.ds.StringMap<String>,
+			bySimpleFullName:haxe.ds.StringMap<String>):Void {
+		if (expr == null)
+			return;
+		switch (expr) {
+			case ENew(typePath, args):
+				final dep = resolveStaticInitTypePath(typePath, byFullName, bySimpleFullName);
+				if (dep != null)
+					deps.push(dep);
+				for (arg in args)
+					collectStaticInitClassDeps(arg, deps, byFullName, bySimpleFullName);
+			case EField(obj, _):
+				collectStaticInitClassDeps(obj, deps, byFullName, bySimpleFullName);
+			case ECall(callee, args):
+				collectStaticInitClassDeps(callee, deps, byFullName, bySimpleFullName);
+				for (arg in args)
+					collectStaticInitClassDeps(arg, deps, byFullName, bySimpleFullName);
+			case EMacroExpr(inner, _):
+				collectStaticInitClassDeps(inner, deps, byFullName, bySimpleFullName);
+			case ELambda(_, body):
+				collectStaticInitClassDeps(body, deps, byFullName, bySimpleFullName);
+			case ESwitch(scrutinee, _, exprs):
+				collectStaticInitClassDeps(scrutinee, deps, byFullName, bySimpleFullName);
+				for (caseExpr in exprs)
+					collectStaticInitClassDeps(caseExpr, deps, byFullName, bySimpleFullName);
+			case EUnop(_, inner):
+				collectStaticInitClassDeps(inner, deps, byFullName, bySimpleFullName);
+			case EBinop(_, left, right):
+				collectStaticInitClassDeps(left, deps, byFullName, bySimpleFullName);
+				collectStaticInitClassDeps(right, deps, byFullName, bySimpleFullName);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectStaticInitClassDeps(cond, deps, byFullName, bySimpleFullName);
+				collectStaticInitClassDeps(thenExpr, deps, byFullName, bySimpleFullName);
+				collectStaticInitClassDeps(elseExpr, deps, byFullName, bySimpleFullName);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectStaticInitClassDeps(value, deps, byFullName, bySimpleFullName);
+			case EArrayComprehension(_, iterable, yieldExpr):
+				collectStaticInitClassDeps(iterable, deps, byFullName, bySimpleFullName);
+				collectStaticInitClassDeps(yieldExpr, deps, byFullName, bySimpleFullName);
+			case EArrayDecl(values):
+				for (value in values)
+					collectStaticInitClassDeps(value, deps, byFullName, bySimpleFullName);
+			case EArrayAccess(array, index):
+				collectStaticInitClassDeps(array, deps, byFullName, bySimpleFullName);
+				collectStaticInitClassDeps(index, deps, byFullName, bySimpleFullName);
+			case ERange(start, end):
+				collectStaticInitClassDeps(start, deps, byFullName, bySimpleFullName);
+				collectStaticInitClassDeps(end, deps, byFullName, bySimpleFullName);
+			case ECast(inner, _) | EUntyped(inner):
+				collectStaticInitClassDeps(inner, deps, byFullName, bySimpleFullName);
+			case _:
+		}
+	}
+
+	static function resolveStaticInitTypePath(typePath:String, byFullName:haxe.ds.StringMap<String>, bySimpleFullName:haxe.ds.StringMap<String>):Null<String> {
+		if (typePath == null || typePath.length == 0)
+			return null;
+		if (byFullName.exists(typePath))
+			return typePath;
+		if (typePath.indexOf(".") >= 0)
+			return null;
+		final fullName = bySimpleFullName.get(typePath);
+		return fullName == null || fullName.length == 0 ? null : fullName;
 	}
 
 	static function simpleName(fullName:String):String {
