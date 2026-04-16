@@ -433,6 +433,8 @@ class JsExprEmitter {
 				final result = helperTypeErrorResult(args);
 				if (result != null)
 					return result ? "true" : "false";
+			case EIdent("__hxhx_map_comprehension"):
+				return emitMapComprehensionExpr(args, scope);
 			case EIdent("__hxhx_for_key_value"):
 				return emitForKeyValueExpr(args, scope);
 			case EIdent("__hxhx_for_in"):
@@ -444,6 +446,17 @@ class JsExprEmitter {
 		final calleeJs = emit(callee, scope);
 		final argsJs = args.map(a -> emitCallArg(a, scope)).join(", ");
 		return calleeJs + "(" + argsJs + ")";
+	}
+
+	static function emitMapComprehensionExpr(args:Array<HxExpr>, scope:JsEmitScope):String {
+		if (args == null || args.length < 2)
+			unsupported("ECall", "__hxhx_map_comprehension");
+		return switch (args[1]) {
+			case ELambda(lambdaArgs, EArrayDecl(pair)) if (lambdaArgs.length == 1 && pair.length >= 2):
+				emitMapComprehension(lambdaArgs[0], args[0], pair[0], pair[1], scope);
+			case _:
+				unsupported("ECall", "__hxhx_map_comprehension");
+		}
 	}
 
 	static function emitCallArg(arg:HxExpr, scope:JsEmitScope):String {
@@ -1030,6 +1043,43 @@ class JsExprEmitter {
 		}
 
 		out.push("return __arr_comp_out;");
+		out.push("})()");
+		return out.join(" ");
+	}
+
+	static function emitMapComprehension(name:String, iterable:HxExpr, keyExpr:HxExpr, valueExpr:HxExpr, scope:JsEmitScope):String {
+		final out = new Array<String>();
+		final iterName = "__hxhx_map_" + JsNameMangler.identifier(name);
+		final iterLocals = new haxe.ds.StringMap<String>();
+		iterLocals.set(name, iterName);
+		final iterScope = nestedScope(scope, iterLocals);
+
+		inline function pushYield():Void {
+			out.push("var __hxhx_pair = [" + emit(keyExpr, iterScope) + ", " + emit(valueExpr, iterScope) + "];");
+			out.push("__hxhx_map_out[__hxhx_pair[0]] = __hxhx_pair[1];");
+		}
+
+		out.push("(function () {");
+		out.push("var __hxhx_map_out = {};");
+
+		switch (iterable) {
+			case ERange(startExpr, endExpr):
+				out.push("var __hxhx_map_start = " + emit(startExpr, scope) + ";");
+				out.push("var __hxhx_map_end = " + emit(endExpr, scope) + ";");
+				out.push("for (var " + iterName + " = __hxhx_map_start; " + iterName + " < __hxhx_map_end; " + iterName + "++) {");
+				pushYield();
+				out.push("}");
+			case _:
+				out.push("var __hxhx_map_iter = " + emit(iterable, scope) + ";");
+				out.push("for (var __hxhx_map_i = 0; __hxhx_map_i < __hxhx_map_iter.length; __hxhx_map_i++) {");
+				out.push("var " + iterName + " = __hxhx_map_iter[__hxhx_map_i];");
+				pushYield();
+				out.push("}");
+		}
+
+		out.push("Object.defineProperty(__hxhx_map_out, \"get\", {value: function(__hx_key) { return this[__hx_key]; }, enumerable: false});");
+		out.push("Object.defineProperty(__hxhx_map_out, \"exists\", {value: function(__hx_key) { return Object.prototype.hasOwnProperty.call(this, __hx_key); }, enumerable: false});");
+		out.push("return __hxhx_map_out;");
 		out.push("})()");
 		return out.join(" ");
 	}

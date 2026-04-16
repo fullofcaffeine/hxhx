@@ -47,6 +47,12 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(mapArrowJs, "map = {\"1\": function(a)", "map-literal arrow value parses without a stray fat-arrow token");
 		assertContains(mapArrowJs, "\"2\": function(b)", "map-literal keeps each arrow value");
 
+		final mapComprehension = HxParser.parseExprText('map = [for (x in ["a", "b"]) x => x.toUpperCase()]');
+		final mapComprehensionJs = JsExprEmitter.emit(mapComprehension, exprScope);
+		assertContains(mapComprehensionJs, "__hxhx_map_out", "map comprehension should allocate an object result");
+		assertContains(mapComprehensionJs, "__hxhx_pair[0]", "map comprehension should use the yielded key");
+		assertContains(mapComprehensionJs, "x.toUpperCase()", "map comprehension should emit the yielded value expression");
+
 		final switchArrow = HxParser.parseExprText("f7 = switch maybe() { case true: f -> f; case false: f -> g -> f(g); }");
 		final switchArrowJs = JsExprEmitter.emit(switchArrow, exprScope);
 		assertContains(switchArrowJs, "f7 = (function () {", "assignment RHS switch expression parses structurally");

@@ -459,6 +459,20 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected range comprehension arrow assignment to parse");
 		}
 
+		final mapComprehensionStmts = HxParser.parseFunctionBodyText('var map = [for (x in ["a", "b"]) x => x.toUpperCase()];');
+		assertTrue(mapComprehensionStmts.length == 1, "expected map comprehension declaration");
+		switch (mapComprehensionStmts[0]) {
+			case SVar("map", _, ECall(EIdent("__hxhx_map_comprehension"), [
+				EArrayDecl([EString("a"), EString("b")]),
+				ELambda(args, EArrayDecl([EIdent("x"), ECall(EField(EIdent("x"), "toUpperCase"), [])]))
+			]), _):
+				assertTrue(args.length == 1 && args[0] == "x", "expected map comprehension loop variable");
+			case SExpr(EUnsupported(raw), _) | SVar(_, _, EUnsupported(raw), _):
+				fail("map comprehension parsed as unsupported: " + raw);
+			case _:
+				fail("expected map comprehension to parse as helper call");
+		}
+
 		final contextualAsStmts = HxParser.parseFunctionBodyText('var as = new unit.MyAbstract.MyAbstractSetter(); as.value = "foo"; eq(as.value, "foo");');
 		assertTrue(contextualAsStmts.length == 3, "expected contextual `as` local plus two statements");
 		switch (contextualAsStmts[0]) {

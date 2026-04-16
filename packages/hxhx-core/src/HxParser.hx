@@ -1461,6 +1461,11 @@ class HxParser {
 		if (!cur.kind.match(TOther("[".code)))
 			return EArrayDecl([]);
 		bump(); // '['
+
+		inline function isFatArrowStart():Bool {
+			return cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code));
+		}
+
 		// Array comprehension: `[for (name in iterable) expr]`
 		//
 		// This is required by upstream `tests/RunCi.hx` for computing the `tests` list.
@@ -1489,20 +1494,23 @@ class HxParser {
 			}
 
 			expect(TRParen, "')'");
-			final yieldExpr = parseExpr(() -> cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
+			final yieldExpr = parseExpr(() -> isFatArrowStart() || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
+			var result:HxExpr = EArrayComprehension(name, iterable, yieldExpr);
+			if (isFatArrowStart()) {
+				bump(); // '='
+				bump(); // '>'
+				final valueExpr = parseExpr(() -> cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
+				result = ECall(EIdent("__hxhx_map_comprehension"), [iterable, ELambda([name], EArrayDecl([yieldExpr, valueExpr]))]);
+			}
 			if (cur.kind.match(TOther("]".code)))
 				bump();
-			return EArrayComprehension(name, iterable, yieldExpr);
+			return result;
 		}
 
 		final values = new Array<HxExpr>();
 		final mapNames = new Array<String>();
 		final mapValues = new Array<HxExpr>();
 		var sawMapEntry = false;
-
-		inline function isFatArrowStart():Bool {
-			return cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code));
-		}
 
 		if (cur.kind.match(TOther("]".code))) {
 			bump();
