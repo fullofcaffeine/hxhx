@@ -628,6 +628,8 @@ class TyperStage {
 			case EMacroExpr(inner, _wrappers):
 				inferExprType(inner, scope, ctx, pos);
 				TyType.fromHintText("haxe.macro.Expr");
+			case EMacroType(_typeText):
+				TyType.fromHintText("haxe.macro.ComplexType");
 			case ETryCatchRaw(_raw):
 				// Stage 3 bring-up: we only preserve the shape of `try/catch` in the expression tree.
 				// Correct semantics are Stage 4+ work, so we type it as `Dynamic` here.

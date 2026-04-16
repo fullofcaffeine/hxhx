@@ -154,7 +154,7 @@ let init () : unit =
   ignore (HxType.enum_ "hxhx.macro._MacroHostClient.MacroHostReadResult");
   ignore (HxType.enum_ "sys.thread.NextEventTime");
   HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
-  HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "EMacroExpr"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported" ];
+  HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "EMacroExpr"; "EMacroType"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported" ];
   HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KInline"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KIn"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
   HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SForKeyValue"; "SWhile"; "SDoWhile"; "SSwitch"; "STry"; "SBreak"; "SContinue"; "SThrow"; "SReturnVoid"; "SReturn"; "SExpr" ];
   HxType.register_enum_ctors "HxSwitchPattern" [ "PNull"; "PWildcard"; "PString"; "PInt"; "PEnumValue"; "PEnumExtract"; "PObject"; "PCapture"; "PArray"; "PLengthGuard"; "PStartsWithGuard"; "PUnsupportedGuard"; "PBind"; "POr" ];
@@ -228,6 +228,11 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxExpr.EMacroExpr" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'wrappers' for HxExpr.EMacroExpr" in
     Obj.repr (HxExpr.EMacroExpr (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "EMacroType" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'typeText' for HxExpr.EMacroType" in
+    Obj.repr (HxExpr.EMacroType a0)
   );
   HxType.register_enum_ctor "HxExpr" "ELambda" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1688,7 +1693,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.js.JsBackend" [ "capabilities"; "delegate"; "describe"; "emit"; "id"; "registrations" ];
   HxType.register_class_static_fields "backend.js.JsBackend" [ "capabilitiesStatic"; "descriptor"; "emitBridge"; "providerDescriptor"; "providerRegistrations"; "targetCore"; "targetCoreEmit" ];
   HxType.register_class_instance_fields "backend.js.JsExprEmitter" [];
-  HxType.register_class_static_fields "backend.js.JsExprEmitter" [ "blockToReturningJs"; "emit"; "emitAnon"; "emitArrayComprehension"; "emitBinop"; "emitCall"; "emitInlineJsCode"; "emitLambda"; "emitMacroExpr"; "emitNew"; "emitRangeExpr"; "emitSwitchExpr"; "emitTryCatchRaw"; "findLastTopLevelSemicolon"; "findMatching"; "hasForExprProbeArg"; "hasTopLevelQuestion"; "isMetadataPathChar"; "isRawTypeHintSegment"; "macroEnum"; "macroExprDef"; "macroExprObject"; "nestedScope"; "resolveIdent"; "rewriteSimpleTryCatchRaw"; "sanitizeCatchName"; "sanitizeCatchTypeHints"; "sanitizeRawHaxeExpressionSyntax"; "skipWhitespace"; "stripExpressionCastHints"; "stripExpressionMetadata"; "unsupported" ];
+  HxType.register_class_static_fields "backend.js.JsExprEmitter" [ "blockToReturningJs"; "emit"; "emitAnon"; "emitArrayComprehension"; "emitBinop"; "emitCall"; "emitInlineJsCode"; "emitLambda"; "emitMacroExpr"; "emitMacroType"; "emitNew"; "emitRangeExpr"; "emitSwitchExpr"; "emitTryCatchRaw"; "findLastTopLevelSemicolon"; "findMatching"; "findTopLevelChar"; "hasForExprProbeArg"; "hasTopLevelQuestion"; "isMetadataPathChar"; "isRawTypeHintSegment"; "macroComplexType"; "macroEnum"; "macroExprDef"; "macroExprObject"; "macroFunctionArgTypes"; "macroTypePath"; "matchingOuterParen"; "nestedScope"; "resolveIdent"; "rewriteSimpleTryCatchRaw"; "sanitizeCatchName"; "sanitizeCatchTypeHints"; "sanitizeRawHaxeExpressionSyntax"; "skipWhitespace"; "splitTopLevelArrow"; "splitTopLevelComma"; "stripExpressionCastHints"; "stripExpressionMetadata"; "stripGenericTypeParams"; "trimLeadingTypeColon"; "unsupported" ];
   HxType.register_class_instance_fields "backend.js.JsFunctionScope" [ "classRefs"; "declareLocal"; "exprScope"; "freshTemp"; "instanceFields"; "locals"; "reserve"; "resolveClassRef"; "resolveLocal"; "tempCounter"; "used" ];
   HxType.register_class_static_fields "backend.js.JsFunctionScope" [];
   HxType.register_class_instance_fields "backend.js.JsNameMangler" [];

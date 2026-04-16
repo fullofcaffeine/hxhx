@@ -2458,7 +2458,7 @@ class EmitterStage {
 			return numericStringIntrinsic;
 
 		return switch (e) {
-			case ELambda(_, _), EMacroExpr(_, _), ETryCatchRaw(_):
+			case ELambda(_, _), EMacroExpr(_, _), EMacroType(_), ETryCatchRaw(_):
 				// Exhaustiveness fallback; normal handling returns from the pre-switch intrinsic helper.
 				"(Obj.magic 0)";
 

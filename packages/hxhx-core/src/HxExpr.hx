@@ -88,6 +88,23 @@ enum HxExpr {
 	EMacroExpr(expr:HxExpr, wrappers:Array<String>);
 
 	/**
+		Type-position macro quote: `macro :Type`.
+
+		Why
+		- Upstream macro printer tests pass macro-quoted complex types to runtime helpers such as
+		  `Printer.printComplexType`.
+		- These quotes are not normal expressions: the leading colon introduces a Haxe
+		  `ComplexType` payload, so parsing them as `EMacroExpr` leaves the body parser at a
+		  `body_parse_error`.
+
+		What
+		- Stores the raw, balanced complex-type payload without the leading `:`.
+		- Target emitters may lower the text into their own minimal `haxe.macro.ComplexType`
+		  representation as bring-up requires.
+	**/
+	EMacroType(typeText:String);
+
+	/**
 		Arrow-function / lambda expression (Stage 3 expansion): `arg -> expr`.
 
 		Why

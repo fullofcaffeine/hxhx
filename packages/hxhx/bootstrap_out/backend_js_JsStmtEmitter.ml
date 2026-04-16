@@ -267,22 +267,23 @@ and emitForIn = fun writer name iterable body scope -> ignore (if (match iterabl
   | HxExpr.EField (_, _) -> 9
   | HxExpr.ECall (_, _) -> 10
   | HxExpr.EMacroExpr (_, _) -> 11
-  | HxExpr.ELambda (_, _) -> 12
-  | HxExpr.ETryCatchRaw _ -> 13
-  | HxExpr.ESwitchRaw _ -> 14
-  | HxExpr.ESwitch (_, _, _) -> 15
-  | HxExpr.ENew (_, _) -> 16
-  | HxExpr.EUnop (_, _) -> 17
-  | HxExpr.EBinop (_, _, _) -> 18
-  | HxExpr.ETernary (_, _, _) -> 19
-  | HxExpr.EAnon (_, _) -> 20
-  | HxExpr.EArrayComprehension (_, _, _) -> 21
-  | HxExpr.EArrayDecl _ -> 22
-  | HxExpr.EArrayAccess (_, _) -> 23
-  | HxExpr.ERange (_, _) -> 24
-  | HxExpr.ECast (_, _) -> 25
-  | HxExpr.EUntyped _ -> 26
-  | HxExpr.EUnsupported _ -> 27) = 24 then ignore (let _g = Obj.magic (match iterable with
+  | HxExpr.EMacroType _ -> 12
+  | HxExpr.ELambda (_, _) -> 13
+  | HxExpr.ETryCatchRaw _ -> 14
+  | HxExpr.ESwitchRaw _ -> 15
+  | HxExpr.ESwitch (_, _, _) -> 16
+  | HxExpr.ENew (_, _) -> 17
+  | HxExpr.EUnop (_, _) -> 18
+  | HxExpr.EBinop (_, _, _) -> 19
+  | HxExpr.ETernary (_, _, _) -> 20
+  | HxExpr.EAnon (_, _) -> 21
+  | HxExpr.EArrayComprehension (_, _, _) -> 22
+  | HxExpr.EArrayDecl _ -> 23
+  | HxExpr.EArrayAccess (_, _) -> 24
+  | HxExpr.ERange (_, _) -> 25
+  | HxExpr.ECast (_, _) -> 26
+  | HxExpr.EUntyped _ -> 27
+  | HxExpr.EUnsupported _ -> 28) = 25 then ignore (let _g = Obj.magic (match iterable with
   | HxExpr.ERange (__enum_param_31, _) -> __enum_param_31
   | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match iterable with
   | HxExpr.ERange (_, __enum_param_32) -> __enum_param_32

@@ -53,6 +53,8 @@ class JsExprEmitter {
 				emitCall(callee, args, scope);
 			case EMacroExpr(inner, wrappers):
 				emitMacroExpr(inner, wrappers, scope);
+			case EMacroType(typeText):
+				emitMacroType(typeText);
 			case EUnop(op, inner):
 				"(" + op + emit(inner, scope) + ")";
 			case EBinop(op, left, right):
@@ -406,6 +408,9 @@ class JsExprEmitter {
 
 	static function emitCall(callee:HxExpr, args:Array<HxExpr>, scope:JsEmitScope):String {
 		switch (callee) {
+			case EEnumValue(name):
+				final params = args == null ? [] : args.map(a -> emit(a, scope));
+				return macroEnum(name, params);
 			case EIdent("__js__") | EField(EField(EIdent("js"), "Syntax"), "code"):
 				return emitInlineJsCode(args, scope);
 			case EIdent("__hxhx_throw"):
@@ -524,6 +529,10 @@ class JsExprEmitter {
 		return macroExprObject(exprDef);
 	}
 
+	static function emitMacroType(typeText:String):String {
+		return macroComplexType(typeText);
+	}
+
 	static function macroExprObject(exprDef:String):String {
 		return "({expr: " + exprDef + ", pos: null})";
 	}
@@ -565,6 +574,220 @@ class JsExprEmitter {
 			case _:
 				macroEnum("EConst", [macroEnum("CIdent", [JsNameMangler.quoteString(emit(expr, scope))])]);
 		}
+	}
+
+	static function macroComplexType(raw:String):String {
+		final text = trimLeadingTypeColon(raw);
+		final arrowParts = splitTopLevelArrow(text);
+		if (arrowParts.length > 1) {
+			final args = new Array<String>();
+			for (i in 0...arrowParts.length - 1) {
+				final segmentArgs = macroFunctionArgTypes(arrowParts[i]);
+				for (arg in segmentArgs)
+					args.push(arg);
+			}
+			return macroEnum("TFunction", ["[" + args.join(", ") + "]", macroComplexType(arrowParts[arrowParts.length - 1])]);
+		}
+
+		final trimmed = StringTools.trim(text);
+		if (trimmed.length == 0)
+			return macroTypePath("");
+
+		final namedColon = findTopLevelChar(trimmed, ":".code);
+		if (namedColon > 0) {
+			final namePart = StringTools.trim(trimmed.substring(0, namedColon));
+			final typePart = trimmed.substr(namedColon + 1);
+			if (StringTools.startsWith(namePart, "?")) {
+				final name = StringTools.trim(namePart.substr(1));
+				return macroEnum("TOptional", [
+					macroEnum("TNamed", [JsNameMangler.quoteString(name), macroComplexType(typePart)])
+				]);
+			}
+			return macroEnum("TNamed", [JsNameMangler.quoteString(namePart), macroComplexType(typePart)]);
+		}
+
+		if (StringTools.startsWith(trimmed, "?"))
+			return macroEnum("TOptional", [macroComplexType(trimmed.substr(1))]);
+
+		final parenEnd = matchingOuterParen(trimmed);
+		if (parenEnd == trimmed.length - 1)
+			return macroEnum("TParent", [macroComplexType(trimmed.substring(1, trimmed.length - 1))]);
+
+		return macroTypePath(trimmed);
+	}
+
+	static function macroFunctionArgTypes(raw:String):Array<String> {
+		final trimmed = StringTools.trim(raw);
+		final parenEnd = matchingOuterParen(trimmed);
+		if (parenEnd == trimmed.length - 1) {
+			final inner = trimmed.substring(1, trimmed.length - 1);
+			final commaParts = splitTopLevelComma(inner);
+			if (commaParts.length > 1)
+				return commaParts.map(part -> macroComplexType(part));
+		}
+		return [macroComplexType(trimmed)];
+	}
+
+	static function macroTypePath(raw:String):String {
+		final path = StringTools.trim(stripGenericTypeParams(raw));
+		final parts = path.split(".");
+		final name = parts.length == 0 ? path : parts[parts.length - 1];
+		final pack = new Array<String>();
+		if (parts.length > 1) {
+			for (i in 0...parts.length - 1)
+				pack.push(JsNameMangler.quoteString(parts[i]));
+		}
+		final typePath = "{pack: [" + pack.join(", ") + "], name: " + JsNameMangler.quoteString(name) + ", params: [], sub: null}";
+		return macroEnum("TPath", [typePath]);
+	}
+
+	static function trimLeadingTypeColon(raw:String):String {
+		var text = StringTools.trim(raw == null ? "" : raw);
+		if (StringTools.startsWith(text, ":"))
+			text = StringTools.trim(text.substr(1));
+		return text;
+	}
+
+	static function stripGenericTypeParams(raw:String):String {
+		final lt = findTopLevelChar(raw, "<".code);
+		return lt < 0 ? raw : raw.substr(0, lt);
+	}
+
+	static function splitTopLevelArrow(raw:String):Array<String> {
+		final out = new Array<String>();
+		var start = 0;
+		var i = 0;
+		var paren = 0;
+		var bracket = 0;
+		var angle = 0;
+		var brace = 0;
+		while (i + 1 < raw.length) {
+			final c = raw.charCodeAt(i);
+			switch (c) {
+				case "(".code:
+					paren++;
+				case ")".code:
+					if (paren > 0)
+						paren--;
+				case "[".code:
+					bracket++;
+				case "]".code:
+					if (bracket > 0)
+						bracket--;
+				case "{".code:
+					brace++;
+				case "}".code:
+					if (brace > 0)
+						brace--;
+				case "<".code:
+					angle++;
+				case ">".code:
+					if (angle > 0)
+						angle--;
+				case "-".code if (paren == 0 && bracket == 0 && angle == 0 && brace == 0 && raw.charCodeAt(i + 1) == ">".code):
+					out.push(raw.substring(start, i));
+					i += 2;
+					start = i;
+					continue;
+				case _:
+			}
+			i++;
+		}
+		out.push(raw.substr(start));
+		return out;
+	}
+
+	static function splitTopLevelComma(raw:String):Array<String> {
+		final out = new Array<String>();
+		var start = 0;
+		var paren = 0;
+		var bracket = 0;
+		var angle = 0;
+		var brace = 0;
+		for (i in 0...raw.length) {
+			final c = raw.charCodeAt(i);
+			switch (c) {
+				case "(".code:
+					paren++;
+				case ")".code:
+					if (paren > 0)
+						paren--;
+				case "[".code:
+					bracket++;
+				case "]".code:
+					if (bracket > 0)
+						bracket--;
+				case "{".code:
+					brace++;
+				case "}".code:
+					if (brace > 0)
+						brace--;
+				case "<".code:
+					angle++;
+				case ">".code:
+					if (angle > 0)
+						angle--;
+				case ",".code if (paren == 0 && bracket == 0 && angle == 0 && brace == 0):
+					out.push(raw.substring(start, i));
+					start = i + 1;
+				case _:
+			}
+		}
+		out.push(raw.substr(start));
+		return out;
+	}
+
+	static function findTopLevelChar(raw:String, target:Int):Int {
+		var paren = 0;
+		var bracket = 0;
+		var angle = 0;
+		var brace = 0;
+		for (i in 0...raw.length) {
+			final c = raw.charCodeAt(i);
+			switch (c) {
+				case "(".code:
+					paren++;
+				case ")".code:
+					if (paren > 0)
+						paren--;
+				case "[".code:
+					bracket++;
+				case "]".code:
+					if (bracket > 0)
+						bracket--;
+				case "{".code:
+					brace++;
+				case "}".code:
+					if (brace > 0)
+						brace--;
+				case "<".code:
+					angle++;
+				case ">".code:
+					if (angle > 0)
+						angle--;
+				case _:
+			}
+			if (c == target && paren == 0 && bracket == 0 && angle == 0 && brace == 0)
+				return i;
+		}
+		return -1;
+	}
+
+	static function matchingOuterParen(raw:String):Int {
+		if (raw == null || raw.length == 0 || raw.charCodeAt(0) != "(".code)
+			return -1;
+		var depth = 1;
+		for (i in 1...raw.length) {
+			final c = raw.charCodeAt(i);
+			if (c == "(".code) {
+				depth++;
+			} else if (c == ")".code) {
+				depth--;
+				if (depth == 0)
+					return i;
+			}
+		}
+		return -1;
 	}
 
 	static function emitAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>, scope:JsEmitScope):String {

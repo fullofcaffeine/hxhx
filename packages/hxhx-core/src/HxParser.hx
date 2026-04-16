@@ -1626,6 +1626,11 @@ class HxParser {
 			wrappers.push("untyped");
 		}
 
+		if (cur.kind.match(TColon)) {
+			bump();
+			return HxExpr.EMacroType(readTypeHintText(stop));
+		}
+
 		final quoted = if (cur.kind.match(TLParen)) {
 			bump();
 			wrappers.push("parenthesis");

@@ -75,5 +75,16 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		final macroInJs = JsExprEmitter.emit(HxParser.parseExprText("macro 1 in 0"), exprScope);
 		assertContains(macroInJs, "__hx_ctor: \"EBinop\"", "macro in quote should emit EBinop expression def");
 		assertContains(macroInJs, "__hx_ctor: \"OpIn\"", "macro in quote should emit OpIn operator");
+
+		final macroTypeJs = JsExprEmitter.emit(HxParser.parseExprText("macro :X -> Y"), exprScope);
+		assertContains(macroTypeJs, "__hx_ctor: \"TFunction\"", "macro type quote should emit function complex type");
+		assertContains(macroTypeJs, "__hx_ctor: \"TPath\"", "macro type quote should emit path complex type");
+		assertContains(macroTypeJs, "name: \"X\"", "macro type quote should preserve argument type path");
+		assertContains(macroTypeJs, "name: \"Y\"", "macro type quote should preserve return type path");
+
+		final enumCtorJs = JsExprEmitter.emit(HxParser.parseExprText('TOptional(TNamed("a", macro :Int))'), exprScope);
+		assertContains(enumCtorJs, "__hx_ctor: \"TOptional\"", "enum constructor calls should emit enum objects");
+		assertContains(enumCtorJs, "__hx_ctor: \"TNamed\"", "nested enum constructor calls should emit enum objects");
+		assertContains(enumCtorJs, "name: \"Int\"", "macro type constructor arg should preserve Int type path");
 	}
 }

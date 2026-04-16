@@ -473,5 +473,15 @@ class M14HihExprTextParserIntegrationTest {
 				case _:
 			}
 		}
+
+		final macroTypeCalls = HxParser.parseFunctionBodyText('eq(p.printComplexType(macro :X -> Y), "X -> Y"); eq(p.printComplexType(TFunction([TOptional(TNamed("a", macro :Int))], macro :Int)), "(?a:Int) -> Int"); eq(p.printField({ name: "x", pos: null, kind: FVar(macro :Any, null), access: [AFinal, AStatic] }), "static final x : Any");');
+		assertTrue(macroTypeCalls.length == 3, "expected macro complex type printer calls to parse");
+		for (stmt in macroTypeCalls) {
+			switch (stmt) {
+				case SExpr(EUnsupported(raw), _):
+					fail("macro complex type call parsed as unsupported: " + raw);
+				case _:
+			}
+		}
 	}
 }

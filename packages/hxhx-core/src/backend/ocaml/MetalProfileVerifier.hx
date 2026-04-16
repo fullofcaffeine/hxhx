@@ -192,6 +192,7 @@ class MetalProfileVerifier {
 					verifyExpr(filePath, className, fnName, stmtPos, arg, violations);
 			case EMacroExpr(inner, _wrappers):
 				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);
+			case EMacroType(_):
 			case EField(obj, _):
 				verifyExpr(filePath, className, fnName, stmtPos, obj, violations);
 			case EUnop(_, inner):
