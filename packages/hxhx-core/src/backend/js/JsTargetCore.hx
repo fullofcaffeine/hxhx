@@ -704,6 +704,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "EReg")
 			return emitERegStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "Reflect")
+			return emitReflectStaticFunctionBody(writer, fnName, params);
+
 		if (fullName == "unit.UnitBuilder" && fnName == "generateSpec") {
 			// Full1 upstream unit smoke executes TestMain after macro expansion should have
 			// replaced this compile-time scan with concrete spec cases. Until native macro
@@ -778,6 +781,19 @@ class JsTargetCore implements ITargetCore {
 				writer.popIndent();
 				writer.writeln("}");
 				writer.writeln("return " + argument + ";");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitReflectStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "isObject":
+				if (params.length < 1)
+					return false;
+				final value = params[0];
+				writer.writeln("return " + value + " != null && (typeof " + value + " === \"object\" || typeof " + value + " === \"string\");");
 				return true;
 			case _:
 				return false;

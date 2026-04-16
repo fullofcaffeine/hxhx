@@ -400,6 +400,16 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "EReg.hx");
 	}
 
+	static function reflectModule():TypedModule {
+		final valueArg = new HxFunctionArg("v", "Dynamic", HxDefaultValue.NoDefault);
+		final reflectClass = new HxClassDecl("Reflect", false, [
+			new HxFunctionDecl("isObject", HxVisibility.Public, true, [valueArg], "Bool",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-reflect"), "")
+		]);
+		final decl = new HxModuleDecl("", [], reflectClass, [reflectClass], false, false);
+		return typedModule("", decl, "Reflect.hx");
+	}
+
 	static function counterModule():TypedModule {
 		final seedArg = new HxFunctionArg("seed", "Int", HxDefaultValue.Default(HxExpr.EInt(2)));
 		final deltaArg = new HxFunctionArg("delta", "Int", HxDefaultValue.Default(HxExpr.EInt(3)));
@@ -750,6 +760,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    var splitter = new EReg(",", "g");',
 				'    Sys.println(splitter.split("a,b,c").join("|"));',
 				'    Sys.println(EReg.escape("a+b"));',
+				'    Sys.println("reflect-is-object=" + Reflect.isObject({x: 1}) + "," + Reflect.isObject("s") + "," + Reflect.isObject(function() return 1) + "," + Reflect.isObject(null));',
 				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref"));',
 				'    Sys.println(haxe.crypto.Base64.BYTES);',
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
@@ -817,6 +828,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				jsBootModule(),
 				dateToolsModule(),
 				eRegModule(),
+				reflectModule(),
 				counterModule(),
 				arrayModule(),
 				jsNodeProcessModule(),
@@ -932,6 +944,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "var __hx_cls_EReg = function", "EReg should emit a constructible regex wrapper");
 			assertContains(js, "__hx_cls_EReg.prototype.match = function", "EReg match prototype method should emit");
 			assertContains(js, "__hx_cls_EReg.escape = function", "EReg escape helper should emit");
+			assertContains(js, "__hx_cls_Reflect.isObject = function", "Reflect isObject shim should emit");
+			assertContains(js, "typeof v === \"object\" || typeof v === \"string\"", "Reflect isObject should match Haxe JS object/string semantics");
 			assertContains(js, "Object.defineProperty(Array.prototype, \"iterator\"",
 				"runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
 			assertContains(js, "__hx_cls_haxe_io_Bytes.ofString(\"bytes-ref\")", "qualified package static refs should resolve to class bindings");
@@ -1026,6 +1040,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "true\nabc_12\nfalse", "EReg should construct and preserve match state");
 			assertContains(stdout, "a|b|c", "EReg split should delegate to JS regular expressions");
 			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");
+			assertContains(stdout, "reflect-is-object=true,true,false,false", "Reflect.isObject should match Haxe JS behavior");
 			assertContains(stdout, "bytes-ref", "qualified package static refs should execute through class bindings");
 			assertContains(stdout, "abc", "same-class static field refs should execute through class bindings");
 			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
