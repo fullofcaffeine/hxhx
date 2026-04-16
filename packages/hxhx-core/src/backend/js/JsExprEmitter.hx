@@ -496,7 +496,44 @@ class JsExprEmitter {
 		return "";
 	}
 
+	static function typeTestName(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EIdent(name) | EEnumValue(name):
+				name;
+			case EField(owner, field): final prefix = typeTestName(owner); prefix == null || prefix.length == 0 ? field : prefix + "." + field;
+			case _:
+				null;
+		}
+	}
+
+	static function emitIsTypeTest(left:HxExpr, right:HxExpr, scope:JsEmitScope):String {
+		final value = emit(left, scope);
+		final typeName = typeTestName(right);
+		final test = switch (typeName) {
+			case "Float" | "Int":
+				'typeof __hx_is === "number"';
+			case "Bool":
+				'typeof __hx_is === "boolean"';
+			case "String":
+				'typeof __hx_is === "string" || __hx_is instanceof String';
+			case "Array":
+				"Array.isArray(__hx_is)";
+			case "Dynamic" | "Any":
+				"true";
+			case null:
+				"false";
+			case _:
+				final resolved = scope.resolveClassRef(typeName);
+				final parts = typeName.split(".");
+				final fallback = parts.length == 0 ? typeName : parts[parts.length - 1];
+				"__hx_is instanceof " + (resolved == null ? JsNameMangler.identifier(fallback) : resolved);
+		}
+		return "(function(__hx_is){ return " + test + "; })(" + value + ")";
+	}
+
 	static function emitBinop(op:String, left:HxExpr, right:HxExpr, scope:JsEmitScope):String {
+		if (op == "is")
+			return emitIsTypeTest(left, right, scope);
 		if (op == "??") {
 			final l = emit(left, scope);
 			final r = emit(right, scope);

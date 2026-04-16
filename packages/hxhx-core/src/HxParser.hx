@@ -1622,7 +1622,7 @@ class HxParser {
 			case "&&": 3;
 			case "&": 3;
 			case "^": 3;
-			case "==" | "!=": 4;
+			case "==" | "!=" | "is": 4;
 			case "<<" | ">>" | ">>>": 5;
 			case "<" | "<=" | ">" | ">=": 5;
 			case "+" | "-": 6;
@@ -1932,6 +1932,8 @@ class HxParser {
 			}
 		}
 		return switch (cur.kind) {
+			case TIdent(name) if (name == "is"):
+				{op: "is", len: 1};
 			case TOther(c):
 				switch (c) {
 					case "=".code:

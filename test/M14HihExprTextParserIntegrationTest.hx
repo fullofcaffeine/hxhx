@@ -308,6 +308,16 @@ class M14HihExprTextParserIntegrationTest {
 			}
 		}
 
+		final floatSuffixTypeTestStmts = HxParser.parseFunctionBodyText('eq(1f64 is Float, true); eq(.0f64, 0.0); eq(7e+0f64, 7e+0);');
+		assertTrue(floatSuffixTypeTestStmts.length == 3, "expected float suffix type-test statements to parse");
+		switch (floatSuffixTypeTestStmts[0]) {
+			case SExpr(ECall(EIdent("eq"), [EBinop("is", EFloat(_), EEnumValue("Float")), EBool(true)]), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("float suffix type-test statement parsed as unsupported: " + raw);
+			case _:
+				fail("expected float suffix type-test call statement");
+		}
+
 		final arrowComprehensionStmts = HxParser.parseFunctionBodyText("arr = [for (i in 0...5) value -> value * i];");
 		assertTrue(arrowComprehensionStmts.length == 1, "expected range comprehension arrow assignment");
 		switch (arrowComprehensionStmts[0]) {
