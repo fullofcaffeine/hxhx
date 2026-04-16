@@ -537,6 +537,23 @@ class M14HihExprTextParserIntegrationTest {
 			}
 		}
 
+		final macroIfVars = HxParser.parseFunctionBodyText('var withoutElse = macro if (1) 2; var withElse = macro if (1) 2 else 3;');
+		assertTrue(macroIfVars.length == 2, "expected macro if quote vars to parse");
+		switch (macroIfVars[0]) {
+			case SVar("withoutElse", _, EMacroExpr(ECall(EIdent("__hxhx_macro_if"), [EInt(1), EInt(2), EIdent("__hxhx_macro_missing_else")]), _), _):
+			case SVar(_, _, EUnsupported(raw), _):
+				fail("macro if without else parsed as unsupported: " + raw);
+			case _:
+				fail("expected macro if without else to preserve missing else marker");
+		}
+		switch (macroIfVars[1]) {
+			case SVar("withElse", _, EMacroExpr(ECall(EIdent("__hxhx_macro_if"), [EInt(1), EInt(2), EInt(3)]), _), _):
+			case SVar(_, _, EUnsupported(raw), _):
+				fail("macro if with else parsed as unsupported: " + raw);
+			case _:
+				fail("expected macro if with else to preserve else expression");
+		}
+
 		final macroTypeCalls = HxParser.parseFunctionBodyText('eq(p.printComplexType(macro :X -> Y), "X -> Y"); eq(p.printComplexType(TFunction([TOptional(TNamed("a", macro :Int))], macro :Int)), "(?a:Int) -> Int"); eq(p.printField({ name: "x", pos: null, kind: FVar(macro :Any, null), access: [AFinal, AStatic] }), "static final x : Any");');
 		assertTrue(macroTypeCalls.length == 3, "expected macro complex type printer calls to parse");
 		for (stmt in macroTypeCalls) {

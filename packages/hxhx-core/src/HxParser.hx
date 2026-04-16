@@ -1665,6 +1665,9 @@ class HxParser {
 	}
 
 	function parseMacroQuotePayload(stop:() -> Bool):HxExpr {
+		if (cur.kind.match(TKeyword(KIf)))
+			return parseMacroQuoteIfPayload(stop);
+
 		final left = parseExpr(() -> stop() || cur.kind.match(TKeyword(KIn)));
 		if (cur.kind.match(TKeyword(KIn))) {
 			bump();
@@ -1672,6 +1675,28 @@ class HxParser {
 			return EBinop("in", left, right);
 		}
 		return left;
+	}
+
+	function parseMacroQuoteIfPayload(stop:() -> Bool):HxExpr {
+		bump(); // `if`
+		expect(TLParen, "'('");
+		final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+		if (!cur.kind.match(TRParen)) {
+			while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
+				bump();
+		}
+		if (cur.kind.match(TRParen))
+			bump();
+
+		final thenExpr = parseMacroQuotePayload(() -> stop() || cur.kind.match(TKeyword(KElse)));
+		if (cur.kind.match(TSemicolon) && peekKind().match(TKeyword(KElse)))
+			bump();
+		final elseExpr = if (acceptKeyword(KElse)) {
+			parseMacroQuotePayload(stop);
+		} else {
+			HxExpr.EIdent("__hxhx_macro_missing_else");
+		}
+		return HxExpr.ECall(HxExpr.EIdent("__hxhx_macro_if"), [cond, thenExpr, elseExpr]);
 	}
 
 	function peekBinop(stop:() -> Bool):Null<{op:String, len:Int}> {

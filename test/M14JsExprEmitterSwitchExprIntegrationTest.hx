@@ -94,6 +94,14 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		assertContains(macroInJs, "__hx_ctor: \"EBinop\"", "macro in quote should emit EBinop expression def");
 		assertContains(macroInJs, "__hx_ctor: \"OpIn\"", "macro in quote should emit OpIn operator");
 
+		final macroIfNoElseJs = JsExprEmitter.emit(HxParser.parseExprText("macro if (1) 2"), exprScope);
+		assertContains(macroIfNoElseJs, "__hx_ctor: \"EIf\"", "macro if without else should emit EIf expression def");
+		assertContains(macroIfNoElseJs, ", null]", "macro if without else should preserve null else branch");
+
+		final macroIfElseJs = JsExprEmitter.emit(HxParser.parseExprText("macro if (1) 2 else 3"), exprScope);
+		assertContains(macroIfElseJs, "__hx_ctor: \"EIf\"", "macro if with else should emit EIf expression def");
+		assertContains(macroIfElseJs, "\"3\"", "macro if with else should preserve else expression");
+
 		final macroTypeJs = JsExprEmitter.emit(HxParser.parseExprText("macro :X -> Y"), exprScope);
 		assertContains(macroTypeJs, "__hx_ctor: \"TFunction\"", "macro type quote should emit function complex type");
 		assertContains(macroTypeJs, "__hx_ctor: \"TPath\"", "macro type quote should emit path complex type");

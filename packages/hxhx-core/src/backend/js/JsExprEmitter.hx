@@ -567,6 +567,20 @@ class JsExprEmitter {
 					emitMacroExpr(left, [], scope),
 					emitMacroExpr(right, [], scope)
 				]);
+			case ECall(EIdent("__hxhx_macro_if"), args):
+				final cond = args.length > 0 ? args[0] : HxExpr.EBool(false);
+				final thenExpr = args.length > 1 ? args[1] : HxExpr.ENull;
+				final elseExpr = if (args.length > 2) {
+					switch (args[2]) {
+						case EIdent("__hxhx_macro_missing_else"):
+							"null";
+						case expr:
+							emitMacroExpr(expr, [], scope);
+					}
+				} else {
+					"null";
+				}
+				macroEnum("EIf", [emitMacroExpr(cond, [], scope), emitMacroExpr(thenExpr, [], scope), elseExpr]);
 			case EUntyped(inner):
 				macroEnum("EUntyped", [emitMacroExpr(inner, [], scope)]);
 			case EUnop(op, inner):
