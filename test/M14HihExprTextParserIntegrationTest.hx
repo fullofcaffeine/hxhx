@@ -205,6 +205,23 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected spread call initializer");
 		}
 
+		final localWhileFunctionStmts = HxParser.parseFunctionBodyText("function count(xs:Array<Int>) { var i = 0; while (i < xs.length) { i += 1; } return i; } var n = count([1, 2, 3]);");
+		assertTrue(localWhileFunctionStmts.length == 2, "expected local while function plus call statement");
+		switch (localWhileFunctionStmts[0]) {
+			case SVar(name, _, ELambda(args, body), _):
+				assertTrue(name == "count", "expected local while function name to parse");
+				assertTrue(args.length == 1 && args[0] == "xs", "expected local while function arg");
+				switch (body) {
+					case EUnsupported(raw):
+						fail("local while function body parsed as unsupported: " + raw);
+					case _:
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("local while function parsed as unsupported statement: " + raw);
+			case _:
+				fail("expected local while function declaration to lower to SVar lambda");
+		}
+
 		final localReturnFunctionStmts = HxParser.parseFunctionBodyText("function capture() return Int64.compare(a, Int64.make(1, 2)); eq(capture(), 0);");
 		assertTrue(localReturnFunctionStmts.length == 2, "expected local return function plus call statement");
 		switch (localReturnFunctionStmts[0]) {

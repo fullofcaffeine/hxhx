@@ -70,5 +70,11 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 
 		final spreadCtorJs = JsExprEmitter.emit(HxParser.parseExprText("new Array(...values)"), exprScope);
 		assertContains(spreadCtorJs, "new Array(...values)", "constructor argument spread should lower to JS spread syntax");
+
+		final whileBody = HxParser.parseExprText("function(xs) { var i = 0; while (i < xs.length) { i += 1; } return i; }");
+		final whileBodyJs = JsExprEmitter.emit(whileBody, exprScope);
+		assertContains(whileBodyJs, "while (__cond())", "block-body function while loop should lower to expression helper");
+		assertContains(whileBodyJs, "i += 1", "block-body function while helper should preserve body side effect");
+		assertContains(whileBodyJs, "return i;", "block-body function while helper should run the continuation after the loop");
 	}
 }

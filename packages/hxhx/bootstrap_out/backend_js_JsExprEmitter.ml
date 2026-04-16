@@ -948,6 +948,7 @@ and emitCall = fun callee args scope -> try let __fallback_result_207 = (
         ));
         let thrown = (!tempString : string) in raise (HxRuntime.Hx_return (Obj.repr (("(function(){ throw " ^ HxString.toStdString thrown) ^ "; })()")))
       ))
+      | "__hxhx_while" -> raise (HxRuntime.Hx_return (Obj.repr (emitWhileExpr (Obj.magic args) scope : string)))
       | "__js__" -> raise (HxRuntime.Hx_return (Obj.repr (emitInlineJsCode (Obj.magic args) scope : string)))
       | "trace" -> ignore (let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
         ignore (let _g2 = Obj.magic (let __arr_191 = HxArray.create () in __arr_191) in (
@@ -1145,6 +1146,10 @@ and emitCallArg = fun arg scope -> let tempResult = ref ("" : string) in (
 and emitForKeyValueExpr = fun args scope -> (
   ignore (if args == Obj.magic (HxRuntime.hx_null) || HxArray.length args < 3 then ignore (unsupported ("ECall" : string) ("__hxhx_for_key_value" : string)) else ());
   let iterable = (emit (Obj.magic (HxArray.get (Obj.magic args) 0)) scope : string) in let body = (emit (Obj.magic (HxArray.get (Obj.magic args) 1)) scope : string) in let continuation = (emit (Obj.magic (HxArray.get (Obj.magic args) 2)) scope : string) in ((((("(function(){ var __iter = " ^ HxString.toStdString iterable) ^ "; var __body = ") ^ HxString.toStdString body) ^ "; var __keys = Object.keys(__iter); for (var __i = 0; __i < __keys.length; __i++) { var __raw_key = __keys[__i]; var __key = Array.isArray(__iter) ? (__raw_key | 0) : __raw_key; __body(__key, __iter[__raw_key]); } return ") ^ HxString.toStdString continuation) ^ "; })()"
+)
+and emitWhileExpr = fun args scope -> (
+  ignore (if args == Obj.magic (HxRuntime.hx_null) || HxArray.length args < 3 then ignore (unsupported ("ECall" : string) ("__hxhx_while" : string)) else ());
+  let cond = (emit (Obj.magic (HxArray.get (Obj.magic args) 0)) scope : string) in let body = (emit (Obj.magic (HxArray.get (Obj.magic args) 1)) scope : string) in let continuation = (emit (Obj.magic (HxArray.get (Obj.magic args) 2)) scope : string) in ((((("(function(){ var __cond = " ^ HxString.toStdString cond) ^ "; var __body = ") ^ HxString.toStdString body) ^ "; while (__cond()) { __body(); } return ") ^ HxString.toStdString continuation) ^ "; })()"
 )
 and emitInlineJsCode = fun args scope -> try let __fallback_result_228 = (
   ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr ("undefined" : string))) else ());
