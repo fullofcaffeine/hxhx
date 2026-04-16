@@ -1147,6 +1147,12 @@ class HxParser {
 		final args = new Array<String>();
 		if (!cur.kind.match(TRParen)) {
 			while (true) {
+				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
+				if (isRest) {
+					bump();
+					bump();
+					bump();
+				}
 				acceptOtherChar("?");
 				final argName = readIdent("argument name");
 				args.push(argName);
