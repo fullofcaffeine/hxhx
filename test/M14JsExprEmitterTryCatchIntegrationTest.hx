@@ -26,5 +26,10 @@ class M14JsExprEmitterTryCatchIntegrationTest {
 		assertContains(privateAccess, "return e.stack;", "typed catch body should return stack expression");
 		assertNotContains(privateAccess, "@:privateAccess", "try raw should erase expression metadata for JS");
 		assertNotContains(privateAccess, ":Exception", "try raw should erase cast and catch type hints for JS");
+
+		final typedBlock = JsExprEmitter.emit(ETryCatchRaw("opaque_block_expr:{ var x:TypedefToStringMap<String>; x; }"), exprScope);
+		assertContains(typedBlock, "(function () { var x; return x; })()", "typed block expression should lower to returning IIFE");
+		assertNotContains(typedBlock, "opaque_block_expr", "typed block expression should erase parser marker");
+		assertNotContains(typedBlock, "TypedefToStringMap<String>", "typed block expression should erase local var type hint");
 	}
 }

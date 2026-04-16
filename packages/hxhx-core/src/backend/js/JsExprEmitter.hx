@@ -117,6 +117,10 @@ class JsExprEmitter {
 		if (raw == null || raw.length == 0 || raw == "opaque_block_expr")
 			unsupported("ETryCatchRaw", raw);
 
+		final opaqueBlock = rewriteOpaqueBlockExprRaw(raw);
+		if (opaqueBlock != null)
+			return opaqueBlock;
+
 		final rewritten = rewriteSimpleTryCatchRaw(raw);
 		if (rewritten != null)
 			return rewritten;
@@ -125,6 +129,24 @@ class JsExprEmitter {
 		if (js.indexOf("catch") < 0 && js.indexOf("finally") < 0)
 			js += "catch(__hx_err){throw __hx_err;}";
 		return "(function () { " + js + " })()";
+	}
+
+	static function rewriteOpaqueBlockExprRaw(raw:String):Null<String> {
+		final marker = "opaque_block_expr:";
+		if (!StringTools.startsWith(raw, marker))
+			return null;
+
+		var body = StringTools.trim(raw.substr(marker.length));
+		if (body.length == 0)
+			unsupported("ETryCatchRaw", raw);
+
+		if (body.charCodeAt(0) == "{".code) {
+			final close = findMatching(body, 0, "{".code, "}".code);
+			if (close == body.length - 1)
+				body = body.substring(1, close);
+		}
+
+		return "(function () { " + blockToReturningJs(body) + " })()";
 	}
 
 	static function rewriteSimpleTryCatchRaw(raw:String):Null<String> {
@@ -234,7 +256,7 @@ class JsExprEmitter {
 	}
 
 	static function sanitizeRawHaxeExpressionSyntax(raw:String):String {
-		return stripExpressionCastHints(stripExpressionMetadata(raw));
+		return stripLocalVarTypeHints(stripExpressionCastHints(stripExpressionMetadata(raw)));
 	}
 
 	static function stripExpressionMetadata(raw:String):String {
@@ -289,12 +311,201 @@ class JsExprEmitter {
 		return out.toString();
 	}
 
+	static function stripLocalVarTypeHints(raw:String):String {
+		if (raw == null || raw.indexOf(":") < 0)
+			return raw;
+
+		final out = new StringBuf();
+		var i = 0;
+		while (i < raw.length) {
+			final keywordLength = localVarKeywordLengthAt(raw, i);
+			if (keywordLength <= 0) {
+				out.addChar(raw.charCodeAt(i));
+				i++;
+				continue;
+			}
+
+			out.add(raw.substr(i, keywordLength));
+			i += keywordLength;
+			var inInitializer = false;
+			var parenDepth = 0;
+			var braceDepth = 0;
+			var bracketDepth = 0;
+			var declarationDone = false;
+			while (i < raw.length && !declarationDone) {
+				final code = raw.charCodeAt(i);
+				switch (code) {
+					case "\"".code | "'".code:
+						i = copyQuotedRaw(raw, i, out);
+					case "(".code:
+						parenDepth++;
+						out.addChar(code);
+						i++;
+					case ")".code:
+						if (parenDepth > 0)
+							parenDepth--;
+						out.addChar(code);
+						i++;
+					case "{".code:
+						braceDepth++;
+						out.addChar(code);
+						i++;
+					case "}".code:
+						if (braceDepth > 0)
+							braceDepth--;
+						out.addChar(code);
+						i++;
+					case "[".code:
+						bracketDepth++;
+						out.addChar(code);
+						i++;
+					case "]".code:
+						if (bracketDepth > 0)
+							bracketDepth--;
+						out.addChar(code);
+						i++;
+					case ":".code if (!inInitializer && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0):
+						i = skipLocalVarTypeHint(raw, i + 1);
+					case "=".code if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0):
+						inInitializer = true;
+						out.addChar(code);
+						i++;
+					case ",".code if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0):
+						inInitializer = false;
+						out.addChar(code);
+						i++;
+					case ";".code if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0):
+						out.addChar(code);
+						i++;
+						declarationDone = true;
+					case _:
+						out.addChar(code);
+						i++;
+				}
+			}
+		}
+		return out.toString();
+	}
+
+	static function localVarKeywordLengthAt(raw:String, offset:Int):Int {
+		if (offset > 0 && isRawIdentChar(raw.charCodeAt(offset - 1)))
+			return 0;
+
+		if (raw.substr(offset, 3) == "var" && offset + 3 < raw.length && isWhitespace(raw.charCodeAt(offset + 3)))
+			return 3;
+		if (raw.substr(offset, 3) == "let" && offset + 3 < raw.length && isWhitespace(raw.charCodeAt(offset + 3)))
+			return 3;
+		if (raw.substr(offset, 5) == "const" && offset + 5 < raw.length && isWhitespace(raw.charCodeAt(offset + 5)))
+			return 5;
+		return 0;
+	}
+
+	static function skipLocalVarTypeHint(raw:String, offset:Int):Int {
+		var i = offset;
+		var parenDepth = 0;
+		var braceDepth = 0;
+		var bracketDepth = 0;
+		var angleDepth = 0;
+		while (i < raw.length) {
+			final code = raw.charCodeAt(i);
+			switch (code) {
+				case "\"".code | "'".code:
+					i = skipQuotedRaw(raw, i);
+				case "(".code:
+					parenDepth++;
+					i++;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth--;
+					i++;
+				case "{".code:
+					braceDepth++;
+					i++;
+				case "}".code:
+					if (braceDepth > 0)
+						braceDepth--;
+					i++;
+				case "[".code:
+					bracketDepth++;
+					i++;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth--;
+					i++;
+				case "<".code:
+					angleDepth++;
+					i++;
+				case ">".code:
+					if (angleDepth > 0)
+						angleDepth--;
+					i++;
+				case "=".code | ",".code | ";".code if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0 && angleDepth == 0):
+					return i;
+				case _:
+					i++;
+			}
+		}
+		return i;
+	}
+
+	static function copyQuotedRaw(raw:String, offset:Int, out:StringBuf):Int {
+		final quote = raw.charCodeAt(offset);
+		out.addChar(quote);
+		var i = offset + 1;
+		while (i < raw.length) {
+			final code = raw.charCodeAt(i);
+			out.addChar(code);
+			i++;
+			if (code == "\\".code && i < raw.length) {
+				out.addChar(raw.charCodeAt(i));
+				i++;
+				continue;
+			}
+			if (code == quote)
+				break;
+		}
+		return i;
+	}
+
+	static function skipQuotedRaw(raw:String, offset:Int):Int {
+		final quote = raw.charCodeAt(offset);
+		var i = offset + 1;
+		while (i < raw.length) {
+			final code = raw.charCodeAt(i);
+			i++;
+			if (code == "\\".code && i < raw.length) {
+				i++;
+				continue;
+			}
+			if (code == quote)
+				break;
+		}
+		return i;
+	}
+
 	static function isMetadataPathChar(code:Int):Bool {
 		return (code >= "a".code && code <= "z".code)
 			|| (code >= "A".code && code <= "Z".code)
 			|| (code >= "0".code && code <= "9".code)
 			|| code == "_".code
 			|| code == ".".code;
+	}
+
+	static function isRawIdentChar(code:Int):Bool {
+		return (code >= "a".code && code <= "z".code)
+			|| (code >= "A".code && code <= "Z".code)
+			|| (code >= "0".code && code <= "9".code)
+			|| code == "_".code
+			|| code == "$".code;
+	}
+
+	static function isWhitespace(code:Int):Bool {
+		return switch (code) {
+			case 9 | 10 | 11 | 12 | 13 | 32:
+				true;
+			case _:
+				false;
+		}
 	}
 
 	static function isRawTypeHintSegment(segment:String):Bool {
