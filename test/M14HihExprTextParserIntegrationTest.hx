@@ -540,6 +540,18 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected privateAccess expression statement to parse");
 		}
 
+		final castPostfixStmts = HxParser.parseFunctionBodyText("t(Std.isOfType(cast(c, Cov1).covariant(), Child1));");
+		assertTrue(castPostfixStmts.length == 1, "expected cast-postfix statement");
+		switch (castPostfixStmts[0]) {
+			case SExpr(ECall(EIdent("t"), [
+				ECall(EField(EIdent("Std"), "isOfType"), [ECall(EField(ECast(EIdent("c"), "Cov1"), "covariant"), []), EEnumValue("Child1")])
+			]), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("cast-postfix statement parsed as unsupported: " + raw);
+			case _:
+				fail("expected cast-postfix call to parse");
+		}
+
 		assertPushTryCatchRaw(HxParser.parseFunctionBodyText("result.push(try throw new Exception('') catch(e:Exception) e.stack);"),
 			"single-expression try throw");
 		assertPushTryCatchRaw(HxParser.parseFunctionBodyText("result.push(try throw @:privateAccess (Exception.thrown(''):Exception) catch(e:Exception) e.stack);"),

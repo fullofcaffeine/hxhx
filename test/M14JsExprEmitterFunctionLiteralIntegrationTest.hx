@@ -90,6 +90,9 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(switchBodyJs, 'out = "A"', "block-body function switch should preserve case body side effect");
 		assertContains(switchBodyJs, "return out;", "block-body function switch should run the continuation after the switch");
 
+		final castPostfixJs = JsExprEmitter.emit(HxParser.parseExprText("cast(c, Cov1).covariant()"), exprScope);
+		assertContains(castPostfixJs, "c.covariant()", "cast expression should accept field/call postfix suffixes");
+
 		final inlineExprJs = JsExprEmitter.emit(HxParser.parseExprText("inline helper(value, max - 1)"), exprScope);
 		assertContains(inlineExprJs, "helper(value, (max - 1))", "expression-position inline should lower to the wrapped call");
 	}

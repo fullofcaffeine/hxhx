@@ -1704,7 +1704,11 @@ class HxParser {
 	}
 
 	function parsePostfixExpr(stop:() -> Bool):HxExpr {
-		var e = parsePrimaryExpr();
+		return parsePostfixSuffix(parsePrimaryExpr(), stop);
+	}
+
+	function parsePostfixSuffix(seed:HxExpr, stop:() -> Bool):HxExpr {
+		var e = seed;
 
 		inline function isTripleDotAhead():Bool {
 			return cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
@@ -1810,6 +1814,7 @@ class HxParser {
 			case TKeyword(k) if (k == KCast):
 				bump();
 				// `cast expr` or `cast(expr, Type)`
+				var castExpr:HxExpr = null;
 				if (cur.kind.match(TLParen)) {
 					bump();
 					final inner = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
@@ -1825,13 +1830,14 @@ class HxParser {
 					}
 					if (cur.kind.match(TRParen))
 						bump();
-					ECast(inner, hint);
+					castExpr = ECast(inner, hint);
 				} else {
-					ECast(parseUnaryExpr(stop), "");
+					castExpr = ECast(parseUnaryExpr(stop), "");
 				}
+				parsePostfixSuffix(castExpr, stop);
 			case TKeyword(k) if (k == KUntyped):
 				bump();
-				EUntyped(parseUnaryExpr(stop));
+				parsePostfixSuffix(EUntyped(parseUnaryExpr(stop)), stop);
 			case TOther(c) if ((c == "+".code || c == "-".code) && nextIsAdjacentOther(c)):
 				// Bring-up lowering: treat prefix increment/decrement as compound assignment.
 				//
