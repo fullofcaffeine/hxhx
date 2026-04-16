@@ -2591,6 +2591,13 @@ class HxParser {
 	function parseStmtInto(out:Array<HxStmt>, stop:() -> Bool):Void {
 		if (out == null || stop())
 			return;
+		if (cur.kind.match(TSemicolon)) {
+			// Empty statements are valid separators after block expressions, e.g. `{ ... };`.
+			// Skipping them prevents bootstrap targets from surfacing token-rendered
+			// `EUnsupported` payloads in otherwise parsed bodies.
+			bump();
+			return;
+		}
 		if (cur.kind.match(TOther("#".code))) {
 			consumePreprocessorLine();
 			return;

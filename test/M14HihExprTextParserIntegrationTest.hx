@@ -270,6 +270,18 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected null coalescing throw fallback expression");
 		}
 
+		final blockTerminatorStmts = HxParser.parseFunctionBodyText('{ deq(0, numericCast(0)); };');
+		assertTrue(blockTerminatorStmts.length == 1, "expected trailing semicolon after block to be skipped");
+		switch (blockTerminatorStmts[0]) {
+			case SBlock([
+				SExpr(ECall(EIdent("deq"), [EInt(0), ECall(EIdent("numericCast"), [EInt(0)])]), _)
+			], _):
+			case SExpr(EUnsupported(raw), _):
+				fail("block terminator parsed as unsupported: " + raw);
+			case _:
+				fail("expected numeric-cast-style block body to remain a single block");
+		}
+
 		final contextualAsStmts = HxParser.parseFunctionBodyText('var as = new unit.MyAbstract.MyAbstractSetter(); as.value = "foo"; eq(as.value, "foo");');
 		assertTrue(contextualAsStmts.length == 3, "expected contextual `as` local plus two statements");
 		switch (contextualAsStmts[0]) {
