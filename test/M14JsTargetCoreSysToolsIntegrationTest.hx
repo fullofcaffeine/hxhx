@@ -589,6 +589,20 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "php/NativeAssocArray.hx");
 	}
 
+	static function haxeDsStringMapModule():TypedModule {
+		final stringMapClass = new HxClassDecl("StringMap", false, [new HxFunctionDecl("new", HxVisibility.Public, false, [], "Void", [], "")]);
+		final decl = new HxModuleDecl("haxe.ds", [], stringMapClass, [stringMapClass], false, false);
+		return typedModule("", decl, "haxe/ds/StringMap.hx");
+	}
+
+	static function haxeXmlParserModule():TypedModule {
+		final escapesField = new HxFieldDecl("escapes", HxVisibility.Public, true, "haxe.ds.StringMap<String>",
+			HxExpr.ETryCatchRaw('opaque_block_expr:{ var h = new haxe.ds.StringMap(); h.set("lt", "<"); h; }'));
+		final parserClass = new HxClassDecl("Parser", false, [], [escapesField]);
+		final decl = new HxModuleDecl("haxe.xml", [], parserClass, [parserClass], false, false);
+		return typedModule("", decl, "haxe/xml/Parser.hx");
+	}
+
 	static function haxeFormatJsonParserModule():TypedModule {
 		final parserClass = new HxClassDecl("JsonParser", false, [
 			new HxFunctionDecl("doParse", HxVisibility.Public, false, [], "Dynamic",
@@ -696,6 +710,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(unit.TestReflect.TYPES[0].__hx_name);',
 				'    Sys.println(unit.TestReflect.TNAMES.join(","));',
 				'    Sys.println(php.Boot.aliases != null ? "assoc-ok" : "assoc-missing");',
+				'    Sys.println(haxe.xml.Parser.escapes.get("lt"));',
 				"    var counter = new Counter(4);",
 				"    Sys.println(counter.add(5));",
 				"    Sys.println(counter.add());",
@@ -765,6 +780,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				upstreamUnitTestReflectModule(),
 				phpBootModule(),
 				phpNativeAssocArrayModule(),
+				haxeDsStringMapModule(),
+				haxeXmlParserModule(),
 				haxeFormatJsonParserModule()
 			];
 			for (module in utestResultModules())
@@ -864,6 +881,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertNotContains(js, " unit.MyInterface", "qualified value type refs should not leak raw namespace access");
 			assertTrue(js.indexOf("var __hx_cls_php_NativeAssocArray = function") < js.indexOf("__hx_cls_php_Boot.aliases = new __hx_cls_php_NativeAssocArray()"),
 				"classes constructed by static field initializers should emit before dependent static fields");
+			assertContains(js, "new __hx_cls_haxe_ds_StringMap()", "raw package-qualified constructors should rewrite to flat class bindings");
+			assertNotContains(js, "new haxe.ds.StringMap()", "raw package-qualified constructors should not leak namespace access");
+			assertContains(js, "__hx_cls_haxe_ds_StringMap.prototype.set = function", "StringMap set runtime complement should emit");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg", "compile-time macro Compiler ident regex should construct EReg");
 			assertTrue(js.indexOf("var __hx_cls_EReg = function") < js.indexOf("__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg"),
 				"EReg constructor should emit before static fields that instantiate it");
@@ -940,6 +960,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "unit.MyInterface", "unresolved qualified value type refs should preserve runtime type names");
 			assertContains(stdout, "haxe.ds.StringMap,unit.MyInterface", "same-class static helper calls should execute during static field initialization");
 			assertContains(stdout, "assoc-ok", "static field constructors should execute after dependency classes are assigned");
+			assertContains(stdout, "<", "raw haxe.ds.StringMap static initializer should execute through the flat class binding");
 			assertContains(stdout, "10\n13", "ordinary JS classes should construct, mutate instance fields, and apply default args");
 			assertContains(stdout, "2,3", "native JS Array prototype methods should remain available");
 			assertContains(stdout, "true,4,5,false", "runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");

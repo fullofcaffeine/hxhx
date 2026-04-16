@@ -1653,6 +1653,8 @@ class JsTargetCore implements ITargetCore {
 	static function emitKnownClassRuntimeComplements(writer:JsWriter, fullName:String, jsRef:String):Void {
 		if (fullName == "StringTools")
 			emitStringToolsRuntimeComplements(writer, jsRef);
+		if (fullName == "haxe.ds.StringMap")
+			emitStringMapRuntimeComplements(writer, jsRef);
 	}
 
 	static function emitStringToolsRuntimeComplements(writer:JsWriter, jsRef:String):Void {
@@ -1661,6 +1663,73 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln(jsRef + ".fastCodeAt = function(s, index) {");
 		writer.pushIndent();
 		writer.writeln("return String(s).charCodeAt(index);");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+	}
+
+	static function emitStringMapRuntimeComplements(writer:JsWriter, jsRef:String):Void {
+		writer.writeln("if (typeof " + jsRef + ".prototype.__hx_store !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.__hx_store = function() {");
+		writer.pushIndent();
+		writer.writeln("if (this.__hx_map == null) this.__hx_map = Object.create(null);");
+		writer.writeln("return this.__hx_map;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.set !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.set = function(key, value) {");
+		writer.pushIndent();
+		writer.writeln("this.__hx_store()[String(key)] = value;");
+		writer.writeln("return value;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.get !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.get = function(key) {");
+		writer.pushIndent();
+		writer.writeln("var store = this.__hx_store();");
+		writer.writeln("var k = String(key);");
+		writer.writeln("return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.exists !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.exists = function(key) {");
+		writer.pushIndent();
+		writer.writeln("return Object.prototype.hasOwnProperty.call(this.__hx_store(), String(key));");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.remove !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.remove = function(key) {");
+		writer.pushIndent();
+		writer.writeln("var store = this.__hx_store();");
+		writer.writeln("var k = String(key);");
+		writer.writeln("var existed = Object.prototype.hasOwnProperty.call(store, k);");
+		writer.writeln("if (existed) delete store[k];");
+		writer.writeln("return existed;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.keys !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.keys = function() {");
+		writer.pushIndent();
+		writer.writeln("var keys = Object.keys(this.__hx_store());");
+		writer.writeln("var index = 0;");
+		writer.writeln("return { hasNext: function() { return index < keys.length; }, next: function() { return keys[index++]; } };");
 		writer.popIndent();
 		writer.writeln("};");
 		writer.popIndent();

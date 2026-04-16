@@ -84,7 +84,7 @@ class JsExprEmitter {
 			case ESwitchRaw(_):
 				unsupported("ESwitchRaw");
 			case ETryCatchRaw(raw):
-				emitTryCatchRaw(raw);
+				emitTryCatchRaw(raw, scope);
 			case ERange(startExpr, endExpr):
 				emitRangeExpr(startExpr, endExpr, scope);
 			case EArrayComprehension(name, iterable, yieldExpr):
@@ -113,25 +113,25 @@ class JsExprEmitter {
 		- Converts the last top-level expression in each block into `return <expr>;`.
 		- Falls back to a syntax-preserving IIFE for more complex raw shapes.
 	**/
-	static function emitTryCatchRaw(raw:String):String {
+	static function emitTryCatchRaw(raw:String, ?scope:JsEmitScope):String {
 		if (raw == null || raw.length == 0 || raw == "opaque_block_expr")
 			unsupported("ETryCatchRaw", raw);
 
-		final opaqueBlock = rewriteOpaqueBlockExprRaw(raw);
+		final opaqueBlock = rewriteOpaqueBlockExprRaw(raw, scope);
 		if (opaqueBlock != null)
 			return opaqueBlock;
 
-		final rewritten = rewriteSimpleTryCatchRaw(raw);
+		final rewritten = rewriteSimpleTryCatchRaw(raw, scope);
 		if (rewritten != null)
 			return rewritten;
 
-		var js = sanitizeCatchTypeHints(raw);
+		var js = rewriteRawQualifiedClassNews(sanitizeCatchTypeHints(raw), scope);
 		if (js.indexOf("catch") < 0 && js.indexOf("finally") < 0)
 			js += "catch(__hx_err){throw __hx_err;}";
 		return "(function () { " + js + " })()";
 	}
 
-	static function rewriteOpaqueBlockExprRaw(raw:String):Null<String> {
+	static function rewriteOpaqueBlockExprRaw(raw:String, ?scope:JsEmitScope):Null<String> {
 		final marker = "opaque_block_expr:";
 		if (!StringTools.startsWith(raw, marker))
 			return null;
@@ -146,10 +146,10 @@ class JsExprEmitter {
 				body = body.substring(1, close);
 		}
 
-		return "(function () { " + blockToReturningJs(body) + " })()";
+		return "(function () { " + blockToReturningJs(body, scope) + " })()";
 	}
 
-	static function rewriteSimpleTryCatchRaw(raw:String):Null<String> {
+	static function rewriteSimpleTryCatchRaw(raw:String, ?scope:JsEmitScope):Null<String> {
 		raw = StringTools.trim(raw);
 		if (!StringTools.startsWith(raw, "try"))
 			return null;
@@ -183,8 +183,8 @@ class JsExprEmitter {
 			return null;
 
 		final catchName = sanitizeCatchName(raw.substring(catchParenOpen + 1, catchParenClose));
-		final tryBody = blockToReturningJs(raw.substring(tryOpen + 1, tryClose));
-		final catchBody = blockToReturningJs(raw.substring(catchBodyOpen + 1, catchBodyClose));
+		final tryBody = blockToReturningJs(raw.substring(tryOpen + 1, tryClose), scope);
+		final catchBody = blockToReturningJs(raw.substring(catchBodyOpen + 1, catchBodyClose), scope);
 		return "(function () { try { " + tryBody + " } catch (" + catchName + ") { " + catchBody + " } })()";
 	}
 
@@ -235,11 +235,11 @@ class JsExprEmitter {
 		return JsNameMangler.identifier(name);
 	}
 
-	static function blockToReturningJs(body:String):String {
-		var trimmed = sanitizeRawHaxeExpressionSyntax(body == null ? "" : StringTools.trim(body));
+	static function blockToReturningJs(body:String, ?scope:JsEmitScope):String {
+		var trimmed = sanitizeRawHaxeExpressionSyntax(body == null ? "" : StringTools.trim(body), scope);
 		while (StringTools.endsWith(trimmed, ";"))
 			trimmed = StringTools.trim(trimmed.substr(0, trimmed.length - 1));
-		trimmed = sanitizeRawHaxeExpressionSyntax(trimmed);
+		trimmed = sanitizeRawHaxeExpressionSyntax(trimmed, scope);
 		if (trimmed.length == 0)
 			return "return null;";
 		if (StringTools.startsWith(trimmed, "return ") || StringTools.startsWith(trimmed, "throw "))
@@ -255,8 +255,54 @@ class JsExprEmitter {
 		return prefix + " return " + expr + ";";
 	}
 
-	static function sanitizeRawHaxeExpressionSyntax(raw:String):String {
-		return stripLocalVarTypeHints(stripExpressionCastHints(stripExpressionMetadata(raw)));
+	static function sanitizeRawHaxeExpressionSyntax(raw:String, ?scope:JsEmitScope):String {
+		return rewriteRawQualifiedClassNews(stripLocalVarTypeHints(stripExpressionCastHints(stripExpressionMetadata(raw))), scope);
+	}
+
+	static function rewriteRawQualifiedClassNews(raw:String, ?scope:JsEmitScope):String {
+		if (raw == null || scope == null || raw.indexOf(".") < 0 || raw.indexOf("new") < 0)
+			return raw;
+
+		final out = new StringBuf();
+		var i = 0;
+		while (i < raw.length) {
+			final code = raw.charCodeAt(i);
+			if (code == "\"".code || code == "'".code) {
+				i = copyQuotedRaw(raw, i, out);
+				continue;
+			}
+
+			if (raw.substr(i, 3) == "new" && (i == 0 || !isRawIdentChar(raw.charCodeAt(i - 1)))) {
+				var ws = i + 3;
+				if (ws < raw.length && isWhitespace(raw.charCodeAt(ws))) {
+					while (ws < raw.length && isWhitespace(raw.charCodeAt(ws)))
+						ws++;
+					var end = ws;
+					while (end < raw.length && isRawPathChar(raw.charCodeAt(end)))
+						end++;
+					final path = raw.substring(ws, end);
+					final dot = path.lastIndexOf(".");
+					if (dot > 0 && dot + 1 < path.length && isUpperStart(path.substr(dot + 1))) {
+						final classRef = scope.resolveClassRef(path);
+						if (classRef != null) {
+							out.add("new");
+							out.add(raw.substring(i + 3, ws));
+							out.add(classRef);
+							i = end;
+							continue;
+						}
+					}
+				}
+			}
+
+			out.addChar(code);
+			i++;
+		}
+		return out.toString();
+	}
+
+	static function isRawPathChar(code:Int):Bool {
+		return code == ".".code || isRawIdentChar(code);
 	}
 
 	static function stripExpressionMetadata(raw:String):String {
