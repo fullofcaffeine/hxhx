@@ -76,5 +76,14 @@ class M14JsStmtEmitterKeyValueForIntegrationTest {
 		assertContains(typeErrorJs, "var s = \"Int has no field keyValueIterator\";",
 			"HelperMacros.typeErrorText key/value for probe should fold to diagnostic text");
 		assertContains(typeErrorJs, "t(true);", "HelperMacros.typeError key/value for probe should fold to true");
+
+		final blockTypeErrorBody = HxParser.parseFunctionBodyText('f(typeError({ var b:{v:Dynamic} = {v:"foo"}; })); t(typeError({ var b:{v:Int} = {v:1.2}; }));');
+		final blockTypeErrorWriter = new JsWriter();
+		final blockTypeErrorScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
+		JsStmtEmitter.emitFunctionBody(blockTypeErrorWriter, blockTypeErrorBody, blockTypeErrorScope);
+		final blockTypeErrorJs = blockTypeErrorWriter.toString();
+
+		assertContains(blockTypeErrorJs, "f(false);", "HelperMacros.typeError valid opaque block probe should fold to false");
+		assertContains(blockTypeErrorJs, "t(true);", "HelperMacros.typeError invalid opaque block probe should fold to true");
 	}
 }

@@ -1578,6 +1578,7 @@ class HxParser {
 		//
 		// For now we parse anon literals structurally and treat other brace expressions
 		// as opaque block expressions.
+		final start = currentIndex();
 		expect(TLBrace, "'{'");
 		if (cur.kind.match(TRBrace)) {
 			bump();
@@ -1608,7 +1609,7 @@ class HxParser {
 					bump();
 			}
 		}
-		return ETryCatchRaw("opaque_block_expr");
+		return ETryCatchRaw("opaque_block_expr:" + StringTools.trim(sliceSource(start, currentIndex())));
 	}
 
 	function parseAnonExpr():HxExpr {

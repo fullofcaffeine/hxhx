@@ -47,11 +47,23 @@ class M14HihExprTextParserIntegrationTest {
 		final denseBlockExpr = HxParser.parseExprText(denseBlockRaw);
 		switch (denseBlockExpr) {
 			case ETryCatchRaw(raw):
-				assertTrue(raw == "opaque_block_expr", "expected opaque block marker");
+				assertTrue(raw.indexOf("opaque_block_expr:") == 0, "expected opaque block marker");
 			case EUnsupported(raw):
 				fail("dense block payload parsed as unsupported: " + raw);
 			case _:
 				fail("dense block payload should parse as opaque block expression");
+		}
+
+		final typedBlockExpr = HxParser.parseExprText('{ var b:{v:Int} = {v:1.2}; }');
+		switch (typedBlockExpr) {
+			case ETryCatchRaw(raw):
+				assertTrue(raw.indexOf("opaque_block_expr:") == 0, "expected block marker with preserved source");
+				assertTrue(raw.indexOf("var b") >= 0, "expected block source to include declaration");
+				assertTrue(raw.indexOf("v:Int") >= 0, "expected block source to include type hint");
+			case EUnsupported(raw):
+				fail("typed block expression parsed as unsupported: " + raw);
+			case _:
+				fail("typed block expression should parse as opaque block expression with source");
 		}
 
 		// Constructor expressions with dotted type paths should stay as ENew nodes.

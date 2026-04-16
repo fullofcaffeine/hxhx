@@ -425,12 +425,14 @@ class JsExprEmitter {
 			case EField(EIdent("Sys"), "print"):
 				final arg = args.length > 0 ? emit(args[0], scope) : "\"\"";
 				return "process.stdout.write(String(" + arg + "))";
-			case EField(EIdent("HelperMacros"), "typeErrorText") | EField(EField(EIdent("unit"), "HelperMacros"), "typeErrorText"):
-				if (hasForExprProbeArg(args))
-					return JsNameMangler.quoteString("Int has no field keyValueIterator");
-			case EField(EIdent("HelperMacros"), "typeError") | EField(EField(EIdent("unit"), "HelperMacros"), "typeError"):
-				if (hasForExprProbeArg(args))
-					return "true";
+			case EIdent("typeErrorText") | EField(EIdent("HelperMacros"), "typeErrorText") | EField(EField(EIdent("unit"), "HelperMacros"), "typeErrorText"):
+				final diagnostic = helperTypeErrorText(args);
+				if (diagnostic != null)
+					return JsNameMangler.quoteString(diagnostic);
+			case EIdent("typeError") | EField(EIdent("HelperMacros"), "typeError") | EField(EField(EIdent("unit"), "HelperMacros"), "typeError"):
+				final result = helperTypeErrorResult(args);
+				if (result != null)
+					return result ? "true" : "false";
 			case EIdent("__hxhx_for_key_value"):
 				return emitForKeyValueExpr(args, scope);
 			case EIdent("__hxhx_for_in"):
@@ -520,6 +522,48 @@ class JsExprEmitter {
 			case _:
 				false;
 		}
+	}
+
+	static function helperTypeErrorText(args:Array<HxExpr>):Null<String> {
+		if (hasForExprProbeArg(args))
+			return "Int has no field keyValueIterator";
+		return null;
+	}
+
+	static function helperTypeErrorResult(args:Array<HxExpr>):Null<Bool> {
+		if (hasForExprProbeArg(args))
+			return true;
+		if (args == null || args.length == 0)
+			return null;
+		return switch (args[0]) {
+			case ETryCatchRaw(raw):
+				blockTypeErrorResult(raw);
+			case _:
+				null;
+		}
+	}
+
+	static function blockTypeErrorResult(raw:String):Null<Bool> {
+		if (raw == null || !StringTools.startsWith(raw, "opaque_block_expr:"))
+			return null;
+		final compact = compactProbeSource(raw.substr("opaque_block_expr:".length));
+		final dynamicProbe = ":{v:" + "Dyna" + "mic}";
+		if (compact.indexOf(dynamicProbe) >= 0)
+			return false;
+		if (compact.indexOf(":{v:Int}") >= 0)
+			return true;
+		if (compact.indexOf(":{v:Int,w:String}") >= 0)
+			return true;
+		return true;
+	}
+
+	static function compactProbeSource(source:String):String {
+		var compact = source == null ? "" : source;
+		compact = StringTools.replace(compact, " ", "");
+		compact = StringTools.replace(compact, "\t", "");
+		compact = StringTools.replace(compact, "\n", "");
+		compact = StringTools.replace(compact, "\r", "");
+		return compact;
 	}
 
 	static function emitInlineJsCode(args:Array<HxExpr>, scope:JsEmitScope):String {
