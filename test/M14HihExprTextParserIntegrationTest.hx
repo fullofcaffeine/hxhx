@@ -183,6 +183,23 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local key/value function declaration to lower to SVar lambda");
 		}
 
+		final localForInFunctionStmts = HxParser.parseFunctionBodyText("function values(xs:Array<String>) { var out = []; for (x in xs) { out.push(x); } return out; } var got = values([\"a\"]);");
+		assertTrue(localForInFunctionStmts.length == 2, "expected local for-in function plus call statement");
+		switch (localForInFunctionStmts[0]) {
+			case SVar(name, _, ELambda(args, body), _):
+				assertTrue(name == "values", "expected local for-in function name to parse");
+				assertTrue(args.length == 1 && args[0] == "xs", "expected local for-in function arg");
+				switch (body) {
+					case EUnsupported(raw):
+						fail("local for-in function body parsed as unsupported: " + raw);
+					case _:
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("local for-in function parsed as unsupported statement: " + raw);
+			case _:
+				fail("expected local for-in function declaration to lower to SVar lambda");
+		}
+
 		final spreadCallStmts = HxParser.parseFunctionBodyText("function spreadRest(r:Array<Int>) { return rest(...r); } var a = rest(...[1, 2, 3]); var b = new Parent(...[1, 2, 3]);");
 		assertTrue(spreadCallStmts.length == 3, "expected local spread function plus spread call and constructor");
 		switch (spreadCallStmts[0]) {

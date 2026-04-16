@@ -1281,6 +1281,11 @@ class HxParser {
 					if (bodyExpr == null)
 						return null;
 					ECall(EIdent("__hxhx_for_key_value"), [iterable, ELambda([keyName, valueName], bodyExpr), continuation]);
+				case SForIn(valueName, iterable, body, _):
+					final bodyExpr = lowerStmtWithContinuation(body, ENull);
+					if (bodyExpr == null)
+						return null;
+					ECall(EIdent("__hxhx_for_in"), [iterable, ELambda([valueName], bodyExpr), continuation]);
 				case SWhile(cond, body, _):
 					final bodyExpr = lowerStmtWithContinuation(body, ENull);
 					if (bodyExpr == null)
