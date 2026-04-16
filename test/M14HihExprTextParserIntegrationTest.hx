@@ -222,6 +222,19 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected local while function declaration to lower to SVar lambda");
 		}
 
+		final inlineExprStmts = HxParser.parseFunctionBodyText("function stringify(value:Dynamic, max:Int) { return inline helper(value, max - 1); } var s = stringify(v, 10);");
+		assertTrue(inlineExprStmts.length == 2, "expected inline expression function plus call statement");
+		switch (inlineExprStmts[0]) {
+			case SVar(name, _, ELambda(_, ECall(EIdent("helper"), [EIdent("value"), EBinop("-", EIdent("max"), EInt(1))])), _):
+				assertTrue(name == "stringify", "expected inline expression function name to parse");
+			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
+				fail("inline expression function body parsed as unsupported: " + raw);
+			case SExpr(EUnsupported(raw), _):
+				fail("inline expression function parsed as unsupported statement: " + raw);
+			case _:
+				fail("expected inline expression return to lower to helper call");
+		}
+
 		final localReturnFunctionStmts = HxParser.parseFunctionBodyText("function capture() return Int64.compare(a, Int64.make(1, 2)); eq(capture(), 0);");
 		assertTrue(localReturnFunctionStmts.length == 2, "expected local return function plus call statement");
 		switch (localReturnFunctionStmts[0]) {

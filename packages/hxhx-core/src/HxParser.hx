@@ -906,6 +906,9 @@ class HxParser {
 					ESuper;
 				} else if (k == KFunction) {
 					parseFunctionExpr();
+				} else if (k == KInline) {
+					bump();
+					parsePrimaryExpr();
 				} else if (k == KNew) {
 					bump();
 					final typePath = readDottedPath();

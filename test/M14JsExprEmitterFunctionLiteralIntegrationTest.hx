@@ -76,5 +76,8 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(whileBodyJs, "while (__cond())", "block-body function while loop should lower to expression helper");
 		assertContains(whileBodyJs, "i += 1", "block-body function while helper should preserve body side effect");
 		assertContains(whileBodyJs, "return i;", "block-body function while helper should run the continuation after the loop");
+
+		final inlineExprJs = JsExprEmitter.emit(HxParser.parseExprText("inline helper(value, max - 1)"), exprScope);
+		assertContains(inlineExprJs, "helper(value, (max - 1))", "expression-position inline should lower to the wrapped call");
 	}
 }
