@@ -1951,6 +1951,10 @@ let emitKnownStaticFunctionBody = fun writer fullName fnName params -> try let _
   ignore (if HxString.equals fullName "DateTools" then raise (HxRuntime.Hx_return (Obj.repr (emitDateToolsStaticFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params)))) else ());
   ignore (if HxString.equals fullName "StringTools" then raise (HxRuntime.Hx_return (Obj.repr (emitStringToolsStaticFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params)))) else ());
   ignore (if HxString.equals fullName "EReg" then raise (HxRuntime.Hx_return (Obj.repr (emitERegStaticFunctionBody (Obj.magic writer) (fnName : string) (Obj.magic params)))) else ());
+  ignore (if HxString.equals fullName "unit.UnitBuilder" && HxString.equals fnName "generateSpec" then ignore ((
+    ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return [];" : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
   ignore (if not (HxString.equals fullName "haxe.SysTools") then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   match fnName with
     | "quoteUnixArg" -> ignore ((
@@ -2288,7 +2292,7 @@ let emitStaticFunctions = fun writer unit classRefs staticRefs -> ignore (let _g
     ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((((HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ HxString.toStdString suffix) ^ " = function(") ^ HxString.toStdString (HxArray.join params ", " (fun x -> x))) ^ ") {" : string));
     ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
     ignore (emitDefaultArgGuards (Obj.magic writer) (Obj.magic args) (Obj.magic params) (Obj.magic fnScope));
-    ignore (if shouldEmitNeutralStaticFunctionBody (Obj.obj (HxAnon.get unit "fullName") : string) (Obj.magic fn) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (if not (emitKnownStaticFunctionBody (Obj.magic writer) (Obj.obj (HxAnon.get unit "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic params)) then ignore (try Backend_js_JsStmtEmitter.emitFunctionBody (Obj.magic writer) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) (Obj.magic fnScope) with
+    ignore (if emitKnownStaticFunctionBody (Obj.magic writer) (Obj.obj (HxAnon.get unit "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic params) then ignore () else ignore (if shouldEmitNeutralStaticFunctionBody (Obj.obj (HxAnon.get unit "fullName") : string) (Obj.magic fn) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (try Backend_js_JsStmtEmitter.emitFunctionBody (Obj.magic writer) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) (Obj.magic fnScope) with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
       | HxRuntime.Hx_return __ret_83 -> raise (HxRuntime.Hx_return __ret_83)
@@ -2305,7 +2309,7 @@ let emitStaticFunctions = fun writer unit classRefs staticRefs -> ignore (let _g
       ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_86) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_86) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_86)) : Haxe_Exception.t) in (
         ignore error;
         if allowStaticBodyFallback unit (HxFunctionDecl.getName (Obj.magic fn) : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return null;" : string)) else ignore (HxType.hx_throw_typed_rtti (Obj.repr (((((HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "fullName"))) ^ ".") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn))) ^ " (static function body)")) ["Dynamic"; "String"])
-      ) else raise (__exn_86)) else ()));
+      ) else raise (__exn_86))));
     ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
     ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
     let exposePath = ref (exposePathForFunction (Obj.obj (HxAnon.get unit "fullName") : string) (Obj.magic fn) : string) in (

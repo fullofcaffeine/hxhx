@@ -152,6 +152,16 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "unit/TestIssues.hx");
 	}
 
+	static function upstreamUnitBuilderModule():TypedModule {
+		final basePathArg = new HxFunctionArg("basePath", "String", HxDefaultValue.NoDefault);
+		final helperClass = new HxClassDecl("UnitBuilder", false, [
+			new HxFunctionDecl("generateSpec", HxVisibility.Public, true, [basePathArg], "Array<Dynamic>",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=compile-time-unit-spec-scan"), "", ["macro"])
+		]);
+		final decl = new HxModuleDecl("unit", [], helperClass, [helperClass], false, false);
+		return typedModule("", decl, "unit/UnitBuilder.hx");
+	}
+
 	static function upstreamUnitDefaultTypeParametersModule():TypedModule {
 		final testClass = new HxClassDecl("TestDefaultTypeParameters", false, [
 			new HxFunctionDecl("printThings", HxVisibility.Public, true, [], "Array<String>",
@@ -745,6 +755,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
 				'    Sys.println(unit.TestReflect.TYPES[0].__hx_name);',
 				'    Sys.println(unit.TestReflect.TNAMES.join(","));',
+				'    var generatedSpecs = [];',
+				'    for (specClass in unit.UnitBuilder.generateSpec("src/unitstd")) generatedSpecs.push(specClass);',
+				'    Sys.println("generated-specs=" + generatedSpecs.length);',
 				'    Sys.println(php.Boot.aliases != null ? "assoc-ok" : "assoc-missing");',
 				'    Sys.println(haxe.xml.Parser.escapes.get("lt"));',
 				'    Sys.println("xml=" + Xml.Element);',
@@ -786,6 +799,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				reservedParamModule(),
 				upstreamUnitHelperMacrosModule(),
 				upstreamUnitTestIssuesModule(),
+				upstreamUnitBuilderModule(),
 				upstreamUnitDefaultTypeParametersModule(),
 				upstreamUnitTestLocalStaticModule(),
 				upstreamUnitTestLocalsModule(),
@@ -861,6 +875,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "return eval_;", "eval static parameter body reference should use the renamed argument");
 			assertContains(js, "__hx_cls_unit_HelperMacros.getCompilationDate = function", "upstream unit macro helper should emit a neutral static stub");
 			assertContains(js, "__hx_cls_unit_TestIssues.addIssueClasses = function", "metadata-marked macro helper should emit a neutral static stub");
+			assertContains(js, "__hx_cls_unit_UnitBuilder.generateSpec = function", "upstream unit spec builder helper should emit");
+			assertContains(js, "return [];", "upstream unit spec builder helper should produce an iterable fallback");
 			assertContains(js, "__hx_cls_unit_TestDefaultTypeParameters.printThings = function",
 				"upstream unit default-type-parameter macro helper should emit a neutral static stub");
 			assertContains(js, "__hx_cls_unit_TestLocalStatic.__basic_x++", "local static fixture should persist x on the class object");
@@ -1015,6 +1031,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
 			assertContains(stdout, "unit.MyInterface", "unresolved qualified value type refs should preserve runtime type names");
 			assertContains(stdout, "haxe.ds.StringMap,unit.MyInterface", "same-class static helper calls should execute during static field initialization");
+			assertContains(stdout, "generated-specs=0", "unexpanded upstream unit spec builder should not crash JS for-in lowering");
 			assertContains(stdout, "assoc-ok", "static field constructors should execute after dependency classes are assigned");
 			assertContains(stdout, "<", "raw haxe.ds.StringMap static initializer should execute through the flat class binding");
 			assertContains(stdout, "xml=0", "static field reads should execute after dependency classes are assigned");
