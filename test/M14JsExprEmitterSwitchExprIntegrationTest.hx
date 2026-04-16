@@ -63,6 +63,13 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		assertContains(guardedPatternJs, "if ((true) && (__sw.length === 3))", "guarded bind pattern should lower length guard");
 		assertContains(guardedPatternJs, "var __sw_bind_rest = __sw;", "guarded bind pattern should bind scrutinee");
 
+		final groupedPattern = HxParser.parseExprText('switch v { case 1, 2, 3: "small"; case val = (4 | 5 | 6) if (val == 5): "middle"; case var x: "_"; }');
+		final groupedPatternJs = JsExprEmitter.emit(groupedPattern, exprScope);
+		assertContains(groupedPatternJs, "(__sw === 1) || (__sw === 2) || (__sw === 3)", "comma-separated case groups should lower as OR conditions");
+		assertContains(groupedPatternJs, "(__sw === 4) || (__sw === 5) || (__sw === 6)", "captured OR pattern should lower all alternatives");
+		assertContains(groupedPatternJs, "(__sw === 5)", "integer equality guard should use captured scrutinee value");
+		assertContains(groupedPatternJs, "var __sw_bind_val = __sw;", "captured guard branch should bind the capture");
+
 		final macroStringJs = JsExprEmitter.emit(HxParser.parseExprText('macro "bar"'), exprScope);
 		assertContains(macroStringJs, "__hx_ctor: \"EConst\"", "macro string quote should emit EConst expression def");
 		assertContains(macroStringJs, "__hx_ctor: \"CString\"", "macro string quote should emit CString constant");

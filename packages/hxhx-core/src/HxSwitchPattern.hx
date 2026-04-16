@@ -42,6 +42,7 @@ enum HxSwitchPattern {
 	PArray(items:Array<HxSwitchPattern>);
 	PLengthGuard(pattern:HxSwitchPattern, bindingName:String, length:Int);
 	PStartsWithGuard(pattern:HxSwitchPattern, bindingName:String, prefix:String);
+	PIntEqualsGuard(pattern:HxSwitchPattern, bindingName:String, value:Int);
 	PUnsupportedGuard(pattern:HxSwitchPattern);
 	PBind(name:String);
 

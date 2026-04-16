@@ -13,6 +13,7 @@ type hxswitchpattern =
 | PArray of hxswitchpattern HxArray.t
 | PLengthGuard of hxswitchpattern * string * int
 | PStartsWithGuard of hxswitchpattern * string * string
+| PIntEqualsGuard of hxswitchpattern * string * int
 | PUnsupportedGuard of hxswitchpattern
 | PBind of string
 | POr of hxswitchpattern HxArray.t

@@ -464,6 +464,26 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected guarded switch expression");
 		}
 
+		final groupedPatternExpr = HxParser.parseExprText('switch v { case 1, 2, 3: "small"; case val = (4 | 5 | 6) if (val == 5): "middle"; case var x: "_"; }');
+		switch (groupedPatternExpr) {
+			case ESwitch(EIdent("v"), patterns, _):
+				assertTrue(patterns.length == 3, "expected grouped switch cases");
+				switch (patterns[0]) {
+					case POr([PInt(1), PInt(2), PInt(3)]):
+					case _:
+						fail("expected comma-separated case group to parse as OR pattern");
+				}
+				switch (patterns[1]) {
+					case PIntEqualsGuard(PCapture("val", POr([PInt(4), PInt(5), PInt(6)])), "val", 5):
+					case _:
+						fail("expected captured OR pattern with integer equality guard");
+				}
+			case EUnsupported(raw):
+				fail("grouped switch expression parsed as unsupported: " + raw);
+			case _:
+				fail("expected grouped switch expression");
+		}
+
 		final macroQuoteCalls = HxParser.parseFunctionBodyText('eq("bar", switchNormal(macro "bar")); eq("bar", switchNormal(macro ("bar"))); eq("bar", switchNormal(macro untyped "bar")); eq("foo", switchNormal(macro null.foo)); eq("22", switchNormal(macro null[22])); eq("in", switchNormal(macro 1 in 0));');
 		assertTrue(macroQuoteCalls.length == 6, "expected macro quote call statements to parse");
 		for (stmt in macroQuoteCalls) {

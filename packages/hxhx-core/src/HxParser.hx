@@ -285,7 +285,7 @@ class HxParser {
 		// Bring-up: support the pattern subset documented in HxSwitchPattern. This
 		// intentionally remains smaller than full Haxe matching, but it is recursive
 		// enough for macro-expression shapes such as `{ expr : EConst(CString(s)) }`.
-		final pattern = parseSwitchPatternOr();
+		final pattern = parseSwitchPatternCaseGroup();
 		if (acceptKeyword(KIf)) {
 			final guard = if (cur.kind.match(TLParen)) {
 				bump();
@@ -307,9 +307,23 @@ class HxParser {
 				PLengthGuard(pattern, name, length);
 			case ECall(EField(EIdent("StringTools"), "startsWith"), [EIdent(name), EString(prefix)]):
 				PStartsWithGuard(pattern, name, prefix);
+			case EBinop("==", EIdent(name), EInt(value)):
+				PIntEqualsGuard(pattern, name, value);
 			case _:
 				PUnsupportedGuard(pattern);
 		}
+	}
+
+	function parseSwitchPatternCaseGroup():HxSwitchPattern {
+		final first = parseSwitchPatternOr();
+		var ors:Null<Array<HxSwitchPattern>> = null;
+		while (cur.kind.match(TComma)) {
+			bump();
+			if (ors == null)
+				ors = [first];
+			ors.push(parseSwitchPatternOr());
+		}
+		return ors == null ? first : POr(ors);
 	}
 
 	function parseSwitchPatternOr():HxSwitchPattern {

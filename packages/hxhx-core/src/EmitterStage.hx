@@ -3708,7 +3708,7 @@ class EmitterStage {
 							patternCond(inner);
 						case PArray(_items):
 							"false";
-						case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PUnsupportedGuard(inner):
+						case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PUnsupportedGuard(inner):
 							patternCond(inner);
 					};
 				}
@@ -3726,7 +3726,7 @@ class EmitterStage {
 								extendTyByIdentForStage3(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case PArray(_items):
 								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
-							case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PUnsupportedGuard(_):
+							case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PUnsupportedGuard(_):
 								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
 							case PEnumExtract(_name, _args):
 								extendTyByIdentForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
@@ -3750,7 +3750,7 @@ class EmitterStage {
 								"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyAsDynamic + "))";
 							case PArray(_items):
 								"(" + bodyAsDynamic + ")";
-							case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PUnsupportedGuard(_):
+							case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PUnsupportedGuard(_):
 								"(" + bodyAsDynamic + ")";
 							case PEnumExtract(_name, _args):
 								"(" + bodyAsDynamic + ")";
@@ -5223,7 +5223,7 @@ class EmitterStage {
 								patternCond(inner);
 							case PArray(_items):
 								"false";
-							case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PUnsupportedGuard(inner):
+							case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PUnsupportedGuard(inner):
 								patternCond(inner);
 						};
 					}
@@ -5241,7 +5241,7 @@ class EmitterStage {
 									extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
 								case PArray(_items):
 									cloneTyCtxLocal(tyCtx);
-								case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PUnsupportedGuard(_):
+								case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PUnsupportedGuard(_):
 									cloneTyCtxLocal(tyCtx);
 								case PEnumExtract(_name, _args):
 									cloneTyCtxLocal(tyCtx);
@@ -5258,7 +5258,7 @@ class EmitterStage {
 									"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
 								case PArray(_items):
 									"(" + bodyUnit + ")";
-								case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PUnsupportedGuard(_):
+								case PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PUnsupportedGuard(_):
 									"(" + bodyUnit + ")";
 								case PEnumExtract(_name, _args):
 									"(" + bodyUnit + ")";

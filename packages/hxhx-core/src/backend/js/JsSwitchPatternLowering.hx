@@ -49,6 +49,10 @@ class JsSwitchPatternLowering {
 				final lowered = lower(inner, scrutineeVar);
 				final guardCond = lowerGuardBindingValue(bindingName, lowered.bindings) + ".startsWith(" + JsNameMangler.quoteString(prefix) + ")";
 				{cond: "(" + lowered.cond + ") && (" + guardCond + ")", bindings: lowered.bindings};
+			case PIntEqualsGuard(inner, bindingName, value):
+				final lowered = lower(inner, scrutineeVar);
+				final guardCond = lowerGuardBindingValue(bindingName, lowered.bindings) + " === " + Std.string(value);
+				{cond: "(" + lowered.cond + ") && (" + guardCond + ")", bindings: lowered.bindings};
 			case PUnsupportedGuard(inner):
 				final lowered = lower(inner, scrutineeVar);
 				{cond: "(" + lowered.cond + ") && false", bindings: lowered.bindings};
