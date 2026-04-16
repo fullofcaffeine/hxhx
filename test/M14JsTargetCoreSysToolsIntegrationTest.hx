@@ -596,7 +596,12 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	}
 
 	static function stringToolsModule():TypedModule {
-		final stringToolsClass = new HxClassDecl("StringTools", false, []);
+		final stringArg = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
+		final prefixArg = new HxFunctionArg("start", "String", HxDefaultValue.NoDefault);
+		final stringToolsClass = new HxClassDecl("StringTools", false, [
+			new HxFunctionDecl("startsWith", HxVisibility.Public, true, [stringArg, prefixArg], "Bool",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-stringtools"), "")
+		]);
 		final decl = new HxModuleDecl("", [], stringToolsClass, [stringToolsClass], false, false);
 		return typedModule("", decl, "StringTools.hx");
 	}
@@ -792,6 +797,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref"));',
 				'    Sys.println(haxe.crypto.Base64.BYTES);',
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
+				'    Sys.println("starts=" + StringTools.startsWith("testCase", "test") + "," + StringTools.startsWith("case", ""));',
 				'    Sys.println(unit.TestReflect.TYPES[0].__hx_name);',
 				'    Sys.println(unit.TestReflect.TNAMES.join(","));',
 				'    var generatedSpecs = [];',
@@ -991,6 +997,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertNotContains(js, "__hx_cls_haxe_io_Bytes.ofString(CHARS)", "same-class static field refs should not leak as globals");
 			assertContains(js, "__hx_cls_StringTools.fastCodeAt = function", "StringTools.fastCodeAt shim should emit");
 			assertContains(js, "return String(s).charCodeAt(index);", "StringTools.fastCodeAt should lower to JS charCodeAt");
+			assertContains(js, "if (typeof __hx_cls_StringTools.startsWith !== \"function\")",
+				"StringTools.startsWith runtime complement should backfill inline/erased std bodies");
+			assertContains(js, "__hx_cls_StringTools.startsWith = function", "StringTools.startsWith shim should emit");
+			assertContains(js, "return String(s).indexOf(String(start)) === 0;", "StringTools.startsWith should lower to JS prefix check");
 			assertContains(js, "__hx_cls_unit_TestReflect.TYPES = [__hx_type_ref(\"unit.MyInterface\")]",
 				"unresolved qualified value type refs should lower to runtime type placeholders");
 			assertContains(js, "__hx_cls_unit_TestReflect.u = function", "same-class static helper should emit before static field calls");
@@ -1081,6 +1091,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "bytes-ref", "qualified package static refs should execute through class bindings");
 			assertContains(stdout, "abc", "same-class static field refs should execute through class bindings");
 			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
+			assertContains(stdout, "starts=true,true", "StringTools.startsWith should support utest prefix discovery and empty prefixes");
 			assertContains(stdout, "unit.MyInterface", "unresolved qualified value type refs should preserve runtime type names");
 			assertContains(stdout, "haxe.ds.StringMap,unit.MyInterface", "same-class static helper calls should execute during static field initialization");
 			assertContains(stdout, "generated-specs=0", "unexpanded upstream unit spec builder should not crash JS for-in lowering");

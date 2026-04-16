@@ -1785,6 +1785,11 @@ class JsTargetCore implements ITargetCore {
 
 	static function emitStringToolsStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
 		switch (fnName) {
+			case "startsWith":
+				if (params.length < 2)
+					return false;
+				writer.writeln("return String(" + params[0] + ").indexOf(String(" + params[1] + ")) === 0;");
+				return true;
 			case "fastCodeAt":
 				if (params.length < 2)
 					return false;
@@ -1803,6 +1808,15 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitStringToolsRuntimeComplements(writer:JsWriter, jsRef:String):Void {
+		writer.writeln("if (typeof " + jsRef + ".startsWith !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".startsWith = function(s, start) {");
+		writer.pushIndent();
+		writer.writeln("return String(s).indexOf(String(start)) === 0;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
 		writer.writeln("if (typeof " + jsRef + ".fastCodeAt !== \"function\") {");
 		writer.pushIndent();
 		writer.writeln(jsRef + ".fastCodeAt = function(s, index) {");
