@@ -550,6 +550,12 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "haxe/crypto/Base64.hx");
 	}
 
+	static function stringToolsModule():TypedModule {
+		final stringToolsClass = new HxClassDecl("StringTools", false, []);
+		final decl = new HxModuleDecl("", [], stringToolsClass, [stringToolsClass], false, false);
+		return typedModule("", decl, "StringTools.hx");
+	}
+
 	static function haxeFormatJsonParserModule():TypedModule {
 		final parserClass = new HxClassDecl("JsonParser", false, [
 			new HxFunctionDecl("doParse", HxVisibility.Public, false, [], "Dynamic",
@@ -653,6 +659,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(EReg.escape("a+b"));',
 				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref"));',
 				'    Sys.println(haxe.crypto.Base64.BYTES);',
+				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
 				"    var counter = new Counter(4);",
 				"    Sys.println(counter.add(5));",
 				"    Sys.println(counter.add());",
@@ -718,6 +725,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				haxeIoInputModule(),
 				haxeIoBytesModule(),
 				haxeCryptoBase64Module(),
+				stringToolsModule(),
 				haxeFormatJsonParserModule()
 			];
 			for (module in utestResultModules())
@@ -807,6 +815,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_crypto_Base64.BYTES = __hx_cls_haxe_io_Bytes.ofString(__hx_cls_haxe_crypto_Base64.CHARS)",
 				"same-class static field refs should resolve to class bindings");
 			assertNotContains(js, "__hx_cls_haxe_io_Bytes.ofString(CHARS)", "same-class static field refs should not leak as globals");
+			assertContains(js, "__hx_cls_StringTools.fastCodeAt = function", "StringTools.fastCodeAt shim should emit");
+			assertContains(js, "return String(s).charCodeAt(index);", "StringTools.fastCodeAt should lower to JS charCodeAt");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg", "compile-time macro Compiler ident regex should construct EReg");
 			assertTrue(js.indexOf("var __hx_cls_EReg = function") < js.indexOf("__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg"),
 				"EReg constructor should emit before static fields that instantiate it");
@@ -879,6 +889,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");
 			assertContains(stdout, "bytes-ref", "qualified package static refs should execute through class bindings");
 			assertContains(stdout, "abc", "same-class static field refs should execute through class bindings");
+			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
 			assertContains(stdout, "10\n13", "ordinary JS classes should construct, mutate instance fields, and apply default args");
 			assertContains(stdout, "2,3", "native JS Array prototype methods should remain available");
 			assertContains(stdout, "true,4,5,false", "runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");

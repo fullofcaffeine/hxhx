@@ -290,6 +290,7 @@ class JsTargetCore implements ITargetCore {
 			writer.popIndent();
 			writer.writeln("};");
 		}
+		emitKnownClassRuntimeComplements(writer, unit.fullName, unit.jsRef);
 
 		if (unit.fullName != "EReg" && !shouldSkipInstancePrototypeEmission(unit.fullName))
 			emitPlainClassPrototypeMethods(writer, unit, classRefs);
@@ -512,6 +513,9 @@ class JsTargetCore implements ITargetCore {
 
 		if (fullName == "DateTools")
 			return emitDateToolsStaticFunctionBody(writer, fnName, params);
+
+		if (fullName == "StringTools")
+			return emitStringToolsStaticFunctionBody(writer, fnName, params);
 
 		if (fullName == "EReg")
 			return emitERegStaticFunctionBody(writer, fnName, params);
@@ -1489,6 +1493,35 @@ class JsTargetCore implements ITargetCore {
 			case _:
 				return false;
 		}
+	}
+
+	static function emitStringToolsStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "fastCodeAt":
+				if (params.length < 2)
+					return false;
+				writer.writeln("return String(" + params[0] + ").charCodeAt(" + params[1] + ");");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitKnownClassRuntimeComplements(writer:JsWriter, fullName:String, jsRef:String):Void {
+		if (fullName == "StringTools")
+			emitStringToolsRuntimeComplements(writer, jsRef);
+	}
+
+	static function emitStringToolsRuntimeComplements(writer:JsWriter, jsRef:String):Void {
+		writer.writeln("if (typeof " + jsRef + ".fastCodeAt !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".fastCodeAt = function(s, index) {");
+		writer.pushIndent();
+		writer.writeln("return String(s).charCodeAt(index);");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
 	}
 
 	static function emitDateToolsFormatGetBody(writer:JsWriter, date:String, token:String):Void {
