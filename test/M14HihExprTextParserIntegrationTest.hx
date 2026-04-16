@@ -295,6 +295,18 @@ class M14HihExprTextParserIntegrationTest {
 			}
 		}
 
+		final arrowComprehensionStmts = HxParser.parseFunctionBodyText("arr = [for (i in 0...5) value -> value * i];");
+		assertTrue(arrowComprehensionStmts.length == 1, "expected range comprehension arrow assignment");
+		switch (arrowComprehensionStmts[0]) {
+			case SExpr(EBinop("=", EIdent("arr"),
+				EArrayComprehension("i", ERange(EInt(0), EInt(5)), ELambda(args, EBinop("*", EIdent("value"), EIdent("i"))))), _):
+				assertTrue(args.length == 1 && args[0] == "value", "expected arrow comprehension arg name");
+			case SExpr(EUnsupported(raw), _):
+				fail("range comprehension arrow parsed as unsupported: " + raw);
+			case _:
+				fail("expected range comprehension arrow assignment to parse");
+		}
+
 		final contextualAsStmts = HxParser.parseFunctionBodyText('var as = new unit.MyAbstract.MyAbstractSetter(); as.value = "foo"; eq(as.value, "foo");');
 		assertTrue(contextualAsStmts.length == 3, "expected contextual `as` local plus two statements");
 		switch (contextualAsStmts[0]) {

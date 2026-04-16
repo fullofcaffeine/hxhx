@@ -87,6 +87,10 @@ class HxLexer {
 		return StringTools.replace(text == null ? "" : text, "_", "");
 	}
 
+	inline function isLeadingDotNumberStart():Bool {
+		return isDigit(peek(1)) && (index == 0 || src.charCodeAt(index - 1) != ".".code);
+	}
+
 	function skipWhitespaceAndComments():Void {
 		while (!eof()) {
 			final c = peek(0);
@@ -492,7 +496,7 @@ class HxLexer {
 			case 58:
 				bump();
 				new HxToken(TColon, p); // :
-			case 46 if (isDigit(peek(1))):
+			case 46 if (isLeadingDotNumberStart()):
 				readLeadingDotNumber(p);
 			case 46:
 				bump();

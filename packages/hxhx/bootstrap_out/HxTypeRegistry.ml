@@ -1602,7 +1602,7 @@ let init () : unit =
   HxType.register_class_static_fields "HxFunctionArg" [ "getDefaultValue"; "getDefaultValueText"; "getIsOptional"; "getIsRest"; "getName"; "getTypeHint" ];
   HxType.register_class_instance_fields "HxFunctionDecl" [ "args"; "body"; "bodyText"; "endPos"; "getFirstReturnExpr"; "isStatic"; "metadata"; "name"; "pos"; "returnStringLiteral"; "returnTypeHint"; "visibility" ];
   HxType.register_class_static_fields "HxFunctionDecl" [ "getArgs"; "getBody"; "getBodyText"; "getEndPos"; "getIsStatic"; "getMetadata"; "getName"; "getPos"; "getReturnStringLiteral"; "getReturnTypeHint"; "getVisibility" ];
-  HxType.register_class_instance_fields "HxLexer" [ "bump"; "column"; "consumeNumericSuffix"; "eof"; "index"; "line"; "next"; "peek"; "pos"; "readIdent"; "readLeadingDotNumber"; "readNumber"; "readRegexLiteral"; "readSingleQuotedString"; "readString"; "skipWhitespaceAndComments"; "src" ];
+  HxType.register_class_instance_fields "HxLexer" [ "bump"; "column"; "consumeNumericSuffix"; "eof"; "index"; "isLeadingDotNumberStart"; "line"; "next"; "peek"; "pos"; "readIdent"; "readLeadingDotNumber"; "readNumber"; "readRegexLiteral"; "readSingleQuotedString"; "readString"; "skipWhitespaceAndComments"; "src" ];
   HxType.register_class_static_fields "HxLexer" [ "isDigit"; "isHexDigit"; "isIdentCont"; "isIdentStart"; "isNumericSeparator"; "isNumericSuffixStart"; "isSpace"; "normalizeNumberText" ];
   HxType.register_class_instance_fields "HxModuleDecl" [ "classes"; "hasToplevelMain"; "headerOnly"; "imports"; "mainClass"; "packagePath" ];
   HxType.register_class_static_fields "HxModuleDecl" [ "getClasses"; "getHasToplevelMain"; "getHeaderOnly"; "getImports"; "getMainClass"; "getPackagePath" ];
