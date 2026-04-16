@@ -7,6 +7,11 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 			throw label + ": expected substring '" + needle + "' in '" + haystack + "'";
 	}
 
+	static function assertEquals(actual:String, expected:String, label:String):Void {
+		if (actual != expected)
+			throw label + ": expected '" + expected + "', got '" + actual + "'";
+	}
+
 	static function main() {
 		final scope = new JsFunctionScope(new haxe.ds.StringMap<String>());
 		final exprScope = scope.exprScope();
@@ -107,5 +112,11 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 
 		final inlineExprJs = JsExprEmitter.emit(HxParser.parseExprText("inline helper(value, max - 1)"), exprScope);
 		assertContains(inlineExprJs, "helper(value, (max - 1))", "expression-position inline should lower to the wrapped call");
+
+		final intReceiverCallJs = JsExprEmitter.emit(ECall(EField(EInt(32), "ofInt"), []), exprScope);
+		assertEquals(intReceiverCallJs, "(32).ofInt()", "integer literal receiver calls should be valid JavaScript");
+
+		final floatReceiverCallJs = JsExprEmitter.emit(ECall(EField(EFloat(1.5), "toFixed"), [EInt(1)]), exprScope);
+		assertEquals(floatReceiverCallJs, "(1.5).toFixed(1)", "float literal receiver calls should be valid JavaScript");
 	}
 }

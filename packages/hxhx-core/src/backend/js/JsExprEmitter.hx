@@ -48,7 +48,7 @@ class JsExprEmitter {
 			case EIdent(name):
 				resolveIdent(name, scope);
 			case EField(obj, field):
-				emit(obj, scope) + JsNameMangler.propertySuffix(field);
+				emitField(obj, field, scope);
 			case ECall(callee, args):
 				emitCall(callee, args, scope);
 			case EMacroExpr(inner, wrappers):
@@ -404,6 +404,16 @@ class JsExprEmitter {
 				return cls;
 		}
 		return JsNameMangler.identifier(name);
+	}
+
+	static function emitField(obj:HxExpr, field:String, scope:JsEmitScope):String {
+		final receiver = switch (obj) {
+			case EInt(_) | EFloat(_):
+				"(" + emit(obj, scope) + ")";
+			case _:
+				emit(obj, scope);
+		}
+		return receiver + JsNameMangler.propertySuffix(field);
 	}
 
 	static function emitCall(callee:HxExpr, args:Array<HxExpr>, scope:JsEmitScope):String {
