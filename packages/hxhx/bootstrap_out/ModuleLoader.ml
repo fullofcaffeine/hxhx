@@ -172,7 +172,7 @@ let typerindexbuild_fromResolvedModule = fun m -> try let __fallback_result_33 =
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; ensureTypeAvailable : Obj.t -> string -> string -> string HxArray.t -> TyClassInfo.t; mutable classPaths : string HxArray.t; mutable defines : string HxMap.string_map; mutable index : TyperIndex.t; mutable onMissingType : Obj.t; mutable expandDependencies : bool; mutable dirEntryCache : bool HxMap.string_map HxMap.string_map; mutable visited : bool HxMap.string_map; mutable typeNotFoundTried : bool HxMap.string_map; mutable pending : ResolvedModule.t HxArray.t; invokeOnMissingType : Obj.t -> string -> bool; markResolvedAlready : Obj.t -> ResolvedModule.t HxArray.t -> unit; drainNewModules : Obj.t -> unit -> ResolvedModule.t HxArray.t; loadModuleByPath : Obj.t -> string -> unit; depsForParsedModule : Obj.t -> string -> HxModuleDecl.t -> string HxArray.t; resolveModuleFile : Obj.t -> string -> string }
+type t = { __hx_type : Obj.t; ensureTypeAvailable : Obj.t -> string -> string -> string HxArray.t -> TyClassInfo.t; mutable classPaths : string HxArray.t; mutable defines : string HxMap.string_map; mutable index : TyperIndex.t; mutable onMissingType : Obj.t; mutable expandDependencies : bool; mutable dirEntryCache : bool HxMap.string_map HxMap.string_map; mutable visited : bool HxMap.string_map; mutable typeNotFoundTried : bool HxMap.string_map; mutable pending : ResolvedModule.t HxArray.t; invokeOnMissingType : Obj.t -> string -> bool; markResolvedAlready : Obj.t -> ResolvedModule.t HxArray.t -> unit; drainNewModules : Obj.t -> unit -> ResolvedModule.t HxArray.t; loadModuleByPath : Obj.t -> string -> unit; depsForParsedModule : Obj.t -> string -> HxModuleDecl.t -> string HxMap.string_map -> string HxArray.t; resolveModuleFile : Obj.t -> string -> string }
 
 let __ctor = fun (self : t) classPaths2 defines2 index2 onMissingType2 expandDependencies2 -> ignore (let expandDependencies2 = if expandDependencies2 == HxRuntime.hx_null then HxRuntime.box_bool true else expandDependencies2 in ignore ((
   ignore (LazyTypeLoader.__ctor (Obj.magic self) ());
@@ -398,7 +398,7 @@ let loadModuleByPath__impl = fun (self : t) (modulePath : string) -> ignore (ign
                   ));
                   if info != Obj.magic (HxRuntime.hx_null) then ignore (TyperIndex.addClass (Obj.magic ((Obj.magic self : t).index)) (Obj.magic info)) else ()
                 )) done) else ());
-                if (Obj.magic self : t).expandDependencies then ignore (let decl = Obj.magic (ParsedModule.getDecl (Obj.magic parsed) ()) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).depsForParsedModule (Obj.magic self) (filtered : string) (Obj.magic decl)) in try while !_g < HxArray.length _g1 do try ignore (let dep = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+                if (Obj.magic self : t).expandDependencies then ignore (let decl = Obj.magic (ParsedModule.getDecl (Obj.magic parsed) ()) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).depsForParsedModule (Obj.magic self) (filtered : string) (Obj.magic decl) (Obj.magic (!tempStringMap))) in try while !_g < HxArray.length _g1 do try ignore (let dep = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
                   ignore (let __old_71 = !_g in let __new_72 = HxInt.add __old_71 1 in (
                     ignore (_g := __new_72);
                     __new_72
@@ -724,7 +724,7 @@ let normalizeImport = fun raw -> try let __fallback_result_135 = (
 ) in Obj.magic __fallback_result_135 with
   | HxRuntime.Hx_return __ret_134 -> Obj.obj __ret_134
 
-let implicitQualifiedTypeDeps = fun source -> try let __fallback_result_146 = (
+let implicitQualifiedTypeDeps = fun source defines2 -> try let __fallback_result_146 = (
   ignore (if source == Obj.magic (HxRuntime.hx_null) || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_136 = HxArray.create () in __arr_136)))) else ());
   let candidates = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in let _g1 = Obj.magic (HxString.split source "\n") in (
     ignore (try while !_g < HxArray.length _g1 do try ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
@@ -735,7 +735,7 @@ let implicitQualifiedTypeDeps = fun source -> try let __fallback_result_146 = (
       let trimmed = (StringTools.trim (line : string) : string) in (
         ignore (if StringTools.startsWith (trimmed : string) ("@:" : string) then raise (HxRuntime.Hx_continue) else ());
         let re = Obj.magic (EReg.create ("\\b(([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Z][A-Za-z0-9_]*)\\b" : string) ("g" : string)) in let pos = ref 0 in while EReg.matchSub (Obj.magic re) (line : string) (!pos) (-1) do ignore (let dep = (EReg.matched (Obj.magic re) 1 : string) in (
-          ignore (if dep != Obj.magic (HxRuntime.hx_null) && HxString.length dep > 0 then ignore (HxMap.set_string candidates dep true) else ());
+          ignore (if dep != Obj.magic (HxRuntime.hx_null) && HxString.length dep > 0 && not (HxConditionalCompilation.isInactiveTargetQualifiedTypePath (dep : string) (Obj.magic defines2)) then ignore (HxMap.set_string candidates dep true) else ());
           let mp = EReg.matchedPos (Obj.magic re) () in let __assign_139 = HxInt.add (Obj.obj (HxAnon.get mp "pos")) (Obj.obj (HxAnon.get mp "len")) in (
             pos := __assign_139;
             __assign_139
@@ -766,7 +766,7 @@ let implicitQualifiedTypeDeps = fun source -> try let __fallback_result_146 = (
 ) in Obj.magic __fallback_result_146 with
   | HxRuntime.Hx_return __ret_145 -> Obj.obj __ret_145
 
-let depsForParsedModule__impl = fun (self : t) (filteredSource : string) (decl : HxModuleDecl.t) -> let out = Obj.magic (HxArray.create ()) in let seen = Obj.magic (HxMap.create_string ()) in let modulePkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in (
+let depsForParsedModule__impl = fun (self : t) (filteredSource : string) (decl : HxModuleDecl.t) (defines2 : string HxMap.string_map) -> let out = Obj.magic (HxArray.create ()) in let seen = Obj.magic (HxMap.create_string ()) in let modulePkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in (
   ignore (let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getImports (Obj.magic decl)) in try while !_g < HxArray.length _g1 do try ignore (let rawImport = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
     ignore (let __old_74 = !_g in let __new_75 = HxInt.add __old_74 1 in (
       ignore (_g := __new_75);
@@ -821,7 +821,7 @@ let depsForParsedModule__impl = fun (self : t) (filteredSource : string) (decl :
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  ignore (let _g = ref 0 in let _g1 = Obj.magic (implicitQualifiedTypeDeps (filteredSource : string)) in while !_g < HxArray.length _g1 do ignore (let dep = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+  ignore (let _g = ref 0 in let _g1 = Obj.magic (implicitQualifiedTypeDeps (filteredSource : string) (Obj.magic defines2)) in while !_g < HxArray.length _g1 do ignore (let dep = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
     ignore (let __old_87 = !_g in let __new_88 = HxInt.add __old_87 1 in (
       ignore (_g := __new_88);
       __new_88
@@ -834,7 +834,7 @@ let depsForParsedModule__impl = fun (self : t) (filteredSource : string) (decl :
   out
 )
 
-let create = fun classPaths2 defines2 index2 onMissingType2 expandDependencies2 -> let self = ({ __hx_type = HxType.class_ "ModuleLoader"; ensureTypeAvailable = (fun o a0 a1 a2 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); classPaths = Obj.magic (HxRuntime.hx_null); defines = Obj.magic (HxRuntime.hx_null); index = Obj.magic (HxRuntime.hx_null); onMissingType = Obj.magic (HxRuntime.hx_null); expandDependencies = false; dirEntryCache = Obj.magic (HxRuntime.hx_null); visited = Obj.magic (HxRuntime.hx_null); typeNotFoundTried = Obj.magic (HxRuntime.hx_null); pending = Obj.magic (HxRuntime.hx_null); invokeOnMissingType = (fun o a0 -> Obj.magic (invokeOnMissingType__impl (Obj.magic o) (Obj.magic a0))); markResolvedAlready = (fun o a0 -> Obj.magic (markResolvedAlready__impl (Obj.magic o) (Obj.magic a0))); drainNewModules = (fun o () -> Obj.magic (drainNewModules__impl (Obj.magic o) (Obj.magic ()))); loadModuleByPath = (fun o a0 -> Obj.magic (loadModuleByPath__impl (Obj.magic o) (Obj.magic a0))); depsForParsedModule = (fun o a0 a1 -> Obj.magic (depsForParsedModule__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); resolveModuleFile = (fun o a0 -> Obj.magic (resolveModuleFile__impl (Obj.magic o) (Obj.magic a0))) } : t) in (
+let create = fun classPaths2 defines2 index2 onMissingType2 expandDependencies2 -> let self = ({ __hx_type = HxType.class_ "ModuleLoader"; ensureTypeAvailable = (fun o a0 a1 a2 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); classPaths = Obj.magic (HxRuntime.hx_null); defines = Obj.magic (HxRuntime.hx_null); index = Obj.magic (HxRuntime.hx_null); onMissingType = Obj.magic (HxRuntime.hx_null); expandDependencies = false; dirEntryCache = Obj.magic (HxRuntime.hx_null); visited = Obj.magic (HxRuntime.hx_null); typeNotFoundTried = Obj.magic (HxRuntime.hx_null); pending = Obj.magic (HxRuntime.hx_null); invokeOnMissingType = (fun o a0 -> Obj.magic (invokeOnMissingType__impl (Obj.magic o) (Obj.magic a0))); markResolvedAlready = (fun o a0 -> Obj.magic (markResolvedAlready__impl (Obj.magic o) (Obj.magic a0))); drainNewModules = (fun o () -> Obj.magic (drainNewModules__impl (Obj.magic o) (Obj.magic ()))); loadModuleByPath = (fun o a0 -> Obj.magic (loadModuleByPath__impl (Obj.magic o) (Obj.magic a0))); depsForParsedModule = (fun o a0 a1 a2 -> Obj.magic (depsForParsedModule__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); resolveModuleFile = (fun o a0 -> Obj.magic (resolveModuleFile__impl (Obj.magic o) (Obj.magic a0))) } : t) in (
   ignore (let expandDependencies2 = if expandDependencies2 == HxRuntime.hx_null then HxRuntime.box_bool true else expandDependencies2 in ignore ((
     ignore (LazyTypeLoader.__ctor (Obj.magic self) ());
     let tempRight = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
@@ -907,4 +907,4 @@ let create = fun classPaths2 defines2 index2 onMissingType2 expandDependencies2 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "ModuleLoader"; ensureTypeAvailable = (fun o a0 a1 a2 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); classPaths = Obj.magic (HxRuntime.hx_null); defines = Obj.magic (HxRuntime.hx_null); index = Obj.magic (HxRuntime.hx_null); onMissingType = Obj.magic (HxRuntime.hx_null); expandDependencies = false; dirEntryCache = Obj.magic (HxRuntime.hx_null); visited = Obj.magic (HxRuntime.hx_null); typeNotFoundTried = Obj.magic (HxRuntime.hx_null); pending = Obj.magic (HxRuntime.hx_null); invokeOnMissingType = (fun o a0 -> Obj.magic (invokeOnMissingType__impl (Obj.magic o) (Obj.magic a0))); markResolvedAlready = (fun o a0 -> Obj.magic (markResolvedAlready__impl (Obj.magic o) (Obj.magic a0))); drainNewModules = (fun o () -> Obj.magic (drainNewModules__impl (Obj.magic o) (Obj.magic ()))); loadModuleByPath = (fun o a0 -> Obj.magic (loadModuleByPath__impl (Obj.magic o) (Obj.magic a0))); depsForParsedModule = (fun o a0 a1 -> Obj.magic (depsForParsedModule__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); resolveModuleFile = (fun o a0 -> Obj.magic (resolveModuleFile__impl (Obj.magic o) (Obj.magic a0))) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "ModuleLoader"; ensureTypeAvailable = (fun o a0 a1 a2 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); classPaths = Obj.magic (HxRuntime.hx_null); defines = Obj.magic (HxRuntime.hx_null); index = Obj.magic (HxRuntime.hx_null); onMissingType = Obj.magic (HxRuntime.hx_null); expandDependencies = false; dirEntryCache = Obj.magic (HxRuntime.hx_null); visited = Obj.magic (HxRuntime.hx_null); typeNotFoundTried = Obj.magic (HxRuntime.hx_null); pending = Obj.magic (HxRuntime.hx_null); invokeOnMissingType = (fun o a0 -> Obj.magic (invokeOnMissingType__impl (Obj.magic o) (Obj.magic a0))); markResolvedAlready = (fun o a0 -> Obj.magic (markResolvedAlready__impl (Obj.magic o) (Obj.magic a0))); drainNewModules = (fun o () -> Obj.magic (drainNewModules__impl (Obj.magic o) (Obj.magic ()))); loadModuleByPath = (fun o a0 -> Obj.magic (loadModuleByPath__impl (Obj.magic o) (Obj.magic a0))); depsForParsedModule = (fun o a0 a1 a2 -> Obj.magic (depsForParsedModule__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); resolveModuleFile = (fun o a0 -> Obj.magic (resolveModuleFile__impl (Obj.magic o) (Obj.magic a0))) } : t)

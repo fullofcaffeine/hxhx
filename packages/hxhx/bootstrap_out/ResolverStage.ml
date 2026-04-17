@@ -115,7 +115,7 @@ let implicitSamePackageDeps = fun source modulePath decl -> try let __fallback_r
 ) in Obj.magic __fallback_result_25 with
   | HxRuntime.Hx_return __ret_24 -> Obj.obj __ret_24
 
-let implicitQualifiedTypeDeps = fun source -> try let __fallback_result_36 = (
+let implicitQualifiedTypeDeps = fun source defines -> try let __fallback_result_36 = (
   ignore (if source == Obj.magic (HxRuntime.hx_null) || HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_26 = HxArray.create () in __arr_26)))) else ());
   let candidates = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (HxString.split source "\n") in (
     ignore (try while !_g < HxArray.length _g1 do try ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
@@ -126,7 +126,7 @@ let implicitQualifiedTypeDeps = fun source -> try let __fallback_result_36 = (
       let trimmed = (StringTools.trim (line : string) : string) in (
         ignore (if StringTools.startsWith (trimmed : string) ("@:" : string) then raise (HxRuntime.Hx_continue) else ());
         let re = Obj.magic (EReg.create ("\\b(([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Z][A-Za-z0-9_]*)\\b" : string) ("g" : string)) in let pos = ref 0 in while EReg.matchSub (Obj.magic re) (line : string) (!pos) (-1) do ignore (let dep = (EReg.matched (Obj.magic re) 1 : string) in (
-          ignore (if dep != Obj.magic (HxRuntime.hx_null) && HxString.length dep > 0 then ignore (HxMap.set_string candidates dep true) else ());
+          ignore (if dep != Obj.magic (HxRuntime.hx_null) && HxString.length dep > 0 && not (HxConditionalCompilation.isInactiveTargetQualifiedTypePath (dep : string) (Obj.magic defines)) then ignore (HxMap.set_string candidates dep true) else ());
           let mp = EReg.matchedPos (Obj.magic re) () in let __assign_29 = HxInt.add (Obj.obj (HxAnon.get mp "pos")) (Obj.obj (HxAnon.get mp "len")) in (
             pos := __assign_29;
             __assign_29
@@ -543,7 +543,7 @@ let parseProjectRoots = fun classPaths roots defines -> let out = Obj.magic (HxA
                           if exists then ignore (HxArray.push deps dep) else ()
                         )
                       )) done) else ());
-                      ignore (let _g = ref 0 in let _g1 = Obj.magic (implicitQualifiedTypeDeps (filteredSource : string)) in while !_g < HxArray.length _g1 do ignore (let dep = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+                      ignore (let _g = ref 0 in let _g1 = Obj.magic (implicitQualifiedTypeDeps (filteredSource : string) (Obj.magic effectiveDefines)) in while !_g < HxArray.length _g1 do ignore (let dep = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
                         ignore (let __old_107 = !_g in let __new_108 = HxInt.add __old_107 1 in (
                           ignore (_g := __new_108);
                           __new_108

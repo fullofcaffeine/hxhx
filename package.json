@@ -98,6 +98,7 @@
     "test:m14:hih-int64-static-helper": "haxe test/m14_hxhx_stage3_int64_static_helper_integration_test.hxml",
     "test:m14:hih-test-nicolas-int64": "haxe test/m14_hxhx_stage3_test_nicolas_int64_integration_test.hxml",
     "test:m14:hih-uppercase-static-helper-call": "haxe test/m14_hxhx_stage3_uppercase_static_helper_call_integration_test.hxml",
+    "test:m14:conditional-compilation": "haxe test/m14_conditional_compilation_integration_test.hxml",
     "test:m14:hih-new-generic-ctor": "haxe test/m14_hih_new_generic_ctor_integration_test.hxml",
     "test:m14:hih-generic-function-decl": "haxe test/m14_hih_generic_function_decl_integration_test.hxml",
     "test:m14:hih-generic-function-arity": "haxe test/m14_hxhx_stage3_generic_function_arity_integration_test.hxml",

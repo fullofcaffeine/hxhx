@@ -127,7 +127,7 @@ class ResolverStage {
 		- We only enqueue dependencies that actually resolve on classpaths, which keeps false
 		  positives low enough for bring-up.
 	**/
-	static function implicitQualifiedTypeDeps(source:String):Array<String> {
+	static function implicitQualifiedTypeDeps(source:String, ?defines:haxe.ds.StringMap<String>):Array<String> {
 		if (source == null || source.length == 0)
 			return [];
 
@@ -143,7 +143,7 @@ class ResolverStage {
 			var pos = 0;
 			while (re.matchSub(line, pos, -1)) {
 				final dep = re.matched(1);
-				if (dep != null && dep.length > 0)
+				if (dep != null && dep.length > 0 && !HxConditionalCompilation.isInactiveTargetQualifiedTypePath(dep, defines))
 					candidates.set(dep, true);
 				final mp = re.matchedPos();
 				pos = mp.pos + mp.len;
@@ -401,7 +401,7 @@ class ResolverStage {
 				}
 			}
 
-			for (dep in implicitQualifiedTypeDeps(filteredSource)) {
+			for (dep in implicitQualifiedTypeDeps(filteredSource, effectiveDefines)) {
 				final exists = resolveModuleFile(classPaths, dep) != null;
 				if (traceDeps)
 					Sys.println("resolver_qualified_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));

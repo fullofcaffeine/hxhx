@@ -159,6 +159,48 @@ class HxConditionalCompilation {
 	}
 
 	/**
+		Returns true when a dependency came from a target-specific package root that is
+		inactive for the current compilation target.
+
+		Why
+		- ResolverStage and ModuleLoader use a deliberately broad qualified-name scanner to
+		  approximate type-driven dependency discovery during Stage3 bring-up.
+		- That scanner can still see names inside preprocessor shapes we do not fully rewrite,
+		  for example `php.Global` in a JS compilation.
+		- Explicit imports remain authoritative; this helper is only for heuristic qualified
+		  dependency discovery.
+	**/
+	public static function isInactiveTargetQualifiedTypePath(typePath:String, defines:haxe.ds.StringMap<String>):Bool {
+		if (typePath == null)
+			return false;
+		final dot = typePath.indexOf(".");
+		if (dot <= 0)
+			return false;
+		final root = typePath.substr(0, dot);
+		if (!isKnownTargetPackageRoot(root))
+			return false;
+		if (defines != null && defines.exists(root))
+			return false;
+		return hasAnyKnownTargetDefine(defines);
+	}
+
+	private static function isKnownTargetPackageRoot(root:String):Bool {
+		return switch (root) {
+			case "php" | "java" | "cs" | "python" | "neko" | "lua" | "cpp" | "hl" | "flash" | "js": true;
+			case _: false;
+		}
+	}
+
+	private static function hasAnyKnownTargetDefine(defines:haxe.ds.StringMap<String>):Bool {
+		if (defines == null)
+			return false;
+		for (root in ["php", "java", "cs", "python", "neko", "lua", "cpp", "hl", "flash", "js"])
+			if (defines.exists(root))
+				return true;
+		return false;
+	}
+
+	/**
 		Filter a single physical line that contains an inline `#if ... #else ... #end`.
 
 		Returns `null` if the line does not contain a supported inline construct.
@@ -183,11 +225,6 @@ class HxConditionalCompilation {
 		if (idxEnd < 0)
 			return null;
 
-		// Optional `#else`.
-		final idxElse = findTokenOutsideStrings(line, "#else", idxIf + 3);
-		final elseInRange = idxElse >= 0 && idxElse < idxEnd;
-		final idxElse0 = elseInRange ? idxElse : -1;
-
 		// Parse the condition boundary so we can separate it from the "then" expression.
 		var condStart = idxIf + 3;
 		while (condStart < line.length && isLineWs(line.charCodeAt(condStart)))
@@ -195,22 +232,61 @@ class HxConditionalCompilation {
 		if (condStart >= line.length)
 			return null;
 
-		final condEnd = parseInlineCondEnd(line, condStart, idxEnd);
+		var condEnd = parseInlineCondEnd(line, condStart, idxEnd);
 		if (condEnd <= condStart)
 			return null;
 
 		final condText = StringTools.trim(line.substr(condStart, condEnd - condStart));
-		final thenStart = condEnd;
-		final thenEnd = idxElse0 >= 0 ? idxElse0 : idxEnd;
-		final elseStart = idxElse0 >= 0 ? (idxElse0 + 5) : -1; // "#else".length == 5
-		final elseEnd = idxEnd;
+		final branches = new Array<{cond:Null<String>, start:Int, end:Int}>();
+		var branchCond:Null<String> = condText;
+		var payloadStart = condEnd;
+		var scanFrom = payloadStart;
+		var done = false;
+		while (!done) {
+			final idxElseIf = findDirectiveTokenOutsideStrings(line, "#elseif", scanFrom, idxEnd);
+			final idxElse = findDirectiveTokenOutsideStrings(line, "#else", scanFrom, idxEnd);
+			var next = idxEnd;
+			var nextKind = "";
+			if (idxElseIf >= 0 && idxElseIf < next) {
+				next = idxElseIf;
+				nextKind = "elseif";
+			}
+			if (idxElse >= 0 && idxElse < next) {
+				next = idxElse;
+				nextKind = "else";
+			}
+
+			branches.push({cond: branchCond, start: payloadStart, end: next});
+			if (next == idxEnd) {
+				done = true;
+			} else if (nextKind == "elseif") {
+				condStart = next + 7; // "#elseif".length == 7
+				while (condStart < line.length && isLineWs(line.charCodeAt(condStart)))
+					condStart++;
+				condEnd = parseInlineCondEnd(line, condStart, idxEnd);
+				if (condEnd <= condStart)
+					return null;
+				branchCond = StringTools.trim(line.substr(condStart, condEnd - condStart));
+				payloadStart = condEnd;
+				scanFrom = payloadStart;
+			} else {
+				branches.push({cond: null, start: next + 5, end: idxEnd}); // "#else".length == 5
+				done = true;
+			}
+		}
 
 		// Decide which branch is active.
-		final takeThen = evalExpr(condText, defines);
-		final keepStart = takeThen ? thenStart : elseStart;
-		final keepEnd = takeThen ? thenEnd : elseEnd;
+		var keepStart = -1;
+		var keepEnd = -1;
+		for (branch in branches) {
+			if (branch.cond == null || evalExpr(branch.cond, defines)) {
+				keepStart = branch.start;
+				keepEnd = branch.end;
+				break;
+			}
+		}
 		if (keepStart < 0 || keepEnd < keepStart) {
-			// No else branch and condition is false: keep nothing.
+			// No matching branch and no else branch: keep nothing.
 			return makeBlankLineLike(line);
 		}
 
@@ -241,6 +317,21 @@ class HxConditionalCompilation {
 		for (c in outCodes)
 			b.addChar(c);
 		return b.toString();
+	}
+
+	private static function findDirectiveTokenOutsideStrings(line:String, token:String, from:Int, max:Int):Int {
+		var pos = from;
+		while (pos < max) {
+			final idx = findTokenOutsideStrings(line, token, pos);
+			if (idx < 0 || idx >= max)
+				return -1;
+			if (token == "#else" && line.substr(idx, 7) == "#elseif") {
+				pos = idx + 1;
+				continue;
+			}
+			return idx;
+		}
+		return -1;
 	}
 
 	private static function parseInlineCondEnd(line:String, start:Int, max:Int):Int {

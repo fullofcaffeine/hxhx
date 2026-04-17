@@ -318,7 +318,7 @@ class ModuleLoader extends LazyTypeLoader {
 		//   references found in source bodies (e.g. `pkg.Type.member(...)`).
 		if (expandDependencies) {
 			final decl = parsed.getDecl();
-			for (dep in depsForParsedModule(filtered, decl)) {
+			for (dep in depsForParsedModule(filtered, decl, effectiveDefines)) {
 				if (dep == null || dep.length == 0)
 					continue;
 				if (resolveModuleFile(dep) == null)
@@ -342,7 +342,7 @@ class ModuleLoader extends LazyTypeLoader {
 		return s;
 	}
 
-	static function implicitQualifiedTypeDeps(source:String):Array<String> {
+	static function implicitQualifiedTypeDeps(source:String, ?defines:haxe.ds.StringMap<String>):Array<String> {
 		if (source == null || source.length == 0)
 			return [];
 
@@ -356,7 +356,7 @@ class ModuleLoader extends LazyTypeLoader {
 			var pos = 0;
 			while (re.matchSub(line, pos, -1)) {
 				final dep = re.matched(1);
-				if (dep != null && dep.length > 0)
+				if (dep != null && dep.length > 0 && !HxConditionalCompilation.isInactiveTargetQualifiedTypePath(dep, defines))
 					candidates.set(dep, true);
 				final mp = re.matchedPos();
 				pos = mp.pos + mp.len;
@@ -370,7 +370,7 @@ class ModuleLoader extends LazyTypeLoader {
 		return out;
 	}
 
-	function depsForParsedModule(filteredSource:String, decl:HxModuleDecl):Array<String> {
+	function depsForParsedModule(filteredSource:String, decl:HxModuleDecl, ?defines:haxe.ds.StringMap<String>):Array<String> {
 		final out = new Array<String>();
 		final seen = new haxe.ds.StringMap<Bool>();
 
@@ -415,7 +415,7 @@ class ModuleLoader extends LazyTypeLoader {
 			push(resolvedImp);
 		}
 
-		for (dep in implicitQualifiedTypeDeps(filteredSource))
+		for (dep in implicitQualifiedTypeDeps(filteredSource, defines))
 			push(dep);
 		return out;
 	}
