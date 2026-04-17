@@ -80,6 +80,17 @@ function positiveInt(value, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
+function commandTimedOut(result) {
+  return Boolean(result && result.error && result.error.code === 'ETIMEDOUT')
+}
+
+function normalizedExitCode(result) {
+  if (commandTimedOut(result)) {
+    return -1
+  }
+  return result.status == null ? -1 : result.status
+}
+
 function relativeArtifactPath(root, filePath) {
   return path.relative(root, filePath).split(path.sep).join('/')
 }
@@ -166,9 +177,9 @@ function main() {
     env,
     timeoutMs: buildTimeoutSec * 1000,
   })
-  summary.build.exit_code = buildResult.status == null ? -1 : buildResult.status
+  summary.build.exit_code = normalizedExitCode(buildResult)
   summary.build.timeout_sec = buildTimeoutSec
-  summary.build.timed_out = Boolean(buildResult.error && buildResult.error.code === 'ETIMEDOUT')
+  summary.build.timed_out = commandTimedOut(buildResult)
   summary.build.signal = buildResult.signal || ''
   const buildStdout = logSummary(
     parsed.root,
@@ -189,7 +200,7 @@ function main() {
   summary.build.error = buildResult.error ? String(buildResult.error.message || buildResult.error) : ''
 
   let hxhxBin = ''
-  if (summary.build.exit_code === 0) {
+  if (summary.build.exit_code === 0 && !summary.build.timed_out) {
     const candidate = parseBuildBinaryPath(buildResult.stdout || '')
     if (candidate.length > 0) {
       const resolved = path.resolve(parsed.root, candidate)
@@ -237,9 +248,9 @@ function main() {
         started_at: suiteStartedAt.toISOString(),
         ended_at: suiteEndedAt.toISOString(),
         duration_ms: suiteEndedAt.getTime() - suiteStartedAt.getTime(),
-        exit_code: suiteResult.status == null ? -1 : suiteResult.status,
+        exit_code: normalizedExitCode(suiteResult),
         timeout_sec: suiteTimeoutSec,
-        timed_out: Boolean(suiteResult.error && suiteResult.error.code === 'ETIMEDOUT'),
+        timed_out: commandTimedOut(suiteResult),
         signal: suiteResult.signal || '',
         stdout_log: suiteStdout.log,
         stderr_log: suiteStderr.log,
