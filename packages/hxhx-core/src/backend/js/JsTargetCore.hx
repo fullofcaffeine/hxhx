@@ -634,6 +634,13 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		}
 
+		if (fullName == "sys.io.Process") {
+			if (params.length < 1)
+				return false;
+			emitSysIoProcessConstructorBody(writer, params);
+			return true;
+		}
+
 		if (fullName == "utest.ui.text.PrintReport") {
 			if (params.length < 1)
 				return false;
@@ -664,6 +671,46 @@ class JsTargetCore implements ITargetCore {
 		}
 
 		return false;
+	}
+
+	static function emitSysIoProcessConstructorBody(writer:JsWriter, params:Array<String>):Void {
+		final cmd = params[0];
+		final args = params.length >= 2 ? params[1] : "null";
+		writer.writeln("var __hx_child_process = require(\"child_process\");");
+		writer.writeln("var __hx_args = Array.isArray(" + args + ") ? " + args + ".map(function(__hx_arg) { return String(__hx_arg); }) : [];");
+		writer.writeln("var __hx_result = __hx_child_process.spawnSync(String(" + cmd + "), __hx_args, { encoding: \"utf8\" });");
+		writer.writeln("this.__hx_process_result = __hx_result;");
+		writer.writeln("function __hx_pipe(__hx_value) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_text = __hx_value == null ? \"\" : String(__hx_value);");
+		writer.writeln("var __hx_offset = 0;");
+		writer.writeln("return {");
+		writer.pushIndent();
+		writer.writeln("readAll: function() {");
+		writer.pushIndent();
+		writer.writeln("var __hx_rest = __hx_text.substr(__hx_offset);");
+		writer.writeln("__hx_offset = __hx_text.length;");
+		writer.writeln("return __hx_rest;");
+		writer.popIndent();
+		writer.writeln("},");
+		writer.writeln("readLine: function() {");
+		writer.pushIndent();
+		writer.writeln("if (__hx_offset >= __hx_text.length) return \"\";");
+		writer.writeln("var __hx_next = __hx_text.indexOf(\"\\n\", __hx_offset);");
+		writer.writeln("if (__hx_next < 0) __hx_next = __hx_text.length;");
+		writer.writeln("var __hx_line = __hx_text.substring(__hx_offset, __hx_next);");
+		writer.writeln("if (__hx_line.length > 0 && __hx_line.charCodeAt(__hx_line.length - 1) === 13) __hx_line = __hx_line.substring(0, __hx_line.length - 1);");
+		writer.writeln("__hx_offset = __hx_next < __hx_text.length ? __hx_next + 1 : __hx_next;");
+		writer.writeln("return __hx_line;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("this.stdout = __hx_pipe(__hx_result == null ? \"\" : __hx_result.stdout);");
+		writer.writeln("this.stderr = __hx_pipe(__hx_result == null ? \"\" : (__hx_result.stderr || (__hx_result.error != null ? __hx_result.error.message : \"\")));");
+		writer.writeln("this.stdin = { writeString: function() { return null; }, flush: function() { return null; }, close: function() { return null; } };");
 	}
 
 	static function emitPlainClassPrototypeMethods(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
@@ -1099,6 +1146,9 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		}
 
+		if (fullName == "sys.io.Process")
+			return emitSysIoProcessInstanceFunctionBody(writer, fnName);
+
 		if (fullName == "unit.TestLocalStatic" && fnName == "basic") {
 			emitUnitTestLocalStaticBasicBody(writer, fullName);
 			return true;
@@ -1149,6 +1199,25 @@ class JsTargetCore implements ITargetCore {
 		}
 
 		return false;
+	}
+
+	static function emitSysIoProcessInstanceFunctionBody(writer:JsWriter, fnName:String):Bool {
+		switch (fnName) {
+			case "exitCode":
+				writer.writeln("var __hx_result = this.__hx_process_result;");
+				writer.writeln("if (__hx_result == null) return 0;");
+				writer.writeln("if (typeof __hx_result.status === \"number\") return __hx_result.status;");
+				writer.writeln("return __hx_result.error != null ? 1 : 0;");
+				return true;
+			case "close":
+				writer.writeln("return this.exitCode();");
+				return true;
+			case "kill":
+				writer.writeln("return null;");
+				return true;
+			case _:
+				return false;
+		}
 	}
 
 	static function emitUnitTestLocalStaticBasicBody(writer:JsWriter, fullName:String):Void {

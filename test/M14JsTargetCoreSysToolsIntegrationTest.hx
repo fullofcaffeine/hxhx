@@ -120,7 +120,14 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final processClass = new HxClassDecl("Process", false, [
 			new HxFunctionDecl("new", HxVisibility.Public, false, [cmdArg, argsArg], "Void",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), ""),
-			new HxFunctionDecl("close", HxVisibility.Public, false, [], "Int", unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
+			new HxFunctionDecl("exitCode", HxVisibility.Public, false, [], "Int", unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"),
+				""),
+			new HxFunctionDecl("close", HxVisibility.Public, false, [], "Int", unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), ""),
+			new HxFunctionDecl("kill", HxVisibility.Public, false, [], "Void", unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
+		], [
+			new HxFieldDecl("stdin", HxVisibility.Public, false, "Dynamic", null),
+			new HxFieldDecl("stdout", HxVisibility.Public, false, "Dynamic", null),
+			new HxFieldDecl("stderr", HxVisibility.Public, false, "Dynamic", null)
 		]);
 		final decl = new HxModuleDecl("sys.io", [], processClass, [processClass], false, false);
 		return typedModule("", decl, "sys/io/Process.hx");
@@ -1128,6 +1135,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"    Sys.println(called.value);",
 				"    Sys.println(handler.finished);",
 				"    Sys.println(handler.results.length);",
+				'    var proc = new sys.io.Process("node", ["-e", "process.stdout.write(\\"proc-out\\"); process.stderr.write(\\"proc-err\\");"]);',
+				'    Sys.println("proc=" + proc.stdout.readAll().toString() + "|" + proc.stderr.readAll().toString() + "|" + proc.exitCode());',
+				"    proc.close();",
 				"  }",
 				"}",
 				"class BaseProp {",
@@ -1467,6 +1477,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "true,4,5,false", "runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
 			assertContains(stdout, "fixture-called\nprecheck\ntested\ncomplete\ntrue\ntrue\n1",
 				"utest TestHandler execute should run a synchronous fixture and dispatch completion hooks");
+			assertContains(stdout, "proc=proc-out|proc-err|0", "sys.io.Process should provide readable stdout/stderr pipes under Node");
 			final requireStdout = runNodeRequireScript(artifactPath);
 			assertContains(requireStdout, "require-main", "CommonJS require should expose unit.TestMain.main without breaking direct execution");
 		} catch (message:String) {
