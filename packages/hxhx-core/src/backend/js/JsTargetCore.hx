@@ -254,6 +254,17 @@ class JsTargetCore implements ITargetCore {
 		return isNativeJsLibExtern(fullName) || isNativeJsHtmlExtern(fullName);
 	}
 
+	static function nativeJsNodeRequireExternRef(fullName:String):Null<String> {
+		return switch (fullName) {
+			case "js.node.url.URL":
+				"require(\"url\").URL";
+			case "js.node.url.URLSearchParams":
+				"require(\"url\").URLSearchParams";
+			case _:
+				null;
+		}
+	}
+
 	static function nativeJsGlobalExternRef(fullName:String):String {
 		if (isNativeJsHtmlExtern(fullName))
 			return nativeJsSimpleGlobalRef(simpleName(fullName));
@@ -413,7 +424,10 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
-		if (isNativeJsGlobalExtern(unit.fullName)) {
+		final nodeRequireRef = nativeJsNodeRequireExternRef(unit.fullName);
+		if (nodeRequireRef != null) {
+			writer.writeln("var " + unit.jsRef + " = " + nodeRequireRef + ";");
+		} else if (isNativeJsGlobalExtern(unit.fullName)) {
 			writer.writeln("var " + unit.jsRef + " = " + nativeJsGlobalExternRef(unit.fullName) + ";");
 		} else if (unit.fullName == "EReg") {
 			emitERegConstructor(writer, unit.jsRef);
@@ -426,7 +440,7 @@ class JsTargetCore implements ITargetCore {
 		if (simpleNameRefs.get(simple) == unit.jsRef) {
 			writer.writeln("__hx_classes[" + JsNameMangler.quoteString(simple) + "] = " + unit.jsRef + ";");
 		}
-		if (isNativeJsGlobalExtern(unit.fullName))
+		if (nodeRequireRef != null || isNativeJsGlobalExtern(unit.fullName))
 			return;
 		emitPrototypeInheritance(writer, unit, classRefs);
 		if (unit.fullName == "EReg")
