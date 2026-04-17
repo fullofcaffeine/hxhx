@@ -266,7 +266,41 @@ class JsExprEmitter {
 		final rewrittenIf = rewriteLeadingIfThenReturn(raw, scope);
 		if (rewrittenIf != null)
 			return rewrittenIf;
+		final rewrittenWhile = rewriteLeadingWhileThenReturn(raw, scope);
+		if (rewrittenWhile != null)
+			return rewrittenWhile;
 		return null;
+	}
+
+	static function rewriteLeadingWhileThenReturn(raw:String, ?scope:JsEmitScope):Null<String> {
+		raw = raw == null ? "" : StringTools.trim(raw);
+		if (!startsWithRawKeyword(raw, 0, "while"))
+			return null;
+
+		final parenOpen = skipWhitespace(raw, 5);
+		if (parenOpen >= raw.length || raw.charCodeAt(parenOpen) != "(".code)
+			return null;
+		final parenClose = findMatching(raw, parenOpen, "(".code, ")".code);
+		if (parenClose < 0)
+			return null;
+
+		final bodyOpen = skipWhitespace(raw, parenClose + 1);
+		if (bodyOpen >= raw.length || raw.charCodeAt(bodyOpen) != "{".code)
+			return null;
+		final bodyClose = findMatching(raw, bodyOpen, "{".code, "}".code);
+		if (bodyClose < 0)
+			return null;
+
+		var trailing = StringTools.trim(raw.substr(bodyClose + 1));
+		while (StringTools.startsWith(trailing, ";"))
+			trailing = StringTools.trim(trailing.substr(1));
+		while (StringTools.endsWith(trailing, ";"))
+			trailing = StringTools.trim(trailing.substr(0, trailing.length - 1));
+
+		final cond = sanitizeRawHaxeExpressionSyntax(raw.substring(parenOpen + 1, parenClose), scope);
+		final body = sanitizeRawHaxeExpressionSyntax(raw.substring(bodyOpen + 1, bodyClose), scope);
+		final result = trailing.length == 0 ? "null" : sanitizeRawHaxeExpressionSyntax(trailing, scope);
+		return "while (" + cond + ") { " + body + " } return " + result + ";";
 	}
 
 	static function rewriteLeadingIfThenReturn(raw:String, ?scope:JsEmitScope):Null<String> {

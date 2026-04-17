@@ -45,5 +45,11 @@ class M14JsExprEmitterTryCatchIntegrationTest {
 		assertContains(blockWithIf, 'append("1"); if (cond2(getInt())) {', "raw block expressions should preserve the side-effect if statement");
 		assertContains(blockWithIf, "return buf.toString();", "raw block expressions should return the final value after side-effect if statements");
 		assertNotContains(blockWithIf, "return if", "raw block expressions should not emit invalid return-if syntax");
+
+		final blockWithTerminalWhile = JsExprEmitter.emit(ETryCatchRaw("opaque_block_expr:{ var next = change; while (next.next != null) { next = next.next; } }"),
+			exprScope);
+		assertContains(blockWithTerminalWhile, "while (next.next != null)", "raw block expressions should preserve terminal while statements");
+		assertContains(blockWithTerminalWhile, "return null;", "raw block expressions should return null after a terminal while statement");
+		assertNotContains(blockWithTerminalWhile, "return while", "raw block expressions should not emit invalid return-while syntax");
 	}
 }
