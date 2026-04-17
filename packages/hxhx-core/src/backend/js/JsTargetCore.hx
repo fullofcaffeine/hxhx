@@ -2663,6 +2663,8 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function shouldEmitNeutralInstanceFunctionBody(fullName:String, fnName:String):Bool {
+		if (fullName == "sys.io.FileInput" || fullName == "sys.io.FileOutput")
+			return true;
 		if (fullName == "sys.io.Process")
 			return true;
 		if (fullName == "utest.Runner" && fnName == "addCases")

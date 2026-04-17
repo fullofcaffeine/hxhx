@@ -92,6 +92,28 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "sys/io/File.hx");
 	}
 
+	static function sysIoFileInputModule():TypedModule {
+		final pArg = new HxFunctionArg("p", "Int", HxDefaultValue.NoDefault);
+		final posArg = new HxFunctionArg("pos", "sys.io.FileSeek", HxDefaultValue.NoDefault);
+		final fileInputClass = new HxClassDecl("FileInput", false, [
+			new HxFunctionDecl("seek", HxVisibility.Public, false, [pArg, posArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=sys-fileinput-seek"), "")
+		]);
+		final decl = new HxModuleDecl("sys.io", [], fileInputClass, [fileInputClass], false, false);
+		return typedModule("", decl, "sys/io/FileInput.hx");
+	}
+
+	static function sysIoFileOutputModule():TypedModule {
+		final pArg = new HxFunctionArg("p", "Int", HxDefaultValue.NoDefault);
+		final posArg = new HxFunctionArg("pos", "sys.io.FileSeek", HxDefaultValue.NoDefault);
+		final fileOutputClass = new HxClassDecl("FileOutput", false, [
+			new HxFunctionDecl("seek", HxVisibility.Public, false, [pArg, posArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=sys-fileoutput-seek"), "")
+		]);
+		final decl = new HxModuleDecl("sys.io", [], fileOutputClass, [fileOutputClass], false, false);
+		return typedModule("", decl, "sys/io/FileOutput.hx");
+	}
+
 	static function sysIoProcessModule():TypedModule {
 		final cmdArg = new HxFunctionArg("cmd", "String", HxDefaultValue.NoDefault);
 		final argsArg = new HxFunctionArg("args", "Array<String>", HxDefaultValue.NoDefault);
@@ -1099,6 +1121,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				pathModule(),
 				fileSystemModule(),
 				sysIoFileModule(),
+				sysIoFileInputModule(),
+				sysIoFileOutputModule(),
 				sysIoProcessModule(),
 				lambdaModule(),
 				stdModule(),
@@ -1182,6 +1206,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_sys_FileSystem.exists = function", "FileSystem exists shim should emit");
 			assertContains(js, "__hx_cls_sys_io_File.copyBuf = (typeof Buffer !== \"undefined\" ? Buffer : require(\"buffer\").Buffer).alloc(65536)",
 				"sys.io.File copy buffer should use Node Buffer global without unresolved js.node path");
+			assertContains(js, "__hx_cls_sys_io_FileInput.prototype.seek = function", "unused sys.io.FileInput seek should emit a neutral JS body");
+			assertNotContains(js, "sys-fileinput-seek", "unused sys.io.FileInput unsupported bodies should not leak into JS");
+			assertContains(js, "__hx_cls_sys_io_FileOutput.prototype.seek = function", "unused sys.io.FileOutput seek should emit a neutral JS body");
+			assertNotContains(js, "sys-fileoutput-seek", "unused sys.io.FileOutput unsupported bodies should not leak into JS");
 			assertContains(js, "try {  return \"try-ok\";", "try expression should lower to a returning IIFE");
 			assertContains(js, "__hx_cls_Macro.stripWhitespaces = function", "compile-time Macro fallback should emit");
 			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");

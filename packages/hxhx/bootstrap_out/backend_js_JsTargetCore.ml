@@ -2512,6 +2512,7 @@ let exposePathForFunction = fun fullName fn -> try let __fallback_result_223 = l
   | HxRuntime.Hx_return __ret_222 -> Obj.obj __ret_222
 
 let shouldEmitNeutralInstanceFunctionBody = fun fullName fnName -> try let __fallback_result_227 = (
+  ignore (if HxString.equals fullName "sys.io.FileInput" || HxString.equals fullName "sys.io.FileOutput" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxString.equals fullName "sys.io.Process" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxString.equals fullName "utest.Runner" && HxString.equals fnName "addCases" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxString.equals fullName "utest.ui.text.HtmlReport" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
