@@ -274,6 +274,50 @@ class HxLexer {
 		return src.substring(start, index);
 	}
 
+	function copyQuotedInterpolationPart(buf:StringBuf, quote:Int):Void {
+		// The opening quote has already been copied. Copy until the matching close,
+		// preserving escaped characters so braces inside nested strings do not affect
+		// the surrounding `${...}` depth.
+		while (!eof()) {
+			final c = bump();
+			buf.addChar(c);
+			if (c == "\\".code) {
+				if (!eof())
+					buf.addChar(bump());
+				continue;
+			}
+			if (c == quote)
+				return;
+		}
+	}
+
+	function copyInterpolationBracePayload(buf:StringBuf):Void {
+		// Called after `${` has been copied from inside an outer string.
+		//
+		// Why
+		// - Interpolation payloads are expressions, so quotes inside them belong to
+		//   the payload, not to the enclosing string literal.
+		// - Without this, a string like `'value ${Config.read('key')}'` terminates at
+		//   the inner `'key'` and leaves the body parser at a `body_parse_error`.
+		var depth = 1;
+		while (!eof() && depth > 0) {
+			final c = bump();
+			buf.addChar(c);
+			switch (c) {
+				case "'".code | "\"".code:
+					copyQuotedInterpolationPart(buf, c);
+				case "{".code:
+					depth++;
+				case "}".code:
+					depth--;
+				case "\\".code:
+					if (!eof())
+						buf.addChar(bump());
+				case _:
+			}
+		}
+	}
+
 	function readString(startPos:HxPos):HxToken {
 		// Opening quote
 		bump();
@@ -308,6 +352,12 @@ class HxLexer {
 
 		while (!eof()) {
 			final c = bump();
+			if (c == "$".code && peek(0) == "{".code) {
+				buf.addChar(c);
+				buf.addChar(bump());
+				copyInterpolationBracePayload(buf);
+				continue;
+			}
 			if (c == 34) { // "
 				return new HxToken(TString(buf.toString()), startPos);
 			}
@@ -386,6 +436,12 @@ class HxLexer {
 
 		while (!eof()) {
 			final c = bump();
+			if (c == "$".code && peek(0) == "{".code) {
+				buf.addChar(c);
+				buf.addChar(bump());
+				copyInterpolationBracePayload(buf);
+				continue;
+			}
 			if (c == "'".code) {
 				return new HxToken(TString(buf.toString()), startPos);
 			}

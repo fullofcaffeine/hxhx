@@ -135,6 +135,51 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected unary bitwise-not call expression");
 		}
 
+		final nestedQuoteInterpolationStmts = HxParser.parseFunctionBodyText("if (exit == 124) { println('No response in ${Config.read('limit')} seconds.'); }");
+		assertTrue(nestedQuoteInterpolationStmts.length == 1, "expected nested-quote interpolation if statement to parse");
+		switch (nestedQuoteInterpolationStmts[0]) {
+			case SIf(_, SBlock([SExpr(ECall(EIdent("println"), [EBinop("+", EString(_), EString(message))]), _)], _), null, _):
+				assertTrue(message.indexOf("Config.read('limit')") >= 0, "expected interpolation payload to preserve nested quoted argument");
+			case SExpr(EUnsupported(raw), _):
+				fail("nested-quote interpolation parsed as unsupported: " + raw);
+			case _:
+				fail("expected nested-quote interpolation in if statement");
+		}
+
+		final switchCaseSequenceStmts = HxParser.parseFunctionBodyText("var result = switch [ok, expected] { case [true, false]: true; case [false, false]: var detail = proc.stderr.readAll().toString(); Sys.print(detail); false; case _: false; };");
+		assertTrue(switchCaseSequenceStmts.length == 1, "expected switch expression case bodies to stay inside one var statement");
+		switch (switchCaseSequenceStmts[0]) {
+			case SVar("result", _, ESwitch(EArrayDecl(_), patterns, exprs), _):
+				assertTrue(patterns.length == 3, "expected all switch expression cases to parse");
+				assertTrue(exprs.length == 3, "expected all switch expression branch values to parse");
+				switch (exprs[1]) {
+					case EUnsupported(raw):
+						fail("switch expression statement-sequence branch parsed as unsupported: " + raw);
+					case _:
+				}
+			case SVar(_, _, EUnsupported(raw), _):
+				fail("switch expression case sequence parsed as unsupported: " + raw);
+			case _:
+				fail("expected switch expression with case statement sequences");
+		}
+
+		final switchNoSemicolonThenElseIfStmts = HxParser.parseFunctionBodyText("var result = switch [ok, expected] { case [true, false]: true; case _: false; }\nif (result && expected != null) { result = check(); } else if (stdout.length > 0) { println(stdout.toString()); }");
+		assertTrue(switchNoSemicolonThenElseIfStmts.length == 2, "expected no-semicolon switch initializer before if/else-if to parse as two statements");
+		switch (switchNoSemicolonThenElseIfStmts[0]) {
+			case SVar("result", _, ESwitch(_, _, _), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("no-semicolon switch initializer parsed as unsupported: " + raw);
+			case _:
+				fail("expected first statement to remain switch initializer var");
+		}
+		switch (switchNoSemicolonThenElseIfStmts[1]) {
+			case SIf(_, SBlock(_), SIf(_, SBlock(_), null, _), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("else-if after no-semicolon switch initializer parsed as unsupported: " + raw);
+			case _:
+				fail("expected second statement to parse as if/else-if");
+		}
+
 		final quotedKeyExpr = HxParser.parseExprText('{ "new": "test" }');
 		switch (quotedKeyExpr) {
 			case EAnon(names, values):

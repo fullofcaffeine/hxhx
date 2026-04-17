@@ -2376,22 +2376,70 @@ class HxParser {
 				continue;
 			}
 			expect(TColon, "':'");
-			// Case body as a single expression; stop before the next `case`/`}`.
-			final expr:HxExpr = if (cur.kind.match(TRBrace) || cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault))) {
-				HxExpr.ENull;
-			} else {
-				parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof) || cur.kind.match(TKeyword(KCase))
-					|| cur.kind.match(TKeyword(KDefault)));
+			final caseStmts = new Array<HxStmt>();
+			while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof) && !cur.kind.match(TKeyword(KCase)) && !cur.kind.match(TKeyword(KDefault))) {
+				final braceStartsAnon = cur.kind.match(TLBrace)
+					&& ((peekKind().match(TIdent(_)) || peekKind().match(TString(_))) && peekKind2().match(TColon));
+				if (braceStartsAnon) {
+					final exprPos = cur.pos;
+					final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)
+						|| cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault)));
+					if (cur.kind.match(TSemicolon))
+						bump();
+					caseStmts.push(SExpr(expr, exprPos));
+				} else {
+					parseStmtInto(caseStmts,
+						() -> cur.kind.match(TRBrace) || cur.kind.match(TEof) || cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault)));
+				}
 			}
-			if (cur.kind.match(TSemicolon))
-				bump();
 			patterns.push(pat);
-			exprs.push(expr);
+			exprs.push(switchCaseExprFromStmts(caseStmts));
 		}
 		if (cur.kind.match(TRBrace))
 			bump();
 
 		return ESwitch(scrutinee, patterns, exprs);
+	}
+
+	function switchCaseExprFromStmts(stmts:Array<HxStmt>):HxExpr {
+		// Expression-switch branches may contain setup statements before the final value:
+		//
+		//   case pattern:
+		//     var detail = compute();
+		//     trace(detail);
+		//     false;
+		//
+		// Reuse the local-function sequence lowering by rewriting a trailing expression
+		// statement into `return expr`; otherwise a final `false;` would be treated as a
+		// side-effect-only statement and the branch value would become `null`.
+		if (stmts == null || stmts.length == 0)
+			return ENull;
+
+		function markTailValue(stmt:HxStmt):HxStmt {
+			return switch (stmt) {
+				case SExpr(expr, pos):
+					SReturn(expr, pos);
+				case SIf(cond, thenBranch, elseBranch, pos):
+					SIf(cond, markTailValue(thenBranch), elseBranch == null ? null : markTailValue(elseBranch), pos);
+				case SBlock(inner, pos) if (inner != null && inner.length > 0):
+					final rewrittenInner = inner.copy();
+					final lastInner = rewrittenInner.length - 1;
+					rewrittenInner[lastInner] = markTailValue(rewrittenInner[lastInner]);
+					SBlock(rewrittenInner, pos);
+				case SSwitch(scrutinee, patterns, bodies, pos):
+					final rewrittenBodies = new Array<HxStmt>();
+					for (body in bodies)
+						rewrittenBodies.push(markTailValue(body));
+					SSwitch(scrutinee, patterns, rewrittenBodies, pos);
+				case other:
+					other;
+			}
+		}
+
+		final rewritten = stmts.copy();
+		final lastIndex = rewritten.length - 1;
+		rewritten[lastIndex] = markTailValue(rewritten[lastIndex]);
+		return lambdaBodyExprFromStmts(rewritten);
 	}
 
 	function parseTryCatchExpr(stop:() -> Bool):HxExpr {
@@ -2795,6 +2843,28 @@ class HxParser {
 			bump();
 			decls.push(parseSingleVarDecl());
 		}
+		final nextStartsStatement = switch (cur.kind) {
+			case TKeyword(k):
+				k == KIf
+				|| k == KSwitch
+				|| k == KTry
+				|| k == KWhile
+				|| k == KDo
+				|| k == KFor
+				|| k == KThrow
+				|| k == KReturn
+				|| k == KInline
+				|| k == KFunction
+				|| k == KVar
+				|| k == KFinal
+				|| k == KBreak
+				|| k == KContinue;
+			case TOther(c): c == "#".code || c == "@".code;
+			case _:
+				false;
+		}
+		if (nextStartsStatement)
+			return decls;
 		syncToStmtEnd();
 		return decls;
 	}

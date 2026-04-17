@@ -79,7 +79,7 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		final switchIfElseSemicolonJs = JsExprEmitter.emit(switchIfElseSemicolon, exprScope);
 		assertContains(switchIfElseSemicolonJs, "__sw.__hx_ctor === \"A\"", "if/else branch switch should match enum constructor");
 		assertContains(switchIfElseSemicolonJs, "var __sw_bind_x = __sw.__hx_params[0];", "if/else branch switch should bind enum arg");
-		assertContains(switchIfElseSemicolonJs, "((__sw_bind_x === null) ? \"null\" : \"not null\")", "semicolon before else should still lower as ternary");
+		assertContains(switchIfElseSemicolonJs, "((__sw_bind_x == null) ? \"null\" : \"not null\")", "semicolon before else should still lower as ternary");
 
 		final emptyCaseSwitchJs = JsExprEmitter.emit(HxParser.parseExprText('switch true { case true: case false: }'), exprScope);
 		assertContains(emptyCaseSwitchJs, "if (__sw === true)", "boolean literal switch pattern should lower true test");
