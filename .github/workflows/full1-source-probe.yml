@@ -21,7 +21,7 @@ jobs:
   full1_source_probe:
     name: Full1 source-build probe (non-blocking)
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4

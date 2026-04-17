@@ -70,7 +70,14 @@ function run(command, args, options) {
     env: options.env,
     encoding: 'utf8',
     maxBuffer: 1024 * 1024 * 64,
+    timeout: options.timeoutMs,
+    killSignal: 'SIGTERM',
   })
+}
+
+function positiveInt(value, fallback) {
+  const parsed = Number.parseInt(String(value || '').trim(), 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
 function relativeArtifactPath(root, filePath) {
@@ -133,6 +140,9 @@ function main() {
       stderr_bytes: 0,
       stdout_tail: '',
       stderr_tail: '',
+      timeout_sec: null,
+      timed_out: false,
+      signal: '',
       error: '',
     },
     suites_run: [],
@@ -144,10 +154,22 @@ function main() {
   env.HXHX_FORCE_STAGE0 = env.HXHX_FORCE_STAGE0 || '1'
   env.HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS = env.HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS || '900'
   env.HXHX_STAGE0_CONNECT_IDLE_SECS = env.HXHX_STAGE0_CONNECT_IDLE_SECS || '45'
+  env.FULL1_SOURCE_PROBE_BUILD_TIMEOUT_SECS = env.FULL1_SOURCE_PROBE_BUILD_TIMEOUT_SECS || '960'
+  env.FULL1_SOURCE_PROBE_SUITE_TIMEOUT_SECS = env.FULL1_SOURCE_PROBE_SUITE_TIMEOUT_SECS || '600'
+
+  const buildTimeoutSec = positiveInt(env.FULL1_SOURCE_PROBE_BUILD_TIMEOUT_SECS, 960)
+  const suiteTimeoutSec = positiveInt(env.FULL1_SOURCE_PROBE_SUITE_TIMEOUT_SECS, 600)
 
   const buildScript = path.join(parsed.root, 'scripts/hxhx/build-hxhx.sh')
-  const buildResult = run('bash', [buildScript], { cwd: parsed.root, env })
+  const buildResult = run('bash', [buildScript], {
+    cwd: parsed.root,
+    env,
+    timeoutMs: buildTimeoutSec * 1000,
+  })
   summary.build.exit_code = buildResult.status == null ? -1 : buildResult.status
+  summary.build.timeout_sec = buildTimeoutSec
+  summary.build.timed_out = Boolean(buildResult.error && buildResult.error.code === 'ETIMEDOUT')
+  summary.build.signal = buildResult.signal || ''
   const buildStdout = logSummary(
     parsed.root,
     path.join(parsed.artifactsDir, 'build.stdout.log'),
@@ -193,7 +215,11 @@ function main() {
           '--artifacts-dir',
           suitesArtifactsDir,
         ],
-        { cwd: parsed.root, env }
+        {
+          cwd: parsed.root,
+          env,
+          timeoutMs: suiteTimeoutSec * 1000,
+        }
       )
       const suiteEndedAt = new Date()
       const suiteStdout = logSummary(
@@ -212,6 +238,9 @@ function main() {
         ended_at: suiteEndedAt.toISOString(),
         duration_ms: suiteEndedAt.getTime() - suiteStartedAt.getTime(),
         exit_code: suiteResult.status == null ? -1 : suiteResult.status,
+        timeout_sec: suiteTimeoutSec,
+        timed_out: Boolean(suiteResult.error && suiteResult.error.code === 'ETIMEDOUT'),
+        signal: suiteResult.signal || '',
         stdout_log: suiteStdout.log,
         stderr_log: suiteStderr.log,
         stdout_bytes: suiteStdout.bytes,
