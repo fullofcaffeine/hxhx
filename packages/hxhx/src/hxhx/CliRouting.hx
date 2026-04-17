@@ -11,6 +11,7 @@ private typedef StandardTargetScan = {
 	final hasJs:Bool;
 	final hasNonJs:Bool;
 	final hasLegacy:Bool;
+	final hasRun:Bool;
 	final missingValueFlag:Null<String>;
 }
 
@@ -120,6 +121,19 @@ class CliRouting {
 				lane: LANE_NATIVE_JS,
 				backendId: "js-native",
 				forwarded: nativeJs,
+				stage0Required: false
+			};
+		}
+
+		if (targetScan.hasRun && !targetScan.hasNonJs) {
+			final nativeJsRun = baseForwarded.copy();
+			nativeJsRun.push("--js");
+			nativeJsRun.push(".hxhx-run.js");
+			addDefineIfMissing(nativeJsRun, "js");
+			return {
+				lane: LANE_NATIVE_JS,
+				backendId: "js-native",
+				forwarded: nativeJsRun,
 				stage0Required: false
 			};
 		}
@@ -256,6 +270,7 @@ class CliRouting {
 		var hasJs = false;
 		var hasNonJs = false;
 		var hasLegacy = false;
+		var hasRun = false;
 		var missingValueFlag:Null<String> = null;
 		var i = 0;
 		while (i < args.length) {
@@ -269,6 +284,8 @@ class CliRouting {
 				case "-lua", "--lua", "-python", "--python", "-php", "--php", "-neko", "--neko", "-cpp", "--cpp", "-cs", "--cs", "-java", "--java", "-jvm",
 					"--jvm", "-hl", "--hl", "-xml", "--xml":
 					hasNonJs = true;
+				case "--run", "-x":
+					hasRun = true;
 				case _:
 			}
 			if (consumesStandardTargetValue(a)) {
@@ -285,6 +302,7 @@ class CliRouting {
 			hasJs: hasJs,
 			hasNonJs: hasNonJs,
 			hasLegacy: hasLegacy,
+			hasRun: hasRun,
 			missingValueFlag: missingValueFlag
 		};
 	}

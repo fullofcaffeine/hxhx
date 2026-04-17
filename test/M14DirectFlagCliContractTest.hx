@@ -111,6 +111,13 @@ class M14DirectFlagCliContractTest {
 		assertEquals(nativeJs.backendId, "js-native", "native js backend");
 		assertTrue(hasDefine(nativeJs.forwarded, "js"), "native js define");
 
+		final nativeJsRun = plan(["--run", "Main", "arg1"]);
+		assertEquals(nativeJsRun.lane, "native-js", "native js --run lane");
+		assertEquals(nativeJsRun.backendId, "js-native", "native js --run backend");
+		assertTrue(hasArgPair(nativeJsRun.forwarded, "--js", ".hxhx-run.js"), "native js --run temp output");
+		assertTrue(hasDefine(nativeJsRun.forwarded, "js"), "native js --run define");
+		assertTrue(hasToken(nativeJsRun.forwarded, "--run"), "native js --run preserves run flag");
+
 		final compat = plan(["--compat", "--js", "out.js", "-main", "Main"]);
 		assertEquals(compat.lane, "stage0-compat", "compat lane");
 		assertTrue(!hasToken(compat.forwarded, "--compat"), "compat forwarding strips --compat");
