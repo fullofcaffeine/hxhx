@@ -624,6 +624,13 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "js/html/Blob.hx");
 	}
 
+	static function jsHtmlEventModule():TypedModule {
+		final noneField = new HxFieldDecl("NONE", HxVisibility.Public, true, "Int", HxExpr.EInt(0), null, null, null, true);
+		final eventClass = new HxClassDecl("Event", false, [], [noneField]);
+		final decl = new HxModuleDecl("js.html", [], eventClass, [eventClass], false, false);
+		return typedModule("", decl, "js/html/Event.hx");
+	}
+
 	static function utestResultAggregatorModule():TypedModule {
 		final runnerArg = new HxFunctionArg("runner", "Dynamic", HxDefaultValue.NoDefault);
 		final aggregatorClass = new HxClassDecl("ResultAggregator", false, [
@@ -1180,6 +1187,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				anyModule(),
 				jsNodeProcessModule(),
 				jsHtmlBlobModule(),
+				jsHtmlEventModule(),
 				utestResultAggregatorModule(),
 				utestRunnerModule(),
 				utestTestHandlerModule(),
@@ -1370,6 +1378,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"native js.html externs should bind to browser/Node globals instead of emitted Haxe constructors");
 			assertNotContains(js, "var __hx_cls_js_html_Blob = function(blobParts", "native js.html extern constructors should not be emitted");
 			assertNotContains(js, "__hx_cls_js_html_Blob.prototype.slice", "native js.html extern prototype methods should not be re-emitted");
+			assertContains(js, "var __hx_cls_js_html_Event = ((globalThis != null && globalThis[\"Event\"] != null) ? globalThis[\"Event\"] : {})",
+				"native js.html Event should bind to the host global when present");
+			assertNotContains(js, "__hx_cls_js_html_Event.NONE =", "native js.html extern static constants should not assign onto read-only host globals");
 			assertNotContains(js, "__js__(\"typeof window", "inline JS intrinsics should lower to raw JavaScript expressions");
 			assertNotContains(js, "require({0})", "inline JS intrinsic placeholders should be replaced with emitted arguments");
 			assertContains(js, "runner.onStart.add(this.start.bind(this))",

@@ -2775,7 +2775,7 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> ignore (try let temp
   let simple = (simpleName (Obj.obj (HxAnon.get unit "fullName") : string) : string) in (
     ignore (if HxString.equals (HxMap.get_string simpleNameRefs simple) (Obj.obj (HxAnon.get unit "jsRef")) then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("__hx_classes[" ^ HxString.toStdString (Backend_js_JsNameMangler.quoteString (simple : string))) ^ "] = ") ^ HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef"))) ^ ";" : string)) else ());
     let tempBool1 = ref (false : bool) in (
-      ignore (let fullName = (Obj.obj (HxAnon.get unit "fullName") : string) in let __assign_66 = fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.lib." : string) in (
+      ignore (let fullName = (Obj.obj (HxAnon.get unit "fullName") : string) in let __assign_66 = fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.lib." : string) || fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.html." : string) in (
         tempBool1 := __assign_66;
         __assign_66
       ));

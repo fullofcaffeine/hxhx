@@ -426,7 +426,7 @@ class JsTargetCore implements ITargetCore {
 		if (simpleNameRefs.get(simple) == unit.jsRef) {
 			writer.writeln("__hx_classes[" + JsNameMangler.quoteString(simple) + "] = " + unit.jsRef + ";");
 		}
-		if (isNativeJsLibExtern(unit.fullName))
+		if (isNativeJsGlobalExtern(unit.fullName))
 			return;
 		emitPrototypeInheritance(writer, unit, classRefs);
 		if (unit.fullName == "EReg")
