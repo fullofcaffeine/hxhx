@@ -43,32 +43,63 @@ def write_lines(path: pathlib.Path, lines: list[str]) -> None:
     path.write_text("".join(lines), encoding="utf-8")
 
 
+def is_darwin_patch_host() -> bool:
+    return platform.system() == "Darwin" or os.environ.get("HXHX_PATCH_HELPER_FORCE_DARWIN") == "1"
+
+
 def patch_skip_sys_on_macos(upstream_dir: str) -> None:
     if os.environ.get("HXHX_RUNCi_FORCE_SYS") == "1":
         return
-    if platform.system() != "Darwin":
+    if not is_darwin_patch_host():
         return
 
-    path = upstream_path(upstream_dir, "tests/runci/System.hx")
-    if not path.is_file():
+    system_path = upstream_path(upstream_dir, "tests/runci/System.hx")
+    if system_path.is_file():
+        src = read_text(system_path)
+        needle = "static public function runSysTest(cmd:String, ?args:Array<String>) {"
+        if needle in src and "HXHX Gate runner" not in src:
+            insert = (
+                needle
+                + "\n\t\t// HXHX Gate runner: upstream tests/sys contains unicode filename fixtures that are invalid on macOS/APFS.\n"
+                + "\t\t// Skip sys tests on macOS to keep runci usable for other stages.\n"
+                + "\t\t// Override with: HXHX_RUNCi_FORCE_SYS=1\n"
+                + "\t\tif (Sys.systemName() == \"Mac\" && Sys.getEnv(\"HXHX_RUNCi_FORCE_SYS\") != \"1\") {\n"
+                + "\t\t\tinfoMsg(\"Skipping sys tests on Mac (HXHX Gate runner; macOS/APFS unicode filename fixtures unsupported)\");\n"
+                + "\t\t\treturn;\n"
+                + "\t\t}\n"
+            )
+            write_text(system_path, src.replace(needle, insert, 1))
+
+    js_target_path = upstream_path(upstream_dir, "tests/runci/targets/Js.hx")
+    if not js_target_path.is_file():
         return
 
-    src = read_text(path)
-    needle = "static public function runSysTest(cmd:String, ?args:Array<String>) {"
-    if needle not in src or "HXHX Gate runner" in src:
+    marker = "HXHX Gate runner: skip JS sys compile on macOS"
+    lines = read_lines(js_target_path)
+    if any(marker in line for line in lines):
         return
 
-    insert = (
-        needle
-        + "\n\t\t// HXHX Gate runner: upstream tests/sys contains unicode filename fixtures that are invalid on macOS/APFS.\n"
-        + "\t\t// Skip sys tests on macOS to keep runci usable for other stages.\n"
-        + "\t\t// Override with: HXHX_RUNCi_FORCE_SYS=1\n"
-        + "\t\tif (Sys.systemName() == \"Mac\" && Sys.getEnv(\"HXHX_RUNCi_FORCE_SYS\") != \"1\") {\n"
-        + "\t\t\tinfoMsg(\"Skipping sys tests on Mac (HXHX Gate runner; macOS/APFS unicode filename fixtures unsupported)\");\n"
-        + "\t\t\treturn;\n"
-        + "\t\t}\n"
-    )
-    write_text(path, src.replace(needle, insert, 1))
+    out: list[str] = []
+    changed_start = False
+    changed_end = False
+    for line in lines:
+        if not changed_start and "changeDirectory(sysDir);" in line:
+            indent = line.split("changeDirectory(sysDir);", 1)[0]
+            out.append(indent + f"// {marker}\n")
+            out.append(indent + "if (Sys.systemName() == \"Mac\" && Sys.getEnv(\"HXHX_RUNCi_FORCE_SYS\") != \"1\") {\n")
+            out.append(indent + "\tinfoMsg(\"Skipping JS sys tests on Mac (HXHX Gate runner; set HXHX_RUNCi_FORCE_SYS=1 to enable)\");\n")
+            out.append(indent + "} else {\n")
+            changed_start = True
+        out.append(line)
+        if changed_start and not changed_end and "runSysTest(" in line:
+            indent = line.split("runSysTest(", 1)[0]
+            out.append(indent + "}\n")
+            changed_end = True
+
+    if changed_start != changed_end:
+        fail("Js.hx sys skip patch could not find a complete sys test block")
+    if changed_start:
+        write_lines(js_target_path, out)
 
 
 def patch_js_server_timeouts_on_macos(upstream_dir: str, timeout_ms: str) -> None:

@@ -43,6 +43,25 @@ class Macro {
 }
 EOF
 
+cat >"$fixture/tests/runci/targets/Js.hx" <<'EOF'
+class Js {
+	static public function run(args:Array<String>) {
+		changeDirectory(sysDir);
+		installNpmPackages(["deasync"]);
+		runCommand("haxe", ["compile-js.hxml"].concat(args));
+		runSysTest("node", ["bin/js/sys.js"]);
+	}
+}
+EOF
+
+cat >"$fixture/tests/runci/System.hx" <<'EOF'
+class System {
+	static public function runSysTest(cmd:String, ?args:Array<String>) {
+		runCommand(cmd, args);
+	}
+}
+EOF
+
 cat >"$fixture/tests/sourcemaps/src/Test.hx" <<'EOF'
 class Test {
   static function main() {
@@ -51,12 +70,16 @@ class Test {
 }
 EOF
 
+HXHX_PATCH_HELPER_FORCE_DARWIN=1 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-sys-on-macos --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-utest-install-if-present --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-skip-haxeserver-install-if-present --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-optional-skip-party --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" sourcemaps-skip-sourcemap-install-if-present --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" node-echo-server --upstream-dir "$fixture"
 
+grep -Fq "HXHX Gate runner: skip JS sys compile on macOS" "$fixture/tests/runci/targets/Js.hx"
+grep -Fq "Skipping JS sys tests on Mac" "$fixture/tests/runci/targets/Js.hx"
+grep -Fq "HXHX Gate runner: upstream tests/sys contains unicode filename fixtures" "$fixture/tests/runci/System.hx"
 grep -Fq 'runCommand("haxelib", ["path", "utest"])' "$fixture/tests/RunCi.hx"
 grep -Fq 'runCommand("haxelib", ["path", "haxeserver"])' "$fixture/tests/runci/targets/Macro.hx"
 grep -Fq "HXHX_GATE2_SKIP_PARTY" "$fixture/tests/runci/targets/Macro.hx"
