@@ -159,6 +159,7 @@
     "test:m14:js-target-core-private-helper-ctor": "haxe test/m14_js_target_core_private_helper_ctor_integration_test.hxml",
     "test:m14:js-target-core-node-url-extern": "haxe test/m14_js_target_core_node_url_extern_integration_test.hxml",
     "test:m14:js-target-core-node-buffer-extern": "haxe test/m14_js_target_core_node_buffer_extern_integration_test.hxml",
+    "test:m14:js-target-core-node-console-extern": "haxe test/m14_js_target_core_node_console_extern_integration_test.hxml",
     "test:m14:js-unsupported-diagnostics": "haxe test/m14_js_native_unsupported_diagnostics_integration_test.hxml",
     "test:m14:js-expr-range": "haxe test/m14_js_expr_emitter_range_expr_integration_test.hxml",
     "test:m14:js-expr-array-comprehension": "haxe test/m14_js_expr_emitter_array_comprehension_integration_test.hxml",

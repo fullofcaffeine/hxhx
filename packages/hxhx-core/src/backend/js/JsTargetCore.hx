@@ -260,6 +260,8 @@ class JsTargetCore implements ITargetCore {
 				"require(\"buffer\").Buffer";
 			case "js.node.buffer.SlowBuffer":
 				"require(\"buffer\").SlowBuffer";
+			case "js.node.console.Console":
+				"require(\"console\").Console";
 			case "js.node.url.URL":
 				"require(\"url\").URL";
 			case "js.node.url.URLSearchParams":
