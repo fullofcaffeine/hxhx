@@ -31,5 +31,19 @@ class M14JsExprEmitterTryCatchIntegrationTest {
 		assertContains(typedBlock, "(function () { var x; return x; })()", "typed block expression should lower to returning IIFE");
 		assertNotContains(typedBlock, "opaque_block_expr", "typed block expression should erase parser marker");
 		assertNotContains(typedBlock, "TypedefToStringMap<String>", "typed block expression should erase local var type hint");
+
+		final nestedValueBlock = JsExprEmitter.emit(ETryCatchRaw('opaque_block_expr:{ var test = { append("3"); 99; }; test; }'), exprScope);
+		assertContains(nestedValueBlock, 'var test = (function () { append("3"); return 99; })();',
+			"nested block expressions used as values should lower to returning IIFEs");
+		assertNotContains(nestedValueBlock, 'var test = { append("3");', "nested block expressions should not leak as invalid JS object literals");
+
+		final objectLiteral = JsExprEmitter.emit(ETryCatchRaw("opaque_block_expr:{ var obj = { value: 1 }; obj.value; }"), exprScope);
+		assertContains(objectLiteral, "var obj = { value: 1 }; return obj.value;", "object literals should remain object literals inside raw block rewrites");
+
+		final blockWithIf = JsExprEmitter.emit(ETryCatchRaw('opaque_block_expr:{ append("1"); if (cond2(getInt())) { append("2"); } else { append("3"); } buf.toString(); }'),
+			exprScope);
+		assertContains(blockWithIf, 'append("1"); if (cond2(getInt())) {', "raw block expressions should preserve the side-effect if statement");
+		assertContains(blockWithIf, "return buf.toString();", "raw block expressions should return the final value after side-effect if statements");
+		assertNotContains(blockWithIf, "return if", "raw block expressions should not emit invalid return-if syntax");
 	}
 }

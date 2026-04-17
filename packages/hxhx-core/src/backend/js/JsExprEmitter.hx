@@ -256,11 +256,150 @@ class JsExprEmitter {
 			return prefix + " return null;";
 		if (StringTools.startsWith(expr, "var ") || StringTools.startsWith(expr, "let ") || StringTools.startsWith(expr, "const "))
 			return trimmed + "; return null;";
+		final controlThenReturn = rewriteLeadingControlThenReturn(expr, scope);
+		if (controlThenReturn != null)
+			return prefix + " " + controlThenReturn;
 		return prefix + " return " + expr + ";";
 	}
 
+	static function rewriteLeadingControlThenReturn(raw:String, ?scope:JsEmitScope):Null<String> {
+		final rewrittenIf = rewriteLeadingIfThenReturn(raw, scope);
+		if (rewrittenIf != null)
+			return rewrittenIf;
+		return null;
+	}
+
+	static function rewriteLeadingIfThenReturn(raw:String, ?scope:JsEmitScope):Null<String> {
+		raw = raw == null ? "" : StringTools.trim(raw);
+		if (!startsWithRawKeyword(raw, 0, "if"))
+			return null;
+
+		final parenOpen = skipWhitespace(raw, 2);
+		if (parenOpen >= raw.length || raw.charCodeAt(parenOpen) != "(".code)
+			return null;
+		final parenClose = findMatching(raw, parenOpen, "(".code, ")".code);
+		if (parenClose < 0)
+			return null;
+
+		final thenOpen = skipWhitespace(raw, parenClose + 1);
+		if (thenOpen >= raw.length || raw.charCodeAt(thenOpen) != "{".code)
+			return null;
+		final thenClose = findMatching(raw, thenOpen, "{".code, "}".code);
+		if (thenClose < 0)
+			return null;
+
+		var cursor = skipWhitespace(raw, thenClose + 1);
+		var elsePart = "";
+		if (startsWithRawKeyword(raw, cursor, "else")) {
+			final elseOpen = skipWhitespace(raw, cursor + 4);
+			if (elseOpen >= raw.length || raw.charCodeAt(elseOpen) != "{".code)
+				return null;
+			final elseClose = findMatching(raw, elseOpen, "{".code, "}".code);
+			if (elseClose < 0)
+				return null;
+			elsePart = " else { " + sanitizeRawHaxeExpressionSyntax(raw.substring(elseOpen + 1, elseClose), scope) + " }";
+			cursor = skipWhitespace(raw, elseClose + 1);
+		}
+
+		var trailing = StringTools.trim(raw.substr(cursor));
+		while (StringTools.startsWith(trailing, ";"))
+			trailing = StringTools.trim(trailing.substr(1));
+		while (StringTools.endsWith(trailing, ";"))
+			trailing = StringTools.trim(trailing.substr(0, trailing.length - 1));
+		if (trailing.length == 0)
+			return null;
+
+		final cond = sanitizeRawHaxeExpressionSyntax(raw.substring(parenOpen + 1, parenClose), scope);
+		final thenBody = sanitizeRawHaxeExpressionSyntax(raw.substring(thenOpen + 1, thenClose), scope);
+		final value = sanitizeRawHaxeExpressionSyntax(trailing, scope);
+		return "if (" + cond + ") { " + thenBody + " }" + elsePart + " return " + value + ";";
+	}
+
+	static function startsWithRawKeyword(source:String, offset:Int, keyword:String):Bool {
+		if (source == null || keyword == null || offset < 0 || offset + keyword.length > source.length)
+			return false;
+		if (source.substr(offset, keyword.length) != keyword)
+			return false;
+		final before = offset == 0 ? -1 : source.charCodeAt(offset - 1);
+		final afterIndex = offset + keyword.length;
+		final after = afterIndex >= source.length ? -1 : source.charCodeAt(afterIndex);
+		return (before < 0 || !isRawIdentChar(before)) && (after < 0 || !isRawIdentChar(after));
+	}
+
 	static function sanitizeRawHaxeExpressionSyntax(raw:String, ?scope:JsEmitScope):String {
-		return rewriteRawQualifiedClassNews(stripLocalVarTypeHints(stripExpressionCastHints(stripExpressionMetadata(raw))), scope);
+		return rewriteNestedOpaqueBlockExpressions(rewriteRawQualifiedClassNews(stripLocalVarTypeHints(stripExpressionCastHints(stripExpressionMetadata(raw))),
+			scope), scope);
+	}
+
+	static function rewriteNestedOpaqueBlockExpressions(raw:String, ?scope:JsEmitScope):String {
+		if (raw == null || raw.indexOf("{") < 0)
+			return raw;
+
+		final out = new StringBuf();
+		var i = 0;
+		while (i < raw.length) {
+			final code = raw.charCodeAt(i);
+			if (code == "\"".code || code == "'".code) {
+				i = copyQuotedRaw(raw, i, out);
+				continue;
+			}
+			if (code == "{".code && isNestedValueBlockOpen(raw, i)) {
+				final close = findMatching(raw, i, "{".code, "}".code);
+				if (close > i) {
+					final body = raw.substring(i + 1, close);
+					if (!looksLikeRawObjectLiteral(body)) {
+						out.add("(function () { ");
+						out.add(blockToReturningJs(body, scope));
+						out.add(" })()");
+						i = close + 1;
+						continue;
+					}
+				}
+			}
+			out.addChar(code);
+			i++;
+		}
+		return out.toString();
+	}
+
+	static function isNestedValueBlockOpen(raw:String, openIndex:Int):Bool {
+		var i = openIndex - 1;
+		while (i >= 0 && isWhitespace(raw.charCodeAt(i)))
+			i--;
+		if (i < 0)
+			return false;
+		return switch (raw.charCodeAt(i)) {
+			case "=".code | "(".code | ",".code | "[".code:
+				true;
+			case _:
+				false;
+		}
+	}
+
+	static function looksLikeRawObjectLiteral(body:String):Bool {
+		final trimmed = body == null ? "" : StringTools.trim(body);
+		if (trimmed.length == 0)
+			return true;
+		final keyEnd = rawObjectLiteralFirstKeyEnd(trimmed, 0);
+		if (keyEnd <= 0)
+			return false;
+		final colon = skipWhitespace(trimmed, keyEnd);
+		return colon < trimmed.length && trimmed.charCodeAt(colon) == ":".code;
+	}
+
+	static function rawObjectLiteralFirstKeyEnd(source:String, start:Int):Int {
+		var i = skipWhitespace(source, start);
+		if (i >= source.length)
+			return -1;
+		final code = source.charCodeAt(i);
+		if (code == "\"".code || code == "'".code)
+			return skipQuotedRaw(source, i);
+		if (!isRawIdentStart(code))
+			return -1;
+		i++;
+		while (i < source.length && isRawIdentChar(source.charCodeAt(i)))
+			i++;
+		return i;
 	}
 
 	static function rewriteRawQualifiedClassNews(raw:String, ?scope:JsEmitScope):String {
@@ -547,6 +686,10 @@ class JsExprEmitter {
 			|| (code >= "0".code && code <= "9".code)
 			|| code == "_".code
 			|| code == "$".code;
+	}
+
+	static function isRawIdentStart(code:Int):Bool {
+		return (code >= "a".code && code <= "z".code) || (code >= "A".code && code <= "Z".code) || code == "_".code || code == "$".code;
 	}
 
 	static function isWhitespace(code:Int):Bool {
