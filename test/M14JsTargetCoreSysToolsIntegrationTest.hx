@@ -922,9 +922,46 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		assertTrue(sawSuper, "helper class scanner should parse super constructor calls");
 	}
 
+	static function assertScannedHelperAbstractExpressionBody():Void {
+		final source = [
+			"abstract LocalWrap(Int) from Int {",
+			"  @:to inline public function toString():String return '$this';",
+			"}"
+		].join("\n");
+		final abstracts = ParserStageScanHelpers.scanModuleLocalHelperAbstracts(source, null);
+		var localWrap:Null<HxClassDecl> = null;
+		for (cls in abstracts) {
+			if (HxClassDecl.getName(cls) == "LocalWrap") {
+				localWrap = cls;
+				break;
+			}
+		}
+		assertTrue(localWrap != null, "helper abstract scanner should discover module-local abstracts");
+		var toStringFn:Null<HxFunctionDecl> = null;
+		for (fn in HxClassDecl.getFunctions(localWrap)) {
+			if (HxFunctionDecl.getName(fn) == "toString") {
+				toStringFn = fn;
+				break;
+			}
+		}
+		assertTrue(toStringFn != null, "helper abstract scanner should retain expression-bodied instance methods");
+		assertTrue(HxFunctionDecl.getBodyText(toStringFn) == "return '$this';",
+			"helper abstract scanner should skip return type hints before expression-bodied method bodies");
+		switch (HxFunctionDecl.getBody(toStringFn)) {
+			case [
+				HxStmt.SReturn(HxExpr.EBinop("+", HxExpr.EString(prefix), HxExpr.EIdent(name)), _)
+			]:
+				assertTrue(prefix == "", "interpolated abstract this string should start with an empty prefix");
+				assertTrue(name == "this", "interpolated abstract this string should retain the this reference");
+			case _:
+				throw "helper abstract expression-bodied toString should parse into a return expression";
+		}
+	}
+
 	static function main():Void {
 		assertNativeStaticFinalDecode();
 		assertScannedHelperClassInheritance();
+		assertScannedHelperAbstractExpressionBody();
 
 		final tmpRoot = Path.normalize(".tmp/m14_js_target_core_systools_" + Std.string(Date.now().getTime()));
 		final outDir = Path.join([tmpRoot, "out"]);

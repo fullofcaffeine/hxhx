@@ -202,6 +202,11 @@ class ParserStage {
 						if (scannedName != null && scannedName.length > 0 && !scannedClassStaticsByName.exists(scannedName))
 							scannedClassStaticsByName.set(scannedName, scanned);
 					}
+					for (scanned in scanHelperAbstracts(source, null)) {
+						final scannedName = scanned == null ? null : HxClassDecl.getName(scanned);
+						if (scannedName != null && scannedName.length > 0 && !scannedClassStaticsByName.exists(scannedName))
+							scannedClassStaticsByName.set(scannedName, scanned);
+					}
 
 					function patchClassStaticFlagsFromScan(cls:HxClassDecl):HxClassDecl {
 						if (cls == null)
@@ -254,6 +259,17 @@ class ParserStage {
 							return true;
 						}
 
+						function hasOnlyUnsupportedBody(body:Array<HxStmt>):Bool {
+							if (body == null || body.length != 1)
+								return false;
+							return switch (body[0]) {
+								case SExpr(EUnsupported(_), _) | SReturn(EUnsupported(_), _):
+									true;
+								case _:
+									false;
+							}
+						}
+
 						var changed = false;
 						final scannedExtendsPath = HxClassDecl.getExtendsPath(scanned);
 						final extendsPath = scannedExtendsPath != null
@@ -270,7 +286,8 @@ class ParserStage {
 							final metadata = mergeScannedMetadata(fn, scannedFn);
 							final metadataChanged = !sameMetadata(metadata, HxFunctionDecl.getMetadata(fn));
 							final scannedBody = scannedFn == null ? [] : HxFunctionDecl.getBody(scannedFn);
-							final bodyChanged = fnName == "new" && HxFunctionDecl.getBody(fn).length == 0 && scannedBody.length > 0;
+							final nativeBody = HxFunctionDecl.getBody(fn);
+							final bodyChanged = scannedBody.length > 0 && (nativeBody.length == 0 || hasOnlyUnsupportedBody(nativeBody));
 							final body = bodyChanged ? scannedBody : HxFunctionDecl.getBody(fn);
 							final bodyText = bodyChanged ? HxFunctionDecl.getBodyText(scannedFn) : HxFunctionDecl.getBodyText(fn);
 							if (isStatic != HxFunctionDecl.getIsStatic(fn))
@@ -1553,15 +1570,19 @@ class ParserStage {
 
 	static function scanFunctionBody(source:String, start:Int, capture:Bool = true):{body:Array<HxStmt>, bodyText:String, nextPos:Int} {
 		var i = start;
+		var bodyStart = -1;
 		var tok = scanNextToken(source, i);
 		while (tok.text.length > 0 && tok.text != "{" && tok.text != ";") {
+			if (tok.isIdent && tok.text == "return" && bodyStart < 0) {
+				bodyStart = tok.nextPos - tok.text.length;
+			}
 			i = tok.nextPos;
 			tok = scanNextToken(source, i);
 		}
 		if (tok.text == ";") {
 			if (!capture)
 				return {body: [], bodyText: "", nextPos: tok.nextPos};
-			final exprText = StringTools.trim(source.substring(start, tok.nextPos - 1));
+			final exprText = StringTools.trim(source.substring(bodyStart >= 0 ? bodyStart : start, tok.nextPos - 1));
 			if (exprText.length == 0)
 				return {body: [], bodyText: "", nextPos: tok.nextPos};
 			final bodyText = exprText + ";";

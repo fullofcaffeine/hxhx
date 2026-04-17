@@ -384,7 +384,7 @@ class ParserStageScanHelpers {
 
 		What
 		- Scans for top-level `abstract <Name>(...) { ... }` declarations.
-		- Captures static fields/functions from the abstract body using the same
+		- Captures fields/functions from the abstract body using the same
 		  class-body scanner used for helper classes.
 
 		How
@@ -393,8 +393,8 @@ class ParserStageScanHelpers {
 		  declarations are not double-counted as regular abstracts.
 
 		Limitations
-		- Parses only static member signatures needed for bring-up stubs.
-		- Ignores non-static members and advanced abstract semantics.
+		- Parses only the member signature/body subset needed for bring-up stubs.
+		- Ignores advanced abstract semantics.
 	**/
 	public static function scanModuleLocalHelperAbstracts(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
 		final out = new Array<HxClassDecl>();
@@ -1040,15 +1040,19 @@ class ParserStageScanHelpers {
 
 	static function scanFunctionBody(source:String, start:Int, capture:Bool = true):{body:Array<HxStmt>, bodyText:String, nextPos:Int} {
 		var i = start;
+		var bodyStart = -1;
 		var tok = scanNextToken(source, i);
 		while (tok.text.length > 0 && tok.text != "{" && tok.text != ";") {
+			if (tok.isIdent && tok.text == "return" && bodyStart < 0) {
+				bodyStart = tok.nextPos - tok.text.length;
+			}
 			i = tok.nextPos;
 			tok = scanNextToken(source, i);
 		}
 		if (tok.text == ";") {
 			if (!capture)
 				return {body: [], bodyText: "", nextPos: tok.nextPos};
-			final exprText = StringTools.trim(source.substring(start, tok.nextPos - 1));
+			final exprText = StringTools.trim(source.substring(bodyStart >= 0 ? bodyStart : start, tok.nextPos - 1));
 			if (exprText.length == 0)
 				return {body: [], bodyText: "", nextPos: tok.nextPos};
 			final bodyText = exprText + ";";
