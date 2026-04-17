@@ -1113,6 +1113,13 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		}
 
+		if (fullName == "utest.ui.text.PlainTextReport" && fnName == "setHandler") {
+			if (params.length < 1)
+				return false;
+			writer.writeln("this.handler = " + params[0] + ";");
+			return true;
+		}
+
 		if (fullName == "utest.ui.text.PlainTextReport" && fnName == "complete") {
 			if (params.length < 1)
 				return false;

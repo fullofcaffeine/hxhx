@@ -377,8 +377,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function utestPlainTextReportModule():TypedModule {
 		final resultArg = new HxFunctionArg("result", "Dynamic", HxDefaultValue.NoDefault);
+		final handlerArg = new HxFunctionArg("handler", "Dynamic", HxDefaultValue.NoDefault);
 		final reportClass = new HxClassDecl("PlainTextReport", false, [
 			new HxFunctionDecl("start", HxVisibility.Private, false, [], "Void", [], ""),
+			new HxFunctionDecl("setHandler", HxVisibility.Public, false, [handlerArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), ""),
 			new HxFunctionDecl("getResults", HxVisibility.Public, false, [], "String",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=body_parse_error"), ""),
 			new HxFunctionDecl("complete", HxVisibility.Private, false, [resultArg], "Void",
@@ -1259,6 +1262,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_utest_ui_text_PlainTextReport.prototype.getResults = function",
 				"utest PlainTextReport getResults should emit a string-safe runtime stub");
 			assertContains(js, "return \"\";", "utest PlainTextReport getResults should return a string");
+			assertContains(js, "__hx_cls_utest_ui_text_PlainTextReport.prototype.setHandler = function",
+				"utest PlainTextReport setHandler should emit a modeled setter");
+			assertContains(js, "this.handler = handler;", "utest PlainTextReport setHandler should preserve handler assignment");
 			assertContains(js, "__hx_cls_utest_ui_text_PlainTextReport.prototype.complete = function",
 				"utest PlainTextReport complete should emit JS-native completion logic");
 			assertContains(js, "process.exit(__hx_ok ? 0 : 1)", "utest PlainTextReport complete should preserve Node exit status");

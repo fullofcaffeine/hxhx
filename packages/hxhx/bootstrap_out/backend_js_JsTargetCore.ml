@@ -1292,6 +1292,11 @@ let emitKnownInstanceFunctionBody = fun writer fullName fnName params -> try let
     ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return \"\";" : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
+  ignore (if HxString.equals fullName "utest.ui.text.PlainTextReport" && HxString.equals fnName "setHandler" then ignore ((
+    ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("this.handler = " ^ HxString.toStdString (HxArray.get (Obj.magic params) 0)) ^ ";" : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
   ignore (if HxString.equals fullName "utest.ui.text.PlainTextReport" && HxString.equals fnName "complete" then ignore ((
     ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     ignore (emitUtestPlainTextReportCompleteBody (Obj.magic writer) (HxArray.get (Obj.magic params) 0 : string));
