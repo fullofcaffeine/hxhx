@@ -13,4 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "Macro" } : t) in
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Macro" } : t)
 
-let init = fun () -> Haxe_macro_Context.onGenerate (fun _hx -> ()) (Obj.magic (HxRuntime.hx_null))
+let init = fun () -> ignore (Haxe_macro_Context.onGenerate (fun _hx -> (
+  ignore _hx;
+  ignore ()
+)) (Obj.magic (HxRuntime.hx_null)))

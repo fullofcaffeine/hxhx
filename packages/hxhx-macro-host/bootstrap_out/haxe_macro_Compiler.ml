@@ -21,21 +21,175 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.macro.Compi
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.macro.Compiler" } : t)
 
-let define = fun flag value -> let tempString = ref "" in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_1 = "" in (
-    tempString := __assign_1;
-    __assign_1
-  ) else let __assign_2 = value in (
-    tempString := __assign_2;
-    __assign_2
-  ));
-  Hxhxmacrohost_api_Compiler.define flag (!tempString)
+let renderNullSafetyMode = fun mode -> let tempResult = ref ("" : string) in (
+  ignore (match mode with
+    | Loose -> let __assign_1 = ("Loose" : string) in (
+      tempResult := __assign_1;
+      __assign_1
+    )
+    | Strict -> let __assign_2 = ("Strict" : string) in (
+      tempResult := __assign_2;
+      __assign_2
+    )
+    | StrictThreaded -> let __assign_3 = ("StrictThreaded" : string) in (
+      tempResult := __assign_3;
+      __assign_3
+    ));
+  !tempResult
 )
 
-let getDefine = fun key -> Hxhxmacrohost_api_Compiler.getDefine key
+let normalizedModulePath = fun path -> let tempResult = ref ("" : string) in (
+  ignore (if path == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
+    tempResult := __assign_4;
+    __assign_4
+  ) else let __assign_5 = (StringTools.trim (StringTools.replace (path : string) ("/" : string) ("." : string) : string) : string) in (
+    tempResult := __assign_5;
+    __assign_5
+  ));
+  !tempResult
+)
 
-let addClassPath = fun path -> Hxhxmacrohost_api_Compiler.addClassPath path
+let effectiveClassPaths = fun classPaths -> try let __fallback_result_11 = let out = Obj.magic (HxArray.create ()) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+  ignore (if classPaths != Obj.magic (HxRuntime.hx_null) && HxArray.length classPaths > 0 then let __assign_6 = Obj.magic classPaths in (
+    tempArray := __assign_6;
+    __assign_6
+  ) else let __assign_7 = Obj.magic (Hxhxmacrohost_api_Context.getClassPath ()) in (
+    tempArray := __assign_7;
+    __assign_7
+  ));
+  ignore (if !tempArray == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
+  let _g = ref 0 in (
+    ignore (try while !_g < HxArray.length (!tempArray) do try ignore (let cp = (HxArray.get (Obj.magic (!tempArray)) (!_g) : string) in (
+      ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
+        ignore (_g := __new_9);
+        __new_9
+      ));
+      ignore (if cp == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
+      let trimmed = (StringTools.trim (cp : string) : string) in (
+        ignore (if HxString.length trimmed = 0 || HxArray.indexOf out trimmed 0 <> -1 then raise (HxRuntime.Hx_continue) else ());
+        HxArray.push out trimmed
+      )
+    )) with
+      | HxRuntime.Hx_continue -> () done with
+      | HxRuntime.Hx_break -> ());
+    out
+  )
+) in Obj.magic __fallback_result_11 with
+  | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
 
-let emitOcamlModule = fun name source -> Hxhxmacrohost_api_Compiler.emitOcamlModule name source
+let shouldIgnoreModule = fun modulePath ignoredModules -> try let __fallback_result_15 = (
+  ignore (if ignoredModules == Obj.magic (HxRuntime.hx_null) || HxArray.length ignoredModules = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let normalized = (normalizedModulePath (modulePath : string) : string) in let _g = ref 0 in (
+    ignore (while !_g < HxArray.length ignoredModules do ignore (let entry = (HxArray.get (Obj.magic ignoredModules) (!_g) : string) in (
+      ignore (let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
+        ignore (_g := __new_13);
+        __new_13
+      ));
+      if HxString.equals (normalizedModulePath (entry : string)) normalized then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+    )) done);
+    false
+  )
+) in Obj.magic __fallback_result_15 with
+  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
 
-let emitHxModule = fun name source -> Hxhxmacrohost_api_Compiler.emitHxModule name source
+let rec collectRecursiveModules = fun rootDir packageParts out seen ignoredModules -> ignore (try (
+  ignore (if not (HxFileSystem.exists rootDir) || not (HxFileSystem.isDirectory rootDir) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  let _g = ref 0 in let _g1 = Obj.magic (HxFileSystem.readDirectory rootDir) in try while !_g < HxArray.length _g1 do try ignore (let entry = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+    ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
+      ignore (_g := __new_17);
+      __new_17
+    ));
+    ignore (if entry == Obj.magic (HxRuntime.hx_null) || HxString.length entry = 0 then raise (HxRuntime.Hx_continue) else ());
+    let full = (Haxe_io_Path.join (Obj.magic (let __arr_18 = HxArray.create () in (
+      ignore (HxArray.push __arr_18 rootDir);
+      ignore (HxArray.push __arr_18 entry);
+      __arr_18
+    ))) : string) in (
+      ignore (if HxFileSystem.isDirectory full then ignore ((
+        ignore (collectRecursiveModules (full : string) (Obj.magic (HxArray.concat packageParts (let __arr_19 = HxArray.create () in (
+          ignore (HxArray.push __arr_19 entry);
+          __arr_19
+        )))) (Obj.magic out) (Obj.magic seen) (Obj.magic ignoredModules));
+        raise (HxRuntime.Hx_continue)
+      )) else ());
+      ignore (if not (StringTools.endsWith (entry : string) (".hx" : string)) then raise (HxRuntime.Hx_continue) else ());
+      let moduleName = (HxString.substr entry 0 (HxInt.sub (HxString.length entry) 3) : string) in let modulePath = (HxArray.join (HxArray.concat packageParts (let __arr_20 = HxArray.create () in (
+        ignore (HxArray.push __arr_20 moduleName);
+        __arr_20
+      ))) "." (fun x -> x) : string) in (
+        ignore (if HxString.length modulePath = 0 || shouldIgnoreModule (modulePath : string) (Obj.magic ignoredModules) || HxArray.indexOf seen modulePath 0 <> -1 then raise (HxRuntime.Hx_continue) else ());
+        ignore (HxArray.push seen modulePath);
+        HxArray.push out modulePath
+      )
+    )
+  )) with
+    | HxRuntime.Hx_continue -> () done with
+    | HxRuntime.Hx_break -> ()
+) with
+  | HxRuntime.Hx_return __ret_21 -> Obj.obj __ret_21)
+
+let define = fun flag value -> ignore (let tempString = ref ("" : string) in (
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_22 = ("" : string) in (
+    tempString := __assign_22;
+    __assign_22
+  ) else let __assign_23 = (value : string) in (
+    tempString := __assign_23;
+    __assign_23
+  ));
+  Hxhxmacrohost_api_Compiler.define (flag : string) (!tempString : string)
+))
+
+let getDefine = fun key -> Hxhxmacrohost_api_Compiler.getDefine (key : string)
+
+let getConfiguration = fun () -> Hxhxmacrohost_api_Compiler.getConfiguration ()
+
+let addClassPath = fun path -> ignore (Hxhxmacrohost_api_Compiler.addClassPath (path : string))
+
+let emitOcamlModule = fun name source -> ignore (Hxhxmacrohost_api_Compiler.emitOcamlModule (name : string) (source : string))
+
+let emitHxModule = fun name source -> ignore (Hxhxmacrohost_api_Compiler.emitHxModule (name : string) (source : string))
+
+let addGlobalMetadata = fun pathFilter meta recursive toTypes toFields -> let recursive = if Obj.repr recursive == HxRuntime.hx_null then true else recursive in let toTypes = if Obj.repr toTypes == HxRuntime.hx_null then true else toTypes in let toFields = if Obj.repr toFields == HxRuntime.hx_null then false else toFields in ignore (Hxhxmacrohost_api_Compiler.addGlobalMetadata (pathFilter : string) (meta : string) recursive toTypes toFields)
+
+let nullSafety = fun path mode recursive -> let mode = if Obj.repr mode == HxRuntime.hx_null then Obj.magic Loose else mode in let recursive = if Obj.repr recursive == HxRuntime.hx_null then true else recursive in ignore (addGlobalMetadata (path : string) (("@:nullSafety(" ^ HxString.toStdString (renderNullSafetyMode (Obj.magic mode))) ^ ")" : string) recursive true false)
+
+let registerCustomMetadata = fun meta source -> ignore (try (
+  ignore (if meta == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  Hxhxmacrohost_api_Compiler.registerCustomMetadata (Obj.obj (HxAnon.get meta "metadata") : string) (Obj.obj (HxAnon.get meta "doc") : string) (source : string)
+) with
+  | HxRuntime.Hx_return __ret_24 -> Obj.obj __ret_24)
+
+let hx_include = fun pack hx_rec ignoredModules classPaths strict -> let hx_rec = if hx_rec == HxRuntime.hx_null then HxRuntime.box_bool true else hx_rec in let strict = if Obj.repr strict == HxRuntime.hx_null then false else strict in ignore (try (
+  ignore (if pack == Obj.magic (HxRuntime.hx_null) || HxString.length pack = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  let normalizedPack = (normalizedModulePath (pack : string) : string) in (
+    ignore (if HxString.length normalizedPack = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+    let included = Obj.magic (HxArray.create ()) in let seen = Obj.magic (HxArray.create ()) in (
+      ignore (if not (shouldIgnoreModule (normalizedPack : string) (Obj.magic ignoredModules)) then ignore ((
+        ignore (HxArray.push included normalizedPack);
+        HxArray.push seen normalizedPack
+      )) else ());
+      ignore (if not (let __nullable_25 = hx_rec in if __nullable_25 == HxRuntime.hx_null then false else Obj.obj __nullable_25 = false) then ignore (let cps = Obj.magic (effectiveClassPaths (Obj.magic classPaths)) in let parts = Obj.magic (HxString.split normalizedPack ".") in let _g = ref 0 in while !_g < HxArray.length cps do ignore (let cp = (HxArray.get (Obj.magic cps) (!_g) : string) in (
+        ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
+          ignore (_g := __new_27);
+          __new_27
+        ));
+        let packageDir = (Haxe_io_Path.join (Obj.magic (HxArray.concat (let __arr_28 = HxArray.create () in (
+          ignore (HxArray.push __arr_28 cp);
+          __arr_28
+        )) parts)) : string) in collectRecursiveModules (packageDir : string) (Obj.magic parts) (Obj.magic included) (Obj.magic seen) (Obj.magic ignoredModules)
+      )) done) else ());
+      ignore (if HxArray.length included = 0 then ignore ((
+        ignore (if strict then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("runtime Compiler.include: no modules matched " ^ HxString.toStdString normalizedPack)) ["Dynamic"; "String"]) else ());
+        raise (HxRuntime.Hx_return (Obj.repr ()))
+      )) else ());
+      let _g = ref 0 in while !_g < HxArray.length included do ignore (let modulePath = (HxArray.get (Obj.magic included) (!_g) : string) in (
+        ignore (let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
+          ignore (_g := __new_30);
+          __new_30
+        ));
+        Hxhxmacrohost_api_Compiler.includeModule (modulePath : string)
+      )) done
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31)

@@ -6,25 +6,25 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable array : Obj.t HxArray.t; mutable current : int }
 
-let create = fun array2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterators.ArrayIterator"; array = Obj.magic (); current = 0 } : t) in (
-  ignore ((
+let create = fun array2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterators.ArrayIterator"; array = Obj.magic (HxRuntime.hx_null); current = 0 } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = 0 in (
-      self.current <- __assign_1;
+      (Obj.magic self : t).current <- __assign_1;
       __assign_1
     ));
-    let __assign_2 = array2 in (
-      self.array <- __assign_2;
+    let __assign_2 = Obj.magic array2 in (
+      (Obj.magic self : t).array <- __assign_2;
       __assign_2
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.iterators.ArrayIterator"; array = Obj.magic (); current = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.iterators.ArrayIterator"; array = Obj.magic (HxRuntime.hx_null); current = 0 } : t)
 
-let hasNext = fun self () -> self.current < HxArray.length (self.array)
+let hasNext = fun self () -> (Obj.magic self : t).current < HxArray.length ((Obj.magic self : t).array)
 
-let next = fun self () -> HxArray.get (self.array) (let __obj_3 = self in let __old_4 = __obj_3.current in let __new_5 = HxInt.add __old_4 1 in (
-  ignore (__obj_3.current <- __new_5);
+let next = fun self () -> HxArray.get (Obj.magic ((Obj.magic self : t).array)) (let __obj_3 = self in let __old_4 = (Obj.magic __obj_3 : t).current in let __new_5 = HxInt.add __old_4 1 in (
+  ignore ((Obj.magic __obj_3 : t).current <- __new_5);
   __old_4
 ))

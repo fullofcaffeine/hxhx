@@ -7,3 +7,4 @@ module Error = Haxe_io_Error
 module FPHelper = Haxe_io_FPHelper
 module Input = Haxe_io_Input
 module Output = Haxe_io_Output
+module Path = Haxe_io_Path

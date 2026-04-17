@@ -4,12 +4,12 @@
 
 let __reflaxe_ocaml__ = ()
 
-let _new = fun v -> v
+let buffer_impl___new = fun v -> v
 
-let create = fun size -> Stdlib.Buffer.create size
+let buffer_impl__create = fun size -> Stdlib.Buffer.create size
 
-let length = fun b -> Stdlib.Buffer.length b
+let buffer_impl__length = fun b -> Stdlib.Buffer.length b
 
-let addString = fun b s -> Stdlib.Buffer.add_string b s
+let buffer_impl__addString = fun b s -> ignore (Stdlib.Buffer.add_string b (s : string))
 
-let contents = fun b -> Stdlib.Buffer.contents b
+let buffer_impl__contents = fun b -> Stdlib.Buffer.contents b

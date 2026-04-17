@@ -17,7 +17,7 @@ let raise = fun message pos -> (
   ignore (if pos != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (let __anon_1 = HxAnon.create () in (
     ignore (HxAnon.set __anon_1 "__hxhx_tag" (Obj.repr "hxhx_macro_host_error_v1"));
     ignore (HxAnon.set __anon_1 "message" (Obj.repr message));
-    ignore (HxAnon.set __anon_1 "pos" (Obj.repr pos));
+    ignore (HxAnon.set __anon_1 "pos" pos);
     __anon_1
   )) ["Dynamic"]) else ());
   HxType.hx_throw_typed_rtti (Obj.repr message) ["Dynamic"; "String"]

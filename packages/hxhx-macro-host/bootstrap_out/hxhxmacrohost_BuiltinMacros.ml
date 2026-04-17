@@ -13,79 +13,85 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacrohost.Bu
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.BuiltinMacros" } : t)
 
-let smoke = fun () -> let t = Hxhxmacrohost_api_Context.getType "String" in (
-  ignore (Hxhxmacrohost_api_Compiler.define "HXHX_SMOKE" "1");
-  let tempString = ref "" in (
-    ignore (if Hxhxmacrohost_api_Context.defined "HXHX_SMOKE" then let __assign_1 = "yes" in (
+let smoke = fun () -> let t = Obj.magic (Hxhxmacrohost_api_Context.getType ("String" : string)) in (
+  ignore (Hxhxmacrohost_api_Compiler.define ("HXHX_SMOKE" : string) ("1" : string));
+  let tempString = ref ("" : string) in (
+    ignore (if Hxhxmacrohost_api_Context.defined ("HXHX_SMOKE" : string) then let __assign_1 = ("yes" : string) in (
       tempString := __assign_1;
       __assign_1
-    ) else let __assign_2 = "no" in (
+    ) else let __assign_2 = ("no" : string) in (
       tempString := __assign_2;
       __assign_2
     ));
-    (("smoke:type=" ^ HxString.toStdString t) ^ ";define=") ^ HxString.toStdString (!tempString)
+    (("smoke:type=" ^ HxString.toStdString (Hxhxmacrohost_api_RuntimeMacroTypes.describe (Obj.magic t))) ^ ";define=") ^ HxString.toStdString (!tempString)
   )
 )
 
-let genModule = fun () -> let t = Hxhxmacrohost_api_Context.getType "String" in let src = ("let generated : string = \"" ^ HxString.toStdString t) ^ "\"" in (
-  ignore (Hxhxmacrohost_api_Compiler.emitOcamlModule "HxHxGen" src);
-  ignore (Hxhxmacrohost_api_Compiler.define "HXHX_GEN" "1");
+let genModule = fun () -> let t = Obj.magic (Hxhxmacrohost_api_Context.getType ("String" : string)) in let src = (("let generated : string = \"" ^ HxString.toStdString (Haxe_macro_TypeTools.toString (Obj.magic t))) ^ "\"" : string) in (
+  ignore (Hxhxmacrohost_api_Compiler.emitOcamlModule ("HxHxGen" : string) (src : string));
+  ignore (Hxhxmacrohost_api_Compiler.define ("HXHX_GEN" : string) ("1" : string));
   "genModule=ok"
 )
 
-let addCpFromEnv = fun () -> try let cp = HxSys.getEnv "HXHX_ADD_CP" in (
-  ignore (if cp != Obj.magic (HxRuntime.hx_null) && HxString.length (StringTools.trim cp) > 0 then ignore ((
-    ignore (Hxhxmacrohost_api_Compiler.addClassPath cp);
+let addCpFromEnv = fun () -> try let __fallback_result_4 = let cp = (HxSys.getEnv "HXHX_ADD_CP" : string) in (
+  ignore (if cp != Obj.magic (HxRuntime.hx_null) && HxString.length (StringTools.trim (cp : string)) > 0 then ignore ((
+    ignore (Hxhxmacrohost_api_Compiler.addClassPath (cp : string));
     raise (HxRuntime.Hx_return (Obj.repr "addCp=ok"))
   )) else ());
   "addCp=skip"
-) with
+) in Obj.magic __fallback_result_4 with
   | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3
 
-let genHxModule = fun () -> let src = "class Gen {}" in (
-  ignore (Hxhxmacrohost_api_Compiler.emitHxModule "Gen" src);
-  ignore (Hxhxmacrohost_api_Compiler.define "HXHX_HXGEN" "1");
+let genHxModule = fun () -> let src = ("class Gen {}" : string) in (
+  ignore (Hxhxmacrohost_api_Compiler.emitHxModule ("Gen" : string) (src : string));
+  ignore (Hxhxmacrohost_api_Compiler.define ("HXHX_HXGEN" : string) ("1" : string));
   "genHx=ok"
 )
 
-let readFlag = fun () -> "flag=" ^ HxString.toStdString (Hxhxmacrohost_api_Context.definedValue "HXHX_FLAG")
+let readFlag = fun () -> "flag=" ^ HxString.toStdString (Hxhxmacrohost_api_Context.definedValue ("HXHX_FLAG" : string))
 
 let dumpDefines = fun () -> (
-  ignore (Hxhxmacrohost_api_Compiler.define "HXHX_ENUM" "1");
-  let defs = Hxhxmacrohost_api_Context.getDefines () in let tempMaybeString = ref (Obj.magic ()) in (
-    ignore (if HxMap.exists_string defs "HXHX_FLAG" then let __assign_4 = HxMap.get_string defs "HXHX_FLAG" in (
-      tempMaybeString := __assign_4;
-      __assign_4
-    ) else let __assign_5 = Obj.magic (HxRuntime.hx_null) in (
+  ignore (Hxhxmacrohost_api_Compiler.define ("HXHX_ENUM" : string) ("1" : string));
+  let defs = Hxhxmacrohost_api_Context.getDefines () in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if HxMap.exists_string defs "HXHX_FLAG" then let __assign_5 = Obj.magic (HxMap.get_string defs "HXHX_FLAG" : string) in (
       tempMaybeString := __assign_5;
       __assign_5
+    ) else let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_6;
+      __assign_6
     ));
-    let flagMap = !tempMaybeString in let tempMaybeString1 = ref (Obj.magic ()) in (
-      ignore (if HxMap.exists_string defs "HXHX_ENUM" then let __assign_6 = HxMap.get_string defs "HXHX_ENUM" in (
-        tempMaybeString1 := __assign_6;
-        __assign_6
-      ) else let __assign_7 = Obj.magic (HxRuntime.hx_null) in (
+    let flagMap = (!tempMaybeString : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+      ignore (if HxMap.exists_string defs "HXHX_ENUM" then let __assign_7 = Obj.magic (HxMap.get_string defs "HXHX_ENUM" : string) in (
         tempMaybeString1 := __assign_7;
         __assign_7
+      ) else let __assign_8 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        tempMaybeString1 := __assign_8;
+        __assign_8
       ));
-      let enumMap = !tempMaybeString1 in let flagGet = Hxhxmacrohost_api_Compiler.getDefine "HXHX_FLAG" in let enumGet = Hxhxmacrohost_api_Compiler.getDefine "HXHX_ENUM" in (((((("defines:flag_map=" ^ HxString.toStdString (HxString.toStdString flagMap)) ^ ";flag_get=") ^ HxString.toStdString (HxString.toStdString flagGet)) ^ ";enum_map=") ^ HxString.toStdString (HxString.toStdString enumMap)) ^ ";enum_get=") ^ HxString.toStdString (HxString.toStdString enumGet)
+      let enumMap = (!tempMaybeString1 : string) in let flagGet = (Hxhxmacrohost_api_Compiler.getDefine ("HXHX_FLAG" : string) : string) in let enumGet = (Hxhxmacrohost_api_Compiler.getDefine ("HXHX_ENUM" : string) : string) in (((((("defines:flag_map=" ^ HxString.toStdString (HxString.toStdString flagMap)) ^ ";flag_get=") ^ HxString.toStdString (HxString.toStdString flagGet)) ^ ";enum_map=") ^ HxString.toStdString (HxString.toStdString enumMap)) ^ ";enum_get=") ^ HxString.toStdString (HxString.toStdString enumGet)
     )
   )
 )
 
 let registerHooks = fun () -> (
-  ignore (Hxhxmacrohost_api_Context.onAfterTyping (fun _hx -> Hxhxmacrohost_api_Compiler.define "HXHX_AFTER_TYPING" "1"));
+  ignore (Hxhxmacrohost_api_Context.onAfterTyping (fun _hx -> (
+    ignore _hx;
+    ignore (Hxhxmacrohost_api_Compiler.define ("HXHX_AFTER_TYPING" : string) ("1" : string))
+  )));
   ignore (Hxhxmacrohost_api_Context.onGenerate (fun _hx -> (
-    ignore (Hxhxmacrohost_api_Compiler.emitOcamlModule "HxHxHook" "let hook_generated : int = 1");
-    Hxhxmacrohost_api_Compiler.define "HXHX_ON_GENERATE" "1"
+    ignore _hx;
+    ignore ((
+      ignore (Hxhxmacrohost_api_Compiler.emitOcamlModule ("HxHxHook" : string) ("let hook_generated : int = 1" : string));
+      Hxhxmacrohost_api_Compiler.define ("HXHX_ON_GENERATE" : string) ("1" : string)
+    ))
   )) (Obj.magic (HxRuntime.hx_null)));
   "hooks=ok"
 )
 
-let fail = fun () -> Hxhxmacrohost_MacroError.raise "intentional macro host failure (for position payload tests)" (let __anon_8 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_8 "fileName" (Obj.repr "src/hxhxmacrohost/BuiltinMacros.hx"));
-  ignore (HxAnon.set __anon_8 "lineNumber" (Obj.repr 156));
-  ignore (HxAnon.set __anon_8 "className" (Obj.repr "hxhxmacrohost.BuiltinMacros"));
-  ignore (HxAnon.set __anon_8 "methodName" (Obj.repr "fail"));
-  __anon_8
+let fail = fun () -> Hxhxmacrohost_MacroError.raise ("intentional macro host failure (for position payload tests)" : string) (let __anon_9 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_9 "fileName" (Obj.repr "src/hxhxmacrohost/BuiltinMacros.hx"));
+  ignore (HxAnon.set __anon_9 "lineNumber" (Obj.repr 159));
+  ignore (HxAnon.set __anon_9 "className" (Obj.repr "hxhxmacrohost.BuiltinMacros"));
+  ignore (HxAnon.set __anon_9 "methodName" (Obj.repr "fail"));
+  __anon_9
 ))

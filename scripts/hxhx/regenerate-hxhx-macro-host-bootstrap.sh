@@ -64,7 +64,7 @@ echo "== Updating bootstrap snapshot: $BOOTSTRAP_DIR"
 rm -rf "$BOOTSTRAP_DIR"
 mkdir -p "$BOOTSTRAP_DIR"
 
-# Copy everything except build artifacts and generator sources.
-(cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
+# Copy everything except build artifacts, generator sources, and diagnostic reports.
+(cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' --exclude='ocaml_profile_report.json' --exclude='ocaml_runtime_plan_report.json' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
 
 echo "OK: regenerated bootstrap snapshot"

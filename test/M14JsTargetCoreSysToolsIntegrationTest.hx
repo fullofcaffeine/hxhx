@@ -92,6 +92,18 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "sys/io/File.hx");
 	}
 
+	static function sysIoProcessModule():TypedModule {
+		final cmdArg = new HxFunctionArg("cmd", "String", HxDefaultValue.NoDefault);
+		final argsArg = new HxFunctionArg("args", "Array<String>", HxDefaultValue.NoDefault);
+		final processClass = new HxClassDecl("Process", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [cmdArg, argsArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), ""),
+			new HxFunctionDecl("close", HxVisibility.Public, false, [], "Int", unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
+		]);
+		final decl = new HxModuleDecl("sys.io", [], processClass, [processClass], false, false);
+		return typedModule("", decl, "sys/io/Process.hx");
+	}
+
 	static function lambdaModule():TypedModule {
 		final iterableArg = new HxFunctionArg("it", "Array<Array<Int>>", HxDefaultValue.NoDefault);
 		final filterIterableArg = new HxFunctionArg("it", "Array<Int>", HxDefaultValue.NoDefault);
@@ -104,6 +116,58 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		]);
 		final decl = new HxModuleDecl("", [], lambdaClass, [lambdaClass], false, false);
 		return typedModule("", decl, "Lambda.hx");
+	}
+
+	static function stdModule():TypedModule {
+		final valueArg = new HxFunctionArg("s", "Dynamic", HxDefaultValue.NoDefault);
+		final intArg = new HxFunctionArg("x", "Float", HxDefaultValue.NoDefault);
+		final stdClass = new HxClassDecl("Std", false, [
+			new HxFunctionDecl("string", HxVisibility.Public, true, [valueArg], "String", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("int", HxVisibility.Public, true, [intArg], "Int", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("parseInt", HxVisibility.Public, true, [valueArg], "Null<Int>", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("parseFloat", HxVisibility.Public, true, [valueArg], "Float", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("random", HxVisibility.Public, true, [intArg], "Int", unsupportedBody("body_parse_error"), "")
+		]);
+		final decl = new HxModuleDecl("", [], stdClass, [stdClass], false, false);
+		return typedModule("", decl, "Std.hx");
+	}
+
+	static function haxeRestModule():TypedModule {
+		final arrayArg = new HxFunctionArg("array", "Array<Dynamic>", HxDefaultValue.NoDefault);
+		final restClass = new HxClassDecl("Rest", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [arrayArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
+		]);
+		final decl = new HxModuleDecl("haxe", [], restClass, [restClass], false, false);
+		return typedModule("", decl, "haxe/Rest.hx");
+	}
+
+	static function jsCtorFixtureModule():TypedModule {
+		final source = [
+			"class JsCtorBase {",
+			"  public function new() {",
+			"    init();",
+			'    Main.ctorCalls.push("BASE");',
+			"  }",
+			"  function init() {}",
+			"}",
+			"class JsCtorChild extends JsCtorBase {",
+			'  var label = "CHILD";',
+			"  override function init() Main.ctorCalls.push(label);",
+			"  public function new() {",
+			'    Main.ctorCalls.push("PRE");',
+			"    super();",
+			"  }",
+			"}",
+			"class JsCtorLeaf extends JsCtorChild {",
+			"  public function new() {",
+			"    super();",
+			'    Main.ctorCalls.push("LEAF");',
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(source, "JsCtorFixture.hx");
+		return TyperStage.typeModule(parsed);
 	}
 
 	static function macroModule():TypedModule {
@@ -363,6 +427,21 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "DateTools.hx");
 	}
 
+	static function dateModule():TypedModule {
+		final yearArg = new HxFunctionArg("year", "Int", HxDefaultValue.NoDefault);
+		final monthArg = new HxFunctionArg("month", "Int", HxDefaultValue.NoDefault);
+		final dayArg = new HxFunctionArg("day", "Int", HxDefaultValue.NoDefault);
+		final hourArg = new HxFunctionArg("hour", "Int", HxDefaultValue.NoDefault);
+		final minuteArg = new HxFunctionArg("min", "Int", HxDefaultValue.NoDefault);
+		final secondArg = new HxFunctionArg("sec", "Int", HxDefaultValue.NoDefault);
+		final dateClass = new HxClassDecl("Date", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [yearArg, monthArg, dayArg, hourArg, minuteArg, secondArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
+		]);
+		final decl = new HxModuleDecl("", [], dateClass, [dateClass], false, false);
+		return typedModule("", decl, "Date.hx");
+	}
+
 	static function eRegModule():TypedModule {
 		final patternArg = new HxFunctionArg("r", "String", HxDefaultValue.NoDefault);
 		final optionsArg = new HxFunctionArg("opt", "String", HxDefaultValue.NoDefault);
@@ -453,13 +532,37 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	}
 
 	static function arrayModule():TypedModule {
+		final lengthArg = new HxFunctionArg("length", "Int", HxDefaultValue.NoDefault, true);
 		final predicateArg = new HxFunctionArg("f", "Dynamic", HxDefaultValue.NoDefault);
 		final arrayClass = new HxClassDecl("Array", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [lengthArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), ""),
 			new HxFunctionDecl("filter", HxVisibility.Public, false, [predicateArg], "Array<Dynamic>",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=if_missing_else"), "")
 		]);
 		final decl = new HxModuleDecl("", [], arrayClass, [arrayClass], false, false);
 		return typedModule("", decl, "Array.hx");
+	}
+
+	static function stringModule():TypedModule {
+		final valueArg = new HxFunctionArg("value", "Dynamic", HxDefaultValue.NoDefault, true);
+		final stringClass = new HxClassDecl("String", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [valueArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
+		]);
+		final decl = new HxModuleDecl("", [], stringClass, [stringClass], false, false);
+		return typedModule("", decl, "String.hx");
+	}
+
+	static function anyModule():TypedModule {
+		final anyClass = new HxClassDecl("Any", false, [
+			new HxFunctionDecl("__promote", HxVisibility.Public, false, [], "Dynamic",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), ""),
+			new HxFunctionDecl("toString", HxVisibility.Public, false, [], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
+		]);
+		final decl = new HxModuleDecl("", [], anyClass, [anyClass], false, false);
+		return typedModule("", decl, "Any.hx");
 	}
 
 	static function jsNodeProcessModule():TypedModule {
@@ -640,9 +743,40 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	}
 
 	static function haxeDsStringMapModule():TypedModule {
-		final stringMapClass = new HxClassDecl("StringMap", false, [new HxFunctionDecl("new", HxVisibility.Public, false, [], "Void", [], "")]);
+		final stringMapClass = new HxClassDecl("StringMap", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [], "Void", unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
+		]);
 		final decl = new HxModuleDecl("haxe.ds", [], stringMapClass, [stringMapClass], false, false);
 		return typedModule("", decl, "haxe/ds/StringMap.hx");
+	}
+
+	static function haxeDsIntMapModule():TypedModule {
+		final intMapClass = new HxClassDecl("IntMap", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [], "Void", unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
+		]);
+		final decl = new HxModuleDecl("haxe.ds", [], intMapClass, [intMapClass], false, false);
+		return typedModule("", decl, "haxe/ds/IntMap.hx");
+	}
+
+	static function haxeDisplayProtocolModule():TypedModule {
+		final methodArg = new HxFunctionArg("method", "String", HxDefaultValue.NoDefault);
+		final requestClass = new HxClassDecl("HaxeRequestMethod", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [methodArg], "Void", [
+				HxStmt.SExpr(HxExpr.EBinop("=", HxExpr.EThis, HxExpr.EIdent("method")), HxPos.unknown())
+			], "")
+		]);
+		final decl = new HxModuleDecl("haxe.display", [], requestClass, [requestClass], false, false);
+		return typedModule("", decl, "haxe/display/Protocol.hx");
+	}
+
+	static function sysThreadThreadModule():TypedModule {
+		final msgArg = new HxFunctionArg("msg", "Dynamic", HxDefaultValue.NoDefault);
+		final threadClass = new HxClassDecl("Thread", false, [
+			new HxFunctionDecl("sendMessage", HxVisibility.Public, false, [msgArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
+		]);
+		final decl = new HxModuleDecl("sys.thread", [], threadClass, [threadClass], false, false);
+		return typedModule("", decl, "sys/thread/Thread.hx");
 	}
 
 	static function haxeXmlParserModule():TypedModule {
@@ -713,7 +847,85 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "unit/TestMain.hx");
 	}
 
+	static function protocolLine(key:String, payload:String):String {
+		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
+			"\t", "\\t");
+		return "ast " + key + " " + escaped.length + ":" + escaped;
+	}
+
+	static function assertNativeStaticFinalDecode():Void {
+		final plainField = "HX_CTOR\npublic\n1\n\n";
+		final staticFinal = "HX_CTOR\npublic\n1\n\n\"_hx_constructor\"";
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("class", "Main"),
+			"ast static_main 1",
+			protocolLine("field", plainField),
+			protocolLine("static_final", staticFinal),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
+		final fields = HxClassDecl.getFields(HxModuleDecl.getMainClass(decl));
+		assertTrue(fields.length == 1, "native static_final should replace duplicate plain field records");
+		final field = fields[0];
+		assertTrue(HxFieldDecl.getIsFinal(field), "native static_final should decode as a final field");
+		assertTrue(HxFieldDecl.getInitText(field) == "\"_hx_constructor\"", "native static_final should retain initializer text");
+		switch (HxFieldDecl.getInit(field)) {
+			case HxExpr.EString(v):
+				assertTrue(v == "_hx_constructor", "native static_final should parse string initializers");
+			case _:
+				throw "native static_final should decode a string initializer expression";
+		}
+	}
+
+	static function assertScannedHelperClassInheritance():Void {
+		final source = [
+			"class Base {}",
+			"class Child extends Base {",
+			"  public function new() {",
+			"    Test.use(this);",
+			"    super();",
+			"  }",
+			"}"
+		].join("\n");
+		final classes = ParserStageScanHelpers.scanModuleLocalHelperClasses(source, null);
+		var child:Null<HxClassDecl> = null;
+		for (cls in classes) {
+			if (HxClassDecl.getName(cls) == "Child") {
+				child = cls;
+				break;
+			}
+		}
+		assertTrue(child != null, "helper class scanner should discover module-local subclasses");
+		assertTrue(HxClassDecl.getExtendsPath(child) == "Base", "helper class scanner should retain extends paths");
+
+		var ctor:Null<HxFunctionDecl> = null;
+		for (fn in HxClassDecl.getFunctions(child)) {
+			if (HxFunctionDecl.getName(fn) == "new") {
+				ctor = fn;
+				break;
+			}
+		}
+		assertTrue(ctor != null, "helper class scanner should retain constructors");
+		var sawPreSuper = false;
+		var sawSuper = false;
+		for (stmt in HxFunctionDecl.getBody(ctor)) {
+			switch (stmt) {
+				case HxStmt.SExpr(HxExpr.ECall(HxExpr.ESuper, _), _):
+					sawSuper = true;
+				case _:
+					if (!sawSuper)
+						sawPreSuper = true;
+			}
+		}
+		assertTrue(sawPreSuper, "helper class scanner should parse pre-super constructor work");
+		assertTrue(sawSuper, "helper class scanner should parse super constructor calls");
+	}
+
 	static function main():Void {
+		assertNativeStaticFinalDecode();
+		assertScannedHelperClassInheritance();
+
 		final tmpRoot = Path.normalize(".tmp/m14_js_target_core_systools_" + Std.string(Date.now().getTime()));
 		final outDir = Path.join([tmpRoot, "out"]);
 		deleteRecursive(tmpRoot);
@@ -728,7 +940,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"import utest.TestHandler;",
 				"import utest.ui.common.ReportTools;",
 				"class Main {",
+				"  public static var ctorCalls:Array<String>;",
+				'  static inline final HX_CTOR = "_hx_constructor";',
 				"  static function main() {",
+				'    Sys.println("std=" + Std.string("std-ok"));',
+				'    Sys.println("inline-final=" + HX_CTOR);',
 				'    Sys.println(SysTools.quoteUnixArg("a b"));',
 				'    Sys.println(SysTools.quoteUnixArg("abc"));',
 				'    Sys.println(SysTools.quoteWinArg("ab c", false));',
@@ -809,6 +1025,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"    var counter = new Counter(4);",
 				"    Sys.println(counter.add(5));",
 				"    Sys.println(counter.add());",
+				"    ctorCalls = [];",
+				"    new JsCtorLeaf();",
+				'    Sys.println("ctor-order=" + ctorCalls.join("|"));',
+				'    Sys.println("ctor-ref=" + untyped __js__("{0}.prototype.hasOwnProperty({1})", JsCtorChild, HX_CTOR));',
 				"    Sys.println([1, 2, 3].filter(function(i) return i > 1).join(\",\"));",
 				'    Sys.println(untyped __js__("(function(){ var it = [4,5].iterator(); return [it.hasNext(), it.next(), it.next(), it.hasNext()].join(\\",\\"); })()"));',
 				"    var called = { value: false };",
@@ -839,7 +1059,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				pathModule(),
 				fileSystemModule(),
 				sysIoFileModule(),
+				sysIoProcessModule(),
 				lambdaModule(),
+				stdModule(),
+				haxeRestModule(),
+				jsCtorFixtureModule(),
 				macroModule(),
 				reservedParamModule(),
 				upstreamUnitHelperMacrosModule(),
@@ -861,11 +1085,14 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				utestReportToolsModule(),
 				jsBootModule(),
 				dateToolsModule(),
+				dateModule(),
 				eRegModule(),
 				reflectModule(),
 				typeModule(),
 				counterModule(),
 				arrayModule(),
+				stringModule(),
+				anyModule(),
 				jsNodeProcessModule(),
 				jsHtmlBlobModule(),
 				utestResultAggregatorModule(),
@@ -880,6 +1107,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				phpBootModule(),
 				phpNativeAssocArrayModule(),
 				haxeDsStringMapModule(),
+				haxeDsIntMapModule(),
+				haxeDisplayProtocolModule(),
+				sysThreadThreadModule(),
 				haxeXmlParserModule(),
 				xmlModule(),
 				xmlTypeModule(),
@@ -972,6 +1202,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.skipResult = function", "utest ReportTools skipResult shim should emit");
 			assertContains(js, "__hx_cls_utest_ui_common_ReportTools.hasOutput = function", "utest ReportTools hasOutput shim should emit");
 			assertContains(js, "__hx_cls_js_Boot.__string_rec = function", "js Boot string recursion shim should emit");
+			assertContains(js, "__hx_cls_Std.string = function", "Std.string shim should emit");
+			assertContains(js, "if (s == null) return \"null\";", "Std.string should be self-contained for null values");
+			assertContains(js, "return String(s);", "Std.string should fall back to native JS stringification");
 			assertContains(js, "__hx_cls_js_Boot.__instanceof = function", "js Boot instanceof shim should emit");
 			assertContains(js, "__hx_cls_js_Boot.__downcastCheck = function", "js Boot downcast shim should emit");
 			assertContains(js, "__hx_cls_DateTools.__format_get = function", "DateTools format token shim should emit");
@@ -1001,6 +1234,13 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"StringTools.startsWith runtime complement should backfill inline/erased std bodies");
 			assertContains(js, "__hx_cls_StringTools.startsWith = function", "StringTools.startsWith shim should emit");
 			assertContains(js, "return String(s).indexOf(String(start)) === 0;", "StringTools.startsWith should lower to JS prefix check");
+			assertContains(js, "__hx_cls_Main.HX_CTOR = \"_hx_constructor\"", "static inline final string constants should keep simple runtime initializers");
+			assertContains(js, "__hx_cls_JsCtorChild.prototype._hx_constructor = function",
+				"pre-super constructors should expose the ES6 extracted constructor marker");
+			assertContains(js, "__hx_cls_JsCtorBase._hx_skip_constructor = false",
+				"base constructors with extracted descendants should expose the ES6 skip marker");
+			assertNotContains(js, "__hx_cls_JsCtorLeaf.prototype._hx_constructor = function",
+				"post-super-only constructors should not expose the extracted constructor marker");
 			assertContains(js, "__hx_cls_unit_TestReflect.TYPES = [__hx_type_ref(\"unit.MyInterface\")]",
 				"unresolved qualified value type refs should lower to runtime type placeholders");
 			assertContains(js, "__hx_cls_unit_TestReflect.u = function", "same-class static helper should emit before static field calls");
@@ -1014,6 +1254,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "new __hx_cls_haxe_ds_StringMap()", "raw package-qualified constructors should rewrite to flat class bindings");
 			assertNotContains(js, "new haxe.ds.StringMap()", "raw package-qualified constructors should not leak namespace access");
 			assertContains(js, "__hx_cls_haxe_ds_StringMap.prototype.set = function", "StringMap set runtime complement should emit");
+			assertContains(js, "__hx_cls_sys_thread_Thread.prototype.sendMessage = function",
+				"unused sys.thread.Thread sendMessage should emit a neutral JS body");
+			assertContains(js, "this.__hx_value = method", "abstract-style constructor assignment to this should lower to a backing value slot");
+			assertNotContains(js, "this = method", "abstract-style constructor assignment should not emit invalid JS assignment to this");
+			assertContains(js, "__hx_cls_sys_io_Process.prototype.close = function", "unused sys.io.Process methods should emit neutral JS bodies");
 			assertTrue(js.indexOf("var __hx_cls_XmlType = function") < js.indexOf("__hx_cls_Xml.Element = __hx_cls_XmlType.Element"),
 				"classes read by static field initializers should emit before dependent static fields");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg", "compile-time macro Compiler ident regex should construct EReg");
@@ -1058,6 +1303,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertNotContains(js, "detail=5", "compile-time-only helper unsupported payload should not leak into JS");
 
 			final stdout = runNodeScript(artifactPath);
+			assertContains(stdout, "std=std-ok", "Std.string should stringify primitive strings through JS Boot");
+			assertContains(stdout, "inline-final=_hx_constructor", "static inline final string constants should be available at runtime");
 			assertContains(stdout, "'a b'", "quoteUnixArg should quote shell-unsafe spaces");
 			assertContains(stdout, "abc", "quoteUnixArg should preserve shell-safe text");
 			assertContains(stdout, "\"ab c\"", "quoteWinArg should quote space-containing text");
@@ -1099,6 +1346,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "<", "raw haxe.ds.StringMap static initializer should execute through the flat class binding");
 			assertContains(stdout, "xml=0", "static field reads should execute after dependency classes are assigned");
 			assertContains(stdout, "10\n13", "ordinary JS classes should construct, mutate instance fields, and apply default args");
+			assertContains(stdout, "ctor-order=PRE|CHILD|BASE|LEAF",
+				"constructor lowering should preserve pre-super, field init, expression-bodied overrides, and post-super ordering");
+			assertContains(stdout, "ctor-ref=true", "enum-like class value refs should resolve to emitted JS class bindings");
 			assertContains(stdout, "2,3", "native JS Array prototype methods should remain available");
 			assertContains(stdout, "true,4,5,false", "runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
 			assertContains(stdout, "fixture-called\nprecheck\ntested\ncomplete\ntrue\ntrue\n1",

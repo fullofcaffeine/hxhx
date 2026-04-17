@@ -13,17 +13,17 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacros.Build
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacros.BuildFieldMacros" } : t)
 
-let addGeneratedField = fun () -> try let modulePath = Hxhxmacrohost_api_Context.definedValue "HXHX_BUILD_MODULE" in (
+let addGeneratedField = fun () -> ignore (try let modulePath = (Hxhxmacrohost_api_Context.definedValue ("HXHX_BUILD_MODULE" : string) : string) in (
   ignore (if modulePath == Obj.magic (HxRuntime.hx_null) || HxString.length modulePath = 0 then ignore ((
-    ignore (Hxhxmacrohost_api_Compiler.define "HXHX_BUILD_ERROR" "missing_module_path");
+    ignore (Hxhxmacrohost_api_Compiler.define ("HXHX_BUILD_ERROR" : string) ("missing_module_path" : string));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  ignore (Hxhxmacrohost_api_Compiler.define "HXHX_BUILD_RAN" "1");
-  let members = HxArray.join (let __arr_1 = HxArray.create () in (
+  ignore (Hxhxmacrohost_api_Compiler.define ("HXHX_BUILD_RAN" : string) ("1" : string));
+  let members = (HxArray.join (let __arr_1 = HxArray.create () in (
     ignore (HxArray.push __arr_1 "public static function generated():Void {");
     ignore (HxArray.push __arr_1 "  trace(\"from_hxhx_build_macro\");");
     ignore (HxArray.push __arr_1 "}");
     __arr_1
-  )) "\n" (fun x -> x) in Hxhxmacrohost_api_Compiler.emitBuildFields modulePath members
+  )) "\n" (fun x -> x) : string) in Hxhxmacrohost_api_Compiler.emitBuildFields (modulePath : string) (members : string)
 ) with
-  | HxRuntime.Hx_return __ret_2 -> Obj.obj __ret_2
+  | HxRuntime.Hx_return __ret_2 -> Obj.obj __ret_2)

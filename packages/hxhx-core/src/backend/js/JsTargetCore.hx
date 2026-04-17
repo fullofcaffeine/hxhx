@@ -134,6 +134,9 @@ class JsTargetCore implements ITargetCore {
 	static function staticInitDepsReady(unit:JsClassUnit, emitted:haxe.ds.StringMap<Bool>, byFullName:haxe.ds.StringMap<String>,
 			bySimpleFullName:haxe.ds.StringMap<String>):Bool {
 		final deps = staticInitClassDeps(unit, byFullName, bySimpleFullName);
+		final superDep = resolveStaticInitTypePath(HxClassDecl.getExtendsPath(unit.decl), byFullName, bySimpleFullName);
+		if (superDep != null)
+			deps.push(superDep);
 		for (dep in deps) {
 			if (dep == unit.fullName)
 				continue;
@@ -341,7 +344,7 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("var __hx_fields = [];");
 		writer.writeln("for (var __hx_key in cls.prototype) {");
 		writer.pushIndent();
-		writer.writeln("if (__hx_key === \"constructor\" || __hx_key.indexOf(\"__hx_\") === 0) continue;");
+		writer.writeln("if (__hx_key === \"constructor\" || __hx_key.indexOf(\"__hx_\") === 0 || __hx_key.indexOf(\"_hx_\") === 0) continue;");
 		writer.writeln("if (typeof cls.prototype[__hx_key] === \"function\") __hx_fields.push(__hx_key);");
 		writer.popIndent();
 		writer.writeln("}");
@@ -354,7 +357,7 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("var __hx_fields = [];");
 		writer.writeln("for (var __hx_key in cls) {");
 		writer.pushIndent();
-		writer.writeln("if (__hx_key === \"prototype\" || __hx_key.indexOf(\"__hx_\") === 0) continue;");
+		writer.writeln("if (__hx_key === \"prototype\" || __hx_key.indexOf(\"__hx_\") === 0 || __hx_key.indexOf(\"_hx_\") === 0) continue;");
 		writer.writeln("if (typeof cls[__hx_key] === \"function\") __hx_fields.push(__hx_key);");
 		writer.popIndent();
 		writer.writeln("}");
@@ -425,6 +428,7 @@ class JsTargetCore implements ITargetCore {
 		}
 		if (isNativeJsLibExtern(unit.fullName))
 			return;
+		emitPrototypeInheritance(writer, unit, classRefs);
 		if (unit.fullName == "EReg")
 			emitERegPrototypeRuntime(writer, unit.jsRef);
 		final staticRefs = staticMemberRefs(unit);
@@ -447,6 +451,9 @@ class JsTargetCore implements ITargetCore {
 			final knownInit = emitKnownStaticFieldInit(unit.fullName, HxFieldDecl.getName(field));
 			final value = if (knownInit != null) {
 				knownInit;
+			} else if (init == null && HxFieldDecl.getIsFinal(field)) {
+				final constant = emitSimpleStaticFinalInitText(HxFieldDecl.getInitText(field));
+				constant == null ? "null" : constant;
 			} else if (init == null) {
 				"null";
 			} else {
@@ -520,6 +527,8 @@ class JsTargetCore implements ITargetCore {
 		final scope = new JsFunctionScope(classRefs, instanceFields);
 		final args = ctor == null ? [] : HxFunctionDecl.getArgs(ctor);
 		final params = declareFunctionParams(args, scope);
+		final superRef = resolveSuperClassRef(unit, classRefs);
+		final split = splitConstructorBody(ctor == null ? [] : HxFunctionDecl.getBody(ctor));
 
 		writer.writeln("var " + unit.jsRef + " = function(" + params.join(", ") + ") {");
 		writer.pushIndent();
@@ -529,19 +538,82 @@ class JsTargetCore implements ITargetCore {
 		if (ctor != null && emitKnownConstructorBody(writer, unit.fullName, params)) {
 			// Known constructor body emitted above.
 		} else if (ctor != null && !shouldEmitNeutralConstructorBody(unit.fullName)) {
-			try {
-				JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(ctor), scope);
-			} catch (e:String) {
-				throw e + " in " + unit.fullName + ".new (constructor body)";
-			} catch (error:haxe.Exception) {
-				throw error.message + " in " + unit.fullName + ".new (constructor body)";
-			}
+			emitConstructorStatements(writer, split.beforeSuper, scope, unit.fullName);
+			if (superRef != null)
+				writer.writeln(superRef + ".call(this);");
+			emitConstructorStatements(writer, split.afterSuper, scope, unit.fullName);
+		} else if (superRef != null) {
+			writer.writeln(superRef + ".call(this);");
 		}
 		writer.popIndent();
 		writer.writeln("};");
 	}
 
+	static function emitPrototypeInheritance(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
+		final superRef = resolveSuperClassRef(unit, classRefs);
+		if (superRef == null)
+			return;
+		writer.writeln("if (typeof " + superRef + " === \"function\") {");
+		writer.pushIndent();
+		writer.writeln(unit.jsRef + ".prototype = Object.create(" + superRef + ".prototype);");
+		writer.writeln(unit.jsRef + ".prototype.constructor = " + unit.jsRef + ";");
+		writer.writeln(unit.jsRef + ".__super__ = " + superRef + ";");
+		writer.popIndent();
+		writer.writeln("}");
+	}
+
+	static function resolveSuperClassRef(unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Null<String> {
+		final path = HxClassDecl.getExtendsPath(unit.decl);
+		if (path == null || path.length == 0)
+			return null;
+		final direct = classRefs.get(path);
+		if (direct != null)
+			return direct;
+		final parts = path.split(".");
+		return classRefs.get(parts[parts.length - 1]);
+	}
+
+	static function splitConstructorBody(body:Array<HxStmt>):{beforeSuper:Array<HxStmt>, afterSuper:Array<HxStmt>, sawSuper:Bool} {
+		final before = new Array<HxStmt>();
+		final after = new Array<HxStmt>();
+		var sawSuper = false;
+		for (stmt in body) {
+			if (!sawSuper && isSuperConstructorCall(stmt)) {
+				sawSuper = true;
+				continue;
+			}
+			if (sawSuper)
+				after.push(stmt);
+			else
+				before.push(stmt);
+		}
+		return {beforeSuper: before, afterSuper: after, sawSuper: sawSuper};
+	}
+
+	static function isSuperConstructorCall(stmt:HxStmt):Bool {
+		return switch (stmt) {
+			case SExpr(ECall(ESuper, _), _): true;
+			case _: false;
+		}
+	}
+
+	static function emitConstructorStatements(writer:JsWriter, stmts:Array<HxStmt>, scope:JsFunctionScope, fullName:String):Void {
+		try {
+			for (stmt in stmts)
+				JsStmtEmitter.emitStmt(writer, stmt, scope);
+		} catch (e:String) {
+			throw e + " in " + fullName + ".new (constructor body)";
+		} catch (error:haxe.Exception) {
+			throw error.message + " in " + fullName + ".new (constructor body)";
+		}
+	}
+
 	static function emitKnownConstructorBody(writer:JsWriter, fullName:String, params:Array<String>):Bool {
+		if (fullName == "Date") {
+			writer.writeln("return new Date(" + params.join(", ") + ");");
+			return true;
+		}
+
 		if (fullName == "utest.ui.text.PrintReport") {
 			if (params.length < 1)
 				return false;
@@ -576,6 +648,15 @@ class JsTargetCore implements ITargetCore {
 
 	static function emitPlainClassPrototypeMethods(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
 		final instanceFields = instanceFieldRefs(unit.decl);
+		if (needsExtractedConstructorMarker(unit)) {
+			writer.writeln(unit.jsRef + ".prototype._hx_constructor = function() {");
+			writer.pushIndent();
+			writer.writeln("return null;");
+			writer.popIndent();
+			writer.writeln("};");
+		}
+		if (needsSkipConstructorMarker(unit, classRefs))
+			writer.writeln(unit.jsRef + "._hx_skip_constructor = false;");
 		for (fn in HxClassDecl.getFunctions(unit.decl)) {
 			if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 				continue;
@@ -603,6 +684,36 @@ class JsTargetCore implements ITargetCore {
 			writer.popIndent();
 			writer.writeln("};");
 		}
+	}
+
+	static function needsExtractedConstructorMarker(unit:JsClassUnit):Bool {
+		if (hasInstanceFieldInitializers(unit.decl))
+			return true;
+		final ctor = findConstructor(unit.decl);
+		if (ctor == null)
+			return false;
+		final split = splitConstructorBody(HxFunctionDecl.getBody(ctor));
+		if (!split.sawSuper)
+			return split.beforeSuper.length > 0;
+		return split.beforeSuper.length > 0;
+	}
+
+	static function needsSkipConstructorMarker(unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Bool {
+		final ctor = findConstructor(unit.decl);
+		if (ctor == null)
+			return false;
+		final split = splitConstructorBody(HxFunctionDecl.getBody(ctor));
+		if (split.sawSuper || split.beforeSuper.length == 0)
+			return false;
+		return true;
+	}
+
+	static function hasInstanceFieldInitializers(decl:HxClassDecl):Bool {
+		for (field in HxClassDecl.getFields(decl)) {
+			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getInit(field) != null)
+				return true;
+		}
+		return false;
 	}
 
 	static function emitInstanceFieldInitializers(writer:JsWriter, unit:JsClassUnit, scope:JsFunctionScope):Void {
@@ -701,6 +812,30 @@ class JsTargetCore implements ITargetCore {
 		return null;
 	}
 
+	static function emitSimpleStaticFinalInitText(initText:String):Null<String> {
+		if (initText == null)
+			return null;
+		final trimmed = StringTools.trim(initText);
+		if (trimmed.length == 0)
+			return null;
+		final first = trimmed.charAt(0);
+		final last = trimmed.charAt(trimmed.length - 1);
+		if ((first == "\"" && last == "\"") || (first == "'" && last == "'"))
+			return trimmed;
+		if (trimmed == "true" || trimmed == "false" || trimmed == "null")
+			return trimmed;
+		var numeric = true;
+		for (i in 0...trimmed.length) {
+			final ch = trimmed.charAt(i);
+			final isDigit = ch >= "0" && ch <= "9";
+			if (!isDigit && ch != "-" && ch != "+" && ch != ".") {
+				numeric = false;
+				break;
+			}
+		}
+		return numeric ? trimmed : null;
+	}
+
 	/**
 		Emits small, audited JS-native bodies for upstream stdlib helpers whose typed
 		bodies are still opaque to the Stage3 JS statement emitter.
@@ -734,6 +869,9 @@ class JsTargetCore implements ITargetCore {
 
 		if (fullName == "StringTools")
 			return emitStringToolsStaticFunctionBody(writer, fnName, params);
+
+		if (fullName == "Std")
+			return emitStdStaticFunctionBody(writer, fnName, params);
 
 		if (fullName == "EReg")
 			return emitERegStaticFunctionBody(writer, fnName, params);
@@ -856,6 +994,52 @@ class JsTargetCore implements ITargetCore {
 		}
 	}
 
+	static function emitStdStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "string":
+				if (params.length < 1)
+					return false;
+				emitStdStringBody(writer, params[0]);
+				return true;
+			case "random":
+				if (params.length < 1)
+					return false;
+				writer.writeln("if (" + params[0] + " <= 0) return 0;");
+				writer.writeln("return Math.floor(Math.random() * " + params[0] + ");");
+				return true;
+			case "int":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return " + params[0] + " | 0;");
+				return true;
+			case "parseInt":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return parseInt(" + params[0] + ", 10);");
+				return true;
+			case "parseFloat":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return parseFloat(" + params[0] + ");");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitStdStringBody(writer:JsWriter, value:String):Void {
+		writer.writeln("if (" + value + " == null) return \"null\";");
+		writer.writeln("if (typeof " + value + " === \"string\") return " + value + ";");
+		writer.writeln("if (Array.isArray(" + value + ")) {");
+		writer.pushIndent();
+		writer.writeln("return \"[\" + " + value + ".map(function(__hx_item) { return " + JsNameMangler.classVarName("Std")
+			+ ".string(__hx_item); }).join(\",\") + \"]\";");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + value + " === \"function\") return \"<function>\";");
+		writer.writeln("return String(" + value + ");");
+	}
+
 	static function emitReflectStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
 		switch (fnName) {
 			case "field":
@@ -881,6 +1065,19 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitKnownInstanceFunctionBody(writer:JsWriter, fullName:String, fnName:String, params:Array<String>):Bool {
+		if (fullName == "Any" && fnName == "__promote") {
+			writer.writeln("return this;");
+			return true;
+		}
+		if (fullName == "Any" && fnName == "toString") {
+			writer.writeln("return this == null ? \"null\" : String(this);");
+			return true;
+		}
+		if (fullName == "sys.thread.Thread" && fnName == "sendMessage") {
+			writer.writeln("return null;");
+			return true;
+		}
+
 		if (fullName == "unit.TestLocalStatic" && fnName == "basic") {
 			emitUnitTestLocalStaticBasicBody(writer, fullName);
 			return true;
@@ -2452,10 +2649,22 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function shouldEmitNeutralConstructorBody(fullName:String):Bool {
+		if (fullName == "Array")
+			return true;
+		if (fullName == "String")
+			return true;
+		if (fullName != null && StringTools.startsWith(fullName, "haxe.ds."))
+			return true;
+		if (fullName == "haxe.Rest")
+			return true;
+		if (fullName == "sys.io.Process")
+			return true;
 		return isCompileTimeMacroApi(fullName) || isStdExceptionClass(fullName);
 	}
 
 	static function shouldEmitNeutralInstanceFunctionBody(fullName:String, fnName:String):Bool {
+		if (fullName == "sys.io.Process")
+			return true;
 		if (fullName == "utest.Runner" && fnName == "addCases")
 			return true;
 		if (fullName == "utest.ui.text.HtmlReport")

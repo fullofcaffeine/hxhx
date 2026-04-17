@@ -114,7 +114,7 @@ class ExprMacroExpander {
 				continue;
 			}
 
-			final newCls = new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), newFns, newFields);
+			final newCls = new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), newFns, newFields, HxClassDecl.getExtendsPath(cls));
 			final newClasses = new Array<HxClassDecl>();
 			for (c in HxModuleDecl.getClasses(decl)) {
 				if (HxClassDecl.getName(c) == HxClassDecl.getName(cls)) {

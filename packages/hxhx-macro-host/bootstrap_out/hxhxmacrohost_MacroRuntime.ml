@@ -13,80 +13,102 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacrohost.Ma
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.MacroRuntime" } : t)
 
-let builtinTypeDesc = fun name -> let tempResult = ref "" in (
+let builtinTypeDesc = fun name -> let tempResult = ref ("" : string) in (
   ignore (match name with
-    | "Bool" | "Float" | "Int" | "String" | "Void" -> let __assign_13 = "builtin:" ^ HxString.toStdString name in (
-      tempResult := __assign_13;
-      __assign_13
+    | "Bool" | "Float" | "Int" | "String" | "Void" -> let __assign_16 = ("builtin:" ^ HxString.toStdString name : string) in (
+      tempResult := __assign_16;
+      __assign_16
     )
-    | _ -> let __assign_12 = "unknown:" ^ HxString.toStdString name in (
-      tempResult := __assign_12;
-      __assign_12
+    | _ -> let __assign_15 = ("unknown:" ^ HxString.toStdString name : string) in (
+      tempResult := __assign_15;
+      __assign_15
     ));
   !tempResult
 )
 
 let defines = HxMap.create_string ()
 
-let afterTypingHooks = let __arr_14 = HxArray.create () in __arr_14
+let afterTypingHooks = Obj.magic (let __arr_17 = HxArray.create () in __arr_17)
 
 let registerAfterTyping = fun cb -> (
   ignore (HxArray.push afterTypingHooks cb);
   HxInt.sub (HxArray.length afterTypingHooks) 1
 )
 
-let onGenerateHooks = let __arr_15 = HxArray.create () in __arr_15
+let onGenerateHooks = Obj.magic (let __arr_18 = HxArray.create () in __arr_18)
 
 let registerOnGenerate = fun cb -> (
   ignore (HxArray.push onGenerateHooks cb);
   HxInt.sub (HxArray.length onGenerateHooks) 1
 )
 
-let afterGenerateHooks = let __arr_16 = HxArray.create () in __arr_16
+let afterGenerateHooks = Obj.magic (let __arr_19 = HxArray.create () in __arr_19)
 
 let registerAfterGenerate = fun cb -> (
   ignore (HxArray.push afterGenerateHooks cb);
   HxInt.sub (HxArray.length afterGenerateHooks) 1
 )
 
-let runHook = fun kind id -> (
+let runHook = fun kind id -> ignore ((
   ignore (if kind == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "MacroRuntime.runHook: missing kind") ["Dynamic"; "String"]) else ());
   ignore (if id < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runHook: invalid hook id: " ^ string_of_int id)) ["Dynamic"; "String"]) else ());
   match kind with
     | "afterGenerate" -> ignore ((
       ignore (if id >= HxArray.length afterGenerateHooks then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runHook: unknown afterGenerate hook id: " ^ string_of_int id)) ["Dynamic"; "String"]) else ());
-      HxArray.get afterGenerateHooks id ()
+      HxArray.get (Obj.magic afterGenerateHooks) id ()
     ))
     | "afterTyping" -> ignore ((
       ignore (if id >= HxArray.length afterTypingHooks then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runHook: unknown afterTyping hook id: " ^ string_of_int id)) ["Dynamic"; "String"]) else ());
-      HxArray.get afterTypingHooks id (let __arr_10 = HxArray.create () in __arr_10)
+      HxArray.get (Obj.magic afterTypingHooks) id (Obj.magic (let __arr_11 = HxArray.create () in __arr_11))
     ))
     | "onGenerate" -> ignore ((
       ignore (if id >= HxArray.length onGenerateHooks then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runHook: unknown onGenerate hook id: " ^ string_of_int id)) ["Dynamic"; "String"]) else ());
-      HxArray.get onGenerateHooks id (let __arr_11 = HxArray.create () in __arr_11)
+      HxArray.get (Obj.magic onGenerateHooks) id (Obj.magic (let __arr_12 = HxArray.create () in __arr_12))
     ))
     | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runHook: unknown kind: " ^ HxString.toStdString kind)) ["Dynamic"; "String"])
+))
+
+let onTypeNotFoundHooks = Obj.magic (let __arr_20 = HxArray.create () in __arr_20)
+
+let registerOnTypeNotFound = fun cb -> (
+  ignore (HxArray.push onTypeNotFoundHooks cb);
+  HxInt.sub (HxArray.length onTypeNotFoundHooks) 1
 )
 
-let currentBuildFieldNames = ref (let __arr_17 = HxArray.create () in __arr_17 : string HxArray.t)
+let runTypeNotFoundHook = fun id name -> (
+  ignore (if id < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runTypeNotFoundHook: invalid hook id: " ^ string_of_int id)) ["Dynamic"; "String"]) else ());
+  ignore (if id >= HxArray.length onTypeNotFoundHooks then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runTypeNotFoundHook: unknown onTypeNotFound hook id: " ^ string_of_int id)) ["Dynamic"; "String"]) else ());
+  let tempString = ref ("" : string) in (
+    ignore (if name == Obj.magic (HxRuntime.hx_null) then let __assign_13 = ("" : string) in (
+      tempString := __assign_13;
+      __assign_13
+    ) else let __assign_14 = (name : string) in (
+      tempString := __assign_14;
+      __assign_14
+    ));
+    HxArray.get (Obj.magic onTypeNotFoundHooks) id (!tempString : string)
+  )
+)
 
-let hasCurrentBuildFieldName = fun name -> try (
+let currentBuildFieldNames = ref (Obj.magic (let __arr_21 = HxArray.create () in __arr_21) : string HxArray.t)
+
+let hasCurrentBuildFieldName = fun name -> try let __fallback_result_10 = (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   HxArray.indexOf (!currentBuildFieldNames) name 0 <> -1
-) with
+) in Obj.magic __fallback_result_10 with
   | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
 
 let hasBuildFieldSnapshot = ref (false : bool)
 
-let setCurrentBuildFieldNames = fun names -> let tempRight = ref (Obj.magic ()) in (
-  ignore (if names == Obj.magic (HxRuntime.hx_null) then let __assign_1 = let __arr_2 = HxArray.create () in __arr_2 in (
+let setCurrentBuildFieldNames = fun names -> ignore (let tempRight = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+  ignore (if names == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
     tempRight := __assign_1;
     __assign_1
-  ) else let __assign_3 = HxArray.copy names in (
+  ) else let __assign_3 = Obj.magic (HxArray.copy names) in (
     tempRight := __assign_3;
     __assign_3
   ));
-  ignore (let __assign_4 = !tempRight in (
+  ignore (let __assign_4 = Obj.magic (!tempRight) in (
     currentBuildFieldNames := __assign_4;
     __assign_4
   ));
@@ -94,10 +116,10 @@ let setCurrentBuildFieldNames = fun names -> let tempRight = ref (Obj.magic ()) 
     hasBuildFieldSnapshot := __assign_5;
     __assign_5
   )
-)
+))
 
-let clearCurrentBuildFieldSnapshot = fun () -> (
-  ignore (let __assign_6 = let __arr_7 = HxArray.create () in __arr_7 in (
+let clearCurrentBuildFieldSnapshot = fun () -> ignore ((
+  ignore (let __assign_6 = Obj.magic (let __arr_7 = HxArray.create () in __arr_7) in (
     currentBuildFieldNames := __assign_6;
     __assign_6
   ));
@@ -105,6 +127,6 @@ let clearCurrentBuildFieldSnapshot = fun () -> (
     hasBuildFieldSnapshot := __assign_8;
     __assign_8
   )
-)
+))
 
 let hasCurrentBuildFieldSnapshot = fun () -> !hasBuildFieldSnapshot

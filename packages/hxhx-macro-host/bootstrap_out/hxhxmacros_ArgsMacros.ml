@@ -13,13 +13,13 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacros.ArgsM
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacros.ArgsMacros" } : t)
 
-let setArg = fun v -> let tempMaybeString = ref (Obj.magic ()) in (
-  ignore (if v == Obj.magic (HxRuntime.hx_null) then let __assign_1 = "" in (
+let setArg = fun v -> ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if v == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic ("" : string) in (
     tempMaybeString := __assign_1;
     __assign_1
-  ) else let __assign_2 = v in (
+  ) else let __assign_2 = Obj.magic (v : string) in (
     tempMaybeString := __assign_2;
     __assign_2
   ));
-  Haxe_macro_Compiler.define "HXHX_ARG" (!tempMaybeString)
-)
+  Haxe_macro_Compiler.define ("HXHX_ARG" : string) (!tempMaybeString : string)
+))

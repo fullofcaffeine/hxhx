@@ -40,7 +40,8 @@ class JsExprEmitter {
 			case EFloat(v):
 				Std.string(v);
 			case EEnumValue(name):
-				JsNameMangler.quoteString(name);
+				final cls = scope == null ? null : scope.resolveClassRef(name);
+				cls == null ? JsNameMangler.quoteString(name) : cls;
 			case EThis:
 				"this";
 			case ESuper:
@@ -1020,6 +1021,13 @@ class JsExprEmitter {
 	static function emitBinop(op:String, left:HxExpr, right:HxExpr, scope:JsEmitScope):String {
 		if (op == "is")
 			return emitIsTypeTest(left, right, scope);
+		if (isAssignmentOp(op)) {
+			switch (left) {
+				case EThis:
+					return "(this.__hx_value " + op + " " + emit(right, scope) + ")";
+				case _:
+			}
+		}
 		if (op == "??") {
 			final l = emit(left, scope);
 			final r = emit(right, scope);
@@ -1035,6 +1043,15 @@ class JsExprEmitter {
 			case _: op;
 		}
 		return "(" + emit(left, scope) + " " + normalized + " " + emit(right, scope) + ")";
+	}
+
+	static function isAssignmentOp(op:String):Bool {
+		return switch (op) {
+			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=" | "??=":
+				true;
+			case _:
+				false;
+		}
 	}
 
 	static function isNullLiteral(expr:HxExpr):Bool {

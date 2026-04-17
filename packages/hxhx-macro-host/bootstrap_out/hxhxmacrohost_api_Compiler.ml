@@ -13,95 +13,326 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacrohost.ap
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.api.Compiler" } : t)
 
-let getDefine = fun key -> try (
+let parseNonNegativeInt = fun raw fallback -> let parsed = Std.parseInt (raw : string) in let tempResult = ref (0 : int) in (
+  ignore (if parsed == HxRuntime.hx_null || (let __nullable_1 = parsed in let __nullable_2 = 0 in if __nullable_1 == HxRuntime.hx_null then false else Obj.obj __nullable_1 < __nullable_2) then let __assign_3 = fallback in (
+    tempResult := __assign_3;
+    __assign_3
+  ) else let __assign_4 = let __nullable_int_5 = parsed in if __nullable_int_5 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_5 in (
+    tempResult := __assign_4;
+    __assign_4
+  ));
+  !tempResult
+)
+
+let defaultPlatformConfig = fun () -> let __anon_6 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_6 "staticTypeSystem" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_6 "sys" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_6 "capturePolicy" (HxEnum.box_if_needed "haxe.macro.CapturePolicy" (Obj.repr (Haxe_macro_PlatformConfig.None))));
+  ignore (HxAnon.set __anon_6 "padNulls" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anon_6 "addFinalReturn" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anon_6 "overloadFunctions" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anon_6 "canSkipNonNullableArgument" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anon_6 "reservedTypePaths" (Obj.repr (let __arr_7 = HxArray.create () in __arr_7)));
+  ignore (HxAnon.set __anon_6 "supportsFunctionEquality" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_6 "usesUtf16" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anon_6 "thisBeforeSuper" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anon_6 "supportsThreads" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_6 "supportsUnicode" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_6 "supportsRestArgs" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_6 "exceptions" (let __anon_8 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_8 "nativeThrows" (Obj.repr (let __arr_9 = HxArray.create () in __arr_9)));
+    ignore (HxAnon.set __anon_8 "nativeCatches" (Obj.repr (let __arr_10 = HxArray.create () in __arr_10)));
+    ignore (HxAnon.set __anon_8 "avoidWrapping" (HxRuntime.box_bool false));
+    ignore (HxAnon.set __anon_8 "wildcardCatch" (Obj.magic (HxRuntime.hx_null)));
+    ignore (HxAnon.set __anon_8 "baseThrow" (Obj.magic (HxRuntime.hx_null)));
+    __anon_8
+  )));
+  ignore (HxAnon.set __anon_6 "scoping" (let __anon_11 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_11 "scope" (HxEnum.box_if_needed "haxe.macro.VarScope" (Obj.repr (Haxe_macro_PlatformConfig.FunctionScope))));
+    ignore (HxAnon.set __anon_11 "flags" (Obj.repr (let __arr_12 = HxArray.create () in __arr_12)));
+    __anon_11
+  )));
+  ignore (HxAnon.set __anon_6 "supportsAtomics" (HxRuntime.box_bool false));
+  __anon_6
+)
+
+let defaultConfiguration = fun () -> let __anon_13 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_13 "version" (Obj.repr 40307));
+  ignore (HxAnon.set __anon_13 "args" (Obj.repr (let __arr_14 = HxArray.create () in __arr_14)));
+  ignore (HxAnon.set __anon_13 "debug" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anon_13 "verbose" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anon_13 "foptimize" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_13 "platformConfig" (defaultPlatformConfig ()));
+  ignore (HxAnon.set __anon_13 "stdPath" (Obj.repr (let __arr_15 = HxArray.create () in __arr_15)));
+  __anon_13
+)
+
+let getDefine = fun key -> try let __fallback_result_19 = (
   ignore (if key == Obj.magic (HxRuntime.hx_null) || HxString.length key = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let payload = Hxhxmacrohost_HostToCompilerRpc.call "compiler.getDefine" (Hxhxmacrohost_Protocol.encodeLen "n" key) in (
+  let payload = (Hxhxmacrohost_HostToCompilerRpc.call ("compiler.getDefine" : string) (Hxhxmacrohost_Protocol.encodeLen ("n" : string) (key : string) : string) : string) in (
     ignore (if payload == Obj.magic (HxRuntime.hx_null) || HxString.length payload = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    let m = Hxhxmacrohost_Protocol.kvParse payload in let defined = HxMap.exists_string m "d" && HxString.equals (HxMap.get_string m "d") "1" in (
+    let m = Hxhxmacrohost_Protocol.kvParse (payload : string) in let defined = HxMap.exists_string m "d" && HxString.equals (HxMap.get_string m "d") "1" in (
       ignore (if not (defined) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      let tempResult = ref (Obj.magic ()) in (
-        ignore (if HxMap.exists_string m "v" then let __assign_1 = HxMap.get_string m "v" in (
-          tempResult := __assign_1;
-          __assign_1
-        ) else let __assign_2 = "" in (
-          tempResult := __assign_2;
-          __assign_2
+      let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+        ignore (if HxMap.exists_string m "v" then let __assign_16 = Obj.magic (HxMap.get_string m "v" : string) in (
+          tempResult := __assign_16;
+          __assign_16
+        ) else let __assign_17 = Obj.magic ("" : string) in (
+          tempResult := __assign_17;
+          __assign_17
         ));
         !tempResult
       )
     )
   )
-) with
-  | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3
+) in Obj.magic __fallback_result_19 with
+  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
 
-let define = fun name value -> try (
+let define = fun name value -> ignore (try (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let tempString = ref "" in (
-    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_4 = "" in (
-      tempString := __assign_4;
-      __assign_4
-    ) else let __assign_5 = value in (
-      tempString := __assign_5;
-      __assign_5
+  let tempString = ref ("" : string) in (
+    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_20 = ("" : string) in (
+      tempString := __assign_20;
+      __assign_20
+    ) else let __assign_21 = (value : string) in (
+      tempString := __assign_21;
+      __assign_21
     ));
-    let tail = (HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "n" name) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "v" (!tempString)) in Hxhxmacrohost_HostToCompilerRpc.call "compiler.define" tail
+    let tail = ((HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("n" : string) (name : string)) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("v" : string) (!tempString : string)) : string) in Hxhxmacrohost_HostToCompilerRpc.call ("compiler.define" : string) (tail : string)
   )
 ) with
-  | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6
+  | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22)
 
-let emitOcamlModule = fun name source -> try (
-  ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let tempString = ref "" in (
-    ignore (if source == Obj.magic (HxRuntime.hx_null) then let __assign_7 = "" in (
-      tempString := __assign_7;
-      __assign_7
-    ) else let __assign_8 = source in (
-      tempString := __assign_8;
-      __assign_8
+let getConfiguration = fun () -> try let __fallback_result_42 = let payload = (Hxhxmacrohost_HostToCompilerRpc.call ("compiler.getConfiguration" : string) ("" : string) : string) in (
+  ignore (if payload == Obj.magic (HxRuntime.hx_null) || HxString.length payload = 0 then raise (HxRuntime.Hx_return (Obj.repr (defaultConfiguration ()))) else ());
+  let parts = Hxhxmacrohost_Protocol.kvParse (payload : string) in let args = Obj.magic (HxArray.create ()) in let tempString = ref ("" : string) in (
+    ignore (if HxMap.exists_string parts "ac" then let __assign_23 = (HxMap.get_string parts "ac" : string) in (
+      tempString := __assign_23;
+      __assign_23
+    ) else let __assign_24 = ("" : string) in (
+      tempString := __assign_24;
+      __assign_24
     ));
-    let tail = (HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "n" name) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "s" (!tempString)) in Hxhxmacrohost_HostToCompilerRpc.call "compiler.emitOcamlModule" tail
+    let argsCount = parseNonNegativeInt (!tempString : string) 0 in (
+      ignore (let _g = ref 0 in let _g1 = argsCount in while !_g < _g1 do ignore (let i = let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
+        ignore (_g := __new_26);
+        __old_25
+      ) in let key = ("a" ^ string_of_int i : string) in if HxMap.exists_string parts key then ignore (HxArray.push args (HxMap.get_string parts key)) else ()) done);
+      let stdPath = Obj.magic (HxArray.create ()) in let tempString1 = ref ("" : string) in (
+        ignore (if HxMap.exists_string parts "sc" then let __assign_27 = (HxMap.get_string parts "sc" : string) in (
+          tempString1 := __assign_27;
+          __assign_27
+        ) else let __assign_28 = ("" : string) in (
+          tempString1 := __assign_28;
+          __assign_28
+        ));
+        let stdCount = parseNonNegativeInt (!tempString1 : string) 0 in (
+          ignore (let _g = ref 0 in let _g1 = stdCount in while !_g < _g1 do ignore (let i = let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
+            ignore (_g := __new_30);
+            __old_29
+          ) in let key = ("s" ^ string_of_int i : string) in if HxMap.exists_string parts key then ignore (HxArray.push stdPath (HxMap.get_string parts key)) else ()) done);
+          let supportsUnicode = not (HxMap.exists_string parts "uni") || HxString.equals (HxMap.get_string parts "uni") "1" in let platformConfig = let __anon_31 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_31 "staticTypeSystem" (HxRuntime.box_bool true));
+            ignore (HxAnon.set __anon_31 "sys" (HxRuntime.box_bool true));
+            ignore (HxAnon.set __anon_31 "capturePolicy" (HxEnum.box_if_needed "haxe.macro.CapturePolicy" (Obj.repr (Haxe_macro_PlatformConfig.None))));
+            ignore (HxAnon.set __anon_31 "padNulls" (HxRuntime.box_bool false));
+            ignore (HxAnon.set __anon_31 "addFinalReturn" (HxRuntime.box_bool false));
+            ignore (HxAnon.set __anon_31 "overloadFunctions" (HxRuntime.box_bool false));
+            ignore (HxAnon.set __anon_31 "canSkipNonNullableArgument" (HxRuntime.box_bool false));
+            ignore (HxAnon.set __anon_31 "reservedTypePaths" (Obj.repr (let __arr_32 = HxArray.create () in __arr_32)));
+            ignore (HxAnon.set __anon_31 "supportsFunctionEquality" (HxRuntime.box_bool true));
+            ignore (HxAnon.set __anon_31 "usesUtf16" (HxRuntime.box_bool false));
+            ignore (HxAnon.set __anon_31 "thisBeforeSuper" (HxRuntime.box_bool false));
+            ignore (HxAnon.set __anon_31 "supportsThreads" (HxRuntime.box_bool true));
+            ignore (HxAnon.set __anon_31 "supportsUnicode" (HxRuntime.box_bool supportsUnicode));
+            ignore (HxAnon.set __anon_31 "supportsRestArgs" (HxRuntime.box_bool true));
+            ignore (HxAnon.set __anon_31 "exceptions" (let __anon_33 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_33 "nativeThrows" (Obj.repr (let __arr_34 = HxArray.create () in __arr_34)));
+              ignore (HxAnon.set __anon_33 "nativeCatches" (Obj.repr (let __arr_35 = HxArray.create () in __arr_35)));
+              ignore (HxAnon.set __anon_33 "avoidWrapping" (HxRuntime.box_bool false));
+              ignore (HxAnon.set __anon_33 "wildcardCatch" (Obj.magic (HxRuntime.hx_null)));
+              ignore (HxAnon.set __anon_33 "baseThrow" (Obj.magic (HxRuntime.hx_null)));
+              __anon_33
+            )));
+            ignore (HxAnon.set __anon_31 "scoping" (let __anon_36 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_36 "scope" (HxEnum.box_if_needed "haxe.macro.VarScope" (Obj.repr (Haxe_macro_PlatformConfig.FunctionScope))));
+              ignore (HxAnon.set __anon_36 "flags" (Obj.repr (let __arr_37 = HxArray.create () in __arr_37)));
+              __anon_36
+            )));
+            ignore (HxAnon.set __anon_31 "supportsAtomics" (HxRuntime.box_bool false));
+            __anon_31
+          ) in let tempString2 = ref ("" : string) in (
+            ignore (if HxMap.exists_string parts "ver" then let __assign_38 = (HxMap.get_string parts "ver" : string) in (
+              tempString2 := __assign_38;
+              __assign_38
+            ) else let __assign_39 = ("" : string) in (
+              tempString2 := __assign_39;
+              __assign_39
+            ));
+            let __anon_40 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_40 "version" (Obj.repr (parseNonNegativeInt (!tempString2 : string) 40307)));
+              ignore (HxAnon.set __anon_40 "args" (Obj.repr args));
+              ignore (HxAnon.set __anon_40 "debug" (HxRuntime.box_bool (HxMap.exists_string parts "dbg" && HxString.equals (HxMap.get_string parts "dbg") "1")));
+              ignore (HxAnon.set __anon_40 "verbose" (HxRuntime.box_bool (HxMap.exists_string parts "vrb" && HxString.equals (HxMap.get_string parts "vrb") "1")));
+              ignore (HxAnon.set __anon_40 "foptimize" (HxRuntime.box_bool (not (HxMap.exists_string parts "opt") || HxString.equals (HxMap.get_string parts "opt") "1")));
+              ignore (HxAnon.set __anon_40 "platformConfig" platformConfig);
+              ignore (HxAnon.set __anon_40 "stdPath" (Obj.repr stdPath));
+              __anon_40
+            )
+          )
+        )
+      )
+    )
+  )
+) in Obj.magic __fallback_result_42 with
+  | HxRuntime.Hx_return __ret_41 -> Obj.magic __ret_41
+
+let emitOcamlModule = fun name source -> ignore (try (
+  ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  let tempString = ref ("" : string) in (
+    ignore (if source == Obj.magic (HxRuntime.hx_null) then let __assign_43 = ("" : string) in (
+      tempString := __assign_43;
+      __assign_43
+    ) else let __assign_44 = (source : string) in (
+      tempString := __assign_44;
+      __assign_44
+    ));
+    let tail = ((HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("n" : string) (name : string)) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("s" : string) (!tempString : string)) : string) in Hxhxmacrohost_HostToCompilerRpc.call ("compiler.emitOcamlModule" : string) (tail : string)
   )
 ) with
-  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
+  | HxRuntime.Hx_return __ret_45 -> Obj.obj __ret_45)
 
-let addClassPath = fun path -> try (
+let addClassPath = fun path -> ignore (try (
   ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let tail = Hxhxmacrohost_Protocol.encodeLen "cp" path in Hxhxmacrohost_HostToCompilerRpc.call "compiler.addClassPath" tail
+  let tail = (Hxhxmacrohost_Protocol.encodeLen ("cp" : string) (path : string) : string) in Hxhxmacrohost_HostToCompilerRpc.call ("compiler.addClassPath" : string) (tail : string)
 ) with
-  | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
+  | HxRuntime.Hx_return __ret_46 -> Obj.obj __ret_46)
 
-let includeModule = fun modulePath -> try (
+let addGlobalMetadata = fun pathFilter metadata recursive toTypes toFields -> let recursive = if Obj.repr recursive == HxRuntime.hx_null then true else recursive in let toTypes = if Obj.repr toTypes == HxRuntime.hx_null then true else toTypes in let toFields = if Obj.repr toFields == HxRuntime.hx_null then false else toFields in ignore (try (
+  ignore (if metadata == Obj.magic (HxRuntime.hx_null) || HxString.length metadata = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  let tempString = ref ("" : string) in (
+    ignore (if pathFilter == Obj.magic (HxRuntime.hx_null) then let __assign_47 = ("" : string) in (
+      tempString := __assign_47;
+      __assign_47
+    ) else let __assign_48 = (pathFilter : string) in (
+      tempString := __assign_48;
+      __assign_48
+    ));
+    let tempString1 = ref ("" : string) in (
+      ignore (if recursive then let __assign_49 = ("1" : string) in (
+        tempString1 := __assign_49;
+        __assign_49
+      ) else let __assign_50 = ("0" : string) in (
+        tempString1 := __assign_50;
+        __assign_50
+      ));
+      let tempString2 = ref ("" : string) in (
+        ignore (if toTypes then let __assign_51 = ("1" : string) in (
+          tempString2 := __assign_51;
+          __assign_51
+        ) else let __assign_52 = ("0" : string) in (
+          tempString2 := __assign_52;
+          __assign_52
+        ));
+        let tempString3 = ref ("" : string) in (
+          ignore (if toFields then let __assign_53 = ("1" : string) in (
+            tempString3 := __assign_53;
+            __assign_53
+          ) else let __assign_54 = ("0" : string) in (
+            tempString3 := __assign_54;
+            __assign_54
+          ));
+          let tail = ((((((((HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("p" : string) (!tempString : string)) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("m" : string) (metadata : string))) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("r" : string) (!tempString1 : string))) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("t" : string) (!tempString2 : string))) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("f" : string) (!tempString3 : string)) : string) in Hxhxmacrohost_HostToCompilerRpc.call ("compiler.addGlobalMetadata" : string) (tail : string)
+        )
+      )
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_55 -> Obj.obj __ret_55)
+
+let registerCustomMetadata = fun metadata doc source -> ignore (try (
+  ignore (if metadata == Obj.magic (HxRuntime.hx_null) || HxString.length metadata = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  let tempString = ref ("" : string) in (
+    ignore (if doc == Obj.magic (HxRuntime.hx_null) then let __assign_56 = ("" : string) in (
+      tempString := __assign_56;
+      __assign_56
+    ) else let __assign_57 = (doc : string) in (
+      tempString := __assign_57;
+      __assign_57
+    ));
+    let tempString1 = ref ("" : string) in (
+      ignore (if source == Obj.magic (HxRuntime.hx_null) then let __assign_58 = ("" : string) in (
+        tempString1 := __assign_58;
+        __assign_58
+      ) else let __assign_59 = (source : string) in (
+        tempString1 := __assign_59;
+        __assign_59
+      ));
+      let tail = ((((HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("m" : string) (metadata : string)) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("d" : string) (!tempString : string))) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("s" : string) (!tempString1 : string)) : string) in Hxhxmacrohost_HostToCompilerRpc.call ("compiler.registerCustomMetadata" : string) (tail : string)
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_60 -> Obj.obj __ret_60)
+
+let listAppliedTypeMetadata = fun typePath -> try let __fallback_result_70 = let out = Obj.magic (HxArray.create ()) in (
+  ignore (if typePath == Obj.magic (HxRuntime.hx_null) || HxString.length typePath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
+  let payload = (Hxhxmacrohost_HostToCompilerRpc.call ("compiler.listAppliedTypeMetadata" : string) (Hxhxmacrohost_Protocol.encodeLen ("p" : string) (typePath : string) : string) : string) in (
+    ignore (if payload == Obj.magic (HxRuntime.hx_null) || HxString.length payload = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
+    let parts = Hxhxmacrohost_Protocol.kvParse (payload : string) in let tempString = ref ("" : string) in (
+      ignore (if HxMap.exists_string parts "c" then let __assign_61 = (HxMap.get_string parts "c" : string) in (
+        tempString := __assign_61;
+        __assign_61
+      ) else let __assign_62 = ("0" : string) in (
+        tempString := __assign_62;
+        __assign_62
+      ));
+      let count = Std.parseInt (!tempString : string) in (
+        ignore (if count == HxRuntime.hx_null || (let __nullable_63 = count in let __nullable_64 = 0 in if __nullable_63 == HxRuntime.hx_null then false else Obj.obj __nullable_63 <= __nullable_64) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
+        let _g = ref 0 in let _g1 = count in (
+          ignore (while let __nullable_65 = !_g in let __nullable_66 = _g1 in if __nullable_66 == HxRuntime.hx_null then false else __nullable_65 < Obj.obj __nullable_66 do ignore (let i = let __old_67 = !_g in let __new_68 = HxInt.add __old_67 1 in (
+            ignore (_g := __new_68);
+            __old_67
+          ) in let key = ("m" ^ string_of_int i : string) in if HxMap.exists_string parts key then ignore (HxArray.push out (HxMap.get_string parts key)) else ()) done);
+          out
+        )
+      )
+    )
+  )
+) in Obj.magic __fallback_result_70 with
+  | HxRuntime.Hx_return __ret_69 -> Obj.obj __ret_69
+
+let includeModule = fun modulePath -> ignore (try (
   ignore (if modulePath == Obj.magic (HxRuntime.hx_null) || HxString.length modulePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let tail = Hxhxmacrohost_Protocol.encodeLen "m" modulePath in Hxhxmacrohost_HostToCompilerRpc.call "compiler.includeModule" tail
+  let tail = (Hxhxmacrohost_Protocol.encodeLen ("m" : string) (modulePath : string) : string) in Hxhxmacrohost_HostToCompilerRpc.call ("compiler.includeModule" : string) (tail : string)
 ) with
-  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
+  | HxRuntime.Hx_return __ret_71 -> Obj.obj __ret_71)
 
-let emitHxModule = fun name source -> try (
+let emitHxModule = fun name source -> ignore (try (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let tempString = ref "" in (
-    ignore (if source == Obj.magic (HxRuntime.hx_null) then let __assign_12 = "" in (
-      tempString := __assign_12;
-      __assign_12
-    ) else let __assign_13 = source in (
-      tempString := __assign_13;
-      __assign_13
+  let tempString = ref ("" : string) in (
+    ignore (if source == Obj.magic (HxRuntime.hx_null) then let __assign_72 = ("" : string) in (
+      tempString := __assign_72;
+      __assign_72
+    ) else let __assign_73 = (source : string) in (
+      tempString := __assign_73;
+      __assign_73
     ));
-    let tail = (HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "n" name) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "s" (!tempString)) in Hxhxmacrohost_HostToCompilerRpc.call "compiler.emitHxModule" tail
+    let tail = ((HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("n" : string) (name : string)) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("s" : string) (!tempString : string)) : string) in Hxhxmacrohost_HostToCompilerRpc.call ("compiler.emitHxModule" : string) (tail : string)
   )
 ) with
-  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
+  | HxRuntime.Hx_return __ret_74 -> Obj.obj __ret_74)
 
-let emitBuildFields = fun modulePath membersSource -> try (
+let emitBuildFields = fun modulePath membersSource -> ignore (try (
   ignore (if modulePath == Obj.magic (HxRuntime.hx_null) || HxString.length modulePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let tempString = ref "" in (
-    ignore (if membersSource == Obj.magic (HxRuntime.hx_null) then let __assign_15 = "" in (
-      tempString := __assign_15;
-      __assign_15
-    ) else let __assign_16 = membersSource in (
-      tempString := __assign_16;
-      __assign_16
+  let tempString = ref ("" : string) in (
+    ignore (if membersSource == Obj.magic (HxRuntime.hx_null) then let __assign_75 = ("" : string) in (
+      tempString := __assign_75;
+      __assign_75
+    ) else let __assign_76 = (membersSource : string) in (
+      tempString := __assign_76;
+      __assign_76
     ));
-    let tail = (HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "m" modulePath) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "s" (!tempString)) in Hxhxmacrohost_HostToCompilerRpc.call "compiler.emitBuildFields" tail
+    let tail = ((HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("m" : string) (modulePath : string)) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("s" : string) (!tempString : string)) : string) in Hxhxmacrohost_HostToCompilerRpc.call ("compiler.emitBuildFields" : string) (tail : string)
   )
 ) with
-  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
+  | HxRuntime.Hx_return __ret_77 -> Obj.obj __ret_77)

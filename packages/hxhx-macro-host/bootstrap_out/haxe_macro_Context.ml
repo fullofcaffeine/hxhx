@@ -20,64 +20,155 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.macro.Conte
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.macro.Context" } : t)
 
-let defined = fun key -> Hxhxmacrohost_api_Context.defined key
+let defined = fun key -> Hxhxmacrohost_api_Context.defined (key : string)
 
-let definedValue = fun key -> Hxhxmacrohost_api_Context.definedValue key
+let definedValue = fun key -> Hxhxmacrohost_api_Context.definedValue (key : string)
 
 let getDefines = fun () -> Hxhxmacrohost_api_Context.getDefines ()
 
 let getBuildFields = fun () -> Hxhxmacrohost_api_Context.getBuildFields ()
 
-let error = fun msg pos depth -> (
+let defineType = fun t moduleDependency -> ignore (Hxhxmacrohost_api_Context.defineType t (moduleDependency : string))
+
+let defineModule = fun modulePath types imports usings -> ignore (Hxhxmacrohost_api_Context.defineModule (modulePath : string) (Obj.magic types) (Obj.magic imports) (Obj.magic usings))
+
+let error = fun msg pos depth -> let depth = if depth == HxRuntime.hx_null then Obj.repr 0 else depth in (
   ignore (if pos != Obj.magic (HxRuntime.hx_null) then ignore () else ());
   ignore (if not (let __nullable_1 = depth in if __nullable_1 == HxRuntime.hx_null then false else Obj.obj __nullable_1 = 0) then ignore () else ());
-  Hxhxmacrohost_MacroError.raise msg (let __anon_2 = HxAnon.create () in (
+  Hxhxmacrohost_MacroError.raise (msg : string) (let __anon_2 = HxAnon.create () in (
     ignore (HxAnon.set __anon_2 "fileName" (Obj.repr "overrides/haxe/macro/Context.hx"));
-    ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 313));
+    ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 330));
     ignore (HxAnon.set __anon_2 "className" (Obj.repr "haxe.macro.Context"));
     ignore (HxAnon.set __anon_2 "methodName" (Obj.repr "error"));
     __anon_2
   ))
 )
 
-let fatalError = fun msg pos depth -> (
+let fatalError = fun msg pos depth -> let depth = if depth == HxRuntime.hx_null then Obj.repr 0 else depth in (
   ignore (if pos != Obj.magic (HxRuntime.hx_null) then ignore () else ());
   ignore (if not (let __nullable_3 = depth in if __nullable_3 == HxRuntime.hx_null then false else Obj.obj __nullable_3 = 0) then ignore () else ());
-  Hxhxmacrohost_MacroError.raise msg (let __anon_4 = HxAnon.create () in (
+  Hxhxmacrohost_MacroError.raise (msg : string) (let __anon_4 = HxAnon.create () in (
     ignore (HxAnon.set __anon_4 "fileName" (Obj.repr "overrides/haxe/macro/Context.hx"));
-    ignore (HxAnon.set __anon_4 "lineNumber" (Obj.repr 319));
+    ignore (HxAnon.set __anon_4 "lineNumber" (Obj.repr 336));
     ignore (HxAnon.set __anon_4 "className" (Obj.repr "haxe.macro.Context"));
     ignore (HxAnon.set __anon_4 "methodName" (Obj.repr "fatalError"));
     __anon_4
   ))
 )
 
-let warning = fun msg pos depth -> (
-  ignore (if msg != Obj.magic (HxRuntime.hx_null) then ignore () else ());
-  ignore (if pos != Obj.magic (HxRuntime.hx_null) then ignore () else ());
-  if not (let __nullable_5 = depth in if __nullable_5 == HxRuntime.hx_null then false else Obj.obj __nullable_5 = 0) then ignore () else ()
+let warning = fun msg pos depth -> let depth = if depth == HxRuntime.hx_null then Obj.repr 0 else depth in ignore (Hxhxmacrohost_api_Context.warning (msg : string) pos depth)
+
+let info = fun msg pos depth -> let depth = if depth == HxRuntime.hx_null then Obj.repr 0 else depth in ignore (Hxhxmacrohost_api_Context.info (msg : string) pos depth)
+
+let getDisplayMode = fun () -> Hxhxmacrohost_api_Context.getDisplayMode ()
+
+let containsDisplayPosition = fun pos -> Hxhxmacrohost_api_Context.containsDisplayPosition pos
+
+let currentPos = fun () -> Hxhxmacrohost_api_Context.currentPos ()
+
+let getExpectedType = fun () -> Hxhxmacrohost_api_Context.getExpectedType ()
+
+let getCallArguments = fun () -> Hxhxmacrohost_api_Context.getCallArguments ()
+
+let getLocalClass = fun () -> Hxhxmacrohost_api_RuntimeMacroTypes.classRefOf (Obj.obj (HxEnum.unbox_or_obj "haxe.macro.Type" (Hxhxmacrohost_api_Context.getLocalType ())))
+
+let getLocalModule = fun () -> Hxhxmacrohost_api_Context.getLocalModule ()
+
+let getLocalType = fun () -> Hxhxmacrohost_api_Context.getLocalType ()
+
+let getLocalMethod = fun () -> Hxhxmacrohost_api_Context.getLocalMethod ()
+
+let getLocalUsing = fun () -> Hxhxmacrohost_api_Context.getLocalUsing ()
+
+let getLocalImports = fun () -> Hxhxmacrohost_api_Context.getLocalImports ()
+
+let getLocalTVars = fun () -> Hxhxmacrohost_api_Context.getLocalTVars ()
+
+let getModule = fun name -> Hxhxmacrohost_api_Context.getModule (name : string)
+
+let parse = fun expr pos -> Hxhxmacrohost_api_Context.parse (expr : string) pos
+
+let parseInlineString = fun expr pos -> Hxhxmacrohost_api_Context.parseInlineString (expr : string) pos
+
+let makeExpr = fun v pos -> Hxhxmacrohost_api_Context.makeExpr v pos
+
+let signature = fun v -> Hxhxmacrohost_api_Context.signature v
+
+let resolvePath = fun file -> Hxhxmacrohost_api_Context.resolvePath (file : string)
+
+let getClassPath = fun () -> Hxhxmacrohost_api_Context.getClassPath ()
+
+let getPosInfos = fun p -> Hxhxmacrohost_api_Context.getPosInfos p
+
+let makePosition = fun inf -> Hxhxmacrohost_api_Context.makePosition inf
+
+let getType = fun name -> Hxhxmacrohost_api_Context.getType (name : string)
+
+let typeof = fun e -> Hxhxmacrohost_api_Context.typeof e
+
+let typeExpr = fun e -> Hxhxmacrohost_api_Context.typeExpr e
+
+let getMainExpr = fun () -> Hxhxmacrohost_api_Context.getMainExpr ()
+
+let getTypedExpr = fun t -> Hxhxmacrohost_api_Context.getTypedExpr t
+
+let storeTypedExpr = fun t -> Hxhxmacrohost_api_Context.storeTypedExpr t
+
+let storeExpr = fun e -> Hxhxmacrohost_api_Context.storeExpr e
+
+let registerModuleDependency = fun modulePath externFile -> ignore (Hxhxmacrohost_api_Context.registerModuleDependency (modulePath : string) (externFile : string))
+
+let resolveType = fun t p -> Hxhxmacrohost_api_Context.resolveType (Obj.magic t) p
+
+let toComplexType = fun t -> Hxhxmacrohost_api_Context.toComplexType (Obj.magic t)
+
+let unify = fun t1 t2 -> Hxhxmacrohost_api_Context.unify (Obj.magic t1) (Obj.magic t2)
+
+let follow = fun t once -> let once = if Obj.repr once == HxRuntime.hx_null then false else once in Hxhxmacrohost_api_Context.follow (Obj.magic t) once
+
+let followWithAbstracts = fun t once -> let once = if Obj.repr once == HxRuntime.hx_null then false else once in Hxhxmacrohost_api_Context.followWithAbstracts (Obj.magic t) once
+
+let onGenerate = fun callback persistent -> let persistent = if Obj.repr persistent == HxRuntime.hx_null then true else persistent in ignore (Hxhxmacrohost_api_Context.onGenerate callback persistent)
+
+let onAfterGenerate = fun callback -> ignore (Hxhxmacrohost_api_Context.onAfterGenerate callback)
+
+let onAfterTyping = fun callback -> ignore (Hxhxmacrohost_api_Context.onAfterTyping callback)
+
+let onAfterInitMacros = fun callback -> ignore (Hxhxmacrohost_api_Context.onAfterInitMacros callback)
+
+let onTypeNotFound = fun callback -> ignore (Hxhxmacrohost_api_Context.onTypeNotFound callback)
+
+let getMessages = fun () -> let snapshots = Obj.magic (Hxhxmacrohost_api_Context.getMessages ()) in let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+  ignore (while !_g < HxArray.length snapshots do ignore (let snapshot = HxArray.get (Obj.magic snapshots) (!_g) in (
+    ignore (let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
+      ignore (_g := __new_6);
+      __new_6
+    ));
+    let _g2 = (Obj.obj (HxAnon.get snapshot "kind") : string) in match _g2 with
+      | "info" -> ignore (HxArray.push out (Info ((Obj.obj (HxAnon.get snapshot "msg") : string), Obj.obj (HxAnon.get snapshot "pos"))))
+      | "warning" -> ignore (HxArray.push out (Warning ((Obj.obj (HxAnon.get snapshot "msg") : string), Obj.obj (HxAnon.get snapshot "pos"))))
+      | _ -> ignore ()
+  )) done);
+  out
 )
 
-let info = fun msg pos depth -> (
-  ignore (if msg != Obj.magic (HxRuntime.hx_null) then ignore () else ());
-  ignore (if pos != Obj.magic (HxRuntime.hx_null) then ignore () else ());
-  if not (let __nullable_6 = depth in if __nullable_6 == HxRuntime.hx_null then false else Obj.obj __nullable_6 = 0) then ignore () else ()
-)
+let filterMessages = fun predicate -> ignore (try (
+  ignore (if predicate == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  Hxhxmacrohost_api_Context.filterMessages (fun snapshot -> let tempMessage = ref (Obj.magic (HxRuntime.hx_null) : message) in (
+    ignore (let _g = (Obj.obj (HxAnon.get snapshot "kind") : string) in if HxString.equals _g "warning" then let __assign_7 = Obj.magic (Warning ((Obj.obj (HxAnon.get snapshot "msg") : string), Obj.obj (HxAnon.get snapshot "pos"))) in (
+      tempMessage := __assign_7;
+      __assign_7
+    ) else let __assign_8 = Obj.magic (Info ((Obj.obj (HxAnon.get snapshot "msg") : string), Obj.obj (HxAnon.get snapshot "pos"))) in (
+      tempMessage := __assign_8;
+      __assign_8
+    ));
+    let message = Obj.magic (!tempMessage) in predicate (Obj.magic message)
+  ))
+) with
+  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9)
 
-let currentPos = fun () -> Obj.magic (HxRuntime.hx_null)
+let getResources = fun () -> Hxhxmacrohost_api_Context.getResources ()
 
-let getType = fun name -> (
-  ignore (if name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 then ignore () else ());
-  Haxe_macro_Type.TDynamic (Obj.obj (HxEnum.unbox_or_obj "haxe.macro.Type" (Obj.magic (HxRuntime.hx_null))))
-)
+let addResource = fun name data -> ignore (Hxhxmacrohost_api_Context.addResource (name : string) (Obj.magic data))
 
-let onGenerate = fun callback persistent -> Hxhxmacrohost_api_Context.onGenerate callback persistent
-
-let onAfterGenerate = fun callback -> Hxhxmacrohost_api_Context.onAfterGenerate callback
-
-let onAfterTyping = fun callback -> Hxhxmacrohost_api_Context.onAfterTyping callback
-
-let getMessages = fun () -> let __arr_7 = HxArray.create () in __arr_7
-
-let filterMessages = fun predicate -> try if predicate == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else () with
-  | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
+let timer = fun id -> Hxhxmacrohost_api_Context.timer (id : string)

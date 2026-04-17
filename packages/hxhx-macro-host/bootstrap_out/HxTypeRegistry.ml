@@ -3,16 +3,31 @@
 (* Type registry used by `Type.resolveClass/resolveEnum`, `Type.get*Fields`, `Type.createInstance`, and typed catches. *)
 
 let init () : unit =
+  ignore (HxType.class_ "HxClassDecl");
+  ignore (HxType.class_ "HxFieldDecl");
+  ignore (HxType.class_ "HxFunctionArg");
+  ignore (HxType.class_ "HxFunctionDecl");
+  ignore (HxType.class_ "HxLexer");
+  ignore (HxType.class_ "HxModuleDecl");
+  ignore (HxType.class_ "HxParseError");
+  ignore (HxType.class_ "HxParser");
+  ignore (HxType.class_ "HxParserSourceNormalize");
+  ignore (HxType.class_ "HxPos");
+  ignore (HxType.class_ "HxToken");
   ignore (HxType.class_ "Macro");
   ignore (HxType.class_ "StringBuf");
+  ignore (HxType.class_ "StringTools");
   ignore (HxType.class_ "haxe.Exception");
   ignore (HxType.class_ "haxe.NativeStackTrace");
+  ignore (HxType.class_ "haxe.ValueException");
+  ignore (HxType.class_ "haxe._CallStack.CallStack_Impl_");
   ignore (HxType.class_ "haxe.io.BytesBuffer");
   ignore (HxType.class_ "haxe.io.FPHelper");
   ignore (HxType.class_ "haxe.io.Input");
   ignore (HxType.class_ "haxe.io.Output");
   ignore (HxType.class_ "haxe.macro.Compiler");
   ignore (HxType.class_ "haxe.macro.Context");
+  ignore (HxType.class_ "haxe.macro.TypeTools");
   ignore (HxType.class_ "hxhxmacrohost.BuildMacroSupport");
   ignore (HxType.class_ "hxhxmacrohost.BuiltinMacros");
   ignore (HxType.class_ "hxhxmacrohost.EntryPoints");
@@ -21,9 +36,18 @@ let init () : unit =
   ignore (HxType.class_ "hxhxmacrohost.MacroError");
   ignore (HxType.class_ "hxhxmacrohost.MacroRuntime");
   ignore (HxType.class_ "hxhxmacrohost.Main");
+  ignore (HxType.class_ "hxhxmacrohost.NativeMacroModuleAbi");
+  ignore (HxType.class_ "hxhxmacrohost.NativeMacroModuleDynlink");
+  ignore (HxType.class_ "hxhxmacrohost.NativeMacroModuleHost");
+  ignore (HxType.class_ "hxhxmacrohost.NativeMacroModuleHostAbi");
+  ignore (HxType.class_ "hxhxmacrohost.OcamlInjection");
   ignore (HxType.class_ "hxhxmacrohost.Protocol");
   ignore (HxType.class_ "hxhxmacrohost.api.Compiler");
   ignore (HxType.class_ "hxhxmacrohost.api.Context");
+  ignore (HxType.class_ "hxhxmacrohost.api.RuntimeMacroExprs");
+  ignore (HxType.class_ "hxhxmacrohost.api.RuntimeMacroTypeDefinitions");
+  ignore (HxType.class_ "hxhxmacrohost.api.RuntimeMacroTypes");
+  ignore (HxType.class_ "hxhxmacrohost.api.RuntimeTypedExprs");
   ignore (HxType.class_ "hxhxmacros.ArgsMacros");
   ignore (HxType.class_ "hxhxmacros.BuildFieldMacros");
   ignore (HxType.class_ "hxhxmacros.ExprMacroShim");
@@ -36,10 +60,584 @@ let init () : unit =
   ignore (HxType.class_ "sys.io.Stdio");
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioInput");
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioOutput");
+  ignore (HxType.enum_ "HxDefaultValue");
+  ignore (HxType.enum_ "HxExpr");
+  ignore (HxType.enum_ "HxKeyword");
+  ignore (HxType.enum_ "HxStmt");
+  ignore (HxType.enum_ "HxSwitchPattern");
+  ignore (HxType.enum_ "HxTokenKind");
+  ignore (HxType.enum_ "HxVisibility");
+  ignore (HxType.enum_ "haxe.StackItem");
   ignore (HxType.enum_ "haxe.macro.Message");
   ignore (HxType.enum_ "haxe.macro.NullSafetyMode");
+  HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
+  HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "EMacroExpr"; "EMacroType"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported" ];
+  HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KInline"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KIn"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
+  HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SForKeyValue"; "SWhile"; "SDoWhile"; "SSwitch"; "STry"; "SBreak"; "SContinue"; "SThrow"; "SReturnVoid"; "SReturn"; "SExpr" ];
+  HxType.register_enum_ctors "HxSwitchPattern" [ "PNull"; "PWildcard"; "PBool"; "PString"; "PInt"; "PEnumValue"; "PEnumExtract"; "PObject"; "PCapture"; "PArray"; "PExtractor"; "PLengthGuard"; "PStartsWithGuard"; "PIntEqualsGuard"; "PUnsupportedGuard"; "PBind"; "POr" ];
+  HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TRegex"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
+  HxType.register_enum_ctors "HxVisibility" [ "Public"; "Private" ];
+  HxType.register_enum_ctors "haxe.StackItem" [ "CFunction"; "Module"; "FilePos"; "Method"; "LocalFunction" ];
   HxType.register_enum_ctors "haxe.macro.Message" [ "Info"; "Warning" ];
   HxType.register_enum_ctors "haxe.macro.NullSafetyMode" [ "Loose"; "Strict"; "StrictThreaded" ];
+  HxType.register_enum_ctor "HxDefaultValue" "NoDefault" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxDefaultValue.NoDefault)
+  );
+  HxType.register_enum_ctor "HxDefaultValue" "Default" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxDefaultValue.Default" in
+    Obj.repr (HxDefaultValue.Default a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "ENull" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxExpr.ENull)
+  );
+  HxType.register_enum_ctor "HxExpr" "EBool" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxExpr.EBool" in
+    Obj.repr (HxExpr.EBool a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "EString" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxExpr.EString" in
+    Obj.repr (HxExpr.EString a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "EInt" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxExpr.EInt" in
+    Obj.repr (HxExpr.EInt a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "EFloat" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxExpr.EFloat" in
+    Obj.repr (HxExpr.EFloat a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "EEnumValue" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxExpr.EEnumValue" in
+    Obj.repr (HxExpr.EEnumValue a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "EThis" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxExpr.EThis)
+  );
+  HxType.register_enum_ctor "HxExpr" "ESuper" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxExpr.ESuper)
+  );
+  HxType.register_enum_ctor "HxExpr" "EIdent" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxExpr.EIdent" in
+    Obj.repr (HxExpr.EIdent a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "EField" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'obj' for HxExpr.EField" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'field' for HxExpr.EField" in
+    Obj.repr (HxExpr.EField (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "ECall" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'callee' for HxExpr.ECall" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'args' for HxExpr.ECall" in
+    Obj.repr (HxExpr.ECall (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "EMacroExpr" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxExpr.EMacroExpr" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'wrappers' for HxExpr.EMacroExpr" in
+    Obj.repr (HxExpr.EMacroExpr (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "EMacroType" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'typeText' for HxExpr.EMacroType" in
+    Obj.repr (HxExpr.EMacroType a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "ELambda" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'args' for HxExpr.ELambda" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'body' for HxExpr.ELambda" in
+    Obj.repr (HxExpr.ELambda (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "ETryCatchRaw" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'raw' for HxExpr.ETryCatchRaw" in
+    Obj.repr (HxExpr.ETryCatchRaw a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "ESwitchRaw" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'raw' for HxExpr.ESwitchRaw" in
+    Obj.repr (HxExpr.ESwitchRaw a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "ESwitch" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'scrutinee' for HxExpr.ESwitch" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'patterns' for HxExpr.ESwitch" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'exprs' for HxExpr.ESwitch" in
+    Obj.repr (HxExpr.ESwitch (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxExpr" "ENew" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'typePath' for HxExpr.ENew" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'args' for HxExpr.ENew" in
+    Obj.repr (HxExpr.ENew (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "EUnop" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'op' for HxExpr.EUnop" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxExpr.EUnop" in
+    Obj.repr (HxExpr.EUnop (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "EBinop" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'op' for HxExpr.EBinop" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'left' for HxExpr.EBinop" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'right' for HxExpr.EBinop" in
+    Obj.repr (HxExpr.EBinop (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxExpr" "ETernary" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'cond' for HxExpr.ETernary" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'thenExpr' for HxExpr.ETernary" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'elseExpr' for HxExpr.ETernary" in
+    Obj.repr (HxExpr.ETernary (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxExpr" "EAnon" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'fieldNames' for HxExpr.EAnon" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'fieldValues' for HxExpr.EAnon" in
+    Obj.repr (HxExpr.EAnon (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "EArrayComprehension" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxExpr.EArrayComprehension" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'iterable' for HxExpr.EArrayComprehension" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'yieldExpr' for HxExpr.EArrayComprehension" in
+    Obj.repr (HxExpr.EArrayComprehension (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxExpr" "EArrayDecl" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'values' for HxExpr.EArrayDecl" in
+    Obj.repr (HxExpr.EArrayDecl a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "EArrayAccess" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'array' for HxExpr.EArrayAccess" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'index' for HxExpr.EArrayAccess" in
+    Obj.repr (HxExpr.EArrayAccess (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "ERange" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'start' for HxExpr.ERange" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'end' for HxExpr.ERange" in
+    Obj.repr (HxExpr.ERange (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "ECast" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxExpr.ECast" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'typeHint' for HxExpr.ECast" in
+    Obj.repr (HxExpr.ECast (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "EUntyped" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxExpr.EUntyped" in
+    Obj.repr (HxExpr.EUntyped a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "EUnsupported" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'raw' for HxExpr.EUnsupported" in
+    Obj.repr (HxExpr.EUnsupported a0)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KPackage" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KPackage)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KImport" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KImport)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KUsing" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KUsing)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KAs" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KAs)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KClass" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KClass)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KPublic" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KPublic)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KPrivate" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KPrivate)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KStatic" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KStatic)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KInline" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KInline)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KFunction" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KFunction)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KReturn" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KReturn)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KIf" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KIf)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KElse" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KElse)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KSwitch" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KSwitch)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KCase" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KCase)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KDefault" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KDefault)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KTry" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KTry)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KCatch" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KCatch)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KThrow" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KThrow)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KWhile" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KWhile)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KDo" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KDo)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KFor" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KFor)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KIn" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KIn)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KBreak" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KBreak)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KContinue" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KContinue)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KUntyped" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KUntyped)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KCast" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KCast)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KVar" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KVar)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KFinal" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KFinal)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KNew" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KNew)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KThis" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KThis)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KSuper" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KSuper)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KTrue" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KTrue)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KFalse" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KFalse)
+  );
+  HxType.register_enum_ctor "HxKeyword" "KNull" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KNull)
+  );
+  HxType.register_enum_ctor "HxStmt" "SBlock" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'stmts' for HxStmt.SBlock" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SBlock" in
+    Obj.repr (HxStmt.SBlock (a0, a1))
+  );
+  HxType.register_enum_ctor "HxStmt" "SVar" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxStmt.SVar" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'typeHint' for HxStmt.SVar" in
+    let a2 = if len > 2 then (HxArray.get args 2) else failwith "Type.createEnum: missing ctor arg 'init' for HxStmt.SVar" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SVar" in
+    Obj.repr (HxStmt.SVar (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "HxStmt" "SIf" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'cond' for HxStmt.SIf" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'thenBranch' for HxStmt.SIf" in
+    let a2 = if len > 2 then (HxArray.get args 2) else failwith "Type.createEnum: missing ctor arg 'elseBranch' for HxStmt.SIf" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SIf" in
+    Obj.repr (HxStmt.SIf (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "HxStmt" "SForIn" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxStmt.SForIn" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'iterable' for HxStmt.SForIn" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'body' for HxStmt.SForIn" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SForIn" in
+    Obj.repr (HxStmt.SForIn (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "HxStmt" "SForKeyValue" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'keyName' for HxStmt.SForKeyValue" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'valueName' for HxStmt.SForKeyValue" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'iterable' for HxStmt.SForKeyValue" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'body' for HxStmt.SForKeyValue" in
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SForKeyValue" in
+    Obj.repr (HxStmt.SForKeyValue (a0, a1, a2, a3, a4))
+  );
+  HxType.register_enum_ctor "HxStmt" "SWhile" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'cond' for HxStmt.SWhile" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'body' for HxStmt.SWhile" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SWhile" in
+    Obj.repr (HxStmt.SWhile (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxStmt" "SDoWhile" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'body' for HxStmt.SDoWhile" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'cond' for HxStmt.SDoWhile" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SDoWhile" in
+    Obj.repr (HxStmt.SDoWhile (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxStmt" "SSwitch" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'scrutinee' for HxStmt.SSwitch" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'patterns' for HxStmt.SSwitch" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'bodies' for HxStmt.SSwitch" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SSwitch" in
+    Obj.repr (HxStmt.SSwitch (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "HxStmt" "STry" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'tryBody' for HxStmt.STry" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'catches' for HxStmt.STry" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.STry" in
+    Obj.repr (HxStmt.STry (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxStmt" "SBreak" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SBreak" in
+    Obj.repr (HxStmt.SBreak a0)
+  );
+  HxType.register_enum_ctor "HxStmt" "SContinue" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SContinue" in
+    Obj.repr (HxStmt.SContinue a0)
+  );
+  HxType.register_enum_ctor "HxStmt" "SThrow" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxStmt.SThrow" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SThrow" in
+    Obj.repr (HxStmt.SThrow (a0, a1))
+  );
+  HxType.register_enum_ctor "HxStmt" "SReturnVoid" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SReturnVoid" in
+    Obj.repr (HxStmt.SReturnVoid a0)
+  );
+  HxType.register_enum_ctor "HxStmt" "SReturn" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxStmt.SReturn" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SReturn" in
+    Obj.repr (HxStmt.SReturn (a0, a1))
+  );
+  HxType.register_enum_ctor "HxStmt" "SExpr" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxStmt.SExpr" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SExpr" in
+    Obj.repr (HxStmt.SExpr (a0, a1))
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PNull" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxSwitchPattern.PNull)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PWildcard" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxSwitchPattern.PWildcard)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PBool" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxSwitchPattern.PBool" in
+    Obj.repr (HxSwitchPattern.PBool a0)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PString" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxSwitchPattern.PString" in
+    Obj.repr (HxSwitchPattern.PString a0)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PInt" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxSwitchPattern.PInt" in
+    Obj.repr (HxSwitchPattern.PInt a0)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PEnumValue" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxSwitchPattern.PEnumValue" in
+    Obj.repr (HxSwitchPattern.PEnumValue a0)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PEnumExtract" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxSwitchPattern.PEnumExtract" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'args' for HxSwitchPattern.PEnumExtract" in
+    Obj.repr (HxSwitchPattern.PEnumExtract (a0, a1))
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PObject" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'fieldNames' for HxSwitchPattern.PObject" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'fieldPatterns' for HxSwitchPattern.PObject" in
+    Obj.repr (HxSwitchPattern.PObject (a0, a1))
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PCapture" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxSwitchPattern.PCapture" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'pattern' for HxSwitchPattern.PCapture" in
+    Obj.repr (HxSwitchPattern.PCapture (a0, a1))
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PArray" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'items' for HxSwitchPattern.PArray" in
+    Obj.repr (HxSwitchPattern.PArray a0)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PExtractor" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'extractorText' for HxSwitchPattern.PExtractor" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'resultPattern' for HxSwitchPattern.PExtractor" in
+    Obj.repr (HxSwitchPattern.PExtractor (a0, a1))
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PLengthGuard" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pattern' for HxSwitchPattern.PLengthGuard" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'bindingName' for HxSwitchPattern.PLengthGuard" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'length' for HxSwitchPattern.PLengthGuard" in
+    Obj.repr (HxSwitchPattern.PLengthGuard (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PStartsWithGuard" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pattern' for HxSwitchPattern.PStartsWithGuard" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'bindingName' for HxSwitchPattern.PStartsWithGuard" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'prefix' for HxSwitchPattern.PStartsWithGuard" in
+    Obj.repr (HxSwitchPattern.PStartsWithGuard (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PIntEqualsGuard" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pattern' for HxSwitchPattern.PIntEqualsGuard" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'bindingName' for HxSwitchPattern.PIntEqualsGuard" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'value' for HxSwitchPattern.PIntEqualsGuard" in
+    Obj.repr (HxSwitchPattern.PIntEqualsGuard (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PUnsupportedGuard" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pattern' for HxSwitchPattern.PUnsupportedGuard" in
+    Obj.repr (HxSwitchPattern.PUnsupportedGuard a0)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "PBind" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxSwitchPattern.PBind" in
+    Obj.repr (HxSwitchPattern.PBind a0)
+  );
+  HxType.register_enum_ctor "HxSwitchPattern" "POr" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'patterns' for HxSwitchPattern.POr" in
+    Obj.repr (HxSwitchPattern.POr a0)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TEof" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxTokenKind.TEof)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TIdent" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxTokenKind.TIdent" in
+    Obj.repr (HxTokenKind.TIdent a0)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TString" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxTokenKind.TString" in
+    Obj.repr (HxTokenKind.TString a0)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TInt" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxTokenKind.TInt" in
+    Obj.repr (HxTokenKind.TInt a0)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TFloat" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxTokenKind.TFloat" in
+    Obj.repr (HxTokenKind.TFloat a0)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TRegex" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pattern' for HxTokenKind.TRegex" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'flags' for HxTokenKind.TRegex" in
+    Obj.repr (HxTokenKind.TRegex (a0, a1))
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TKeyword" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'k' for HxTokenKind.TKeyword" in
+    Obj.repr (HxTokenKind.TKeyword a0)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TLBrace" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxTokenKind.TLBrace)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TRBrace" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxTokenKind.TRBrace)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TLParen" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxTokenKind.TLParen)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TRParen" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxTokenKind.TRParen)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TSemicolon" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxTokenKind.TSemicolon)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TColon" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxTokenKind.TColon)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TDot" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxTokenKind.TDot)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TComma" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxTokenKind.TComma)
+  );
+  HxType.register_enum_ctor "HxTokenKind" "TOther" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'code' for HxTokenKind.TOther" in
+    Obj.repr (HxTokenKind.TOther a0)
+  );
+  HxType.register_enum_ctor "HxVisibility" "Public" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxVisibility.Public)
+  );
+  HxType.register_enum_ctor "HxVisibility" "Private" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxVisibility.Private)
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "CFunction" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_CallStack.CFunction)
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "Module" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'm' for haxe.StackItem.Module" in
+    Obj.repr (Haxe_CallStack.Module a0)
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "FilePos" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createEnum: missing ctor arg 's' for haxe.StackItem.FilePos" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'file' for haxe.StackItem.FilePos" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'line' for haxe.StackItem.FilePos" in
+    let a3 = if len > 3 then (HxArray.get args 3) else HxRuntime.hx_null in
+    Obj.repr (Haxe_CallStack.FilePos (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "Method" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'classname' for haxe.StackItem.Method" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'method' for haxe.StackItem.Method" in
+    Obj.repr (Haxe_CallStack.Method (a0, a1))
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "LocalFunction" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else HxRuntime.hx_null in
+    Obj.repr (Haxe_CallStack.LocalFunction a0)
+  );
   HxType.register_enum_ctor "haxe.macro.Message" "Info" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'msg' for haxe.macro.Message.Info" in
@@ -61,11 +659,106 @@ let init () : unit =
   HxType.register_enum_ctor "haxe.macro.NullSafetyMode" "StrictThreaded" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_macro_Compiler.StrictThreaded)
   );
+  HxType.register_class_ctor "HxClassDecl" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for HxClassDecl" in
+    let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'hasStaticMain' for HxClassDecl" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else Obj.magic HxRuntime.hx_null in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
+    let a4 = if len > 4 then Obj.obj ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (HxClassDecl.create a0 a1 a2 a3 a4)
+  );
+  HxType.register_class_ctor "HxFieldDecl" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for HxFieldDecl" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'visibility' for HxFieldDecl" in
+    let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'isStatic' for HxFieldDecl" in
+    let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'typeHint' for HxFieldDecl" in
+    let a4 = if len > 4 then (HxArray.get args 4) else failwith "Type.createInstance: missing ctor arg 'init' for HxFieldDecl" in
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else Obj.magic HxRuntime.hx_null in
+    let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else Obj.magic HxRuntime.hx_null in
+    let a7 = if len > 7 then Obj.magic ((HxArray.get args 7)) else Obj.magic HxRuntime.hx_null in
+    let a8 = if len > 8 then (HxArray.get args 8) else HxRuntime.hx_null in
+    let a9 = if len > 9 then Obj.obj ((HxArray.get args 9)) else Obj.magic HxRuntime.hx_null in
+    let a10 = if len > 10 then Obj.obj ((HxArray.get args 10)) else Obj.magic HxRuntime.hx_null in
+    let a11 = if len > 11 then Obj.obj ((HxArray.get args 11)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (HxFieldDecl.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
+  );
+  HxType.register_class_ctor "HxFunctionArg" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for HxFunctionArg" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'typeHint' for HxFunctionArg" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'defaultValue' for HxFunctionArg" in
+    let a3 = if len > 3 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
+    let a4 = if len > 4 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
+    let a5 = if len > 5 then Obj.obj ((HxArray.get args 5)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (HxFunctionArg.create a0 a1 a2 a3 a4 a5)
+  );
+  HxType.register_class_ctor "HxFunctionDecl" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for HxFunctionDecl" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'visibility' for HxFunctionDecl" in
+    let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'isStatic' for HxFunctionDecl" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'args' for HxFunctionDecl" in
+    let a4 = if len > 4 then Obj.obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'returnTypeHint' for HxFunctionDecl" in
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'body' for HxFunctionDecl" in
+    let a6 = if len > 6 then Obj.obj ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'returnStringLiteral' for HxFunctionDecl" in
+    let a7 = if len > 7 then Obj.magic ((HxArray.get args 7)) else Obj.magic HxRuntime.hx_null in
+    let a8 = if len > 8 then Obj.magic ((HxArray.get args 8)) else Obj.magic HxRuntime.hx_null in
+    let a9 = if len > 9 then Obj.magic ((HxArray.get args 9)) else Obj.magic HxRuntime.hx_null in
+    let a10 = if len > 10 then Obj.obj ((HxArray.get args 10)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (HxFunctionDecl.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10)
+  );
+  HxType.register_class_ctor "HxLexer" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'src' for HxLexer" in
+    Obj.repr (HxLexer.create a0)
+  );
+  HxType.register_class_ctor "HxModuleDecl" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'packagePath' for HxModuleDecl" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'imports' for HxModuleDecl" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'mainClass' for HxModuleDecl" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'classes' for HxModuleDecl" in
+    let a4 = if len > 4 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'headerOnly' for HxModuleDecl" in
+    let a5 = if len > 5 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'hasToplevelMain' for HxModuleDecl" in
+    Obj.repr (HxModuleDecl.create a0 a1 a2 a3 a4 a5)
+  );
+  HxType.register_class_ctor "HxParseError" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'message' for HxParseError" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'pos' for HxParseError" in
+    Obj.repr (HxParseError.create a0 a1)
+  );
+  HxType.register_class_ctor "HxParser" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'source' for HxParser" in
+    Obj.repr (HxParser.create a0)
+  );
+  HxType.register_class_ctor "HxParserSourceNormalize" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxParserSourceNormalize.create ())
+  );
+  HxType.register_class_ctor "HxPos" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'index' for HxPos" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'line' for HxPos" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'column' for HxPos" in
+    Obj.repr (HxPos.create a0 a1 a2)
+  );
+  HxType.register_class_ctor "HxToken" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'kind' for HxToken" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'pos' for HxToken" in
+    Obj.repr (HxToken.create a0 a1)
+  );
   HxType.register_class_ctor "Macro" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Macro.create ())
   );
   HxType.register_class_ctor "StringBuf" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (StringBuf.create ())
+  );
+  HxType.register_class_ctor "StringTools" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (StringTools.create ())
   );
   HxType.register_class_ctor "haxe.Exception" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -76,6 +769,16 @@ let init () : unit =
   );
   HxType.register_class_ctor "haxe.NativeStackTrace" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_NativeStackTrace.create ())
+  );
+  HxType.register_class_ctor "haxe.ValueException" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'value' for haxe.ValueException" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else Obj.magic HxRuntime.hx_null in
+    let a2 = if len > 2 then (HxArray.get args 2) else HxRuntime.hx_null in
+    Obj.repr (Haxe_ValueException.create a0 a1 a2)
+  );
+  HxType.register_class_ctor "haxe._CallStack.CallStack_Impl_" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_CallStack.create ())
   );
   HxType.register_class_ctor "haxe.io.BytesBuffer" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_io_BytesBuffer.create ())
@@ -94,6 +797,9 @@ let init () : unit =
   );
   HxType.register_class_ctor "haxe.macro.Context" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_macro_Context.create ())
+  );
+  HxType.register_class_ctor "haxe.macro.TypeTools" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_macro_TypeTools.create ())
   );
   HxType.register_class_ctor "hxhxmacrohost.BuildMacroSupport" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacrohost_BuildMacroSupport.create ())
@@ -119,6 +825,21 @@ let init () : unit =
   HxType.register_class_ctor "hxhxmacrohost.Main" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacrohost_Main.create ())
   );
+  HxType.register_class_ctor "hxhxmacrohost.NativeMacroModuleAbi" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacrohost_NativeMacroModuleAbi.create ())
+  );
+  HxType.register_class_ctor "hxhxmacrohost.NativeMacroModuleDynlink" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacrohost_NativeMacroModuleDynlink.create ())
+  );
+  HxType.register_class_ctor "hxhxmacrohost.NativeMacroModuleHost" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacrohost_NativeMacroModuleHost.create ())
+  );
+  HxType.register_class_ctor "hxhxmacrohost.NativeMacroModuleHostAbi" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacrohost_NativeMacroModuleHostAbi.create ())
+  );
+  HxType.register_class_ctor "hxhxmacrohost.OcamlInjection" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacrohost_OcamlInjection.create ())
+  );
   HxType.register_class_ctor "hxhxmacrohost.Protocol" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacrohost_Protocol.create ())
   );
@@ -127,6 +848,18 @@ let init () : unit =
   );
   HxType.register_class_ctor "hxhxmacrohost.api.Context" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacrohost_api_Context.create ())
+  );
+  HxType.register_class_ctor "hxhxmacrohost.api.RuntimeMacroExprs" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacrohost_api_RuntimeMacroExprs.create ())
+  );
+  HxType.register_class_ctor "hxhxmacrohost.api.RuntimeMacroTypeDefinitions" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacrohost_api_RuntimeMacroTypeDefinitions.create ())
+  );
+  HxType.register_class_ctor "hxhxmacrohost.api.RuntimeMacroTypes" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacrohost_api_RuntimeMacroTypes.create ())
+  );
+  HxType.register_class_ctor "hxhxmacrohost.api.RuntimeTypedExprs" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacrohost_api_RuntimeTypedExprs.create ())
   );
   HxType.register_class_ctor "hxhxmacros.ArgsMacros" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacros_ArgsMacros.create ())
@@ -165,16 +898,31 @@ let init () : unit =
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'stream' for sys.io._Stdio.OcamlStdioOutput" in
     Obj.repr (Sys_io_Stdio.ocamlstdiooutput_create a0)
   );
+  HxType.register_class_empty_ctor "HxClassDecl" (fun () -> Obj.repr (HxClassDecl.__empty ()));
+  HxType.register_class_empty_ctor "HxFieldDecl" (fun () -> Obj.repr (HxFieldDecl.__empty ()));
+  HxType.register_class_empty_ctor "HxFunctionArg" (fun () -> Obj.repr (HxFunctionArg.__empty ()));
+  HxType.register_class_empty_ctor "HxFunctionDecl" (fun () -> Obj.repr (HxFunctionDecl.__empty ()));
+  HxType.register_class_empty_ctor "HxLexer" (fun () -> Obj.repr (HxLexer.__empty ()));
+  HxType.register_class_empty_ctor "HxModuleDecl" (fun () -> Obj.repr (HxModuleDecl.__empty ()));
+  HxType.register_class_empty_ctor "HxParseError" (fun () -> Obj.repr (HxParseError.__empty ()));
+  HxType.register_class_empty_ctor "HxParser" (fun () -> Obj.repr (HxParser.__empty ()));
+  HxType.register_class_empty_ctor "HxParserSourceNormalize" (fun () -> Obj.repr (HxParserSourceNormalize.__empty ()));
+  HxType.register_class_empty_ctor "HxPos" (fun () -> Obj.repr (HxPos.__empty ()));
+  HxType.register_class_empty_ctor "HxToken" (fun () -> Obj.repr (HxToken.__empty ()));
   HxType.register_class_empty_ctor "Macro" (fun () -> Obj.repr (Macro.__empty ()));
   HxType.register_class_empty_ctor "StringBuf" (fun () -> Obj.repr (StringBuf.__empty ()));
+  HxType.register_class_empty_ctor "StringTools" (fun () -> Obj.repr (StringTools.__empty ()));
   HxType.register_class_empty_ctor "haxe.Exception" (fun () -> Obj.repr (Haxe_Exception.__empty ()));
   HxType.register_class_empty_ctor "haxe.NativeStackTrace" (fun () -> Obj.repr (Haxe_NativeStackTrace.__empty ()));
+  HxType.register_class_empty_ctor "haxe.ValueException" (fun () -> Obj.repr (Haxe_ValueException.__empty ()));
+  HxType.register_class_empty_ctor "haxe._CallStack.CallStack_Impl_" (fun () -> Obj.repr (Haxe_CallStack.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.BytesBuffer" (fun () -> Obj.repr (Haxe_io_BytesBuffer.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.FPHelper" (fun () -> Obj.repr (Haxe_io_FPHelper.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.Input" (fun () -> Obj.repr (Haxe_io_Input.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.Output" (fun () -> Obj.repr (Haxe_io_Output.__empty ()));
   HxType.register_class_empty_ctor "haxe.macro.Compiler" (fun () -> Obj.repr (Haxe_macro_Compiler.__empty ()));
   HxType.register_class_empty_ctor "haxe.macro.Context" (fun () -> Obj.repr (Haxe_macro_Context.__empty ()));
+  HxType.register_class_empty_ctor "haxe.macro.TypeTools" (fun () -> Obj.repr (Haxe_macro_TypeTools.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.BuildMacroSupport" (fun () -> Obj.repr (Hxhxmacrohost_BuildMacroSupport.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.BuiltinMacros" (fun () -> Obj.repr (Hxhxmacrohost_BuiltinMacros.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.EntryPoints" (fun () -> Obj.repr (Hxhxmacrohost_EntryPoints.__empty ()));
@@ -183,9 +931,18 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhxmacrohost.MacroError" (fun () -> Obj.repr (Hxhxmacrohost_MacroError.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.MacroRuntime" (fun () -> Obj.repr (Hxhxmacrohost_MacroRuntime.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.Main" (fun () -> Obj.repr (Hxhxmacrohost_Main.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacrohost.NativeMacroModuleAbi" (fun () -> Obj.repr (Hxhxmacrohost_NativeMacroModuleAbi.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacrohost.NativeMacroModuleDynlink" (fun () -> Obj.repr (Hxhxmacrohost_NativeMacroModuleDynlink.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacrohost.NativeMacroModuleHost" (fun () -> Obj.repr (Hxhxmacrohost_NativeMacroModuleHost.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacrohost.NativeMacroModuleHostAbi" (fun () -> Obj.repr (Hxhxmacrohost_NativeMacroModuleHostAbi.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacrohost.OcamlInjection" (fun () -> Obj.repr (Hxhxmacrohost_OcamlInjection.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.Protocol" (fun () -> Obj.repr (Hxhxmacrohost_Protocol.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.api.Compiler" (fun () -> Obj.repr (Hxhxmacrohost_api_Compiler.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.api.Context" (fun () -> Obj.repr (Hxhxmacrohost_api_Context.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacrohost.api.RuntimeMacroExprs" (fun () -> Obj.repr (Hxhxmacrohost_api_RuntimeMacroExprs.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacrohost.api.RuntimeMacroTypeDefinitions" (fun () -> Obj.repr (Hxhxmacrohost_api_RuntimeMacroTypeDefinitions.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacrohost.api.RuntimeMacroTypes" (fun () -> Obj.repr (Hxhxmacrohost_api_RuntimeMacroTypes.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacrohost.api.RuntimeTypedExprs" (fun () -> Obj.repr (Hxhxmacrohost_api_RuntimeTypedExprs.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.ArgsMacros" (fun () -> Obj.repr (Hxhxmacros_ArgsMacros.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.BuildFieldMacros" (fun () -> Obj.repr (Hxhxmacros_BuildFieldMacros.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.ExprMacroShim" (fun () -> Obj.repr (Hxhxmacros_ExprMacroShim.__empty ()));
@@ -197,14 +954,42 @@ let init () : unit =
   HxType.register_class_empty_ctor "sys.io.Stdio" (fun () -> Obj.repr (Sys_io_Stdio.__empty ()));
   HxType.register_class_empty_ctor "sys.io._Stdio.OcamlStdioInput" (fun () -> Obj.repr (Sys_io_Stdio.ocamlstdioinput___empty ()));
   HxType.register_class_empty_ctor "sys.io._Stdio.OcamlStdioOutput" (fun () -> Obj.repr (Sys_io_Stdio.ocamlstdiooutput___empty ()));
+  HxType.register_class_instance_fields "HxClassDecl" [ "extendsPath"; "fields"; "functions"; "hasStaticMain"; "name" ];
+  HxType.register_class_static_fields "HxClassDecl" [ "getExtendsPath"; "getFields"; "getFunctions"; "getHasStaticMain"; "getName" ];
+  HxType.register_class_instance_fields "HxFieldDecl" [ "endPos"; "init"; "initText"; "isFinal"; "isStatic"; "metadata"; "name"; "pos"; "propertyGet"; "propertySet"; "typeHint"; "visibility" ];
+  HxType.register_class_static_fields "HxFieldDecl" [ "getEndPos"; "getInit"; "getInitText"; "getIsFinal"; "getIsStatic"; "getMetadata"; "getName"; "getPos"; "getPropertyGet"; "getPropertySet"; "getTypeHint"; "getVisibility" ];
+  HxType.register_class_instance_fields "HxFunctionArg" [ "defaultValue"; "defaultValueText"; "isOptional"; "isRest"; "name"; "typeHint" ];
+  HxType.register_class_static_fields "HxFunctionArg" [ "getDefaultValue"; "getDefaultValueText"; "getIsOptional"; "getIsRest"; "getName"; "getTypeHint" ];
+  HxType.register_class_instance_fields "HxFunctionDecl" [ "args"; "body"; "bodyText"; "endPos"; "getFirstReturnExpr"; "isStatic"; "metadata"; "name"; "pos"; "returnStringLiteral"; "returnTypeHint"; "visibility" ];
+  HxType.register_class_static_fields "HxFunctionDecl" [ "getArgs"; "getBody"; "getBodyText"; "getEndPos"; "getIsStatic"; "getMetadata"; "getName"; "getPos"; "getReturnStringLiteral"; "getReturnTypeHint"; "getVisibility" ];
+  HxType.register_class_instance_fields "HxLexer" [ "bump"; "column"; "consumeNumericSuffix"; "eof"; "index"; "isLeadingDotNumberStart"; "line"; "next"; "peek"; "pos"; "readIdent"; "readLeadingDotNumber"; "readNumber"; "readRegexLiteral"; "readSingleQuotedString"; "readString"; "skipWhitespaceAndComments"; "src" ];
+  HxType.register_class_static_fields "HxLexer" [ "isDigit"; "isHexDigit"; "isIdentCont"; "isIdentStart"; "isNumericSeparator"; "isNumericSuffixStart"; "isSpace"; "normalizeNumberText" ];
+  HxType.register_class_instance_fields "HxModuleDecl" [ "classes"; "hasToplevelMain"; "headerOnly"; "imports"; "mainClass"; "packagePath" ];
+  HxType.register_class_static_fields "HxModuleDecl" [ "getClasses"; "getHasToplevelMain"; "getHeaderOnly"; "getImports"; "getMainClass"; "getPackagePath" ];
+  HxType.register_class_instance_fields "HxParseError" [ "message"; "pos"; "toString" ];
+  HxType.register_class_static_fields "HxParseError" [];
+  HxType.register_class_instance_fields "HxParser" [ "acceptKeyword"; "acceptOtherChar"; "bump"; "capturedReturnStringLiteral"; "consumeBalancedBracesForExpr"; "consumeBalancedParensForExpr"; "consumeBinop"; "consumePreprocessorLine"; "consumeUntilIndex"; "cur"; "currentIndex"; "expect"; "fail"; "hasAttachedMetadataArgs"; "isLikelyExtractorPatternStart"; "isOtherChar"; "isValidLambdaArgName"; "lambdaArgNameEnd"; "lambdaBodyExprFromStmts"; "lex"; "mapLiteralKeyName"; "nextIsAdjacentOther"; "parseAnonExpr"; "parseAnonExprAfterOpen"; "parseArrayDeclExpr"; "parseBinaryExpr"; "parseBraceExpr"; "parseCallArg"; "parseClassMembers"; "parseExpr"; "parseForExprRaw"; "parseFunctionBodyStatements"; "parseFunctionBodyStatementsBestEffort"; "parseFunctionDecl"; "parseFunctionExpr"; "parseInterpolatedStringExpr"; "parseLambdaArgName"; "parseLocalFunctionStmt"; "parseMacroClassQuoteExpr"; "parseMacroQuoteExpr"; "parseMacroQuoteIfPayload"; "parseMacroQuotePayload"; "parseMacroReificationExpr"; "parseMacroTypeSwitchPattern"; "parseMetadataText"; "parseModule"; "parsePostfixExpr"; "parsePostfixSuffix"; "parsePrimaryExpr"; "parseReturnStmt"; "parseStmt"; "parseStmtInto"; "parseSwitchExpr"; "parseSwitchPattern"; "parseSwitchPatternAtom"; "parseSwitchPatternCaseGroup"; "parseSwitchPatternOr"; "parseTryCatchExpr"; "parseUnaryExpr"; "parseVarDecls"; "parseVarStmt"; "peek"; "peek2"; "peek3"; "peekBinop"; "peekKind"; "peekKind2"; "peekKind3"; "peeked1"; "peeked2"; "peeked3"; "posIndex"; "readAnonFieldName"; "readDottedPath"; "readIdent"; "readImportPath"; "readMetadataHead"; "readPropertyAccessorText"; "readTypeHintText"; "skipBalancedAngles"; "skipBalancedBraces"; "skipBalancedParens"; "sliceSource"; "source"; "switchPatternWithGuard"; "syncToStmtEnd"; "tryParseSwitchExtractorPattern"; "tryReadArrowLambdaExpr"; "tryReadParenthesizedLambdaArgs" ];
+  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "debugBodyLabel"; "isAssignmentBinop"; "isRightAssoc"; "isUpperStart"; "keywordText"; "normalizeInlineJsConditionalMarkers"; "parseExprText"; "parseFunctionBodyText" ];
+  HxType.register_class_instance_fields "HxParserSourceNormalize" [];
+  HxType.register_class_static_fields "HxParserSourceNormalize" [ "normalizeDenseEscapedQuotes"; "normalizeDenseKeywordSpacing" ];
+  HxType.register_class_instance_fields "HxPos" [ "column"; "getColumn"; "getIndex"; "getLine"; "index"; "line"; "toString" ];
+  HxType.register_class_static_fields "HxPos" [ "unknown" ];
+  HxType.register_class_instance_fields "HxToken" [ "getKind"; "getPos"; "kind"; "pos" ];
+  HxType.register_class_static_fields "HxToken" [];
   HxType.register_class_instance_fields "Macro" [];
   HxType.register_class_static_fields "Macro" [ "init" ];
   HxType.register_class_instance_fields "StringBuf" [ "add"; "addChar"; "addSub"; "buf"; "get_length"; "toString" ];
   HxType.register_class_static_fields "StringBuf" [];
+  HxType.register_class_instance_fields "StringTools" [];
+  HxType.register_class_static_fields "StringTools" [ "_hexUpper"; "_hexValue"; "_isUrlUnreserved"; "_quoteUnixArgOcaml"; "_quoteWinArgOcaml"; "_urlDecodeOcaml"; "_urlEncodeOcaml"; "_winMetaCharactersOcaml"; "contains"; "endsWith"; "fastCodeAt"; "hex"; "htmlEscape"; "htmlUnescape"; "isEof"; "isSpace"; "iterator"; "keyValueIterator"; "lpad"; "ltrim"; "quoteUnixArg"; "quoteWinArg"; "replace"; "rpad"; "rtrim"; "startsWith"; "trim"; "unsafeCodeAt"; "urlDecode"; "urlEncode"; "utf16CodePointAt"; "winMetaCharacters" ];
   HxType.register_class_instance_fields "haxe.Exception" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
   HxType.register_class_static_fields "haxe.Exception" [ "caught"; "thrown" ];
   HxType.register_class_instance_fields "haxe.NativeStackTrace" [];
   HxType.register_class_static_fields "haxe.NativeStackTrace" [ "callStack"; "exceptionStack"; "parseFileLine"; "saveStack"; "toHaxe" ];
+  HxType.register_class_instance_fields "haxe.ValueException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap"; "value" ];
+  HxType.register_class_static_fields "haxe.ValueException" [];
+  HxType.register_class_instance_fields "haxe._CallStack.CallStack_Impl_" [];
+  HxType.register_class_static_fields "haxe._CallStack.CallStack_Impl_" [ "asArray"; "callStack"; "copy"; "equalItems"; "exceptionStack"; "get"; "get_length"; "itemToString"; "nativeToHaxe"; "parseFileLine"; "subtract"; "toString" ];
   HxType.register_class_instance_fields "haxe.io.BytesBuffer" [ "add"; "addByte"; "addBytes"; "addDouble"; "addFloat"; "addInt32"; "addInt64"; "addString"; "b"; "getBytes"; "get_length" ];
   HxType.register_class_static_fields "haxe.io.BytesBuffer" [];
   HxType.register_class_instance_fields "haxe.io.FPHelper" [];
@@ -214,9 +999,11 @@ let init () : unit =
   HxType.register_class_instance_fields "haxe.io.Output" [ "bigEndian"; "close"; "flush"; "prepare"; "set_bigEndian"; "write"; "writeByte"; "writeBytes"; "writeDouble"; "writeFloat"; "writeFullBytes"; "writeInput"; "writeInt16"; "writeInt24"; "writeInt32"; "writeInt8"; "writeString"; "writeUInt16"; "writeUInt24"; "writeUInt8" ];
   HxType.register_class_static_fields "haxe.io.Output" [];
   HxType.register_class_instance_fields "haxe.macro.Compiler" [];
-  HxType.register_class_static_fields "haxe.macro.Compiler" [ "addClassPath"; "define"; "emitHxModule"; "emitOcamlModule"; "getDefine" ];
+  HxType.register_class_static_fields "haxe.macro.Compiler" [ "addClassPath"; "addGlobalMetadata"; "collectRecursiveModules"; "define"; "effectiveClassPaths"; "emitHxModule"; "emitOcamlModule"; "getConfiguration"; "getDefine"; "include"; "normalizedModulePath"; "nullSafety"; "registerCustomMetadata"; "renderNullSafetyMode"; "shouldIgnoreModule" ];
   HxType.register_class_instance_fields "haxe.macro.Context" [];
-  HxType.register_class_static_fields "haxe.macro.Context" [ "currentPos"; "defined"; "definedValue"; "error"; "fatalError"; "filterMessages"; "getBuildFields"; "getDefines"; "getMessages"; "getType"; "info"; "onAfterGenerate"; "onAfterTyping"; "onGenerate"; "warning" ];
+  HxType.register_class_static_fields "haxe.macro.Context" [ "addResource"; "containsDisplayPosition"; "currentPos"; "defineModule"; "defineType"; "defined"; "definedValue"; "error"; "fatalError"; "filterMessages"; "follow"; "followWithAbstracts"; "getBuildFields"; "getCallArguments"; "getClassPath"; "getDefines"; "getDisplayMode"; "getExpectedType"; "getLocalClass"; "getLocalImports"; "getLocalMethod"; "getLocalModule"; "getLocalTVars"; "getLocalType"; "getLocalUsing"; "getMainExpr"; "getMessages"; "getModule"; "getPosInfos"; "getResources"; "getType"; "getTypedExpr"; "info"; "makeExpr"; "makePosition"; "onAfterGenerate"; "onAfterInitMacros"; "onAfterTyping"; "onGenerate"; "onTypeNotFound"; "parse"; "parseInlineString"; "registerModuleDependency"; "resolvePath"; "resolveType"; "signature"; "storeExpr"; "storeTypedExpr"; "timer"; "toComplexType"; "typeExpr"; "typeof"; "unify"; "warning" ];
+  HxType.register_class_instance_fields "haxe.macro.TypeTools" [];
+  HxType.register_class_static_fields "haxe.macro.TypeTools" [ "applyTypeParameters"; "follow"; "followWithAbstracts"; "iter"; "toComplexType"; "toString"; "unify" ];
   HxType.register_class_instance_fields "hxhxmacrohost.BuildMacroSupport" [];
   HxType.register_class_static_fields "hxhxmacrohost.BuildMacroSupport" [ "afterEntrypoint"; "escapeHaxeString"; "printFieldMinimal"; "tryConstToHaxe"; "tryExtractReturnInt"; "tryExtractReturnString"; "tryExtractTraceString" ];
   HxType.register_class_instance_fields "hxhxmacrohost.BuiltinMacros" [];
@@ -226,19 +1013,37 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhxmacrohost.EntryPointsGen" [];
   HxType.register_class_static_fields "hxhxmacrohost.EntryPointsGen" [ "run" ];
   HxType.register_class_instance_fields "hxhxmacrohost.HostToCompilerRpc" [];
-  HxType.register_class_static_fields "hxhxmacrohost.HostToCompilerRpc" [ "call"; "isTrueEnv"; "nextId"; "safeReadLine"; "summarizeTail"; "traceEnabled"; "writeTraceLine" ];
+  HxType.register_class_static_fields "hxhxmacrohost.HostToCompilerRpc" [ "call"; "clearLocalHandler"; "isTrueEnv"; "localHandler"; "nextId"; "safeReadLine"; "setLocalHandler"; "summarizeTail"; "traceEnabled"; "writeTraceLine" ];
   HxType.register_class_instance_fields "hxhxmacrohost.MacroError" [];
   HxType.register_class_static_fields "hxhxmacrohost.MacroError" [ "raise" ];
   HxType.register_class_instance_fields "hxhxmacrohost.MacroRuntime" [];
-  HxType.register_class_static_fields "hxhxmacrohost.MacroRuntime" [ "afterGenerateHooks"; "afterTypingHooks"; "builtinTypeDesc"; "clearCurrentBuildFieldSnapshot"; "currentBuildFieldNames"; "defines"; "hasBuildFieldSnapshot"; "hasCurrentBuildFieldName"; "hasCurrentBuildFieldSnapshot"; "onGenerateHooks"; "registerAfterGenerate"; "registerAfterTyping"; "registerOnGenerate"; "runHook"; "setCurrentBuildFieldNames" ];
+  HxType.register_class_static_fields "hxhxmacrohost.MacroRuntime" [ "afterGenerateHooks"; "afterTypingHooks"; "builtinTypeDesc"; "clearCurrentBuildFieldSnapshot"; "currentBuildFieldNames"; "defines"; "hasBuildFieldSnapshot"; "hasCurrentBuildFieldName"; "hasCurrentBuildFieldSnapshot"; "onGenerateHooks"; "onTypeNotFoundHooks"; "registerAfterGenerate"; "registerAfterTyping"; "registerOnGenerate"; "registerOnTypeNotFound"; "runHook"; "runTypeNotFoundHook"; "setCurrentBuildFieldNames" ];
   HxType.register_class_instance_fields "hxhxmacrohost.Main" [];
-  HxType.register_class_static_fields "hxhxmacrohost.Main" [ "expandExprMacro"; "flushStdout"; "handleReq"; "main"; "parseDecInt"; "parseKV"; "parseOneStringLiteralArg"; "replyErr"; "replyOk"; "runMacroExpr"; "safeReadLine" ];
+  HxType.register_class_static_fields "hxhxmacrohost.Main" [ "expandExprMacro"; "flushStdout"; "handleReq"; "loadNativeModule"; "main"; "nativeExprToPlugin"; "parseDecInt"; "parseKV"; "parseOneStringLiteralArg"; "replyErr"; "replyOk"; "runMacroExpr"; "runNativeExpr"; "safeReadLine" ];
+  HxType.register_class_instance_fields "hxhxmacrohost.NativeMacroModuleAbi" [];
+  HxType.register_class_static_fields "hxhxmacrohost.NativeMacroModuleAbi" [];
+  HxType.register_class_instance_fields "hxhxmacrohost.NativeMacroModuleDynlink" [];
+  HxType.register_class_static_fields "hxhxmacrohost.NativeMacroModuleDynlink" [ "loadAndCapture" ];
+  HxType.register_class_instance_fields "hxhxmacrohost.NativeMacroModuleHost" [];
+  HxType.register_class_static_fields "hxhxmacrohost.NativeMacroModuleHost" [ "clear"; "runExpr"; "snapshot" ];
+  HxType.register_class_instance_fields "hxhxmacrohost.NativeMacroModuleHostAbi" [];
+  HxType.register_class_static_fields "hxhxmacrohost.NativeMacroModuleHostAbi" [ "decodeRow"; "decodeSnapshot"; "exprsForPlugin"; "exprsForPluginAllowEmpty"; "exprsForPluginInternal"; "fail"; "normalizeSourceLabel"; "requireHeaderInt"; "requireToken"; "trim"; "trimTrailingCr" ];
+  HxType.register_class_instance_fields "hxhxmacrohost.OcamlInjection" [];
+  HxType.register_class_static_fields "hxhxmacrohost.OcamlInjection" [];
   HxType.register_class_instance_fields "hxhxmacrohost.Protocol" [];
   HxType.register_class_static_fields "hxhxmacrohost.Protocol" [ "decodeLenValue"; "encodeLen"; "escapePayload"; "kvGet"; "kvParse"; "splitN"; "unescapePayload" ];
   HxType.register_class_instance_fields "hxhxmacrohost.api.Compiler" [];
-  HxType.register_class_static_fields "hxhxmacrohost.api.Compiler" [ "addClassPath"; "define"; "emitBuildFields"; "emitHxModule"; "emitOcamlModule"; "getDefine"; "includeModule" ];
+  HxType.register_class_static_fields "hxhxmacrohost.api.Compiler" [ "addClassPath"; "addGlobalMetadata"; "defaultConfiguration"; "defaultPlatformConfig"; "define"; "emitBuildFields"; "emitHxModule"; "emitOcamlModule"; "getConfiguration"; "getDefine"; "includeModule"; "listAppliedTypeMetadata"; "parseNonNegativeInt"; "registerCustomMetadata" ];
   HxType.register_class_instance_fields "hxhxmacrohost.api.Context" [];
-  HxType.register_class_static_fields "hxhxmacrohost.api.Context" [ "defined"; "definedValue"; "getBuildFields"; "getDefines"; "getType"; "onAfterGenerate"; "onAfterTyping"; "onGenerate" ];
+  HxType.register_class_static_fields "hxhxmacrohost.api.Context" [ "addResource"; "containsDisplayPosition"; "currentPos"; "defineModule"; "defineType"; "defined"; "definedValue"; "encodePosition"; "filterMessages"; "follow"; "followWithAbstracts"; "getBuildFields"; "getCallArguments"; "getClassPath"; "getDefines"; "getDisplayMode"; "getExpectedType"; "getLocalImports"; "getLocalMethod"; "getLocalModule"; "getLocalTVars"; "getLocalType"; "getLocalUsing"; "getMainExpr"; "getMessages"; "getModule"; "getPosInfos"; "getResources"; "getType"; "getTypedExpr"; "info"; "makeExpr"; "makePosition"; "onAfterGenerate"; "onAfterInitMacros"; "onAfterTyping"; "onGenerate"; "onTypeNotFound"; "parse"; "parseInlineString"; "parseNonNegativeInt"; "parseOptionalTypeSnapshot"; "registerModuleDependency"; "resolvePath"; "resolveType"; "signature"; "storeExpr"; "storeTypedExpr"; "timer"; "toComplexType"; "typeExpr"; "typeof"; "unify"; "warning" ];
+  HxType.register_class_instance_fields "hxhxmacrohost.api.RuntimeMacroExprs" [];
+  HxType.register_class_static_fields "hxhxmacrohost.api.RuntimeMacroExprs" [ "convert"; "convertDef"; "convertStmt"; "convertValue"; "defaultPos"; "endsWithSelfClose"; "findTopLevelArrow"; "findTopLevelCallOpen"; "hasKeywordAt"; "innerType"; "isIdentChar"; "isValidLambdaArg"; "makeConstExpr"; "makeExpr"; "makeMarkupExpr"; "parse"; "parseBinop"; "parseComplexType"; "parseFunctionBodyText"; "parseInlineString"; "parseLambdaArgs"; "parseOptionalComplexType"; "parseOptionalComplexTypeText"; "parseTypePath"; "parseUnop"; "readMarkupTagName"; "scanBalanced"; "scanMarkupLiteral"; "signature"; "skipInterpolation"; "skipQuoted"; "skipWhitespace"; "splitTopLevelArgs"; "tryParseInlineCallExpr"; "tryParseInlineExpr"; "tryParseInlineIfExpr"; "tryParseInlineLambdaExpr" ];
+  HxType.register_class_instance_fields "hxhxmacrohost.api.RuntimeMacroTypeDefinitions" [];
+  HxType.register_class_static_fields "hxhxmacrohost.api.RuntimeMacroTypeDefinitions" [ "emitTypeDefinitionResult"; "escapeHaxeString"; "isValidIdent"; "printFieldMinimal"; "printImportExpr"; "printTypePath"; "printUsingPath"; "renderMetadataLines"; "renderModuleDefinition"; "renderSingleTypeSource"; "renderTypeBody"; "renderTypeDefinition"; "trimNonEmptySegments"; "tryConstToHaxe"; "tryExtractReturnInt"; "tryExtractReturnString"; "tryExtractTraceString"; "validateModulePath" ];
+  HxType.register_class_instance_fields "hxhxmacrohost.api.RuntimeMacroTypes" [];
+  HxType.register_class_static_fields "hxhxmacrohost.api.RuntimeMacroTypes" [ "abstractImplClassRefOf"; "abstractRef"; "abstractType"; "anonymousComplexField"; "anonymousFieldSummaryOfType"; "applyTypeParameters"; "boolType"; "buildFieldExpr"; "buildFieldTypedExpr"; "buildMethodType"; "buildNamedPathScope"; "classField"; "classRef"; "classRefOf"; "classType"; "defTypeRef"; "defaultPos"; "describe"; "describeTypeShape"; "describeTypeShapeInner"; "emptyMetaAccess"; "emptyNamedPathScope"; "ensureNoParams"; "ensureNoRuntimeParams"; "enumRef"; "extractNullInner"; "extractWrappedInnerText"; "firstTypeParameterArityMismatch"; "firstTypeParameterArityMismatchInner"; "floatType"; "follow"; "followWithAbstracts"; "followedAnonymousFieldSummary"; "followedAnonymousFieldSummaryWithAbstracts"; "fullPath"; "functionFieldArgs"; "functionFieldReturnType"; "getTypeByName"; "intType"; "isDynamicType"; "isNullWrapper"; "iter"; "localTVar"; "localUsingRefsForPaths"; "makeRef"; "makeTypedExpr"; "metaHas"; "metadataAccess"; "mismatchKind"; "moduleFieldsCarrier"; "moduleFieldsCarrierOf"; "moduleTypeExpr"; "moduleTypeOfType"; "moduleTypePath"; "moduleTypesForModule"; "moduleTypesForPath"; "normalizeName"; "nullType"; "nullWrapped"; "parseAnonymousField"; "parseAnonymousTypeText"; "parseDeclaredTypePayload"; "parseMetadataEntries"; "parseMetadataEntry"; "parseNonNegativeInt"; "parsePathTypeText"; "parseTypeText"; "parseTypeTextWithParameters"; "parseTypeTextWithParametersAndNamedPaths"; "parseTypeTextWithScope"; "pathExpr"; "position"; "rebuildResolvedPathType"; "refPath"; "renderNamedType"; "requireInnerType"; "resolveAddType"; "resolveAnonymousComplexField"; "resolveAnonymousComplexType"; "resolveComplexType"; "resolveNamedPathType"; "resolveNamedPathTypeFromCompiler"; "resolveTypePath"; "skipBlockComment"; "skipLineComment"; "skipQuotedText"; "splitMetadataArgs"; "splitTopLevelTypeParts"; "splitTopLevelTypePartsMulti"; "stringType"; "stripLeadingMetadataEntries"; "substituteTypeParameters"; "syntheticAbstractRef"; "syntheticDefTypeRef"; "toComplexType"; "toString"; "topLevelIndexOf"; "typeForPath"; "typeForResolvedDecl"; "typeFromResolvedDecl"; "typeFromText"; "typeParameter"; "typeParameterRefs"; "typePos"; "typeofExpr"; "unify"; "voidType" ];
+  HxType.register_class_instance_fields "hxhxmacrohost.api.RuntimeTypedExprs" [];
+  HxType.register_class_static_fields "hxhxmacrohost.api.RuntimeTypedExprs" [ "collectTypePathParts"; "defaultPosition"; "dynamicType"; "extractTypePathCandidate"; "isSimpleTypePathSegment"; "looksLikeTypeName"; "makeExpr"; "makeTyped"; "parseNonNegativeInt"; "quoteString"; "renderBinop"; "renderComplexType"; "renderMetadata"; "renderRawExpr"; "renderRawUnop"; "renderTypeParam"; "renderTypePath"; "renderTypedArrowFunction"; "renderUnop"; "resolveTypePathFromCompiler"; "stripArrowReturn"; "stripTypePathWrappers"; "toExpr"; "toString"; "tryTypeExprFromPath"; "typeArrowFunctionExpr"; "typeBlockExpr"; "typeExpr"; "typeVarsExpr"; "unwrapArrowBody" ];
   HxType.register_class_instance_fields "hxhxmacros.ArgsMacros" [];
   HxType.register_class_static_fields "hxhxmacros.ArgsMacros" [ "setArg" ];
   HxType.register_class_instance_fields "hxhxmacros.BuildFieldMacros" [];
@@ -263,8 +1068,20 @@ let init () : unit =
   HxType.register_class_static_fields "sys.io._Stdio.OcamlStdioInput" [];
   HxType.register_class_instance_fields "sys.io._Stdio.OcamlStdioOutput" [ "bigEndian"; "close"; "flush"; "prepare"; "set_bigEndian"; "stream"; "write"; "writeByte"; "writeBytes"; "writeDouble"; "writeFloat"; "writeFullBytes"; "writeInput"; "writeInt16"; "writeInt24"; "writeInt32"; "writeInt8"; "writeString"; "writeUInt16"; "writeUInt24"; "writeUInt8" ];
   HxType.register_class_static_fields "sys.io._Stdio.OcamlStdioOutput" [];
+  HxType.register_class_super "haxe.ValueException" (HxType.class_ "haxe.Exception");
   HxType.register_class_super "sys.io._Stdio.OcamlStdioInput" (HxType.class_ "haxe.io.Input");
   HxType.register_class_super "sys.io._Stdio.OcamlStdioOutput" (HxType.class_ "haxe.io.Output");
+  HxType.register_class_tags "HxClassDecl" [ "HxClassDecl" ];
+  HxType.register_class_tags "HxFieldDecl" [ "HxFieldDecl" ];
+  HxType.register_class_tags "HxFunctionArg" [ "HxFunctionArg" ];
+  HxType.register_class_tags "HxFunctionDecl" [ "HxFunctionDecl" ];
+  HxType.register_class_tags "HxLexer" [ "HxLexer" ];
+  HxType.register_class_tags "HxModuleDecl" [ "HxModuleDecl" ];
+  HxType.register_class_tags "HxParseError" [ "HxParseError" ];
+  HxType.register_class_tags "HxParser" [ "HxParser" ];
+  HxType.register_class_tags "HxParserSourceNormalize" [ "HxParserSourceNormalize" ];
+  HxType.register_class_tags "HxPos" [ "HxPos" ];
+  HxType.register_class_tags "HxToken" [ "HxToken" ];
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
   HxType.register_class_tags "Macro" [ "Macro" ];
   HxType.register_class_tags "StringBuf" [ "StringBuf" ];
@@ -275,7 +1092,8 @@ let init () : unit =
   HxType.register_class_tags "haxe.IMap" [ "haxe.IMap" ];
   HxType.register_class_tags "haxe.Int64Helper" [ "haxe.Int64Helper" ];
   HxType.register_class_tags "haxe.NativeStackTrace" [ "haxe.NativeStackTrace" ];
-  HxType.register_class_tags "haxe.SysTools" [ "haxe.SysTools" ];
+  HxType.register_class_tags "haxe.Serializer" [ "haxe.Serializer" ];
+  HxType.register_class_tags "haxe.ValueException" [ "haxe.Exception"; "haxe.ValueException" ];
   HxType.register_class_tags "haxe._CallStack.CallStack_Impl_" [ "haxe._CallStack.CallStack_Impl_" ];
   HxType.register_class_tags "haxe._Constraints.Constructible_Impl_" [ "haxe._Constraints.Constructible_Impl_" ];
   HxType.register_class_tags "haxe._Constraints.FlatEnum_Impl_" [ "haxe._Constraints.FlatEnum_Impl_" ];
@@ -284,6 +1102,7 @@ let init () : unit =
   HxType.register_class_tags "haxe._Int32.Int32_Impl_" [ "haxe._Int32.Int32_Impl_" ];
   HxType.register_class_tags "haxe._Int64.Int64_Impl_" [ "haxe._Int64.Int64_Impl_" ];
   HxType.register_class_tags "haxe._Int64.___Int64" [ "haxe._Int64.___Int64" ];
+  HxType.register_class_tags "haxe.crypto.Md5" [ "haxe.crypto.Md5" ];
   HxType.register_class_tags "haxe.display.DisplayMethods" [ "haxe.display.DisplayMethods" ];
   HxType.register_class_tags "haxe.display.Methods" [ "haxe.display.Methods" ];
   HxType.register_class_tags "haxe.display._Diagnostic.DiagnosticKind_Impl_" [ "haxe.display._Diagnostic.DiagnosticKind_Impl_" ];
@@ -321,9 +1140,14 @@ let init () : unit =
   HxType.register_class_tags "haxe.display._Protocol.HaxeResponseErrorSeverity_Impl_" [ "haxe.display._Protocol.HaxeResponseErrorSeverity_Impl_" ];
   HxType.register_class_tags "haxe.ds.BalancedTree" [ "haxe.IMap"; "haxe.ds.BalancedTree" ];
   HxType.register_class_tags "haxe.ds.EnumValueMap" [ "haxe.IMap"; "haxe.ds.BalancedTree"; "haxe.ds.EnumValueMap" ];
+  HxType.register_class_tags "haxe.ds.List" [ "haxe.ds.List" ];
   HxType.register_class_tags "haxe.ds.TreeNode" [ "haxe.ds.TreeNode" ];
+  HxType.register_class_tags "haxe.ds._List.ListIterator" [ "haxe.ds._List.ListIterator" ];
+  HxType.register_class_tags "haxe.ds._List.ListKeyValueIterator" [ "haxe.ds._List.ListKeyValueIterator" ];
+  HxType.register_class_tags "haxe.ds._List.ListNode" [ "haxe.ds._List.ListNode" ];
   HxType.register_class_tags "haxe.ds._Map.Map_Impl_" [ "haxe.ds._Map.Map_Impl_" ];
   HxType.register_class_tags "haxe.ds._ReadOnlyArray.ReadOnlyArray_Impl_" [ "haxe.ds._ReadOnlyArray.ReadOnlyArray_Impl_" ];
+  HxType.register_class_tags "haxe.ds._Vector.Vector_Impl_" [ "haxe.ds._Vector.Vector_Impl_" ];
   HxType.register_class_tags "haxe.exceptions.NotImplementedException" [ "haxe.Exception"; "haxe.exceptions.NotImplementedException"; "haxe.exceptions.PosException" ];
   HxType.register_class_tags "haxe.exceptions.PosException" [ "haxe.Exception"; "haxe.exceptions.PosException" ];
   HxType.register_class_tags "haxe.io.BytesBuffer" [ "haxe.io.BytesBuffer" ];
@@ -331,6 +1155,7 @@ let init () : unit =
   HxType.register_class_tags "haxe.io.FPHelper" [ "haxe.io.FPHelper" ];
   HxType.register_class_tags "haxe.io.Input" [ "haxe.io.Input" ];
   HxType.register_class_tags "haxe.io.Output" [ "haxe.io.Output" ];
+  HxType.register_class_tags "haxe.io.Path" [ "haxe.io.Path" ];
   HxType.register_class_tags "haxe.iterators.ArrayIterator" [ "haxe.iterators.ArrayIterator" ];
   HxType.register_class_tags "haxe.iterators.ArrayKeyValueIterator" [ "haxe.iterators.ArrayKeyValueIterator" ];
   HxType.register_class_tags "haxe.iterators.MapKeyValueIterator" [ "haxe.iterators.MapKeyValueIterator" ];
@@ -340,6 +1165,7 @@ let init () : unit =
   HxType.register_class_tags "haxe.macro.Compiler" [ "haxe.macro.Compiler" ];
   HxType.register_class_tags "haxe.macro.Context" [ "haxe.macro.Context" ];
   HxType.register_class_tags "haxe.macro.Error" [ "haxe.Exception"; "haxe.macro.Error" ];
+  HxType.register_class_tags "haxe.macro.TypeTools" [ "haxe.macro.TypeTools" ];
   HxType.register_class_tags "hxhxmacrohost.BuildMacroSupport" [ "hxhxmacrohost.BuildMacroSupport" ];
   HxType.register_class_tags "hxhxmacrohost.BuiltinMacros" [ "hxhxmacrohost.BuiltinMacros" ];
   HxType.register_class_tags "hxhxmacrohost.EntryPoints" [ "hxhxmacrohost.EntryPoints" ];
@@ -348,9 +1174,18 @@ let init () : unit =
   HxType.register_class_tags "hxhxmacrohost.MacroError" [ "hxhxmacrohost.MacroError" ];
   HxType.register_class_tags "hxhxmacrohost.MacroRuntime" [ "hxhxmacrohost.MacroRuntime" ];
   HxType.register_class_tags "hxhxmacrohost.Main" [ "hxhxmacrohost.Main" ];
+  HxType.register_class_tags "hxhxmacrohost.NativeMacroModuleAbi" [ "hxhxmacrohost.NativeMacroModuleAbi" ];
+  HxType.register_class_tags "hxhxmacrohost.NativeMacroModuleDynlink" [ "hxhxmacrohost.NativeMacroModuleDynlink" ];
+  HxType.register_class_tags "hxhxmacrohost.NativeMacroModuleHost" [ "hxhxmacrohost.NativeMacroModuleHost" ];
+  HxType.register_class_tags "hxhxmacrohost.NativeMacroModuleHostAbi" [ "hxhxmacrohost.NativeMacroModuleHostAbi" ];
+  HxType.register_class_tags "hxhxmacrohost.OcamlInjection" [ "hxhxmacrohost.OcamlInjection" ];
   HxType.register_class_tags "hxhxmacrohost.Protocol" [ "hxhxmacrohost.Protocol" ];
   HxType.register_class_tags "hxhxmacrohost.api.Compiler" [ "hxhxmacrohost.api.Compiler" ];
   HxType.register_class_tags "hxhxmacrohost.api.Context" [ "hxhxmacrohost.api.Context" ];
+  HxType.register_class_tags "hxhxmacrohost.api.RuntimeMacroExprs" [ "hxhxmacrohost.api.RuntimeMacroExprs" ];
+  HxType.register_class_tags "hxhxmacrohost.api.RuntimeMacroTypeDefinitions" [ "hxhxmacrohost.api.RuntimeMacroTypeDefinitions" ];
+  HxType.register_class_tags "hxhxmacrohost.api.RuntimeMacroTypes" [ "hxhxmacrohost.api.RuntimeMacroTypes" ];
+  HxType.register_class_tags "hxhxmacrohost.api.RuntimeTypedExprs" [ "hxhxmacrohost.api.RuntimeTypedExprs" ];
   HxType.register_class_tags "hxhxmacros.ArgsMacros" [ "hxhxmacros.ArgsMacros" ];
   HxType.register_class_tags "hxhxmacros.BuildFieldMacros" [ "hxhxmacros.BuildFieldMacros" ];
   HxType.register_class_tags "hxhxmacros.ExprMacroShim" [ "hxhxmacros.ExprMacroShim" ];

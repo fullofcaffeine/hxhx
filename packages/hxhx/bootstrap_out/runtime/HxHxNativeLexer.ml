@@ -240,7 +240,8 @@ let tokenize (src : string) : string =
           (match text with
           | "package" | "import" | "using" | "as" | "class"
           | "public" | "private" | "static" | "function" | "return"
-          | "var" | "final" | "new" | "true" | "false" | "null" ->
+          | "var" | "final" | "inline" | "override" | "macro" | "extern"
+          | "dynamic" | "new" | "true" | "false" | "null" ->
               add_tok "kw" at_idx at_line at_col text
           | _ -> add_tok "ident" at_idx at_line at_col text);
           loop ()

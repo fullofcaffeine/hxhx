@@ -13,14 +13,20 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacros.Plugi
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacros.PluginFixtureMacros" } : t)
 
-let init = fun () -> (
-  ignore (Haxe_macro_Compiler.define "HXHX_PLUGIN_FIXTURE" "1");
-  let cp = HxSys.getEnv "HXHX_PLUGIN_FIXTURE_CP" in (
-    ignore (if cp != Obj.magic (HxRuntime.hx_null) && HxString.length (StringTools.trim cp) > 0 then ignore (Haxe_macro_Compiler.addClassPath cp) else ());
-    ignore (Haxe_macro_Context.onAfterTyping (fun _hx -> Haxe_macro_Compiler.define "HXHX_PLUGIN_FIXTURE_AFTER_TYPING" "1"));
+let init = fun () -> ignore ((
+  ignore (Haxe_macro_Compiler.define ("HXHX_PLUGIN_FIXTURE" : string) ("1" : string));
+  let cp = (HxSys.getEnv "HXHX_PLUGIN_FIXTURE_CP" : string) in (
+    ignore (if cp != Obj.magic (HxRuntime.hx_null) && HxString.length (StringTools.trim (cp : string)) > 0 then ignore (Haxe_macro_Compiler.addClassPath (cp : string)) else ());
+    ignore (Haxe_macro_Context.onAfterTyping (fun _hx -> (
+      ignore _hx;
+      ignore (Haxe_macro_Compiler.define ("HXHX_PLUGIN_FIXTURE_AFTER_TYPING" : string) ("1" : string))
+    )));
     Haxe_macro_Context.onGenerate (fun _hx -> (
-      ignore (Haxe_macro_Compiler.define "HXHX_PLUGIN_FIXTURE_ON_GENERATE" "1");
-      Haxe_macro_Compiler.emitOcamlModule "HxHxPluginFixtureGen" "let plugin_fixture_generated : string = \"ok\""
+      ignore _hx;
+      ignore ((
+        ignore (Haxe_macro_Compiler.define ("HXHX_PLUGIN_FIXTURE_ON_GENERATE" : string) ("1" : string));
+        Haxe_macro_Compiler.emitOcamlModule ("HxHxPluginFixtureGen" : string) ("let plugin_fixture_generated : string = \"ok\"" : string)
+      ))
     )) (Obj.magic (HxRuntime.hx_null))
   )
-)
+))

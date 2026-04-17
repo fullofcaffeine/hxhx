@@ -13,4 +13,4 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacrohost.En
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.EntryPoints" } : t)
 
-let run = fun _expr -> Hxhxmacrohost_EntryPointsGen.run _expr
+let run = fun _expr -> Hxhxmacrohost_EntryPointsGen.run (_expr : string)

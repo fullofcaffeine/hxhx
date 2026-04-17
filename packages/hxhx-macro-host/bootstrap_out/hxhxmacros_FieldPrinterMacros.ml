@@ -13,27 +13,27 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacros.Field
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacros.FieldPrinterMacros" } : t)
 
-let addArgFunctionAndVar = fun () -> let fields = Haxe_macro_Context.getBuildFields () in let traceCall = let __anon_1 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_1 "expr" (Obj.repr (Haxe_macro_Expr.ECall ((let __anon_2 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_2 "expr" (Obj.repr (Haxe_macro_Expr.EConst (Haxe_macro_Expr.CIdent "trace"))));
-    ignore (HxAnon.set __anon_2 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+let addArgFunctionAndVar = fun () -> let fields = Obj.magic (Haxe_macro_Context.getBuildFields ()) in let traceCall = let __anon_1 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_1 "expr" (HxEnum.box_if_needed "haxe.macro.ExprDef" (Obj.repr (Haxe_macro_Expr.ECall ((let __anon_2 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_2 "expr" (HxEnum.box_if_needed "haxe.macro.ExprDef" (Obj.repr (Haxe_macro_Expr.EConst (Obj.magic (Haxe_macro_Expr.CIdent ("trace" : string)))))));
+    ignore (HxAnon.set __anon_2 "pos" (Obj.magic (HxRuntime.hx_null)));
     __anon_2
-  )), (let __arr_3 = HxArray.create () in (
+  )), Obj.magic (let __arr_3 = HxArray.create () in (
     ignore (HxArray.push __arr_3 (let __anon_4 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_4 "expr" (Obj.repr (Haxe_macro_Expr.EConst (Haxe_macro_Expr.CString ("from_hxhx_field_printer", HxEnum.box_if_needed "haxe.macro.StringLiteralKind" (Obj.repr (Haxe_macro_Expr.DoubleQuotes)))))));
-      ignore (HxAnon.set __anon_4 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+      ignore (HxAnon.set __anon_4 "expr" (HxEnum.box_if_needed "haxe.macro.ExprDef" (Obj.repr (Haxe_macro_Expr.EConst (Obj.magic (Haxe_macro_Expr.CString (("from_hxhx_field_printer" : string), HxEnum.box_if_needed "haxe.macro.StringLiteralKind" (Obj.repr (Haxe_macro_Expr.DoubleQuotes)))))))));
+      ignore (HxAnon.set __anon_4 "pos" (Obj.magic (HxRuntime.hx_null)));
       __anon_4
     )));
     __arr_3
-  ))))));
-  ignore (HxAnon.set __anon_1 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+  )))))));
+  ignore (HxAnon.set __anon_1 "pos" (Obj.magic (HxRuntime.hx_null)));
   __anon_1
 ) in let body = let __anon_5 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_5 "expr" (Obj.repr (Haxe_macro_Expr.EBlock (let __arr_6 = HxArray.create () in (
+  ignore (HxAnon.set __anon_5 "expr" (HxEnum.box_if_needed "haxe.macro.ExprDef" (Obj.repr (Haxe_macro_Expr.EBlock (Obj.magic (let __arr_6 = HxArray.create () in (
     ignore (HxArray.push __arr_6 traceCall);
     __arr_6
-  )))));
-  ignore (HxAnon.set __anon_5 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+  )))))));
+  ignore (HxAnon.set __anon_5 "pos" (Obj.magic (HxRuntime.hx_null)));
   __anon_5
 ) in (
   ignore (HxArray.push fields (let __anon_7 = HxAnon.create () in (
@@ -43,28 +43,28 @@ let addArgFunctionAndVar = fun () -> let fields = Haxe_macro_Context.getBuildFie
       ignore (HxArray.push __arr_8 (Haxe_macro_Expr.AStatic));
       __arr_8
     ))));
-    ignore (HxAnon.set __anon_7 "kind" (Obj.repr (Haxe_macro_Expr.FFun (let __anon_9 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_7 "kind" (HxEnum.box_if_needed "haxe.macro.FieldType" (Obj.repr (Haxe_macro_Expr.FFun (let __anon_9 = HxAnon.create () in (
       ignore (HxAnon.set __anon_9 "args" (Obj.repr (let __arr_10 = HxArray.create () in (
         ignore (HxArray.push __arr_10 (let __anon_11 = HxAnon.create () in (
           ignore (HxAnon.set __anon_11 "name" (Obj.repr "a"));
-          ignore (HxAnon.set __anon_11 "type" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-          ignore (HxAnon.set __anon_11 "opt" (Obj.repr (Obj.repr false)));
-          ignore (HxAnon.set __anon_11 "value" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+          ignore (HxAnon.set __anon_11 "type" (HxEnum.box_if_needed "haxe.macro.ComplexType" (Obj.magic (HxRuntime.hx_null))));
+          ignore (HxAnon.set __anon_11 "opt" (Obj.repr false));
+          ignore (HxAnon.set __anon_11 "value" (Obj.magic (HxRuntime.hx_null)));
           __anon_11
         )));
         ignore (HxArray.push __arr_10 (let __anon_12 = HxAnon.create () in (
           ignore (HxAnon.set __anon_12 "name" (Obj.repr "b"));
-          ignore (HxAnon.set __anon_12 "type" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-          ignore (HxAnon.set __anon_12 "opt" (Obj.repr (Obj.repr false)));
-          ignore (HxAnon.set __anon_12 "value" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+          ignore (HxAnon.set __anon_12 "type" (HxEnum.box_if_needed "haxe.macro.ComplexType" (Obj.magic (HxRuntime.hx_null))));
+          ignore (HxAnon.set __anon_12 "opt" (Obj.repr false));
+          ignore (HxAnon.set __anon_12 "value" (Obj.magic (HxRuntime.hx_null)));
           __anon_12
         )));
         __arr_10
       ))));
-      ignore (HxAnon.set __anon_9 "expr" (Obj.repr body));
+      ignore (HxAnon.set __anon_9 "expr" body);
       __anon_9
-    )))));
-    ignore (HxAnon.set __anon_7 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+    ))))));
+    ignore (HxAnon.set __anon_7 "pos" (Obj.magic (HxRuntime.hx_null)));
     __anon_7
   )));
   ignore (HxArray.push fields (let __anon_13 = HxAnon.create () in (
@@ -74,12 +74,12 @@ let addArgFunctionAndVar = fun () -> let fields = Haxe_macro_Context.getBuildFie
       ignore (HxArray.push __arr_14 (Haxe_macro_Expr.AStatic));
       __arr_14
     ))));
-    ignore (HxAnon.set __anon_13 "kind" (Obj.repr (Haxe_macro_Expr.FVar (Obj.obj (HxEnum.unbox_or_obj "haxe.macro.ComplexType" (Obj.magic (HxRuntime.hx_null))), (let __anon_15 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_15 "expr" (Obj.repr (Haxe_macro_Expr.EConst (Haxe_macro_Expr.CInt ("123", Obj.magic (HxRuntime.hx_null))))));
-      ignore (HxAnon.set __anon_15 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+    ignore (HxAnon.set __anon_13 "kind" (HxEnum.box_if_needed "haxe.macro.FieldType" (Obj.repr (Haxe_macro_Expr.FVar (Obj.obj (HxEnum.unbox_or_obj "haxe.macro.ComplexType" (Obj.magic (HxRuntime.hx_null))), (let __anon_15 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_15 "expr" (HxEnum.box_if_needed "haxe.macro.ExprDef" (Obj.repr (Haxe_macro_Expr.EConst (Obj.magic (Haxe_macro_Expr.CInt (("123" : string), Obj.magic (HxRuntime.hx_null))))))));
+      ignore (HxAnon.set __anon_15 "pos" (Obj.magic (HxRuntime.hx_null)));
       __anon_15
-    ))))));
-    ignore (HxAnon.set __anon_13 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+    )))))));
+    ignore (HxAnon.set __anon_13 "pos" (Obj.magic (HxRuntime.hx_null)));
     __anon_13
   )));
   fields

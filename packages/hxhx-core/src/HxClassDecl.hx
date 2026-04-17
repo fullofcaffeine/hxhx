@@ -14,12 +14,14 @@ class HxClassDecl {
 	public final hasStaticMain:Bool;
 	public final functions:Array<HxFunctionDecl>;
 	public final fields:Array<HxFieldDecl>;
+	public final extendsPath:String;
 
-	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>, ?fields:Array<HxFieldDecl>) {
+	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>, ?fields:Array<HxFieldDecl>, ?extendsPath:String) {
 		this.name = name;
 		this.hasStaticMain = hasStaticMain;
 		this.functions = functions == null ? [] : functions;
 		this.fields = fields == null ? [] : fields;
+		this.extendsPath = extendsPath == null ? "" : extendsPath;
 	}
 
 	/**
@@ -51,5 +53,17 @@ class HxClassDecl {
 	**/
 	public static function getFields(c:HxClassDecl):Array<HxFieldDecl> {
 		return c.fields;
+	}
+
+	/**
+		Returns the source-level superclass path when the bootstrap parser can
+		observe one.
+
+		The Stage3 JS backend uses this only as behavior metadata for prototype
+		chaining and constructor ordering; unresolved paths remain empty instead
+		of weakening parser errors elsewhere.
+	**/
+	public static function getExtendsPath(c:HxClassDecl):String {
+		return c.extendsPath;
 	}
 }

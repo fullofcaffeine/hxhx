@@ -201,31 +201,31 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable message : string; mutable stack : Haxe_CallStack.stackitem HxArray.t; mutable previous : Haxe_Exception.t; mutable native : Obj.t; mutable __exceptionMessage : string; mutable __exceptionStack : Haxe_CallStack.stackitem HxArray.t; mutable __nativeStack : Obj.t; mutable __skipStack : int; mutable __nativeException : Obj.t; mutable __previousException : Haxe_Exception.t; unwrap : Obj.t -> unit -> Obj.t; toString : Obj.t -> unit -> string; details : Obj.t -> unit -> string; __shiftStack : Obj.t -> unit -> unit; __unshiftStack : Obj.t -> unit -> unit; get_message : Obj.t -> unit -> string; get_previous : Obj.t -> unit -> Haxe_Exception.t; get_native : Obj.t -> unit -> Obj.t; get_stack : Obj.t -> unit -> Haxe_CallStack.stackitem HxArray.t; mutable pos : Obj.t }
 
-let create = fun message pos2 previous -> let self = ({ __hx_type = HxType.class_ "haxe.macro.Error"; message = ""; stack = Obj.magic (); previous = Obj.magic (); native = Obj.magic (); __exceptionMessage = ""; __exceptionStack = Obj.magic (); __nativeStack = Obj.magic (); __skipStack = 0; __nativeException = Obj.magic (); __previousException = Obj.magic (); unwrap = (fun o () -> Haxe_Exception.unwrap__impl (Obj.magic o) ()); toString = (fun o () -> Haxe_Exception.toString__impl (Obj.magic o) ()); details = (fun o () -> Haxe_Exception.details__impl (Obj.magic o) ()); __shiftStack = (fun o () -> Haxe_Exception.__shiftStack__impl (Obj.magic o) ()); __unshiftStack = (fun o () -> Haxe_Exception.__unshiftStack__impl (Obj.magic o) ()); get_message = (fun o () -> Haxe_Exception.get_message__impl (Obj.magic o) ()); get_previous = (fun o () -> Haxe_Exception.get_previous__impl (Obj.magic o) ()); get_native = (fun o () -> Haxe_Exception.get_native__impl (Obj.magic o) ()); get_stack = (fun o () -> Haxe_Exception.get_stack__impl (Obj.magic o) ()); pos = Obj.magic () } : t) in (
-  ignore ((
+let create = fun message pos2 previous -> let self = ({ __hx_type = HxType.class_ "haxe.macro.Error"; message = ""; stack = Obj.magic (HxRuntime.hx_null); previous = Obj.magic (HxRuntime.hx_null); native = Obj.magic (HxRuntime.hx_null); __exceptionMessage = ""; __exceptionStack = Obj.magic (HxRuntime.hx_null); __nativeStack = Obj.magic (HxRuntime.hx_null); __skipStack = 0; __nativeException = Obj.magic (HxRuntime.hx_null); __previousException = Obj.magic (HxRuntime.hx_null); unwrap = (fun o () -> Obj.magic (Haxe_Exception.unwrap__impl (Obj.magic o) (Obj.magic ()))); toString = (fun o () -> Obj.magic (Haxe_Exception.toString__impl (Obj.magic o) (Obj.magic ()))); details = (fun o () -> Obj.magic (Haxe_Exception.details__impl (Obj.magic o) (Obj.magic ()))); __shiftStack = (fun o () -> Obj.magic (Haxe_Exception.__shiftStack__impl (Obj.magic o) (Obj.magic ()))); __unshiftStack = (fun o () -> Obj.magic (Haxe_Exception.__unshiftStack__impl (Obj.magic o) (Obj.magic ()))); get_message = (fun o () -> Obj.magic (Haxe_Exception.get_message__impl (Obj.magic o) (Obj.magic ()))); get_previous = (fun o () -> Obj.magic (Haxe_Exception.get_previous__impl (Obj.magic o) (Obj.magic ()))); get_native = (fun o () -> Obj.magic (Haxe_Exception.get_native__impl (Obj.magic o) (Obj.magic ()))); get_stack = (fun o () -> Obj.magic (Haxe_Exception.get_stack__impl (Obj.magic o) (Obj.magic ()))); pos = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
     ignore (Haxe_Exception.__ctor (Obj.magic self) message previous (Obj.magic (HxRuntime.hx_null)));
-    ignore (let __assign_1 = pos2 in (
-      self.pos <- __assign_1;
+    ignore (let __assign_1 = Obj.magic pos2 in (
+      (Obj.magic self : t).pos <- __assign_1;
       __assign_1
     ));
-    let __obj_2 = self in let __old_3 = __obj_2.__skipStack in let __new_4 = HxInt.add __old_3 1 in (
-      ignore (__obj_2.__skipStack <- __new_4);
+    let __obj_2 = self in let __old_3 = (Obj.magic __obj_2 : Haxe_Exception.t).__skipStack in let __new_4 = HxInt.add __old_3 1 in (
+      ignore ((Obj.magic __obj_2 : Haxe_Exception.t).__skipStack <- __new_4);
       __old_3
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.macro.Error"; message = ""; stack = Obj.magic (); previous = Obj.magic (); native = Obj.magic (); __exceptionMessage = ""; __exceptionStack = Obj.magic (); __nativeStack = Obj.magic (); __skipStack = 0; __nativeException = Obj.magic (); __previousException = Obj.magic (); unwrap = (fun o () -> Haxe_Exception.unwrap__impl (Obj.magic o) ()); toString = (fun o () -> Haxe_Exception.toString__impl (Obj.magic o) ()); details = (fun o () -> Haxe_Exception.details__impl (Obj.magic o) ()); __shiftStack = (fun o () -> Haxe_Exception.__shiftStack__impl (Obj.magic o) ()); __unshiftStack = (fun o () -> Haxe_Exception.__unshiftStack__impl (Obj.magic o) ()); get_message = (fun o () -> Haxe_Exception.get_message__impl (Obj.magic o) ()); get_previous = (fun o () -> Haxe_Exception.get_previous__impl (Obj.magic o) ()); get_native = (fun o () -> Haxe_Exception.get_native__impl (Obj.magic o) ()); get_stack = (fun o () -> Haxe_Exception.get_stack__impl (Obj.magic o) ()); pos = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.macro.Error"; message = ""; stack = Obj.magic (HxRuntime.hx_null); previous = Obj.magic (HxRuntime.hx_null); native = Obj.magic (HxRuntime.hx_null); __exceptionMessage = ""; __exceptionStack = Obj.magic (HxRuntime.hx_null); __nativeStack = Obj.magic (HxRuntime.hx_null); __skipStack = 0; __nativeException = Obj.magic (HxRuntime.hx_null); __previousException = Obj.magic (HxRuntime.hx_null); unwrap = (fun o () -> Obj.magic (Haxe_Exception.unwrap__impl (Obj.magic o) (Obj.magic ()))); toString = (fun o () -> Obj.magic (Haxe_Exception.toString__impl (Obj.magic o) (Obj.magic ()))); details = (fun o () -> Obj.magic (Haxe_Exception.details__impl (Obj.magic o) (Obj.magic ()))); __shiftStack = (fun o () -> Obj.magic (Haxe_Exception.__shiftStack__impl (Obj.magic o) (Obj.magic ()))); __unshiftStack = (fun o () -> Obj.magic (Haxe_Exception.__unshiftStack__impl (Obj.magic o) (Obj.magic ()))); get_message = (fun o () -> Obj.magic (Haxe_Exception.get_message__impl (Obj.magic o) (Obj.magic ()))); get_previous = (fun o () -> Obj.magic (Haxe_Exception.get_previous__impl (Obj.magic o) (Obj.magic ()))); get_native = (fun o () -> Obj.magic (Haxe_Exception.get_native__impl (Obj.magic o) (Obj.magic ()))); get_stack = (fun o () -> Obj.magic (Haxe_Exception.get_stack__impl (Obj.magic o) (Obj.magic ()))); pos = Obj.magic (HxRuntime.hx_null) } : t)
 
-let __ctor = fun (self : t) message pos2 previous -> ignore ((
+let __ctor = fun (self : t) message pos2 previous -> ignore (ignore ((
   ignore (Haxe_Exception.__ctor (Obj.magic self) message previous (Obj.magic (HxRuntime.hx_null)));
-  ignore (let __assign_1 = pos2 in (
-    self.pos <- __assign_1;
+  ignore (let __assign_1 = Obj.magic pos2 in (
+    (Obj.magic self : t).pos <- __assign_1;
     __assign_1
   ));
-  let __obj_2 = self in let __old_3 = __obj_2.__skipStack in let __new_4 = HxInt.add __old_3 1 in (
-    ignore (__obj_2.__skipStack <- __new_4);
+  let __obj_2 = self in let __old_3 = (Obj.magic __obj_2 : Haxe_Exception.t).__skipStack in let __new_4 = HxInt.add __old_3 1 in (
+    ignore ((Obj.magic __obj_2 : Haxe_Exception.t).__skipStack <- __new_4);
     __old_3
   )
-))
+)))

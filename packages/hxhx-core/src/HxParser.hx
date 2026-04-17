@@ -3600,9 +3600,18 @@ class HxParser {
 				case TKeyword(KClass):
 					bump(); // 'class'
 					final className = readIdent("class name");
-					// Skip `extends` / `implements` / generics / metadata until '{'.
-					while (!cur.kind.match(TLBrace) && !cur.kind.match(TEof))
-						bump();
+					var extendsPath = "";
+					// Capture the simple superclass path while still ignoring generic
+					// parameters and implements clauses in this bootstrap parser.
+					while (!cur.kind.match(TLBrace) && !cur.kind.match(TEof)) {
+						switch (cur.kind) {
+							case TIdent(name) if (name == "extends"):
+								bump();
+								extendsPath = readDottedPath();
+							case _:
+								bump();
+						}
+					}
 					if (cur.kind.match(TEof))
 						break;
 					expect(TLBrace, "'{'");
@@ -3618,7 +3627,7 @@ class HxParser {
 						}
 					}
 
-					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields));
+					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath));
 				// `parseClassMembers` consumes the closing `}`.
 				case TKeyword(KFunction):
 					// Detect module-level `function main(...)` entrypoint.

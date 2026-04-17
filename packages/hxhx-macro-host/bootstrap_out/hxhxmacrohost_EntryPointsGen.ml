@@ -13,115 +13,115 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacrohost.En
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.EntryPointsGen" } : t)
 
-let run = fun expr -> try (
+let run = fun expr -> try let __fallback_result_23 = (
   ignore (if expr == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let e = StringTools.trim expr in let tempResult = ref (Obj.magic ()) in (
+  let e = (StringTools.trim (expr : string) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (match e with
       | "Macro.init()" -> let r = Obj.repr (Macro.init ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
-        if HxType.isOfType r (HxType.class_ "String") then let __assign_2 = Obj.obj r in (
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_2 = Obj.magic (Obj.obj r : string) in (
           tempResult := __assign_2;
           __assign_2
-        ) else let __assign_3 = "ok" in (
+        ) else let __assign_3 = Obj.magic ("ok" : string) in (
           tempResult := __assign_3;
           __assign_3
         )
       )
-      | "hxhxmacros.ArgsMacros.setArg(\"ok\")" -> let r = Obj.repr (Hxhxmacros_ArgsMacros.setArg "ok") in (
+      | "hxhxmacros.ArgsMacros.setArg(\"ok\")" -> let r = Obj.repr (Hxhxmacros_ArgsMacros.setArg ("ok" : string)) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
-        if HxType.isOfType r (HxType.class_ "String") then let __assign_4 = Obj.obj r in (
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_4 = Obj.magic (Obj.obj r : string) in (
           tempResult := __assign_4;
           __assign_4
-        ) else let __assign_5 = "ok" in (
+        ) else let __assign_5 = Obj.magic ("ok" : string) in (
           tempResult := __assign_5;
           __assign_5
         )
       )
       | "hxhxmacros.BuildFieldMacros.addGeneratedField()" -> let r = Obj.repr (Hxhxmacros_BuildFieldMacros.addGeneratedField ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
-        if HxType.isOfType r (HxType.class_ "String") then let __assign_6 = Obj.obj r in (
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_6 = Obj.magic (Obj.obj r : string) in (
           tempResult := __assign_6;
           __assign_6
-        ) else let __assign_7 = "ok" in (
+        ) else let __assign_7 = Obj.magic ("ok" : string) in (
           tempResult := __assign_7;
           __assign_7
         )
       )
       | "hxhxmacros.ExprMacroShim.hello()" -> let r = Obj.repr (Hxhxmacros_ExprMacroShim.hello ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
-        if HxType.isOfType r (HxType.class_ "String") then let __assign_8 = Obj.obj r in (
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_8 = Obj.magic (Obj.obj r : string) in (
           tempResult := __assign_8;
           __assign_8
-        ) else let __assign_9 = "ok" in (
+        ) else let __assign_9 = Obj.magic ("ok" : string) in (
           tempResult := __assign_9;
           __assign_9
         )
       )
       | "hxhxmacros.ExternalMacros.external()" -> let r = Obj.repr (Hxhxmacros_ExternalMacros.hx_external ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
-        if HxType.isOfType r (HxType.class_ "String") then let __assign_10 = Obj.obj r in (
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_10 = Obj.magic (Obj.obj r : string) in (
           tempResult := __assign_10;
           __assign_10
-        ) else let __assign_11 = "ok" in (
+        ) else let __assign_11 = Obj.magic ("ok" : string) in (
           tempResult := __assign_11;
           __assign_11
         )
       )
       | "hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar()" -> let r = Obj.repr (Hxhxmacros_FieldPrinterMacros.addArgFunctionAndVar ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
-        if HxType.isOfType r (HxType.class_ "String") then let __assign_12 = Obj.obj r in (
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_12 = Obj.magic (Obj.obj r : string) in (
           tempResult := __assign_12;
           __assign_12
-        ) else let __assign_13 = "ok" in (
+        ) else let __assign_13 = Obj.magic ("ok" : string) in (
           tempResult := __assign_13;
           __assign_13
         )
       )
       | "hxhxmacros.HaxelibInitMacros.init()" -> let r = Obj.repr (Hxhxmacros_HaxelibInitMacros.init ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
-        if HxType.isOfType r (HxType.class_ "String") then let __assign_14 = Obj.obj r in (
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_14 = Obj.magic (Obj.obj r : string) in (
           tempResult := __assign_14;
           __assign_14
-        ) else let __assign_15 = "ok" in (
+        ) else let __assign_15 = Obj.magic ("ok" : string) in (
           tempResult := __assign_15;
           __assign_15
         )
       )
       | "hxhxmacros.PluginFixtureMacros.init()" -> let r = Obj.repr (Hxhxmacros_PluginFixtureMacros.init ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
-        if HxType.isOfType r (HxType.class_ "String") then let __assign_16 = Obj.obj r in (
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_16 = Obj.magic (Obj.obj r : string) in (
           tempResult := __assign_16;
           __assign_16
-        ) else let __assign_17 = "ok" in (
+        ) else let __assign_17 = Obj.magic ("ok" : string) in (
           tempResult := __assign_17;
           __assign_17
         )
       )
       | "hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()" -> let r = Obj.repr (Hxhxmacros_ReturnFieldMacros.addGeneratedFieldReturn ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
-        if HxType.isOfType r (HxType.class_ "String") then let __assign_18 = Obj.obj r in (
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_18 = Obj.magic (Obj.obj r : string) in (
           tempResult := __assign_18;
           __assign_18
-        ) else let __assign_19 = "ok" in (
+        ) else let __assign_19 = Obj.magic ("ok" : string) in (
           tempResult := __assign_19;
           __assign_19
         )
       )
       | "hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn()" -> let r = Obj.repr (Hxhxmacros_ReturnFieldMacros.replaceGeneratedFieldReturn ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
-        if HxType.isOfType r (HxType.class_ "String") then let __assign_20 = Obj.obj r in (
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_20 = Obj.magic (Obj.obj r : string) in (
           tempResult := __assign_20;
           __assign_20
-        ) else let __assign_21 = "ok" in (
+        ) else let __assign_21 = Obj.magic ("ok" : string) in (
           tempResult := __assign_21;
           __assign_21
         )
       )
-      | _ -> let __assign_1 = Obj.magic (HxRuntime.hx_null) in (
+      | _ -> let __assign_1 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
         tempResult := __assign_1;
         __assign_1
       ));
     !tempResult
   )
-) with
+) in Obj.magic __fallback_result_23 with
   | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22

@@ -13,8 +13,8 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacros.Exter
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacros.ExternalMacros" } : t)
 
-let hx_external = fun () -> let flag = Hxhxmacrohost_api_Context.definedValue "HXHX_FLAG" in (
-  ignore (Hxhxmacrohost_api_Compiler.define "HXHX_EXTERNAL" "1");
-  ignore (Hxhxmacrohost_api_Compiler.emitOcamlModule "HxHxExternal" (("let external_flag : string = \"" ^ HxString.toStdString flag) ^ "\""));
+let hx_external = fun () -> let flag = (Hxhxmacrohost_api_Context.definedValue ("HXHX_FLAG" : string) : string) in (
+  ignore (Hxhxmacrohost_api_Compiler.define ("HXHX_EXTERNAL" : string) ("1" : string));
+  ignore (Hxhxmacrohost_api_Compiler.emitOcamlModule ("HxHxExternal" : string) (("let external_flag : string = \"" ^ HxString.toStdString flag) ^ "\"" : string));
   "external=ok"
 )

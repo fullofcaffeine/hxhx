@@ -60,6 +60,22 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertTrue(snapshot.indexOf("Sym ('<', _) when !reading_type") >= 0, "bootstrap native parser snapshot must track generic type hint angle depth");
 	}
 
+	static function assertBootstrapNativeParserAllowsKeywordPathSegments():Void {
+		final sourcePath = "packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml";
+		final source = readOptional(sourcePath);
+		assertTrue(source != null, "missing native parser source at " + sourcePath);
+		assertTrue(source.indexOf("let read_path_ident () : string =") >= 0, "native parser source must distinguish path identifiers");
+		assertTrue(source.indexOf('"macro"') >= 0, "native parser source must accept macro as a path segment");
+		assertTrue(source.indexOf('"extern"') >= 0, "native parser source must accept extern as a path segment");
+
+		final snapshotPath = "packages/hxhx/bootstrap_out/runtime/HxHxNativeParser.ml";
+		final snapshot = readOptional(snapshotPath);
+		assertTrue(snapshot != null, "missing committed bootstrap native parser snapshot at " + snapshotPath);
+		assertTrue(snapshot.indexOf("let read_path_ident () : string =") >= 0, "bootstrap native parser snapshot must distinguish path identifiers");
+		assertTrue(snapshot.indexOf('"macro"') >= 0, "bootstrap native parser snapshot must accept macro as a path segment");
+		assertTrue(snapshot.indexOf('"extern"') >= 0, "bootstrap native parser snapshot must accept extern as a path segment");
+	}
+
 	static function assertParsedGenericMethods(decl:HxModuleDecl, sourceLabel:String):Void {
 		final cls = findClass(decl, "GenericMethods");
 
@@ -99,6 +115,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 	static function main() {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
 		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
+		assertBootstrapNativeParserAllowsKeywordPathSegments();
 
 		final src = '@:generic class GenericMethods<T> {\n'
 			+ '  public function new() {}\n'

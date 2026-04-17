@@ -136,11 +136,11 @@ class ParserStageNativeDecode {
 			fields.push(f);
 		}
 
-		for (fp in fieldPayloads) {
-			pushFieldMaybe(decodeFieldPayload(fp));
+		for (fp in staticFinalPayloads) {
+			pushFieldMaybe(decodeStaticFinalPayload(fp));
 		}
 
-		for (fp in staticFinalPayloads) {
+		for (fp in fieldPayloads) {
 			pushFieldMaybe(decodeFieldPayload(fp));
 		}
 
@@ -289,7 +289,7 @@ class ParserStageNativeDecode {
 		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
 	}
 
-	static function decodeFieldPayload(payload:String):Null<HxFieldDecl> {
+	static function decodeFieldPayload(payload:String, isFinal:Bool = false):Null<HxFieldDecl> {
 		// v=2 field payload (also accepted from v1 `ast static_final`):
 		//   name\nvis\nstatic\ntypehint\ninitexpr
 		if (payload == null || payload.length == 0)
@@ -306,12 +306,11 @@ class ParserStageNativeDecode {
 		var init:Null<HxExpr> = null;
 		if (initRaw.length > 0)
 			init = true ? parseReturnExprText(initRaw) : null;
-		return new HxFieldDecl(name, vis, isStatic, typeHint, init);
+		return new HxFieldDecl(name, vis, isStatic, typeHint, init, null, null, null, isFinal, "", "", initRaw);
 	}
 
 	static function decodeStaticFinalPayload(payload:String):Null<HxFieldDecl> {
-		// Backward-compat shim for older call sites and tests.
-		return decodeFieldPayload(payload);
+		return decodeFieldPayload(payload, true);
 	}
 
 	static function stripNewTypeParams(raw:String):String {

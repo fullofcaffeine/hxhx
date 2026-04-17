@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacrohost.Ma
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.Main" } : t)
 
-let safeReadLine = fun () -> try try raise (HxRuntime.Hx_return (Obj.repr (try input_line stdin with End_of_file -> Obj.magic (HxRuntime.hx_null)))) with
+let safeReadLine = fun () -> try let __fallback_result_8 = try raise (HxRuntime.Hx_return (Obj.repr ((try input_line stdin with End_of_file -> Obj.magic (HxRuntime.hx_null)) : string))) with
   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
   | HxRuntime.Hx_return __ret_3 -> raise (HxRuntime.Hx_return __ret_3)
@@ -24,440 +24,620 @@ let safeReadLine = fun () -> try try raise (HxRuntime.Hx_return (Obj.repr (try i
   | __exn_6 -> if true then let _hx = (Obj.repr __exn_6 : Obj.t) in (
     ignore _hx;
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-  ) else raise (__exn_6) with
+  ) else raise (__exn_6) in Obj.magic __fallback_result_8 with
   | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
 
-let expandExprMacro = fun expr -> try let tempString = ref "" in (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_62 = "" in (
-    tempString := __assign_62;
-    __assign_62
-  ) else let __assign_63 = StringTools.trim expr in (
-    tempString := __assign_63;
-    __assign_63
+let expandExprMacro = fun expr -> try let __fallback_result_96 = let tempString = ref ("" : string) in (
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_93 = ("" : string) in (
+    tempString := __assign_93;
+    __assign_93
+  ) else let __assign_94 = (StringTools.trim (expr : string) : string) in (
+    tempString := __assign_94;
+    __assign_94
   ));
   ignore (if HxString.length (!tempString) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.expandExpr: empty expr") ["Dynamic"; "String"]) else ());
-  let ext = Hxhxmacrohost_EntryPoints.run (!tempString) in (
-    ignore (if ext != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ext)) else ());
+  let ext = (Hxhxmacrohost_EntryPoints.run (!tempString : string) : string) in (
+    ignore (if ext != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (ext : string))) else ());
     ignore (match !tempString with
-      | "HelperMacros.getCompilationDate()" | "unit.HelperMacros.getCompilationDate()" -> raise (HxRuntime.Hx_return (Obj.repr "\"<compilation-date>\""))
+      | "HelperMacros.getCompilationDate()" | "unit.HelperMacros.getCompilationDate()" -> raise (HxRuntime.Hx_return (Obj.repr ("\"<compilation-date>\"" : string)))
       | _ -> ignore ());
     HxType.hx_throw_typed_rtti (Obj.repr ("macro.expandExpr: expr not registered: " ^ HxString.toStdString (!tempString))) ["Dynamic"; "String"]
   )
-) with
-  | HxRuntime.Hx_return __ret_64 -> Obj.obj __ret_64
+) in Obj.magic __fallback_result_96 with
+  | HxRuntime.Hx_return __ret_95 -> Obj.obj __ret_95
 
-let parseOneStringLiteralArg = fun s -> try (
+let parseOneStringLiteralArg = fun s -> try let __fallback_result_102 = (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let t = StringTools.trim s in (
+  let t = (StringTools.trim (s : string) : string) in (
     ignore (if HxString.length t < 2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let q = HxString.charCodeAt t 0 in (
-      ignore (if not (let __nullable_65 = q in if __nullable_65 == HxRuntime.hx_null then false else Obj.obj __nullable_65 = 34) && not (let __nullable_66 = q in if __nullable_66 == HxRuntime.hx_null then false else Obj.obj __nullable_66 = 39) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      ignore (if not (let __nullable_67 = HxString.charCodeAt t (HxInt.sub (HxString.length t) 1) in let __nullable_68 = q in if __nullable_67 == HxRuntime.hx_null then __nullable_67 == HxRuntime.hx_null && __nullable_68 == HxRuntime.hx_null else not (__nullable_68 == HxRuntime.hx_null) && Obj.obj __nullable_67 = Obj.obj __nullable_68) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      let body = HxString.substr t 1 (HxInt.sub (HxString.length t) 2) in let body = StringTools.replace body "\\\\" "\\" in let body = StringTools.replace body "\\\"" "\"" in let body = StringTools.replace body "\\'" "'" in body
+      ignore (if not (let __nullable_97 = q in if __nullable_97 == HxRuntime.hx_null then false else Obj.obj __nullable_97 = 34) && not (let __nullable_98 = q in if __nullable_98 == HxRuntime.hx_null then false else Obj.obj __nullable_98 = 39) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if not (let __nullable_99 = HxString.charCodeAt t (HxInt.sub (HxString.length t) 1) in let __nullable_100 = q in if __nullable_99 == HxRuntime.hx_null then __nullable_99 == HxRuntime.hx_null && __nullable_100 == HxRuntime.hx_null else not (__nullable_100 == HxRuntime.hx_null) && Obj.obj __nullable_99 = Obj.obj __nullable_100) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      let body = (HxString.substr t 1 (HxInt.sub (HxString.length t) 2) : string) in let body = (StringTools.replace (body : string) ("\\\\" : string) ("\\" : string) : string) in let body = (StringTools.replace (body : string) ("\\\"" : string) ("\"" : string) : string) in let body = (StringTools.replace (body : string) ("\\'" : string) ("'" : string) : string) in body
     )
   )
-) with
-  | HxRuntime.Hx_return __ret_69 -> Obj.obj __ret_69
+) in Obj.magic __fallback_result_102 with
+  | HxRuntime.Hx_return __ret_101 -> Obj.obj __ret_101
 
-let runMacroExpr = fun expr -> try let tempString = ref "" in (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_50 = "" in (
-    tempString := __assign_50;
-    __assign_50
-  ) else let __assign_51 = StringTools.trim expr in (
-    tempString := __assign_51;
-    __assign_51
+let runMacroExpr = fun expr -> try let __fallback_result_81 = let tempString = ref ("" : string) in (
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_69 = ("" : string) in (
+    tempString := __assign_69;
+    __assign_69
+  ) else let __assign_70 = (StringTools.trim (expr : string) : string) in (
+    tempString := __assign_70;
+    __assign_70
   ));
-  ignore (if StringTools.startsWith (!tempString) "include(" && StringTools.endsWith (!tempString) ")" then ignore (let inside = StringTools.trim (HxString.substr (!tempString) (HxString.length "include(") (HxInt.sub (HxInt.sub (HxString.length (!tempString)) (HxString.length "include(")) 1)) in let moduleName = parseOneStringLiteralArg inside in if moduleName != Obj.magic (HxRuntime.hx_null) && HxString.length moduleName > 0 then ignore ((
-    ignore (Hxhxmacrohost_api_Compiler.includeModule moduleName);
+  ignore (if StringTools.startsWith (!tempString : string) ("include(" : string) && StringTools.endsWith (!tempString : string) (")" : string) then ignore (let inside = (StringTools.trim (HxString.substr (!tempString) (HxString.length "include(") (HxInt.sub (HxInt.sub (HxString.length (!tempString)) (HxString.length "include(")) 1) : string) : string) in let moduleName = (parseOneStringLiteralArg (inside : string) : string) in if moduleName != Obj.magic (HxRuntime.hx_null) && HxString.length moduleName > 0 then ignore ((
+    ignore (Hxhxmacrohost_api_Compiler.includeModule (moduleName : string));
     raise (HxRuntime.Hx_return (Obj.repr "include=ok"))
   )) else ()) else ());
-  let tempMaybeString = ref (Obj.magic ()) in (
+  let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (match !tempString with
-      | "BuiltinMacros.addCpFromEnv()" | "hxhxmacrohost.BuiltinMacros.addCpFromEnv()" -> let __assign_53 = Hxhxmacrohost_BuiltinMacros.addCpFromEnv () in (
-        tempMaybeString := __assign_53;
-        __assign_53
+      | "BuiltinMacros.addCpFromEnv()" | "hxhxmacrohost.BuiltinMacros.addCpFromEnv()" -> let __assign_72 = Obj.magic (Hxhxmacrohost_BuiltinMacros.addCpFromEnv () : string) in (
+        tempMaybeString := __assign_72;
+        __assign_72
       )
-      | "BuiltinMacros.dumpDefines()" | "hxhxmacrohost.BuiltinMacros.dumpDefines()" -> let __assign_54 = Hxhxmacrohost_BuiltinMacros.dumpDefines () in (
-        tempMaybeString := __assign_54;
-        __assign_54
+      | "BuiltinMacros.dumpDefines()" | "hxhxmacrohost.BuiltinMacros.dumpDefines()" -> let __assign_73 = Obj.magic (Hxhxmacrohost_BuiltinMacros.dumpDefines () : string) in (
+        tempMaybeString := __assign_73;
+        __assign_73
       )
-      | "BuiltinMacros.fail()" | "hxhxmacrohost.BuiltinMacros.fail()" -> let __assign_55 = Hxhxmacrohost_BuiltinMacros.fail () in (
-        tempMaybeString := __assign_55;
-        __assign_55
+      | "BuiltinMacros.fail()" | "hxhxmacrohost.BuiltinMacros.fail()" -> let __assign_74 = Obj.magic (Hxhxmacrohost_BuiltinMacros.fail () : string) in (
+        tempMaybeString := __assign_74;
+        __assign_74
       )
-      | "BuiltinMacros.genHxModule()" | "hxhxmacrohost.BuiltinMacros.genHxModule()" -> let __assign_56 = Hxhxmacrohost_BuiltinMacros.genHxModule () in (
-        tempMaybeString := __assign_56;
-        __assign_56
+      | "BuiltinMacros.genHxModule()" | "hxhxmacrohost.BuiltinMacros.genHxModule()" -> let __assign_75 = Obj.magic (Hxhxmacrohost_BuiltinMacros.genHxModule () : string) in (
+        tempMaybeString := __assign_75;
+        __assign_75
       )
-      | "BuiltinMacros.genModule()" | "hxhxmacrohost.BuiltinMacros.genModule()" -> let __assign_57 = Hxhxmacrohost_BuiltinMacros.genModule () in (
-        tempMaybeString := __assign_57;
-        __assign_57
+      | "BuiltinMacros.genModule()" | "hxhxmacrohost.BuiltinMacros.genModule()" -> let __assign_76 = Obj.magic (Hxhxmacrohost_BuiltinMacros.genModule () : string) in (
+        tempMaybeString := __assign_76;
+        __assign_76
       )
-      | "BuiltinMacros.readFlag()" | "hxhxmacrohost.BuiltinMacros.readFlag()" -> let __assign_58 = Hxhxmacrohost_BuiltinMacros.readFlag () in (
-        tempMaybeString := __assign_58;
-        __assign_58
+      | "BuiltinMacros.readFlag()" | "hxhxmacrohost.BuiltinMacros.readFlag()" -> let __assign_77 = Obj.magic (Hxhxmacrohost_BuiltinMacros.readFlag () : string) in (
+        tempMaybeString := __assign_77;
+        __assign_77
       )
-      | "BuiltinMacros.registerHooks()" | "hxhxmacrohost.BuiltinMacros.registerHooks()" -> let __assign_59 = Hxhxmacrohost_BuiltinMacros.registerHooks () in (
-        tempMaybeString := __assign_59;
-        __assign_59
+      | "BuiltinMacros.registerHooks()" | "hxhxmacrohost.BuiltinMacros.registerHooks()" -> let __assign_78 = Obj.magic (Hxhxmacrohost_BuiltinMacros.registerHooks () : string) in (
+        tempMaybeString := __assign_78;
+        __assign_78
       )
-      | "BuiltinMacros.smoke()" | "hxhxmacrohost.BuiltinMacros.smoke()" -> let __assign_60 = Hxhxmacrohost_BuiltinMacros.smoke () in (
-        tempMaybeString := __assign_60;
-        __assign_60
+      | "BuiltinMacros.smoke()" | "hxhxmacrohost.BuiltinMacros.smoke()" -> let __assign_79 = Obj.magic (Hxhxmacrohost_BuiltinMacros.smoke () : string) in (
+        tempMaybeString := __assign_79;
+        __assign_79
       )
-      | _ -> let __assign_52 = Obj.magic (HxRuntime.hx_null) in (
-        tempMaybeString := __assign_52;
-        __assign_52
+      | _ -> let __assign_71 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        tempMaybeString := __assign_71;
+        __assign_71
       ));
-    ignore (if !tempMaybeString != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (!tempMaybeString))) else ());
-    let ext = Hxhxmacrohost_EntryPoints.run (!tempString) in (
-      ignore (if ext != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ext)) else ());
+    ignore (if !tempMaybeString != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (!tempMaybeString : string))) else ());
+    let ext = (Hxhxmacrohost_EntryPoints.run (!tempString : string) : string) in (
+      ignore (if ext != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (ext : string))) else ());
       "ran:" ^ HxString.toStdString (!tempString)
     )
   )
-) with
-  | HxRuntime.Hx_return __ret_61 -> Obj.obj __ret_61
+) in Obj.magic __fallback_result_81 with
+  | HxRuntime.Hx_return __ret_80 -> Obj.obj __ret_80
 
-let parseKV = fun tail -> Hxhxmacrohost_Protocol.kvParse tail
+let parseKV = fun tail -> Hxhxmacrohost_Protocol.kvParse (tail : string)
 
-let parseDecInt = fun s -> try (
+let parseDecInt = fun s -> try let __fallback_result_118 = (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
   let i = ref 0 in (
-    ignore (while !i < HxString.length s && (let __nullable_70 = HxString.charCodeAt s (!i) in if __nullable_70 == HxRuntime.hx_null then false else Obj.obj __nullable_70 = 32) do ignore (let __old_71 = !i in let __new_72 = HxInt.add __old_71 1 in (
-      ignore (i := __new_72);
-      __old_71
+    ignore (while !i < HxString.length s && (let __nullable_103 = HxString.charCodeAt s (!i) in if __nullable_103 == HxRuntime.hx_null then false else Obj.obj __nullable_103 = 32) do ignore (let __old_104 = !i in let __new_105 = HxInt.add __old_104 1 in (
+      ignore (i := __new_105);
+      __old_104
     )) done);
     ignore (if !i >= HxString.length s then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
     let value = ref 0 in let saw = ref false in (
       ignore (try while !i < HxString.length s do try ignore (let c = HxString.charCodeAt s (!i) in (
-        ignore (if (let __nullable_73 = c in let __nullable_74 = 48 in if __nullable_73 == HxRuntime.hx_null then false else Obj.obj __nullable_73 < __nullable_74) || (let __nullable_75 = c in let __nullable_76 = 57 in if __nullable_75 == HxRuntime.hx_null then false else Obj.obj __nullable_75 > __nullable_76) then raise (HxRuntime.Hx_break) else ());
-        ignore (let __assign_77 = true in (
-          saw := __assign_77;
-          __assign_77
+        ignore (if (let __nullable_106 = c in let __nullable_107 = 48 in if __nullable_106 == HxRuntime.hx_null then false else Obj.obj __nullable_106 < __nullable_107) || (let __nullable_108 = c in let __nullable_109 = 57 in if __nullable_108 == HxRuntime.hx_null then false else Obj.obj __nullable_108 > __nullable_109) then raise (HxRuntime.Hx_break) else ());
+        ignore (let __assign_110 = true in (
+          saw := __assign_110;
+          __assign_110
         ));
-        ignore (let __assign_78 = HxInt.add (HxInt.mul (!value) 10) (HxInt.sub (let __nullable_int_79 = c in if __nullable_int_79 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_79) 48) in (
-          value := __assign_78;
-          __assign_78
+        ignore (let __assign_111 = HxInt.add (HxInt.mul (!value) 10) (HxInt.sub (let __nullable_int_112 = c in if __nullable_int_112 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_112) 48) in (
+          value := __assign_111;
+          __assign_111
         ));
-        let __old_80 = !i in let __new_81 = HxInt.add __old_80 1 in (
-          ignore (i := __new_81);
-          __old_80
+        let __old_113 = !i in let __new_114 = HxInt.add __old_113 1 in (
+          ignore (i := __new_114);
+          __old_113
         )
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      let tempResult = ref 0 in (
-        ignore (if !saw then let __assign_82 = !value in (
-          tempResult := __assign_82;
-          __assign_82
-        ) else let __assign_83 = -1 in (
-          tempResult := __assign_83;
-          __assign_83
+      let tempResult = ref (0 : int) in (
+        ignore (if !saw then let __assign_115 = !value in (
+          tempResult := __assign_115;
+          __assign_115
+        ) else let __assign_116 = -1 in (
+          tempResult := __assign_116;
+          __assign_116
         ));
         !tempResult
       )
     )
   )
-) with
-  | HxRuntime.Hx_return __ret_84 -> Obj.obj __ret_84
+) in Obj.magic __fallback_result_118 with
+  | HxRuntime.Hx_return __ret_117 -> Obj.obj __ret_117
 
-let flushStdout = fun () -> let __obj_87 = Sys_io_Stdio.stdout () in __obj_87.flush (Obj.magic __obj_87) ()
+let flushStdout = fun () -> ignore (let __obj_121 = Sys_io_Stdio.stdout () in (Obj.magic __obj_121 : Haxe_io_Output.t).flush (Obj.magic __obj_121) ())
 
-let replyOk = fun id tail -> (
+let replyOk = fun id tail -> ignore ((
   ignore (print_endline ((("res " ^ string_of_int id) ^ " ok ") ^ HxString.toStdString tail));
   flushStdout ()
-)
+))
 
-let replyErr = fun id msg pos -> let tempString = ref "" in (
-  ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_85 = "" in (
-    tempString := __assign_85;
-    __assign_85
-  ) else let __assign_86 = (HxString.toStdString (Obj.obj (HxAnon.get pos "fileName")) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get pos "lineNumber")) in (
-    tempString := __assign_86;
-    __assign_86
+let replyErr = fun id msg pos -> ignore (let tempString = ref ("" : string) in (
+  ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_119 = ("" : string) in (
+    tempString := __assign_119;
+    __assign_119
+  ) else let __assign_120 = ((HxString.toStdString (Obj.obj (HxAnon.get pos "fileName")) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get pos "lineNumber")) : string) in (
+    tempString := __assign_120;
+    __assign_120
   ));
-  ignore (print_endline ((((("res " ^ string_of_int id) ^ " err ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "m" msg)) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "p" (!tempString))));
+  ignore (print_endline ((((("res " ^ string_of_int id) ^ " err ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("m" : string) (msg : string))) ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("p" : string) (!tempString : string))));
   flushStdout ()
+))
+
+let nativeExprToPlugin = Obj.magic (HxMap.create_string ())
+
+let loadNativeModule = fun modulePath pluginId -> let tempString = ref ("" : string) in (
+  ignore (if modulePath == Obj.magic (HxRuntime.hx_null) then let __assign_82 = ("" : string) in (
+    tempString := __assign_82;
+    __assign_82
+  ) else let __assign_83 = (modulePath : string) in (
+    tempString := __assign_83;
+    __assign_83
+  ));
+  let path = (StringTools.trim (!tempString : string) : string) in let tempString1 = ref ("" : string) in (
+    ignore (if pluginId == Obj.magic (HxRuntime.hx_null) then let __assign_84 = ("" : string) in (
+      tempString1 := __assign_84;
+      __assign_84
+    ) else let __assign_85 = (pluginId : string) in (
+      tempString1 := __assign_85;
+      __assign_85
+    ));
+    let pid = (StringTools.trim (!tempString1 : string) : string) in (
+      ignore (if HxString.length path = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.loadNativeModule: module path is required") ["Dynamic"; "String"]) else ());
+      ignore (if HxString.length pid = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.loadNativeModule: plugin id is required") ["Dynamic"; "String"]) else ());
+      let tempString2 = ref ("" : string) in let response = (HxHxMacroModuleDynlink.load_and_capture_safe (path : string) (pid : string) : string) in (
+        ignore (if response == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "native macro module loader returned no response") ["Dynamic"; "String"]) else ());
+        ignore (if StringTools.startsWith (response : string) ("ok\n" : string) then let __assign_86 = (HxString.substr response 3 (-1) : string) in (
+          tempString2 := __assign_86;
+          __assign_86
+        ) else (
+          ignore (if StringTools.startsWith (response : string) ("err\n" : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxString.substr response 4 (-1))) ["Dynamic"; "String"]) else ());
+          HxType.hx_throw_typed_rtti (Obj.repr "native macro module loader returned malformed response") ["Dynamic"; "String"]
+        ));
+        let exprs = Obj.magic (Hxhxmacrohost_NativeMacroModuleHostAbi.exprsForPlugin (!tempString2 : string) (pid : string) (path : string)) in (
+          ignore (let _g = ref 0 in while !_g < HxArray.length exprs do ignore (let expr = (HxArray.get (Obj.magic exprs) (!_g) : string) in (
+            ignore (let __old_87 = !_g in let __new_88 = HxInt.add __old_87 1 in (
+              ignore (_g := __new_88);
+              __new_88
+            ));
+            let existingPlugin = (HxMap.get_string nativeExprToPlugin expr : string) in if existingPlugin == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string nativeExprToPlugin expr pid) else ignore (if not (HxString.equals existingPlugin pid) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (((("macro.loadNativeModule: expr `" ^ HxString.toStdString expr) ^ "` already registered by plugin `") ^ HxString.toStdString existingPlugin) ^ "`")) ["Dynamic"; "String"]) else ())
+          )) done);
+          let payloadParts = Obj.magic (HxArray.create ()) in (
+            ignore (HxArray.push payloadParts (Hxhxmacrohost_Protocol.encodeLen ("c" : string) (string_of_int (HxArray.length exprs) : string)));
+            ignore (let _g = ref 0 in let _g1 = HxArray.length exprs in while !_g < _g1 do ignore (let i = let __old_89 = !_g in let __new_90 = HxInt.add __old_89 1 in (
+              ignore (_g := __new_90);
+              __old_89
+            ) in HxArray.push payloadParts (Hxhxmacrohost_Protocol.encodeLen ("e" ^ string_of_int i : string) (HxArray.get (Obj.magic exprs) i : string))) done);
+            HxArray.join payloadParts " " (fun x -> x)
+          )
+        )
+      )
+    )
+  )
 )
 
-let handleReq = fun line -> try let parts = Hxhxmacrohost_Protocol.splitN line 3 in let tempNumber = ref 0 in (
-  ignore (if HxArray.length parts > 1 then let __assign_8 = parseDecInt (HxArray.get parts 1) in (
-    tempNumber := __assign_8;
-    __assign_8
-  ) else let __assign_9 = -1 in (
+let runNativeExpr = fun expr -> let tempString = ref ("" : string) in (
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_91 = ("" : string) in (
+    tempString := __assign_91;
+    __assign_91
+  ) else let __assign_92 = (expr : string) in (
+    tempString := __assign_92;
+    __assign_92
+  ));
+  let key = (StringTools.trim (!tempString : string) : string) in (
+    ignore (if HxString.length key = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.runNativeExpr: expr is required") ["Dynamic"; "String"]) else ());
+    ignore (if not (HxMap.exists_string nativeExprToPlugin key) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("native macro expr not registered: " ^ HxString.toStdString key)) ["Dynamic"; "String"]) else ());
+    HxHxMacroModuleHost.run_expr (key : string)
+  )
+)
+
+let handleReq = fun line -> ignore (try let parts = Obj.magic (Hxhxmacrohost_Protocol.splitN (line : string) 3) in let tempNumber = ref (0 : int) in (
+  ignore (if HxArray.length parts > 1 then let __assign_9 = parseDecInt (HxArray.get (Obj.magic parts) 1 : string) in (
     tempNumber := __assign_9;
     __assign_9
+  ) else let __assign_10 = -1 in (
+    tempNumber := __assign_10;
+    __assign_10
   ));
-  let id = !tempNumber in let tempString = ref "" in (
-    ignore (if HxArray.length parts > 2 then let __assign_10 = HxArray.get parts 2 in (
-      tempString := __assign_10;
-      __assign_10
-    ) else let __assign_11 = "" in (
+  let id = !tempNumber in let tempString = ref ("" : string) in (
+    ignore (if HxArray.length parts > 2 then let __assign_11 = (HxArray.get (Obj.magic parts) 2 : string) in (
       tempString := __assign_11;
       __assign_11
+    ) else let __assign_12 = ("" : string) in (
+      tempString := __assign_12;
+      __assign_12
     ));
-    let tempString1 = ref "" in (
-      ignore (if HxArray.length parts > 3 then let __assign_12 = HxArray.get parts 3 in (
-        tempString1 := __assign_12;
-        __assign_12
-      ) else let __assign_13 = "" in (
+    let tempString1 = ref ("" : string) in (
+      ignore (if HxArray.length parts > 3 then let __assign_13 = (HxArray.get (Obj.magic parts) 3 : string) in (
         tempString1 := __assign_13;
         __assign_13
+      ) else let __assign_14 = ("" : string) in (
+        tempString1 := __assign_14;
+        __assign_14
       ));
       ignore (if id < 0 then ignore ((
-        ignore (replyErr 0 "missing id" (let __anon_14 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_14 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-          ignore (HxAnon.set __anon_14 "lineNumber" (Obj.repr 82));
-          ignore (HxAnon.set __anon_14 "className" (Obj.repr "hxhxmacrohost.Main"));
-          ignore (HxAnon.set __anon_14 "methodName" (Obj.repr "handleReq"));
-          __anon_14
+        ignore (replyErr 0 ("missing id" : string) (let __anon_15 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_15 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+          ignore (HxAnon.set __anon_15 "lineNumber" (Obj.repr 88));
+          ignore (HxAnon.set __anon_15 "className" (Obj.repr "hxhxmacrohost.Main"));
+          ignore (HxAnon.set __anon_15 "methodName" (Obj.repr "handleReq"));
+          __anon_15
         )));
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       try match !tempString with
-        | "compiler.define" -> ignore (let parsed = parseKV (!tempString1) in let tempMaybeString = ref (Obj.magic ()) in (
-          ignore (if HxMap.exists_string parsed "n" then let __assign_16 = HxMap.get_string parsed "n" in (
-            tempMaybeString := __assign_16;
-            __assign_16
-          ) else let __assign_17 = "" in (
+        | "compiler.define" -> ignore (let parsed = parseKV (!tempString1 : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxMap.exists_string parsed "n" then let __assign_17 = Obj.magic (HxMap.get_string parsed "n" : string) in (
             tempMaybeString := __assign_17;
             __assign_17
+          ) else let __assign_18 = Obj.magic ("" : string) in (
+            tempMaybeString := __assign_18;
+            __assign_18
           ));
-          let name = !tempMaybeString in let tempMaybeString1 = ref (Obj.magic ()) in (
-            ignore (if HxMap.exists_string parsed "v" then let __assign_18 = HxMap.get_string parsed "v" in (
-              tempMaybeString1 := __assign_18;
-              __assign_18
-            ) else let __assign_19 = "" in (
+          let name = (!tempMaybeString : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+            ignore (if HxMap.exists_string parsed "v" then let __assign_19 = Obj.magic (HxMap.get_string parsed "v" : string) in (
               tempMaybeString1 := __assign_19;
               __assign_19
+            ) else let __assign_20 = Obj.magic ("" : string) in (
+              tempMaybeString1 := __assign_20;
+              __assign_20
             ));
-            let value = !tempMaybeString1 in (
+            let value = (!tempMaybeString1 : string) in (
               ignore (if HxString.length name = 0 then ignore ((
-                ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing name") (let __anon_20 = HxAnon.create () in (
-                  ignore (HxAnon.set __anon_20 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-                  ignore (HxAnon.set __anon_20 "lineNumber" (Obj.repr 95));
-                  ignore (HxAnon.set __anon_20 "className" (Obj.repr "hxhxmacrohost.Main"));
-                  ignore (HxAnon.set __anon_20 "methodName" (Obj.repr "handleReq"));
-                  __anon_20
+                ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing name" : string) (let __anon_21 = HxAnon.create () in (
+                  ignore (HxAnon.set __anon_21 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                  ignore (HxAnon.set __anon_21 "lineNumber" (Obj.repr 101));
+                  ignore (HxAnon.set __anon_21 "className" (Obj.repr "hxhxmacrohost.Main"));
+                  ignore (HxAnon.set __anon_21 "methodName" (Obj.repr "handleReq"));
+                  __anon_21
                 )));
                 raise (HxRuntime.Hx_return (Obj.repr ()))
               )) else ());
-              ignore (Hxhxmacrohost_api_Compiler.define name value);
-              replyOk id (Hxhxmacrohost_Protocol.encodeLen "v" "ok")
+              ignore (Hxhxmacrohost_api_Compiler.define (name : string) (value : string));
+              replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) ("ok" : string) : string)
             )
           )
         ))
-        | "context.defined" -> ignore (let parsed = parseKV (!tempString1) in let tempMaybeString2 = ref (Obj.magic ()) in (
-          ignore (if HxMap.exists_string parsed "n" then let __assign_21 = HxMap.get_string parsed "n" in (
-            tempMaybeString2 := __assign_21;
-            __assign_21
-          ) else let __assign_22 = "" in (
+        | "context.defined" -> ignore (let parsed = parseKV (!tempString1 : string) in let tempMaybeString2 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxMap.exists_string parsed "n" then let __assign_22 = Obj.magic (HxMap.get_string parsed "n" : string) in (
             tempMaybeString2 := __assign_22;
             __assign_22
+          ) else let __assign_23 = Obj.magic ("" : string) in (
+            tempMaybeString2 := __assign_23;
+            __assign_23
           ));
-          let name = !tempMaybeString2 in let tempString2 = ref "" in (
-            ignore (if Hxhxmacrohost_api_Context.defined name then let __assign_23 = "1" in (
-              tempString2 := __assign_23;
-              __assign_23
-            ) else let __assign_24 = "0" in (
+          let name = (!tempMaybeString2 : string) in let tempString2 = ref ("" : string) in (
+            ignore (if Hxhxmacrohost_api_Context.defined (name : string) then let __assign_24 = ("1" : string) in (
               tempString2 := __assign_24;
               __assign_24
+            ) else let __assign_25 = ("0" : string) in (
+              tempString2 := __assign_25;
+              __assign_25
             ));
-            replyOk id (Hxhxmacrohost_Protocol.encodeLen "v" (!tempString2))
+            replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) (!tempString2 : string) : string)
           )
         ))
-        | "context.definedValue" -> ignore (let parsed = parseKV (!tempString1) in let tempMaybeString3 = ref (Obj.magic ()) in (
-          ignore (if HxMap.exists_string parsed "n" then let __assign_25 = HxMap.get_string parsed "n" in (
-            tempMaybeString3 := __assign_25;
-            __assign_25
-          ) else let __assign_26 = "" in (
+        | "context.definedValue" -> ignore (let parsed = parseKV (!tempString1 : string) in let tempMaybeString3 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxMap.exists_string parsed "n" then let __assign_26 = Obj.magic (HxMap.get_string parsed "n" : string) in (
             tempMaybeString3 := __assign_26;
             __assign_26
-          ));
-          let name = !tempMaybeString3 in replyOk id (Hxhxmacrohost_Protocol.encodeLen "v" (Hxhxmacrohost_api_Context.definedValue name))
-        ))
-        | "context.getType" -> ignore (let parsed = parseKV (!tempString1) in let tempMaybeString4 = ref (Obj.magic ()) in (
-          ignore (if HxMap.exists_string parsed "n" then let __assign_27 = HxMap.get_string parsed "n" in (
-            tempMaybeString4 := __assign_27;
+          ) else let __assign_27 = Obj.magic ("" : string) in (
+            tempMaybeString3 := __assign_27;
             __assign_27
-          ) else let __assign_28 = "" in (
+          ));
+          let name = (!tempMaybeString3 : string) in replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) (Hxhxmacrohost_api_Context.definedValue (name : string) : string) : string)
+        ))
+        | "context.getType" -> ignore (let parsed = parseKV (!tempString1 : string) in let tempMaybeString4 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxMap.exists_string parsed "n" then let __assign_28 = Obj.magic (HxMap.get_string parsed "n" : string) in (
             tempMaybeString4 := __assign_28;
             __assign_28
+          ) else let __assign_29 = Obj.magic ("" : string) in (
+            tempMaybeString4 := __assign_29;
+            __assign_29
           ));
-          let name = !tempMaybeString4 in (
+          let name = (!tempMaybeString4 : string) in (
             ignore (if HxString.length name = 0 then ignore ((
-              ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing name") (let __anon_29 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_29 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-                ignore (HxAnon.set __anon_29 "lineNumber" (Obj.repr 161));
-                ignore (HxAnon.set __anon_29 "className" (Obj.repr "hxhxmacrohost.Main"));
-                ignore (HxAnon.set __anon_29 "methodName" (Obj.repr "handleReq"));
-                __anon_29
+              ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing name" : string) (let __anon_30 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_30 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                ignore (HxAnon.set __anon_30 "lineNumber" (Obj.repr 203));
+                ignore (HxAnon.set __anon_30 "className" (Obj.repr "hxhxmacrohost.Main"));
+                ignore (HxAnon.set __anon_30 "methodName" (Obj.repr "handleReq"));
+                __anon_30
               )));
               raise (HxRuntime.Hx_return (Obj.repr ()))
             )) else ());
-            replyOk id (Hxhxmacrohost_Protocol.encodeLen "v" (Hxhxmacrohost_api_Context.getType name))
+            replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) (Hxhxmacrohost_api_RuntimeMacroTypes.describe (Obj.magic (Hxhxmacrohost_api_Context.getType (name : string))) : string) : string)
           )
         ))
-        | "macro.expandExpr" -> ignore (let parsed = parseKV (!tempString1) in let tempMaybeString5 = ref (Obj.magic ()) in (
-          ignore (if HxMap.exists_string parsed "e" then let __assign_30 = HxMap.get_string parsed "e" in (
-            tempMaybeString5 := __assign_30;
-            __assign_30
-          ) else let __assign_31 = "" in (
+        | "macro.expandExpr" -> ignore (let parsed = parseKV (!tempString1 : string) in let tempMaybeString5 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxMap.exists_string parsed "e" then let __assign_31 = Obj.magic (HxMap.get_string parsed "e" : string) in (
             tempMaybeString5 := __assign_31;
             __assign_31
+          ) else let __assign_32 = Obj.magic ("" : string) in (
+            tempMaybeString5 := __assign_32;
+            __assign_32
           ));
-          let expr = !tempMaybeString5 in (
+          let expr = (!tempMaybeString5 : string) in (
             ignore (if HxString.length expr = 0 then ignore ((
-              ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing expr") (let __anon_32 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_32 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-                ignore (HxAnon.set __anon_32 "lineNumber" (Obj.repr 136));
-                ignore (HxAnon.set __anon_32 "className" (Obj.repr "hxhxmacrohost.Main"));
-                ignore (HxAnon.set __anon_32 "methodName" (Obj.repr "handleReq"));
-                __anon_32
+              ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing expr" : string) (let __anon_33 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_33 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                ignore (HxAnon.set __anon_33 "lineNumber" (Obj.repr 163));
+                ignore (HxAnon.set __anon_33 "className" (Obj.repr "hxhxmacrohost.Main"));
+                ignore (HxAnon.set __anon_33 "methodName" (Obj.repr "handleReq"));
+                __anon_33
               )));
               raise (HxRuntime.Hx_return (Obj.repr ()))
             )) else ());
-            replyOk id (Hxhxmacrohost_Protocol.encodeLen "v" (expandExprMacro expr))
+            replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) (expandExprMacro (expr : string) : string) : string)
           )
         ))
-        | "macro.run" -> ignore (let parsed = parseKV (!tempString1) in let tempMaybeString6 = ref (Obj.magic ()) in (
-          ignore (if HxMap.exists_string parsed "e" then let __assign_33 = HxMap.get_string parsed "e" in (
-            tempMaybeString6 := __assign_33;
-            __assign_33
-          ) else let __assign_34 = "" in (
+        | "macro.loadNativeModule" -> ignore (let parsed = parseKV (!tempString1 : string) in let tempMaybeString6 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxMap.exists_string parsed "p" then let __assign_34 = Obj.magic (HxMap.get_string parsed "p" : string) in (
             tempMaybeString6 := __assign_34;
             __assign_34
+          ) else let __assign_35 = Obj.magic ("" : string) in (
+            tempMaybeString6 := __assign_35;
+            __assign_35
           ));
-          let expr = !tempMaybeString6 in (
+          let modulePath = (!tempMaybeString6 : string) in let tempMaybeString7 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+            ignore (if HxMap.exists_string parsed "i" then let __assign_36 = Obj.magic (HxMap.get_string parsed "i" : string) in (
+              tempMaybeString7 := __assign_36;
+              __assign_36
+            ) else let __assign_37 = Obj.magic ("" : string) in (
+              tempMaybeString7 := __assign_37;
+              __assign_37
+            ));
+            let pluginId = (!tempMaybeString7 : string) in (
+              ignore (if HxString.length modulePath = 0 then ignore ((
+                ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing module path" : string) (let __anon_38 = HxAnon.create () in (
+                  ignore (HxAnon.set __anon_38 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                  ignore (HxAnon.set __anon_38 "lineNumber" (Obj.repr 133));
+                  ignore (HxAnon.set __anon_38 "className" (Obj.repr "hxhxmacrohost.Main"));
+                  ignore (HxAnon.set __anon_38 "methodName" (Obj.repr "handleReq"));
+                  __anon_38
+                )));
+                raise (HxRuntime.Hx_return (Obj.repr ()))
+              )) else ());
+              ignore (if HxString.length pluginId = 0 then ignore ((
+                ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing plugin id" : string) (let __anon_39 = HxAnon.create () in (
+                  ignore (HxAnon.set __anon_39 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                  ignore (HxAnon.set __anon_39 "lineNumber" (Obj.repr 137));
+                  ignore (HxAnon.set __anon_39 "className" (Obj.repr "hxhxmacrohost.Main"));
+                  ignore (HxAnon.set __anon_39 "methodName" (Obj.repr "handleReq"));
+                  __anon_39
+                )));
+                raise (HxRuntime.Hx_return (Obj.repr ()))
+              )) else ());
+              replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) (loadNativeModule (modulePath : string) (pluginId : string) : string) : string)
+            )
+          )
+        ))
+        | "macro.run" -> ignore (let parsed = parseKV (!tempString1 : string) in let tempMaybeString8 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxMap.exists_string parsed "e" then let __assign_40 = Obj.magic (HxMap.get_string parsed "e" : string) in (
+            tempMaybeString8 := __assign_40;
+            __assign_40
+          ) else let __assign_41 = Obj.magic ("" : string) in (
+            tempMaybeString8 := __assign_41;
+            __assign_41
+          ));
+          let expr = (!tempMaybeString8 : string) in (
             ignore (if HxString.length expr = 0 then ignore ((
-              ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing expr") (let __anon_35 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_35 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-                ignore (HxAnon.set __anon_35 "lineNumber" (Obj.repr 118));
-                ignore (HxAnon.set __anon_35 "className" (Obj.repr "hxhxmacrohost.Main"));
-                ignore (HxAnon.set __anon_35 "methodName" (Obj.repr "handleReq"));
-                __anon_35
+              ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing expr" : string) (let __anon_42 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_42 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                ignore (HxAnon.set __anon_42 "lineNumber" (Obj.repr 124));
+                ignore (HxAnon.set __anon_42 "className" (Obj.repr "hxhxmacrohost.Main"));
+                ignore (HxAnon.set __anon_42 "methodName" (Obj.repr "handleReq"));
+                __anon_42
               )));
               raise (HxRuntime.Hx_return (Obj.repr ()))
             )) else ());
-            replyOk id (Hxhxmacrohost_Protocol.encodeLen "v" (runMacroExpr expr))
+            replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) (runMacroExpr (expr : string) : string) : string)
           )
         ))
-        | "macro.runHook" -> ignore (let parsed = parseKV (!tempString1) in let tempMaybeString7 = ref (Obj.magic ()) in (
-          ignore (if HxMap.exists_string parsed "k" then let __assign_36 = HxMap.get_string parsed "k" in (
-            tempMaybeString7 := __assign_36;
-            __assign_36
-          ) else let __assign_37 = "" in (
-            tempMaybeString7 := __assign_37;
-            __assign_37
+        | "macro.runHook" -> ignore (let parsed = parseKV (!tempString1 : string) in let tempMaybeString9 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxMap.exists_string parsed "k" then let __assign_43 = Obj.magic (HxMap.get_string parsed "k" : string) in (
+            tempMaybeString9 := __assign_43;
+            __assign_43
+          ) else let __assign_44 = Obj.magic ("" : string) in (
+            tempMaybeString9 := __assign_44;
+            __assign_44
           ));
-          let kind = !tempMaybeString7 in let tempMaybeString8 = ref (Obj.magic ()) in (
-            ignore (if HxMap.exists_string parsed "i" then let __assign_38 = HxMap.get_string parsed "i" in (
-              tempMaybeString8 := __assign_38;
-              __assign_38
-            ) else let __assign_39 = "" in (
-              tempMaybeString8 := __assign_39;
-              __assign_39
+          let kind = (!tempMaybeString9 : string) in let tempMaybeString10 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+            ignore (if HxMap.exists_string parsed "i" then let __assign_45 = Obj.magic (HxMap.get_string parsed "i" : string) in (
+              tempMaybeString10 := __assign_45;
+              __assign_45
+            ) else let __assign_46 = Obj.magic ("" : string) in (
+              tempMaybeString10 := __assign_46;
+              __assign_46
             ));
-            let idStr = !tempMaybeString8 in let hid = Std.parseInt idStr in (
+            let idStr = (!tempMaybeString10 : string) in let hid = Std.parseInt (idStr : string) in (
               ignore (if HxString.length kind = 0 then ignore ((
-                ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing kind") (let __anon_40 = HxAnon.create () in (
-                  ignore (HxAnon.set __anon_40 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-                  ignore (HxAnon.set __anon_40 "lineNumber" (Obj.repr 146));
-                  ignore (HxAnon.set __anon_40 "className" (Obj.repr "hxhxmacrohost.Main"));
-                  ignore (HxAnon.set __anon_40 "methodName" (Obj.repr "handleReq"));
-                  __anon_40
+                ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing kind" : string) (let __anon_47 = HxAnon.create () in (
+                  ignore (HxAnon.set __anon_47 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                  ignore (HxAnon.set __anon_47 "lineNumber" (Obj.repr 173));
+                  ignore (HxAnon.set __anon_47 "className" (Obj.repr "hxhxmacrohost.Main"));
+                  ignore (HxAnon.set __anon_47 "methodName" (Obj.repr "handleReq"));
+                  __anon_47
                 )));
                 raise (HxRuntime.Hx_return (Obj.repr ()))
               )) else ());
               ignore (if hid == HxRuntime.hx_null then ignore ((
-                ignore (replyErr id (HxString.toStdString (!tempString) ^ ": invalid hook id") (let __anon_41 = HxAnon.create () in (
-                  ignore (HxAnon.set __anon_41 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-                  ignore (HxAnon.set __anon_41 "lineNumber" (Obj.repr 150));
-                  ignore (HxAnon.set __anon_41 "className" (Obj.repr "hxhxmacrohost.Main"));
-                  ignore (HxAnon.set __anon_41 "methodName" (Obj.repr "handleReq"));
-                  __anon_41
+                ignore (replyErr id (HxString.toStdString (!tempString) ^ ": invalid hook id" : string) (let __anon_48 = HxAnon.create () in (
+                  ignore (HxAnon.set __anon_48 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                  ignore (HxAnon.set __anon_48 "lineNumber" (Obj.repr 177));
+                  ignore (HxAnon.set __anon_48 "className" (Obj.repr "hxhxmacrohost.Main"));
+                  ignore (HxAnon.set __anon_48 "methodName" (Obj.repr "handleReq"));
+                  __anon_48
                 )));
                 raise (HxRuntime.Hx_return (Obj.repr ()))
               )) else ());
-              ignore (Hxhxmacrohost_MacroRuntime.runHook kind (let __nullable_int_42 = hid in if __nullable_int_42 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_42));
-              replyOk id (Hxhxmacrohost_Protocol.encodeLen "v" "ok")
+              ignore (Hxhxmacrohost_MacroRuntime.runHook (kind : string) (let __nullable_int_49 = hid in if __nullable_int_49 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_49));
+              replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) ("ok" : string) : string)
             )
           )
         ))
-        | "ping" -> ignore (replyOk id (Hxhxmacrohost_Protocol.encodeLen "v" "pong"))
-        | _ -> ignore (replyErr id ("unknown method: " ^ HxString.toStdString (!tempString)) (let __anon_15 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_15 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-          ignore (HxAnon.set __anon_15 "lineNumber" (Obj.repr 166));
-          ignore (HxAnon.set __anon_15 "className" (Obj.repr "hxhxmacrohost.Main"));
-          ignore (HxAnon.set __anon_15 "methodName" (Obj.repr "handleReq"));
-          __anon_15
+        | "macro.runNativeExpr" -> ignore (let parsed = parseKV (!tempString1 : string) in let tempMaybeString11 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxMap.exists_string parsed "e" then let __assign_50 = Obj.magic (HxMap.get_string parsed "e" : string) in (
+            tempMaybeString11 := __assign_50;
+            __assign_50
+          ) else let __assign_51 = Obj.magic ("" : string) in (
+            tempMaybeString11 := __assign_51;
+            __assign_51
+          ));
+          let expr = (!tempMaybeString11 : string) in (
+            ignore (if HxString.length expr = 0 then ignore ((
+              ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing expr" : string) (let __anon_52 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_52 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                ignore (HxAnon.set __anon_52 "lineNumber" (Obj.repr 145));
+                ignore (HxAnon.set __anon_52 "className" (Obj.repr "hxhxmacrohost.Main"));
+                ignore (HxAnon.set __anon_52 "methodName" (Obj.repr "handleReq"));
+                __anon_52
+              )));
+              raise (HxRuntime.Hx_return (Obj.repr ()))
+            )) else ());
+            replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) (runNativeExpr (expr : string) : string) : string)
+          )
+        ))
+        | "macro.runTypeNotFoundHook" -> ignore (let parsed = parseKV (!tempString1 : string) in let tempMaybeString12 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxMap.exists_string parsed "i" then let __assign_53 = Obj.magic (HxMap.get_string parsed "i" : string) in (
+            tempMaybeString12 := __assign_53;
+            __assign_53
+          ) else let __assign_54 = Obj.magic ("" : string) in (
+            tempMaybeString12 := __assign_54;
+            __assign_54
+          ));
+          let idStr = (!tempMaybeString12 : string) in let hid = Std.parseInt (idStr : string) in let tempMaybeString13 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+            ignore (if HxMap.exists_string parsed "n" then let __assign_55 = Obj.magic (HxMap.get_string parsed "n" : string) in (
+              tempMaybeString13 := __assign_55;
+              __assign_55
+            ) else let __assign_56 = Obj.magic ("" : string) in (
+              tempMaybeString13 := __assign_56;
+              __assign_56
+            ));
+            let typePath = (!tempMaybeString13 : string) in (
+              ignore (if hid == HxRuntime.hx_null then ignore ((
+                ignore (replyErr id (HxString.toStdString (!tempString) ^ ": invalid hook id" : string) (let __anon_57 = HxAnon.create () in (
+                  ignore (HxAnon.set __anon_57 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                  ignore (HxAnon.set __anon_57 "lineNumber" (Obj.repr 188));
+                  ignore (HxAnon.set __anon_57 "className" (Obj.repr "hxhxmacrohost.Main"));
+                  ignore (HxAnon.set __anon_57 "methodName" (Obj.repr "handleReq"));
+                  __anon_57
+                )));
+                raise (HxRuntime.Hx_return (Obj.repr ()))
+              )) else ());
+              ignore (if HxString.length typePath = 0 then ignore ((
+                ignore (replyErr id (HxString.toStdString (!tempString) ^ ": missing type path" : string) (let __anon_58 = HxAnon.create () in (
+                  ignore (HxAnon.set __anon_58 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+                  ignore (HxAnon.set __anon_58 "lineNumber" (Obj.repr 192));
+                  ignore (HxAnon.set __anon_58 "className" (Obj.repr "hxhxmacrohost.Main"));
+                  ignore (HxAnon.set __anon_58 "methodName" (Obj.repr "handleReq"));
+                  __anon_58
+                )));
+                raise (HxRuntime.Hx_return (Obj.repr ()))
+              )) else ());
+              let result = Hxhxmacrohost_MacroRuntime.runTypeNotFoundHook (let __nullable_int_59 = hid in if __nullable_int_59 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_59) (typePath : string) in let tempString3 = ref ("" : string) in (
+                ignore (if Hxhxmacrohost_api_RuntimeMacroTypeDefinitions.emitTypeDefinitionResult result then let __assign_60 = ("1" : string) in (
+                  tempString3 := __assign_60;
+                  __assign_60
+                ) else let __assign_61 = ("0" : string) in (
+                  tempString3 := __assign_61;
+                  __assign_61
+                ));
+                replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) (!tempString3 : string) : string)
+              )
+            )
+          )
+        ))
+        | "ping" -> ignore (replyOk id (Hxhxmacrohost_Protocol.encodeLen ("v" : string) ("pong" : string) : string))
+        | _ -> ignore (replyErr id ("unknown method: " ^ HxString.toStdString (!tempString) : string) (let __anon_16 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_16 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+          ignore (HxAnon.set __anon_16 "lineNumber" (Obj.repr 208));
+          ignore (HxAnon.set __anon_16 "className" (Obj.repr "hxhxmacrohost.Main"));
+          ignore (HxAnon.set __anon_16 "methodName" (Obj.repr "handleReq"));
+          __anon_16
         ))) with
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_43 -> raise (HxRuntime.Hx_return __ret_43)
-        | HxRuntime.Hx_exception (__exn_v_44, __exn_tags_45) -> if true then let e = (__exn_v_44 : Obj.t) in (
+        | HxRuntime.Hx_return __ret_62 -> raise (HxRuntime.Hx_return __ret_62)
+        | HxRuntime.Hx_exception (__exn_v_63, __exn_tags_64) -> if true then let e = (__exn_v_63 : Obj.t) in (
           ignore e;
-          let tag = HxRuntime.dynamic_toStdString (Obj.obj (HxAnon.get e "__hxhx_tag")) in (
-            ignore (if HxString.equals tag "hxhx_macro_host_error_v1" then ignore (let msg = HxRuntime.dynamic_toStdString (Obj.obj (HxAnon.get e "message")) in let p = Obj.obj (HxAnon.get e "pos") in (
-              ignore (replyErr id ((HxString.toStdString (!tempString) ^ ": ") ^ HxString.toStdString msg) p);
+          let tag = (HxRuntime.dynamic_toStdString (Obj.obj (HxAnon.get e "__hxhx_tag")) : string) in (
+            ignore (if HxString.equals tag "hxhx_macro_host_error_v1" then ignore (let msg = (HxRuntime.dynamic_toStdString (Obj.obj (HxAnon.get e "message")) : string) in let p = Obj.obj (HxAnon.get e "pos") in (
+              ignore (replyErr id ((HxString.toStdString (!tempString) ^ ": ") ^ HxString.toStdString msg : string) p);
               raise (HxRuntime.Hx_return (Obj.repr ()))
             )) else ());
-            replyErr id ((HxString.toStdString (!tempString) ^ ": exception: ") ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)) (let __anon_46 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_46 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-              ignore (HxAnon.set __anon_46 "lineNumber" (Obj.repr 177));
-              ignore (HxAnon.set __anon_46 "className" (Obj.repr "hxhxmacrohost.Main"));
-              ignore (HxAnon.set __anon_46 "methodName" (Obj.repr "handleReq"));
-              __anon_46
+            replyErr id ((HxString.toStdString (!tempString) ^ ": exception: ") ^ HxString.toStdString (HxRuntime.dynamic_toStdString e) : string) (let __anon_65 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_65 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+              ignore (HxAnon.set __anon_65 "lineNumber" (Obj.repr 219));
+              ignore (HxAnon.set __anon_65 "className" (Obj.repr "hxhxmacrohost.Main"));
+              ignore (HxAnon.set __anon_65 "methodName" (Obj.repr "handleReq"));
+              __anon_65
             ))
           )
-        ) else HxRuntime.hx_throw_typed __exn_v_44 __exn_tags_45
-        | __exn_47 -> if true then let e = (Obj.repr __exn_47 : Obj.t) in (
+        ) else HxRuntime.hx_throw_typed __exn_v_63 __exn_tags_64
+        | __exn_66 -> if true then let e = (Obj.repr __exn_66 : Obj.t) in (
           ignore e;
-          let tag = HxRuntime.dynamic_toStdString (Obj.obj (HxAnon.get e "__hxhx_tag")) in (
-            ignore (if HxString.equals tag "hxhx_macro_host_error_v1" then ignore (let msg = HxRuntime.dynamic_toStdString (Obj.obj (HxAnon.get e "message")) in let p = Obj.obj (HxAnon.get e "pos") in (
-              ignore (replyErr id ((HxString.toStdString (!tempString) ^ ": ") ^ HxString.toStdString msg) p);
+          let tag = (HxRuntime.dynamic_toStdString (Obj.obj (HxAnon.get e "__hxhx_tag")) : string) in (
+            ignore (if HxString.equals tag "hxhx_macro_host_error_v1" then ignore (let msg = (HxRuntime.dynamic_toStdString (Obj.obj (HxAnon.get e "message")) : string) in let p = Obj.obj (HxAnon.get e "pos") in (
+              ignore (replyErr id ((HxString.toStdString (!tempString) ^ ": ") ^ HxString.toStdString msg : string) p);
               raise (HxRuntime.Hx_return (Obj.repr ()))
             )) else ());
-            replyErr id ((HxString.toStdString (!tempString) ^ ": exception: ") ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)) (let __anon_48 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_48 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-              ignore (HxAnon.set __anon_48 "lineNumber" (Obj.repr 177));
-              ignore (HxAnon.set __anon_48 "className" (Obj.repr "hxhxmacrohost.Main"));
-              ignore (HxAnon.set __anon_48 "methodName" (Obj.repr "handleReq"));
-              __anon_48
+            replyErr id ((HxString.toStdString (!tempString) ^ ": exception: ") ^ HxString.toStdString (HxRuntime.dynamic_toStdString e) : string) (let __anon_67 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_67 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
+              ignore (HxAnon.set __anon_67 "lineNumber" (Obj.repr 219));
+              ignore (HxAnon.set __anon_67 "className" (Obj.repr "hxhxmacrohost.Main"));
+              ignore (HxAnon.set __anon_67 "methodName" (Obj.repr "handleReq"));
+              __anon_67
             ))
           )
-        ) else raise (__exn_47)
+        ) else raise (__exn_66)
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_49 -> Obj.obj __ret_49
+  | HxRuntime.Hx_return __ret_68 -> Obj.obj __ret_68)
 
-let main = fun () -> try (
+let main = fun () -> ignore (try (
   ignore (print_endline ("hxhx_macro_rpc_v=" ^ string_of_int 1));
   ignore (flushStdout ());
-  let hello = safeReadLine () in (
+  let hello = (safeReadLine () : string) in (
     ignore (if hello == Obj.magic (HxRuntime.hx_null) || HxString.indexOf hello "hello" 0 <> 0 then ignore ((
-      ignore (print_endline ("err " ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "m" "missing hello")));
+      ignore (print_endline ("err " ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("m" : string) ("missing hello" : string))));
       raise (HxRuntime.Hx_return (Obj.repr ()))
     )) else ());
     ignore (if HxString.indexOf hello ("proto=" ^ string_of_int 1) 0 = -1 then ignore ((
-      ignore (print_endline ("err " ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "m" "unsupported proto")));
+      ignore (print_endline ("err " ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen ("m" : string) ("unsupported proto" : string))));
       raise (HxRuntime.Hx_return (Obj.repr ()))
     )) else ());
     ignore (print_endline "ok");
     ignore (flushStdout ());
-    try while true do try ignore (let line = safeReadLine () in (
+    try while true do try ignore (let line = (safeReadLine () : string) in (
       ignore (if line == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-      let trimmed = StringTools.trim line in (
+      let trimmed = (StringTools.trim (line : string) : string) in (
         ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_continue) else ());
         ignore (if HxString.equals trimmed "quit" then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-        ignore (if StringTools.startsWith trimmed "req " then ignore ((
-          ignore (handleReq trimmed);
+        ignore (if StringTools.startsWith (trimmed : string) ("req " : string) then ignore ((
+          ignore (handleReq (trimmed : string));
           raise (HxRuntime.Hx_continue)
         )) else ());
-        replyErr 0 "unknown message" (let __anon_1 = HxAnon.create () in (
+        replyErr 0 ("unknown message" : string) (let __anon_1 = HxAnon.create () in (
           ignore (HxAnon.set __anon_1 "fileName" (Obj.repr "src/hxhxmacrohost/Main.hx"));
-          ignore (HxAnon.set __anon_1 "lineNumber" (Obj.repr 63));
+          ignore (HxAnon.set __anon_1 "lineNumber" (Obj.repr 69));
           ignore (HxAnon.set __anon_1 "className" (Obj.repr "hxhxmacrohost.Main"));
           ignore (HxAnon.set __anon_1 "methodName" (Obj.repr "main"));
           __anon_1
@@ -468,4 +648,4 @@ let main = fun () -> try (
       | HxRuntime.Hx_break -> ()
   )
 ) with
-  | HxRuntime.Hx_return __ret_2 -> Obj.obj __ret_2
+  | HxRuntime.Hx_return __ret_2 -> Obj.obj __ret_2)

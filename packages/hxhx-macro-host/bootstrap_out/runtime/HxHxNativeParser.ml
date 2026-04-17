@@ -237,11 +237,20 @@ let parse_module_from_tokens (src : string) (toks : token array)
         "new"
     | _ -> raise (Parse_error (pos_of (cur ()), "expected identifier"))
   in
+  let read_path_ident () : string =
+    match cur () with
+    | Kw ((("macro" | "extern") as s), _) ->
+        (* These are declaration keywords but legal package segments in paths
+           such as `haxe.macro.Compiler` and `haxe.extern.*`. *)
+        bump ();
+        s
+    | _ -> read_ident ()
+  in
   let read_dotted_path () : string =
-    let parts = ref [ read_ident () ] in
+    let parts = ref [ read_path_ident () ] in
     while token_eq_sym (cur ()) '.' do
       bump ();
-      parts := !parts @ [ read_ident () ]
+      parts := !parts @ [ read_path_ident () ]
     done;
     Stdlib.String.concat "." !parts
   in
@@ -249,9 +258,9 @@ let parse_module_from_tokens (src : string) (toks : token array)
   let read_import_path () : string =
     (* Like `read_dotted_path`, but also accepts a trailing `.*` wildcard:
          import a.b.*;
-       The final `*` token is represented as the string segment "*" so the
-       Haxe-side decoder can treat it as `"a.b.*"`. *)
-    let parts = ref [ read_ident () ] in
+	       The final `*` token is represented as the string segment "*" so the
+	       Haxe-side decoder can treat it as `"a.b.*"`. *)
+    let parts = ref [ read_path_ident () ] in
     let done_ = ref false in
     while (not !done_) && token_eq_sym (cur ()) '.' do
       bump ();
@@ -260,7 +269,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
           bump ();
           parts := !parts @ [ "*" ];
           done_ := true
-      | _ -> parts := !parts @ [ read_ident () ]
+      | _ -> parts := !parts @ [ read_path_ident () ]
     done;
     Stdlib.String.concat "." !parts
   in
@@ -324,14 +333,24 @@ let parse_module_from_tokens (src : string) (toks : token array)
     let cur_type_parts : string list ref = ref [] in
     let cur_default_hint : string option ref = ref None in
     let reading_type = ref false in
+    let type_angle = ref 0 in
+    let type_bracket = ref 0 in
+    let type_brace = ref 0 in
     let rest_next = ref false in
+
+    let type_hint_top_level () =
+      !type_angle = 0 && !type_bracket = 0 && !type_brace = 0
+    in
 
     let flush_arg () =
       match !cur_name with
       | None ->
           cur_type_parts := [];
           cur_default_hint := None;
-          reading_type := false
+          reading_type := false;
+          type_angle := 0;
+          type_bracket := 0;
+          type_brace := 0
       | Some name ->
           let ty_raw = Stdlib.String.concat "" !cur_type_parts |> Stdlib.String.trim in
           let ty =
@@ -342,7 +361,10 @@ let parse_module_from_tokens (src : string) (toks : token array)
           cur_name := None;
           cur_type_parts := [];
           cur_default_hint := None;
-          reading_type := false
+          reading_type := false;
+          type_angle := 0;
+          type_bracket := 0;
+          type_brace := 0
     in
 
     while !paren > 0 do
@@ -378,8 +400,33 @@ let parse_module_from_tokens (src : string) (toks : token array)
             if !reading_type then cur_type_parts := !cur_type_parts @ [ ")" ];
             paren := !paren - 1;
             bump ())
-      | Sym (',', _) when !paren = 1 ->
+      | Sym (',', _)
+        when !paren = 1 && (not !reading_type || type_hint_top_level ()) ->
           flush_arg ();
+          bump ()
+      | Sym ('<', _) when !reading_type ->
+          type_angle := !type_angle + 1;
+          cur_type_parts := !cur_type_parts @ [ "<" ];
+          bump ()
+      | Sym ('>', _) when !reading_type ->
+          if !type_angle > 0 then type_angle := !type_angle - 1;
+          cur_type_parts := !cur_type_parts @ [ ">" ];
+          bump ()
+      | Sym ('[', _) when !reading_type ->
+          type_bracket := !type_bracket + 1;
+          cur_type_parts := !cur_type_parts @ [ "[" ];
+          bump ()
+      | Sym (']', _) when !reading_type ->
+          if !type_bracket > 0 then type_bracket := !type_bracket - 1;
+          cur_type_parts := !cur_type_parts @ [ "]" ];
+          bump ()
+      | Sym ('{', _) when !reading_type ->
+          type_brace := !type_brace + 1;
+          cur_type_parts := !cur_type_parts @ [ "{" ];
+          bump ()
+      | Sym ('}', _) when !reading_type && !type_brace > 0 ->
+          type_brace := !type_brace - 1;
+          cur_type_parts := !cur_type_parts @ [ "}" ];
           bump ()
       | Sym (':', _) when !paren = 1 && !cur_name <> None && not !reading_type
         ->
@@ -1065,15 +1112,24 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
         Some s
     | _ -> None
   in
+  let read_path_ident_opt () : string option =
+    match cur () with
+    | Kw ((("macro" | "extern") as s), _) ->
+        (* Fallback parsing should keep the same path semantics as the strict
+           parser: these remain keywords except inside package/import paths. *)
+        bump ();
+        Some s
+    | _ -> read_ident_opt ()
+  in
 
   let read_dotted_path () : string =
-    match read_ident_opt () with
+    match read_path_ident_opt () with
     | None -> ""
     | Some first ->
         let parts = ref [ first ] in
         while token_eq_sym (cur ()) '.' do
           bump ();
-          match read_ident_opt () with
+          match read_path_ident_opt () with
           | Some s -> parts := !parts @ [ s ]
           | None -> ()
         done;
@@ -1081,7 +1137,7 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
   in
 
   let read_import_path () : string =
-    match read_ident_opt () with
+    match read_path_ident_opt () with
     | None -> ""
     | Some first ->
         let parts = ref [ first ] in
@@ -1094,7 +1150,7 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
               parts := !parts @ [ "*" ];
               done_ := true
           | _ -> (
-              match read_ident_opt () with
+              match read_path_ident_opt () with
               | Some s -> parts := !parts @ [ s ]
               | None -> done_ := true)
         done;

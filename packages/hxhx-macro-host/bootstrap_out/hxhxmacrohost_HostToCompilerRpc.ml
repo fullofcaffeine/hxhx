@@ -13,137 +13,157 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacrohost.Ho
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.HostToCompilerRpc" } : t)
 
-let isTrueEnv = fun name -> try let v = HxSys.getEnv name in (
+let isTrueEnv = fun name -> try let __fallback_result_2 = let v = (HxSys.getEnv name : string) in (
   ignore (if v == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  let t = HxString.toLowerCase (StringTools.trim v) () in HxString.equals t "1" || HxString.equals t "true" || HxString.equals t "yes"
-) with
+  let t = (HxString.toLowerCase (StringTools.trim (v : string)) () : string) in HxString.equals t "1" || HxString.equals t "true" || HxString.equals t "yes"
+) in Obj.magic __fallback_result_2 with
   | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
 
-let writeTraceLine = fun msg -> try (
-  ignore (let __obj_2 = Sys_io_Stdio.stderr () in __obj_2.writeString (Obj.magic __obj_2) (HxString.toStdString msg ^ "\n") (Obj.magic (HxRuntime.hx_null)));
-  let __obj_3 = Sys_io_Stdio.stderr () in __obj_3.flush (Obj.magic __obj_3) ()
+let writeTraceLine = fun msg -> ignore (try (
+  ignore (let __obj_3 = Sys_io_Stdio.stderr () in (Obj.magic __obj_3 : Haxe_io_Output.t).writeString (Obj.magic __obj_3) (HxString.toStdString msg ^ "\n" : string) (Obj.magic (HxRuntime.hx_null)));
+  let __obj_4 = Sys_io_Stdio.stderr () in (Obj.magic __obj_4 : Haxe_io_Output.t).flush (Obj.magic __obj_4) ()
 ) with
   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-  | HxRuntime.Hx_return __ret_4 -> raise (HxRuntime.Hx_return __ret_4)
-  | HxRuntime.Hx_exception (__exn_v_5, __exn_tags_6) -> if true then let _hx = (__exn_v_5 : Obj.t) in (
+  | HxRuntime.Hx_return __ret_5 -> raise (HxRuntime.Hx_return __ret_5)
+  | HxRuntime.Hx_exception (__exn_v_6, __exn_tags_7) -> if true then let _hx = (__exn_v_6 : Obj.t) in (
     ignore _hx;
     ()
-  ) else HxRuntime.hx_throw_typed __exn_v_5 __exn_tags_6
-  | __exn_7 -> if true then let _hx = (Obj.repr __exn_7 : Obj.t) in (
+  ) else HxRuntime.hx_throw_typed __exn_v_6 __exn_tags_7
+  | __exn_8 -> if true then let _hx = (Obj.repr __exn_8 : Obj.t) in (
     ignore _hx;
     ()
-  ) else raise (__exn_7)
+  ) else raise (__exn_8))
 
-let traceEnabled = fun () -> let tempResult = ref false in let v = HxSys.getEnv "HXHX_MACRO_HOST_TRACE" in (
-  ignore (if v == Obj.magic (HxRuntime.hx_null) then let __assign_8 = false in (
-    tempResult := __assign_8;
-    __assign_8
-  ) else let t = HxString.toLowerCase (StringTools.trim v) () in let __assign_9 = HxString.equals t "1" || HxString.equals t "true" || HxString.equals t "yes" in (
+let traceEnabled = fun () -> let tempResult = ref (false : bool) in let v = (HxSys.getEnv "HXHX_MACRO_HOST_TRACE" : string) in (
+  ignore (if v == Obj.magic (HxRuntime.hx_null) then let __assign_9 = false in (
     tempResult := __assign_9;
     __assign_9
+  ) else let t = (HxString.toLowerCase (StringTools.trim (v : string)) () : string) in let __assign_10 = HxString.equals t "1" || HxString.equals t "true" || HxString.equals t "yes" in (
+    tempResult := __assign_10;
+    __assign_10
   ));
   !tempResult
 )
 
-let summarizeTail = fun tail -> try (
-  ignore (if tail == Obj.magic (HxRuntime.hx_null) || HxString.length tail = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  try let m = Hxhxmacrohost_Protocol.kvParse tail in let keys = HxArray.create () in let k = HxIterator.of_array (HxMap.keys_string m) in (
-    ignore (while (let __iter_10 = k in fun () -> HxIterator.hasNext __iter_10) () do ignore (let k2 = (let __iter_11 = k in fun () -> HxIterator.next __iter_11) () in HxArray.push keys k2) done);
+let summarizeTail = fun tail -> try let __fallback_result_18 = (
+  ignore (if tail == Obj.magic (HxRuntime.hx_null) || HxString.length tail = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  try let m = Hxhxmacrohost_Protocol.kvParse (tail : string) in let keys = Obj.magic (HxArray.create ()) in let k = HxIterator.of_array (HxMap.keys_string m) in (
+    ignore (while (let __iter_11 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_11)) () do ignore (let k2 = ((let __iter_12 = k in fun () -> HxIterator.next (Obj.magic __iter_12)) () : string) in HxArray.push keys k2) done);
     raise (HxRuntime.Hx_return (Obj.repr ("keys=" ^ HxString.toStdString (HxArray.join keys "," (fun x -> x)))))
   ) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_12 -> raise (HxRuntime.Hx_return __ret_12)
-    | HxRuntime.Hx_exception (__exn_v_13, __exn_tags_14) -> if true then let _hx = (__exn_v_13 : Obj.t) in (
+    | HxRuntime.Hx_return __ret_13 -> raise (HxRuntime.Hx_return __ret_13)
+    | HxRuntime.Hx_exception (__exn_v_14, __exn_tags_15) -> if true then let _hx = (__exn_v_14 : Obj.t) in (
       ignore _hx;
-      raise (HxRuntime.Hx_return (Obj.repr ("len=" ^ string_of_int (HxString.length tail))))
-    ) else HxRuntime.hx_throw_typed __exn_v_13 __exn_tags_14
-    | __exn_15 -> if true then let _hx = (Obj.repr __exn_15 : Obj.t) in (
+      raise (HxRuntime.Hx_return (Obj.repr ("len=" ^ string_of_int (HxString.length tail) : string)))
+    ) else HxRuntime.hx_throw_typed __exn_v_14 __exn_tags_15
+    | __exn_16 -> if true then let _hx = (Obj.repr __exn_16 : Obj.t) in (
       ignore _hx;
-      raise (HxRuntime.Hx_return (Obj.repr ("len=" ^ string_of_int (HxString.length tail))))
-    ) else raise (__exn_15)
-) with
-  | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16
+      raise (HxRuntime.Hx_return (Obj.repr ("len=" ^ string_of_int (HxString.length tail) : string)))
+    ) else raise (__exn_16)
+) in Obj.magic __fallback_result_18 with
+  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let safeReadLine = fun () -> try try raise (HxRuntime.Hx_return (Obj.repr (try input_line stdin with End_of_file -> Obj.magic (HxRuntime.hx_null)))) with
+let safeReadLine = fun () -> try let __fallback_result_40 = try raise (HxRuntime.Hx_return (Obj.repr ((try input_line stdin with End_of_file -> Obj.magic (HxRuntime.hx_null)) : string))) with
   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-  | HxRuntime.Hx_return __ret_28 -> raise (HxRuntime.Hx_return __ret_28)
-  | HxRuntime.Hx_exception (__exn_v_29, __exn_tags_30) -> if true then let _hx = (__exn_v_29 : Obj.t) in (
+  | HxRuntime.Hx_return __ret_35 -> raise (HxRuntime.Hx_return __ret_35)
+  | HxRuntime.Hx_exception (__exn_v_36, __exn_tags_37) -> if true then let _hx = (__exn_v_36 : Obj.t) in (
     ignore _hx;
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-  ) else HxRuntime.hx_throw_typed __exn_v_29 __exn_tags_30
-  | __exn_31 -> if true then let _hx = (Obj.repr __exn_31 : Obj.t) in (
+  ) else HxRuntime.hx_throw_typed __exn_v_36 __exn_tags_37
+  | __exn_38 -> if true then let _hx = (Obj.repr __exn_38 : Obj.t) in (
     ignore _hx;
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-  ) else raise (__exn_31) with
-  | HxRuntime.Hx_return __ret_32 -> Obj.obj __ret_32
+  ) else raise (__exn_38) in Obj.magic __fallback_result_40 with
+  | HxRuntime.Hx_return __ret_39 -> Obj.obj __ret_39
 
 let nextId = ref (-1 : int)
 
-let call = fun hx_method tail -> let id = let __old_17 = !nextId in let __new_18 = HxInt.add __old_17 (-1) in (
-  ignore (nextId := __new_18);
-  __old_17
-) in (
-  ignore (if traceEnabled () then ignore (let tempString = ref "" in (
-    ignore (if tail == Obj.magic (HxRuntime.hx_null) || HxString.length tail = 0 then let __assign_19 = "" in (
-      tempString := __assign_19;
-      __assign_19
-    ) else let __assign_20 = " " ^ HxString.toStdString (summarizeTail tail) in (
-      tempString := __assign_20;
-      __assign_20
-    ));
-    writeTraceLine (("[hxhx macro host rpc] -> " ^ HxString.toStdString hx_method) ^ HxString.toStdString (!tempString))
-  )) else ());
-  let tempString1 = ref "" in (
-    ignore (if tail == Obj.magic (HxRuntime.hx_null) || HxString.length tail = 0 then let __assign_21 = ((("req " ^ string_of_int id) ^ " ") ^ HxString.toStdString hx_method) ^ "\n" in (
-      tempString1 := __assign_21;
-      __assign_21
-    ) else let __assign_22 = ((((("req " ^ string_of_int id) ^ " ") ^ HxString.toStdString hx_method) ^ " ") ^ HxString.toStdString tail) ^ "\n" in (
-      tempString1 := __assign_22;
-      __assign_22
-    ));
-    ignore (print_string (HxString.toStdString (!tempString1)));
-    ignore (let __obj_23 = Sys_io_Stdio.stdout () in __obj_23.flush (Obj.magic __obj_23) ());
-    let out = ref "" in (
-      ignore (try while true do try ignore (let line = safeReadLine () in (
-        ignore (if line == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro host: unexpected EOF while waiting for compiler response") ["Dynamic"; "String"]) else ());
-        let trimmed = StringTools.trim line in (
-          ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_continue) else ());
-          ignore (if StringTools.startsWith trimmed "req " then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: received unexpected compiler request while waiting for reverse response: " ^ HxString.toStdString trimmed)) ["Dynamic"; "String"]) else ());
-          ignore (if not (StringTools.startsWith trimmed "res ") then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: malformed reverse response: " ^ HxString.toStdString trimmed)) ["Dynamic"; "String"]) else ());
-          let parts = Hxhxmacrohost_Protocol.splitN trimmed 3 in let rid = Std.parseInt (HxArray.get parts 1) in (
-            ignore (if rid == HxRuntime.hx_null || not (let __nullable_24 = rid in if __nullable_24 == HxRuntime.hx_null then false else Obj.obj __nullable_24 = id) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: reverse response id mismatch: " ^ HxString.toStdString trimmed)) ["Dynamic"; "String"]) else ());
-            let status = HxArray.get parts 2 in let respTail = HxArray.get parts 3 in (
-              ignore (if HxString.equals status "ok" then ignore ((
-                ignore (if traceEnabled () then ignore (writeTraceLine (("[hxhx macro host rpc] <- " ^ HxString.toStdString hx_method) ^ " ok")) else ());
-                ignore (let __assign_25 = Hxhxmacrohost_Protocol.kvGet respTail "v" in (
-                  out := __assign_25;
-                  __assign_25
-                ));
-                raise (HxRuntime.Hx_break)
-              )) else ());
-              let msg2 = Hxhxmacrohost_Protocol.kvGet respTail "m" in let pos = Hxhxmacrohost_Protocol.kvGet respTail "p" in (
-                ignore (if traceEnabled () then ignore (writeTraceLine (("[hxhx macro host rpc] <- " ^ HxString.toStdString hx_method) ^ " err")) else ());
-                let tempError = ref "" in (
-                  ignore (if pos != Obj.magic (HxRuntime.hx_null) && HxString.length pos > 0 then let __assign_26 = ((("compiler: " ^ HxString.toStdString msg2) ^ " (") ^ HxString.toStdString pos) ^ ")" in (
-                    tempError := __assign_26;
-                    __assign_26
-                  ) else let __assign_27 = "compiler: " ^ HxString.toStdString msg2 in (
-                    tempError := __assign_27;
-                    __assign_27
+let localHandler = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : Obj.t)
+
+let setLocalHandler = fun handler -> ignore (let __assign_19 = handler in (
+  localHandler := __assign_19;
+  __assign_19
+))
+
+let clearLocalHandler = fun () -> ignore (let __assign_20 = Obj.magic (HxRuntime.hx_null) in (
+  localHandler := __assign_20;
+  __assign_20
+))
+
+let call = fun hx_method tail -> try let __fallback_result_34 = (
+  ignore (if !localHandler != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (Obj.obj (HxReflect.callMethod (Obj.magic (HxRuntime.hx_null)) (Obj.repr (!localHandler)) (let __arr_21 = HxArray.create () in (
+    ignore (HxArray.push __arr_21 hx_method);
+    ignore (HxArray.push __arr_21 tail);
+    __arr_21
+  )))) : string))) else ());
+  let id = let __old_22 = !nextId in let __new_23 = HxInt.add __old_22 (-1) in (
+    ignore (nextId := __new_23);
+    __old_22
+  ) in (
+    ignore (if traceEnabled () then ignore (let tempString = ref ("" : string) in (
+      ignore (if tail == Obj.magic (HxRuntime.hx_null) || HxString.length tail = 0 then let __assign_24 = ("" : string) in (
+        tempString := __assign_24;
+        __assign_24
+      ) else let __assign_25 = (" " ^ HxString.toStdString (summarizeTail (tail : string)) : string) in (
+        tempString := __assign_25;
+        __assign_25
+      ));
+      writeTraceLine (("[hxhx macro host rpc] -> " ^ HxString.toStdString hx_method) ^ HxString.toStdString (!tempString) : string)
+    )) else ());
+    let tempString1 = ref ("" : string) in (
+      ignore (if tail == Obj.magic (HxRuntime.hx_null) || HxString.length tail = 0 then let __assign_26 = (((("req " ^ string_of_int id) ^ " ") ^ HxString.toStdString hx_method) ^ "\n" : string) in (
+        tempString1 := __assign_26;
+        __assign_26
+      ) else let __assign_27 = (((((("req " ^ string_of_int id) ^ " ") ^ HxString.toStdString hx_method) ^ " ") ^ HxString.toStdString tail) ^ "\n" : string) in (
+        tempString1 := __assign_27;
+        __assign_27
+      ));
+      ignore (print_string (HxString.toStdString (!tempString1)));
+      ignore (let __obj_28 = Sys_io_Stdio.stdout () in (Obj.magic __obj_28 : Haxe_io_Output.t).flush (Obj.magic __obj_28) ());
+      let out = ref ("" : string) in (
+        ignore (try while true do try ignore (let line = (safeReadLine () : string) in (
+          ignore (if line == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro host: unexpected EOF while waiting for compiler response") ["Dynamic"; "String"]) else ());
+          let trimmed = (StringTools.trim (line : string) : string) in (
+            ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_continue) else ());
+            ignore (if StringTools.startsWith (trimmed : string) ("req " : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: received unexpected compiler request while waiting for reverse response: " ^ HxString.toStdString trimmed)) ["Dynamic"; "String"]) else ());
+            ignore (if not (StringTools.startsWith (trimmed : string) ("res " : string)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: malformed reverse response: " ^ HxString.toStdString trimmed)) ["Dynamic"; "String"]) else ());
+            let parts = Obj.magic (Hxhxmacrohost_Protocol.splitN (trimmed : string) 3) in let rid = Std.parseInt (HxArray.get (Obj.magic parts) 1 : string) in (
+              ignore (if rid == HxRuntime.hx_null || not (let __nullable_29 = rid in if __nullable_29 == HxRuntime.hx_null then false else Obj.obj __nullable_29 = id) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: reverse response id mismatch: " ^ HxString.toStdString trimmed)) ["Dynamic"; "String"]) else ());
+              let status = (HxArray.get (Obj.magic parts) 2 : string) in let respTail = (HxArray.get (Obj.magic parts) 3 : string) in (
+                ignore (if HxString.equals status "ok" then ignore ((
+                  ignore (if traceEnabled () then ignore (writeTraceLine (("[hxhx macro host rpc] <- " ^ HxString.toStdString hx_method) ^ " ok" : string)) else ());
+                  ignore (let __assign_30 = (Hxhxmacrohost_Protocol.kvGet (respTail : string) ("v" : string) : string) in (
+                    out := __assign_30;
+                    __assign_30
                   ));
-                  HxType.hx_throw_typed_rtti (Obj.repr (!tempError)) ["Dynamic"; "String"]
+                  raise (HxRuntime.Hx_break)
+                )) else ());
+                let msg2 = (Hxhxmacrohost_Protocol.kvGet (respTail : string) ("m" : string) : string) in let pos = (Hxhxmacrohost_Protocol.kvGet (respTail : string) ("p" : string) : string) in (
+                  ignore (if traceEnabled () then ignore (writeTraceLine (("[hxhx macro host rpc] <- " ^ HxString.toStdString hx_method) ^ " err" : string)) else ());
+                  let tempError = ref ("" : string) in (
+                    ignore (if pos != Obj.magic (HxRuntime.hx_null) && HxString.length pos > 0 then let __assign_31 = (((("compiler: " ^ HxString.toStdString msg2) ^ " (") ^ HxString.toStdString pos) ^ ")" : string) in (
+                      tempError := __assign_31;
+                      __assign_31
+                    ) else let __assign_32 = ("compiler: " ^ HxString.toStdString msg2 : string) in (
+                      tempError := __assign_32;
+                      __assign_32
+                    ));
+                    HxType.hx_throw_typed_rtti (Obj.repr (!tempError)) ["Dynamic"; "String"]
+                  )
                 )
               )
             )
           )
-        )
-      )) with
-        | HxRuntime.Hx_continue -> () done with
-        | HxRuntime.Hx_break -> ());
-      !out
+        )) with
+          | HxRuntime.Hx_continue -> () done with
+          | HxRuntime.Hx_break -> ());
+        !out
+      )
     )
   )
-)
+) in Obj.magic __fallback_result_34 with
+  | HxRuntime.Hx_return __ret_33 -> Obj.obj __ret_33
