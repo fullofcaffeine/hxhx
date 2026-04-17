@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 runner="$ROOT/scripts/hxhx/run-upstream-runci-targets.sh"
+extended_workflow="$ROOT/.github/workflows/gate3-full1-extended.yml"
 
 grep -Fq 'if [ "\${HXHX_FORBID_STAGE0:-0}" = "1" ]; then' "$runner"
 grep -Fq 'exec "${HXHX_BIN}" "\$@"' "$runner"
@@ -20,6 +21,7 @@ grep -Fq 'resolve_lua_bin()' "$runner"
 grep -Fq 'command -v lua5.4' "$runner"
 grep -Fq 'need_cmd luarocks "Lua target dependencies"' "$runner"
 grep -Fq 'cat >"$WRAP_DIR/lua"' "$runner"
+grep -Fq "printf '%s\\n' \"\${REQUESTED_TARGETS}\"" "$extended_workflow"
 
 strict_line="$(grep -nF 'exec "${HXHX_BIN}" "\$@"' "$runner" | head -n 1 | cut -d: -f1)"
 compat_line="$(grep -nF 'exec "${HXHX_BIN}" --compat "\$@"' "$runner" | head -n 1 | cut -d: -f1)"
