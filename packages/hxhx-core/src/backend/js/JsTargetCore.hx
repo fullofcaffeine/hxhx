@@ -256,6 +256,10 @@ class JsTargetCore implements ITargetCore {
 
 	static function nativeJsNodeRequireExternRef(fullName:String):Null<String> {
 		return switch (fullName) {
+			case "js.node.buffer.Buffer":
+				"require(\"buffer\").Buffer";
+			case "js.node.buffer.SlowBuffer":
+				"require(\"buffer\").SlowBuffer";
 			case "js.node.url.URL":
 				"require(\"url\").URL";
 			case "js.node.url.URLSearchParams":
