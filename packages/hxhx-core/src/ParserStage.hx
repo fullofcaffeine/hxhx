@@ -1320,8 +1320,9 @@ class ParserStage {
 					var parenDepth = 0;
 					var bracketDepth = 0;
 					var angleDepth = 0;
+					var fieldDone = false;
 
-					while (true) {
+					while (!fieldDone) {
 						final ft = scanNextToken(source, i);
 						i = ft.nextPos;
 						if (ft.text.length == 0)
@@ -1333,7 +1334,7 @@ class ParserStage {
 									depth += 1;
 								case "}":
 									depth -= 1;
-									if (depth <= 0) break;
+									if (depth <= 0) fieldDone = true;
 								case "(":
 									if (depth == 1) parenDepth += 1;
 								case ")":
@@ -1349,7 +1350,7 @@ class ParserStage {
 								case ",":
 									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) wantName = true;
 								case ";":
-									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) break;
+									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) fieldDone = true;
 								case _:
 							}
 							continue;
@@ -1371,6 +1372,8 @@ class ParserStage {
 					sawStatic = false;
 					sawMacro = false;
 					vis = HxVisibility.Public;
+					if (depth <= 0)
+						break;
 				case "function":
 					// Best-effort: collect function name + arity + static flag from the scanned class body.
 					//
