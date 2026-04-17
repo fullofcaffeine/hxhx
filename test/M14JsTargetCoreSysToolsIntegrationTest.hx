@@ -548,6 +548,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final valueArg = new HxFunctionArg("value", "Dynamic", HxDefaultValue.NoDefault, true);
 		final stringClass = new HxClassDecl("String", false, [
 			new HxFunctionDecl("new", HxVisibility.Public, false, [valueArg], "Void",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), ""),
+			new HxFunctionDecl("toUpperCase", HxVisibility.Public, false, [], "String",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
 		]);
 		final decl = new HxModuleDecl("", [], stringClass, [stringClass], false, false);
@@ -1051,6 +1053,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(haxe.crypto.Base64.BYTES);',
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
 				'    Sys.println("starts=" + StringTools.startsWith("testCase", "test") + "," + StringTools.startsWith("case", ""));',
+				'    Sys.println("upper=" + "abc".toUpperCase());',
 				'    Sys.println(unit.TestReflect.TYPES[0].__hx_name);',
 				'    Sys.println(unit.TestReflect.TNAMES.join(","));',
 				'    var generatedSpecs = [];',
@@ -1271,6 +1274,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"StringTools.startsWith runtime complement should backfill inline/erased std bodies");
 			assertContains(js, "__hx_cls_StringTools.startsWith = function", "StringTools.startsWith shim should emit");
 			assertContains(js, "return String(s).indexOf(String(start)) === 0;", "StringTools.startsWith should lower to JS prefix check");
+			assertNotContains(js, "__hx_cls_String.prototype.toUpperCase",
+				"native JS String prototype methods should not be re-emitted from unsupported std bodies");
 			assertContains(js, "__hx_cls_Main.HX_CTOR = \"_hx_constructor\"", "static inline final string constants should keep simple runtime initializers");
 			assertContains(js, "__hx_cls_JsCtorChild.prototype._hx_constructor = function",
 				"pre-super constructors should expose the ES6 extracted constructor marker");
@@ -1376,6 +1381,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "abc", "same-class static field refs should execute through class bindings");
 			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
 			assertContains(stdout, "starts=true,true", "StringTools.startsWith should support utest prefix discovery and empty prefixes");
+			assertContains(stdout, "upper=ABC", "native JS String prototype methods should remain available");
 			assertContains(stdout, "unit.MyInterface", "unresolved qualified value type refs should preserve runtime type names");
 			assertContains(stdout, "haxe.ds.StringMap,unit.MyInterface", "same-class static helper calls should execute during static field initialization");
 			assertContains(stdout, "generated-specs=0", "unexpanded upstream unit spec builder should not crash JS for-in lowering");

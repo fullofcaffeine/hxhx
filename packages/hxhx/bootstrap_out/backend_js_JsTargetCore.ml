@@ -2566,7 +2566,7 @@ let emitPlainClassPrototypeMethods = fun writer unit classRefs -> ignore (let in
     | HxRuntime.Hx_break -> ()
 ))
 
-let isNativeJsPrototypeClass = fun fullName -> HxString.equals fullName "Array"
+let isNativeJsPrototypeClass = fun fullName -> HxString.equals fullName "Array" || HxString.equals fullName "String"
 
 let isNativeJsExternPrototypeClass = fun fullName -> fullName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (fullName : string) ("js.node." : string)
 
