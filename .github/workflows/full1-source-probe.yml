@@ -130,6 +130,7 @@ jobs:
           name: full1-source-probe-${{ github.run_id }}
           path: |
             .artifacts/full1/source-probe/source-probe.summary.json
+            .artifacts/full1/source-probe/*.log
             .artifacts/full1/source-probe/suites/*.log
             .artifacts/full1/source-probe/suites/*.summary.json
           if-no-files-found: warn

@@ -16,6 +16,7 @@ const path = require('path')
 const cp = require('child_process')
 
 const DEFAULT_SUITES = ['server', 'optimization']
+const SUMMARY_TAIL_CHARS = 4000
 
 function parseArgs(argv) {
   const out = {
@@ -72,6 +73,22 @@ function run(command, args, options) {
   })
 }
 
+function relativeArtifactPath(root, filePath) {
+  return path.relative(root, filePath).split(path.sep).join('/')
+}
+
+function logSummary(root, filePath, text) {
+  const content = String(text || '')
+  fs.writeFileSync(filePath, content, 'utf8')
+  return {
+    log: relativeArtifactPath(root, filePath),
+    bytes: Buffer.byteLength(content, 'utf8'),
+    tail: content.length > SUMMARY_TAIL_CHARS
+      ? content.slice(content.length - SUMMARY_TAIL_CHARS)
+      : content,
+  }
+}
+
 function parseBuildBinaryPath(stdoutText) {
   const lines = String(stdoutText || '')
     .split(/\r?\n/)
@@ -102,7 +119,7 @@ function main() {
   ensureDir(suitesArtifactsDir)
 
   const summary = {
-    schema: 'full1-source-probe-summary.v1',
+    schema: 'full1-source-probe-summary.v2',
     started_at: startedAt.toISOString(),
     root: parsed.root,
     suites: parsed.suites,
@@ -110,8 +127,12 @@ function main() {
       attempted: true,
       exit_code: null,
       hxhx_bin: '',
-      stdout: '',
-      stderr: '',
+      stdout_log: '',
+      stderr_log: '',
+      stdout_bytes: 0,
+      stderr_bytes: 0,
+      stdout_tail: '',
+      stderr_tail: '',
       error: '',
     },
     suites_run: [],
@@ -127,8 +148,22 @@ function main() {
   const buildScript = path.join(parsed.root, 'scripts/hxhx/build-hxhx.sh')
   const buildResult = run('bash', [buildScript], { cwd: parsed.root, env })
   summary.build.exit_code = buildResult.status == null ? -1 : buildResult.status
-  summary.build.stdout = buildResult.stdout || ''
-  summary.build.stderr = buildResult.stderr || ''
+  const buildStdout = logSummary(
+    parsed.root,
+    path.join(parsed.artifactsDir, 'build.stdout.log'),
+    buildResult.stdout || ''
+  )
+  const buildStderr = logSummary(
+    parsed.root,
+    path.join(parsed.artifactsDir, 'build.stderr.log'),
+    buildResult.stderr || ''
+  )
+  summary.build.stdout_log = buildStdout.log
+  summary.build.stderr_log = buildStderr.log
+  summary.build.stdout_bytes = buildStdout.bytes
+  summary.build.stderr_bytes = buildStderr.bytes
+  summary.build.stdout_tail = buildStdout.tail
+  summary.build.stderr_tail = buildStderr.tail
   summary.build.error = buildResult.error ? String(buildResult.error.message || buildResult.error) : ''
 
   let hxhxBin = ''
@@ -161,14 +196,28 @@ function main() {
         { cwd: parsed.root, env }
       )
       const suiteEndedAt = new Date()
+      const suiteStdout = logSummary(
+        parsed.root,
+        path.join(suitesArtifactsDir, `${suite}.source-probe.stdout.log`),
+        suiteResult.stdout || ''
+      )
+      const suiteStderr = logSummary(
+        parsed.root,
+        path.join(suitesArtifactsDir, `${suite}.source-probe.stderr.log`),
+        suiteResult.stderr || ''
+      )
       summary.suites_run.push({
         suite,
         started_at: suiteStartedAt.toISOString(),
         ended_at: suiteEndedAt.toISOString(),
         duration_ms: suiteEndedAt.getTime() - suiteStartedAt.getTime(),
         exit_code: suiteResult.status == null ? -1 : suiteResult.status,
-        stdout: suiteResult.stdout || '',
-        stderr: suiteResult.stderr || '',
+        stdout_log: suiteStdout.log,
+        stderr_log: suiteStderr.log,
+        stdout_bytes: suiteStdout.bytes,
+        stderr_bytes: suiteStderr.bytes,
+        stdout_tail: suiteStdout.tail,
+        stderr_tail: suiteStderr.tail,
         error: suiteResult.error ? String(suiteResult.error.message || suiteResult.error) : '',
       })
     }

@@ -61,6 +61,7 @@ What it does:
 - forces source build (`HXHX_FORCE_STAGE0=1`),
 - runs narrowed strict suites (`server`, `optimization`),
 - writes artifacts under `.artifacts/full1/source-probe/`,
+- keeps `source-probe.summary.json` compact by recording log paths, byte counts, and short stdout/stderr tails while storing full logs separately,
 - emits `FULL1_SOURCE_BUILD_PROBE:PASS` or `FULL1_SOURCE_BUILD_PROBE:WARN`.
 
 ## Bootstrap-Source Reconciliation (Diagnostic Classification Lane)

@@ -29,7 +29,7 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
 
 | Workflow | File | Cadence | Expected signal | Evidence artifact/log |
 | --- | --- | --- | --- | --- |
-| Full1 / Source-Build Probe | `.github/workflows/full1-source-probe.yml` | Weekly schedule | `FULL1_SOURCE_BUILD_PROBE:PASS` (ideal) or `FULL1_SOURCE_BUILD_PROBE:WARN` (diagnostic follow-up required) | Artifact `full1-source-probe-<run_id>` |
+| Full1 / Source-Build Probe | `.github/workflows/full1-source-probe.yml` | Weekly schedule | `FULL1_SOURCE_BUILD_PROBE:PASS` (ideal) or `FULL1_SOURCE_BUILD_PROBE:WARN` (diagnostic follow-up required) | Artifact `full1-source-probe-<run_id>` with compact summary JSON plus separate build/suite logs |
 | Full1 / Bootstrap-Source Reconciliation | `.github/workflows/full1-bootstrap-source-reconcile.yml` | Weekly schedule | `FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:PASS` (classification complete) or `...:WARN` (artifact pair/classification incomplete) | Artifact `full1-bootstrap-source-reconcile-<run_id>` |
 
 ## Weekly procedure
