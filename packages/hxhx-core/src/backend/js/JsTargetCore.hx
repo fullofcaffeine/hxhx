@@ -524,10 +524,10 @@ class JsTargetCore implements ITargetCore {
 	static function emitPlainClassConstructor(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
 		final ctor = findConstructor(unit.decl);
 		final instanceFields = instanceFieldRefs(unit.decl);
-		final scope = new JsFunctionScope(classRefs, instanceFields);
+		final superRef = resolveSuperClassRef(unit, classRefs);
+		final scope = new JsFunctionScope(classRefs, instanceFields, superRef);
 		final args = ctor == null ? [] : HxFunctionDecl.getArgs(ctor);
 		final params = declareFunctionParams(args, scope);
-		final superRef = resolveSuperClassRef(unit, classRefs);
 		final split = splitConstructorBody(ctor == null ? [] : HxFunctionDecl.getBody(ctor));
 
 		writer.writeln("var " + unit.jsRef + " = function(" + params.join(", ") + ") {");
@@ -648,6 +648,7 @@ class JsTargetCore implements ITargetCore {
 
 	static function emitPlainClassPrototypeMethods(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
 		final instanceFields = instanceFieldRefs(unit.decl);
+		final superRef = resolveSuperClassRef(unit, classRefs);
 		if (needsExtractedConstructorMarker(unit)) {
 			writer.writeln(unit.jsRef + ".prototype._hx_constructor = function() {");
 			writer.pushIndent();
@@ -661,7 +662,7 @@ class JsTargetCore implements ITargetCore {
 			if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 				continue;
 
-			final fnScope = new JsFunctionScope(classRefs, instanceFields);
+			final fnScope = new JsFunctionScope(classRefs, instanceFields, superRef);
 			final args = HxFunctionDecl.getArgs(fn);
 			final params = declareFunctionParams(args, fnScope);
 			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));

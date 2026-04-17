@@ -2527,7 +2527,7 @@ let shouldEmitNeutralInstanceFunctionBody = fun fullName fnName -> try let __fal
 ) in Obj.magic __fallback_result_227 with
   | HxRuntime.Hx_return __ret_226 -> Obj.obj __ret_226
 
-let emitPlainClassPrototypeMethods = fun writer unit classRefs -> ignore (let instanceFields = Obj.magic (instanceFieldRefs (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in (
+let emitPlainClassPrototypeMethods = fun writer unit classRefs -> ignore (let instanceFields = Obj.magic (instanceFieldRefs (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in let superRef = (resolveSuperClassRef unit (Obj.magic classRefs) : string) in (
   ignore (if needsExtractedConstructorMarker unit then ignore ((
     ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ ".prototype._hx_constructor = function() {" : string));
     ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
@@ -2542,7 +2542,7 @@ let emitPlainClassPrototypeMethods = fun writer unit classRefs -> ignore (let in
       __new_120
     ));
     ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) || HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new" then raise (HxRuntime.Hx_continue) else ());
-    let fnScope = Obj.magic (Backend_js_JsFunctionScope.create (Obj.magic classRefs) (Obj.magic instanceFields)) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let params = Obj.magic (declareFunctionParams (Obj.magic args) (Obj.magic fnScope)) in let suffix = (Backend_js_JsNameMangler.propertySuffix (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
+    let fnScope = Obj.magic (Backend_js_JsFunctionScope.create (Obj.magic classRefs) (Obj.magic instanceFields) (superRef : string)) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let params = Obj.magic (declareFunctionParams (Obj.magic args) (Obj.magic fnScope)) in let suffix = (Backend_js_JsNameMangler.propertySuffix (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
       ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ ".prototype") ^ HxString.toStdString suffix) ^ " = function(") ^ HxString.toStdString (HxArray.join params ", " (fun x -> x))) ^ ") {" : string));
       ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
       ignore (emitDefaultArgGuards (Obj.magic writer) (Obj.magic args) (Obj.magic params) (Obj.magic fnScope));
@@ -2595,7 +2595,7 @@ let allowStaticFieldFallback = fun unit fieldName reason -> (
     | HxRuntime.Hx_return __ret_204 -> Obj.obj __ret_204
 )
 
-let emitStaticFields = fun writer unit classRefs staticRefs -> ignore (let staticScope = Obj.magic (Backend_js_JsFunctionScope.create (Obj.magic classRefs) (Obj.magic staticRefs)) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in try while !_g < HxArray.length _g1 do try ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+let emitStaticFields = fun writer unit classRefs staticRefs -> ignore (let staticScope = Obj.magic (Backend_js_JsFunctionScope.create (Obj.magic classRefs) (Obj.magic staticRefs) (Obj.magic (HxRuntime.hx_null))) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in try while !_g < HxArray.length _g1 do try ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
   ignore (let __old_68 = !_g in let __new_69 = HxInt.add __old_68 1 in (
     ignore (_g := __new_69);
     __new_69
@@ -2665,7 +2665,7 @@ let shouldEmitNeutralConstructorBody = fun fullName -> try let __fallback_result
 ) in Obj.magic __fallback_result_225 with
   | HxRuntime.Hx_return __ret_224 -> Obj.obj __ret_224
 
-let emitPlainClassConstructor = fun writer unit classRefs -> ignore (let ctor = Obj.magic (findConstructor (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in let instanceFields = Obj.magic (instanceFieldRefs (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in let scope = Obj.magic (Backend_js_JsFunctionScope.create (Obj.magic classRefs) (Obj.magic instanceFields)) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionArg.t HxArray.t) in (
+let emitPlainClassConstructor = fun writer unit classRefs -> ignore (let ctor = Obj.magic (findConstructor (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in let instanceFields = Obj.magic (instanceFieldRefs (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in let superRef = (resolveSuperClassRef unit (Obj.magic classRefs) : string) in let scope = Obj.magic (Backend_js_JsFunctionScope.create (Obj.magic classRefs) (Obj.magic instanceFields) (superRef : string)) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionArg.t HxArray.t) in (
   ignore (if ctor == Obj.magic (HxRuntime.hx_null) then let __assign_90 = Obj.magic (let __arr_91 = HxArray.create () in __arr_91) in (
     tempArray := __assign_90;
     __assign_90
@@ -2673,7 +2673,7 @@ let emitPlainClassConstructor = fun writer unit classRefs -> ignore (let ctor = 
     tempArray := __assign_92;
     __assign_92
   ));
-  let params = Obj.magic (declareFunctionParams (Obj.magic (!tempArray)) (Obj.magic scope)) in let superRef = (resolveSuperClassRef unit (Obj.magic classRefs) : string) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in (
+  let params = Obj.magic (declareFunctionParams (Obj.magic (!tempArray)) (Obj.magic scope)) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in (
     ignore (if ctor == Obj.magic (HxRuntime.hx_null) then let __assign_93 = Obj.magic (let __arr_94 = HxArray.create () in __arr_94) in (
       tempArray1 := __assign_93;
       __assign_93
@@ -2728,7 +2728,7 @@ let emitStaticFunctions = fun writer unit classRefs staticRefs -> ignore (let _g
     __new_84
   ));
   ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) then raise (HxRuntime.Hx_continue) else ());
-  let fnScope = Obj.magic (Backend_js_JsFunctionScope.create (Obj.magic classRefs) (Obj.magic staticRefs)) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let params = Obj.magic (declareFunctionParams (Obj.magic args) (Obj.magic fnScope)) in let suffix = (Backend_js_JsNameMangler.propertySuffix (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
+  let fnScope = Obj.magic (Backend_js_JsFunctionScope.create (Obj.magic classRefs) (Obj.magic staticRefs) (Obj.magic (HxRuntime.hx_null))) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let params = Obj.magic (declareFunctionParams (Obj.magic args) (Obj.magic fnScope)) in let suffix = (Backend_js_JsNameMangler.propertySuffix (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
     ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ((((HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef")) ^ HxString.toStdString suffix) ^ " = function(") ^ HxString.toStdString (HxArray.join params ", " (fun x -> x))) ^ ") {" : string));
     ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
     ignore (emitDefaultArgGuards (Obj.magic writer) (Obj.magic args) (Obj.magic params) (Obj.magic fnScope));

@@ -12,11 +12,13 @@ class JsFunctionScope {
 	final used:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap();
 	final classRefs:haxe.ds.StringMap<String>;
 	final instanceFields:haxe.ds.StringMap<String>;
+	final superClassRef:Null<String>;
 	var tempCounter:Int = 0;
 
-	public function new(classRefs:haxe.ds.StringMap<String>, ?instanceFields:haxe.ds.StringMap<String>) {
+	public function new(classRefs:haxe.ds.StringMap<String>, ?instanceFields:haxe.ds.StringMap<String>, ?superClassRef:String) {
 		this.classRefs = classRefs == null ? new haxe.ds.StringMap<String>() : classRefs;
 		this.instanceFields = instanceFields == null ? new haxe.ds.StringMap<String>() : instanceFields;
+		this.superClassRef = superClassRef;
 	}
 
 	function reserve(name:String):String {
@@ -55,6 +57,10 @@ class JsFunctionScope {
 		return classRefs.get(raw);
 	}
 
+	public function resolveSuperClassRef():Null<String> {
+		return superClassRef;
+	}
+
 	public function freshTemp(prefix:String):String {
 		final base = prefix == null || prefix.length == 0 ? "__tmp" : prefix;
 		while (true) {
@@ -70,7 +76,8 @@ class JsFunctionScope {
 		final self = this;
 		return {
 			resolveLocal: function(name:String):Null<String> return self.resolveLocal(name),
-			resolveClassRef: function(name:String):Null<String> return self.resolveClassRef(name)
+			resolveClassRef: function(name:String):Null<String> return self.resolveClassRef(name),
+			resolveSuperClassRef: function():Null<String> return self.resolveSuperClassRef()
 		};
 	}
 }

@@ -23,6 +23,9 @@ class JsExprEmitter {
 			},
 			resolveClassRef: function(name:String):Null<String> {
 				return parent == null ? null : parent.resolveClassRef(name);
+			},
+			resolveSuperClassRef: function():Null<String> {
+				return parent == null ? null : parent.resolveSuperClassRef();
 			}
 		};
 	}
@@ -665,6 +668,12 @@ class JsExprEmitter {
 	}
 
 	static function emitField(obj:HxExpr, field:String, scope:JsEmitScope):String {
+		switch (obj) {
+			case ESuper:
+				return emitSuperPropertyGet(field, scope);
+			case _:
+		}
+
 		if (scope != null) {
 			final fullPath = typeTestName(EField(obj, field));
 			if (fullPath != null) {
@@ -691,6 +700,8 @@ class JsExprEmitter {
 
 	static function emitCall(callee:HxExpr, args:Array<HxExpr>, scope:JsEmitScope):String {
 		switch (callee) {
+			case EField(ESuper, field):
+				return emitSuperMethodCall(field, args, scope);
 			case EEnumValue(name):
 				final params = args == null ? [] : args.map(a -> emit(a, scope));
 				return macroEnum(name, params);
@@ -1025,6 +1036,10 @@ class JsExprEmitter {
 			switch (left) {
 				case EThis:
 					return "(this.__hx_value " + op + " " + emit(right, scope) + ")";
+				case EField(ESuper, field) if (op == "="):
+					return emitSuperPropertySet(field, right, scope);
+				case EField(ESuper, field):
+					return unsupported("EBinop", "compound assignment to super." + field);
 				case _:
 			}
 		}
@@ -1052,6 +1067,30 @@ class JsExprEmitter {
 			case _:
 				false;
 		}
+	}
+
+	static function emitSuperPropertyGet(field:String, scope:JsEmitScope):String {
+		final superRef = resolveSuperRef(scope);
+		return superRef + ".prototype" + JsNameMangler.propertySuffix("get_" + field) + ".call(this)";
+	}
+
+	static function emitSuperPropertySet(field:String, value:HxExpr, scope:JsEmitScope):String {
+		final superRef = resolveSuperRef(scope);
+		return superRef + ".prototype" + JsNameMangler.propertySuffix("set_" + field) + ".call(this, " + emit(value, scope) + ")";
+	}
+
+	static function emitSuperMethodCall(field:String, args:Array<HxExpr>, scope:JsEmitScope):String {
+		final superRef = resolveSuperRef(scope);
+		final emittedArgs = args == null ? [] : args.map(a -> emitCallArg(a, scope));
+		final allArgs = ["this"].concat(emittedArgs);
+		return superRef + ".prototype" + JsNameMangler.propertySuffix(field) + ".call(" + allArgs.join(", ") + ")";
+	}
+
+	static function resolveSuperRef(scope:JsEmitScope):String {
+		final superRef = scope == null ? null : scope.resolveSuperClassRef();
+		if (superRef == null || superRef.length == 0)
+			unsupported("ESuper", "missing superclass context");
+		return superRef;
 	}
 
 	static function isNullLiteral(expr:HxExpr):Bool {

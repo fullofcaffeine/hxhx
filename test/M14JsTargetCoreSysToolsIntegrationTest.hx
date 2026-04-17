@@ -1098,6 +1098,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"    new JsCtorLeaf();",
 				'    Sys.println("ctor-order=" + ctorCalls.join("|"));',
 				'    Sys.println("ctor-ref=" + untyped __js__("{0}.prototype.hasOwnProperty({1})", JsCtorChild, HX_CTOR));',
+				"    var childProp = new ChildProp();",
+				'    Sys.println("super-prop=" + childProp.get_prop() + ":" + childProp.set_prop(4) + ":" + childProp.get_prop());',
 				"    Sys.println([1, 2, 3].filter(function(i) return i > 1).join(\",\"));",
 				'    Sys.println(untyped __js__("(function(){ var it = [4,5].iterator(); return [it.hasNext(), it.next(), it.next(), it.hasNext()].join(\\",\\"); })()"));',
 				"    var called = { value: false };",
@@ -1120,6 +1122,18 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"    Sys.println(handler.finished);",
 				"    Sys.println(handler.results.length);",
 				"  }",
+				"}",
+				"class BaseProp {",
+				"  var backing:Int;",
+				"  public var prop(get,set):Int;",
+				"  public function new() backing = 1;",
+				"  public function get_prop() return backing;",
+				"  public function set_prop(v:Int) return backing = v;",
+				"}",
+				"class ChildProp extends BaseProp {",
+				"  public function new() super();",
+				"  public override function get_prop() return super.prop + 1;",
+				"  public override function set_prop(v:Int) return (super.prop = v) + 1;",
 				"}"
 			].join("\n");
 			final modules = [
@@ -1433,6 +1447,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "ctor-order=PRE|CHILD|BASE|LEAF",
 				"constructor lowering should preserve pre-super, field init, expression-bodied overrides, and post-super ordering");
 			assertContains(stdout, "ctor-ref=true", "enum-like class value refs should resolve to emitted JS class bindings");
+			assertContains(js, "__hx_cls_BaseProp.prototype.get_prop.call(this)", "super property reads should lower to the base getter in prototype-style JS");
+			assertContains(js, "__hx_cls_BaseProp.prototype.set_prop.call(this, v)",
+				"super property writes should lower to the base setter in prototype-style JS");
+			assertNotContains(js, "super.prop", "prototype-style JS emission must not leak raw super property syntax");
+			assertContains(stdout, "super-prop=2:5:5", "super property getter/setter lowering should execute through the base accessors");
 			assertContains(stdout, "2,3", "native JS Array prototype methods should remain available");
 			assertContains(stdout, "true,4,5,false", "runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
 			assertContains(stdout, "fixture-called\nprecheck\ntested\ncomplete\ntrue\ntrue\n1",
