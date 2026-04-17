@@ -135,7 +135,7 @@ jobs:
           fi
 
           if [ "${need_lua}" = "1" ]; then
-            retry_apt sudo apt-get install -y lua5.4
+            retry_apt sudo apt-get install -y lua5.4 luarocks
           fi
 
           if [ "${need_cs}" = "1" ]; then
@@ -189,6 +189,7 @@ jobs:
           fi
           if [ "${need_lua}" = "1" ]; then
             lua5.4 -v || true
+            luarocks --version | head -n 1
           fi
           if [ "${need_cs}" = "1" ]; then
             dotnet --version || true

@@ -168,6 +168,22 @@ need_cmd() {
   fi
 }
 
+resolve_lua_bin() {
+  if command -v lua >/dev/null 2>&1; then
+    command -v lua
+    return 0
+  fi
+  if command -v lua5.4 >/dev/null 2>&1; then
+    command -v lua5.4
+    return 0
+  fi
+  if command -v lua5.3 >/dev/null 2>&1; then
+    command -v lua5.3
+    return 0
+  fi
+  return 1
+}
+
 probe_haxelib_binary() {
   local bin="$1"
   "$bin" help >/dev/null 2>&1 || "$bin" --help >/dev/null 2>&1 || "$bin" version >/dev/null 2>&1
@@ -272,6 +288,7 @@ fi
 
 STAGE0_NEKOTOOLS="${NEKOTOOLS_BIN:-}"
 STAGE0_NEKO="${NEKO_BIN:-}"
+LUA_BIN="${LUA_BIN:-}"
 
 if [ -z "$STAGE0_NEKOTOOLS" ]; then
   if [ -x "$HOME/haxe/neko/nekotools" ]; then
@@ -290,6 +307,10 @@ if [ -z "$STAGE0_NEKO" ]; then
   elif command -v neko >/dev/null 2>&1; then
     STAGE0_NEKO="$(command -v neko)"
   fi
+fi
+
+if [ -z "$LUA_BIN" ]; then
+  LUA_BIN="$(resolve_lua_bin || true)"
 fi
 
 if [ -z "$STAGE0_NEKOTOOLS" ] || [ ! -x "$STAGE0_NEKOTOOLS" ]; then
@@ -571,7 +592,10 @@ preflight_target() {
       need_cmd php "PHP target tests"
       ;;
     lua)
-      need_cmd lua "Lua target tests"
+      if [ -z "$LUA_BIN" ] || [ ! -x "$LUA_BIN" ]; then
+        die_or_skip "Missing 'lua' or 'lua5.4' on PATH (Lua target tests)."
+      fi
+      need_cmd luarocks "Lua target dependencies"
       ;;
     hl)
       need_cmd hl "HashLink target tests"
@@ -715,6 +739,13 @@ fi
 exec "${STAGE0_NEKO}" "\$@"
 EOF
 chmod +x "$WRAP_DIR/neko"
+
+cat >"$WRAP_DIR/lua" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+exec "${LUA_BIN}" "\$@"
+EOF
+chmod +x "$WRAP_DIR/lua"
 
 targets=()
 for tok in $TARGETS_RAW; do
