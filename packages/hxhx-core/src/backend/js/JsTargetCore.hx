@@ -2689,7 +2689,7 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function isNativeJsPrototypeClass(fullName:String):Bool {
-		return fullName == "Array" || fullName == "String";
+		return fullName == "Array" || fullName == "Date" || fullName == "String";
 	}
 
 	static function isNativeJsExternPrototypeClass(fullName:String):Bool {
