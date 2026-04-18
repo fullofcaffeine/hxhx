@@ -1536,6 +1536,12 @@ class EmitterStage {
 		Runtime-backed constructors use dedicated shims. Current-module class-like
 		constructors allocate `HxAnon`, initialize declared fields to null, then call
 		the generated `new` method when present, preserving the previous inline order.
+
+		For helper classes declared in the same `.hx` module, Stage3 emits those helpers
+		as separate stub modules while the root module still represents instances as
+		`HxAnon`. Until helper constructor bodies are emitted as real methods, seed
+		fields positionally from constructor arguments instead of calling an unbound
+		root-module `new_` value.
 	**/
 	static function exprToOcamlNewStage3(typePath:String, args:Array<HxExpr>, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
@@ -1554,18 +1560,32 @@ class EmitterStage {
 		if (fields == null)
 			return "(Obj.magic 0)";
 		final ctorMethods = currentInstanceMethodsFor(typePath);
+		final rawTypePath = typePath == null ? "" : StringTools.trim(typePath);
+		final typeParts = rawTypePath.length == 0 ? [] : rawTypePath.split(".");
+		final typeShortName = typeParts.length == 0 ? rawTypePath : typeParts[typeParts.length - 1];
+		final isCurrentModuleCtor = typeShortName == currentModuleShortNameForStage3(currentPackagePath);
 		final ctorName = ocamlValueIdent("new");
-		final argCodes = args.map(a -> "("
-			+ exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-			+ ")");
-		final ctorCall = hasMethodName(ctorMethods,
-			"new") ? ("ignore (" + ctorName + " (__hx_obj)" + (argCodes.length == 0 ? "" : (" " + argCodes.join(" "))) + ")") : "()";
+		function ctorArgToOcaml(a:HxExpr):String {
+			return switch (a) {
+				case EIdent(name) if (stage3HasTyIdent(name, tyByIdent) || isMutableLocalRefIdent(name)):
+					ocamlReadValueIdent(name);
+				case _:
+					exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+			}
+		}
+		final argCodes = args.map(a -> "(" + ctorArgToOcaml(a) + ")");
+		final ctorCall = isCurrentModuleCtor
+			&& hasMethodName(ctorMethods,
+				"new") ? ("ignore (" + ctorName + " (__hx_obj)" + (argCodes.length == 0 ? "" : (" " + argCodes.join(" "))) + ")") : "()";
 		final initStmts = new Array<String>();
+		var fieldIndex = 0;
 		for (f in fields) {
 			final fieldName = HxFieldDecl.getName(f);
 			if (fieldName == null || fieldName.length == 0)
 				continue;
-			initStmts.push("HxAnon.set (Obj.repr __hx_obj) " + escapeOcamlString(fieldName) + " HxRuntime.hx_null");
+			final valueExpr = (!isCurrentModuleCtor && fieldIndex < argCodes.length) ? ("(Obj.repr " + argCodes[fieldIndex] + ")") : "HxRuntime.hx_null";
+			initStmts.push("HxAnon.set (Obj.repr __hx_obj) " + escapeOcamlString(fieldName) + " " + valueExpr);
+			fieldIndex += 1;
 		}
 		return "(let __hx_obj = HxAnon.create () in "
 			+ (initStmts.length == 0 ? "" : (initStmts.join("; ") + "; "))
