@@ -1314,6 +1314,24 @@ class HxParser {
 					if (bodyExpr == null)
 						return null;
 					ECall(EIdent("__hxhx_while"), [ELambda([], cond), ELambda([], bodyExpr), continuation]);
+				case STry(tryBody, catches, _):
+					// Local function bodies are expression-lowered; preserve try/catch as a
+					// private sentinel so target emitters can still produce statement-level try.
+					final tryExpr = lowerStmtWithContinuation(tryBody, continuation);
+					if (tryExpr == null)
+						return null;
+					final catchEntries = new Array<HxExpr>();
+					for (c in catches) {
+						final catchExpr = lowerStmtWithContinuation(c.body, continuation);
+						if (catchExpr == null)
+							return null;
+						catchEntries.push(EArrayDecl([
+							EString(c.name),
+							EString(c.typeHint == null ? "" : c.typeHint),
+							ELambda([c.name], catchExpr)
+						]));
+					}
+					ECall(EIdent("__hxhx_try"), [ELambda([], tryExpr), EArrayDecl(catchEntries), continuation]);
 				case _:
 					unsupportedStmtKind = stmtKindText(stmt);
 					null;

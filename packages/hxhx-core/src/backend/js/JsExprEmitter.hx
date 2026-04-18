@@ -919,6 +919,8 @@ class JsExprEmitter {
 				return emitForInExpr(args, scope);
 			case EIdent("__hxhx_while"):
 				return emitWhileExpr(args, scope);
+			case EIdent("__hxhx_try"):
+				return emitTryExpr(args, scope);
 			case _:
 		}
 		final calleeJs = emit(callee, scope);
@@ -1028,6 +1030,116 @@ class JsExprEmitter {
 			+ "; while (__cond()) { __body(); } return "
 			+ continuation
 			+ "; })()";
+	}
+
+	static function emitTryExpr(args:Array<HxExpr>, scope:JsEmitScope):String {
+		if (args == null || args.length < 2)
+			unsupported("ECall", "__hxhx_try");
+
+		// See HxParser.lambdaBodyExprFromStmts: this sentinel carries local-function
+		// try/catch through expression-only lambda lowering until JS can reify it.
+		final tryFn = emit(args[0], scope);
+		final cases:Array<HxExpr> = switch (args[1]) {
+			case EArrayDecl(values):
+				values;
+			case _:
+				unsupported("ECall", "__hxhx_try");
+				[];
+		}
+		final out = new Array<String>();
+		out.push("(function(){");
+		out.push("var __hx_try = " + tryFn + ";");
+		out.push("try { return __hx_try(); } catch (__hx_err) {");
+		for (i in 0...cases.length) {
+			switch (cases[i]) {
+				case EArrayDecl([EString(_name), EString(typeHint), catchFnExpr]):
+					final head = i == 0 ? "if" : "else if";
+					final catchFn = emit(catchFnExpr, scope);
+					out.push(head
+						+ " ("
+						+ emitCatchCondition(typeHint, "__hx_err")
+						+ ") { var __hx_catch = "
+						+ catchFn
+						+ "; return __hx_catch(__hx_err); }");
+				case _:
+					unsupported("ECall", "__hxhx_try");
+			}
+		}
+		out.push("throw __hx_err;");
+		out.push("}");
+		out.push("})()");
+		return out.join(" ");
+	}
+
+	static function normalizeCatchType(typeHint:String):String {
+		if (typeHint == null)
+			return "";
+		var hint = StringTools.trim(typeHint);
+		if (hint.length == 0)
+			return "";
+		hint = StringTools.replace(hint, " ", "");
+		hint = StringTools.replace(hint, "\t", "");
+		hint = StringTools.replace(hint, "\n", "");
+		hint = StringTools.replace(hint, "\r", "");
+		while (StringTools.startsWith(hint, "Null<") && StringTools.endsWith(hint, ">"))
+			hint = hint.substr(5, hint.length - 6);
+		final genericAt = hint.indexOf("<");
+		if (genericAt >= 0)
+			hint = hint.substr(0, genericAt);
+		return hint;
+	}
+
+	static function simpleTypeName(fullName:String):String {
+		if (fullName == null || fullName.length == 0)
+			return "";
+		final parts = fullName.split(".");
+		return parts[parts.length - 1];
+	}
+
+	static function emitCatchCondition(typeHint:String, errRef:String):String {
+		final normalized = normalizeCatchType(typeHint);
+		if (normalized.length == 0 || normalized == "Dynamic" || normalized == "Any")
+			return "true";
+
+		return switch (normalized) {
+			case "String" | "StdTypes.String":
+				"(typeof " + errRef + " === \"string\" || " + errRef + " instanceof String)";
+			case "Bool" | "StdTypes.Bool":
+				"(typeof " + errRef + " === \"boolean\")";
+			case "Int" | "StdTypes.Int":
+				"(typeof " + errRef + " === \"number\" && ((" + errRef + " | 0) === " + errRef + "))";
+			case "Float" | "StdTypes.Float":
+				"(typeof " + errRef + " === \"number\")";
+			case "Array" | "StdTypes.Array":
+				"Array.isArray(" + errRef + ")";
+			default:
+				final simple = simpleTypeName(normalized);
+				final normalizedQuoted = JsNameMangler.quoteString(normalized);
+				final simpleQuoted = JsNameMangler.quoteString(simple);
+				"("
+				+ errRef
+				+ " != null && typeof "
+				+ errRef
+				+ " === \"object\" && ("
+				+ errRef
+				+ ".__hx_name === "
+				+ normalizedQuoted
+				+ " || "
+				+ errRef
+				+ ".__hx_name === "
+				+ simpleQuoted
+				+ " || ("
+				+ errRef
+				+ ".constructor != null && ("
+				+ errRef
+				+ ".constructor.__hx_name === "
+				+ normalizedQuoted
+				+ " || "
+				+ errRef
+				+ ".constructor.__hx_name === "
+				+ simpleQuoted
+				+ "))))";
+		}
 	}
 
 	static function hasForExprProbeArg(args:Array<HxExpr>):Bool {

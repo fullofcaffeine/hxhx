@@ -51,6 +51,18 @@ class M14JsStmtEmitterTryThrowIntegrationTest {
 			"if/throw body should lower to a throw expression");
 		assertContains(functionJs, "negativeOnly(10);", "local function call should emit after declaration");
 
+		final localTryBody = HxParser.parseFunctionBodyText('function next() { try { var read = file.readBytes(buf, 0, len); return Std.string(read); } catch(e:haxe.io.Eof) { return Std.string("eof"); } catch(e:Dynamic) { return Std.string(e); } } next();');
+		final localTryWriter = new JsWriter();
+		final localTryScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
+		JsStmtEmitter.emitFunctionBody(localTryWriter, localTryBody, localTryScope);
+		final localTryJs = localTryWriter.toString();
+		assertContains(localTryJs, "var next = function()", "local try helper should lower to a JS function value");
+		assertContains(localTryJs, "try { return", "local try helper should emit try expression IIFE");
+		assertContains(localTryJs, "catch (__hx_err)", "local try helper should catch thrown values");
+		assertContains(localTryJs, "__hx_err.__hx_name === \"haxe.io.Eof\"", "typed catch should emit a guard before dynamic catch");
+		assertContains(localTryJs, "else if (true)", "dynamic catch should emit as fallback catch arm");
+		assertNotContains(localTryJs, "function:try", "local try helper should not leak unsupported marker");
+
 		final superWriter = new JsWriter();
 		final superScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
 		JsStmtEmitter.emitFunctionBody(superWriter, [SExpr(ECall(ESuper, [EIdent("message"), EIdent("previous")]), pos)], superScope);

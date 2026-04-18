@@ -400,6 +400,19 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("expected local block throw function to lower to throwing lambda");
 		}
+
+		final localTryFunctionStmts = HxParser.parseFunctionBodyText('function next() { try { var read = file.readBytes(buf, 0, len); return Std.string(read); } catch(e:haxe.io.Eof) { return Std.string("eof"); } catch(e:Dynamic) { return Std.string(e); } } eq("24", next());');
+		assertTrue(localTryFunctionStmts.length == 2, "expected local try function plus assertion");
+		switch (localTryFunctionStmts[0]) {
+			case SVar("next", _, ELambda([], ECall(EIdent("__hxhx_try"), args)), _):
+				assertTrue(args.length == 3, "expected try sentinel, catch table, and continuation");
+			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
+				fail("local try function body parsed as unsupported: " + raw);
+			case SExpr(EUnsupported(raw), _):
+				fail("local try function parsed as unsupported statement: " + raw);
+			case _:
+				fail("expected local try function to lower to try sentinel lambda");
+		}
 		switch (localBlockThrowFunctionStmts[1]) {
 			case SVar("s", _, ETryCatchRaw(_), _):
 			case SExpr(EUnsupported(raw), _):
