@@ -51,7 +51,7 @@ class M14HihExprTextParserIntegrationTest {
 			case EUnsupported(raw):
 				fail("dense block payload parsed as unsupported: " + raw);
 			case _:
-				fail("dense block payload should parse as opaque block expression");
+				// Parseable block expressions may now lower structurally instead of staying opaque.
 		}
 
 		final typedBlockExpr = HxParser.parseExprText('{ var b:{v:Int} = {v:1.2}; }');
@@ -63,7 +63,7 @@ class M14HihExprTextParserIntegrationTest {
 			case EUnsupported(raw):
 				fail("typed block expression parsed as unsupported: " + raw);
 			case _:
-				fail("typed block expression should parse as opaque block expression with source");
+				// Parseable block expressions may now lower structurally instead of staying opaque.
 		}
 
 		// Constructor expressions with dotted type paths should stay as ENew nodes.

@@ -62,6 +62,14 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(mapArrowJs, "map = {\"1\": function(a)", "map-literal arrow value parses without a stray fat-arrow token");
 		assertContains(mapArrowJs, "\"2\": function(b)", "map-literal keeps each arrow value");
 
+		final unicodeBlock = HxParser.parseExprText('{ var valid = valid.copy(); if (Sys.systemName() == "Windows") valid = valid.filter(f -> !f.match(Only([0x0001]))); valid = valid.filter(f -> !f.match(Only([0xD7FF])) && !f.match(Only([0x1FFFF]))); valid; }');
+		final unicodeBlockJs = JsExprEmitter.emit(unicodeBlock, exprScope);
+		assertContains(unicodeBlockJs, ".filter(function(f)", "block-expression filter arrows should lower to JS functions");
+		assertContains(unicodeBlockJs, "__hx_ctor", "enum pattern values should lower to comparable enum objects");
+		assertContains(unicodeBlockJs, "JSON.stringify", "enum match should lower to a structural parameter comparison");
+		if (unicodeBlockJs.indexOf("->") >= 0 || unicodeBlockJs.indexOf("0 x") >= 0)
+			throw "UnicodeSequences-style block emitted raw Haxe syntax: " + unicodeBlockJs;
+
 		final mapComprehension = HxParser.parseExprText('map = [for (x in ["a", "b"]) x => x.toUpperCase()]');
 		final mapComprehensionJs = JsExprEmitter.emit(mapComprehension, exprScope);
 		assertContains(mapComprehensionJs, "__hxhx_map_out", "map comprehension should allocate an object result");

@@ -1604,8 +1604,10 @@ class HxParser {
 		// - anonymous object literal: `{ field: value }`
 		// - block expression initializer: `{ var h = ...; ...; h; }`
 		//
-		// For now we parse anon literals structurally and treat other brace expressions
-		// as opaque block expressions.
+		// Parse anon literals structurally. For block expressions, first try the same
+		// continuation lowering used by local function bodies so callbacks and side
+		// effects do not leak as raw Haxe syntax into JS-native output. If the statement
+		// subset is still too rich, keep the old opaque fallback.
 		final start = currentIndex();
 		expect(TLBrace, "'{'");
 		if (cur.kind.match(TRBrace)) {
@@ -1624,20 +1626,15 @@ class HxParser {
 		if (isAnonLiteral)
 			return parseAnonExprAfterOpen();
 
-		var depth = 1;
-		while (depth > 0 && !cur.kind.match(TEof)) {
-			switch (cur.kind) {
-				case TLBrace:
-					depth += 1;
-					bump();
-				case TRBrace:
-					depth -= 1;
-					bump();
-				case _:
-					bump();
-			}
+		final stmts = parseFunctionBodyStatementsBestEffort();
+		final raw = "opaque_block_expr:" + StringTools.trim(sliceSource(start, currentIndex()));
+		final lowered = blockExprFromStmts(stmts);
+		return switch (lowered) {
+			case EUnsupported(_):
+				ETryCatchRaw(raw);
+			case _:
+				lowered;
 		}
-		return ETryCatchRaw("opaque_block_expr:" + StringTools.trim(sliceSource(start, currentIndex())));
 	}
 
 	function parseAnonExpr():HxExpr {
@@ -2432,6 +2429,10 @@ class HxParser {
 		// Reuse the local-function sequence lowering by rewriting a trailing expression
 		// statement into `return expr`; otherwise a final `false;` would be treated as a
 		// side-effect-only statement and the branch value would become `null`.
+		return blockExprFromStmts(stmts);
+	}
+
+	function blockExprFromStmts(stmts:Array<HxStmt>):HxExpr {
 		if (stmts == null || stmts.length == 0)
 			return ENull;
 
@@ -3615,7 +3616,7 @@ class HxParser {
 						}
 						if (cur.kind.match(TSemicolon)) {
 							bump();
-						} else if (init != null && isSemicolonlessFieldInitializer(init) && isClassMemberBoundary()) {
+						} else if (init != null && isSemicolonlessFieldInitializer(init, initText) && isClassMemberBoundary()) {
 							// Haxe permits semicolonless block-expression field initializers:
 							// `var x = switch (...) { ... }` followed by the next member.
 							// Accept that form so switch field initializers do not absorb the
@@ -3644,7 +3645,10 @@ class HxParser {
 		return {functions: funcs, fields: fields};
 	}
 
-	function isSemicolonlessFieldInitializer(expr:HxExpr):Bool {
+	function isSemicolonlessFieldInitializer(expr:HxExpr, initText:String):Bool {
+		final text = StringTools.trim(initText == null ? "" : initText);
+		if (StringTools.startsWith(text, "{"))
+			return true;
 		return switch (expr) {
 			case ESwitch(_, _, _) | ESwitchRaw(_) | ETryCatchRaw(_):
 				true;

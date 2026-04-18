@@ -879,6 +879,8 @@ class JsExprEmitter {
 		switch (callee) {
 			case EField(ESuper, field):
 				return emitSuperMethodCall(field, args, scope);
+			case EField(subject, "match") if (args != null && args.length == 1):
+				return emitEnumMatch(subject, args[0], scope);
 			case EEnumValue(name):
 				final params = args == null ? [] : args.map(a -> emit(a, scope));
 				return macroEnum(name, params);
@@ -931,6 +933,32 @@ class JsExprEmitter {
 		final calleeJs = emit(callee, scope);
 		final argsJs = args.map(a -> emitCallArg(a, scope)).join(", ");
 		return calleeJs + "(" + argsJs + ")";
+	}
+
+	static function emitEnumMatch(subject:HxExpr, pattern:HxExpr, scope:JsEmitScope):String {
+		return switch (pattern) {
+			case ECall(EEnumValue(_), _):
+				final subjectJs = emit(subject, scope);
+				final patternJs = emit(pattern, scope);
+				"(function(__hx_v, __hx_p) {"
+				+ "if (__hx_v == null || __hx_p == null) return false;"
+				+ "if (__hx_v.__hx_ctor !== __hx_p.__hx_ctor) return false;"
+				+ "var __hx_vp = Array.isArray(__hx_v.__hx_params) ? __hx_v.__hx_params : [];"
+				+ "var __hx_pp = Array.isArray(__hx_p.__hx_params) ? __hx_p.__hx_params : [];"
+				+ "if (__hx_vp.length !== __hx_pp.length) return false;"
+				+ "for (var __hx_i = 0; __hx_i < __hx_pp.length; __hx_i++) {"
+				+ "if (JSON.stringify(__hx_vp[__hx_i]) !== JSON.stringify(__hx_pp[__hx_i])) return false;"
+				+ "}"
+				+ "return true;"
+				+ "})("
+				+ subjectJs
+				+ ", "
+				+ patternJs
+				+ ")";
+			case _:
+				final calleeJs = emit(EField(subject, "match"), scope);
+				calleeJs + "(" + emitCallArg(pattern, scope) + ")";
+		}
 	}
 
 	static function emitSysCommand(args:Array<HxExpr>, scope:JsEmitScope):String {
