@@ -126,6 +126,11 @@ Full1 perf timing artifacts:
 - evaluated artifacts include `full1-perf.timings.summary.json` and `full1-perf.timings.md`
 - measured phases are `build_hxhx_binary`, `build_macro_host_binary`, `kpi_benchmark`, `eval_evidence`, `suite_evidence`, and `perf_evaluator`
 
+Full1 native eval timing artifacts:
+- raw artifacts include `full1-eval-native.timings.jsonl`
+- evaluated artifacts include `full1-eval-native.timings.summary.json` and `full1-eval-native.timings.md`
+- measured phases include host/toolchain setup, npm/Haxe dependency prep, upstream checkout fetch, `build_hxhx_binary`, and `native_eval_runner`
+
 `Gate M7` release/scheduled runs force strict settings:
 - `HXHX_M7_PROFILE=full`
 - `HXHX_M7_STRICT=1`

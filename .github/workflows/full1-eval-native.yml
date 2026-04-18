@@ -20,6 +20,8 @@ permissions:
 env:
   NODE_VERSION: "20"
   HAXE_VERSION: "4.3.7"
+  FULL1_EVAL_NATIVE_ARTIFACTS_DIR: ".artifacts/full1/eval-native"
+  FULL1_EVAL_NATIVE_TIMINGS_JSONL: ".artifacts/full1/eval-native/full1-eval-native.timings.jsonl"
 
 jobs:
   full1_eval_native:
@@ -37,6 +39,8 @@ jobs:
       - name: Install host toolchains (Full1 eval native)
         run: |
           set -euo pipefail
+          mkdir -p "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}"
+          phase_start_ms="$(date +%s%3N)"
           retry_apt() {
             local max_attempts=4
             local attempt=1
@@ -53,16 +57,38 @@ jobs:
               sleep 5
             done
           }
-          retry_apt sudo apt-get update
-          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
-          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
-            dune_pkg="dune"
-          else
-            dune_pkg="ocaml-dune"
+          run_phase_body() (
+            set -euo pipefail
+            retry_apt sudo apt-get update
+            dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+            if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+              dune_pkg="dune"
+            else
+              dune_pkg="ocaml-dune"
+            fi
+            retry_apt sudo apt-get install -y \
+              ocaml "${dune_pkg}" ocaml-findlib \
+              python3
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
           fi
-          retry_apt sudo apt-get install -y \
-            ocaml "${dune_pkg}" ocaml-findlib \
-            python3
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$FULL1_EVAL_NATIVE_TIMINGS_JSONL" \
+            --workflow "full1-eval-native" \
+            --job "full1_eval_native" \
+            --phase "install_host_toolchains" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -80,38 +106,192 @@ jobs:
             ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
 
       - name: Install npm dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: |
+          set -euo pipefail
+          mkdir -p "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}"
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          npm ci --ignore-scripts --no-audit --no-fund
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$FULL1_EVAL_NATIVE_TIMINGS_JSONL" \
+            --workflow "full1-eval-native" \
+            --job "full1_eval_native" \
+            --phase "install_npm_dependencies" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Install Haxe (pinned via lix)
         run: |
           set -euo pipefail
-          npx lix download
-          npx lix download haxe "${{ env.HAXE_VERSION }}"
-          npx lix use haxe "${{ env.HAXE_VERSION }}"
-          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
-          export PATH="$(pwd)/node_modules/.bin:$PATH"
-          haxe -version
+          mkdir -p "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            npx lix download
+            npx lix download haxe "${{ env.HAXE_VERSION }}"
+            npx lix use haxe "${{ env.HAXE_VERSION }}"
+            echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+            export PATH="$(pwd)/node_modules/.bin:$PATH"
+            haxe -version
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$FULL1_EVAL_NATIVE_TIMINGS_JSONL" \
+            --workflow "full1-eval-native" \
+            --job "full1_eval_native" \
+            --phase "install_haxe" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Download Haxe libraries (lix)
-        run: npx lix download
+        run: |
+          set -euo pipefail
+          mkdir -p "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}"
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          npx lix download
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$FULL1_EVAL_NATIVE_TIMINGS_JSONL" \
+            --workflow "full1-eval-native" \
+            --job "full1_eval_native" \
+            --phase "download_haxe_libraries" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Fetch upstream Haxe checkout (vendor/haxe)
-        run: bash scripts/vendor/fetch-haxe-upstream.sh
+        run: |
+          set -euo pipefail
+          mkdir -p "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}"
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          bash scripts/vendor/fetch-haxe-upstream.sh
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$FULL1_EVAL_NATIVE_TIMINGS_JSONL" \
+            --workflow "full1-eval-native" \
+            --job "full1_eval_native" \
+            --phase "fetch_upstream_haxe" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Build shared hxhx binary
         run: |
           set -euo pipefail
-          mkdir -p .artifacts/full1/eval-native
-          HXHX_STAGE0_PREFER_NATIVE=1 HXHX_STAGE0_OCAML_BUILD=native bash scripts/hxhx/build-hxhx.sh | tee .artifacts/full1/eval-native/build-hxhx.stdout.log
-          HXHX_BIN="$(tail -n 1 .artifacts/full1/eval-native/build-hxhx.stdout.log)"
-          if [ ! -x "${HXHX_BIN}" ] && [ ! -f "${HXHX_BIN}" ]; then
-            echo "Resolved HXHX_BIN does not exist: ${HXHX_BIN}" >&2
-            exit 1
+          mkdir -p "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            HXHX_STAGE0_PREFER_NATIVE=1 HXHX_STAGE0_OCAML_BUILD=native bash scripts/hxhx/build-hxhx.sh | tee "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}/build-hxhx.stdout.log"
+            phase_exit="${PIPESTATUS[0]}"
+            if [ "$phase_exit" -ne 0 ]; then
+              exit "$phase_exit"
+            fi
+            HXHX_BIN="$(tail -n 1 "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}/build-hxhx.stdout.log")"
+            if [ ! -x "${HXHX_BIN}" ] && [ ! -f "${HXHX_BIN}" ]; then
+              echo "Resolved HXHX_BIN does not exist: ${HXHX_BIN}" >&2
+              exit 1
+            fi
+            echo "HXHX_BIN=${HXHX_BIN}" >> "$GITHUB_ENV"
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
           fi
-          echo "HXHX_BIN=${HXHX_BIN}" >> "$GITHUB_ENV"
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$FULL1_EVAL_NATIVE_TIMINGS_JSONL" \
+            --workflow "full1-eval-native" \
+            --job "full1_eval_native" \
+            --phase "build_hxhx_binary" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          if [ "$phase_exit" -ne 0 ]; then
+            exit "$phase_exit"
+          fi
 
       - name: Run Full1 native eval/interp runner
-        run: node scripts/ci/run-full1-eval-native.js
+        run: |
+          set -euo pipefail
+          mkdir -p "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}"
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          node scripts/ci/run-full1-eval-native.js
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$FULL1_EVAL_NATIVE_TIMINGS_JSONL" \
+            --workflow "full1-eval-native" \
+            --job "full1_eval_native" \
+            --phase "native_eval_runner" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
+
+      - name: Summarize Full1 eval native timings
+        if: always()
+        run: |
+          set -euo pipefail
+          timings="$FULL1_EVAL_NATIVE_TIMINGS_JSONL"
+          if [ -f "$timings" ]; then
+            node scripts/ci/full1-phase-timing.js summarize \
+              --jsonl "$timings" \
+              --json-out "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}/full1-eval-native.timings.summary.json" \
+              --markdown-out "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}/full1-eval-native.timings.md"
+            cat "${FULL1_EVAL_NATIVE_ARTIFACTS_DIR}/full1-eval-native.timings.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload Full1 eval native artifact
         if: always()
