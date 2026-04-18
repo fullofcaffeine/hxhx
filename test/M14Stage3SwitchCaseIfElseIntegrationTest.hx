@@ -22,7 +22,9 @@ class M14Stage3SwitchCaseIfElseIntegrationTest {
 	static function assertParserKeepsElseBranch():Void {
 		final expr = HxParser.parseExprText('switch (e) { case "u": var t = d.getDay(); if (t == 0) "7" else Std.string(t); }');
 		final ok = switch (expr) {
-			case ESwitch(_, _, [ECall(ELambda(["t"], ETernary(_, EString("7"), ECall(EField(EIdent("Std"), "string"), [EIdent("t")]))), _)]):
+			case ESwitch(_, _, [
+				ECall(ELambda(["t"], ETernary(_, EString("7"), ECall(EField(EIdent("Std"), "string"), [EIdent("t")]))), _)
+			]):
 				true;
 			case _:
 				false;
@@ -65,8 +67,7 @@ class M14Stage3SwitchCaseIfElseIntegrationTest {
 			assertTrue(FileSystem.exists(mlPath), 'Expected DateTools.ml in emitted output.');
 			final ocaml = File.getContent(mlPath);
 			assertTrue(ocaml.indexOf('Std.string') >= 0, 'Stage3 switch case if/else regression: else Std.string branch was not emitted.');
-			assertTrue(ocaml.indexOf('else (HxRuntime.hx_null)') < 0,
-				'Stage3 switch case if/else regression: else branch was lowered as null.');
+			assertTrue(ocaml.indexOf('else (HxRuntime.hx_null)') < 0, 'Stage3 switch case if/else regression: else branch was lowered as null.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

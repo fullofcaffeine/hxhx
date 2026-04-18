@@ -47,8 +47,7 @@ class M14Stage3ConcatArrayLengthIntegrationTest {
 			final ocaml = File.getContent(mainMl);
 			assertTrue(ocaml.indexOf('HxRuntime.dynamic_toStdString (Obj.repr (HxBootArray.length (a)))') >= 0,
 				'Stage3 string concat must stringify array length before OCaml ^.');
-			assertTrue(ocaml.indexOf('^ (HxBootArray.length (a))') < 0,
-				'Stage3 string concat regression: array length was emitted as a raw int.');
+			assertTrue(ocaml.indexOf('^ (HxBootArray.length (a))') < 0, 'Stage3 string concat regression: array length was emitted as a raw int.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

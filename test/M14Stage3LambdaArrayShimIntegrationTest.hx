@@ -47,12 +47,9 @@ class M14Stage3LambdaArrayShimIntegrationTest {
 			final lambdaMl = haxe.io.Path.join([outDir, 'Lambda.ml']);
 			assertTrue(FileSystem.exists(lambdaMl), 'Expected Lambda.ml shim in emitted output.');
 			final ocaml = File.getContent(lambdaMl);
-			assertTrue(ocaml.indexOf('HxBootArray.to_list (Obj.magic it)') >= 0,
-				'Stage3 Lambda.list shim must accept array-backed bootstrap values.');
-			assertTrue(ocaml.indexOf('Stdlib.List.fold_left') >= 0,
-				'Stage3 Lambda.fold shim must share the array-backed list conversion path.');
-			assertTrue(ocaml.indexOf('Seq.t') < 0,
-				'Stage3 Lambda shim regression: array values were treated as Seq.t.');
+			assertTrue(ocaml.indexOf('HxBootArray.to_list (Obj.magic it)') >= 0, 'Stage3 Lambda.list shim must accept array-backed bootstrap values.');
+			assertTrue(ocaml.indexOf('Stdlib.List.fold_left') >= 0, 'Stage3 Lambda.fold shim must share the array-backed list conversion path.');
+			assertTrue(ocaml.indexOf('Seq.t') < 0, 'Stage3 Lambda shim regression: array values were treated as Seq.t.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

@@ -57,8 +57,7 @@ class M14Stage3EnumExtractorBindingIntegrationTest {
 			final ocaml = File.getContent(mainMl);
 			assertTrue(ocaml.indexOf('let s = Obj.magic ((HxArray.get (Obj.magic __hx_sw_params_0) 3)) in') >= 0,
 				'Stage3 enum extractor switch must bind constructor argument variables.');
-			assertTrue(ocaml.indexOf('let __sw = (s)') >= 0,
-				'Stage3 nested switch must use the constructor argument binding.');
+			assertTrue(ocaml.indexOf('let __sw = (s)') >= 0, 'Stage3 nested switch must use the constructor argument binding.');
 			assertTrue(ocaml.indexOf('let __sw = (s)') > ocaml.indexOf('let s = Obj.magic'),
 				'Stage3 nested switch referenced the constructor argument before binding it.');
 		} catch (e:Dynamic) {

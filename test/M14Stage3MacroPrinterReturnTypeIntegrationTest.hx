@@ -65,8 +65,7 @@ class M14Stage3MacroPrinterReturnTypeIntegrationTest {
 				'Stage3 macro Printer return override did not type printBinop as string.');
 			assertTrue(ocaml.indexOf('printComplexType (this_ : _) (ct : _) : unit') < 0,
 				'Stage3 macro Printer regression: printComplexType was emitted as unit.');
-			assertTrue(ocaml.indexOf('printBinop (this_ : _) (op : _) : unit') < 0,
-				'Stage3 macro Printer regression: printBinop was emitted as unit.');
+			assertTrue(ocaml.indexOf('printBinop (this_ : _) (op : _) : unit') < 0, 'Stage3 macro Printer regression: printBinop was emitted as unit.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}
