@@ -1626,8 +1626,10 @@ class HxParser {
 		if (isAnonLiteral)
 			return parseAnonExprAfterOpen();
 
-		final stmts = parseFunctionBodyStatementsBestEffort();
+		final stmts = parseFunctionBodyStatementsBestEffort(false);
 		final raw = "opaque_block_expr:" + StringTools.trim(sliceSource(start, currentIndex()));
+		if (blockExprShouldStayOpaque(stmts))
+			return ETryCatchRaw(raw);
 		final lowered = blockExprFromStmts(stmts);
 		return switch (lowered) {
 			case EUnsupported(_):
@@ -1635,6 +1637,27 @@ class HxParser {
 			case _:
 				lowered;
 		}
+	}
+
+	function blockExprShouldStayOpaque(stmts:Array<HxStmt>):Bool {
+		if (stmts == null)
+			return false;
+		for (stmt in stmts) {
+			switch (stmt) {
+				case SVar(_, typeHint, _, _) if (StringTools.trim(typeHint == null ? "" : typeHint).length > 0):
+					// Compile-time type-error probes rely on the raw local type annotation. The
+					// expression-only block lowering intentionally drops type hints, so keep typed
+					// local blocks opaque instead of erasing the evidence.
+					return true;
+				case SVar(_, _, ENew(typePath, _), _) if (typePath == "haxe.ds.StringMap" || typePath == "StringMap"):
+					// Keep the upstream XML parser escape-table initializer on the existing opaque
+					// path. Stage3 OCaml intentionally stubs that runtime-heavy mutable map today;
+					// structurally lowering it turns the placeholder into module-init code.
+					return true;
+				case _:
+			}
+		}
+		return false;
 	}
 
 	function parseAnonExpr():HxExpr {
@@ -3285,7 +3308,7 @@ class HxParser {
 		}
 	}
 
-	function parseFunctionBodyStatementsBestEffort():Array<HxStmt> {
+	function parseFunctionBodyStatementsBestEffort(wrapperCloseOnly:Bool = true):Array<HxStmt> {
 		// Like `parseFunctionBodyStatements`, but never throws.
 		//
 		// Why
@@ -3318,7 +3341,7 @@ class HxParser {
 			};
 		}
 		inline function isWrapperCloseBrace():Bool {
-			return cur.kind.match(TRBrace) && peekKind().match(TEof);
+			return cur.kind.match(TRBrace) && (!wrapperCloseOnly || peekKind().match(TEof));
 		}
 		while (true) {
 			switch (cur.kind) {
@@ -3331,6 +3354,9 @@ class HxParser {
 					// Our wrapper source is always:
 					//   "{\n" + body + "\n}"
 					// so the *real* end-of-body brace is the one immediately followed by TEof.
+					//
+					// Nested block expressions are parsed from the real source stream, not a synthetic
+					// wrapper, so their close brace is always a valid boundary for this helper.
 					if (isWrapperCloseBrace()) {
 						bump();
 						return out;

@@ -66,6 +66,31 @@ class M14HihExprTextParserIntegrationTest {
 				// Parseable block expressions may now lower structurally instead of staying opaque.
 		}
 
+		final typedBlockCallStmts = HxParser.parseFunctionBodyText("check(typeError({ var b: { v:Int } = { v: 1.2 }; })); after();");
+		assertTrue(typedBlockCallStmts.length == 2, "expected typed block call plus following statement");
+		switch (typedBlockCallStmts[0]) {
+			case SExpr(ECall(EIdent("check"), [ECall(EIdent("typeError"), [arg])]), _):
+				switch (arg) {
+					case EUnsupported(raw):
+						fail("nested typed block expression parsed as unsupported: " + raw);
+					case _:
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("typed block call statement parsed as unsupported: " + raw);
+			case _:
+				fail("expected typed block expression to stay inside typeError call");
+		}
+
+		final mutableMapBlockExpr = HxParser.parseExprText('{ var h = new haxe.ds.StringMap(); h.set("lt", "<"); h; }');
+		switch (mutableMapBlockExpr) {
+			case ETryCatchRaw(raw):
+				assertTrue(raw.indexOf("opaque_block_expr:") == 0, "expected mutable map block to stay opaque");
+			case EUnsupported(raw):
+				fail("mutable map block parsed as unsupported: " + raw);
+			case _:
+				fail("mutable map block should stay opaque for Stage3 poison/stub compatibility");
+		}
+
 		// Constructor expressions with dotted type paths should stay as ENew nodes.
 		final newExprRaw = "new js.lib.DataView(new js.lib.ArrayBuffer(8))";
 		final newExpr = HxParser.parseExprText(newExprRaw);
