@@ -109,7 +109,7 @@ jobs:
             --summary-path "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo.summary.json" \
             --suites "server,display,threads"
 
-      - name: Build shared hxhx and macro host binaries
+      - name: Build shared hxhx binary
         run: |
           set -euo pipefail
           mkdir -p "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}"
@@ -138,7 +138,6 @@ jobs:
           }
 
           build_one "scripts/hxhx/build-hxhx.sh" "hxhx" "build-hxhx.stdout.log" "build-hxhx.stderr.log"
-          build_one "scripts/hxhx/build-hxhx-macro-host.sh" "hxhx-macro-host" "build-hxhx-macro-host.stdout.log" "build-hxhx-macro-host.stderr.log"
 
       - name: Upload shared hxhx artifact
         uses: actions/upload-artifact@v4
@@ -146,24 +145,91 @@ jobs:
           name: full1-suite-hxhx-${{ github.run_id }}
           path: |
             .artifacts/full1/suites/hxhx
-            .artifacts/full1/suites/hxhx-macro-host
             .artifacts/full1/suites/haxelib_repo/**
             .artifacts/full1/suites/haxelib_repo.summary.json
             .artifacts/full1/suites/build-hxhx.stdout.log
             .artifacts/full1/suites/build-hxhx.stderr.log
+          if-no-files-found: error
+
+  build_macro_host:
+    name: Full1 suite / build macro host
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install OCaml toolchain (macro host)
+        run: |
+          set -euo pipefail
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          }
+
+          retry_apt sudo apt-get update
+
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+
+          retry_apt sudo apt-get install -y ocaml "${dune_pkg}" ocaml-findlib
+
+      - name: Build macro host binary
+        run: |
+          set -euo pipefail
+          mkdir -p "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}"
+          build_stdout="$(mktemp)"
+          build_stderr="$(mktemp)"
+          bash scripts/hxhx/build-hxhx-macro-host.sh >"${build_stdout}" 2>"${build_stderr}"
+          cat "${build_stderr}"
+          built_path="$(awk 'NF { line=$0 } END { print line }' "${build_stdout}")"
+          if [ -z "${built_path}" ] || [ ! -f "${built_path}" ]; then
+            echo "scripts/hxhx/build-hxhx-macro-host.sh did not produce a valid binary path" >&2
+            cat "${build_stdout}" >&2
+            exit 1
+          fi
+          cp "${built_path}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx-macro-host"
+          chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx-macro-host"
+          cp "${build_stdout}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build-hxhx-macro-host.stdout.log"
+          cp "${build_stderr}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build-hxhx-macro-host.stderr.log"
+
+      - name: Upload shared macro host artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-suite-macro-host-${{ github.run_id }}
+          path: |
+            .artifacts/full1/suites/hxhx-macro-host
             .artifacts/full1/suites/build-hxhx-macro-host.stdout.log
             .artifacts/full1/suites/build-hxhx-macro-host.stderr.log
           if-no-files-found: error
 
-  full1_suite_runner:
-    name: Full1 suite / ${{ matrix.suite }}
+  full1_suite_runner_inproc:
+    name: Full1 suite / ${{ matrix.suite }} (inproc)
     needs: build_hxhx
     runs-on: ubuntu-latest
     timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
-        suite: [misc, server, threads, optimization, display]
+        suite: [misc, threads, display]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -252,8 +318,134 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx"
+          export HAXELIB_PATH="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo"
+          export HXHX_MACRO_RUNTIME_MODE=inproc
+          unset HXHX_MACRO_HOST_EXE
+          node scripts/ci/run-upstream-suite.js \
+            --suite "${{ matrix.suite }}" \
+            --strict \
+            --hxhx-bin "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx" \
+            --artifacts-dir "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}"
+
+      - name: Upload Full1 suite artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-suite-${{ matrix.suite }}-${{ github.run_id }}
+          path: |
+            .artifacts/full1/suites/${{ matrix.suite }}.log
+            .artifacts/full1/suites/${{ matrix.suite }}.summary.json
+            .artifacts/full1/suites/generated/${{ matrix.suite }}-*
+          if-no-files-found: warn
+
+  full1_suite_runner_external_host:
+    name: Full1 suite / ${{ matrix.suite }} (external-host)
+    needs: [build_hxhx, build_macro_host]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        # These suites still exercise macro-heavy paths that require the external
+        # macro host until native inproc parity catches up.
+        suite: [server, optimization]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install host toolchains (Full1 suites)
+        run: |
+          set -euo pipefail
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          }
+
+          retry_apt sudo apt-get update
+
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+
+          retry_apt sudo apt-get install -y \
+            ocaml "${dune_pkg}" ocaml-findlib \
+            neko \
+            python3 pypy3 \
+            default-jdk \
+            build-essential \
+            php \
+            lua5.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Fetch upstream Haxe checkout (vendor/haxe)
+        run: bash scripts/vendor/fetch-haxe-upstream.sh
+
+      - name: Download shared hxhx artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: full1-suite-hxhx-${{ github.run_id }}
+          path: .artifacts/full1/suites
+
+      - name: Download shared macro host artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: full1-suite-macro-host-${{ github.run_id }}
+          path: .artifacts/full1/suites
+
+      - name: Run Full1 strict suite
+        run: |
+          set -euo pipefail
+          chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx"
           chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx-macro-host"
           export HAXELIB_PATH="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo"
+          export HXHX_MACRO_RUNTIME_MODE=external-host
           export HXHX_MACRO_HOST_EXE="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx-macro-host"
           node scripts/ci/run-upstream-suite.js \
             --suite "${{ matrix.suite }}" \
