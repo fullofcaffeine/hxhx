@@ -38,6 +38,8 @@ jobs:
     env:
       HXHX_MACRO_RUNTIME_MODE: ${{ matrix.macro_runtime_mode }}
       HXHX_GATE2_SKIP_PARTY: '1'
+      HXHX_PARITY_ARTIFACT_DIR: .artifacts/macro-runtime-parity/${{ matrix.macro_runtime_mode }}
+      HXHX_PARITY_TIMINGS_JSONL: .artifacts/macro-runtime-parity/${{ matrix.macro_runtime_mode }}/${{ matrix.macro_runtime_mode }}.timings.jsonl
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,6 +49,8 @@ jobs:
       - name: Install host toolchains (OCaml + Python)
         run: |
           set -euo pipefail
+          mkdir -p "$HXHX_PARITY_ARTIFACT_DIR"
+          phase_start_ms="$(date +%s%3N)"
           retry_apt() {
             local max_attempts=4
             local attempt=1
@@ -63,19 +67,41 @@ jobs:
               sleep 5
             done
           }
-          retry_apt sudo apt-get update
-          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
-          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
-            dune_pkg="dune"
-          else
-            dune_pkg="ocaml-dune"
+          run_phase_body() (
+            set -euo pipefail
+            retry_apt sudo apt-get update
+            dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+            if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+              dune_pkg="dune"
+            else
+              dune_pkg="ocaml-dune"
+            fi
+            retry_apt sudo apt-get install -y \
+              ocaml "${dune_pkg}" ocaml-findlib \
+              python3
+            dune --version
+            ocamlc -version
+            python3 --version
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
           fi
-          retry_apt sudo apt-get install -y \
-            ocaml "${dune_pkg}" ocaml-findlib \
-            python3
-          dune --version
-          ocamlc -version
-          python3 --version
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$HXHX_PARITY_TIMINGS_JSONL" \
+            --workflow "macro-runtime-parity-weekly" \
+            --job "$HXHX_MACRO_RUNTIME_MODE" \
+            --phase "install_host_toolchains" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -93,23 +119,113 @@ jobs:
             ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
 
       - name: Install npm dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: |
+          set -euo pipefail
+          mkdir -p "$HXHX_PARITY_ARTIFACT_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          npm ci --ignore-scripts --no-audit --no-fund
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$HXHX_PARITY_TIMINGS_JSONL" \
+            --workflow "macro-runtime-parity-weekly" \
+            --job "$HXHX_MACRO_RUNTIME_MODE" \
+            --phase "install_npm_dependencies" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Install Haxe (pinned via lix)
         run: |
           set -euo pipefail
-          npx lix download
-          npx lix download haxe "${{ env.HAXE_VERSION }}"
-          npx lix use haxe "${{ env.HAXE_VERSION }}"
-          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
-          export PATH="$(pwd)/node_modules/.bin:$PATH"
-          haxe -version
+          mkdir -p "$HXHX_PARITY_ARTIFACT_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            npx lix download
+            npx lix download haxe "${{ env.HAXE_VERSION }}"
+            npx lix use haxe "${{ env.HAXE_VERSION }}"
+            echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+            export PATH="$(pwd)/node_modules/.bin:$PATH"
+            haxe -version
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$HXHX_PARITY_TIMINGS_JSONL" \
+            --workflow "macro-runtime-parity-weekly" \
+            --job "$HXHX_MACRO_RUNTIME_MODE" \
+            --phase "install_haxe" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Download Haxe libraries (lix)
-        run: npx lix download
+        run: |
+          set -euo pipefail
+          mkdir -p "$HXHX_PARITY_ARTIFACT_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          npx lix download
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$HXHX_PARITY_TIMINGS_JSONL" \
+            --workflow "macro-runtime-parity-weekly" \
+            --job "$HXHX_MACRO_RUNTIME_MODE" \
+            --phase "download_haxe_libraries" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Fetch upstream Haxe checkout (vendor/haxe)
-        run: bash scripts/vendor/fetch-haxe-upstream.sh
+        run: |
+          set -euo pipefail
+          mkdir -p "$HXHX_PARITY_ARTIFACT_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          bash scripts/vendor/fetch-haxe-upstream.sh
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$HXHX_PARITY_TIMINGS_JSONL" \
+            --workflow "macro-runtime-parity-weekly" \
+            --job "$HXHX_MACRO_RUNTIME_MODE" \
+            --phase "fetch_upstream_haxe" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Derive mode marker suffix
         run: |
@@ -117,7 +233,7 @@ jobs:
           marker="${HXHX_MACRO_RUNTIME_MODE^^}"
           marker="${marker//-/_}"
           echo "HXHX_MODE_MARKER=$marker" >> "$GITHUB_ENV"
-          artifact_dir=".artifacts/macro-runtime-parity/${HXHX_MACRO_RUNTIME_MODE}"
+          artifact_dir="$HXHX_PARITY_ARTIFACT_DIR"
           echo "HXHX_PARITY_ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"
           mkdir -p "$artifact_dir"
           {
@@ -128,34 +244,143 @@ jobs:
       - name: Build hxhx once for this mode
         run: |
           set -euo pipefail
-          HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
-          if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
-            echo "Failed to build hxhx binary for macro runtime parity lane." >&2
-            exit 1
+          mkdir -p "$HXHX_PARITY_ARTIFACT_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
+            if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+              echo "Failed to build hxhx binary for macro runtime parity lane." >&2
+              exit 1
+            fi
+            echo "HXHX_BIN=$HXHX_BIN" >> "$GITHUB_ENV"
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
           fi
-          echo "HXHX_BIN=$HXHX_BIN" >> "$GITHUB_ENV"
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$HXHX_PARITY_TIMINGS_JSONL" \
+            --workflow "macro-runtime-parity-weekly" \
+            --job "$HXHX_MACRO_RUNTIME_MODE" \
+            --phase "build_hxhx_binary" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Run upstream unit macro (stage3 no-emit)
         run: |
           set -euo pipefail
           artifact_dir="${HXHX_PARITY_ARTIFACT_DIR}"
-          npm run test:upstream:unit-macro-stage3-no-emit 2>&1 | tee "$artifact_dir/unit-macro-stage3-no-emit.log"
-          echo "MACRO_RUNTIME_PARITY_UNIT_${HXHX_MODE_MARKER}:PASS" | tee -a "$artifact_dir/markers.txt"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            npm run test:upstream:unit-macro-stage3-no-emit 2>&1 | tee "$artifact_dir/unit-macro-stage3-no-emit.log"
+            phase_exit="${PIPESTATUS[0]}"
+            if [ "$phase_exit" -ne 0 ]; then
+              exit "$phase_exit"
+            fi
+            echo "MACRO_RUNTIME_PARITY_UNIT_${HXHX_MODE_MARKER}:PASS" | tee -a "$artifact_dir/markers.txt"
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$HXHX_PARITY_TIMINGS_JSONL" \
+            --workflow "macro-runtime-parity-weekly" \
+            --job "$HXHX_MACRO_RUNTIME_MODE" \
+            --phase "unit_macro_stage3_no_emit" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Run upstream runci macro workload (stage3 no-emit)
         run: |
           set -euo pipefail
           artifact_dir="${HXHX_PARITY_ARTIFACT_DIR}"
-          npm run test:upstream:runci-macro-stage3-no-emit 2>&1 | tee "$artifact_dir/runci-macro-stage3-no-emit.log"
-          echo "MACRO_RUNTIME_PARITY_RUNCI_${HXHX_MODE_MARKER}:PASS" | tee -a "$artifact_dir/markers.txt"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            npm run test:upstream:runci-macro-stage3-no-emit 2>&1 | tee "$artifact_dir/runci-macro-stage3-no-emit.log"
+            phase_exit="${PIPESTATUS[0]}"
+            if [ "$phase_exit" -ne 0 ]; then
+              exit "$phase_exit"
+            fi
+            echo "MACRO_RUNTIME_PARITY_RUNCI_${HXHX_MODE_MARKER}:PASS" | tee -a "$artifact_dir/markers.txt"
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$HXHX_PARITY_TIMINGS_JSONL" \
+            --workflow "macro-runtime-parity-weekly" \
+            --job "$HXHX_MACRO_RUNTIME_MODE" \
+            --phase "runci_macro_stage3_no_emit" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Run display + macro protocol checks
         run: |
           set -euo pipefail
           artifact_dir="${HXHX_PARITY_ARTIFACT_DIR}"
-          npm run test:upstream:display-stage3-no-emit 2>&1 | tee "$artifact_dir/display-stage3-no-emit.log"
-          npm run test:m14:macro-runtime-mode-switch 2>&1 | tee "$artifact_dir/m14-macro-runtime-mode-switch.log"
-          echo "MACRO_RUNTIME_PARITY_DISPLAY_PROTOCOL_${HXHX_MODE_MARKER}:PASS" | tee -a "$artifact_dir/markers.txt"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            npm run test:upstream:display-stage3-no-emit 2>&1 | tee "$artifact_dir/display-stage3-no-emit.log"
+            phase_exit="${PIPESTATUS[0]}"
+            if [ "$phase_exit" -ne 0 ]; then
+              exit "$phase_exit"
+            fi
+            npm run test:m14:macro-runtime-mode-switch 2>&1 | tee "$artifact_dir/m14-macro-runtime-mode-switch.log"
+            phase_exit="${PIPESTATUS[0]}"
+            if [ "$phase_exit" -ne 0 ]; then
+              exit "$phase_exit"
+            fi
+            echo "MACRO_RUNTIME_PARITY_DISPLAY_PROTOCOL_${HXHX_MODE_MARKER}:PASS" | tee -a "$artifact_dir/markers.txt"
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$HXHX_PARITY_TIMINGS_JSONL" \
+            --workflow "macro-runtime-parity-weekly" \
+            --job "$HXHX_MACRO_RUNTIME_MODE" \
+            --phase "display_macro_protocol" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Attach parity blockers list and emit mode marker
         run: |
@@ -164,6 +389,19 @@ jobs:
           cp docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md "$artifact_dir/macro-runtime-parity-blockers.md"
           echo "MACRO_RUNTIME_PARITY_BLOCKERS_${HXHX_MODE_MARKER}:TRACKED" | tee -a "$artifact_dir/markers.txt"
           echo "MACRO_RUNTIME_PARITY_${HXHX_MODE_MARKER}:PASS" | tee -a "$artifact_dir/markers.txt"
+
+      - name: Summarize macro runtime parity timings
+        if: always()
+        run: |
+          set -euo pipefail
+          timings="$HXHX_PARITY_TIMINGS_JSONL"
+          if [ -f "$timings" ]; then
+            node scripts/ci/full1-phase-timing.js summarize \
+              --jsonl "$timings" \
+              --json-out "$HXHX_PARITY_ARTIFACT_DIR/${HXHX_MACRO_RUNTIME_MODE}.timings.summary.json" \
+              --markdown-out "$HXHX_PARITY_ARTIFACT_DIR/${HXHX_MACRO_RUNTIME_MODE}.timings.md"
+            cat "$HXHX_PARITY_ARTIFACT_DIR/${HXHX_MACRO_RUNTIME_MODE}.timings.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload parity artifacts (mode-tagged)
         if: always()

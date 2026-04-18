@@ -30,11 +30,13 @@ const suiteWorkflowPath = '.github/workflows/full1-suite-runners.yml'
 const perfWorkflowPath = '.github/workflows/gate-perf-full1.yml'
 const evalWorkflowPath = '.github/workflows/full1-eval-native.yml'
 const pluginWorkflowPath = '.github/workflows/full1-plugin-parity.yml'
+const macroWorkflowPath = '.github/workflows/macro-runtime-parity-weekly.yml'
 
 const suiteWorkflow = read(suiteWorkflowPath)
 const perfWorkflow = read(perfWorkflowPath)
 const evalWorkflow = read(evalWorkflowPath)
 const pluginWorkflow = read(pluginWorkflowPath)
+const macroWorkflow = read(macroWorkflowPath)
 
 for (const needle of [
   'build_hxhx.timings.jsonl',
@@ -73,6 +75,18 @@ for (const needle of [
   'Summarize ${{ matrix.name }} timings',
 ]) {
   requireIncludes(pluginWorkflowPath, pluginWorkflow, needle)
+}
+
+for (const needle of [
+  'HXHX_PARITY_TIMINGS_JSONL',
+  '${{ matrix.macro_runtime_mode }}.timings.jsonl',
+  'build_hxhx_binary',
+  'unit_macro_stage3_no_emit',
+  'runci_macro_stage3_no_emit',
+  'display_macro_protocol',
+  'Summarize macro runtime parity timings',
+]) {
+  requireIncludes(macroWorkflowPath, macroWorkflow, needle)
 }
 
 console.log('[full1-phase-timing-workflow-check] ok')

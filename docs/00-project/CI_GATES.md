@@ -100,7 +100,7 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | --- | --- | --- | --- |
 | `Gate 1 / Upstream Macro Unit Compatibility` | `.github/workflows/gate1.yml` | Full upstream unit macro compatibility baseline. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 2 / Upstream Macro Workloads` | `.github/workflows/gate2.yml` | Wider upstream `runci` macro workload checks. | **Nightly/scheduled** | weekly schedule, manual |
-| `Macro Runtime Parity (Weekly)` | `.github/workflows/macro-runtime-parity-weekly.yml` | Runs upstream macro + display checks in both macro runtime modes (`external-host`, `inproc`) with mode-tagged artifacts, reusable outputs, and aggregate macro parity markers. | **Nightly/scheduled + Release + Reusable** | weekly schedule, manual, `release`, `workflow_call` |
+| `Macro Runtime Parity (Weekly)` | `.github/workflows/macro-runtime-parity-weekly.yml` | Runs upstream macro + display checks in both macro runtime modes (`external-host`, `inproc`) with mode-tagged artifacts, phase timings, reusable outputs, and aggregate macro parity markers. | **Nightly/scheduled + Release + Reusable** | weekly schedule, manual, `release`, `workflow_call` |
 | `Full1 / Eval Native` | `.github/workflows/full1-eval-native.yml` | Runs the upstream-aligned native eval/interp baseline (`tests/unit/compile-macro.hxml`) in strict stage0-forbidden mode and emits a structured eval marker/artifact. | **Release + Manual + Reusable** | manual, `release`, `workflow_call` |
 | `Gate 3 / Upstream Target Matrix` | `.github/workflows/gate3.yml` | Upstream target/workflow compatibility matrix checks. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 3 Full1 / Extended Targets Strict` | `.github/workflows/gate3-full1-extended.yml` | Full1 strict extended target matrix (`Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php`) with no-skip enforcement and JSON summary artifacts. | **Nightly/scheduled** | weekly schedule, manual |
@@ -135,6 +135,11 @@ Full1 plugin parity timing artifacts:
 - proof artifacts include `<proof-id>.timings.jsonl`, `<proof-id>.timings.summary.json`, and `<proof-id>.timings.md`
 - measured phases include OCaml package prep, npm/Haxe dependency prep, optional upstream eval-host preparation, and `plugin_proof`
 - timing Markdown is appended to `GITHUB_STEP_SUMMARY` for each proof row
+
+Macro runtime parity timing artifacts:
+- mode-tagged artifacts include `<mode>.timings.jsonl`, `<mode>.timings.summary.json`, and `<mode>.timings.md`
+- measured phases include host/toolchain setup, npm/Haxe dependency prep, upstream checkout fetch, `build_hxhx_binary`, unit macro, runci macro, and display/protocol checks
+- timing Markdown is appended to `GITHUB_STEP_SUMMARY` for each runtime mode
 
 `Gate M7` release/scheduled runs force strict settings:
 - `HXHX_M7_PROFILE=full`
