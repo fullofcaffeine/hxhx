@@ -896,6 +896,13 @@ class JsExprEmitter {
 			case EField(EIdent("Sys"), "print"):
 				final arg = args.length > 0 ? emit(args[0], scope) : "\"\"";
 				return "process.stdout.write(String(" + arg + "))";
+			case EField(EIdent("Sys"), "command"):
+				return emitSysCommand(args, scope);
+			case EField(EIdent("Sys"), "setCwd"):
+				final dir = args.length > 0 ? emit(args[0], scope) : "\".\"";
+				return "process.chdir(String(" + dir + "))";
+			case EField(EIdent("Sys"), "getCwd"):
+				return "process.cwd()";
 			case EIdent("typeErrorText") | EField(EIdent("HelperMacros"), "typeErrorText") | EField(EField(EIdent("unit"), "HelperMacros"), "typeErrorText"):
 				final diagnostic = helperTypeErrorText(args);
 				if (diagnostic != null)
@@ -917,6 +924,31 @@ class JsExprEmitter {
 		final calleeJs = emit(callee, scope);
 		final argsJs = args.map(a -> emitCallArg(a, scope)).join(", ");
 		return calleeJs + "(" + argsJs + ")";
+	}
+
+	static function emitSysCommand(args:Array<HxExpr>, scope:JsEmitScope):String {
+		final cmd = args.length > 0 ? emit(args[0], scope) : "\"\"";
+		if (args.length <= 1) {
+			return "(function(){"
+				+ "var __hx_cp = require(\"child_process\");"
+				+ "var __hx_result = __hx_cp.spawnSync(String("
+				+ cmd
+				+ "), { stdio: \"inherit\", shell: true });"
+				+ "return (__hx_result && typeof __hx_result.status === \"number\") ? __hx_result.status : 1;"
+				+ "})()";
+		}
+		final rawArgs = emit(args[1], scope);
+		return "(function(){"
+			+ "var __hx_cp = require(\"child_process\");"
+			+ "var __hx_raw_args = "
+			+ rawArgs
+			+ ";"
+			+ "var __hx_args = Array.isArray(__hx_raw_args) ? __hx_raw_args.map(function(__hx_arg) { return String(__hx_arg); }) : [];"
+			+ "var __hx_result = __hx_cp.spawnSync(String("
+			+ cmd
+			+ "), __hx_args, { stdio: \"inherit\" });"
+			+ "return (__hx_result && typeof __hx_result.status === \"number\") ? __hx_result.status : 1;"
+			+ "})()";
 	}
 
 	static function emitMapComprehensionExpr(args:Array<HxExpr>, scope:JsEmitScope):String {

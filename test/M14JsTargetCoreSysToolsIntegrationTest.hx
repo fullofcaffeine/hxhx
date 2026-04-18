@@ -1010,6 +1010,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final outDir = Path.join([tmpRoot, "out"]);
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
+		FileSystem.createDirectory(Path.join([tmpRoot, "cwd-probe"]));
 
 		var failure:Null<String> = null;
 		try {
@@ -1036,6 +1037,12 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(Lambda.flatten([[1, 2], [3]]).join(","));',
 				'    Sys.println(Lambda.filter([1, 2, 3, 4], function(i) return i > 2).join(","));',
 				'    Sys.println(FileSystem.exists("."));',
+				'    var oldCwd = Sys.getCwd();',
+				'    var cwdProbe = "' + tmpRoot + '/cwd-probe";',
+				'    Sys.setCwd(cwdProbe);',
+				'    var cwdCommandCode = Sys.command("node", ["-e", "console.log(\\"cwd-probe=\\" + require(\\"path\\").basename(process.cwd()))"]);',
+				'    Sys.setCwd(oldCwd);',
+				'    Sys.println("cwd-command-code=" + cwdCommandCode);',
 				'    Sys.println(try { "try-ok"; } catch (e:Dynamic) { "try-fail"; });',
 				"    Sys.println(untyped __js__(\"typeof window != 'undefined'\"));",
 				'    var requiredPath = "fs";',
@@ -1373,6 +1380,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "this.__hx_value = method", "abstract-style constructor assignment to this should lower to a backing value slot");
 			assertNotContains(js, "this = method", "abstract-style constructor assignment should not emit invalid JS assignment to this");
 			assertContains(js, "__hx_cls_sys_io_Process.prototype.close = function", "unused sys.io.Process methods should emit neutral JS bodies");
+			assertContains(js, "process.chdir(String", "Sys.setCwd should lower to Node process.chdir");
+			assertContains(js, "spawnSync(String(", "Sys.command should lower to Node child_process.spawnSync");
 			assertTrue(js.indexOf("var __hx_cls_XmlType = function") < js.indexOf("__hx_cls_Xml.Element = __hx_cls_XmlType.Element"),
 				"classes read by static field initializers should emit before dependent static fields");
 			assertContains(js, "__hx_cls_haxe_macro_Compiler.ident = new __hx_cls_EReg", "compile-time macro Compiler ident regex should construct EReg");
@@ -1433,6 +1442,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "1,2,3", "Lambda.flatten should concatenate nested iterables");
 			assertContains(stdout, "3,4", "Lambda.filter should preserve matching items");
 			assertContains(stdout, "true", "FileSystem.exists should use Node fs existsSync");
+			assertContains(stdout, "cwd-probe=cwd-probe", "Sys.command should inherit the cwd set by Sys.setCwd");
+			assertContains(stdout, "cwd-command-code=0", "Sys.command should report the child exit code");
 			assertContains(stdout, "try-ok", "try expression should return the successful branch value");
 			assertContains(stdout, "try-ok\nfalse\nfunction\n`null`", "inline JS intrinsic should execute raw JavaScript templates under Node");
 			assertContains(stdout, "`null`", "utest Assert.getTypeName should name null values");
