@@ -2761,7 +2761,7 @@ class HxParser {
 				}
 			}
 
-			final thenBranch = ensureBranchReturns(parseStmt(() -> cur.kind.match(TEof)));
+			final thenBranch = ensureBranchReturns(parseStmt(() -> cur.kind.match(TKeyword(KElse)) || cur.kind.match(TEof)));
 			if (!acceptKeyword(KElse)) {
 				// Be permissive: missing else branch. Treat as a void return.
 				//
@@ -2790,14 +2790,14 @@ class HxParser {
 		return SReturn(expr, pos);
 	}
 
-	function syncToStmtEnd():Void {
+	function syncToStmtEndUntil(stop:() -> Bool):Void {
 		// Best-effort resynchronization for statements.
 		//
 		// Why
 		// - Our expression grammar is intentionally incomplete; it may stop before `;`.
 		// - If we don't advance to the end of the statement, parsing can get stuck on
 		//   the same token forever.
-		while (!cur.kind.match(TSemicolon) && !cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+		while (!stop() && !cur.kind.match(TSemicolon) && !cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
 			switch (cur.kind) {
 				case TLParen:
 					bump();
@@ -2811,6 +2811,10 @@ class HxParser {
 		}
 		if (cur.kind.match(TSemicolon))
 			bump();
+	}
+
+	function syncToStmtEnd():Void {
+		syncToStmtEndUntil(() -> false);
 	}
 
 	function parseVarDecls(pos:HxPos):Array<HxStmt> {
@@ -2960,7 +2964,7 @@ class HxParser {
 				}
 				if (cur.kind.match(TRParen))
 					bump();
-				final thenBranch = parseStmt(stop);
+				final thenBranch = parseStmt(() -> stop() || cur.kind.match(TKeyword(KElse)));
 				// Keep nullable enum branches on the explicit `Null<T>` path so stage0 OCaml
 				// generation keeps representation coercions consistent.
 				var elseBranch:Null<HxStmt> = null;
@@ -3238,8 +3242,8 @@ class HxParser {
 				syncToStmtEnd();
 				SContinue(pos);
 			case _:
-				final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-				syncToStmtEnd();
+				final expr = parseExpr(() -> stop() || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+				syncToStmtEndUntil(stop);
 				SExpr(expr, pos);
 		}
 	}

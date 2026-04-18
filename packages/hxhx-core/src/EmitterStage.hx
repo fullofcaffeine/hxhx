@@ -540,6 +540,30 @@ class EmitterStage {
 		}
 	}
 
+	/**
+		Returns a Stage3-only OCaml return type override for std helpers whose
+		behavioral API is more precise than the current bootstrap typer result.
+
+		Why
+		- The native Stage3 frontend still types some expression-bodied upstream std
+		  helpers as `Void` when it cannot model the whole body.
+		- `haxe.macro.Printer` is a pressure point in Full1 native eval: its public
+		  `print*` helpers are string printers and are immediately consumed in string
+		  concatenations. Emitting them as `unit` makes OCaml reject valid bootstrap
+		  output before the lane can run.
+
+		What
+		- Keep this as a narrow std API contract, not a generic "unknown means String"
+		  fallback.
+	**/
+	static function stage3ReturnTypeOverride(mainModuleName:String, nameRaw:String, fallback:String):String {
+		if (mainModuleName == "Haxe_macro_Printer") {
+			if (nameRaw == "opt" || nameRaw == "escapeString" || StringTools.startsWith(nameRaw, "print"))
+				return "string";
+		}
+		return fallback;
+	}
+
 	static function lowerFirst(name:String):String {
 		if (name == null || name.length == 0)
 			return "_";
@@ -1133,9 +1157,13 @@ class EmitterStage {
 				case EBool(v): "string_of_bool " + (v ? "true" : "false");
 				case EFloat(v): "string_of_float " + Std.string(v);
 				case EIdent(name) if (tyForIdent(name) == "Int"):
-					"string_of_int " + ocamlReadValueIdent(name);
+					// Stage3 local type hints are best-effort during upstream-suite bring-up.
+					// Use the runtime `Std.string` path for identifiers so stale numeric hints
+					// do not turn string iterator variables (for example `field`) into
+					// `string_of_int field` in concatenations.
+					"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
 				case EIdent(name) if (tyForIdent(name) == "Float"):
-					"string_of_float " + ocamlReadValueIdent(name);
+					"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
 				case EIdent(name) if (tyForIdent(name) == "Bool"):
 					// Keep stringification resilient when best-effort inference mislabels a non-bool
 					// value as `Bool` (for example, some stage0-fed static-final shapes during bring-up).
@@ -1317,6 +1345,94 @@ class EmitterStage {
 			for (name in names)
 				out.set(name, t);
 		return out;
+	}
+
+	static function collectStage3PatternBindingNames(pattern:HxSwitchPattern):Array<String> {
+		final out = new Array<String>();
+		function add(name:String):Void {
+			if (name != null && name.length > 0 && name != "_" && out.indexOf(name) < 0)
+				out.push(name);
+		}
+		function walk(p:HxSwitchPattern):Void {
+			if (p == null)
+				return;
+			switch (p) {
+				case PBind(name):
+					add(name);
+				case PCapture(name, inner):
+					add(name);
+					walk(inner);
+				case PEnumExtract(_name, args):
+					if (args != null)
+						for (arg in args)
+							walk(arg);
+				case PObject(_fieldNames, fieldPatterns):
+					if (fieldPatterns != null)
+						for (fieldPattern in fieldPatterns)
+							walk(fieldPattern);
+				case PArray(items):
+					if (items != null)
+						for (item in items)
+							walk(item);
+				case PExtractor(_extractorText, resultPattern):
+					walk(resultPattern);
+				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PUnsupportedGuard(inner):
+					walk(inner);
+				case POr(patterns):
+					if (patterns != null)
+						for (inner in patterns)
+							walk(inner);
+				case _:
+			}
+		}
+		walk(pattern);
+		return out;
+	}
+
+	static function stage3PatternBindingLets(pattern:HxSwitchPattern, valueExpr:String):String {
+		final parts = new Array<String>();
+		var paramCounter = 0;
+		function walk(p:HxSwitchPattern, value:String):Void {
+			if (p == null)
+				return;
+			switch (p) {
+				case PBind(name):
+					if (name != null && name.length > 0 && name != "_")
+						parts.push("let " + ocamlValueIdent(name) + " = Obj.magic (" + value + ") in ");
+				case PCapture(name, inner):
+					if (name != null && name.length > 0 && name != "_")
+						parts.push("let " + ocamlValueIdent(name) + " = Obj.magic (" + value + ") in ");
+					walk(inner, value);
+				case PEnumExtract(_name, args):
+					if (args != null && args.length > 0) {
+						final paramsName = "__hx_sw_params_" + Std.string(paramCounter++);
+						parts.push("let " + paramsName + " = Type.enumParameters (" + value + ") in ");
+						for (i in 0...args.length)
+							walk(args[i], "(HxArray.get (Obj.magic " + paramsName + ") " + Std.string(i) + ")");
+					}
+				case PObject(_fieldNames, fieldPatterns):
+					if (fieldPatterns != null)
+						for (fieldPattern in fieldPatterns)
+							walk(fieldPattern, value);
+				case PArray(items):
+					if (items != null)
+						for (i in 0...items.length)
+							walk(items[i], "(HxArray.get (Obj.magic " + value + ") " + Std.string(i) + ")");
+				case PExtractor(_extractorText, resultPattern):
+					walk(resultPattern, value);
+				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PUnsupportedGuard(inner):
+					walk(inner, value);
+				case POr(patterns):
+					// Stage3 bring-up supports the common upstream shape where all alternatives bind
+					// the same names from the same constructor-argument positions, e.g.
+					// `case A(s) | B(s): s`.
+					if (patterns != null && patterns.length > 0)
+						walk(patterns[0], value);
+				case _:
+			}
+		}
+		walk(pattern, valueExpr);
+		return parts.join("");
 	}
 
 	/**
@@ -1756,6 +1872,8 @@ class EmitterStage {
 				true;
 			case EIdent(name): final t = stage3TyForIdent(name,
 					tyByIdent); t == "Int" || (isMutableLocalRefIdent(name) && (t == "" || t == "Dynamic" || t == "Unknown"));
+			case EField(_inner, "length"):
+				true;
 			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"): stage3IsIntExpr(a,
 					tyByIdent) && stage3IsIntExpr(b, tyByIdent);
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsIntExpr(thenExpr, tyByIdent) && stage3IsIntExpr(elseExpr, tyByIdent);
@@ -1894,6 +2012,8 @@ class EmitterStage {
 		// Best-effort: keep concatenation type-safe by stringifying obvious primitives.
 		return switch (expr) {
 			case EInt(_), EFloat(_), EBool(_), EIdent(_):
+				exprToOcamlString(expr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+			case _ if (stage3IsIntExpr(expr, tyByIdent) || stage3IsFloatExpr(expr, tyByIdent) || stage3IsBoolExpr(expr, tyByIdent)):
 				exprToOcamlString(expr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 			case _:
 				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -3780,13 +3900,15 @@ class EmitterStage {
 							case PCapture(name, _inner):
 								extendTyByIdentForStage3(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case PArray(_items):
-								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PUnsupportedGuard(_):
-								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case PEnumExtract(_name, _args):
-								extendTyByIdentForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case PObject(_fieldNames, _fieldPatterns):
-								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+							case POr(_):
+								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case _:
 								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
 						};
@@ -3799,20 +3921,8 @@ class EmitterStage {
 						// Bring-up strategy: cast each branch to `Obj.t` to keep emission resilient.
 						final bodyAsDynamic = "(Obj.magic (" + body + "))";
 						final thenExpr = switch (pattern) {
-							case PBind(name):
-								"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyAsDynamic + "))";
-							case PCapture(name, _inner):
-								"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyAsDynamic + "))";
-							case PArray(_items):
-								"(" + bodyAsDynamic + ")";
-							case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PUnsupportedGuard(_):
-								"(" + bodyAsDynamic + ")";
-							case PEnumExtract(_name, _args):
-								"(" + bodyAsDynamic + ")";
-							case PObject(_fieldNames, _fieldPatterns):
-								"(" + bodyAsDynamic + ")";
 							case _:
-								"(" + bodyAsDynamic + ")";
+								"(" + stage3PatternBindingLets(pattern, "__sw") + "(" + bodyAsDynamic + "))";
 						};
 						final cond = patternCond(pattern);
 						chain = "(if " + cond + " then " + thenExpr + " else (" + chain + "))";
@@ -5299,32 +5409,22 @@ class EmitterStage {
 								case PCapture(name, _inner):
 									extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
 								case PArray(_items):
-									cloneTyCtxLocal(tyCtx);
+									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PUnsupportedGuard(_):
-									cloneTyCtxLocal(tyCtx);
+									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case PEnumExtract(_name, _args):
-									cloneTyCtxLocal(tyCtx);
+									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case PObject(_fieldNames, _fieldPatterns):
-									cloneTyCtxLocal(tyCtx);
+									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+								case POr(_):
+									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case _:
 									cloneTyCtxLocal(tyCtx);
 							};
 							final bodyUnit = stmtToUnit(body, cast caseTy);
 							final thenUnit = switch (pattern) {
-								case PBind(name):
-									"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
-								case PCapture(name, _inner):
-									"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
-								case PArray(_items):
-									"(" + bodyUnit + ")";
-								case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PUnsupportedGuard(_):
-									"(" + bodyUnit + ")";
-								case PEnumExtract(_name, _args):
-									"(" + bodyUnit + ")";
-								case PObject(_fieldNames, _fieldPatterns):
-									"(" + bodyUnit + ")";
 								case _:
-									"(" + bodyUnit + ")";
+									"(" + stage3PatternBindingLets(pattern, "__sw") + "(" + bodyUnit + "))";
 							};
 							final cond = patternCond(pattern);
 							chain = "(if " + cond + " then " + thenUnit + " else (" + chain + "))";
@@ -5982,13 +6082,11 @@ class EmitterStage {
 		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Lambda",
 			"(* hxhx(stage3) bootstrap shim: Lambda *)\n"
 			+ "let array it =\n"
-			+ "  HxBootArray.of_list (Stdlib.List.of_seq (it : _ Seq.t))\n"
+			+ "  HxBootArray.of_list (HxBootArray.to_list (Obj.magic it))\n"
 			+ "let list it =\n"
-			+ "  Stdlib.List.of_seq (it : _ Seq.t)\n"
+			+ "  HxBootArray.to_list (Obj.magic it)\n"
 			+ "let fold it f first =\n"
-			+ "  let acc = ref first in\n"
-			+ "  Seq.iter (fun x -> acc := f x !acc) (it : _ Seq.t);\n"
-			+ "  !acc\n"
+			+ "  Stdlib.List.fold_left (fun acc x -> f x acc) first (list it)\n"
 			+ "let has _ _ = false\n"
 			+ "let exists _ _ = false\n"
 			+ "let iter _ _ = ()\n"
@@ -6062,6 +6160,7 @@ class EmitterStage {
 			+ "let isFunction = HxReflect.isFunction\n"
 			+ "let isObject = HxReflect.isObject\n"
 			+ "let compare = HxReflect.compare\n"
+			+ "let compareMethods a b = HxReflect.same_closure (Obj.repr a) (Obj.repr b)\n"
 			+ "let callMethod = HxReflect.callMethod\n"
 			+ "let makeVarArgs = HxReflect.makeVarArgs\n"
 			+ "let makeVarArgsVoid = HxReflect.makeVarArgsVoid\n"
@@ -7519,7 +7618,8 @@ class EmitterStage {
 								+ ocamlTypeFromTy(a.getType()) + ")")
 								.join(" ");
 							final parsedFn = parsedByName.get(nameRaw);
-							final retTy = ocamlTypeFromTy(tf.getReturnType());
+							var retTy = ocamlTypeFromTy(tf.getReturnType());
+							retTy = stage3ReturnTypeOverride(mainModuleName, nameRaw, retTy);
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
 							for (a in args)
@@ -7575,7 +7675,8 @@ class EmitterStage {
 								headArgs.push("(" + ocamlValueIdent(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")");
 							final ocamlArgs = headArgs.length == 0 ? "()" : headArgs.join(" ");
 
-							final retTy = ocamlTypeFromTy(tf.getReturnType());
+							var retTy = ocamlTypeFromTy(tf.getReturnType());
+							retTy = stage3ReturnTypeOverride(mainModuleName, nameRaw, retTy);
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
 							for (a in args)
