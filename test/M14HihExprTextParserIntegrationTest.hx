@@ -858,6 +858,20 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected switch expression with extractor patterns");
 		}
 
+		final arrayExtractorPatternExpr = HxParser.parseExprText('switch args { case ["exitCode", Std.parseInt(_) => code]: code; case _: 0; }');
+		switch (arrayExtractorPatternExpr) {
+			case ESwitch(EIdent("args"), patterns, _):
+				switch (patterns[0]) {
+					case PArray([PString("exitCode"), PExtractor("Std.parseInt(_)", PBind("code"))]):
+					case _:
+						fail("expected array pattern with qualified static extractor");
+				}
+			case EUnsupported(raw):
+				fail("array extractor switch parsed as unsupported: " + raw);
+			case _:
+				fail("expected switch expression with array extractor pattern");
+		}
+
 		final switchIfElseSemicolonExpr = HxParser.parseExprText('switch v { case A(x): if (x == null) "null"; else "not null"; }');
 		switch (switchIfElseSemicolonExpr) {
 			case ESwitch(EIdent("v"), patterns, exprs):

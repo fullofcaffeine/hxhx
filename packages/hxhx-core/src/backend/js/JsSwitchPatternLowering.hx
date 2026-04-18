@@ -43,9 +43,8 @@ class JsSwitchPatternLowering {
 				{cond: lowered.cond, bindings: bindings};
 			case PArray(items):
 				lowerArray(items, scrutineeVar);
-			case PExtractor(_, resultPattern):
-				final lowered = lower(resultPattern, scrutineeVar);
-				{cond: "false", bindings: lowered.bindings};
+			case PExtractor(extractorText, resultPattern):
+				lowerExtractor(extractorText, resultPattern, scrutineeVar);
 			case PLengthGuard(inner, bindingName, length):
 				final lowered = lower(inner, scrutineeVar);
 				final guardCond = lowerGuardBindingValue(bindingName, lowered.bindings) + ".length === " + length;
@@ -128,6 +127,21 @@ class JsSwitchPatternLowering {
 			}
 		}
 		return {cond: conds.join(" && "), bindings: bindings};
+	}
+
+	static function lowerExtractor(extractorText:String, resultPattern:HxSwitchPattern, scrutineeVar:String):JsSwitchPatternLowered {
+		final applied = switch (StringTools.trim(extractorText)) {
+			case "Std.parseInt(_)":
+				"parseInt(" + scrutineeVar + ", 10)";
+			case "_.slice(0, 1)" | "_.slice(0,1)":
+				scrutineeVar + ".slice(0, 1)";
+			case _:
+				null;
+		}
+		final lowered = lower(resultPattern, applied == null ? scrutineeVar : applied);
+		if (applied == null)
+			return {cond: "false", bindings: lowered.bindings};
+		return lowered;
 	}
 
 	static function lowerGuardBindingValue(name:String, bindings:Array<JsSwitchPatternBinding>):String {

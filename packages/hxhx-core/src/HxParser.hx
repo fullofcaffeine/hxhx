@@ -519,7 +519,9 @@ class HxParser {
 		return switch (cur.kind) {
 			case TIdent("_"):
 				peekKind().match(TDot);
-			case TIdent(name) if (!isUpperStart(name)): final nextKind = peekKind(); nextKind.match(TLParen) || nextKind.match(TDot);
+			case TIdent(name): final nextKind = peekKind(); // Qualified static extractors such as `Std.parseInt(_) => code`
+				// appear inside upstream sys switch patterns.
+				nextKind.match(TDot) || (!isUpperStart(name) && nextKind.match(TLParen));
 			case _:
 				false;
 		}

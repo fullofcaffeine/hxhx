@@ -896,6 +896,11 @@ class JsExprEmitter {
 			case EField(EIdent("Sys"), "print"):
 				final arg = args.length > 0 ? emit(args[0], scope) : "\"\"";
 				return "process.stdout.write(String(" + arg + "))";
+			case EField(EIdent("Sys"), "args"):
+				return "process.argv.slice(2)";
+			case EField(EIdent("Sys"), "exit"):
+				final code = args.length > 0 ? emit(args[0], scope) : "0";
+				return "process.exit(Number(" + code + ") || 0)";
 			case EField(EIdent("Sys"), "command"):
 				return emitSysCommand(args, scope);
 			case EField(EIdent("Sys"), "setCwd"):

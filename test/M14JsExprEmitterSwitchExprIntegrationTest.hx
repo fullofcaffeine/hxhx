@@ -75,6 +75,16 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		assertContains(extractorPatternJs, "if (false)", "extractor patterns should parse and lower to a conservative disabled branch during bring-up");
 		assertContains(extractorPatternJs, "return \"even\";", "extractor branch bodies should still emit");
 
+		final qualifiedExtractorPatternJs = JsExprEmitter.emit(HxParser.parseExprText('switch args { case ["exitCode", Std.parseInt(_) => code]: code; case _: 0; }'),
+			exprScope);
+		assertContains(qualifiedExtractorPatternJs, '__sw[0] === "exitCode"', "array extractor pattern should keep literal guard");
+		assertContains(qualifiedExtractorPatternJs, "var __sw_bind_code = parseInt(__sw[1], 10);", "qualified static extractor should bind parsed value");
+
+		final sliceExtractorPatternJs = JsExprEmitter.emit(HxParser.parseExprText('switch args { case _.slice(0, 1) => ["putEnv"]: 1; case _: 0; }'),
+			exprScope);
+		assertContains(sliceExtractorPatternJs, "Array.isArray(__sw.slice(0, 1))", "slice extractor should lower result array pattern");
+		assertContains(sliceExtractorPatternJs, '__sw.slice(0, 1)[0] === "putEnv"', "slice extractor should match first command arg");
+
 		final switchIfElseSemicolon = HxParser.parseExprText('switch v { case A(x): if (x == null) "null"; else "not null"; }');
 		final switchIfElseSemicolonJs = JsExprEmitter.emit(switchIfElseSemicolon, exprScope);
 		assertContains(switchIfElseSemicolonJs, "__sw.__hx_ctor === \"A\"", "if/else branch switch should match enum constructor");

@@ -1037,6 +1037,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(Lambda.flatten([[1, 2], [3]]).join(","));',
 				'    Sys.println(Lambda.filter([1, 2, 3, 4], function(i) return i > 2).join(","));',
 				'    Sys.println(FileSystem.exists("."));',
+				'    Sys.println("args-len=" + Sys.args().length);',
 				'    var oldCwd = Sys.getCwd();',
 				'    var cwdProbe = "' + tmpRoot + '/cwd-probe";',
 				'    Sys.setCwd(cwdProbe);',
@@ -1381,6 +1382,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertNotContains(js, "this = method", "abstract-style constructor assignment should not emit invalid JS assignment to this");
 			assertContains(js, "__hx_cls_sys_io_Process.prototype.close = function", "unused sys.io.Process methods should emit neutral JS bodies");
 			assertContains(js, "process.chdir(String", "Sys.setCwd should lower to Node process.chdir");
+			assertContains(js, "process.argv.slice(2)", "Sys.args should lower to Node argv without executable/script entries");
 			assertContains(js, "spawnSync(String(", "Sys.command should lower to Node child_process.spawnSync");
 			assertTrue(js.indexOf("var __hx_cls_XmlType = function") < js.indexOf("__hx_cls_Xml.Element = __hx_cls_XmlType.Element"),
 				"classes read by static field initializers should emit before dependent static fields");
@@ -1442,6 +1444,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "1,2,3", "Lambda.flatten should concatenate nested iterables");
 			assertContains(stdout, "3,4", "Lambda.filter should preserve matching items");
 			assertContains(stdout, "true", "FileSystem.exists should use Node fs existsSync");
+			assertContains(stdout, "args-len=0", "Sys.args should return an empty array when Node receives no script arguments");
 			assertContains(stdout, "cwd-probe=cwd-probe", "Sys.command should inherit the cwd set by Sys.setCwd");
 			assertContains(stdout, "cwd-command-code=0", "Sys.command should report the child exit code");
 			assertContains(stdout, "try-ok", "try expression should return the successful branch value");
