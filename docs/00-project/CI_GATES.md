@@ -146,6 +146,12 @@ Full1 Gate3 extended timing artifacts:
 - evaluated artifacts include `gate3-full1-extended.timings.summary.json` and `gate3-full1-extended.timings.md`
 - measured phases include host/toolchain setup, npm/Haxe dependency prep, upstream checkout fetch, and `strict_extended_gate3_matrix`
 
+Diagnostic Full1 timing scope:
+- `.github/workflows/full1-source-probe.yml` and `.github/workflows/full1-bootstrap-source-reconcile.yml` are intentionally outside the mandatory per-phase timing-artifact contract while they remain non-blocking diagnostic lanes.
+- Their purpose is source-vs-bootstrap failure classification, not release throughput regression detection. They already publish compact JSON summaries with run duration, build/suite timeout status, and pass/warn classification data.
+- Do not treat missing `*.timings.jsonl`, `*.timings.summary.json`, or `*.timings.md` artifacts from these diagnostic workflows as a coverage gap.
+- If either diagnostic workflow is promoted to a release-blocking or reusable Full1 gate, add the same phase-timing artifact contract used by the heavy Full1 lanes before making it blocking.
+
 `Gate M7` release/scheduled runs force strict settings:
 - `HXHX_M7_PROFILE=full`
 - `HXHX_M7_STRICT=1`
