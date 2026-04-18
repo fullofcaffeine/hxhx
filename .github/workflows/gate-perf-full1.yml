@@ -99,55 +99,114 @@ jobs:
           mkdir -p "$raw_dir" "$evaluated_dir"
           echo "raw_dir=$raw_dir" >> "$GITHUB_OUTPUT"
           echo "evaluated_dir=$evaluated_dir" >> "$GITHUB_OUTPUT"
+          timings_jsonl="$raw_dir/full1-perf.timings.jsonl"
 
-          echo "== Build shared hxhx binaries"
-          if ! bash scripts/hxhx/build-hxhx.sh >"$raw_dir/build-hxhx.stdout.log" 2>"$raw_dir/build-hxhx.stderr.log"; then
-            cat "$raw_dir/build-hxhx.stderr.log" >&2
-            exit 1
-          fi
-          cat "$raw_dir/build-hxhx.stderr.log"
-          hxhx_bin="$(awk 'NF { line=$0 } END { print line }' "$raw_dir/build-hxhx.stdout.log")"
-          if [ -z "$hxhx_bin" ] || [ ! -f "$hxhx_bin" ]; then
-            echo "build-hxhx.sh did not produce a valid binary path: ${hxhx_bin:-<empty>}" >&2
-            exit 1
-          fi
-          chmod +x "$hxhx_bin" || true
-          export HXHX_BIN="$hxhx_bin"
+          append_phase_timing() {
+            local phase="$1"
+            local started_ms="$2"
+            local ended_ms="$3"
+            local phase_status="$4"
+            local exit_code="$5"
+            node scripts/ci/full1-phase-timing.js append \
+              --jsonl "$timings_jsonl" \
+              --workflow "gate-perf-full1" \
+              --job "perf-parity" \
+              --phase "$phase" \
+              --started-ms "$started_ms" \
+              --ended-ms "$ended_ms" \
+              --status "$phase_status" \
+              --exit-code "$exit_code"
+          }
 
-          if ! bash scripts/hxhx/build-hxhx-macro-host.sh >"$raw_dir/build-hxhx-macro-host.stdout.log" 2>"$raw_dir/build-hxhx-macro-host.stderr.log"; then
-            cat "$raw_dir/build-hxhx-macro-host.stderr.log" >&2
-            exit 1
-          fi
-          cat "$raw_dir/build-hxhx-macro-host.stderr.log"
-          macro_host_bin="$(awk 'NF { line=$0 } END { print line }' "$raw_dir/build-hxhx-macro-host.stdout.log")"
-          if [ -z "$macro_host_bin" ] || [ ! -f "$macro_host_bin" ]; then
-            echo "build-hxhx-macro-host.sh did not produce a valid binary path: ${macro_host_bin:-<empty>}" >&2
-            exit 1
-          fi
-          chmod +x "$macro_host_bin" || true
-          export HXHX_MACRO_HOST_EXE="$macro_host_bin"
+          run_phase() {
+            local phase="$1"
+            shift
+            local started_ms
+            local ended_ms
+            local exit_code
+            local phase_status
+            started_ms="$(date +%s%3N)"
+            set +e
+            "$@"
+            exit_code="$?"
+            set -e
+            ended_ms="$(date +%s%3N)"
+            phase_status="pass"
+            if [ "$exit_code" -ne 0 ]; then
+              phase_status="fail"
+            fi
+            append_phase_timing "$phase" "$started_ms" "$ended_ms" "$phase_status" "$exit_code"
+            return "$exit_code"
+          }
 
-          HXHX_KPI_REPORT_DIR="$raw_dir/kpi" npm run hxhx:bench:kpi
-          node scripts/ci/full1-kpi-evidence.js \
-            --kpi-report "$raw_dir/kpi/report.json" \
-            --json-out "$raw_dir/full1-kpi.evidence.json"
+          build_hxhx() {
+            echo "== Build hxhx"
+            if ! bash scripts/hxhx/build-hxhx.sh >"$raw_dir/build-hxhx.stdout.log" 2>"$raw_dir/build-hxhx.stderr.log"; then
+              cat "$raw_dir/build-hxhx.stderr.log" >&2
+              return 1
+            fi
+            cat "$raw_dir/build-hxhx.stderr.log"
+            hxhx_bin="$(awk 'NF { line=$0 } END { print line }' "$raw_dir/build-hxhx.stdout.log")"
+            if [ -z "$hxhx_bin" ] || [ ! -f "$hxhx_bin" ]; then
+              echo "build-hxhx.sh did not produce a valid binary path: ${hxhx_bin:-<empty>}" >&2
+              return 1
+            fi
+            chmod +x "$hxhx_bin" || true
+            export HXHX_BIN="$hxhx_bin"
+          }
 
-          node scripts/ci/full1-eval-evidence.js \
-            --artifacts-dir "$raw_dir/eval-native" \
-            --json-out "$raw_dir/full1-eval.evidence.json" \
-            --reps "$FULL1_PERF_REPS"
+          build_macro_host() {
+            echo "== Build hxhx macro host"
+            if ! bash scripts/hxhx/build-hxhx-macro-host.sh >"$raw_dir/build-hxhx-macro-host.stdout.log" 2>"$raw_dir/build-hxhx-macro-host.stderr.log"; then
+              cat "$raw_dir/build-hxhx-macro-host.stderr.log" >&2
+              return 1
+            fi
+            cat "$raw_dir/build-hxhx-macro-host.stderr.log"
+            macro_host_bin="$(awk 'NF { line=$0 } END { print line }' "$raw_dir/build-hxhx-macro-host.stdout.log")"
+            if [ -z "$macro_host_bin" ] || [ ! -f "$macro_host_bin" ]; then
+              echo "build-hxhx-macro-host.sh did not produce a valid binary path: ${macro_host_bin:-<empty>}" >&2
+              return 1
+            fi
+            chmod +x "$macro_host_bin" || true
+            export HXHX_MACRO_HOST_EXE="$macro_host_bin"
+          }
 
-          node scripts/ci/full1-suite-evidence.js \
-            --artifacts-dir "$raw_dir/suites" \
-            --json-out "$raw_dir/full1-suites.evidence.json" \
-            --reps "$FULL1_PERF_REPS" \
-            --hxhx-bin "$HXHX_BIN"
+          run_kpi_benchmark() {
+            HXHX_KPI_REPORT_DIR="$raw_dir/kpi" npm run hxhx:bench:kpi
+            node scripts/ci/full1-kpi-evidence.js \
+              --kpi-report "$raw_dir/kpi/report.json" \
+              --json-out "$raw_dir/full1-kpi.evidence.json"
+          }
 
-          node scripts/ci/full1-perf-evaluator.js \
-            --evidence "$raw_dir/full1-kpi.evidence.json" \
-            --evidence "$raw_dir/full1-eval.evidence.json" \
-            --evidence "$raw_dir/full1-suites.evidence.json" \
-            --json-out "$evaluated_dir/full1-perf-evaluation.json"
+          run_eval_evidence() {
+            node scripts/ci/full1-eval-evidence.js \
+              --artifacts-dir "$raw_dir/eval-native" \
+              --json-out "$raw_dir/full1-eval.evidence.json" \
+              --reps "$FULL1_PERF_REPS"
+          }
+
+          run_suite_evidence() {
+            node scripts/ci/full1-suite-evidence.js \
+              --artifacts-dir "$raw_dir/suites" \
+              --json-out "$raw_dir/full1-suites.evidence.json" \
+              --reps "$FULL1_PERF_REPS" \
+              --hxhx-bin "$HXHX_BIN"
+          }
+
+          run_perf_evaluator() {
+            node scripts/ci/full1-perf-evaluator.js \
+              --evidence "$raw_dir/full1-kpi.evidence.json" \
+              --evidence "$raw_dir/full1-eval.evidence.json" \
+              --evidence "$raw_dir/full1-suites.evidence.json" \
+              --json-out "$evaluated_dir/full1-perf-evaluation.json"
+          }
+
+          run_phase "build_hxhx_binary" build_hxhx
+          run_phase "build_macro_host_binary" build_macro_host
+          run_phase "kpi_benchmark" run_kpi_benchmark
+          run_phase "eval_evidence" run_eval_evidence
+          run_phase "suite_evidence" run_suite_evidence
+          run_phase "perf_evaluator" run_perf_evaluator
 
       - name: Add Full1 perf summary
         if: always()
@@ -157,6 +216,7 @@ jobs:
           raw_dir="$RUNNER_TEMP/full1_perf/raw"
           evaluated_dir="$RUNNER_TEMP/full1_perf/evaluated"
           evaluation="$evaluated_dir/full1-perf-evaluation.json"
+          timings="$raw_dir/full1-perf.timings.jsonl"
           {
             echo "### Full1 performance parity"
             echo ""
@@ -171,6 +231,13 @@ jobs:
             node -e 'const fs=require("fs"); const p=process.argv[1]; const s=JSON.parse(fs.readFileSync(p,"utf8")); console.log(`- Decision: \`${s.decision}\``); console.log(`- Marker: \`${s.marker || "not emitted"}\``); if (Array.isArray(s.failures) && s.failures.length) { console.log(""); console.log("Failures:"); for (const failure of s.failures) console.log(`- ${failure}`); }' "$evaluation" >> "$summary"
           else
             echo "- Decision: \`no evaluation artifact written\`" >> "$summary"
+          fi
+          if [ -f "$timings" ]; then
+            node scripts/ci/full1-phase-timing.js summarize \
+              --jsonl "$timings" \
+              --json-out "$evaluated_dir/full1-perf.timings.summary.json" \
+              --markdown-out "$evaluated_dir/full1-perf.timings.md"
+            cat "$evaluated_dir/full1-perf.timings.md" >> "$summary"
           fi
 
       - name: Upload raw Full1 perf artifacts
