@@ -29,10 +29,12 @@ function requireIncludes(relPath, haystack, needle) {
 const suiteWorkflowPath = '.github/workflows/full1-suite-runners.yml'
 const perfWorkflowPath = '.github/workflows/gate-perf-full1.yml'
 const evalWorkflowPath = '.github/workflows/full1-eval-native.yml'
+const pluginWorkflowPath = '.github/workflows/full1-plugin-parity.yml'
 
 const suiteWorkflow = read(suiteWorkflowPath)
 const perfWorkflow = read(perfWorkflowPath)
 const evalWorkflow = read(evalWorkflowPath)
+const pluginWorkflow = read(pluginWorkflowPath)
 
 for (const needle of [
   'build_hxhx.timings.jsonl',
@@ -61,6 +63,16 @@ for (const needle of [
   'Summarize Full1 eval native timings',
 ]) {
   requireIncludes(evalWorkflowPath, evalWorkflow, needle)
+}
+
+for (const needle of [
+  '${{ matrix.id }}.timings.jsonl',
+  'install_ocaml_packages',
+  'prepare_upstream_eval_host',
+  'plugin_proof',
+  'Summarize ${{ matrix.name }} timings',
+]) {
+  requireIncludes(pluginWorkflowPath, pluginWorkflow, needle)
 }
 
 console.log('[full1-phase-timing-workflow-check] ok')

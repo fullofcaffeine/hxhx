@@ -66,11 +66,35 @@ jobs:
       - name: Install OCaml packages
         run: |
           set -euo pipefail
-          eval "$(opam env)"
-          opam install -y dune ocamlfind
-          eval "$(opam env)"
-          dune --version
-          ocamlc -version
+          mkdir -p "${{ matrix.artifact_path }}"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            eval "$(opam env)"
+            opam install -y dune ocamlfind
+            eval "$(opam env)"
+            dune --version
+            ocamlc -version
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ matrix.artifact_path }}/${{ matrix.id }}.timings.jsonl" \
+            --workflow "full1-plugin-parity" \
+            --job "${{ matrix.id }}" \
+            --phase "install_ocaml_packages" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Export OCaml switch binaries to PATH
         run: |
@@ -94,25 +118,95 @@ jobs:
             ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
 
       - name: Install npm dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: |
+          set -euo pipefail
+          mkdir -p "${{ matrix.artifact_path }}"
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          npm ci --ignore-scripts --no-audit --no-fund
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ matrix.artifact_path }}/${{ matrix.id }}.timings.jsonl" \
+            --workflow "full1-plugin-parity" \
+            --job "${{ matrix.id }}" \
+            --phase "install_npm_dependencies" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Install Haxe (pinned via lix)
         run: |
           set -euo pipefail
-          npx lix download
-          npx lix download haxe "${{ env.HAXE_VERSION }}"
-          npx lix use haxe "${{ env.HAXE_VERSION }}"
-          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
-          export PATH="$(pwd)/node_modules/.bin:$PATH"
-          haxe -version
+          mkdir -p "${{ matrix.artifact_path }}"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            npx lix download
+            npx lix download haxe "${{ env.HAXE_VERSION }}"
+            npx lix use haxe "${{ env.HAXE_VERSION }}"
+            echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+            export PATH="$(pwd)/node_modules/.bin:$PATH"
+            haxe -version
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ matrix.artifact_path }}/${{ matrix.id }}.timings.jsonl" \
+            --workflow "full1-plugin-parity" \
+            --job "${{ matrix.id }}" \
+            --phase "install_haxe" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Download Haxe libraries (lix)
-        run: npx lix download
+        run: |
+          set -euo pipefail
+          mkdir -p "${{ matrix.artifact_path }}"
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          npx lix download
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ matrix.artifact_path }}/${{ matrix.id }}.timings.jsonl" \
+            --workflow "full1-plugin-parity" \
+            --job "${{ matrix.id }}" \
+            --phase "download_haxe_libraries" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Prepare native upstream Haxe eval host
         if: matrix.prepare_upstream_eval_host == 'true'
         run: |
           set -euo pipefail
+          mkdir -p "${{ matrix.artifact_path }}"
+          phase_start_ms="$(date +%s%3N)"
           retry_apt() {
             local max_attempts=4
             local attempt=1
@@ -129,30 +223,52 @@ jobs:
               sleep 5
             done
           }
-          retry_apt sudo apt-get update
-          retry_apt sudo apt-get install -y libpcre2-dev zlib1g-dev libmbedtls-dev neko
-          eval "$(opam env)"
-          opam install -y \
-            dune.3.15.3 \
-            ocamlfind \
-            camlp5 \
-            sedlex \
-            xml-light \
-            extlib \
-            ptmap \
-            sha \
-            camlp-streams \
-            luv.0.5.13
-          bash scripts/vendor/fetch-haxe-upstream.sh
-          (
-            cd vendor/haxe
+          run_phase_body() (
+            set -euo pipefail
+            retry_apt sudo apt-get update
+            retry_apt sudo apt-get install -y libpcre2-dev zlib1g-dev libmbedtls-dev neko
             eval "$(opam env)"
-            make haxe
+            opam install -y \
+              dune.3.15.3 \
+              ocamlfind \
+              camlp5 \
+              sedlex \
+              xml-light \
+              extlib \
+              ptmap \
+              sha \
+              camlp-streams \
+              luv.0.5.13
+            bash scripts/vendor/fetch-haxe-upstream.sh
+            (
+              cd vendor/haxe
+              eval "$(opam env)"
+              make haxe
+            )
+            test -x vendor/haxe/haxe
+            vendor/haxe/haxe --version
+            echo "RPMX_HAXE_PLUGIN_HOST=$PWD/vendor/haxe/haxe" >> "$GITHUB_ENV"
+            echo "RPMX_HAXE_PLUGIN_OCAML_ENV=opam" >> "$GITHUB_ENV"
           )
-          test -x vendor/haxe/haxe
-          vendor/haxe/haxe --version
-          echo "RPMX_HAXE_PLUGIN_HOST=$PWD/vendor/haxe/haxe" >> "$GITHUB_ENV"
-          echo "RPMX_HAXE_PLUGIN_OCAML_ENV=opam" >> "$GITHUB_ENV"
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ matrix.artifact_path }}/${{ matrix.id }}.timings.jsonl" \
+            --workflow "full1-plugin-parity" \
+            --job "${{ matrix.id }}" \
+            --phase "prepare_upstream_eval_host" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Preview cleanup candidates before proof
         run: npm run clean:dry-run -- --verbose
@@ -160,8 +276,45 @@ jobs:
       - name: Run ${{ matrix.name }}
         run: |
           set -euo pipefail
-          eval "$(opam env)"
-          ${{ matrix.command }}
+          mkdir -p "${{ matrix.artifact_path }}"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            eval "$(opam env)"
+            ${{ matrix.command }}
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ matrix.artifact_path }}/${{ matrix.id }}.timings.jsonl" \
+            --workflow "full1-plugin-parity" \
+            --job "${{ matrix.id }}" \
+            --phase "plugin_proof" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
+
+      - name: Summarize ${{ matrix.name }} timings
+        if: always()
+        run: |
+          set -euo pipefail
+          timings="${{ matrix.artifact_path }}/${{ matrix.id }}.timings.jsonl"
+          if [ -f "$timings" ]; then
+            node scripts/ci/full1-phase-timing.js summarize \
+              --jsonl "$timings" \
+              --json-out "${{ matrix.artifact_path }}/${{ matrix.id }}.timings.summary.json" \
+              --markdown-out "${{ matrix.artifact_path }}/${{ matrix.id }}.timings.md"
+            cat "${{ matrix.artifact_path }}/${{ matrix.id }}.timings.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Clean temporary proof output
         if: always()
