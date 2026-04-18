@@ -2420,7 +2420,10 @@ class HxParser {
 				case SExpr(expr, pos):
 					SReturn(expr, pos);
 				case SIf(cond, thenBranch, elseBranch, pos):
-					SIf(cond, markTailValue(thenBranch), elseBranch == null ? null : markTailValue(elseBranch), pos);
+					var rewrittenElse:Null<HxStmt> = null;
+					if (elseBranch != null)
+						rewrittenElse = markTailValue(elseBranch);
+					SIf(cond, markTailValue(thenBranch), rewrittenElse, pos);
 				case SBlock(inner, pos) if (inner != null && inner.length > 0):
 					final rewrittenInner = inner.copy();
 					final lastInner = rewrittenInner.length - 1;
