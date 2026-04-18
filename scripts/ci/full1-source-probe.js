@@ -153,6 +153,7 @@ function main() {
       stderr_tail: '',
       timeout_sec: null,
       timed_out: false,
+      usable_after_timeout: false,
       signal: '',
       error: '',
     },
@@ -200,13 +201,14 @@ function main() {
   summary.build.error = buildResult.error ? String(buildResult.error.message || buildResult.error) : ''
 
   let hxhxBin = ''
-  if (summary.build.exit_code === 0 && !summary.build.timed_out) {
+  if (summary.build.exit_code === 0 || summary.build.timed_out) {
     const candidate = parseBuildBinaryPath(buildResult.stdout || '')
     if (candidate.length > 0) {
       const resolved = path.resolve(parsed.root, candidate)
       if (fs.existsSync(resolved)) {
         hxhxBin = resolved
         summary.build.hxhx_bin = resolved
+        summary.build.usable_after_timeout = summary.build.timed_out
       }
     }
   }

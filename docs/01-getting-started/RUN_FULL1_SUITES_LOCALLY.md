@@ -63,6 +63,7 @@ What it does:
 - writes artifacts under `.artifacts/full1/source-probe/`,
 - keeps `source-probe.summary.json` compact by recording log paths, byte counts, and short stdout/stderr tails while storing full logs separately,
 - enforces child-process timeouts (`FULL1_SOURCE_PROBE_BUILD_TIMEOUT_SECS`, default `960`; `FULL1_SOURCE_PROBE_SUITE_TIMEOUT_SECS`, default `600`) so the diagnostic produces `PASS`/`WARN` evidence instead of occupying a runner indefinitely,
+- may continue into suite diagnostics if the source build times out after printing a usable `hxhx` binary path; the summary records `build.timed_out=true`, `build.usable_after_timeout=true`, and the overall marker remains `WARN`,
 - emits `FULL1_SOURCE_BUILD_PROBE:PASS` or `FULL1_SOURCE_BUILD_PROBE:WARN`.
 
 ## Bootstrap-Source Reconciliation (Diagnostic Classification Lane)
