@@ -70,6 +70,7 @@ function main() {
   requireScriptTarget(pkg, 'test:rpmx:hxhx-builtin')
   requireScriptTarget(pkg, 'test:rpmx:hxhx-plugin')
   requireScriptTarget(pkg, 'test:rpmx:hxhx-plugin-host-pilot')
+  requireScriptTarget(pkg, 'test:rpmx:matrix-evidence')
   requireScriptTarget(pkg, 'test:hxhx:reflaxe-elixir-native-verify')
 
   if (process.exitCode) return

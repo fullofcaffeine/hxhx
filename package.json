@@ -225,6 +225,7 @@
     "test:rpmx:hxhx-builtin": "bash scripts/ci/run-rpmx-hxhx-builtin-proof.sh",
     "test:rpmx:hxhx-plugin": "bash scripts/ci/run-rpmx-hxhx-plugin-contract-proof.sh",
     "test:rpmx:hxhx-plugin-host-pilot": "bash scripts/ci/run-rpmx-hxhx-plugin-proof.sh",
+    "test:rpmx:matrix-evidence": "node scripts/ci/rpmx-promotion-matrix-evidence-check.js",
     "test:full1:source-probe": "node scripts/ci/full1-source-probe.js",
     "test:full1:bootstrap-source-reconcile": "node scripts/ci/full1-bootstrap-source-reconcile.js",
     "hxhx:dist": "bash scripts/hxhx/build-dist.sh",

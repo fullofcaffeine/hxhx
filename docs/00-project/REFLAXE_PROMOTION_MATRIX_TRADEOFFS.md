@@ -92,6 +92,7 @@ Reflaxe.elixir generated-target runtime scenario.
 Current aggregate marker for this evidence window:
 
 ```text
+npm run test:rpmx:matrix-evidence
 RO_PROMOTION_MATRIX:PASS
 ```
 
