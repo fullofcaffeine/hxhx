@@ -211,6 +211,19 @@
       "enforcement": "planned"
     },
     {
+      "id": "F1-PM-11B",
+      "suite": "full-plugin-upstream-to-hxhx",
+      "lane": "full",
+      "targets": [
+        "plugin",
+        "reflaxe.ocaml"
+      ],
+      "profile": "upstream-haxe-built artifact loaded by hxhx",
+      "marker": "REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS",
+      "workflow": "scripts/ci/run-full1-plugin-upstream-to-hxhx-proof.sh",
+      "enforcement": "planned"
+    },
+    {
       "id": "F1-PM-12",
       "suite": "full-perf-policy",
       "lane": "full",

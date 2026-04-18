@@ -2513,6 +2513,23 @@ class OcamlCompiler extends DirectToStringCompiler {
 				.filter(s -> s.length > 0);
 
 			final duneLayoutValue = haxe.macro.Context.definedValue("ocaml_dune_layout");
+			final pluginRunMainValue = haxe.macro.Context.definedValue("ocaml_plugin_run_main");
+			final pluginRunsMain = haxe.macro.Context.defined("ocaml_plugin_run_main")
+				&& (pluginRunMainValue == null || StringTools.trim(pluginRunMainValue) != "0");
+			final pluginRegisterProviderValue = haxe.macro.Context.definedValue("ocaml_plugin_register_provider");
+			var pluginRegisterPluginId:Null<String> = null;
+			var pluginRegisterProviderType:Null<String> = null;
+			if (pluginRegisterProviderValue != null && StringTools.trim(pluginRegisterProviderValue).length > 0) {
+				final rawRegistration = StringTools.trim(pluginRegisterProviderValue);
+				final separator = rawRegistration.indexOf(":");
+				if (separator <= 0 || separator >= rawRegistration.length - 1) {
+					haxe.macro.Context.error("invalid -D ocaml_plugin_register_provider; expected <pluginId>:<providerType>", haxe.macro.Context.currentPos());
+				} else {
+					pluginRegisterPluginId = StringTools.trim(rawRegistration.substr(0, separator));
+					pluginRegisterProviderType = StringTools.trim(rawRegistration.substr(separator + 1));
+				}
+			}
+			final pluginLoadMarker = haxe.macro.Context.definedValue("ocaml_plugin_load_marker");
 
 			final exesValue = haxe.macro.Context.definedValue("ocaml_dune_exes");
 			final executables = if (exesValue == null || StringTools.trim(exesValue).length == 0) {
@@ -2543,6 +2560,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 				projectName: DuneProjectEmitter.defaultProjectName(outDir),
 				exeName: DuneProjectEmitter.defaultExeName(outDir),
 				mainModuleId: resolvedMainModuleId,
+				pluginMainModuleId: pluginRunsMain ? resolvedMainModuleId : null,
+				pluginRegisterPluginId: pluginRegisterPluginId,
+				pluginRegisterProviderType: pluginRegisterProviderType,
+				pluginLoadMarker: pluginLoadMarker,
 				duneLibraries: duneLibs,
 				duneLayout: duneLayoutValue,
 				executables: executables

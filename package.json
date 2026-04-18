@@ -212,6 +212,7 @@
     "test:full1:suite:display": "node scripts/ci/run-upstream-suite.js --suite display --strict",
     "test:full1:suites:strict": "npm run -s test:full1:suite:misc && npm run -s test:full1:suite:server && npm run -s test:full1:suite:threads && npm run -s test:full1:suite:optimization && npm run -s test:full1:suite:display",
     "test:full1:eval-native": "node scripts/ci/run-full1-eval-native.js",
+    "test:full1:plugin:upstream-to-hxhx": "bash scripts/ci/run-full1-plugin-upstream-to-hxhx-proof.sh",
     "test:reflaxe-ocaml:haxe-matrix": "node scripts/ci/run-reflaxe-ocaml-haxe-matrix.js",
     "test:reflaxe-ocaml:perf": "node scripts/ci/run-reflaxe-ocaml-perf.js",
     "test:rpmx:haxe-plugin": "bash scripts/ci/run-rpmx-haxe-plugin-proof.sh",

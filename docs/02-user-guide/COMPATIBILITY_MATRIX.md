@@ -105,7 +105,7 @@ Matrix status taxonomy:
 | Build after emit | ✅ | `-D ocaml_build=native|byte`, `-D ocaml_run` |
 | `.mli` inference | ✅ | `-D ocaml_mli` (`ocamlc -i`) |
 | Stable error locations | ✅ | Line directives (`# 1 "File.ml"`) by default |
-| Dune layouts | ✅ | `-D ocaml_dune_layout=lib|plugin`, `-D ocaml_dune_exes=...` |
+| Dune layouts | ✅ | `-D ocaml_dune_layout=lib|plugin`, `-D ocaml_dune_exes=...`, `-D ocaml_plugin_run_main=1`, `-D ocaml_plugin_register_provider=...` |
 
 ## Macro / HXHX status (bootstrapping path)
 

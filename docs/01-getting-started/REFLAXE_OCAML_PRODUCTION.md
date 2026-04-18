@@ -170,6 +170,9 @@ Common:
 - `-D ocaml_no_dune`
 - `-D ocaml_dune_layout=exe|lib|plugin`
 - `-D ocaml_dune_exes=name:MainModule[,name2:Main2]`
+- `-D ocaml_plugin_run_main=1` for plugin layouts that need dynlink-time Haxe entrypoint side effects
+- `-D ocaml_plugin_register_provider=<pluginId>:<providerType>` for `hxhx` backend-provider registration entry modules
+- `-D ocaml_plugin_load_marker=<text>` for optional plugin smoke-test load evidence
 - `-D ocaml_mli` or `-D ocaml_mli=infer|all`
 - `-D ocaml_sourcemap=directives`
 - `-D ocaml_profile=portable|metal`

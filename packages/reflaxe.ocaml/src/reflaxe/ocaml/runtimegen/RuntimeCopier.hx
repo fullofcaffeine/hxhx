@@ -140,6 +140,15 @@ class RuntimeCopier {
 		return path == null ? "" : StringTools.replace(path, "\\", "/");
 	}
 
+	#if macro
+	static function enabledDefine(name:String):Bool {
+		final raw = haxe.macro.Context.definedValue(name);
+		if (raw != null)
+			return StringTools.trim(raw) != "0";
+		return haxe.macro.Context.defined(name);
+	}
+	#end
+
 	static function addInclusionReason(reasonMap:Map<String, Map<String, Bool>>, moduleName:String, reason:String):Void {
 		if (moduleName == null || moduleName.length == 0 || reason == null || reason.length == 0)
 			return;
@@ -354,10 +363,11 @@ class RuntimeCopier {
 			return;
 
 		#if macro
-		final allowHxHxRuntime = haxe.macro.Context.defined("hih_native_parser")
-			|| haxe.macro.Context.defined("hxhx_native_frontend")
-			|| haxe.macro.Context.defined("hxhx")
-			|| haxe.macro.Context.defined("hxhx_macro_host");
+		final allowHxHxRuntime = enabledDefine("hih_native_parser")
+			|| enabledDefine("hxhx_native_frontend")
+			|| enabledDefine("hxhx")
+			|| enabledDefine("hxhx_backend_plugin_host_runtime")
+			|| enabledDefine("hxhx_macro_host");
 		#else
 		final allowHxHxRuntime = false;
 		#end

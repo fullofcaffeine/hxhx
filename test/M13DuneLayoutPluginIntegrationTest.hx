@@ -98,6 +98,41 @@ class M13DuneLayoutPluginIntegrationTest {
 		if (entryContent.indexOf("Pkg_M13MliMain.main") >= 0)
 			throw "plugin entry should not call the main module";
 
+		final pluginRunMainOutDir = "out_ocaml_m13_dune_plugin_run_main_" + Std.string(Std.int(Date.now().getTime()));
+		sys.FileSystem.createDirectory(pluginRunMainOutDir);
+		final pluginRunMainCompile = runCompile(pluginRunMainOutDir, "plugin", ["ocaml_plugin_run_main=1"]);
+		if (pluginRunMainCompile.exitCode != 0) {
+			throw "haxe compile failed for ocaml_plugin_run_main=1: " + pluginRunMainCompile.exitCode + "\n" + pluginRunMainCompile.stderr;
+		}
+		final pluginRunMainExeName = exeNameFromOutDir(pluginRunMainOutDir);
+		final pluginRunMainEntryPath = pluginRunMainOutDir + "/" + pluginRunMainExeName + ".ml";
+		assertExists(pluginRunMainEntryPath, "plugin run-main entry module");
+		final pluginRunMainEntryContent = sys.io.File.getContent(pluginRunMainEntryPath);
+		assertContains(pluginRunMainEntryContent, "Pkg_M13MliMain.main", "plugin run-main entry should call the main module");
+
+		final pluginRegisterOutDir = "out_ocaml_m13_dune_plugin_register_" + Std.string(Std.int(Date.now().getTime()));
+		sys.FileSystem.createDirectory(pluginRegisterOutDir);
+		final pluginRegisterCompile = runCompile(pluginRegisterOutDir, "plugin", [
+			"ocaml_plugin_register_provider=test.plugin:backend.js.JsBackend",
+			"ocaml_plugin_load_marker=m13_plugin_loaded",
+			"hxhx_backend_plugin_host_runtime=1"
+		]);
+		if (pluginRegisterCompile.exitCode != 0) {
+			throw "haxe compile failed for ocaml_plugin_register_provider: "
+				+ pluginRegisterCompile.exitCode
+				+ "\n"
+				+ pluginRegisterCompile.stderr;
+		}
+		final pluginRegisterExeName = exeNameFromOutDir(pluginRegisterOutDir);
+		final pluginRegisterEntryPath = pluginRegisterOutDir + "/" + pluginRegisterExeName + ".ml";
+		assertExists(pluginRegisterEntryPath, "plugin register entry module");
+		final pluginRegisterEntryContent = sys.io.File.getContent(pluginRegisterEntryPath);
+		assertContains(pluginRegisterEntryContent, "m13_plugin_loaded", "plugin register entry should emit marker");
+		assertContains(pluginRegisterEntryContent, "HxHxBackendPluginHost.register_provider_type", "plugin register entry should call hxhx host registration");
+		assertContains(pluginRegisterEntryContent, "\"test.plugin\" \"backend.js.JsBackend\"",
+			"plugin register entry should preserve plugin/provider identifiers");
+		assertExists(pluginRegisterOutDir + "/runtime/HxHxBackendPluginHost.ml", "plugin register host runtime");
+
 		if (Sys.command("sh", ["-c", "command -v dune >/dev/null 2>&1 && command -v ocamlc >/dev/null 2>&1"]) == 0) {
 			final prev = Sys.getCwd();
 			Sys.setCwd(outDir);
@@ -105,6 +140,26 @@ class M13DuneLayoutPluginIntegrationTest {
 			Sys.setCwd(prev);
 			if (buildCode != 0)
 				throw "dune build failed for plugin layout: " + buildCode;
+
+			Sys.setCwd(pluginRunMainOutDir);
+			final runMainBuildCode = Sys.command("dune", [
+				"build",
+				"./" + pluginRunMainExeName + ".cma",
+				"./" + pluginRunMainExeName + ".cmxs"
+			]);
+			Sys.setCwd(prev);
+			if (runMainBuildCode != 0)
+				throw "dune build failed for plugin run-main layout: " + runMainBuildCode;
+
+			Sys.setCwd(pluginRegisterOutDir);
+			final registerBuildCode = Sys.command("dune", [
+				"build",
+				"./" + pluginRegisterExeName + ".cma",
+				"./" + pluginRegisterExeName + ".cmxs"
+			]);
+			Sys.setCwd(prev);
+			if (registerBuildCode != 0)
+				throw "dune build failed for plugin register layout: " + registerBuildCode;
 		}
 
 		final invalidOutDir = "out_ocaml_m13_dune_plugin_invalid_" + Std.string(Std.int(Date.now().getTime()));
