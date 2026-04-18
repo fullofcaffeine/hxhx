@@ -29,6 +29,8 @@ permissions:
 env:
   NODE_VERSION: "20"
   HAXE_VERSION: "4.3.7"
+  FULL1_GATE3_EXTENDED_ARTIFACTS_DIR: ".artifacts/full1"
+  FULL1_GATE3_EXTENDED_TIMINGS_JSONL: ".artifacts/full1/gate3-full1-extended.timings.jsonl"
 
 jobs:
   full1_gate3_extended:
@@ -46,6 +48,28 @@ jobs:
           REQUESTED_TARGETS: ${{ inputs.targets || 'Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php' }}
         run: |
           set -euo pipefail
+          mkdir -p "$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          record_phase_exit() {
+            phase_exit="$?"
+            trap - EXIT
+            phase_end_ms="$(date +%s%3N)"
+            phase_status="pass"
+            if [ "$phase_exit" -ne 0 ]; then
+              phase_status="fail"
+            fi
+            node scripts/ci/full1-phase-timing.js append \
+              --jsonl "$FULL1_GATE3_EXTENDED_TIMINGS_JSONL" \
+              --workflow "gate3-full1-extended" \
+              --job "full1_gate3_extended" \
+              --phase "install_host_toolchains" \
+              --started-ms "$phase_start_ms" \
+              --ended-ms "$phase_end_ms" \
+              --status "$phase_status" \
+              --exit-code "$phase_exit"
+            exit "$phase_exit"
+          }
+          trap record_phase_exit EXIT
           retry_apt() {
             local max_attempts=4
             local attempt=1
@@ -225,11 +249,57 @@ jobs:
             ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
 
       - name: Install npm dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: |
+          set -euo pipefail
+          mkdir -p "$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          record_phase_exit() {
+            phase_exit="$?"
+            trap - EXIT
+            phase_end_ms="$(date +%s%3N)"
+            phase_status="pass"
+            if [ "$phase_exit" -ne 0 ]; then
+              phase_status="fail"
+            fi
+            node scripts/ci/full1-phase-timing.js append \
+              --jsonl "$FULL1_GATE3_EXTENDED_TIMINGS_JSONL" \
+              --workflow "gate3-full1-extended" \
+              --job "full1_gate3_extended" \
+              --phase "install_npm_dependencies" \
+              --started-ms "$phase_start_ms" \
+              --ended-ms "$phase_end_ms" \
+              --status "$phase_status" \
+              --exit-code "$phase_exit"
+            exit "$phase_exit"
+          }
+          trap record_phase_exit EXIT
+          npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Install Haxe (pinned via lix)
         run: |
           set -euo pipefail
+          mkdir -p "$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          record_phase_exit() {
+            phase_exit="$?"
+            trap - EXIT
+            phase_end_ms="$(date +%s%3N)"
+            phase_status="pass"
+            if [ "$phase_exit" -ne 0 ]; then
+              phase_status="fail"
+            fi
+            node scripts/ci/full1-phase-timing.js append \
+              --jsonl "$FULL1_GATE3_EXTENDED_TIMINGS_JSONL" \
+              --workflow "gate3-full1-extended" \
+              --job "full1_gate3_extended" \
+              --phase "install_haxe" \
+              --started-ms "$phase_start_ms" \
+              --ended-ms "$phase_end_ms" \
+              --status "$phase_status" \
+              --exit-code "$phase_exit"
+            exit "$phase_exit"
+          }
+          trap record_phase_exit EXIT
           npx lix download
           npx lix download haxe "${{ env.HAXE_VERSION }}"
           npx lix use haxe "${{ env.HAXE_VERSION }}"
@@ -238,10 +308,58 @@ jobs:
           haxe -version
 
       - name: Download Haxe libraries (lix)
-        run: npx lix download
+        run: |
+          set -euo pipefail
+          mkdir -p "$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          record_phase_exit() {
+            phase_exit="$?"
+            trap - EXIT
+            phase_end_ms="$(date +%s%3N)"
+            phase_status="pass"
+            if [ "$phase_exit" -ne 0 ]; then
+              phase_status="fail"
+            fi
+            node scripts/ci/full1-phase-timing.js append \
+              --jsonl "$FULL1_GATE3_EXTENDED_TIMINGS_JSONL" \
+              --workflow "gate3-full1-extended" \
+              --job "full1_gate3_extended" \
+              --phase "download_haxe_libraries" \
+              --started-ms "$phase_start_ms" \
+              --ended-ms "$phase_end_ms" \
+              --status "$phase_status" \
+              --exit-code "$phase_exit"
+            exit "$phase_exit"
+          }
+          trap record_phase_exit EXIT
+          npx lix download
 
       - name: Fetch upstream Haxe checkout (vendor/haxe)
-        run: bash scripts/vendor/fetch-haxe-upstream.sh
+        run: |
+          set -euo pipefail
+          mkdir -p "$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          record_phase_exit() {
+            phase_exit="$?"
+            trap - EXIT
+            phase_end_ms="$(date +%s%3N)"
+            phase_status="pass"
+            if [ "$phase_exit" -ne 0 ]; then
+              phase_status="fail"
+            fi
+            node scripts/ci/full1-phase-timing.js append \
+              --jsonl "$FULL1_GATE3_EXTENDED_TIMINGS_JSONL" \
+              --workflow "gate3-full1-extended" \
+              --job "full1_gate3_extended" \
+              --phase "fetch_upstream_haxe" \
+              --started-ms "$phase_start_ms" \
+              --ended-ms "$phase_end_ms" \
+              --status "$phase_status" \
+              --exit-code "$phase_exit"
+            exit "$phase_exit"
+          }
+          trap record_phase_exit EXIT
+          bash scripts/vendor/fetch-haxe-upstream.sh
 
       - name: Run strict extended Gate3 matrix
         env:
@@ -258,9 +376,30 @@ jobs:
           HXHX_GATE3_TARGET_TIMEOUT_SEC: "3600"
         run: |
           set -euo pipefail
-          mkdir -p .artifacts/full1
-          log_path=".artifacts/full1/gate3-full1-extended.log"
-          summary_path=".artifacts/full1/gate3-full1-extended.summary.json"
+          mkdir -p "$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          record_phase_exit() {
+            phase_exit="$?"
+            trap - EXIT
+            phase_end_ms="$(date +%s%3N)"
+            phase_status="pass"
+            if [ "$phase_exit" -ne 0 ]; then
+              phase_status="fail"
+            fi
+            node scripts/ci/full1-phase-timing.js append \
+              --jsonl "$FULL1_GATE3_EXTENDED_TIMINGS_JSONL" \
+              --workflow "gate3-full1-extended" \
+              --job "full1_gate3_extended" \
+              --phase "strict_extended_gate3_matrix" \
+              --started-ms "$phase_start_ms" \
+              --ended-ms "$phase_end_ms" \
+              --status "$phase_status" \
+              --exit-code "$phase_exit"
+            exit "$phase_exit"
+          }
+          trap record_phase_exit EXIT
+          log_path="$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR/gate3-full1-extended.log"
+          summary_path="$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR/gate3-full1-extended.summary.json"
           echo "HXHX_GATE3_TARGETS=${HXHX_GATE3_TARGETS}"
           echo "HXHX_GATE3_ALLOW_SKIP=${HXHX_GATE3_ALLOW_SKIP}"
           echo "HXHX_GATE3_MACRO_MODE=${HXHX_GATE3_MACRO_MODE}"
@@ -291,6 +430,19 @@ jobs:
             exit 1
           fi
 
+      - name: Summarize Full1 Gate3 extended timings
+        if: always()
+        run: |
+          set -euo pipefail
+          timings="$FULL1_GATE3_EXTENDED_TIMINGS_JSONL"
+          if [ -f "$timings" ]; then
+            node scripts/ci/full1-phase-timing.js summarize \
+              --jsonl "$timings" \
+              --json-out "$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR/gate3-full1-extended.timings.summary.json" \
+              --markdown-out "$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR/gate3-full1-extended.timings.md"
+            cat "$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR/gate3-full1-extended.timings.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload Full1 Gate3 extended artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -299,4 +451,7 @@ jobs:
           path: |
             .artifacts/full1/gate3-full1-extended.log
             .artifacts/full1/gate3-full1-extended.summary.json
+            .artifacts/full1/gate3-full1-extended.timings.jsonl
+            .artifacts/full1/gate3-full1-extended.timings.summary.json
+            .artifacts/full1/gate3-full1-extended.timings.md
           if-no-files-found: warn
