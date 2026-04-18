@@ -104,7 +104,7 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Full1 / Eval Native` | `.github/workflows/full1-eval-native.yml` | Runs the upstream-aligned native eval/interp baseline (`tests/unit/compile-macro.hxml`) in strict stage0-forbidden mode and emits a structured eval marker/artifact. | **Release + Manual + Reusable** | manual, `release`, `workflow_call` |
 | `Gate 3 / Upstream Target Matrix` | `.github/workflows/gate3.yml` | Upstream target/workflow compatibility matrix checks. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 3 Full1 / Extended Targets Strict` | `.github/workflows/gate3-full1-extended.yml` | Full1 strict extended target matrix (`Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php`) with no-skip enforcement and JSON summary artifacts. | **Nightly/scheduled** | weekly schedule, manual |
-| `Full1 / Suite Runners Strict` | `.github/workflows/full1-suite-runners.yml` | Full1 strict suite runners for `misc`, `server`, `threads`, `optimization`, `display` with per-suite log + summary artifacts. | **Nightly/scheduled** | weekly schedule, manual |
+| `Full1 / Suite Runners Strict` | `.github/workflows/full1-suite-runners.yml` | Full1 strict suite runners for `misc`, `server`, `threads`, `optimization`, `display` with per-suite log, summary, and phase-timing artifacts. Inproc suites (`misc`, `threads`, `display`) do not download or export a macro host; current external-host suites (`server`, `optimization`) consume the shared macro-host artifact until inproc parity catches up. | **Nightly/scheduled** | weekly schedule, manual |
 | `Full1 / Source-Build Probe` | `.github/workflows/full1-source-probe.yml` | Non-blocking diagnostic lane: force source build (`HXHX_FORCE_STAGE0=1`) and run narrowed strict suites (`server`, `optimization`) to detect bootstrap-lagged fixes without destabilizing the primary matrix. Summary JSON stays compact; child processes are hard-timeboxed and full logs are separate artifacts. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
 | `Full1 / Bootstrap-Source Reconciliation` | `.github/workflows/full1-bootstrap-source-reconcile.yml` | Diagnostic evidence lane that runs `server` + `optimization` in both bootstrap-built and source-built lanes on the same commit, then classifies each blocker as bootstrap lag vs source-build instability vs real parity bug. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
 | `Gate Perf Full1 / HXHX vs Haxe` | `.github/workflows/gate-perf-full1.yml` | Release-blocking Full1 performance parity lane. Uploads raw KPI evidence plus evaluated Full1 perf summary and emits `FULL1_PERF_PARITY:PASS` only through the evaluator after the policy passes. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
@@ -115,6 +115,11 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Smoke / Stage0 Source Build` | `.github/workflows/stage0-source-smoke.yml` | Source-only stage0 smoke path integrity check. | **Nightly/scheduled** | daily schedule, manual |
 
 Heavy Full1 workflows use event+ref scoped concurrency and cancel stale in-progress reruns so manual retries and scheduled evidence runs do not pile up behind obsolete work.
+
+Full1 suite runner timing artifacts:
+- build jobs emit `build_hxhx.timings.*` and `build_macro_host.timings.*`
+- suite jobs emit `<suite>.timings.jsonl`, `<suite>.timings.summary.json`, and `<suite>.timings.md`
+- timing Markdown is appended to `GITHUB_STEP_SUMMARY` for quick before/after review
 
 `Gate M7` release/scheduled runs force strict settings:
 - `HXHX_M7_PROFILE=full`
