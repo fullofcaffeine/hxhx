@@ -16,6 +16,10 @@ Success marker for this documentation lane:
 
 - `RO_PRODUCTION_DOCS:PASS`
 
+Aggregate product-readiness marker for the declared standalone target scope:
+
+- `RO_PRODUCTION_READY:PASS`
+
 ## What this guide is for
 
 Use this guide when all of these are true:
@@ -315,6 +319,7 @@ For standalone `reflaxe.ocaml`, trust these product markers:
 - `RO_RUNTIME_STDLIB_CLOSURE:PASS`
 - `RO_TARGET_PERF_CREDIBLE:PASS`
 - `RO_PRODUCTION_DOCS:PASS`
+- `RO_PRODUCTION_READY:PASS`
 
 These are separate from `hxhx`-specific markers such as:
 
@@ -332,6 +337,13 @@ Before calling the upstream-Haxe `reflaxe.ocaml` path production-ready for your 
 4. Confirm the output shape in `out/` looks normal.
 5. Compare your workload class to the declared validation matrix.
 6. If performance matters, run the standalone perf lane locally.
+7. Before a release-facing claim, run the aggregate product-readiness check:
+   `npm run test:reflaxe-ocaml:production-ready`.
+
+Current local evidence artifacts for the aggregate marker:
+
+- `.artifacts/reflaxe-ocaml/haxe-matrix/summary.json`
+- `.artifacts/reflaxe-ocaml/perf/summary.json`
 
 ## Related docs
 

@@ -32,9 +32,12 @@ function main() {
   const packageReadme = read(packageReadmePath)
 
   requireIncludes(contract, 'RO_PRODUCTION_DOCS:PASS', contractPath)
+  requireIncludes(contract, 'RO_PRODUCTION_READY:PASS', contractPath)
+  requireIncludes(contract, 'test:reflaxe-ocaml:production-ready', contractPath)
   requireIncludes(contract, 'REFLAXE_OCAML_PRODUCTION.md', contractPath)
 
   requireIncludes(guide, 'RO_PRODUCTION_DOCS:PASS', guidePath)
+  requireIncludes(guide, 'RO_PRODUCTION_READY:PASS', guidePath)
   requireIncludes(guide, 'haxe 4.3.7', guidePath)
   requireIncludes(guide, 'RO_HAXE_4_3_7_MATRIX:PASS', guidePath)
   requireIncludes(guide, 'RO_RUNTIME_STDLIB_CLOSURE:PASS', guidePath)

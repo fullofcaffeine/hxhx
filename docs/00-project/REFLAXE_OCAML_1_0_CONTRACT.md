@@ -119,6 +119,8 @@ Required marker set:
     - `docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md`
 - `RO_PRODUCTION_READY:PASS`
   - aggregate marker emitted only when the required product-level inputs are satisfied
+  - local evidence command:
+    - `npm run test:reflaxe-ocaml:production-ready`
 
 Supporting evidence:
 

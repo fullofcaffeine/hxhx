@@ -221,6 +221,7 @@
     "test:full1:plugin:upstream-host-adapter": "bash scripts/ci/run-full1-plugin-upstream-host-adapter-proof.sh",
     "test:reflaxe-ocaml:haxe-matrix": "node scripts/ci/run-reflaxe-ocaml-haxe-matrix.js",
     "test:reflaxe-ocaml:perf": "node scripts/ci/run-reflaxe-ocaml-perf.js",
+    "test:reflaxe-ocaml:production-ready": "node scripts/ci/reflaxe-ocaml-production-ready-check.js",
     "test:rpmx:haxe-plugin": "bash scripts/ci/run-rpmx-haxe-plugin-proof.sh",
     "test:rpmx:hxhx-builtin": "bash scripts/ci/run-rpmx-hxhx-builtin-proof.sh",
     "test:rpmx:hxhx-plugin": "bash scripts/ci/run-rpmx-hxhx-plugin-contract-proof.sh",
