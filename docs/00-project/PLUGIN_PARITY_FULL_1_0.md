@@ -46,6 +46,8 @@ Runtime/evidence markers:
 - `PLUGIN_MATRIX_STRICT:PASS` remains the Scoped 1.0 plugin smoke marker.
 - `REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS` proves the upstream Haxe to
   `hxhx` matrix row.
+- `REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS` proves the strict `hxhx` to
+  `hxhx` matrix row.
 - `FULL1_PLUGIN_PARITY:PASS` is the Full 1.0 aggregate plugin parity marker.
 
 `FULL1_PLUGIN_PARITY:PASS` must not be emitted until all blocking
@@ -66,5 +68,7 @@ Runtime/evidence markers:
   - Runnable proof: `npm run test:full1:plugin:upstream-to-hxhx`.
   - Row marker: `REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS`.
 - `haxe.ocaml-f1cl.8.3`: Reflaxe.ocaml plugin proof: build via hxhx strict and load in hxhx.
+  - Runnable proof: `npm run test:full1:plugin:hxhx-to-hxhx`.
+  - Row marker: `REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS`.
 - `haxe.ocaml-f1cl.8.4`: Explicit upstream Haxe host-adapter proof for reflaxe.ocaml artifacts.
 - `haxe.ocaml-f1cl.8.5`: CI workflow: Gate Full1 plugin parity.

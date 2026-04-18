@@ -32,7 +32,8 @@ Scope manifests used by this map:
 | PM-17 | Full1 measured performance parity | Full1 performance evidence | `perf` | stage0-free hxhx vs upstream Haxe 4.3.7 | `.github/workflows/gate-perf-full1.yml` (`scripts/ci/full1-perf-evaluator.js`) | `FULL1_PERF_PARITY:PASS` |
 | PM-18 | Full1 plugin parity contract | Full1 plugin contract | `plugin` | policy guard | `scripts/ci/full1-plugin-parity-contract-check.js` | `FULL1_PLUGIN_PARITY_CONTRACT:PASS` |
 | PM-19 | Full1 plugin upstream-Haxe artifact into hxhx | Full1 plugin evidence | `plugin,reflaxe.ocaml` | upstream Haxe 4.3.7-built artifact loaded by hxhx | `scripts/ci/run-full1-plugin-upstream-to-hxhx-proof.sh` | `REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS` |
-| PM-20 | Full1 measured plugin parity | Full1 plugin evidence | `plugin` | scheduled/release | `.github/workflows/gate-full1.yml` | `FULL1_PLUGIN_PARITY:PASS` |
+| PM-20 | Full1 plugin hxhx-built artifact into hxhx | Full1 plugin evidence | `plugin,reflaxe.ocaml` | stage0-forbidden hxhx-built artifact loaded by hxhx | `scripts/ci/run-full1-plugin-hxhx-to-hxhx-proof.sh` | `REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS` |
+| PM-21 | Full1 measured plugin parity | Full1 plugin evidence | `plugin` | scheduled/release | `.github/workflows/gate-full1.yml` | `FULL1_PLUGIN_PARITY:PASS` |
 
 ## Marker Registry
 
@@ -90,5 +91,6 @@ These are the canonical marker strings used for parity statements in logs:
 - For Full1 plugin parity claims, include:
   - `FULL1_PLUGIN_PARITY_CONTRACT:PASS` as the contract-definition source.
   - `REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS` for the upstream Haxe-built `reflaxe.ocaml` plugin artifact loaded by `hxhx`.
+  - `REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS` for the stage0-forbidden `hxhx`-built `reflaxe.ocaml` plugin artifact loaded by `hxhx`.
   - `FULL1_PLUGIN_PARITY:PASS` only when the `reflaxe.ocaml` plugin proof matrix passes without hidden stage0 delegation.
   - `docs/00-project/PLUGIN_PARITY_FULL_1_0.md` as the policy source.

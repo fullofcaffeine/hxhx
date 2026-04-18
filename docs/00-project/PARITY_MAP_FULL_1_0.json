@@ -224,6 +224,19 @@
       "enforcement": "planned"
     },
     {
+      "id": "F1-PM-11C",
+      "suite": "full-plugin-hxhx-to-hxhx",
+      "lane": "full",
+      "targets": [
+        "plugin",
+        "reflaxe.ocaml"
+      ],
+      "profile": "stage0-forbidden hxhx-built artifact loaded by hxhx",
+      "marker": "REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS",
+      "workflow": "scripts/ci/run-full1-plugin-hxhx-to-hxhx-proof.sh",
+      "enforcement": "planned"
+    },
+    {
       "id": "F1-PM-12",
       "suite": "full-perf-policy",
       "lane": "full",

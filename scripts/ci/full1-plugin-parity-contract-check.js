@@ -18,6 +18,7 @@ const requiredDocSnippets = [
   'FULL1_PLUGIN_PARITY_CONTRACT:PASS',
   'FULL1_PLUGIN_PARITY:PASS',
   'REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS',
+  'REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS',
   '## Host/Compiler Matrix',
   'upstream Haxe to hxhx',
   'hxhx strict to hxhx',
@@ -29,6 +30,7 @@ const requiredDocSnippets = [
   'haxe.ocaml-f1cl.8.4',
   'haxe.ocaml-f1cl.8.5',
   'npm run test:full1:plugin:upstream-to-hxhx',
+  'npm run test:full1:plugin:hxhx-to-hxhx',
   'reflaxe.elixir` is example-only and non-blocking',
 ]
 
@@ -62,9 +64,11 @@ function main() {
 
   requireIncludes(parityMapPath, parityMap, 'FULL1_PLUGIN_PARITY_CONTRACT:PASS')
   requireIncludes(parityMapPath, parityMap, 'REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS')
+  requireIncludes(parityMapPath, parityMap, 'REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS')
   requireIncludes(parityMapPath, parityMap, 'FULL1_PLUGIN_PARITY:PASS')
   requireIncludes(fullParityMapPath, fullParityMap, 'FULL1_PLUGIN_PARITY_CONTRACT:PASS')
   requireIncludes(fullParityMapPath, fullParityMap, 'REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS')
+  requireIncludes(fullParityMapPath, fullParityMap, 'REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS')
   requireIncludes(fullParityMapPath, fullParityMap, 'FULL1_PLUGIN_PARITY:PASS')
   requireIncludes(fullContractPath, fullContract, docPath)
   requireIncludes(scopeManifestPath, scopeManifest, 'FULL1_PLUGIN_PARITY_CONTRACT:PASS')
