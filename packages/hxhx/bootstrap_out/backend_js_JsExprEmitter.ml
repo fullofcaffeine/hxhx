@@ -2067,6 +2067,7 @@ and emitCall = fun callee args scope -> try let __fallback_result_549 = (
       | HxExpr.EIdent _p0 -> ignore (let _g2 = (_p0 : string) in match _g1 with
         | "args" -> ignore (if HxString.equals _g2 "Sys" then raise (HxRuntime.Hx_return (Obj.repr ("process.argv.slice(2)" : string))) else ignore ())
         | "command" -> ignore (if HxString.equals _g2 "Sys" then raise (HxRuntime.Hx_return (Obj.repr (emitSysCommand (Obj.magic args) scope : string))) else ignore ())
+        | "copy" -> ignore (let subject = Obj.magic _g in if args != Obj.magic (HxRuntime.hx_null) && HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr (emitCopyCall (Obj.magic subject) scope : string))) else ignore ())
         | "exit" -> ignore (if HxString.equals _g2 "Sys" then ignore (let tempString1 = ref ("" : string) in (
           ignore (if HxArray.length args > 0 then let __assign_525 = (emit (Obj.magic (HxArray.get (Obj.magic args) 0)) scope : string) in (
             tempString1 := __assign_525;
@@ -2160,6 +2161,7 @@ and emitCall = fun callee args scope -> try let __fallback_result_549 = (
           | HxExpr.EUnsupported _ -> 28) = 8 then ignore (let _g4 = (match _g2 with
           | HxExpr.EIdent __enum_param_538 -> __enum_param_538
           | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "js" then raise (HxRuntime.Hx_return (Obj.repr (emitInlineJsCode (Obj.magic args) scope : string))) else ignore ()) else ignore ()) else ignore ())
+        | "copy" -> ignore (let subject = Obj.magic _g in if args != Obj.magic (HxRuntime.hx_null) && HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr (emitCopyCall (Obj.magic subject) scope : string))) else ignore ())
         | "match" -> ignore (let subject = Obj.magic _g in if args != Obj.magic (HxRuntime.hx_null) && HxArray.length args = 1 then raise (HxRuntime.Hx_return (Obj.repr (emitEnumMatch (Obj.magic subject) (Obj.magic (HxArray.get (Obj.magic args) 0)) scope : string))) else ignore ())
         | "typeError" -> ignore (if HxString.equals _g3 "HelperMacros" then ignore (if (match _g2 with
           | HxExpr.ENull -> 0
@@ -2235,7 +2237,10 @@ and emitCall = fun callee args scope -> try let __fallback_result_549 = (
           | HxExpr.EIdent __enum_param_543 -> __enum_param_543
           | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "unit" then ignore (let diagnostic = (helperTypeErrorText (Obj.magic args) : string) in if diagnostic != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Backend_js_JsNameMangler.quoteString (diagnostic : string) : string))) else ()) else ignore ()) else ignore ()) else ignore ())
         | _ -> ignore ())
-      | _ -> ignore (if HxString.equals _g1 "match" then ignore (let subject = Obj.magic _g in if args != Obj.magic (HxRuntime.hx_null) && HxArray.length args = 1 then raise (HxRuntime.Hx_return (Obj.repr (emitEnumMatch (Obj.magic subject) (Obj.magic (HxArray.get (Obj.magic args) 0)) scope : string))) else ignore ()) else ignore ()))
+      | _ -> ignore (match _g1 with
+        | "copy" -> ignore (let subject = Obj.magic _g in if args != Obj.magic (HxRuntime.hx_null) && HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr (emitCopyCall (Obj.magic subject) scope : string))) else ignore ())
+        | "match" -> ignore (let subject = Obj.magic _g in if args != Obj.magic (HxRuntime.hx_null) && HxArray.length args = 1 then raise (HxRuntime.Hx_return (Obj.repr (emitEnumMatch (Obj.magic subject) (Obj.magic (HxArray.get (Obj.magic args) 0)) scope : string))) else ignore ())
+        | _ -> ignore ()))
     | _ -> ignore ());
   let calleeJs = (emit (Obj.magic callee) scope : string) in let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
     ignore (let _g = Obj.magic (let __arr_544 = HxArray.create () in __arr_544) in (
@@ -2255,6 +2260,7 @@ and emitCall = fun callee args scope -> try let __fallback_result_549 = (
   )
 ) in Obj.magic __fallback_result_549 with
   | HxRuntime.Hx_return __ret_548 -> Obj.obj __ret_548
+and emitCopyCall = fun subject scope -> let subjectJs = (emit (Obj.magic subject) scope : string) in ((("(function(__hx_copy_target) {" ^ "return Array.isArray(__hx_copy_target) ? __hx_copy_target.slice() : __hx_copy_target.copy();") ^ "})(") ^ HxString.toStdString subjectJs) ^ ")"
 and emitEnumMatch = fun subject pattern scope -> let tempResult = ref ("" : string) in (
   ignore (if (match pattern with
     | HxExpr.ENull -> 0

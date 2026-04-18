@@ -881,6 +881,8 @@ class JsExprEmitter {
 				return emitSuperMethodCall(field, args, scope);
 			case EField(subject, "match") if (args != null && args.length == 1):
 				return emitEnumMatch(subject, args[0], scope);
+			case EField(subject, "copy") if (args != null && args.length == 0):
+				return emitCopyCall(subject, scope);
 			case EEnumValue(name):
 				final params = args == null ? [] : args.map(a -> emit(a, scope));
 				return macroEnum(name, params);
@@ -933,6 +935,15 @@ class JsExprEmitter {
 		final calleeJs = emit(callee, scope);
 		final argsJs = args.map(a -> emitCallArg(a, scope)).join(", ");
 		return calleeJs + "(" + argsJs + ")";
+	}
+
+	static function emitCopyCall(subject:HxExpr, scope:JsEmitScope):String {
+		final subjectJs = emit(subject, scope);
+		return "(function(__hx_copy_target) {"
+			+ "return Array.isArray(__hx_copy_target) ? __hx_copy_target.slice() : __hx_copy_target.copy();"
+			+ "})("
+			+ subjectJs
+			+ ")";
 	}
 
 	static function emitEnumMatch(subject:HxExpr, pattern:HxExpr, scope:JsEmitScope):String {

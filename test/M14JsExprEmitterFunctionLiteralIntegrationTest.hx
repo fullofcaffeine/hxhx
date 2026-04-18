@@ -7,6 +7,11 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 			throw label + ": expected substring '" + needle + "' in '" + haystack + "'";
 	}
 
+	static function assertNotContains(haystack:String, needle:String, label:String):Void {
+		if (haystack != null && haystack.indexOf(needle) >= 0)
+			throw label + ": unexpected substring '" + needle + "' in '" + haystack + "'";
+	}
+
 	static function assertEquals(actual:String, expected:String, label:String):Void {
 		if (actual != expected)
 			throw label + ": expected '" + expected + "', got '" + actual + "'";
@@ -64,6 +69,9 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 
 		final unicodeBlock = HxParser.parseExprText('{ var valid = valid.copy(); if (Sys.systemName() == "Windows") valid = valid.filter(f -> !f.match(Only([0x0001]))); valid = valid.filter(f -> !f.match(Only([0xD7FF])) && !f.match(Only([0x1FFFF]))); valid; }');
 		final unicodeBlockJs = JsExprEmitter.emit(unicodeBlock, exprScope);
+		assertContains(unicodeBlockJs, "Array.isArray", "array copy should guard Haxe Array values before falling back to object copy");
+		assertContains(unicodeBlockJs, ".slice()", "array copy should lower to JS slice");
+		assertNotContains(unicodeBlockJs, ".copy())", "array copy should not directly call a missing JS Array.copy method");
 		assertContains(unicodeBlockJs, ".filter(function(f)", "block-expression filter arrows should lower to JS functions");
 		assertContains(unicodeBlockJs, "__hx_ctor", "enum pattern values should lower to comparable enum objects");
 		assertContains(unicodeBlockJs, "JSON.stringify", "enum match should lower to a structural parameter comparison");
