@@ -1,0 +1,246 @@
+name: Full1 / Plugin Parity
+
+on:
+  workflow_call:
+    outputs:
+      full1_plugin_parity_marker:
+        description: "Full1 plugin parity marker emitted when all required plugin proofs pass."
+        value: ${{ jobs.full1_plugin_aggregate.outputs.full1_plugin_parity_marker }}
+  workflow_dispatch:
+  schedule:
+    # Weekly Full1 plugin parity evidence.
+    - cron: "0 15 * * 6"
+  release:
+    types: [published]
+
+concurrency:
+  group: full1-plugin-parity-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+
+jobs:
+  full1_plugin_proofs:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: upstream-to-hxhx
+            name: Full1 plugin upstream Haxe to hxhx
+            command: npm run -s test:full1:plugin:upstream-to-hxhx
+            artifact_name: full1-plugin-upstream-to-hxhx
+            artifact_path: .artifacts/full1/plugin-upstream-to-hxhx
+            prepare_upstream_eval_host: "false"
+          - id: hxhx-to-hxhx
+            name: Full1 plugin hxhx to hxhx
+            command: npm run -s test:full1:plugin:hxhx-to-hxhx
+            artifact_name: full1-plugin-hxhx-to-hxhx
+            artifact_path: .artifacts/full1/plugin-hxhx-to-hxhx
+            prepare_upstream_eval_host: "false"
+          - id: upstream-host-adapter
+            name: Full1 plugin upstream host adapter
+            command: npm run -s test:full1:plugin:upstream-host-adapter
+            artifact_name: full1-plugin-upstream-host-adapter
+            artifact_path: .artifacts/full1/plugin-upstream-host-adapter
+            prepare_upstream_eval_host: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Prepare native upstream Haxe eval host
+        if: matrix.prepare_upstream_eval_host == 'true'
+        run: |
+          set -euo pipefail
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          }
+          retry_apt sudo apt-get update
+          retry_apt sudo apt-get install -y libpcre2-dev zlib1g-dev libmbedtls-dev neko
+          eval "$(opam env)"
+          opam install -y \
+            dune.3.15.3 \
+            ocamlfind \
+            camlp5 \
+            sedlex \
+            xml-light \
+            extlib \
+            ptmap \
+            sha \
+            camlp-streams \
+            luv.0.5.13
+          bash scripts/vendor/fetch-haxe-upstream.sh
+          (
+            cd vendor/haxe
+            eval "$(opam env)"
+            make haxe
+          )
+          test -x vendor/haxe/haxe
+          vendor/haxe/haxe --version
+          echo "RPMX_HAXE_PLUGIN_HOST=$PWD/vendor/haxe/haxe" >> "$GITHUB_ENV"
+          echo "RPMX_HAXE_PLUGIN_OCAML_ENV=opam" >> "$GITHUB_ENV"
+
+      - name: Preview cleanup candidates before proof
+        run: npm run clean:dry-run -- --verbose
+
+      - name: Run ${{ matrix.name }}
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          ${{ matrix.command }}
+
+      - name: Clean temporary proof output
+        if: always()
+        run: npm run clean:tmp
+
+      - name: Upload ${{ matrix.name }} artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload upstream host adapter source proof artifact
+        if: always() && matrix.prepare_upstream_eval_host == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-plugin-upstream-host-adapter-rpmx-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/rpmx/haxe-plugin
+          if-no-files-found: error
+          retention-days: 14
+
+  full1_plugin_aggregate:
+    name: Full1 plugin parity aggregate
+    runs-on: ubuntu-latest
+    needs:
+      - full1_plugin_proofs
+    if: always()
+    outputs:
+      full1_plugin_parity_marker: ${{ steps.emit.outputs.full1_plugin_parity_marker }}
+    steps:
+      - name: Write Full1 plugin summary artifact
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/full1/plugin-parity
+          proofs_result='${{ needs.full1_plugin_proofs.result }}'
+          jq -n \
+            --arg proofs_result "$proofs_result" \
+            --arg workflow "Full1 / Plugin Parity" \
+            --arg run_id "${{ github.run_id }}" \
+            --arg run_attempt "${{ github.run_attempt }}" \
+            '{
+              schema: "full1-plugin-parity-summary.v1",
+              workflow: $workflow,
+              run_id: $run_id,
+              run_attempt: $run_attempt,
+              jobs: {
+                full1_plugin_proofs: { result: $proofs_result }
+              },
+              required_markers: [
+                "REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS",
+                "REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS",
+                "REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS"
+              ],
+              aggregate_markers: [
+                "FULL1_PLUGIN_PARITY:PASS"
+              ]
+            }' > .artifacts/full1/plugin-parity/full1-plugin-parity.summary.json
+
+      - name: Upload Full1 plugin aggregate artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-plugin-parity-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/full1/plugin-parity/full1-plugin-parity.summary.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Emit Full1 plugin parity marker
+        id: emit
+        run: |
+          set -euo pipefail
+          proofs_result='${{ needs.full1_plugin_proofs.result }}'
+          echo "full1_plugin_proofs=${proofs_result}"
+          if [ "$proofs_result" = "success" ]; then
+            echo "FULL1_PLUGIN_PARITY:PASS"
+            echo "full1_plugin_parity_marker=FULL1_PLUGIN_PARITY:PASS" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "FULL1_PLUGIN_PARITY:FAIL" >&2
+          exit 1

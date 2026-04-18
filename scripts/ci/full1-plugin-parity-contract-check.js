@@ -13,6 +13,8 @@ const parityMapPath = 'docs/00-project/PARITY_MAP_HAXE_4_3_7.md'
 const fullParityMapPath = 'docs/00-project/PARITY_MAP_FULL_1_0.json'
 const fullContractPath = 'docs/00-project/FULL_1_0_CONTRACT.md'
 const scopeManifestPath = 'docs/02-user-guide/compat/full-1.0-scope.json'
+const pluginWorkflowPath = '.github/workflows/full1-plugin-parity.yml'
+const full1WorkflowPath = '.github/workflows/gate-full1.yml'
 
 const requiredDocSnippets = [
   'FULL1_PLUGIN_PARITY_CONTRACT:PASS',
@@ -34,6 +36,8 @@ const requiredDocSnippets = [
   'npm run test:full1:plugin:upstream-to-hxhx',
   'npm run test:full1:plugin:hxhx-to-hxhx',
   'npm run test:full1:plugin:upstream-host-adapter',
+  '.github/workflows/full1-plugin-parity.yml',
+  'FULL1_PLUGIN_PARITY:PASS` only after all three proof rows pass',
   'reflaxe.elixir` is example-only and non-blocking',
 ]
 
@@ -60,6 +64,8 @@ function main() {
   const fullParityMap = readUtf8(fullParityMapPath)
   const fullContract = readUtf8(fullContractPath)
   const scopeManifest = readUtf8(scopeManifestPath)
+  const pluginWorkflow = readUtf8(pluginWorkflowPath)
+  const full1Workflow = readUtf8(full1WorkflowPath)
 
   for (const snippet of requiredDocSnippets) {
     requireIncludes(docPath, doc, snippet)
@@ -78,6 +84,13 @@ function main() {
   requireIncludes(fullContractPath, fullContract, docPath)
   requireIncludes(scopeManifestPath, scopeManifest, 'FULL1_PLUGIN_PARITY_CONTRACT:PASS')
   requireIncludes(scopeManifestPath, scopeManifest, 'FULL1_PLUGIN_PARITY:PASS')
+  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS')
+  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS')
+  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS')
+  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'FULL1_PLUGIN_PARITY:PASS')
+  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'actions/upload-artifact@v4')
+  requireIncludes(full1WorkflowPath, full1Workflow, './.github/workflows/full1-plugin-parity.yml')
+  requireIncludes(full1WorkflowPath, full1Workflow, 'FULL1_PLUGIN_PARITY:PASS')
 
   if (/\bTBD\b|\bTODO\b|<placeholder>/i.test(doc)) {
     fail(`${docPath} must not contain placeholder closure language`)

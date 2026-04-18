@@ -34,7 +34,7 @@ Scope manifests used by this map:
 | PM-19 | Full1 plugin upstream-Haxe artifact into hxhx | Full1 plugin evidence | `plugin,reflaxe.ocaml` | upstream Haxe 4.3.7-built artifact loaded by hxhx | `scripts/ci/run-full1-plugin-upstream-to-hxhx-proof.sh` | `REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS` |
 | PM-20 | Full1 plugin hxhx-built artifact into hxhx | Full1 plugin evidence | `plugin,reflaxe.ocaml` | stage0-forbidden hxhx-built artifact loaded by hxhx | `scripts/ci/run-full1-plugin-hxhx-to-hxhx-proof.sh` | `REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS` |
 | PM-21 | Full1 upstream Haxe host-adapter artifact proof | Full1 plugin evidence | `plugin,reflaxe.ocaml` | upstream Haxe 4.3.7 artifact loaded by explicit eval host adapter | `scripts/ci/run-full1-plugin-upstream-host-adapter-proof.sh` | `REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS` |
-| PM-22 | Full1 measured plugin parity | Full1 plugin evidence | `plugin` | scheduled/release | `.github/workflows/gate-full1.yml` | `FULL1_PLUGIN_PARITY:PASS` |
+| PM-22 | Full1 measured plugin parity | Full1 plugin evidence | `plugin` | scheduled/release | `.github/workflows/full1-plugin-parity.yml` (standalone + reusable inside `.github/workflows/gate-full1.yml`) | `FULL1_PLUGIN_PARITY:PASS` |
 
 ## Marker Registry
 

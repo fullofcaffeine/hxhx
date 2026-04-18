@@ -76,3 +76,5 @@ Runtime/evidence markers:
   - Runnable proof: `npm run test:full1:plugin:upstream-host-adapter`.
   - Row marker: `REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS`.
 - `haxe.ocaml-f1cl.8.5`: CI workflow: Gate Full1 plugin parity.
+  - Workflow: `.github/workflows/full1-plugin-parity.yml`.
+  - Aggregate marker: `FULL1_PLUGIN_PARITY:PASS` only after all three proof rows pass.

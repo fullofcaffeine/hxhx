@@ -195,7 +195,7 @@
       ],
       "profile": "scheduled-release",
       "marker": "FULL1_PLUGIN_PARITY:PASS",
-      "workflow": ".github/workflows/gate-full1.yml",
+      "workflow": ".github/workflows/full1-plugin-parity.yml (reused by .github/workflows/gate-full1.yml)",
       "enforcement": "planned"
     },
     {
