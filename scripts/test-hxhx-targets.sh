@@ -1502,6 +1502,7 @@ HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprunciobj/src" -main Main --hxhx-out "$tmprunciobj/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^ok$"
 
 
 echo "== Stage3 regression: array concat/map/join chain lowers to bootstrap intrinsics"
@@ -1756,11 +1757,9 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprest/src" -main Main --hxhx-out "$tmprest/out")"
 echo "$out" | grep -q "^stage3=ok$"
-rest_values="$(printf '%s\n' "$out" | grep -c '^0$' || true)"
-if [ "$rest_values" -ne 3 ]; then
-  echo "Stage3 regression: expected deterministic rest-args output count=3 (value line `0`), got $rest_values." >&2
-  exit 1
-fi
+echo "$out" | grep -q "^p:$"
+echo "$out" | grep -q "^p:a$"
+echo "$out" | grep -q "^p:a,b$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: rest-only args (no fixed params) pack into Array<T>"
@@ -1784,11 +1783,9 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprestonly/src" -main Main --hxhx-out "$tmprestonly/out")"
 echo "$out" | grep -q "^stage3=ok$"
-rest_only_values="$(printf '%s\n' "$out" | grep -c '^0$' || true)"
-if [ "$rest_only_values" -ne 3 ]; then
-  echo "Stage3 regression: expected deterministic rest-only output count=3 (value line `0`), got $rest_only_values." >&2
-  exit 1
-fi
+echo "$out" | grep -q "^\[\]$"
+echo "$out" | grep -q "^\[a\]$"
+echo "$out" | grep -q "^\[a,b\]$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: string ternary in println emits"

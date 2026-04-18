@@ -1196,8 +1196,31 @@ class EmitterStage {
 		return currentKnownModuleNames != null && currentKnownModuleNames.exists(name);
 	}
 
+	static function stage3HasStmtValueIdent(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		for (entry in currentStmtTyEntries)
+			if (entry.name == name)
+				return true;
+		final lowered = ocamlValueIdent(name);
+		if (lowered != name)
+			for (entry in currentStmtTyEntries)
+				if (entry.name == lowered)
+					return true;
+		return false;
+	}
+
 	static function stage3HasTyIdent(name:String, ?tyByIdent:Map<String, TyType>):Bool {
-		return stage3TyLookup(stage3ResolveTyIdentName(name, tyByIdent), tyByIdent) != null;
+		return stage3TyLookup(stage3ResolveTyIdentName(name, tyByIdent), tyByIdent) != null || stage3HasStmtValueIdent(name);
+	}
+
+	static function stage3HasLocalValueIdent(name:String):Bool {
+		if (name == null || name.length == 0 || currentFunctionLocalTypeHints == null)
+			return false;
+		if (stage3LocalHintLookup(name) != null)
+			return true;
+		final lowered = ocamlValueIdent(name);
+		return lowered != name && stage3LocalHintLookup(lowered) != null;
 	}
 
 	static function stage3HasThisBinding(?tyByIdent:Map<String, TyType>):Bool {
@@ -1567,7 +1590,8 @@ class EmitterStage {
 		final ctorName = ocamlValueIdent("new");
 		function ctorArgToOcaml(a:HxExpr):String {
 			return switch (a) {
-				case EIdent(name) if (stage3HasTyIdent(name, tyByIdent) || isMutableLocalRefIdent(name)):
+				case EIdent(name)
+					if (stage3HasTyIdent(name, tyByIdent) || stage3HasStmtValueIdent(name) || stage3HasLocalValueIdent(name) || isMutableLocalRefIdent(name)):
 					ocamlReadValueIdent(name);
 				case _:
 					exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -3193,7 +3217,8 @@ class EmitterStage {
 					// - When the callee is an unqualified in-module identifier and we have a recorded arity,
 					//   collapse over-applications to bring-up poison (unless we know it is a rest-arg call).
 					if (stage3HasArity(c, arityByIdentRaw) && args.length > stage3ArityFor(c, arityByIdentRaw)) {
-						if (sig == null || !sig.hasRest)
+						final parsedSigAcceptsCall = sig != null && (sig.hasRest || args.length <= sig.expected);
+						if (!parsedSigAcceptsCall)
 							return "(Obj.magic 0)";
 					}
 
