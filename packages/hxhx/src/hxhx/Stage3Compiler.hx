@@ -2217,6 +2217,10 @@ class Stage3Compiler {
 		// - If a global `--hxhx-out <dir>` is provided, we suffix it per-unit to avoid collisions.
 		for (idx in 0...units.length) {
 			final u = units[idx];
+			if (global.backendId == "js-native" && CliRouting.isJsNativeHelperUnit(u)) {
+				Sys.println("hxhx(stage3): unit_skipped idx=" + idx + " reason=js_native_neko_cmd_helper args=" + summarizeArgs(u));
+				continue;
+			}
 			final unitArgs = new Array<String>();
 			if (global.backendId != null && global.backendId.length > 0) {
 				unitArgs.push("--hxhx-backend");

@@ -39,7 +39,8 @@ class CliRouting {
 		}
 
 		final baseForwarded = stripRoutingFlags(forwarded);
-		final targetScan = scanStandardTargetFlags(planningTargetArgs(baseForwarded));
+		final planningUnits = planningTargetUnits(baseForwarded);
+		final targetScan = scanStandardTargetFlags(flattenUnits(planningUnits));
 
 		if (targetScan.missingValueFlag != null && (targetScan.missingValueFlag == "--js" || targetScan.missingValueFlag == "-js")) {
 			throw "Missing value after --js/ -js";
@@ -114,7 +115,7 @@ class CliRouting {
 			};
 		}
 
-		if (targetScan.hasJs && !targetScan.hasNonJs) {
+		if (targetScan.hasJs && (!targetScan.hasNonJs || canRouteMixedUnitsAsNativeJs(planningUnits))) {
 			final nativeJs = baseForwarded.copy();
 			addDefineIfMissing(nativeJs, "js");
 			return {
@@ -307,6 +308,81 @@ class CliRouting {
 		};
 	}
 
+	static function hasStandardJsTargetFlag(args:Array<String>):Bool {
+		if (args == null)
+			return false;
+		for (a in args) {
+			switch (a) {
+				case "-js", "--js":
+					return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function hasNekoTargetFlag(args:Array<String>):Bool {
+		if (args == null)
+			return false;
+		for (a in args) {
+			switch (a) {
+				case "-neko", "--neko":
+					return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function hasNonNekoStandardTargetFlag(args:Array<String>):Bool {
+		if (args == null)
+			return false;
+		for (a in args) {
+			switch (a) {
+				case "-lua", "--lua", "-python", "--python", "-php", "--php", "-cpp", "--cpp", "-cs", "--cs", "-java", "--java", "-jvm", "--jvm", "-hl",
+					"--hl", "-swf", "--swf", "-as3", "--as3", "-xml", "--xml":
+					return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function hasCommandHook(args:Array<String>):Bool {
+		if (args == null)
+			return false;
+		for (a in args) {
+			switch (a) {
+				case "-cmd", "--cmd":
+					return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	public static function isJsNativeHelperUnit(args:Array<String>):Bool {
+		return !hasStandardJsTargetFlag(args) && hasNekoTargetFlag(args) && hasCommandHook(args) && !hasNonNekoStandardTargetFlag(args);
+	}
+
+	static function canRouteMixedUnitsAsNativeJs(units:Array<Array<String>>):Bool {
+		if (units == null || units.length == 0)
+			return false;
+		var sawJs = false;
+		for (unit in units) {
+			if (hasStandardJsTargetFlag(unit)) {
+				if (scanStandardTargetFlags(unit).hasNonJs)
+					return false;
+				sawJs = true;
+				continue;
+			}
+			if (isJsNativeHelperUnit(unit))
+				continue;
+			return false;
+		}
+		return sawJs;
+	}
+
 	static function stripRoutingFlags(args:Array<String>):Array<String> {
 		final out = new Array<String>();
 		for (a in args) {
@@ -320,9 +396,17 @@ class CliRouting {
 	}
 
 	static function planningTargetArgs(forwarded:Array<String>):Array<String> {
+		return flattenUnits(planningTargetUnits(forwarded));
+	}
+
+	static function planningTargetUnits(forwarded:Array<String>):Array<Array<String>> {
 		final units = Hxml.expandArgsToUnits(forwarded);
 		if (units == null)
-			return forwarded;
+			return [forwarded];
+		return units;
+	}
+
+	static function flattenUnits(units:Array<Array<String>>):Array<String> {
 		final out = new Array<String>();
 		for (unit in units) {
 			for (arg in unit)

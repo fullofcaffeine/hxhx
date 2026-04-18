@@ -156,5 +156,25 @@ class M14DirectFlagCliContractTest {
 		final jsEach = plan([jsEachHxmlPath]);
 		assertEquals(jsEach.lane, "native-js", "multi-unit js hxml lane");
 		assertTrue(hasDefine(jsEach.forwarded, "js"), "multi-unit js hxml define");
+
+		final sysEachHxmlPath = tmpDir + "/compile-each.hxml";
+		File.saveContent(sysEachHxmlPath,
+			"-p src\n--main ExitCode\n-neko bin/neko/ExitCode.n\n-lib utest\n-cmd nekotools boot bin/neko/ExitCode.n\n\n--next\n-D source-header=''\n--debug\n-lib utest\n-p src\n");
+		final sysJsHxmlPath = tmpDir + "/compile-js.hxml";
+		File.saveContent(sysJsHxmlPath,
+			"compile-each.hxml\n--main Main\n-js bin/js/sys.js\n-lib hxnodejs\n\n--next\ncompile-each.hxml\n--main UtilityProcess\n-js bin/js/UtilityProcess.js\n-lib hxnodejs\n");
+		final sysJs = plan([sysJsHxmlPath]);
+		assertEquals(sysJs.lane, "native-js", "sys-style mixed helper js hxml lane");
+		assertTrue(hasDefine(sysJs.forwarded, "js"), "sys-style mixed helper js hxml define");
+		assertTrue(CliRouting.isJsNativeHelperUnit([
+			"-p",
+			"src",
+			"--main",
+			"ExitCode",
+			"-neko",
+			"bin/neko/ExitCode.n",
+			"-cmd",
+			"nekotools boot bin/neko/ExitCode.n"
+		]), "neko command helper unit should be recognized for js routing");
 	}
 }

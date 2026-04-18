@@ -3555,47 +3555,55 @@ let run = fun args -> try let __fallback_result_757 = let tempWaitModeParse = re
             ignore (if units == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (error ("failed to expand .hxml args (multi-unit)" : string)))) else ());
             ignore (if HxArray.length units <= 1 then raise (HxRuntime.Hx_return (Obj.repr (runOne (Obj.magic (Obj.obj (HxAnon.get connect "rest")))))) else ());
             let _g = ref 0 in let _g1 = HxArray.length units in (
-              ignore (while !_g < _g1 do ignore (let idx = let __old_750 = !_g in let __new_751 = HxInt.add __old_750 1 in (
+              ignore (try while !_g < _g1 do try ignore (let idx = let __old_750 = !_g in let __new_751 = HxInt.add __old_750 1 in (
                 ignore (_g := __new_751);
                 __old_750
-              ) in let u = Obj.magic (HxArray.get (Obj.magic units) idx) in let unitArgs = Obj.magic (HxArray.create ()) in (
-                ignore (if Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "backendId") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "backendId")) > 0 then ignore ((
-                  ignore (HxArray.push unitArgs "--hxhx-backend");
-                  HxArray.push unitArgs (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "backendId"))
+              ) in let u = Obj.magic (HxArray.get (Obj.magic units) idx) in (
+                ignore (if HxString.equals (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "backendId")) "js-native" && Hxhx_CliRouting.isJsNativeHelperUnit (Obj.magic u) then ignore ((
+                  ignore (print_endline ((("hxhx(stage3): unit_skipped idx=" ^ string_of_int idx) ^ " reason=js_native_neko_cmd_helper args=") ^ HxString.toStdString (summarizeArgs (Obj.magic u))));
+                  raise (HxRuntime.Hx_continue)
                 )) else ());
-                ignore (if Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "macroRuntimeMode") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "macroRuntimeMode")) > 0 then ignore ((
-                  ignore (HxArray.push unitArgs "--hxhx-macro-runtime");
-                  HxArray.push unitArgs (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "macroRuntimeMode"))
-                )) else ());
-                ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.magic (!tempStruct)) "typeOnly") then ignore (HxArray.push unitArgs "--hxhx-type-only") else ());
-                ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.magic (!tempStruct)) "noEmit") then ignore (HxArray.push unitArgs "--hxhx-no-emit") else ());
-                ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.magic (!tempStruct)) "noRun") then ignore (HxArray.push unitArgs "--hxhx-no-run") else ());
-                ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.magic (!tempStruct)) "emitFullBodies") then ignore (HxArray.push unitArgs "--hxhx-emit-full-bodies") else ());
-                ignore (if Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "outDir") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "outDir")) > 0 && not (hasFlag (Obj.magic u) ("--hxhx-out" : string)) then ignore ((
-                  ignore (HxArray.push unitArgs "--hxhx-out");
-                  HxArray.push unitArgs ((HxString.toStdString (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "outDir")) ^ "_u") ^ string_of_int idx)
-                )) else ());
-                let _g2 = ref 0 in (
-                  ignore (while !_g2 < HxArray.length u do ignore (let a = (HxArray.get (Obj.magic u) (!_g2) : string) in (
-                    ignore (let __old_752 = !_g2 in let __new_753 = HxInt.add __old_752 1 in (
-                      ignore (_g2 := __new_753);
-                      __new_753
-                    ));
-                    HxArray.push unitArgs a
-                  )) done);
-                  ignore (if HxString.equals (HxSys.getEnv "HXHX_TRACE_UNITS") "1" then ignore (let main = (findFlagValue (Obj.magic u) ("-main" : string) ("--main" : string) : string) in let cp = Obj.magic (findManyFlagValues (Obj.magic u) ("-cp" : string) ("--class-path" : string) ("-p" : string)) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                    ignore (if main == Obj.magic (HxRuntime.hx_null) then let __assign_754 = Obj.magic ("<none>" : string) in (
-                      tempMaybeString := __assign_754;
-                      __assign_754
-                    ) else let __assign_755 = Obj.magic (main : string) in (
-                      tempMaybeString := __assign_755;
-                      __assign_755
-                    ));
-                    print_endline ((((((("hxhx(stage3): unit_begin idx=" ^ string_of_int idx) ^ " main=") ^ HxString.toStdString (!tempMaybeString)) ^ " cp=") ^ HxString.toStdString (HxArray.join cp "," (fun x -> x))) ^ " args=") ^ HxString.toStdString (summarizeArgs (Obj.magic u)))
+                let unitArgs = Obj.magic (HxArray.create ()) in (
+                  ignore (if Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "backendId") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "backendId")) > 0 then ignore ((
+                    ignore (HxArray.push unitArgs "--hxhx-backend");
+                    HxArray.push unitArgs (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "backendId"))
                   )) else ());
-                  let code = runOne (Obj.magic unitArgs) in if code <> 0 then raise (HxRuntime.Hx_return (Obj.repr code)) else ()
+                  ignore (if Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "macroRuntimeMode") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "macroRuntimeMode")) > 0 then ignore ((
+                    ignore (HxArray.push unitArgs "--hxhx-macro-runtime");
+                    HxArray.push unitArgs (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "macroRuntimeMode"))
+                  )) else ());
+                  ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.magic (!tempStruct)) "typeOnly") then ignore (HxArray.push unitArgs "--hxhx-type-only") else ());
+                  ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.magic (!tempStruct)) "noEmit") then ignore (HxArray.push unitArgs "--hxhx-no-emit") else ());
+                  ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.magic (!tempStruct)) "noRun") then ignore (HxArray.push unitArgs "--hxhx-no-run") else ());
+                  ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.magic (!tempStruct)) "emitFullBodies") then ignore (HxArray.push unitArgs "--hxhx-emit-full-bodies") else ());
+                  ignore (if Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "outDir") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "outDir")) > 0 && not (hasFlag (Obj.magic u) ("--hxhx-out" : string)) then ignore ((
+                    ignore (HxArray.push unitArgs "--hxhx-out");
+                    HxArray.push unitArgs ((HxString.toStdString (Obj.obj (HxAnon.get (Obj.magic (!tempStruct)) "outDir")) ^ "_u") ^ string_of_int idx)
+                  )) else ());
+                  let _g2 = ref 0 in (
+                    ignore (while !_g2 < HxArray.length u do ignore (let a = (HxArray.get (Obj.magic u) (!_g2) : string) in (
+                      ignore (let __old_752 = !_g2 in let __new_753 = HxInt.add __old_752 1 in (
+                        ignore (_g2 := __new_753);
+                        __new_753
+                      ));
+                      HxArray.push unitArgs a
+                    )) done);
+                    ignore (if HxString.equals (HxSys.getEnv "HXHX_TRACE_UNITS") "1" then ignore (let main = (findFlagValue (Obj.magic u) ("-main" : string) ("--main" : string) : string) in let cp = Obj.magic (findManyFlagValues (Obj.magic u) ("-cp" : string) ("--class-path" : string) ("-p" : string)) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                      ignore (if main == Obj.magic (HxRuntime.hx_null) then let __assign_754 = Obj.magic ("<none>" : string) in (
+                        tempMaybeString := __assign_754;
+                        __assign_754
+                      ) else let __assign_755 = Obj.magic (main : string) in (
+                        tempMaybeString := __assign_755;
+                        __assign_755
+                      ));
+                      print_endline ((((((("hxhx(stage3): unit_begin idx=" ^ string_of_int idx) ^ " main=") ^ HxString.toStdString (!tempMaybeString)) ^ " cp=") ^ HxString.toStdString (HxArray.join cp "," (fun x -> x))) ^ " args=") ^ HxString.toStdString (summarizeArgs (Obj.magic u)))
+                    )) else ());
+                    let code = runOne (Obj.magic unitArgs) in if code <> 0 then raise (HxRuntime.Hx_return (Obj.repr code)) else ()
+                  )
                 )
-              )) done);
+              )) with
+                | HxRuntime.Hx_continue -> () done with
+                | HxRuntime.Hx_break -> ());
               0
             )
           )
