@@ -33,7 +33,7 @@ replacement claim:
 | --- | --- | --- | --- | --- |
 | upstream Haxe to hxhx | upstream Haxe 4.3.7 | `hxhx` strict plugin host | Build the `reflaxe.ocaml` plugin artifact with upstream Haxe, then load and exercise it in `hxhx` with stage0 forbidden. | `haxe.ocaml-f1cl.8.2` |
 | hxhx strict to hxhx | `hxhx` strict, stage0 forbidden | `hxhx` strict plugin host | Build the `reflaxe.ocaml` plugin artifact with `hxhx`, then load and exercise it in `hxhx` without stage0 fallback. | `haxe.ocaml-f1cl.8.3` |
-| explicit upstream Haxe host-adapter proof | upstream Haxe 4.3.7 | upstream Haxe host adapter boundary | Prove the upstream-host adapter story explicitly so upstream-built plugin artifacts have a reviewed compatibility explanation, not an implied one. | `haxe.ocaml-f1cl.8.4` |
+| explicit upstream Haxe host-adapter proof | upstream Haxe 4.3.7 | upstream Haxe eval host adapter boundary | Load the `reflaxe.ocaml` artifact through `eval.vm.Context.loadPlugin` and record the exact upstream compiler that produced the artifact. | `haxe.ocaml-f1cl.8.4` |
 
 ## Required Markers
 
@@ -48,6 +48,8 @@ Runtime/evidence markers:
   `hxhx` matrix row.
 - `REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS` proves the strict `hxhx` to
   `hxhx` matrix row.
+- `REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS` proves the explicit
+  upstream Haxe eval host-adapter row through `eval.vm.Context.loadPlugin`.
 - `FULL1_PLUGIN_PARITY:PASS` is the Full 1.0 aggregate plugin parity marker.
 
 `FULL1_PLUGIN_PARITY:PASS` must not be emitted until all blocking
@@ -71,4 +73,6 @@ Runtime/evidence markers:
   - Runnable proof: `npm run test:full1:plugin:hxhx-to-hxhx`.
   - Row marker: `REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS`.
 - `haxe.ocaml-f1cl.8.4`: Explicit upstream Haxe host-adapter proof for reflaxe.ocaml artifacts.
+  - Runnable proof: `npm run test:full1:plugin:upstream-host-adapter`.
+  - Row marker: `REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS`.
 - `haxe.ocaml-f1cl.8.5`: CI workflow: Gate Full1 plugin parity.

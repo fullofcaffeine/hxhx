@@ -39,6 +39,7 @@ Current repo contracts already reflect this:
 The proven upstream-host path today is the explicit host-adapter/plugin workflow:
 
 - `RPMX_HAXE_PLUGIN:PASS`
+- `REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS`
 
 That proof builds a real Reflaxe workload through upstream Haxe and `reflaxe.ocaml`, then records host/compiler/artifact provenance explicitly. It does not claim that upstream Haxe has a true compiler-target plugin surface.
 
@@ -114,9 +115,11 @@ The supported upstream path should continue to be validated with:
 
 1. upstream-host build/provenance proof
    - `bash scripts/ci/run-rpmx-haxe-plugin-proof.sh`
-2. eval-host adapter smoke
+2. Full 1.0 upstream-host adapter proof
+   - `bash scripts/ci/run-full1-plugin-upstream-host-adapter-proof.sh`
+3. eval-host adapter smoke
    - `bash scripts/hxhx/run-promotion-eval-smoke.sh`
-3. docs/contracts guardrails
+4. docs/contracts guardrails
    - `npm run -s ci:guards`
 
 When the upstream host is built in a non-system OCaml toolchain, the proof lane

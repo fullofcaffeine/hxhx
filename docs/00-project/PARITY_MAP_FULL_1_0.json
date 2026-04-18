@@ -237,6 +237,19 @@
       "enforcement": "planned"
     },
     {
+      "id": "F1-PM-11D",
+      "suite": "full-plugin-upstream-host-adapter",
+      "lane": "full",
+      "targets": [
+        "plugin",
+        "reflaxe.ocaml"
+      ],
+      "profile": "upstream Haxe 4.3.7 artifact loaded by explicit eval host adapter",
+      "marker": "REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS",
+      "workflow": "scripts/ci/run-full1-plugin-upstream-host-adapter-proof.sh",
+      "enforcement": "planned"
+    },
+    {
       "id": "F1-PM-12",
       "suite": "full-perf-policy",
       "lane": "full",

@@ -214,6 +214,7 @@
     "test:full1:eval-native": "node scripts/ci/run-full1-eval-native.js",
     "test:full1:plugin:upstream-to-hxhx": "bash scripts/ci/run-full1-plugin-upstream-to-hxhx-proof.sh",
     "test:full1:plugin:hxhx-to-hxhx": "bash scripts/ci/run-full1-plugin-hxhx-to-hxhx-proof.sh",
+    "test:full1:plugin:upstream-host-adapter": "bash scripts/ci/run-full1-plugin-upstream-host-adapter-proof.sh",
     "test:reflaxe-ocaml:haxe-matrix": "node scripts/ci/run-reflaxe-ocaml-haxe-matrix.js",
     "test:reflaxe-ocaml:perf": "node scripts/ci/run-reflaxe-ocaml-perf.js",
     "test:rpmx:haxe-plugin": "bash scripts/ci/run-rpmx-haxe-plugin-proof.sh",
