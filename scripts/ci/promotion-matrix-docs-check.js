@@ -54,7 +54,7 @@ function main() {
 
   requireIncludes(files.contract, contract, 'RO_PROMOTION_MATRIX:PASS')
   requireIncludes(files.tradeoffs, tradeoffs, 'Aggregate status: not claimable yet')
-  requireIncludes(files.tradeoffs, tradeoffs, 'RPMX_HXHX_BUILTIN:BLOCKED')
+  requireIncludes(files.tradeoffs, tradeoffs, 'RPMX_HXHX_BUILTIN:PASS')
   requireIncludes(files.tradeoffs, tradeoffs, 'RPMX_HXHX_PLUGIN:PASS')
   requireIncludes(files.choose, choose, 'Default recommendation')
   requireIncludes(files.choose, choose, 'official external native path')

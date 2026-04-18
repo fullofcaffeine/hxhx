@@ -2626,6 +2626,12 @@ class EmitterStage {
 				// Special-case a tiny slice of runtime I/O so bring-up server binaries can function
 				// before the full runtime is modeled. Cases that need local type predicates stay here.
 				switch (callee) {
+					case EField(sysObj, "stdin") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
+						return "(Sys_io_Stdio.stdin ())";
+					case EField(sysObj, "stdout") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
+						return "(Sys_io_Stdio.stdout ())";
+					case EField(sysObj, "stderr") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
+						return "(Sys_io_Stdio.stderr ())";
 					case EField(sysObj, "println") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
 						return "print_endline ("
 							+ exprToOcamlString(args[0], tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -6007,6 +6013,44 @@ class EmitterStage {
 			"let doubleToI64 = fun v -> let parts = Obj.magic (HxFPHelper.doubleToI64Parts v) in let x = Obj.magic (Haxe_Int64.make (HxArray.get (Obj.magic parts) 1) (HxArray.get (Obj.magic parts) 0)) in let tempResult = x in tempResult\n");
 		if (generatedPaths.indexOf(fpHelperPath) == -1)
 			generatedPaths.push(fpHelperPath);
+
+		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Haxe_io_Input",
+			"(* hxhx(stage3) bootstrap shim: haxe.io.Input *)\n"
+			+ "type t = {\n"
+			+ "  __hx_type : Obj.t;\n"
+			+ "  readLine : Obj.t -> unit -> string;\n"
+			+ "  readByte : Obj.t -> unit -> int;\n"
+			+ "  close : Obj.t -> unit -> unit;\n"
+			+ "}\n"
+			+ "let set_bigEndian__impl _ v = v\n"
+			+ "let close__impl _ () = ()\n"));
+
+		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Haxe_io_Output",
+			"(* hxhx(stage3) bootstrap shim: haxe.io.Output *)\n"
+			+ "type t = {\n"
+			+ "  __hx_type : Obj.t;\n"
+			+ "  writeString : Obj.t -> string -> Obj.t -> unit;\n"
+			+ "  writeByte : Obj.t -> int -> unit;\n"
+			+ "  flush : Obj.t -> unit -> unit;\n"
+			+ "  close : Obj.t -> unit -> unit;\n"
+			+ "}\n"
+			+ "let set_bigEndian__impl _ v = v\n"
+			+ "let close__impl _ () = ()\n"));
+
+		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Sys_io_Stdio",
+			"(* hxhx(stage3) bootstrap shim: sys.io.Stdio *)\n"
+			+ "type t = { __hx_type : Obj.t }\n"
+			+ "type ocamlstdioinput_t = int\n"
+			+ "type ocamlstdiooutput_t = int\n"
+			+ "let create () = { __hx_type = HxType.class_ \"sys.io.Stdio\" }\n"
+			+ "let __empty () = { __hx_type = HxType.class_ \"sys.io.Stdio\" }\n"
+			+ "let ocamlstdioinput_create stream = stream\n"
+			+ "let ocamlstdioinput___empty () = ocamlstdioinput_create HxStdio.stdin_stream\n"
+			+ "let ocamlstdiooutput_create stream = stream\n"
+			+ "let ocamlstdiooutput___empty () = ocamlstdiooutput_create HxStdio.stdout_stream\n"
+			+ "let stdin () = ocamlstdioinput_create HxStdio.stdin_stream\n"
+			+ "let stdout () = ocamlstdiooutput_create HxStdio.stdout_stream\n"
+			+ "let stderr () = ocamlstdiooutput_create HxStdio.stderr_stream\n"));
 
 		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Reflect",
 			"(* hxhx(stage3) bootstrap shim: Reflect *)\n"

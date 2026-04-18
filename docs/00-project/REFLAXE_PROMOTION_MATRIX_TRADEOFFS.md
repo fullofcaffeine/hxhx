@@ -1,16 +1,16 @@
 # Reflaxe Promotion Matrix Tradeoffs
 
-Last audited: 2026-04-14
+Last audited: 2026-04-18
 
 This page compares the supported promotion paths named by
 `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`.
 
 Aggregate status: not claimable yet.
 
-Reason: the current tree has an official hxhx plugin-hosted Reflaxe.elixir
-native pilot and an upstream-host plugin proof script, but the hxhx built-in
-external Reflaxe compiler proof is still explicitly blocked. Until that built-in
-proof emits `RPMX_HXHX_BUILTIN:PASS`, this repo must not emit or claim
+Reason: all three per-path proof markers now have runnable script surfaces, but
+aggregate closure still requires a current full matrix run plus measured
+performance/operational comparison artifacts from the same evidence window.
+Until that combined evidence exists, this repo must not emit or claim
 `RO_PROMOTION_MATRIX:PASS`.
 
 ## Evidence Status
@@ -18,7 +18,7 @@ proof emits `RPMX_HXHX_BUILTIN:PASS`, this repo must not emit or claim
 | Path | Script | Current marker | Status |
 | --- | --- | --- | --- |
 | `haxe + reflaxe.ocaml -> plugin` | `npm run test:rpmx:haxe-plugin` | `RPMX_HAXE_PLUGIN:PASS` | Runnable proof script exists. |
-| `hxhx + reflaxe.ocaml -> built-in target` | `npm run test:rpmx:hxhx-builtin` | `RPMX_HXHX_BUILTIN:BLOCKED` | No runnable external Reflaxe compiler built-in proof in current tree. |
+| `hxhx + reflaxe.ocaml -> built-in target` | `npm run test:rpmx:hxhx-builtin` | `RPMX_HXHX_BUILTIN:PASS` | Builds the pinned Reflaxe.elixir `Run` compiler entrypoint through non-delegating hxhx `--ocaml` and records the native executable artifact. |
 | `hxhx + reflaxe.ocaml -> plugin` | `npm run test:rpmx:hxhx-plugin` | `RPMX_HXHX_PLUGIN:PASS` | Wrapper over the pinned Reflaxe.elixir native promotion pilot. |
 
 ## Same Workload Family
@@ -27,9 +27,8 @@ The pressure-test family is Reflaxe.elixir:
 
 - Upstream plugin proof uses the external Reflaxe.elixir generator source path.
 - hxhx plugin proof uses the pinned Reflaxe.elixir todo-app promotion pilot.
-- hxhx built-in proof is intentionally blocked until the native built-in path can
-  exercise an external Reflaxe compiler without pretending plugin evidence is a
-  built-in result.
+- hxhx built-in proof compiles and native-builds the pinned Reflaxe.elixir
+  `Run` compiler entrypoint through the built-in `--ocaml` path.
 
 ## Tradeoff Summary
 
@@ -51,22 +50,25 @@ evidence.
 `hxhx + reflaxe.ocaml -> plugin` loses on operational simplicity. The plugin
 artifact, manifest, OCaml ABI, and host binary must line up.
 
-`hxhx + reflaxe.ocaml -> built-in target` loses today because the external
-Reflaxe.elixir compiler proof is not implemented. It should not be recommended
-as the external compiler default until the blocked proof turns into a real pass.
+`hxhx + reflaxe.ocaml -> built-in target` loses when operational decoupling is
+more important than packaging simplicity. The proof now builds a native
+Reflaxe.elixir compiler entrypoint, but the path still couples backend
+promotion to the hxhx distribution instead of a separately shipped plugin
+artifact.
 
 ## Recommended Defaults
 
 For external Reflaxe compilers, use the hxhx plugin-hosted promotion path as the
-official external native path today.
+default external native path when independent artifact rollout matters.
 
 For upstream compatibility and baseline behavior, use upstream
 `haxe + reflaxe.ocaml`.
 
-For built-in distribution work, use the built-in path only for backends already
-owned by the hxhx distribution, such as the current linked JS/OCaml target cores.
-Do not use it to claim Reflaxe.elixir external native promotion until
-`RPMX_HXHX_BUILTIN:PASS` exists.
+For built-in distribution work, use the built-in path when no plugin artifact is
+desired and the tighter hxhx release coupling is acceptable. The current
+`RPMX_HXHX_BUILTIN:PASS` marker proves compile/native-build viability for the
+pinned Reflaxe.elixir compiler entrypoint; it does not by itself prove every
+Reflaxe.elixir generated-target runtime scenario.
 
 ## Closure Rule
 

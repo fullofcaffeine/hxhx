@@ -78,24 +78,24 @@ Use this when:
 - you control release packaging,
 - and you want no runtime plugin artifact.
 
-Do not choose this as the external Reflaxe.elixir default yet. The current
-built-in external compiler proof is explicitly blocked:
+Use this as a compile/native-build proof lane for external Reflaxe compiler
+promotion when you need to prove the hxhx built-in `reflaxe.ocaml` path can
+build the compiler entrypoint without a runtime plugin artifact:
 
 ```bash
 npm run test:rpmx:hxhx-builtin
 ```
 
-Current blocked marker:
-
-```text
-RPMX_HXHX_BUILTIN:BLOCKED
-```
-
-The marker required for aggregate promotion-matrix closure is:
+Current success marker:
 
 ```text
 RPMX_HXHX_BUILTIN:PASS
 ```
+
+This proof builds the pinned Reflaxe.elixir `Run` compiler entrypoint through
+non-delegating hxhx `--ocaml` and records the resulting native executable in
+`.artifacts/rpmx/hxhx-builtin/<run-id>/`. It is compile/native-build evidence,
+not a replacement for end-to-end external target runtime validation.
 
 ## Raw Source-Host Reflaxe HXML
 
@@ -112,5 +112,6 @@ isolating a target-level issue.
 Move to hxhx plugin-hosted promotion when you need native hxhx infrastructure
 with external compiler workloads.
 
-Move to hxhx built-in only after the backend is owned by the hxhx distribution
-and the current built-in proof emits `RPMX_HXHX_BUILTIN:PASS`.
+Move to hxhx built-in when you need no plugin artifact and you can accept the
+tighter release/distribution coupling. Keep hxhx plugin-hosted promotion as the
+default external Reflaxe path when operational decoupling matters more.
