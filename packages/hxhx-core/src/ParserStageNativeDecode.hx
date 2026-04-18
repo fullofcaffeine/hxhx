@@ -302,7 +302,7 @@ class ParserStageNativeDecode {
 		final vis = visLine == "private" ? HxVisibility.Private : HxVisibility.Public;
 		final isStatic = (lines.length > 2 ? lines[2] : "1") == "1";
 		final typeHint = lines.length > 3 ? lines[3] : "";
-		final initRaw = lines.length > 4 ? lines.slice(4).join("\n") : "";
+		final initRaw = lines.length > 4 ? trimCapturedFieldInitializer(lines.slice(4).join("\n")) : "";
 		var init:Null<HxExpr> = null;
 		if (initRaw.length > 0)
 			init = true ? parseReturnExprText(initRaw) : null;
@@ -311,6 +311,38 @@ class ParserStageNativeDecode {
 
 	static function decodeStaticFinalPayload(payload:String):Null<HxFieldDecl> {
 		return decodeFieldPayload(payload, true);
+	}
+
+	static function trimCapturedFieldInitializer(raw:String):String {
+		final text = StringTools.trim(raw == null ? "" : raw);
+		if (!StringTools.startsWith(text, "switch"))
+			return text;
+		final end = balancedSwitchEnd(text);
+		return end > 0 ? StringTools.trim(text.substr(0, end)) : text;
+	}
+
+	static function balancedSwitchEnd(text:String):Int {
+		var braceStart = -1;
+		for (i in 0...text.length) {
+			if (text.charCodeAt(i) == "{".code) {
+				braceStart = i;
+				break;
+			}
+		}
+		if (braceStart < 0)
+			return -1;
+		var depth = 0;
+		for (i in braceStart...text.length) {
+			final c = text.charCodeAt(i);
+			if (c == "{".code) {
+				depth += 1;
+			} else if (c == "}".code) {
+				depth -= 1;
+				if (depth == 0)
+					return i + 1;
+			}
+		}
+		return -1;
 	}
 
 	static function stripNewTypeParams(raw:String):String {

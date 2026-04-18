@@ -3613,7 +3613,16 @@ class HxParser {
 							init = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof) || cur.kind.match(TRBrace));
 							initText = StringTools.trim(sliceSource(initStart, currentIndex()));
 						}
-						expect(TSemicolon, "';'");
+						if (cur.kind.match(TSemicolon)) {
+							bump();
+						} else if (init != null && isSemicolonlessFieldInitializer(init) && isClassMemberBoundary()) {
+							// Haxe permits semicolonless block-expression field initializers:
+							// `var x = switch (...) { ... }` followed by the next member.
+							// Accept that form so switch field initializers do not absorb the
+							// rest of the class during Stage3 bring-up parsing.
+						} else {
+							expect(TSemicolon, "';'");
+						}
 						fields.push(new HxFieldDecl(name, visibility, isStatic, typeHint, init, metadata, memberStart, cur.getPos(), sawFinal, propertyGet,
 							propertySet, initText));
 						continue;
@@ -3633,6 +3642,38 @@ class HxParser {
 			}
 		}
 		return {functions: funcs, fields: fields};
+	}
+
+	function isSemicolonlessFieldInitializer(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ESwitch(_, _, _) | ESwitchRaw(_) | ETryCatchRaw(_):
+				true;
+			case _:
+				false;
+		}
+	}
+
+	function isClassMemberBoundary():Bool {
+		return switch (cur.kind) {
+			case TRBrace:
+				true;
+			case TEof:
+				true;
+			case TKeyword(keyword):
+				final text = keywordText(keyword);
+				text == "public"
+				|| text == "private"
+				|| text == "static"
+				|| text == "inline"
+				|| text == "final"
+				|| text == "var"
+				|| text == "function";
+			case TIdent(name): name == "macro" || name == "extern" || name == "override";
+			case TOther(c):
+				c == "@".code;
+			case _:
+				false;
+		}
 	}
 
 	/**

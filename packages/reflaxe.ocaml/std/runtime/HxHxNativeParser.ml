@@ -316,10 +316,23 @@ let parse_module_from_tokens (src : string) (toks : token array)
        (upstream patterns often declare helper types first, then the main one). *)
 
   let tok_to_text (t : token) : string =
+    let escape_haxe_string_literal (s : string) : string =
+      let b = Buffer.create (Stdlib.String.length s) in
+      Stdlib.String.iter
+        (function
+          | '\\' -> Buffer.add_string b "\\\\"
+          | '"' -> Buffer.add_string b "\\\""
+          | '\n' -> Buffer.add_string b "\\n"
+          | '\r' -> Buffer.add_string b "\\r"
+          | '\t' -> Buffer.add_string b "\\t"
+          | c -> Buffer.add_char b c)
+        s;
+      Buffer.contents b
+    in
     match t with
     | Kw (s, _) -> s
     | Ident (s, _) -> s
-    | String (s, _) -> "\"" ^ s ^ "\""
+    | String (s, _) -> "\"" ^ escape_haxe_string_literal s ^ "\""
     | Regex (s, _) -> s
     | Sym (c, _) -> Stdlib.String.make 1 c
     | Eof _ -> ""

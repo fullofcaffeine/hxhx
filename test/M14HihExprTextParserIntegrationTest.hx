@@ -378,6 +378,28 @@ class M14HihExprTextParserIntegrationTest {
 		assertTrue(scannedMacroFuncs.length == 1, "expected scanner to find macro helper function");
 		assertTrue(HxFunctionDecl.getMetadata(scannedMacroFuncs[0]).indexOf("macro") >= 0, "expected scanner macro modifier metadata");
 
+		final semicolonlessSwitchFieldSource = [
+			"class TestFileSystem {",
+			'  var tailingSlashes = switch (Sys.systemName()) {',
+			'    case "Windows": ["", "/", "\\\\"];',
+			'    case _: ["", "/"];',
+			"  }",
+			"  public function setup() {}",
+			"}"
+		].join("\n");
+		final semicolonlessSwitchFieldDecl = new HxParser(semicolonlessSwitchFieldSource).parseModule("TestFileSystem");
+		final semicolonlessSwitchFields = HxClassDecl.getFields(HxModuleDecl.getMainClass(semicolonlessSwitchFieldDecl));
+		assertTrue(semicolonlessSwitchFields.length == 1, "expected semicolonless switch field initializer to parse as one field");
+		switch (HxFieldDecl.getInit(semicolonlessSwitchFields[0])) {
+			case ESwitch(_, patterns, exprs):
+				assertTrue(patterns.length == 2, "expected switch field initializer cases");
+				assertTrue(exprs.length == 2, "expected switch field initializer branch expressions");
+			case EUnsupported(raw):
+				fail("semicolonless switch field initializer parsed as unsupported: " + raw);
+			case _:
+				fail("expected switch field initializer to parse structurally");
+		}
+
 		final localIfThrowStmts = HxParser.parseFunctionBodyText("function negativeOnly(i:Int) { if(i >= 0) throw new ArgumentException('i'); } negativeOnly(10);");
 		assertTrue(localIfThrowStmts.length == 2, "expected local if/throw function plus call statement");
 		switch (localIfThrowStmts[0]) {

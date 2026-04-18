@@ -921,6 +921,31 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		}
 	}
 
+	static function assertNativeSwitchFieldInitializerDecode():Void {
+		final init = 'switch(Sys.systemName()){case "Windows":["","/","\\\\"];case _:["","/"];} public function setup(){}';
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("class", "TestFileSystem"),
+			"ast static_main 0",
+			protocolLine("field", "tailingSlashes\npublic\n0\n\n" + init),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
+		final fields = HxClassDecl.getFields(HxModuleDecl.getMainClass(decl));
+		assertTrue(fields.length == 1, "native switch field initializer should decode one field");
+		final field = fields[0];
+		assertTrue(HxFieldDecl.getInitText(field).indexOf("public function setup") < 0, "native switch field initializer should trim following class members");
+		switch (HxFieldDecl.getInit(field)) {
+			case HxExpr.ESwitch(HxExpr.ECall(HxExpr.EField(HxExpr.EIdent("Sys"), "systemName"), []), patterns, exprs):
+				assertTrue(patterns.length == 2, "native switch field initializer should preserve cases");
+				assertTrue(exprs.length == 2, "native switch field initializer should preserve branch values");
+			case HxExpr.EUnsupported(raw):
+				throw "native switch field initializer parsed as unsupported: " + raw;
+			case _:
+				throw "native switch field initializer should decode as switch expression";
+		}
+	}
+
 	static function assertScannedHelperClassInheritance():Void {
 		final source = [
 			"class Base {}",
@@ -1003,6 +1028,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function main():Void {
 		assertNativeStaticFinalDecode();
+		assertNativeSwitchFieldInitializerDecode();
 		assertScannedHelperClassInheritance();
 		assertScannedHelperAbstractExpressionBody();
 

@@ -76,6 +76,22 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertTrue(snapshot.indexOf('"extern"') >= 0, "bootstrap native parser snapshot must accept extern as a path segment");
 	}
 
+	static function assertBootstrapNativeParserEscapesStringTokenText():Void {
+		final sourcePath = "packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml";
+		final source = readOptional(sourcePath);
+		assertTrue(source != null, "missing native parser source at " + sourcePath);
+		assertTrue(source.indexOf("let escape_haxe_string_literal") >= 0, "native parser source must escape string token text");
+		assertTrue(source.indexOf('String (s, _) -> "\\"" ^ escape_haxe_string_literal s ^ "\\""') >= 0,
+			"native parser source must re-render string tokens as escaped Haxe string literals");
+
+		final snapshotPath = "packages/hxhx/bootstrap_out/runtime/HxHxNativeParser.ml";
+		final snapshot = readOptional(snapshotPath);
+		assertTrue(snapshot != null, "missing committed bootstrap native parser snapshot at " + snapshotPath);
+		assertTrue(snapshot.indexOf("let escape_haxe_string_literal") >= 0, "bootstrap native parser snapshot must escape string token text");
+		assertTrue(snapshot.indexOf('String (s, _) -> "\\"" ^ escape_haxe_string_literal s ^ "\\""') >= 0,
+			"bootstrap native parser snapshot must re-render string tokens as escaped Haxe string literals");
+	}
+
 	static function assertParsedGenericMethods(decl:HxModuleDecl, sourceLabel:String):Void {
 		final cls = findClass(decl, "GenericMethods");
 
@@ -116,6 +132,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
 		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
 		assertBootstrapNativeParserAllowsKeywordPathSegments();
+		assertBootstrapNativeParserEscapesStringTokenText();
 
 		final src = '@:generic class GenericMethods<T> {\n'
 			+ '  public function new() {}\n'
