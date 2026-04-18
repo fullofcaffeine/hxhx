@@ -52,12 +52,20 @@ require_cmd node
 require_cmd ocamlopt
 require_cmd haxe
 
+now_ms() {
+  node -e 'process.stdout.write(String(Date.now()))'
+}
+
+total_start_ms="$(now_ms)"
+
 if [ -z "${OCAMLOPT:-}" ] && [ -x "$OCAMLOPT_WRAPPER" ]; then
   export OCAMLOPT="$OCAMLOPT_WRAPPER"
 fi
 
+source_start_ms="$(now_ms)"
 source_repo="$(resolve_source_repo)"
 source_commit="$(git -C "$source_repo" rev-parse HEAD)"
+source_end_ms="$(now_ms)"
 for rel in src vendor/reflaxe/src vendor/phoenix_shared/src; do
   if [ ! -d "$source_repo/$rel" ]; then
     echo "rpmx hxhx builtin proof: missing source path: $source_repo/$rel" >&2
@@ -69,7 +77,9 @@ if [ ! -f "$source_repo/src/Run.hx" ]; then
   exit 2
 fi
 
+hxhx_start_ms="$(now_ms)"
 hxhx_bin="$(resolve_hxhx_bin)"
+hxhx_end_ms="$(now_ms)"
 if [ ! -x "$hxhx_bin" ] && [[ "$hxhx_bin" != *.bc ]]; then
   echo "rpmx hxhx builtin proof: failed to resolve executable hxhx binary: $hxhx_bin" >&2
   exit 2
@@ -88,6 +98,7 @@ out_dir="$WORK_DIR/out"
 stdout_log="$ARTIFACT_DIR/compile.stdout.log"
 stderr_log="$ARTIFACT_DIR/compile.stderr.log"
 
+compile_start_ms="$(now_ms)"
 set +e
 HXHX_FORBID_STAGE0=1 "${hxhx_cmd[@]}" \
   --ocaml \
@@ -101,6 +112,7 @@ HXHX_FORBID_STAGE0=1 "${hxhx_cmd[@]}" \
   >"$stdout_log" 2>"$stderr_log"
 compile_code="$?"
 set -e
+compile_end_ms="$(now_ms)"
 
 cat "$stdout_log"
 if [ "$compile_code" -ne 0 ]; then
@@ -117,14 +129,39 @@ if [ ! -x "$built_exe" ]; then
 fi
 
 exe_copy="$ARTIFACT_DIR/out.exe"
+artifact_start_ms="$(now_ms)"
 cp "$built_exe" "$exe_copy"
 exe_sha256="$(shasum -a 256 "$exe_copy" | awk '{print $1}')"
 printf '%s  out.exe\n' "$exe_sha256" >"$ARTIFACT_DIR/out.exe.sha256"
+artifact_end_ms="$(now_ms)"
+total_end_ms="$(now_ms)"
 
 summary="$ARTIFACT_DIR/rpmx-hxhx-builtin.summary.json"
-node - "$summary" "$source_repo" "$source_commit" "$hxhx_bin" "$hxhx_mode" "$out_dir" "$exe_copy" "$exe_sha256" "$stdout_log" "$stderr_log" <<'NODE'
+node - "$summary" "$source_repo" "$source_commit" "$hxhx_bin" "$hxhx_mode" "$out_dir" "$exe_copy" "$exe_sha256" "$stdout_log" "$stderr_log" "$total_start_ms" "$total_end_ms" "$source_start_ms" "$source_end_ms" "$hxhx_start_ms" "$hxhx_end_ms" "$compile_start_ms" "$compile_end_ms" "$artifact_start_ms" "$artifact_end_ms" <<'NODE'
 const fs = require('fs')
-const [summaryPath, sourceRepo, sourceCommit, hxhxBin, hxhxMode, outDir, exePath, exeSha256, stdoutLog, stderrLog] = process.argv.slice(2)
+const [
+  summaryPath,
+  sourceRepo,
+  sourceCommit,
+  hxhxBin,
+  hxhxMode,
+  outDir,
+  exePath,
+  exeSha256,
+  stdoutLog,
+  stderrLog,
+  totalStartMs,
+  totalEndMs,
+  sourceStartMs,
+  sourceEndMs,
+  hxhxStartMs,
+  hxhxEndMs,
+  compileStartMs,
+  compileEndMs,
+  artifactStartMs,
+  artifactEndMs,
+] = process.argv.slice(2)
+const seconds = (start, end) => Number(((Number(end) - Number(start)) / 1000).toFixed(3))
 fs.writeFileSync(summaryPath, JSON.stringify({
   workload: 'reflaxe-elixir-compiler-run-entrypoint',
   proof: {
@@ -145,6 +182,13 @@ fs.writeFileSync(summaryPath, JSON.stringify({
     builtExecutableSha256: exeSha256,
     stdoutLog,
     stderrLog,
+  },
+  timings: {
+    totalSeconds: seconds(totalStartMs, totalEndMs),
+    sourceResolveSeconds: seconds(sourceStartMs, sourceEndMs),
+    hxhxResolveSeconds: seconds(hxhxStartMs, hxhxEndMs),
+    compileSeconds: seconds(compileStartMs, compileEndMs),
+    artifactSeconds: seconds(artifactStartMs, artifactEndMs),
   },
   result: 'RPMX_HXHX_BUILTIN:PASS',
 }, null, 2) + '\n')

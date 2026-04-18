@@ -1,6 +1,6 @@
 # Choose a Reflaxe Promotion Path
 
-Last audited: 2026-04-14
+Last audited: 2026-04-18
 
 This is the operator-facing recommendation page for choosing between Reflaxe
 promotion paths.
@@ -16,13 +16,22 @@ Tradeoff snapshot:
 Default recommendation: for external Reflaxe compilers, use the hxhx plugin-host
 adapter path as the official external native path today.
 
+Current evidence window: 2026-04-18, pinned Reflaxe.elixir commit
+`5b322236e0627f8322394e819cf28ba6c1271a83`.
+
+Current aggregate marker:
+
+```text
+RO_PROMOTION_MATRIX:PASS
+```
+
 ## Quick Decision Table
 
 | If you need | Choose | Why |
 | --- | --- | --- |
 | Upstream-compatible baseline behavior | `haxe + reflaxe.ocaml -> plugin` | It keeps upstream Haxe semantics and is the easiest comparison oracle. |
-| External Reflaxe compiler promotion through hxhx native infrastructure | `hxhx + reflaxe.ocaml -> plugin` | It is the current official external native path and has a pinned Reflaxe.elixir pilot. |
-| Backend logic shipped inside hxhx | hxhx built-in backend | Use only when the backend is owned by the hxhx distribution. |
+| External Reflaxe compiler promotion through hxhx native infrastructure | `hxhx + reflaxe.ocaml -> plugin` | It is the current official external native path, has a pinned Reflaxe.elixir pilot, and keeps rollout decoupled from hxhx releases. |
+| Backend logic shipped inside hxhx | hxhx built-in backend | Use only when the backend is owned by the hxhx distribution and the tighter release coupling is acceptable. |
 
 ## Path A: Upstream Haxe Plugin
 
@@ -43,6 +52,14 @@ Expected success marker:
 ```text
 RPMX_HAXE_PLUGIN:PASS
 ```
+
+Current timed artifact:
+
+```text
+.artifacts/rpmx/haxe-plugin/20260418-060631/rpmx-haxe-plugin.summary.json
+```
+
+Measured proof total: 3.969s.
 
 Main cost: this is not non-delegating hxhx native evidence.
 
@@ -68,6 +85,16 @@ Expected success marker:
 RPMX_HXHX_PLUGIN:PASS
 ```
 
+Current timed artifact:
+
+```text
+.artifacts/rpmx/hxhx-plugin/20260418-060711/rpmx-hxhx-plugin.summary.json
+```
+
+Measured proof total: 3.911s with a reused hxhx bytecode binary. The pilot
+breakdown records 0.265s plugin promotion, 2.281s hxhx compile, and 0.044s
+generated Node execution.
+
 Main cost: plugin artifacts and host ABI must be deployed together.
 
 ## Path C: hxhx Built-in Backend
@@ -91,6 +118,15 @@ Current success marker:
 ```text
 RPMX_HXHX_BUILTIN:PASS
 ```
+
+Current timed artifact:
+
+```text
+.artifacts/rpmx/hxhx-builtin/20260418-120644/rpmx-hxhx-builtin.summary.json
+```
+
+Measured proof total: 17.365s with a reused hxhx bytecode binary. The hxhx
+Stage3 compile/native-build phase accounts for 17.137s.
 
 This proof builds the pinned Reflaxe.elixir `Run` compiler entrypoint through
 non-delegating hxhx `--ocaml` and records the resulting native executable in

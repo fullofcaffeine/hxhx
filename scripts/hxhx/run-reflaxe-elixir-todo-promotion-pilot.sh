@@ -21,6 +21,12 @@ require_cmd dune
 require_cmd ocamlopt
 require_cmd haxe
 
+now_ms() {
+  node -e 'process.stdout.write(String(Date.now()))'
+}
+
+total_start_ms="$(now_ms)"
+
 if [ ! -x "$FETCH_SCRIPT" ]; then
   echo "reflaxe-elixir todo pilot: missing fetch script: $FETCH_SCRIPT" >&2
   exit 1
@@ -40,6 +46,7 @@ fi
 
 source_repo="${REFLAXE_ELIXIR_DIR:-}"
 source_commit=""
+source_start_ms="$(now_ms)"
 if [ -z "$source_repo" ]; then
   fetch_output="$(bash "$FETCH_SCRIPT")"
   printf '%s\n' "$fetch_output"
@@ -52,6 +59,7 @@ else
   fi
   source_commit="$(git -C "$source_repo" rev-parse HEAD)"
 fi
+source_end_ms="$(now_ms)"
 
 todo_src="$source_repo/examples/todo-app/src_haxe"
 if [ ! -d "$todo_src" ]; then
@@ -60,12 +68,20 @@ if [ ! -d "$todo_src" ]; then
 fi
 
 HXHX_BIN_RESOLVED="${HXHX_BIN:-}"
-if [ -z "$HXHX_BIN_RESOLVED" ] || [ ! -x "$HXHX_BIN_RESOLVED" ]; then
+if [ -z "$HXHX_BIN_RESOLVED" ] || { [ ! -x "$HXHX_BIN_RESOLVED" ] && [[ "$HXHX_BIN_RESOLVED" != *.bc ]]; }; then
   HXHX_BIN_RESOLVED="$(bash "$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
 fi
-if [ ! -x "$HXHX_BIN_RESOLVED" ]; then
+if [ ! -x "$HXHX_BIN_RESOLVED" ] && [[ "$HXHX_BIN_RESOLVED" != *.bc ]]; then
   echo "reflaxe-elixir todo pilot: failed to resolve executable hxhx binary: $HXHX_BIN_RESOLVED" >&2
   exit 2
+fi
+if [[ "$HXHX_BIN_RESOLVED" == *.bc ]]; then
+  require_cmd ocamlrun
+  HXHX_CMD=(ocamlrun "$HXHX_BIN_RESOLVED")
+  HXHX_MODE="bytecode"
+else
+  HXHX_CMD=("$HXHX_BIN_RESOLVED")
+  HXHX_MODE="native"
 fi
 
 tmp_root="$(mktemp -d)"
@@ -76,12 +92,11 @@ trap cleanup EXIT
 
 promoted_out="$tmp_root/promoted"
 artifact_ext="cmxs"
-case "$HXHX_BIN_RESOLVED" in
-  *.bc)
-    artifact_ext="cma"
-    ;;
-esac
+if [ "$HXHX_MODE" = "bytecode" ]; then
+  artifact_ext="cma"
+fi
 
+promote_start_ms="$(now_ms)"
 bash "$PROMOTE_SCRIPT" \
   --plugin-id pilot.reflaxe.elixir.todo.plugin \
   --plugin-version 0.1.0 \
@@ -89,6 +104,7 @@ bash "$PROMOTE_SCRIPT" \
   --target-id js-native \
   --artifact-ext "$artifact_ext" \
   --out-dir "$promoted_out"
+promote_end_ms="$(now_ms)"
 
 manifest="$promoted_out/backend-plugin.json"
 artifact="$promoted_out/plugins/pilot_reflaxe_elixir_todo_plugin.${artifact_ext}"
@@ -126,12 +142,13 @@ HX
 out_dir="$tmp_root/out"
 mkdir -p "$out_dir"
 
+compile_start_ms="$(now_ms)"
 set +e
 compile_output="$(
   HXHX_FORBID_STAGE0=1 \
     HXHX_TRACE_BACKEND_SELECTION=1 \
     HXHX_TRACE_BACKEND_PROVIDERS=1 \
-    "$HXHX_BIN_RESOLVED" \
+    "${HXHX_CMD[@]}" \
       --js "$out_dir/todo_pilot.js" \
       --hxhx-no-run \
       -cp "$todo_src" \
@@ -143,6 +160,7 @@ compile_output="$(
 )"
 compile_code="$?"
 set -e
+compile_end_ms="$(now_ms)"
 printf '%s\n' "$compile_output"
 if [ -n "$ARTIFACT_DIR" ]; then
   printf '%s\n' "$compile_output" >"$ARTIFACT_DIR/compile.stdout.log"
@@ -162,7 +180,9 @@ if [ "$compile_code" -ne 0 ]; then
 fi
 printf '%s\n' "$compile_output" | grep -q '^backend_selected_impl=provider/js-native-wrapper$'
 
+node_start_ms="$(now_ms)"
 node_output="$(node "$out_dir/todo_pilot.js")"
+node_end_ms="$(now_ms)"
 printf '%s\n' "$node_output"
 printf '%s\n' "$node_output" | grep -q '^TODO_PILOT:sum=6$'
 if [ -n "$ARTIFACT_DIR" ]; then
@@ -176,22 +196,55 @@ if [ ! -f "$sample_module" ]; then
   exit 2
 fi
 sample_hash="$(shasum -a 256 "$sample_module" | awk '{print $1}' | cut -c1-16)"
+total_end_ms="$(now_ms)"
 if [ -n "$ARTIFACT_DIR" ]; then
-  {
-    echo "{"
-    echo "  \"status\": \"pass\","
-    echo "  \"marker\": \"REFLAXE_ELIXIR_PROMOTION_NATIVE:PASS\","
-    echo "  \"sourceRepo\": \"$source_repo\","
-    echo "  \"sourceCommit\": \"$source_commit\","
-    echo "  \"todoSrc\": \"$todo_src\","
-    echo "  \"sampleModule\": \"$sample_module\","
-    echo "  \"sampleHash\": \"$sample_hash\","
-    echo "  \"hxhxBin\": \"$HXHX_BIN_RESOLVED\","
-    echo "  \"pluginManifestSha256\": \"$manifest_sha256\","
-    echo "  \"pluginArtifactSha256\": \"$artifact_sha256\","
-    echo "  \"nodeOutput\": \"TODO_PILOT:sum=6\""
-    echo "}"
-  } >"$ARTIFACT_DIR/reflaxe-elixir-promotion-native.summary.json"
+  node - "$ARTIFACT_DIR/reflaxe-elixir-promotion-native.summary.json" "$source_repo" "$source_commit" "$todo_src" "$sample_module" "$sample_hash" "$HXHX_BIN_RESOLVED" "$HXHX_MODE" "$manifest_sha256" "$artifact_sha256" "$total_start_ms" "$total_end_ms" "$source_start_ms" "$source_end_ms" "$promote_start_ms" "$promote_end_ms" "$compile_start_ms" "$compile_end_ms" "$node_start_ms" "$node_end_ms" <<'NODE'
+const fs = require('fs')
+const [
+  summaryPath,
+  sourceRepo,
+  sourceCommit,
+  todoSrc,
+  sampleModule,
+  sampleHash,
+  hxhxBin,
+  hxhxMode,
+  pluginManifestSha256,
+  pluginArtifactSha256,
+  totalStartMs,
+  totalEndMs,
+  sourceStartMs,
+  sourceEndMs,
+  promoteStartMs,
+  promoteEndMs,
+  compileStartMs,
+  compileEndMs,
+  nodeStartMs,
+  nodeEndMs,
+] = process.argv.slice(2)
+const seconds = (start, end) => Number(((Number(end) - Number(start)) / 1000).toFixed(3))
+fs.writeFileSync(summaryPath, JSON.stringify({
+  status: 'pass',
+  marker: 'REFLAXE_ELIXIR_PROMOTION_NATIVE:PASS',
+  sourceRepo,
+  sourceCommit,
+  todoSrc,
+  sampleModule,
+  sampleHash,
+  hxhxBin,
+  hxhxMode,
+  pluginManifestSha256,
+  pluginArtifactSha256,
+  nodeOutput: 'TODO_PILOT:sum=6',
+  timings: {
+    totalSeconds: seconds(totalStartMs, totalEndMs),
+    sourceResolveSeconds: seconds(sourceStartMs, sourceEndMs),
+    pluginPromoteSeconds: seconds(promoteStartMs, promoteEndMs),
+    compileSeconds: seconds(compileStartMs, compileEndMs),
+    nodeRunSeconds: seconds(nodeStartMs, nodeEndMs),
+  },
+}, null, 2) + '\n')
+NODE
 fi
 
 echo "pilot_reflaxe_elixir_repo=$source_repo"

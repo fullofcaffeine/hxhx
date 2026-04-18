@@ -53,9 +53,13 @@ function main() {
   const pkg = pkgText ? JSON.parse(pkgText) : { scripts: {} }
 
   requireIncludes(files.contract, contract, 'RO_PROMOTION_MATRIX:PASS')
-  requireIncludes(files.tradeoffs, tradeoffs, 'Aggregate status: not claimable yet')
+  requireIncludes(files.tradeoffs, tradeoffs, 'Aggregate status: current evidence satisfies `RO_PROMOTION_MATRIX:PASS`')
+  requireIncludes(files.tradeoffs, tradeoffs, '.artifacts/rpmx/haxe-plugin/')
+  requireIncludes(files.tradeoffs, tradeoffs, '.artifacts/rpmx/hxhx-builtin/')
+  requireIncludes(files.tradeoffs, tradeoffs, '.artifacts/rpmx/hxhx-plugin/')
   requireIncludes(files.tradeoffs, tradeoffs, 'RPMX_HXHX_BUILTIN:PASS')
   requireIncludes(files.tradeoffs, tradeoffs, 'RPMX_HXHX_PLUGIN:PASS')
+  requireIncludes(files.choose, choose, 'RO_PROMOTION_MATRIX:PASS')
   requireIncludes(files.choose, choose, 'Default recommendation')
   requireIncludes(files.choose, choose, 'official external native path')
   requireIncludes(files.startHere, startHere, 'CHOOSE_A_REFLAXE_PROMOTION_PATH.md')

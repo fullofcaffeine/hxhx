@@ -21,6 +21,12 @@ require_cmd ocamlc
 require_cmd ocamlopt
 require_cmd node
 
+now_ms() {
+  node -e 'process.stdout.write(String(Date.now()))'
+}
+
+total_start_ms="$(now_ms)"
+
 if [ ! -x "$FETCH_SCRIPT" ]; then
   echo "rpmx haxe plugin proof: missing fetch script: $FETCH_SCRIPT" >&2
   exit 1
@@ -102,10 +108,12 @@ compile_args=(
   -D ocaml_no_build
 )
 
+compile_start_ms="$(now_ms)"
 (
   cd "$ROOT"
   "$host_compiler_bin" "${compile_args[@]}"
 ) >"$compile_stdout" 2>"$compile_stderr"
+compile_end_ms="$(now_ms)"
 
 for required in \
   "$out_dir/dune" \
@@ -145,10 +153,12 @@ dune_version="$(dune --version)"
 ocamlc_version="$(ocamlc -version)"
 ocamlopt_version="$(ocamlopt -version)"
 
+build_start_ms="$(now_ms)"
 (
   cd "$out_dir"
   dune build ./out.cma ./out.cmxs
 ) >"$build_stdout" 2>"$build_stderr"
+build_end_ms="$(now_ms)"
 
 byte_artifact="$out_dir/_build/default/out.cma"
 native_artifact="$out_dir/_build/default/out.cmxs"
@@ -184,6 +194,7 @@ HX
 
 load_status="not_attempted"
 load_artifact=""
+load_start_ms="$(now_ms)"
 for artifact in "$byte_artifact" "$native_artifact"; do
   set +e
   output="$(
@@ -220,6 +231,7 @@ for artifact in "$byte_artifact" "$native_artifact"; do
   printf '%s\n' "$output" >"$load_stderr"
   break
 done
+load_end_ms="$(now_ms)"
 
 if [ "$load_status" = "fail" ]; then
   echo "rpmx haxe plugin proof: eval host load failed for reasons other than host ABI mismatch" >&2
@@ -237,6 +249,7 @@ if [ -n "$load_artifact" ]; then
 else
   load_artifact_abs=""
 fi
+total_end_ms="$(now_ms)"
 
 ROOT="$ROOT" \
 RUN_ID="$run_id" \
@@ -259,9 +272,18 @@ BYTE_ARTIFACT="$byte_artifact_abs" \
 NATIVE_ARTIFACT="$native_artifact_abs" \
 LOAD_STATUS="$load_status" \
 LOAD_ARTIFACT="$load_artifact_abs" \
+TOTAL_START_MS="$total_start_ms" \
+TOTAL_END_MS="$total_end_ms" \
+COMPILE_START_MS="$compile_start_ms" \
+COMPILE_END_MS="$compile_end_ms" \
+BUILD_START_MS="$build_start_ms" \
+BUILD_END_MS="$build_end_ms" \
+LOAD_START_MS="$load_start_ms" \
+LOAD_END_MS="$load_end_ms" \
 SUMMARY_JSON="$summary_json" \
 node <<'NODE'
 const fs = require('fs');
+const seconds = (start, end) => Number(((Number(end) - Number(start)) / 1000).toFixed(3));
 const summary = {
   runId: process.env.RUN_ID,
   workload: 'reflaxe-elixir-run-generator',
@@ -295,6 +317,12 @@ const summary = {
     ],
     loadStatus: process.env.LOAD_STATUS,
     loadArtifact: process.env.LOAD_ARTIFACT || null,
+  },
+  timings: {
+    totalSeconds: seconds(process.env.TOTAL_START_MS, process.env.TOTAL_END_MS),
+    compileSeconds: seconds(process.env.COMPILE_START_MS, process.env.COMPILE_END_MS),
+    buildSeconds: seconds(process.env.BUILD_START_MS, process.env.BUILD_END_MS),
+    loadProbeSeconds: seconds(process.env.LOAD_START_MS, process.env.LOAD_END_MS),
   },
   logs: {
     compileStdout: 'haxe.stdout.log',

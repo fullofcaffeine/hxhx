@@ -9,10 +9,21 @@ if [ ! -x "$PILOT_SCRIPT" ]; then
   exit 1
 fi
 
+if ! command -v node >/dev/null 2>&1; then
+  echo "rpmx hxhx plugin proof: missing required command: node" >&2
+  exit 1
+fi
+
 run_id="$(date +%Y%m%d-%H%M%S)"
 artifact_dir="${RPMX_HXHX_PLUGIN_ARTIFACT_DIR:-$ROOT/.artifacts/rpmx/hxhx-plugin/$run_id}"
 mkdir -p "$artifact_dir"
 
+now_ms() {
+  node -e 'process.stdout.write(String(Date.now()))'
+}
+
+total_start_ms="$(now_ms)"
+pilot_start_ms="$(now_ms)"
 set +e
 pilot_output="$(
   HXHX_PILOT_ARTIFACT_DIR="$artifact_dir" \
@@ -20,6 +31,7 @@ pilot_output="$(
 )"
 pilot_status="$?"
 set -e
+pilot_end_ms="$(now_ms)"
 
 printf '%s\n' "$pilot_output"
 printf '%s\n' "$pilot_output" >"$artifact_dir/rpmx-hxhx-plugin.stdout.log"
@@ -32,10 +44,11 @@ fi
 printf '%s\n' "$pilot_output" | grep -q '^REFLAXE_ELIXIR_PROMOTION_NATIVE:PASS$'
 
 summary="$artifact_dir/rpmx-hxhx-plugin.summary.json"
-node <<'NODE' "$artifact_dir" "$summary"
+total_end_ms="$(now_ms)"
+node - "$artifact_dir" "$summary" "$total_start_ms" "$total_end_ms" "$pilot_start_ms" "$pilot_end_ms" <<'NODE'
 const fs = require('fs')
-const artifactDir = process.argv[2]
-const summaryPath = process.argv[3]
+const [artifactDir, summaryPath, totalStartMs, totalEndMs, pilotStartMs, pilotEndMs] = process.argv.slice(2)
+const seconds = (start, end) => Number(((Number(end) - Number(start)) / 1000).toFixed(3))
 const pilotSummaryPath = `${artifactDir}/reflaxe-elixir-promotion-native.summary.json`
 const pilotSummary = fs.existsSync(pilotSummaryPath)
   ? JSON.parse(fs.readFileSync(pilotSummaryPath, 'utf8'))
@@ -49,6 +62,11 @@ fs.writeFileSync(summaryPath, JSON.stringify({
     pilotSummary: pilotSummaryPath,
     sourceCommit: pilotSummary ? pilotSummary.sourceCommit : null,
     hxhxBin: pilotSummary ? pilotSummary.hxhxBin : null,
+  },
+  timings: {
+    totalSeconds: seconds(totalStartMs, totalEndMs),
+    pilotSeconds: seconds(pilotStartMs, pilotEndMs),
+    pilotBreakdown: pilotSummary ? pilotSummary.timings || null : null,
   },
   result: 'RPMX_HXHX_PLUGIN:PASS',
 }, null, 2) + '\n')
