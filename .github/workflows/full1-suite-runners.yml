@@ -104,14 +104,38 @@ jobs:
       - name: Prepare shared suite haxelib repo
         run: |
           set -euo pipefail
-          node scripts/ci/prepare-suite-haxelib-deps.js \
-            --repo-path "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo" \
-            --summary-path "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo.summary.json" \
-            --suites "server,display,threads"
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          {
+            node scripts/ci/prepare-suite-haxelib-deps.js \
+              --repo-path "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo" \
+              --summary-path "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo.summary.json" \
+              --suites "server,display,threads"
+          }
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_hxhx.timings.jsonl" \
+            --workflow "full1-suite-runners" \
+            --job "build_hxhx" \
+            --phase "prepare_haxelib_repo" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Build shared hxhx binary
         run: |
           set -euo pipefail
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          {
           mkdir -p "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}"
           build_one() {
             local script_path="$1"
@@ -138,6 +162,37 @@ jobs:
           }
 
           build_one "scripts/hxhx/build-hxhx.sh" "hxhx" "build-hxhx.stdout.log" "build-hxhx.stderr.log"
+          }
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_hxhx.timings.jsonl" \
+            --workflow "full1-suite-runners" \
+            --job "build_hxhx" \
+            --phase "build_hxhx_binary" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
+
+      - name: Summarize build hxhx timings
+        if: always()
+        run: |
+          set -euo pipefail
+          timings="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_hxhx.timings.jsonl"
+          if [ -f "$timings" ]; then
+            node scripts/ci/full1-phase-timing.js summarize \
+              --jsonl "$timings" \
+              --json-out "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_hxhx.timings.summary.json" \
+              --markdown-out "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_hxhx.timings.md"
+            cat "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_hxhx.timings.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload shared hxhx artifact
         uses: actions/upload-artifact@v4
@@ -149,6 +204,9 @@ jobs:
             .artifacts/full1/suites/haxelib_repo.summary.json
             .artifacts/full1/suites/build-hxhx.stdout.log
             .artifacts/full1/suites/build-hxhx.stderr.log
+            .artifacts/full1/suites/build_hxhx.timings.jsonl
+            .artifacts/full1/suites/build_hxhx.timings.summary.json
+            .artifacts/full1/suites/build_hxhx.timings.md
           if-no-files-found: error
 
   build_macro_host:
@@ -161,9 +219,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
       - name: Install OCaml toolchain (macro host)
         run: |
           set -euo pipefail
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          {
           retry_apt() {
             local max_attempts=4
             local attempt=1
@@ -191,10 +257,31 @@ jobs:
           fi
 
           retry_apt sudo apt-get install -y ocaml "${dune_pkg}" ocaml-findlib
+          }
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_macro_host.timings.jsonl" \
+            --workflow "full1-suite-runners" \
+            --job "build_macro_host" \
+            --phase "install_ocaml_toolchain" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
 
       - name: Build macro host binary
         run: |
           set -euo pipefail
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          {
           mkdir -p "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}"
           build_stdout="$(mktemp)"
           build_stderr="$(mktemp)"
@@ -210,6 +297,37 @@ jobs:
           chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx-macro-host"
           cp "${build_stdout}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build-hxhx-macro-host.stdout.log"
           cp "${build_stderr}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build-hxhx-macro-host.stderr.log"
+          }
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_macro_host.timings.jsonl" \
+            --workflow "full1-suite-runners" \
+            --job "build_macro_host" \
+            --phase "build_macro_host_binary" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
+
+      - name: Summarize macro host timings
+        if: always()
+        run: |
+          set -euo pipefail
+          timings="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_macro_host.timings.jsonl"
+          if [ -f "$timings" ]; then
+            node scripts/ci/full1-phase-timing.js summarize \
+              --jsonl "$timings" \
+              --json-out "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_macro_host.timings.summary.json" \
+              --markdown-out "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_macro_host.timings.md"
+            cat "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build_macro_host.timings.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload shared macro host artifact
         uses: actions/upload-artifact@v4
@@ -219,6 +337,9 @@ jobs:
             .artifacts/full1/suites/hxhx-macro-host
             .artifacts/full1/suites/build-hxhx-macro-host.stdout.log
             .artifacts/full1/suites/build-hxhx-macro-host.stderr.log
+            .artifacts/full1/suites/build_macro_host.timings.jsonl
+            .artifacts/full1/suites/build_macro_host.timings.summary.json
+            .artifacts/full1/suites/build_macro_host.timings.md
           if-no-files-found: error
 
   full1_suite_runner_inproc:
@@ -317,6 +438,9 @@ jobs:
       - name: Run Full1 strict suite
         run: |
           set -euo pipefail
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          {
           chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx"
           export HAXELIB_PATH="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo"
           export HXHX_MACRO_RUNTIME_MODE=inproc
@@ -326,6 +450,38 @@ jobs:
             --strict \
             --hxhx-bin "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx" \
             --artifacts-dir "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}"
+          }
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${{ matrix.suite }}.timings.jsonl" \
+            --workflow "full1-suite-runners" \
+            --job "suite-${{ matrix.suite }}-inproc" \
+            --phase "suite_run" \
+            --detail "suite=${{ matrix.suite }}" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
+
+      - name: Summarize Full1 suite timings
+        if: always()
+        run: |
+          set -euo pipefail
+          timings="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${{ matrix.suite }}.timings.jsonl"
+          if [ -f "$timings" ]; then
+            node scripts/ci/full1-phase-timing.js summarize \
+              --jsonl "$timings" \
+              --json-out "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${{ matrix.suite }}.timings.summary.json" \
+              --markdown-out "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${{ matrix.suite }}.timings.md"
+            cat "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${{ matrix.suite }}.timings.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload Full1 suite artifacts
         if: always()
@@ -335,6 +491,9 @@ jobs:
           path: |
             .artifacts/full1/suites/${{ matrix.suite }}.log
             .artifacts/full1/suites/${{ matrix.suite }}.summary.json
+            .artifacts/full1/suites/${{ matrix.suite }}.timings.jsonl
+            .artifacts/full1/suites/${{ matrix.suite }}.timings.summary.json
+            .artifacts/full1/suites/${{ matrix.suite }}.timings.md
             .artifacts/full1/suites/generated/${{ matrix.suite }}-*
           if-no-files-found: warn
 
@@ -442,6 +601,9 @@ jobs:
       - name: Run Full1 strict suite
         run: |
           set -euo pipefail
+          phase_start_ms="$(date +%s%3N)"
+          set +e
+          {
           chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx"
           chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx-macro-host"
           export HAXELIB_PATH="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo"
@@ -452,6 +614,38 @@ jobs:
             --strict \
             --hxhx-bin "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx" \
             --artifacts-dir "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}"
+          }
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${{ matrix.suite }}.timings.jsonl" \
+            --workflow "full1-suite-runners" \
+            --job "suite-${{ matrix.suite }}-external-host" \
+            --phase "suite_run" \
+            --detail "suite=${{ matrix.suite }}" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
+
+      - name: Summarize Full1 suite timings
+        if: always()
+        run: |
+          set -euo pipefail
+          timings="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${{ matrix.suite }}.timings.jsonl"
+          if [ -f "$timings" ]; then
+            node scripts/ci/full1-phase-timing.js summarize \
+              --jsonl "$timings" \
+              --json-out "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${{ matrix.suite }}.timings.summary.json" \
+              --markdown-out "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${{ matrix.suite }}.timings.md"
+            cat "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${{ matrix.suite }}.timings.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload Full1 suite artifacts
         if: always()
@@ -461,5 +655,8 @@ jobs:
           path: |
             .artifacts/full1/suites/${{ matrix.suite }}.log
             .artifacts/full1/suites/${{ matrix.suite }}.summary.json
+            .artifacts/full1/suites/${{ matrix.suite }}.timings.jsonl
+            .artifacts/full1/suites/${{ matrix.suite }}.timings.summary.json
+            .artifacts/full1/suites/${{ matrix.suite }}.timings.md
             .artifacts/full1/suites/generated/${{ matrix.suite }}-*
           if-no-files-found: warn
