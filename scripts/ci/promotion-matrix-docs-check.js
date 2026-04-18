@@ -66,6 +66,7 @@ function main() {
   requireScriptTarget(pkg, 'test:rpmx:hxhx-builtin')
   requireScriptTarget(pkg, 'test:rpmx:hxhx-plugin')
   requireScriptTarget(pkg, 'test:rpmx:hxhx-plugin-host-pilot')
+  requireScriptTarget(pkg, 'test:hxhx:reflaxe-elixir-native-verify')
 
   if (process.exitCode) return
   console.log('[ci:guards] OK: promotion matrix docs and script targets are wired')
