@@ -70,6 +70,16 @@ That sub-contract distinguishes the contract-definition marker
 evidence only; Full 1.0 performance evidence must compare stage0-free `hxhx`
 runtime lanes against upstream Haxe 4.3.7.
 
+Plugin parity has its own explicit sub-contract:
+
+- `docs/00-project/PLUGIN_PARITY_FULL_1_0.md`
+
+That sub-contract distinguishes the contract-definition marker
+`FULL1_PLUGIN_PARITY_CONTRACT:PASS` from the runtime evidence marker
+`FULL1_PLUGIN_PARITY:PASS`. Scoped 1.0 plugin smoke evidence
+(`PLUGIN_MATRIX_STRICT:PASS`) does not replace the Full 1.0
+`reflaxe.ocaml` plugin proof matrix.
+
 ## Non-goals policy
 
 Anything not explicitly declared in the scope manifest is out-of-scope for the claim.

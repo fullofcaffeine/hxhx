@@ -30,6 +30,8 @@ Scope manifests used by this map:
 | PM-15 | Full1 macro/eval closure aggregate | Full1 aggregate | `Macro,Eval` | scheduled/release | `.github/workflows/gate-full1.yml` | `FULL1_MACRO_EVAL_PARITY:PASS` |
 | PM-16 | Full1 performance policy contract | Full1 performance contract | `perf` | policy guard | `scripts/ci/full1-perf-policy-check.js` | `FULL1_PERF_POLICY:PASS` |
 | PM-17 | Full1 measured performance parity | Full1 performance evidence | `perf` | stage0-free hxhx vs upstream Haxe 4.3.7 | `.github/workflows/gate-perf-full1.yml` (`scripts/ci/full1-perf-evaluator.js`) | `FULL1_PERF_PARITY:PASS` |
+| PM-18 | Full1 plugin parity contract | Full1 plugin contract | `plugin` | policy guard | `scripts/ci/full1-plugin-parity-contract-check.js` | `FULL1_PLUGIN_PARITY_CONTRACT:PASS` |
+| PM-19 | Full1 measured plugin parity | Full1 plugin evidence | `plugin` | scheduled/release | `.github/workflows/gate-full1.yml` | `FULL1_PLUGIN_PARITY:PASS` |
 
 ## Marker Registry
 
@@ -63,6 +65,8 @@ These are the canonical marker strings used for parity statements in logs:
 - `FULL1_EVAL_NATIVE:PASS`
 - `FULL1_MACRO_EVAL_PARITY:PASS`
 - `FULL1_MACRO_EVAL_CONTRACT:PASS`
+- `FULL1_PLUGIN_PARITY_CONTRACT:PASS`
+- `FULL1_PLUGIN_PARITY:PASS`
 - `FULL1_PERF_POLICY:PASS`
 - `FULL1_PERF_PARITY:PASS`
 
@@ -81,3 +85,7 @@ These are the canonical marker strings used for parity statements in logs:
   - `FULL1_PERF_POLICY:PASS` as the contract-definition source.
   - `FULL1_PERF_PARITY:PASS` only when the stage0-free `hxhx` vs upstream Haxe 4.3.7 evaluator passes.
   - `docs/00-project/FULL1_PERF_PARITY_POLICY.md` as the policy source.
+- For Full1 plugin parity claims, include:
+  - `FULL1_PLUGIN_PARITY_CONTRACT:PASS` as the contract-definition source.
+  - `FULL1_PLUGIN_PARITY:PASS` only when the `reflaxe.ocaml` plugin proof matrix passes without hidden stage0 delegation.
+  - `docs/00-project/PLUGIN_PARITY_FULL_1_0.md` as the policy source.

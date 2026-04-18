@@ -199,6 +199,18 @@
       "enforcement": "planned"
     },
     {
+      "id": "F1-PM-11A",
+      "suite": "full-plugin-parity-contract",
+      "lane": "full",
+      "targets": [
+        "plugin"
+      ],
+      "profile": "contract",
+      "marker": "FULL1_PLUGIN_PARITY_CONTRACT:PASS",
+      "workflow": "scripts/ci/full1-plugin-parity-contract-check.js",
+      "enforcement": "planned"
+    },
+    {
       "id": "F1-PM-12",
       "suite": "full-perf-policy",
       "lane": "full",
