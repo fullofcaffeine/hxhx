@@ -1863,6 +1863,11 @@ let emitStringToolsStaticFunctionBody = fun writer fnName params -> try let __fa
     ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("return String(" ^ HxString.toStdString (HxArray.get (Obj.magic params) 0)) ^ ").charCodeAt(") ^ HxString.toStdString (HxArray.get (Obj.magic params) 1)) ^ ");" : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   ))
+  | "replace" -> ignore ((
+    ignore (if HxArray.length params < 3 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((((("return String(" ^ HxString.toStdString (HxArray.get (Obj.magic params) 0)) ^ ").split(String(") ^ HxString.toStdString (HxArray.get (Obj.magic params) 1)) ^ ")).join(String(") ^ HxString.toStdString (HxArray.get (Obj.magic params) 2)) ^ "));" : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  ))
   | "startsWith" -> ignore ((
     ignore (if HxArray.length params < 2 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (((("return String(" ^ HxString.toStdString (HxArray.get (Obj.magic params) 0)) ^ ").indexOf(String(") ^ HxString.toStdString (HxArray.get (Obj.magic params) 1)) ^ ")) === 0;" : string));
@@ -2210,6 +2215,15 @@ let emitStringToolsRuntimeComplements = fun writer jsRef -> ignore ((
   ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString jsRef ^ ".startsWith = function(s, start) {" : string));
   ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
   ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return String(s).indexOf(String(start)) === 0;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString jsRef) ^ ".replace !== \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString jsRef ^ ".replace = function(s, sub, by) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return String(s).split(String(sub)).join(String(by));" : string));
   ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
   ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
   ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());

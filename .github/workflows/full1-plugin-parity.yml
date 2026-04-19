@@ -223,12 +223,29 @@ jobs:
               sleep 5
             done
           }
+          retry_opam_install() {
+            local max_attempts=3
+            local attempt=1
+            while true; do
+              if opam install -y "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "opam install failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "opam install failed (attempt ${attempt}/${max_attempts}); refreshing repository metadata before retry" >&2
+              opam update || true
+              attempt=$((attempt + 1))
+              sleep 10
+            done
+          }
           run_phase_body() (
             set -euo pipefail
             retry_apt sudo apt-get update
             retry_apt sudo apt-get install -y libpcre2-dev zlib1g-dev libmbedtls-dev neko
             eval "$(opam env)"
-            opam install -y \
+            retry_opam_install \
               dune.3.15.3 \
               ocamlfind \
               camlp5 \

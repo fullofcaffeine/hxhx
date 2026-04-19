@@ -795,8 +795,12 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	static function stringToolsModule():TypedModule {
 		final stringArg = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
 		final prefixArg = new HxFunctionArg("start", "String", HxDefaultValue.NoDefault);
+		final subArg = new HxFunctionArg("sub", "String", HxDefaultValue.NoDefault);
+		final byArg = new HxFunctionArg("by", "String", HxDefaultValue.NoDefault);
 		final stringToolsClass = new HxClassDecl("StringTools", false, [
 			new HxFunctionDecl("startsWith", HxVisibility.Public, true, [stringArg, prefixArg], "Bool",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-stringtools"), ""),
+			new HxFunctionDecl("replace", HxVisibility.Public, true, [stringArg, subArg, byArg], "String",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-stringtools"), "")
 		]);
 		final decl = new HxModuleDecl("", [], stringToolsClass, [stringToolsClass], false, false);
@@ -1190,6 +1194,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(haxe.crypto.Base64.BYTES.toString());',
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
 				'    Sys.println("starts=" + StringTools.startsWith("testCase", "test") + "," + StringTools.startsWith("case", ""));',
+				'    Sys.println("replace=" + StringTools.replace("banana", "na", "X") + "," + StringTools.replace("a\\\\b", "\\\\", "/") + "," + StringTools.replace("abc", "", "x"));',
 				'    Sys.println("upper=" + "abc".toUpperCase());',
 				'    Sys.println(unit.TestReflect.TYPES[0].__hx_name);',
 				'    Sys.println(unit.TestReflect.TNAMES.join(","));',
@@ -1455,6 +1460,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"StringTools.startsWith runtime complement should backfill inline/erased std bodies");
 			assertContains(js, "__hx_cls_StringTools.startsWith = function", "StringTools.startsWith shim should emit");
 			assertContains(js, "return String(s).indexOf(String(start)) === 0;", "StringTools.startsWith should lower to JS prefix check");
+			assertContains(js, "__hx_cls_StringTools.replace = function", "StringTools.replace shim should emit");
+			assertContains(js, "return String(s).split(String(sub)).join(String(by));", "StringTools.replace should lower to literal split/join replacement");
 			assertNotContains(js, "__hx_cls_String.prototype.toUpperCase",
 				"native JS String prototype methods should not be re-emitted from unsupported std bodies");
 			assertContains(js, "__hx_cls_Main.HX_CTOR = \"_hx_constructor\"", "static inline final string constants should keep simple runtime initializers");
@@ -1580,6 +1587,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "abc", "same-class static field refs should execute through class bindings");
 			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
 			assertContains(stdout, "starts=true,true", "StringTools.startsWith should support utest prefix discovery and empty prefixes");
+			assertContains(stdout, "replace=baXX,a/b,axbxc", "StringTools.replace should perform literal global replacements including empty needles");
 			assertContains(stdout, "upper=ABC", "native JS String prototype methods should remain available");
 			assertContains(stdout, "unit.MyInterface", "unresolved qualified value type refs should preserve runtime type names");
 			assertContains(stdout, "haxe.ds.StringMap,unit.MyInterface", "same-class static helper calls should execute during static field initialization");

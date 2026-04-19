@@ -2147,6 +2147,11 @@ class JsTargetCore implements ITargetCore {
 					return false;
 				writer.writeln("return String(" + params[0] + ").indexOf(String(" + params[1] + ")) === 0;");
 				return true;
+			case "replace":
+				if (params.length < 3)
+					return false;
+				writer.writeln("return String(" + params[0] + ").split(String(" + params[1] + ")).join(String(" + params[2] + "));");
+				return true;
 			case "fastCodeAt":
 				if (params.length < 2)
 					return false;
@@ -2446,6 +2451,15 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln(jsRef + ".startsWith = function(s, start) {");
 		writer.pushIndent();
 		writer.writeln("return String(s).indexOf(String(start)) === 0;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".replace !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".replace = function(s, sub, by) {");
+		writer.pushIndent();
+		writer.writeln("return String(s).split(String(sub)).join(String(by));");
 		writer.popIndent();
 		writer.writeln("};");
 		writer.popIndent();
