@@ -977,15 +977,21 @@ let init () : unit =
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'fields' for TyClassInfo" in
     let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'staticMethods' for TyClassInfo" in
     let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'instanceMethods' for TyClassInfo" in
-    Obj.repr (TyClassInfo.create a0 a1 a2 a3 a4 a5)
+    let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'staticMethodLists' for TyClassInfo" in
+    let a7 = if len > 7 then Obj.magic ((HxArray.get args 7)) else failwith "Type.createInstance: missing ctor arg 'instanceMethodLists' for TyClassInfo" in
+    Obj.repr (TyClassInfo.create a0 a1 a2 a3 a4 a5 a6 a7)
   );
   HxType.register_class_ctor "TyFunSig" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for TyFunSig" in
     let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'isStatic' for TyFunSig" in
-    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'args' for TyFunSig" in
-    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'returnType' for TyFunSig" in
-    Obj.repr (TyFunSig.create a0 a1 a2 a3)
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'argNames' for TyFunSig" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'args' for TyFunSig" in
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'argOptional' for TyFunSig" in
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'argRest' for TyFunSig" in
+    let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'returnType' for TyFunSig" in
+    let a7 = if len > 7 then Obj.magic ((HxArray.get args 7)) else failwith "Type.createInstance: missing ctor arg 'pos' for TyFunSig" in
+    Obj.repr (TyFunSig.create a0 a1 a2 a3 a4 a5 a6 a7)
   );
   HxType.register_class_ctor "TyFunctionEnv" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1647,9 +1653,9 @@ let init () : unit =
   HxType.register_class_static_fields "StringTools" [ "_hexUpper"; "_hexValue"; "_isUrlUnreserved"; "_quoteUnixArgOcaml"; "_quoteWinArgOcaml"; "_urlDecodeOcaml"; "_urlEncodeOcaml"; "_winMetaCharactersOcaml"; "contains"; "endsWith"; "fastCodeAt"; "hex"; "htmlEscape"; "htmlUnescape"; "isEof"; "isSpace"; "iterator"; "keyValueIterator"; "lpad"; "ltrim"; "quoteUnixArg"; "quoteWinArg"; "replace"; "rpad"; "rtrim"; "startsWith"; "trim"; "unsafeCodeAt"; "urlDecode"; "urlEncode"; "utf16CodePointAt"; "winMetaCharacters" ];
   HxType.register_class_instance_fields "TyClassEnv" [ "functions"; "getFunctions"; "getName"; "name" ];
   HxType.register_class_static_fields "TyClassEnv" [];
-  HxType.register_class_instance_fields "TyClassInfo" [ "fieldType"; "fields"; "fullName"; "getFullName"; "getModulePath"; "getShortName"; "hasField"; "instanceMethod"; "instanceMethods"; "modulePath"; "shortName"; "staticMethod"; "staticMethods" ];
+  HxType.register_class_instance_fields "TyClassInfo" [ "fieldType"; "fields"; "fullName"; "getFullName"; "getModulePath"; "getShortName"; "hasField"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "modulePath"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods" ];
   HxType.register_class_static_fields "TyClassInfo" [];
-  HxType.register_class_instance_fields "TyFunSig" [ "args"; "getArgs"; "getIsStatic"; "getName"; "getReturnType"; "isStatic"; "name"; "returnType" ];
+  HxType.register_class_instance_fields "TyFunSig" [ "acceptsArity"; "argNames"; "argOptional"; "argRest"; "args"; "getArgNames"; "getArgOptional"; "getArgRest"; "getArgs"; "getIsStatic"; "getName"; "getPos"; "getReturnType"; "isStatic"; "name"; "pos"; "returnType" ];
   HxType.register_class_static_fields "TyFunSig" [];
   HxType.register_class_instance_fields "TyFunctionEnv" [ "declareLocal"; "getLocals"; "getName"; "getParams"; "getReturnExprType"; "getReturnType"; "locals"; "name"; "params"; "resolveLocal"; "resolveSymbol"; "returnExprType"; "returnType" ];
   HxType.register_class_static_fields "TyFunctionEnv" [];
@@ -1670,7 +1676,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TyperIndexBuild" [];
   HxType.register_class_static_fields "TyperIndexBuild" [ "classFullName"; "classFullNameInModule"; "expectedModuleNameFromFile"; "fromResolvedModule" ];
   HxType.register_class_instance_fields "TyperStage" [];
-  HxType.register_class_static_fields "TyperStage" [ "arrayElementType"; "declarePatternBindings"; "dottedFieldPath"; "inferExprType"; "inferReturnType"; "isAssignmentBinop"; "isStrict"; "isUpperStartName"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
+  HxType.register_class_static_fields "TyperStage" [ "arrayElementType"; "callRange"; "declarePatternBindings"; "diagnosticFileName"; "dottedFieldPath"; "extractRawDiagnostic"; "functionNameRange"; "inferExprType"; "inferReturnType"; "isAssignmentBinop"; "isStrict"; "isUpperStartName"; "renderArgType"; "renderOverloadCandidate"; "resolveMethodCallReturnType"; "sourceLine"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
   HxType.register_class_instance_fields "_EmitterStage._EmitterStageDebug" [];
   HxType.register_class_static_fields "_EmitterStage._EmitterStageDebug" [ "traceCallSig"; "traceStage3Enabled"; "traceStage3Module"; "traceStage3Phase"; "traceStage3StmtList" ];
   HxType.register_class_instance_fields "_EmitterStage._InstanceFieldEntry" [ "fields"; "key" ];
@@ -1800,7 +1806,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.Stage1Resolver" [];
   HxType.register_class_static_fields "hxhx.Stage1Resolver" [ "normalizeSep"; "resolveClassPath"; "resolveMain"; "resolveModule" ];
   HxType.register_class_instance_fields "hxhx.Stage3Compiler" [];
-  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "anyNonBuiltinMacro"; "appendManifestRequests"; "appendPluginLoadRequest"; "appendProviderRequests"; "bool01"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "canRunNode"; "collectBuildMacroExprs"; "collectBundledBackendPluginManifestPaths"; "collectBundledBackendProviderTypeNames"; "collectDeclarationValues"; "collectExplicitBackendPluginManifestPaths"; "collectExplicitBackendProviderTypeNames"; "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "decodeWaitStdioRequest"; "dispatchOnTypeNotFoundHooks"; "encodeConnectRequest"; "error"; "escapeOneLine"; "findFlagValue"; "findJsOutputFileHint"; "findManyFlagValues"; "findSingleFlagValue"; "formatException"; "hasConfiguredExternalMacroHostExe"; "hasDefineFlag"; "hasFlag"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "loadDynamicBackendProviders"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "processConnectResponse"; "readConnectDisplayStdin"; "resolveBuiltinBackend"; "resolveHaxelibSpec"; "run"; "runConnect"; "runOne"; "runWaitSocket"; "runWaitStdio"; "runWaitStdioRequest"; "shouldAutoBuildMacroHost"; "summarizeArgs"; "synthesizeDisplayResponse"; "trim"; "writeWaitStdioReply" ];
+  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "anyNonBuiltinMacro"; "appendManifestRequests"; "appendPluginLoadRequest"; "appendProviderRequests"; "bool01"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "canRunNode"; "collectBuildMacroExprs"; "collectBundledBackendPluginManifestPaths"; "collectBundledBackendProviderTypeNames"; "collectDeclarationValues"; "collectExplicitBackendPluginManifestPaths"; "collectExplicitBackendProviderTypeNames"; "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "decodeWaitStdioRequest"; "dispatchOnTypeNotFoundHooks"; "encodeConnectRequest"; "error"; "escapeOneLine"; "findFlagValue"; "findJsOutputFileHint"; "findManyFlagValues"; "findSingleFlagValue"; "formatException"; "hasConfiguredExternalMacroHostExe"; "hasDefineFlag"; "hasFlag"; "haxeDiagnosticError"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "loadDynamicBackendProviders"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "processConnectResponse"; "rawTyperDiagnostic"; "readConnectDisplayStdin"; "resolveBuiltinBackend"; "resolveHaxelibSpec"; "run"; "runConnect"; "runOne"; "runWaitSocket"; "runWaitStdio"; "runWaitStdioRequest"; "shouldAutoBuildMacroHost"; "summarizeArgs"; "synthesizeDisplayResponse"; "trim"; "writeWaitStdioReply" ];
   HxType.register_class_instance_fields "hxhx.macro.BuildFieldSnapshotPayload" [];
   HxType.register_class_static_fields "hxhx.macro.BuildFieldSnapshotPayload" [ "encodeParsedModule" ];
   HxType.register_class_instance_fields "hxhx.macro.InProcGeneratedEntrypoints" [];

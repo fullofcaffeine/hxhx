@@ -81,6 +81,15 @@ class TyperIndex {
 		if (resolved == null)
 			return idx;
 
+		function addMethod(primary:haxe.ds.StringMap<TyFunSig>, all:haxe.ds.StringMap<Array<TyFunSig>>, sig:TyFunSig):Void {
+			final name = sig.getName();
+			final candidates = all.exists(name) ? all.get(name) : [];
+			candidates.push(sig);
+			all.set(name, candidates);
+			if (!primary.exists(name))
+				primary.set(name, sig);
+		}
+
 		for (m in resolved) {
 			final pm = ResolvedModule.getParsed(m);
 			final decl = pm.getDecl();
@@ -105,23 +114,32 @@ class TyperIndex {
 
 				final statics = new haxe.ds.StringMap<TyFunSig>();
 				final instances = new haxe.ds.StringMap<TyFunSig>();
+				final staticLists = new haxe.ds.StringMap<Array<TyFunSig>>();
+				final instanceLists = new haxe.ds.StringMap<Array<TyFunSig>>();
 				for (fn in HxClassDecl.getFunctions(cls)) {
 					final fnName = HxFunctionDecl.getName(fn);
 					final isStatic = HxFunctionDecl.getIsStatic(fn);
 					final args = new Array<TyType>();
-					for (a in HxFunctionDecl.getArgs(fn))
+					final argNames = new Array<String>();
+					final argOptional = new Array<Bool>();
+					final argRest = new Array<Bool>();
+					for (a in HxFunctionDecl.getArgs(fn)) {
+						argNames.push(HxFunctionArg.getName(a));
 						args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
+						argOptional.push(HxFunctionArg.getIsOptional(a));
+						argRest.push(HxFunctionArg.getIsRest(a));
+					}
 
 					final retHint = HxFunctionDecl.getReturnTypeHint(fn);
 					final ret = (fnName == "new") ? TyType.fromHintText(full) : TyType.fromHintText(retHint);
-					final sig = new TyFunSig(fnName, isStatic, args, ret);
+					final sig = new TyFunSig(fnName, isStatic, argNames, args, argOptional, argRest, ret, HxFunctionDecl.getPos(fn));
 					if (isStatic)
-						statics.set(fnName, sig)
+						addMethod(statics, staticLists, sig)
 					else
-						instances.set(fnName, sig);
+						addMethod(instances, instanceLists, sig);
 				}
 
-				idx.addClass(new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances));
+				idx.addClass(new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances, staticLists, instanceLists));
 			}
 		}
 

@@ -81,6 +81,38 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			final ocaml = File.getContent(mainMl);
 			assertTrue(ocaml.indexOf('add (other) (n)') >= 0, 'Stage3 receiver-call emit missing `add (other) (n)` call shape.');
 			assertTrue(ocaml.indexOf('add (this_) (other) (n)') < 0, 'Stage3 receiver-call regression: emitted over-applied `add (this_) (other) (n)`.');
+
+			final overloadHx = haxe.io.Path.join([srcDir, 'OverloadAmbiguous.hx']);
+			final overloadSrc = [
+				'extern class ToolCache {',
+				'  overload static function extractTar(?flags:Array<String>):Void;',
+				'  overload static function extractTar(?flags:String):Void;',
+				'}',
+				'class OverloadAmbiguous {',
+				'  static function main() {',
+				'    ToolCache.extractTar();',
+				'  }',
+				'}',
+			].join("\n");
+			File.saveContent(overloadHx, overloadSrc);
+			final overloadParsed = ParserStage.parse(overloadSrc, overloadHx);
+			final overloadResolved = new ResolvedModule("OverloadAmbiguous", overloadHx, overloadParsed);
+			final overloadIndex = TyperIndex.build([overloadResolved]);
+			final overloadLoader = new ModuleLoader([srcDir], new StringMap<String>(), overloadIndex, function(_typePath:String):Bool {
+				return false;
+			});
+			overloadLoader.markResolvedAlready([overloadResolved]);
+			var overloadFailure:Null<String> = null;
+			try {
+				TyperStage.typeResolvedModule(overloadResolved, overloadIndex, overloadLoader);
+			} catch (e:TyperError) {
+				overloadFailure = e.getMessage();
+			}
+			assertTrue(overloadFailure != null, 'Stage3 typer accepted an ambiguous zero-arg overload call.');
+			assertTrue(TyperStage.extractRawDiagnostic(overloadFailure) != null, 'Ambiguous overload should surface as a Haxe-style raw diagnostic.');
+			assertTrue(overloadFailure.indexOf('Ambiguous overload, candidates follow') >= 0, 'Ambiguous overload diagnostic missing headline.');
+			assertTrue(overloadFailure.indexOf('(?flags : Null<Array<String>>) -> Void') >= 0, 'Ambiguous overload diagnostic missing Array candidate.');
+			assertTrue(overloadFailure.indexOf('(?flags : Null<String>) -> Void') >= 0, 'Ambiguous overload diagnostic missing String candidate.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

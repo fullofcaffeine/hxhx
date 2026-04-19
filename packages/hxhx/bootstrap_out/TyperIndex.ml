@@ -218,56 +218,72 @@ let classFullNameInModule = fun pkg moduleName clsName -> let tempString = ref (
   )
 )
 
-let build = fun resolved -> try let __fallback_result_57 = let idx = Obj.magic (create ()) in (
+let build = fun resolved -> try let __fallback_result_60 = let idx = Obj.magic (create ()) in (
   ignore (if resolved == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic idx))) else ());
-  let _g = ref 0 in (
+  let addMethod = fun primary all hx_sig -> ignore (let name = (TyFunSig.getName (Obj.magic hx_sig) () : string) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t HxArray.t) in (
+    ignore (if HxMap.exists_string all name then let __assign_44 = Obj.magic (Obj.magic (HxMap.get_string all name)) in (
+      tempMaybeArray := __assign_44;
+      __assign_44
+    ) else let __assign_45 = Obj.magic (Obj.magic (let __arr_46 = HxArray.create () in __arr_46)) in (
+      tempMaybeArray := __assign_45;
+      __assign_45
+    ));
+    let candidates = Obj.magic (!tempMaybeArray) in (
+      ignore (HxArray.push candidates hx_sig);
+      ignore (HxMap.set_string all name candidates);
+      if not (HxMap.exists_string primary name) then ignore (HxMap.set_string primary name hx_sig) else ()
+    )
+  )) in let _g = ref 0 in (
     ignore (while !_g < HxArray.length resolved do ignore (let m = Obj.magic (HxArray.get (Obj.magic resolved) (!_g)) in (
-      ignore (let __old_44 = !_g in let __new_45 = HxInt.add __old_44 1 in (
-        ignore (_g := __new_45);
-        __new_45
+      ignore (let __old_47 = !_g in let __new_48 = HxInt.add __old_47 1 in (
+        ignore (_g := __new_48);
+        __new_48
       ));
       let pm = Obj.magic (ResolvedModule.getParsed (Obj.magic m)) in let decl = Obj.magic (ParsedModule.getDecl (Obj.magic pm) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let moduleName = (expectedModuleNameFromFile (ResolvedModule.getFilePath (Obj.magic m) : string) : string) in let _g2 = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in try while !_g2 < HxArray.length _g1 do try ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g1) (!_g2)) in (
-        ignore (let __old_46 = !_g2 in let __new_47 = HxInt.add __old_46 1 in (
-          ignore (_g2 := __new_47);
-          __new_47
+        ignore (let __old_49 = !_g2 in let __new_50 = HxInt.add __old_49 1 in (
+          ignore (_g2 := __new_50);
+          __new_50
         ));
         let clsName = (HxClassDecl.getName (Obj.magic cls) : string) in (
           ignore (if clsName == Obj.magic (HxRuntime.hx_null) || HxString.length clsName = 0 || HxString.equals clsName "Unknown" then raise (HxRuntime.Hx_continue) else ());
           let full = (classFullNameInModule (pkg : string) (moduleName : string) (clsName : string) : string) in let fields = Obj.magic (HxMap.create_string ()) in (
             ignore (let _g3 = ref 0 in let _g4 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g3 < HxArray.length _g4 do ignore (let f = Obj.magic (HxArray.get (Obj.magic _g4) (!_g3)) in (
-              ignore (let __old_48 = !_g3 in let __new_49 = HxInt.add __old_48 1 in (
-                ignore (_g3 := __new_49);
-                __new_49
+              ignore (let __old_51 = !_g3 in let __new_52 = HxInt.add __old_51 1 in (
+                ignore (_g3 := __new_52);
+                __new_52
               ));
               HxMap.set_string fields (HxFieldDecl.getName (Obj.magic f)) (TyType.fromHintText (HxFieldDecl.getTypeHint (Obj.magic f) : string))
             )) done);
-            let statics = Obj.magic (HxMap.create_string ()) in let instances = Obj.magic (HxMap.create_string ()) in (
+            let statics = Obj.magic (HxMap.create_string ()) in let instances = Obj.magic (HxMap.create_string ()) in let staticLists = Obj.magic (HxMap.create_string ()) in let instanceLists = Obj.magic (HxMap.create_string ()) in (
               ignore (let _g3 = ref 0 in let _g4 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in while !_g3 < HxArray.length _g4 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g4) (!_g3)) in (
-                ignore (let __old_50 = !_g3 in let __new_51 = HxInt.add __old_50 1 in (
-                  ignore (_g3 := __new_51);
-                  __new_51
+                ignore (let __old_53 = !_g3 in let __new_54 = HxInt.add __old_53 1 in (
+                  ignore (_g3 := __new_54);
+                  __new_54
                 ));
-                let fnName = (HxFunctionDecl.getName (Obj.magic fn) : string) in let isStatic = HxFunctionDecl.getIsStatic (Obj.magic fn) in let args = Obj.magic (HxArray.create ()) in (
+                let fnName = (HxFunctionDecl.getName (Obj.magic fn) : string) in let isStatic = HxFunctionDecl.getIsStatic (Obj.magic fn) in let args = Obj.magic (HxArray.create ()) in let argNames = Obj.magic (HxArray.create ()) in let argOptional = Obj.magic (HxArray.create ()) in let argRest = Obj.magic (HxArray.create ()) in (
                   ignore (let _g5 = ref 0 in let _g6 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in while !_g5 < HxArray.length _g6 do ignore (let a = Obj.magic (HxArray.get (Obj.magic _g6) (!_g5)) in (
-                    ignore (let __old_52 = !_g5 in let __new_53 = HxInt.add __old_52 1 in (
-                      ignore (_g5 := __new_53);
-                      __new_53
+                    ignore (let __old_55 = !_g5 in let __new_56 = HxInt.add __old_55 1 in (
+                      ignore (_g5 := __new_56);
+                      __new_56
                     ));
-                    HxArray.push args (TyType.fromHintText (HxFunctionArg.getTypeHint (Obj.magic a) : string))
+                    ignore (HxArray.push argNames (HxFunctionArg.getName (Obj.magic a)));
+                    ignore (HxArray.push args (TyType.fromHintText (HxFunctionArg.getTypeHint (Obj.magic a) : string)));
+                    ignore (HxArray.push argOptional (HxFunctionArg.getIsOptional (Obj.magic a)));
+                    HxArray.push argRest (HxFunctionArg.getIsRest (Obj.magic a))
                   )) done);
                   let retHint = (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-                    ignore (if HxString.equals fnName "new" then let __assign_54 = Obj.magic (TyType.fromHintText (full : string)) in (
-                      tempTyType := __assign_54;
-                      __assign_54
-                    ) else let __assign_55 = Obj.magic (TyType.fromHintText (retHint : string)) in (
-                      tempTyType := __assign_55;
-                      __assign_55
+                    ignore (if HxString.equals fnName "new" then let __assign_57 = Obj.magic (TyType.fromHintText (full : string)) in (
+                      tempTyType := __assign_57;
+                      __assign_57
+                    ) else let __assign_58 = Obj.magic (TyType.fromHintText (retHint : string)) in (
+                      tempTyType := __assign_58;
+                      __assign_58
                     ));
-                    let ret = Obj.magic (!tempTyType) in let hx_sig = Obj.magic (TyFunSig.create (fnName : string) isStatic (Obj.magic args) (Obj.magic ret)) in if isStatic then ignore (HxMap.set_string statics fnName hx_sig) else ignore (HxMap.set_string instances fnName hx_sig)
+                    let ret = Obj.magic (!tempTyType) in let hx_sig = Obj.magic (TyFunSig.create (fnName : string) isStatic (Obj.magic argNames) (Obj.magic args) (Obj.magic argOptional) (Obj.magic argRest) (Obj.magic ret) (Obj.magic (HxFunctionDecl.getPos (Obj.magic fn)))) in if isStatic then ignore (addMethod (Obj.magic statics) (Obj.magic staticLists) (Obj.magic hx_sig)) else ignore (addMethod (Obj.magic instances) (Obj.magic instanceLists) (Obj.magic hx_sig))
                   )
                 )
               )) done);
-              addClass (Obj.magic idx) (Obj.magic (TyClassInfo.create (full : string) (clsName : string) (ResolvedModule.getModulePath (Obj.magic m) : string) (Obj.magic fields) (Obj.magic statics) (Obj.magic instances)))
+              addClass (Obj.magic idx) (Obj.magic (TyClassInfo.create (full : string) (clsName : string) (ResolvedModule.getModulePath (Obj.magic m) : string) (Obj.magic fields) (Obj.magic statics) (Obj.magic instances) (Obj.magic staticLists) (Obj.magic instanceLists)))
             )
           )
         )
@@ -277,5 +293,5 @@ let build = fun resolved -> try let __fallback_result_57 = let idx = Obj.magic (
     )) done);
     idx
   )
-) in Obj.magic __fallback_result_57 with
-  | HxRuntime.Hx_return __ret_56 -> Obj.obj __ret_56
+) in Obj.magic __fallback_result_60 with
+  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59

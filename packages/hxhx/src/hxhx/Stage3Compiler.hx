@@ -90,6 +90,12 @@ class Stage3Compiler {
 		return 2;
 	}
 
+	static function haxeDiagnosticError(msg:String):Int {
+		Sys.stderr().writeString(msg + "\n");
+		Sys.stderr().flush();
+		return 1;
+	}
+
 	static function hasFlag(args:Array<String>, flag:String):Bool {
 		if (args == null || flag == null || flag.length == 0)
 			return false;
@@ -812,6 +818,10 @@ class Stage3Compiler {
 		final line = p == null ? 0 : p.getLine();
 		final col = p == null ? 0 : p.getColumn();
 		return e.getFilePath() + ":" + line + ":" + col + ": " + e.getMessage();
+	}
+
+	static function rawTyperDiagnostic(e:TyperError):Null<String> {
+		return TyperStage.extractRawDiagnostic(e.getMessage());
 	}
 
 	static function resolveHaxelibSpec(lib:String, cwd:String, seen:Map<String, Bool>, depth:Int):HaxelibSpec {
@@ -1793,6 +1803,9 @@ class Stage3Compiler {
 					typedCount += 1;
 				} catch (e:TyperError) {
 					closeMacroSession();
+					final rawDiagnostic = rawTyperDiagnostic(e);
+					if (rawDiagnostic != null)
+						return haxeDiagnosticError(rawDiagnostic);
 					return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + formatException(e));
 				} catch (e:String) {
 					closeMacroSession();
@@ -1908,6 +1921,9 @@ class Stage3Compiler {
 				typedModules.push(TyperStage.typeResolvedModule(m, typerIndex, moduleLoader));
 			} catch (e:TyperError) {
 				closeMacroSession();
+				final rawDiagnostic = rawTyperDiagnostic(e);
+				if (rawDiagnostic != null)
+					return haxeDiagnosticError(rawDiagnostic);
 				return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + formatException(e));
 			} catch (e:String) {
 				closeMacroSession();

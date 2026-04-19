@@ -365,6 +365,109 @@ class TyperStage {
 		return c >= "A".code && c <= "Z".code;
 	}
 
+	public static inline var RAW_DIAGNOSTIC_PREFIX:String = "__HXHX_RAW_DIAGNOSTIC__:";
+
+	public static function extractRawDiagnostic(message:String):Null<String> {
+		if (message == null || !StringTools.startsWith(message, RAW_DIAGNOSTIC_PREFIX))
+			return null;
+		return message.substr(RAW_DIAGNOSTIC_PREFIX.length);
+	}
+
+	static function sourceLine(filePath:String, line:Int):String {
+		if (filePath == null || filePath.length == 0 || line <= 0 || !sys.FileSystem.exists(filePath))
+			return "";
+		final lines = sys.io.File.getContent(filePath).split("\n");
+		return line <= lines.length ? lines[line - 1] : "";
+	}
+
+	static function diagnosticFileName(filePath:String):String {
+		if (filePath == null || filePath.length == 0)
+			return "<unknown>";
+		return haxe.io.Path.withoutDirectory(filePath);
+	}
+
+	static function callRange(filePath:String, pos:HxPos):{start:Int, end:Int} {
+		final start = pos == null || pos.getColumn() <= 0 ? 1 : pos.getColumn();
+		final line = sourceLine(filePath, pos == null ? 0 : pos.getLine());
+		if (line.length == 0)
+			return {start: start, end: start};
+		final startIndex = start > 0 ? start - 1 : 0;
+		final rest = startIndex < line.length ? line.substr(startIndex) : "";
+		var end = line.length + 1;
+		final semicolon = rest.indexOf(";");
+		if (semicolon >= 0)
+			end = start + semicolon;
+		return {start: start, end: end};
+	}
+
+	static function functionNameRange(filePath:String, sig:TyFunSig):{start:Int, end:Int} {
+		final pos = sig.getPos();
+		final line = sourceLine(filePath, pos == null ? 0 : pos.getLine());
+		final name = sig.getName();
+		final idx = line.indexOf(name);
+		final start = idx >= 0 ? idx + 1 : (pos == null || pos.getColumn() <= 0 ? 1 : pos.getColumn());
+		return {start: start, end: start + name.length};
+	}
+
+	static function renderArgType(sig:TyFunSig, index:Int):String {
+		final args = sig.getArgs();
+		final optional = sig.getArgOptional();
+		final raw = index < args.length ? args[index].getDisplay() : "Dynamic";
+		if (index < optional.length && optional[index] && !StringTools.startsWith(raw, "Null<"))
+			return "Null<" + raw + ">";
+		return raw;
+	}
+
+	static function renderOverloadCandidate(filePath:String, sig:TyFunSig):String {
+		final pos = sig.getPos();
+		final range = functionNameRange(filePath, sig);
+		final names = sig.getArgNames();
+		final optional = sig.getArgOptional();
+		final args = sig.getArgs();
+		final parts = new Array<String>();
+		for (i in 0...args.length) {
+			final argName = i < names.length ? names[i] : ("arg" + i);
+			final prefix = (i < optional.length && optional[i]) ? "?" : "";
+			parts.push(prefix + argName + " : " + renderArgType(sig, i));
+		}
+		return diagnosticFileName(filePath) + ":" + (pos == null ? 0 : pos.getLine()) + ": characters " + range.start + "-" + range.end + " : ... ("
+			+ parts.join(", ") + ") -> " + sig.getReturnType().getDisplay();
+	}
+
+	static function resolveMethodCallReturnType(c:TyClassInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
+			pos:HxPos):TyType {
+		for (a in args)
+			inferExprType(a, scope, ctx, pos);
+
+		final candidates = isStatic ? c.staticMethodCandidates(field) : c.instanceMethodCandidates(field);
+		if (candidates.length == 0)
+			return TyType.unknown();
+
+		final arityMatches = new Array<TyFunSig>();
+		for (candidate in candidates) {
+			if (candidate.acceptsArity(args.length))
+				arityMatches.push(candidate);
+		}
+		if (arityMatches.length > 1) {
+			final range = callRange(ctx.getFilePath(), pos);
+			final lines = [diagnosticFileName(ctx.getFilePath())
+				+ ":"
+				+ (pos == null ? 0 : pos.getLine())
+				+ ": characters "
+				+ range.start
+				+ "-"
+				+ range.end
+				+ " : Ambiguous overload, candidates follow"];
+			for (candidate in arityMatches)
+				lines.push(renderOverloadCandidate(ctx.getFilePath(), candidate));
+			throw new TyperError(ctx.getFilePath(), pos, RAW_DIAGNOSTIC_PREFIX + lines.join("\n"));
+		}
+		if (arityMatches.length == 1)
+			return arityMatches[0].getReturnType();
+
+		return TyType.unknown();
+	}
+
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
 		return switch (expr) {
 			case ENull:
@@ -546,10 +649,7 @@ class TyperStage {
 							case EIdent(typeName):
 								final c = isUpperStartName(typeName) ? ctx.resolveType(typeName) : null;
 								if (c != null) {
-									for (a in args)
-										inferExprType(a, scope, ctx, pos);
-									final sig = c.staticMethod(field);
-									sig != null ? sig.getReturnType() : TyType.unknown();
+									resolveMethodCallReturnType(c, field, true, args, scope, ctx, pos);
 								} else {
 									// `obj` is a value identifier (local/param), not a type name.
 									final objTy = inferExprType(obj, scope, ctx, pos);
@@ -558,20 +658,18 @@ class TyperStage {
 									final idx = ctx.getIndex();
 									final c2 = idx == null ? null : idx.getByFullName(objTy.getDisplay());
 									if (c2 != null) {
-										final sig = c2.instanceMethod(field);
-										sig != null ? sig.getReturnType() : TyType.unknown();
+										resolveMethodCallReturnType(c2, field, false, args, scope, ctx, pos);
 									} else {
 										TyType.unknown();
 									}
 								}
 							case EThis:
 								final c = ctx.currentClass();
-								for (a in args)
-									inferExprType(a, scope, ctx, pos);
 								if (c != null) {
-									final sig = c.instanceMethod(field);
-									sig != null ? sig.getReturnType() : TyType.unknown();
+									resolveMethodCallReturnType(c, field, false, args, scope, ctx, pos);
 								} else {
+									for (a in args)
+										inferExprType(a, scope, ctx, pos);
 									TyType.unknown();
 								}
 							case _:
@@ -586,10 +684,7 @@ class TyperStage {
 									if (isUpperStartName(last)) {
 										final c = ctx.resolveType(dotted);
 										if (c != null) {
-											for (a in args)
-												inferExprType(a, scope, ctx, pos);
-											final sig = c.staticMethod(field);
-											return sig != null ? sig.getReturnType() : TyType.unknown();
+											return resolveMethodCallReturnType(c, field, true, args, scope, ctx, pos);
 										}
 									}
 								}
@@ -601,8 +696,7 @@ class TyperStage {
 								final idx = ctx.getIndex();
 								final c2 = idx == null ? null : idx.getByFullName(objTy.getDisplay());
 								if (c2 != null) {
-									final sig = c2.instanceMethod(field);
-									sig != null ? sig.getReturnType() : TyType.unknown();
+									resolveMethodCallReturnType(c2, field, false, args, scope, ctx, pos);
 								} else {
 									TyType.unknown();
 								}

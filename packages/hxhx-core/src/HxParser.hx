@@ -3606,6 +3606,12 @@ class HxParser {
 									// are not modeled in the current bring-up AST.
 									bump();
 									keep = true;
+								case TIdent(name) if (name == "overload"):
+									// Preserve overload declarations so the Stage3 typer can reject ambiguous
+									// call sites instead of silently treating overloaded externs as unknown.
+									metadata.push("overload");
+									bump();
+									keep = true;
 								case _:
 							}
 						}

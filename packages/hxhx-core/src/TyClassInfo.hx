@@ -26,9 +26,12 @@ class TyClassInfo {
 	final fields:haxe.ds.StringMap<TyType>;
 	final staticMethods:haxe.ds.StringMap<TyFunSig>;
 	final instanceMethods:haxe.ds.StringMap<TyFunSig>;
+	final staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>;
+	final instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>;
 
 	public function new(fullName:String, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyType>, staticMethods:haxe.ds.StringMap<TyFunSig>,
-			instanceMethods:haxe.ds.StringMap<TyFunSig>) {
+			instanceMethods:haxe.ds.StringMap<TyFunSig>, staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
+			instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>) {
 		this.fullName = fullName;
 		this.shortName = shortName;
 		this.modulePath = modulePath;
@@ -42,6 +45,8 @@ class TyClassInfo {
 		this.fields = fields;
 		this.staticMethods = staticMethods;
 		this.instanceMethods = instanceMethods;
+		this.staticMethodLists = staticMethodLists;
+		this.instanceMethodLists = instanceMethodLists;
 	}
 
 	public function getFullName():String
@@ -64,4 +69,10 @@ class TyClassInfo {
 
 	public function instanceMethod(name:String):Null<TyFunSig>
 		return instanceMethods.exists(name) ? instanceMethods.get(name) : null;
+
+	public function staticMethodCandidates(name:String):Array<TyFunSig>
+		return staticMethodLists.exists(name) ? staticMethodLists.get(name) : [];
+
+	public function instanceMethodCandidates(name:String):Array<TyFunSig>
+		return instanceMethodLists.exists(name) ? instanceMethodLists.get(name) : [];
 }
