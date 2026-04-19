@@ -1048,7 +1048,7 @@ let readString = fun self (startPos : HxPos.t) -> try let __fallback_result_671 
             raise (HxRuntime.Hx_continue)
           )
         )) else ());
-        ignore (if c = 34 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TString (StringBuf.toString (Obj.magic buf) () : string))) (Obj.magic startPos))))) else ());
+        ignore (if c = 34 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TString ((StringBuf.toString (Obj.magic buf) () : string), false))) (Obj.magic startPos))))) else ());
         ignore (if c = 92 then ignore ((
           ignore (if (Obj.magic self : t).index >= HxString.length ((Obj.magic self : t).src) then raise (HxRuntime.Hx_break) else ());
           let tempNumber7 = ref (0 : int) in (
@@ -1292,7 +1292,7 @@ let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let __fallback
             raise (HxRuntime.Hx_continue)
           )
         )) else ());
-        ignore (if c = 39 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TString (StringBuf.toString (Obj.magic buf) () : string))) (Obj.magic startPos))))) else ());
+        ignore (if c = 39 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TString ((StringBuf.toString (Obj.magic buf) () : string), true))) (Obj.magic startPos))))) else ());
         ignore (if c = 92 then ignore ((
           ignore (if (Obj.magic self : t).index >= HxString.length ((Obj.magic self : t).src) then raise (HxRuntime.Hx_break) else ());
           let tempNumber7 = ref (0 : int) in (

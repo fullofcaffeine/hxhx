@@ -359,7 +359,7 @@ class HxLexer {
 				continue;
 			}
 			if (c == 34) { // "
-				return new HxToken(TString(buf.toString()), startPos);
+				return new HxToken(TString(buf.toString(), false), startPos);
 			}
 			if (c == 92) { // backslash
 				if (eof())
@@ -443,7 +443,7 @@ class HxLexer {
 				continue;
 			}
 			if (c == "'".code) {
-				return new HxToken(TString(buf.toString()), startPos);
+				return new HxToken(TString(buf.toString(), true), startPos);
 			}
 			if (c == 92) { // backslash
 				if (eof())

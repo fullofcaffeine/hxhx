@@ -8,7 +8,16 @@
 enum HxTokenKind {
 	TEof;
 	TIdent(name:String);
-	TString(value:String);
+
+	/**
+		String literal payload.
+
+		`interpolate` is true only for Haxe's single-quoted interpolation strings.
+		Double-quoted strings can contain `$NAME` literally, which matters for
+		upstream sys argument tests that pass shell-looking data through unchanged.
+	**/
+	TString(value:String, interpolate:Bool);
+
 	TInt(value:Int);
 	TFloat(value:Float);
 	TRegex(pattern:String, flags:String);

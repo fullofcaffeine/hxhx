@@ -637,7 +637,8 @@ let init () : unit =
   HxType.register_enum_ctor "HxTokenKind" "TString" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxTokenKind.TString" in
-    Obj.repr (HxTokenKind.TString a0)
+    let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'interpolate' for HxTokenKind.TString" in
+    Obj.repr (HxTokenKind.TString (a0, a1))
   );
   HxType.register_enum_ctor "HxTokenKind" "TInt" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in

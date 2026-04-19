@@ -58,7 +58,7 @@ let findBuildMacroExprs = fun source -> try let __fallback_result_18 = let out =
           ignore (let _g3 = Obj.magic (HxToken.getKind (Obj.magic t2) ()) in let _g1 = Obj.magic (HxToken.getKind (Obj.magic t3) ()) in let _g4 = Obj.magic (HxToken.getKind (Obj.magic t4) ()) in if (match _g3 with
             | HxTokenKind.TEof -> 0
             | HxTokenKind.TIdent _ -> 1
-            | HxTokenKind.TString _ -> 2
+            | HxTokenKind.TString (_, _) -> 2
             | HxTokenKind.TInt _ -> 3
             | HxTokenKind.TFloat _ -> 4
             | HxTokenKind.TRegex (_, _) -> 5
@@ -74,7 +74,7 @@ let findBuildMacroExprs = fun source -> try let __fallback_result_18 = let out =
             | HxTokenKind.TOther _ -> 15) = 12 then if (match _g1 with
             | HxTokenKind.TEof -> 0
             | HxTokenKind.TIdent _ -> 1
-            | HxTokenKind.TString _ -> 2
+            | HxTokenKind.TString (_, _) -> 2
             | HxTokenKind.TInt _ -> 3
             | HxTokenKind.TFloat _ -> 4
             | HxTokenKind.TRegex (_, _) -> 5
@@ -93,7 +93,7 @@ let findBuildMacroExprs = fun source -> try let __fallback_result_18 = let out =
             | "autoBuild" -> if (match _g4 with
               | HxTokenKind.TEof -> 0
               | HxTokenKind.TIdent _ -> 1
-              | HxTokenKind.TString _ -> 2
+              | HxTokenKind.TString (_, _) -> 2
               | HxTokenKind.TInt _ -> 3
               | HxTokenKind.TFloat _ -> 4
               | HxTokenKind.TRegex (_, _) -> 5
@@ -116,7 +116,7 @@ let findBuildMacroExprs = fun source -> try let __fallback_result_18 = let out =
             | "build" -> if (match _g4 with
               | HxTokenKind.TEof -> 0
               | HxTokenKind.TIdent _ -> 1
-              | HxTokenKind.TString _ -> 2
+              | HxTokenKind.TString (_, _) -> 2
               | HxTokenKind.TInt _ -> 3
               | HxTokenKind.TFloat _ -> 4
               | HxTokenKind.TRegex (_, _) -> 5

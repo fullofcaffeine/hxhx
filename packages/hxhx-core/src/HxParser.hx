@@ -414,7 +414,7 @@ class HxParser {
 						case TIdent(name):
 							bump();
 							name;
-						case TString(name):
+						case TString(name, _):
 							bump();
 							name;
 						case _:
@@ -461,7 +461,7 @@ class HxParser {
 				if (cur.kind.match(TOther("]".code)))
 					bump();
 				PArray(items);
-			case TString(s):
+			case TString(s, _):
 				bump();
 				PString(s);
 			case TInt(v):
@@ -812,7 +812,7 @@ class HxParser {
 				case TKeyword(k):
 					parts.push(keywordText(k));
 					bump();
-				case TString(s):
+				case TString(s, _):
 					parts.push('"' + s + '"');
 					bump();
 				case TInt(v):
@@ -980,9 +980,9 @@ class HxParser {
 					bump();
 					EUnsupported(raw);
 				}
-			case TString(s):
+			case TString(s, interpolate):
 				bump();
-				parseInterpolatedStringExpr(s);
+				interpolate ? parseInterpolatedStringExpr(s) : EString(s);
 			case TInt(v):
 				bump();
 				EInt(v);
@@ -1618,7 +1618,7 @@ class HxParser {
 		final isAnonLiteral = switch (cur.kind) {
 			case TIdent(_):
 				peekKind().match(TColon);
-			case TString(_):
+			case TString(_, _):
 				peekKind().match(TColon);
 			case _:
 				false;
@@ -1710,7 +1710,7 @@ class HxParser {
 
 	function readAnonFieldName():String {
 		return switch (cur.kind) {
-			case TString(s):
+			case TString(s, _):
 				bump();
 				s;
 			case _:
@@ -2419,7 +2419,7 @@ class HxParser {
 			final caseStmts = new Array<HxStmt>();
 			while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof) && !cur.kind.match(TKeyword(KCase)) && !cur.kind.match(TKeyword(KDefault))) {
 				final braceStartsAnon = cur.kind.match(TLBrace)
-					&& ((peekKind().match(TIdent(_)) || peekKind().match(TString(_))) && peekKind2().match(TColon));
+					&& ((peekKind().match(TIdent(_)) || peekKind().match(TString(_, _))) && peekKind2().match(TColon));
 				if (braceStartsAnon) {
 					final exprPos = cur.pos;
 					final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)
@@ -2513,7 +2513,7 @@ class HxParser {
 				case TKeyword(k):
 					final text = keywordText(k);
 					if (text == "new" || text == "throw" || text == "return" || text == "var" || text == "final") text + " "; else text;
-				case TString(s):
+				case TString(s, _):
 					"\"" + s + "\"";
 				case TInt(v):
 					Std.string(v);
@@ -2823,7 +2823,7 @@ class HxParser {
 
 		if (capturedReturnStringLiteral.length == 0) {
 			switch (cur.kind) {
-				case TString(s):
+				case TString(s, _):
 					capturedReturnStringLiteral = s;
 				case _:
 			}
@@ -3332,7 +3332,7 @@ class HxParser {
 				case TDot: ".";
 				case TComma: ",";
 				case TIdent(name): "ident(" + name + ")";
-				case TString(_): "string";
+				case TString(_, _): "string";
 				case TInt(_): "int";
 				case TFloat(_): "float";
 				case TRegex(_, _): "regex";

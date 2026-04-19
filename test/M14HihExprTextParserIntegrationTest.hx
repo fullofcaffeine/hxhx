@@ -171,6 +171,25 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected nested-quote interpolation in if statement");
 		}
 
+		final doubleQuotedDollarExpr = HxParser.parseExprText("\"a $HOME b\"");
+		switch (doubleQuotedDollarExpr) {
+			case EString(value):
+				assertTrue(value == "a $HOME b", "expected double-quoted dollar text to stay literal");
+			case EBinop(_, _, _):
+				fail("double-quoted dollar text should not become interpolation");
+			case _:
+				fail("expected double-quoted dollar text to parse as EString");
+		}
+
+		final singleQuotedDollarExpr = HxParser.parseExprText("'a $value b'");
+		switch (singleQuotedDollarExpr) {
+			case EBinop(_, _, _):
+			case EString(_):
+				fail("single-quoted dollar text should keep interpolation behavior");
+			case _:
+				fail("expected single-quoted dollar text to parse as interpolation concat");
+		}
+
 		final switchCaseSequenceStmts = HxParser.parseFunctionBodyText("var result = switch [ok, expected] { case [true, false]: true; case [false, false]: var detail = proc.stderr.readAll().toString(); Sys.print(detail); false; case _: false; };");
 		assertTrue(switchCaseSequenceStmts.length == 1, "expected switch expression case bodies to stay inside one var statement");
 		switch (switchCaseSequenceStmts[0]) {

@@ -50,7 +50,7 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
         ignore (let _g = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in if (match _g with
           | HxTokenKind.TEof -> 0
           | HxTokenKind.TIdent _ -> 1
-          | HxTokenKind.TString _ -> 2
+          | HxTokenKind.TString (_, _) -> 2
           | HxTokenKind.TInt _ -> 3
           | HxTokenKind.TFloat _ -> 4
           | HxTokenKind.TRegex (_, _) -> 5
@@ -86,7 +86,7 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
         ignore (let _g = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in if (match _g with
           | HxTokenKind.TEof -> 0
           | HxTokenKind.TIdent _ -> 1
-          | HxTokenKind.TString _ -> 2
+          | HxTokenKind.TString (_, _) -> 2
           | HxTokenKind.TInt _ -> 3
           | HxTokenKind.TFloat _ -> 4
           | HxTokenKind.TRegex (_, _) -> 5
@@ -143,7 +143,7 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
             ignore (while !scanningPath do ignore (let _g = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in if (match _g with
               | HxTokenKind.TEof -> 0
               | HxTokenKind.TIdent _ -> 1
-              | HxTokenKind.TString _ -> 2
+              | HxTokenKind.TString (_, _) -> 2
               | HxTokenKind.TInt _ -> 3
               | HxTokenKind.TFloat _ -> 4
               | HxTokenKind.TRegex (_, _) -> 5
@@ -215,7 +215,7 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
             ignore (let _g = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in if (match _g with
               | HxTokenKind.TEof -> 0
               | HxTokenKind.TIdent _ -> 1
-              | HxTokenKind.TString _ -> 2
+              | HxTokenKind.TString (_, _) -> 2
               | HxTokenKind.TInt _ -> 3
               | HxTokenKind.TFloat _ -> 4
               | HxTokenKind.TRegex (_, _) -> 5
@@ -322,7 +322,7 @@ let readScope = fun sourceFile -> try let __fallback_result_62 = let imports = O
         while true do ignore (let _g = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in if (match _g with
           | HxTokenKind.TEof -> 0
           | HxTokenKind.TIdent _ -> 1
-          | HxTokenKind.TString _ -> 2
+          | HxTokenKind.TString (_, _) -> 2
           | HxTokenKind.TInt _ -> 3
           | HxTokenKind.TFloat _ -> 4
           | HxTokenKind.TRegex (_, _) -> 5
