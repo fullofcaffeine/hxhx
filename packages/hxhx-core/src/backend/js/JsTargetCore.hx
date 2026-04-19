@@ -995,6 +995,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "StringTools")
 			return emitStringToolsStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "haxe.ds.Vector")
+			return emitVectorStaticFunctionBody(writer, fnName, params);
+
 		if (fullName == "Std")
 			return emitStdStaticFunctionBody(writer, fnName, params);
 
@@ -2162,6 +2165,22 @@ class JsTargetCore implements ITargetCore {
 		}
 	}
 
+	static function emitVectorStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "fromArrayCopy":
+				if (params.length < 1)
+					return false;
+				emitVectorFromArrayCopyBody(writer, params[0]);
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitVectorFromArrayCopyBody(writer:JsWriter, array:String):Void {
+		writer.writeln("return " + array + " == null ? null : " + array + ".slice();");
+	}
+
 	static function emitHaxeIoBytesStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
 		final bytesRef = JsNameMangler.classVarName("haxe.io.Bytes");
 		switch (fnName) {
@@ -2379,6 +2398,8 @@ class JsTargetCore implements ITargetCore {
 			emitStringMapRuntimeComplements(writer, jsRef);
 		if (fullName == "haxe.ds.IntMap")
 			emitIntMapRuntimeComplements(writer, jsRef);
+		if (fullName == "haxe.ds.Vector")
+			emitVectorRuntimeComplements(writer, jsRef);
 	}
 
 	static function emitHaxeIoBytesRuntimeComplements(writer:JsWriter, jsRef:String):Void {
@@ -2617,6 +2638,18 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("var keys = Object.keys(store);");
 		writer.writeln("var index = 0;");
 		writer.writeln("return { hasNext: function() { return index < keys.length; }, next: function() { return store[keys[index++]]; } };");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+	}
+
+	static function emitVectorRuntimeComplements(writer:JsWriter, jsRef:String):Void {
+		writer.writeln("if (typeof " + jsRef + ".fromArrayCopy !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".fromArrayCopy = function(array) {");
+		writer.pushIndent();
+		emitVectorFromArrayCopyBody(writer, "array");
 		writer.popIndent();
 		writer.writeln("};");
 		writer.popIndent();

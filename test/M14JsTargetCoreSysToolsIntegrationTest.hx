@@ -856,6 +856,16 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "haxe/ds/IntMap.hx");
 	}
 
+	static function haxeDsVectorModule():TypedModule {
+		final arrayArg = new HxFunctionArg("array", "Array<Dynamic>", HxDefaultValue.NoDefault);
+		final vectorClass = new HxClassDecl("Vector", false, [
+			new HxFunctionDecl("fromArrayCopy", HxVisibility.Public, true, [arrayArg], "haxe.ds.Vector<Dynamic>",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-vector"), "")
+		]);
+		final decl = new HxModuleDecl("haxe.ds", [], vectorClass, [vectorClass], false, false);
+		return typedModule("", decl, "haxe/ds/Vector.hx");
+	}
+
 	static function haxeDisplayProtocolModule():TypedModule {
 		final methodArg = new HxFunctionArg("method", "String", HxDefaultValue.NoDefault);
 		final requestClass = new HxClassDecl("HaxeRequestMethod", false, [
@@ -1199,6 +1209,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    intMap.set(42, "answer");',
 				'    intMap.set(-1, "minus");',
 				'    Sys.println("intmap=" + intMap.get(42) + ":" + intMap.exists(-1) + ":" + intMap.remove(42) + ":" + intMap.get(42));',
+				'    var vectorSource = [5, 6];',
+				'    var vectorCopy = haxe.ds.Vector.fromArrayCopy(vectorSource);',
+				'    vectorSource[0] = 9;',
+				'    Sys.println("vector-copy=" + vectorCopy[0] + ":" + vectorCopy[1] + ":" + vectorCopy.length);',
 				'    Sys.println("upper=" + "abc".toUpperCase());',
 				'    Sys.println(unit.TestReflect.TYPES[0].__hx_name);',
 				'    Sys.println(unit.TestReflect.TNAMES.join(","));',
@@ -1317,6 +1331,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				phpNativeAssocArrayModule(),
 				haxeDsStringMapModule(),
 				haxeDsIntMapModule(),
+				haxeDsVectorModule(),
 				haxeDisplayProtocolModule(),
 				sysThreadThreadModule(),
 				haxeXmlParserModule(),
@@ -1491,6 +1506,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_ds_IntMap.prototype.set = function", "IntMap set runtime complement should emit");
 			assertContains(js, "__hx_cls_haxe_ds_IntMap.prototype.get = function", "IntMap get runtime complement should emit");
 			assertContains(js, "this.__hx_store()[String(key | 0)] = value;", "IntMap keys should be stored by integer identity");
+			assertContains(js, "__hx_cls_haxe_ds_Vector.fromArrayCopy = function", "Vector fromArrayCopy runtime complement should emit");
+			assertContains(js, "return array == null ? null : array.slice();", "Vector fromArrayCopy should use JS array shallow-copy semantics");
 			assertContains(js, "__hx_cls_sys_thread_Thread.prototype.sendMessage = function",
 				"unused sys.thread.Thread sendMessage should emit a neutral JS body");
 			assertContains(js, "this.__hx_value = method", "abstract-style constructor assignment to this should lower to a backing value slot");
@@ -1596,6 +1613,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "starts=true,true", "StringTools.startsWith should support utest prefix discovery and empty prefixes");
 			assertContains(stdout, "replace=baXX,a/b,axbxc", "StringTools.replace should perform literal global replacements including empty needles");
 			assertContains(stdout, "intmap=answer:true:true:null", "IntMap should support diff-style get/exists/remove lookups");
+			assertContains(stdout, "vector-copy=5:6:2", "Vector.fromArrayCopy should return a shallow copy isolated from later source mutation");
 			assertContains(stdout, "upper=ABC", "native JS String prototype methods should remain available");
 			assertContains(stdout, "unit.MyInterface", "unresolved qualified value type refs should preserve runtime type names");
 			assertContains(stdout, "haxe.ds.StringMap,unit.MyInterface", "same-class static helper calls should execute during static field initialization");
