@@ -2377,6 +2377,8 @@ class JsTargetCore implements ITargetCore {
 			emitHaxeIoBytesRuntimeComplements(writer, jsRef);
 		if (fullName == "haxe.ds.StringMap")
 			emitStringMapRuntimeComplements(writer, jsRef);
+		if (fullName == "haxe.ds.IntMap")
+			emitIntMapRuntimeComplements(writer, jsRef);
 	}
 
 	static function emitHaxeIoBytesRuntimeComplements(writer:JsWriter, jsRef:String):Void {
@@ -2536,6 +2538,85 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("var keys = Object.keys(this.__hx_store());");
 		writer.writeln("var index = 0;");
 		writer.writeln("return { hasNext: function() { return index < keys.length; }, next: function() { return keys[index++]; } };");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+	}
+
+	static function emitIntMapRuntimeComplements(writer:JsWriter, jsRef:String):Void {
+		writer.writeln("if (typeof " + jsRef + ".prototype.__hx_store !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.__hx_store = function() {");
+		writer.pushIndent();
+		writer.writeln("if (this.__hx_map == null) this.__hx_map = Object.create(null);");
+		writer.writeln("return this.__hx_map;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.set !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.set = function(key, value) {");
+		writer.pushIndent();
+		writer.writeln("this.__hx_store()[String(key | 0)] = value;");
+		writer.writeln("return value;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.get !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.get = function(key) {");
+		writer.pushIndent();
+		writer.writeln("var store = this.__hx_store();");
+		writer.writeln("var k = String(key | 0);");
+		writer.writeln("return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.exists !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.exists = function(key) {");
+		writer.pushIndent();
+		writer.writeln("return Object.prototype.hasOwnProperty.call(this.__hx_store(), String(key | 0));");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.remove !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.remove = function(key) {");
+		writer.pushIndent();
+		writer.writeln("var store = this.__hx_store();");
+		writer.writeln("var k = String(key | 0);");
+		writer.writeln("var existed = Object.prototype.hasOwnProperty.call(store, k);");
+		writer.writeln("if (existed) delete store[k];");
+		writer.writeln("return existed;");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.keys !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.keys = function() {");
+		writer.pushIndent();
+		writer.writeln("var keys = Object.keys(this.__hx_store()).map(function(k) { return k | 0; });");
+		writer.writeln("var index = 0;");
+		writer.writeln("return { hasNext: function() { return index < keys.length; }, next: function() { return keys[index++]; } };");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".prototype.iterator !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype.iterator = function() {");
+		writer.pushIndent();
+		writer.writeln("var store = this.__hx_store();");
+		writer.writeln("var keys = Object.keys(store);");
+		writer.writeln("var index = 0;");
+		writer.writeln("return { hasNext: function() { return index < keys.length; }, next: function() { return store[keys[index++]]; } };");
 		writer.popIndent();
 		writer.writeln("};");
 		writer.popIndent();

@@ -1195,6 +1195,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
 				'    Sys.println("starts=" + StringTools.startsWith("testCase", "test") + "," + StringTools.startsWith("case", ""));',
 				'    Sys.println("replace=" + StringTools.replace("banana", "na", "X") + "," + StringTools.replace("a\\\\b", "\\\\", "/") + "," + StringTools.replace("abc", "", "x"));',
+				'    var intMap = new haxe.ds.IntMap();',
+				'    intMap.set(42, "answer");',
+				'    intMap.set(-1, "minus");',
+				'    Sys.println("intmap=" + intMap.get(42) + ":" + intMap.exists(-1) + ":" + intMap.remove(42) + ":" + intMap.get(42));',
 				'    Sys.println("upper=" + "abc".toUpperCase());',
 				'    Sys.println(unit.TestReflect.TYPES[0].__hx_name);',
 				'    Sys.println(unit.TestReflect.TNAMES.join(","));',
@@ -1484,6 +1488,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "new __hx_cls_haxe_ds_StringMap()", "raw package-qualified constructors should rewrite to flat class bindings");
 			assertNotContains(js, "new haxe.ds.StringMap()", "raw package-qualified constructors should not leak namespace access");
 			assertContains(js, "__hx_cls_haxe_ds_StringMap.prototype.set = function", "StringMap set runtime complement should emit");
+			assertContains(js, "__hx_cls_haxe_ds_IntMap.prototype.set = function", "IntMap set runtime complement should emit");
+			assertContains(js, "__hx_cls_haxe_ds_IntMap.prototype.get = function", "IntMap get runtime complement should emit");
+			assertContains(js, "this.__hx_store()[String(key | 0)] = value;", "IntMap keys should be stored by integer identity");
 			assertContains(js, "__hx_cls_sys_thread_Thread.prototype.sendMessage = function",
 				"unused sys.thread.Thread sendMessage should emit a neutral JS body");
 			assertContains(js, "this.__hx_value = method", "abstract-style constructor assignment to this should lower to a backing value slot");
@@ -1588,6 +1595,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
 			assertContains(stdout, "starts=true,true", "StringTools.startsWith should support utest prefix discovery and empty prefixes");
 			assertContains(stdout, "replace=baXX,a/b,axbxc", "StringTools.replace should perform literal global replacements including empty needles");
+			assertContains(stdout, "intmap=answer:true:true:null", "IntMap should support diff-style get/exists/remove lookups");
 			assertContains(stdout, "upper=ABC", "native JS String prototype methods should remain available");
 			assertContains(stdout, "unit.MyInterface", "unresolved qualified value type refs should preserve runtime type names");
 			assertContains(stdout, "haxe.ds.StringMap,unit.MyInterface", "same-class static helper calls should execute during static field initialization");

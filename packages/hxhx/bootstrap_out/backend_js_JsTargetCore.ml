@@ -2306,10 +2306,90 @@ let emitStringMapRuntimeComplements = fun writer jsRef -> ignore ((
   Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string)
 ))
 
+let emitIntMapRuntimeComplements = fun writer jsRef -> ignore ((
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString jsRef) ^ ".prototype.__hx_store !== \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString jsRef ^ ".prototype.__hx_store = function() {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (this.__hx_map == null) this.__hx_map = Object.create(null);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return this.__hx_map;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString jsRef) ^ ".prototype.set !== \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString jsRef ^ ".prototype.set = function(key, value) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("this.__hx_store()[String(key | 0)] = value;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return value;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString jsRef) ^ ".prototype.get !== \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString jsRef ^ ".prototype.get = function(key) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var store = this.__hx_store();" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var k = String(key | 0);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString jsRef) ^ ".prototype.exists !== \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString jsRef ^ ".prototype.exists = function(key) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return Object.prototype.hasOwnProperty.call(this.__hx_store(), String(key | 0));" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString jsRef) ^ ".prototype.remove !== \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString jsRef ^ ".prototype.remove = function(key) {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var store = this.__hx_store();" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var k = String(key | 0);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var existed = Object.prototype.hasOwnProperty.call(store, k);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (existed) delete store[k];" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return existed;" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString jsRef) ^ ".prototype.keys !== \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString jsRef ^ ".prototype.keys = function() {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var keys = Object.keys(this.__hx_store()).map(function(k) { return k | 0; });" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var index = 0;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return { hasNext: function() { return index < keys.length; }, next: function() { return keys[index++]; } };" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("if (typeof " ^ HxString.toStdString jsRef) ^ ".prototype.iterator !== \"function\") {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString jsRef ^ ".prototype.iterator = function() {" : string));
+  ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var store = this.__hx_store();" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var keys = Object.keys(store);" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("var index = 0;" : string));
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("return { hasNext: function() { return index < keys.length; }, next: function() { return store[keys[index++]]; } };" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("};" : string));
+  ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+  Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string)
+))
+
 let emitKnownClassRuntimeComplements = fun writer fullName jsRef -> ignore ((
   ignore (if HxString.equals fullName "StringTools" then ignore (emitStringToolsRuntimeComplements (Obj.magic writer) (jsRef : string)) else ());
   ignore (if HxString.equals fullName "haxe.io.Bytes" then ignore (emitHaxeIoBytesRuntimeComplements (Obj.magic writer) (jsRef : string)) else ());
-  if HxString.equals fullName "haxe.ds.StringMap" then ignore (emitStringMapRuntimeComplements (Obj.magic writer) (jsRef : string)) else ()
+  ignore (if HxString.equals fullName "haxe.ds.StringMap" then ignore (emitStringMapRuntimeComplements (Obj.magic writer) (jsRef : string)) else ());
+  if HxString.equals fullName "haxe.ds.IntMap" then ignore (emitIntMapRuntimeComplements (Obj.magic writer) (jsRef : string)) else ()
 ))
 
 let emitDateToolsFormatGetBody = fun writer date token -> ignore (let dateToolsRef = (Backend_js_JsNameMangler.classVarName ("DateTools" : string) : string) in (
