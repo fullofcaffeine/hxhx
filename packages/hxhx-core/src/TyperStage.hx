@@ -434,20 +434,72 @@ class TyperStage {
 			+ parts.join(", ") + ") -> " + sig.getReturnType().getDisplay();
 	}
 
+	static function normalizeOverloadTypeName(ty:TyType):String {
+		if (ty == null)
+			return "Unknown";
+		var s = StringTools.trim(ty.getDisplay());
+		while (StringTools.startsWith(s, "Null<") && StringTools.endsWith(s, ">"))
+			s = StringTools.trim(s.substr(5, s.length - 6));
+		return s;
+	}
+
+	static function overloadArgScore(expected:TyType, actual:TyType):Int {
+		final exp = normalizeOverloadTypeName(expected);
+		final act = normalizeOverloadTypeName(actual);
+		if (exp == "Unknown" || act == "Unknown" || exp == "Dynamic" || act == "Dynamic")
+			return 0;
+		if (exp == act)
+			return 4;
+		if ((exp == "Float" && act == "Int") || (exp == "Int" && act == "Float"))
+			return 1;
+		return -1;
+	}
+
+	static function overloadCandidateScore(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int):Int {
+		if (!sig.acceptsArity(suppliedArity))
+			return -1;
+		final expected = sig.getArgs();
+		var score = 0;
+		for (i in 0...suppliedArity) {
+			final argScore = overloadArgScore(i < expected.length ? expected[i] : TyType.fromHintText("Dynamic"),
+				i < argTypes.length ? argTypes[i] : TyType.unknown());
+			if (argScore < 0)
+				return -1;
+			score += argScore;
+		}
+		return score;
+	}
+
 	static function resolveMethodCallReturnType(c:TyClassInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
 			pos:HxPos):TyType {
+		final argTypes = new Array<TyType>();
 		for (a in args)
-			inferExprType(a, scope, ctx, pos);
+			argTypes.push(inferExprType(a, scope, ctx, pos));
 
 		final candidates = isStatic ? c.staticMethodCandidates(field) : c.instanceMethodCandidates(field);
 		if (candidates.length == 0)
 			return TyType.unknown();
 
 		final arityMatches = new Array<TyFunSig>();
+		var bestScore = -1;
+		final bestMatches = new Array<TyFunSig>();
 		for (candidate in candidates) {
-			if (candidate.acceptsArity(args.length))
+			final score = overloadCandidateScore(candidate, argTypes, args.length);
+			if (score >= 0) {
 				arityMatches.push(candidate);
+				if (score > bestScore) {
+					bestScore = score;
+					bestMatches.resize(0);
+					bestMatches.push(candidate);
+				} else if (score == bestScore) {
+					bestMatches.push(candidate);
+				}
+			}
 		}
+		if (bestMatches.length == 1 && bestScore > 0)
+			return bestMatches[0].getReturnType();
+		if (bestMatches.length == 1 && arityMatches.length == 1)
+			return bestMatches[0].getReturnType();
 		if (arityMatches.length > 1) {
 			final range = callRange(ctx.getFilePath(), pos);
 			final lines = [diagnosticFileName(ctx.getFilePath())

@@ -219,12 +219,14 @@ class ParserStage {
 							return cls;
 
 						final scannedFnStaticByName:Map<String, Bool> = new Map();
-						final scannedFnByName:Map<String, HxFunctionDecl> = new Map();
+						final scannedFnsByName:Map<String, Array<HxFunctionDecl>> = new Map();
 						for (fn in HxClassDecl.getFunctions(scanned)) {
 							final fnName = HxFunctionDecl.getName(fn);
 							if (fnName != null && fnName.length > 0) {
 								scannedFnStaticByName.set(fnName, HxFunctionDecl.getIsStatic(fn));
-								scannedFnByName.set(fnName, fn);
+								final bucket = scannedFnsByName.exists(fnName) ? scannedFnsByName.get(fnName) : [];
+								bucket.push(fn);
+								scannedFnsByName.set(fnName, bucket);
 							}
 						}
 
@@ -240,11 +242,40 @@ class ParserStage {
 
 						function mergeScannedMetadata(fn:HxFunctionDecl, scannedFn:Null<HxFunctionDecl>):Array<String> {
 							final out = HxFunctionDecl.getMetadata(fn).copy();
-							if (scannedFn != null
-								&& hasMetadata(HxFunctionDecl.getMetadata(scannedFn), "macro")
-								&& !hasMetadata(out, "macro"))
-								out.push("macro");
+							if (scannedFn != null) {
+								for (value in HxFunctionDecl.getMetadata(scannedFn)) {
+									if (!hasMetadata(out, value))
+										out.push(value);
+								}
+							}
 							return out;
+						}
+
+						function usefulHint(value:String):Bool {
+							final s = StringTools.trim(value == null ? "" : value);
+							return s.length > 0 && s != "Unknown";
+						}
+
+						function argsNeedScan(nativeArgs:Array<HxFunctionArg>, scannedArgs:Array<HxFunctionArg>):Bool {
+							if (nativeArgs == null || scannedArgs == null || nativeArgs.length != scannedArgs.length)
+								return false;
+							for (i in 0...nativeArgs.length) {
+								if (!usefulHint(HxFunctionArg.getTypeHint(nativeArgs[i]))
+									&& usefulHint(HxFunctionArg.getTypeHint(scannedArgs[i])))
+									return true;
+							}
+							return false;
+						}
+
+						function nextScannedFn(name:String, used:Map<String, Int>):Null<HxFunctionDecl> {
+							if (name == null || name.length == 0)
+								return null;
+							final bucket = scannedFnsByName.get(name);
+							if (bucket == null || bucket.length == 0)
+								return null;
+							final index = used.exists(name) ? used.get(name) : 0;
+							used.set(name, index + 1);
+							return index < bucket.length ? bucket[index] : bucket[bucket.length - 1];
 						}
 
 						function sameMetadata(left:Array<String>, right:Array<String>):Bool {
@@ -278,13 +309,27 @@ class ParserStage {
 							changed = true;
 						final patchedFns = new Array<HxFunctionDecl>();
 						final existingFnNames:Map<String, Bool> = new Map();
+						final scannedFnUseByName:Map<String, Int> = new Map();
 						for (fn in HxClassDecl.getFunctions(cls)) {
 							final fnName = HxFunctionDecl.getName(fn);
 							final scannedStatic = fnName == null ? null : scannedFnStaticByName.get(fnName);
 							final isStatic = scannedStatic == null ? HxFunctionDecl.getIsStatic(fn) : scannedStatic;
-							final scannedFn = fnName == null ? null : scannedFnByName.get(fnName);
+							final scannedFn = nextScannedFn(fnName, scannedFnUseByName);
 							final metadata = mergeScannedMetadata(fn, scannedFn);
 							final metadataChanged = !sameMetadata(metadata, HxFunctionDecl.getMetadata(fn));
+							final args = scannedFn != null
+								&& argsNeedScan(HxFunctionDecl.getArgs(fn),
+									HxFunctionDecl.getArgs(scannedFn)) ? HxFunctionDecl.getArgs(scannedFn) : HxFunctionDecl.getArgs(fn);
+							final argsChanged = args != HxFunctionDecl.getArgs(fn);
+							final returnType = scannedFn != null
+								&& !usefulHint(HxFunctionDecl.getReturnTypeHint(fn))
+								&& usefulHint(HxFunctionDecl.getReturnTypeHint(scannedFn)) ? HxFunctionDecl.getReturnTypeHint(scannedFn) : HxFunctionDecl.getReturnTypeHint(fn);
+							final returnChanged = returnType != HxFunctionDecl.getReturnTypeHint(fn);
+							final pos = scannedFn != null
+								&& HxFunctionDecl.getPos(fn).getLine() <= 0 ? HxFunctionDecl.getPos(scannedFn) : HxFunctionDecl.getPos(fn);
+							final endPos = scannedFn != null
+								&& HxFunctionDecl.getEndPos(fn).getLine() <= 0 ? HxFunctionDecl.getEndPos(scannedFn) : HxFunctionDecl.getEndPos(fn);
+							final posChanged = pos != HxFunctionDecl.getPos(fn) || endPos != HxFunctionDecl.getEndPos(fn);
 							final scannedBody = scannedFn == null ? [] : HxFunctionDecl.getBody(scannedFn);
 							final nativeBody = HxFunctionDecl.getBody(fn);
 							final bodyChanged = scannedBody.length > 0 && (nativeBody.length == 0 || hasOnlyUnsupportedBody(nativeBody));
@@ -294,15 +339,23 @@ class ParserStage {
 								changed = true;
 							if (metadataChanged)
 								changed = true;
+							if (argsChanged)
+								changed = true;
+							if (returnChanged)
+								changed = true;
+							if (posChanged)
+								changed = true;
 							if (bodyChanged)
 								changed = true;
 							if (fnName != null && fnName.length > 0)
 								existingFnNames.set(fnName, true);
 							patchedFns.push(isStatic == HxFunctionDecl.getIsStatic(fn)
 								&& !metadataChanged
-								&& !bodyChanged ? fn : new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), isStatic,
-									HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn), body, HxFunctionDecl.getReturnStringLiteral(fn),
-									metadata, HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), bodyText));
+								&& !argsChanged
+								&& !returnChanged
+								&& !posChanged
+								&& !bodyChanged ? fn : new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), isStatic, args,
+									returnType, body, HxFunctionDecl.getReturnStringLiteral(fn), metadata, pos, endPos, bodyText));
 						}
 						for (fn in HxClassDecl.getFunctions(scanned)) {
 							final fnName = HxFunctionDecl.getName(fn);

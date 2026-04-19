@@ -82,6 +82,29 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			assertTrue(ocaml.indexOf('add (other) (n)') >= 0, 'Stage3 receiver-call emit missing `add (other) (n)` call shape.');
 			assertTrue(ocaml.indexOf('add (this_) (other) (n)') < 0, 'Stage3 receiver-call regression: emitted over-applied `add (this_) (other) (n)`.');
 
+			final resolvedOverloadHx = haxe.io.Path.join([srcDir, 'OverloadResolved.hx']);
+			final resolvedOverloadSrc = [
+				'extern class ResolvedTool {',
+				'  overload static function label(v:Int):String;',
+				'  overload static function label(v:String):String;',
+				'}',
+				'class OverloadResolved {',
+				'  static function main() {',
+				'    ResolvedTool.label(12);',
+				'    ResolvedTool.label("x");',
+				'  }',
+				'}',
+			].join("\n");
+			File.saveContent(resolvedOverloadHx, resolvedOverloadSrc);
+			final resolvedOverloadParsed = ParserStage.parse(resolvedOverloadSrc, resolvedOverloadHx);
+			final resolvedOverloadResolved = new ResolvedModule("OverloadResolved", resolvedOverloadHx, resolvedOverloadParsed);
+			final resolvedOverloadIndex = TyperIndex.build([resolvedOverloadResolved]);
+			final resolvedOverloadLoader = new ModuleLoader([srcDir], new StringMap<String>(), resolvedOverloadIndex, function(_typePath:String):Bool {
+				return false;
+			});
+			resolvedOverloadLoader.markResolvedAlready([resolvedOverloadResolved]);
+			TyperStage.typeResolvedModule(resolvedOverloadResolved, resolvedOverloadIndex, resolvedOverloadLoader);
+
 			final overloadHx = haxe.io.Path.join([srcDir, 'OverloadAmbiguous.hx']);
 			final overloadSrc = [
 				'extern class ToolCache {',

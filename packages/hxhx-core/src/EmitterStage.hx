@@ -6523,10 +6523,16 @@ class EmitterStage {
 		installEmitToDirProfile(ocamlProfile);
 		ensureEmitToDirOutDir(outAbs);
 
+		_EmitterStageDebug.traceStage3Phase("emitToDir_before_generated_modules");
 		final generatedPaths = emitGeneratedOcamlModulesForStage3(p, outAbs);
+		_EmitterStageDebug.traceStage3Phase("emitToDir_after_generated_modules:" + generatedPaths.length);
+		_EmitterStageDebug.traceStage3Phase("emitToDir_before_runtime_copy");
 		final runtimePaths = copyStage3RuntimeForStage3(outAbs);
+		_EmitterStageDebug.traceStage3Phase("emitToDir_after_runtime_copy:" + runtimePaths.length);
+		_EmitterStageDebug.traceStage3Phase("emitToDir_before_bootstrap_shims");
 		for (shimPath in emitStage3BootstrapShimsForStage3(outAbs))
 			generatedPaths.push(shimPath);
+		_EmitterStageDebug.traceStage3Phase("emitToDir_after_bootstrap_shims:" + generatedPaths.length);
 
 		_EmitterStageDebug.traceStage3Phase("before_typed_modules");
 		final typedModulesRaw = p.getTypedModules();

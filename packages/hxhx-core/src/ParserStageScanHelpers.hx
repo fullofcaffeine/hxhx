@@ -706,7 +706,52 @@ class ParserStageScanHelpers {
 
 		var sawStatic = false;
 		var sawMacro = false;
+		var sawOverload = false;
 		var vis:HxVisibility = HxVisibility.Public;
+
+		function scanTypeHintUntil(startPos:Int, stopAtComma:Bool):{hint:String, nextPos:Int} {
+			final parts = new Array<String>();
+			var j = startPos;
+			var parenDepth = 0;
+			var bracketDepth = 0;
+			var braceDepth = 0;
+			var angleDepth = 0;
+			while (true) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {hint: parts.join(""), nextPos: j};
+				final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0;
+				if (atTop
+					&& (tok.text == ")" || tok.text == "=" || tok.text == "{" || tok.text == ";" || (stopAtComma && tok.text == ",")))
+					return {hint: parts.join(""), nextPos: j};
+				parts.push(tok.text);
+				j = tok.nextPos;
+				switch (tok.text) {
+					case "(":
+						parenDepth += 1;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth -= 1;
+					case "[":
+						bracketDepth += 1;
+					case "]":
+						if (bracketDepth > 0)
+							bracketDepth -= 1;
+					case "{":
+						braceDepth += 1;
+					case "}":
+						if (braceDepth > 0)
+							braceDepth -= 1;
+					case "<":
+						angleDepth += 1;
+					case ">":
+						if (angleDepth > 0)
+							angleDepth -= 1;
+					case _:
+				}
+			}
+			return {hint: parts.join(""), nextPos: j};
+		}
 
 		while (true) {
 			final t = scanNextToken(source, i);
@@ -727,6 +772,7 @@ class ParserStageScanHelpers {
 							// Declarations are terminated; reset modifiers.
 							sawStatic = false;
 							sawMacro = false;
+							sawOverload = false;
 							vis = HxVisibility.Public;
 						}
 					case _:
@@ -746,6 +792,8 @@ class ParserStageScanHelpers {
 					sawStatic = true;
 				case "macro":
 					sawMacro = true;
+				case "overload":
+					sawOverload = true;
 				case "inline" | "extern" | "override":
 					// Keep scanning; these can appear between `static` and the declaration keyword.
 				case "var" | "final":
@@ -841,6 +889,7 @@ class ParserStageScanHelpers {
 
 					sawStatic = false;
 					sawMacro = false;
+					sawOverload = false;
 					vis = HxVisibility.Public;
 					if (depth <= 0)
 						break;
@@ -933,12 +982,27 @@ class ParserStageScanHelpers {
 
 							final nm = at.text;
 							final argName = (nm == null || nm.length == 0) ? ("arg" + argIndex) : nm;
-							args.push(new HxFunctionArg(argName, "", HxDefaultValue.NoDefault, pendingOptional, pendingRest));
+							var argType = "";
+							final colonTok = scanNextToken(source, i);
+							if (colonTok.text == ":") {
+								final scannedType = scanTypeHintUntil(colonTok.nextPos, true);
+								argType = scannedType.hint;
+								i = scannedType.nextPos;
+							}
+							args.push(new HxFunctionArg(argName, argType, HxDefaultValue.NoDefault, pendingOptional, pendingRest));
 							argIndex += 1;
 							expectArg = false;
 							pendingOptional = false;
 							pendingRest = false;
 						}
+					}
+
+					var returnType = "";
+					final returnTok = scanNextToken(source, i);
+					if (returnTok.text == ":") {
+						final scannedReturn = scanTypeHintUntil(returnTok.nextPos, false);
+						returnType = scannedReturn.hint;
+						i = scannedReturn.nextPos;
 					}
 
 					final shouldCaptureBody = fnName == "new" || !wantStaticFn;
@@ -949,12 +1013,17 @@ class ParserStageScanHelpers {
 						i = bodyCapture.nextPos;
 
 					if (fnName.length > 0) {
-						final metadata = sawMacro ? ["macro"] : null;
-						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", body, "", metadata, null, null, bodyText));
+						final metadata = new Array<String>();
+						if (sawMacro)
+							metadata.push("macro");
+						if (sawOverload)
+							metadata.push("overload");
+						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, returnType, body, "", metadata, null, null, bodyText));
 					}
 
 					sawStatic = false;
 					sawMacro = false;
+					sawOverload = false;
 					vis = HxVisibility.Public;
 				case _:
 			}

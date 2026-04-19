@@ -17,6 +17,7 @@ set -euo pipefail
 HAXELIB_BIN="${HAXELIB_BIN:-haxelib}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export HXHX_REPO_ROOT="${HXHX_REPO_ROOT:-$ROOT}"
 
 DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"

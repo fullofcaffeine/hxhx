@@ -1676,7 +1676,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TyperIndexBuild" [];
   HxType.register_class_static_fields "TyperIndexBuild" [ "classFullName"; "classFullNameInModule"; "expectedModuleNameFromFile"; "fromResolvedModule" ];
   HxType.register_class_instance_fields "TyperStage" [];
-  HxType.register_class_static_fields "TyperStage" [ "arrayElementType"; "callRange"; "declarePatternBindings"; "diagnosticFileName"; "dottedFieldPath"; "extractRawDiagnostic"; "functionNameRange"; "inferExprType"; "inferReturnType"; "isAssignmentBinop"; "isStrict"; "isUpperStartName"; "renderArgType"; "renderOverloadCandidate"; "resolveMethodCallReturnType"; "sourceLine"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
+  HxType.register_class_static_fields "TyperStage" [ "arrayElementType"; "callRange"; "declarePatternBindings"; "diagnosticFileName"; "dottedFieldPath"; "extractRawDiagnostic"; "functionNameRange"; "inferExprType"; "inferReturnType"; "isAssignmentBinop"; "isStrict"; "isUpperStartName"; "normalizeOverloadTypeName"; "overloadArgScore"; "overloadCandidateScore"; "renderArgType"; "renderOverloadCandidate"; "resolveMethodCallReturnType"; "sourceLine"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
   HxType.register_class_instance_fields "_EmitterStage._EmitterStageDebug" [];
   HxType.register_class_static_fields "_EmitterStage._EmitterStageDebug" [ "traceCallSig"; "traceStage3Enabled"; "traceStage3Module"; "traceStage3Phase"; "traceStage3StmtList" ];
   HxType.register_class_instance_fields "_EmitterStage._InstanceFieldEntry" [ "fields"; "key" ];
