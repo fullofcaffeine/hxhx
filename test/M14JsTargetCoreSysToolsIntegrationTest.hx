@@ -614,6 +614,17 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return typedModule("", decl, "js/node/Process.hx");
 	}
 
+	static function jsBrowserModule():TypedModule {
+		final browserClass = new HxClassDecl("Browser", false, [], [
+			new HxFieldDecl("console", HxVisibility.Public, true, "Dynamic", null),
+			new HxFieldDecl("window", HxVisibility.Public, true, "Dynamic", null),
+			new HxFieldDecl("document", HxVisibility.Public, true, "Dynamic", null),
+			new HxFieldDecl("supported", HxVisibility.Public, true, "Bool", null)
+		]);
+		final decl = new HxModuleDecl("js", [], browserClass, [browserClass], false, false);
+		return typedModule("", decl, "js/Browser.hx");
+	}
+
 	static function jsHtmlBlobModule():TypedModule {
 		final blobPartsArg = new HxFunctionArg("blobParts", "Dynamic", HxDefaultValue.NoDefault);
 		final eitherArg = new HxFunctionArg("haxe", "Dynamic", HxDefaultValue.NoDefault);
@@ -1162,6 +1173,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"    new JsCtorLeaf();",
 				'    Sys.println("ctor-order=" + ctorCalls.join("|"));',
 				'    Sys.println("ctor-ref=" + untyped __js__("{0}.prototype.hasOwnProperty({1})", JsCtorChild, HX_CTOR));',
+				'    js.Browser.console.log("browser-console=ok");',
 				"    var childProp = new ChildProp();",
 				'    Sys.println("super-prop=" + childProp.get_prop() + ":" + childProp.set_prop(4) + ":" + childProp.get_prop());',
 				"    Sys.println([1, 2, 3].filter(function(i) return i > 1).join(\",\"));",
@@ -1246,6 +1258,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				stringModule(),
 				anyModule(),
 				jsNodeProcessModule(),
+				jsBrowserModule(),
 				jsHtmlBlobModule(),
 				jsHtmlEventModule(),
 				utestResultAggregatorModule(),
@@ -1444,6 +1457,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "if (delta == null) delta = 3", "ordinary class default arguments should lower inside instance methods");
 			assertNotContains(js, "__hx_cls_Array.prototype.filter", "native JS Array prototype methods should not be re-emitted");
 			assertNotContains(js, "__hx_cls_js_node_Process.prototype.initgroups", "native js.node extern prototype methods should not be re-emitted");
+			assertContains(js, "var __hx_cls_js_Browser = (function() { var __hx_global", "js.Browser should bind to the selected JS global facade");
+			assertContains(js, "console: __hx_global.console", "js.Browser.console should read the host console under Node");
+			assertNotContains(js, "__hx_cls_js_Browser.console = null", "js.Browser.console must not be overwritten by a synthetic null static field");
 			assertContains(js, "var __hx_cls_js_html_Blob = ((globalThis != null && globalThis[\"Blob\"] != null) ? globalThis[\"Blob\"] : {})",
 				"native js.html externs should bind to browser/Node globals instead of emitted Haxe constructors");
 			assertNotContains(js, "var __hx_cls_js_html_Blob = function(blobParts", "native js.html extern constructors should not be emitted");
@@ -1531,6 +1547,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "ctor-order=PRE|CHILD|BASE|LEAF",
 				"constructor lowering should preserve pre-super, field init, expression-bodied overrides, and post-super ordering");
 			assertContains(stdout, "ctor-ref=true", "enum-like class value refs should resolve to emitted JS class bindings");
+			assertContains(stdout, "browser-console=ok", "js.Browser.console should execute through the Node global console");
 			assertContains(js, "__hx_cls_BaseProp.prototype.get_prop.call(this)", "super property reads should lower to the base getter in prototype-style JS");
 			assertContains(js, "__hx_cls_BaseProp.prototype.set_prop.call(this, v)",
 				"super property writes should lower to the base setter in prototype-style JS");

@@ -271,6 +271,39 @@ class JsTargetCore implements ITargetCore {
 		}
 	}
 
+	/**
+		Provides the runtime facade for `js.Browser`.
+
+		Why
+		- Upstream JS treats `js.Browser.console` as a shortcut to the selected JS
+		  global's `console` object.
+		- Emitting `js.Browser` as an owned Haxe class initializes recovered static
+		  extern fields to `null`, so `js.Browser.console.log(...)` crashes under Node.
+
+		What
+		- Binds the recovered class symbol to a small facade over the active JS global.
+		- Keeps static field emission disabled for this extern, preventing synthetic
+		  `null` assignments from overwriting host-provided globals.
+	**/
+	static function nativeJsBrowserExternRef(fullName:String):Null<String> {
+		if (fullName != "js.Browser")
+			return null;
+		return [
+			"(function() {",
+			" var __hx_global = (typeof window !== \"undefined\") ? window : ((typeof global !== \"undefined\") ? global : ((typeof self !== \"undefined\") ? self : globalThis));",
+			" return {",
+			"self: __hx_global,",
+			"window: __hx_global.window,",
+			"document: __hx_global.document,",
+			"location: __hx_global.location,",
+			"navigator: __hx_global.navigator,",
+			"console: __hx_global.console,",
+			"supported: (typeof __hx_global.window !== \"undefined\" && __hx_global.window.location != null && typeof __hx_global.window.location.protocol === \"string\")",
+			"};",
+			" })()"
+		].join("");
+	}
+
 	static function nativeJsGlobalExternRef(fullName:String):String {
 		if (isNativeJsHtmlExtern(fullName))
 			return nativeJsSimpleGlobalRef(simpleName(fullName));
@@ -431,8 +464,11 @@ class JsTargetCore implements ITargetCore {
 
 	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
 		final nodeRequireRef = nativeJsNodeRequireExternRef(unit.fullName);
+		final browserRef = nativeJsBrowserExternRef(unit.fullName);
 		if (nodeRequireRef != null) {
 			writer.writeln("var " + unit.jsRef + " = " + nodeRequireRef + ";");
+		} else if (browserRef != null) {
+			writer.writeln("var " + unit.jsRef + " = " + browserRef + ";");
 		} else if (isNativeJsGlobalExtern(unit.fullName)) {
 			writer.writeln("var " + unit.jsRef + " = " + nativeJsGlobalExternRef(unit.fullName) + ";");
 		} else if (unit.fullName == "EReg") {
@@ -446,7 +482,7 @@ class JsTargetCore implements ITargetCore {
 		if (simpleNameRefs.get(simple) == unit.jsRef) {
 			writer.writeln("__hx_classes[" + JsNameMangler.quoteString(simple) + "] = " + unit.jsRef + ";");
 		}
-		if (nodeRequireRef != null || isNativeJsGlobalExtern(unit.fullName))
+		if (nodeRequireRef != null || browserRef != null || isNativeJsGlobalExtern(unit.fullName))
 			return;
 		emitPrototypeInheritance(writer, unit, classRefs);
 		if (unit.fullName == "EReg")
