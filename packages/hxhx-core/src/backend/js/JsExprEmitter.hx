@@ -76,7 +76,7 @@ class JsExprEmitter {
 			case EArrayDecl(values):
 				"[" + values.map(v -> emit(v, scope)).join(", ") + "]";
 			case EArrayAccess(array, index):
-				emit(array, scope) + "[" + emit(index, scope) + "]";
+				emitArrayRead(array, index, scope);
 			case ELambda(args, body):
 				emitLambda(args, body, scope);
 			case ECast(inner, _):
@@ -1397,17 +1397,28 @@ class JsExprEmitter {
 	static function emitBinop(op:String, left:HxExpr, right:HxExpr, scope:JsEmitScope):String {
 		if (op == "is")
 			return emitIsTypeTest(left, right, scope);
+		if (op == "=") {
+			switch (left) {
+				case EArrayAccess(array, index):
+					return emitArrayWrite(array, index, right, scope);
+				case _:
+			}
+		}
 		if (isAssignmentOp(op)) {
 			switch (left) {
 				case EThis:
-					return "(this.__hx_value " + op + " " + emit(right, scope) + ")";
+					return emitThisAssignment(op, right, scope);
 				case EField(ESuper, field) if (op == "="):
 					return emitSuperPropertySet(field, right, scope);
 				case EField(ESuper, field):
 					return unsupported("EBinop", "compound assignment to super." + field);
+				case EIdent(_), EField(_, _) if (op == "+="):
+					return emitAbstractAddAssign(left, right, scope);
 				case _:
 			}
 		}
+		if (op == "+")
+			return emitAbstractAdd(left, right, scope);
 		if (op == "??") {
 			final l = emit(left, scope);
 			final r = emit(right, scope);
@@ -1423,6 +1434,66 @@ class JsExprEmitter {
 			case _: op;
 		}
 		return "(" + emit(left, scope) + " " + normalized + " " + emit(right, scope) + ")";
+	}
+
+	static function emitThisAssignment(op:String, right:HxExpr, scope:JsEmitScope):String {
+		final rhs = emit(right, scope);
+		if (op != "=")
+			return "(this.__hx_value " + op + " " + rhs + ")";
+		return switch (right) {
+			case EAnon(fieldNames, _):
+				final assignments = new Array<String>();
+				for (field in fieldNames) {
+					final suffix = JsNameMangler.propertySuffix(field);
+					assignments.push("this" + suffix + " = this.__hx_value" + suffix);
+				}
+				"((this.__hx_value = " + rhs + "), " + assignments.join(", ") + ", this.__hx_value)";
+			case _:
+				"(this.__hx_value = " + rhs + ")";
+		}
+	}
+
+	static function emitAbstractAdd(left:HxExpr, right:HxExpr, scope:JsEmitScope):String {
+		final l = emit(left, scope);
+		final r = emit(right, scope);
+		return
+			"(function(__hx_l, __hx_r) { return (__hx_l != null && typeof __hx_l.__hx_op_add === \"function\") ? __hx_l.__hx_op_add(__hx_r) : (__hx_l + __hx_r); })("
+			+ l
+			+ ", "
+			+ r
+			+ ")";
+	}
+
+	static function emitAbstractAddAssign(left:HxExpr, right:HxExpr, scope:JsEmitScope):String {
+		final l = emit(left, scope);
+		final r = emit(right, scope);
+		return "((" + l + " != null && typeof " + l + ".__hx_op_addAssign === \"function\") ? (" + l + ".__hx_op_addAssign(" + r + "), " + l + ") : (" + l
+			+ " += " + r + "))";
+	}
+
+	static function emitArrayRead(array:HxExpr, index:HxExpr, scope:JsEmitScope):String {
+		final a = emit(array, scope);
+		final i = emit(index, scope);
+		return
+			"(function(__hx_a, __hx_i) { return (__hx_a != null && typeof __hx_a.__hx_op_read === \"function\") ? __hx_a.__hx_op_read(__hx_i) : __hx_a[__hx_i]; })("
+			+ a
+			+ ", "
+			+ i
+			+ ")";
+	}
+
+	static function emitArrayWrite(array:HxExpr, index:HxExpr, value:HxExpr, scope:JsEmitScope):String {
+		final a = emit(array, scope);
+		final i = emit(index, scope);
+		final v = emit(value, scope);
+		return
+			"(function(__hx_a, __hx_i, __hx_v) { return (__hx_a != null && typeof __hx_a.__hx_op_write === \"function\") ? __hx_a.__hx_op_write(__hx_i, __hx_v) : (__hx_a[__hx_i] = __hx_v); })("
+			+ a
+			+ ", "
+			+ i
+			+ ", "
+			+ v
+			+ ")";
 	}
 
 	static function isAssignmentOp(op:String):Bool {

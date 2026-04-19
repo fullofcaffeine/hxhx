@@ -7130,6 +7130,7 @@ class EmitterStage {
 					// Stage 3 bring-up: hxhx full output uses a narrow StringTools surface before
 					// Stage3 can reliably emit the full std module.
 					final hasStringToolsHex = moduleName == "StringTools";
+					final emitParsedStaticFields = !hasStringToolsHex && !StringTools.startsWith(moduleName, "Haxe_Int64");
 					if (hasStringToolsHex) {
 						for (line in stringToolsBootstrapShimSourceForStage3().split("\n"))
 							out.push(line);
@@ -7140,6 +7141,8 @@ class EmitterStage {
 					final parsedFields = HxClassDecl.getFields(cls);
 					final staticTyByIdent:Map<String, TyType> = new Map();
 					for (f in parsedFields) {
+						if (!emitParsedStaticFields)
+							continue;
 						if (!HxFieldDecl.getIsStatic(f))
 							continue;
 						final nameRaw = HxFieldDecl.getName(f);
@@ -7367,8 +7370,12 @@ class EmitterStage {
 					out.push("");
 
 					final parsedFields = HxClassDecl.getFields(mainClass);
+					final emitParsedStaticFields = mainModuleName != "StringTools"
+						&& !StringTools.startsWith(mainModuleName, "Haxe_Int64");
 					final staticFieldTypeByName:Map<String, TyType> = new Map();
 					for (f in parsedFields) {
+						if (!emitParsedStaticFields)
+							continue;
 						if (!HxFieldDecl.getIsStatic(f))
 							continue;
 						final fieldName = HxFieldDecl.getName(f);
@@ -7395,6 +7402,8 @@ class EmitterStage {
 					// - Prelude functions must not depend on static values (which are emitted later).
 					final staticFieldNames:Map<String, Bool> = new Map();
 					for (f in parsedFields) {
+						if (!emitParsedStaticFields)
+							continue;
 						if (!HxFieldDecl.getIsStatic(f))
 							continue;
 						final n = HxFieldDecl.getName(f);
@@ -7411,6 +7420,8 @@ class EmitterStage {
 					//   so we prefer an explicit worklist here.
 					final staticInitWorklist = new Array<HxExpr>();
 					for (f in parsedFields) {
+						if (!emitParsedStaticFields)
+							continue;
 						if (!HxFieldDecl.getIsStatic(f))
 							continue;
 						final init = HxFieldDecl.getInit(f);
@@ -7808,6 +7819,8 @@ class EmitterStage {
 					// During bring-up we treat those names as "bound" incrementally to avoid collapsing them to poison.
 					final staticTyByIdent:Map<String, TyType> = new Map();
 					for (f in parsedFields) {
+						if (!emitParsedStaticFields)
+							continue;
 						if (!HxFieldDecl.getIsStatic(f))
 							continue;
 						final nameRaw = HxFieldDecl.getName(f);
@@ -7823,7 +7836,7 @@ class EmitterStage {
 						if (staticTyByIdent.get(nameRaw) == null)
 							staticTyByIdent.set(nameRaw, TyType.unknown());
 					}
-					if (parsedFields.length > 0)
+					if (emitParsedStaticFields && parsedFields.length > 0)
 						out.push("");
 
 					final typedFnsRest = new Array<TyFunctionEnv>();

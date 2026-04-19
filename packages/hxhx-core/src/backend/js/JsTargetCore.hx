@@ -471,6 +471,8 @@ class JsTargetCore implements ITargetCore {
 			writer.writeln("var " + unit.jsRef + " = " + browserRef + ";");
 		} else if (isNativeJsGlobalExtern(unit.fullName)) {
 			writer.writeln("var " + unit.jsRef + " = " + nativeJsGlobalExternRef(unit.fullName) + ";");
+		} else if (unit.fullName == "haxe.ds.Vector") {
+			emitVectorConstructor(writer, unit.jsRef);
 		} else if (unit.fullName == "EReg") {
 			emitERegConstructor(writer, unit.jsRef);
 		} else {
@@ -502,6 +504,8 @@ class JsTargetCore implements ITargetCore {
 		for (field in HxClassDecl.getFields(unit.decl)) {
 			if (!HxFieldDecl.getIsStatic(field))
 				continue;
+			if (shouldSkipStaticFieldEmission(unit.fullName, HxFieldDecl.getName(field)))
+				continue;
 			final suffix = JsNameMangler.propertySuffix(HxFieldDecl.getName(field));
 			final init = HxFieldDecl.getInit(field);
 			final knownInit = emitKnownStaticFieldInit(unit.fullName, HxFieldDecl.getName(field));
@@ -531,6 +535,20 @@ class JsTargetCore implements ITargetCore {
 			};
 			writer.writeln(unit.jsRef + suffix + " = " + value + ";");
 		}
+	}
+
+	static function shouldSkipStaticFieldEmission(fullName:String, fieldName:String):Bool {
+		if (fullName == "haxe.ds.Vector")
+			return true;
+		if (fullName == "StringTools") {
+			return switch (fieldName) {
+				case "elen" | "slen" | "l" | "r":
+					true;
+				case _:
+					false;
+			}
+		}
+		return false;
 	}
 
 	static function emitStaticFunctions(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, staticRefs:haxe.ds.StringMap<String>):Void {
@@ -802,7 +820,32 @@ class JsTargetCore implements ITargetCore {
 			}
 			writer.popIndent();
 			writer.writeln("};");
+			emitOperatorMethodAlias(writer, unit.jsRef, fn);
 		}
+	}
+
+	static function emitOperatorMethodAlias(writer:JsWriter, jsRef:String, fn:HxFunctionDecl):Void {
+		final alias = operatorAliasForFunction(fn);
+		if (alias == null)
+			return;
+		final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
+		writer.writeln(jsRef + ".prototype." + alias + " = " + jsRef + ".prototype" + suffix + ";");
+	}
+
+	static function operatorAliasForFunction(fn:HxFunctionDecl):Null<String> {
+		final metadata = HxFunctionDecl.getMetadata(fn);
+		if (metadata == null)
+			return null;
+		for (meta in metadata) {
+			final normalized = StringTools.replace(meta == null ? "" : meta, " ", "");
+			if (normalized.indexOf("op(A+B)") >= 0)
+				return "__hx_op_add";
+			if (normalized.indexOf("op(A+=B)") >= 0)
+				return "__hx_op_addAssign";
+			if (normalized.indexOf("op([])") >= 0)
+				return HxFunctionDecl.getArgs(fn).length >= 2 ? "__hx_op_write" : "__hx_op_read";
+		}
+		return null;
 	}
 
 	static function needsExtractedConstructorMarker(unit:JsClassUnit):Bool {
@@ -1588,6 +1631,17 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("this.r = new RegExp(String(__hx_pattern), __hx_options);");
 		writer.writeln("this.r.m = null;");
 		writer.writeln("this.r.s = null;");
+		writer.popIndent();
+		writer.writeln("};");
+	}
+
+	static function emitVectorConstructor(writer:JsWriter, ref:String):Void {
+		writer.writeln("var " + ref + " = function(length) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_len = length == null ? 0 : (length | 0);");
+		writer.writeln("var __hx_array = new Array(__hx_len < 0 ? 0 : __hx_len);");
+		writer.writeln("__hx_array.__class__ = " + ref + ";");
+		writer.writeln("return __hx_array;");
 		writer.popIndent();
 		writer.writeln("};");
 	}

@@ -101,6 +101,9 @@ def cmd_patch_hxparser_interpolated_exprs(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
+    if "let parseInterpolationPayload = fun text ->" in src:
+        return
+
     old = '''          ignore (if !j < HxString.length s && (let __nullable_670 = HxString.charCodeAt s (!j) in if __nullable_670 == HxRuntime.hx_null then false else Obj.obj __nullable_670 = 125) then ignore (let inner = (StringTools.trim (HxString.substr s start (HxInt.sub (!j) start) : string) : string) in if isSimpleIdent (inner : string) then ignore (((
             ignore (HxArray.push parts (HxExpr.EBinop (("+" : string), Obj.magic (HxExpr.EString ("" : string)), Obj.magic (HxExpr.EIdent (inner : string)))));
             ignore (let __assign_671 = HxInt.add (!j) 1 in (

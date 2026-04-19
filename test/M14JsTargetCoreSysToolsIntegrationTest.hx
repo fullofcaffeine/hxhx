@@ -797,12 +797,16 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final prefixArg = new HxFunctionArg("start", "String", HxDefaultValue.NoDefault);
 		final subArg = new HxFunctionArg("sub", "String", HxDefaultValue.NoDefault);
 		final byArg = new HxFunctionArg("by", "String", HxDefaultValue.NoDefault);
+		final leakedEndLen = new HxFieldDecl("elen", HxVisibility.Public, true, "Int", HxExpr.EField(HxExpr.EIdent("end"), "length"));
+		final leakedSourceLen = new HxFieldDecl("slen", HxVisibility.Public, true, "Int", HxExpr.EField(HxExpr.EIdent("s"), "length"));
+		final winMeta = new HxFieldDecl("winMetaCharacters", HxVisibility.Public, true, "Array<Int>",
+			HxExpr.EField(HxExpr.EIdent("haxe.SysTools"), "winMetaCharacters"));
 		final stringToolsClass = new HxClassDecl("StringTools", false, [
 			new HxFunctionDecl("startsWith", HxVisibility.Public, true, [stringArg, prefixArg], "Bool",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-stringtools"), ""),
 			new HxFunctionDecl("replace", HxVisibility.Public, true, [stringArg, subArg, byArg], "String",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-stringtools"), "")
-		]);
+		], [leakedEndLen, leakedSourceLen, winMeta]);
 		final decl = new HxModuleDecl("", [], stringToolsClass, [stringToolsClass], false, false);
 		return typedModule("", decl, "StringTools.hx");
 	}
@@ -858,10 +862,12 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function haxeDsVectorModule():TypedModule {
 		final arrayArg = new HxFunctionArg("array", "Array<Dynamic>", HxDefaultValue.NoDefault);
+		final leakedLocal = new HxFieldDecl("r", HxVisibility.Public, true, "Dynamic", HxExpr.ENew("haxe.ds.Vector", [HxExpr.EIdent("length")]));
+		final leakedLen = new HxFieldDecl("len", HxVisibility.Public, true, "Int", HxExpr.EIdent("length"));
 		final vectorClass = new HxClassDecl("Vector", false, [
 			new HxFunctionDecl("fromArrayCopy", HxVisibility.Public, true, [arrayArg], "haxe.ds.Vector<Dynamic>",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=stdlib-vector"), "")
-		]);
+		], [leakedLocal, leakedLen]);
 		final decl = new HxModuleDecl("haxe.ds", [], vectorClass, [vectorClass], false, false);
 		return typedModule("", decl, "haxe/ds/Vector.hx");
 	}
@@ -1058,7 +1064,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	static function assertScannedHelperAbstractExpressionBody():Void {
 		final source = [
 			"abstract LocalWrap(Int) from Int {",
-			"  @:to inline public function toString():String return '$this';",
+			"  @:to inline public function toString():String return '[IV +${this.index}]';",
 			"}"
 		].join("\n");
 		final abstracts = ParserStageScanHelpers.scanModuleLocalHelperAbstracts(source, null);
@@ -1078,16 +1084,45 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			}
 		}
 		assertTrue(toStringFn != null, "helper abstract scanner should retain expression-bodied instance methods");
-		assertTrue(HxFunctionDecl.getBodyText(toStringFn) == "return '$this';",
+		assertTrue(HxFunctionDecl.getBodyText(toStringFn) == "return '[IV +${this.index}]';",
 			"helper abstract scanner should skip return type hints before expression-bodied method bodies");
 		switch (HxFunctionDecl.getBody(toStringFn)) {
 			case [
-				HxStmt.SReturn(HxExpr.EBinop("+", HxExpr.EString(prefix), HxExpr.EIdent(name)), _)
+				HxStmt.SReturn(HxExpr.EBinop("+",
+					HxExpr.EBinop("+", HxExpr.EString(prefix), HxExpr.EBinop("+", HxExpr.EString(emptyPrefix), HxExpr.EField(HxExpr.EThis, field))),
+					HxExpr.EString(suffix)),
+					_)
 			]:
-				assertTrue(prefix == "", "interpolated abstract this string should start with an empty prefix");
-				assertTrue(name == "this", "interpolated abstract this string should retain the this reference");
+				assertTrue(prefix == "[IV +", "interpolated abstract this field string should preserve literal prefix");
+				assertTrue(emptyPrefix == "", "interpolated abstract this field should stringify through an empty prefix");
+				assertTrue(field == "index", "interpolated abstract this field should retain the field name");
+				assertTrue(suffix == "]", "interpolated abstract this field string should preserve literal suffix");
 			case _:
 				throw "helper abstract expression-bodied toString should parse into a return expression";
+		}
+	}
+
+	static function assertScannedModuleStaticFields():Void {
+		final source = [
+			"package diff;",
+			"final OFFSET_MAX = 1 << 30;",
+			"class Diffseq {",
+			"  static function diag() {",
+			"    return OFFSET_MAX;",
+			"  }",
+			"}"
+		].join("\n");
+		final fields = ParserStageScanHelpers.scanModuleStaticFields(source);
+		assertTrue(fields.length == 1, "module field scanner should discover top-level final declarations");
+		final field = fields[0];
+		assertTrue(HxFieldDecl.getName(field) == "OFFSET_MAX", "module field scanner should retain the field name");
+		assertTrue(HxFieldDecl.getIsStatic(field), "module field scanner should expose fields as static class members");
+		assertTrue(HxFieldDecl.getIsFinal(field), "module field scanner should retain final-ness");
+		assertTrue(StringTools.trim(HxFieldDecl.getInitText(field)) == "1 << 30", "module field scanner should retain raw initializer text");
+		switch (HxFieldDecl.getInit(field)) {
+			case HxExpr.EBinop("<<", HxExpr.EInt(1), HxExpr.EInt(30)):
+			case _:
+				throw "module field scanner should parse bitshift initializers";
 		}
 	}
 
@@ -1096,6 +1131,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		assertNativeSwitchFieldInitializerDecode();
 		assertScannedHelperClassInheritance();
 		assertScannedHelperAbstractExpressionBody();
+		assertScannedModuleStaticFields();
 
 		final tmpRoot = Path.normalize(".tmp/m14_js_target_core_systools_" + Std.string(Date.now().getTime()));
 		final outDir = Path.join([tmpRoot, "out"]);
@@ -1112,12 +1148,14 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"import utest.Assert;",
 				"import utest.TestHandler;",
 				"import utest.ui.common.ReportTools;",
+				"final MODULE_OFFSET = 1 << 5;",
 				"class Main {",
 				"  public static var ctorCalls:Array<String>;",
 				'  static inline final HX_CTOR = "_hx_constructor";',
 				"  static function main() {",
 				'    Sys.println("std=" + Std.string("std-ok"));',
 				'    Sys.println("inline-final=" + HX_CTOR);',
+				'    Sys.println("module-offset=" + MODULE_OFFSET);',
 				'    Sys.println(SysTools.quoteUnixArg("a b"));',
 				'    Sys.println(SysTools.quoteUnixArg("abc"));',
 				'    Sys.println(SysTools.quoteWinArg("ab c", false));',
@@ -1213,6 +1251,25 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    var vectorCopy = haxe.ds.Vector.fromArrayCopy(vectorSource);',
 				'    vectorSource[0] = 9;',
 				'    Sys.println("vector-copy=" + vectorCopy[0] + ":" + vectorCopy[1] + ":" + vectorCopy.length);',
+				'    var directVector = new haxe.ds.Vector(3);',
+				'    directVector[1] = 9;',
+				'    Sys.println("vector-new=" + directVector.length + ":" + directVector[1]);',
+				'    var diffEquivs = [];',
+				'    var diffLookup = [];',
+				'    var diffEquivIndex = -1;',
+				'    if (diffEquivIndex < 0) {',
+				'      var diffEquiv = { hash: 7, length: 4 }',
+				'      diffEquivIndex = diffEquivs.push(diffEquiv) - 1;',
+				'      diffLookup.push(diffEquivIndex);',
+				'    }',
+				'    for (diffIndex in diffLookup) Sys.println("diff-equiv=" + diffEquivs[diffIndex].hash + ":" + diffIndex);',
+				'    Sys.println("interp-this=" + new InterpThis(4).toString());',
+				'    var opStore = [0, 0, 0, 0];',
+				'    var opVec = new LocalOpVector(opStore, 1);',
+				'    var opVec2 = opVec + 1;',
+				'    opVec += 1;',
+				'    opVec[0] = 7;',
+				'    Sys.println("abstract-op=" + opVec2[0] + ":" + opStore[2] + ":" + opVec.toString());',
 				'    Sys.println("upper=" + "abc".toUpperCase());',
 				'    Sys.println(unit.TestReflect.TYPES[0].__hx_name);',
 				'    Sys.println(unit.TestReflect.TNAMES.join(","));',
@@ -1269,6 +1326,21 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"  public function new() super();",
 				"  public override function get_prop() return super.prop + 1;",
 				"  public override function set_prop(v:Int) return (super.prop = v) + 1;",
+				"}",
+				"class InterpThis {",
+				"  public var value:Int;",
+				"  public function new(value:Int) this.value = value;",
+				"  public function toString():String return '[IV +${this.value}]';",
+				"}",
+				"class LocalOpVector {",
+				"  public var store:Array<Int>;",
+				"  public var index:Int;",
+				"  public function new(store:Array<Int>, index:Int) { this.store = store; this.index = index; }",
+				"  @:op(A + B) public inline function add(delta:Int) return new LocalOpVector(this.store, this.index + delta);",
+				"  @:op(A += B) public inline function addAssign(delta:Int) this.index += delta;",
+				"  @:op([]) public inline function read(delta:Int) return this.store[this.index + delta];",
+				"  @:op([]) public inline function write(delta:Int, value:Int) return this.store[this.index + delta] = value;",
+				"  public inline function toString():String return 'LV:${this.index}';",
 				"}"
 			].join("\n");
 			final modules = [
@@ -1481,9 +1553,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "return String(s).indexOf(String(start)) === 0;", "StringTools.startsWith should lower to JS prefix check");
 			assertContains(js, "__hx_cls_StringTools.replace = function", "StringTools.replace shim should emit");
 			assertContains(js, "return String(s).split(String(sub)).join(String(by));", "StringTools.replace should lower to literal split/join replacement");
+			assertNotContains(js, "__hx_cls_StringTools.elen =", "StringTools local variables should not leak as static fields");
+			assertNotContains(js, "__hx_cls_StringTools.slen =", "StringTools local variables should not leak as static fields");
+			assertContains(js, "__hx_cls_StringTools.winMetaCharacters = __hx_cls_haxe_SysTools.winMetaCharacters",
+				"StringTools real static fields should still emit");
 			assertNotContains(js, "__hx_cls_String.prototype.toUpperCase",
 				"native JS String prototype methods should not be re-emitted from unsupported std bodies");
 			assertContains(js, "__hx_cls_Main.HX_CTOR = \"_hx_constructor\"", "static inline final string constants should keep simple runtime initializers");
+			assertContains(js, "__hx_cls_Main.MODULE_OFFSET = (1 << 5)", "module-level final declarations should emit as static fields");
+			assertNotContains(js, " + MODULE_OFFSET", "same-module top-level final references should not leak as raw globals");
 			assertContains(js, "__hx_cls_JsCtorChild.prototype._hx_constructor = function",
 				"pre-super constructors should expose the ES6 extracted constructor marker");
 			assertContains(js, "__hx_cls_JsCtorBase._hx_skip_constructor = false",
@@ -1508,6 +1586,19 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "this.__hx_store()[String(key | 0)] = value;", "IntMap keys should be stored by integer identity");
 			assertContains(js, "__hx_cls_haxe_ds_Vector.fromArrayCopy = function", "Vector fromArrayCopy runtime complement should emit");
 			assertContains(js, "return array == null ? null : array.slice();", "Vector fromArrayCopy should use JS array shallow-copy semantics");
+			assertContains(js, "var __hx_array = new Array(__hx_len < 0 ? 0 : __hx_len);", "Vector constructor should use JS array storage");
+			assertNotContains(js, "__hx_cls_haxe_ds_Vector.r =", "Vector local variables should not leak as static fields");
+			assertNotContains(js, "__hx_cls_haxe_ds_Vector.len =", "Vector local variables should not leak as static fields");
+			assertContains(js, "this.value", "interpolated this-field access should emit the JS this receiver");
+			assertNotContains(js, "this_.value", "interpolated this-field access should not mangle this as an identifier");
+			assertContains(js, "__hx_cls_LocalOpVector.prototype.__hx_op_add = __hx_cls_LocalOpVector.prototype.add",
+				"abstract @:op(A + B) methods should expose a JS operator slot");
+			assertContains(js, "__hx_cls_LocalOpVector.prototype.__hx_op_addAssign = __hx_cls_LocalOpVector.prototype.addAssign",
+				"abstract @:op(A += B) methods should expose a JS operator slot");
+			assertContains(js, "__hx_cls_LocalOpVector.prototype.__hx_op_read = __hx_cls_LocalOpVector.prototype.read",
+				"abstract @:op([]) read methods should expose a JS operator slot");
+			assertContains(js, "__hx_cls_LocalOpVector.prototype.__hx_op_write = __hx_cls_LocalOpVector.prototype.write",
+				"abstract @:op([]) write methods should expose a JS operator slot");
 			assertContains(js, "__hx_cls_sys_thread_Thread.prototype.sendMessage = function",
 				"unused sys.thread.Thread sendMessage should emit a neutral JS body");
 			assertContains(js, "this.__hx_value = method", "abstract-style constructor assignment to this should lower to a backing value slot");
@@ -1568,6 +1659,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			final stdout = runNodeScript(artifactPath);
 			assertContains(stdout, "std=std-ok", "Std.string should stringify primitive strings through JS Boot");
 			assertContains(stdout, "inline-final=_hx_constructor", "static inline final string constants should be available at runtime");
+			assertContains(stdout, "module-offset=32", "module-level final declarations should resolve inside same-module functions");
 			assertContains(stdout, "'a b'", "quoteUnixArg should quote shell-unsafe spaces");
 			assertContains(stdout, "abc", "quoteUnixArg should preserve shell-safe text");
 			assertContains(stdout, "\"ab c\"", "quoteWinArg should quote space-containing text");
@@ -1614,6 +1706,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "replace=baXX,a/b,axbxc", "StringTools.replace should perform literal global replacements including empty needles");
 			assertContains(stdout, "intmap=answer:true:true:null", "IntMap should support diff-style get/exists/remove lookups");
 			assertContains(stdout, "vector-copy=5:6:2", "Vector.fromArrayCopy should return a shallow copy isolated from later source mutation");
+			assertContains(stdout, "vector-new=3:9", "Vector constructor should return indexable JS array storage");
+			assertContains(stdout, "diff-equiv=7:0", "semicolonless anonymous object initializers should not drop following assignments");
+			assertContains(stdout, "interp-this=[IV +4]", "interpolated this-field access should execute through the JS this receiver");
+			assertContains(stdout, "abstract-op=7:7:LV:2", "abstract operator slots should execute add/addAssign/read/write methods");
 			assertContains(stdout, "upper=ABC", "native JS String prototype methods should remain available");
 			assertContains(stdout, "unit.MyInterface", "unresolved qualified value type refs should preserve runtime type names");
 			assertContains(stdout, "haxe.ds.StringMap,unit.MyInterface", "same-class static helper calls should execute during static field initialization");

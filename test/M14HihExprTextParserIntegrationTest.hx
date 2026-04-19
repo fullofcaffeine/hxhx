@@ -81,6 +81,14 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected typed block expression to stay inside typeError call");
 		}
 
+		final semicolonlessAnonStmts = HxParser.parseFunctionBodyText("final equiv:Equivclass = { hash: h, length: length }\nequivIndex = ctx.addEquiv(equiv);\na.push(equivIndex);");
+		assertTrue(semicolonlessAnonStmts.length == 3, "semicolonless anonymous object initializer should not consume following assignment");
+		switch (semicolonlessAnonStmts[1]) {
+			case SExpr(EBinop("=", EIdent("equivIndex"), ECall(EField(EIdent("ctx"), "addEquiv"), [EIdent("equiv")])), _):
+			case _:
+				fail("expected assignment after semicolonless anonymous object initializer to parse as its own statement");
+		}
+
 		final mutableMapBlockExpr = HxParser.parseExprText('{ var h = new haxe.ds.StringMap(); h.set("lt", "<"); h; }');
 		switch (mutableMapBlockExpr) {
 			case ETryCatchRaw(raw):
@@ -188,6 +196,17 @@ class M14HihExprTextParserIntegrationTest {
 				fail("single-quoted dollar text should keep interpolation behavior");
 			case _:
 				fail("expected single-quoted dollar text to parse as interpolation concat");
+		}
+
+		final thisFieldInterpolationExpr = HxParser.parseExprText("'[IV +${this.index}]'");
+		switch (thisFieldInterpolationExpr) {
+			case EBinop("+", EBinop("+", EString(prefix), EBinop("+", EString(emptyPrefix), EField(EThis, field))), EString(suffix)):
+				assertTrue(prefix == "[IV +", "expected this-field interpolation prefix");
+				assertTrue(emptyPrefix == "", "expected this-field interpolation to force string concat");
+				assertTrue(field == "index", "expected this-field interpolation to preserve field name");
+				assertTrue(suffix == "]", "expected this-field interpolation suffix");
+			case _:
+				fail("expected this-field interpolation to parse as EField(EThis, index)");
 		}
 
 		final switchCaseSequenceStmts = HxParser.parseFunctionBodyText("var result = switch [ok, expected] { case [true, false]: true; case [false, false]: var detail = proc.stderr.readAll().toString(); Sys.print(detail); false; case _: false; };");

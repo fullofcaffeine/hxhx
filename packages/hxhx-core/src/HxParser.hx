@@ -1356,6 +1356,7 @@ class HxParser {
 		// String interpolation (bring-up subset):
 		// - `$ident`
 		// - `${ident}`
+		// - `${this.field}` / `${ident.field}`
 		//
 		// Why
 		// - Upstream harness code (RunCi) uses both forms (e.g. `'test ${test} failed'`).
@@ -1386,7 +1387,25 @@ class HxParser {
 		final parts = new Array<HxExpr>();
 		var buf = new StringBuf();
 
-		inline function stringifyIdentExpr(name:String):HxExpr {
+		function parseInterpolationPayload(text:String):Null<HxExpr> {
+			if (text == null)
+				return null;
+			final trimmed = StringTools.trim(text);
+			if (trimmed.length == 0)
+				return null;
+			final names = trimmed.split(".");
+			if (names.length == 0)
+				return null;
+			for (name in names)
+				if (!isSimpleIdent(name))
+					return null;
+			var expr:HxExpr = names[0] == "this" ? EThis : EIdent(names[0]);
+			for (i in 1...names.length)
+				expr = EField(expr, names[i]);
+			return expr;
+		}
+
+		inline function stringifyExpr(expr:HxExpr):HxExpr {
 			// Avoid emitting `Std.string(...)` in the bootstrap AST.
 			//
 			// Why
@@ -1398,7 +1417,7 @@ class HxParser {
 			// - Force a string-concat context via `"" + ident`. Our Stage3 emitter recognizes
 			//   `+` with a string operand and lowers it to OCaml `^`, stringifying primitives
 			//   on the other side as needed.
-			return EBinop("+", EString(""), EIdent(name));
+			return EBinop("+", EString(""), expr);
 		}
 
 		function flushBuf():Void {
@@ -1433,9 +1452,9 @@ class HxParser {
 				while (j < s.length && s.charCodeAt(j) != "}".code)
 					j++;
 				if (j < s.length && s.charCodeAt(j) == "}".code) {
-					final inner = StringTools.trim(s.substr(start, j - start));
-					if (isSimpleIdent(inner)) {
-						parts.push(stringifyIdentExpr(inner));
+					final payload = parseInterpolationPayload(s.substr(start, j - start));
+					if (payload != null) {
+						parts.push(stringifyExpr(payload));
 						i = j + 1;
 						continue;
 					}
@@ -1453,7 +1472,7 @@ class HxParser {
 				while (j < s.length && isIdentCont(s.charCodeAt(j)))
 					j++;
 				final name = s.substr(j0, j - j0);
-				parts.push(stringifyIdentExpr(name));
+				parts.push(stringifyExpr(name == "this" ? EThis : EIdent(name)));
 				i = j;
 				continue;
 			}
@@ -2895,6 +2914,8 @@ class HxParser {
 			decls.push(parseSingleVarDecl());
 		}
 		final nextStartsStatement = switch (cur.kind) {
+			case TIdent(_):
+				declsCanEndBeforeIdentifier(decls);
 			case TKeyword(k):
 				k == KIf
 				|| k == KSwitch
@@ -2918,6 +2939,18 @@ class HxParser {
 			return decls;
 		syncToStmtEnd();
 		return decls;
+	}
+
+	static function declsCanEndBeforeIdentifier(decls:Array<HxStmt>):Bool {
+		if (decls == null || decls.length == 0)
+			return false;
+		final last = decls[decls.length - 1];
+		return switch (last) {
+			case SVar(_, _, EAnon(_, _), _):
+				true;
+			case _:
+				false;
+		}
 	}
 
 	function parseVarStmt(pos:HxPos):HxStmt {
@@ -3741,6 +3774,7 @@ class HxParser {
 		var packagePath = "";
 		final imports = new Array<String>();
 		var hasToplevelMain = false;
+		final moduleFields = new Array<HxFieldDecl>();
 
 		if (acceptKeyword(KPackage)) {
 			// Haxe allows an empty package declaration: `package;`
@@ -3769,7 +3803,38 @@ class HxParser {
 		// - We still recognize module-level `function main(...)` for upstream unit tests.
 		// - Non-class declarations (typedef/enum/abstract/etc.) are ignored for now.
 		final classes = new Array<HxClassDecl>();
+		function parseModuleField(isFinal:Bool):Void {
+			final fieldStart = cur.getPos();
+			bump();
+			final name = readIdent("top-level field name");
+			var typeHint = "";
+			if (cur.kind.match(TColon)) {
+				bump();
+				typeHint = readTypeHintText(() -> cur.kind.match(TOther("=".code)) || cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+			}
+			var init:Null<HxExpr> = null;
+			var initText = "";
+			if (acceptOtherChar("=")) {
+				final initStart = currentIndex();
+				init = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+				initText = sliceSource(initStart, currentIndex());
+			}
+			if (cur.kind.match(TSemicolon))
+				bump();
+			else
+				syncToStmtEnd();
+			moduleFields.push(new HxFieldDecl(name, Public, true, typeHint, init, [], fieldStart, cur.getPos(), isFinal, "", "", initText));
+		}
 		while (!cur.kind.match(TEof)) {
+			switch (cur.kind) {
+				case TKeyword(KFinal):
+					parseModuleField(true);
+					continue;
+				case TKeyword(KVar):
+					parseModuleField(false);
+					continue;
+				case _:
+			}
 			switch (cur.kind) {
 				case TKeyword(KClass):
 					bump(); // 'class'
@@ -3830,6 +3895,22 @@ class HxParser {
 		}
 		if (chosen == null && classes.length > 0)
 			chosen = classes[0];
+		if (moduleFields.length > 0) {
+			final base = chosen == null ? new HxClassDecl(expected.length > 0 ? expected : "Unknown", false, [], []) : chosen;
+			final mergedFields = moduleFields.concat(HxClassDecl.getFields(base));
+			chosen = new HxClassDecl(HxClassDecl.getName(base), HxClassDecl.getHasStaticMain(base), HxClassDecl.getFunctions(base), mergedFields,
+				HxClassDecl.getExtendsPath(base));
+			var replaced = false;
+			for (i in 0...classes.length) {
+				if (HxClassDecl.getName(classes[i]) == HxClassDecl.getName(chosen)) {
+					classes[i] = chosen;
+					replaced = true;
+					break;
+				}
+			}
+			if (!replaced)
+				classes.push(chosen);
+		}
 		final mainClass = chosen == null ? new HxClassDecl("Unknown", false, [], []) : chosen;
 		return new HxModuleDecl(packagePath, imports, mainClass, classes, false, hasToplevelMain);
 	}

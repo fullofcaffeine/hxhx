@@ -446,6 +446,39 @@ class ParserStage {
 						}
 					}
 
+					final scannedModuleFields = ParserStageScanHelpers.scanModuleStaticFields(source);
+					if (scannedModuleFields.length > 0) {
+						if (mainName == null || mainName.length == 0 || mainName == "Unknown") {
+							final fallbackName = expectedMainClass != null && expectedMainClass.length > 0 ? expectedMainClass : "Unknown";
+							main = new HxClassDecl(fallbackName, HxClassDecl.getHasStaticMain(main), HxClassDecl.getFunctions(main),
+								HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main));
+							mainName = fallbackName;
+						}
+						final existingFieldNames:Map<String, Bool> = new Map();
+						for (f in HxClassDecl.getFields(main)) {
+							final fieldName = HxFieldDecl.getName(f);
+							if (fieldName != null && fieldName.length > 0)
+								existingFieldNames.set(fieldName, true);
+						}
+						final mergedFields = new Array<HxFieldDecl>();
+						var addedModuleField = false;
+						for (f in scannedModuleFields) {
+							final fieldName = HxFieldDecl.getName(f);
+							if (fieldName == null || fieldName.length == 0 || existingFieldNames.exists(fieldName))
+								continue;
+							mergedFields.push(f);
+							existingFieldNames.set(fieldName, true);
+							addedModuleField = true;
+						}
+						if (addedModuleField) {
+							for (f in HxClassDecl.getFields(main))
+								mergedFields.push(f);
+							main = new HxClassDecl(HxClassDecl.getName(main), HxClassDecl.getHasStaticMain(main), HxClassDecl.getFunctions(main),
+								mergedFields, HxClassDecl.getExtendsPath(main));
+							staticPatchApplied = true;
+						}
+					}
+
 					main = patchClassStaticFlagsFromScan(main);
 					final existingClasses = new Array<HxClassDecl>();
 					for (c in HxModuleDecl.getClasses(nativeDecl))

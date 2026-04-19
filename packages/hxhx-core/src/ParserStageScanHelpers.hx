@@ -104,6 +104,48 @@ class ParserStageScanHelpers {
 		return out;
 	}
 
+	public static function scanModuleStaticFields(source:String):Array<HxFieldDecl> {
+		final out = new Array<HxFieldDecl>();
+		if (source == null || source.length == 0)
+			return out;
+
+		var braceDepth = 0;
+		var i = 0;
+		while (true) {
+			final t = scanNextToken(source, i);
+			i = t.nextPos;
+			if (t.text.length == 0)
+				break;
+
+			if (!t.isIdent) {
+				if (t.text == "{")
+					braceDepth += 1;
+				else if (t.text == "}")
+					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
+				continue;
+			}
+
+			if (braceDepth != 0)
+				continue;
+			if (t.text != "final" && t.text != "var")
+				continue;
+
+			var nameTok = scanNextToken(source, i);
+			while (nameTok.text.length > 0 && !nameTok.isIdent)
+				nameTok = scanNextToken(source, nameTok.nextPos);
+			if (!nameTok.isIdent || nameTok.text.length == 0)
+				continue;
+
+			final name = nameTok.text;
+			final initText = scanFieldInitializer(source, nameTok.nextPos);
+			out.push(new HxFieldDecl(name, HxVisibility.Public, true, "", parseModuleStaticInitExpr(initText), [], null, null, t.text == "final", "", "",
+				initText));
+			i = scanFieldDeclarationEnd(source, nameTok.nextPos);
+		}
+
+		return out;
+	}
+
 	static function scanClassHeader(source:String, start:Int):{bodyStart:Int, nextPos:Int, extendsPath:String} {
 		var extendsPath = "";
 		var readingExtends = false;
@@ -707,7 +749,39 @@ class ParserStageScanHelpers {
 		var sawStatic = false;
 		var sawMacro = false;
 		var sawOverload = false;
+		var pendingMetadata = new Array<String>();
 		var vis:HxVisibility = HxVisibility.Public;
+
+		function scanMetadataText(startPos:Int):{text:String, nextPos:Int} {
+			var j = startPos;
+			final colon = scanNextToken(source, j);
+			if (colon.text == ":")
+				j = colon.nextPos;
+			final head = scanNextToken(source, j);
+			if (!head.isIdent || head.text.length == 0)
+				return {text: "", nextPos: startPos};
+			final parts = [head.text];
+			j = head.nextPos;
+			final next = scanNextToken(source, j);
+			if (next.text != "(")
+				return {text: parts.join(""), nextPos: j};
+			parts.push("(");
+			j = next.nextPos;
+			var depth = 1;
+			while (depth > 0) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: parts.join(""), nextPos: j};
+				j = tok.nextPos;
+				parts.push(tok.text);
+				if (tok.text == "(") {
+					depth += 1;
+				} else if (tok.text == ")") {
+					depth -= 1;
+				}
+			}
+			return {text: parts.join(""), nextPos: j};
+		}
 
 		function scanTypeHintUntil(startPos:Int, stopAtComma:Bool):{hint:String, nextPos:Int} {
 			final parts = new Array<String>();
@@ -763,6 +837,13 @@ class ParserStageScanHelpers {
 
 			if (!t.isIdent) {
 				switch (t.text) {
+					case "@":
+						if (depth == 1) {
+							final meta = scanMetadataText(i);
+							if (meta.text.length > 0)
+								pendingMetadata.push(meta.text);
+							i = meta.nextPos;
+						}
 					case "{":
 						depth += 1;
 					case "}":
@@ -775,6 +856,7 @@ class ParserStageScanHelpers {
 							sawStatic = false;
 							sawMacro = false;
 							sawOverload = false;
+							pendingMetadata = [];
 							vis = HxVisibility.Public;
 						}
 					case _:
@@ -892,6 +974,7 @@ class ParserStageScanHelpers {
 					sawStatic = false;
 					sawMacro = false;
 					sawOverload = false;
+					pendingMetadata = [];
 					vis = HxVisibility.Public;
 					if (depth <= 0)
 						break;
@@ -1015,7 +1098,7 @@ class ParserStageScanHelpers {
 						i = bodyCapture.nextPos;
 
 					if (fnName.length > 0) {
-						final metadata = new Array<String>();
+						final metadata = pendingMetadata.copy();
 						if (sawMacro)
 							metadata.push("macro");
 						if (sawOverload)
@@ -1026,6 +1109,7 @@ class ParserStageScanHelpers {
 					sawStatic = false;
 					sawMacro = false;
 					sawOverload = false;
+					pendingMetadata = [];
 					vis = HxVisibility.Public;
 				case _:
 			}
@@ -1077,6 +1161,44 @@ class ParserStageScanHelpers {
 		return "";
 	}
 
+	static function scanFieldDeclarationEnd(source:String, start:Int):Int {
+		var i = start;
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var braceDepth = 0;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			if (c == "\"".code || c == "'".code) {
+				i = skipQuotedSource(source, i);
+				continue;
+			}
+			switch (c) {
+				case "(".code:
+					parenDepth += 1;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth -= 1;
+				case "[".code:
+					bracketDepth += 1;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth -= 1;
+				case "{".code:
+					braceDepth += 1;
+				case "}".code:
+					if (braceDepth == 0)
+						return i;
+					braceDepth -= 1;
+				case ";".code:
+					if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0)
+						return i + 1;
+				case _:
+			}
+			i += 1;
+		}
+		return i;
+	}
+
 	static function skipQuotedSource(source:String, start:Int):Int {
 		final quote = source.charCodeAt(start);
 		var i = start + 1;
@@ -1110,6 +1232,23 @@ class ParserStageScanHelpers {
 		if (intRe.match(text))
 			return EInt(Std.parseInt(text));
 		return null;
+	}
+
+	static function parseModuleStaticInitExpr(raw:String):Null<HxExpr> {
+		final simple = parseSimpleInitExpr(raw);
+		if (simple != null)
+			return simple;
+		final text = raw == null ? "" : StringTools.trim(raw);
+		if (text.length == 0)
+			return null;
+		try {
+			final expr = HxParser.parseExprText(text);
+			return hasUnsupportedExpr(expr) ? null : expr;
+		} catch (_:HxParseError) {
+			return null;
+		} catch (_:String) {
+			return null;
+		}
 	}
 
 	static function scanFunctionBody(source:String, start:Int, capture:Bool = true):{body:Array<HxStmt>, bodyText:String, nextPos:Int} {
