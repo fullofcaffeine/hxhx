@@ -25,6 +25,7 @@ class M14JsExprEmitterArrayComprehensionIntegrationTest {
 		final iterJs = JsExprEmitter.emit(iterExpr, exprScope);
 		assertContains(iterJs, "var __arr_comp_iter = values;", "array comprehension captures iterable once");
 		assertContains(iterJs, "var __arr_comp_value = __arr_comp_iter[__arr_comp_i];", "array comprehension binds loop value each iteration");
-		assertContains(iterJs, "__arr_comp_out.push((__arr_comp_value + 1));", "array comprehension yield uses bound value");
+		assertContains(iterJs, "__hx_op_add", "array comprehension addition should use abstract-aware helper");
+		assertContains(iterJs, "(__arr_comp_value, 1)", "array comprehension yield uses bound value");
 	}
 }

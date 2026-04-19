@@ -22,7 +22,8 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		final bind = HxParser.parseExprText("switch (mode) { case value: value + 1; }");
 		final bindJs = JsExprEmitter.emit(bind, exprScope);
 		assertContains(bindJs, "var __sw_bind_value = __sw;", "bind pattern should define branch-local alias");
-		assertContains(bindJs, "return (__sw_bind_value + 1);", "bind alias should be used in emitted expression");
+		assertContains(bindJs, "__hx_op_add", "bind branch addition should use abstract-aware helper");
+		assertContains(bindJs, "(__sw_bind_value, 1)", "bind alias should be used in emitted expression");
 
 		final throwExpr = HxParser.parseExprText("switch (value) { case label: throw 'unknown value $label'; }");
 		final throwJs = JsExprEmitter.emit(throwExpr, exprScope);
