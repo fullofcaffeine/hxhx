@@ -55,6 +55,10 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
   echo "Missing hxhx executable (set HXHX_BIN or allow build-hxhx.sh to produce one)." >&2
   exit 1
 fi
+case "$HXHX_BIN" in
+  /*) ;;
+  *) HXHX_BIN="$ROOT/$HXHX_BIN" ;;
+esac
 
 echo "== Building hxhx macro host (RPC skeleton)"
 # By default this uses the committed Stage4 bootstrap snapshot under:
@@ -383,6 +387,21 @@ class JsNativeRangeExprMain {
 }
 HX
 
+mkdir -p "$tmpdir/js_run_ambiguous"
+cat >"$tmpdir/js_run_ambiguous/Main.hx" <<'HX'
+extern class ArchiveProbe {
+  overload static function unpack(?flags:Array<String>):Void;
+  overload static function unpack(?flags:String):Void;
+}
+
+function main() {
+  ArchiveProbe.unpack();
+}
+HX
+cat >"$tmpdir/js_run_ambiguous/compile-fail.hxml" <<'HXML'
+--run Main
+HXML
+
 cat >"$tmpdir/src/JsNativeTryCatchMain.hx" <<'HX'
 class JsNativeTryCatchMain {
   static function main() {
@@ -628,6 +647,26 @@ if [ "$has_js_native_target" -eq 1 ]; then
   echo "$out" | grep -q "^run=ok$"
   echo "$out" | grep -q "^js-native-range-expr:4:10$"
   test -f "$tmpdir/out_js_range_expr/main.js"
+
+  echo "== Builtin fast-path target: --run rejects ambiguous optional overloads"
+  ambiguous_log="$tmpdir/js_run_ambiguous/out.log"
+  ambiguous_err="$tmpdir/js_run_ambiguous/err.log"
+  set +e
+  (
+    cd "$tmpdir/js_run_ambiguous"
+    HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" compile-fail.hxml >"$ambiguous_log" 2>"$ambiguous_err"
+  )
+  ambiguous_rc=$?
+  set -e
+  if [ "$ambiguous_rc" -eq 0 ]; then
+    echo "Expected --run to reject ambiguous optional overloads." >&2
+    sed -n '1,80p' "$ambiguous_log" >&2
+    sed -n '1,80p' "$ambiguous_err" >&2
+    exit 1
+  fi
+  grep -q "Ambiguous overload, candidates follow" "$ambiguous_err"
+  grep -q "(?flags : Null<Array<String>>) -> Void" "$ambiguous_err"
+  grep -q "(?flags : Null<String>) -> Void" "$ambiguous_err"
 
   echo "== Builtin fast-path target: js-native try/catch throw/rethrow (compile+run smoke)"
   out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN"  --js "$tmpdir/out_js_trycatch/main.js" -cp "$tmpdir/src" -main JsNativeTryCatchMain --hxhx-out "$tmpdir/out_js_trycatch")"

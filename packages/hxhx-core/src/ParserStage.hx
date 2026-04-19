@@ -256,12 +256,17 @@ class ParserStage {
 							return s.length > 0 && s != "Unknown";
 						}
 
-						function argsNeedScan(nativeArgs:Array<HxFunctionArg>, scannedArgs:Array<HxFunctionArg>):Bool {
+						function argsNeedScan(nativeArgs:Array<HxFunctionArg>, scannedArgs:Array<HxFunctionArg>, allowShapeRepair:Bool):Bool {
 							if (nativeArgs == null || scannedArgs == null || nativeArgs.length != scannedArgs.length)
 								return false;
 							for (i in 0...nativeArgs.length) {
 								if (!usefulHint(HxFunctionArg.getTypeHint(nativeArgs[i]))
 									&& usefulHint(HxFunctionArg.getTypeHint(scannedArgs[i])))
+									return true;
+								if (allowShapeRepair
+									&& HxFunctionArg.getIsOptional(nativeArgs[i]) != HxFunctionArg.getIsOptional(scannedArgs[i]))
+									return true;
+								if (allowShapeRepair && HxFunctionArg.getIsRest(nativeArgs[i]) != HxFunctionArg.getIsRest(scannedArgs[i]))
 									return true;
 							}
 							return false;
@@ -317,9 +322,11 @@ class ParserStage {
 							final scannedFn = nextScannedFn(fnName, scannedFnUseByName);
 							final metadata = mergeScannedMetadata(fn, scannedFn);
 							final metadataChanged = !sameMetadata(metadata, HxFunctionDecl.getMetadata(fn));
+							final allowArgShapeRepair = scannedFn != null
+								&& hasMetadata(HxFunctionDecl.getMetadata(scannedFn), "overload");
 							final args = scannedFn != null
-								&& argsNeedScan(HxFunctionDecl.getArgs(fn),
-									HxFunctionDecl.getArgs(scannedFn)) ? HxFunctionDecl.getArgs(scannedFn) : HxFunctionDecl.getArgs(fn);
+								&& argsNeedScan(HxFunctionDecl.getArgs(fn), HxFunctionDecl.getArgs(scannedFn),
+									allowArgShapeRepair) ? HxFunctionDecl.getArgs(scannedFn) : HxFunctionDecl.getArgs(fn);
 							final argsChanged = args != HxFunctionDecl.getArgs(fn);
 							final returnType = scannedFn != null
 								&& !usefulHint(HxFunctionDecl.getReturnTypeHint(fn))

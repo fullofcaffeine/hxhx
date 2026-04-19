@@ -324,12 +324,16 @@ let parse = fun source filePath -> let expectedMainClass = (expectedMainClassFro
               __assign_97
             ));
             let s = (StringTools.trim (!tempString : string) : string) in HxString.length s > 0 && not (HxString.equals s "Unknown")
-          ) in let argsNeedScan = fun nativeArgs scannedArgs -> try let __fallback_result_101 = (
+          ) in let argsNeedScan = fun nativeArgs scannedArgs allowShapeRepair -> try let __fallback_result_101 = (
             ignore (if nativeArgs == Obj.magic (HxRuntime.hx_null) || scannedArgs == Obj.magic (HxRuntime.hx_null) || HxArray.length nativeArgs <> HxArray.length scannedArgs then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
             ignore (let _g = ref 0 in let _g1 = HxArray.length nativeArgs in while !_g < _g1 do ignore (let i = let __old_98 = !_g in let __new_99 = HxInt.add __old_98 1 in (
               ignore (_g := __new_99);
               __old_98
-            ) in if not (usefulHint (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic nativeArgs) i)) : string)) && usefulHint (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic scannedArgs) i)) : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()) done);
+            ) in (
+              ignore (if not (usefulHint (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic nativeArgs) i)) : string)) && usefulHint (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic scannedArgs) i)) : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+              ignore (if allowShapeRepair && HxFunctionArg.getIsOptional (Obj.magic (HxArray.get (Obj.magic nativeArgs) i)) <> HxFunctionArg.getIsOptional (Obj.magic (HxArray.get (Obj.magic scannedArgs) i)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+              if allowShapeRepair && HxFunctionArg.getIsRest (Obj.magic (HxArray.get (Obj.magic nativeArgs) i)) <> HxFunctionArg.getIsRest (Obj.magic (HxArray.get (Obj.magic scannedArgs) i)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+            )) done);
             false
           ) in Obj.magic __fallback_result_101 with
             | HxRuntime.Hx_return __ret_100 -> Obj.obj __ret_100 in let nextScannedFn = fun name used -> try let __fallback_result_110 = (
@@ -503,8 +507,8 @@ let parse = fun source filePath -> let expectedMainClass = (expectedMainClassFro
                         tempMaybeBool1 := __assign_132;
                         __assign_132
                       ));
-                      let isStatic = Obj.magic (!tempMaybeBool1) in let scannedFn = Obj.magic (nextScannedFn (fnName : string) scannedFnUseByName) in let metadata = Obj.magic (mergeScannedMetadata (Obj.magic fn) (Obj.magic scannedFn)) in let metadataChanged = not (sameMetadata (Obj.magic metadata) (Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn)))) in let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionArg.t HxArray.t) in (
-                        ignore (if scannedFn != Obj.magic (HxRuntime.hx_null) && argsNeedScan (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic scannedFn))) then let __assign_133 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic scannedFn)) in (
+                      let isStatic = Obj.magic (!tempMaybeBool1) in let scannedFn = Obj.magic (nextScannedFn (fnName : string) scannedFnUseByName) in let metadata = Obj.magic (mergeScannedMetadata (Obj.magic fn) (Obj.magic scannedFn)) in let metadataChanged = not (sameMetadata (Obj.magic metadata) (Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn)))) in let allowArgShapeRepair = scannedFn != Obj.magic (HxRuntime.hx_null) && hasMetadata (Obj.magic (HxFunctionDecl.getMetadata (Obj.magic scannedFn))) ("overload" : string) in let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionArg.t HxArray.t) in (
+                        ignore (if scannedFn != Obj.magic (HxRuntime.hx_null) && argsNeedScan (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic scannedFn))) allowArgShapeRepair then let __assign_133 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic scannedFn)) in (
                           tempArray2 := __assign_133;
                           __assign_133
                         ) else let __assign_134 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in (
