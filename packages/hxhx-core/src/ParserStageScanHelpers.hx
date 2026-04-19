@@ -721,6 +721,8 @@ class ParserStageScanHelpers {
 				if (tok.text.length == 0)
 					return {hint: parts.join(""), nextPos: j};
 				final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0;
+				if (atTop && tok.isIdent && tok.text == "return")
+					return {hint: parts.join(""), nextPos: j};
 				if (atTop
 					&& (tok.text == ")" || tok.text == "=" || tok.text == "{" || tok.text == ";" || (stopAtComma && tok.text == ",")))
 					return {hint: parts.join(""), nextPos: j};
