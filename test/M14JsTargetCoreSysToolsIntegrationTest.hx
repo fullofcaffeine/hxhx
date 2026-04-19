@@ -84,10 +84,21 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	}
 
 	static function sysIoFileModule():TypedModule {
+		final pathArg = new HxFunctionArg("path", "String", HxDefaultValue.NoDefault);
+		final contentArg = new HxFunctionArg("content", "String", HxDefaultValue.NoDefault);
+		final bytesArg = new HxFunctionArg("bytes", "haxe.io.Bytes", HxDefaultValue.NoDefault);
+		final srcPathArg = new HxFunctionArg("srcPath", "String", HxDefaultValue.NoDefault);
+		final dstPathArg = new HxFunctionArg("dstPath", "String", HxDefaultValue.NoDefault);
 		final copyBufLen = new HxFieldDecl("copyBufLen", HxVisibility.Private, true, "Int", HxExpr.EInt(65536));
 		final copyBuf = new HxFieldDecl("copyBuf", HxVisibility.Private, true, "Dynamic",
 			HxExpr.EUnsupported("[js-native:unsupported_expr] kind=EUnsupported detail=js.node.Buffer.alloc(copyBufLen)"));
-		final fileClass = new HxClassDecl("File", false, [], [copyBufLen, copyBuf]);
+		final fileClass = new HxClassDecl("File", false, [
+			new HxFunctionDecl("getContent", HxVisibility.Public, true, [pathArg], "String", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("saveContent", HxVisibility.Public, true, [pathArg, contentArg], "Void", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("getBytes", HxVisibility.Public, true, [pathArg], "haxe.io.Bytes", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("saveBytes", HxVisibility.Public, true, [pathArg, bytesArg], "Void", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("copy", HxVisibility.Public, true, [srcPathArg, dstPathArg], "Void", unsupportedBody("body_parse_error"), "")
+		], [copyBufLen, copyBuf]);
 		final decl = new HxModuleDecl("sys.io", [], fileClass, [fileClass], false, false);
 		return typedModule("", decl, "sys/io/File.hx");
 	}
@@ -169,6 +180,19 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		]);
 		final decl = new HxModuleDecl("haxe", [], restClass, [restClass], false, false);
 		return typedModule("", decl, "haxe/Rest.hx");
+	}
+
+	static function haxeTemplateModule():TypedModule {
+		final strArg = new HxFunctionArg("str", "String", HxDefaultValue.NoDefault);
+		final contextArg = new HxFunctionArg("context", "Dynamic", HxDefaultValue.NoDefault);
+		final macrosArg = new HxFunctionArg("macros", "Dynamic", HxDefaultValue.Default(HxExpr.ENull));
+		final globalsField = new HxFieldDecl("globals", HxVisibility.Public, true, "Dynamic", HxExpr.EAnon([], []));
+		final templateClass = new HxClassDecl("Template", false, [
+			new HxFunctionDecl("new", HxVisibility.Public, false, [strArg], "Void", unsupportedBody("body_parse_error"), ""),
+			new HxFunctionDecl("execute", HxVisibility.Public, false, [contextArg, macrosArg], "String", unsupportedBody("body_parse_error"), "")
+		], [globalsField]);
+		final decl = new HxModuleDecl("haxe", [], templateClass, [templateClass], false, false);
+		return typedModule("", decl, "haxe/Template.hx");
 	}
 
 	static function jsCtorFixtureModule():TypedModule {
@@ -1069,6 +1093,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		try {
 			final source = [
 				"import sys.FileSystem;",
+				"import sys.io.File;",
 				"import js.Boot;",
 				"import utest.Assert;",
 				"import utest.TestHandler;",
@@ -1092,6 +1117,14 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(FileSystem.exists("."));',
 				'    Sys.println("args-len=" + Sys.args().length);',
 				'    var oldCwd = Sys.getCwd();',
+				'    var fileProbe = Path.join([oldCwd, "file-probe.txt"]);',
+				'    File.saveContent(fileProbe, "alpha");',
+				'    Sys.println("file-content=" + File.getContent(fileProbe));',
+				'    File.copy(fileProbe, fileProbe + ".copy");',
+				'    Sys.println("file-copy=" + File.getContent(fileProbe + ".copy"));',
+				'    File.saveBytes(fileProbe + ".bin", haxe.io.Bytes.ofString("beta"));',
+				'    Sys.println("file-bytes=" + File.getBytes(fileProbe + ".bin").toString());',
+				'    Sys.println("template=" + new haxe.Template("Hello ::name:: $$$$normPath(::cwd::/x,true)").execute({ name: "tmpl", cwd: "root" }, { normPath: function(_, p:String, escape:String = "false") return escape == "true" ? p.split("/").join("\\\\") : p; }));',
 				'    var cwdProbe = "' + tmpRoot + '/cwd-probe";',
 				'    Sys.setCwd(cwdProbe);',
 				'    var cwdCommandCode = Sys.command("node", ["-e", "console.log(\\"cwd-probe=\\" + require(\\"path\\").basename(process.cwd()))"]);',
@@ -1227,6 +1260,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				lambdaModule(),
 				stdModule(),
 				haxeRestModule(),
+				haxeTemplateModule(),
 				jsCtorFixtureModule(),
 				macroModule(),
 				reservedParamModule(),
@@ -1306,6 +1340,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_SysTools.quoteWinArg = function", "SysTools quoteWinArg shim should emit");
 			assertContains(js, "__hx_cls_haxe_io_Path.normalize = function", "Path normalize shim should emit");
 			assertContains(js, "__hx_cls_sys_FileSystem.exists = function", "FileSystem exists shim should emit");
+			assertContains(js, "__hx_cls_sys_io_File.getContent = function", "sys.io.File getContent shim should emit");
+			assertContains(js, "readFileSync(path, \"utf8\")", "sys.io.File.getContent should use Node fs readFileSync");
+			assertContains(js, "__hx_cls_sys_io_File.saveContent = function", "sys.io.File saveContent shim should emit");
+			assertContains(js, "__hx_cls_sys_io_File.copy = function", "sys.io.File copy shim should emit");
+			assertContains(js, "__hx_cls_haxe_Template.prototype.execute = function", "haxe.Template execute shim should emit");
 			assertContains(js, "__hx_cls_sys_io_File.copyBuf = (typeof Buffer !== \"undefined\" ? Buffer : require(\"buffer\").Buffer).alloc(65536)",
 				"sys.io.File copy buffer should use Node Buffer global without unresolved js.node path");
 			assertContains(js, "__hx_cls_sys_io_FileInput.prototype.seek = function", "unused sys.io.FileInput seek should emit a neutral JS body");
@@ -1510,6 +1549,11 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "3,4", "Lambda.filter should preserve matching items");
 			assertContains(stdout, "true", "FileSystem.exists should use Node fs existsSync");
 			assertContains(stdout, "args-len=0", "Sys.args should return an empty array when Node receives no script arguments");
+			assertContains(stdout, "file-content=alpha", "sys.io.File.getContent should read UTF-8 content under Node");
+			assertContains(stdout, "file-copy=alpha", "sys.io.File.copy should copy readable content under Node");
+			assertContains(stdout, "file-bytes=beta", "sys.io.File getBytes/saveBytes should round-trip haxe.io.Bytes under Node");
+			assertContains(stdout, "template=Hello tmpl root" + "\\" + "x",
+				"haxe.Template should expand context vars and simple macros used by misc expectations");
 			assertContains(stdout, "cwd-probe=cwd-probe", "Sys.command should inherit the cwd set by Sys.setCwd");
 			assertContains(stdout, "cwd-command-code=0", "Sys.command should report the child exit code");
 			assertContains(stdout, "try-ok", "try expression should return the successful branch value");

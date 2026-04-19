@@ -685,6 +685,13 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		}
 
+		if (fullName == "haxe.Template") {
+			if (params.length < 1)
+				return false;
+			writer.writeln("this.__hx_template = " + params[0] + " == null ? \"\" : String(" + params[0] + ");");
+			return true;
+		}
+
 		if (fullName == "utest.ui.text.PrintReport") {
 			if (params.length < 1)
 				return false;
@@ -970,6 +977,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "sys.FileSystem")
 			return emitFileSystemStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "sys.io.File")
+			return emitFileStaticFunctionBody(writer, fnName, params);
+
 		if (fullName == "utest.Assert")
 			return emitUtestAssertStaticFunctionBody(writer, fnName, params);
 
@@ -1198,6 +1208,9 @@ class JsTargetCore implements ITargetCore {
 
 		if (fullName == "haxe.io.Bytes")
 			return emitHaxeIoBytesInstanceFunctionBody(writer, fnName, params);
+
+		if (fullName == "haxe.Template")
+			return emitHaxeTemplateInstanceFunctionBody(writer, fnName, params);
 
 		if (fullName == "unit.TestLocalStatic" && fnName == "basic") {
 			emitUnitTestLocalStaticBasicBody(writer, fullName);
@@ -2310,6 +2323,48 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("return null;");
 	}
 
+	static function emitHaxeTemplateInstanceFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		if (fnName != "execute" || params.length < 1)
+			return false;
+		final context = params[0];
+		final macros = params.length > 1 ? params[1] : "null";
+		final templateRef = JsNameMangler.classVarName("haxe.Template");
+		writer.writeln("var __hx_context = " + context + " == null ? {} : " + context + ";");
+		writer.writeln("var __hx_macros = " + macros + " == null ? {} : " + macros + ";");
+		writer.writeln("var __hx_globals = " + templateRef + ".globals == null ? {} : " + templateRef + ".globals;");
+		writer.writeln("function __hx_resolve(name) {");
+		writer.pushIndent();
+		writer.writeln("if (__hx_context != null && Object.prototype.hasOwnProperty.call(Object(__hx_context), name)) return __hx_context[name];");
+		writer.writeln("if (__hx_globals != null && Object.prototype.hasOwnProperty.call(Object(__hx_globals), name)) return __hx_globals[name];");
+		writer.writeln("return null;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("var __hx_out = this.__hx_template == null ? \"\" : String(this.__hx_template);");
+		writer.writeln("__hx_out = __hx_out.replace(/::([A-Za-z0-9_]+)::/g, function(_, name) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_value = __hx_resolve(name);");
+		writer.writeln("return __hx_value == null ? \"null\" : String(__hx_value);");
+		writer.popIndent();
+		writer.writeln("});");
+		writer.writeln("__hx_out = __hx_out.replace(/\\$\\$([A-Za-z0-9_-]+)\\(([^)]*)\\)/g, function(_, name, rawArgs) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_fn = __hx_macros == null ? null : __hx_macros[name];");
+		writer.writeln("if (typeof __hx_fn !== \"function\") return \"\";");
+		writer.writeln("var __hx_args = [__hx_resolve];");
+		writer.writeln("if (rawArgs != null && rawArgs.length > 0) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_parts = rawArgs.split(\",\");");
+		writer.writeln("for (var __hx_i = 0; __hx_i < __hx_parts.length; __hx_i++) __hx_args.push(String(__hx_parts[__hx_i]).trim());");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("var __hx_result = __hx_fn.apply(__hx_macros, __hx_args);");
+		writer.writeln("return __hx_result == null ? \"null\" : String(__hx_result);");
+		writer.popIndent();
+		writer.writeln("});");
+		writer.writeln("return __hx_out;");
+		return true;
+	}
+
 	static function emitKnownClassRuntimeComplements(writer:JsWriter, fullName:String, jsRef:String):Void {
 		if (fullName == "StringTools")
 			emitStringToolsRuntimeComplements(writer, jsRef);
@@ -2591,6 +2646,50 @@ class JsTargetCore implements ITargetCore {
 					return false;
 				final path = params[0];
 				writer.writeln("return require(\"path\").resolve(" + path + ");");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitFileStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		final bytesRef = JsNameMangler.classVarName("haxe.io.Bytes");
+		final bufferRef = "(typeof Buffer !== \"undefined\" ? Buffer : require(\"buffer\").Buffer)";
+		switch (fnName) {
+			case "getContent":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return require(\"fs\").readFileSync(" + params[0] + ", \"utf8\");");
+				return true;
+			case "saveContent":
+				if (params.length < 2)
+					return false;
+				writer.writeln("require(\"fs\").writeFileSync(" + params[0] + ", String(" + params[1] + "), \"utf8\");");
+				writer.writeln("return null;");
+				return true;
+			case "getBytes":
+				if (params.length < 1)
+					return false;
+				writer.writeln("var __hx_data = Array.prototype.slice.call(require(\"fs\").readFileSync(" + params[0] + "));");
+				writer.writeln("return new " + bytesRef + "(__hx_data.length, __hx_data);");
+				return true;
+			case "saveBytes":
+				if (params.length < 2)
+					return false;
+				writer.writeln("var __hx_bytes_data = " + params[1] + " == null ? [] : (typeof " + params[1] + ".getData === \"function\" ? " + params[1]
+					+ ".getData() : " + params[1] + ".b);");
+				writer.writeln("require(\"fs\").writeFileSync("
+					+ params[0]
+					+ ", "
+					+ bufferRef
+					+ ".from(__hx_bytes_data == null ? [] : __hx_bytes_data));");
+				writer.writeln("return null;");
+				return true;
+			case "copy":
+				if (params.length < 2)
+					return false;
+				writer.writeln("require(\"fs\").copyFileSync(" + params[0] + ", " + params[1] + ");");
+				writer.writeln("return null;");
 				return true;
 			case _:
 				return false;
@@ -3048,6 +3147,8 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		if (fullName == "sys.io.Process")
 			return true;
+		if (fullName == "haxe.Template")
+			return fnName != "execute";
 		if (fullName == "utest.Runner" && fnName == "addCases")
 			return true;
 		if (fullName == "utest.ui.text.HtmlReport")
@@ -3060,6 +3161,8 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function shouldSkipInstancePrototypeEmission(fullName:String):Bool {
+		if (fullName == "haxe.Template")
+			return false;
 		if (fullName != null && StringTools.startsWith(fullName, "haxe."))
 			return true;
 		if (isNativeJsGlobalExtern(fullName))
