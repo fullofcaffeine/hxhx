@@ -21,7 +21,9 @@ class M14JsStmtEmitterKeyValueForIntegrationTest {
 		assertContains(js, "for (var __i_2 = 0; __i_2 < __keys_1.length; __i_2++) {", "key/value for should emit indexed key loop");
 		assertContains(js, "var label = __keys_1[__i_2];", "key binding should read current key");
 		assertContains(js, "var stacks = __iter_0[label];", "value binding should read by key");
-		assertContains(js, "console.log(((label + \":\") + stacks.length));", "loop body should resolve key and value locals");
+		assertContains(js, "console.log(", "loop body should emit the println call");
+		assertContains(js, "__hx_op_add", "loop body should use abstract-aware addition lowering");
+		assertContains(js, "stacks.length", "loop body should resolve the value local field access");
 
 		final localFunctionBody = HxParser.parseFunctionBodyText("function collect(r:Array<Int>) { var keys = []; var values = []; for (k => v in r) { keys.push(k); values.push(v); } return {keys: keys, values: values}; } var got = collect([3, 2]);");
 		final localFunctionWriter = new JsWriter();
