@@ -1447,7 +1447,11 @@ class JsExprEmitter {
 					final suffix = JsNameMangler.propertySuffix(field);
 					assignments.push("this" + suffix + " = this.__hx_value" + suffix);
 				}
-				"((this.__hx_value = " + rhs + "), " + assignments.join(", ") + ", this.__hx_value)";
+				if (assignments.length == 0) {
+					"((this.__hx_value = " + rhs + "), this.__hx_value)";
+				} else {
+					"((this.__hx_value = " + rhs + "), " + assignments.join(", ") + ", this.__hx_value)";
+				}
 			case _:
 				"(this.__hx_value = " + rhs + ")";
 		}

@@ -1,5 +1,7 @@
 import backend.BackendContext;
+import backend.js.JsExprEmitter;
 import backend.js.JsBackend;
+import backend.js.JsFunctionScope;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
@@ -1126,12 +1128,20 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		}
 	}
 
+	static function assertEmptyAnonThisAssignmentJs():Void {
+		final exprScope = new JsFunctionScope(new haxe.ds.StringMap<String>()).exprScope();
+		final js = JsExprEmitter.emit(HxExpr.EBinop("=", HxExpr.EThis, HxExpr.EAnon([], [])), exprScope);
+		assertContains(js, "this.__hx_value = {}", "abstract this assignment should assign the backing value slot");
+		assertNotContains(js, "), , this.__hx_value)", "empty anonymous object assignment to abstract this should not emit an empty sequence slot");
+	}
+
 	static function main():Void {
 		assertNativeStaticFinalDecode();
 		assertNativeSwitchFieldInitializerDecode();
 		assertScannedHelperClassInheritance();
 		assertScannedHelperAbstractExpressionBody();
 		assertScannedModuleStaticFields();
+		assertEmptyAnonThisAssignmentJs();
 
 		final tmpRoot = Path.normalize(".tmp/m14_js_target_core_systools_" + Std.string(Date.now().getTime()));
 		final outDir = Path.join([tmpRoot, "out"]);
@@ -1603,6 +1613,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"unused sys.thread.Thread sendMessage should emit a neutral JS body");
 			assertContains(js, "this.__hx_value = method", "abstract-style constructor assignment to this should lower to a backing value slot");
 			assertNotContains(js, "this = method", "abstract-style constructor assignment should not emit invalid JS assignment to this");
+			assertNotContains(js, "), , this.__hx_value)", "empty anonymous object assignment to abstract this should not emit an empty sequence slot");
 			assertContains(js, "__hx_cls_sys_io_Process.prototype.close = function", "unused sys.io.Process methods should emit neutral JS bodies");
 			assertContains(js, "process.chdir(String", "Sys.setCwd should lower to Node process.chdir");
 			assertContains(js, "process.argv.slice(2)", "Sys.args should lower to Node argv without executable/script entries");
