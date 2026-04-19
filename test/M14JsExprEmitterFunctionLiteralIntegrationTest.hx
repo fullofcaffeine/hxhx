@@ -25,7 +25,8 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		final unaryJs = JsExprEmitter.emit(unary, exprScope);
 		assertContains(unaryJs, "function(", "function literal lowers to JS function expression");
 		assertContains(unaryJs, "return (", "function literal emits return statement");
-		assertContains(unaryJs, "+ 1", "function literal preserves expression body");
+		assertContains(unaryJs, "__hx_op_add", "function literal preserves expression body through abstract-aware addition");
+		assertContains(unaryJs, "x, 1", "function literal keeps addition operands");
 
 		final typedArg = HxParser.parseExprText("function(value:Int) return value");
 		final typedArgJs = JsExprEmitter.emit(typedArg, exprScope);
@@ -55,7 +56,8 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		final optionalArrow = HxParser.parseExprText("f = (?a:Int=1, b:String) -> a + b.length");
 		final optionalArrowJs = JsExprEmitter.emit(optionalArrow, exprScope);
 		assertContains(optionalArrowJs, "f = function(a, b)", "optional/typed/default arrow args keep runtime arg names");
-		assertContains(optionalArrowJs, "a + b.length", "optional/typed/default arrow body is preserved");
+		assertContains(optionalArrowJs, "__hx_op_add", "optional/typed/default arrow body uses abstract-aware addition");
+		assertContains(optionalArrowJs, "a, b.length", "optional/typed/default arrow body keeps operands");
 
 		final ascribedArrow = HxParser.parseExprText("f0 = (() -> 1:()->Int)");
 		final ascribedArrowJs = JsExprEmitter.emit(ascribedArrow, exprScope);
@@ -101,7 +103,8 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(blockBodyJs, "function(", "block-body function literal parses");
 		assertContains(blockBodyJs, "return ", "block-body function literal emits return");
 		assertContains(blockBodyJs, "function(y)", "block-body function literal lowers var binding");
-		assertContains(blockBodyJs, "(x + 1)", "block-body function literal keeps initializer expression");
+		assertContains(blockBodyJs, "__hx_op_add", "block-body function literal keeps initializer addition semantics");
+		assertContains(blockBodyJs, "x, 1", "block-body function literal keeps initializer operands");
 
 		final jsLibCtor = HxParser.parseExprText("new js.lib.DataView(new js.lib.ArrayBuffer(8))");
 		final jsLibCtorJs = JsExprEmitter.emit(jsLibCtor, exprScope);
