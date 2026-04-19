@@ -641,6 +641,14 @@ class JsTargetCore implements ITargetCore {
 			return true;
 		}
 
+		if (fullName == "haxe.io.Bytes") {
+			if (params.length < 2)
+				return false;
+			writer.writeln("this.length = " + params[0] + " == null ? 0 : (" + params[0] + " | 0);");
+			writer.writeln("this.b = " + params[1] + " == null ? [] : " + params[1] + ";");
+			return true;
+		}
+
 		if (fullName == "utest.ui.text.PrintReport") {
 			if (params.length < 1)
 				return false;
@@ -920,6 +928,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "haxe.io.Path")
 			return emitPathStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "haxe.io.Bytes")
+			return emitHaxeIoBytesStaticFunctionBody(writer, fnName, params);
+
 		if (fullName == "sys.FileSystem")
 			return emitFileSystemStaticFunctionBody(writer, fnName, params);
 
@@ -1148,6 +1159,9 @@ class JsTargetCore implements ITargetCore {
 
 		if (fullName == "sys.io.Process")
 			return emitSysIoProcessInstanceFunctionBody(writer, fnName);
+
+		if (fullName == "haxe.io.Bytes")
+			return emitHaxeIoBytesInstanceFunctionBody(writer, fnName, params);
 
 		if (fullName == "unit.TestLocalStatic" && fnName == "basic") {
 			emitUnitTestLocalStaticBasicBody(writer, fullName);
@@ -2094,11 +2108,245 @@ class JsTargetCore implements ITargetCore {
 		}
 	}
 
+	static function emitHaxeIoBytesStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		final bytesRef = JsNameMangler.classVarName("haxe.io.Bytes");
+		switch (fnName) {
+			case "alloc":
+				if (params.length < 1)
+					return false;
+				emitHaxeIoBytesAllocBody(writer, bytesRef, params[0]);
+				return true;
+			case "ofString":
+				if (params.length < 1)
+					return false;
+				emitHaxeIoBytesOfStringBody(writer, bytesRef, params[0]);
+				return true;
+			case "ofData":
+				if (params.length < 1)
+					return false;
+				writer.writeln("var __hx_data = " + params[0] + " == null ? [] : Array.prototype.slice.call(" + params[0] + ");");
+				writer.writeln("return new " + bytesRef + "(__hx_data.length, __hx_data);");
+				return true;
+			case "ofHex":
+				if (params.length < 1)
+					return false;
+				emitHaxeIoBytesOfHexBody(writer, bytesRef, params[0]);
+				return true;
+			case "fastGet":
+				if (params.length < 2)
+					return false;
+				writer.writeln("return (" + params[0] + "[" + params[1] + " | 0] | 0) & 255;");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitHaxeIoBytesAllocBody(writer:JsWriter, bytesRef:String, length:String):Void {
+		writer.writeln("var __hx_len = " + length + " == null ? 0 : (" + length + " | 0);");
+		writer.writeln("if (__hx_len < 0) throw \"OutsideBounds\";");
+		writer.writeln("var __hx_data = new Array(__hx_len);");
+		writer.writeln("for (var __hx_i = 0; __hx_i < __hx_len; __hx_i++) __hx_data[__hx_i] = 0;");
+		writer.writeln("return new " + bytesRef + "(__hx_len, __hx_data);");
+	}
+
+	static function emitHaxeIoBytesOfStringBody(writer:JsWriter, bytesRef:String, value:String):Void {
+		writer.writeln("var __hx_text = String(" + value + ");");
+		writer.writeln("var __hx_data;");
+		writer.writeln("if (typeof Buffer !== \"undefined\") {");
+		writer.pushIndent();
+		writer.writeln("__hx_data = Array.prototype.slice.call(Buffer.from(__hx_text, \"utf8\"));");
+		writer.popIndent();
+		writer.writeln("} else if (typeof TextEncoder !== \"undefined\") {");
+		writer.pushIndent();
+		writer.writeln("__hx_data = Array.prototype.slice.call(new TextEncoder().encode(__hx_text));");
+		writer.popIndent();
+		writer.writeln("} else {");
+		writer.pushIndent();
+		writer.writeln("__hx_data = [];");
+		writer.writeln("for (var __hx_i = 0; __hx_i < __hx_text.length; __hx_i++) __hx_data.push(__hx_text.charCodeAt(__hx_i) & 255);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return new " + bytesRef + "(__hx_data.length, __hx_data);");
+	}
+
+	static function emitHaxeIoBytesOfHexBody(writer:JsWriter, bytesRef:String, value:String):Void {
+		writer.writeln("var __hx_s = String(" + value + ");");
+		writer.writeln("var __hx_len = __hx_s.length;");
+		writer.writeln("if ((__hx_len & 1) !== 0) throw \"Not a hex string (odd number of digits)\";");
+		writer.writeln("var __hx_ret = " + bytesRef + ".alloc(__hx_len >> 1);");
+		writer.writeln("for (var __hx_i = 0; __hx_i < __hx_ret.length; __hx_i++) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_high = __hx_s.charCodeAt(__hx_i * 2);");
+		writer.writeln("var __hx_low = __hx_s.charCodeAt(__hx_i * 2 + 1);");
+		writer.writeln("__hx_high = (__hx_high & 15) + ((__hx_high & 64) >> 6) * 9;");
+		writer.writeln("__hx_low = (__hx_low & 15) + ((__hx_low & 64) >> 6) * 9;");
+		writer.writeln("__hx_ret.set(__hx_i, ((__hx_high << 4) | __hx_low) & 255);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return __hx_ret;");
+	}
+
+	static function emitHaxeIoBytesInstanceFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "get":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return (this.b[" + params[0] + " | 0] | 0) & 255;");
+				return true;
+			case "set":
+				if (params.length < 2)
+					return false;
+				writer.writeln("this.b[" + params[0] + " | 0] = (" + params[1] + " | 0) & 255;");
+				writer.writeln("return null;");
+				return true;
+			case "getData":
+				writer.writeln("return this.b;");
+				return true;
+			case "getString" | "readString":
+				if (params.length < 2)
+					return false;
+				emitHaxeIoBytesGetStringBody(writer, params[0], params[1]);
+				return true;
+			case "toString":
+				writer.writeln("return this.getString(0, this.length);");
+				return true;
+			case "toHex":
+				emitHaxeIoBytesToHexBody(writer);
+				return true;
+			case "sub":
+				if (params.length < 2)
+					return false;
+				writer.writeln("var __hx_pos = " + params[0] + " | 0;");
+				writer.writeln("var __hx_len = " + params[1] + " | 0;");
+				writer.writeln("if (__hx_pos < 0 || __hx_len < 0 || __hx_pos + __hx_len > this.length) throw \"OutsideBounds\";");
+				writer.writeln("return new " + JsNameMangler.classVarName("haxe.io.Bytes") + "(__hx_len, this.b.slice(__hx_pos, __hx_pos + __hx_len));");
+				return true;
+			case "fill":
+				if (params.length < 3)
+					return false;
+				writer.writeln("var __hx_pos = " + params[0] + " | 0;");
+				writer.writeln("var __hx_len = " + params[1] + " | 0;");
+				writer.writeln("var __hx_value = (" + params[2] + " | 0) & 255;");
+				writer.writeln("for (var __hx_i = 0; __hx_i < __hx_len; __hx_i++) this.set(__hx_pos + __hx_i, __hx_value);");
+				writer.writeln("return null;");
+				return true;
+			case "blit":
+				if (params.length < 4)
+					return false;
+				emitHaxeIoBytesBlitBody(writer, params[0], params[1], params[2], params[3]);
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	static function emitHaxeIoBytesGetStringBody(writer:JsWriter, pos:String, len:String):Void {
+		writer.writeln("var __hx_pos = " + pos + " | 0;");
+		writer.writeln("var __hx_len = " + len + " | 0;");
+		writer.writeln("var __hx_slice = this.b.slice(__hx_pos, __hx_pos + __hx_len);");
+		writer.writeln("if (typeof Buffer !== \"undefined\") return Buffer.from(__hx_slice).toString(\"utf8\");");
+		writer.writeln("if (typeof TextDecoder !== \"undefined\") return new TextDecoder(\"utf-8\").decode(new Uint8Array(__hx_slice));");
+		writer.writeln("return String.fromCharCode.apply(null, __hx_slice);");
+	}
+
+	static function emitHaxeIoBytesToHexBody(writer:JsWriter):Void {
+		writer.writeln("var __hx_out = \"\";");
+		writer.writeln("var __hx_chars = \"0123456789abcdef\";");
+		writer.writeln("for (var __hx_i = 0; __hx_i < this.length; __hx_i++) {");
+		writer.pushIndent();
+		writer.writeln("var __hx_c = this.get(__hx_i);");
+		writer.writeln("__hx_out += __hx_chars.charAt(__hx_c >> 4) + __hx_chars.charAt(__hx_c & 15);");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return __hx_out;");
+	}
+
+	static function emitHaxeIoBytesBlitBody(writer:JsWriter, pos:String, src:String, srcpos:String, len:String):Void {
+		writer.writeln("var __hx_pos = " + pos + " | 0;");
+		writer.writeln("var __hx_srcpos = " + srcpos + " | 0;");
+		writer.writeln("var __hx_len = " + len + " | 0;");
+		writer.writeln("if (__hx_pos < 0 || __hx_srcpos < 0 || __hx_len < 0 || __hx_pos + __hx_len > this.length || __hx_srcpos + __hx_len > "
+			+ src
+			+ ".length) throw \"OutsideBounds\";");
+		writer.writeln("var __hx_tmp = " + src + ".b.slice(__hx_srcpos, __hx_srcpos + __hx_len);");
+		writer.writeln("for (var __hx_i = 0; __hx_i < __hx_len; __hx_i++) this.set(__hx_pos + __hx_i, __hx_tmp[__hx_i]);");
+		writer.writeln("return null;");
+	}
+
 	static function emitKnownClassRuntimeComplements(writer:JsWriter, fullName:String, jsRef:String):Void {
 		if (fullName == "StringTools")
 			emitStringToolsRuntimeComplements(writer, jsRef);
+		if (fullName == "haxe.io.Bytes")
+			emitHaxeIoBytesRuntimeComplements(writer, jsRef);
 		if (fullName == "haxe.ds.StringMap")
 			emitStringMapRuntimeComplements(writer, jsRef);
+	}
+
+	static function emitHaxeIoBytesRuntimeComplements(writer:JsWriter, jsRef:String):Void {
+		writer.writeln("if (typeof " + jsRef + ".alloc !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".alloc = function(length) {");
+		writer.pushIndent();
+		emitHaxeIoBytesAllocBody(writer, jsRef, "length");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".ofString !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".ofString = function(s) {");
+		writer.pushIndent();
+		emitHaxeIoBytesOfStringBody(writer, jsRef, "s");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("if (typeof " + jsRef + ".ofHex !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".ofHex = function(s) {");
+		writer.pushIndent();
+		emitHaxeIoBytesOfHexBody(writer, jsRef, "s");
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
+		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "get", ["pos"], function() {
+			writer.writeln("return (this.b[pos | 0] | 0) & 255;");
+		});
+		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "set", ["pos", "v"], function() {
+			writer.writeln("this.b[pos | 0] = (v | 0) & 255;");
+			writer.writeln("return null;");
+		});
+		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "getData", [], function() {
+			writer.writeln("return this.b;");
+		});
+		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "getString", ["pos", "len"], function() {
+			emitHaxeIoBytesGetStringBody(writer, "pos", "len");
+		});
+		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "readString", ["pos", "len"], function() {
+			writer.writeln("return this.getString(pos, len);");
+		});
+		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "toString", [], function() {
+			writer.writeln("return this.getString(0, this.length);");
+		});
+		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "toHex", [], function() {
+			emitHaxeIoBytesToHexBody(writer);
+		});
+	}
+
+	static function emitHaxeIoBytesPrototypeComplement(writer:JsWriter, jsRef:String, name:String, params:Array<String>, body:Void->Void):Void {
+		final suffix = JsNameMangler.propertySuffix(name);
+		writer.writeln("if (!Object.prototype.hasOwnProperty.call(" + jsRef + ".prototype, " + JsNameMangler.quoteString(name) + ") || typeof " + jsRef
+			+ ".prototype" + suffix + " !== \"function\") {");
+		writer.pushIndent();
+		writer.writeln(jsRef + ".prototype" + suffix + " = function(" + params.join(", ") + ") {");
+		writer.pushIndent();
+		body();
+		writer.popIndent();
+		writer.writeln("};");
+		writer.popIndent();
+		writer.writeln("}");
 	}
 
 	static function emitStringToolsRuntimeComplements(writer:JsWriter, jsRef:String):Void {

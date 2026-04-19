@@ -725,8 +725,24 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function haxeIoBytesModule():TypedModule {
 		final stringArg = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
+		final lengthArg = new HxFunctionArg("length", "Int", HxDefaultValue.NoDefault);
+		final dataArg = new HxFunctionArg("b", "Array<Int>", HxDefaultValue.NoDefault);
+		final posArg = new HxFunctionArg("pos", "Int", HxDefaultValue.NoDefault);
+		final valueArg = new HxFunctionArg("v", "Int", HxDefaultValue.NoDefault);
+		final lenArg = new HxFunctionArg("len", "Int", HxDefaultValue.NoDefault);
 		final bytesClass = new HxClassDecl("Bytes", false, [
-			new HxFunctionDecl("ofString", HxVisibility.Public, true, [stringArg], "String", [HxStmt.SReturn(HxExpr.EIdent("s"), HxPos.unknown())], "")
+			new HxFunctionDecl("new", HxVisibility.Public, false, [lengthArg, dataArg], "Void", unsupportedBody("bytes-constructor-placeholder"), ""),
+			new HxFunctionDecl("alloc", HxVisibility.Public, true, [lengthArg], "haxe.io.Bytes", unsupportedBody("bytes-alloc-placeholder"), ""),
+			new HxFunctionDecl("ofString", HxVisibility.Public, true, [stringArg], "haxe.io.Bytes", unsupportedBody("bytes-of-string-placeholder"), ""),
+			new HxFunctionDecl("ofHex", HxVisibility.Public, true, [stringArg], "haxe.io.Bytes", unsupportedBody("bytes-of-hex-placeholder"), ""),
+			new HxFunctionDecl("get", HxVisibility.Public, false, [posArg], "Int", unsupportedBody("bytes-get-placeholder"), ""),
+			new HxFunctionDecl("set", HxVisibility.Public, false, [posArg, valueArg], "Void", unsupportedBody("bytes-set-placeholder"), ""),
+			new HxFunctionDecl("getString", HxVisibility.Public, false, [posArg, lenArg], "String", unsupportedBody("bytes-get-string-placeholder"), ""),
+			new HxFunctionDecl("toString", HxVisibility.Public, false, [], "String", unsupportedBody("bytes-to-string-placeholder"), ""),
+			new HxFunctionDecl("toHex", HxVisibility.Public, false, [], "String", unsupportedBody("bytes-to-hex-placeholder"), "")
+		], [
+			new HxFieldDecl("length", HxVisibility.Public, false, "Int", null),
+			new HxFieldDecl("b", HxVisibility.Private, false, "Array<Int>", null)
 		]);
 		final decl = new HxModuleDecl("haxe.io", [], bytesClass, [bytesClass], false, false);
 		return typedModule("", decl, "haxe/io/Bytes.hx");
@@ -734,7 +750,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function haxeCryptoBase64Module():TypedModule {
 		final charsField = new HxFieldDecl("CHARS", HxVisibility.Private, true, "String", HxExpr.EString("abc"));
-		final bytesField = new HxFieldDecl("BYTES", HxVisibility.Private, true, "String",
+		final bytesField = new HxFieldDecl("BYTES", HxVisibility.Private, true, "haxe.io.Bytes",
 			HxExpr.ECall(HxExpr.EField(HxExpr.EField(HxExpr.EField(HxExpr.EIdent("haxe"), "io"), "Bytes"), "ofString"), [HxExpr.EIdent("CHARS")]));
 		final base64Class = new HxClassDecl("Base64", false, [], [charsField, bytesField]);
 		final decl = new HxModuleDecl("haxe.crypto", [], base64Class, [base64Class], false, false);
@@ -1126,8 +1142,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    var reflectedCounter = new Counter(1);',
 				'    var reflectedFields = Type.getInstanceFields(Type.getClass(reflectedCounter));',
 				'    Sys.println("type-fields=" + Type.getClassName(Type.getClass(reflectedCounter)) + ":" + reflectedFields.join("|") + ":" + Reflect.isFunction(Reflect.field(reflectedCounter, "add")));',
-				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref"));',
-				'    Sys.println(haxe.crypto.Base64.BYTES);',
+				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref").toString());',
+				'    Sys.println(haxe.crypto.Base64.BYTES.toString());',
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
 				'    Sys.println("starts=" + StringTools.startsWith("testCase", "test") + "," + StringTools.startsWith("case", ""));',
 				'    Sys.println("upper=" + "abc".toUpperCase());',
@@ -1371,6 +1387,13 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				"runtime prelude should provide Haxe Array.iterator compatibility for native JS arrays");
 			assertContains(js, "__hx_cls_haxe_io_Bytes.ofString(\"bytes-ref\")", "qualified package static refs should resolve to class bindings");
 			assertNotContains(js, "haxe.io.Bytes.ofString", "qualified package static refs should not leak raw namespace access");
+			assertContains(js, "__hx_cls_haxe_io_Bytes.alloc = function", "Bytes.alloc JS-native body should emit");
+			assertContains(js, "__hx_cls_haxe_io_Bytes.ofHex = function", "Bytes.ofHex JS-native body should emit");
+			assertContains(js, "__hx_ret.set(__hx_i", "Bytes.ofHex should write through the Bytes instance setter");
+			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.set = function", "Bytes.set prototype should emit for std ofHex runtime");
+			assertContains(js, "this.b[pos | 0] = (v | 0) & 255", "Bytes.set complement should mask byte values");
+			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.get = function", "Bytes.get prototype should emit for std readers");
+			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.toString = function", "Bytes.toString prototype should emit for sys/runtime readers");
 			assertContains(js, "__hx_cls_haxe_crypto_Base64.BYTES = __hx_cls_haxe_io_Bytes.ofString(__hx_cls_haxe_crypto_Base64.CHARS)",
 				"same-class static field refs should resolve to class bindings");
 			assertNotContains(js, "__hx_cls_haxe_io_Bytes.ofString(CHARS)", "same-class static field refs should not leak as globals");
