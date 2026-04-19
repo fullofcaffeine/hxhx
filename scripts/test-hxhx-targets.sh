@@ -1822,7 +1822,7 @@ HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstr/src" -main Main --hxhx-out "$tmpstr/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^hex=A$"
-echo "$out" | grep -q '^dollar=\$$'
+echo "$out" | grep -q '^dollar=\$\$$'
 if printf '%s\n' "$out" | grep -Eq '^x=|^y='; then
   echo "Stage3 regression: interpolation fallback unexpectedly changed (`x=`/`y=` lines reappeared)." >&2
   exit 1
