@@ -72,6 +72,7 @@
 		"haxe_DynamicAccess.ml",
 		"haxe_Constraints.ml",
 		"haxe_CallStack.ml",
+		"backend_source_SourceNativeBackend.ml",
 		"backend_reflaxe_ReflaxeTargetAdapter.ml",
 		"backend_plugin_ManifestJsonParser.ml",
 		"backend_plugin_ManifestJsonArray.ml",
@@ -157,7 +158,7 @@
 		"CompilerDriver.ml",
 		"Any.ml"
 	],
-	"id": 1,
+	"id": 2,
 	"wasCached": false,
 	"version": 1
 }

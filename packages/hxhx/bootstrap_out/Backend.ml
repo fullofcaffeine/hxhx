@@ -3,6 +3,7 @@ module Js = Backend_js
 module Ocaml = Backend_ocaml
 module Plugin = Backend_plugin
 module Reflaxe = Backend_reflaxe
+module Source = Backend_source
 module BackendAbi = Backend_BackendAbi
 module BackendContext = Backend_BackendContext
 module BackendDispatchBoundary = Backend_BackendDispatchBoundary

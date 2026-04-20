@@ -4,6 +4,7 @@ package backend;
 import backend.js.JsBackend;
 #end
 import backend.ocaml.OcamlStage3Backend;
+import backend.source.SourceNativeBackend;
 import backend.UnsupportedNativeTargetBackend;
 
 /**
@@ -39,11 +40,11 @@ class BackendRegistry {
 		});
 		registrations.push(UnsupportedNativeTargetBackend.nekoRegistration());
 		registrations.push(UnsupportedNativeTargetBackend.hlRegistration());
-		registrations.push(UnsupportedNativeTargetBackend.pythonRegistration());
-		registrations.push(UnsupportedNativeTargetBackend.javaRegistration());
-		registrations.push(UnsupportedNativeTargetBackend.csRegistration());
-		registrations.push(UnsupportedNativeTargetBackend.phpRegistration());
-		registrations.push(UnsupportedNativeTargetBackend.luaRegistration());
+		registrations.push(SourceNativeBackend.pythonRegistration());
+		registrations.push(SourceNativeBackend.javaRegistration());
+		registrations.push(SourceNativeBackend.csRegistration());
+		registrations.push(SourceNativeBackend.phpRegistration());
+		registrations.push(SourceNativeBackend.luaRegistration());
 		#if !hxhx_stage0_ocaml_only
 		registrations.push({
 			descriptor: JsBackend.descriptor(),

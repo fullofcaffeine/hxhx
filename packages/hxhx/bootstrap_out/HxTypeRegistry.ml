@@ -85,6 +85,7 @@ let init () : unit =
   ignore (HxType.class_ "backend.plugin.ManifestJsonParser");
   ignore (HxType.class_ "backend.plugin._ManifestJsonParser.ManifestJsonValueBox");
   ignore (HxType.class_ "backend.reflaxe.ReflaxeTargetAdapter");
+  ignore (HxType.class_ "backend.source.SourceNativeBackend");
   ignore (HxType.class_ "haxe.Exception");
   ignore (HxType.class_ "haxe.NativeStackTrace");
   ignore (HxType.class_ "haxe.ValueException");
@@ -151,6 +152,7 @@ let init () : unit =
   ignore (HxType.enum_ "HxTokenKind");
   ignore (HxType.enum_ "HxVisibility");
   ignore (HxType.enum_ "_HxConditionalCompilation.Token");
+  ignore (HxType.enum_ "backend.source._SourceNativeBackend.SourceNativeTarget");
   ignore (HxType.enum_ "haxe.StackItem");
   ignore (HxType.enum_ "hxhx.macro._MacroHostClient.MacroHostReadResult");
   ignore (HxType.enum_ "sys.thread.NextEventTime");
@@ -162,6 +164,7 @@ let init () : unit =
   HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TRegex"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
   HxType.register_enum_ctors "HxVisibility" [ "Public"; "Private" ];
   HxType.register_enum_ctors "_HxConditionalCompilation.Token" [ "TIdent"; "TString"; "TNot"; "TAnd"; "TOr"; "TLParen"; "TRParen"; "TEq"; "TNeq"; "TEof" ];
+  HxType.register_enum_ctors "backend.source._SourceNativeBackend.SourceNativeTarget" [ "Python"; "Java"; "Cs"; "Php"; "Lua" ];
   HxType.register_enum_ctors "haxe.StackItem" [ "CFunction"; "Module"; "FilePos"; "Method"; "LocalFunction" ];
   HxType.register_enum_ctors "hxhx.macro._MacroHostClient.MacroHostReadResult" [ "ReadLine"; "ReadEof"; "ReadError" ];
   HxType.register_enum_ctors "sys.thread.NextEventTime" [ "Now"; "Never"; "AnyTime"; "At" ];
@@ -731,6 +734,21 @@ let init () : unit =
   HxType.register_enum_ctor "_HxConditionalCompilation.Token" "TEof" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (HxConditionalCompilation.TEof)
   );
+  HxType.register_enum_ctor "backend.source._SourceNativeBackend.SourceNativeTarget" "Python" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_source_SourceNativeBackend.Python)
+  );
+  HxType.register_enum_ctor "backend.source._SourceNativeBackend.SourceNativeTarget" "Java" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_source_SourceNativeBackend.Java)
+  );
+  HxType.register_enum_ctor "backend.source._SourceNativeBackend.SourceNativeTarget" "Cs" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_source_SourceNativeBackend.Cs)
+  );
+  HxType.register_enum_ctor "backend.source._SourceNativeBackend.SourceNativeTarget" "Php" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_source_SourceNativeBackend.Php)
+  );
+  HxType.register_enum_ctor "backend.source._SourceNativeBackend.SourceNativeTarget" "Lua" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_source_SourceNativeBackend.Lua)
+  );
   HxType.register_enum_ctor "haxe.StackItem" "CFunction" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_CallStack.CFunction)
   );
@@ -1217,6 +1235,9 @@ let init () : unit =
   HxType.register_class_ctor "backend.reflaxe.ReflaxeTargetAdapter" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_reflaxe_ReflaxeTargetAdapter.create ())
   );
+  HxType.register_class_ctor "backend.source.SourceNativeBackend" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_source_SourceNativeBackend.create ())
+  );
   HxType.register_class_ctor "haxe.Exception" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'message' for haxe.Exception" in
@@ -1537,6 +1558,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "backend.plugin.ManifestJsonParser" (fun () -> Obj.repr (Backend_plugin_ManifestJsonParser.__empty ()));
   HxType.register_class_empty_ctor "backend.plugin._ManifestJsonParser.ManifestJsonValueBox" (fun () -> Obj.repr (Backend_plugin_ManifestJsonParser.manifestjsonvaluebox___empty ()));
   HxType.register_class_empty_ctor "backend.reflaxe.ReflaxeTargetAdapter" (fun () -> Obj.repr (Backend_reflaxe_ReflaxeTargetAdapter.__empty ()));
+  HxType.register_class_empty_ctor "backend.source.SourceNativeBackend" (fun () -> Obj.repr (Backend_source_SourceNativeBackend.__empty ()));
   HxType.register_class_empty_ctor "haxe.Exception" (fun () -> Obj.repr (Haxe_Exception.__empty ()));
   HxType.register_class_empty_ctor "haxe.NativeStackTrace" (fun () -> Obj.repr (Haxe_NativeStackTrace.__empty ()));
   HxType.register_class_empty_ctor "haxe.ValueException" (fun () -> Obj.repr (Haxe_ValueException.__empty ()));
@@ -1721,7 +1743,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.TargetCoreBackend" [ "backendDescriptor"; "capabilities"; "describe"; "emit"; "emitImpl"; "id" ];
   HxType.register_class_static_fields "backend.TargetCoreBackend" [ "emitBridge" ];
   HxType.register_class_instance_fields "backend.UnsupportedNativeTargetBackend" [];
-  HxType.register_class_static_fields "backend.UnsupportedNativeTargetBackend" [ "csDescriptor"; "csRegistration"; "descriptor"; "emitUnsupported"; "hlDescriptor"; "hlRegistration"; "javaDescriptor"; "javaRegistration"; "luaDescriptor"; "luaRegistration"; "nekoDescriptor"; "nekoRegistration"; "phpDescriptor"; "phpRegistration"; "pythonDescriptor"; "pythonRegistration" ];
+  HxType.register_class_static_fields "backend.UnsupportedNativeTargetBackend" [ "descriptor"; "emitUnsupported"; "hlDescriptor"; "hlRegistration"; "nekoDescriptor"; "nekoRegistration" ];
   HxType.register_class_instance_fields "backend._OcamlProfile.OcamlProfile_Impl_" [];
   HxType.register_class_static_fields "backend._OcamlProfile.OcamlProfile_Impl_" [ "fromDefineValue"; "toDefineValue" ];
   HxType.register_class_instance_fields "backend.js.JsBackend" [ "capabilities"; "delegate"; "describe"; "emit"; "id"; "registrations" ];
@@ -1760,6 +1782,8 @@ let init () : unit =
   HxType.register_class_static_fields "backend.plugin._ManifestJsonParser.ManifestJsonValueBox" [];
   HxType.register_class_instance_fields "backend.reflaxe.ReflaxeTargetAdapter" [];
   HxType.register_class_static_fields "backend.reflaxe.ReflaxeTargetAdapter" [ "backend"; "registration"; "registrations" ];
+  HxType.register_class_instance_fields "backend.source.SourceNativeBackend" [];
+  HxType.register_class_static_fields "backend.source.SourceNativeBackend" [ "artifactKind"; "capabilitiesStatic"; "concatOp"; "csDescriptor"; "csRegistration"; "defaultFileName"; "defaultValue"; "descriptor"; "emitTarget"; "emptyStmt"; "ensureDirectory"; "ensureParentDirectory"; "javaDescriptor"; "javaRegistration"; "luaDescriptor"; "luaRegistration"; "mainModule"; "phpDescriptor"; "phpRegistration"; "printStmt"; "pythonDescriptor"; "pythonRegistration"; "quoteString"; "registration"; "renderExpr"; "renderProgram"; "renderStmt"; "renderStmts"; "returnStmt"; "returnVoidStmt"; "sanitizeTypeName"; "stringCall"; "targetLabel"; "valueName"; "varDecl" ];
   HxType.register_class_instance_fields "haxe.Exception" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
   HxType.register_class_static_fields "haxe.Exception" [ "caught"; "thrown" ];
   HxType.register_class_instance_fields "haxe.NativeStackTrace" [];
@@ -1971,6 +1995,7 @@ let init () : unit =
   HxType.register_class_tags "backend.plugin.ManifestJsonParser" [ "backend.plugin.ManifestJsonParser" ];
   HxType.register_class_tags "backend.plugin._ManifestJsonParser.ManifestJsonValueBox" [ "backend.plugin._ManifestJsonParser.ManifestJsonValueBox" ];
   HxType.register_class_tags "backend.reflaxe.ReflaxeTargetAdapter" [ "backend.reflaxe.ReflaxeTargetAdapter" ];
+  HxType.register_class_tags "backend.source.SourceNativeBackend" [ "backend.source.SourceNativeBackend" ];
   HxType.register_class_tags "haxe.Exception" [ "haxe.Exception" ];
   HxType.register_class_tags "haxe.IMap" [ "haxe.IMap" ];
   HxType.register_class_tags "haxe.Int64Helper" [ "haxe.Int64Helper" ];
