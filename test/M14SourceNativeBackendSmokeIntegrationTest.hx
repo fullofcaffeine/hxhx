@@ -155,6 +155,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function switchExpressionProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var label = switch (\"python\") {",
+			"      case \"python\" | \"py\": \"Python\";",
+			"      case \"java\": \"Java\";",
+			"      case _: \"Other\";",
+			"    };",
+			"    Sys.println(Std.string(label));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function emit(targetId:String, label:String, expectedFile:String, expectedNeedle:String):Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_" + targetId + "_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -271,6 +289,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertSwitchExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_switch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(switchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "label = (\"Python\" if", "switch expressions should render literal branch values");
+		assertContains(content, "or ((\"python\" == \"py\"))", "switch expressions should render or-pattern conditions");
+		assertContains(content, "print(str(label))", "switch expression results should render as normal values");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function main():Void {
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
@@ -285,5 +317,6 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertBinaryOperators();
 		assertEnumValue();
 		assertLambdaExpression();
+		assertSwitchExpression();
 	}
 }

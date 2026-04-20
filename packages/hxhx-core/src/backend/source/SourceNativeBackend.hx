@@ -267,6 +267,8 @@ class SourceNativeBackend {
 				rangeIterable(target, start, end);
 			case ELambda(args, body):
 				lambdaExpr(target, args, body);
+			case ESwitch(scrutinee, patterns, exprs):
+				switchExpr(target, scrutinee, patterns, exprs);
 			case ENew(typePath, args):
 				constructorExpr(target, typePath, args);
 			case _:
@@ -397,6 +399,119 @@ class SourceNativeBackend {
 				"function(" + renderedArgs + ") { return " + renderedBody + "; }";
 			case Lua:
 				"function(" + renderedArgs + ") return " + renderedBody + " end";
+		};
+	}
+
+	static function switchExpr(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
+		final scrutineeExpr = renderExpr(target, scrutinee);
+		var chain = defaultValue(target);
+		if (patterns != null && exprs != null) {
+			final count = patterns.length < exprs.length ? patterns.length : exprs.length;
+			for (i in 0...count) {
+				final idx = count - 1 - i;
+				final cond = switchPatternCond(target, scrutineeExpr, patterns[idx]);
+				final body = renderExpr(target, exprs[idx]);
+				chain = conditionalExpr(target, cond, body, chain);
+			}
+		}
+		return chain;
+	}
+
+	static function conditionalExpr(target:SourceNativeTarget, cond:String, thenExpr:String, elseExpr:String):String {
+		return switch (target) {
+			case Python:
+				"(" + thenExpr + " if (" + cond + ") else " + elseExpr + ")";
+			case Java:
+				"(" + cond + " ? " + thenExpr + " : " + elseExpr + ")";
+			case Cs:
+				"(" + cond + " ? " + thenExpr + " : " + elseExpr + ")";
+			case Php:
+				"(" + cond + " ? " + thenExpr + " : " + elseExpr + ")";
+			case Lua:
+				"((" + cond + ") and " + thenExpr + " or " + elseExpr + ")";
+		};
+	}
+
+	static function switchPatternCond(target:SourceNativeTarget, scrutinee:String, pattern:HxSwitchPattern):String {
+		return switch (pattern) {
+			case PNull:
+				equalityCond(target, scrutinee, defaultValue(target));
+			case PWildcard:
+				trueLiteral(target);
+			case PBool(value):
+				equalityCond(target, scrutinee, renderExpr(target, EBool(value)));
+			case PString(value):
+				equalityCond(target, scrutinee, quoteString(value));
+			case PInt(value):
+				equalityCond(target, scrutinee, Std.string(value));
+			case PEnumValue(name):
+				equalityCond(target, scrutinee, quoteString(name));
+			case PEnumExtract(name, _args):
+				equalityCond(target, scrutinee, quoteString(name));
+			case PCapture(_name, inner):
+				switchPatternCond(target, scrutinee, inner);
+			case PBind(_name):
+				trueLiteral(target);
+			case POr(patterns):
+				if (patterns == null || patterns.length == 0) {
+					falseLiteral(target);
+				} else {
+					final op = target == Python || target == Lua ? " or " : " || ";
+					final parts = [
+						for (p in patterns)
+							"(" + switchPatternCond(target, scrutinee, p) + ")"
+					].join(op);
+					"(" + parts + ")";
+				}
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
+				PUnsupportedGuard(_):
+				throw targetLabel(target) + " source backend MVP unsupported switch pattern: " + patternKind(pattern);
+		};
+	}
+
+	static function equalityCond(target:SourceNativeTarget, left:String, right:String):String {
+		return "(" + left + " " + (target == Lua ? "==" : "==") + " " + right + ")";
+	}
+
+	static function trueLiteral(target:SourceNativeTarget):String {
+		return switch (target) {
+			case Python: "True";
+			case Java: "true";
+			case Cs: "true";
+			case Php: "true";
+			case Lua: "true";
+		};
+	}
+
+	static function falseLiteral(target:SourceNativeTarget):String {
+		return switch (target) {
+			case Python: "False";
+			case Java: "false";
+			case Cs: "false";
+			case Php: "false";
+			case Lua: "false";
+		};
+	}
+
+	static function patternKind(pattern:HxSwitchPattern):String {
+		return switch (pattern) {
+			case PNull: "PNull";
+			case PWildcard: "PWildcard";
+			case PBool(_): "PBool";
+			case PString(_): "PString";
+			case PInt(_): "PInt";
+			case PEnumValue(_): "PEnumValue";
+			case PEnumExtract(_, _): "PEnumExtract";
+			case PObject(_, _): "PObject";
+			case PCapture(_, _): "PCapture";
+			case PArray(_): "PArray";
+			case PExtractor(_, _): "PExtractor";
+			case PLengthGuard(_, _, _): "PLengthGuard";
+			case PStartsWithGuard(_, _, _): "PStartsWithGuard";
+			case PIntEqualsGuard(_, _, _): "PIntEqualsGuard";
+			case PUnsupportedGuard(_): "PUnsupportedGuard";
+			case PBind(_): "PBind";
+			case POr(_): "POr";
 		};
 	}
 
