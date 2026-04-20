@@ -256,7 +256,41 @@ class SourceNativeBackend {
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringCall(target, renderExpr(target, args[0]));
 			case _:
-				throw targetLabel(target) + " source backend MVP unsupported expression: " + Std.string(expr);
+				throw targetLabel(target) + " source backend MVP unsupported expression: " + exprKind(expr);
+		};
+	}
+
+	static function exprKind(expr:HxExpr):String {
+		return switch (expr) {
+			case ENull: "ENull";
+			case EBool(_): "EBool";
+			case EString(_): "EString";
+			case EInt(_): "EInt";
+			case EFloat(_): "EFloat";
+			case EEnumValue(_): "EEnumValue";
+			case EThis: "EThis";
+			case ESuper: "ESuper";
+			case EIdent(_): "EIdent";
+			case EField(_, _): "EField";
+			case ECall(_, _): "ECall";
+			case EMacroExpr(_, _): "EMacroExpr";
+			case EMacroType(_): "EMacroType";
+			case ELambda(_, _): "ELambda";
+			case ETryCatchRaw(_): "ETryCatchRaw";
+			case ESwitchRaw(_): "ESwitchRaw";
+			case ESwitch(_, _, _): "ESwitch";
+			case ENew(_, _): "ENew";
+			case EUnop(_, _): "EUnop";
+			case EBinop(_, _, _): "EBinop";
+			case ETernary(_, _, _): "ETernary";
+			case EAnon(_, _): "EAnon";
+			case EArrayComprehension(_, _, _): "EArrayComprehension";
+			case EArrayDecl(_): "EArrayDecl";
+			case EArrayAccess(_, _): "EArrayAccess";
+			case ERange(_, _): "ERange";
+			case ECast(_, _): "ECast";
+			case EUntyped(_): "EUntyped";
+			case EUnsupported(_): "EUnsupported";
 		};
 	}
 
@@ -315,7 +349,27 @@ class SourceNativeBackend {
 			case SReturnVoid(_):
 				[indent + returnVoidStmt(target)];
 			case _:
-				throw targetLabel(target) + " source backend MVP unsupported statement: " + Std.string(stmt);
+				throw targetLabel(target) + " source backend MVP unsupported statement: " + stmtKind(stmt);
+		};
+	}
+
+	static function stmtKind(stmt:HxStmt):String {
+		return switch (stmt) {
+			case SBlock(_, _): "SBlock";
+			case SVar(_, _, _, _): "SVar";
+			case SIf(_, _, _, _): "SIf";
+			case SForIn(_, _, _, _): "SForIn";
+			case SForKeyValue(_, _, _, _, _): "SForKeyValue";
+			case SWhile(_, _, _): "SWhile";
+			case SDoWhile(_, _, _): "SDoWhile";
+			case SSwitch(_, _, _, _): "SSwitch";
+			case STry(_, _, _): "STry";
+			case SBreak(_): "SBreak";
+			case SContinue(_): "SContinue";
+			case SThrow(_, _): "SThrow";
+			case SReturnVoid(_): "SReturnVoid";
+			case SReturn(_, _): "SReturn";
+			case SExpr(_, _): "SExpr";
 		};
 	}
 
