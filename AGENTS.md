@@ -464,6 +464,9 @@ Keep `README.md` up to date as milestones land.
 
 - When you add/change a workflow (build/test/bootstrap, stage flags, new required tools), update `README.md` in the same change.
 - Prefer documenting “why/what/how” briefly and linking to the deeper doc under `docs/` when it exists.
+- Keep public README/getting-started docs user-first: lead with intended production use cases, supported commands, and plain-language outcomes.
+- Do not put internal regression names, stage/gate jargon, CI marker taxonomy, or maintainer-only knobs in public quickstart sections unless each term is introduced in plain language and linked to a glossary or technical doc.
+- Put deep implementation details, bootstrap tuning, gate internals, and targeted regression commands in the relevant technical docs under `docs/`, with term definitions where needed.
 
 ## Bugs (Regression Tests)
 
@@ -506,6 +509,7 @@ This repo should be a **world-class, didactic example** of building a compiler b
 When behavior, flags, workflows, or required tooling changes, update the relevant documentation in the same change:
 
 - Keep `README.md` accurate for "getting started" and the common workflows (`npm test`, Gate runners, building/running `hxhx`).
+- Keep public-facing docs understandable without assuming contributor context. Avoid unexplained phrases like "Stage3 generic-function arity regression" in user quickstarts; explain the user-facing action instead, or move the detail to a technical runbook.
 - If the change is narrow and developer-facing, update the most relevant doc under `docs/` instead of bloating `README.md`.
 
 ## Repository Docs (README)

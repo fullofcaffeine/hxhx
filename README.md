@@ -44,52 +44,38 @@ Lane chooser + mini glossary shortcuts:
 ```bash
 npm install
 npx lix download
-npm run ci:guards
-npm test
+HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
+"$HXHX_BIN" --version
 ```
 
-If you are working on the heavy Stage3 generic-function arity regression specifically, run it outside the
-default loop:
+## Intended use cases
+
+Use `reflaxe.ocaml` with upstream Haxe when you want to compile Haxe code to
+OCaml today:
 
 ```bash
-npm run test:m14:heavy
+haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=native --no-output
 ```
 
-Build `hxhx` from committed bootstrap snapshots:
+Use `hxhx` when you want to test the Haxe-in-Haxe compiler path. For example,
+this runs the native JS compiler lane without falling back to upstream `haxe`:
 
 ```bash
-bash scripts/hxhx/build-hxhx.sh
+HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --js out/main.js -cp src -main Main --hxhx-no-run
 ```
 
-This default build path only hydrates sharded snapshot files into a temporary bootstrap
-workspace and runs `dune`; it no longer performs semantic patching of generated OCaml
-during the build itself.
+Use `hxhx` as an embedded compiler subprocess when another tool needs a stable
+compiler command boundary:
 
-Performance tip for heavy bootstrap/source maintenance runs:
+- `docs/02-user-guide/EMBEDDING.md`
 
-```bash
-# If `which haxe` points to a Lix shim, prefer native stage0 explicitly.
-HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast
+Maintainer-only test loops, bootstrap regeneration, performance probes, and
+internal regression commands live in the technical docs instead of this public
+quickstart:
 
-# Regeneration owns snapshot finalization before the committed bootstrap snapshot is
-# re-sharded and verified.
-
-# Keep dune worker count deterministic (useful for memory-pressure tuning).
-HXHX_DUNE_JOBS=4 bash scripts/hxhx/build-hxhx.sh
-
-# Probe the selected stage0-free native bootstrap refresh direction without retaining
-# large temporary build directories. The Stage3 probe is timeout-bounded by default;
-# override with HXHX_STAGE0_FREE_REFRESH_STAGE3_TIMEOUT_SEC=0 only for diagnostics.
-npm run hxhx:probe:stage0-free-refresh
-
-# Compare wrapper vs native stage0 policy and worker counts in one run.
-HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4 HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen
-
-# If source builds use --connect and appear stuck, auto-retry sooner.
-HXHX_FORCE_STAGE0=1 HXHX_STAGE0_USE_REPO_SERVER=1 HXHX_STAGE0_CONNECT_IDLE_SECS=90 bash scripts/hxhx/build-hxhx.sh
-```
-
-Defaults stay `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native` and `HXHX_DUNE_JOBS=auto`; use fixed workers only when tuning for host-specific memory constraints.
+- `docs/01-getting-started/TESTING.md`
+- `docs/00-project/STAGE0_POLICY.md`
+- `docs/benchmarks/HXHX_KPI_BASELINE.md`
 
 ## Pick your workflow
 
