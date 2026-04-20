@@ -121,6 +121,31 @@ class M14DirectFlagCliContractTest {
 		assertEquals(nativeHl.backendId, "hl-native", "native hl backend");
 		assertTrue(hasDefine(nativeHl.forwarded, "hl"), "native hl define");
 
+		final nativePython = plan(["--python", "py_out", "-main", "Main"]);
+		assertEquals(nativePython.lane, "native-python", "native python lane");
+		assertEquals(nativePython.backendId, "python-native", "native python backend");
+		assertTrue(hasDefine(nativePython.forwarded, "python"), "native python define");
+
+		final nativeJava = plan(["--java", "java_out", "-main", "Main"]);
+		assertEquals(nativeJava.lane, "native-java", "native java lane");
+		assertEquals(nativeJava.backendId, "java-native", "native java backend");
+		assertTrue(hasDefine(nativeJava.forwarded, "java"), "native java define");
+
+		final nativeCs = plan(["--cs", "cs_out", "-main", "Main"]);
+		assertEquals(nativeCs.lane, "native-cs", "native cs lane");
+		assertEquals(nativeCs.backendId, "cs-native", "native cs backend");
+		assertTrue(hasDefine(nativeCs.forwarded, "cs"), "native cs define");
+
+		final nativePhp = plan(["--php", "php_out", "-main", "Main"]);
+		assertEquals(nativePhp.lane, "native-php", "native php lane");
+		assertEquals(nativePhp.backendId, "php-native", "native php backend");
+		assertTrue(hasDefine(nativePhp.forwarded, "php"), "native php define");
+
+		final nativeLua = plan(["--lua", "lua_out", "-main", "Main"]);
+		assertEquals(nativeLua.lane, "native-lua", "native lua lane");
+		assertEquals(nativeLua.backendId, "lua-native", "native lua backend");
+		assertTrue(hasDefine(nativeLua.forwarded, "lua"), "native lua define");
+
 		final nativeJsRun = plan(["--run", "Main", "arg1"]);
 		assertEquals(nativeJsRun.lane, "native-js", "native js --run lane");
 		assertEquals(nativeJsRun.backendId, "js-native", "native js --run backend");

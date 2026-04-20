@@ -39,6 +39,11 @@ class BackendRegistry {
 		});
 		registrations.push(UnsupportedNativeTargetBackend.nekoRegistration());
 		registrations.push(UnsupportedNativeTargetBackend.hlRegistration());
+		registrations.push(UnsupportedNativeTargetBackend.pythonRegistration());
+		registrations.push(UnsupportedNativeTargetBackend.javaRegistration());
+		registrations.push(UnsupportedNativeTargetBackend.csRegistration());
+		registrations.push(UnsupportedNativeTargetBackend.phpRegistration());
+		registrations.push(UnsupportedNativeTargetBackend.luaRegistration());
 		#if !hxhx_stage0_ocaml_only
 		registrations.push({
 			descriptor: JsBackend.descriptor(),

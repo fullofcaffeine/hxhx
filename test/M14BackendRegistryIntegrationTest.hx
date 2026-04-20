@@ -79,6 +79,26 @@ class M14BackendRegistryIntegrationTest {
 		assertTrue(hl != null, "descriptorForTarget(hl-native) returned null");
 		assertTrue(hl.implId == "builtin/hl-native-placeholder", "unexpected hl-native implId");
 
+		final python = BackendRegistry.descriptorForTarget("python-native");
+		assertTrue(python != null, "descriptorForTarget(python-native) returned null");
+		assertTrue(python.implId == "builtin/python-native-placeholder", "unexpected python-native implId");
+
+		final java = BackendRegistry.descriptorForTarget("java-native");
+		assertTrue(java != null, "descriptorForTarget(java-native) returned null");
+		assertTrue(java.implId == "builtin/java-native-placeholder", "unexpected java-native implId");
+
+		final cs = BackendRegistry.descriptorForTarget("cs-native");
+		assertTrue(cs != null, "descriptorForTarget(cs-native) returned null");
+		assertTrue(cs.implId == "builtin/cs-native-placeholder", "unexpected cs-native implId");
+
+		final php = BackendRegistry.descriptorForTarget("php-native");
+		assertTrue(php != null, "descriptorForTarget(php-native) returned null");
+		assertTrue(php.implId == "builtin/php-native-placeholder", "unexpected php-native implId");
+
+		final lua = BackendRegistry.descriptorForTarget("lua-native");
+		assertTrue(lua != null, "descriptorForTarget(lua-native) returned null");
+		assertTrue(lua.implId == "builtin/lua-native-placeholder", "unexpected lua-native implId");
+
 		assertFailsContains(function() BackendRegistry.requireForTarget("does-not-exist"), "does-not-exist");
 		assertFailsContains(function() BackendRegistry.requireForTarget("does-not-exist"), "ocaml-stage3");
 

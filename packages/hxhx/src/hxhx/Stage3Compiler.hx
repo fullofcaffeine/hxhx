@@ -304,6 +304,16 @@ class Stage3Compiler {
 				"neko";
 			case "hl-native":
 				"hl";
+			case "python-native":
+				"python";
+			case "java-native":
+				"java";
+			case "cs-native":
+				"cs";
+			case "php-native":
+				"php";
+			case "lua-native":
+				"lua";
 			case _:
 				"ocaml";
 		};

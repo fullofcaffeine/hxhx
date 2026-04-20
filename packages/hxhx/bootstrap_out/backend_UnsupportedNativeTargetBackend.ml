@@ -41,6 +41,16 @@ let nekoDescriptor = fun () -> descriptor ("neko-native" : string) ("builtin/nek
 
 let hlDescriptor = fun () -> descriptor ("hl-native" : string) ("builtin/hl-native-placeholder" : string) ("Native HashLink backend placeholder" : string) ("process" : string)
 
+let pythonDescriptor = fun () -> descriptor ("python-native" : string) ("builtin/python-native-placeholder" : string) ("Native Python backend placeholder" : string) ("process" : string)
+
+let javaDescriptor = fun () -> descriptor ("java-native" : string) ("builtin/java-native-placeholder" : string) ("Native Java backend placeholder" : string) ("process" : string)
+
+let csDescriptor = fun () -> descriptor ("cs-native" : string) ("builtin/cs-native-placeholder" : string) ("Native C# backend placeholder" : string) ("process" : string)
+
+let phpDescriptor = fun () -> descriptor ("php-native" : string) ("builtin/php-native-placeholder" : string) ("Native PHP backend placeholder" : string) ("process" : string)
+
+let luaDescriptor = fun () -> descriptor ("lua-native" : string) ("builtin/lua-native-placeholder" : string) ("Native Lua backend placeholder" : string) ("process" : string)
+
 let emitUnsupported = fun targetLabel _program _context -> (
   ignore _program;
   (
@@ -59,4 +69,34 @@ let hlRegistration = fun () -> let d = hlDescriptor () in let __anon_6 = HxAnon.
   ignore (HxAnon.set __anon_6 "descriptor" d);
   ignore (HxAnon.set __anon_6 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> emitUnsupported ("HashLink" : string) (Obj.magic program) (Obj.magic context)))));
   __anon_6
+)
+
+let pythonRegistration = fun () -> let d = pythonDescriptor () in let __anon_7 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_7 "descriptor" d);
+  ignore (HxAnon.set __anon_7 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> emitUnsupported ("Python" : string) (Obj.magic program) (Obj.magic context)))));
+  __anon_7
+)
+
+let javaRegistration = fun () -> let d = javaDescriptor () in let __anon_8 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_8 "descriptor" d);
+  ignore (HxAnon.set __anon_8 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> emitUnsupported ("Java" : string) (Obj.magic program) (Obj.magic context)))));
+  __anon_8
+)
+
+let csRegistration = fun () -> let d = csDescriptor () in let __anon_9 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_9 "descriptor" d);
+  ignore (HxAnon.set __anon_9 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> emitUnsupported ("C#" : string) (Obj.magic program) (Obj.magic context)))));
+  __anon_9
+)
+
+let phpRegistration = fun () -> let d = phpDescriptor () in let __anon_10 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_10 "descriptor" d);
+  ignore (HxAnon.set __anon_10 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> emitUnsupported ("PHP" : string) (Obj.magic program) (Obj.magic context)))));
+  __anon_10
+)
+
+let luaRegistration = fun () -> let d = luaDescriptor () in let __anon_11 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_11 "descriptor" d);
+  ignore (HxAnon.set __anon_11 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> emitUnsupported ("Lua" : string) (Obj.magic program) (Obj.magic context)))));
+  __anon_11
 )

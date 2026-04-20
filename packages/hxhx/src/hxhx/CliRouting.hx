@@ -20,6 +20,11 @@ class CliRouting {
 	public static inline final LANE_NATIVE_JS:String = "native-js";
 	public static inline final LANE_NATIVE_NEKO:String = "native-neko";
 	public static inline final LANE_NATIVE_HL:String = "native-hl";
+	public static inline final LANE_NATIVE_PYTHON:String = "native-python";
+	public static inline final LANE_NATIVE_JAVA:String = "native-java";
+	public static inline final LANE_NATIVE_CS:String = "native-cs";
+	public static inline final LANE_NATIVE_PHP:String = "native-php";
+	public static inline final LANE_NATIVE_LUA:String = "native-lua";
 	public static inline final LANE_STAGE0_COMPAT:String = "stage0-compat";
 	public static inline final LANE_STAGE0_OCAML_EVAL:String = "stage0-ocaml-eval";
 
@@ -160,6 +165,18 @@ class CliRouting {
 				lane: LANE_NATIVE_HL,
 				backendId: "hl-native",
 				forwarded: nativeHl,
+				stage0Required: false
+			};
+		}
+
+		final sourceTarget = pureSourceTarget(flattened);
+		if (!targetScan.hasJs && sourceTarget != null) {
+			final nativeSource = baseForwarded.copy();
+			addDefineIfMissing(nativeSource, sourceTarget.defineName);
+			return {
+				lane: sourceTarget.lane,
+				backendId: sourceTarget.backendId,
+				forwarded: nativeSource,
 				stage0Required: false
 			};
 		}
@@ -370,6 +387,100 @@ class CliRouting {
 			}
 		}
 		return false;
+	}
+
+	static function hasSourceTargetFlag(args:Array<String>, target:String):Bool {
+		if (args == null)
+			return false;
+		for (a in args) {
+			switch (target) {
+				case "python":
+					if (a == "-python" || a == "--python")
+						return true;
+				case "java":
+					if (a == "-java" || a == "--java")
+						return true;
+				case "cs":
+					if (a == "-cs" || a == "--cs")
+						return true;
+				case "php":
+					if (a == "-php" || a == "--php")
+						return true;
+				case "lua":
+					if (a == "-lua" || a == "--lua")
+						return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function hasNonSourceStandardTargetFlag(args:Array<String>, target:String):Bool {
+		if (args == null)
+			return false;
+		for (a in args) {
+			switch (a) {
+				case "-swf", "--swf", "-as3", "--as3", "-xml", "--xml", "-neko", "--neko", "-hl", "--hl", "-cpp", "--cpp", "-jvm", "--jvm":
+					return true;
+				case "-python", "--python":
+					if (target != "python")
+						return true;
+				case "-java", "--java":
+					if (target != "java")
+						return true;
+				case "-cs", "--cs":
+					if (target != "cs")
+						return true;
+				case "-php", "--php":
+					if (target != "php")
+						return true;
+				case "-lua", "--lua":
+					if (target != "lua")
+						return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function pureSourceTarget(args:Array<String>):Null<{lane:String, backendId:String, defineName:String}> {
+		final candidates = [
+			{
+				target: "python",
+				lane: LANE_NATIVE_PYTHON,
+				backendId: "python-native",
+				defineName: "python"
+			},
+			{
+				target: "java",
+				lane: LANE_NATIVE_JAVA,
+				backendId: "java-native",
+				defineName: "java"
+			},
+			{
+				target: "cs",
+				lane: LANE_NATIVE_CS,
+				backendId: "cs-native",
+				defineName: "cs"
+			},
+			{
+				target: "php",
+				lane: LANE_NATIVE_PHP,
+				backendId: "php-native",
+				defineName: "php"
+			},
+			{
+				target: "lua",
+				lane: LANE_NATIVE_LUA,
+				backendId: "lua-native",
+				defineName: "lua"
+			}
+		];
+		for (candidate in candidates) {
+			if (hasSourceTargetFlag(args, candidate.target) && !hasNonSourceStandardTargetFlag(args, candidate.target))
+				return {lane: candidate.lane, backendId: candidate.backendId, defineName: candidate.defineName};
+		}
+		return null;
 	}
 
 	static function hasNonNekoStandardTargetFlag(args:Array<String>):Bool {

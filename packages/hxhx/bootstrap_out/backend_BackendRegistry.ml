@@ -20,6 +20,11 @@ let buildBuiltinRegistrations = fun () -> let registrations = Obj.magic (HxArray
   )));
   ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.nekoRegistration ()));
   ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.hlRegistration ()));
+  ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.pythonRegistration ()));
+  ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.javaRegistration ()));
+  ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.csRegistration ()));
+  ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.phpRegistration ()));
+  ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.luaRegistration ()));
   ignore (HxArray.push registrations (let __anon_2 = HxAnon.create () in (
     ignore (HxAnon.set __anon_2 "descriptor" (Backend_js_JsBackend.descriptor ()));
     ignore (HxAnon.set __anon_2 "create" (Obj.repr (fun () -> Backend_js_JsBackend.create ())));
