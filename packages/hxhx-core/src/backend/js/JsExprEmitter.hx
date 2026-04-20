@@ -1488,6 +1488,8 @@ class JsExprEmitter {
 	static function emitPostfixIncDec(op:String, target:HxExpr, scope:JsEmitScope):String {
 		final delta = op == "post++" ? "1" : "-1";
 		return switch (target) {
+			case EThis:
+				"(function(__hx_self){ var __hx_old = __hx_self.__hx_value; __hx_self.__hx_value = (__hx_old + " + delta + "); return __hx_old; })(this)";
 			case EIdent(_):
 				final ref = emit(target, scope);
 				"(function(){ var __hx_old = " + ref + "; " + ref + " = (__hx_old + " + delta + "); return __hx_old; })()";
