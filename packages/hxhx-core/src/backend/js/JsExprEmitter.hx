@@ -847,6 +847,14 @@ class JsExprEmitter {
 	}
 
 	static function emitField(obj:HxExpr, field:String, scope:JsEmitScope):String {
+		if (field == "code") {
+			switch (obj) {
+				case EString(_):
+					return "(" + emit(obj, scope) + ").charCodeAt(0)";
+				case _:
+			}
+		}
+
 		switch (obj) {
 			case ESuper:
 				return emitSuperPropertyGet(field, scope);

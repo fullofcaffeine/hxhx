@@ -610,6 +610,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final stringClass = new HxClassDecl("String", false, [
 			new HxFunctionDecl("new", HxVisibility.Public, false, [valueArg], "Void",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), ""),
+			new HxFunctionDecl("fromCharCode", HxVisibility.Public, true, [new HxFunctionArg("code", "Int", HxDefaultValue.NoDefault)], "String",
+				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), ""),
 			new HxFunctionDecl("toUpperCase", HxVisibility.Public, false, [], "String",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), "")
 		]);
@@ -768,6 +770,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final posArg = new HxFunctionArg("pos", "Int", HxDefaultValue.NoDefault);
 		final valueArg = new HxFunctionArg("v", "Int", HxDefaultValue.NoDefault);
 		final lenArg = new HxFunctionArg("len", "Int", HxDefaultValue.NoDefault);
+		final otherArg = new HxFunctionArg("other", "haxe.io.Bytes", HxDefaultValue.NoDefault);
+		final otherPosArg = new HxFunctionArg("otherpos", "Int", HxDefaultValue.NoDefault);
 		final bytesClass = new HxClassDecl("Bytes", false, [
 			new HxFunctionDecl("new", HxVisibility.Public, false, [lengthArg, dataArg], "Void", unsupportedBody("bytes-constructor-placeholder"), ""),
 			new HxFunctionDecl("alloc", HxVisibility.Public, true, [lengthArg], "haxe.io.Bytes", unsupportedBody("bytes-alloc-placeholder"), ""),
@@ -777,6 +781,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			new HxFunctionDecl("set", HxVisibility.Public, false, [posArg, valueArg], "Void", unsupportedBody("bytes-set-placeholder"), ""),
 			new HxFunctionDecl("getString", HxVisibility.Public, false, [posArg, lenArg], "String", unsupportedBody("bytes-get-string-placeholder"), ""),
 			new HxFunctionDecl("toString", HxVisibility.Public, false, [], "String", unsupportedBody("bytes-to-string-placeholder"), ""),
+			new HxFunctionDecl("compareSub", HxVisibility.Public, false, [posArg, otherArg, otherPosArg, lenArg], "Bool",
+				unsupportedBody("bytes-compare-sub-placeholder"), ""),
 			new HxFunctionDecl("toHex", HxVisibility.Public, false, [], "String", unsupportedBody("bytes-to-hex-placeholder"), "")
 		], [
 			new HxFieldDecl("length", HxVisibility.Public, false, "Int", null),
@@ -1253,7 +1259,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println("type-fields=" + Type.getClassName(Type.getClass(reflectedCounter)) + ":" + reflectedFields.join("|") + ":" + Reflect.isFunction(Reflect.field(reflectedCounter, "add")));',
 				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref").toString());',
 				'    Sys.println("bytes-sub=" + haxe.io.Bytes.ofString("abcdef").sub(2, 3).toString());',
+				'    Sys.println("bytes-compare-sub=" + haxe.io.Bytes.ofString("abc").compareSub(1, haxe.io.Bytes.ofString("zbcx"), 1, 2) + ":" + haxe.io.Bytes.ofString("abc").compareSub(0, haxe.io.Bytes.ofString("xbc"), 0, 2));',
 				'    Sys.println(haxe.crypto.Base64.BYTES.toString());',
+				'    Sys.println("string-from-code=" + String.fromCharCode(65));',
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
 				'    Sys.println("starts=" + StringTools.startsWith("testCase", "test") + "," + StringTools.startsWith("case", ""));',
 				'    Sys.println("replace=" + StringTools.replace("banana", "na", "X") + "," + StringTools.replace("a\\\\b", "\\\\", "/") + "," + StringTools.replace("abc", "", "x"));',
@@ -1566,12 +1574,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "this.b[pos | 0] = (v | 0) & 255", "Bytes.set complement should mask byte values");
 			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.get = function", "Bytes.get prototype should emit for std readers");
 			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.sub = function", "Bytes.sub prototype complement should emit for diff printers");
+			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.compareSub = function", "Bytes.compareSub prototype complement should emit for diff hashing");
 			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.toString = function", "Bytes.toString prototype should emit for sys/runtime readers");
 			assertContains(js, "__hx_cls_haxe_crypto_Base64.BYTES = __hx_cls_haxe_io_Bytes.ofString(__hx_cls_haxe_crypto_Base64.CHARS)",
 				"same-class static field refs should resolve to class bindings");
 			assertNotContains(js, "__hx_cls_haxe_io_Bytes.ofString(CHARS)", "same-class static field refs should not leak as globals");
 			assertContains(js, "__hx_cls_StringTools.fastCodeAt = function", "StringTools.fastCodeAt shim should emit");
 			assertContains(js, "return String(s).charCodeAt(index);", "StringTools.fastCodeAt should lower to JS charCodeAt");
+			assertContains(js, "__hx_cls_String.fromCharCode = function", "String.fromCharCode shim should emit");
+			assertContains(js, "return String.fromCharCode(code);", "String.fromCharCode should lower to the native JS helper");
 			assertContains(js, "if (typeof __hx_cls_StringTools.startsWith !== \"function\")",
 				"StringTools.startsWith runtime complement should backfill inline/erased std bodies");
 			assertContains(js, "__hx_cls_StringTools.startsWith = function", "StringTools.startsWith shim should emit");
@@ -1729,7 +1740,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "type-fields=Counter:add:true", "Type/Reflect helpers should expose prototype test methods for utest-style discovery");
 			assertContains(stdout, "bytes-ref", "qualified package static refs should execute through class bindings");
 			assertContains(stdout, "bytes-sub=cde", "Bytes.sub should return a sliced Bytes value that can be stringified");
+			assertContains(stdout, "bytes-compare-sub=true:false", "Bytes.compareSub should compare matching byte ranges");
 			assertContains(stdout, "abc", "same-class static field refs should execute through class bindings");
+			assertContains(stdout, "string-from-code=A", "String.fromCharCode should produce the requested character");
 			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
 			assertContains(stdout, "starts=true,true", "StringTools.startsWith should support utest prefix discovery and empty prefixes");
 			assertContains(stdout, "replace=baXX,a/b,axbxc", "StringTools.replace should perform literal global replacements including empty needles");

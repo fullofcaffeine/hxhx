@@ -1041,6 +1041,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "StringTools")
 			return emitStringToolsStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "String")
+			return emitStringStaticFunctionBody(writer, fnName, params);
+
 		if (fullName == "haxe.ds.Vector")
 			return emitVectorStaticFunctionBody(writer, fnName, params);
 
@@ -2232,6 +2235,18 @@ class JsTargetCore implements ITargetCore {
 		}
 	}
 
+	static function emitStringStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "fromCharCode":
+				if (params.length < 1)
+					return false;
+				writer.writeln("return String.fromCharCode(" + params[0] + ");");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
 	static function emitVectorStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
 		switch (fnName) {
 			case "fromArrayCopy":
@@ -2359,6 +2374,11 @@ class JsTargetCore implements ITargetCore {
 					return false;
 				emitHaxeIoBytesSubBody(writer, params[0], params[1]);
 				return true;
+			case "compareSub":
+				if (params.length < 4)
+					return false;
+				emitHaxeIoBytesCompareSubBody(writer, params[0], params[1], params[2], params[3]);
+				return true;
 			case "fill":
 				if (params.length < 3)
 					return false;
@@ -2392,6 +2412,22 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("var __hx_len = " + len + " | 0;");
 		writer.writeln("if (__hx_pos < 0 || __hx_len < 0 || __hx_pos + __hx_len > this.length) throw \"OutsideBounds\";");
 		writer.writeln("return new " + JsNameMangler.classVarName("haxe.io.Bytes") + "(__hx_len, this.b.slice(__hx_pos, __hx_pos + __hx_len));");
+	}
+
+	static function emitHaxeIoBytesCompareSubBody(writer:JsWriter, pos:String, other:String, otherpos:String, len:String):Void {
+		writer.writeln("var __hx_pos = " + pos + " | 0;");
+		writer.writeln("var __hx_other = " + other + ";");
+		writer.writeln("var __hx_otherpos = " + otherpos + " | 0;");
+		writer.writeln("var __hx_len = " + len + " | 0;");
+		writer.writeln("var __hx_other_data = __hx_other == null ? null : (typeof __hx_other.getData === \"function\" ? __hx_other.getData() : __hx_other.b);");
+		writer.writeln("if (__hx_other_data == null) throw \"OutsideBounds\";");
+		writer.writeln("if (__hx_pos < 0 || __hx_otherpos < 0 || __hx_len < 0 || __hx_pos + __hx_len > this.length || __hx_otherpos + __hx_len > __hx_other.length) throw \"OutsideBounds\";");
+		writer.writeln("for (var __hx_i = 0; __hx_i < __hx_len; __hx_i++) {");
+		writer.pushIndent();
+		writer.writeln("if (((this.b[__hx_pos + __hx_i] | 0) & 255) !== ((__hx_other_data[__hx_otherpos + __hx_i] | 0) & 255)) return false;");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.writeln("return true;");
 	}
 
 	static function emitHaxeIoBytesToHexBody(writer:JsWriter):Void {
@@ -2522,6 +2558,9 @@ class JsTargetCore implements ITargetCore {
 		});
 		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "sub", ["pos", "len"], function() {
 			emitHaxeIoBytesSubBody(writer, "pos", "len");
+		});
+		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "compareSub", ["pos", "other", "otherpos", "len"], function() {
+			emitHaxeIoBytesCompareSubBody(writer, "pos", "other", "otherpos", "len");
 		});
 		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "toHex", [], function() {
 			emitHaxeIoBytesToHexBody(writer);

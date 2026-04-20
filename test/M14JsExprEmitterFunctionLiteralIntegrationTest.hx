@@ -68,6 +68,10 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(postfixArraySlotJs, "__hx_op_write", "postfix array slot increment should respect abstract write slots");
 		assertContains(postfixArraySlotJs, "return __hx_old;", "postfix array slot increment should return the previous slot value");
 
+		final stringCodeJs = JsExprEmitter.emit(HxParser.parseExprText('"\\n".code'), exprScope);
+		assertContains(stringCodeJs, ".charCodeAt(0)", "single-character string .code should lower to JS charCodeAt");
+		assertNotContains(stringCodeJs, ".code", "single-character string .code should not emit an undefined JS property read");
+
 		final optionalArrow = HxParser.parseExprText("f = (?a:Int=1, b:String) -> a + b.length");
 		final optionalArrowJs = JsExprEmitter.emit(optionalArrow, exprScope);
 		assertContains(optionalArrowJs, "f = function(a, b)", "optional/typed/default arrow args keep runtime arg names");
