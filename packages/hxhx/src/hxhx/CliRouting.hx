@@ -18,6 +18,8 @@ private typedef StandardTargetScan = {
 class CliRouting {
 	public static inline final LANE_NATIVE_OCAML:String = "native-ocaml";
 	public static inline final LANE_NATIVE_JS:String = "native-js";
+	public static inline final LANE_NATIVE_NEKO:String = "native-neko";
+	public static inline final LANE_NATIVE_HL:String = "native-hl";
 	public static inline final LANE_STAGE0_COMPAT:String = "stage0-compat";
 	public static inline final LANE_STAGE0_OCAML_EVAL:String = "stage0-ocaml-eval";
 
@@ -135,6 +137,29 @@ class CliRouting {
 				lane: LANE_NATIVE_JS,
 				backendId: "js-native",
 				forwarded: nativeJsRun,
+				stage0Required: false
+			};
+		}
+
+		final flattened = flattenUnits(planningUnits);
+		if (!targetScan.hasJs && hasNekoTargetFlag(flattened) && !hasNonNekoStandardTargetFlag(flattened)) {
+			final nativeNeko = baseForwarded.copy();
+			addDefineIfMissing(nativeNeko, "neko");
+			return {
+				lane: LANE_NATIVE_NEKO,
+				backendId: "neko-native",
+				forwarded: nativeNeko,
+				stage0Required: false
+			};
+		}
+
+		if (!targetScan.hasJs && hasHlTargetFlag(flattened) && !hasNonHlStandardTargetFlag(flattened)) {
+			final nativeHl = baseForwarded.copy();
+			addDefineIfMissing(nativeHl, "hl");
+			return {
+				lane: LANE_NATIVE_HL,
+				backendId: "hl-native",
+				forwarded: nativeHl,
 				stage0Required: false
 			};
 		}
@@ -334,6 +359,19 @@ class CliRouting {
 		return false;
 	}
 
+	static function hasHlTargetFlag(args:Array<String>):Bool {
+		if (args == null)
+			return false;
+		for (a in args) {
+			switch (a) {
+				case "-hl", "--hl":
+					return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
 	static function hasNonNekoStandardTargetFlag(args:Array<String>):Bool {
 		if (args == null)
 			return false;
@@ -341,6 +379,20 @@ class CliRouting {
 			switch (a) {
 				case "-lua", "--lua", "-python", "--python", "-php", "--php", "-cpp", "--cpp", "-cs", "--cs", "-java", "--java", "-jvm", "--jvm", "-hl",
 					"--hl", "-swf", "--swf", "-as3", "--as3", "-xml", "--xml":
+					return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function hasNonHlStandardTargetFlag(args:Array<String>):Bool {
+		if (args == null)
+			return false;
+		for (a in args) {
+			switch (a) {
+				case "-lua", "--lua", "-python", "--python", "-php", "--php", "-cpp", "--cpp", "-cs", "--cs", "-java", "--java", "-jvm", "--jvm", "-neko",
+					"--neko", "-swf", "--swf", "-as3", "--as3", "-xml", "--xml":
 					return true;
 				case _:
 			}

@@ -45,6 +45,8 @@ class Main {
 	static inline final COMPAT_HAXE_VERSION:String = "4.3.7";
 	static inline final LANE_NATIVE_OCAML:String = "native-ocaml";
 	static inline final LANE_NATIVE_JS:String = "native-js";
+	static inline final LANE_NATIVE_NEKO:String = "native-neko";
+	static inline final LANE_NATIVE_HL:String = "native-hl";
 	static inline final LANE_STAGE0_COMPAT:String = "stage0-compat";
 	static inline final LANE_STAGE0_OCAML_EVAL:String = "stage0-ocaml-eval";
 
@@ -713,7 +715,7 @@ class Main {
 		}
 
 		switch (plan.lane) {
-			case LANE_NATIVE_OCAML | LANE_NATIVE_JS:
+			case LANE_NATIVE_OCAML | LANE_NATIVE_JS | LANE_NATIVE_NEKO | LANE_NATIVE_HL:
 				if (ocamlInterpLike) {
 					fatal("hxhx: --hxhx-ocaml-interp cannot be combined with native target lanes.");
 				}

@@ -65,6 +65,7 @@ let init () : unit =
   ignore (HxType.class_ "backend.ITargetBackendProvider");
   ignore (HxType.class_ "backend.ITargetCore");
   ignore (HxType.class_ "backend.TargetCoreBackend");
+  ignore (HxType.class_ "backend.UnsupportedNativeTargetBackend");
   ignore (HxType.class_ "backend._OcamlProfile.OcamlProfile_Impl_");
   ignore (HxType.class_ "backend.js.JsBackend");
   ignore (HxType.class_ "backend.js.JsExprEmitter");
@@ -1138,6 +1139,9 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'emitImpl' for backend.TargetCoreBackend" in
     Obj.repr (Backend_TargetCoreBackend.create a0 a1)
   );
+  HxType.register_class_ctor "backend.UnsupportedNativeTargetBackend" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_UnsupportedNativeTargetBackend.create ())
+  );
   HxType.register_class_ctor "backend._OcamlProfile.OcamlProfile_Impl_" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_OcamlProfile.create ())
   );
@@ -1513,6 +1517,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "backend.EmitResult" (fun () -> Obj.repr (Backend_EmitResult.__empty ()));
   HxType.register_class_empty_ctor "backend.GenIrBoundary" (fun () -> Obj.repr (Backend_GenIrBoundary.__empty ()));
   HxType.register_class_empty_ctor "backend.TargetCoreBackend" (fun () -> Obj.repr (Backend_TargetCoreBackend.__empty ()));
+  HxType.register_class_empty_ctor "backend.UnsupportedNativeTargetBackend" (fun () -> Obj.repr (Backend_UnsupportedNativeTargetBackend.__empty ()));
   HxType.register_class_empty_ctor "backend._OcamlProfile.OcamlProfile_Impl_" (fun () -> Obj.repr (Backend_OcamlProfile.__empty ()));
   HxType.register_class_empty_ctor "backend.js.JsBackend" (fun () -> Obj.repr (Backend_js_JsBackend.__empty ()));
   HxType.register_class_empty_ctor "backend.js.JsExprEmitter" (fun () -> Obj.repr (Backend_js_JsExprEmitter.__empty ()));
@@ -1715,6 +1720,8 @@ let init () : unit =
   HxType.register_class_static_fields "backend.ITargetCore" [];
   HxType.register_class_instance_fields "backend.TargetCoreBackend" [ "backendDescriptor"; "capabilities"; "describe"; "emit"; "emitImpl"; "id" ];
   HxType.register_class_static_fields "backend.TargetCoreBackend" [ "emitBridge" ];
+  HxType.register_class_instance_fields "backend.UnsupportedNativeTargetBackend" [];
+  HxType.register_class_static_fields "backend.UnsupportedNativeTargetBackend" [ "descriptor"; "emitUnsupported"; "hlDescriptor"; "hlRegistration"; "nekoDescriptor"; "nekoRegistration" ];
   HxType.register_class_instance_fields "backend._OcamlProfile.OcamlProfile_Impl_" [];
   HxType.register_class_static_fields "backend._OcamlProfile.OcamlProfile_Impl_" [ "fromDefineValue"; "toDefineValue" ];
   HxType.register_class_instance_fields "backend.js.JsBackend" [ "capabilities"; "delegate"; "describe"; "emit"; "id"; "registrations" ];
@@ -1780,7 +1787,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.BuildMetadataCollector" [];
   HxType.register_class_static_fields "hxhx.BuildMetadataCollector" [ "collectBuildMacroExprs"; "findBuildMacroExprs"; "matchesMetadataPathFilter"; "trim" ];
   HxType.register_class_instance_fields "hxhx.CliRouting" [];
-  HxType.register_class_static_fields "hxhx.CliRouting" [ "addDefineIfMissing"; "addDefineIfMissingForPlanning"; "addLibraryIfMissing"; "addLibraryIfMissingForPlanning"; "addMacroIfMissing"; "canRouteMixedUnitsAsNativeJs"; "consumesStandardTargetValue"; "findFlagValue"; "findSourceHostReflaxeTarget"; "findUnsupportedLegacyTarget"; "flattenUnits"; "getDefineValue"; "hasCommandHook"; "hasDefine"; "hasFlag"; "hasLibrary"; "hasMacro"; "hasNekoTargetFlag"; "hasNonNekoStandardTargetFlag"; "hasStandardJsTargetFlag"; "isJsNativeHelperUnit"; "listLaneSelectors"; "plan"; "planningTargetArgs"; "planningTargetUnits"; "scanStandardTargetFlags"; "stripRoutingFlags" ];
+  HxType.register_class_static_fields "hxhx.CliRouting" [ "addDefineIfMissing"; "addDefineIfMissingForPlanning"; "addLibraryIfMissing"; "addLibraryIfMissingForPlanning"; "addMacroIfMissing"; "canRouteMixedUnitsAsNativeJs"; "consumesStandardTargetValue"; "findFlagValue"; "findSourceHostReflaxeTarget"; "findUnsupportedLegacyTarget"; "flattenUnits"; "getDefineValue"; "hasCommandHook"; "hasDefine"; "hasFlag"; "hasHlTargetFlag"; "hasLibrary"; "hasMacro"; "hasNekoTargetFlag"; "hasNonHlStandardTargetFlag"; "hasNonNekoStandardTargetFlag"; "hasStandardJsTargetFlag"; "isJsNativeHelperUnit"; "listLaneSelectors"; "plan"; "planningTargetArgs"; "planningTargetUnits"; "scanStandardTargetFlags"; "stripRoutingFlags" ];
   HxType.register_class_instance_fields "hxhx.DisplayResponseSynthesizer" [];
   HxType.register_class_static_fields "hxhx.DisplayResponseSynthesizer" [ "compactWhitespace"; "countArgumentIndexBeforeToken"; "extractArgTypeHintFromSegment"; "extractExprOfInner"; "findCallNameBeforeParen"; "findFunctionArgTypeHint"; "findMatchingCloseToken"; "findTypedefStructBody"; "formatCompletionList"; "isIdentContinue"; "isIdentStart"; "parseDisplayRequestQuery"; "parseStrictInt"; "parseStructFieldNames"; "readDisplaySource"; "stripTypePath"; "synthesize"; "synthesizeExprOfStructCompletion"; "tokenizeDisplaySource"; "xmlEscape" ];
   HxType.register_class_instance_fields "hxhx.ExprMacroExpander" [];
@@ -1806,7 +1813,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.Stage1Resolver" [];
   HxType.register_class_static_fields "hxhx.Stage1Resolver" [ "normalizeSep"; "resolveClassPath"; "resolveMain"; "resolveModule" ];
   HxType.register_class_instance_fields "hxhx.Stage3Compiler" [];
-  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "anyNonBuiltinMacro"; "appendManifestRequests"; "appendPluginLoadRequest"; "appendProviderRequests"; "bool01"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "canRunNode"; "collectBuildMacroExprs"; "collectBundledBackendPluginManifestPaths"; "collectBundledBackendProviderTypeNames"; "collectDeclarationValues"; "collectExplicitBackendPluginManifestPaths"; "collectExplicitBackendProviderTypeNames"; "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "decodeWaitStdioRequest"; "dispatchOnTypeNotFoundHooks"; "encodeConnectRequest"; "error"; "escapeOneLine"; "findFlagValue"; "findJsOutputFileHint"; "findManyFlagValues"; "findSingleFlagValue"; "formatException"; "hasConfiguredExternalMacroHostExe"; "hasDefineFlag"; "hasFlag"; "haxeDiagnosticError"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "loadDynamicBackendProviders"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "processConnectResponse"; "rawTyperDiagnostic"; "readConnectDisplayStdin"; "resolveBuiltinBackend"; "resolveHaxelibSpec"; "run"; "runConnect"; "runOne"; "runWaitSocket"; "runWaitStdio"; "runWaitStdioRequest"; "shouldAutoBuildMacroHost"; "summarizeArgs"; "synthesizeDisplayResponse"; "trim"; "writeWaitStdioReply" ];
+  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "anyNonBuiltinMacro"; "appendManifestRequests"; "appendPluginLoadRequest"; "appendProviderRequests"; "bool01"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "canRunNode"; "collectBuildMacroExprs"; "collectBundledBackendPluginManifestPaths"; "collectBundledBackendProviderTypeNames"; "collectDeclarationValues"; "collectExplicitBackendPluginManifestPaths"; "collectExplicitBackendProviderTypeNames"; "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "decodeWaitStdioRequest"; "dispatchOnTypeNotFoundHooks"; "encodeConnectRequest"; "error"; "escapeOneLine"; "findFlagValue"; "findJsOutputFileHint"; "findManyFlagValues"; "findSingleFlagValue"; "formatException"; "hasConfiguredExternalMacroHostExe"; "hasDefineFlag"; "hasFlag"; "haxeDiagnosticError"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "loadDynamicBackendProviders"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "processConnectResponse"; "rawTyperDiagnostic"; "readConnectDisplayStdin"; "resolveBuiltinBackend"; "resolveHaxelibSpec"; "run"; "runConnect"; "runOne"; "runWaitSocket"; "runWaitStdio"; "runWaitStdioRequest"; "shouldAutoBuildMacroHost"; "summarizeArgs"; "synthesizeDisplayResponse"; "targetDefineForBackend"; "trim"; "writeWaitStdioReply" ];
   HxType.register_class_instance_fields "hxhx.macro.BuildFieldSnapshotPayload" [];
   HxType.register_class_static_fields "hxhx.macro.BuildFieldSnapshotPayload" [ "encodeParsedModule" ];
   HxType.register_class_instance_fields "hxhx.macro.InProcGeneratedEntrypoints" [];
@@ -1944,6 +1951,7 @@ let init () : unit =
   HxType.register_class_tags "backend.ITargetBackendProvider" [ "backend.ITargetBackendProvider" ];
   HxType.register_class_tags "backend.ITargetCore" [ "backend.ITargetCore" ];
   HxType.register_class_tags "backend.TargetCoreBackend" [ "backend.IBackend"; "backend.TargetCoreBackend" ];
+  HxType.register_class_tags "backend.UnsupportedNativeTargetBackend" [ "backend.UnsupportedNativeTargetBackend" ];
   HxType.register_class_tags "backend._OcamlProfile.OcamlProfile_Impl_" [ "backend._OcamlProfile.OcamlProfile_Impl_" ];
   HxType.register_class_tags "backend.js.JsBackend" [ "backend.IBackend"; "backend.ITargetBackendProvider"; "backend.js.JsBackend" ];
   HxType.register_class_tags "backend.js.JsExprEmitter" [ "backend.js.JsExprEmitter" ];

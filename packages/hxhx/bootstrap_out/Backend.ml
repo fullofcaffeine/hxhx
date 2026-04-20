@@ -15,3 +15,4 @@ module ITargetBackendProvider = Backend_ITargetBackendProvider
 module ITargetCore = Backend_ITargetCore
 module OcamlProfile = Backend_OcamlProfile
 module TargetCoreBackend = Backend_TargetCoreBackend
+module UnsupportedNativeTargetBackend = Backend_UnsupportedNativeTargetBackend

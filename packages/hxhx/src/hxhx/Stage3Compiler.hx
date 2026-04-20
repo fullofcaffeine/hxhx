@@ -296,6 +296,19 @@ class Stage3Compiler {
 		return false;
 	}
 
+	static function targetDefineForBackend(backendId:String):String {
+		return switch (backendId) {
+			case "js-native":
+				"js";
+			case "neko-native":
+				"neko";
+			case "hl-native":
+				"hl";
+			case _:
+				"ocaml";
+		};
+	}
+
 	static function findJsOutputFileHint(args:Array<String>):Null<String> {
 		final expanded = Stage1Args.expandHxmlArgs(args);
 		if (expanded == null)
@@ -1361,7 +1374,8 @@ class Stage3Compiler {
 			}
 			out;
 		}
-		hxhx.macro.MacroState.seedCompilerConfiguration(args, macroStdPaths, backendId == "js-native" ? "js" : "ocaml");
+		final backendTargetDefine = targetDefineForBackend(backendId);
+		hxhx.macro.MacroState.seedCompilerConfiguration(args, macroStdPaths, backendTargetDefine);
 		hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
 
 		final libMacros = {
@@ -1515,15 +1529,11 @@ class Stage3Compiler {
 		// - ResolverStage will use this map to strip inactive `#if` branches before parsing.
 		final definesMap = HxDefineMap.fromRawDefines(allDefines);
 		definesMap.set("sys", "1");
-		if (backendId == "js-native") {
-			definesMap.set("js", "1");
-		} else {
-			definesMap.set("ocaml", "1");
-		}
+		definesMap.set(backendTargetDefine, "1");
 		for (n in hxhx.macro.MacroState.listDefineNames()) {
 			definesMap.set(n, hxhx.macro.MacroState.definedValue(n));
 		}
-		if (backendId != "js-native") {
+		if (backendId == "ocaml-stage3") {
 			try {
 				final profile = OcamlProfile.fromDefineValue(definesMap.get("ocaml_profile"));
 				definesMap.set("ocaml_profile", OcamlProfile.toDefineValue(profile));

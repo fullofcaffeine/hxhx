@@ -58,6 +58,8 @@ class M14BackendRegistryIntegrationTest {
 		final ids = BackendRegistry.supportedTargetIds();
 		assertTrue(has(ids, "ocaml-stage3"), "backend registry missing ocaml-stage3 target id");
 		assertTrue(has(ids, "js-native"), "backend registry missing js-native target id");
+		assertTrue(has(ids, "neko-native"), "backend registry missing neko-native target id");
+		assertTrue(has(ids, "hl-native"), "backend registry missing hl-native target id");
 
 		final ocaml = BackendRegistry.descriptorForTarget("ocaml-stage3");
 		assertTrue(ocaml != null, "descriptorForTarget(ocaml-stage3) returned null");
@@ -68,6 +70,14 @@ class M14BackendRegistryIntegrationTest {
 		assertTrue(js != null, "descriptorForTarget(js-native) returned null");
 		assertTrue(js.implId == "builtin/js-native", "unexpected js-native implId");
 		assertTrue(js.requires.macroApiVersion == BackendAbi.MACRO_API_VERSION, "unexpected js-native macro API version");
+
+		final neko = BackendRegistry.descriptorForTarget("neko-native");
+		assertTrue(neko != null, "descriptorForTarget(neko-native) returned null");
+		assertTrue(neko.implId == "builtin/neko-native-placeholder", "unexpected neko-native implId");
+
+		final hl = BackendRegistry.descriptorForTarget("hl-native");
+		assertTrue(hl != null, "descriptorForTarget(hl-native) returned null");
+		assertTrue(hl.implId == "builtin/hl-native-placeholder", "unexpected hl-native implId");
 
 		assertFailsContains(function() BackendRegistry.requireForTarget("does-not-exist"), "does-not-exist");
 		assertFailsContains(function() BackendRegistry.requireForTarget("does-not-exist"), "ocaml-stage3");

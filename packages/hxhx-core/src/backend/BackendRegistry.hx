@@ -4,6 +4,7 @@ package backend;
 import backend.js.JsBackend;
 #end
 import backend.ocaml.OcamlStage3Backend;
+import backend.UnsupportedNativeTargetBackend;
 
 /**
 	Canonical registry for builtin Stage3 backend implementations.
@@ -36,6 +37,8 @@ class BackendRegistry {
 			descriptor: OcamlStage3Backend.descriptor(),
 			create: function() return new OcamlStage3Backend()
 		});
+		registrations.push(UnsupportedNativeTargetBackend.nekoRegistration());
+		registrations.push(UnsupportedNativeTargetBackend.hlRegistration());
 		#if !hxhx_stage0_ocaml_only
 		registrations.push({
 			descriptor: JsBackend.descriptor(),

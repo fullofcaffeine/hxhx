@@ -761,7 +761,7 @@ let main = fun () -> ignore (try let args = Obj.magic (HxSys.args ()) in (
                     if HxRuntime.unbox_bool_or_obj (HxAnon.get plan "stage0Required") then ignore (print_endline ("stage0_haxe_bin=" ^ HxString.toStdString (!tempString4))) else ()
                   )) else ());
                   let _g = (Obj.obj (HxAnon.get plan "lane") : string) in match _g with
-                    | "native-js" | "native-ocaml" -> ignore ((
+                    | "native-hl" | "native-js" | "native-neko" | "native-ocaml" -> ignore ((
                       ignore (if !ocamlInterpLike then ignore (fatal ("hxhx: --hxhx-ocaml-interp cannot be combined with native target lanes." : string)) else ());
                       let stage3Args = Obj.magic (HxArray.concat (let __arr_155 = HxArray.create () in (
                         ignore (HxArray.push __arr_155 "--hxhx-backend");

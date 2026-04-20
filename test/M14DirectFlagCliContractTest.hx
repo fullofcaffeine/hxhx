@@ -111,6 +111,16 @@ class M14DirectFlagCliContractTest {
 		assertEquals(nativeJs.backendId, "js-native", "native js backend");
 		assertTrue(hasDefine(nativeJs.forwarded, "js"), "native js define");
 
+		final nativeNeko = plan(["--neko", "out.n", "-main", "Main"]);
+		assertEquals(nativeNeko.lane, "native-neko", "native neko lane");
+		assertEquals(nativeNeko.backendId, "neko-native", "native neko backend");
+		assertTrue(hasDefine(nativeNeko.forwarded, "neko"), "native neko define");
+
+		final nativeHl = plan(["--hl", "out.hl", "-main", "Main"]);
+		assertEquals(nativeHl.lane, "native-hl", "native hl lane");
+		assertEquals(nativeHl.backendId, "hl-native", "native hl backend");
+		assertTrue(hasDefine(nativeHl.forwarded, "hl"), "native hl define");
+
 		final nativeJsRun = plan(["--run", "Main", "arg1"]);
 		assertEquals(nativeJsRun.lane, "native-js", "native js --run lane");
 		assertEquals(nativeJsRun.backendId, "js-native", "native js --run backend");
