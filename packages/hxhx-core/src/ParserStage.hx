@@ -141,7 +141,7 @@ class ParserStage {
 			var body:Array<HxStmt> = [];
 			#if !hxhx_stage0_no_hx_parser
 			try {
-				body = HxParser.parseFunctionBodyText(bodyText);
+				body = HxParser.offsetFunctionBodyColumns(HxParser.parseFunctionBodyTextAt(bodyText, source, open + 1), 1);
 			} catch (_:HxParseError) {
 				body = [];
 			} catch (_:String) {
@@ -424,25 +424,22 @@ class ParserStage {
 						}
 					}
 
-					if (HxModuleDecl.getHasToplevelMain(nativeDecl) && expectedMainClass != null && expectedMainClass.length > 0) {
-						final topMain = scanToplevelMainFunction(source);
-						if (topMain != null) {
-							var mainHasMain = false;
-							for (fn in HxClassDecl.getFunctions(main)) {
-								if (HxFunctionDecl.getName(fn) == "main") {
-									mainHasMain = true;
-									break;
-								}
+					final topMain = expectedMainClass != null && expectedMainClass.length > 0 ? scanToplevelMainFunction(source) : null;
+					if (topMain != null) {
+						var mainHasMain = false;
+						for (fn in HxClassDecl.getFunctions(main)) {
+							if (HxFunctionDecl.getName(fn) == "main") {
+								mainHasMain = true;
+								break;
 							}
-							if (mainName == null || mainName.length == 0 || mainName == "Unknown" || mainName != expectedMainClass) {
-								main = new HxClassDecl(expectedMainClass, true, [topMain], []);
-								mainName = expectedMainClass;
-							} else if (!mainHasMain) {
-								final functions = HxClassDecl.getFunctions(main).copy();
-								functions.push(topMain);
-								main = new HxClassDecl(HxClassDecl.getName(main), true, functions, HxClassDecl.getFields(main),
-									HxClassDecl.getExtendsPath(main));
-							}
+						}
+						if (mainName == null || mainName.length == 0 || mainName == "Unknown" || mainName != expectedMainClass) {
+							main = new HxClassDecl(expectedMainClass, true, [topMain], []);
+							mainName = expectedMainClass;
+						} else if (!mainHasMain) {
+							final functions = HxClassDecl.getFunctions(main).copy();
+							functions.push(topMain);
+							main = new HxClassDecl(HxClassDecl.getName(main), true, functions, HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main));
 						}
 					}
 

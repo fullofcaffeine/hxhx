@@ -396,6 +396,66 @@ class HxParser {
 		}
 	}
 
+	public static function offsetFunctionBodyColumns(stmts:Array<HxStmt>, delta:Int):Array<HxStmt> {
+		if (stmts == null || delta == 0)
+			return stmts;
+		final shifted = new Array<HxStmt>();
+		for (stmt in stmts)
+			shifted.push(offsetFunctionBodyStmtColumns(stmt, delta));
+		return shifted;
+	}
+
+	static function offsetFunctionBodyPosColumn(pos:HxPos, delta:Int):HxPos {
+		if (pos == null || pos.getLine() <= 0)
+			return HxPos.unknown();
+		return new HxPos(pos.getIndex(), pos.getLine(), pos.getColumn() + delta);
+	}
+
+	static function offsetFunctionBodyStmtColumns(stmt:HxStmt, delta:Int):HxStmt {
+		return switch (stmt) {
+			case SBlock(stmts, pos):
+				final shifted = new Array<HxStmt>();
+				for (s in stmts)
+					shifted.push(offsetFunctionBodyStmtColumns(s, delta));
+				SBlock(shifted, offsetFunctionBodyPosColumn(pos, delta));
+			case SVar(name, typeHint, init, pos):
+				SVar(name, typeHint, init, offsetFunctionBodyPosColumn(pos, delta));
+			case SIf(cond, thenBranch, elseBranch, pos):
+				SIf(cond, offsetFunctionBodyStmtColumns(thenBranch, delta), elseBranch == null ? null : offsetFunctionBodyStmtColumns(elseBranch, delta),
+					offsetFunctionBodyPosColumn(pos, delta));
+			case SForIn(name, iterable, body, pos):
+				SForIn(name, iterable, offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyPosColumn(pos, delta));
+			case SForKeyValue(keyName, valueName, iterable, body, pos):
+				SForKeyValue(keyName, valueName, iterable, offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyPosColumn(pos, delta));
+			case SWhile(cond, body, pos):
+				SWhile(cond, offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyPosColumn(pos, delta));
+			case SDoWhile(body, cond, pos):
+				SDoWhile(offsetFunctionBodyStmtColumns(body, delta), cond, offsetFunctionBodyPosColumn(pos, delta));
+			case SSwitch(scrutinee, patterns, bodies, pos):
+				final shiftedBodies = new Array<HxStmt>();
+				for (body in bodies)
+					shiftedBodies.push(offsetFunctionBodyStmtColumns(body, delta));
+				SSwitch(scrutinee, patterns, shiftedBodies, offsetFunctionBodyPosColumn(pos, delta));
+			case STry(tryBody, catches, pos):
+				final shiftedCatches = new Array<{name:String, typeHint:String, body:HxStmt}>();
+				for (c in catches)
+					shiftedCatches.push({name: c.name, typeHint: c.typeHint, body: offsetFunctionBodyStmtColumns(c.body, delta)});
+				STry(offsetFunctionBodyStmtColumns(tryBody, delta), shiftedCatches, offsetFunctionBodyPosColumn(pos, delta));
+			case SBreak(pos):
+				SBreak(offsetFunctionBodyPosColumn(pos, delta));
+			case SContinue(pos):
+				SContinue(offsetFunctionBodyPosColumn(pos, delta));
+			case SThrow(expr, pos):
+				SThrow(expr, offsetFunctionBodyPosColumn(pos, delta));
+			case SReturnVoid(pos):
+				SReturnVoid(offsetFunctionBodyPosColumn(pos, delta));
+			case SReturn(expr, pos):
+				SReturn(expr, offsetFunctionBodyPosColumn(pos, delta));
+			case SExpr(expr, pos):
+				SExpr(expr, offsetFunctionBodyPosColumn(pos, delta));
+		}
+	}
+
 	static function normalizeInlineJsConditionalMarkers(bodySource:String):String {
 		// Stage3 body slices can still contain inline conditional-compilation markers,
 		// notably upstream JS-specific assertions shaped like:
@@ -3899,6 +3959,7 @@ class HxParser {
 		// - We still recognize module-level `function main(...)` for upstream unit tests.
 		// - Non-class declarations (typedef/enum/abstract/etc.) are ignored for now.
 		final classes = new Array<HxClassDecl>();
+		final moduleFunctions = new Array<HxFunctionDecl>();
 		function parseModuleField(isFinal:Bool):Void {
 			final fieldStart = cur.getPos();
 			bump();
@@ -3966,12 +4027,17 @@ class HxParser {
 				// `parseClassMembers` consumes the closing `}`.
 				case TKeyword(KFunction):
 					// Detect module-level `function main(...)` entrypoint.
+					final fnStart = cur.getPos();
 					bump();
-					switch (cur.kind) {
-						case TIdent("main"):
-							hasToplevelMain = true;
-						case _:
-					}
+					final parsedFn = parseFunctionDecl(Public, true, [], fnStart);
+					final fn = new HxFunctionDecl(HxFunctionDecl.getName(parsedFn), HxFunctionDecl.getVisibility(parsedFn),
+						HxFunctionDecl.getIsStatic(parsedFn), HxFunctionDecl.getArgs(parsedFn), HxFunctionDecl.getReturnTypeHint(parsedFn),
+						offsetFunctionBodyColumns(HxFunctionDecl.getBody(parsedFn), 1), HxFunctionDecl.getReturnStringLiteral(parsedFn),
+						HxFunctionDecl.getMetadata(parsedFn), HxFunctionDecl.getPos(parsedFn), HxFunctionDecl.getEndPos(parsedFn),
+						HxFunctionDecl.getBodyText(parsedFn));
+					if (HxFunctionDecl.getName(fn) == "main")
+						hasToplevelMain = true;
+					moduleFunctions.push(fn);
 				default:
 					bump();
 			}
@@ -3991,10 +4057,11 @@ class HxParser {
 		}
 		if (chosen == null && classes.length > 0)
 			chosen = classes[0];
-		if (moduleFields.length > 0) {
+		if (moduleFunctions.length > 0 || moduleFields.length > 0) {
 			final base = chosen == null ? new HxClassDecl(expected.length > 0 ? expected : "Unknown", false, [], []) : chosen;
+			final mergedFunctions = moduleFunctions.concat(HxClassDecl.getFunctions(base));
 			final mergedFields = moduleFields.concat(HxClassDecl.getFields(base));
-			chosen = new HxClassDecl(HxClassDecl.getName(base), HxClassDecl.getHasStaticMain(base), HxClassDecl.getFunctions(base), mergedFields,
+			chosen = new HxClassDecl(HxClassDecl.getName(base), HxClassDecl.getHasStaticMain(base) || hasToplevelMain, mergedFunctions, mergedFields,
 				HxClassDecl.getExtendsPath(base));
 			var replaced = false;
 			for (i in 0...classes.length) {

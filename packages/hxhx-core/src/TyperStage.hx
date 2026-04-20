@@ -386,12 +386,22 @@ class TyperStage {
 		return haxe.io.Path.withoutDirectory(filePath);
 	}
 
+	static function isRangeIdentCode(code:Int):Bool {
+		return (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || (code >= 48 && code <= 57) || code == 95;
+	}
+
 	static function callRange(filePath:String, pos:HxPos):{start:Int, end:Int} {
 		final start = pos == null || pos.getColumn() <= 0 ? 0 : pos.getColumn() - 1;
 		final line = sourceLine(filePath, pos == null ? 0 : pos.getLine());
 		if (line.length == 0)
 			return {start: start, end: start};
-		final startIndex = start > 0 ? start : 0;
+		var startIndex = start > 0 ? start : 0;
+		if (startIndex > 0
+			&& startIndex < line.length
+			&& isRangeIdentCode(line.charCodeAt(startIndex - 1))
+			&& isRangeIdentCode(line.charCodeAt(startIndex))) {
+			startIndex -= 1;
+		}
 		final rest = startIndex < line.length ? line.substr(startIndex) : "";
 		var end = line.length;
 		final semicolon = rest.indexOf(";");

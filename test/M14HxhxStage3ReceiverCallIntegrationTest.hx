@@ -192,6 +192,38 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 					throw 'Native method_body slice did not parse to an expression statement.';
 			}
 
+			final upstream437TopLevelOverloadSrc = [
+				'extern class ToolCache {',
+				'\toverload static function extractTar(?flags:Array<String>):Void;',
+				'\toverload static function extractTar(?flags:String):Void;',
+				'}',
+				'',
+				'function main() {',
+				'\tToolCache.extractTar();',
+				'}',
+			].join("\n");
+			File.saveContent(upstream437OverloadHx, upstream437TopLevelOverloadSrc);
+			final upstream437TopLevelParsed = ParserStage.parse(upstream437TopLevelOverloadSrc, upstream437OverloadHx);
+			final upstream437TopLevelResolved = new ResolvedModule("Main", upstream437OverloadHx, upstream437TopLevelParsed);
+			final upstream437TopLevelIndex = TyperIndex.build([upstream437TopLevelResolved]);
+			final upstream437TopLevelLoader = new ModuleLoader([srcDir], new StringMap<String>(), upstream437TopLevelIndex, function(_typePath:String):Bool {
+				return false;
+			});
+			upstream437TopLevelLoader.markResolvedAlready([upstream437TopLevelResolved]);
+			var upstream437TopLevelFailure:Null<String> = null;
+			try {
+				TyperStage.typeResolvedModule(upstream437TopLevelResolved, upstream437TopLevelIndex, upstream437TopLevelLoader);
+			} catch (e:TyperError) {
+				upstream437TopLevelFailure = e.getMessage();
+			}
+			final upstream437TopLevelDiagnostic = TyperStage.extractRawDiagnostic(upstream437TopLevelFailure);
+			assertEquals(upstream437TopLevelDiagnostic, [
+				'Main.hx:7: characters 2-24 : Ambiguous overload, candidates follow',
+				'Main.hx:2: characters 27-37 : ... (?flags : Null<Array<String>>) -> Void',
+				'Main.hx:3: characters 27-37 : ... (?flags : Null<String>) -> Void',
+			].join("\n"),
+				'Top-level Issue10434 diagnostic should use the call-site position, not the overload declaration.');
+
 			final vectorOutDir = haxe.io.Path.join([tmpRoot, 'vector_out']);
 			final vectorLengthArg = new HxFunctionArg("length", "Int", HxDefaultValue.NoDefault);
 			final vectorArrayArg = new HxFunctionArg("array", "Array<Dynamic>", HxDefaultValue.NoDefault);
