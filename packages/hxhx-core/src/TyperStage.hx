@@ -463,10 +463,10 @@ class TyperStage {
 	static function overloadArgScore(expected:TyType, actual:TyType):Int {
 		final exp = normalizeOverloadTypeName(expected);
 		final act = normalizeOverloadTypeName(actual);
-		if (exp == "Unknown" || act == "Unknown" || exp == "Dynamic" || act == "Dynamic")
-			return 0;
 		if (exp == act)
 			return 4;
+		if (exp == "Unknown" || act == "Unknown" || exp == "Dynamic" || act == "Dynamic")
+			return 0;
 		if ((exp == "Float" && act == "Int") || (exp == "Int" && act == "Float"))
 			return 1;
 		return -1;

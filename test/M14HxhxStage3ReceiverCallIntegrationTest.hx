@@ -115,6 +115,30 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			resolvedOverloadLoader.markResolvedAlready([resolvedOverloadResolved]);
 			TyperStage.typeResolvedModule(resolvedOverloadResolved, resolvedOverloadIndex, resolvedOverloadLoader);
 
+			final dynamicOverloadHx = haxe.io.Path.join([srcDir, 'OverloadDynamicResolved.hx']);
+			final dynamicOverloadSrc = [
+				'extern class DynamicTool {',
+				'  overload static function label(v:Bool):String;',
+				'  overload static function label(v:Int):String;',
+				'  overload static function label(v:String):String;',
+				'  overload static function label(v:Dynamic):String;',
+				'}',
+				'class OverloadDynamicResolved {',
+				'  static function main() {',
+				'    DynamicTool.label({});',
+				'  }',
+				'}',
+			].join("\n");
+			File.saveContent(dynamicOverloadHx, dynamicOverloadSrc);
+			final dynamicOverloadParsed = ParserStage.parse(dynamicOverloadSrc, dynamicOverloadHx);
+			final dynamicOverloadResolved = new ResolvedModule("OverloadDynamicResolved", dynamicOverloadHx, dynamicOverloadParsed);
+			final dynamicOverloadIndex = TyperIndex.build([dynamicOverloadResolved]);
+			final dynamicOverloadLoader = new ModuleLoader([srcDir], new StringMap<String>(), dynamicOverloadIndex, function(_typePath:String):Bool {
+				return false;
+			});
+			dynamicOverloadLoader.markResolvedAlready([dynamicOverloadResolved]);
+			TyperStage.typeResolvedModule(dynamicOverloadResolved, dynamicOverloadIndex, dynamicOverloadLoader);
+
 			final overloadHx = haxe.io.Path.join([srcDir, 'OverloadAmbiguous.hx']);
 			final overloadSrc = [
 				'extern class ToolCache {',
