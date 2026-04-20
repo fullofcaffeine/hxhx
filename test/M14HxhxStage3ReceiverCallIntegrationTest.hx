@@ -8,6 +8,11 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			throw message;
 	}
 
+	static function assertEquals(actual:String, expected:String, message:String):Void {
+		if (actual != expected)
+			throw message + "\nexpected:\n" + expected + "\nactual:\n" + actual;
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -132,10 +137,46 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 				overloadFailure = e.getMessage();
 			}
 			assertTrue(overloadFailure != null, 'Stage3 typer accepted an ambiguous zero-arg overload call.');
-			assertTrue(TyperStage.extractRawDiagnostic(overloadFailure) != null, 'Ambiguous overload should surface as a Haxe-style raw diagnostic.');
+			final overloadDiagnostic = TyperStage.extractRawDiagnostic(overloadFailure);
+			assertTrue(overloadDiagnostic != null, 'Ambiguous overload should surface as a Haxe-style raw diagnostic.');
 			assertTrue(overloadFailure.indexOf('Ambiguous overload, candidates follow') >= 0, 'Ambiguous overload diagnostic missing headline.');
 			assertTrue(overloadFailure.indexOf('(?flags : Null<Array<String>>) -> Void') >= 0, 'Ambiguous overload diagnostic missing Array candidate.');
 			assertTrue(overloadFailure.indexOf('(?flags : Null<String>) -> Void') >= 0, 'Ambiguous overload diagnostic missing String candidate.');
+
+			final upstream437OverloadHx = haxe.io.Path.join([srcDir, 'Main.hx']);
+			final upstream437OverloadSrc = [
+				'extern class ToolCache {',
+				'\toverload static function extractTar(?flags:Array<String>):Void;',
+				'\toverload static function extractTar(?flags:String):Void;',
+				'}',
+				'',
+				'class Main {',
+				'\tstatic function main() {',
+				'\t\tToolCache.extractTar();',
+				'\t}',
+				'}',
+			].join("\n");
+			File.saveContent(upstream437OverloadHx, upstream437OverloadSrc);
+			final upstream437OverloadParsed = ParserStage.parse(upstream437OverloadSrc, upstream437OverloadHx);
+			final upstream437OverloadResolved = new ResolvedModule("Main", upstream437OverloadHx, upstream437OverloadParsed);
+			final upstream437OverloadIndex = TyperIndex.build([upstream437OverloadResolved]);
+			final upstream437OverloadLoader = new ModuleLoader([srcDir], new StringMap<String>(), upstream437OverloadIndex, function(_typePath:String):Bool {
+				return false;
+			});
+			upstream437OverloadLoader.markResolvedAlready([upstream437OverloadResolved]);
+			var upstream437Failure:Null<String> = null;
+			try {
+				TyperStage.typeResolvedModule(upstream437OverloadResolved, upstream437OverloadIndex, upstream437OverloadLoader);
+			} catch (e:TyperError) {
+				upstream437Failure = e.getMessage();
+			}
+			final upstream437Diagnostic = TyperStage.extractRawDiagnostic(upstream437Failure);
+			assertEquals(upstream437Diagnostic, [
+				'Main.hx:3: characters 2-57 : Ambiguous overload, candidates follow',
+				'Main.hx:0: characters 1-11 : ... (?flags : Null<Array<String>>) -> Void',
+				'Main.hx:0: characters 1-11 : ... (?flags : Null<String>) -> Void',
+			].join("\n"),
+				'Ambiguous overload diagnostic should match Haxe 4.3.7 Issue10434 expected stderr.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

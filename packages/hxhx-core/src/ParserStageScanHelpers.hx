@@ -751,6 +751,12 @@ class ParserStageScanHelpers {
 		var sawOverload = false;
 		var pendingMetadata = new Array<String>();
 		var vis:HxVisibility = HxVisibility.Public;
+		var declarationStart = -1;
+
+		function noteDeclarationStart(index:Int):Void {
+			if (declarationStart < 0)
+				declarationStart = index;
+		}
 
 		function scanMetadataText(startPos:Int):{text:String, nextPos:Int} {
 			var j = startPos;
@@ -857,6 +863,7 @@ class ParserStageScanHelpers {
 							sawMacro = false;
 							sawOverload = false;
 							pendingMetadata = [];
+							declarationStart = -1;
 							vis = HxVisibility.Public;
 						}
 					case _:
@@ -869,18 +876,25 @@ class ParserStageScanHelpers {
 
 			switch (t.text) {
 				case "public":
+					noteDeclarationStart(t.startPos);
 					vis = HxVisibility.Public;
 				case "private":
+					noteDeclarationStart(t.startPos);
 					vis = HxVisibility.Private;
 				case "static":
+					noteDeclarationStart(t.startPos);
 					sawStatic = true;
 				case "macro":
+					noteDeclarationStart(t.startPos);
 					sawMacro = true;
 				case "overload":
+					noteDeclarationStart(t.startPos);
 					sawOverload = true;
 				case "inline" | "extern" | "override":
 					// Keep scanning; these can appear between `static` and the declaration keyword.
+					noteDeclarationStart(t.startPos);
 				case "var" | "final":
+					noteDeclarationStart(t.startPos);
 					// `final` can introduce either:
 					// - a field declaration (`final X = ...;` / `static final X = ...;`), or
 					// - a function modifier (`final function f() ...` / `final static function f() ...`).
@@ -975,10 +989,12 @@ class ParserStageScanHelpers {
 					sawMacro = false;
 					sawOverload = false;
 					pendingMetadata = [];
+					declarationStart = -1;
 					vis = HxVisibility.Public;
 					if (depth <= 0)
 						break;
 				case "function":
+					noteDeclarationStart(t.startPos);
 					// Best-effort: collect function name + arity + static flag from the scanned class body.
 					//
 					// Why include non-static functions:
@@ -1103,19 +1119,43 @@ class ParserStageScanHelpers {
 							metadata.push("macro");
 						if (sawOverload)
 							metadata.push("overload");
-						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, returnType, body, "", metadata, null, null, bodyText));
+						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, returnType, body, "", metadata,
+							posFromIndex(source, declarationStart), posFromIndex(source, i), bodyText));
 					}
 
 					sawStatic = false;
 					sawMacro = false;
 					sawOverload = false;
 					pendingMetadata = [];
+					declarationStart = -1;
 					vis = HxVisibility.Public;
 				case _:
 			}
 		}
 
 		return {nextPos: i, fields: fields, functions: functions};
+	}
+
+	/**
+		Convert a lightweight scanner offset into the same 1-based source position
+		shape produced by `HxParser`, so native-parser enrichment can report
+		diagnostics against scanned helper declarations instead of line 0.
+	**/
+	static function posFromIndex(source:String, index:Int):HxPos {
+		if (source == null || index < 0 || index > source.length)
+			return HxPos.unknown();
+		var line = 1;
+		var lineStart = 0;
+		var i = 0;
+		while (i < index) {
+			final c = source.charCodeAt(i);
+			i += 1;
+			if (c == "\n".code) {
+				line += 1;
+				lineStart = i;
+			}
+		}
+		return new HxPos(index, line, index - lineStart + 1);
 	}
 
 	static function scanFieldInitializer(source:String, start:Int):String {
@@ -1405,7 +1445,12 @@ class ParserStageScanHelpers {
 		return {bodyText: "", nextPos: i};
 	}
 
-	public static function scanNextToken(source:String, start:Int):{isIdent:Bool, text:String, nextPos:Int} {
+	public static function scanNextToken(source:String, start:Int):{
+		isIdent:Bool,
+		text:String,
+		nextPos:Int,
+		startPos:Int
+	} {
 		final len = source.length;
 		var i = start;
 
@@ -1492,18 +1537,38 @@ class ParserStageScanHelpers {
 				i += 1;
 				while (i < len && isIdentPart(source.charCodeAt(i)))
 					i += 1;
-				return {isIdent: true, text: source.substr(startIdent, i - startIdent), nextPos: i};
+				return {
+					isIdent: true,
+					text: source.substr(startIdent, i - startIdent),
+					nextPos: i,
+					startPos: startIdent
+				};
 			}
 
 			// Ellipsis
 			if (c == ".".code && i + 2 < len && source.charCodeAt(i + 1) == ".".code && source.charCodeAt(i + 2) == ".".code) {
-				return {isIdent: false, text: "...", nextPos: i + 3};
+				return {
+					isIdent: false,
+					text: "...",
+					nextPos: i + 3,
+					startPos: i
+				};
 			}
 
 			// Single-char symbol
-			return {isIdent: false, text: String.fromCharCode(c), nextPos: i + 1};
+			return {
+				isIdent: false,
+				text: String.fromCharCode(c),
+				nextPos: i + 1,
+				startPos: i
+			};
 		}
 
-		return {isIdent: false, text: "", nextPos: len};
+		return {
+			isIdent: false,
+			text: "",
+			nextPos: len,
+			startPos: len
+		};
 	}
 }

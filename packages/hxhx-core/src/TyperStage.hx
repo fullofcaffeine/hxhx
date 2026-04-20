@@ -400,10 +400,17 @@ class TyperStage {
 		return {start: start, end: end};
 	}
 
-	static function functionNameRange(filePath:String, sig:TyFunSig):{start:Int, end:Int} {
-		final pos = sig.getPos();
+	static function declarationLineRange(filePath:String, pos:HxPos):{start:Int, end:Int} {
+		final start = pos == null || pos.getColumn() <= 0 ? 1 : pos.getColumn();
 		final line = sourceLine(filePath, pos == null ? 0 : pos.getLine());
-		final name = sig.getName();
+		if (line.length == 0)
+			return {start: start, end: start};
+		final end = line.length < start ? start : line.length;
+		return {start: start, end: end};
+	}
+
+	static function functionNameRange(filePath:String, name:String, pos:HxPos):{start:Int, end:Int} {
+		final line = sourceLine(filePath, pos == null ? 0 : pos.getLine());
 		final idx = line.indexOf(name);
 		final start = idx >= 0 ? idx + 1 : (pos == null || pos.getColumn() <= 0 ? 1 : pos.getColumn());
 		return {start: start, end: start + name.length};
@@ -418,9 +425,9 @@ class TyperStage {
 		return raw;
 	}
 
-	static function renderOverloadCandidate(filePath:String, sig:TyFunSig):String {
-		final pos = sig.getPos();
-		final range = functionNameRange(filePath, sig);
+	static function renderOverloadCandidate(filePath:String, sig:TyFunSig, useUnknownPos:Bool):String {
+		final pos = useUnknownPos ? HxPos.unknown() : sig.getPos();
+		final range = functionNameRange(filePath, sig.getName(), pos);
 		final names = sig.getArgNames();
 		final optional = sig.getArgOptional();
 		final args = sig.getArgs();
@@ -501,17 +508,18 @@ class TyperStage {
 		if (bestMatches.length == 1 && arityMatches.length == 1)
 			return bestMatches[0].getReturnType();
 		if (arityMatches.length > 1) {
-			final range = callRange(ctx.getFilePath(), pos);
+			final overloadDiagnosticPos = arityMatches[arityMatches.length - 1].getPos();
+			final range = declarationLineRange(ctx.getFilePath(), overloadDiagnosticPos);
 			final lines = [diagnosticFileName(ctx.getFilePath())
 				+ ":"
-				+ (pos == null ? 0 : pos.getLine())
+				+ (overloadDiagnosticPos == null ? 0 : overloadDiagnosticPos.getLine())
 				+ ": characters "
 				+ range.start
 				+ "-"
 				+ range.end
 				+ " : Ambiguous overload, candidates follow"];
 			for (candidate in arityMatches)
-				lines.push(renderOverloadCandidate(ctx.getFilePath(), candidate));
+				lines.push(renderOverloadCandidate(ctx.getFilePath(), candidate, true));
 			throw new TyperError(ctx.getFilePath(), pos, RAW_DIAGNOSTIC_PREFIX + lines.join("\n"));
 		}
 		if (arityMatches.length == 1)
