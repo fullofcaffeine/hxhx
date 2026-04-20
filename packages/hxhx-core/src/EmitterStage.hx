@@ -6437,6 +6437,16 @@ class EmitterStage {
 		return lines.length == 2 && lines[0] == placeholder && StringTools.startsWith(lines[1], "[@@@warning");
 	}
 
+	static function shouldEmitParsedStaticFields(moduleName:String):Bool {
+		if (moduleName == "StringTools")
+			return false;
+		if (StringTools.startsWith(moduleName, "Haxe_Int64"))
+			return false;
+		if (moduleName == "Haxe_ds_Vector")
+			return false;
+		return true;
+	}
+
 	static function patchStage3StringToolsShimForStage3(outAbs:String):Null<String> {
 		final shimName = "StringTools";
 		final shimFile = shimName + ".ml";
@@ -7148,7 +7158,7 @@ class EmitterStage {
 					// Stage 3 bring-up: hxhx full output uses a narrow StringTools surface before
 					// Stage3 can reliably emit the full std module.
 					final hasStringToolsHex = moduleName == "StringTools";
-					final emitParsedStaticFields = !hasStringToolsHex && !StringTools.startsWith(moduleName, "Haxe_Int64");
+					final emitParsedStaticFields = shouldEmitParsedStaticFields(moduleName);
 					if (hasStringToolsHex) {
 						for (line in stringToolsBootstrapShimSourceForStage3().split("\n"))
 							out.push(line);
@@ -7388,8 +7398,7 @@ class EmitterStage {
 					out.push("");
 
 					final parsedFields = HxClassDecl.getFields(mainClass);
-					final emitParsedStaticFields = mainModuleName != "StringTools"
-						&& !StringTools.startsWith(mainModuleName, "Haxe_Int64");
+					final emitParsedStaticFields = shouldEmitParsedStaticFields(mainModuleName);
 					final staticFieldTypeByName:Map<String, TyType> = new Map();
 					for (f in parsedFields) {
 						if (!emitParsedStaticFields)

@@ -13,6 +13,11 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			throw message + "\nexpected:\n" + expected + "\nactual:\n" + actual;
 	}
 
+	static function assertNotContains(haystack:String, needle:String, message:String):Void {
+		if (haystack.indexOf(needle) >= 0)
+			throw message + " (unexpected `" + needle + "`)";
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -177,6 +182,24 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 				'Main.hx:0: characters 1-11 : ... (?flags : Null<String>) -> Void',
 			].join("\n"),
 				'Ambiguous overload diagnostic should match Haxe 4.3.7 Issue10434 expected stderr.');
+
+			final vectorOutDir = haxe.io.Path.join([tmpRoot, 'vector_out']);
+			final vectorLengthArg = new HxFunctionArg("length", "Int", HxDefaultValue.NoDefault);
+			final vectorArrayArg = new HxFunctionArg("array", "Array<Dynamic>", HxDefaultValue.NoDefault);
+			final vectorLocalR = new HxFieldDecl("r", HxVisibility.Public, true, "Dynamic", HxExpr.ENew("haxe.ds.Vector", [HxExpr.EIdent("length")]));
+			final vectorLocalLen = new HxFieldDecl("len", HxVisibility.Public, true, "Int", HxExpr.EIdent("length"));
+			final vectorClass = new HxClassDecl("Vector", false, [
+				new HxFunctionDecl("new", HxVisibility.Public, false, [vectorLengthArg], "Void", [], ""),
+				new HxFunctionDecl("fromArrayCopy", HxVisibility.Public, true, [vectorArrayArg], "haxe.ds.Vector<Dynamic>",
+					[HxStmt.SReturn(HxExpr.EIdent("array"), HxPos.unknown())], "")
+			], [vectorLocalR, vectorLocalLen]);
+			final vectorDecl = new HxModuleDecl("haxe.ds", [], vectorClass, [vectorClass], false, false);
+			final vectorTyped = TyperStage.typeModule(new ParsedModule("", vectorDecl, "haxe/ds/Vector.hx"));
+			EmitterStage.emitToDir(new MacroExpandedProgram([vectorTyped], false), vectorOutDir, true, false);
+			final vectorMl = File.getContent(haxe.io.Path.join([vectorOutDir, "Haxe_ds_Vector.ml"]));
+			assertNotContains(vectorMl, "let r =", "Stage3 OCaml should not emit haxe.ds.Vector scanned local `r` as a static field.");
+			assertNotContains(vectorMl, "let len =", "Stage3 OCaml should not emit haxe.ds.Vector scanned local `len` as a static field.");
+			assertNotContains(vectorMl, "new_ (__hx_obj)", "Stage3 OCaml should not emit Vector local initialization that calls an unbound constructor.");
 		} catch (e:Dynamic) {
 			thrown = e;
 		}
