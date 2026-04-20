@@ -128,6 +128,10 @@ hxhx --ocaml -main Main -cp src --hxhx-no-emit
 - At each atomic checkpoint (typically after committing and pushing a bounded seam), review whether docs need updates.
   Record the outcome in the bead/checkpoint note, including "no docs update required" when the change is purely
   internal and does not affect user-facing workflows, flags, CI gates, release contracts, or required tooling.
+- At each atomic checkpoint, review the `README.md` **Goals status** table specifically.
+  Keep it aligned with the current production-readiness reality and with the owning bead plan.
+  If a checkpoint changes the production usability of any main goal, update the table in the same slice.
+  If the table does not change, record that decision in the relevant bead/checkpoint note.
 - Prefer one commit per verified step over one commit per long session.
 
 ## Landing the Plane (Session Completion)
