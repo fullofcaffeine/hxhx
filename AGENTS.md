@@ -466,6 +466,7 @@ Keep `README.md` up to date as milestones land.
 - Prefer documenting “why/what/how” briefly and linking to the deeper doc under `docs/` when it exists.
 - Keep public README/getting-started docs user-first: lead with intended production use cases, supported commands, and plain-language outcomes.
 - Do not put internal regression names, stage/gate jargon, CI marker taxonomy, or maintainer-only knobs in public quickstart sections unless each term is introduced in plain language and linked to a glossary or technical doc.
+- Do not write public README guidance that assumes contributor context, for example: "If you are working on the heavy Stage3 generic-function arity regression specifically, run it outside the default loop." Rewrite it as a user-facing action, or move it to a technical runbook with term definitions.
 - Put deep implementation details, bootstrap tuning, gate internals, and targeted regression commands in the relevant technical docs under `docs/`, with term definitions where needed.
 
 ## Bugs (Regression Tests)

@@ -5,39 +5,40 @@
 # hxhx
 
 [![CI](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml)
-[![Compatibility Gate 1 Lite](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1-lite.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1-lite.yml)
-[![Compatibility Gate 2 Lite](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2-lite.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2-lite.yml)
-[![Compatibility Gate 3 Builtin](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3-builtin.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3-builtin.yml)
-[![JS Oracle Smoke](https://github.com/fullofcaffeine/hxhx/actions/workflows/js-oracle-smoke.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/js-oracle-smoke.yml)
-[![Compatibility Gate 1](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1.yml)
-[![Compatibility Gate 2](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2.yml)
-[![Compatibility Gate 3](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.15.0-blue)](https://github.com/fullofcaffeine/hxhx/releases)
 
-`hxhx` is a Haxe-in-Haxe compiler stack targeting Haxe `4.3.7` compatibility.
-This repo also contains `reflaxe.ocaml` and native promotion tooling so Reflaxe targets can be compiled to native plugin artifacts.
+`hxhx` is a Haxe-in-Haxe compiler stack that is working toward Haxe `4.3.7`
+compatibility. This repo also contains `reflaxe.ocaml`, a Reflaxe target for
+compiling Haxe code to OCaml.
+
+The practical user story today is:
+- use `reflaxe.ocaml` with upstream Haxe to produce OCaml,
+- try the native `hxhx` compiler path for supported experimental lanes,
+- package Reflaxe targets as native artifacts for `hxhx`,
+- embed `hxhx` as a compiler subprocess behind a stable command boundary.
+
+`hxhx` is not yet a general drop-in replacement for upstream Haxe. That full
+replacement goal is tracked separately in the technical roadmap and release
+contracts.
 
 ## Start here
 
-If you are new, read:
-- `docs/README.md`
+If you are new, start with:
 - `docs/01-getting-started/START_HERE.md`
-- `docs/00-project/GLOSSARY.md`
-- `docs/00-project/CI_GATES.md`
-
-That guide gives a beginner path for:
-1. building/running `hxhx`,
-2. choosing compat vs native quickstart lanes,
-3. checking what works today at a glance,
-4. using upstream `haxe` with `reflaxe.ocaml`,
-5. promoting a Reflaxe target/compiler to native plugin artifacts,
-6. understanding plugin vs builtin target modes,
-7. embedding `hxhx` via a supported subprocess contract.
-
-Lane chooser + mini glossary shortcuts:
+- `docs/01-getting-started/WHAT_WORKS_TODAY.md`
 - `docs/01-getting-started/CHOOSE_YOUR_LANE.md`
-- `docs/01-getting-started/TERMS_YOU_MUST_KNOW.md`
+- `docs/00-project/GLOSSARY.md`
+
+Those docs answer the first questions most users have:
+1. What can I use today?
+2. Should I use upstream Haxe, `hxhx`, or both?
+3. How do I compile Haxe to OCaml?
+4. How do I try native `hxhx` without relying on upstream Haxe?
+5. Where do I find the deeper compiler and CI details?
+
+If a term is unfamiliar, use `docs/01-getting-started/TERMS_YOU_MUST_KNOW.md`
+or `docs/00-project/GLOSSARY.md`.
 
 ## Quick setup
 
@@ -50,30 +51,55 @@ HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
 
 ## Intended use cases
 
-Use `reflaxe.ocaml` with upstream Haxe when you want to compile Haxe code to
-OCaml today:
+### Compile Haxe to OCaml today
+
+Use `reflaxe.ocaml` with upstream Haxe when you want the most practical path for
+turning Haxe code into OCaml output:
 
 ```bash
 haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=native --no-output
 ```
 
-Use `hxhx` when you want to test the Haxe-in-Haxe compiler path. For example,
-this runs the native JS compiler lane without falling back to upstream `haxe`:
+Start here:
+- `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
+- `packages/reflaxe.ocaml/README.md`
+
+### Try the native hxhx compiler
+
+Use `hxhx` when you want to test this repo's Haxe-in-Haxe compiler path. This
+example compiles a JS entry point with upstream-Haxe fallback disabled:
 
 ```bash
 HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --js out/main.js -cp src -main Main --hxhx-no-run
 ```
 
-Use `hxhx` as an embedded compiler subprocess when another tool needs a stable
-compiler command boundary:
+Start here:
+- `docs/01-getting-started/QUICKSTART_NATIVE.md`
+- `docs/01-getting-started/WHAT_WORKS_TODAY.md`
+
+### Package Reflaxe targets for native hxhx hosting
+
+Use the promotion workflow when you are a Reflaxe target author and want to
+build native plugin or builtin-host artifacts for `hxhx`:
+
+- `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
+- `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
+
+### Embed hxhx in another tool
+
+Use `hxhx` as a subprocess when another tool needs a stable compiler command
+boundary:
 
 - `docs/02-user-guide/EMBEDDING.md`
 
-Maintainer-only test loops, bootstrap regeneration, performance probes, and
-internal regression commands live in the technical docs instead of this public
-quickstart:
+## What is intentionally not in this README
+
+Maintainer-only test loops, bootstrap regeneration, performance probes, release
+gate internals, and targeted regression commands live in technical docs instead
+of the public quickstart:
 
 - `docs/01-getting-started/TESTING.md`
+- `docs/00-project/CI_GATES.md`
 - `docs/00-project/STAGE0_POLICY.md`
 - `docs/benchmarks/HXHX_KPI_BASELINE.md`
 
@@ -103,7 +129,7 @@ quickstart:
   - `docs/02-user-guide/EMBEDDING.md`
   - Runnable example: `npm run hxhx:example:embedding-subprocess`
 
-## Core concepts (recommended before deep docs)
+## Core concepts
 
 - `docs/02-user-guide/concepts/execution_modes.md`
 - `docs/02-user-guide/concepts/native_mode_pipeline.md`
@@ -125,18 +151,18 @@ For upstream `haxe` + `reflaxe.ocaml` plugin packaging, `-D ocaml_plugin_mode=1`
 Those filters apply at emitted-artifact time so plugin packaging can omit host-provided units without changing typing.
 `ocaml_module_prefix` renames emitted Haxe compilation units deterministically, which lets distinct promoted plugins avoid unit-name collisions without rewriting host/runtime-provided modules.
 
-## Current status (concise)
+## Current status
 
-- Compatibility baseline: **Haxe `4.3.7`**.
-- Scoped replacement bundle and stage0-forbidden policy checks are wired and tracked.
-- Native JS lane (`--js <file>`) exists as a scoped MVP lane with explicit in/out-of-scope matrix:
+- `reflaxe.ocaml` with upstream Haxe is the practical OCaml output path today.
+- Native `hxhx` is usable for scoped compiler experiments and selected lanes, not
+  yet as a universal Haxe replacement.
+- Native JS output has a documented scope:
   - `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`
-- Full upstream compatibility gates (Gate 1/2/3) run on weekly/manual cadence (see `docs/00-project/CI_GATES.md`).
-- Full1 strict suite scaffolding uses a stable bootstrap-based matrix plus a non-blocking source-build probe lane for `server`/`optimization` (`FULL1_SOURCE_BUILD_PROBE:*` evidence in CI artifacts).
-- Full1 also has a bootstrap-source reconciliation diagnostic lane that classifies `server`/`optimization` outcomes on the same commit (`FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:*`).
-- Semantic-diff PR canary is now scoped to stdlib/runtimegen-sensitive changes and always publishes triage artifacts (`semantic-diff-pr-artifacts`).
-- Macro runtime mode parity is tracked weekly in both `external-host` and `inproc` lanes (see `.github/workflows/macro-runtime-parity-weekly.yml` and `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`).
-- Native lanes default to in-process macro runtime (`inproc`); fallback/rollback remains available with `HXHX_MACRO_RUNTIME_MODE=external-host`.
+- Full upstream Haxe `4.3.7` compatibility is an active project goal and must be
+  proven by the release gates before it is claimed publicly:
+  - `docs/01-getting-started/HXHX_1_0_ROADMAP.md`
+  - `docs/00-project/FULL_1_0_CONTRACT.md`
+  - `docs/00-project/CI_GATES.md`
 
 ## Command catalog
 
