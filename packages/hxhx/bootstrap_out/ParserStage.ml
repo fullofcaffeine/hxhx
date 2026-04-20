@@ -218,7 +218,7 @@ let parseViaNativeHooks = fun source expectedMainClass -> let tempString = ref (
     tempString := __assign_247;
     __assign_247
   ));
-  ParserStageNativeDecode.decodeNativeProtocol (!tempString : string)
+  ParserStageNativeDecode.decodeNativeProtocol (!tempString : string) (source : string)
 )
 
 let parse = fun source filePath -> let expectedMainClass = (expectedMainClassFromFile (filePath : string) : string) in let tempHxModuleDecl = ref (Obj.magic (HxRuntime.hx_null) : HxModuleDecl.t) in let enrichNativeDecl = fun nativeDecl -> try let __fallback_result_229 = let main = ref (Obj.magic (HxModuleDecl.getMainClass (Obj.magic nativeDecl))) in let mainName = ref (HxClassDecl.getName (Obj.magic (!main)) : string) in let staticPatchApplied = ref false in let scannedClassStaticsByName = HxMap.create_string () in (

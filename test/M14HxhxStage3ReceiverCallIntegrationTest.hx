@@ -154,7 +154,6 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 				'\toverload static function extractTar(?flags:Array<String>):Void;',
 				'\toverload static function extractTar(?flags:String):Void;',
 				'}',
-				'',
 				'class Main {',
 				'\tstatic function main() {',
 				'\t\tToolCache.extractTar();',
@@ -177,11 +176,21 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			}
 			final upstream437Diagnostic = TyperStage.extractRawDiagnostic(upstream437Failure);
 			assertEquals(upstream437Diagnostic, [
-				'Main.hx:3: characters 2-57 : Ambiguous overload, candidates follow',
-				'Main.hx:0: characters 1-11 : ... (?flags : Null<Array<String>>) -> Void',
-				'Main.hx:0: characters 1-11 : ... (?flags : Null<String>) -> Void',
+				'Main.hx:7: characters 2-24 : Ambiguous overload, candidates follow',
+				'Main.hx:2: characters 27-37 : ... (?flags : Null<Array<String>>) -> Void',
+				'Main.hx:3: characters 27-37 : ... (?flags : Null<String>) -> Void',
 			].join("\n"),
 				'Ambiguous overload diagnostic should match Haxe 4.3.7 Issue10434 expected stderr.');
+			final upstream437BodyStart = upstream437OverloadSrc.indexOf('\n\t\tToolCache.extractTar();');
+			final rebasedBody = HxParser.parseFunctionBodyTextAt('\n\t\tToolCache.extractTar();\n\t', upstream437OverloadSrc, upstream437BodyStart);
+			assertEquals(Std.string(rebasedBody.length), '1', 'Native method_body slice should parse to one rebased expression statement.');
+			switch (rebasedBody[0]) {
+				case SExpr(_, pos):
+					assertEquals(Std.string(pos.getLine()), '7', 'Native method_body statement line should be rebased to the original module.');
+					assertEquals(Std.string(pos.getColumn()), '3', 'Native method_body statement column should preserve the original indentation.');
+				case _:
+					throw 'Native method_body slice did not parse to an expression statement.';
+			}
 
 			final vectorOutDir = haxe.io.Path.join([tmpRoot, 'vector_out']);
 			final vectorLengthArg = new HxFunctionArg("length", "Int", HxDefaultValue.NoDefault);

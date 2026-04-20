@@ -596,9 +596,9 @@ class ParserStage {
 			&& expectedMainClass.length > 0 ? native.NativeParser.parseModuleDeclWithExpected(source,
 				expectedMainClass) : native.NativeParser.parseModuleDecl(source);
 		#if hxhx_stage0_no_native_decode_extract
-		return decodeNativeProtocol(encoded);
+		return decodeNativeProtocol(encoded, source);
 		#else
-		return ParserStageNativeDecode.decodeNativeProtocol(encoded);
+		return ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
 		#end
 	}
 
@@ -1678,13 +1678,16 @@ class ParserStage {
 		if (tok.text == ";") {
 			if (!capture)
 				return {body: [], bodyText: "", nextPos: tok.nextPos};
-			final exprText = StringTools.trim(source.substring(bodyStart >= 0 ? bodyStart : start, tok.nextPos - 1));
+			final rawStart = bodyStart >= 0 ? bodyStart : start;
+			final rawExpr = source.substring(rawStart, tok.nextPos - 1);
+			final leading = leadingWhitespaceLength(rawExpr);
+			final exprText = StringTools.trim(rawExpr);
 			if (exprText.length == 0)
 				return {body: [], bodyText: "", nextPos: tok.nextPos};
 			final bodyText = exprText + ";";
 			var body = new Array<HxStmt>();
 			try {
-				body = HxParser.parseFunctionBodyText(bodyText);
+				body = HxParser.parseFunctionBodyTextAt(bodyText, source, rawStart + leading);
 				if (hasUnsupportedStmtList(body))
 					body = [];
 			} catch (_:HxParseError) {
@@ -1706,7 +1709,7 @@ class ParserStage {
 		var body = new Array<HxStmt>();
 		if (block.bodyText.length > 0) {
 			try {
-				body = HxParser.parseFunctionBodyText(block.bodyText);
+				body = HxParser.parseFunctionBodyTextAt(block.bodyText, source, tok.nextPos);
 				if (hasUnsupportedStmtList(body))
 					body = [];
 			} catch (_:HxParseError) {
@@ -1716,6 +1719,19 @@ class ParserStage {
 			}
 		}
 		return {body: body, bodyText: body.length == 0 ? "" : block.bodyText, nextPos: block.nextPos};
+	}
+
+	static function leadingWhitespaceLength(text:String):Int {
+		if (text == null || text.length == 0)
+			return 0;
+		var i = 0;
+		while (i < text.length) {
+			final c = text.charCodeAt(i);
+			if (c != " ".code && c != "\t".code && c != "\n".code && c != "\r".code)
+				break;
+			i += 1;
+		}
+		return i;
 	}
 
 	static function hasUnsupportedStmtList(stmts:Array<HxStmt>):Bool {
@@ -1939,7 +1955,7 @@ class ParserStage {
 		- See `docs/02-user-guide/HXHX_NATIVE_FRONTEND_PROTOCOL.md:1` for the exact
 		  wire format and versioning rules.
 	**/
-	static function decodeNativeProtocol(encoded:String):HxModuleDecl {
+	static function decodeNativeProtocol(encoded:String, ?source:String):HxModuleDecl {
 		final lines = encoded.split("\n").filter(l -> l.length > 0);
 		if (lines.length == 0) {
 			throw "Native frontend: missing/invalid protocol header";
@@ -1959,6 +1975,7 @@ class ParserStage {
 		final fieldPayloads = new Array<String>();
 		final staticFinalPayloads = new Array<String>();
 		final methodBodies:Map<String, String> = [];
+		final methodBodyStarts:Map<String, Int> = [];
 		final functions = new Array<HxFunctionDecl>();
 		final fields = new Array<HxFieldDecl>();
 		var sawOk = false;
@@ -2014,7 +2031,13 @@ class ParserStage {
 						if (nl > 0) {
 							final name = payload.substr(0, nl);
 							if (!methodBodies.exists(name)) {
-								methodBodies.set(name, payload.substr(nl + 1));
+								final bodySource = payload.substr(nl + 1);
+								methodBodies.set(name, bodySource);
+								if (source != null && source.length > 0 && bodySource.length > 0) {
+									final bodyStart = source.indexOf(bodySource);
+									if (bodyStart >= 0)
+										methodBodyStarts.set(name, bodyStart);
+								}
 							}
 						}
 					case _:
@@ -2032,7 +2055,8 @@ class ParserStage {
 				final parts = mp.split("|");
 				parts.length == 0 ? "" : parts[0];
 			};
-			functions.push(decodeMethodPayload(mp, methodBodies.exists(name) ? methodBodies.get(name) : null));
+			functions.push(decodeMethodPayload(mp, methodBodies.exists(name) ? methodBodies.get(name) : null,
+				methodBodyStarts.exists(name) ? methodBodyStarts.get(name) : -1, source));
 		}
 
 		final seenFields:Map<String, Bool> = [];
@@ -2058,7 +2082,7 @@ class ParserStage {
 		return new HxModuleDecl(packagePath, imports, cls, [cls], headerOnly, hasToplevelMain);
 	}
 
-	static function decodeMethodPayload(payload:String, methodBodySrc:Null<String>):HxFunctionDecl {
+	static function decodeMethodPayload(payload:String, methodBodySrc:Null<String>, methodBodyStart:Int = -1, ?source:String):HxFunctionDecl {
 		// Bootstrap note: payload is a `|` separated list (unescaped for '|').
 		//
 		// v=1:
@@ -2174,7 +2198,7 @@ class ParserStage {
 			// Debug aid: allow logging parse holes with the method name.
 			HxParser.debugBodyLabel = name;
 			try {
-				outBody = HxParser.parseFunctionBodyText(methodBodySrc);
+				outBody = HxParser.parseFunctionBodyTextAt(methodBodySrc, source, methodBodyStart);
 			} catch (e:HxParseError) {
 				if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_FAIL") == "1") {
 					try {

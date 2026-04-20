@@ -387,13 +387,13 @@ class TyperStage {
 	}
 
 	static function callRange(filePath:String, pos:HxPos):{start:Int, end:Int} {
-		final start = pos == null || pos.getColumn() <= 0 ? 1 : pos.getColumn();
+		final start = pos == null || pos.getColumn() <= 0 ? 0 : pos.getColumn() - 1;
 		final line = sourceLine(filePath, pos == null ? 0 : pos.getLine());
 		if (line.length == 0)
 			return {start: start, end: start};
-		final startIndex = start > 0 ? start - 1 : 0;
+		final startIndex = start > 0 ? start : 0;
 		final rest = startIndex < line.length ? line.substr(startIndex) : "";
-		var end = line.length + 1;
+		var end = line.length;
 		final semicolon = rest.indexOf(";");
 		if (semicolon >= 0)
 			end = start + semicolon;
@@ -425,8 +425,8 @@ class TyperStage {
 		return raw;
 	}
 
-	static function renderOverloadCandidate(filePath:String, sig:TyFunSig, useUnknownPos:Bool):String {
-		final pos = useUnknownPos ? HxPos.unknown() : sig.getPos();
+	static function renderOverloadCandidate(filePath:String, sig:TyFunSig):String {
+		final pos = sig.getPos();
 		final range = functionNameRange(filePath, sig.getName(), pos);
 		final names = sig.getArgNames();
 		final optional = sig.getArgOptional();
@@ -508,18 +508,17 @@ class TyperStage {
 		if (bestMatches.length == 1 && arityMatches.length == 1)
 			return bestMatches[0].getReturnType();
 		if (arityMatches.length > 1) {
-			final overloadDiagnosticPos = arityMatches[arityMatches.length - 1].getPos();
-			final range = declarationLineRange(ctx.getFilePath(), overloadDiagnosticPos);
+			final range = callRange(ctx.getFilePath(), pos);
 			final lines = [diagnosticFileName(ctx.getFilePath())
 				+ ":"
-				+ (overloadDiagnosticPos == null ? 0 : overloadDiagnosticPos.getLine())
+				+ (pos == null ? 0 : pos.getLine())
 				+ ": characters "
 				+ range.start
 				+ "-"
 				+ range.end
 				+ " : Ambiguous overload, candidates follow"];
 			for (candidate in arityMatches)
-				lines.push(renderOverloadCandidate(ctx.getFilePath(), candidate, true));
+				lines.push(renderOverloadCandidate(ctx.getFilePath(), candidate));
 			throw new TyperError(ctx.getFilePath(), pos, RAW_DIAGNOSTIC_PREFIX + lines.join("\n"));
 		}
 		if (arityMatches.length == 1)

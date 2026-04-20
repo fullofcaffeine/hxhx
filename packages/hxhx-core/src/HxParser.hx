@@ -295,6 +295,107 @@ class HxParser {
 		return p.parseFunctionBodyStatementsBestEffort();
 	}
 
+	/**
+		Parse a raw function-body slice and rebase statement positions to the original module.
+
+		Why
+		- Native frontend protocol bodies are transported as source slices. `parseFunctionBodyText`
+		  wraps those slices in synthetic braces, which makes every recovered statement position
+		  relative to the wrapper instead of the user's `.hx` file.
+		- Diagnostics that rely on statement positions, such as ambiguous overload errors, must
+		  report the real call site to match upstream Haxe behavior.
+
+		What
+		- Parses the body exactly like `parseFunctionBodyText`.
+		- If the caller provides the original source and the slice's absolute start index, shifts
+		  every statement position back into that source.
+
+		How
+		- `parseFunctionBodyText` prepends `"{\n"` before parsing. Rebasing subtracts that
+		  synthetic line/index before adding the original slice start.
+	**/
+	public static function parseFunctionBodyTextAt(bodySource:String, originalSource:String, bodyStartIndex:Int):Array<HxStmt> {
+		final stmts = parseFunctionBodyText(bodySource);
+		if (originalSource == null || bodyStartIndex < 0 || bodyStartIndex > originalSource.length)
+			return stmts;
+		final base = sourcePosAt(originalSource, bodyStartIndex);
+		final shifted = new Array<HxStmt>();
+		for (stmt in stmts)
+			shifted.push(rebaseFunctionBodyStmt(stmt, base, bodyStartIndex));
+		return shifted;
+	}
+
+	static function sourcePosAt(source:String, index:Int):HxPos {
+		var line = 1;
+		var lineStart = 0;
+		var i = 0;
+		while (i < index) {
+			final c = source.charCodeAt(i);
+			i += 1;
+			if (c == "\n".code) {
+				line += 1;
+				lineStart = i;
+			}
+		}
+		return new HxPos(index, line, index - lineStart + 1);
+	}
+
+	static function rebaseFunctionBodyPos(pos:HxPos, base:HxPos, bodyStartIndex:Int):HxPos {
+		if (pos == null || pos.getLine() <= 0)
+			return HxPos.unknown();
+		final bodyIndex = pos.getIndex() - 2; // parseFunctionBodyText prepends "{\n".
+		final bodyLine = pos.getLine() - 1;
+		final absoluteLine = base.getLine() + bodyLine - 1;
+		final absoluteColumn = bodyLine <= 1 ? base.getColumn() + pos.getColumn() - 1 : pos.getColumn();
+		return new HxPos(bodyStartIndex + (bodyIndex < 0 ? 0 : bodyIndex), absoluteLine, absoluteColumn);
+	}
+
+	static function rebaseFunctionBodyStmt(stmt:HxStmt, base:HxPos, bodyStartIndex:Int):HxStmt {
+		return switch (stmt) {
+			case SBlock(stmts, pos):
+				final shifted = new Array<HxStmt>();
+				for (s in stmts)
+					shifted.push(rebaseFunctionBodyStmt(s, base, bodyStartIndex));
+				SBlock(shifted, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SVar(name, typeHint, init, pos):
+				SVar(name, typeHint, init, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SIf(cond, thenBranch, elseBranch, pos):
+				SIf(cond, rebaseFunctionBodyStmt(thenBranch, base, bodyStartIndex),
+					elseBranch == null ? null : rebaseFunctionBodyStmt(elseBranch, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SForIn(name, iterable, body, pos):
+				SForIn(name, iterable, rebaseFunctionBodyStmt(body, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SForKeyValue(keyName, valueName, iterable, body, pos):
+				SForKeyValue(keyName, valueName, iterable, rebaseFunctionBodyStmt(body, base, bodyStartIndex),
+					rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SWhile(cond, body, pos):
+				SWhile(cond, rebaseFunctionBodyStmt(body, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SDoWhile(body, cond, pos):
+				SDoWhile(rebaseFunctionBodyStmt(body, base, bodyStartIndex), cond, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SSwitch(scrutinee, patterns, bodies, pos):
+				final shiftedBodies = new Array<HxStmt>();
+				for (body in bodies)
+					shiftedBodies.push(rebaseFunctionBodyStmt(body, base, bodyStartIndex));
+				SSwitch(scrutinee, patterns, shiftedBodies, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case STry(tryBody, catches, pos):
+				final shiftedCatches = new Array<{name:String, typeHint:String, body:HxStmt}>();
+				for (c in catches)
+					shiftedCatches.push({name: c.name, typeHint: c.typeHint, body: rebaseFunctionBodyStmt(c.body, base, bodyStartIndex)});
+				STry(rebaseFunctionBodyStmt(tryBody, base, bodyStartIndex), shiftedCatches, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SBreak(pos):
+				SBreak(rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SContinue(pos):
+				SContinue(rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SThrow(expr, pos):
+				SThrow(expr, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SReturnVoid(pos):
+				SReturnVoid(rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SReturn(expr, pos):
+				SReturn(expr, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+			case SExpr(expr, pos):
+				SExpr(expr, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+		}
+	}
+
 	static function normalizeInlineJsConditionalMarkers(bodySource:String):String {
 		// Stage3 body slices can still contain inline conditional-compilation markers,
 		// notably upstream JS-specific assertions shaped like:

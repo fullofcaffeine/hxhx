@@ -29,7 +29,7 @@ class ParserStageNativeDecode {
 		- See `docs/02-user-guide/HXHX_NATIVE_FRONTEND_PROTOCOL.md:1` for the exact
 		  wire format and versioning rules.
 	**/
-	public static function decodeNativeProtocol(encoded:String):HxModuleDecl {
+	public static function decodeNativeProtocol(encoded:String, ?source:String):HxModuleDecl {
 		final lines = encoded.split("\n").filter(l -> l.length > 0);
 		if (lines.length == 0) {
 			throw "Native frontend: missing/invalid protocol header";
@@ -49,6 +49,7 @@ class ParserStageNativeDecode {
 		final fieldPayloads = new Array<String>();
 		final staticFinalPayloads = new Array<String>();
 		final methodBodies:Map<String, String> = [];
+		final methodBodyStarts:Map<String, Int> = [];
 		final functions = new Array<HxFunctionDecl>();
 		final fields = new Array<HxFieldDecl>();
 		var sawOk = false;
@@ -104,7 +105,13 @@ class ParserStageNativeDecode {
 						if (nl > 0) {
 							final name = payload.substr(0, nl);
 							if (!methodBodies.exists(name)) {
-								methodBodies.set(name, payload.substr(nl + 1));
+								final bodySource = payload.substr(nl + 1);
+								methodBodies.set(name, bodySource);
+								if (source != null && source.length > 0 && bodySource.length > 0) {
+									final bodyStart = source.indexOf(bodySource);
+									if (bodyStart >= 0)
+										methodBodyStarts.set(name, bodyStart);
+								}
 							}
 						}
 					case _:
@@ -122,7 +129,8 @@ class ParserStageNativeDecode {
 				final parts = mp.split("|");
 				parts.length == 0 ? "" : parts[0];
 			};
-			functions.push(decodeMethodPayload(mp, methodBodies.exists(name) ? methodBodies.get(name) : null));
+			functions.push(decodeMethodPayload(mp, methodBodies.exists(name) ? methodBodies.get(name) : null,
+				methodBodyStarts.exists(name) ? methodBodyStarts.get(name) : -1, source));
 		}
 
 		final seenFields:Map<String, Bool> = [];
@@ -148,7 +156,7 @@ class ParserStageNativeDecode {
 		return new HxModuleDecl(packagePath, imports, cls, [cls], headerOnly, hasToplevelMain);
 	}
 
-	static function decodeMethodPayload(payload:String, methodBodySrc:Null<String>):HxFunctionDecl {
+	static function decodeMethodPayload(payload:String, methodBodySrc:Null<String>, methodBodyStart:Int = -1, ?source:String):HxFunctionDecl {
 		// Bootstrap note: payload is a `|` separated list (unescaped for '|').
 		//
 		// v=1:
@@ -264,7 +272,7 @@ class ParserStageNativeDecode {
 			// Debug aid: allow logging parse holes with the method name.
 			HxParser.debugBodyLabel = name;
 			try {
-				outBody = HxParser.parseFunctionBodyText(methodBodySrc);
+				outBody = HxParser.parseFunctionBodyTextAt(methodBodySrc, source, methodBodyStart);
 			} catch (e:HxParseError) {
 				if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_FAIL") == "1") {
 					try {

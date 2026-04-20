@@ -1305,13 +1305,16 @@ class ParserStageScanHelpers {
 		if (tok.text == ";") {
 			if (!capture)
 				return {body: [], bodyText: "", nextPos: tok.nextPos};
-			final exprText = StringTools.trim(source.substring(bodyStart >= 0 ? bodyStart : start, tok.nextPos - 1));
+			final rawStart = bodyStart >= 0 ? bodyStart : start;
+			final rawExpr = source.substring(rawStart, tok.nextPos - 1);
+			final leading = leadingWhitespaceLength(rawExpr);
+			final exprText = StringTools.trim(rawExpr);
 			if (exprText.length == 0)
 				return {body: [], bodyText: "", nextPos: tok.nextPos};
 			final bodyText = exprText + ";";
 			var body = new Array<HxStmt>();
 			try {
-				body = HxParser.parseFunctionBodyText(bodyText);
+				body = HxParser.parseFunctionBodyTextAt(bodyText, source, rawStart + leading);
 				if (hasUnsupportedStmtList(body))
 					body = [];
 			} catch (_:HxParseError) {
@@ -1333,7 +1336,7 @@ class ParserStageScanHelpers {
 		var body = new Array<HxStmt>();
 		if (block.bodyText.length > 0) {
 			try {
-				body = HxParser.parseFunctionBodyText(block.bodyText);
+				body = HxParser.parseFunctionBodyTextAt(block.bodyText, source, tok.nextPos);
 				if (hasUnsupportedStmtList(body))
 					body = [];
 			} catch (_:HxParseError) {
@@ -1343,6 +1346,19 @@ class ParserStageScanHelpers {
 			}
 		}
 		return {body: body, bodyText: body.length == 0 ? "" : block.bodyText, nextPos: block.nextPos};
+	}
+
+	static function leadingWhitespaceLength(text:String):Int {
+		if (text == null || text.length == 0)
+			return 0;
+		var i = 0;
+		while (i < text.length) {
+			final c = text.charCodeAt(i);
+			if (c != " ".code && c != "\t".code && c != "\n".code && c != "\r".code)
+				break;
+			i += 1;
+		}
+		return i;
 	}
 
 	static function hasUnsupportedStmtList(stmts:Array<HxStmt>):Bool {
