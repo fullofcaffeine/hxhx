@@ -1267,6 +1267,14 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    var directVector = new haxe.ds.Vector(3);',
 				'    directVector[1] = 9;',
 				'    Sys.println("vector-new=" + directVector.length + ":" + directVector[1]);',
+				'    var postValues = [10, 20, 30];',
+				'    var postIndex = 0;',
+				'    Sys.println("post-index-read=" + postValues[postIndex++] + ":" + postIndex);',
+				'    Sys.println("post-local=" + postIndex++ + ":" + postIndex);',
+				'    var postField = { n: 3 };',
+				'    Sys.println("post-field=" + postField.n++ + ":" + postField.n);',
+				'    postValues[1]++;',
+				'    Sys.println("post-array-slot=" + postValues[1]);',
 				'    var diffEquivs = [];',
 				'    var diffLookup = [];',
 				'    var diffEquivIndex = -1;',
@@ -1604,6 +1612,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "var __hx_array = new Array(__hx_len < 0 ? 0 : __hx_len);", "Vector constructor should use JS array storage");
 			assertNotContains(js, "__hx_cls_haxe_ds_Vector.r =", "Vector local variables should not leak as static fields");
 			assertNotContains(js, "__hx_cls_haxe_ds_Vector.len =", "Vector local variables should not leak as static fields");
+			assertContains(js, "return __hx_old;", "postfix increment should return the old value in expression positions");
 			assertContains(js, "this.value", "interpolated this-field access should emit the JS this receiver");
 			assertNotContains(js, "this_.value", "interpolated this-field access should not mangle this as an identifier");
 			assertContains(js, "__hx_cls_LocalOpVector.prototype.__hx_op_add = __hx_cls_LocalOpVector.prototype.add",
@@ -1724,6 +1733,10 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "intmap=answer:true:true:null", "IntMap should support diff-style get/exists/remove lookups");
 			assertContains(stdout, "vector-copy=5:6:2", "Vector.fromArrayCopy should return a shallow copy isolated from later source mutation");
 			assertContains(stdout, "vector-new=3:9", "Vector constructor should return indexable JS array storage");
+			assertContains(stdout, "post-index-read=10:1", "postfix index increment should read with the old index and then update it");
+			assertContains(stdout, "post-local=1:2", "postfix local increment should return the old value and then update it");
+			assertContains(stdout, "post-field=3:4", "postfix field increment should return the old value and then update it");
+			assertContains(stdout, "post-array-slot=21", "postfix array slot increment should write the incremented slot value");
 			assertContains(stdout, "diff-equiv=7:0", "semicolonless anonymous object initializers should not drop following assignments");
 			assertContains(stdout, "interp-this=[IV +4]", "interpolated this-field access should execute through the JS this receiver");
 			assertContains(stdout, "abstract-op=7:7:LV:2", "abstract operator slots should execute add/addAssign/read/write methods");

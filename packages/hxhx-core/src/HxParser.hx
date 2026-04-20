@@ -1834,15 +1834,10 @@ class HxParser {
 						bump();
 					e = EArrayAccess(e, index);
 				case TOther(c) if ((c == "+".code || c == "-".code) && nextIsAdjacentOther(c)):
-					// Bring-up lowering: treat postfix increment/decrement as compound assignment.
-					//
-					// Scope
-					// - This intentionally models statement-style usage (`i++`, `i--`) used in loops.
-					// - Expression-level old/new value distinction is deferred.
-					final op = (c == "+".code) ? "+=" : "-=";
+					final op = (c == "+".code) ? "post++" : "post--";
 					bump();
 					bump();
-					e = EBinop(op, e, EInt(1));
+					e = EUnop(op, e);
 				case _:
 					break;
 			}

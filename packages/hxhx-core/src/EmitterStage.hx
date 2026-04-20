@@ -3569,6 +3569,21 @@ class EmitterStage {
 				// Non-goal: correct numeric tower (Int vs Float) or full operator set.
 				// If we can't emit safely, fall back to bring-up poison.
 				switch (op) {
+					case "post++" | "post--":
+						switch (expr) {
+							case EIdent(name) if (isMutableLocalRefIdent(name)):
+								final ident = ocamlValueIdent(name);
+								final binop = op == "post++" ? "HxInt.add" : "HxInt.sub";
+								"(let __hx_old = (!"
+								+ ident
+								+ ") in ("
+								+ ident
+								+ " := "
+								+ binop
+								+ " __hx_old 1; __hx_old))";
+							case _:
+								"(Obj.magic 0)";
+						}
 					case "!":
 						"(not (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
 					case "-":
@@ -4137,7 +4152,7 @@ class EmitterStage {
 					// Stage 3: allow a tiny subset of unary operators in return positions so bring-up
 					// programs can become incrementally more semantic.
 					switch (op) {
-						case "!" | "-":
+						case "!" | "-" | "post++" | "post--":
 							hasBringupPoison(inner);
 						case _:
 							true;
@@ -4331,6 +4346,9 @@ class EmitterStage {
 			case EBinop(_op, left, right):
 				collectAssignedNamesInExprRec(left, out);
 				collectAssignedNamesInExprRec(right, out);
+			case EUnop("post++" | "post--", EIdent(name)):
+				if (name != null && name.length > 0)
+					out.set(name, true);
 			case EUnop(_op, inner):
 				collectAssignedNamesInExprRec(inner, out);
 			case ECall(callee, args):

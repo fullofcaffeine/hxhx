@@ -59,6 +59,8 @@ class JsExprEmitter {
 				emitMacroExpr(inner, wrappers, scope);
 			case EMacroType(typeText):
 				emitMacroType(typeText);
+			case EUnop(op, inner) if (op == "post++" || op == "post--"):
+				emitPostfixIncDec(op, inner, scope);
 			case EUnop(op, inner):
 				"(" + op + emit(inner, scope) + ")";
 			case EBinop(op, left, right):
@@ -1473,6 +1475,39 @@ class JsExprEmitter {
 		final r = emit(right, scope);
 		return "((" + l + " != null && typeof " + l + ".__hx_op_addAssign === \"function\") ? (" + l + ".__hx_op_addAssign(" + r + "), " + l + ") : (" + l
 			+ " += " + r + "))";
+	}
+
+	static function emitPostfixIncDec(op:String, target:HxExpr, scope:JsEmitScope):String {
+		final delta = op == "post++" ? "1" : "-1";
+		return switch (target) {
+			case EIdent(_):
+				final ref = emit(target, scope);
+				"(function(){ var __hx_old = " + ref + "; " + ref + " = (__hx_old + " + delta + "); return __hx_old; })()";
+			case EField(obj, field):
+				final objJs = emit(obj, scope);
+				final prop = JsNameMangler.propertySuffix(field);
+				"(function(__hx_obj){ var __hx_old = __hx_obj"
+				+ prop
+				+ "; __hx_obj"
+				+ prop
+				+ " = (__hx_old + "
+				+ delta
+				+ "); return __hx_old; })("
+				+ objJs
+				+ ")";
+			case EArrayAccess(array, index):
+				final arrayJs = emit(array, scope);
+				final indexJs = emit(index, scope);
+				final body = "var __hx_old = (__hx_a != null && typeof __hx_a.__hx_op_read === \"function\") ? __hx_a.__hx_op_read(__hx_i) : __hx_a[__hx_i]; "
+					+ "var __hx_next = (__hx_old + "
+					+ delta
+					+ "); "
+					+ "if (__hx_a != null && typeof __hx_a.__hx_op_write === \"function\") __hx_a.__hx_op_write(__hx_i, __hx_next); "
+					+ "else __hx_a[__hx_i] = __hx_next; return __hx_old;";
+				"(function(__hx_a, __hx_i){ " + body + " })(" + arrayJs + ", " + indexJs + ")";
+			case _:
+				unsupported("EUnop", op);
+		}
 	}
 
 	static function emitArrayRead(array:HxExpr, index:HxExpr, scope:JsEmitScope):String {

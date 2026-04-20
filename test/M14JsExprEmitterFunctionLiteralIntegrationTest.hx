@@ -53,6 +53,21 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(assignedArrowJs, "maybe = function()", "assignment RHS arrow literal parses as a lambda");
 		assertContains(assignedArrowJs, "Math.random() > 0.5", "assignment RHS arrow keeps comparison body");
 
+		final postfixArgJs = JsExprEmitter.emit(HxParser.parseExprText("file.data.get(p++)"), exprScope);
+		assertContains(postfixArgJs, "file.data.get((function(){ var __hx_old = p;", "postfix increment should pass the old local value to calls");
+		assertContains(postfixArgJs, "p = (__hx_old + 1)", "postfix increment should update the local after reading it");
+		assertContains(postfixArgJs, "return __hx_old;", "postfix increment should return the captured old value");
+		assertNotContains(postfixArgJs, "p += 1", "postfix increment should not collapse to pre-increment compound assignment");
+
+		final postfixArrayIndexJs = JsExprEmitter.emit(HxParser.parseExprText("values[p++]"), exprScope);
+		assertContains(postfixArrayIndexJs, "var __hx_old = p;", "postfix array index should capture the old index value");
+		assertContains(postfixArrayIndexJs, "return __hx_old;", "postfix array index should read with the old index before incrementing");
+
+		final postfixArraySlotJs = JsExprEmitter.emit(HxParser.parseExprText("values[p]++"), exprScope);
+		assertContains(postfixArraySlotJs, "__hx_op_read", "postfix array slot increment should respect abstract read slots");
+		assertContains(postfixArraySlotJs, "__hx_op_write", "postfix array slot increment should respect abstract write slots");
+		assertContains(postfixArraySlotJs, "return __hx_old;", "postfix array slot increment should return the previous slot value");
+
 		final optionalArrow = HxParser.parseExprText("f = (?a:Int=1, b:String) -> a + b.length");
 		final optionalArrowJs = JsExprEmitter.emit(optionalArrow, exprScope);
 		assertContains(optionalArrowJs, "f = function(a, b)", "optional/typed/default arrow args keep runtime arg names");

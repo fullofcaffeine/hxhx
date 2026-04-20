@@ -15920,10 +15920,10 @@ and parsePostfixSuffix = fun self (seed : HxExpr.hxexpr) (stop : unit -> bool) -
           __assign_1847
         ));
         if (c2 = 43 || c2 = 45) && !tempRight13 then ignore (let tempString = ref ("" : string) in (
-          ignore (if c2 = 43 then let __assign_1848 = ("+=" : string) in (
+          ignore (if c2 = 43 then let __assign_1848 = ("post++" : string) in (
             tempString := __assign_1848;
             __assign_1848
-          ) else let __assign_1849 = ("-=" : string) in (
+          ) else let __assign_1849 = ("post--" : string) in (
             tempString := __assign_1849;
             __assign_1849
           ));
@@ -15970,7 +15970,7 @@ and parsePostfixSuffix = fun self (seed : HxExpr.hxexpr) (stop : unit -> bool) -
               (Obj.magic self : t).cur <- __assign_1859;
               __assign_1859
             )));
-            let __assign_1860 = Obj.magic (HxExpr.EBinop ((op : string), Obj.magic (!seed), Obj.magic (HxExpr.EInt 1))) in (
+            let __assign_1860 = Obj.magic (HxExpr.EUnop ((op : string), Obj.magic (!seed))) in (
               seed := __assign_1860;
               __assign_1860
             )

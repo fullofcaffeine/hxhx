@@ -44,6 +44,8 @@ class M14HihCompoundAssignIntegrationTest {
 		var sawShiftLeftEq = false;
 		var sawUnsignedShiftRightEq = false;
 		var sawBinaryPlusUnaryPlus = false;
+		var sawPostInc = false;
+		var sawPostDec = false;
 		for (stmt in HxFunctionDecl.getBody(parsedMain)) {
 			switch (stmt) {
 				case SExpr(EBinop(op, EIdent("acc"), _), _):
@@ -58,14 +60,20 @@ class M14HihCompoundAssignIntegrationTest {
 							sawUnsignedShiftRightEq = true;
 						case _:
 					}
+				case SExpr(EUnop("post++", EIdent("acc")), _):
+					sawPostInc = true;
+				case SExpr(EUnop("post--", EIdent("acc")), _):
+					sawPostDec = true;
 				case SVar("x", _, EBinop("+", EIdent("a"), EUnop("+", EIdent("b"))), _):
 					sawBinaryPlusUnaryPlus = true;
 				case _:
 			}
 		}
 
-		assertTrue(plusEqCount == 3, "parser should lower explicit '+=' plus '++' forms to '+='");
-		assertTrue(minusEqCount == 3, "parser should lower explicit '-=' plus '--' forms to '-='");
+		assertTrue(plusEqCount == 2, "parser should lower explicit '+=' and prefix '++' forms to '+='");
+		assertTrue(minusEqCount == 2, "parser should lower explicit '-=' and prefix '--' forms to '-='");
+		assertTrue(sawPostInc, "parser should preserve postfix '++' as an old-value unary form");
+		assertTrue(sawPostDec, "parser should preserve postfix '--' as an old-value unary form");
 		assertTrue(sawBinaryPlusUnaryPlus, "parser should keep 'a + +b' as binary-plus with unary-plus rhs");
 		assertTrue(sawShiftLeftEq, "parser should keep '<<=' as EBinop");
 		assertTrue(sawUnsignedShiftRightEq, "parser should keep '>>>=' as EBinop");
