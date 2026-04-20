@@ -265,6 +265,8 @@ class SourceNativeBackend {
 				arrayLiteral(target, items);
 			case ERange(start, end):
 				rangeIterable(target, start, end);
+			case ELambda(args, body):
+				lambdaExpr(target, args, body);
 			case ENew(typePath, args):
 				constructorExpr(target, typePath, args);
 			case _:
@@ -379,6 +381,23 @@ class SourceNativeBackend {
 	static function callExpr(target:SourceNativeTarget, callee:String, args:Array<HxExpr>):String {
 		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
 		return callee + "(" + rendered + ")";
+	}
+
+	static function lambdaExpr(target:SourceNativeTarget, args:Array<String>, body:HxExpr):String {
+		final renderedArgs = [for (arg in args) valueName(target, arg)].join(", ");
+		final renderedBody = renderExpr(target, body);
+		return switch (target) {
+			case Python:
+				"lambda " + renderedArgs + ": " + renderedBody;
+			case Java:
+				"(" + renderedArgs + ") -> " + renderedBody;
+			case Cs:
+				"(" + renderedArgs + ") => " + renderedBody;
+			case Php:
+				"function(" + renderedArgs + ") { return " + renderedBody + "; }";
+			case Lua:
+				"function(" + renderedArgs + ") return " + renderedBody + " end";
+		};
 	}
 
 	static function arrayLiteral(target:SourceNativeTarget, items:Array<HxExpr>):String {

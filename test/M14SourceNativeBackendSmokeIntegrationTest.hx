@@ -141,6 +141,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function lambdaProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var inc = value -> value + 1;",
+			"    Sys.println(Std.string(inc(1)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function emit(targetId:String, label:String, expectedFile:String, expectedNeedle:String):Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_" + targetId + "_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -244,6 +258,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertLambdaExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lambda_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(lambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "inc = lambda value: (value + 1)", "lambda expressions should render in variable initializers");
+		assertContains(content, "print(str(inc(1)))", "lambda values should render as callable identifiers");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function main():Void {
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
@@ -257,5 +284,6 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertForInStatement();
 		assertBinaryOperators();
 		assertEnumValue();
+		assertLambdaExpression();
 	}
 }
