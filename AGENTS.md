@@ -125,6 +125,9 @@ hxhx --ocaml -main Main -cp src --hxhx-no-emit
 - Do **not** let unrelated fixes, docs, runner changes, and bootstrap experiments pile into one large local batch unless the work is genuinely inseparable.
 - If the worktree starts spanning multiple concerns, stop and split it before taking the next seam.
 - When touching CI/workflow or release-contract surfaces, check the corresponding GitHub workflow status before and after the local change so "appropriate and passing" is measured against the real runners, not only local assumptions.
+- At each atomic checkpoint (typically after committing and pushing a bounded seam), review whether docs need updates.
+  Record the outcome in the bead/checkpoint note, including "no docs update required" when the change is purely
+  internal and does not affect user-facing workflows, flags, CI gates, release contracts, or required tooling.
 - Prefer one commit per verified step over one commit per long session.
 
 ## Landing the Plane (Session Completion)
