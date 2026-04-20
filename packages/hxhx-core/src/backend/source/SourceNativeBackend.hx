@@ -245,10 +245,12 @@ class SourceNativeBackend {
 				Std.string(value);
 			case EFloat(value):
 				Std.string(value);
+			case EEnumValue(name):
+				quoteString(name);
 			case EIdent(name):
 				valueName(target, name);
-			case EBinop("+", left, right):
-				renderExpr(target, left) + " " + concatOp(target) + " " + renderExpr(target, right);
+			case EBinop(op, left, right):
+				binopExpr(target, op, left, right);
 			case ECast(inner, _):
 				renderExpr(target, inner);
 			case EUntyped(inner):
@@ -291,7 +293,7 @@ class SourceNativeBackend {
 			case ESwitch(_, _, _): "ESwitch";
 			case ENew(_, _): "ENew";
 			case EUnop(_, _): "EUnop";
-			case EBinop(_, _, _): "EBinop";
+			case EBinop(op, _, _): "EBinop(" + op + ")";
 			case ETernary(_, _, _): "ETernary";
 			case EAnon(_, _): "EAnon";
 			case EArrayComprehension(_, _, _): "EArrayComprehension";
@@ -311,6 +313,34 @@ class SourceNativeBackend {
 			case Cs: "+";
 			case Php: ".";
 			case Lua: "..";
+		};
+	}
+
+	static function binopExpr(target:SourceNativeTarget, op:String, left:HxExpr, right:HxExpr):String {
+		final a = renderExpr(target, left);
+		final b = renderExpr(target, right);
+		final mapped = binopToken(target, op);
+		if (mapped == null)
+			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
+		if (op == "=" || op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
+			return a + " " + mapped + " " + b;
+		return "(" + a + " " + mapped + " " + b + ")";
+	}
+
+	static function binopToken(target:SourceNativeTarget, op:String):Null<String> {
+		return switch (op) {
+			case "+":
+				concatOp(target);
+			case "!=" if (target == Lua):
+				"~=";
+			case "&&" if (target == Python || target == Lua):
+				"and";
+			case "||" if (target == Python || target == Lua):
+				"or";
+			case "==", "!=", "<", "<=", ">", ">=", "-", "*", "/", "%", "=", "+=", "-=", "*=", "/=", "%=", "&", "|", "^", "<<", ">>", "&&", "||":
+				op;
+			default:
+				null;
 		};
 	}
 

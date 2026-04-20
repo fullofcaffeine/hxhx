@@ -113,6 +113,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function binopProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var total = 1 + 2;",
+			"    total = total - 1;",
+			"    Sys.println(Std.string(total == 2));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function enumValueProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(Macro));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function emit(targetId:String, label:String, expectedFile:String, expectedNeedle:String):Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_" + targetId + "_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -191,16 +219,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertBinaryOperators():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_binop_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(binopProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "total = (1 + 2)", "binary plus should render in initializers");
+		assertContains(content, "total = (total - 1)", "assignment statements should render binary RHS expressions");
+		assertContains(content, "print(str((total == 2)))", "comparison operators should render inside calls");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertEnumValue():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_enum_value_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(enumValueProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		assertContains(File.getContent(outputPath), "print(str(\"Macro\"))", "enum-like values should render as stable string tags");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function main():Void {
-		emit("python-native", "python", "Main.py", "print(\"source-native:\" + \"python\")");
-		emit("java-native", "java", "Main.java", "System.out.println(\"source-native:\" + \"java\");");
-		emit("cs-native", "cs", "Main.cs", "System.Console.WriteLine(\"source-native:\" + \"cs\");");
-		emit("php-native", "php", "index.php", "echo \"source-native:\" . \"php\" . PHP_EOL;");
-		emit("lua-native", "lua", "Main.lua", "print(\"source-native:\" .. \"lua\")");
+		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
+		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
+		emit("cs-native", "cs", "Main.cs", "System.Console.WriteLine((\"source-native:\" + \"cs\"));");
+		emit("php-native", "php", "index.php", "echo (\"source-native:\" . \"php\") . PHP_EOL;");
+		emit("lua-native", "lua", "Main.lua", "print((\"source-native:\" .. \"lua\"))");
 		assertUnsupportedDiagnostic();
 		assertGenericCallStatement();
 		assertArrayLiteral();
 		assertConstructorExpression();
 		assertForInStatement();
+		assertBinaryOperators();
+		assertEnumValue();
 	}
 }
