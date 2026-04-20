@@ -43,12 +43,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
-	static function unsupportedIfProgram():GenIrProgram {
+	static function unsupportedWhileProgram():GenIrProgram {
 		final src = [
 			"class Main {",
 			"  static function main() {",
-			"    if (true) {",
-			"      Sys.println(\"branch\");",
+			"    while (true) {",
+			"      Sys.println(\"loop\");",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function ifStatementProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var value = 1;",
+			"    if (value == 1) {",
+			"      Sys.println(\"yes\");",
+			"    } else {",
+			"      Sys.println(\"no\");",
 			"    }",
 			"  }",
 			"}",
@@ -197,11 +215,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final backend = BackendRegistry.requireForTarget("python-native");
 		var message = "";
 		try {
-			backend.emit(unsupportedIfProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+			backend.emit(unsupportedWhileProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		} catch (e:String) {
 			message = e;
 		}
-		assertContains(message, "Python source backend MVP unsupported statement: SIf", "unsupported statement diagnostic should name the AST kind");
+		assertContains(message, "Python source backend MVP unsupported statement: SWhile", "unsupported statement diagnostic should name the AST kind");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertIfStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_if_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(ifStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "if (value == 1):", "if statements should render conditions");
+		assertContains(content, "    print(\"yes\")", "then branches should render with nested indentation");
+		assertContains(content, "else:", "else branches should render");
+		assertContains(content, "    print(\"no\")", "else branch bodies should render with nested indentation");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -310,6 +343,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("php-native", "php", "index.php", "echo (\"source-native:\" . \"php\") . PHP_EOL;");
 		emit("lua-native", "lua", "Main.lua", "print((\"source-native:\" .. \"lua\"))");
 		assertUnsupportedDiagnostic();
+		assertIfStatement();
 		assertGenericCallStatement();
 		assertArrayLiteral();
 		assertConstructorExpression();

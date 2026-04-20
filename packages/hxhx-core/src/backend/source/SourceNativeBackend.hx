@@ -587,6 +587,8 @@ class SourceNativeBackend {
 			case SVar(name, _typeHint, init, _):
 				final rhs = init == null ? defaultValue(target) : renderExpr(target, init);
 					[indent + varDecl(target, sanitizeTypeName(name), rhs)];
+			case SIf(cond, thenBranch, elseBranch, _):
+				renderIf(target, cond, thenBranch, elseBranch, indent);
 			case SForIn(name, iterable, body, _):
 				renderForIn(target, name, iterable, body, indent);
 			case SReturn(expr, _):
@@ -636,6 +638,70 @@ class SourceNativeBackend {
 			case Php: "  ";
 			case Lua: "  ";
 		};
+	}
+
+	static function renderIf(target:SourceNativeTarget, cond:HxExpr, thenBranch:HxStmt, elseBranch:Null<HxStmt>, indent:String):Array<String> {
+		final renderedCond = renderExpr(target, cond);
+		final childIndent = indent + indentStep(target);
+		final out = new Array<String>();
+		switch (target) {
+			case Python:
+				out.push(indent + "if " + renderedCond + ":");
+				for (line in renderStmt(target, thenBranch, childIndent))
+					out.push(line);
+				if (elseBranch != null) {
+					out.push(indent + "else:");
+					for (line in renderStmt(target, elseBranch, childIndent))
+						out.push(line);
+				}
+			case Java:
+				out.push(indent + "if (" + renderedCond + ") {");
+				for (line in renderStmt(target, thenBranch, childIndent))
+					out.push(line);
+				if (elseBranch == null) {
+					out.push(indent + "}");
+				} else {
+					out.push(indent + "} else {");
+					for (line in renderStmt(target, elseBranch, childIndent))
+						out.push(line);
+					out.push(indent + "}");
+				}
+			case Cs:
+				out.push(indent + "if (" + renderedCond + ") {");
+				for (line in renderStmt(target, thenBranch, childIndent))
+					out.push(line);
+				if (elseBranch == null) {
+					out.push(indent + "}");
+				} else {
+					out.push(indent + "} else {");
+					for (line in renderStmt(target, elseBranch, childIndent))
+						out.push(line);
+					out.push(indent + "}");
+				}
+			case Php:
+				out.push(indent + "if (" + renderedCond + ") {");
+				for (line in renderStmt(target, thenBranch, childIndent))
+					out.push(line);
+				if (elseBranch == null) {
+					out.push(indent + "}");
+				} else {
+					out.push(indent + "} else {");
+					for (line in renderStmt(target, elseBranch, childIndent))
+						out.push(line);
+					out.push(indent + "}");
+				}
+			case Lua:
+				out.push(indent + "if " + renderedCond + " then");
+				for (line in renderStmt(target, thenBranch, childIndent))
+					out.push(line);
+				if (elseBranch != null) {
+					out.push(indent + "else");
+					for (line in renderStmt(target, elseBranch, childIndent))
+						out.push(line);
+				}
+				out.push(indent + "end");
+		}
+		return out;
 	}
 
 	static function renderForIn(target:SourceNativeTarget, name:String, iterable:HxExpr, body:HxStmt, indent:String):Array<String> {
