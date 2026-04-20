@@ -624,7 +624,22 @@ class HxParser {
 				PArray(items);
 			case TString(s, _):
 				bump();
-				PString(s);
+				if (cur.kind.match(TDot)) {
+					switch (peekKind()) {
+						case TIdent("code"):
+							// Haxe std target overrides commonly use char-code case patterns:
+							// `case '+'.code:` and `case ['2'.code, '1'.code]:`.
+							// Treat the string literal's first code unit as the pattern value so
+							// parser bring-up can keep these switches structured.
+							bump(); // `.`
+							bump(); // `code`
+							PInt(s == null || s.length == 0 ? -1 : s.charCodeAt(0));
+						case _:
+							PString(s);
+					}
+				} else {
+					PString(s);
+				}
 			case TInt(v):
 				bump();
 				PInt(v);
@@ -3945,8 +3960,8 @@ class HxParser {
 
 		while (acceptKeyword(KImport) || acceptKeyword(KUsing)) {
 			final path = readImportPath();
-			// Accept `import Foo.Bar as Baz;` and ignore alias for now.
-			if (acceptKeyword(KAs)) {
+			// Accept import aliases (`as` and Haxe's `in`) and ignore the alias for now.
+			if (acceptKeyword(KAs) || acceptKeyword(KIn)) {
 				readIdent("import alias");
 			}
 			imports.push(path);

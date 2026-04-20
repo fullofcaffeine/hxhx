@@ -226,6 +226,50 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected switch expression with case statement sequences");
 		}
 
+		final charCodeSwitchModule = "class CharCodeSwitch {\n" + "  static function postProcess(s:String) {\n" + "    switch (s.charAt(0)) {\n"
+			+ "      case '+'.code:\n" + "        return 1;\n" + "      case '%'.code if (s.length > 1):\n" + "        switch [s.charAt(1), s.charAt(2)] {\n"
+			+ "          case ['2'.code, '1'.code]: return 2;\n" + "          case _: return 3;\n" + "        }\n" + "      case _: return 0;\n" + "    }\n"
+			+ "  }\n" + "}\n";
+		final charCodeDecl = new HxParser(charCodeSwitchModule).parseModule("CharCodeSwitch");
+		final charCodeFn = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(charCodeDecl))[0];
+		switch (HxFunctionDecl.getBody(charCodeFn)[0]) {
+			case SSwitch(_, patterns, bodies, _):
+				assertTrue(patterns.length == 3, "expected char-code switch patterns");
+				switch (patterns[0]) {
+					case PInt(code):
+						assertTrue(code == "+".code, "expected '+'.code switch pattern");
+					case _:
+						fail("expected first char-code case to parse as PInt");
+				}
+				switch (patterns[1]) {
+					case PUnsupportedGuard(PInt(code)):
+						assertTrue(code == "%".code, "expected guarded '%'.code switch pattern");
+					case _:
+						fail("expected guarded char-code case to stay structured");
+				}
+				switch (bodies[1]) {
+					case SBlock([SSwitch(_, nestedPatterns, _, _)], _):
+						switch (nestedPatterns[0]) {
+							case PArray([PInt(left), PInt(right)]):
+								assertTrue(left == "2".code && right == "1".code, "expected array char-code switch pattern");
+							case _:
+								fail("expected nested array char-code case to parse structurally");
+						}
+					case _:
+						fail("expected guarded char-code case body to contain nested switch");
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("char-code switch parsed as unsupported: " + raw);
+			case _:
+				fail("expected char-code switch statement");
+		}
+
+		final importInAliasDecl = new HxParser("package python.internal;\nimport python.Syntax.code in py;\nclass ImportInAlias {}\n")
+			.parseModule("ImportInAlias");
+		final importInAliasImports = HxModuleDecl.getImports(importInAliasDecl);
+		assertTrue(importInAliasImports.length == 1, "expected import-in alias to preserve one import");
+		assertTrue(importInAliasImports[0] == "python.Syntax.code", "expected import-in alias path without alias");
+
 		final switchNoSemicolonThenElseIfStmts = HxParser.parseFunctionBodyText("var result = switch [ok, expected] { case [true, false]: true; case _: false; }\nif (result && expected != null) { result = check(); } else if (stdout.length > 0) { println(stdout.toString()); }");
 		assertTrue(switchNoSemicolonThenElseIfStmts.length == 2, "expected no-semicolon switch initializer before if/else-if to parse as two statements");
 		switch (switchNoSemicolonThenElseIfStmts[0]) {
