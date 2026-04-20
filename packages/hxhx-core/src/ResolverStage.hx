@@ -354,8 +354,11 @@ class ResolverStage {
 				// resolves to `unit.MyType` / `unit.MyMod.SubType` if present.
 				//
 				// Bootstrap rule: try the raw import first, then fall back to a same-package prefix.
+				final existsDirect = resolveModuleFile(classPaths, imp) != null;
+				if (!existsDirect && HxConditionalCompilation.isActiveTargetNativeExternPath(imp, definesMap))
+					continue;
+
 				final resolvedImp = {
-					final existsDirect = resolveModuleFile(classPaths, imp) != null;
 					if (existsDirect)
 						imp
 					else {

@@ -1607,7 +1607,7 @@ let init () : unit =
   HxType.register_class_instance_fields "HxClassDecl" [ "extendsPath"; "fields"; "functions"; "hasStaticMain"; "name" ];
   HxType.register_class_static_fields "HxClassDecl" [ "getExtendsPath"; "getFields"; "getFunctions"; "getHasStaticMain"; "getName" ];
   HxType.register_class_instance_fields "HxConditionalCompilation" [];
-  HxType.register_class_static_fields "HxConditionalCompilation" [ "evalExpr"; "filterInlineConditionals"; "filterSource"; "findDirectiveTokenOutsideStrings"; "findTokenOutsideStrings"; "hasAnyKnownTargetDefine"; "isInactiveTargetQualifiedTypePath"; "isKnownTargetPackageRoot"; "isLineWs"; "isSpace"; "makeBlankLineLike"; "parseDirectiveLine"; "parseInlineCondEnd"; "skipStringLiteral"; "splitLinesPreserveNewlines"; "stripLineCommentOutsideStrings" ];
+  HxType.register_class_static_fields "HxConditionalCompilation" [ "evalExpr"; "filterInlineConditionals"; "filterSource"; "findDirectiveTokenOutsideStrings"; "findTokenOutsideStrings"; "hasAnyKnownTargetDefine"; "isActiveTargetNativeExternPath"; "isInactiveTargetQualifiedTypePath"; "isKnownTargetPackageRoot"; "isLineWs"; "isSpace"; "makeBlankLineLike"; "parseDirectiveLine"; "parseInlineCondEnd"; "skipStringLiteral"; "splitLinesPreserveNewlines"; "stripLineCommentOutsideStrings" ];
   HxType.register_class_instance_fields "HxDefineMap" [];
   HxType.register_class_static_fields "HxDefineMap" [ "addRawDefine"; "fromRawDefines"; "mergeInto" ];
   HxType.register_class_instance_fields "HxFieldDecl" [ "endPos"; "init"; "initText"; "isFinal"; "isStatic"; "metadata"; "name"; "pos"; "propertyGet"; "propertySet"; "typeHint"; "visibility" ];

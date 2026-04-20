@@ -184,6 +184,30 @@ class HxConditionalCompilation {
 		return hasAnyKnownTargetDefine(defines);
 	}
 
+	/**
+		Returns true when a type path belongs to the currently active target-native
+		package root and may legitimately be an extern platform type with no `.hx`
+		module in Haxe std.
+
+		Why
+		- Haxe target std overrides import platform types such as
+		  `java.lang.CharSequence` and `cs.system.Type`.
+		- Some of those names are external VM/.NET types, not Haxe modules stored
+		  under `std/`.
+		- ResolverStage walks explicit imports before the full typer/extern model
+		  exists, so it needs a narrow way to avoid treating these active target
+		  extern imports as hard `import_missing` errors.
+	**/
+	public static function isActiveTargetNativeExternPath(typePath:String, defines:haxe.ds.StringMap<String>):Bool {
+		if (typePath == null)
+			return false;
+		final dot = typePath.indexOf(".");
+		if (dot <= 0)
+			return false;
+		final root = typePath.substr(0, dot);
+		return isKnownTargetPackageRoot(root) && defines != null && defines.exists(root);
+	}
+
 	private static function isKnownTargetPackageRoot(root:String):Bool {
 		return switch (root) {
 			case "php" | "java" | "cs" | "python" | "neko" | "lua" | "cpp" | "hl" | "flash" | "js": true;

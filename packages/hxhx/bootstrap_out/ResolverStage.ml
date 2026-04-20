@@ -481,41 +481,44 @@ let parseProjectRoots = fun classPaths roots defines -> let out = Obj.magic (HxA
                       ));
                       let imp = (normalizeImport (rawImport : string) : string) in (
                         ignore (if HxString.length imp = 0 then raise (HxRuntime.Hx_continue) else ());
-                        let tempString = ref ("" : string) in (
-                          ignore (let existsDirect = resolveModuleFile (Obj.magic classPaths) (imp : string) != Obj.magic (HxRuntime.hx_null) in if existsDirect then let __assign_92 = (imp : string) in (
-                            tempString := __assign_92;
-                            __assign_92
-                          ) else let dot = HxString.indexOf imp "." 0 in let tempString1 = ref ("" : string) in (
-                            ignore (if dot = -1 then let __assign_93 = (imp : string) in (
-                              tempString1 := __assign_93;
-                              __assign_93
-                            ) else let __assign_94 = (HxString.substr imp 0 dot : string) in (
-                              tempString1 := __assign_94;
-                              __assign_94
-                            ));
-                            let head = (!tempString1 : string) in let tempMaybeNumber = ref (HxRuntime.hx_null : Obj.t) in (
-                              ignore (if HxString.length head = 0 then let __assign_95 = Obj.magic (Obj.repr 0) in (
-                                tempMaybeNumber := __assign_95;
-                                __assign_95
-                              ) else let __assign_96 = Obj.magic (HxString.charCodeAt head 0) in (
-                                tempMaybeNumber := __assign_96;
-                                __assign_96
+                        let existsDirect = resolveModuleFile (Obj.magic classPaths) (imp : string) != Obj.magic (HxRuntime.hx_null) in (
+                          ignore (if not (existsDirect) && HxConditionalCompilation.isActiveTargetNativeExternPath (imp : string) (Obj.magic (!tempMaybeStringMap)) then raise (HxRuntime.Hx_continue) else ());
+                          let tempString = ref ("" : string) in (
+                            ignore (if existsDirect then let __assign_92 = (imp : string) in (
+                              tempString := __assign_92;
+                              __assign_92
+                            ) else let dot = HxString.indexOf imp "." 0 in let tempString1 = ref ("" : string) in (
+                              ignore (if dot = -1 then let __assign_93 = (imp : string) in (
+                                tempString1 := __assign_93;
+                                __assign_93
+                              ) else let __assign_94 = (HxString.substr imp 0 dot : string) in (
+                                tempString1 := __assign_94;
+                                __assign_94
                               ));
-                              let head0 = Obj.magic (!tempMaybeNumber) in let headIsUpper = (let __nullable_97 = head0 in let __nullable_98 = 65 in if __nullable_97 == HxRuntime.hx_null then false else Obj.obj __nullable_97 >= __nullable_98) && (let __nullable_99 = head0 in let __nullable_100 = 90 in if __nullable_99 == HxRuntime.hx_null then false else Obj.obj __nullable_99 <= __nullable_100) in if headIsUpper && modulePkg != Obj.magic (HxRuntime.hx_null) && HxString.length modulePkg > 0 && not (StringTools.startsWith (imp : string) (HxString.toStdString modulePkg ^ "." : string)) then let __assign_101 = ((HxString.toStdString modulePkg ^ ".") ^ HxString.toStdString imp : string) in (
-                                tempString := __assign_101;
-                                __assign_101
-                              ) else let __assign_102 = (imp : string) in (
-                                tempString := __assign_102;
-                                __assign_102
+                              let head = (!tempString1 : string) in let tempMaybeNumber = ref (HxRuntime.hx_null : Obj.t) in (
+                                ignore (if HxString.length head = 0 then let __assign_95 = Obj.magic (Obj.repr 0) in (
+                                  tempMaybeNumber := __assign_95;
+                                  __assign_95
+                                ) else let __assign_96 = Obj.magic (HxString.charCodeAt head 0) in (
+                                  tempMaybeNumber := __assign_96;
+                                  __assign_96
+                                ));
+                                let head0 = Obj.magic (!tempMaybeNumber) in let headIsUpper = (let __nullable_97 = head0 in let __nullable_98 = 65 in if __nullable_97 == HxRuntime.hx_null then false else Obj.obj __nullable_97 >= __nullable_98) && (let __nullable_99 = head0 in let __nullable_100 = 90 in if __nullable_99 == HxRuntime.hx_null then false else Obj.obj __nullable_99 <= __nullable_100) in if headIsUpper && modulePkg != Obj.magic (HxRuntime.hx_null) && HxString.length modulePkg > 0 && not (StringTools.startsWith (imp : string) (HxString.toStdString modulePkg ^ "." : string)) then let __assign_101 = ((HxString.toStdString modulePkg ^ ".") ^ HxString.toStdString imp : string) in (
+                                  tempString := __assign_101;
+                                  __assign_101
+                                ) else let __assign_102 = (imp : string) in (
+                                  tempString := __assign_102;
+                                  __assign_102
+                                )
                               )
+                            ));
+                            let resolvedImp = (!tempString : string) in (
+                              ignore (if StringTools.endsWith (resolvedImp : string) (".*" : string) then ignore (let base = (HxString.substr resolvedImp 0 (HxInt.sub (HxString.length resolvedImp) 2) : string) in (
+                                ignore (if resolveModuleFile (Obj.magic classPaths) (base : string) != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push deps base) else ());
+                                raise (HxRuntime.Hx_continue)
+                              )) else ());
+                              HxArray.push deps resolvedImp
                             )
-                          ));
-                          let resolvedImp = (!tempString : string) in (
-                            ignore (if StringTools.endsWith (resolvedImp : string) (".*" : string) then ignore (let base = (HxString.substr resolvedImp 0 (HxInt.sub (HxString.length resolvedImp) 2) : string) in (
-                              ignore (if resolveModuleFile (Obj.magic classPaths) (base : string) != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push deps base) else ());
-                              raise (HxRuntime.Hx_continue)
-                            )) else ());
-                            HxArray.push deps resolvedImp
                           )
                         )
                       )

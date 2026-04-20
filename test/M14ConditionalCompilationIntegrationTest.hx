@@ -13,6 +13,11 @@ class M14ConditionalCompilationIntegrationTest {
 			throw label + " (unexpected `" + needle + "`)";
 	}
 
+	static function assertTrue(condition:Bool, label:String):Void {
+		if (!condition)
+			throw label;
+	}
+
 	static function defines(values:Array<String>):StringMap<String> {
 		final out = new StringMap<String>();
 		for (value in values)
@@ -102,6 +107,58 @@ class M14ConditionalCompilationIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function testActiveTargetNativeExternImports():Void {
+		final tmpRoot = haxe.io.Path.normalize(".tmp/m14_conditional_compilation_target_extern_" + Std.string(Date.now().getTime()));
+		final javaStdDir = haxe.io.Path.join([tmpRoot, "java_std"]);
+		final csStdDir = haxe.io.Path.join([tmpRoot, "cs_std"]);
+		deleteRecursive(tmpRoot);
+		ensureDirectory(tmpRoot);
+		ensureDirectory(javaStdDir);
+		ensureDirectory(csStdDir);
+
+		File.saveContent(haxe.io.Path.join([javaStdDir, "String.hx"]), [
+			"import java.lang.CharSequence;",
+			"class String {",
+			"  public static function accepts(value:CharSequence):Void {}",
+			"}",
+		].join("\n"));
+		File.saveContent(haxe.io.Path.join([csStdDir, "Type.hx"]), [
+			"import cs.system.Type;",
+			"class Type {",
+			"  public static function accepts(value:cs.system.Type):Void {}",
+			"}",
+		].join("\n"));
+
+		var thrown:Dynamic = null;
+		try {
+			final javaResolved = ResolverStage.parseProjectRoots([javaStdDir], ["String"], defines(["java"]));
+			final javaPaths = modulePaths(javaResolved);
+			assertContains(javaPaths, "String", "active Java std override should resolve root String");
+			assertNotContains(javaPaths, "java.lang.CharSequence", "active Java extern import should not require a .hx module");
+
+			final csResolved = ResolverStage.parseProjectRoots([csStdDir], ["Type"], defines(["cs"]));
+			final csPaths = modulePaths(csResolved);
+			assertContains(csPaths, "Type", "active C# std override should resolve root Type");
+			assertNotContains(csPaths, "cs.system.Type", "active C# extern import should not require a .hx module");
+		} catch (e:Dynamic) {
+			thrown = e;
+		}
+
+		if (thrown != null) {
+			Sys.println("debug_out=" + tmpRoot);
+			throw thrown;
+		}
+
+		var inactiveFailed = false;
+		try {
+			ResolverStage.parseProjectRoots([javaStdDir], ["String"], defines(["cs"]));
+		} catch (e:Dynamic) {
+			inactiveFailed = Std.string(e).indexOf("import_missing java.lang.CharSequence") >= 0;
+		}
+		deleteRecursive(tmpRoot);
+		assertTrue(inactiveFailed, "inactive target extern imports should still fail like ordinary missing imports");
+	}
+
 	static function main():Void {
 		final inlineElseIf = 'if (#if flash Flash.path() #elseif php php.Global.method_exists(v, "hxSerialize") #else v.hxSerialize != null #end) keep();';
 		final jsFiltered = HxConditionalCompilation.filterSource(inlineElseIf, defines(["js"]));
@@ -115,5 +172,6 @@ class M14ConditionalCompilationIntegrationTest {
 		assertNotContains(phpFiltered, "v.hxSerialize", "inline #else branch should be blanked after a matching #elseif");
 
 		testInactiveTargetQualifiedDeps();
+		testActiveTargetNativeExternImports();
 	}
 }
