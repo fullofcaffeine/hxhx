@@ -495,6 +495,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final dateClass = new HxClassDecl("Date", false, [
 			new HxFunctionDecl("new", HxVisibility.Public, false, [yearArg, monthArg, dayArg, hourArg, minuteArg, secondArg], "Void",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=6"), ""),
+			new HxFunctionDecl("now", HxVisibility.Public, true, [], "Date", [], ""),
 			new HxFunctionDecl("getTime", HxVisibility.Public, false, [], "Float",
 				unsupportedBody("[js-native:unsupported_expr] kind=EUnsupported detail=unsupported-date-gettime-body"), "")
 		]);
@@ -1237,6 +1238,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(DateTools.format(date, "%Y-%m-%d %H:%M:%S %a %b"));',
 				"    var nativeDate = new Date(2020, 0, 2, 3, 4, 5);",
 				'    Sys.println("date-gettime-positive=" + (nativeDate.getTime() > 0));',
+				"    var nowDate = Date.now();",
+				'    Sys.println("date-now-positive=" + (nowDate.getTime() > 0));',
 				'    var ident = new EReg("^[A-Za-z_][A-Za-z0-9_]*$", "");',
 				'    Sys.println(ident.match("abc_12"));',
 				'    Sys.println(ident.matched(0));',
@@ -1527,6 +1530,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_js_Boot.__downcastCheck = function", "js Boot downcast shim should emit");
 			assertContains(js, "__hx_cls_DateTools.__format_get = function", "DateTools format token shim should emit");
 			assertContains(js, "__hx_cls_DateTools.__format = function", "DateTools format scanner shim should emit");
+			assertContains(js, "__hx_cls_Date.now = function", "Date.now static shim should emit");
+			assertContains(js, "return new Date();", "Date.now should return a native JS Date instance");
 			assertNotContains(js, "__hx_cls_Date.prototype.getTime", "native Date getTime should use the JS Date prototype");
 			assertNotContains(js, "unsupported-date-gettime-body", "native Date unsupported instance bodies should not leak into JS");
 			assertContains(js, "var __hx_cls_EReg = function", "EReg should emit a constructible regex wrapper");
@@ -1705,6 +1710,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "true\ntrue\ntrue", "js Boot interface/downcast helpers should recognize direct interface matches");
 			assertContains(stdout, "2020-01-02 03:04:05 Thu Jan", "DateTools.format should resolve common strftime tokens");
 			assertContains(stdout, "date-gettime-positive=true", "Date.getTime should execute through the native JS Date prototype");
+			assertContains(stdout, "date-now-positive=true", "Date.now should return a native Date with getTime");
 			assertContains(stdout, "true\nabc_12\nfalse", "EReg should construct and preserve match state");
 			assertContains(stdout, "a|b|c", "EReg split should delegate to JS regular expressions");
 			assertContains(stdout, "a\\+b", "EReg.escape should quote regex metacharacters");

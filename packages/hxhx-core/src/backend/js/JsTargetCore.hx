@@ -1035,6 +1035,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "DateTools")
 			return emitDateToolsStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "Date")
+			return emitDateStaticFunctionBody(writer, fnName, params);
+
 		if (fullName == "StringTools")
 			return emitStringToolsStaticFunctionBody(writer, fnName, params);
 
@@ -2191,6 +2194,16 @@ class JsTargetCore implements ITargetCore {
 				if (params.length < 2)
 					return false;
 				writer.writeln("return " + JsNameMangler.classVarName("DateTools") + ".__format(" + params[0] + ", " + params[1] + ");");
+				return true;
+			case _:
+				return false;
+		}
+	}
+
+	static function emitDateStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "now":
+				writer.writeln("return new Date();");
 				return true;
 			case _:
 				return false;
