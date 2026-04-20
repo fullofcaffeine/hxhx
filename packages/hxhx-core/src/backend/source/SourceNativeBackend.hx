@@ -261,6 +261,10 @@ class SourceNativeBackend {
 				callExpr(target, renderExpr(target, callee), args);
 			case EArrayDecl(items):
 				arrayLiteral(target, items);
+			case ERange(start, end):
+				rangeIterable(target, start, end);
+			case ENew(typePath, args):
+				constructorExpr(target, typePath, args);
 			case _:
 				throw targetLabel(target) + " source backend MVP unsupported expression: " + exprKind(expr);
 		};
@@ -358,6 +362,36 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function constructorExpr(target:SourceNativeTarget, typePath:String, args:Array<HxExpr>):String {
+		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
+		final safeType = sanitizeDottedPath(typePath);
+		return switch (target) {
+			case Python: safeType + "(" + rendered + ")";
+			case Java: "new " + safeType + "(" + rendered + ")";
+			case Cs: "new " + safeType + "(" + rendered + ")";
+			case Php: "new " + safeType + "(" + rendered + ")";
+			case Lua: safeType + ".new(" + rendered + ")";
+		};
+	}
+
+	static function sanitizeDottedPath(path:String):String {
+		if (path == null || path.length == 0)
+			return "Unknown";
+		return [for (part in path.split(".")) sanitizeTypeName(part)].join(".");
+	}
+
+	static function rangeIterable(target:SourceNativeTarget, start:HxExpr, end:HxExpr):String {
+		final a = renderExpr(target, start);
+		final b = renderExpr(target, end);
+		return switch (target) {
+			case Python: "range(" + a + ", " + b + ")";
+			case Java: "range(" + a + ", " + b + ")";
+			case Cs: "range(" + a + ", " + b + ")";
+			case Php: "range(" + a + ", " + b + " - 1)";
+			case Lua: "hxhx_range(" + a + ", " + b + ")";
+		};
+	}
+
 	static function printStmt(target:SourceNativeTarget, expr:String):String {
 		return switch (target) {
 			case Python: "print(" + expr + ")";
@@ -389,6 +423,8 @@ class SourceNativeBackend {
 			case SVar(name, _typeHint, init, _):
 				final rhs = init == null ? defaultValue(target) : renderExpr(target, init);
 					[indent + varDecl(target, sanitizeTypeName(name), rhs)];
+			case SForIn(name, iterable, body, _):
+				renderForIn(target, name, iterable, body, indent);
 			case SReturn(expr, _):
 				[indent + returnStmt(target, renderExpr(target, expr))];
 			case SReturnVoid(_):
@@ -425,6 +461,51 @@ class SourceNativeBackend {
 				out.push(line);
 		if (out.length == 0)
 			out.push(indent + emptyStmt(target));
+		return out;
+	}
+
+	static function indentStep(target:SourceNativeTarget):String {
+		return switch (target) {
+			case Python: "    ";
+			case Java: "    ";
+			case Cs: "    ";
+			case Php: "  ";
+			case Lua: "  ";
+		};
+	}
+
+	static function renderForIn(target:SourceNativeTarget, name:String, iterable:HxExpr, body:HxStmt, indent:String):Array<String> {
+		final cleanName = sanitizeTypeName(name);
+		final value = valueName(target, cleanName);
+		final source = renderExpr(target, iterable);
+		final childIndent = indent + indentStep(target);
+		final out = new Array<String>();
+		switch (target) {
+			case Python:
+				out.push(indent + "for " + cleanName + " in " + source + ":");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+			case Java:
+				out.push(indent + "for (var " + cleanName + " : " + source + ") {");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+				out.push(indent + "}");
+			case Cs:
+				out.push(indent + "foreach (var " + cleanName + " in " + source + ") {");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+				out.push(indent + "}");
+			case Php:
+				out.push(indent + "foreach (" + source + " as " + value + ") {");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+				out.push(indent + "}");
+			case Lua:
+				out.push(indent + "for _, " + cleanName + " in ipairs(" + source + ") do");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+				out.push(indent + "end");
+		}
 		return out;
 	}
 

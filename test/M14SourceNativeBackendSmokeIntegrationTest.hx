@@ -85,6 +85,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function constructorProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    new EReg(\"a\", \"\");",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function forInProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    for (value in [1, 2]) {",
+			"      Sys.println(Std.string(value));",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function emit(targetId:String, label:String, expectedFile:String, expectedNeedle:String):Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_" + targetId + "_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -139,6 +167,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertConstructorExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_constructor_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(constructorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		assertContains(File.getContent(outputPath), "EReg(\"a\", \"\")", "constructor expressions should render calls");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertForInStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_for_in_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(forInProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "for value in [1, 2]:", "for-in statements should render iterable loops");
+		assertContains(content, "    print(str(value))", "for-in bodies should render with nested indentation");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function main():Void {
 		emit("python-native", "python", "Main.py", "print(\"source-native:\" + \"python\")");
 		emit("java-native", "java", "Main.java", "System.out.println(\"source-native:\" + \"java\");");
@@ -148,5 +200,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertUnsupportedDiagnostic();
 		assertGenericCallStatement();
 		assertArrayLiteral();
+		assertConstructorExpression();
+		assertForInStatement();
 	}
 }
