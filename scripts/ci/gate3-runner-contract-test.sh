@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 runner="$ROOT/scripts/hxhx/run-upstream-runci-targets.sh"
+macro_runner="$ROOT/scripts/hxhx/run-upstream-runci-macro.sh"
 extended_workflow="$ROOT/.github/workflows/gate3-full1-extended.yml"
 
 grep -Fq 'if [ "\${HXHX_FORBID_STAGE0:-0}" = "1" ]; then' "$runner"
@@ -22,6 +23,21 @@ grep -Fq 'command -v lua5.4' "$runner"
 grep -Fq 'need_cmd luarocks "Lua target dependencies"' "$runner"
 grep -Fq 'cat >"$WRAP_DIR/lua"' "$runner"
 grep -Fq "printf '%s\\n' \"\${REQUESTED_TARGETS}\"" "$extended_workflow"
+
+target_pinned_line="$(grep -nF 'probes+=("$HOME/haxe/versions/$UPSTREAM_REF/haxelib")' "$runner" | head -n 1 | cut -d: -f1)"
+target_requested_line="$(grep -nF 'if [ -n "$requested" ]; then' "$runner" | head -n 1 | cut -d: -f1)"
+if [ "$target_pinned_line" -ge "$target_requested_line" ]; then
+  echo "Gate3 haxelib resolver must prefer pinned native Haxe toolchain before PATH/requested wrappers" >&2
+  exit 1
+fi
+
+grep -Fq 'resolve_runnable_haxelib()' "$macro_runner"
+macro_pinned_line="$(grep -nF 'probes+=("$HOME/haxe/versions/$UPSTREAM_REF/haxelib")' "$macro_runner" | head -n 1 | cut -d: -f1)"
+macro_requested_line="$(grep -nF 'if [ -n "$requested" ]; then' "$macro_runner" | head -n 1 | cut -d: -f1)"
+if [ "$macro_pinned_line" -ge "$macro_requested_line" ]; then
+  echo "Gate2 haxelib resolver must prefer pinned native Haxe toolchain before PATH/requested wrappers" >&2
+  exit 1
+fi
 
 strict_line="$(grep -nF 'exec "${HXHX_BIN}" "\$@"' "$runner" | head -n 1 | cut -d: -f1)"
 compat_line="$(grep -nF 'exec "${HXHX_BIN}" --compat "\$@"' "$runner" | head -n 1 | cut -d: -f1)"
