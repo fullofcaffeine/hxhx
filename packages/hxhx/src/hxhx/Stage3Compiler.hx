@@ -319,19 +319,35 @@ class Stage3Compiler {
 		};
 	}
 
-	static function findJsOutputFileHint(args:Array<String>):Null<String> {
+	static function targetOutputFlags(backendId:String):Array<String> {
+		// Only file-shaped target flags belong in BackendContext.outputFileHint.
+		// Directory-shaped targets such as Java/C#/PHP need target-specific layout support first.
+		return switch (backendId) {
+			case "js-native":
+				["-js", "--js"];
+			case "python-native":
+				["-python", "--python"];
+			case "lua-native":
+				["-lua", "--lua"];
+			case _:
+				[];
+		};
+	}
+
+	static function findTargetOutputFileHint(args:Array<String>, backendId:String):Null<String> {
 		final expanded = Stage1Args.expandHxmlArgs(args);
 		if (expanded == null)
+			return null;
+		final targetFlags = targetOutputFlags(backendId);
+		if (targetFlags.length == 0)
 			return null;
 		var i = 0;
 		while (i < expanded.length) {
 			final a = expanded[i];
-			switch (a) {
-				case "-js", "--js":
-					if (i + 1 < expanded.length)
-						return expanded[i + 1];
-					return null;
-				case _:
+			if (targetFlags.indexOf(a) >= 0) {
+				if (i + 1 < expanded.length)
+					return expanded[i + 1];
+				return null;
 			}
 			i += 1;
 		}
@@ -1212,7 +1228,7 @@ class Stage3Compiler {
 		var noRun = g.noRun;
 		final rest = g.rest;
 		MacroRuntimeMode.emitMarker(macroRuntimeMode);
-		final jsOutputHintRaw = findJsOutputFileHint(rest);
+		final targetOutputHintRaw = findTargetOutputFileHint(rest, backendId);
 
 		// Stage3 bring-up is intentionally stricter than a full `haxe` CLI, but it needs to be able to
 		// *attempt* upstream-ish hxmls (e.g. Gate1 `compile-macro.hxml`) without failing immediately on
@@ -2132,8 +2148,8 @@ class Stage3Compiler {
 			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 				Sys.println("stage3_driver=before_output_file_hint");
 			}
-			final outputFileHint = if (supportsCustomOutputFile && jsOutputHintRaw != null && jsOutputHintRaw.length > 0) {
-				Path.isAbsolute(jsOutputHintRaw) ? Path.normalize(jsOutputHintRaw) : absFromCwd(cwd, jsOutputHintRaw);
+			final outputFileHint = if (supportsCustomOutputFile && targetOutputHintRaw != null && targetOutputHintRaw.length > 0) {
+				Path.isAbsolute(targetOutputHintRaw) ? Path.normalize(targetOutputHintRaw) : absFromCwd(cwd, targetOutputHintRaw);
 			} else {
 				null;
 			}

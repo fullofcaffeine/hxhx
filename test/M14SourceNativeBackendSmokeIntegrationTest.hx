@@ -208,6 +208,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonOutputHint():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_hint_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final outputPath = Path.join([tmpRoot, "bin", "unit.py"]);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		final result = backend.emit(program("python"), new BackendContext(tmpRoot, outputPath, "Main", true, false, new StringMap<String>()));
+		assertTrue(result.entryPath == outputPath, "source backend should honor explicit Python output file hint");
+		assertTrue(FileSystem.exists(outputPath), "source backend should create the explicit Python output file");
+		assertContains(File.getContent(outputPath), "print((\"source-native:\" + \"python\"))", "hinted Python output should contain emitted program");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertUnsupportedDiagnostic():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_unsupported_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -342,6 +354,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("cs-native", "cs", "Main.cs", "System.Console.WriteLine((\"source-native:\" + \"cs\"));");
 		emit("php-native", "php", "index.php", "echo (\"source-native:\" . \"php\") . PHP_EOL;");
 		emit("lua-native", "lua", "Main.lua", "print((\"source-native:\" .. \"lua\"))");
+		assertPythonOutputHint();
 		assertUnsupportedDiagnostic();
 		assertIfStatement();
 		assertGenericCallStatement();
