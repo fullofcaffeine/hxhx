@@ -347,6 +347,29 @@ class Stage1Args {
 						return null;
 					}
 					i += 2;
+				case "--java-lib" | "-java-lib" if (permissive):
+					// Native Java libraries satisfy imports that have no `.hx` module file.
+					// Record an internal define so Stage3's bootstrap resolver can keep those
+					// external imports out of the Haxe module graph without weakening normal
+					// missing-import diagnostics.
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after " + a);
+						return null;
+					}
+					if (defines.indexOf("hxhx_java_lib=1") == -1)
+						defines.push("hxhx_java_lib=1");
+					i += 2;
+				case "--net-lib" | "-net-lib" if (permissive):
+					// C#/.NET native libraries play the same role as `--java-lib`: they
+					// provide external types that the bootstrap resolver cannot load as Haxe
+					// source modules.
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after " + a);
+						return null;
+					}
+					if (defines.indexOf("hxhx_net_lib=1") == -1)
+						defines.push("hxhx_net_lib=1");
+					i += 2;
 				case "--run", "-x" if (permissive):
 					// Upstream allows macro/compile-time suites to be driven via `--run`/`-x` instead
 					// of `-main` in some fixtures. For Stage3 diagnostic runs, treat this as setting

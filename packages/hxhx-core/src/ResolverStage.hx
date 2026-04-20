@@ -355,7 +355,9 @@ class ResolverStage {
 				//
 				// Bootstrap rule: try the raw import first, then fall back to a same-package prefix.
 				final existsDirect = resolveModuleFile(classPaths, imp) != null;
-				if (!existsDirect && HxConditionalCompilation.isActiveTargetNativeExternPath(imp, definesMap))
+				if (!existsDirect
+					&& (HxConditionalCompilation.isActiveTargetNativeExternPath(imp, definesMap)
+						|| HxConditionalCompilation.isActiveNativeLibraryExternPath(imp, definesMap)))
 					continue;
 
 				final resolvedImp = {

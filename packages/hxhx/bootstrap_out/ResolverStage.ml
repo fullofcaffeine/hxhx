@@ -482,7 +482,7 @@ let parseProjectRoots = fun classPaths roots defines -> let out = Obj.magic (HxA
                       let imp = (normalizeImport (rawImport : string) : string) in (
                         ignore (if HxString.length imp = 0 then raise (HxRuntime.Hx_continue) else ());
                         let existsDirect = resolveModuleFile (Obj.magic classPaths) (imp : string) != Obj.magic (HxRuntime.hx_null) in (
-                          ignore (if not (existsDirect) && HxConditionalCompilation.isActiveTargetNativeExternPath (imp : string) (Obj.magic (!tempMaybeStringMap)) then raise (HxRuntime.Hx_continue) else ());
+                          ignore (if not (existsDirect) && (HxConditionalCompilation.isActiveTargetNativeExternPath (imp : string) (Obj.magic (!tempMaybeStringMap)) || HxConditionalCompilation.isActiveNativeLibraryExternPath (imp : string) (Obj.magic (!tempMaybeStringMap))) then raise (HxRuntime.Hx_continue) else ());
                           let tempString = ref ("" : string) in (
                             ignore (if existsDirect then let __assign_92 = (imp : string) in (
                               tempString := __assign_92;

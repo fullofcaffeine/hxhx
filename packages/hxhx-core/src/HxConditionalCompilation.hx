@@ -208,6 +208,38 @@ class HxConditionalCompilation {
 		return isKnownTargetPackageRoot(root) && defines != null && defines.exists(root);
 	}
 
+	/**
+		Whether a missing import may be satisfied by an explicitly declared native library.
+
+		Why
+		- Java/C# upstream unit workloads import types from native libraries declared with
+		  flags such as `--java-lib native.jar` or `--net-lib native.dll`.
+		- Those types do not have `.hx` module files, so the syntax-driven bootstrap resolver
+		  must not fail before the target backend/library-introspection layer can handle them.
+		- The rule is deliberately gated by internal defines emitted only when such native
+		  library flags are present, so ordinary missing Haxe imports remain strict.
+
+		What
+		- For Java, any dotted missing import can be external when `java` and
+		  `hxhx_java_lib` are active.
+		- For C#, any dotted missing import can be external when `cs` and `hxhx_net_lib`
+		  are active.
+	**/
+	public static function isActiveNativeLibraryExternPath(typePath:String, defines:haxe.ds.StringMap<String>):Bool {
+		if (typePath == null)
+			return false;
+		final s = StringTools.trim(typePath);
+		if (s.length == 0 || s.indexOf(".") <= 0)
+			return false;
+		if (defines == null)
+			return false;
+		if (defines.exists("java") && defines.exists("hxhx_java_lib"))
+			return true;
+		if (defines.exists("cs") && defines.exists("hxhx_net_lib"))
+			return true;
+		return false;
+	}
+
 	private static function isKnownTargetPackageRoot(root:String):Bool {
 		return switch (root) {
 			case "php" | "java" | "cs" | "python" | "neko" | "lua" | "cpp" | "hl" | "flash" | "js": true;

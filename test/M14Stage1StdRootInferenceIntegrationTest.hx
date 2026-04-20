@@ -10,6 +10,15 @@ class M14Stage1StdRootInferenceIntegrationTest {
 			throw message;
 	}
 
+	static function hasValue(values:Array<String>, expected:String):Bool {
+		if (values == null)
+			return false;
+		for (value in values)
+			if (value == expected)
+				return true;
+		return false;
+	}
+
 	static function envOrEmpty(name:String):String {
 		final value = Sys.getEnv(name);
 		return value == null ? "" : value;
@@ -78,6 +87,23 @@ class M14Stage1StdRootInferenceIntegrationTest {
 			final parsed = Stage1Args.parse(["--cwd", projectDir, "-cp", "src", "-main", "Main"], true);
 			assertTrue(parsed != null, "expected Stage1Args.parse to succeed");
 			final classPaths = Stage1Args.getClassPaths(parsed);
+
+			final nativeLibParsed = Stage1Args.parse([
+				"--cwd",
+				projectDir,
+				"-cp",
+				"src",
+				"-main",
+				"Main",
+				"--java-lib",
+				"native.jar",
+				"--net-lib",
+				"native.dll"
+			], true);
+			assertTrue(nativeLibParsed != null, "expected native-library args to parse in permissive Stage1 mode");
+			final nativeLibDefines = Stage1Args.getDefines(nativeLibParsed);
+			assertTrue(hasValue(nativeLibDefines, "hxhx_java_lib=1"), "expected --java-lib to seed native Java library define");
+			assertTrue(hasValue(nativeLibDefines, "hxhx_net_lib=1"), "expected --net-lib to seed native .NET library define");
 
 			var found = false;
 			for (cp in classPaths) {

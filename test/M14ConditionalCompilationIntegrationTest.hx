@@ -159,6 +159,68 @@ class M14ConditionalCompilationIntegrationTest {
 		assertTrue(inactiveFailed, "inactive target extern imports should still fail like ordinary missing imports");
 	}
 
+	static function testActiveNativeLibraryExternImports():Void {
+		final tmpRoot = haxe.io.Path.normalize(".tmp/m14_conditional_compilation_native_lib_extern_" + Std.string(Date.now().getTime()));
+		final javaSrcDir = haxe.io.Path.join([tmpRoot, "java_src"]);
+		final csSrcDir = haxe.io.Path.join([tmpRoot, "cs_src"]);
+		final javaUnitDir = haxe.io.Path.join([javaSrcDir, "unit"]);
+		final csUnitDir = haxe.io.Path.join([csSrcDir, "unit"]);
+		deleteRecursive(tmpRoot);
+		ensureDirectory(tmpRoot);
+		ensureDirectory(javaSrcDir);
+		ensureDirectory(csSrcDir);
+		ensureDirectory(javaUnitDir);
+		ensureDirectory(csUnitDir);
+
+		File.saveContent(haxe.io.Path.join([javaUnitDir, "TestJava.hx"]), [
+			"package unit;",
+			"import haxe.test.Base.Base_InnerClass;",
+			"class TestJava { public static function main():Void {} }",
+		].join("\n"));
+		File.saveContent(haxe.io.Path.join([csUnitDir, "TestCSharp.hx"]), [
+			"package unit;",
+			"import haxe.test.Base.Base_InnerClass;",
+			"class TestCSharp { public static function main():Void {} }",
+		].join("\n"));
+
+		var thrown:Dynamic = null;
+		try {
+			var javaWithoutLibFailed = false;
+			try {
+				ResolverStage.parseProjectRoots([javaSrcDir], ["unit.TestJava"], defines(["java"]));
+			} catch (e:Dynamic) {
+				javaWithoutLibFailed = Std.string(e).indexOf("import_missing haxe.test.Base.Base_InnerClass") >= 0;
+			}
+			assertTrue(javaWithoutLibFailed, "missing Java native-library import should stay strict without --java-lib evidence");
+
+			final javaResolved = ResolverStage.parseProjectRoots([javaSrcDir], ["unit.TestJava"], defines(["java", "hxhx_java_lib"]));
+			final javaPaths = modulePaths(javaResolved);
+			assertContains(javaPaths, "unit.TestJava", "Java native-library root should resolve");
+			assertNotContains(javaPaths, "haxe.test.Base.Base_InnerClass", "Java native-library extern import should not require a .hx module");
+
+			var csWithoutLibFailed = false;
+			try {
+				ResolverStage.parseProjectRoots([csSrcDir], ["unit.TestCSharp"], defines(["cs"]));
+			} catch (e:Dynamic) {
+				csWithoutLibFailed = Std.string(e).indexOf("import_missing haxe.test.Base.Base_InnerClass") >= 0;
+			}
+			assertTrue(csWithoutLibFailed, "missing C# native-library import should stay strict without --net-lib evidence");
+
+			final csResolved = ResolverStage.parseProjectRoots([csSrcDir], ["unit.TestCSharp"], defines(["cs", "hxhx_net_lib"]));
+			final csPaths = modulePaths(csResolved);
+			assertContains(csPaths, "unit.TestCSharp", "C# native-library root should resolve");
+			assertNotContains(csPaths, "haxe.test.Base.Base_InnerClass", "C# native-library extern import should not require a .hx module");
+		} catch (e:Dynamic) {
+			thrown = e;
+		}
+
+		if (thrown != null) {
+			Sys.println("debug_out=" + tmpRoot);
+			throw thrown;
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function main():Void {
 		final inlineElseIf = 'if (#if flash Flash.path() #elseif php php.Global.method_exists(v, "hxSerialize") #else v.hxSerialize != null #end) keep();';
 		final jsFiltered = HxConditionalCompilation.filterSource(inlineElseIf, defines(["js"]));
@@ -173,5 +235,6 @@ class M14ConditionalCompilationIntegrationTest {
 
 		testInactiveTargetQualifiedDeps();
 		testActiveTargetNativeExternImports();
+		testActiveNativeLibraryExternImports();
 	}
 }
