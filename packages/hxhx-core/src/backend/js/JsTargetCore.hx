@@ -2357,10 +2357,7 @@ class JsTargetCore implements ITargetCore {
 			case "sub":
 				if (params.length < 2)
 					return false;
-				writer.writeln("var __hx_pos = " + params[0] + " | 0;");
-				writer.writeln("var __hx_len = " + params[1] + " | 0;");
-				writer.writeln("if (__hx_pos < 0 || __hx_len < 0 || __hx_pos + __hx_len > this.length) throw \"OutsideBounds\";");
-				writer.writeln("return new " + JsNameMangler.classVarName("haxe.io.Bytes") + "(__hx_len, this.b.slice(__hx_pos, __hx_pos + __hx_len));");
+				emitHaxeIoBytesSubBody(writer, params[0], params[1]);
 				return true;
 			case "fill":
 				if (params.length < 3)
@@ -2388,6 +2385,13 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("if (typeof Buffer !== \"undefined\") return Buffer.from(__hx_slice).toString(\"utf8\");");
 		writer.writeln("if (typeof TextDecoder !== \"undefined\") return new TextDecoder(\"utf-8\").decode(new Uint8Array(__hx_slice));");
 		writer.writeln("return String.fromCharCode.apply(null, __hx_slice);");
+	}
+
+	static function emitHaxeIoBytesSubBody(writer:JsWriter, pos:String, len:String):Void {
+		writer.writeln("var __hx_pos = " + pos + " | 0;");
+		writer.writeln("var __hx_len = " + len + " | 0;");
+		writer.writeln("if (__hx_pos < 0 || __hx_len < 0 || __hx_pos + __hx_len > this.length) throw \"OutsideBounds\";");
+		writer.writeln("return new " + JsNameMangler.classVarName("haxe.io.Bytes") + "(__hx_len, this.b.slice(__hx_pos, __hx_pos + __hx_len));");
 	}
 
 	static function emitHaxeIoBytesToHexBody(writer:JsWriter):Void {
@@ -2515,6 +2519,9 @@ class JsTargetCore implements ITargetCore {
 		});
 		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "toString", [], function() {
 			writer.writeln("return this.getString(0, this.length);");
+		});
+		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "sub", ["pos", "len"], function() {
+			emitHaxeIoBytesSubBody(writer, "pos", "len");
 		});
 		emitHaxeIoBytesPrototypeComplement(writer, jsRef, "toHex", [], function() {
 			emitHaxeIoBytesToHexBody(writer);

@@ -1252,6 +1252,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    var reflectedFields = Type.getInstanceFields(Type.getClass(reflectedCounter));',
 				'    Sys.println("type-fields=" + Type.getClassName(Type.getClass(reflectedCounter)) + ":" + reflectedFields.join("|") + ":" + Reflect.isFunction(Reflect.field(reflectedCounter, "add")));',
 				'    Sys.println(haxe.io.Bytes.ofString("bytes-ref").toString());',
+				'    Sys.println("bytes-sub=" + haxe.io.Bytes.ofString("abcdef").sub(2, 3).toString());',
 				'    Sys.println(haxe.crypto.Base64.BYTES.toString());',
 				'    Sys.println(StringTools.fastCodeAt("AZ", 1));',
 				'    Sys.println("starts=" + StringTools.startsWith("testCase", "test") + "," + StringTools.startsWith("case", ""));',
@@ -1564,6 +1565,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.set = function", "Bytes.set prototype should emit for std ofHex runtime");
 			assertContains(js, "this.b[pos | 0] = (v | 0) & 255", "Bytes.set complement should mask byte values");
 			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.get = function", "Bytes.get prototype should emit for std readers");
+			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.sub = function", "Bytes.sub prototype complement should emit for diff printers");
 			assertContains(js, "__hx_cls_haxe_io_Bytes.prototype.toString = function", "Bytes.toString prototype should emit for sys/runtime readers");
 			assertContains(js, "__hx_cls_haxe_crypto_Base64.BYTES = __hx_cls_haxe_io_Bytes.ofString(__hx_cls_haxe_crypto_Base64.CHARS)",
 				"same-class static field refs should resolve to class bindings");
@@ -1726,6 +1728,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "reflect-is-object=true,true,false,false", "Reflect.isObject should match Haxe JS behavior");
 			assertContains(stdout, "type-fields=Counter:add:true", "Type/Reflect helpers should expose prototype test methods for utest-style discovery");
 			assertContains(stdout, "bytes-ref", "qualified package static refs should execute through class bindings");
+			assertContains(stdout, "bytes-sub=cde", "Bytes.sub should return a sliced Bytes value that can be stringified");
 			assertContains(stdout, "abc", "same-class static field refs should execute through class bindings");
 			assertContains(stdout, "90", "StringTools.fastCodeAt should return JS char codes");
 			assertContains(stdout, "starts=true,true", "StringTools.startsWith should support utest prefix discovery and empty prefixes");
