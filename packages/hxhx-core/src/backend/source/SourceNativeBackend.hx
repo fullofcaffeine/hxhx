@@ -582,6 +582,8 @@ class SourceNativeBackend {
 				renderStmts(target, stmts, indent);
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
 				[indent + printStmt(target, renderExpr(target, args[0]))];
+			case SExpr(ECall(EIdent("trace"), args), _) if (args.length >= 1):
+				[indent + printStmt(target, renderExpr(target, args[0]))];
 			case SExpr(expr, _):
 				[indent + exprStmt(target, renderExpr(target, expr))];
 			case SVar(name, _typeHint, init, _):

@@ -89,6 +89,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function traceProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    trace(\"trace-native\");",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function arrayLiteralProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -261,6 +274,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertTraceStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_trace_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(traceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		assertContains(File.getContent(outputPath), "print(\"trace-native\")", "trace calls should lower to the target print statement");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertArrayLiteral():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_array_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -358,6 +382,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertUnsupportedDiagnostic();
 		assertIfStatement();
 		assertGenericCallStatement();
+		assertTraceStatement();
 		assertArrayLiteral();
 		assertConstructorExpression();
 		assertForInStatement();
