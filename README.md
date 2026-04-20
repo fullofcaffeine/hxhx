@@ -22,6 +22,20 @@ The practical user story today is:
 replacement goal is tracked separately in the technical roadmap and release
 contracts.
 
+## Goals status
+
+This table is the short, public-facing status board for the main goals. It is
+about production usability, not internal compiler milestones.
+
+| Goal | Production usability today | What to use now | Not ready yet |
+| --- | --- | --- | --- |
+| `reflaxe.ocaml` with upstream `haxe` | Most usable path in this repo for producing OCaml from Haxe. Treat it as production-candidate: validate your own app and runtime needs before shipping. | Use upstream Haxe `4.3.7` plus `-lib reflaxe.ocaml`. Start with `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`. | A public 1.0 claim still depends on the release contract, runtime/stdlib closure evidence, and app-level validation. |
+| `reflaxe.ocaml` with `hxhx` | Experimental. Useful for validating the native compiler path, not the default production route. | Use this when testing `hxhx` compatibility or native compiler work. Keep upstream Haxe available as the practical fallback. | Full macro/plugin parity and upstream-suite evidence are still being burned down. |
+| `reflaxe.ocaml` as a native `hxhx` plugin | In progress. The promotion workflow and plugin-safe output mode exist, but this is not yet the broad production packaging story. | Reflaxe target authors can use the promotion docs to build and validate native plugin artifacts. | Native plugin loading, host API coverage, and release evidence still need to mature before this is the default recommendation. |
+| `reflaxe.ocaml` as a builtin/native `hxhx` target | In progress. The design supports builtin host adapters as a separate packaging shape from plugins. | Use the promotion matrix docs to understand plugin vs builtin packaging. | The long-term goal is one reusable target core that can be packaged as plugin or builtin without rewriting the backend. That is not fully productized yet. |
+| `hxhx` as a MIT drop-in Haxe replacement | Not production-ready. This is the major long-term goal: Haxe `4.3.7`-equivalent behavior, no required upstream-Haxe fallback, and credible performance. | Use `hxhx` for scoped native lanes, experiments, and subprocess embedding where the supported scope matches your use case. | Do not claim full drop-in compatibility until the upstream-derived Full 1.0 gates and performance evidence pass. |
+| Source/native target compilation beyond OCaml | Early implementation. The best production path for Haxe-to-OCaml is still upstream Haxe plus `reflaxe.ocaml`. | For OCaml output, use `reflaxe.ocaml` with upstream Haxe. For source-target burn-down, use the technical gate docs. | The desired end state is `hxhx` plus native Reflaxe target cores that can be packaged for upstream Haxe, `hxhx` plugin loading, or builtin `hxhx` targets. Source MVPs for Python/Java/C#/PHP/Lua are not production support claims. |
+
 ## Start here
 
 If you are new, start with:
