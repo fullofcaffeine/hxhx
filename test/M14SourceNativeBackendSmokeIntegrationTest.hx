@@ -33,6 +33,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final src = [
 			"class Main {",
 			"  static function main() {",
+			"    Std.string(\"expr-statement\");",
 			"    Sys.println(\"source-native:\" + \"" + label + "\");",
 			"  }",
 			"}",
@@ -49,6 +50,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    if (true) {",
 			"      Sys.println(\"branch\");",
 			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function genericCallProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Math.isFinite(1.5);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function arrayLiteralProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values = [1, 2];",
+			"    Sys.println(Std.string(values));",
 			"  }",
 			"}",
 		].join("\n");
@@ -89,6 +117,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertGenericCallStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(genericCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		assertContains(File.getContent(outputPath), "Math.isFinite(1.5)", "generic expression statement should render calls and fields");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertArrayLiteral():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_array_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(arrayLiteralProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		assertContains(File.getContent(outputPath), "values = [1, 2]", "array literals should render in variable initializers");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function main():Void {
 		emit("python-native", "python", "Main.py", "print(\"source-native:\" + \"python\")");
 		emit("java-native", "java", "Main.java", "System.out.println(\"source-native:\" + \"java\");");
@@ -96,5 +146,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("php-native", "php", "index.php", "echo \"source-native:\" . \"php\" . PHP_EOL;");
 		emit("lua-native", "lua", "Main.lua", "print(\"source-native:\" .. \"lua\")");
 		assertUnsupportedDiagnostic();
+		assertGenericCallStatement();
+		assertArrayLiteral();
 	}
 }

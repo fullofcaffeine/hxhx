@@ -255,6 +255,12 @@ class SourceNativeBackend {
 				renderExpr(target, inner);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringCall(target, renderExpr(target, args[0]));
+			case EField(receiver, field):
+				fieldAccess(target, renderExpr(target, receiver), field);
+			case ECall(callee, args):
+				callExpr(target, renderExpr(target, callee), args);
+			case EArrayDecl(items):
+				arrayLiteral(target, items);
 			case _:
 				throw targetLabel(target) + " source backend MVP unsupported expression: " + exprKind(expr);
 		};
@@ -325,6 +331,33 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function fieldAccess(target:SourceNativeTarget, receiver:String, field:String):String {
+		final safeField = sanitizeTypeName(field);
+		return switch (target) {
+			case Php: receiver + "->" + safeField;
+			case Python: receiver + "." + safeField;
+			case Java: receiver + "." + safeField;
+			case Cs: receiver + "." + safeField;
+			case Lua: receiver + "." + safeField;
+		};
+	}
+
+	static function callExpr(target:SourceNativeTarget, callee:String, args:Array<HxExpr>):String {
+		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
+		return callee + "(" + rendered + ")";
+	}
+
+	static function arrayLiteral(target:SourceNativeTarget, items:Array<HxExpr>):String {
+		final rendered = [for (item in items) renderExpr(target, item)].join(", ");
+		return switch (target) {
+			case Java: "new Object[] { " + rendered + " }";
+			case Cs: "new object[] { " + rendered + " }";
+			case Python: "[" + rendered + "]";
+			case Php: "[" + rendered + "]";
+			case Lua: "{" + rendered + "}";
+		};
+	}
+
 	static function printStmt(target:SourceNativeTarget, expr:String):String {
 		return switch (target) {
 			case Python: "print(" + expr + ")";
@@ -335,12 +368,24 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function exprStmt(target:SourceNativeTarget, expr:String):String {
+		return switch (target) {
+			case Python: expr;
+			case Java: expr + ";";
+			case Cs: expr + ";";
+			case Php: expr + ";";
+			case Lua: expr;
+		};
+	}
+
 	static function renderStmt(target:SourceNativeTarget, stmt:HxStmt, indent:String):Array<String> {
 		return switch (stmt) {
 			case SBlock(stmts, _):
 				renderStmts(target, stmts, indent);
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
 				[indent + printStmt(target, renderExpr(target, args[0]))];
+			case SExpr(expr, _):
+				[indent + exprStmt(target, renderExpr(target, expr))];
 			case SVar(name, _typeHint, init, _):
 				final rhs = init == null ? defaultValue(target) : renderExpr(target, init);
 					[indent + varDecl(target, sanitizeTypeName(name), rhs)];
