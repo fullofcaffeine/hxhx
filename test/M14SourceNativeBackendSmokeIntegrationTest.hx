@@ -696,6 +696,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var sm = new haxe.ds.StringMap<Int>();",
 			"    sm.set(\"b\", 2);",
 			"    Sys.println(Std.string(sm.get(\"b\")));",
+			"    var im = new haxe.ds.IntMap<Int>();",
+			"    im.set(-4815, 8546);",
+			"    Sys.println(Std.string(im.exists(-4815)));",
+			"    im.remove(-4815);",
+			"    Sys.println(Std.string(im.exists(-4815)));",
 			"    var values = Lambda.array(sm);",
 			"    Sys.println(values.join(\"#\"));",
 			"    var keys = Lambda.array({ iterator: sm.keys });",
@@ -1945,8 +1950,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$sm->set(\"b\", 2);", "PHP haxe.ds.StringMap.set should use the runtime shim");
 		assertContains(content, "__hxhx_add_string($m->exists(\"a\"))", "PHP Map.exists should be usable in expressions");
 		assertContains(content, "__hxhx_add_string($m->get(\"a\"))", "PHP Map.get should be usable in expressions");
-		assertContains(content, "__hxhx_add_string($m->remove(\"a\"))", "PHP Map.remove should be usable in expressions");
+		assertContains(content, "__hxhx_add_string(__hxhx_remove($m, \"a\"))", "PHP Map.remove should be usable in expressions");
 		assertContains(content, "__hxhx_add_string($sm->get(\"b\"))", "PHP haxe.ds.StringMap.get should be usable in expressions");
+		assertContains(content, "$im = new Map();", "PHP haxe.ds.IntMap construction should lower to the runtime shim");
+		assertContains(content, "__hxhx_remove($im, (-4815));", "PHP haxe.ds.IntMap.remove should dispatch through the polymorphic remove helper");
 		assertContains(content, "class Lambda {", "PHP source backend should emit a minimal Lambda helper");
 		assertContains(content, "class Reflect {", "PHP source backend should emit a minimal Reflect helper for Array.sort callbacks");
 		assertContains(content, "$values = Lambda::array($sm);", "PHP Lambda.array should accept Map-backed iterables");
@@ -2340,7 +2347,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_array_get($array, $index)", "PHP runtime should include a safe Haxe array read helper");
-		assertContains(content, "function __hxhx_array_remove(&$array, $value)", "PHP runtime should include an Array.remove helper");
+		assertContains(content, "function __hxhx_remove(&$collection, $value)", "PHP runtime should include a polymorphic remove helper");
 		assertContains(content, "function __hxhx_array_splice(&$array, $pos, $len)", "PHP runtime should include an Array.splice helper");
 		assertContains(content, "function __hxhx_array_sort(&$array, $compare)", "PHP runtime should include an Array.sort helper");
 		assertContains(content, "function __hxhx_array_join($array, $separator)", "PHP runtime should include an Array.join helper");
@@ -2350,10 +2357,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP out-of-bounds array reads should go through safe Haxe read helper");
 		assertContains(content, "__hxhx_array_sort($a, [Reflect::class, \"compare\"]);", "PHP Array.sort should lower through the mutating helper");
 		assertContains(content, "echo __hxhx_array_join($a, \"#\") . PHP_EOL;", "PHP Array.join should lower through the join helper");
-		assertContains(content, "__hxhx_array_remove($a, 2);", "PHP Array.remove should lower through the mutating helper");
+		assertContains(content, "__hxhx_remove($a, 2);", "PHP Array.remove should lower through the mutating helper");
 		assertContains(content, "__hxhx_array_splice($a, 1, 1);", "PHP Array.splice should lower through the mutating helper");
 		assertContains(content, "$it = __hxhx_iterator($a);", "PHP Array.iterator should lower through the iterator helper");
-		assertContains(content, "$m->remove(\"a\");", "PHP Map.remove should remain an object method call");
+		assertContains(content, "__hxhx_remove($m, \"a\");", "PHP Map.remove should go through the polymorphic remove helper");
 		assertNotContains(content, "$a->remove(2)", "PHP arrays should not emit object-method remove calls on raw arrays");
 		assertNotContains(content, "$a->iterator()", "PHP arrays should not emit object-method iterator calls on raw arrays");
 		assertNotContains(content, "$a[3]", "PHP expression reads should not emit direct array access for missing-index semantics");

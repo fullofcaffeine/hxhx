@@ -864,12 +864,8 @@ class SourceNativeBackend {
 		if (mutableReceiver == null)
 			return null;
 		return switch (field) {
-			case "remove" if (args.length == 1 && phpArrayRemoveCandidateArg(args[0])):
-				"__hxhx_array_remove("
-				+ mutableReceiver
-				+ ", "
-				+ renderExpr(Php, args[0])
-				+ ")";
+			case "remove" if (args.length == 1):
+				"__hxhx_remove(" + mutableReceiver + ", " + renderExpr(Php, args[0]) + ")";
 			case "splice" if (args.length == 2):
 				"__hxhx_array_splice("
 				+ mutableReceiver
@@ -893,15 +889,6 @@ class SourceNativeBackend {
 				phpLvalueExpr(receiver);
 			case _:
 				null;
-		};
-	}
-
-	static function phpArrayRemoveCandidateArg(arg:HxExpr):Bool {
-		return switch (arg) {
-			case EString(_):
-				false;
-			case _:
-				true;
 		};
 	}
 
@@ -3546,12 +3533,13 @@ class SourceNativeBackend {
 				lines.push("  if (!is_array($array)) return null;");
 				lines.push("  return array_key_exists($index, $array) ? $array[$index] : null;");
 				lines.push("}");
-				lines.push("function __hxhx_array_remove(&$array, $value) {");
-				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
-				lines.push("  if (!is_array($array)) return false;");
-				lines.push("  $index = array_search($value, $array, true);");
+				lines.push("function __hxhx_remove(&$collection, $value) {");
+				lines.push("  if ($collection instanceof Map) return $collection->remove($value);");
+				lines.push("  if ($collection instanceof __HxArray) $collection = $collection->toArray();");
+				lines.push("  if (!is_array($collection)) return false;");
+				lines.push("  $index = array_search($value, $collection, true);");
 				lines.push("  if ($index === false) return false;");
-				lines.push("  array_splice($array, $index, 1);");
+				lines.push("  array_splice($collection, $index, 1);");
 				lines.push("  return true;");
 				lines.push("}");
 				lines.push("function __hxhx_array_splice(&$array, $pos, $len) {");
