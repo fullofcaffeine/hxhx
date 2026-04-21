@@ -478,6 +478,66 @@ class Stage3Compiler {
 		}
 	}
 
+	static function javaNoEmitOverloadDiagnostic(typedModules:Array<TypedModule>):Null<String> {
+		if (typedModules == null)
+			return null;
+		for (typed in typedModules) {
+			final parsed = typed.getParsed();
+			final filePath = parsed.getFilePath();
+			for (cls in HxModuleDecl.getClasses(parsed.getDecl())) {
+				final seen = new Map<String, {name:String, rawSig:String, pos:HxPos}>();
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					final meta = HxFunctionDecl.getMetadata(fn);
+					if (meta == null || meta.indexOf("overload") < 0)
+						continue;
+					final name = HxFunctionDecl.getName(fn);
+					final rawSig = javaRawOverloadSignature(fn);
+					final erasedSig = javaErasedOverloadSignature(fn);
+					final key = name + "#" + erasedSig;
+					final prev = seen.get(key);
+					if (prev != null) {
+						final relation = prev.rawSig == rawSig ? "same" : "similar";
+						return javaOverloadCollisionDiagnostic(filePath, fn, relation);
+					}
+					seen.set(key, {name: name, rawSig: rawSig, pos: HxFunctionDecl.getPos(fn)});
+				}
+			}
+		}
+		return null;
+	}
+
+	static function javaRawOverloadSignature(fn:HxFunctionDecl):String {
+		final parts = new Array<String>();
+		for (arg in HxFunctionDecl.getArgs(fn))
+			parts.push(StringTools.trim(HxFunctionArg.getTypeHint(arg)));
+		return parts.join(",");
+	}
+
+	static function javaErasedOverloadSignature(fn:HxFunctionDecl):String {
+		final parts = new Array<String>();
+		for (arg in HxFunctionDecl.getArgs(fn))
+			parts.push(javaErasedOverloadArg(StringTools.trim(HxFunctionArg.getTypeHint(arg))));
+		return parts.join(",");
+	}
+
+	static function javaErasedOverloadArg(typeHint:String):String {
+		final compact = StringTools.replace(typeHint == null ? "" : typeHint, " ", "");
+		if (compact.indexOf("->") >= 0)
+			return "Function";
+		if (compact.length == 0)
+			return "Object";
+		return compact;
+	}
+
+	static function javaOverloadCollisionDiagnostic(filePath:String, fn:HxFunctionDecl, relation:String):String {
+		final pos = HxFunctionDecl.getPos(fn);
+		final line = pos == null ? 0 : pos.getLine();
+		final start = pos == null ? 0 : pos.getColumn();
+		final end = start + HxFunctionDecl.getName(fn).length;
+		return filePath + ":" + Std.string(line) + ": characters " + Std.string(start) + "-" + Std.string(end) + " : Another overloaded field of "
+			+ relation + " signature was already declared : " + HxFunctionDecl.getName(fn);
+	}
+
 	/**
 		Decode a single `--wait stdio` request frame.
 
@@ -2206,6 +2266,13 @@ class Stage3Compiler {
 			if (backendCaps.supportsNoEmit != true) {
 				closeMacroSession();
 				return error("backend does not support --hxhx-no-emit: " + backendId);
+			}
+			if (backendId == "java-native") {
+				final overloadDiagnostic = javaNoEmitOverloadDiagnostic(typedModules);
+				if (overloadDiagnostic != null) {
+					closeMacroSession();
+					return error(overloadDiagnostic);
+				}
 			}
 
 			for (name in hxhx.macro.MacroState.listDefineNames()) {
