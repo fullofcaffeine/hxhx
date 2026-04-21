@@ -1656,7 +1656,7 @@ class SourceNativeBackend {
 	static function phpStaticTypePathPrefix(expr:HxExpr):Null<String> {
 		return switch (expr) {
 			case EIdent(name):
-				if (looksLikeTypePathSegment(name)) name else null;
+				if (looksLikeTypePathRoot(name) || looksLikePhpPackageRoot(name)) name else null;
 			case EField(receiver, field):
 				final prefix = phpStaticTypePathPrefix(receiver);
 				if (prefix == null) {
@@ -1681,6 +1681,15 @@ class SourceNativeBackend {
 			return false;
 		final ch = name.charAt(0);
 		return (ch >= "A" && ch <= "Z") || (ch >= "a" && ch <= "z");
+	}
+
+	static function looksLikePhpPackageRoot(name:String):Bool {
+		return switch (name == null ? "" : name) {
+			case "haxe" | "php" | "unit" | "utest":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function phpStaticPropertyAccess(typePath:String, field:String):String {
@@ -2524,12 +2533,8 @@ class SourceNativeBackend {
 		}
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			final modulePackage = phpSupportPackage(moduleDecl, filePath);
-			if (mainPackage != null && mainPackage.length > 0) {
-				if (modulePackage != mainPackage)
-					return;
-			} else if (modulePackage.length > 0) {
+			if (!phpShouldEmitSupportPackage(mainPackage, modulePackage))
 				return;
-			}
 			if (isStdSourceFile(filePath))
 				return;
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
@@ -2552,6 +2557,12 @@ class SourceNativeBackend {
 				out.push(line);
 		}
 		return out;
+	}
+
+	static function phpShouldEmitSupportPackage(mainPackage:String, modulePackage:String):Bool {
+		if (mainPackage != null && mainPackage.length > 0)
+			return modulePackage == mainPackage;
+		return modulePackage == null || modulePackage.length == 0;
 	}
 
 	static function moduleHasClass(decl:HxModuleDecl, className:String):Bool {
@@ -3065,6 +3076,35 @@ class SourceNativeBackend {
 				lines.push("  }");
 				lines.push("  public function __toString() {");
 				lines.push("    return $this->toString();");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("class __HxDispatcher {");
+				lines.push("  public function add($listener) {");
+				lines.push("    return $listener;");
+				lines.push("  }");
+				lines.push("  public function dispatch($event) {");
+				lines.push("    return null;");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("class Runner {");
+				lines.push("  public $onProgress;");
+				lines.push("  public $onTestStart;");
+				lines.push("  public function __construct() {");
+				lines.push("    $this->onProgress = new __HxDispatcher();");
+				lines.push("    $this->onTestStart = new __HxDispatcher();");
+				lines.push("  }");
+				lines.push("  public function addCase($case) {");
+				lines.push("    return null;");
+				lines.push("  }");
+				lines.push("  public function run() {");
+				lines.push("    throw new \\Exception(\"hxhx PHP utest Runner runtime is not implemented\");");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("class Report {");
+				lines.push("  public $displayHeader;");
+				lines.push("  public $displaySuccessResults;");
+				lines.push("  public static function create($runner) {");
+				lines.push("    return new Report();");
 				lines.push("  }");
 				lines.push("}");
 				lines.push("class ValueException extends \\Exception {");

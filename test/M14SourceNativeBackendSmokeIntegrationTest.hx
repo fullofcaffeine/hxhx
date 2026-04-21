@@ -688,6 +688,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpInstanceFieldMethodCallProgram():GenIrProgram {
+		final src = [
+			"class Dispatcher {",
+			"  public function new() {}",
+			"  public function add(listener) { }",
+			"}",
+			"",
+			"class RunnerLike {",
+			"  public var onProgress = new Dispatcher();",
+			"  public function new() {}",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var runner = new RunnerLike();",
+			"    runner.onProgress.add(function(e) { });",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1583,6 +1607,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Map", "PHP source backend should emit a minimal Map helper");
 		assertContains(content, "public function set($key, $value)", "PHP Map helper should support set");
 		assertContains(content, "public function get($key)", "PHP Map helper should support get");
+		assertContains(content, "class Runner", "PHP source backend should emit an explicit utest Runner bring-up shim");
+		assertContains(content, "hxhx PHP utest Runner runtime is not implemented", "PHP Runner shim should fail honestly instead of faking success");
+		assertContains(content, "class Report", "PHP source backend should emit an explicit utest Report bring-up shim");
 		assertContains(content, "class ValueException extends \\Exception", "PHP source backend should emit a minimal ValueException helper");
 		assertContains(content, "public static function thrown($value)", "PHP ValueException helper should support thrown values");
 		assertContains(content, "class Sys", "PHP source backend should emit a minimal Sys helper");
@@ -1617,6 +1644,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "class UnitBuilder", "PHP support class should be emitted in the current global class model");
 		assertContains(content, "$specs = [];", "PHP compile-time-only UnitBuilder.generateSpec should not become a runtime class call");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpInstanceFieldMethodCall():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_field_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpInstanceFieldMethodCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$runner->onProgress->add(function($e) {", "PHP field method calls should use instance dispatch");
+		assertNotContains(content, "onProgress::add", "PHP field method calls should not be mistaken for static type paths");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -1782,7 +1822,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class TestBytes {", "PHP support class emission should include non-std typed modules across parser package boundaries");
-		assertNotContains(content, "class Runner {", "PHP support class emission should not include unrelated haxelib packages");
+		assertNotContains(content, "class UTestException {", "PHP support class emission should not include unrelated haxelib packages");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2266,6 +2306,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpRuntimeShim();
 		assertPhpMapRuntimeShim();
 		assertPhpSamePackageQualifiedStaticPath();
+		assertPhpInstanceFieldMethodCall();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();
