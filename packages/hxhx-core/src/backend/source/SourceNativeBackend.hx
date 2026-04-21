@@ -729,7 +729,28 @@ class SourceNativeBackend {
 
 	static function callExpr(target:SourceNativeTarget, callee:String, args:Array<HxExpr>):String {
 		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
+		if (target == Php) {
+			final testHelper = phpTestHelperCall(callee, rendered);
+			if (testHelper != null)
+				return testHelper;
+		}
 		return callee + "(" + rendered + ")";
+	}
+
+	static function phpTestHelperCall(callee:String, renderedArgs:String):Null<String> {
+		if (!StringTools.startsWith(callee, "$"))
+			return null;
+		final name = callee.substr(1);
+		return if (isPhpUnitTestHelperName(name)) "$this->" + name + "(" + renderedArgs + ")" else null;
+	}
+
+	static function isPhpUnitTestHelperName(name:String):Bool {
+		return switch (name) {
+			case "eq" | "feq" | "aeq" | "t" | "f" | "assert" | "exc" | "unspec" | "allow" | "noAssert" | "hf" | "nhf" | "hsf" | "nhsf":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function fieldCallExpr(target:SourceNativeTarget, receiver:HxExpr, field:String, args:Array<HxExpr>):String {
@@ -2647,6 +2668,16 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function renderPhpFunctionArg(arg:HxFunctionArg):String {
+		final name = valueName(Php, HxFunctionArg.getName(arg));
+		return switch (HxFunctionArg.getDefaultValue(arg)) {
+			case Default(expr):
+				name + " = " + (phpExprIsConstantDefault(expr) ? renderExpr(Php, expr) : defaultValue(Php));
+			case NoDefault:
+				HxFunctionArg.getIsOptional(arg) ? name + " = null" : name;
+		}
+	}
+
 	static function renderPhpHelperClass(cls:HxClassDecl):Array<String> {
 		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
 		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
@@ -2701,7 +2732,7 @@ class SourceNativeBackend {
 			emittedMethods.set(methodName, true);
 			final args = [
 				for (arg in HxFunctionDecl.getArgs(fn))
-					valueName(Php, HxFunctionArg.getName(arg))
+					renderPhpFunctionArg(arg)
 			].join(", ");
 			final prefix = isStatic && !isCtor ? "  public static function " : "  public function ";
 			out.push(prefix + methodName + "(" + args + ") {");

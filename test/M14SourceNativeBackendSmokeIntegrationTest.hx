@@ -22,6 +22,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			throw message + " (unexpected `" + needle + "` in `" + haystack + "`)";
 	}
 
+	static function protocolLine(key:String, payload:String):String {
+		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
+			"\t", "\\t");
+		return "ast " + key + " " + escaped.length + ":" + escaped;
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -704,6 +710,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    var runner = new RunnerLike();",
 			"    runner.onProgress.add(function(e) { });",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpInheritedTestHelperCallProgram():GenIrProgram {
+		final src = [
+			"class Test {",
+			"  public function new() {}",
+			"  function eq(a, b, ?pos) { }",
+			"  function t(v) { }",
+			"}",
+			"",
+			"class TestOps extends Test {",
+			"  public function new() { super(); }",
+			"  public function testOps() {",
+			"    eq(1, 1);",
+			"    t(true);",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var test = new TestOps();",
+			"    test.testOps();",
 			"  }",
 			"}",
 		].join("\n");
@@ -1660,6 +1694,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpInheritedTestHelperCall():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_test_helper_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpInheritedTestHelperCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public function eq($a, $b, $pos = null)", "PHP optional helper parameters should be omittable at runtime");
+		assertContains(content, "$this->eq(1, 1);", "PHP inherited unit test helper calls should dispatch through this");
+		assertContains(content, "$this->t(true);", "PHP inherited boolean unit test helpers should dispatch through this");
+		assertNotContains(content, "$eq(1, 1);", "PHP inherited unit test helper calls should not emit local callables");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertNativeProtocolOptionalArgDecode():Void {
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("class", "Test"),
+			"ast static_main 0",
+			protocolLine("method", "eq|private|0|a,b,?pos|Void|||a:Dynamic,b:Dynamic,?pos:haxe.PosInfos|"),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
+		final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl));
+		assertTrue(functions.length == 1, "native protocol should decode the optional-arg method");
+		final args = HxFunctionDecl.getArgs(functions[0]);
+		assertTrue(args.length == 3, "native protocol should preserve optional-arg arity");
+		assertTrue(HxFunctionArg.getName(args[2]) == "pos", "native protocol should strip optional marker from arg names");
+		assertTrue(HxFunctionArg.getIsOptional(args[2]), "native protocol should preserve optional argument metadata");
+		assertTrue(HxFunctionArg.getTypeHint(args[2]) == "haxe.PosInfos", "native protocol should preserve optional argument type hints");
+	}
+
 	static function assertPhpWebShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2307,6 +2374,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpMapRuntimeShim();
 		assertPhpSamePackageQualifiedStaticPath();
 		assertPhpInstanceFieldMethodCall();
+		assertPhpInheritedTestHelperCall();
+		assertNativeProtocolOptionalArgDecode();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();
