@@ -71,7 +71,7 @@ class SourceNativeBackend {
 		return {
 			supportsNoEmit: true,
 			supportsBuildExecutable: true,
-			supportsCustomOutputFile: false
+			supportsCustomOutputFile: true
 		};
 	}
 
@@ -239,7 +239,7 @@ class SourceNativeBackend {
 		final classesDir = Path.join([context.outputDir, "obj"]);
 		final mainPackage = HxModuleDecl.getPackagePath(decl);
 		final sourcePath = javaSourcePath(sourceDir, mainPackage, className);
-		final jarPath = javaJarPath(context.outputDir, className);
+		final jarPath = javaJarPath(context.outputDir, className, context.outputFileHint);
 		ensureDirectory(sourceDir);
 		ensureDirectory(classesDir);
 		ensureParentDirectory(jarPath);
@@ -268,7 +268,9 @@ class SourceNativeBackend {
 		return new EmitResult(jarPath, artifacts, false);
 	}
 
-	static function javaJarPath(outputDir:String, className:String):String {
+	static function javaJarPath(outputDir:String, className:String, ?outputFileHint:String):String {
+		if (outputFileHint != null && outputFileHint.length > 0)
+			return Path.normalize(outputFileHint);
 		final normalized = Path.normalize(outputDir == null || outputDir.length == 0 ? "." : outputDir);
 		final base = Path.withoutDirectory(normalized);
 		if (base == "java")
@@ -3563,6 +3565,7 @@ class SourceNativeBackend {
 			out.push("public class " + safeClass + " {");
 			out.push("  public " + safeClass + "() {");
 			out.push("  }");
+			appendJavaImportStubMembers(out, packagePath, safeClass);
 			if (nestedNames != null) {
 				for (nested in nestedNames)
 					appendJavaNestedImportStub(out, nested);
@@ -3570,6 +3573,15 @@ class SourceNativeBackend {
 			out.push("}");
 		}
 		return out.join("\n");
+	}
+
+	static function appendJavaImportStubMembers(out:Array<String>, packagePath:String, className:String):Void {
+		final qualified = javaQualifiedClassName(packagePath, className);
+		if (qualified == "haxe.CallStack") {
+			out.push("  public static Object exceptionStack(Object... args) {");
+			out.push("    return null;");
+			out.push("  }");
+		}
 	}
 
 	static function javaNestedImportStubNames(program:GenIrProgram, decl:HxModuleDecl, className:String):Array<String> {

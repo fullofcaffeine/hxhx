@@ -32,7 +32,7 @@ let capabilitiesStatic = fun () -> let __anon_1 = HxAnon.create () in (
 let javaCapabilities = fun () -> let __anon_2 = HxAnon.create () in (
   ignore (HxAnon.set __anon_2 "supportsNoEmit" (HxRuntime.box_bool true));
   ignore (HxAnon.set __anon_2 "supportsBuildExecutable" (HxRuntime.box_bool true));
-  ignore (HxAnon.set __anon_2 "supportsCustomOutputFile" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anon_2 "supportsCustomOutputFile" (HxRuntime.box_bool true));
   __anon_2
 )
 
@@ -288,21 +288,24 @@ let sanitizeJavaIdentifier = fun name -> let clean = (sanitizeTypeName (name : s
   !tempResult
 )
 
-let javaJarPath = fun outputDir className -> try let __fallback_result_55 = let tempString = ref ("" : string) in (
-  ignore (if outputDir == Obj.magic (HxRuntime.hx_null) || HxString.length outputDir = 0 then let __assign_51 = ("." : string) in (
-    tempString := __assign_51;
-    __assign_51
-  ) else let __assign_52 = (outputDir : string) in (
-    tempString := __assign_52;
-    __assign_52
-  ));
-  let normalized = (Haxe_io_Path.normalize (!tempString : string) : string) in let base = (Haxe_io_Path.withoutDirectory (normalized : string) : string) in (
-    ignore (if HxString.equals base "java" then raise (HxRuntime.Hx_return (Obj.repr (Haxe_io_Path.join (Obj.magic (let __arr_53 = HxArray.create () in (
-      ignore (HxArray.push __arr_53 normalized);
-      ignore (HxArray.push __arr_53 (HxString.toStdString (sanitizeJavaIdentifier (className : string)) ^ "-Debug.jar"));
-      __arr_53
-    ))) : string))) else ());
-    HxString.toStdString normalized ^ ".jar"
+let javaJarPath = fun outputDir className outputFileHint -> try let __fallback_result_55 = (
+  ignore (if outputFileHint != Obj.magic (HxRuntime.hx_null) && HxString.length outputFileHint > 0 then raise (HxRuntime.Hx_return (Obj.repr (Haxe_io_Path.normalize (outputFileHint : string) : string))) else ());
+  let tempString = ref ("" : string) in (
+    ignore (if outputDir == Obj.magic (HxRuntime.hx_null) || HxString.length outputDir = 0 then let __assign_51 = ("." : string) in (
+      tempString := __assign_51;
+      __assign_51
+    ) else let __assign_52 = (outputDir : string) in (
+      tempString := __assign_52;
+      __assign_52
+    ));
+    let normalized = (Haxe_io_Path.normalize (!tempString : string) : string) in let base = (Haxe_io_Path.withoutDirectory (normalized : string) : string) in (
+      ignore (if HxString.equals base "java" then raise (HxRuntime.Hx_return (Obj.repr (Haxe_io_Path.join (Obj.magic (let __arr_53 = HxArray.create () in (
+        ignore (HxArray.push __arr_53 normalized);
+        ignore (HxArray.push __arr_53 (HxString.toStdString (sanitizeJavaIdentifier (className : string)) ^ "-Debug.jar"));
+        __arr_53
+      ))) : string))) else ());
+      HxString.toStdString normalized ^ ".jar"
+    )
   )
 ) in Obj.magic __fallback_result_55 with
   | HxRuntime.Hx_return __ret_54 -> Obj.obj __ret_54
@@ -7950,6 +7953,12 @@ let renderJavaHeader = fun decl currentClassName -> let out = Obj.magic (HxArray
   )
 )
 
+let appendJavaImportStubMembers = fun out packagePath className -> ignore (let qualified = (javaQualifiedClassName (packagePath : string) (className : string) : string) in if HxString.equals qualified "haxe.CallStack" then ignore ((
+  ignore (HxArray.push out "  public static Object exceptionStack(Object... args) {");
+  ignore (HxArray.push out "    return null;");
+  HxArray.push out "  }"
+)) else ())
+
 let javaNestedImportStubNames = fun program decl className -> let currentPath = (javaQualifiedClassName (HxModuleDecl.getPackagePath (Obj.magic decl) : string) (className : string) : string) in let prefix = (HxString.toStdString currentPath ^ "." : string) in let seen = HxMap.create_string () in let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic program) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let typed = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
     ignore (let __old_1627 = !_g in let __new_1628 = HxInt.add __old_1627 1 in (
@@ -8073,6 +8082,7 @@ let renderJavaImportStub = fun packagePath className nestedNames -> let wildcard
       ignore (HxArray.push out (("public class " ^ HxString.toStdString (!tempString)) ^ " {"));
       ignore (HxArray.push out (("  public " ^ HxString.toStdString (!tempString)) ^ "() {"));
       ignore (HxArray.push out "  }");
+      ignore (appendJavaImportStubMembers (Obj.magic out) (packagePath : string) (!tempString : string));
       ignore (if nestedNames != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length nestedNames do ignore (let nested = (HxArray.get (Obj.magic nestedNames) (!_g) : string) in (
         ignore (let __old_1625 = !_g in let __new_1626 = HxInt.add __old_1625 1 in (
           ignore (_g := __new_1626);
@@ -10329,7 +10339,7 @@ let emitJavaJar = fun program context decl className body -> let sourceDir = (Ha
   ignore (HxArray.push __arr_45 ((Obj.magic context : Backend_BackendContext.t).outputDir));
   ignore (HxArray.push __arr_45 "obj");
   __arr_45
-))) : string) in let mainPackage = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let sourcePath = (javaSourcePath (sourceDir : string) (mainPackage : string) (className : string) : string) in let jarPath = (javaJarPath ((Obj.magic context : Backend_BackendContext.t).outputDir : string) (className : string) : string) in (
+))) : string) in let mainPackage = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let sourcePath = (javaSourcePath (sourceDir : string) (mainPackage : string) (className : string) : string) in let jarPath = (javaJarPath ((Obj.magic context : Backend_BackendContext.t).outputDir : string) (className : string) ((Obj.magic context : Backend_BackendContext.t).outputFileHint : string) : string) in (
   ignore (ensureDirectory (sourceDir : string));
   ignore (ensureDirectory (classesDir : string));
   ignore (ensureParentDirectory (jarPath : string));

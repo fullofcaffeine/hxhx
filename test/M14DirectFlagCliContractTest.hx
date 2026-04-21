@@ -131,6 +131,11 @@ class M14DirectFlagCliContractTest {
 		assertEquals(nativeJava.backendId, "java-native", "native java backend");
 		assertTrue(hasDefine(nativeJava.forwarded, "java"), "native java define");
 
+		final nativeJvm = plan(["--jvm", "jvm.jar", "-main", "Main"]);
+		assertEquals(nativeJvm.lane, "native-java", "native jvm lane should use the Java source backend");
+		assertEquals(nativeJvm.backendId, "java-native", "native jvm backend should use the Java source backend");
+		assertTrue(hasDefine(nativeJvm.forwarded, "java"), "native jvm define");
+
 		final nativeCs = plan(["--cs", "cs_out", "-main", "Main"]);
 		assertEquals(nativeCs.lane, "native-cs", "native cs lane");
 		assertEquals(nativeCs.backendId, "cs-native", "native cs backend");

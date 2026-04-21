@@ -832,6 +832,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"import StringTools;",
 			"import haxe.ds.List;",
 			"import haxe.io.Bytes;",
+			"import haxe.CallStack;",
 			"import utest.ui.common.IReport;",
 			"import MyClass.UsingBase;",
 			"",
@@ -1809,6 +1810,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final runciJarPath = Path.join([runciOutputDir, "Main-Debug.jar"]);
 		assertTrue(runciResult.entryPath == runciJarPath, "Java source backend should use runci-compatible jar path for bin/java output");
 		assertTrue(FileSystem.exists(runciJarPath), "Java source backend should package jar under bin/java for upstream runci");
+		final jvmBuildDir = Path.join([tmpRoot, "bin", "jvm"]);
+		final jvmJarPath = Path.join([tmpRoot, "jvm.jar"]);
+		final jvmResult = backend.emit(program("java"), new BackendContext(jvmBuildDir, jvmJarPath, "Main", true, true, new StringMap<String>()));
+		assertTrue(jvmResult.entryPath == jvmJarPath, "Java source backend should preserve file-shaped --jvm jar output hints");
+		assertTrue(FileSystem.exists(jvmJarPath), "Java source backend should package the requested --jvm jar file");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -1844,6 +1850,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final listStubPath = Path.join([outputDir, "src", "haxe", "ds", "List.java"]);
 		final bytesStubPath = Path.join([outputDir, "src", "haxe", "io", "Bytes.java"]);
 		final reportStubPath = Path.join([outputDir, "src", "utest", "ui", "common", "IReport.java"]);
+		final callStackStubPath = Path.join([outputDir, "src", "haxe", "CallStack.java"]);
 		final moduleLocalStubPath = Path.join([outputDir, "src", "MyClass", "UsingBase.java"]);
 		final testBytesStubPath = Path.join([outputDir, "src", "unit", "TestBytes.java"]);
 		final jarPath = outputDir + ".jar";
@@ -1855,6 +1862,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(FileSystem.exists(listStubPath), "Java source backend should synthesize stubs for imported Haxe package classes");
 		assertTrue(FileSystem.exists(bytesStubPath), "Java source backend should synthesize stubs for imported Haxe package classes beyond haxe.ds");
 		assertTrue(FileSystem.exists(reportStubPath), "Java source backend should synthesize stubs for imported interface-like package classes");
+		assertTrue(FileSystem.exists(callStackStubPath), "Java source backend should synthesize haxe.CallStack stubs");
 		assertTrue(FileSystem.exists(moduleLocalStubPath), "Java source backend should synthesize stubs for module-local dotted imports");
 		assertTrue(FileSystem.exists(testBytesStubPath), "Java source backend should synthesize compile-only runci helper classes");
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should package a jar after compiling support classes");
@@ -1863,11 +1871,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final objectShapeContent = File.getContent(objectShapeSourcePath);
 		final signalOwnerContent = File.getContent(signalOwnerSourcePath);
 		final reportContent = File.getContent(reportStubPath);
+		final callStackContent = File.getContent(callStackStubPath);
 		assertContains(helperContent, "public class Helper", "Java support source should declare the sibling class");
 		assertContains(helperContent, "assert_", "Java support source should sanitize reserved method names");
 		assertContains(helperContent, "Object native_", "Java support source should sanitize reserved argument names");
 		assertContains(helperContent, "Object __", "Java support source should sanitize underscore-only argument names");
 		assertContains(reportContent, "public interface IReport", "Java import stubs should model interface-like names as interfaces");
+		assertContains(callStackContent, "public static Object exceptionStack(Object... args)", "Java haxe.CallStack stubs should include exceptionStack");
 		assertContains(objectShapeContent, "public String toString()", "Java support source should preserve Object-compatible toString signatures");
 		assertContains(objectShapeContent, "public int hashCode()", "Java support source should preserve Object-compatible hashCode signatures");
 		assertContains(objectShapeContent, "public boolean equals(Object other)", "Java support source should preserve Object-compatible equals signatures");

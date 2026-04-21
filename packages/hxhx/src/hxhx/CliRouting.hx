@@ -398,7 +398,7 @@ class CliRouting {
 					if (a == "-python" || a == "--python")
 						return true;
 				case "java":
-					if (a == "-java" || a == "--java")
+					if (a == "-java" || a == "--java" || a == "-jvm" || a == "--jvm")
 						return true;
 				case "cs":
 					if (a == "-cs" || a == "--cs")
@@ -420,7 +420,7 @@ class CliRouting {
 			return false;
 		for (a in args) {
 			switch (a) {
-				case "-swf", "--swf", "-as3", "--as3", "-xml", "--xml", "-neko", "--neko", "-hl", "--hl", "-cpp", "--cpp", "-jvm", "--jvm":
+				case "-swf", "--swf", "-as3", "--as3", "-xml", "--xml", "-neko", "--neko", "-hl", "--hl", "-cpp", "--cpp":
 					return true;
 				case "-python", "--python":
 					if (target != "python")

@@ -245,7 +245,7 @@ let hasSourceTargetFlag = fun args target -> try let __fallback_result_58 = (
       ));
       match target with
         | "cs" -> ignore (if HxString.equals a "-cs" || HxString.equals a "--cs" then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
-        | "java" -> ignore (if HxString.equals a "-java" || HxString.equals a "--java" then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
+        | "java" -> ignore (if HxString.equals a "-java" || HxString.equals a "--java" || HxString.equals a "-jvm" || HxString.equals a "--jvm" then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
         | "lua" -> ignore (if HxString.equals a "-lua" || HxString.equals a "--lua" then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
         | "php" -> ignore (if HxString.equals a "-php" || HxString.equals a "--php" then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
         | "python" -> ignore (if HxString.equals a "-python" || HxString.equals a "--python" then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
@@ -265,9 +265,9 @@ let hasNonSourceStandardTargetFlag = fun args target -> try let __fallback_resul
         __new_60
       ));
       match a with
+        | "--as3" | "--cpp" | "--hl" | "--neko" | "--swf" | "--xml" | "-as3" | "-cpp" | "-hl" | "-neko" | "-swf" | "-xml" -> raise (HxRuntime.Hx_return (Obj.repr true))
         | "--cs" | "-cs" -> ignore (if not (HxString.equals target "cs") then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
         | "--java" | "-java" -> ignore (if not (HxString.equals target "java") then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
-        | "--as3" | "--cpp" | "--hl" | "--jvm" | "--neko" | "--swf" | "--xml" | "-as3" | "-cpp" | "-hl" | "-jvm" | "-neko" | "-swf" | "-xml" -> raise (HxRuntime.Hx_return (Obj.repr true))
         | "--lua" | "-lua" -> ignore (if not (HxString.equals target "lua") then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
         | "--php" | "-php" -> ignore (if not (HxString.equals target "php") then raise (HxRuntime.Hx_return (Obj.repr true)) else ())
         | "--python" | "-python" -> ignore (if not (HxString.equals target "python") then raise (HxRuntime.Hx_return (Obj.repr true)) else ())

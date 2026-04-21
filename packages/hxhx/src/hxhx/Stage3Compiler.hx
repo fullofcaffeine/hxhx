@@ -329,6 +329,8 @@ class Stage3Compiler {
 				["-python", "--python"];
 			case "lua-native":
 				["-lua", "--lua"];
+			case "java-native":
+				["-jvm", "--jvm"];
 			case _:
 				[];
 		};
@@ -339,7 +341,7 @@ class Stage3Compiler {
 		// the original target path so upstream runners keep working against the emitted artifact.
 		return switch (backendId) {
 			case "java-native":
-				["-java", "--java", "-jvm", "--jvm"];
+				["-java", "--java"];
 			case "php-native":
 				["-php", "--php"];
 			case _:
