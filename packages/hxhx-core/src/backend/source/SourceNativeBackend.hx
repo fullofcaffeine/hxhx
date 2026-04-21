@@ -3386,6 +3386,11 @@ class SourceNativeBackend {
 				lines.push("    if ($a == $b) return 0;");
 				lines.push("    return $a < $b ? -1 : 1;");
 				lines.push("  }");
+				lines.push("  public static function field($object, $field) {");
+				lines.push("    if (is_object($object) && property_exists($object, $field)) return $object->$field;");
+				lines.push("    if (is_array($object) && array_key_exists($field, $object)) return $object[$field];");
+				lines.push("    return null;");
+				lines.push("  }");
 				lines.push("}");
 				lines.push("class __HxDispatcher {");
 				lines.push("  public function add($listener) {");

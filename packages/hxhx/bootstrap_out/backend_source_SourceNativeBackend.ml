@@ -7449,6 +7449,11 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "    if ($a == $b) return 0;");
       ignore (HxArray.push lines "    return $a < $b ? -1 : 1;");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function field($object, $field) {");
+      ignore (HxArray.push lines "    if (is_object($object) && property_exists($object, $field)) return $object->$field;");
+      ignore (HxArray.push lines "    if (is_array($object) && array_key_exists($field, $object)) return $object[$field];");
+      ignore (HxArray.push lines "    return null;");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "class __HxDispatcher {");
       ignore (HxArray.push lines "  public function add($listener) {");
