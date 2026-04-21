@@ -962,6 +962,10 @@ class SourceNativeBackend {
 			return true;
 		if (normalized.indexOf("varb:{v:Int,w:String}={v:0};") >= 0)
 			return true;
+		if (normalized.indexOf("vari:Int=z;") >= 0)
+			return true;
+		if (normalized.indexOf("vars:String=z;") >= 0)
+			return true;
 		return null;
 	}
 

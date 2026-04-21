@@ -450,8 +450,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    var ok = HelperMacros.typeError({ var b:{v:Int} = {v:1.2}; });",
 			"    var bad = HelperMacros.typeError({ var b:{v:Dynamic} = {v:\"foo\"}; });",
+			"    var z = null;",
+			"    var castInt = HelperMacros.typeError({ var i:Int = z; });",
+			"    var castString = HelperMacros.typeError({ var s:String = z; });",
 			"    Sys.println(Std.string(ok));",
 			"    Sys.println(Std.string(bad));",
+			"    Sys.println(Std.string(castInt));",
+			"    Sys.println(Std.string(castString));",
 			"  }",
 			"}",
 		].join("\n");
@@ -1475,6 +1480,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "$ok = true;", "PHP source backend should fold known block typeError probes that should fail typing");
 		assertContains(content, "$bad = false;", "PHP source backend should fold known block typeError probes that should type successfully");
+		assertContains(content, "$castInt = true;", "PHP source backend should fold abstract-cast Int block typeError probes");
+		assertContains(content, "$castString = true;", "PHP source backend should fold abstract-cast String block typeError probes");
 		deleteRecursive(tmpRoot);
 	}
 

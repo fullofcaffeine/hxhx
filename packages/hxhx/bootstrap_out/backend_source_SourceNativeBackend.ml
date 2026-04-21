@@ -898,6 +898,8 @@ let helperTypeErrorBlockResult = fun args -> try let __fallback_result_368 = (
         ignore (if HxString.indexOf normalized "varb:{v:Int}={v:0,w:\"foo\"};" 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.box_bool true))) else ());
         ignore (if HxString.indexOf normalized "varb:{v:Int}={v:0,v:2};" 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.box_bool true))) else ());
         ignore (if HxString.indexOf normalized "varb:{v:Int,w:String}={v:0};" 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.box_bool true))) else ());
+        ignore (if HxString.indexOf normalized "vari:Int=z;" 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.box_bool true))) else ());
+        ignore (if HxString.indexOf normalized "vars:String=z;" 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.box_bool true))) else ());
         HxRuntime.hx_null
       )
     )
