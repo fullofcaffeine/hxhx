@@ -1608,7 +1608,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public function set($key, $value)", "PHP Map helper should support set");
 		assertContains(content, "public function get($key)", "PHP Map helper should support get");
 		assertContains(content, "class Runner", "PHP source backend should emit an explicit utest Runner bring-up shim");
-		assertContains(content, "hxhx PHP utest Runner runtime is not implemented", "PHP Runner shim should fail honestly instead of faking success");
+		assertContains(content, "get_class_methods($case)", "PHP Runner shim should execute public test/spec methods instead of faking success");
 		assertContains(content, "class Report", "PHP source backend should emit an explicit utest Report bring-up shim");
 		assertContains(content, "class ValueException extends \\Exception", "PHP source backend should emit a minimal ValueException helper");
 		assertContains(content, "public static function thrown($value)", "PHP ValueException helper should support thrown values");
