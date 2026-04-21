@@ -862,6 +862,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpTernaryAssignmentLogicalProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(!true ? true : true));",
+			"    var k = false;",
+			"    Sys.println(Std.string(k = true ? false : true));",
+			"    Sys.println(Std.string(k));",
+			"    Sys.println(Std.string((k = true) ? false : true));",
+			"    Sys.println(Std.string(k));",
+			"    Sys.println(Std.string(true || false && false));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1949,6 +1968,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTernaryAssignmentLogical():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_ternary_assignment_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTernaryAssignmentLogicalProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "echo strval(((!true) ? true : true)) . PHP_EOL;", "PHP ternary should bind after unary not for `!true ? true : true`");
+		assertContains(content, "echo strval($k = (true ? false : true)) . PHP_EOL;", "PHP assignment should bind looser than ternary in expression form");
+		assertContains(content, "echo strval((($k = true) ? false : true)) . PHP_EOL;", "PHP parenthesized assignment should remain the ternary condition");
+		assertContains(content, "echo strval((true || (false && false))) . PHP_EOL;", "PHP logical and should bind tighter than logical or");
+		assertNotContains(content, "((!true ? true : true))", "PHP unary not should not wrap the full ternary");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpWebShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2250,7 +2285,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "return __hxhx_add(parent::get_prop(), 1);", "PHP super property reads should lower through parent getters");
-		assertContains(content, "return __hxhx_add(parent::set_prop($v), 1);", "PHP super property writes should lower through parent setters");
+		assertContains(content, "return __hxhx_add((parent::set_prop($v)), 1);", "PHP super property writes should lower through parent setters");
 		assertContains(content, "$s = (parent::get_fProp())(0);",
 			"PHP calls through super property getter results should lower through parent getters before invocation");
 		deleteRecursive(tmpRoot);
@@ -2605,6 +2640,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpModuloMultiplicationPrecedence();
 		assertPhpFloatModulo();
 		assertPhpMathRuntime();
+		assertPhpTernaryAssignmentLogical();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();

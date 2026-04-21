@@ -659,6 +659,12 @@ class TyperStage {
 						}
 				}
 			case ECall(callee, args):
+				switch (callee) {
+					case EIdent("__hxhx_parenthesized") if (args.length == 1):
+						return inferExprType(args[0], scope, ctx, pos);
+					case _:
+				}
+
 				// Stage 3 bring-up: type a small set of `Sys.*` primitives explicitly.
 				//
 				// Why

@@ -1063,7 +1063,12 @@ class HxParser {
 				}
 				if (cur.kind.match(TRParen))
 					bump();
-				inner;
+				switch (inner) {
+					case EBinop(op, _, _) if (isAssignmentBinop(op)):
+						ECall(EIdent("__hxhx_parenthesized"), [inner]);
+					case _:
+						inner;
+				}
 			case TLBrace:
 				parseBraceExpr();
 			case TKeyword(k):

@@ -349,6 +349,8 @@ class SourceNativeBackend {
 				fieldAccessExpr(target, receiver, field);
 			case EArrayAccess(receiver, index):
 				arrayAccessExpr(target, receiver, index);
+			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
+				"(" + renderExpr(target, args[0]) + ")";
 			case ECall(ELambda(lambdaArgs, lambdaBody), args):
 				lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
 			case ECall(ESuper, args):
