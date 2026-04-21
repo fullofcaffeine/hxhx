@@ -504,6 +504,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function lambdaImmediateCallProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var value = (input -> input)(1);",
+			"    Sys.println(Std.string(value));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function switchExpressionProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -749,6 +763,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpAnonymousObjectExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_anon_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$info = (object)[\"label\" => \"ok\", \"count\" => 1];",
+			"PHP anonymous object literals should lower through stdClass-style object casts");
+		assertContains(content, "echo $info->label . PHP_EOL;", "PHP anonymous object field access should keep using arrow syntax");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertLoopControlStatements():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_loop_control_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -920,6 +948,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpLambdaImmediateCallExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_lambda_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(lambdaImmediateCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$value = (function($input) { return $input; })(1);", "PHP immediate lambda calls should wrap the closure before invocation");
+		assertContains(content, "echo strval($value) . PHP_EOL;", "PHP immediate lambda-call results should still flow through later statements");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertSwitchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_switch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -969,6 +1010,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertArrayComprehensionExpression();
 		assertGuardedArrayComprehensionExpression();
 		assertAnonymousObjectExpression();
+		assertPhpAnonymousObjectExpression();
 		assertLoopControlStatements();
 		assertPostfixExpressions();
 		assertUnsignedRightShiftExpression();
@@ -982,6 +1024,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertBinaryOperators();
 		assertEnumValue();
 		assertLambdaExpression();
+		assertPhpLambdaImmediateCallExpression();
 		assertSwitchExpression();
 		assertSwitchStatement();
 	}

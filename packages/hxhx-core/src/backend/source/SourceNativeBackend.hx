@@ -277,6 +277,8 @@ class SourceNativeBackend {
 				fieldAccess(target, renderExpr(target, receiver), field);
 			case EArrayAccess(receiver, index):
 				arrayAccessExpr(target, receiver, index);
+			case ECall(ELambda(lambdaArgs, lambdaBody), args):
+				lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
 			case ECall(ESuper, args):
 				superConstructorCallExpr(target, args);
 			case ECall(callee, args):
@@ -495,6 +497,17 @@ class SourceNativeBackend {
 		return callee + "(" + rendered + ")";
 	}
 
+	static function lambdaCallExpr(target:SourceNativeTarget, lambdaArgs:Array<String>, lambdaBody:HxExpr, callArgs:Array<HxExpr>):String {
+		final callee = lambdaExpr(target, lambdaArgs, lambdaBody);
+		final rendered = [for (arg in callArgs) renderExpr(target, arg)].join(", ");
+		return switch (target) {
+			case Php:
+				"(" + callee + ")(" + rendered + ")";
+			case Python, Java, Cs, Lua:
+				callee + "(" + rendered + ")";
+		};
+	}
+
 	static function arrayAccessExpr(target:SourceNativeTarget, receiver:HxExpr, index:HxExpr):String {
 		final renderedReceiver = renderExpr(target, receiver);
 		final renderedIndex = renderExpr(target, index);
@@ -577,7 +590,13 @@ class SourceNativeBackend {
 				for (i in 0...count)
 					pairs.push(sanitizeTypeName(fieldNames[i]) + "=" + renderExpr(target, fieldValues[i]));
 				"__hxhx_anon(" + pairs.join(", ") + ")";
-			case Java, Cs, Php, Lua:
+			case Php:
+				final pairs = new Array<String>();
+				final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
+				for (i in 0...count)
+					pairs.push(quoteString(sanitizeTypeName(fieldNames[i])) + " => " + renderExpr(target, fieldValues[i]));
+				"(object)[" + pairs.join(", ") + "]";
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: EAnon";
 		};
 	}

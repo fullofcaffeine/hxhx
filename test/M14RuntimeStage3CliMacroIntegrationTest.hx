@@ -161,6 +161,37 @@ class M14RuntimeStage3CliMacroIntegrationTest {
 		assertTrue(emittedPython.indexOf("HelperMacros.getCompilationDate()") == -1,
 			"expected expr macro call to be removed from emitted python, got:\n" + emittedPython);
 
+		final phpProjectRoot = Path.join([tmpRoot, "php_project"]);
+		final phpSrcDir = Path.join([phpProjectRoot, "src"]);
+		sys.FileSystem.createDirectory(phpProjectRoot);
+		sys.FileSystem.createDirectory(phpSrcDir);
+
+		File.saveContent(Path.join([phpSrcDir, "Main.hx"]), [
+			"class Main {",
+			"\tstatic function main() {",
+			"\t\tSys.println(\"php-stage3\");",
+			"\t}",
+			"}"
+		].join("\n"));
+
+		final phpOutArg = Path.join(["bin", "php"]);
+		final phpOut = Path.join([phpProjectRoot, "bin", "php", "index.php"]);
+		final phpRun = runShell("HAXE_STD_PATH="
+			+ shellQuote(Path.join([repoRoot, "vendor", "haxe", "std"]))
+			+ " timeout 20s "
+			+ quotedHxCmd
+			+ " --hxhx-stage3 -C "
+			+ shellQuote(Path.normalize(Path.join([repoRoot, phpProjectRoot])))
+			+ " -cp src -main Main --php "
+			+ shellQuote(phpOutArg)
+			+ " --hxhx-backend php-native --hxhx-no-run",
+			repoRoot);
+		if (phpRun.code != 0)
+			fail("stage3 php source compile failed:\nSTDOUT:\n" + phpRun.stdout + "\nSTDERR:\n" + phpRun.stderr + "\nEXIT:" + phpRun.code);
+
+		assertTrue(sys.FileSystem.exists(phpOut), "expected stage3 php backend to honor the target output directory and emit bin/php/index.php");
+		assertTrue(File.getContent(phpOut).indexOf("php-stage3") >= 0, "expected emitted php entrypoint in bin/php/index.php");
+
 		deleteRecursive(tmpRoot);
 	}
 }

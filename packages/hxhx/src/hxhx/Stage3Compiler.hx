@@ -321,7 +321,7 @@ class Stage3Compiler {
 
 	static function targetOutputFlags(backendId:String):Array<String> {
 		// Only file-shaped target flags belong in BackendContext.outputFileHint.
-		// Directory-shaped targets such as Java/C#/PHP need target-specific layout support first.
+		// Directory-shaped targets need target-specific layout support first.
 		return switch (backendId) {
 			case "js-native":
 				["-js", "--js"];
@@ -334,11 +334,42 @@ class Stage3Compiler {
 		};
 	}
 
+	static function targetOutputDirectoryFlags(backendId:String):Array<String> {
+		// Source backends that can execute directly from a target output directory should preserve
+		// the original target path so upstream runners keep working against the emitted artifact.
+		return switch (backendId) {
+			case "php-native":
+				["-php", "--php"];
+			case _:
+				[];
+		};
+	}
+
 	static function findTargetOutputFileHint(args:Array<String>, backendId:String):Null<String> {
 		final expanded = Stage1Args.expandHxmlArgs(args);
 		if (expanded == null)
 			return null;
 		final targetFlags = targetOutputFlags(backendId);
+		if (targetFlags.length == 0)
+			return null;
+		var i = 0;
+		while (i < expanded.length) {
+			final a = expanded[i];
+			if (targetFlags.indexOf(a) >= 0) {
+				if (i + 1 < expanded.length)
+					return expanded[i + 1];
+				return null;
+			}
+			i += 1;
+		}
+		return null;
+	}
+
+	static function findTargetOutputDirectoryHint(args:Array<String>, backendId:String):Null<String> {
+		final expanded = Stage1Args.expandHxmlArgs(args);
+		if (expanded == null)
+			return null;
+		final targetFlags = targetOutputDirectoryFlags(backendId);
 		if (targetFlags.length == 0)
 			return null;
 		var i = 0;
@@ -1249,6 +1280,7 @@ class Stage3Compiler {
 		final rest = g.rest;
 		MacroRuntimeMode.emitMarker(macroRuntimeMode);
 		final targetOutputHintRaw = findTargetOutputFileHint(rest, backendId);
+		final targetOutputDirHintRaw = findTargetOutputDirectoryHint(rest, backendId);
 
 		// Stage3 bring-up is intentionally stricter than a full `haxe` CLI, but it needs to be able to
 		// *attempt* upstream-ish hxmls (e.g. Gate1 `compile-macro.hxml`) without failing immediately on
@@ -2177,14 +2209,19 @@ class Stage3Compiler {
 				Sys.println("stage3_driver=after_output_file_hint");
 				Sys.println("stage3_driver=before_backend_context");
 			}
-			final context = new BackendContext(outAbs, outputFileHint, parsedMain, emitFullBodies, supportsBuildExecutable, definesMap);
+			final outputDirAbs = if (targetOutputDirHintRaw != null && targetOutputDirHintRaw.length > 0) {
+				Path.isAbsolute(targetOutputDirHintRaw) ? Path.normalize(targetOutputDirHintRaw) : absFromCwd(cwd, targetOutputDirHintRaw);
+			} else {
+				outAbs;
+			}
+			final context = new BackendContext(outputDirAbs, outputFileHint, parsedMain, emitFullBodies, supportsBuildExecutable, definesMap);
 			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 				Sys.println("stage3_driver=after_backend_context");
 				Sys.println("stage3_driver=before_emit_trace_backend_id");
 			}
 			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 				Sys.println("stage3_driver=after_emit_trace_backend_id");
-				Sys.println("stage3_driver=before_emit backend=" + backendId + " typed_modules=" + typedModules.length + " out=" + outAbs);
+				Sys.println("stage3_driver=before_emit backend=" + backendId + " typed_modules=" + typedModules.length + " out=" + outputDirAbs);
 			}
 			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 				Sys.println("stage3_driver=emitWithBackend_before_genir_boundary");
