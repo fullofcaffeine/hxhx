@@ -812,6 +812,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpModuloMultiplicationPrecedenceProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(5 * 10 % 3));",
+			"    Sys.println(Std.string(5 * (10 % 3)));",
+			"    Sys.println(Std.string((5 * 10) % 3));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1855,6 +1870,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpModuloMultiplicationPrecedence():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_modulo_multiplication_precedence_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpModuloMultiplicationPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "strval((5 * (10 % 3)))", "PHP modulo should bind tighter than multiplication for implicit grouping");
+		assertContains(content, "strval(((5 * 10) % 3))", "PHP modulo/multiplication lowering should preserve explicit multiplication grouping");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpWebShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2508,6 +2536,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpBitwisePrecedence();
 		assertPhpSameClassStaticHelperCall();
 		assertPhpBitwiseEqualityPrecedence();
+		assertPhpModuloMultiplicationPrecedence();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();
