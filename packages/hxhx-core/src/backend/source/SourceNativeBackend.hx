@@ -202,7 +202,7 @@ class SourceNativeBackend {
 
 	static function emitTarget(target:SourceNativeTarget, program:GenIrProgram, context:BackendContext):EmitResult {
 		final main = mainModule(program, context);
-		final className = sanitizeTypeName(HxClassDecl.getName(main.cls));
+		final className = sanitizeTypeNameForTarget(target, HxClassDecl.getName(main.cls));
 		final outputPath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([context.outputDir, defaultFileName(target, className)]);
 		ensureParentDirectory(outputPath);
@@ -219,6 +219,34 @@ class SourceNativeBackend {
 			out.add(ok ? ch : "_");
 		}
 		return out.toString();
+	}
+
+	static function sanitizeTypeNameForTarget(target:SourceNativeTarget, name:String):String {
+		return switch (target) {
+			case Php:
+				sanitizePhpTypeName(name);
+			case Python, Java, Cs, Lua:
+				sanitizeTypeName(name);
+		};
+	}
+
+	static function sanitizePhpTypeName(name:String):String {
+		final clean = sanitizeTypeName(name);
+		return isPhpReservedTypeName(clean) ? clean + "_" : clean;
+	}
+
+	static function isPhpReservedTypeName(name:String):Bool {
+		return switch (name == null ? "" : name.toLowerCase()) {
+			case "abstract" | "and" | "array" | "as" | "break" | "callable" | "case" | "catch" | "class" | "clone" | "const" | "continue" | "declare" |
+				"default" | "die" | "do" | "echo" | "else" | "elseif" | "empty" | "enddeclare" | "endfor" | "endforeach" | "endif" | "endswitch" |
+				"endwhile" | "enum" | "eval" | "exit" | "extends" | "final" | "finally" | "fn" | "for" | "foreach" | "function" | "global" | "goto" | "if" |
+				"implements" | "include" | "include_once" | "instanceof" | "insteadof" | "interface" | "isset" | "list" | "match" | "namespace" | "new" |
+				"or" | "parent" | "print" | "private" | "protected" | "public" | "readonly" | "require" | "require_once" | "return" | "self" | "static" |
+				"switch" | "throw" | "trait" | "try" | "unset" | "use" | "var" | "while" | "xor" | "yield" | "from" | "true" | "false" | "null":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function quoteString(value:String):String {
@@ -1578,19 +1606,19 @@ class SourceNativeBackend {
 	static function sanitizePhpTypePath(path:String):String {
 		if (path == null || path.length == 0)
 			return "Unknown";
-		return [for (part in path.split(".")) sanitizeTypeName(part)].join("\\");
+		return [for (part in path.split(".")) sanitizePhpTypeName(part)].join("\\");
 	}
 
 	static function phpStaticTypePath(expr:HxExpr):Null<String> {
 		return switch (expr) {
 			case EIdent(name):
-				if (looksLikeTypePathRoot(name)) sanitizeTypeName(name) else null;
+				if (looksLikeTypePathRoot(name)) sanitizePhpTypeName(name) else null;
 			case EField(receiver, field):
 				final prefix = phpStaticTypePathPrefix(receiver);
 				if (prefix == null) {
 					null;
 				} else {
-					prefix + "\\" + sanitizeTypeName(field);
+					prefix + "\\" + sanitizePhpTypeName(field);
 				}
 			case _:
 				null;
@@ -1600,13 +1628,13 @@ class SourceNativeBackend {
 	static function phpStaticTypePathPrefix(expr:HxExpr):Null<String> {
 		return switch (expr) {
 			case EIdent(name):
-				if (looksLikeTypePathSegment(name)) sanitizeTypeName(name) else null;
+				if (looksLikeTypePathSegment(name)) sanitizePhpTypeName(name) else null;
 			case EField(receiver, field):
 				final prefix = phpStaticTypePathPrefix(receiver);
 				if (prefix == null) {
 					null;
 				} else {
-					prefix + "\\" + sanitizeTypeName(field);
+					prefix + "\\" + sanitizePhpTypeName(field);
 				}
 			case _:
 				null;
@@ -2457,7 +2485,7 @@ class SourceNativeBackend {
 			if (isStdSourceFile(filePath))
 				return;
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
-				final className = sanitizeTypeName(HxClassDecl.getName(cls));
+				final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
 				if (isCompileTimeOnlySupportClass(cls))
 					continue;
 				if (className == mainClassName || seen.exists(className))
@@ -2502,7 +2530,7 @@ class SourceNativeBackend {
 	}
 
 	static function renderPhpHelperClass(cls:HxClassDecl):Array<String> {
-		final className = sanitizeTypeName(HxClassDecl.getName(cls));
+		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
 		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
 		final classHeader = baseName == null
 			|| baseName.length == 0 ? "class " + className + " {" : "class "
@@ -2795,7 +2823,7 @@ class SourceNativeBackend {
 		if (extendsPath == null || extendsPath.length == 0)
 			return "";
 		final parts = extendsPath.split(".");
-		return sanitizeTypeName(parts[parts.length - 1]);
+		return sanitizePhpTypeName(parts[parts.length - 1]);
 	}
 
 	static function renderProgram(target:SourceNativeTarget, program:GenIrProgram, decl:HxModuleDecl, className:String, body:Array<HxStmt>):String {
