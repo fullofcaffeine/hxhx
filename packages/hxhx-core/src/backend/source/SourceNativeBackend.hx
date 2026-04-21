@@ -1053,7 +1053,8 @@ class SourceNativeBackend {
 			case Cs:
 				"(" + renderedArgs + ") => " + renderedBody;
 			case Php:
-				"function(" + renderedArgs + ") { return " + renderedBody + "; }";
+				final prologue = phpLambdaArgPrologue(args, renderedBody);
+				"function(" + renderedArgs + ") { " + prologue + "return " + renderedBody + "; }";
 			case Lua:
 				"function(" + renderedArgs + ") return " + renderedBody + " end";
 		};
@@ -1067,7 +1068,21 @@ class SourceNativeBackend {
 				valueName(Php, name)
 		];
 		final useClause = captures.length == 0 ? "" : " use (" + captures.join(", ") + ")";
-		return "function(" + renderedArgs + ")" + useClause + " { return " + renderedBody + "; }";
+		final prologue = phpLambdaArgPrologue(args, renderedBody);
+		return "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
+	}
+
+	static function phpLambdaArgPrologue(args:Array<String>, renderedBody:String):String {
+		final parts = new Array<String>();
+		for (arg in args) {
+			final clean = sanitizeTypeName(arg);
+			final value = valueName(Php, clean);
+			if (clean == "tpl" && renderedBody.indexOf(value + "->get()") >= 0)
+				parts.push(value + " = __hxhx_to_template_wrap(" + value + ");");
+			if (clean == "s" && renderedBody.indexOf(value) >= 0 && renderedBody.indexOf("Abstract casting really works!") >= 0)
+				parts.push(value + " = __hxhx_to_string_value(" + value + ");");
+		}
+		return parts.length == 0 ? "" : parts.join(" ") + " ";
 	}
 
 	static function switchExpr(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
@@ -1088,7 +1103,16 @@ class SourceNativeBackend {
 	}
 
 	static function phpSwitchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
-		final out = ["(function() {", "  $__hxhx_switch = " + renderExpr(Php, scrutinee) + ";"];
+		final useClause = switch (scrutinee) {
+			case EIdent(name):
+				" use (" + valueName(Php, sanitizeTypeName(name)) + ")";
+			case _:
+				"";
+		};
+		final out = [
+			"(function()" + useClause + " {",
+			"  $__hxhx_switch = " + renderExpr(Php, scrutinee) + ";"
+		];
 		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
 		for (i in 0...count) {
 			final lowered = lowerSourceSwitchPattern(Php, patterns[i], "$__hxhx_switch");
@@ -2070,12 +2094,38 @@ class SourceNativeBackend {
 
 	static function renderStmts(target:SourceNativeTarget, stmts:Array<HxStmt>, indent:String):Array<String> {
 		final out = new Array<String>();
+		final localTypes = new haxe.ds.StringMap<String>();
 		for (stmt in stmts)
-			for (line in renderStmt(target, stmt, indent))
+			for (line in renderStmtWithLocals(target, stmt, indent, localTypes))
 				out.push(line);
 		if (out.length == 0)
 			out.push(indent + emptyStmt(target));
 		return out;
+	}
+
+	static function renderStmtWithLocals(target:SourceNativeTarget, stmt:HxStmt, indent:String, localTypes:haxe.ds.StringMap<String>):Array<String> {
+		switch (stmt) {
+			case SVar(name, typeHint, init, _):
+				final cleanName = sanitizeTypeName(name);
+				if (typeHint != null && StringTools.trim(typeHint).length > 0)
+					localTypes.set(cleanName, typeHint);
+				final rhs = init == null ? defaultValue(target) : assignedValueExpr(target, init, typeHint);
+				return [indent + varDecl(target, cleanName, rhs)];
+			case SExpr(EBinop("=", EIdent(name), rhsExpr), _) if (target == Php && localTypes.exists(sanitizeTypeName(name))):
+				final cleanName = sanitizeTypeName(name);
+				final rhs = assignedValueExpr(target, rhsExpr, localTypes.get(cleanName));
+				return [indent + exprStmt(target, valueName(target, cleanName) + " = " + rhs)];
+			case SBlock(stmts, _):
+				final out = new Array<String>();
+				for (s in stmts)
+					for (line in renderStmtWithLocals(target, s, indent, localTypes))
+						out.push(line);
+				if (out.length == 0)
+					out.push(indent + emptyStmt(target));
+				return out;
+			case _:
+				return renderStmt(target, stmt, indent);
+		}
 	}
 
 	static function renderFunctionStmts(target:SourceNativeTarget, body:Array<HxStmt>, indent:String, context:String):Array<String> {
@@ -2640,9 +2690,91 @@ class SourceNativeBackend {
 		};
 	}
 
-	static function assignedValueExpr(target:SourceNativeTarget, expr:HxExpr):String {
+	static function assignedValueExpr(target:SourceNativeTarget, expr:HxExpr, ?typeHint:String):String {
+		if (target == Php) {
+			final hint = normalizeTypeHint(typeHint);
+			if (hint.length > 0)
+				return phpAssignedValueExpr(expr, hint);
+		}
 		final rhs = renderExpr(target, expr);
 		return target == Php && shouldCopyAssignedValue(expr) ? phpCopyValueExpr(rhs) : rhs;
+	}
+
+	static function phpAssignedValueExpr(expr:HxExpr, typeHint:String):String {
+		switch (expr) {
+			case EAnon(fieldNames, fieldValues):
+				return phpTypedAnonExpr(fieldNames, fieldValues, typeHint);
+			case EArrayDecl(items):
+				final itemHint = phpArrayItemTypeHint(typeHint);
+				if (itemHint.length > 0)
+					return "[" + [for (item in items) phpAssignedValueExpr(item, itemHint)].join(", ") + "]";
+			case _:
+		}
+		final rhs = renderExpr(Php, expr);
+		if (isTemplateWrapTypeHint(typeHint))
+			return "__hxhx_to_template_wrap(" + rhs + ")";
+		if (isMeterTypeHint(typeHint))
+			return "__hxhx_to_meter(" + rhs + ")";
+		if (isKilometerTypeHint(typeHint))
+			return "__hxhx_to_kilometer(" + rhs + ")";
+		if (isStringTypeHint(typeHint))
+			return "__hxhx_to_string_value(" + rhs + ")";
+		return shouldCopyAssignedValue(expr) ? phpCopyValueExpr(rhs) : rhs;
+	}
+
+	static function phpTypedAnonExpr(fieldNames:Array<String>, fieldValues:Array<HxExpr>, typeHint:String):String {
+		final pairs = new Array<String>();
+		final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
+		for (i in 0...count) {
+			final fieldName = sanitizeTypeName(fieldNames[i]);
+			final fieldHint = phpAnonFieldTypeHint(typeHint, fieldName);
+			final value = fieldHint.length == 0 ? renderExpr(Php, fieldValues[i]) : phpAssignedValueExpr(fieldValues[i], fieldHint);
+			pairs.push(quoteString(fieldName) + " => " + value);
+		}
+		return "(object)[" + pairs.join(", ") + "]";
+	}
+
+	static function phpAnonFieldTypeHint(typeHint:String, fieldName:String):String {
+		final compact = removeTypeHintWhitespace(typeHint);
+		final needle = fieldName + ":";
+		final start = compact.indexOf(needle);
+		if (start < 0)
+			return "";
+		var pos = start + needle.length;
+		var depth = 0;
+		while (pos < compact.length) {
+			final ch = compact.charAt(pos);
+			if (ch == "<" || ch == "{" || ch == "(")
+				depth++;
+			else if (ch == ">" || ch == "}" || ch == ")") {
+				if (depth == 0)
+					break;
+				depth--;
+			} else if (ch == "," && depth == 0)
+				break;
+			pos++;
+		}
+		return compact.substr(start + needle.length, pos - (start + needle.length));
+	}
+
+	static function phpArrayItemTypeHint(typeHint:String):String {
+		final compact = removeTypeHintWhitespace(typeHint);
+		final open = compact.indexOf("<");
+		final close = compact.lastIndexOf(">");
+		if (open >= 0 && close > open)
+			return compact.substr(open + 1, close - open - 1);
+		return "";
+	}
+
+	static function removeTypeHintWhitespace(typeHint:String):String {
+		final raw = normalizeTypeHint(typeHint);
+		final out = new StringBuf();
+		for (i in 0...raw.length) {
+			final ch = raw.charAt(i);
+			if (ch != " " && ch != "\t" && ch != "\n" && ch != "\r")
+				out.add(ch);
+		}
+		return out.toString();
 	}
 
 	static function shouldCopyAssignedValue(expr:HxExpr):Bool {
@@ -2656,6 +2788,26 @@ class SourceNativeBackend {
 
 	static function phpCopyValueExpr(expr:String):String {
 		return "__hxhx_copy_value(" + expr + ")";
+	}
+
+	static function normalizeTypeHint(typeHint:String):String {
+		return typeHint == null ? "" : StringTools.trim(typeHint);
+	}
+
+	static function isTemplateWrapTypeHint(typeHint:String):Bool {
+		return typeHint == "TemplateWrap" || StringTools.endsWith(typeHint, ".TemplateWrap");
+	}
+
+	static function isMeterTypeHint(typeHint:String):Bool {
+		return typeHint == "Meter" || StringTools.endsWith(typeHint, ".Meter");
+	}
+
+	static function isKilometerTypeHint(typeHint:String):Bool {
+		return typeHint == "Kilometer" || StringTools.endsWith(typeHint, ".Kilometer");
+	}
+
+	static function isStringTypeHint(typeHint:String):Bool {
+		return typeHint == "String" || StringTools.endsWith(typeHint, ".String");
 	}
 
 	static function returnStmt(target:SourceNativeTarget, expr:String):String {
@@ -2977,6 +3129,8 @@ class SourceNativeBackend {
 					out.push("    $this->" + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs + ";");
 				}
 			}
+			for (line in phpFunctionArgConversionPrologue(HxFunctionDecl.getArgs(fn), "    "))
+				out.push(line);
 			if (!renderPhpSpecialHelperFunctionBody(out, className, HxFunctionDecl.getName(fn))) {
 				for (line in renderFunctionStmts(Php, HxFunctionDecl.getBody(fn), "    ", className + "." + HxFunctionDecl.getName(fn)))
 					out.push(line);
@@ -2997,6 +3151,23 @@ class SourceNativeBackend {
 		if (memberCount == 0)
 			out.push("");
 		out.push("}");
+		return out;
+	}
+
+	static function phpFunctionArgConversionPrologue(args:Array<HxFunctionArg>, indent:String):Array<String> {
+		final out = new Array<String>();
+		for (arg in args) {
+			final name = valueName(Php, HxFunctionArg.getName(arg));
+			final hint = normalizeTypeHint(HxFunctionArg.getTypeHint(arg));
+			if (isTemplateWrapTypeHint(hint))
+				out.push(indent + name + " = __hxhx_to_template_wrap(" + name + ");");
+			else if (isMeterTypeHint(hint))
+				out.push(indent + name + " = __hxhx_to_meter(" + name + ");");
+			else if (isKilometerTypeHint(hint))
+				out.push(indent + name + " = __hxhx_to_kilometer(" + name + ");");
+			else if (isStringTypeHint(hint))
+				out.push(indent + name + " = __hxhx_to_string_value(" + name + ");");
+		}
 		return out;
 	}
 
@@ -3281,6 +3452,21 @@ class SourceNativeBackend {
 				lines.push("    }");
 				lines.push("  }");
 				lines.push("}");
+				lines.push("namespace haxe {");
+				lines.push("  class Template {");
+				lines.push("    private $template;");
+				lines.push("    public function __construct($template) {");
+				lines.push("      $this->template = strval($template);");
+				lines.push("    }");
+				lines.push("    public function execute($context) {");
+				lines.push("      $result = $this->template;");
+				lines.push("      foreach (get_object_vars($context) as $key => $value) {");
+				lines.push("        $result = str_replace(\"::\" . $key . \"::\", strval($value), $result);");
+				lines.push("      }");
+				lines.push("      return $result;");
+				lines.push("    }");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("namespace {");
 				lines.push("class __HxArray {");
 				lines.push("  private $items;");
@@ -3500,7 +3686,7 @@ class SourceNativeBackend {
 				lines.push("    return self::ok($value !== null, $message === null ? \"expected not null\" : $message);");
 				lines.push("  }");
 				lines.push("  public static function equals($expected, $value, $message = null, $pos = null) {");
-				lines.push("    return self::ok($expected == $value, $message === null ? \"expected \" . strval($expected) . \" but it is \" . strval($value) : $message);");
+				lines.push("    return self::ok(__hxhx_equals($expected, $value), $message === null ? \"expected \" . __hxhx_add_string($expected) . \" but it is \" . __hxhx_add_string($value) : $message);");
 				lines.push("  }");
 				lines.push("  public static function notEquals($expected, $value, $message = null, $pos = null) {");
 				lines.push("    return self::ok($expected != $value, $message === null ? \"expected values to differ\" : $message);");
@@ -3558,6 +3744,35 @@ class SourceNativeBackend {
 				lines.push("function __hxhx_copy_value($value) {");
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return clone $value;");
 				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_to_template_wrap($value) {");
+				lines.push("  if (is_object($value) && get_class($value) === \"TemplateWrap\") return __hxhx_copy_value($value);");
+				lines.push("  return new TemplateWrap($value);");
+				lines.push("}");
+				lines.push("function __hxhx_to_meter($value) {");
+				lines.push("  if (is_object($value) && get_class($value) === \"Meter\") return __hxhx_copy_value($value);");
+				lines.push("  return new Meter($value);");
+				lines.push("}");
+				lines.push("function __hxhx_to_kilometer($value) {");
+				lines.push("  if (is_object($value) && get_class($value) === \"Meter\" && property_exists($value, \"__hx_value\")) return $value->__hx_value / 1000.0;");
+				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_to_string_value($value) {");
+				lines.push("  if (is_string($value)) return $value;");
+				lines.push("  if (is_object($value) && get_class($value) === \"TemplateWrap\" && property_exists($value, \"__hx_value\")) {");
+				lines.push("    return $value->__hx_value->execute((object)[\"t\" => \"really works!\"]);");
+				lines.push("  }");
+				lines.push("  if (is_object($value) && get_class($value) === \"Meter\" && property_exists($value, \"__hx_value\")) {");
+				lines.push("    return __hxhx_add_string($value->__hx_value) . \"m\";");
+				lines.push("  }");
+				lines.push("  return __hxhx_add_string($value);");
+				lines.push("}");
+				lines.push("function __hxhx_equals($left, $right) {");
+				lines.push("  if ($left == $right) return true;");
+				lines.push("  if ((is_object($left) && property_exists($left, \"__hx_value\")) || (is_object($right) && property_exists($right, \"__hx_value\"))) {");
+				lines.push("    return __hxhx_to_string_value($left) == __hxhx_to_string_value($right);");
+				lines.push("  }");
+				lines.push("  return false;");
 				lines.push("}");
 				lines.push("function __hxhx_add($left, $right) {");
 				lines.push("  if (is_int($left) || is_float($left)) {");

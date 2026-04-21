@@ -1071,6 +1071,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  function bar() this++;",
 			"}",
 			"",
+			"class TemplateWrap {",
+			"  public function new(s:String) {",
+			"    this = new haxe.Template(s);",
+			"  }",
+			"  public function get():haxe.Template {",
+			"    return this;",
+			"  }",
+			"}",
+			"",
+			"class Meter {",
+			"  public function new(f:Float) {",
+			"    this = f;",
+			"  }",
+			"}",
+			"",
+			"class Kilometer {",
+			"  public function new(f:Float) {",
+			"    this = f;",
+			"  }",
+			"}",
+			"",
+			"class DistanceBox {",
+			"  public var km:Kilometer;",
+			"  public function new(km:Kilometer) {",
+			"    this.km = km;",
+			"  }",
+			"}",
+			"",
 			"class Main {",
 			"  static function main() {",
 			"    var counter = new Counter(2);",
@@ -1082,6 +1110,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(mirror.toInt()));",
 			"    Sys.println(Std.string(counter.post()));",
 			"    Sys.println(Std.string(counter));",
+			"    var tpl:TemplateWrap = \"Hi ::t::\";",
+			"    Sys.println(tpl.get().execute({ t: \"ok\" }));",
+			"    var text:String = tpl;",
+			"    Sys.println(text);",
+			"    var later:TemplateWrap;",
+			"    later = \"Again ::t::\";",
+			"    Sys.println(later.get().execute({ t: \"ok\" }));",
+			"    var meters:Meter = 3000;",
+			"    var km:Kilometer = meters;",
+			"    var box = new DistanceBox(meters);",
+			"    Sys.println(Std.string(km));",
+			"    Sys.println(Std.string(box.km));",
 			"  }",
 			"}",
 		].join("\n");
@@ -2623,6 +2663,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$mirror = __hxhx_copy_value($counter);", "PHP abstract-style variable copies should not alias the backing slot");
 		assertContains(content, "return __hxhx_post_update_field($this, \"__hx_value\", 1);",
 			"PHP expression-position postfix this updates should target the backing slot");
+		assertContains(content, "namespace haxe {", "PHP source backend should emit haxe namespace helpers for abstract-cast runtime support");
+		assertContains(content, "class Template {", "PHP source backend should emit a minimal haxe.Template runtime shim");
+		assertContains(content, "function __hxhx_equals($left, $right)",
+			"PHP source backend should emit Haxe-style equality support for abstract-backed values");
+		assertContains(content, "$tpl = __hxhx_to_template_wrap(\"Hi ::t::\");",
+			"PHP abstract @:from-style typed variable declarations should construct the wrapper");
+		assertContains(content, "$text = __hxhx_to_string_value($tpl);", "PHP abstract @:to-style String declarations should use string conversion");
+		assertContains(content, "$later = __hxhx_to_template_wrap(\"Again ::t::\");",
+			"PHP abstract @:from-style typed assignments should construct the wrapper");
+		assertContains(content, "$meters = __hxhx_to_meter(3000);", "PHP abstract Meter declarations should preserve wrapper provenance");
+		assertContains(content, "$km = __hxhx_to_kilometer($meters);", "PHP abstract-to-abstract assignments should use the Kilometer conversion helper");
+		assertContains(content, "$km = __hxhx_to_kilometer($km);", "PHP function arguments typed as Kilometer should normalize constructor inputs");
 		assertContains(content, "__hxhx_is_of_type($counter, \"Int\")", "PHP Std.isOfType should lower abstract-backed values through the type helper");
 		assertContains(content, "__hxhx_is_of_type(3, \"Int\")", "PHP Std.isOfType should lower scalar type checks without runtime type variables");
 		deleteRecursive(tmpRoot);
@@ -2928,6 +2980,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpObjectPatternSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, "(function() use ($e) {", "PHP switch expressions should capture local scrutinees used inside closures");
 		assertContains(content, "$__hxhx_switch = $e;", "PHP switch expressions should evaluate the scrutinee once inside a closure");
 		assertContains(content, "property_exists($__hxhx_switch, \"expr\")", "PHP object switch patterns should check object field existence");
 		assertContains(content, "$const = $__hxhx_switch->expr;", "PHP object switch captures should bind the matched field value");
