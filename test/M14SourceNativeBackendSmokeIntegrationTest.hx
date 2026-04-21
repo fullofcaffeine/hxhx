@@ -1062,6 +1062,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  public function toInt():Int {",
 			"    return this;",
 			"  }",
+			"  public function incr():Int {",
+			"    return ++this;",
+			"  }",
+			"  public function post():Int {",
+			"    return this++;",
+			"  }",
 			"  function bar() this++;",
 			"}",
 			"",
@@ -1071,6 +1077,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(Std.isOfType(counter, Int)));",
 			"    Sys.println(Std.string(Std.isOfType(3, Int)));",
 			"    Sys.println(Std.string(counter.toInt()));",
+			"    var mirror = counter;",
+			"    Sys.println(Std.string(counter.incr()));",
+			"    Sys.println(Std.string(mirror.toInt()));",
+			"    Sys.println(Std.string(counter.post()));",
 			"    Sys.println(Std.string(counter));",
 			"  }",
 			"}",
@@ -2606,9 +2616,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Counter {", "PHP abstract-like helper classes should still emit as support classes");
 		assertContains(content, "public $__hx_value;", "PHP abstract-style this values should get a backing slot");
-		assertContains(content, "$this->__hx_value = $i;", "PHP abstract constructor assignments to this should target the backing slot");
+		assertContains(content, "$this->__hx_value = __hxhx_copy_value($i);", "PHP abstract constructor assignments to this should target the backing slot");
 		assertContains(content, "$this->__hx_value = ($this->__hx_value + 1);", "PHP statement-position postfix this updates should target the backing slot");
 		assertContains(content, "return $this->__hx_value;", "PHP abstract-style return this should return the backing value");
+		assertContains(content, "return $this->__hx_value += 1;", "PHP abstract-style prefix this updates should mutate and return the backing value");
+		assertContains(content, "$mirror = __hxhx_copy_value($counter);", "PHP abstract-style variable copies should not alias the backing slot");
+		assertContains(content, "return __hxhx_post_update_field($this, \"__hx_value\", 1);",
+			"PHP expression-position postfix this updates should target the backing slot");
 		assertContains(content, "__hxhx_is_of_type($counter, \"Int\")", "PHP Std.isOfType should lower abstract-backed values through the type helper");
 		assertContains(content, "__hxhx_is_of_type(3, \"Int\")", "PHP Std.isOfType should lower scalar type checks without runtime type variables");
 		deleteRecursive(tmpRoot);

@@ -462,7 +462,8 @@ class SourceNativeBackend {
 		final mapped = binopToken(target, op);
 		if (mapped == null)
 			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
-		final b = renderExpr(target, right);
+		final b0 = renderExpr(target, right);
+		final b = target == Php && op == "=" && shouldCopyAssignedValue(right) ? phpCopyValueExpr(b0) : b0;
 		if (target == Php && isAssignmentOp(op)) {
 			switch (left) {
 				case EThis:
@@ -676,6 +677,8 @@ class SourceNativeBackend {
 						+ ", "
 						+ Std.string(delta)
 						+ ")";
+					case EThis:
+						"__hxhx_post_update_field($this, " + quoteString("__hx_value") + ", " + Std.string(delta) + ")";
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 				}
@@ -2014,7 +2017,7 @@ class SourceNativeBackend {
 			case SExpr(expr, _):
 				[indent + exprStmt(target, renderExpr(target, expr))];
 			case SVar(name, _typeHint, init, _):
-				final rhs = init == null ? defaultValue(target) : renderExpr(target, init);
+				final rhs = init == null ? defaultValue(target) : assignedValueExpr(target, init);
 					[indent + varDecl(target, sanitizeTypeName(name), rhs)];
 			case SIf(cond, thenBranch, elseBranch, _):
 				renderIf(target, cond, thenBranch, elseBranch, indent);
@@ -2635,6 +2638,24 @@ class SourceNativeBackend {
 			case Cs: "var " + name + " = " + rhs + ";";
 			case Php: "$" + sanitizePhpValueName(name) + " = " + rhs + ";";
 		};
+	}
+
+	static function assignedValueExpr(target:SourceNativeTarget, expr:HxExpr):String {
+		final rhs = renderExpr(target, expr);
+		return target == Php && shouldCopyAssignedValue(expr) ? phpCopyValueExpr(rhs) : rhs;
+	}
+
+	static function shouldCopyAssignedValue(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EIdent(_):
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function phpCopyValueExpr(expr:String):String {
+		return "__hxhx_copy_value(" + expr + ")";
 	}
 
 	static function returnStmt(target:SourceNativeTarget, expr:String):String {
@@ -3533,6 +3554,10 @@ class SourceNativeBackend {
 				lines.push("  $old = $value;");
 				lines.push("  $value = $old + $delta;");
 				lines.push("  return $old;");
+				lines.push("}");
+				lines.push("function __hxhx_copy_value($value) {");
+				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return clone $value;");
+				lines.push("  return $value;");
 				lines.push("}");
 				lines.push("function __hxhx_add($left, $right) {");
 				lines.push("  if (is_int($left) || is_float($left)) {");
