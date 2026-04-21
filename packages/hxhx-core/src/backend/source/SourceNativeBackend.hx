@@ -1142,18 +1142,137 @@ class SourceNativeBackend {
 
 	static function lambdaExpr(target:SourceNativeTarget, args:Array<String>, body:HxExpr):String {
 		final renderedArgs = [for (arg in args) valueName(target, arg)].join(", ");
-		final renderedBody = renderExpr(target, body);
 		return switch (target) {
 			case Python:
-				"lambda " + renderedArgs + ": " + renderedBody;
+				"lambda " + renderedArgs + ": " + renderExpr(target, body);
 			case Java:
-				"(" + renderedArgs + ") -> " + renderedBody;
+				javaLambdaExpr(renderedArgs, body);
 			case Cs:
-				"(" + renderedArgs + ") => " + renderedBody;
+				"(" + renderedArgs + ") => " + renderExpr(target, body);
 			case Php:
 				phpLambdaExpr(args, body, [], []);
 			case Lua:
-				"function(" + renderedArgs + ") return " + renderedBody + " end";
+				"function(" + renderedArgs + ") return " + renderExpr(target, body) + " end";
+		};
+	}
+
+	static function javaLambdaExpr(renderedArgs:String, body:HxExpr):String {
+		final lines = ["(" + renderedArgs + ") -> {"];
+		for (line in javaExprAsStatements(body, "  ", true))
+			lines.push(line);
+		lines.push("}");
+		return lines.join("\n");
+	}
+
+	static function isLambdaSeqTemp(name:String):Bool {
+		return name != null && StringTools.startsWith(name, "__hxhx_lambda_seq_");
+	}
+
+	static function javaExprAsStatements(expr:HxExpr, indent:String, appendReturn:Bool):Array<String> {
+		return switch (expr) {
+			case ENull:
+				appendReturn ? [indent + "return null;"] : [];
+			case ECall(ELambda(args, continuation), callArgs) if (args.length == 1 && isLambdaSeqTemp(args[0]) && callArgs.length == 1):
+				final out = javaExprAsStatements(callArgs[0], indent, false);
+				for (line in javaExprAsStatements(continuation, indent, appendReturn))
+					out.push(line);
+				out;
+			case ECall(EIdent("__hxhx_for_in"), args) if (args.length >= 3):
+				javaForInExprStatements(args[0], args[1], args[2], indent, appendReturn);
+			case ESwitch(scrutinee, patterns, exprs):
+				javaSwitchExprStatements(scrutinee, patterns, exprs, indent, appendReturn);
+			case ECall(EField(EIdent("Sys"), "println"), args) if (args.length == 1):
+				final out = [indent + printStmt(Java, renderExpr(Java, args[0]))];
+				if (appendReturn)
+					out.push(indent + "return null;");
+				out;
+			case ECall(EIdent("trace"), args) if (args.length >= 1):
+				final out = [indent + printStmt(Java, renderExpr(Java, args[0]))];
+				if (appendReturn)
+					out.push(indent + "return null;");
+				out;
+			case EBinop("||", left, right) if (!appendReturn):
+				final childIndent = indent + indentStep(Java);
+				final out = [indent + "if (!(" + renderExpr(Java, left) + ")) {"];
+				for (line in javaExprAsStatements(right, childIndent, false))
+					out.push(line);
+				out.push(indent + "}");
+				out;
+			case EBinop("&&", left, right) if (!appendReturn):
+				final childIndent = indent + indentStep(Java);
+				final out = [indent + "if (" + renderExpr(Java, left) + ") {"];
+				for (line in javaExprAsStatements(right, childIndent, false))
+					out.push(line);
+				out.push(indent + "}");
+				out;
+			case ETernary(cond, thenExpr, elseExpr):
+				final childIndent = indent + indentStep(Java);
+				final out = [indent + "if (" + renderExpr(Java, cond) + ") {"];
+				for (line in javaExprAsStatements(thenExpr, childIndent, appendReturn))
+					out.push(line);
+				out.push(indent + "} else {");
+				for (line in javaExprAsStatements(elseExpr, childIndent, appendReturn))
+					out.push(line);
+				out.push(indent + "}");
+				out;
+			case ECall(EIdent("__hxhx_throw"), args):
+				final thrown = args.length > 0 ? renderExpr(Java, args[0]) : "null";
+					[indent + "throw new RuntimeException(String.valueOf(" + thrown + "));"];
+			case _:
+				if (appendReturn) {
+					[indent + "return " + renderExpr(Java, expr) + ";"];
+				} else {
+					[indent + exprStmt(Java, renderExpr(Java, expr))];
+				}
+		};
+	}
+
+	static function javaSwitchExprStatements(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>, indent:String,
+			appendReturn:Bool):Array<String> {
+		final out = new Array<String>();
+		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+		if (count == 0) {
+			if (appendReturn)
+				out.push(indent + "return null;");
+			return out;
+		}
+		final scrutineeExpr = renderExpr(Java, scrutinee);
+		final childIndent = indent + indentStep(Java);
+		for (i in 0...count) {
+			final pattern = patterns[i];
+			final cond = switchPatternCond(Java, scrutineeExpr, pattern);
+			if (i == 0) {
+				out.push(indent + "if (" + cond + ") {");
+			} else if (pattern.match(PWildcard)) {
+				out.push(indent + "} else {");
+			} else {
+				out.push(indent + "} else if (" + cond + ") {");
+			}
+			for (line in javaExprAsStatements(exprs[i], childIndent, appendReturn))
+				out.push(line);
+		}
+		out.push(indent + "}");
+		return out;
+	}
+
+	static function javaForInExprStatements(iterable:HxExpr, bodyExpr:HxExpr, continuation:HxExpr, indent:String, appendReturn:Bool):Array<String> {
+		return switch (bodyExpr) {
+			case ELambda(args, body) if (args.length == 1):
+				final cleanName = sanitizeTypeName(args[0]);
+				final out = [indent + "for (var " + cleanName + " : " + renderExpr(Java, iterable) + ") {"];
+				for (line in javaExprAsStatements(body, indent + indentStep(Java), false))
+					out.push(line);
+				out.push(indent + "}");
+				for (line in javaExprAsStatements(continuation, indent, appendReturn))
+					out.push(line);
+				out;
+			case _:
+				final out = [
+					indent + exprStmt(Java, callExpr(Java, "__hxhx_for_in", [iterable, bodyExpr, continuation]))
+				];
+				if (appendReturn)
+					out.push(indent + "return null;");
+				out;
 		};
 	}
 

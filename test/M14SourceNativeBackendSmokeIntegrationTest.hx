@@ -789,6 +789,42 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function javaLambdaSequenceCallbackProgram():GenIrProgram {
+		final src = [
+			"class Dispatcher {",
+			"  public function new() {}",
+			"  public function add(listener) { }",
+			"}",
+			"",
+			"class RunnerLike {",
+			"  public var onProgress = new Dispatcher();",
+			"  public function new() {}",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var runner = new RunnerLike();",
+			"    var success = true;",
+			"    runner.onProgress.add(function(e) {",
+			"      for (item in [\"Success\", \"Failure\"]) {",
+			"        switch (item) {",
+			"          case \"Success\":",
+			"          case \"Warning\":",
+			"          case \"Ignore\":",
+			"          default:",
+			"            success = false;",
+			"        }",
+			"      }",
+			"      Sys.println(\"done\");",
+			"    });",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpInheritedTestHelperCallProgram():GenIrProgram {
 		final src = [
 			"class Test {",
@@ -1721,6 +1757,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final run = commandOutput("java", ["-jar", jarPath]);
 		assertTrue(run.code == 0, "Java source backend jar should run: " + run.stderr);
 		assertContains(run.stdout, "source-native:java", "Java source backend jar should execute generated main");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertJavaLambdaSequenceCallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_lambda_sequence_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("java-native");
+		backend.emit(javaLambdaSequenceCallbackProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.java"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "runner.onProgress.add((e) -> {", "Java callback lambdas with statement bodies should render as block lambdas");
+		assertContains(content, "for (var item :", "Java lambda-body for-in continuations should lower to statements");
+		assertContains(content, "success = false;", "Java lambda-body switch side effects should lower to statements");
+		assertContains(content, "System.out.println(\"done\");", "Java lambda-body continuations should render after lowered for-in statements");
+		assertNotContains(content, "__hxhx_lambda_seq_", "Java callback lambdas should not leak lambda-sequence temporaries into generated source");
+		assertNotContains(content, "-> null(", "Java callback lambdas should not render invalid null-call continuations");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -3112,6 +3165,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("lua-native", "lua", "Main.lua", "print((\"source-native:\" .. \"lua\"))");
 		assertPythonOutputHint();
 		assertJavaJarPackaging();
+		assertJavaLambdaSequenceCallback();
 		assertUnsupportedDiagnostic();
 		assertWhileStatement();
 		assertIfStatement();
