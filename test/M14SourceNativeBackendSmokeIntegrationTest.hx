@@ -945,6 +945,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(\"a\".code));",
 			"    var str = \"abc\";",
 			"    Sys.println(Std.string(str.charCodeAt(1)));",
+			"    Sys.println(str.substr(1, 2));",
+			"    Sys.println(str.substr(3));",
+			"    Sys.println(str.substr(5));",
 			"  }",
 			"}",
 		].join("\n");
@@ -2102,6 +2105,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP runtime should include a String.lastIndexOf helper");
 		assertContains(content, "function __hxhx_string_split($value, $delimiter)", "PHP runtime should include a String.split helper");
 		assertContains(content, "function __hxhx_string_char_code_at($value, $index)", "PHP runtime should include a String.charCodeAt helper");
+		assertContains(content, "function __hxhx_string_substr($value, $pos, $len = null)", "PHP runtime should include a String.substr helper");
 		assertContains(content, "echo strval(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")) . PHP_EOL;",
 			"PHP string-like concatenation receivers should lower indexOf through the helper");
 		assertContains(content, "echo strval(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)) . PHP_EOL;",
@@ -2118,11 +2122,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "echo strval(__hxhx_string_char_code_at(\"a\", 0)) . PHP_EOL;", "PHP string literal .code should lower through the helper");
 		assertContains(content, "echo strval(__hxhx_string_char_code_at($str, 1)) . PHP_EOL;",
 			"PHP string variable charCodeAt should lower through the helper");
+		assertContains(content, "echo __hxhx_string_substr($str, 1, 2) . PHP_EOL;", "PHP string variable substr should lower with explicit length");
+		assertContains(content, "echo __hxhx_string_substr($str, 3) . PHP_EOL;", "PHP string variable substr should lower with omitted length");
+		assertContains(content, "echo __hxhx_string_substr($str, 5) . PHP_EOL;", "PHP out-of-range substr should lower through the helper");
 		assertNotContains(content, "__hxhx_add(\"bla\", \"x\")->indexOf", "PHP string-like receivers should not emit object-method calls on raw strings");
 		assertNotContains(content, "\"abc\"->split", "PHP string literals should not emit object-method split calls");
 		assertNotContains(content, "\"abc\"->charCodeAt", "PHP string literals should not emit object-method charCodeAt calls");
 		assertNotContains(content, "\"a\"->code", "PHP string literal .code should not emit property access on raw strings");
 		assertNotContains(content, "$str->charCodeAt", "PHP string variables should not emit object-method charCodeAt calls");
+		assertNotContains(content, "$str->substr", "PHP string variables should not emit object-method substr calls");
 		deleteRecursive(tmpRoot);
 	}
 

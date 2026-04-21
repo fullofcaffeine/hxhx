@@ -897,6 +897,8 @@ class SourceNativeBackend {
 				"__hxhx_string_split(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "charCodeAt" if (args.length == 1):
 				"__hxhx_string_char_code_at(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "substr" if (args.length == 1 || args.length == 2):
+				"__hxhx_string_substr(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case _:
 				null;
 		};
@@ -904,7 +906,7 @@ class SourceNativeBackend {
 
 	static function phpVariableStringMethod(field:String):Bool {
 		return switch (field) {
-			case "split" | "charCodeAt":
+			case "split" | "charCodeAt" | "substr":
 				true;
 			case _:
 				false;
@@ -3456,6 +3458,12 @@ class SourceNativeBackend {
 				lines.push("  $i = (int)$index;");
 				lines.push("  if ($i < 0 || $i >= strlen($s)) return null;");
 				lines.push("  return ord($s[$i]);");
+				lines.push("}");
+				lines.push("function __hxhx_string_substr($value, $pos, $len = null) {");
+				lines.push("  $s = strval($value);");
+				lines.push("  $p = (int)$pos;");
+				lines.push("  $result = $len === null ? substr($s, $p) : substr($s, $p, (int)$len);");
+				lines.push("  return $result === false ? \"\" : $result;");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
 				lines.push("  $old = $obj->$field;");
