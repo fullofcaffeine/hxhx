@@ -539,6 +539,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpShiftAssignmentProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var a = 1;",
+			"    a <<= 2;",
+			"    a >>= 1;",
+			"    a >>>= 1;",
+			"    Sys.println(Std.string(a));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1477,6 +1494,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpShiftAssignment():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_shift_assignment_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpShiftAssignmentProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$a <<= 2;", "PHP signed left-shift assignment should render directly");
+		assertContains(content, "$a >>= 1;", "PHP signed right-shift assignment should render directly");
+		assertContains(content, "$a = __hxhx_ushr($a, 1);", "PHP unsigned right-shift assignment should reuse the unsigned-shift helper");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1530,6 +1561,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpSuperProperty();
 		assertPhpForKeyValue();
 		assertPhpTypeCheck();
+		assertPhpShiftAssignment();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();

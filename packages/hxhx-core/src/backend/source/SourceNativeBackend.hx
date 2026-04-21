@@ -379,13 +379,15 @@ class SourceNativeBackend {
 	static function binopExpr(target:SourceNativeTarget, op:String, left:HxExpr, right:HxExpr):String {
 		if (op == ">>>")
 			return unsignedRightShiftExpr(target, renderExpr(target, left), renderExpr(target, right));
+		if (op == ">>>=")
+			return unsignedRightShiftAssignExpr(target, left, right);
 		if (op == "is")
 			return typeCheckExpr(target, left, right);
 		final mapped = binopToken(target, op);
 		if (mapped == null)
 			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
 		final b = renderExpr(target, right);
-		if (target == Php && (op == "=" || op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")) {
+		if (target == Php && isAssignmentOp(op)) {
 			switch (left) {
 				case EThis:
 					return phpThisValueExpr() + " " + mapped + " " + b;
@@ -395,9 +397,18 @@ class SourceNativeBackend {
 			}
 		}
 		final a = renderExpr(target, left);
-		if (op == "=" || op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
+		if (isAssignmentOp(op))
 			return a + " " + mapped + " " + b;
 		return "(" + a + " " + mapped + " " + b + ")";
+	}
+
+	static function isAssignmentOp(op:String):Bool {
+		return switch (op) {
+			case "=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function typeCheckExpr(target:SourceNativeTarget, value:HxExpr, typeExpr:HxExpr):String {
@@ -449,6 +460,24 @@ class SourceNativeBackend {
 				"__hxhx_ushr(" + left + ", " + right + ")";
 			case Lua:
 				"__hxhx_ushr(" + left + ", " + right + ")";
+		};
+	}
+
+	static function unsignedRightShiftAssignExpr(target:SourceNativeTarget, left:HxExpr, right:HxExpr):String {
+		final renderedRight = renderExpr(target, right);
+		return switch (target) {
+			case Php:
+				final lhs = switch (left) {
+					case EThis:
+						phpThisValueExpr();
+					case _:
+						renderExpr(target, left);
+				};
+				lhs + " = " + unsignedRightShiftExpr(target, lhs, renderedRight);
+			case Java:
+				renderExpr(target, left) + " >>>= " + renderedRight;
+			case Python, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported binary operator: >>>=";
 		};
 	}
 
@@ -541,7 +570,8 @@ class SourceNativeBackend {
 				"and";
 			case "||" if (target == Python || target == Lua):
 				"or";
-			case "==", "!=", "<", "<=", ">", ">=", "-", "*", "/", "%", "=", "+=", "-=", "*=", "/=", "%=", "&", "|", "^", "<<", ">>", "&&", "||":
+			case "==", "!=", "<", "<=", ">", ">=", "-", "*", "/", "%", "=", "+=", "-=", "*=", "/=", "%=", "&", "|", "^", "<<", ">>", "<<=", ">>=", "&=", "|=",
+				"^=", "&&", "||":
 				op;
 			default:
 				null;
