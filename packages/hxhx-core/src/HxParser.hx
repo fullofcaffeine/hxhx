@@ -992,7 +992,7 @@ class HxParser {
 					parts.push('"' + s + '"');
 					bump();
 				case TInt(v):
-					parts.push(Std.string(v));
+					parts.push(cur.numericText != null ? cur.numericText + (cur.numericSuffix == null ? "" : cur.numericSuffix) : Std.string(v));
 					bump();
 				case TFloat(v):
 					parts.push(Std.string(v));
@@ -1165,8 +1165,10 @@ class HxParser {
 				bump();
 				interpolate ? parseInterpolatedStringExpr(s) : EString(s);
 			case TInt(v):
+				final raw = cur.numericText;
+				final suffix = cur.numericSuffix;
 				bump();
-				EInt(v);
+				intLiteralExpr(v, raw, suffix);
 			case TFloat(v):
 				bump();
 				EFloat(v);
@@ -1531,6 +1533,15 @@ class HxParser {
 			index--;
 		}
 		return result;
+	}
+
+	function intLiteralExpr(value:Int, raw:Null<String>, suffix:Null<String>):HxExpr {
+		if (raw == null || suffix == null)
+			return EInt(value);
+		final normalizedSuffix = suffix.toLowerCase();
+		if (normalizedSuffix == "i64" || normalizedSuffix == "u64")
+			return ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(normalizedSuffix)]);
+		return EInt(value);
 	}
 
 	function parseInterpolatedStringExpr(s:String):HxExpr {
@@ -2711,7 +2722,7 @@ class HxParser {
 				case TString(s, _):
 					"\"" + s + "\"";
 				case TInt(v):
-					Std.string(v);
+					cur.numericText != null ? cur.numericText + (cur.numericSuffix == null ? "" : cur.numericSuffix) : Std.string(v);
 				case TFloat(v):
 					Std.string(v);
 				case TRegex(pattern, flags):

@@ -8,10 +8,14 @@
 class HxToken {
 	public final kind:HxTokenKind;
 	public final pos:HxPos;
+	public final numericText:Null<String>;
+	public final numericSuffix:Null<String>;
 
-	public function new(kind:HxTokenKind, pos:HxPos) {
+	public function new(kind:HxTokenKind, pos:HxPos, ?numericText:String, ?numericSuffix:String) {
 		this.kind = kind;
 		this.pos = pos;
+		this.numericText = numericText;
+		this.numericSuffix = numericSuffix;
 	}
 
 	public function getKind():HxTokenKind {

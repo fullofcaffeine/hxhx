@@ -640,6 +640,14 @@ class M14HihExprTextParserIntegrationTest {
 					fail("expected numeric suffix call statement");
 			}
 		}
+		switch (numericSuffixStmts[2]) {
+			case SExpr(ECall(EIdent("eq"), [
+				EBinop("+", ECall(EIdent("__hxhx_int_literal"), [EString("3000000000000"), EString("i64")]), EString("")),
+				_
+			]), _):
+			case _:
+				fail("expected i64 decimal suffix to preserve raw literal text");
+		}
 
 		final floatSuffixTypeTestStmts = HxParser.parseFunctionBodyText('eq(1f64 is Float, true); eq(.0f64, 0.0); eq(7e+0f64, 7e+0);');
 		assertTrue(floatSuffixTypeTestStmts.length == 3, "expected float suffix type-test statements to parse");

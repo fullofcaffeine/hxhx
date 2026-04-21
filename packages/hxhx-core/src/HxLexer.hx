@@ -192,10 +192,10 @@ class HxLexer {
 				bump();
 			}
 			final numericEnd = index;
-			consumeNumericSuffix();
+			final suffix = consumeNumericSuffix();
 			final text = normalizeNumberText(src.substring(start, numericEnd));
 			final value = Std.parseInt(text);
-			return new HxToken(TInt(value == null ? 0 : value), startPos);
+			return new HxToken(TInt(value == null ? 0 : value), startPos, text, suffix);
 		}
 
 		var isFloat = false;
@@ -235,7 +235,7 @@ class HxLexer {
 			return new HxToken(TFloat(value), startPos);
 		}
 		final value = Std.parseInt(text);
-		return new HxToken(TInt(value == null ? 0 : value), startPos);
+		return new HxToken(TInt(value == null ? 0 : value), startPos, text, suffix);
 	}
 
 	function readLeadingDotNumber(startPos:HxPos):HxToken {

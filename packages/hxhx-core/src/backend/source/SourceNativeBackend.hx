@@ -357,6 +357,8 @@ class SourceNativeBackend {
 				arrayAccessExpr(target, receiver, index);
 			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
 				"(" + renderExpr(target, args[0]) + ")";
+			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]):
+				intLiteralExpr(target, raw, suffix);
 			case ECall(ELambda(lambdaArgs, lambdaBody), args):
 				lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
 			case ECall(ESuper, args):
@@ -844,6 +846,15 @@ class SourceNativeBackend {
 				return testHelper;
 		}
 		return callee + "(" + rendered + ")";
+	}
+
+	static function intLiteralExpr(target:SourceNativeTarget, raw:String, suffix:String):String {
+		return switch (target) {
+			case Php:
+				"__hxhx_int_literal(" + quotePhpString(raw) + ", " + quotePhpString(suffix) + ")";
+			case Python, Java, Cs, Lua:
+				raw;
+		};
 	}
 
 	static function phpSameClassStaticHelperCall(callee:String, renderedArgs:String):Null<String> {
@@ -4008,6 +4019,26 @@ class SourceNativeBackend {
 				lines.push("function __hxhx_numeric_value($value) {");
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return $value->__hx_value;");
 				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_int_literal($text, $suffix) {");
+				lines.push("  $clean = str_replace(\"_\", \"\", strtolower($text));");
+				lines.push("  if (strpos($clean, \"0x\") === 0) {");
+				lines.push("    $hex = ltrim(substr($clean, 2), \"0\");");
+				lines.push("    if ($hex === \"\") return 0;");
+				lines.push("    if (($suffix === \"i64\" || $suffix === \"u64\") && strlen($hex) > 16) $hex = substr($hex, -16);");
+				lines.push("    if ($suffix === \"i64\" && strlen($hex) === 16 && hexdec(substr($hex, 0, 1)) >= 8) {");
+				lines.push("      if ($hex === \"ffffffffffffffff\") return -1;");
+				lines.push("      if ($hex === \"8000000000000000\") return \"-9223372036854775808\";");
+				lines.push("      return \"-\" . strval(hexdec($hex));");
+				lines.push("    }");
+				lines.push("    $value = hexdec($hex);");
+				lines.push("    return is_float($value) ? sprintf(\"%.0f\", $value) : intval($value);");
+				lines.push("  }");
+				lines.push("  $negative = strlen($clean) > 0 && $clean[0] === \"-\";");
+				lines.push("  $digits = $negative ? substr($clean, 1) : $clean;");
+				lines.push("  $limit = $negative ? \"9223372036854775808\" : \"9223372036854775807\";");
+				lines.push("  if (strlen($digits) < 19 || (strlen($digits) === 19 && strcmp($digits, $limit) <= 0)) return intval($clean);");
+				lines.push("  return $clean;");
 				lines.push("}");
 				lines.push("function __hxhx_is_point3($value) {");
 				lines.push("  return is_object($value) && property_exists($value, \"x\") && property_exists($value, \"y\") && property_exists($value, \"z\");");

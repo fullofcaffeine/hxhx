@@ -399,8 +399,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    var a = 32.ofInt();",
 			"    var b = (-4).ofInt();",
+			"    var c = 3000000000000i64 + \"\";",
+			"    var d = 0xFFFFFFFFFFFFFFFFi64 + \"\";",
 			"    Sys.println(Std.string(a));",
 			"    Sys.println(Std.string(b));",
+			"    Sys.println(c);",
+			"    Sys.println(d);",
 			"  }",
 			"}",
 		].join("\n");
@@ -2423,6 +2427,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "$a = haxe\\Int64::ofInt(32);", "PHP Int64 literal extension calls should lower to static calls");
 		assertContains(content, "$b = haxe\\Int64::ofInt((-4));", "PHP negative Int64 literal extension calls should lower to static calls");
+		assertContains(content, "$c = __hxhx_add(__hxhx_int_literal(\"3000000000000\", \"i64\"), \"\");",
+			"PHP i64 decimal suffix literals should preserve raw text before runtime string conversion");
+		assertContains(content, "$d = __hxhx_add(__hxhx_int_literal(\"0xFFFFFFFFFFFFFFFF\", \"i64\"), \"\");",
+			"PHP i64 hex suffix literals should preserve raw text before runtime string conversion");
+		assertContains(content, "function __hxhx_int_literal($text, $suffix)", "PHP runtime should include numeric suffix literal normalization support");
 		assertNotContains(content, "32->ofInt()", "PHP should not emit instance calls on integer literals");
 		deleteRecursive(tmpRoot);
 	}
