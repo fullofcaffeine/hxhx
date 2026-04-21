@@ -43,13 +43,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
-	static function unsupportedWhileProgram():GenIrProgram {
+	static function unsupportedDoWhileProgram():GenIrProgram {
 		final src = [
 			"class Main {",
 			"  static function main() {",
-			"    while (true) {",
+			"    do {",
 			"      Sys.println(\"loop\");",
+			"    } while (true);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function whileProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var count = 0;",
+			"    while (count < 2) {",
+			"      count += 1;",
 			"    }",
+			"    Sys.println(Std.string(count));",
 			"  }",
 			"}",
 		].join("\n");
@@ -102,6 +119,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function unaryOperatorProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var flag = !false;",
+			"    var delta = -1;",
+			"    Sys.println(Std.string(flag));",
+			"    Sys.println(Std.string(delta));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function postfixStatementProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var count = 1;",
+			"    count++;",
+			"    count--;",
+			"    Sys.println(Std.string(count));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function helperClassProgram():GenIrProgram {
 		final src = [
 			"class Helper {",
@@ -119,6 +168,76 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function helperInstanceFieldProgram():GenIrProgram {
+		final src = [
+			"class Helper {",
+			"  public var value:String = \"seed\";",
+			"  public function new() {}",
+			"  public function message() {",
+			"    return this.value;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var helper = new Helper();",
+			"    Sys.println(helper.message());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function assertCrossModuleClassEmission():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cross_module_" + Std.string(Date.now().getTime()));
+		final srcDir = Path.join([tmpRoot, "src"]);
+		final unitDir = Path.join([srcDir, "unit"]);
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(unitDir);
+		File.saveContent(Path.join([unitDir, "TestOps.hx"]), [
+			"package unit;",
+			"class TestOps {",
+			"  public function new() {}",
+			"  public function label() {",
+			"    return \"ops\";",
+			"  }",
+			"}",
+		].join("\n"));
+		File.saveContent(Path.join([unitDir, "Main.hx"]), [
+			"package unit;",
+			"class Main {",
+			"  static function main() {",
+			"    var ops = new TestOps();",
+			"    Sys.println(ops.label());",
+			"  }",
+			"}",
+		].join("\n"));
+		final resolved = ResolverStage.parseProjectRoots([srcDir], ["unit.Main"], new StringMap<String>());
+		final resolvedPaths = [for (module in resolved) ResolvedModule.getModulePath(module)];
+		assertTrue(resolvedPaths.indexOf("unit.TestOps") >= 0, "resolver should include referenced support modules");
+		final index = TyperIndex.build(resolved);
+		final loader = new ModuleLoader([srcDir], new StringMap<String>(), index, function(_typePath:String):Bool {
+			return false;
+		});
+		loader.markResolvedAlready(resolved);
+		final typed = new Array<TypedModule>();
+		for (module in resolved)
+			typed.push(TyperStage.typeResolvedModule(module, index, loader));
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(MacroStage.expandProgram(typed, []), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class TestOps:", "cross-module helper classes should be emitted");
+		assertContains(content, "def __init__(self):", "cross-module constructors should lower to __init__");
+		assertContains(content, "def label(self):", "cross-module instance methods should be emitted");
+		assertContains(content, "return \"ops\"", "cross-module instance method bodies should be rendered");
+		assertContains(content, "ops = TestOps()", "main should still be able to instantiate emitted support classes");
+		assertContains(content, "print(ops.label())", "main should still be able to call emitted support methods");
+		deleteRecursive(tmpRoot);
 	}
 
 	static function arrayLiteralProgram():GenIrProgram {
@@ -259,11 +378,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final backend = BackendRegistry.requireForTarget("python-native");
 		var message = "";
 		try {
-			backend.emit(unsupportedWhileProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+			backend.emit(unsupportedDoWhileProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		} catch (e:String) {
 			message = e;
 		}
-		assertContains(message, "Python source backend MVP unsupported statement: SWhile", "unsupported statement diagnostic should name the AST kind");
+		assertContains(message, "Python source backend MVP unsupported statement: SDoWhile", "unsupported statement diagnostic should name the AST kind");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertWhileStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_while_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(whileProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "while (count < 2):", "while loops should render conditions");
+		assertContains(content, "    count += 1", "while loop bodies should render with nested indentation");
+		assertContains(content, "print(str(count))", "while-derived locals should still flow through later statements");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -304,6 +437,36 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertUnaryOperators():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_unop_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(unaryOperatorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "flag = (not False)", "logical not should lower to the Python unary form");
+		assertContains(content, "delta = (-1)", "unary minus should lower to the target unary form");
+		assertContains(content, "print(str(flag))", "unary-derived values should still flow through normal calls");
+		assertContains(content, "print(str(delta))", "multiple unary-derived values should still render");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPostfixStatements():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_postfix_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(postfixStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "count = 1", "postfix smoke should declare the local first");
+		assertContains(content, "count = (count + 1)", "postfix increment statements should lower to explicit assignments");
+		assertContains(content, "count = (count - 1)", "postfix decrement statements should lower to explicit assignments");
+		assertContains(content, "print(str(count))", "postfix-lowered locals should still flow through later statements");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperClassEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -316,6 +479,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "def message():", "helper static methods should be emitted");
 		assertContains(content, "return \"helper\"", "helper method bodies should be rendered");
 		assertContains(content, "print(Helper.message())", "main should still be able to call emitted helper classes");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertHelperInstanceFieldEmission():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_field_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(helperInstanceFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Helper:", "helper classes with instance fields should still be emitted");
+		assertContains(content, "def __init__(self):", "helper constructors should lower to __init__");
+		assertContains(content, "self.value = \"seed\"", "helper instance fields should initialize inside __init__");
+		assertContains(content, "def message(self):", "helper instance methods should still be emitted");
+		assertContains(content, "return self.value", "instance methods should be able to read lowered fields");
+		assertContains(content, "helper = Helper()", "main should still instantiate helper classes");
+		assertContains(content, "print(helper.message())", "main should still call helper instance methods");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -414,10 +595,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("lua-native", "lua", "Main.lua", "print((\"source-native:\" .. \"lua\"))");
 		assertPythonOutputHint();
 		assertUnsupportedDiagnostic();
+		assertWhileStatement();
 		assertIfStatement();
 		assertGenericCallStatement();
 		assertTraceStatement();
+		assertUnaryOperators();
+		assertPostfixStatements();
 		assertHelperClassEmission();
+		assertHelperInstanceFieldEmission();
+		assertCrossModuleClassEmission();
 		assertArrayLiteral();
 		assertConstructorExpression();
 		assertForInStatement();

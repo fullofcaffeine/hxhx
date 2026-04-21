@@ -196,7 +196,7 @@ class SourceNativeBackend {
 		final outputPath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([context.outputDir, defaultFileName(target, className)]);
 		ensureParentDirectory(outputPath);
-		sys.io.File.saveContent(outputPath, renderProgram(target, main.decl, className, HxFunctionDecl.getBody(main.fn)));
+		sys.io.File.saveContent(outputPath, renderProgram(target, program, main.decl, className, HxFunctionDecl.getBody(main.fn)));
 		return new EmitResult(outputPath, [new EmitArtifact(artifactKind(target), outputPath)], false);
 	}
 
@@ -247,6 +247,16 @@ class SourceNativeBackend {
 				Std.string(value);
 			case EEnumValue(name):
 				quoteString(name);
+			case EThis:
+				switch (target) {
+					case Python: "self";
+					case Java: "this";
+					case Cs: "this";
+					case Php: "$this";
+					case Lua: "self";
+				}
+			case EUnop(op, inner):
+				unopExpr(target, op, inner);
 			case EIdent(name):
 				valueName(target, name);
 			case EBinop(op, left, right):
@@ -329,6 +339,18 @@ class SourceNativeBackend {
 		if (op == "=" || op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
 			return a + " " + mapped + " " + b;
 		return "(" + a + " " + mapped + " " + b + ")";
+	}
+
+	static function unopExpr(target:SourceNativeTarget, op:String, inner:HxExpr):String {
+		final rendered = renderExpr(target, inner);
+		return switch (op) {
+			case "!":
+				if (target == Python || target == Lua) "(not " + rendered + ")"; else "(!" + rendered + ")";
+			case "-", "+", "~":
+				"(" + op + rendered + ")";
+			default:
+				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + op;
+		};
 	}
 
 	static function binopToken(target:SourceNativeTarget, op:String):Null<String> {
@@ -566,6 +588,20 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function postIncrementStmt(target:SourceNativeTarget, expr:HxExpr, delta:Int):String {
+		final targetExpr = switch (expr) {
+			case EIdent(name):
+				valueName(target, name);
+			case EField(receiver, field):
+				fieldAccess(target, renderExpr(target, receiver), field);
+			case _:
+				throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
+		};
+		final absDelta = Std.string(delta < 0 ? -delta : delta);
+		final rhs = if (delta < 0) "(" + targetExpr + " - " + absDelta + ")" else "(" + targetExpr + " + " + absDelta + ")";
+		return exprStmt(target, targetExpr + " = " + rhs);
+	}
+
 	static function exprStmt(target:SourceNativeTarget, expr:String):String {
 		return switch (target) {
 			case Python: expr;
@@ -584,6 +620,10 @@ class SourceNativeBackend {
 				[indent + printStmt(target, renderExpr(target, args[0]))];
 			case SExpr(ECall(EIdent("trace"), args), _) if (args.length >= 1):
 				[indent + printStmt(target, renderExpr(target, args[0]))];
+			case SExpr(EUnop("post++", inner), _):
+				[indent + postIncrementStmt(target, inner, 1)];
+			case SExpr(EUnop("post--", inner), _):
+				[indent + postIncrementStmt(target, inner, -1)];
 			case SExpr(expr, _):
 				[indent + exprStmt(target, renderExpr(target, expr))];
 			case SVar(name, _typeHint, init, _):
@@ -593,6 +633,8 @@ class SourceNativeBackend {
 				renderIf(target, cond, thenBranch, elseBranch, indent);
 			case SForIn(name, iterable, body, _):
 				renderForIn(target, name, iterable, body, indent);
+			case SWhile(cond, body, _):
+				renderWhile(target, cond, body, indent);
 			case SReturn(expr, _):
 				[indent + returnStmt(target, renderExpr(target, expr))];
 			case SReturnVoid(_):
@@ -741,6 +783,39 @@ class SourceNativeBackend {
 		return out;
 	}
 
+	static function renderWhile(target:SourceNativeTarget, cond:HxExpr, body:HxStmt, indent:String):Array<String> {
+		final renderedCond = renderExpr(target, cond);
+		final childIndent = indent + indentStep(target);
+		final out = new Array<String>();
+		switch (target) {
+			case Python:
+				out.push(indent + "while " + renderedCond + ":");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+			case Java:
+				out.push(indent + "while (" + renderedCond + ") {");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+				out.push(indent + "}");
+			case Cs:
+				out.push(indent + "while (" + renderedCond + ") {");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+				out.push(indent + "}");
+			case Php:
+				out.push(indent + "while (" + renderedCond + ") {");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+				out.push(indent + "}");
+			case Lua:
+				out.push(indent + "while " + renderedCond + " do");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+				out.push(indent + "end");
+		}
+		return out;
+	}
+
 	static function defaultValue(target:SourceNativeTarget):String {
 		return switch (target) {
 			case Python: "None";
@@ -791,26 +866,33 @@ class SourceNativeBackend {
 		};
 	}
 
-	static function renderSupportClasses(target:SourceNativeTarget, decl:HxModuleDecl, mainClassName:String):Array<String> {
+	static function renderSupportClasses(target:SourceNativeTarget, program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
 		return switch (target) {
 			case Python:
-				renderPythonSupportClasses(decl, mainClassName);
+				renderPythonSupportClasses(program, decl, mainClassName);
 			case Java | Cs | Php | Lua:
 				[];
 		};
 	}
 
-	static function renderPythonSupportClasses(decl:HxModuleDecl, mainClassName:String):Array<String> {
+	static function renderPythonSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
 		final out = new Array<String>();
-		for (cls in HxModuleDecl.getClasses(decl)) {
-			final className = sanitizeTypeName(HxClassDecl.getName(cls));
-			if (className == mainClassName)
-				continue;
-			if (out.length > 0)
-				out.push("");
-			for (line in renderPythonHelperClass(cls))
-				out.push(line);
+		final seen = new Map<String, Bool>();
+		function appendDeclClasses(moduleDecl:HxModuleDecl):Void {
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final className = sanitizeTypeName(HxClassDecl.getName(cls));
+				if (className == mainClassName || seen.exists(className))
+					continue;
+				seen.set(className, true);
+				if (out.length > 0)
+					out.push("");
+				for (line in renderPythonHelperClass(cls))
+					out.push(line);
+			}
 		}
+		appendDeclClasses(decl);
+		for (typed in program.getTypedModules())
+			appendDeclClasses(typed.getParsed().getDecl());
 		return out;
 	}
 
@@ -818,27 +900,52 @@ class SourceNativeBackend {
 		final className = sanitizeTypeName(HxClassDecl.getName(cls));
 		final out = ["class " + className + ":"];
 		var memberCount = 0;
+		final instanceFields = new Array<HxFieldDecl>();
 		for (field in HxClassDecl.getFields(cls)) {
-			if (!HxFieldDecl.getIsStatic(field))
-				throw "Python source backend MVP unsupported helper instance field: " + className + "." + HxFieldDecl.getName(field);
+			if (!HxFieldDecl.getIsStatic(field)) {
+				instanceFields.push(field);
+				continue;
+			}
 			final init = HxFieldDecl.getInit(field);
 			final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
 			out.push("    " + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs);
 			memberCount += 1;
 		}
+		var sawConstructor = false;
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == "main")
 				continue;
-			if (!HxFunctionDecl.getIsStatic(fn))
-				throw "Python source backend MVP unsupported helper instance function: " + className + "." + HxFunctionDecl.getName(fn);
-			out.push("    @staticmethod");
-			final args = [
-				for (arg in HxFunctionDecl.getArgs(fn))
-					sanitizeTypeName(HxFunctionArg.getName(arg))
-			].join(", ");
-			out.push("    def " + sanitizeTypeName(HxFunctionDecl.getName(fn)) + "(" + args + "):");
+			final isStatic = HxFunctionDecl.getIsStatic(fn);
+			final isCtor = HxFunctionDecl.getName(fn) == "new";
+			if (isCtor)
+				sawConstructor = true;
+			if (isStatic && !isCtor)
+				out.push("    @staticmethod");
+			final args = new Array<String>();
+			if (!isStatic || isCtor)
+				args.push("self");
+			for (arg in HxFunctionDecl.getArgs(fn))
+				args.push(sanitizeTypeName(HxFunctionArg.getName(arg)));
+			final methodName = isCtor ? "__init__" : sanitizeTypeName(HxFunctionDecl.getName(fn));
+			out.push("    def " + methodName + "(" + args.join(", ") + "):");
+			if (isCtor) {
+				for (field in instanceFields) {
+					final init = HxFieldDecl.getInit(field);
+					final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
+					out.push("        self." + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs);
+				}
+			}
 			for (line in renderStmts(Python, HxFunctionDecl.getBody(fn), "        "))
 				out.push(line);
+			memberCount += 1;
+		}
+		if (!sawConstructor && instanceFields.length > 0) {
+			out.push("    def __init__(self):");
+			for (field in instanceFields) {
+				final init = HxFieldDecl.getInit(field);
+				final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
+				out.push("        self." + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs);
+			}
 			memberCount += 1;
 		}
 		if (memberCount == 0)
@@ -846,12 +953,12 @@ class SourceNativeBackend {
 		return out;
 	}
 
-	static function renderProgram(target:SourceNativeTarget, decl:HxModuleDecl, className:String, body:Array<HxStmt>):String {
+	static function renderProgram(target:SourceNativeTarget, program:GenIrProgram, decl:HxModuleDecl, className:String, body:Array<HxStmt>):String {
 		final lines = new Array<String>();
 		switch (target) {
 			case Python:
 				lines.push("# Generated by hxhx Stage3 Python source backend MVP");
-				for (line in renderSupportClasses(target, decl, className))
+				for (line in renderSupportClasses(target, program, decl, className))
 					lines.push(line);
 				if (lines[lines.length - 1] != "# Generated by hxhx Stage3 Python source backend MVP")
 					lines.push("");
