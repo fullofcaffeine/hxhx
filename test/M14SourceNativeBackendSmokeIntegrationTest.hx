@@ -17,6 +17,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			throw message + " (missing `" + needle + "` in `" + haystack + "`)";
 	}
 
+	static function assertNotContains(haystack:String, needle:String, message:String):Void {
+		if (haystack.indexOf(needle) >= 0)
+			throw message + " (unexpected `" + needle + "` in `" + haystack + "`)";
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -548,6 +553,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    a >>= 1;",
 			"    a >>>= 1;",
 			"    Sys.println(Std.string(a));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpCompileTimeOnlyMacroSupportProgram():GenIrProgram {
+		final src = [
+			"class TestIssues {",
+			"  macro static public function addIssueClasses(dir:String, pack:String) {",
+			"    return macro $b{[]};",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(\"ok\");",
 			"  }",
 			"}",
 		].join("\n");
@@ -1508,6 +1532,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpCompileTimeOnlyMacroSupportSkipped():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_compile_time_macro_skip_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpCompileTimeOnlyMacroSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertNotContains(content, "class TestIssues", "PHP support emission should skip compile-time-only macro helper classes");
+		assertContains(content, "echo \"ok\" . PHP_EOL;", "PHP main output should still emit when compile-time-only helpers are skipped");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1562,6 +1599,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpForKeyValue();
 		assertPhpTypeCheck();
 		assertPhpShiftAssignment();
+		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();

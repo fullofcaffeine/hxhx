@@ -2066,7 +2066,7 @@ class SourceNativeBackend {
 				return;
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final className = sanitizeTypeName(HxClassDecl.getName(cls));
-				if (isCompileTimeOnlySupportClass(className))
+				if (isCompileTimeOnlySupportClass(cls))
 					continue;
 				if (className == mainClassName || seen.exists(className))
 					continue;
@@ -2086,8 +2086,20 @@ class SourceNativeBackend {
 		return out;
 	}
 
-	static function isCompileTimeOnlySupportClass(className:String):Bool {
-		return className == "HelperMacros";
+	static function isCompileTimeOnlySupportClass(cls:HxClassDecl):Bool {
+		final className = sanitizeTypeName(HxClassDecl.getName(cls));
+		if (className == "HelperMacros")
+			return true;
+		if (HxClassDecl.getFields(cls).length > 0)
+			return false;
+		final fns = HxClassDecl.getFunctions(cls);
+		if (fns.length == 0)
+			return false;
+		for (fn in fns) {
+			if (HxFunctionDecl.getMetadata(fn).indexOf("macro") < 0)
+				return false;
+		}
+		return true;
 	}
 
 	static function isStdSourceFile(filePath:String):Bool {
