@@ -825,6 +825,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function javaSupportClassProgram():GenIrProgram {
+		final src = [
+			"class Helper {",
+			"  public function new() {}",
+			"  public function label() {",
+			"    return \"helper\";",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var helper = new Helper();",
+			"    Sys.println(Std.string(helper.label()));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpInheritedTestHelperCallProgram():GenIrProgram {
 		final src = [
 			"class Test {",
@@ -1774,6 +1795,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "System.out.println(\"done\");", "Java lambda-body continuations should render after lowered for-in statements");
 		assertNotContains(content, "__hxhx_lambda_seq_", "Java callback lambdas should not leak lambda-sequence temporaries into generated source");
 		assertNotContains(content, "-> null(", "Java callback lambdas should not render invalid null-call continuations");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertJavaSupportClassJarPackaging():Void {
+		if (!commandExists("javac") || !commandExists("jar"))
+			return;
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_support_class_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final outputDir = Path.join([tmpRoot, "bin", "java", "SupportMain-Debug"]);
+		final backend = BackendRegistry.requireForTarget("java-native");
+		final result = backend.emit(javaSupportClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final mainSourcePath = Path.join([outputDir, "src", "Main.java"]);
+		final helperSourcePath = Path.join([outputDir, "src", "Helper.java"]);
+		final jarPath = outputDir + ".jar";
+		assertTrue(result.entryPath == jarPath, "Java source backend should still report the packaged jar for support-class programs");
+		assertTrue(FileSystem.exists(mainSourcePath), "Java source backend should emit the main Java source file");
+		assertTrue(FileSystem.exists(helperSourcePath), "Java source backend should emit sibling support classes before javac");
+		assertTrue(FileSystem.exists(jarPath), "Java source backend should package a jar after compiling support classes");
+		assertContains(File.getContent(helperSourcePath), "public class Helper", "Java support source should declare the sibling class");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -3166,6 +3206,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonOutputHint();
 		assertJavaJarPackaging();
 		assertJavaLambdaSequenceCallback();
+		assertJavaSupportClassJarPackaging();
 		assertUnsupportedDiagnostic();
 		assertWhileStatement();
 		assertIfStatement();
