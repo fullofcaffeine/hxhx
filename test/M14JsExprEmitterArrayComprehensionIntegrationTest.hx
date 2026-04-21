@@ -27,5 +27,10 @@ class M14JsExprEmitterArrayComprehensionIntegrationTest {
 		assertContains(iterJs, "var __arr_comp_value = __arr_comp_iter[__arr_comp_i];", "array comprehension binds loop value each iteration");
 		assertContains(iterJs, "__hx_op_add", "array comprehension addition should use abstract-aware helper");
 		assertContains(iterJs, "(__arr_comp_value, 1)", "array comprehension yield uses bound value");
+
+		final guardedExpr = HxParser.parseExprText("[for (value in values) if (keep(value)) value]");
+		final guardedJs = JsExprEmitter.emit(guardedExpr, exprScope);
+		assertContains(guardedJs, "if (keep(__arr_comp_value)) {", "guarded comprehension should lower the if-guard inside the loop");
+		assertContains(guardedJs, "__arr_comp_out.push(__arr_comp_value);", "guarded comprehension should still push the yielded value");
 	}
 }

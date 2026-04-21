@@ -844,7 +844,7 @@ let hasForExprProbeArg = fun args -> try let __fallback_result_614 = (
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -935,7 +935,7 @@ let helperTypeErrorResult = fun args -> try let __fallback_result_621 = (
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -1370,7 +1370,7 @@ let resolvePackageQualifiedTypePlaceholder = fun fullPath expr scope -> try let 
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -1449,7 +1449,7 @@ let isNullLiteral = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
     | HxExpr.EArrayDecl _ -> 23
     | HxExpr.EArrayAccess (_, _) -> 24
     | HxExpr.ERange (_, _) -> 25
@@ -1879,7 +1879,7 @@ let rec emit = fun expr scope -> let tempResult = ref ("" : string) in (
       tempResult := __assign_38;
       __assign_38
     )
-    | HxExpr.EArrayComprehension (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let name = (_g : string) in let iterable = Obj.magic _g1 in let yieldExpr = Obj.magic _g2 in let __assign_39 = (emitArrayComprehension (name : string) (Obj.magic iterable) (Obj.magic yieldExpr) scope : string) in (
+    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let yieldExpr = Obj.magic _g3 in let __assign_39 = (emitArrayComprehension (name : string) (Obj.magic iterable) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) (Obj.magic yieldExpr) scope : string) in (
       tempResult := __assign_39;
       __assign_39
     )
@@ -1951,7 +1951,7 @@ and emitField = fun obj field scope -> try let __fallback_result_509 = (
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
     | HxExpr.EArrayDecl _ -> 23
     | HxExpr.EArrayAccess (_, _) -> 24
     | HxExpr.ERange (_, _) -> 25
@@ -1986,7 +1986,7 @@ and emitField = fun obj field scope -> try let __fallback_result_509 = (
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
     | HxExpr.EArrayDecl _ -> 23
     | HxExpr.EArrayAccess (_, _) -> 24
     | HxExpr.ERange (_, _) -> 25
@@ -2190,7 +2190,7 @@ and emitCall = fun callee args scope -> try let __fallback_result_551 = (
           | HxExpr.EBinop (_, _, _) -> 19
           | HxExpr.ETernary (_, _, _) -> 20
           | HxExpr.EAnon (_, _) -> 21
-          | HxExpr.EArrayComprehension (_, _, _) -> 22
+          | HxExpr.EArrayComprehension (_, _, _, _) -> 22
           | HxExpr.EArrayDecl _ -> 23
           | HxExpr.EArrayAccess (_, _) -> 24
           | HxExpr.ERange (_, _) -> 25
@@ -2224,7 +2224,7 @@ and emitCall = fun callee args scope -> try let __fallback_result_551 = (
           | HxExpr.EBinop (_, _, _) -> 19
           | HxExpr.ETernary (_, _, _) -> 20
           | HxExpr.EAnon (_, _) -> 21
-          | HxExpr.EArrayComprehension (_, _, _) -> 22
+          | HxExpr.EArrayComprehension (_, _, _, _) -> 22
           | HxExpr.EArrayDecl _ -> 23
           | HxExpr.EArrayAccess (_, _) -> 24
           | HxExpr.ERange (_, _) -> 25
@@ -2265,7 +2265,7 @@ and emitCall = fun callee args scope -> try let __fallback_result_551 = (
           | HxExpr.EBinop (_, _, _) -> 19
           | HxExpr.ETernary (_, _, _) -> 20
           | HxExpr.EAnon (_, _) -> 21
-          | HxExpr.EArrayComprehension (_, _, _) -> 22
+          | HxExpr.EArrayComprehension (_, _, _, _) -> 22
           | HxExpr.EArrayDecl _ -> 23
           | HxExpr.EArrayAccess (_, _) -> 24
           | HxExpr.ERange (_, _) -> 25
@@ -2323,7 +2323,7 @@ and emitEnumMatch = fun subject pattern scope -> let tempResult = ref ("" : stri
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
     | HxExpr.EArrayDecl _ -> 23
     | HxExpr.EArrayAccess (_, _) -> 24
     | HxExpr.ERange (_, _) -> 25
@@ -2358,7 +2358,7 @@ and emitEnumMatch = fun subject pattern scope -> let tempResult = ref ("" : stri
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -2420,7 +2420,7 @@ and emitMapComprehensionExpr = fun args scope -> (
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -2453,7 +2453,7 @@ and emitMapComprehensionExpr = fun args scope -> (
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -2501,7 +2501,7 @@ and emitCallArg = fun arg scope -> let tempResult = ref ("" : string) in (
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
     | HxExpr.EArrayDecl _ -> 23
     | HxExpr.EArrayAccess (_, _) -> 24
     | HxExpr.ERange (_, _) -> 25
@@ -2534,7 +2534,7 @@ and emitCallArg = fun arg scope -> let tempResult = ref ("" : string) in (
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
     | HxExpr.EArrayDecl _ -> 23
     | HxExpr.EArrayAccess (_, _) -> 24
     | HxExpr.ERange (_, _) -> 25
@@ -2590,7 +2590,7 @@ and emitForInExpr = fun args scope -> (
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -2640,7 +2640,7 @@ and emitTryExpr = fun args scope -> (
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -2688,7 +2688,7 @@ and emitTryExpr = fun args scope -> (
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _) -> 22
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
         | HxExpr.EArrayDecl _ -> 23
         | HxExpr.EArrayAccess (_, _) -> 24
         | HxExpr.ERange (_, _) -> 25
@@ -2719,7 +2719,7 @@ and emitTryExpr = fun args scope -> (
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _) -> 22
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
         | HxExpr.EArrayDecl _ -> 23
         | HxExpr.EArrayAccess (_, _) -> 24
         | HxExpr.ERange (_, _) -> 25
@@ -2750,7 +2750,7 @@ and emitTryExpr = fun args scope -> (
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _) -> 22
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
         | HxExpr.EArrayDecl _ -> 23
         | HxExpr.EArrayAccess (_, _) -> 24
         | HxExpr.ERange (_, _) -> 25
@@ -2804,7 +2804,7 @@ and emitInlineJsCode = fun args scope -> try let __fallback_result_637 = (
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -2932,7 +2932,7 @@ and emitBinop = fun op left right scope -> try let __fallback_result_695 = (
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
     | HxExpr.EArrayDecl _ -> 23
     | HxExpr.EArrayAccess (_, _) -> 24
     | HxExpr.ERange (_, _) -> 25
@@ -2972,7 +2972,7 @@ and emitBinop = fun op left right scope -> try let __fallback_result_695 = (
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -3036,7 +3036,7 @@ and emitThisAssignment = fun op right scope -> try let __fallback_result_704 = l
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -3252,7 +3252,7 @@ and macroExprDef = fun expr scope -> let tempResult = ref ("" : string) in (
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -3320,7 +3320,7 @@ and macroExprDef = fun expr scope -> let tempResult = ref ("" : string) in (
               | HxExpr.EBinop (_, _, _) -> 19
               | HxExpr.ETernary (_, _, _) -> 20
               | HxExpr.EAnon (_, _) -> 21
-              | HxExpr.EArrayComprehension (_, _, _) -> 22
+              | HxExpr.EArrayComprehension (_, _, _, _) -> 22
               | HxExpr.EArrayDecl _ -> 23
               | HxExpr.EArrayAccess (_, _) -> 24
               | HxExpr.ERange (_, _) -> 25
@@ -3523,7 +3523,7 @@ and emitRangeExpr = fun startExpr endExpr scope -> let out = Obj.magic (HxArray.
   ignore (HxArray.push out "})()");
   HxArray.join out " " (fun x -> x)
 )
-and emitArrayComprehension = fun name iterable yieldExpr scope -> let out = Obj.magic (HxArray.create ()) in let iterName = ("__arr_comp_" ^ HxString.toStdString (Backend_js_JsNameMangler.identifier (name : string)) : string) in let iterLocals = Obj.magic (HxMap.create_string ()) in (
+and emitArrayComprehension = fun name iterable guardExpr yieldExpr scope -> let out = Obj.magic (HxArray.create ()) in let iterName = ("__arr_comp_" ^ HxString.toStdString (Backend_js_JsNameMangler.identifier (name : string)) : string) in let iterLocals = Obj.magic (HxMap.create_string ()) in (
   ignore (HxMap.set_string iterLocals name iterName);
   let iterScope = nestedScope scope (Obj.magic iterLocals) in (
     ignore (HxArray.push out "(function () {");
@@ -3551,7 +3551,7 @@ and emitArrayComprehension = fun name iterable yieldExpr scope -> let out = Obj.
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -3565,13 +3565,21 @@ and emitArrayComprehension = fun name iterable yieldExpr scope -> let out = Obj.
       ignore (HxArray.push out (("var __arr_comp_start = " ^ HxString.toStdString (emit (Obj.magic startExpr) scope)) ^ ";"));
       ignore (HxArray.push out (("var __arr_comp_end = " ^ HxString.toStdString (emit (Obj.magic endExpr) scope)) ^ ";"));
       ignore (HxArray.push out (((((("for (var " ^ HxString.toStdString iterName) ^ " = __arr_comp_start; ") ^ HxString.toStdString iterName) ^ " < __arr_comp_end; ") ^ HxString.toStdString iterName) ^ "++) {"));
-      ignore (HxArray.push out (("__arr_comp_out.push(" ^ HxString.toStdString (emit (Obj.magic yieldExpr) iterScope)) ^ ");"));
+      ignore (if guardExpr == Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push out (("__arr_comp_out.push(" ^ HxString.toStdString (emit (Obj.magic yieldExpr) iterScope)) ^ ");")) else ignore ((
+        ignore (HxArray.push out (("if (" ^ HxString.toStdString (emit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) iterScope)) ^ ") {"));
+        ignore (HxArray.push out (("__arr_comp_out.push(" ^ HxString.toStdString (emit (Obj.magic yieldExpr) iterScope)) ^ ");"));
+        HxArray.push out "}"
+      )));
       HxArray.push out "}"
     )) else ignore ((
       ignore (HxArray.push out (("var __arr_comp_iter = " ^ HxString.toStdString (emit (Obj.magic iterable) scope)) ^ ";"));
       ignore (HxArray.push out "for (var __arr_comp_i = 0; __arr_comp_i < __arr_comp_iter.length; __arr_comp_i++) {");
       ignore (HxArray.push out (("var " ^ HxString.toStdString iterName) ^ " = __arr_comp_iter[__arr_comp_i];"));
-      ignore (HxArray.push out (("__arr_comp_out.push(" ^ HxString.toStdString (emit (Obj.magic yieldExpr) iterScope)) ^ ");"));
+      ignore (if guardExpr == Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push out (("__arr_comp_out.push(" ^ HxString.toStdString (emit (Obj.magic yieldExpr) iterScope)) ^ ");")) else ignore ((
+        ignore (HxArray.push out (("if (" ^ HxString.toStdString (emit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) iterScope)) ^ ") {"));
+        ignore (HxArray.push out (("__arr_comp_out.push(" ^ HxString.toStdString (emit (Obj.magic yieldExpr) iterScope)) ^ ");"));
+        HxArray.push out "}"
+      )));
       HxArray.push out "}"
     )));
     ignore (HxArray.push out "return __arr_comp_out;");
@@ -3607,7 +3615,7 @@ and emitMapComprehension = fun name iterable keyExpr valueExpr scope -> let out 
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25

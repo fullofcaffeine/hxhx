@@ -916,11 +916,13 @@ class TyperStage {
 				for (v in values)
 					inferExprType(v, scope, ctx, pos);
 				TyType.fromHintText("Dynamic");
-			case EArrayComprehension(name, iterable, yieldExpr):
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				// Bring-up: type the iterable and bind the loop variable for the yield expression.
 				final itTy = inferExprType(iterable, scope, ctx, pos);
 				final elemTy = arrayElementType(itTy);
 				scope.declareLocal(name, (elemTy != null && !elemTy.isUnknown()) ? elemTy : TyType.fromHintText("Dynamic"));
+				if (guardExpr != null)
+					inferExprType(guardExpr, scope, ctx, pos);
 				inferExprType(yieldExpr, scope, ctx, pos);
 				TyType.fromHintText("Array<Dynamic>");
 			case EArrayDecl(values):

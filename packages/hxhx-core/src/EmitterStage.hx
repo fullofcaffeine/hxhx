@@ -1566,7 +1566,7 @@ class EmitterStage {
 		The loop variable is added to a cloned type context before lowering the
 		yield expression, preserving the old local branch behavior.
 	**/
-	static function exprToOcamlArrayComprehension(name:String, iterable:HxExpr, yieldExpr:HxExpr, ?arityByIdent:Map<String, Int>,
+	static function exprToOcamlArrayComprehension(name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr, ?arityByIdent:Map<String, Int>,
 			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
 			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		final out = "__arr_comp_out";
@@ -1578,7 +1578,15 @@ class EmitterStage {
 				TyType.fromHintText("Dynamic");
 		};
 		final ty2 = extendTyByIdentForStage3(cast tyByIdent, name, loopTy);
+		final guard = guardExpr == null ? null : exprToOcaml(guardExpr, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 		final body = exprToOcaml(yieldExpr, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+		final pushExpr = guard == null ? "ignore (HxBootArray.push " + out + " (" + body + "))" : "(if ("
+			+ guard
+			+ ") then ignore (HxBootArray.push "
+			+ out
+			+ " ("
+			+ body
+			+ ")) else ())";
 		return switch (iterable) {
 			case ERange(startExpr, endExpr):
 				final start = exprToOcaml(startExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -1595,11 +1603,9 @@ class EmitterStage {
 				+ ") in "
 				+ "(if (__end <= __start) then () else (for "
 				+ v
-				+ " = __start to (__end - 1) do ignore (HxBootArray.push "
-				+ out
-				+ " ("
-				+ body
-				+ ")) done)); "
+				+ " = __start to (__end - 1) do "
+				+ pushExpr
+				+ " done)); "
 				+ out
 				+ ")";
 			case _:
@@ -1611,11 +1617,9 @@ class EmitterStage {
 				+ it
 				+ ") (fun "
 				+ v
-				+ " -> ignore (HxBootArray.push "
-				+ out
-				+ " ("
-				+ body
-				+ "))); "
+				+ " -> "
+				+ pushExpr
+				+ "); "
 				+ out
 				+ ")";
 		};
@@ -2650,8 +2654,8 @@ class EmitterStage {
 			case ENew(typePath, args):
 				exprToOcamlNewStage3(typePath, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
 					callSigByCalleeRaw);
-			case EArrayComprehension(name, iterable, yieldExpr):
-				exprToOcamlArrayComprehension(name, iterable, yieldExpr, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				exprToOcamlArrayComprehension(name, iterable, guardExpr, yieldExpr, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 			case EField(obj, field):
 				exprToOcamlStage3FieldAccess(obj, field, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
@@ -4265,7 +4269,7 @@ class EmitterStage {
 						if (hasBringupPoison(v))
 							return true;
 					false;
-				case EArrayComprehension(_name, iterable, _yieldExpr):
+				case EArrayComprehension(_name, iterable, _guardExpr, _yieldExpr):
 					// Stage 3 bring-up: don't poison the whole comprehension just because the yield
 					// expression mentions the binder name (which is introduced by the comprehension).
 					//
@@ -4362,8 +4366,10 @@ class EmitterStage {
 				if (values != null)
 					for (v in values)
 						collectAssignedNamesInExprRec(v, out);
-			case EArrayComprehension(_name, iterable, yieldExpr):
+			case EArrayComprehension(_name, iterable, guardExpr, yieldExpr):
 				collectAssignedNamesInExprRec(iterable, out);
+				if (guardExpr != null)
+					collectAssignedNamesInExprRec(guardExpr, out);
 				collectAssignedNamesInExprRec(yieldExpr, out);
 			case EArrayAccess(arr, idx):
 				collectAssignedNamesInExprRec(arr, out);
@@ -4525,13 +4531,15 @@ class EmitterStage {
 			case EBinop(_, left, right):
 				scanExprForPreludeDepsRec(left, locals, calls, idents);
 				scanExprForPreludeDepsRec(right, locals, calls, idents);
-			case EArrayComprehension(name, iterable, yieldExpr):
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				final nestedLocals:Map<String, Bool> = new Map();
 				for (k in locals.keys())
 					nestedLocals.set(k, true);
 				if (name != null && name.length > 0)
 					nestedLocals.set(name, true);
 				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
+				if (guardExpr != null)
+					scanExprForPreludeDepsRec(guardExpr, nestedLocals, calls, idents);
 				scanExprForPreludeDepsRec(yieldExpr, nestedLocals, calls, idents);
 			case EArrayDecl(values):
 				if (values != null)
@@ -4782,7 +4790,7 @@ class EmitterStage {
 							same ? TyType.fromHintText("Array<" + firstTy.toString() + ">") : TyType.fromHintText("Array");
 						}
 					}
-				case EArrayComprehension(name, iterable, yieldExpr):
+				case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 					final iterElemTy = switch (iterable) {
 						case ERange(_, _):
 							TyType.fromHintText("Int");
@@ -4793,6 +4801,8 @@ class EmitterStage {
 						case _:
 							TyType.unknown();
 					};
+					if (guardExpr != null)
+						inferInitType(guardExpr, name, iterElemTy);
 					final yielded = inferInitType(yieldExpr, name, iterElemTy);
 					final elemTy = yielded.isUnknown() ? iterElemTy : yielded;
 					elemTy.isUnknown() ? TyType.fromHintText("Array") : TyType.fromHintText("Array<" + elemTy.toString() + ">");
@@ -5235,8 +5245,11 @@ class EmitterStage {
 									break;
 								}
 						seen;
-					case EArrayComprehension(name, iterable, yieldExpr):
-						(name != needle && (exprContainsIdent(iterable, needle) || exprContainsIdent(yieldExpr, needle)));
+					case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+						(name != needle
+							&& (exprContainsIdent(iterable, needle)
+								|| (guardExpr != null && exprContainsIdent(guardExpr, needle))
+								|| exprContainsIdent(yieldExpr, needle)));
 					case EArrayAccess(arrayExpr, indexExpr): exprContainsIdent(arrayExpr, needle) || exprContainsIdent(indexExpr, needle);
 					case ERange(startExpr, endExpr): exprContainsIdent(startExpr, needle) || exprContainsIdent(endExpr, needle);
 					case ETernary(cond, thenExpr, elseExpr): exprContainsIdent(cond,
@@ -5293,8 +5306,11 @@ class EmitterStage {
 									break;
 								}
 						seen;
-					case EArrayComprehension(name, iterable, yieldExpr):
-						(name != needle && (exprHintsInt(iterable, needle) || exprHintsInt(yieldExpr, needle)));
+					case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+						(name != needle
+							&& (exprHintsInt(iterable, needle)
+								|| (guardExpr != null && exprHintsInt(guardExpr, needle))
+								|| exprHintsInt(yieldExpr, needle)));
 					case EArrayAccess(arrayExpr, indexExpr): exprHintsInt(arrayExpr, needle) || exprHintsInt(indexExpr, needle);
 					case ERange(startExpr, endExpr): exprHintsInt(startExpr, needle) || exprHintsInt(endExpr, needle);
 					case ETernary(cond, thenExpr, elseExpr): exprHintsInt(cond, needle) || exprHintsInt(thenExpr, needle) || exprHintsInt(elseExpr, needle);
@@ -5504,7 +5520,7 @@ class EmitterStage {
 							} else {
 								defaultLoopTy;
 							}
-						case EArrayDecl(_), EArrayComprehension(_, _, _):
+						case EArrayDecl(_), EArrayComprehension(_, _, _, _):
 							final inferredElem = arrayElemTypeFromTy(inferInitType(iterable));
 							inferredElem.isUnknown() ? defaultLoopTy : inferredElem;
 						case _:
@@ -7085,7 +7101,7 @@ class EmitterStage {
 						case EIdent(name):
 							final t = knownByIdent.get(name);
 							t == null ? TyType.unknown() : t;
-						case EArrayDecl(_), EArrayComprehension(_, _, _):
+						case EArrayDecl(_), EArrayComprehension(_, _, _, _):
 							TyType.fromHintText("Array");
 						case _:
 							TyType.unknown();
@@ -7124,7 +7140,7 @@ class EmitterStage {
 							&& isTyNamed(rt,
 								"Int")) TyType.fromHintText("Int"); else if ((op == "+" || op == "-" || op == "*")
 							&& (isTyNamed(lt, "Float") || isTyNamed(rt, "Float"))) TyType.fromHintText("Float"); else TyType.unknown();
-					case EArrayDecl(_), EArrayComprehension(_, _, _):
+					case EArrayDecl(_), EArrayComprehension(_, _, _, _):
 						TyType.fromHintText("Array");
 					case _:
 						TyType.unknown();
@@ -7512,9 +7528,11 @@ class EmitterStage {
 									staticInitWorklist.push(left);
 								if (right != null)
 									staticInitWorklist.push(right);
-							case EArrayComprehension(_, iterable, yieldExpr):
+							case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
 								if (iterable != null)
 									staticInitWorklist.push(iterable);
+								if (guardExpr != null)
+									staticInitWorklist.push(guardExpr);
 								if (yieldExpr != null)
 									staticInitWorklist.push(yieldExpr);
 							case EArrayDecl(values):
@@ -8090,9 +8108,11 @@ class EmitterStage {
 											exprWorklist.push(left);
 										if (right != null)
 											exprWorklist.push(right);
-									case EArrayComprehension(_name, iterable, yieldExpr):
+									case EArrayComprehension(_name, iterable, guardExpr, yieldExpr):
 										if (iterable != null)
 											exprWorklist.push(iterable);
+										if (guardExpr != null)
+											exprWorklist.push(guardExpr);
 										if (yieldExpr != null)
 											exprWorklist.push(yieldExpr);
 									case EArrayDecl(values):

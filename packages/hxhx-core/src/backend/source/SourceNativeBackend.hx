@@ -255,6 +255,8 @@ class SourceNativeBackend {
 					case Php: "$this";
 					case Lua: "self";
 				}
+			case ESuper:
+				superExpr(target);
 			case EUnop(op, inner):
 				unopExpr(target, op, inner);
 			case EIdent(name):
@@ -275,12 +277,14 @@ class SourceNativeBackend {
 				fieldAccess(target, renderExpr(target, receiver), field);
 			case EArrayAccess(receiver, index):
 				arrayAccessExpr(target, receiver, index);
+			case ECall(ESuper, args):
+				superConstructorCallExpr(target, args);
 			case ECall(callee, args):
 				callExpr(target, renderExpr(target, callee), args);
 			case EArrayDecl(items):
 				arrayLiteral(target, items);
-			case EArrayComprehension(name, iterable, yieldExpr):
-				arrayComprehensionExpr(target, name, iterable, yieldExpr);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				arrayComprehensionExpr(target, name, iterable, guardExpr, yieldExpr);
 			case ERange(start, end):
 				rangeIterable(target, start, end);
 			case ELambda(args, body):
@@ -318,7 +322,7 @@ class SourceNativeBackend {
 			case EBinop(op, _, _): "EBinop(" + op + ")";
 			case ETernary(_, _, _): "ETernary";
 			case EAnon(_, _): "EAnon";
-			case EArrayComprehension(_, _, _): "EArrayComprehension";
+			case EArrayComprehension(_, _, _, _): "EArrayComprehension";
 			case EArrayDecl(_): "EArrayDecl";
 			case EArrayAccess(_, _): "EArrayAccess";
 			case ERange(_, _): "ERange";
@@ -469,6 +473,23 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function superExpr(target:SourceNativeTarget):String {
+		return switch (target) {
+			case Python: "super()";
+			case Java, Cs, Php, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported expression: ESuper";
+		};
+	}
+
+	static function superConstructorCallExpr(target:SourceNativeTarget, args:Array<HxExpr>):String {
+		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
+		return switch (target) {
+			case Python: "super().__init__(" + rendered + ")";
+			case Java, Cs, Php, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported expression: ESuper";
+		};
+	}
+
 	static function callExpr(target:SourceNativeTarget, callee:String, args:Array<HxExpr>):String {
 		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
 		return callee + "(" + rendered + ")";
@@ -483,7 +504,7 @@ class SourceNativeBackend {
 		};
 	}
 
-	static function arrayComprehensionExpr(target:SourceNativeTarget, name:String, iterable:HxExpr, yieldExpr:HxExpr):String {
+	static function arrayComprehensionExpr(target:SourceNativeTarget, name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr):String {
 		return switch (target) {
 			case Python:
 				final binder = valueName(target, name);
@@ -494,7 +515,8 @@ class SourceNativeBackend {
 					case _:
 						renderExpr(target, iterable);
 				};
-				"[" + renderedYield + " for " + binder + " in " + renderedIterable + "]";
+				final renderedGuard = guardExpr == null ? "" : " if " + renderExpr(target, guardExpr);
+				"[" + renderedYield + " for " + binder + " in " + renderedIterable + renderedGuard + "]";
 			case Java, Cs, Php, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: EArrayComprehension";
 		};
@@ -1128,27 +1150,61 @@ class SourceNativeBackend {
 	static function renderPythonSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
+		final pending = new Array<HxClassDecl>();
 		function appendDeclClasses(moduleDecl:HxModuleDecl):Void {
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final className = sanitizeTypeName(HxClassDecl.getName(cls));
 				if (className == mainClassName || seen.exists(className))
 					continue;
 				seen.set(className, true);
-				if (out.length > 0)
-					out.push("");
-				for (line in renderPythonHelperClass(cls))
-					out.push(line);
+				pending.push(cls);
 			}
 		}
 		appendDeclClasses(decl);
 		for (typed in program.getTypedModules())
 			appendDeclClasses(typed.getParsed().getDecl());
+		final pendingNames = new Map<String, Bool>();
+		for (cls in pending)
+			pendingNames.set(sanitizeTypeName(HxClassDecl.getName(cls)), true);
+		final ordered = new Array<HxClassDecl>();
+		final emittedNames = new Map<String, Bool>();
+		final remaining = pending.copy();
+		while (remaining.length > 0) {
+			var progressed = false;
+			var i = 0;
+			while (i < remaining.length) {
+				final cls = remaining[i];
+				final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
+				if (baseName == null || baseName.length == 0 || !pendingNames.exists(baseName) || emittedNames.exists(baseName)) {
+					ordered.push(cls);
+					emittedNames.set(sanitizeTypeName(HxClassDecl.getName(cls)), true);
+					remaining.splice(i, 1);
+					progressed = true;
+					continue;
+				}
+				i++;
+			}
+			if (!progressed) {
+				for (cls in remaining)
+					ordered.push(cls);
+				break;
+			}
+		}
+		for (cls in ordered) {
+			if (out.length > 0)
+				out.push("");
+			for (line in renderPythonHelperClass(cls))
+				out.push(line);
+		}
 		return out;
 	}
 
 	static function renderPythonHelperClass(cls:HxClassDecl):Array<String> {
 		final className = sanitizeTypeName(HxClassDecl.getName(cls));
-		final out = ["class " + className + ":"];
+		final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
+		final classHeader = baseName == null
+			|| baseName.length == 0 ? "class " + className + ":" : "class " + className + "(" + baseName + "):";
+		final out = [classHeader];
 		var memberCount = 0;
 		final instanceFields = new Array<HxFieldDecl>();
 		for (field in HxClassDecl.getFields(cls)) {
@@ -1201,6 +1257,13 @@ class SourceNativeBackend {
 		if (memberCount == 0)
 			out.push("    pass");
 		return out;
+	}
+
+	static function pythonBaseClassName(extendsPath:String):String {
+		if (extendsPath == null || extendsPath.length == 0)
+			return "";
+		final parts = extendsPath.split(".");
+		return sanitizeTypeName(parts[parts.length - 1]);
 	}
 
 	static function renderProgram(target:SourceNativeTarget, program:GenIrProgram, decl:HxModuleDecl, className:String, body:Array<HxStmt>):String {

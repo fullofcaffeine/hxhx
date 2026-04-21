@@ -655,8 +655,9 @@ class Stage3Compiler {
 				for (v in values)
 					c += countUnsupportedExprsInExpr(v);
 				c;
-			case EArrayComprehension(_name, iterable, yieldExpr):
-				countUnsupportedExprsInExpr(iterable) + countUnsupportedExprsInExpr(yieldExpr);
+			case EArrayComprehension(_name, iterable, guardExpr, yieldExpr):
+				countUnsupportedExprsInExpr(iterable) + (guardExpr == null ? 0 : countUnsupportedExprsInExpr(guardExpr)) +
+				countUnsupportedExprsInExpr(yieldExpr);
 			case EArrayAccess(arr, idx):
 				countUnsupportedExprsInExpr(arr) + countUnsupportedExprsInExpr(idx);
 			case ECast(expr, _hint):
@@ -704,8 +705,10 @@ class Stage3Compiler {
 			case EArrayDecl(values):
 				for (v in values)
 					collectUnsupportedExprRawInExpr(v, out, max);
-			case EArrayComprehension(_name, iterable, yieldExpr):
+			case EArrayComprehension(_name, iterable, guardExpr, yieldExpr):
 				collectUnsupportedExprRawInExpr(iterable, out, max);
+				if (guardExpr != null)
+					collectUnsupportedExprRawInExpr(guardExpr, out, max);
 				collectUnsupportedExprRawInExpr(yieldExpr, out, max);
 			case EArrayAccess(arr, idx):
 				collectUnsupportedExprRawInExpr(arr, out, max);

@@ -93,8 +93,8 @@ class JsExprEmitter {
 				emitTryCatchRaw(raw, scope);
 			case ERange(startExpr, endExpr):
 				emitRangeExpr(startExpr, endExpr, scope);
-			case EArrayComprehension(name, iterable, yieldExpr):
-				emitArrayComprehension(name, iterable, yieldExpr, scope);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				emitArrayComprehension(name, iterable, guardExpr, yieldExpr, scope);
 			case ENew(typePath, args):
 				emitNew(typePath, args, scope);
 			case EUnsupported(raw):
@@ -1922,12 +1922,22 @@ class JsExprEmitter {
 		return out.join(" ");
 	}
 
-	static function emitArrayComprehension(name:String, iterable:HxExpr, yieldExpr:HxExpr, scope:JsEmitScope):String {
+	static function emitArrayComprehension(name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr, scope:JsEmitScope):String {
 		final out = new Array<String>();
 		final iterName = "__arr_comp_" + JsNameMangler.identifier(name);
 		final iterLocals = new haxe.ds.StringMap<String>();
 		iterLocals.set(name, iterName);
 		final iterScope = nestedScope(scope, iterLocals);
+
+		inline function pushYield():Void {
+			if (guardExpr == null) {
+				out.push("__arr_comp_out.push(" + emit(yieldExpr, iterScope) + ");");
+			} else {
+				out.push("if (" + emit(guardExpr, iterScope) + ") {");
+				out.push("__arr_comp_out.push(" + emit(yieldExpr, iterScope) + ");");
+				out.push("}");
+			}
+		}
 
 		out.push("(function () {");
 		out.push("var __arr_comp_out = [];");
@@ -1937,13 +1947,13 @@ class JsExprEmitter {
 				out.push("var __arr_comp_start = " + emit(startExpr, scope) + ";");
 				out.push("var __arr_comp_end = " + emit(endExpr, scope) + ";");
 				out.push("for (var " + iterName + " = __arr_comp_start; " + iterName + " < __arr_comp_end; " + iterName + "++) {");
-				out.push("__arr_comp_out.push(" + emit(yieldExpr, iterScope) + ");");
+				pushYield();
 				out.push("}");
 			case _:
 				out.push("var __arr_comp_iter = " + emit(iterable, scope) + ";");
 				out.push("for (var __arr_comp_i = 0; __arr_comp_i < __arr_comp_iter.length; __arr_comp_i++) {");
 				out.push("var " + iterName + " = __arr_comp_iter[__arr_comp_i];");
-				out.push("__arr_comp_out.push(" + emit(yieldExpr, iterScope) + ");");
+				pushYield();
 				out.push("}");
 		}
 

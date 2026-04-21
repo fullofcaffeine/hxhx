@@ -319,10 +319,11 @@ class ExprMacroExpander {
 					out.push(rv);
 				}
 				changed ? EArrayDecl(out) : e;
-			case EArrayComprehension(name, iterable, yieldExpr):
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				final ri = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rg = guardExpr == null ? null : rewriteExpr(guardExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				final ry = rewriteExpr(yieldExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				(ri != iterable || ry != yieldExpr) ? EArrayComprehension(name, ri, ry) : e;
+				(ri != iterable || rg != guardExpr || ry != yieldExpr) ? EArrayComprehension(name, ri, rg, ry) : e;
 			case EArrayAccess(arr, idx):
 				final ra = rewriteExpr(arr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				final ri = rewriteExpr(idx, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
@@ -372,7 +373,7 @@ class ExprMacroExpander {
 			case ETernary(_, _, _): "Ternary";
 			case EAnon(_, _): "Anon";
 			case EArrayDecl(_): "ArrayDecl";
-			case EArrayComprehension(_, _, _): "ArrayComprehension";
+			case EArrayComprehension(_, _, _, _): "ArrayComprehension";
 			case EArrayAccess(_, _): "ArrayAccess";
 			case ERange(_, _): "Range";
 			case ECast(_, _): "Cast";

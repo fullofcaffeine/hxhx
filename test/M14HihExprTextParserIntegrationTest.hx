@@ -638,12 +638,23 @@ class M14HihExprTextParserIntegrationTest {
 		assertTrue(arrowComprehensionStmts.length == 1, "expected range comprehension arrow assignment");
 		switch (arrowComprehensionStmts[0]) {
 			case SExpr(EBinop("=", EIdent("arr"),
-				EArrayComprehension("i", ERange(EInt(0), EInt(5)), ELambda(args, EBinop("*", EIdent("value"), EIdent("i"))))), _):
+				EArrayComprehension("i", ERange(EInt(0), EInt(5)), null, ELambda(args, EBinop("*", EIdent("value"), EIdent("i"))))),
+				_):
 				assertTrue(args.length == 1 && args[0] == "value", "expected arrow comprehension arg name");
 			case SExpr(EUnsupported(raw), _):
 				fail("range comprehension arrow parsed as unsupported: " + raw);
 			case _:
 				fail("expected range comprehension arrow assignment to parse");
+		}
+
+		final guardComprehensionStmts = HxParser.parseFunctionBodyText("arr = [for (x in values) if (keep(x)) x];");
+		assertTrue(guardComprehensionStmts.length == 1, "expected guarded comprehension assignment");
+		switch (guardComprehensionStmts[0]) {
+			case SExpr(EBinop("=", EIdent("arr"), EArrayComprehension("x", EIdent("values"), ECall(EIdent("keep"), [EIdent("x")]), EIdent("x"))), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("guarded comprehension parsed as unsupported: " + raw);
+			case _:
+				fail("expected guarded comprehension assignment to parse");
 		}
 
 		final mapComprehensionStmts = HxParser.parseFunctionBodyText('var map = [for (x in ["a", "b"]) x => x.toUpperCase()];');

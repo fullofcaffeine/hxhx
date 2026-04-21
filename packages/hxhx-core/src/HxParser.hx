@@ -1709,8 +1709,14 @@ class HxParser {
 			}
 
 			expect(TRParen, "')'");
+			var guardExpr:Null<HxExpr> = null;
+			if (acceptKeyword(KIf)) {
+				expect(TLParen, "'('");
+				guardExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				expect(TRParen, "')'");
+			}
 			final yieldExpr = parseExpr(() -> isFatArrowStart() || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
-			var result:HxExpr = EArrayComprehension(name, iterable, yieldExpr);
+			var result:HxExpr = EArrayComprehension(name, iterable, guardExpr, yieldExpr);
 			if (isFatArrowStart()) {
 				bump(); // '='
 				bump(); // '>'

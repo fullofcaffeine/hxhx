@@ -606,7 +606,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
           | HxExpr.EBinop (_, _, _) -> 19
           | HxExpr.ETernary (_, _, _) -> 20
           | HxExpr.EAnon (_, _) -> 21
-          | HxExpr.EArrayComprehension (_, _, _) -> 22
+          | HxExpr.EArrayComprehension (_, _, _, _) -> 22
           | HxExpr.EArrayDecl _ -> 23
           | HxExpr.EArrayAccess (_, _) -> 24
           | HxExpr.ERange (_, _) -> 25
@@ -638,7 +638,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
           | HxExpr.EBinop (_, _, _) -> 19
           | HxExpr.ETernary (_, _, _) -> 20
           | HxExpr.EAnon (_, _) -> 21
-          | HxExpr.EArrayComprehension (_, _, _) -> 22
+          | HxExpr.EArrayComprehension (_, _, _, _) -> 22
           | HxExpr.EArrayDecl _ -> 23
           | HxExpr.EArrayAccess (_, _) -> 24
           | HxExpr.ERange (_, _) -> 25
@@ -670,7 +670,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
           | HxExpr.EBinop (_, _, _) -> 19
           | HxExpr.ETernary (_, _, _) -> 20
           | HxExpr.EAnon (_, _) -> 21
-          | HxExpr.EArrayComprehension (_, _, _) -> 22
+          | HxExpr.EArrayComprehension (_, _, _, _) -> 22
           | HxExpr.EArrayDecl _ -> 23
           | HxExpr.EArrayAccess (_, _) -> 24
           | HxExpr.ERange (_, _) -> 25
@@ -702,7 +702,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
           | HxExpr.EBinop (_, _, _) -> 19
           | HxExpr.ETernary (_, _, _) -> 20
           | HxExpr.EAnon (_, _) -> 21
-          | HxExpr.EArrayComprehension (_, _, _) -> 22
+          | HxExpr.EArrayComprehension (_, _, _, _) -> 22
           | HxExpr.EArrayDecl _ -> 23
           | HxExpr.EArrayAccess (_, _) -> 24
           | HxExpr.ERange (_, _) -> 25
@@ -749,7 +749,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
           | HxExpr.EBinop (_, _, _) -> 19
           | HxExpr.ETernary (_, _, _) -> 20
           | HxExpr.EAnon (_, _) -> 21
-          | HxExpr.EArrayComprehension (_, _, _) -> 22
+          | HxExpr.EArrayComprehension (_, _, _, _) -> 22
           | HxExpr.EArrayDecl _ -> 23
           | HxExpr.EArrayAccess (_, _) -> 24
           | HxExpr.ERange (_, _) -> 25
@@ -823,7 +823,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _) -> 22
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
         | HxExpr.EArrayDecl _ -> 23
         | HxExpr.EArrayAccess (_, _) -> 24
         | HxExpr.ERange (_, _) -> 25
@@ -856,7 +856,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _) -> 22
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
         | HxExpr.EArrayDecl _ -> 23
         | HxExpr.EArrayAccess (_, _) -> 24
         | HxExpr.ERange (_, _) -> 25
@@ -971,7 +971,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _) -> 22
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
         | HxExpr.EArrayDecl _ -> 23
         | HxExpr.EArrayAccess (_, _) -> 24
         | HxExpr.ERange (_, _) -> 25
@@ -1233,7 +1233,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -1337,7 +1337,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
         )
       )
     )
-    | HxExpr.EArrayComprehension (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let name = (_g : string) in let iterable = Obj.magic _g1 in let yieldExpr = Obj.magic _g2 in let itTy = Obj.magic (inferExprType (Obj.magic iterable) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in let elemTy = Obj.magic (arrayElementType (Obj.magic itTy)) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let yieldExpr = Obj.magic _g3 in let itTy = Obj.magic (inferExprType (Obj.magic iterable) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in let elemTy = Obj.magic (arrayElementType (Obj.magic itTy)) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
       ignore (if elemTy != Obj.magic (HxRuntime.hx_null) && not (TyType.isUnknown (Obj.magic elemTy) ()) then let __assign_277 = Obj.magic elemTy in (
         tempTyType := __assign_277;
         __assign_277
@@ -1346,6 +1346,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_295 = le
         __assign_278
       ));
       ignore (TyFunctionEnv.declareLocal (Obj.magic scope) (name : string) (Obj.magic (!tempTyType)));
+      ignore (if guardExpr != Obj.magic (HxRuntime.hx_null) then ignore (inferExprType (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) else ());
       ignore (inferExprType (Obj.magic yieldExpr) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos));
       let __assign_279 = Obj.magic (TyType.fromHintText ("Array<Dynamic>" : string)) in (
         tempResult := __assign_279;
@@ -1517,7 +1518,7 @@ let inferReturnType = fun fn scope ctx -> let out = ref (Obj.magic (Obj.magic (H
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _) -> 22
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
         | HxExpr.EArrayDecl _ -> 23
         | HxExpr.EArrayAccess (_, _) -> 24
         | HxExpr.ERange (_, _) -> 25

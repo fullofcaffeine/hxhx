@@ -1803,7 +1803,7 @@ class ParserStage {
 					if (hasUnsupportedExpr(arg))
 						return true;
 				false;
-			case EArrayComprehension(_, iterable, yieldExpr): hasUnsupportedExpr(iterable) || hasUnsupportedExpr(yieldExpr);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr): hasUnsupportedExpr(iterable) || (guardExpr != null && hasUnsupportedExpr(guardExpr)) || hasUnsupportedExpr(yieldExpr);
 			case ESwitchRaw(_) | ETryCatchRaw(_):
 				true;
 			case _:

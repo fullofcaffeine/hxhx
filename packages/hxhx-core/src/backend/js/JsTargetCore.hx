@@ -198,8 +198,10 @@ class JsTargetCore implements ITargetCore {
 			case EAnon(_, fieldValues):
 				for (value in fieldValues)
 					collectStaticInitClassDeps(value, deps, byFullName, bySimpleFullName);
-			case EArrayComprehension(_, iterable, yieldExpr):
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
 				collectStaticInitClassDeps(iterable, deps, byFullName, bySimpleFullName);
+				if (guardExpr != null)
+					collectStaticInitClassDeps(guardExpr, deps, byFullName, bySimpleFullName);
 				collectStaticInitClassDeps(yieldExpr, deps, byFullName, bySimpleFullName);
 			case EArrayDecl(values):
 				for (value in values)

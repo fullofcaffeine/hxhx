@@ -44,7 +44,7 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
     | HxExpr.EArrayDecl _ -> 23
     | HxExpr.EArrayAccess (_, _) -> 24
     | HxExpr.ERange (_, _) -> 25
@@ -77,7 +77,7 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
     | HxExpr.EArrayDecl _ -> 23
     | HxExpr.EArrayAccess (_, _) -> 24
     | HxExpr.ERange (_, _) -> 25
@@ -284,10 +284,11 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
       verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic fieldExpr) (Obj.magic violations)
     )) done
   ))
-  | HxExpr.EArrayComprehension (_p0, _p1, _p2) -> ignore ((
+  | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> ignore ((
     ignore _p0;
-    let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let iterable = Obj.magic _g2 in let yieldExpr = Obj.magic _g1 in (
+    let _g2 = Obj.magic _p1 in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpr = Obj.magic _g3 in (
       ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic iterable) (Obj.magic violations));
+      ignore (if guardExpr != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) (Obj.magic violations)) else ());
       verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic yieldExpr) (Obj.magic violations)
     )
   ))

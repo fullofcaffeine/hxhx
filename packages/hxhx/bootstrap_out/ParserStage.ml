@@ -402,7 +402,7 @@ let parse = fun source filePath -> let expectedMainClass = (expectedMainClassFro
                     | HxExpr.EBinop (_, _, _) -> 19
                     | HxExpr.ETernary (_, _, _) -> 20
                     | HxExpr.EAnon (_, _) -> 21
-                    | HxExpr.EArrayComprehension (_, _, _) -> 22
+                    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
                     | HxExpr.EArrayDecl _ -> 23
                     | HxExpr.EArrayAccess (_, _) -> 24
                     | HxExpr.ERange (_, _) -> 25
@@ -446,7 +446,7 @@ let parse = fun source filePath -> let expectedMainClass = (expectedMainClassFro
                     | HxExpr.EBinop (_, _, _) -> 19
                     | HxExpr.ETernary (_, _, _) -> 20
                     | HxExpr.EAnon (_, _) -> 21
-                    | HxExpr.EArrayComprehension (_, _, _) -> 22
+                    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
                     | HxExpr.EArrayDecl _ -> 23
                     | HxExpr.EArrayAccess (_, _) -> 24
                     | HxExpr.ERange (_, _) -> 25

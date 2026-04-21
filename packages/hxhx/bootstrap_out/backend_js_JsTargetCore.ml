@@ -145,10 +145,11 @@ let rec collectStaticInitClassDeps = fun expr deps byFullName bySimpleFullName -
         collectStaticInitClassDeps (Obj.magic value) (Obj.magic deps) (Obj.magic byFullName) (Obj.magic bySimpleFullName)
       )) done
     ))
-    | HxExpr.EArrayComprehension (_p0, _p1, _p2) -> ignore ((
+    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> ignore ((
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let iterable = Obj.magic _g2 in let yieldExpr = Obj.magic _g1 in (
+      let _g2 = Obj.magic _p1 in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpr = Obj.magic _g3 in (
         ignore (collectStaticInitClassDeps (Obj.magic iterable) (Obj.magic deps) (Obj.magic byFullName) (Obj.magic bySimpleFullName));
+        ignore (if guardExpr != Obj.magic (HxRuntime.hx_null) then ignore (collectStaticInitClassDeps (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) (Obj.magic deps) (Obj.magic byFullName) (Obj.magic bySimpleFullName)) else ());
         collectStaticInitClassDeps (Obj.magic yieldExpr) (Obj.magic deps) (Obj.magic byFullName) (Obj.magic bySimpleFullName)
       )
     ))
@@ -620,7 +621,7 @@ let isSuperConstructorCall = fun stmt -> let tempResult = ref (false : bool) in 
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -655,7 +656,7 @@ let isSuperConstructorCall = fun stmt -> let tempResult = ref (false : bool) in 
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _) -> 22
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
         | HxExpr.EArrayDecl _ -> 23
         | HxExpr.EArrayAccess (_, _) -> 24
         | HxExpr.ERange (_, _) -> 25

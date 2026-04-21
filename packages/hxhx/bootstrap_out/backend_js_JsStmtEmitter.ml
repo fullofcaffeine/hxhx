@@ -236,7 +236,7 @@ and emitStmt = fun writer stmt scope -> ignore (match stmt with
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
       | HxExpr.EArrayDecl _ -> 23
       | HxExpr.EArrayAccess (_, _) -> 24
       | HxExpr.ERange (_, _) -> 25
@@ -271,7 +271,7 @@ and emitStmt = fun writer stmt scope -> ignore (match stmt with
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _) -> 22
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
         | HxExpr.EArrayDecl _ -> 23
         | HxExpr.EArrayAccess (_, _) -> 24
         | HxExpr.ERange (_, _) -> 25
@@ -342,7 +342,7 @@ and emitForIn = fun writer name iterable body scope -> ignore (if (match iterabl
   | HxExpr.EBinop (_, _, _) -> 19
   | HxExpr.ETernary (_, _, _) -> 20
   | HxExpr.EAnon (_, _) -> 21
-  | HxExpr.EArrayComprehension (_, _, _) -> 22
+  | HxExpr.EArrayComprehension (_, _, _, _) -> 22
   | HxExpr.EArrayDecl _ -> 23
   | HxExpr.EArrayAccess (_, _) -> 24
   | HxExpr.ERange (_, _) -> 25

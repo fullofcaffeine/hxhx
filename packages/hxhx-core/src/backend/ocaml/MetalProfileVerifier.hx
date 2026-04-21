@@ -207,8 +207,10 @@ class MetalProfileVerifier {
 			case EAnon(_, fieldValues):
 				for (fieldExpr in fieldValues)
 					verifyExpr(filePath, className, fnName, stmtPos, fieldExpr, violations);
-			case EArrayComprehension(_, iterable, yieldExpr):
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
 				verifyExpr(filePath, className, fnName, stmtPos, iterable, violations);
+				if (guardExpr != null)
+					verifyExpr(filePath, className, fnName, stmtPos, guardExpr, violations);
 				verifyExpr(filePath, className, fnName, stmtPos, yieldExpr, violations);
 			case EArrayDecl(values):
 				for (valueExpr in values)

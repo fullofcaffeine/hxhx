@@ -304,6 +304,7 @@ enum HxExpr {
 		- Stores:
 		  - the loop variable name
 		  - the iterable expression
+		  - an optional guard expression (`if (...)`)
 		  - the yielded element expression
 
 		How (bring-up semantics)
@@ -315,7 +316,7 @@ enum HxExpr {
 		  - push each yielded element
 		  - return the filled array
 	**/
-	EArrayComprehension(name:String, iterable:HxExpr, yieldExpr:HxExpr);
+	EArrayComprehension(name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr);
 
 	/**
 		Array literal: `[e1, e2, ...]`.

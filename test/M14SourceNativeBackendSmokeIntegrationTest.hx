@@ -195,6 +195,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function guardedArrayComprehensionProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function keep(value:Int):Bool {",
+			"    return value > 1;",
+			"  }",
+			"  static function main() {",
+			"    var values = [1, 2];",
+			"    var kept = [for (value in values) if (keep(value)) value];",
+			"    Sys.println(Std.string(kept));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function anonymousObjectProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -313,6 +331,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    var helper = new Helper();",
 			"    Sys.println(helper.message());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function superProgram():GenIrProgram {
+		final src = [
+			"class Base {",
+			"  public var labelValue:String = \"base\";",
+			"  public function new(seed:String) {",
+			"    this.labelValue = seed + \"-base\";",
+			"  }",
+			"  public function label() {",
+			"    return this.labelValue;",
+			"  }",
+			"}",
+			"",
+			"class Child extends Base {",
+			"  public function new() {",
+			"    super(\"seed\");",
+			"  }",
+			"  public function inheritedLabel() {",
+			"    return super.label();",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var child = new Child();",
+			"    Sys.println(child.inheritedLabel());",
 			"  }",
 			"}",
 		].join("\n");
@@ -670,6 +721,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertGuardedArrayComprehensionExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_guarded_array_comprehension_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(guardedArrayComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "kept = [value for value in values if keep(value)]",
+			"guarded array comprehensions should lower to Python list comprehensions with trailing if");
+		assertContains(content, "print(str(kept))", "guarded array-comprehension-derived locals should still flow through later statements");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertAnonymousObjectExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_anon_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -762,6 +827,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "return self.value", "instance methods should be able to read lowered fields");
 		assertContains(content, "helper = Helper()", "main should still instantiate helper classes");
 		assertContains(content, "print(helper.message())", "main should still call helper instance methods");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertSuperEmission():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_super_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(superProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Base:", "base helper classes should still emit normally");
+		assertContains(content, "class Child(Base):", "child helper classes should preserve their extends clause");
+		assertContains(content, "super().__init__(\"seed\")", "constructor super calls should lower through Python __init__ dispatch");
+		assertContains(content, "return super().label()", "super method calls should lower through Python super()");
+		assertContains(content, "child = Child()", "main should still instantiate subclasses");
+		assertContains(content, "print(child.inheritedLabel())", "main should still call methods defined on subclasses");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -885,12 +967,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTryCatchStatement();
 		assertArrayAccessExpression();
 		assertArrayComprehensionExpression();
+		assertGuardedArrayComprehensionExpression();
 		assertAnonymousObjectExpression();
 		assertLoopControlStatements();
 		assertPostfixExpressions();
 		assertUnsignedRightShiftExpression();
 		assertHelperClassEmission();
 		assertHelperInstanceFieldEmission();
+		assertSuperEmission();
 		assertCrossModuleClassEmission();
 		assertArrayLiteral();
 		assertConstructorExpression();
