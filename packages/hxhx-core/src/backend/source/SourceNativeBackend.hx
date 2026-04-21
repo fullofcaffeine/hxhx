@@ -19,6 +19,16 @@ private enum SourceNativeTarget {
 	Lua;
 }
 
+private typedef SourceSwitchPatternBinding = {
+	final name:String;
+	final expr:String;
+};
+
+private typedef SourceSwitchPatternLowered = {
+	final cond:String;
+	final bindings:Array<SourceSwitchPatternBinding>;
+};
+
 /**
 	Minimal native source-target backend rung for Stage3 source emitters.
 
@@ -369,6 +379,8 @@ class SourceNativeBackend {
 	static function binopExpr(target:SourceNativeTarget, op:String, left:HxExpr, right:HxExpr):String {
 		if (op == ">>>")
 			return unsignedRightShiftExpr(target, renderExpr(target, left), renderExpr(target, right));
+		if (op == "is")
+			return typeCheckExpr(target, left, right);
 		final mapped = binopToken(target, op);
 		if (mapped == null)
 			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
@@ -386,6 +398,43 @@ class SourceNativeBackend {
 		if (op == "=" || op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
 			return a + " " + mapped + " " + b;
 		return "(" + a + " " + mapped + " " + b + ")";
+	}
+
+	static function typeCheckExpr(target:SourceNativeTarget, value:HxExpr, typeExpr:HxExpr):String {
+		final renderedValue = renderExpr(target, value);
+		return switch (target) {
+			case Php:
+				final typeName = switch (typeExpr) {
+					case EIdent(name) | EEnumValue(name):
+						name;
+					case EField(receiver, field):
+						sanitizeDottedPath(renderExpr(target, receiver) + "." + field);
+					case _:
+						throw targetLabel(target) + " source backend MVP unsupported type check RHS: " + exprKind(typeExpr);
+				}
+				phpTypeCheckExpr(renderedValue, typeName);
+			case Python, Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported binary operator: is";
+		};
+	}
+
+	static function phpTypeCheckExpr(value:String, typeName:String):String {
+		return switch (typeName) {
+			case "Int":
+				"is_int(" + value + ")";
+			case "Float":
+				"is_float(" + value + ")";
+			case "String":
+				"is_string(" + value + ")";
+			case "Bool":
+				"is_bool(" + value + ")";
+			case "Array":
+				"is_array(" + value + ")";
+			case "Dynamic" | "Any":
+				"true";
+			case _:
+				"(" + value + " instanceof " + sanitizePhpTypePath(typeName) + ")";
+		};
 	}
 
 	static function unsignedRightShiftExpr(target:SourceNativeTarget, left:String, right:String):String {
@@ -1247,6 +1296,8 @@ class SourceNativeBackend {
 				renderIf(target, cond, thenBranch, elseBranch, indent);
 			case SForIn(name, iterable, body, _):
 				renderForIn(target, name, iterable, body, indent);
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				renderForKeyValue(target, keyName, valueName, iterable, body, indent);
 			case SWhile(cond, body, _):
 				renderWhile(target, cond, body, indent);
 			case SSwitch(scrutinee, patterns, bodies, _):
@@ -1415,6 +1466,26 @@ class SourceNativeBackend {
 		return out;
 	}
 
+	static function renderForKeyValue(target:SourceNativeTarget, keyName:String, itemName:String, iterable:HxExpr, body:HxStmt, indent:String):Array<String> {
+		final cleanKey = sanitizeTypeName(keyName);
+		final cleanItem = sanitizeTypeName(itemName);
+		final keyValue = valueName(target, cleanKey);
+		final itemValue = valueName(target, cleanItem);
+		final source = renderExpr(target, iterable);
+		final childIndent = indent + indentStep(target);
+		final out = new Array<String>();
+		switch (target) {
+			case Php:
+				out.push(indent + "foreach (" + source + " as " + keyValue + " => " + itemValue + ") {");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
+				out.push(indent + "}");
+			case Python, Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported statement: SForKeyValue";
+		}
+		return out;
+	}
+
 	static function renderWhile(target:SourceNativeTarget, cond:HxExpr, body:HxStmt, indent:String):Array<String> {
 		final renderedCond = renderExpr(target, cond);
 		final childIndent = indent + indentStep(target);
@@ -1466,8 +1537,266 @@ class SourceNativeBackend {
 					for (line in renderStmt(target, bodies[i], childIndent))
 						out.push(line);
 				}
-			case Java | Cs | Php | Lua:
+			case Php:
+				if (count == 0)
+					return out;
+				final switchValue = "$__hxhx_switch";
+				out.push(indent + switchValue + " = " + scrutineeExpr + ";");
+				for (i in 0...count) {
+					final lowered = lowerSourceSwitchPattern(target, patterns[i], switchValue);
+					final keyword = i == 0 ? "if" : "} elseif";
+					out.push(indent + keyword + " (" + lowered.cond + ") {");
+					for (binding in lowered.bindings) {
+						final bindName = sanitizeTypeName(binding.name);
+						out.push(childIndent + varDecl(target, bindName, binding.expr));
+					}
+					for (line in renderStmt(target, bodies[i], childIndent))
+						out.push(line);
+				}
+				out.push(indent + "}");
+			case Java | Cs | Lua:
 				throw targetLabel(target) + " source backend MVP unsupported statement: SSwitch";
+		}
+		return out;
+	}
+
+	static function lowerSourceSwitchPattern(target:SourceNativeTarget, pattern:HxSwitchPattern, scrutinee:String):SourceSwitchPatternLowered {
+		return switch (pattern) {
+			case PNull:
+				{cond: equalityCond(target, scrutinee, defaultValue(target)), bindings: []};
+			case PWildcard:
+				{cond: trueLiteral(target), bindings: []};
+			case PBool(value):
+				{cond: equalityCond(target, scrutinee, renderExpr(target, EBool(value))), bindings: []};
+			case PString(value):
+				{cond: equalityCond(target, scrutinee, quoteString(value)), bindings: []};
+			case PInt(value):
+				{cond: equalityCond(target, scrutinee, Std.string(value)), bindings: []};
+			case PEnumValue(name):
+				{cond: equalityCond(target, scrutinee, quoteString(name)), bindings: []};
+			case PEnumExtract(name, args):
+				lowerSourceEnumExtract(target, name, args, scrutinee);
+			case PObject(fieldNames, fieldPatterns):
+				lowerSourceObjectPattern(target, fieldNames, fieldPatterns, scrutinee);
+			case PCapture(name, inner):
+				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
+				final bindings = copySourceSwitchBindings(lowered.bindings);
+				bindings.push({name: name, expr: scrutinee});
+				{cond: lowered.cond, bindings: bindings};
+			case PArray(items):
+				lowerSourceArrayPattern(target, items, scrutinee);
+			case PBind(name):
+				{cond: trueLiteral(target), bindings: [{name: name, expr: scrutinee}]};
+			case POr(patterns):
+				final parts = new Array<String>();
+				var commonBindings:Null<Array<SourceSwitchPatternBinding>> = null;
+				if (patterns != null) {
+					for (p in patterns) {
+						final lowered = lowerSourceSwitchPattern(target, p, scrutinee);
+						parts.push("(" + lowered.cond + ")");
+						commonBindings = mergeSourceSwitchBindings(commonBindings, lowered.bindings);
+					}
+				}
+				{
+					cond: parts.length == 0 ? falseLiteral(target) : parts.join(target == Python || target == Lua ? " or " : " || "),
+					bindings: commonBindings == null ? [] : commonBindings
+				};
+			case PUnsupportedGuard(inner):
+				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
+				{cond: "((" + lowered.cond + ") && false)", bindings: lowered.bindings};
+			case PLengthGuard(inner, bindingName, length):
+				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
+				final value = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
+				{cond: "((" + lowered.cond + ") && (" + sourceLengthExpr(target, value) + " == " + Std.string(length) + "))", bindings: lowered.bindings};
+			case PStartsWithGuard(inner, bindingName, prefix):
+				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
+				final value = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
+				{cond: "((" + lowered.cond + ") && (" + sourceStartsWithExpr(target, value, prefix) + "))", bindings: lowered.bindings};
+			case PIntEqualsGuard(inner, bindingName, value):
+				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
+				final bound = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
+				{cond: "((" + lowered.cond + ") && " + equalityCond(target, bound, Std.string(value)) + ")", bindings: lowered.bindings};
+			case PExtractor(_, _):
+				throw targetLabel(target) + " source backend MVP unsupported switch pattern: " + patternKind(pattern);
+		};
+	}
+
+	static function lowerSourceEnumExtract(target:SourceNativeTarget, name:String, args:Array<HxSwitchPattern>, scrutinee:String):SourceSwitchPatternLowered {
+		final conds = switch (target) {
+			case Php:
+				[
+					scrutinee + " !== null",
+					"is_object(" + scrutinee + ")",
+					"property_exists(" + scrutinee + ", " + quoteString("__hx_ctor") + ")",
+					scrutinee + "->__hx_ctor === " + quoteString(name),
+					"property_exists(" + scrutinee + ", " + quoteString("__hx_params") + ")",
+					"is_array(" + scrutinee + "->__hx_params)"
+				];
+			case Python:
+				[
+					scrutinee + " is not None",
+					"hasattr(" + scrutinee + ", " + quoteString("__hx_ctor") + ")",
+					scrutinee + ".__hx_ctor == " + quoteString(name),
+					"hasattr(" + scrutinee + ", " + quoteString("__hx_params") + ")"
+				];
+			case Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported switch pattern: PEnumExtract";
+		};
+		final bindings = new Array<SourceSwitchPatternBinding>();
+		if (args != null) {
+			for (i in 0...args.length) {
+				final paramExpr = sourceSwitchParamExpr(target, scrutinee, i);
+				final lowered = lowerSourceSwitchPattern(target, args[i], paramExpr);
+				if (lowered.cond != trueLiteral(target))
+					conds.push("(" + lowered.cond + ")");
+				for (binding in lowered.bindings)
+					bindings.push(binding);
+			}
+		}
+		return {cond: conds.join(target == Python || target == Lua ? " and " : " && "), bindings: bindings};
+	}
+
+	static function lowerSourceObjectPattern(target:SourceNativeTarget, fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>,
+			scrutinee:String):SourceSwitchPatternLowered {
+		final conds = switch (target) {
+			case Php:
+				[scrutinee + " !== null", "is_object(" + scrutinee + ")"];
+			case Python:
+				[scrutinee + " is not None"];
+			case Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported switch pattern: PObject";
+		};
+		final bindings = new Array<SourceSwitchPatternBinding>();
+		if (fieldNames != null && fieldPatterns != null) {
+			final count = fieldNames.length < fieldPatterns.length ? fieldNames.length : fieldPatterns.length;
+			for (i in 0...count) {
+				final field = sanitizeTypeName(fieldNames[i]);
+				final fieldExpr = sourceSwitchFieldExpr(target, scrutinee, field);
+				if (target == Php)
+					conds.push("property_exists(" + scrutinee + ", " + quoteString(field) + ")");
+				final lowered = lowerSourceSwitchPattern(target, fieldPatterns[i], fieldExpr);
+				if (lowered.cond != trueLiteral(target))
+					conds.push("(" + lowered.cond + ")");
+				for (binding in lowered.bindings)
+					bindings.push(binding);
+			}
+		}
+		return {cond: conds.join(target == Python || target == Lua ? " and " : " && "), bindings: bindings};
+	}
+
+	static function lowerSourceArrayPattern(target:SourceNativeTarget, items:Array<HxSwitchPattern>, scrutinee:String):SourceSwitchPatternLowered {
+		final count = items == null ? 0 : items.length;
+		final conds = switch (target) {
+			case Php:
+				[
+					"is_array(" + scrutinee + ")",
+					"count(" + scrutinee + ") == " + Std.string(count)
+				];
+			case Python:
+				[
+					"isinstance(" + scrutinee + ", list)",
+					"len(" + scrutinee + ") == " + Std.string(count)
+				];
+			case Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported switch pattern: PArray";
+		};
+		final bindings = new Array<SourceSwitchPatternBinding>();
+		if (items != null) {
+			for (i in 0...items.length) {
+				final itemExpr = sourceSwitchArrayItemExpr(target, scrutinee, i);
+				final lowered = lowerSourceSwitchPattern(target, items[i], itemExpr);
+				if (lowered.cond != trueLiteral(target))
+					conds.push("(" + lowered.cond + ")");
+				for (binding in lowered.bindings)
+					bindings.push(binding);
+			}
+		}
+		return {cond: conds.join(target == Python || target == Lua ? " and " : " && "), bindings: bindings};
+	}
+
+	static function sourceSwitchParamExpr(target:SourceNativeTarget, scrutinee:String, index:Int):String {
+		return switch (target) {
+			case Php:
+				scrutinee + "->__hx_params[" + index + "]";
+			case Python:
+				scrutinee + ".__hx_params[" + index + "]";
+			case Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported switch pattern parameter access";
+		};
+	}
+
+	static function sourceSwitchFieldExpr(target:SourceNativeTarget, scrutinee:String, field:String):String {
+		return switch (target) {
+			case Php:
+				scrutinee + "->" + field;
+			case Python:
+				scrutinee + "." + field;
+			case Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported switch pattern field access";
+		};
+	}
+
+	static function sourceSwitchArrayItemExpr(target:SourceNativeTarget, scrutinee:String, index:Int):String {
+		return scrutinee + "[" + index + "]";
+	}
+
+	static function sourceLengthExpr(target:SourceNativeTarget, value:String):String {
+		return switch (target) {
+			case Php: "count(" + value + ")";
+			case Python: "len(" + value + ")";
+			case Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported switch length guard";
+		};
+	}
+
+	static function sourceStartsWithExpr(target:SourceNativeTarget, value:String, prefix:String):String {
+		return switch (target) {
+			case Php:
+				"str_starts_with(" + value + ", " + quoteString(prefix) + ")";
+			case Python:
+				value + ".startswith(" + quoteString(prefix) + ")";
+			case Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported switch startsWith guard";
+		};
+	}
+
+	static function sourceSwitchBindingValue(target:SourceNativeTarget, name:String, bindings:Array<SourceSwitchPatternBinding>):String {
+		if (bindings != null) {
+			for (binding in bindings) {
+				if (binding.name == name)
+					return binding.expr;
+			}
+		}
+		return valueName(target, name);
+	}
+
+	static function mergeSourceSwitchBindings(existing:Null<Array<SourceSwitchPatternBinding>>,
+			next:Array<SourceSwitchPatternBinding>):Array<SourceSwitchPatternBinding> {
+		if (existing == null)
+			return copySourceSwitchBindings(next);
+		if (next == null || existing.length != next.length)
+			return [];
+		final out = new Array<SourceSwitchPatternBinding>();
+		for (binding in existing) {
+			var found = false;
+			for (candidate in next) {
+				if (candidate.name == binding.name && candidate.expr == binding.expr) {
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+				return [];
+			out.push(binding);
+		}
+		return out;
+	}
+
+	static function copySourceSwitchBindings(bindings:Array<SourceSwitchPatternBinding>):Array<SourceSwitchPatternBinding> {
+		final out = new Array<SourceSwitchPatternBinding>();
+		if (bindings != null) {
+			for (binding in bindings)
+				out.push({name: binding.name, expr: binding.expr});
 		}
 		return out;
 	}

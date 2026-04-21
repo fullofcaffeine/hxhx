@@ -507,6 +507,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpForKeyValueProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values = [10, 20];",
+			"    for (index => value in values) {",
+			"      Sys.println(Std.string(index) + Std.string(value));",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpTypeCheckProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var i = 1;",
+			"    var s = \"one\";",
+			"    Sys.println(Std.string(i is Int));",
+			"    Sys.println(Std.string(s is String));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1255,6 +1287,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpForKeyValue():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_for_key_value_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpForKeyValueProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "foreach ($values as $index => $value) {", "PHP key/value loops should lower through foreach key => value");
+		assertContains(content, "echo (strval($index) . strval($value)) . PHP_EOL;",
+			"PHP key/value loop bodies should render with both loop bindings in scope");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperInstanceFieldEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1418,6 +1464,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTypeCheck():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_check_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTypeCheckProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "strval(is_int($i))", "PHP `is Int` checks should lower to is_int");
+		assertContains(content, "strval(is_string($s))", "PHP `is String` checks should lower to is_string");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpSwitchStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_switch_stmt_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$__hxhx_switch = \"python\";", "PHP switch statements should evaluate the scrutinee once");
+		assertContains(content, "if (($__hxhx_switch == \"python\")) {", "PHP switch statements should lower the first case to if");
+		assertContains(content, "} elseif (true) {", "PHP wildcard switch branches should lower to elseif true");
+		assertContains(content, "echo \"other\" . PHP_EOL;", "PHP switch statement branch bodies should render");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function main():Void {
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
@@ -1454,6 +1528,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpAbstractThisPostfix();
 		assertPhpSuperConstructor();
 		assertPhpSuperProperty();
+		assertPhpForKeyValue();
+		assertPhpTypeCheck();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();
@@ -1468,5 +1544,6 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertSwitchExpression();
 		assertUnsupportedSwitchGuardExpression();
 		assertSwitchStatement();
+		assertPhpSwitchStatement();
 	}
 }
