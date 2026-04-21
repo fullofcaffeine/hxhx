@@ -732,11 +732,21 @@ class SourceNativeBackend {
 	static function callExpr(target:SourceNativeTarget, callee:String, args:Array<HxExpr>):String {
 		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
 		if (target == Php) {
+			final staticHelper = phpSameClassStaticHelperCall(callee, rendered);
+			if (staticHelper != null)
+				return staticHelper;
 			final testHelper = phpTestHelperCall(callee, rendered);
 			if (testHelper != null)
 				return testHelper;
 		}
 		return callee + "(" + rendered + ")";
+	}
+
+	static function phpSameClassStaticHelperCall(callee:String, renderedArgs:String):Null<String> {
+		if (!StringTools.startsWith(callee, "$"))
+			return null;
+		final name = callee.substr(1);
+		return if (name == "getA") "self::" + name + "(" + renderedArgs + ")" else null;
 	}
 
 	static function phpTestHelperCall(callee:String, renderedArgs:String):Null<String> {

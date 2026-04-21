@@ -774,6 +774,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpSameClassStaticHelperCallProgram():GenIrProgram {
+		final src = [
+			"class TestOps {",
+			"  static function getA() return { a: 1 };",
+			"  public function new() {}",
+			"  public function testOps() {",
+			"    return (getA().a + 1) >> 1;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var test = new TestOps();",
+			"    Sys.println(Std.string(test.testOps()));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1788,6 +1810,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpSameClassStaticHelperCall():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_class_static_helper_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpSameClassStaticHelperCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function getA()", "PHP same-class static helper should be emitted as a static method");
+		assertContains(content, "return (__hxhx_add(self::getA()->a, 1) >> 1);", "PHP unqualified same-class static helper calls should lower through self::");
+		assertNotContains(content, "$getA()", "PHP same-class static helper calls should not lower as local callable variables");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpWebShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2439,6 +2475,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNativeProtocolOptionalArgDecode();
 		assertPhpPlusSemantics();
 		assertPhpBitwisePrecedence();
+		assertPhpSameClassStaticHelperCall();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();
