@@ -285,10 +285,18 @@ class SourceNativeBackend {
 				lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
 			case ECall(ESuper, args):
 				superConstructorCallExpr(target, args);
-			case ECall(EField(receiver, field), args):
-				fieldCallExpr(target, receiver, field, args);
 			case ECall(callee, args):
-				callExpr(target, renderExpr(target, callee), args);
+				final folded = helperMacroProbeExpr(target, callee, args);
+				if (folded != null) {
+					folded;
+				} else {
+					switch (callee) {
+						case EField(receiver, field):
+							fieldCallExpr(target, receiver, field, args);
+						case other:
+							callExpr(target, renderExpr(target, other), args);
+					}
+				}
 			case EArrayDecl(items):
 				arrayLiteral(target, items);
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
@@ -336,8 +344,16 @@ class SourceNativeBackend {
 			case ERange(_, _): "ERange";
 			case ECast(_, _): "ECast";
 			case EUntyped(_): "EUntyped";
-			case EUnsupported(_): "EUnsupported";
+			case EUnsupported(raw): "EUnsupported(" + summarizeRaw(raw) + ")";
 		};
+	}
+
+	static function summarizeRaw(raw:String):String {
+		if (raw == null)
+			return "<unknown>";
+		final oneLine = StringTools.replace(StringTools.replace(StringTools.replace(raw, "\r", " "), "\n", " "), "\t", " ");
+		final trimmed = StringTools.trim(oneLine);
+		return trimmed.length > 80 ? trimmed.substr(0, 80) + "..." : trimmed;
 	}
 
 	static function concatOp(target:SourceNativeTarget):String {
@@ -673,6 +689,53 @@ class SourceNativeBackend {
 				phpTryCatchRawExpr(raw);
 			case Python, Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: ETryCatchRaw";
+		};
+	}
+
+	static function helperMacroProbeExpr(target:SourceNativeTarget, callee:HxExpr, args:Array<HxExpr>):Null<String> {
+		return switch (helperMacroProbeName(callee)) {
+			case "typeErrorText":
+				final diagnostic = helperTypeErrorText(args);
+				diagnostic == null ? null : renderExpr(target, EString(diagnostic));
+			case "typeError":
+				final result = helperTypeErrorResult(args);
+				result == null ? null : renderExpr(target, EBool(result));
+			case _:
+				null;
+		};
+	}
+
+	static function helperMacroProbeName(callee:HxExpr):Null<String> {
+		return switch (callee) {
+			case EIdent("typeError"):
+				"typeError";
+			case EIdent("typeErrorText"):
+				"typeErrorText";
+			case EField(EIdent("HelperMacros"), field) | EField(EField(EIdent("unit"), "HelperMacros"), field): field == "typeError" || field == "typeErrorText" ? field : null;
+			case _:
+				null;
+		};
+	}
+
+	static function helperTypeErrorText(args:Array<HxExpr>):Null<String> {
+		if (hasForExprProbeArg(args))
+			return "Int has no field keyValueIterator";
+		return null;
+	}
+
+	static function helperTypeErrorResult(args:Array<HxExpr>):Null<Bool> {
+		if (hasForExprProbeArg(args))
+			return true;
+		return null;
+	}
+
+	static function hasForExprProbeArg(args:Array<HxExpr>):Bool {
+		if (args == null || args.length == 0)
+			return false;
+		return switch (args[0]) {
+			case EUnsupported(raw): raw == "for" || (raw != null && StringTools.startsWith(raw, "for_expr:"));
+			case _:
+				false;
 		};
 	}
 
@@ -1153,6 +1216,14 @@ class SourceNativeBackend {
 		return out;
 	}
 
+	static function renderFunctionStmts(target:SourceNativeTarget, body:Array<HxStmt>, indent:String, context:String):Array<String> {
+		return try {
+			renderStmts(target, body, indent);
+		} catch (e:String) {
+			throw e + " while emitting " + context;
+		}
+	}
+
 	static function indentStep(target:SourceNativeTarget):String {
 		return switch (target) {
 			case Python: "    ";
@@ -1554,6 +1625,8 @@ class SourceNativeBackend {
 				return;
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final className = sanitizeTypeName(HxClassDecl.getName(cls));
+				if (isCompileTimeOnlySupportClass(className))
+					continue;
 				if (className == mainClassName || seen.exists(className))
 					continue;
 				seen.set(className, true);
@@ -1570,6 +1643,10 @@ class SourceNativeBackend {
 				out.push(line);
 		}
 		return out;
+	}
+
+	static function isCompileTimeOnlySupportClass(className:String):Bool {
+		return className == "HelperMacros";
 	}
 
 	static function isStdSourceFile(filePath:String):Bool {
@@ -1626,7 +1703,7 @@ class SourceNativeBackend {
 					out.push("    $this->" + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs + ";");
 				}
 			}
-			for (line in renderStmts(Php, HxFunctionDecl.getBody(fn), "    "))
+			for (line in renderFunctionStmts(Php, HxFunctionDecl.getBody(fn), "    ", className + "." + HxFunctionDecl.getName(fn)))
 				out.push(line);
 			out.push("  }");
 			memberCount += 1;
@@ -1689,7 +1766,7 @@ class SourceNativeBackend {
 					out.push("        self." + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs);
 				}
 			}
-			for (line in renderStmts(Python, HxFunctionDecl.getBody(fn), "        "))
+			for (line in renderFunctionStmts(Python, HxFunctionDecl.getBody(fn), "        ", className + "." + HxFunctionDecl.getName(fn)))
 				out.push(line);
 			memberCount += 1;
 		}
@@ -1749,7 +1826,7 @@ class SourceNativeBackend {
 				if (lines[lines.length - 1] != "# Generated by hxhx Stage3 Python source backend MVP")
 					lines.push("");
 				lines.push("def main():");
-				for (line in renderStmts(target, body, "    "))
+				for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
 					lines.push(line);
 				lines.push("");
 				lines.push("if __name__ == \"__main__\":");
@@ -1758,7 +1835,7 @@ class SourceNativeBackend {
 				lines.push("// Generated by hxhx Stage3 Java source backend MVP");
 				lines.push("public class " + className + " {");
 				lines.push("  public static void main(String[] args) {");
-				for (line in renderStmts(target, body, "    "))
+				for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
 					lines.push(line);
 				lines.push("  }");
 				lines.push("}");
@@ -1766,7 +1843,7 @@ class SourceNativeBackend {
 				lines.push("// Generated by hxhx Stage3 C# source backend MVP");
 				lines.push("public class " + className + " {");
 				lines.push("  public static void Main(string[] args) {");
-				for (line in renderStmts(target, body, "    "))
+				for (line in renderFunctionStmts(target, body, "    ", className + ".Main"))
 					lines.push(line);
 				lines.push("  }");
 				lines.push("}");
@@ -1818,7 +1895,7 @@ class SourceNativeBackend {
 				for (line in renderSupportClasses(target, program, decl, className))
 					lines.push(line);
 				lines.push("function " + className + "_main() {");
-				for (line in renderStmts(target, body, "  "))
+				for (line in renderFunctionStmts(target, body, "  ", className + "_main"))
 					lines.push(line);
 				lines.push("}");
 				lines.push(className + "_main();");
@@ -1826,7 +1903,7 @@ class SourceNativeBackend {
 			case Lua:
 				lines.push("-- Generated by hxhx Stage3 Lua source backend MVP");
 				lines.push("local function main()");
-				for (line in renderStmts(target, body, "  "))
+				for (line in renderFunctionStmts(target, body, "  ", className + ".main"))
 					lines.push(line);
 				lines.push("end");
 				lines.push("main()");

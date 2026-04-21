@@ -386,6 +386,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpTypeErrorProbeProgram():GenIrProgram {
+		final src = [
+			"class HelperMacros {",
+			"  public static function typeError(e) {",
+			"    return false;",
+			"  }",
+			"  public static function typeErrorText(e) {",
+			"    return \"\";",
+			"  }",
+			"}",
+			"",
+			"class MyNotIterator {",
+			"  public function new() {}",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var ok = HelperMacros.typeError(for (key => value in new MyNotIterator()) { });",
+			"    var message = HelperMacros.typeErrorText(for (key => value in 1) { });",
+			"    Sys.println(Std.string(ok));",
+			"    Sys.println(message);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1057,6 +1086,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTypeErrorProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_probe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTypeErrorProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$ok = true;", "PHP source backend should fold HelperMacros.typeError for expression-position for probes");
+		assertContains(content, "$message = \"Int has no field keyValueIterator\";",
+			"PHP source backend should fold HelperMacros.typeErrorText for key/value for probes");
+		assertContains(content, "echo strval($ok) . PHP_EOL;", "folded typeError results should still flow through normal printing");
+		assertContains(content, "echo $message . PHP_EOL;", "folded typeErrorText results should still flow through normal printing");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperInstanceFieldEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1251,6 +1296,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpTryCatchExpression();
+		assertPhpTypeErrorProbe();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();
