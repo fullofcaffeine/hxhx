@@ -273,6 +273,8 @@ class SourceNativeBackend {
 				renderExpr(target, inner);
 			case EMacroExpr(inner, wrappers):
 				macroExpr(target, inner, wrappers);
+			case ETryCatchRaw(raw):
+				tryCatchRawExpr(target, raw);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringCall(target, renderExpr(target, args[0]));
 			case EField(receiver, field):
@@ -663,6 +665,112 @@ class SourceNativeBackend {
 			case Python, Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: EMacroExpr";
 		};
+	}
+
+	static function tryCatchRawExpr(target:SourceNativeTarget, raw:String):String {
+		return switch (target) {
+			case Php:
+				phpTryCatchRawExpr(raw);
+			case Python, Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported expression: ETryCatchRaw";
+		};
+	}
+
+	static function phpTryCatchRawExpr(raw:String):String {
+		if (raw == null || raw.length == 0 || StringTools.startsWith(raw, "opaque_block_expr:"))
+			throw "PHP source backend MVP unsupported expression: ETryCatchRaw";
+		final stmts = HxParser.parseFunctionBodyText(raw);
+		if (stmts.length != 1)
+			throw "PHP source backend MVP unsupported expression: ETryCatchRaw";
+		return switch (stmts[0]) {
+			case STry(tryBody, catches, _):
+				renderPhpTryExpr(tryBody, catches);
+			case _:
+				throw "PHP source backend MVP unsupported expression: ETryCatchRaw";
+		};
+	}
+
+	static function renderPhpTryExpr(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>):String {
+		final out = ["(function() {", "  try {"];
+		for (line in renderReturningStmt(Php, tryBody, "    "))
+			out.push(line);
+		out.push("  }");
+		if (catches == null || catches.length == 0) {
+			out.push("  catch (\\Throwable $e) {");
+			out.push("    throw $e;");
+			out.push("  }");
+		} else {
+			for (c in catches) {
+				final catchName = sanitizeTypeName(c.name);
+				out.push("  catch (\\Throwable $" + catchName + ") {");
+				for (line in renderReturningStmt(Php, c.body, "    "))
+					out.push(line);
+				out.push("  }");
+			}
+		}
+		out.push("})()");
+		return out.join("\n");
+	}
+
+	static function renderReturningStmt(target:SourceNativeTarget, stmt:HxStmt, indent:String):Array<String> {
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				final out = new Array<String>();
+				if (stmts == null || stmts.length == 0) {
+					out.push(indent + returnStmt(target, defaultValue(target)));
+				} else {
+					for (i in 0...stmts.length) {
+						final rendered = i == stmts.length - 1 ? renderReturningStmt(target, stmts[i], indent) : renderStmt(target, stmts[i], indent);
+						for (line in rendered)
+							out.push(line);
+					}
+				}
+				out;
+			case SExpr(expr, _):
+				[indent + returnStmt(target, renderExpr(target, expr))];
+			case SReturn(expr, _):
+				[indent + returnStmt(target, renderExpr(target, expr))];
+			case SReturnVoid(_):
+				[indent + returnStmt(target, defaultValue(target))];
+			case SIf(cond, thenBranch, elseBranch, _):
+				renderReturningIf(target, cond, thenBranch, elseBranch, indent);
+			case STry(tryBody, catches, _):
+				switch (target) {
+					case Php:
+						[indent + returnStmt(target, renderPhpTryExpr(tryBody, catches))];
+					case Python | Java | Cs | Lua:
+						throw targetLabel(target) + " source backend MVP unsupported returning try";
+				}
+			case SThrow(expr, _):
+				[indent + throwStmt(target, renderExpr(target, expr))];
+			case _:
+				final out = renderStmt(target, stmt, indent);
+				out.push(indent + returnStmt(target, defaultValue(target)));
+				out;
+		};
+	}
+
+	static function renderReturningIf(target:SourceNativeTarget, cond:HxExpr, thenBranch:HxStmt, elseBranch:Null<HxStmt>, indent:String):Array<String> {
+		final renderedCond = renderExpr(target, cond);
+		final childIndent = indent + indentStep(target);
+		final out = new Array<String>();
+		switch (target) {
+			case Php:
+				out.push(indent + "if (" + renderedCond + ") {");
+				for (line in renderReturningStmt(target, thenBranch, childIndent))
+					out.push(line);
+				out.push(indent + "} else {");
+				if (elseBranch == null) {
+					out.push(childIndent + returnStmt(target, defaultValue(target)));
+				} else {
+					for (line in renderReturningStmt(target, elseBranch, childIndent))
+						out.push(line);
+				}
+				out.push(indent + "}");
+			case Python | Java | Cs | Lua:
+				throw targetLabel(target) + " source backend MVP unsupported returning if";
+		}
+		return out;
 	}
 
 	static function phpMacroExpr(expr:HxExpr, wrappers:Array<String>):String {
