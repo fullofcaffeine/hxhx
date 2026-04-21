@@ -463,6 +463,10 @@ class SourceNativeBackend {
 					return phpThisValueExpr() + " " + mapped + " " + b;
 				case EField(ESuper, field) if (op == "="):
 					return phpSuperSetterCall(field, [right]);
+				case EArrayAccess(receiver, index) if (op == "="):
+					return "__hxhx_array_set(" + renderExpr(target, receiver) + ", " + renderExpr(target, index) + ", " + b + ")";
+				case EArrayAccess(receiver, index) if (op == "+="):
+					return "__hxhx_array_add_assign(" + renderExpr(target, receiver) + ", " + renderExpr(target, index) + ", " + b + ")";
 				case _:
 			}
 		}
@@ -3529,9 +3533,25 @@ class SourceNativeBackend {
 				lines.push("  return 0;");
 				lines.push("}");
 				lines.push("function __hxhx_array_get($array, $index) {");
+				lines.push("  if ($array instanceof Map) return $array->get($index);");
 				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
 				lines.push("  if (!is_array($array)) return null;");
 				lines.push("  return array_key_exists($index, $array) ? $array[$index] : null;");
+				lines.push("}");
+				lines.push("function __hxhx_array_set(&$array, $index, $value) {");
+				lines.push("  if ($array instanceof Map) {");
+				lines.push("    $array->set($index, $value);");
+				lines.push("    return $value;");
+				lines.push("  }");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) $array = [];");
+				lines.push("  $array[$index] = $value;");
+				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_array_add_assign(&$array, $index, $value) {");
+				lines.push("  $next = __hxhx_add(__hxhx_array_get($array, $index), $value);");
+				lines.push("  __hxhx_array_set($array, $index, $next);");
+				lines.push("  return $next;");
 				lines.push("}");
 				lines.push("function __hxhx_remove(&$collection, $value) {");
 				lines.push("  if ($collection instanceof Map) return $collection->remove($value);");

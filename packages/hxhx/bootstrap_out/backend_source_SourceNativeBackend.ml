@@ -3190,6 +3190,7 @@ and binopExpr = fun target op left right -> try let __fallback_result_199 = (
           ignore (HxArray.push __arr_197 right);
           __arr_197
         ))) : string))) else ignore ()) else ignore ())
+        | HxExpr.EArrayAccess (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let receiver = Obj.magic _g in let index = Obj.magic _g1 in if HxString.equals op "=" then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_array_set(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic index))) ^ ", ") ^ HxString.toStdString b) ^ ")" : string))) else ignore (let receiver2 = Obj.magic _g in let index2 = Obj.magic _g1 in if HxString.equals op "+=" then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_array_add_assign(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic receiver2))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic index2))) ^ ", ") ^ HxString.toStdString b) ^ ")" : string))) else ignore ()))
         | _ -> ignore ()) else ());
       let a = (lvalueExpr (Obj.magic target) (Obj.magic left) : string) in (
         ignore (if isAssignmentOp (op : string) then raise (HxRuntime.Hx_return (Obj.repr ((((HxString.toStdString a ^ " ") ^ HxString.toStdString mapped) ^ " ") ^ HxString.toStdString b : string))) else ());
@@ -7459,9 +7460,25 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  return 0;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_array_get($array, $index) {");
+      ignore (HxArray.push lines "  if ($array instanceof Map) return $array->get($index);");
       ignore (HxArray.push lines "  if ($array instanceof __HxArray) $array = $array->toArray();");
       ignore (HxArray.push lines "  if (!is_array($array)) return null;");
       ignore (HxArray.push lines "  return array_key_exists($index, $array) ? $array[$index] : null;");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_array_set(&$array, $index, $value) {");
+      ignore (HxArray.push lines "  if ($array instanceof Map) {");
+      ignore (HxArray.push lines "    $array->set($index, $value);");
+      ignore (HxArray.push lines "    return $value;");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  if ($array instanceof __HxArray) $array = $array->toArray();");
+      ignore (HxArray.push lines "  if (!is_array($array)) $array = [];");
+      ignore (HxArray.push lines "  $array[$index] = $value;");
+      ignore (HxArray.push lines "  return $value;");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_array_add_assign(&$array, $index, $value) {");
+      ignore (HxArray.push lines "  $next = __hxhx_add(__hxhx_array_get($array, $index), $value);");
+      ignore (HxArray.push lines "  __hxhx_array_set($array, $index, $next);");
+      ignore (HxArray.push lines "  return $next;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_remove(&$collection, $value) {");
       ignore (HxArray.push lines "  if ($collection instanceof Map) return $collection->remove($value);");
