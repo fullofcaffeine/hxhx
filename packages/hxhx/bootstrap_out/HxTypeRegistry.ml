@@ -20,6 +20,7 @@ let init () : unit =
   ignore (HxType.class_ "HxParserSourceNormalize");
   ignore (HxType.class_ "HxPos");
   ignore (HxType.class_ "HxToken");
+  ignore (HxType.class_ "JavaNoEmitDiagnostics");
   ignore (HxType.class_ "LazyTypeLoader");
   ignore (HxType.class_ "MacroExpandedModule");
   ignore (HxType.class_ "MacroExpandedProgram");
@@ -924,6 +925,9 @@ let init () : unit =
     let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
     Obj.repr (HxToken.create a0 a1 a2 a3)
   );
+  HxType.register_class_ctor "JavaNoEmitDiagnostics" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (JavaNoEmitDiagnostics.create ())
+  );
   HxType.register_class_ctor "LazyTypeLoader" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (LazyTypeLoader.create ())
   );
@@ -1500,6 +1504,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "HxParserSourceNormalize" (fun () -> Obj.repr (HxParserSourceNormalize.__empty ()));
   HxType.register_class_empty_ctor "HxPos" (fun () -> Obj.repr (HxPos.__empty ()));
   HxType.register_class_empty_ctor "HxToken" (fun () -> Obj.repr (HxToken.__empty ()));
+  HxType.register_class_empty_ctor "JavaNoEmitDiagnostics" (fun () -> Obj.repr (JavaNoEmitDiagnostics.__empty ()));
   HxType.register_class_empty_ctor "LazyTypeLoader" (fun () -> Obj.repr (LazyTypeLoader.__empty ()));
   HxType.register_class_empty_ctor "MacroExpandedModule" (fun () -> Obj.repr (MacroExpandedModule.__empty ()));
   HxType.register_class_empty_ctor "MacroExpandedProgram" (fun () -> Obj.repr (MacroExpandedProgram.__empty ()));
@@ -1656,6 +1661,8 @@ let init () : unit =
   HxType.register_class_static_fields "HxPos" [ "unknown" ];
   HxType.register_class_instance_fields "HxToken" [ "getKind"; "getPos"; "kind"; "numericSuffix"; "numericText"; "pos" ];
   HxType.register_class_static_fields "HxToken" [];
+  HxType.register_class_instance_fields "JavaNoEmitDiagnostics" [];
+  HxType.register_class_static_fields "JavaNoEmitDiagnostics" [ "diagnosticFileName"; "jvmAnnotationMetadataDiagnostic"; "jvmAnnotationMetadataDiagnosticForParsed"; "metadataFieldEnd"; "sourcePosition" ];
   HxType.register_class_instance_fields "LazyTypeLoader" [ "ensureTypeAvailable" ];
   HxType.register_class_static_fields "LazyTypeLoader" [];
   HxType.register_class_instance_fields "MacroExpandedModule" [ "generatedOcamlModules"; "getGeneratedOcamlModules"; "getTyped"; "macroMode"; "typed" ];
@@ -1932,6 +1939,7 @@ let init () : unit =
   HxType.register_class_tags "HxPos" [ "HxPos" ];
   HxType.register_class_tags "HxToken" [ "HxToken" ];
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
+  HxType.register_class_tags "JavaNoEmitDiagnostics" [ "JavaNoEmitDiagnostics" ];
   HxType.register_class_tags "LazyTypeLoader" [ "LazyTypeLoader" ];
   HxType.register_class_tags "MacroExpandedModule" [ "MacroExpandedModule" ];
   HxType.register_class_tags "MacroExpandedProgram" [ "MacroExpandedProgram" ];

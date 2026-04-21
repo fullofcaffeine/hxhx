@@ -129,6 +129,7 @@
 		"MacroExpandedProgram.ml",
 		"MacroExpandedModule.ml",
 		"LazyTypeLoader.ml",
+		"JavaNoEmitDiagnostics.ml",
 		"IntIterator.ml",
 		"HxVisibility.ml",
 		"HxTokenKind.ml",

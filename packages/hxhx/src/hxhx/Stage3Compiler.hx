@@ -534,8 +534,8 @@ class Stage3Compiler {
 		final line = pos == null ? 0 : pos.getLine();
 		final start = pos == null ? 0 : pos.getColumn();
 		final end = start + HxFunctionDecl.getName(fn).length;
-		return filePath + ":" + Std.string(line) + ": characters " + Std.string(start) + "-" + Std.string(end) + " : Another overloaded field of "
-			+ relation + " signature was already declared : " + HxFunctionDecl.getName(fn);
+		return Path.withoutDirectory(filePath) + ":" + Std.string(line) + ": characters " + Std.string(start) + "-" + Std.string(end)
+			+ " : Another overloaded field of " + relation + " signature was already declared : " + HxFunctionDecl.getName(fn);
 	}
 
 	/**
@@ -2268,10 +2268,15 @@ class Stage3Compiler {
 				return error("backend does not support --hxhx-no-emit: " + backendId);
 			}
 			if (backendId == "java-native") {
+				final metadataDiagnostic = JavaNoEmitDiagnostics.jvmAnnotationMetadataDiagnostic(typedModules);
+				if (metadataDiagnostic != null) {
+					closeMacroSession();
+					return haxeDiagnosticError(metadataDiagnostic);
+				}
 				final overloadDiagnostic = javaNoEmitOverloadDiagnostic(typedModules);
 				if (overloadDiagnostic != null) {
 					closeMacroSession();
-					return error(overloadDiagnostic);
+					return haxeDiagnosticError(overloadDiagnostic);
 				}
 			}
 
