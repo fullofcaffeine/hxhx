@@ -231,6 +231,17 @@ class SourceNativeBackend {
 		return "\"" + s + "\"";
 	}
 
+	static function quotePhpString(value:String):String {
+		var s = value == null ? "" : value;
+		s = StringTools.replace(s, "\\", "\\\\");
+		s = StringTools.replace(s, "\"", "\\\"");
+		s = StringTools.replace(s, "\n", "\\n");
+		s = StringTools.replace(s, "\r", "\\r");
+		s = StringTools.replace(s, "\t", "\\t");
+		s = StringTools.replace(s, "$", "\\$");
+		return "\"" + s + "\"";
+	}
+
 	static function renderExpr(target:SourceNativeTarget, expr:HxExpr):String {
 		return switch (expr) {
 			case ENull:
@@ -250,7 +261,10 @@ class SourceNativeBackend {
 					case Lua: value ? "true" : "false";
 				}
 			case EString(value):
-				quoteString(value);
+				switch (target) {
+					case Php: quotePhpString(value);
+					case Python, Java, Cs, Lua: quoteString(value);
+				}
 			case EInt(value):
 				Std.string(value);
 			case EFloat(value):
@@ -1125,7 +1139,7 @@ class SourceNativeBackend {
 
 	static function phpMacroEnum(name:String, params:Array<String>):String {
 		final paramText = params == null ? "" : params.join(", ");
-		return "(object)[\"__hx_ctor\" => " + quoteString(name) + ", \"__hx_index\" => 0, \"__hx_params\" => [" + paramText + "]]";
+		return "(object)[\"__hx_ctor\" => " + quotePhpString(name) + ", \"__hx_index\" => 0, \"__hx_params\" => [" + paramText + "]]";
 	}
 
 	static function phpMacroComplexType(raw:String):String {
@@ -1153,9 +1167,9 @@ class SourceNativeBackend {
 			final typePart = trimmed.substr(namedColon + 1);
 			if (StringTools.startsWith(namePart, "?")) {
 				final name = StringTools.trim(namePart.substr(1));
-				return phpMacroEnum("TOptional", [phpMacroEnum("TNamed", [quoteString(name), phpMacroComplexType(typePart)])]);
+				return phpMacroEnum("TOptional", [phpMacroEnum("TNamed", [quotePhpString(name), phpMacroComplexType(typePart)])]);
 			}
-			return phpMacroEnum("TNamed", [quoteString(namePart), phpMacroComplexType(typePart)]);
+			return phpMacroEnum("TNamed", [quotePhpString(namePart), phpMacroComplexType(typePart)]);
 		}
 
 		if (StringTools.startsWith(trimmed, "?"))
@@ -1187,12 +1201,12 @@ class SourceNativeBackend {
 		final pack = new Array<String>();
 		if (parts.length > 1) {
 			for (i in 0...parts.length - 1)
-				pack.push(quoteString(parts[i]));
+				pack.push(quotePhpString(parts[i]));
 		}
 		final typePath = "(object)[\"pack\" => ["
 			+ pack.join(", ")
 			+ "], \"name\" => "
-			+ quoteString(name)
+			+ quotePhpString(name)
 			+ ", \"params\" => [], \"sub\" => null]";
 		return phpMacroEnum("TPath", [typePath]);
 	}
@@ -1377,17 +1391,17 @@ class SourceNativeBackend {
 	static function phpMacroExprDef(expr:HxExpr):String {
 		return switch (expr) {
 			case EString(value):
-				phpMacroEnum("EConst", [phpMacroEnum("CString", [quoteString(value)])]);
+				phpMacroEnum("EConst", [phpMacroEnum("CString", [quotePhpString(value)])]);
 			case EInt(value):
-				phpMacroEnum("EConst", [phpMacroEnum("CInt", [quoteString(Std.string(value))])]);
+				phpMacroEnum("EConst", [phpMacroEnum("CInt", [quotePhpString(Std.string(value))])]);
 			case EFloat(value):
-				phpMacroEnum("EConst", [phpMacroEnum("CFloat", [quoteString(Std.string(value))])]);
+				phpMacroEnum("EConst", [phpMacroEnum("CFloat", [quotePhpString(Std.string(value))])]);
 			case ENull:
-				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quoteString("null")])]);
+				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quotePhpString("null")])]);
 			case EIdent(name):
-				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quoteString(name)])]);
+				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quotePhpString(name)])]);
 			case EField(receiver, field):
-				phpMacroEnum("EField", [phpMacroExpr(receiver, []), quoteString(field)]);
+				phpMacroEnum("EField", [phpMacroExpr(receiver, []), quotePhpString(field)]);
 			case EArrayAccess(receiver, index):
 				phpMacroEnum("EArray", [phpMacroExpr(receiver, []), phpMacroExpr(index, [])]);
 			case EArrayDecl(values):
@@ -1415,9 +1429,9 @@ class SourceNativeBackend {
 			case EUntyped(inner):
 				phpMacroEnum("EUntyped", [phpMacroExpr(inner, [])]);
 			case EUnop(op, inner):
-				phpMacroEnum("EUnop", [quoteString(op), phpMacroExpr(inner, [])]);
+				phpMacroEnum("EUnop", [quotePhpString(op), phpMacroExpr(inner, [])]);
 			case _:
-				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quoteString(renderExpr(Php, expr))])]);
+				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quotePhpString(renderExpr(Php, expr))])]);
 		};
 	}
 

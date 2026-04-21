@@ -373,6 +373,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpDollarStringProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var code = \"" + "$" + "__hxhx_result[] = 1;\";",
+			"    Sys.println(code);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpMacroTypeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1421,6 +1435,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpDollarString():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_dollar_string_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpDollarStringProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$code = \"\\$__hxhx_result[] = 1;\";", "PHP string literals should escape dollars to avoid interpolation parse errors");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1899,6 +1925,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpRuntimeShim();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
+		assertPhpDollarString();
 		assertPhpMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();
