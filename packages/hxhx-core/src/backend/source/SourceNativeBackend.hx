@@ -826,6 +826,11 @@ class SourceNativeBackend {
 	static function fieldCallExpr(target:SourceNativeTarget, receiver:HxExpr, field:String, args:Array<HxExpr>):String {
 		return switch (target) {
 			case Php:
+				switch (receiver) {
+					case EAnon(_, _) if (field == "toString" && args.length == 0):
+						return "__hxhx_map_literal_from_object(" + renderExpr(Php, receiver) + ")->toString()";
+					case _:
+				}
 				final stringCall = phpStringFieldCall(receiver, field, args);
 				if (stringCall != null)
 					return stringCall;
@@ -1771,14 +1776,31 @@ class SourceNativeBackend {
 	}
 
 	static function arrayLiteral(target:SourceNativeTarget, items:Array<HxExpr>):String {
-		final rendered = [for (item in items) renderExpr(target, item)].join(", ");
 		return switch (target) {
-			case Java: "new Object[] { " + rendered + " }";
-			case Cs: "new object[] { " + rendered + " }";
-			case Python: "[" + rendered + "]";
-			case Php: "[" + rendered + "]";
-			case Lua: "{" + rendered + "}";
+			case Java: "new Object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " }";
+			case Cs: "new object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " }";
+			case Python: "[" + [for (item in items) renderExpr(target, item)].join(", ") + "]";
+			case Php:
+				final mapPairs = phpMapLiteralPairs(items);
+				if (mapPairs != null) "__hxhx_map_literal([" + mapPairs.join(", ") + "])"; else "["
+					+ [for (item in items) renderExpr(target, item)].join(", ") + "]";
+			case Lua: "{" + [for (item in items) renderExpr(target, item)].join(", ") + "}";
 		};
+	}
+
+	static function phpMapLiteralPairs(items:Array<HxExpr>):Null<Array<String>> {
+		if (items.length == 0)
+			return null;
+		final pairs = new Array<String>();
+		for (item in items) {
+			switch (item) {
+				case EBinop("=>", key, value):
+					pairs.push("[" + renderExpr(Php, key) + ", " + renderExpr(Php, value) + "]");
+				case _:
+					return null;
+			}
+		}
+		return pairs;
 	}
 
 	static function constructorExpr(target:SourceNativeTarget, typePath:String, args:Array<HxExpr>):String {
@@ -3288,7 +3310,7 @@ class SourceNativeBackend {
 				lines.push("    if (count($this->items) === 0) return \"[]\";");
 				lines.push("    $parts = [];");
 				lines.push("    foreach ($this->items as $id => $value) {");
-				lines.push("      $parts[] = strval($this->keys[$id]) . \" => \" . strval($value);");
+				lines.push("      $parts[] = __hxhx_add_string($this->keys[$id]) . \" => \" . __hxhx_add_string($value);");
 				lines.push("    }");
 				lines.push("    return \"[\" . implode(\", \", $parts) . \"]\";");
 				lines.push("  }");
@@ -3552,6 +3574,16 @@ class SourceNativeBackend {
 				lines.push("  $next = __hxhx_add(__hxhx_array_get($array, $index), $value);");
 				lines.push("  __hxhx_array_set($array, $index, $next);");
 				lines.push("  return $next;");
+				lines.push("}");
+				lines.push("function __hxhx_map_literal($pairs) {");
+				lines.push("  $map = new Map();");
+				lines.push("  foreach ($pairs as $pair) $map->set($pair[0], $pair[1]);");
+				lines.push("  return $map;");
+				lines.push("}");
+				lines.push("function __hxhx_map_literal_from_object($object) {");
+				lines.push("  $map = new Map();");
+				lines.push("  foreach (get_object_vars($object) as $key => $value) $map->set($key, $value);");
+				lines.push("  return $map;");
 				lines.push("}");
 				lines.push("function __hxhx_remove(&$collection, $value) {");
 				lines.push("  if ($collection instanceof Map) return $collection->remove($value);");
