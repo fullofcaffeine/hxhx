@@ -1575,15 +1575,24 @@ class HxParser {
 			if (trimmed.length == 0)
 				return null;
 			final names = trimmed.split(".");
-			if (names.length == 0)
-				return null;
+			var isSimplePath = names.length > 0;
 			for (name in names)
 				if (!isSimpleIdent(name))
-					return null;
-			var expr:HxExpr = names[0] == "this" ? EThis : EIdent(names[0]);
-			for (i in 1...names.length)
-				expr = EField(expr, names[i]);
-			return expr;
+					isSimplePath = false;
+			if (isSimplePath) {
+				var expr:HxExpr = names[0] == "this" ? EThis : EIdent(names[0]);
+				for (i in 1...names.length)
+					expr = EField(expr, names[i]);
+				return expr;
+			}
+			return try {
+				switch (HxParser.parseExprText(trimmed)) {
+					case EUnsupported(_): null;
+					case expr: expr;
+				}
+			} catch (_:Dynamic) {
+				null;
+			};
 		}
 
 		inline function stringifyExpr(expr:HxExpr):HxExpr {

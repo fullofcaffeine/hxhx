@@ -171,6 +171,12 @@ class M14HihExprTextParserIntegrationTest {
 		final nestedQuoteInterpolationStmts = HxParser.parseFunctionBodyText("if (exit == 124) { println('No response in ${Config.read('limit')} seconds.'); }");
 		assertTrue(nestedQuoteInterpolationStmts.length == 1, "expected nested-quote interpolation if statement to parse");
 		switch (nestedQuoteInterpolationStmts[0]) {
+			case SIf(_, SBlock([
+				SExpr(ECall(EIdent("println"), [
+					EBinop("+", EBinop("+", EString(_), EBinop("+", EString(_), ECall(EField(EIdent("Config"), "read"), [EString(arg)]))), EString(_))
+				]), _)
+			], _), null, _):
+				assertTrue(arg == "limit", "expected interpolation payload call to preserve nested quoted argument");
 			case SIf(_, SBlock([SExpr(ECall(EIdent("println"), [EBinop("+", EString(_), EString(message))]), _)], _), null, _):
 				assertTrue(message.indexOf("Config.read('limit')") >= 0, "expected interpolation payload to preserve nested quoted argument");
 			case SExpr(EUnsupported(raw), _):
@@ -207,6 +213,17 @@ class M14HihExprTextParserIntegrationTest {
 				assertTrue(suffix == "]", "expected this-field interpolation suffix");
 			case _:
 				fail("expected this-field interpolation to parse as EField(EThis, index)");
+		}
+
+		final literalInterpolationExpr = HxParser.parseExprText("'${5}'");
+		switch (literalInterpolationExpr) {
+			case EBinop("+", EString(emptyPrefix), EInt(value)):
+				assertTrue(emptyPrefix == "", "expected literal interpolation to force string concat");
+				assertTrue(value == 5, "expected literal interpolation to preserve integer payload");
+			case EString(value):
+				fail("literal interpolation should not stay literal: " + value);
+			case _:
+				fail("expected literal interpolation to parse as an integer payload");
 		}
 
 		final switchCaseSequenceStmts = HxParser.parseFunctionBodyText("var result = switch [ok, expected] { case [true, false]: true; case [false, false]: var detail = proc.stderr.readAll().toString(); Sys.print(detail); false; case _: false; };");

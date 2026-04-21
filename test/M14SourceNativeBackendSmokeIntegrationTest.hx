@@ -711,6 +711,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println([\"foo\" => 1].toString());",
 			"    var keyword = { \"new\": \"test\" };",
 			"    Sys.println(Reflect.field(keyword, \"new\"));",
+			"    var x = 5;",
+			"    Sys.println('${5}');",
+			"    Sys.println('a${x}b');",
 			"    var values = Lambda.array(sm);",
 			"    Sys.println(values.join(\"#\"));",
 			"    var keys = Lambda.array({ iterator: sm.keys });",
@@ -1974,6 +1977,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Reflect {", "PHP source backend should emit a minimal Reflect helper for Array.sort callbacks");
 		assertContains(content, "public static function field($object, $field)", "PHP Reflect helper should support dynamic field lookup");
 		assertContains(content, "Reflect::field($keyword, \"new\")", "PHP Reflect.field should lower as a static helper call");
+		assertContains(content, "echo __hxhx_add(\"\", 5) . PHP_EOL;", "PHP literal interpolation should lower to string concat");
+		assertContains(content, "echo __hxhx_add(__hxhx_add(\"a\", __hxhx_add(\"\", $x)), \"b\") . PHP_EOL;",
+			"PHP identifier interpolation should keep prefix, payload, and suffix");
 		assertContains(content, "$values = Lambda::array($sm);", "PHP Lambda.array should accept Map-backed iterables");
 		assertContains(content, "echo __hxhx_array_join($values, \"#\") . PHP_EOL;", "PHP Array.join should lower for Lambda.array results");
 		assertContains(content, "$keys = Lambda::array((object)[\"iterator\" => (function() use ($sm) { return $sm->keys(); })]);",
