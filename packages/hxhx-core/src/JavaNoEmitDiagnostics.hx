@@ -1,5 +1,26 @@
 import haxe.io.Path;
 
+private typedef JavaNoEmitMethodInfo = {
+	final name:String;
+	final signature:String;
+	final line:Int;
+	final column:Int;
+	final endColumn:Int;
+};
+
+private typedef JavaNoEmitClassInfo = {
+	final name:String;
+	final kind:String;
+	final isAbstract:Bool;
+	final extendsName:String;
+	final implementsName:String;
+	final line:Int;
+	final column:Int;
+	final endColumn:Int;
+	final requirements:Array<JavaNoEmitMethodInfo>;
+	final implementations:Array<String>;
+};
+
 /**
 	Target-specific compile-fail diagnostics for the Stage3 Java no-emit lane.
 
@@ -37,6 +58,29 @@ class JavaNoEmitDiagnostics {
 		return null;
 	}
 
+	/**
+		Return the first missing overloaded abstract-method implementation diagnostic.
+
+		Target mapping:
+		- Java rejects concrete classes that extend abstract classes without implementing
+		  every overload whose erased JVM method surface must be concrete.
+		- Stage3 no-emit currently stops before Java codegen, so this source-level validator
+		  preserves the compile-fail contract until richer class/interface typing owns it.
+	**/
+	public static function abstractOverloadImplementationDiagnostic(typedModules:Array<TypedModule>):Null<String> {
+		if (typedModules == null)
+			return null;
+		for (typed in typedModules) {
+			if (typed == null)
+				continue;
+			final parsed = typed.getParsed();
+			final diagnostic = abstractOverloadImplementationDiagnosticForParsed(parsed);
+			if (diagnostic != null)
+				return diagnostic;
+		}
+		return null;
+	}
+
 	static function jvmAnnotationMetadataDiagnosticForParsed(parsed:ParsedModule):Null<String> {
 		if (parsed == null)
 			return null;
@@ -60,6 +104,295 @@ class JavaNoEmitDiagnostics {
 		if (filePath == null || filePath.length == 0)
 			return "<unknown>";
 		return Path.withoutDirectory(filePath);
+	}
+
+	static function abstractOverloadImplementationDiagnosticForParsed(parsed:ParsedModule):Null<String> {
+		if (parsed == null)
+			return null;
+		final source = parsed.getSource();
+		if (source == null || source.length == 0 || source.indexOf("@:overload") < 0)
+			return null;
+		final classes = scanJavaNoEmitClasses(source);
+		if (classes.length == 0)
+			return null;
+		final byName = new Map<String, JavaNoEmitClassInfo>();
+		for (cls in classes)
+			byName.set(cls.name, cls);
+		for (cls in classes) {
+			if (cls.kind != "class" || cls.isAbstract || cls.extendsName.length == 0)
+				continue;
+			final directSuper = byName.get(cls.extendsName);
+			if (directSuper == null || !isAbstractClassChain(directSuper, byName))
+				continue;
+			final requirements = inheritedRequirements(directSuper, byName);
+			if (requirements.length == 0)
+				continue;
+			final implemented = inheritedImplementations(cls, byName);
+			final missing = new Array<JavaNoEmitMethodInfo>();
+			for (req in requirements) {
+				if (!implemented.exists(req.signature))
+					missing.push(req);
+			}
+			if (missing.length > 0)
+				return renderMissingAbstractOverloads(parsed.getFilePath(), cls, cls.extendsName, missing);
+		}
+		return null;
+	}
+
+	static function scanJavaNoEmitClasses(source:String):Array<JavaNoEmitClassInfo> {
+		final classes = new Array<JavaNoEmitClassInfo>();
+		final lines = source.split("\n");
+		var current:Null<JavaNoEmitClassInfo> = null;
+		var depth = 0;
+		var pendingAbstractClass = false;
+		var pendingAbstractMember = false;
+		for (i in 0...lines.length) {
+			final raw = stripTrailingCarriage(lines[i]);
+			final trimmed = StringTools.trim(raw);
+			if (trimmed.length == 0)
+				continue;
+			if (current == null) {
+				if (trimmed == "abstract") {
+					pendingAbstractClass = true;
+					continue;
+				}
+				final parsed = parseJavaNoEmitClassLine(raw, i + 1, pendingAbstractClass);
+				pendingAbstractClass = false;
+				if (parsed != null) {
+					classes.push(parsed);
+					current = parsed;
+					depth = braceDelta(raw);
+					if (depth <= 0) {
+						current = null;
+						depth = 0;
+					}
+					continue;
+				}
+				continue;
+			}
+
+			if (trimmed == "abstract") {
+				pendingAbstractMember = true;
+			} else if (trimmed.indexOf("function ") >= 0) {
+				final method = parseJavaNoEmitMethodLine(raw, i + 1);
+				if (method != null) {
+					final isRequirement = current.kind == "interface"
+						|| (current.isAbstract && (pendingAbstractMember || StringTools.startsWith(trimmed, "abstract ")));
+					if (isRequirement)
+						current.requirements.push(method);
+					else
+						current.implementations.push(method.signature);
+				}
+				pendingAbstractMember = false;
+			} else if (trimmed.indexOf("@:overload") < 0) {
+				pendingAbstractMember = false;
+			}
+
+			depth += braceDelta(raw);
+			if (depth <= 0) {
+				current = null;
+				depth = 0;
+				pendingAbstractMember = false;
+			}
+		}
+		return classes;
+	}
+
+	static function parseJavaNoEmitClassLine(raw:String, line:Int, pendingAbstract:Bool):Null<JavaNoEmitClassInfo> {
+		final words = raw.split(" ");
+		var sawAbstract = pendingAbstract;
+		var kind = "";
+		var name = "";
+		var extendsName = "";
+		var implementsName = "";
+		var i = 0;
+		while (i < words.length) {
+			final word = cleanJavaNoEmitWord(words[i]);
+			switch (word) {
+				case "" | "@:keep" | "public" | "private":
+				case "abstract":
+					sawAbstract = true;
+				case "interface":
+					kind = "interface";
+					if (i + 1 < words.length)
+						name = cleanJavaNoEmitWord(words[i + 1]);
+				case "class":
+					kind = "class";
+					if (i + 1 < words.length)
+						name = cleanJavaNoEmitWord(words[i + 1]);
+				case "extends":
+					if (i + 1 < words.length)
+						extendsName = cleanJavaNoEmitWord(words[i + 1]);
+				case "implements":
+					if (i + 1 < words.length)
+						implementsName = cleanJavaNoEmitWord(words[i + 1]);
+				case _:
+			}
+			i += 1;
+		}
+		if (kind.length == 0 || name.length == 0)
+			return null;
+		final column = raw.indexOf(name) + 1;
+		return {
+			name: name,
+			kind: kind,
+			isAbstract: sawAbstract,
+			extendsName: extendsName,
+			implementsName: implementsName,
+			line: line,
+			column: column,
+			endColumn: column + name.length,
+			requirements: [],
+			implementations: []
+		};
+	}
+
+	static function parseJavaNoEmitMethodLine(raw:String, line:Int):Null<JavaNoEmitMethodInfo> {
+		final fnIndex = raw.indexOf("function ");
+		if (fnIndex < 0)
+			return null;
+		final nameStart = fnIndex + "function ".length;
+		final open = raw.indexOf("(", nameStart);
+		final close = open < 0 ? -1 : raw.indexOf(")", open);
+		if (open < 0 || close < 0)
+			return null;
+		final name = StringTools.trim(raw.substring(nameStart, open));
+		if (name.length == 0)
+			return null;
+		final args = compactArgs(raw.substring(open + 1, close));
+		final column = nameStart + 1;
+		return {
+			name: name,
+			signature: name + "(" + args + ")",
+			line: line,
+			column: column,
+			endColumn: column + name.length
+		};
+	}
+
+	static function cleanJavaNoEmitWord(word:String):String {
+		var out = StringTools.trim(word == null ? "" : word);
+		while (out.length > 0) {
+			final last = out.charAt(out.length - 1);
+			if (last == "{" || last == "}" || last == "," || last == ";")
+				out = out.substr(0, out.length - 1);
+			else
+				break;
+		}
+		return out;
+	}
+
+	static function compactArgs(args:String):String {
+		final raw = StringTools.trim(args == null ? "" : args);
+		if (raw.length == 0)
+			return "";
+		final parts = new Array<String>();
+		for (part in raw.split(","))
+			parts.push(StringTools.replace(StringTools.trim(part), " ", ""));
+		return parts.join(",");
+	}
+
+	static function braceDelta(raw:String):Int {
+		var delta = 0;
+		for (i in 0...raw.length) {
+			final ch = raw.charCodeAt(i);
+			if (ch == "{".code)
+				delta += 1;
+			else if (ch == "}".code)
+				delta -= 1;
+		}
+		return delta;
+	}
+
+	static function stripTrailingCarriage(line:String):String {
+		if (line != null && line.length > 0 && line.charCodeAt(line.length - 1) == 13)
+			return line.substr(0, line.length - 1);
+		return line == null ? "" : line;
+	}
+
+	static function isAbstractClassChain(cls:JavaNoEmitClassInfo, byName:Map<String, JavaNoEmitClassInfo>):Bool {
+		var current:Null<JavaNoEmitClassInfo> = cls;
+		while (current != null) {
+			if (current.isAbstract)
+				return true;
+			current = current.extendsName.length == 0 ? null : byName.get(current.extendsName);
+		}
+		return false;
+	}
+
+	static function inheritedRequirements(cls:JavaNoEmitClassInfo, byName:Map<String, JavaNoEmitClassInfo>):Array<JavaNoEmitMethodInfo> {
+		final out = new Array<JavaNoEmitMethodInfo>();
+		appendInheritedRequirements(out, cls, byName);
+		return out;
+	}
+
+	static function appendInheritedRequirements(out:Array<JavaNoEmitMethodInfo>, cls:JavaNoEmitClassInfo, byName:Map<String, JavaNoEmitClassInfo>):Void {
+		if (cls.extendsName.length > 0) {
+			final parent = byName.get(cls.extendsName);
+			if (parent != null)
+				appendInheritedRequirements(out, parent, byName);
+		}
+		if (cls.implementsName.length > 0) {
+			final iface = byName.get(cls.implementsName);
+			if (iface != null)
+				appendUniqueRequirements(out, iface.requirements);
+		}
+		appendUniqueRequirements(out, cls.requirements);
+	}
+
+	static function appendUniqueRequirements(out:Array<JavaNoEmitMethodInfo>, requirements:Array<JavaNoEmitMethodInfo>):Void {
+		for (req in requirements) {
+			var seen = false;
+			for (existing in out) {
+				if (existing.signature == req.signature) {
+					seen = true;
+					break;
+				}
+			}
+			if (!seen)
+				out.push(req);
+		}
+	}
+
+	static function inheritedImplementations(cls:JavaNoEmitClassInfo, byName:Map<String, JavaNoEmitClassInfo>):Map<String, Bool> {
+		final out = new Map<String, Bool>();
+		appendInheritedImplementations(out, cls, byName);
+		return out;
+	}
+
+	static function appendInheritedImplementations(out:Map<String, Bool>, cls:JavaNoEmitClassInfo, byName:Map<String, JavaNoEmitClassInfo>):Void {
+		if (cls.extendsName.length > 0) {
+			final parent = byName.get(cls.extendsName);
+			if (parent != null)
+				appendInheritedImplementations(out, parent, byName);
+		}
+		for (signature in cls.implementations)
+			out.set(signature, true);
+	}
+
+	static function renderMissingAbstractOverloads(filePath:String, cls:JavaNoEmitClassInfo, superName:String, missing:Array<JavaNoEmitMethodInfo>):String {
+		final file = diagnosticFileName(filePath);
+		final plural = missing.length == 1 ? "method" : "methods";
+		final pronoun = missing.length == 1 ? "it" : "them";
+		final lines = [file + ":" + Std.string(cls.line) + ": characters " + Std.string(cls.column) + "-" + Std.string(cls.endColumn)
+			+ " : This class extends abstract class " + superName + " but doesn't implement the following " + plural,
+			file
+			+ ":"
+			+ Std.string(cls.line)
+			+ ": characters "
+			+ Std.string(cls.column)
+			+ "-"
+			+ Std.string(cls.endColumn)
+			+ " : Implement "
+			+ pronoun
+			+ " or make "
+			+ cls.name
+			+ " abstract as well"];
+		for (req in missing) {
+			lines.push(file + ":" + Std.string(req.line) + ": characters " + Std.string(req.column) + "-" + Std.string(req.endColumn) + " : ... "
+				+ req.signature);
+		}
+		return lines.join("\n");
 	}
 
 	static function metadataFieldEnd(source:String, fieldStart:Int):Int {

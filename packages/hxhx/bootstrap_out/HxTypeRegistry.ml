@@ -1662,7 +1662,7 @@ let init () : unit =
   HxType.register_class_instance_fields "HxToken" [ "getKind"; "getPos"; "kind"; "numericSuffix"; "numericText"; "pos" ];
   HxType.register_class_static_fields "HxToken" [];
   HxType.register_class_instance_fields "JavaNoEmitDiagnostics" [];
-  HxType.register_class_static_fields "JavaNoEmitDiagnostics" [ "diagnosticFileName"; "jvmAnnotationMetadataDiagnostic"; "jvmAnnotationMetadataDiagnosticForParsed"; "metadataFieldEnd"; "sourcePosition" ];
+  HxType.register_class_static_fields "JavaNoEmitDiagnostics" [ "abstractOverloadImplementationDiagnostic"; "abstractOverloadImplementationDiagnosticForParsed"; "appendInheritedImplementations"; "appendInheritedRequirements"; "appendUniqueRequirements"; "braceDelta"; "cleanJavaNoEmitWord"; "compactArgs"; "diagnosticFileName"; "inheritedImplementations"; "inheritedRequirements"; "isAbstractClassChain"; "jvmAnnotationMetadataDiagnostic"; "jvmAnnotationMetadataDiagnosticForParsed"; "metadataFieldEnd"; "parseJavaNoEmitClassLine"; "parseJavaNoEmitMethodLine"; "renderMissingAbstractOverloads"; "scanJavaNoEmitClasses"; "sourcePosition"; "stripTrailingCarriage" ];
   HxType.register_class_instance_fields "LazyTypeLoader" [ "ensureTypeAvailable" ];
   HxType.register_class_static_fields "LazyTypeLoader" [];
   HxType.register_class_instance_fields "MacroExpandedModule" [ "generatedOcamlModules"; "getGeneratedOcamlModules"; "getTyped"; "macroMode"; "typed" ];

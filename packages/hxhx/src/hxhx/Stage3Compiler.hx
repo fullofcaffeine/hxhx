@@ -2273,6 +2273,11 @@ class Stage3Compiler {
 					closeMacroSession();
 					return haxeDiagnosticError(metadataDiagnostic);
 				}
+				final abstractDiagnostic = JavaNoEmitDiagnostics.abstractOverloadImplementationDiagnostic(typedModules);
+				if (abstractDiagnostic != null) {
+					closeMacroSession();
+					return haxeDiagnosticError(abstractDiagnostic);
+				}
 				final overloadDiagnostic = javaNoEmitOverloadDiagnostic(typedModules);
 				if (overloadDiagnostic != null) {
 					closeMacroSession();
