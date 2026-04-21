@@ -2543,6 +2543,35 @@ class SourceNativeBackend {
 		return normalized.indexOf("/std/") >= 0 || StringTools.startsWith(normalized, "std/");
 	}
 
+	static function phpStaticFieldDefault(init:Null<HxExpr>):String {
+		if (init == null)
+			return defaultValue(Php);
+		return phpExprIsConstantDefault(init) ? renderExpr(Php, init) : defaultValue(Php);
+	}
+
+	static function phpExprIsConstantDefault(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ENull | EBool(_) | EString(_) | EInt(_) | EFloat(_):
+				true;
+			case EUnop("-", value):
+				switch (value) {
+					case EInt(_) | EFloat(_): true;
+					case _: false;
+				}
+			case EArrayDecl(values):
+				var ok = true;
+				for (value in values) {
+					if (!phpExprIsConstantDefault(value)) {
+						ok = false;
+						break;
+					}
+				}
+				ok;
+			case _:
+				false;
+		};
+	}
+
 	static function renderPhpHelperClass(cls:HxClassDecl):Array<String> {
 		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
 		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
@@ -2579,7 +2608,7 @@ class SourceNativeBackend {
 				continue;
 			}
 			final init = HxFieldDecl.getInit(field);
-			final rhs = init == null ? defaultValue(Php) : renderExpr(Php, init);
+			final rhs = phpStaticFieldDefault(init);
 			out.push("  public static $" + fieldName + " = " + rhs + ";");
 			memberCount += 1;
 		}

@@ -475,6 +475,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpNonConstantStaticFieldProgram():GenIrProgram {
+		final src = [
+			"class Helper {",
+			"  public static var names = [label(\"x\")];",
+			"  static function label(s:String):String {",
+			"    return s;",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(Helper.names));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpMacroTypeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1621,6 +1640,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpNonConstantStaticFieldDefault():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_nonconstant_static_field_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpNonConstantStaticFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static $names = null;", "PHP static field defaults should avoid non-constant expressions");
+		assertNotContains(content, "public static $names = [label", "PHP static field defaults should not call helper functions");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2106,6 +2138,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpDuplicateStaticFieldEmission();
 		assertPhpDuplicateMethodEmission();
 		assertPhpReservedValueName();
+		assertPhpNonConstantStaticFieldDefault();
 		assertPhpMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();
