@@ -403,6 +403,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpArrayConstructorProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values = new Array();",
+			"    Sys.println(Std.string(values.length));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpMacroTypeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1477,6 +1491,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpArrayConstructor():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_constructor_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpArrayConstructorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$values = [];", "PHP Array constructor should lower to array literal syntax");
+		assertNotContains(content, "new Array()", "PHP should not emit reserved Array constructor syntax");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1957,6 +1984,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpMacroExpr();
 		assertPhpDollarString();
 		assertPhpInt64LiteralExtension();
+		assertPhpArrayConstructor();
 		assertPhpMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();

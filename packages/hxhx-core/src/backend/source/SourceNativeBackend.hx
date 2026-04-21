@@ -1554,7 +1554,8 @@ class SourceNativeBackend {
 			case Python: safeType + "(" + rendered + ")";
 			case Java: "new " + safeType + "(" + rendered + ")";
 			case Cs: "new " + safeType + "(" + rendered + ")";
-			case Php: "new " + safeType + "(" + rendered + ")";
+			case Php:
+				if (typePath == "Array") "[]"; else "new " + safeType + "(" + rendered + ")";
 			case Lua: safeType + ".new(" + rendered + ")";
 		};
 	}
