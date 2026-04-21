@@ -3741,6 +3741,9 @@ class SourceNativeBackend {
 
 	static function appendJavaMainSupportMembers(out:Array<String>, decl:HxModuleDecl, className:String, body:Array<HxStmt>):Void {
 		final emittedMethods = new Map<String, Bool>();
+		final functionRefs = new Map<String, Bool>();
+		for (stmt in body)
+			collectJavaEntryBodyFunctionRefs(stmt, functionRefs);
 		for (fn in HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl))) {
 			final fnName = HxFunctionDecl.getName(fn);
 			if (fnName == "main" || fnName == "new" || !HxFunctionDecl.getIsStatic(fn))
@@ -3752,7 +3755,12 @@ class SourceNativeBackend {
 			if (!emittedMethods.exists(key)) {
 				emittedMethods.set(key, true);
 				out.push("  public static Object " + methodName + "(" + javaFunctionArgs(args) + ") {");
-				out.push("    return null;");
+				if (functionRefs.exists(methodName)) {
+					for (line in javaMainHelperBody(fn, "Object", className, methodName))
+						out.push(line);
+				} else {
+					out.push("    return null;");
+				}
 				out.push("  }");
 			}
 			final varargsKey = methodName + "#varargs";
@@ -3765,6 +3773,86 @@ class SourceNativeBackend {
 			appendJavaFunctionalOverloads(out, emittedMethods, methodName, args.length, true, className);
 		}
 		appendJavaEntryBodyCallSupportMembers(out, emittedMethods, body, className);
+	}
+
+	static function collectJavaEntryBodyFunctionRefs(stmt:HxStmt, out:Map<String, Bool>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (child in stmts)
+					collectJavaEntryBodyFunctionRefs(child, out);
+			case SVar(_, _, init, _):
+				if (init != null)
+					collectJavaEntryBodyFunctionRefsInExpr(init, out, false);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectJavaEntryBodyFunctionRefsInExpr(cond, out, false);
+				collectJavaEntryBodyFunctionRefs(thenBranch, out);
+				if (elseBranch != null)
+					collectJavaEntryBodyFunctionRefs(elseBranch, out);
+			case SForIn(_, iterable, body, _):
+				collectJavaEntryBodyFunctionRefsInExpr(iterable, out, false);
+				collectJavaEntryBodyFunctionRefs(body, out);
+			case SForKeyValue(_, _, iterable, body, _):
+				collectJavaEntryBodyFunctionRefsInExpr(iterable, out, false);
+				collectJavaEntryBodyFunctionRefs(body, out);
+			case SWhile(cond, body, _):
+				collectJavaEntryBodyFunctionRefsInExpr(cond, out, false);
+				collectJavaEntryBodyFunctionRefs(body, out);
+			case SDoWhile(body, cond, _):
+				collectJavaEntryBodyFunctionRefs(body, out);
+				collectJavaEntryBodyFunctionRefsInExpr(cond, out, false);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectJavaEntryBodyFunctionRefsInExpr(scrutinee, out, false);
+				for (body in bodies)
+					collectJavaEntryBodyFunctionRefs(body, out);
+			case STry(tryBody, catches, _):
+				collectJavaEntryBodyFunctionRefs(tryBody, out);
+				for (c in catches)
+					collectJavaEntryBodyFunctionRefs(c.body, out);
+			case SThrow(expr, _), SReturn(expr, _), SExpr(expr, _):
+				collectJavaEntryBodyFunctionRefsInExpr(expr, out, false);
+			case SBreak(_), SContinue(_), SReturnVoid(_):
+		}
+	}
+
+	static function collectJavaEntryBodyFunctionRefsInExpr(expr:HxExpr, out:Map<String, Bool>, asCallee:Bool):Void {
+		switch (expr) {
+			case EIdent(name) if (!asCallee):
+				out.set(sanitizeJavaIdentifier(name), true);
+			case ECall(callee, args):
+				collectJavaEntryBodyFunctionRefsInExpr(callee, out, true);
+				for (arg in args)
+					collectJavaEntryBodyFunctionRefsInExpr(arg, out, false);
+			case EField(receiver, _), EUnop(_, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
+				collectJavaEntryBodyFunctionRefsInExpr(receiver, out, false);
+			case EBinop(_, left, right):
+				collectJavaEntryBodyFunctionRefsInExpr(left, out, false);
+				collectJavaEntryBodyFunctionRefsInExpr(right, out, false);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectJavaEntryBodyFunctionRefsInExpr(cond, out, false);
+				collectJavaEntryBodyFunctionRefsInExpr(thenExpr, out, false);
+				collectJavaEntryBodyFunctionRefsInExpr(elseExpr, out, false);
+			case EAnon(_, values), EArrayDecl(values):
+				for (value in values)
+					collectJavaEntryBodyFunctionRefsInExpr(value, out, false);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
+				collectJavaEntryBodyFunctionRefsInExpr(iterable, out, false);
+				if (guardExpr != null)
+					collectJavaEntryBodyFunctionRefsInExpr(guardExpr, out, false);
+				collectJavaEntryBodyFunctionRefsInExpr(yieldExpr, out, false);
+			case EArrayAccess(receiver, index), ERange(receiver, index):
+				collectJavaEntryBodyFunctionRefsInExpr(receiver, out, false);
+				collectJavaEntryBodyFunctionRefsInExpr(index, out, false);
+			case ELambda(_, body):
+				collectJavaEntryBodyFunctionRefsInExpr(body, out, false);
+			case ESwitch(scrutinee, _, exprs):
+				collectJavaEntryBodyFunctionRefsInExpr(scrutinee, out, false);
+				for (item in exprs)
+					collectJavaEntryBodyFunctionRefsInExpr(item, out, false);
+			case ENew(_, args):
+				for (arg in args)
+					collectJavaEntryBodyFunctionRefsInExpr(arg, out, false);
+			case _:
+		}
 	}
 
 	static function appendJavaFunctionalField(out:Array<String>, methodName:String, arity:Int, className:String):Void {
@@ -3791,36 +3879,52 @@ class SourceNativeBackend {
 
 	static function appendJavaFunctionalOverloads(out:Array<String>, emittedMethods:Map<String, Bool>, methodName:String, declaredArity:Int, isStatic:Bool,
 			className:String):Void {
-		if (declaredArity != 1)
+		if (declaredArity != 1 && declaredArity != 2)
 			return;
 		final returnType = javaSupportMethodReturnType(methodName, declaredArity, className);
 		final prefix = isStatic ? "  public static " + returnType + " " : "  public " + returnType + " ";
+		final valueSuffix = declaredArity == 2 ? ", Object value" : "";
+		final callbackValue = declaredArity == 2 ? "value" : "null";
 		final consumerKey = methodName + "#consumer";
 		if (!emittedMethods.exists(consumerKey)) {
 			emittedMethods.set(consumerKey, true);
-			out.push(prefix + methodName + "(java.util.function.Consumer<Object> arg0) {");
-			out.push("    arg0.accept(null);");
+			out.push(prefix + methodName + "(java.util.function.Consumer<Object> arg0" + valueSuffix + ") {");
+			out.push("    arg0.accept(" + callbackValue + ");");
 			out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
 			out.push("  }");
 		}
 		final functionKey = methodName + "#function";
 		if (!emittedMethods.exists(functionKey)) {
 			emittedMethods.set(functionKey, true);
-			out.push(prefix + methodName + "(java.util.function.Function<Object, Object> arg0) {");
-			out.push("    return " + javaFunctionalDefaultReturn(returnType, "arg0.apply(null)") + ";");
+			out.push(prefix + methodName + "(java.util.function.Function<Object, Object> arg0" + valueSuffix + ") {");
+			out.push("    return " + javaFunctionalDefaultReturn(returnType, "arg0.apply(" + callbackValue + ")") + ";");
 			out.push("  }");
 		}
 		final biFunctionKey = methodName + "#bifunction";
 		if (!emittedMethods.exists(biFunctionKey)) {
 			emittedMethods.set(biFunctionKey, true);
-			out.push(prefix + methodName + "(java.util.function.BiFunction<Object, Object, Object> arg0) {");
-			out.push("    return " + javaFunctionalDefaultReturn(returnType, "arg0.apply(null, null)") + ";");
+			out.push(prefix + methodName + "(java.util.function.BiFunction<Object, Object, Object> arg0" + valueSuffix + ") {");
+			out.push("    return " + javaFunctionalDefaultReturn(returnType, "arg0.apply(" + callbackValue + ", " + callbackValue + ")") + ";");
 			out.push("  }");
 		}
 	}
 
 	static function javaFunctionalDefaultReturn(returnType:String, callbackExpr:String):String {
 		return returnType == "Object" ? callbackExpr : javaSupportDefaultReturn(returnType);
+	}
+
+	static function javaMainHelperBody(fn:HxFunctionDecl, returnType:String, className:String, methodName:String):Array<String> {
+		final lines = renderFunctionStmts(Java, HxFunctionDecl.getBody(fn), "    ", className + "." + methodName);
+		var hasReturn = false;
+		for (line in lines) {
+			if (StringTools.startsWith(StringTools.trim(line), "return ")) {
+				hasReturn = true;
+				break;
+			}
+		}
+		if (!hasReturn)
+			lines.push("    return " + javaSupportDefaultReturn(returnType) + ";");
+		return lines;
 	}
 
 	static function appendJavaEntryBodyCallSupportMembers(out:Array<String>, emittedMethods:Map<String, Bool>, body:Array<HxStmt>, className:String):Void {

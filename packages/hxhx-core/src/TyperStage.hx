@@ -460,9 +460,28 @@ class TyperStage {
 		return s;
 	}
 
-	static function overloadArgScore(expected:TyType, actual:TyType):Int {
-		final exp = normalizeOverloadTypeName(expected);
-		final act = normalizeOverloadTypeName(actual);
+	static function normalizeFunctionTypeSegment(s:String):String {
+		var out = StringTools.trim(s);
+		while (StringTools.startsWith(out, "(") && StringTools.endsWith(out, ")"))
+			out = StringTools.trim(out.substr(1, out.length - 2));
+		return out;
+	}
+
+	static function functionTypeSegments(display:String):Array<String> {
+		final trimmed = StringTools.trim(display);
+		if (trimmed.indexOf("->") < 0)
+			return [];
+		final out = new Array<String>();
+		for (part in trimmed.split("->")) {
+			final segment = normalizeFunctionTypeSegment(part);
+			if (segment.length == 0)
+				return [];
+			out.push(segment);
+		}
+		return out.length < 2 ? [] : out;
+	}
+
+	static function flatOverloadTypeScore(exp:String, act:String):Int {
 		if (exp == act)
 			return 4;
 		if (exp == "Unknown" || act == "Unknown" || exp == "Dynamic" || act == "Dynamic")
@@ -470,6 +489,29 @@ class TyperStage {
 		if ((exp == "Float" && act == "Int") || (exp == "Int" && act == "Float"))
 			return 1;
 		return -1;
+	}
+
+	static function functionOverloadTypeScore(exp:String, act:String):Int {
+		final expParts = functionTypeSegments(exp);
+		final actParts = functionTypeSegments(act);
+		if (expParts.length == 0 && actParts.length == 0)
+			return flatOverloadTypeScore(exp, act);
+		if (expParts.length == 0 || actParts.length == 0 || expParts.length != actParts.length)
+			return -1;
+		var score = 0;
+		for (i in 0...expParts.length) {
+			final partScore = flatOverloadTypeScore(expParts[i], actParts[i]);
+			if (partScore < 0)
+				return -1;
+			score += partScore;
+		}
+		return score;
+	}
+
+	static function overloadArgScore(expected:TyType, actual:TyType):Int {
+		final exp = normalizeOverloadTypeName(expected);
+		final act = normalizeOverloadTypeName(actual);
+		return functionOverloadTypeScore(exp, act);
 	}
 
 	static function overloadCandidateScore(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int):Int {
@@ -537,6 +579,26 @@ class TyperStage {
 		return TyType.unknown();
 	}
 
+	static function functionReferenceType(sig:TyFunSig):TyType {
+		final parts = new Array<String>();
+		for (arg in sig.getArgs())
+			parts.push(normalizeOverloadTypeName(arg));
+		if (parts.length == 0)
+			parts.push("()");
+		parts.push(normalizeOverloadTypeName(sig.getReturnType()));
+		return TyType.fromHintText(parts.join("->"));
+	}
+
+	static function currentStaticMethodReferenceType(name:String, ctx:TyperContext):Null<TyType> {
+		final c = ctx.currentClass();
+		if (c == null)
+			return null;
+		final candidates = c.staticMethodCandidates(name);
+		if (candidates.length != 1)
+			return null;
+		return functionReferenceType(candidates[0]);
+	}
+
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
 		return switch (expr) {
 			case ENull:
@@ -569,8 +631,13 @@ class TyperStage {
 					// Only upper-start simple identifiers can be unqualified Haxe type names in this
 					// Stage3 bootstrap model. Treating every lower-case value name as a potential type
 					// makes lazy loading probe parent/root packages for ordinary locals and receivers.
-					final t = isUpperStartName(name) ? ctx.resolveType(name) : null;
-					t != null ? TyType.fromHintText(t.getFullName()) : TyType.unknown();
+					final methodRef = isUpperStartName(name) ? null : currentStaticMethodReferenceType(name, ctx);
+					if (methodRef != null) {
+						methodRef;
+					} else {
+						final t = isUpperStartName(name) ? ctx.resolveType(name) : null;
+						t != null ? TyType.fromHintText(t.getFullName()) : TyType.unknown();
+					}
 				}
 			case EField(obj, _field):
 				// Stage 3 bring-up: type a tiny set of `Math` constants used in upstream unit tests.

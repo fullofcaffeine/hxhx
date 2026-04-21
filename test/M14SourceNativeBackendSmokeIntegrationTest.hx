@@ -867,6 +867,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class FunctionalSupport {",
 			"  public function new() {}",
 			"  public static function consume(callback) { }",
+			"  public static function choose(callback, value) { }",
 			"}",
 			"",
 			"class Main {",
@@ -875,6 +876,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(helper.label()));",
 			"    helper.assert(\"ok\");",
 			"    testTopLevel(i -> Sys.println(\"callback\"));",
+			"    Sys.println(Std.string(FunctionalSupport.choose(plusOne, 4)));",
+			"    Sys.println(Std.string(FunctionalSupport.choose(pairTotal, 4)));",
+			"  }",
+			"  static function plusOne(value) {",
+			"    return value * 2;",
+			"  }",
+			"  static function pairTotal(left, right) {",
+			"    return left * right;",
 			"  }",
 			"  static function multiply(a, b) {",
 			"    return a * b;",
@@ -1909,8 +1918,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"Java support methods should expose returning one-arg functional overloads");
 		assertContains(functionalSupportContent, "java.util.function.BiFunction<Object, Object, Object>",
 			"Java support methods should expose two-arg functional overloads");
+		assertContains(functionalSupportContent, "choose(java.util.function.Function<Object, Object> arg0, Object value)",
+			"Java two-argument helper stubs should expose one-arg function/value overloads");
+		assertContains(functionalSupportContent, "return arg0.apply(value)",
+			"Java two-argument helper stubs should invoke one-arg callbacks with the supplied value");
+		assertContains(functionalSupportContent, "choose(java.util.function.BiFunction<Object, Object, Object> arg0, Object value)",
+			"Java two-argument helper stubs should expose two-arg function/value overloads");
+		assertContains(functionalSupportContent, "return arg0.apply(value, value)",
+			"Java two-argument helper stubs should invoke two-arg callbacks with the supplied value twice");
 		assertContains(mainContent, "java.util.function.BiFunction<Object, Object, Object> multiply = Main::multiply",
 			"Java main helpers should expose method-reference fields");
+		assertContains(mainContent, "public static Object plusOne(Object value)", "Java main helpers should emit one-arg static function references");
+		assertContains(mainContent, "return (Std.int_(value) * Std.int_(2));", "Java main helper method references should execute their Haxe return bodies");
+		assertContains(mainContent, "public static Object pairTotal(Object left, Object right)",
+			"Java main helpers should emit two-arg static function references");
+		assertContains(mainContent, "return (Std.int_(left) * Std.int_(right));",
+			"Java main helper method references should execute two-arg Haxe return bodies");
 		assertContains(mainContent, "public static Object multiply(Object a, Object b)", "Java main helpers should emit compile-only static methods");
 		assertContains(mainContent, "testTopLevel(java.util.function.Function<Object, Object> arg0)",
 			"Java entrypoint body direct helper calls should expose lambda-compatible overloads");
@@ -1924,6 +1947,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final secondRun = commandOutput("java", ["-jar", jarPath]);
 		assertTrue(secondRun.code == 0, "Java source backend jar should still run after repeated emit: " + secondRun.stderr);
 		assertContains(secondRun.stdout, "callback", "Java functional helper stubs should execute callback bodies");
+		assertContains(secondRun.stdout, "8", "Java function/value overloads should execute one-arg same-class method references");
+		assertContains(secondRun.stdout, "16", "Java function/value overloads should execute two-arg same-class method references");
 		deleteRecursive(tmpRoot);
 	}
 

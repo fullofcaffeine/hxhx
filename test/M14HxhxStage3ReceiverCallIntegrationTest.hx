@@ -139,6 +139,35 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			dynamicOverloadLoader.markResolvedAlready([dynamicOverloadResolved]);
 			TyperStage.typeResolvedModule(dynamicOverloadResolved, dynamicOverloadIndex, dynamicOverloadLoader);
 
+			final functionOverloadHx = haxe.io.Path.join([srcDir, 'FunctionOverloadResolved.hx']);
+			final functionOverloadSrc = [
+				'extern class FnChoice {',
+				'  overload static function choose(f:Int->Int, value:Int):Int;',
+				'  overload static function choose(f:Int->Int->Int, value:Int):Int;',
+				'}',
+				'class FunctionOverloadResolved {',
+				'  static function main() {',
+				'    FnChoice.choose(plusOne, 4);',
+				'    FnChoice.choose(pairTotal, 4);',
+				'  }',
+				'  static function plusOne(value):Int {',
+				'    return value + 1;',
+				'  }',
+				'  static function pairTotal(left, right):Int {',
+				'    return left + right;',
+				'  }',
+				'}',
+			].join("\n");
+			File.saveContent(functionOverloadHx, functionOverloadSrc);
+			final functionOverloadParsed = ParserStage.parse(functionOverloadSrc, functionOverloadHx);
+			final functionOverloadResolved = new ResolvedModule("FunctionOverloadResolved", functionOverloadHx, functionOverloadParsed);
+			final functionOverloadIndex = TyperIndex.build([functionOverloadResolved]);
+			final functionOverloadLoader = new ModuleLoader([srcDir], new StringMap<String>(), functionOverloadIndex, function(_typePath:String):Bool {
+				return false;
+			});
+			functionOverloadLoader.markResolvedAlready([functionOverloadResolved]);
+			TyperStage.typeResolvedModule(functionOverloadResolved, functionOverloadIndex, functionOverloadLoader);
+
 			final overloadHx = haxe.io.Path.join([srcDir, 'OverloadAmbiguous.hx']);
 			final overloadSrc = [
 				'extern class ToolCache {',
