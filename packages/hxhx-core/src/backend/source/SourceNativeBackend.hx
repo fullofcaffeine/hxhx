@@ -445,6 +445,8 @@ class SourceNativeBackend {
 			return nullCoalesceAssignExpr(target, left, right);
 		if (op == "is")
 			return typeCheckExpr(target, left, right);
+		if (target == Php && op == "+")
+			return "__hxhx_add(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		final mapped = binopToken(target, op);
 		if (mapped == null)
 			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
@@ -3233,6 +3235,12 @@ class SourceNativeBackend {
 				lines.push("  $old = $value;");
 				lines.push("  $value = $old + $delta;");
 				lines.push("  return $old;");
+				lines.push("}");
+				lines.push("function __hxhx_add($left, $right) {");
+				lines.push("  if (is_int($left) || is_float($left)) {");
+				lines.push("    if (is_int($right) || is_float($right)) return $left + $right;");
+				lines.push("  }");
+				lines.push("  return strval($left) . strval($right);");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
 				lines.push("  $old = $obj->$field;");

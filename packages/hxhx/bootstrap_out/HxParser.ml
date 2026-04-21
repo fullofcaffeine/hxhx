@@ -8769,53 +8769,45 @@ let binopPrec = fun op -> let tempResult = ref (0 : int) in (
       tempResult := __assign_4366;
       __assign_4366
     )
-    | "&" -> let __assign_4367 = 3 in (
+    | "&&" -> let __assign_4367 = 3 in (
       tempResult := __assign_4367;
       __assign_4367
     )
-    | "&&" -> let __assign_4368 = 3 in (
+    | "+" | "-" -> let __assign_4368 = 6 in (
       tempResult := __assign_4368;
       __assign_4368
     )
-    | "+" | "-" -> let __assign_4369 = 6 in (
+    | "<" | "<=" | ">" | ">=" -> let __assign_4369 = 5 in (
       tempResult := __assign_4369;
       __assign_4369
     )
-    | "<" | "<=" | ">" | ">=" -> let __assign_4370 = 5 in (
+    | "<<" | ">>" | ">>>" -> let __assign_4370 = 5 in (
       tempResult := __assign_4370;
       __assign_4370
     )
-    | "<<" | ">>" | ">>>" -> let __assign_4371 = 5 in (
+    | "?" -> let __assign_4371 = 2 in (
       tempResult := __assign_4371;
       __assign_4371
     )
-    | "?" -> let __assign_4372 = 2 in (
+    | "??" -> let __assign_4372 = 2 in (
       tempResult := __assign_4372;
       __assign_4372
     )
-    | "??" -> let __assign_4373 = 2 in (
+    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_4373 = 1 in (
       tempResult := __assign_4373;
       __assign_4373
     )
-    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_4374 = 1 in (
+    | "&" | "^" | "|" -> let __assign_4374 = 3 in (
       tempResult := __assign_4374;
       __assign_4374
     )
-    | "^" -> let __assign_4375 = 3 in (
+    | "!=" | "==" | "is" -> let __assign_4375 = 4 in (
       tempResult := __assign_4375;
       __assign_4375
     )
-    | "!=" | "==" | "is" -> let __assign_4376 = 4 in (
+    | "||" -> let __assign_4376 = 2 in (
       tempResult := __assign_4376;
       __assign_4376
-    )
-    | "|" -> let __assign_4377 = 2 in (
-      tempResult := __assign_4377;
-      __assign_4377
-    )
-    | "||" -> let __assign_4378 = 2 in (
-      tempResult := __assign_4378;
-      __assign_4378
     )
     | _ -> let __assign_4365 = 0 in (
       tempResult := __assign_4365;
@@ -8826,20 +8818,20 @@ let binopPrec = fun op -> let tempResult = ref (0 : int) in (
 
 let isAssignmentBinop = fun op -> let tempResult = ref (false : bool) in (
   ignore (match op with
-    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_4380 = true in (
-      tempResult := __assign_4380;
-      __assign_4380
+    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_4378 = true in (
+      tempResult := __assign_4378;
+      __assign_4378
     )
-    | _ -> let __assign_4379 = false in (
-      tempResult := __assign_4379;
-      __assign_4379
+    | _ -> let __assign_4377 = false in (
+      tempResult := __assign_4377;
+      __assign_4377
     ));
   !tempResult
 )
 
 let isRightAssoc = fun op -> isAssignmentBinop (op : string)
 
-let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_4395 = (
+let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_4393 = (
   ignore (if decls == Obj.magic (HxRuntime.hx_null) || HxArray.length decls = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let last = Obj.magic (HxArray.get (Obj.magic decls) (HxInt.sub (HxArray.length decls) 1)) in let tempResult = ref (false : bool) in (
     ignore (if (match last with
@@ -8859,21 +8851,21 @@ let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_4395 = 
       | HxStmt.SReturn (_, _) -> 13
       | HxStmt.SExpr (_, _) -> 14) = 1 then (
       ignore (match last with
-        | HxStmt.SVar (__enum_param_4381, _, _, _) -> __enum_param_4381
+        | HxStmt.SVar (__enum_param_4379, _, _, _) -> __enum_param_4379
         | _ -> failwith "Unexpected enum parameter");
       ignore (match last with
-        | HxStmt.SVar (_, __enum_param_4382, _, _) -> __enum_param_4382
+        | HxStmt.SVar (_, __enum_param_4380, _, _) -> __enum_param_4380
         | _ -> failwith "Unexpected enum parameter");
       let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (match last with
-        | HxStmt.SVar (_, _, __enum_param_4383, _) -> __enum_param_4383
+        | HxStmt.SVar (_, _, __enum_param_4381, _) -> __enum_param_4381
         | _ -> failwith "Unexpected enum parameter")) in (
         ignore (match last with
-          | HxStmt.SVar (_, _, _, __enum_param_4384) -> __enum_param_4384
+          | HxStmt.SVar (_, _, _, __enum_param_4382) -> __enum_param_4382
           | _ -> failwith "Unexpected enum parameter");
-        if _g3 == Obj.magic (HxRuntime.hx_null) then let __assign_4385 = false in (
-          tempResult := __assign_4385;
-          __assign_4385
-        ) else if (let __enum_idx_4386 = _g3 in if __enum_idx_4386 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_4386 with
+        if _g3 == Obj.magic (HxRuntime.hx_null) then let __assign_4383 = false in (
+          tempResult := __assign_4383;
+          __assign_4383
+        ) else if (let __enum_idx_4384 = _g3 in if __enum_idx_4384 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_4384 with
           | HxExpr.ENull -> 0
           | HxExpr.EBool _ -> 1
           | HxExpr.EString _ -> 2
@@ -8903,29 +8895,29 @@ let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_4395 = 
           | HxExpr.ECast (_, _) -> 26
           | HxExpr.EUntyped _ -> 27
           | HxExpr.EUnsupported _ -> 28) = 21 then (
+          ignore (let __enum_param_4386 = _g3 in if __enum_param_4386 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4386 with
+            | HxExpr.EAnon (__enum_param_4385, _) -> __enum_param_4385
+            | _ -> failwith "Unexpected enum parameter");
           ignore (let __enum_param_4388 = _g3 in if __enum_param_4388 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4388 with
-            | HxExpr.EAnon (__enum_param_4387, _) -> __enum_param_4387
+            | HxExpr.EAnon (_, __enum_param_4387) -> __enum_param_4387
             | _ -> failwith "Unexpected enum parameter");
-          ignore (let __enum_param_4390 = _g3 in if __enum_param_4390 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4390 with
-            | HxExpr.EAnon (_, __enum_param_4389) -> __enum_param_4389
-            | _ -> failwith "Unexpected enum parameter");
-          let __assign_4391 = true in (
-            tempResult := __assign_4391;
-            __assign_4391
+          let __assign_4389 = true in (
+            tempResult := __assign_4389;
+            __assign_4389
           )
-        ) else let __assign_4392 = false in (
-          tempResult := __assign_4392;
-          __assign_4392
+        ) else let __assign_4390 = false in (
+          tempResult := __assign_4390;
+          __assign_4390
         )
       )
-    ) else let __assign_4393 = false in (
-      tempResult := __assign_4393;
-      __assign_4393
+    ) else let __assign_4391 = false in (
+      tempResult := __assign_4391;
+      __assign_4391
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_4395 with
-  | HxRuntime.Hx_return __ret_4394 -> Obj.obj __ret_4394
+) in Obj.magic __fallback_result_4393 with
+  | HxRuntime.Hx_return __ret_4392 -> Obj.obj __ret_4392
 
 let debugBodyLabel = ref (("" : string) : string)
 

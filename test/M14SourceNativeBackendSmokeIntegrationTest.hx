@@ -746,6 +746,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpPlusSemanticsProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(1 + 2 + \"\"));",
+			"    Sys.println(Std.string(1 + (2 + \"\")));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpBitwisePrecedenceProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(4 | 3 & 1));",
+			"    Sys.println(Std.string(4 | (3 & 1)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1732,6 +1760,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(HxFunctionArg.getTypeHint(args[2]) == "haxe.PosInfos", "native protocol should preserve optional argument type hints");
 	}
 
+	static function assertPhpPlusSemantics():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_plus_semantics_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpPlusSemanticsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_add($left, $right)", "PHP source backend should emit a Haxe plus-semantics helper");
+		assertContains(content, "__hxhx_add(__hxhx_add(1, 2), \"\")",
+			"PHP plus lowering should preserve left-associative numeric addition before string conversion");
+		assertContains(content, "__hxhx_add(1, __hxhx_add(2, \"\"))", "PHP plus lowering should preserve explicit string-concat grouping");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpBitwisePrecedence():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_bitwise_precedence_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpBitwisePrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "strval(((4 | 3) & 1))", "PHP bitwise operators should group left-to-right without explicit parentheses");
+		assertContains(content, "strval((4 | (3 & 1)))", "PHP bitwise lowering should preserve explicit parenthesized grouping");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpWebShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2032,8 +2088,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpSuperPropertyProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "return (parent::get_prop() . 1);", "PHP super property reads should lower through parent getters");
-		assertContains(content, "return (parent::set_prop($v) . 1);", "PHP super property writes should lower through parent setters");
+		assertContains(content, "return __hxhx_add(parent::get_prop(), 1);", "PHP super property reads should lower through parent getters");
+		assertContains(content, "return __hxhx_add(parent::set_prop($v), 1);", "PHP super property writes should lower through parent setters");
 		assertContains(content, "$s = (parent::get_fProp())(0);",
 			"PHP calls through super property getter results should lower through parent getters before invocation");
 		deleteRecursive(tmpRoot);
@@ -2048,7 +2104,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "foreach ($values as $index => $value) {", "PHP key/value loops should lower through foreach key => value");
-		assertContains(content, "echo (strval($index) . strval($value)) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add(strval($index), strval($value)) . PHP_EOL;",
 			"PHP key/value loop bodies should render with both loop bindings in scope");
 		deleteRecursive(tmpRoot);
 	}
@@ -2352,7 +2408,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
 		emit("cs-native", "cs", "Main.cs", "System.Console.WriteLine((\"source-native:\" + \"cs\"));");
-		emit("php-native", "php", "index.php", "echo (\"source-native:\" . \"php\") . PHP_EOL;");
+		emit("php-native", "php", "index.php", "echo __hxhx_add(\"source-native:\", \"php\") . PHP_EOL;");
 		emit("lua-native", "lua", "Main.lua", "print((\"source-native:\" .. \"lua\"))");
 		assertPythonOutputHint();
 		assertUnsupportedDiagnostic();
@@ -2381,6 +2437,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpInstanceFieldMethodCall();
 		assertPhpInheritedTestHelperCall();
 		assertNativeProtocolOptionalArgDecode();
+		assertPhpPlusSemantics();
+		assertPhpBitwisePrecedence();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();

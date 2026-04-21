@@ -1925,10 +1925,8 @@ class HxParser {
 			case "?": 2;
 			case "??": 2;
 			case "||": 2;
-			case "|": 2;
 			case "&&": 3;
-			case "&": 3;
-			case "^": 3;
+			case "|" | "&" | "^": 3;
 			case "==" | "!=" | "is": 4;
 			case "<<" | ">>" | ">>>": 5;
 			case "<" | "<=" | ">" | ">=": 5;
