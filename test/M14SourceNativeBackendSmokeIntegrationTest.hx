@@ -936,6 +936,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    Sys.println(Std.string(Math.isNaN(5.0 % 0.0)));",
 			"    Sys.println(Std.string(Math.isFinite(1.5)));",
+			"    Sys.println(Std.string(Math.floor(-1.5)));",
+			"    Sys.println(Std.string(Math.ceil(-1.5)));",
+			"    Sys.println(Std.string(Math.round(-1.5)));",
+			"    Sys.println(Std.string(Math.ffloor(-10000000000.7)));",
+			"    Sys.println(Std.string(Math.fceil(-10000000000.7)));",
+			"    Sys.println(Std.string(Math.fround(-10000000000.7)));",
 			"  }",
 			"}",
 		].join("\n");
@@ -2130,7 +2136,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Math", "PHP source backend should emit a minimal Math runtime shim");
 		assertContains(content, "public static function isNaN($value)", "PHP Math shim should support isNaN");
 		assertContains(content, "public static function isFinite($value)", "PHP Math shim should support isFinite");
+		assertContains(content, "public static function floor($value)", "PHP Math shim should support floor");
+		assertContains(content, "public static function ceil($value)", "PHP Math shim should support ceil");
+		assertContains(content, "public static function round($value)", "PHP Math shim should support Haxe round");
+		assertContains(content, "public static function ffloor($value)", "PHP Math shim should support ffloor");
+		assertContains(content, "public static function fceil($value)", "PHP Math shim should support fceil");
+		assertContains(content, "public static function fround($value)", "PHP Math shim should support Haxe fround");
+		assertContains(content, "return floor($value + 0.5);", "PHP Math.round should match Haxe half-up-toward-positive behavior");
 		assertContains(content, "Math::isNaN(__hxhx_mod(5, 0))", "PHP Math.isNaN should be callable with modulo-derived NaN");
+		assertContains(content, "Math::floor((-1.5))", "PHP Math.floor should lower to the runtime shim");
+		assertContains(content, "Math::ceil((-1.5))", "PHP Math.ceil should lower to the runtime shim");
+		assertContains(content, "Math::round((-1.5))", "PHP Math.round should lower to the runtime shim");
+		assertContains(content, "Math::ffloor((-10000000000.7))", "PHP Math.ffloor should lower to the runtime shim");
+		assertContains(content, "Math::fceil((-10000000000.7))", "PHP Math.fceil should lower to the runtime shim");
+		assertContains(content, "Math::fround((-10000000000.7))", "PHP Math.fround should lower to the runtime shim");
 		deleteRecursive(tmpRoot);
 	}
 
