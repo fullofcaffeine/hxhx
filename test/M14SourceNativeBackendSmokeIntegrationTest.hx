@@ -818,6 +818,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpEnumStringProgram():GenIrProgram {
+		final src = [
+			"enum MyEnum {",
+			"  C(i:Int, s:String);",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var e = MyEnum.C(0, \"h\");",
+			"    Sys.println(Std.string(e));",
+			"    Sys.println(Std.string([e]));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final baseDecl = parsed.getDecl();
+		final main = HxModuleDecl.getMainClass(baseDecl);
+		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
+		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpBitwisePrecedenceProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1902,9 +1926,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "$m = new Map();", "PHP Map construction should lower to the runtime shim");
 		assertContains(content, "$m->set(\"a\", 1);", "PHP Map.set should lower as an instance method call");
-		assertContains(content, "strval($m->exists(\"a\"))", "PHP Map.exists should be usable in expressions");
-		assertContains(content, "strval($m->get(\"a\"))", "PHP Map.get should be usable in expressions");
-		assertContains(content, "strval($m->remove(\"a\"))", "PHP Map.remove should be usable in expressions");
+		assertContains(content, "__hxhx_add_string($m->exists(\"a\"))", "PHP Map.exists should be usable in expressions");
+		assertContains(content, "__hxhx_add_string($m->get(\"a\"))", "PHP Map.get should be usable in expressions");
+		assertContains(content, "__hxhx_add_string($m->remove(\"a\"))", "PHP Map.remove should be usable in expressions");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2008,6 +2032,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpEnumString():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_enum_string_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpEnumStringProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "return (object)[\"__hx_ctor\" => \"C\", \"__hx_index\" => 0, \"__hx_params\" => [$i, $s]];",
+			"PHP scanned enum constructors should return Haxe-like runtime enum objects");
+		assertContains(content, "echo __hxhx_add_string($e) . PHP_EOL;", "PHP Std.string on enum values should use Haxe stringification");
+		assertContains(content, "echo __hxhx_add_string([$e]) . PHP_EOL;", "PHP Std.string on enum arrays should recursively stringify enum values");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpBitwisePrecedence():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_bitwise_precedence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2016,8 +2055,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpBitwisePrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "strval(((4 | 3) & 1))", "PHP bitwise operators should group left-to-right without explicit parentheses");
-		assertContains(content, "strval((4 | (3 & 1)))", "PHP bitwise lowering should preserve explicit parenthesized grouping");
+		assertContains(content, "__hxhx_add_string(((4 | 3) & 1))", "PHP bitwise operators should group left-to-right without explicit parentheses");
+		assertContains(content, "__hxhx_add_string((4 | (3 & 1)))", "PHP bitwise lowering should preserve explicit parenthesized grouping");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2043,8 +2082,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpBitwiseEqualityPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "strval(((1 & 32768) != 0))", "PHP bitwise/equality lowering should preserve explicit left grouping");
-		assertContains(content, "strval((0 != (1 & 32768)))", "PHP bitwise/equality lowering should preserve explicit right grouping");
+		assertContains(content, "__hxhx_add_string(((1 & 32768) != 0))", "PHP bitwise/equality lowering should preserve explicit left grouping");
+		assertContains(content, "__hxhx_add_string((0 != (1 & 32768)))", "PHP bitwise/equality lowering should preserve explicit right grouping");
 		assertNotContains(content, "(1 & (32768 != 0))", "PHP bitwise operators should bind tighter than equality on the left");
 		assertNotContains(content, "((0 != 1) & 32768)", "PHP bitwise operators should bind tighter than equality on the right");
 		deleteRecursive(tmpRoot);
@@ -2058,8 +2097,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpModuloMultiplicationPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "strval((5 * __hxhx_mod(10, 3)))", "PHP modulo should bind tighter than multiplication for implicit grouping");
-		assertContains(content, "strval(__hxhx_mod((5 * 10), 3))", "PHP modulo/multiplication lowering should preserve explicit multiplication grouping");
+		assertContains(content, "__hxhx_add_string((5 * __hxhx_mod(10, 3)))", "PHP modulo should bind tighter than multiplication for implicit grouping");
+		assertContains(content, "__hxhx_add_string(__hxhx_mod((5 * 10), 3))",
+			"PHP modulo/multiplication lowering should preserve explicit multiplication grouping");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2102,10 +2142,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpTernaryAssignmentLogicalProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "echo strval(((!true) ? true : true)) . PHP_EOL;", "PHP ternary should bind after unary not for `!true ? true : true`");
-		assertContains(content, "echo strval($k = (true ? false : true)) . PHP_EOL;", "PHP assignment should bind looser than ternary in expression form");
-		assertContains(content, "echo strval((($k = true) ? false : true)) . PHP_EOL;", "PHP parenthesized assignment should remain the ternary condition");
-		assertContains(content, "echo strval((true || (false && false))) . PHP_EOL;", "PHP logical and should bind tighter than logical or");
+		assertContains(content, "echo __hxhx_add_string(((!true) ? true : true)) . PHP_EOL;",
+			"PHP ternary should bind after unary not for `!true ? true : true`");
+		assertContains(content, "echo __hxhx_add_string($k = (true ? false : true)) . PHP_EOL;",
+			"PHP assignment should bind looser than ternary in expression form");
+		assertContains(content, "echo __hxhx_add_string((($k = true) ? false : true)) . PHP_EOL;",
+			"PHP parenthesized assignment should remain the ternary condition");
+		assertContains(content, "echo __hxhx_add_string((true || (false && false))) . PHP_EOL;", "PHP logical and should bind tighter than logical or");
 		assertNotContains(content, "((!true ? true : true))", "PHP unary not should not wrap the full ternary");
 		deleteRecursive(tmpRoot);
 	}
@@ -2124,24 +2167,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_string_split($value, $delimiter)", "PHP runtime should include a String.split helper");
 		assertContains(content, "function __hxhx_string_char_code_at($value, $index)", "PHP runtime should include a String.charCodeAt helper");
 		assertContains(content, "function __hxhx_string_substr($value, $pos, $len = null)", "PHP runtime should include a String.substr helper");
-		assertContains(content, "echo strval(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")) . PHP_EOL;",
 			"PHP string-like concatenation receivers should lower indexOf through the helper");
-		assertContains(content, "echo strval(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)) . PHP_EOL;",
 			"PHP string literal receivers should lower indexOf with a start index");
-		assertContains(content, "echo strval(__hxhx_string_last_index_of(\"foofoofoobarbar\", \"bar\", 11)) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add_string(__hxhx_string_last_index_of(\"foofoofoobarbar\", \"bar\", 11)) . PHP_EOL;",
 			"PHP string literal receivers should lower lastIndexOf with a start index");
-		assertContains(content, "echo strval(__hxhx_length(__hxhx_string_split(\"abc\", \"\"))) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add_string(__hxhx_length(__hxhx_string_split(\"abc\", \"\"))) . PHP_EOL;",
 			"PHP string split should compose with array length");
-		assertContains(content, "echo strval(__hxhx_array_get(__hxhx_string_split(\"a,b,c\", \",\"), 1)) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get(__hxhx_string_split(\"a,b,c\", \",\"), 1)) . PHP_EOL;",
 			"PHP string split results should use safe array reads");
-		assertContains(content, "echo strval(__hxhx_string_char_code_at(\"abc\", 0)) . PHP_EOL;", "PHP string charCodeAt should lower through the helper");
-		assertContains(content, "echo strval(__hxhx_string_char_code_at(\"abc\", 99)) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at(\"abc\", 0)) . PHP_EOL;",
+			"PHP string charCodeAt should lower through the helper");
+		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at(\"abc\", 99)) . PHP_EOL;",
 			"PHP out-of-range charCodeAt should lower through the nullable helper");
-		assertContains(content, "echo strval(__hxhx_string_char_code_at(\"a\", 0)) . PHP_EOL;", "PHP string literal .code should lower through the helper");
-		assertContains(content, "echo strval(__hxhx_string_index_of($str, \"b\")) . PHP_EOL;", "PHP string variable indexOf should lower through the helper");
-		assertContains(content, "echo strval(__hxhx_string_last_index_of($str, \"b\")) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at(\"a\", 0)) . PHP_EOL;",
+			"PHP string literal .code should lower through the helper");
+		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of($str, \"b\")) . PHP_EOL;",
+			"PHP string variable indexOf should lower through the helper");
+		assertContains(content, "echo __hxhx_add_string(__hxhx_string_last_index_of($str, \"b\")) . PHP_EOL;",
 			"PHP string variable lastIndexOf should lower through the helper");
-		assertContains(content, "echo strval(__hxhx_string_char_code_at($str, 1)) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at($str, 1)) . PHP_EOL;",
 			"PHP string variable charCodeAt should lower through the helper");
 		assertContains(content, "echo __hxhx_string_substr($str, 1, 2) . PHP_EOL;", "PHP string variable substr should lower with explicit length");
 		assertContains(content, "echo __hxhx_string_substr($str, 3) . PHP_EOL;", "PHP string variable substr should lower with omitted length");
@@ -2239,9 +2285,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "$values = [];", "PHP Array constructor should lower to array literal syntax");
 		assertContains(content, "function __hxhx_length($value)", "PHP runtime should include a Haxe length helper");
-		assertContains(content, "echo strval(__hxhx_length($values)) . PHP_EOL;", "PHP array constructor length should use the Haxe length helper");
-		assertContains(content, "echo strval(__hxhx_length($items)) . PHP_EOL;", "PHP array literal length should use the Haxe length helper");
-		assertContains(content, "echo strval(__hxhx_length(\"abc\")) . PHP_EOL;", "PHP string length should use the Haxe length helper");
+		assertContains(content, "echo __hxhx_add_string(__hxhx_length($values)) . PHP_EOL;", "PHP array constructor length should use the Haxe length helper");
+		assertContains(content, "echo __hxhx_add_string(__hxhx_length($items)) . PHP_EOL;", "PHP array literal length should use the Haxe length helper");
+		assertContains(content, "echo __hxhx_add_string(__hxhx_length(\"abc\")) . PHP_EOL;", "PHP string length should use the Haxe length helper");
 		assertNotContains(content, "new Array()", "PHP should not emit reserved Array constructor syntax");
 		assertNotContains(content, "$items->length", "PHP arrays should not use object-property length access");
 		deleteRecursive(tmpRoot);
@@ -2260,7 +2306,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_array_splice(&$array, $pos, $len)", "PHP runtime should include an Array.splice helper");
 		assertContains(content, "class __HxArrayIterator", "PHP runtime should include a Haxe array iterator wrapper");
 		assertContains(content, "function __hxhx_iterator($value)", "PHP runtime should include an iterator helper");
-		assertContains(content, "echo strval(__hxhx_array_get($a, 3)) . PHP_EOL;", "PHP out-of-bounds array reads should go through safe Haxe read helper");
+		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get($a, 3)) . PHP_EOL;",
+			"PHP out-of-bounds array reads should go through safe Haxe read helper");
 		assertContains(content, "__hxhx_array_remove($a, 2);", "PHP Array.remove should lower through the mutating helper");
 		assertContains(content, "__hxhx_array_splice($a, 1, 1);", "PHP Array.splice should lower through the mutating helper");
 		assertContains(content, "$it = __hxhx_iterator($a);", "PHP Array.iterator should lower through the iterator helper");
@@ -2412,7 +2459,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$ok = true;", "PHP source backend should fold HelperMacros.typeError for expression-position for probes");
 		assertContains(content, "$message = \"Int has no field keyValueIterator\";",
 			"PHP source backend should fold HelperMacros.typeErrorText for key/value for probes");
-		assertContains(content, "echo strval($ok) . PHP_EOL;", "folded typeError results should still flow through normal printing");
+		assertContains(content, "echo __hxhx_add_string($ok) . PHP_EOL;", "folded typeError results should still flow through normal printing");
 		assertContains(content, "echo $message . PHP_EOL;", "folded typeErrorText results should still flow through normal printing");
 		deleteRecursive(tmpRoot);
 	}
@@ -2461,7 +2508,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$__hxhx_result[] = function($value) use ($i) { return ($value * $i); };",
 			"PHP closures yielded from comprehensions should capture the comprehension binder");
 		assertContains(content, "return $__hxhx_result;", "PHP array comprehensions should return the collected array");
-		assertContains(content, "echo strval(__hxhx_array_get($funcs, 0)(10)) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get($funcs, 0)(10)) . PHP_EOL;",
 			"PHP array-comprehension-derived functions should still be callable from later statements");
 		deleteRecursive(tmpRoot);
 	}
@@ -2518,7 +2565,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "foreach ($values as $index => $value) {", "PHP key/value loops should lower through foreach key => value");
-		assertContains(content, "echo __hxhx_add(strval($index), strval($value)) . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add(__hxhx_add_string($index), __hxhx_add_string($value)) . PHP_EOL;",
 			"PHP key/value loop bodies should render with both loop bindings in scope");
 		deleteRecursive(tmpRoot);
 	}
@@ -2640,7 +2687,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$value = (function($input) { return $input; })(1);", "PHP immediate lambda calls should wrap the closure before invocation");
-		assertContains(content, "echo strval($value) . PHP_EOL;", "PHP immediate lambda-call results should still flow through later statements");
+		assertContains(content, "echo __hxhx_add_string($value) . PHP_EOL;", "PHP immediate lambda-call results should still flow through later statements");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2694,8 +2741,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpTypeCheckProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "strval(is_int($i))", "PHP `is Int` checks should lower to is_int");
-		assertContains(content, "strval(is_string($s))", "PHP `is String` checks should lower to is_string");
+		assertContains(content, "__hxhx_add_string(is_int($i))", "PHP `is Int` checks should lower to is_int");
+		assertContains(content, "__hxhx_add_string(is_string($s))", "PHP `is String` checks should lower to is_string");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2853,6 +2900,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpShadowedTestHelperClosure();
 		assertNativeProtocolOptionalArgDecode();
 		assertPhpPlusSemantics();
+		assertPhpEnumString();
 		assertPhpBitwisePrecedence();
 		assertPhpSameClassStaticHelperCall();
 		assertPhpBitwiseEqualityPrecedence();

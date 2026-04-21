@@ -716,12 +716,7 @@ class SourceNativeBackend {
 	static function stdStringCall(target:SourceNativeTarget, expr:HxExpr):String {
 		return switch (target) {
 			case Php:
-				switch (expr) {
-					case EArrayDecl(_):
-						"__hxhx_add_string(" + renderExpr(Php, expr) + ")";
-					case _:
-						stringCall(Php, renderExpr(Php, expr));
-				}
+				"__hxhx_add_string(" + renderExpr(Php, expr) + ")";
 			case Python, Java, Cs, Lua:
 				stringCall(target, renderExpr(target, expr));
 		};
@@ -3420,6 +3415,7 @@ class SourceNativeBackend {
 				lines.push("}");
 				lines.push("function __hxhx_add_string($value) {");
 				lines.push("  if ($value === null) return \"null\";");
+				lines.push("  if (is_bool($value)) return $value ? \"true\" : \"false\";");
 				lines.push("  if ($value instanceof __HxArray) $value = $value->toArray();");
 				lines.push("  if (is_array($value)) {");
 				lines.push("    $parts = [];");
@@ -3429,6 +3425,13 @@ class SourceNativeBackend {
 				lines.push("    return \"[\" . implode(\",\", $parts) . \"]\";");
 				lines.push("  }");
 				lines.push("  if (is_object($value) && !method_exists($value, \"__toString\")) {");
+				lines.push("    if (property_exists($value, \"__hx_ctor\") && property_exists($value, \"__hx_params\") && is_array($value->__hx_params)) {");
+				lines.push("      $params = [];");
+				lines.push("      foreach ($value->__hx_params as $param) {");
+				lines.push("        $params[] = __hxhx_add_string($param);");
+				lines.push("      }");
+				lines.push("      return count($params) === 0 ? $value->__hx_ctor : $value->__hx_ctor . \"(\" . implode(\",\", $params) . \")\";");
+				lines.push("    }");
 				lines.push("    $parts = [];");
 				lines.push("    foreach (get_object_vars($value) as $key => $fieldValue) {");
 				lines.push("      $parts[] = $key . \": \" . __hxhx_add_string($fieldValue);");

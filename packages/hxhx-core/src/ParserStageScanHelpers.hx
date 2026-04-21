@@ -224,6 +224,10 @@ class ParserStageScanHelpers {
 		if (source == null || source.length == 0)
 			return out;
 
+		function enumRuntimeValue(ctorName:String, argExprs:Array<HxExpr>):HxExpr {
+			return EAnon(["__hx_ctor", "__hx_index", "__hx_params"], [EString(ctorName), EInt(0), EArrayDecl(argExprs)]);
+		}
+
 		inline function isUpperStart(name:String):Bool {
 			if (name == null || name.length == 0)
 				return false;
@@ -329,14 +333,18 @@ class ParserStageScanHelpers {
 						continue;
 					final argNames = ctor.args == null ? [] : ctor.args;
 					if (argNames.length == 0) {
-						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", null));
+						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(ctorName, [])));
 					} else {
 						final args = new Array<HxFunctionArg>();
+						final values = new Array<HxExpr>();
 						for (a in argNames)
 							args.push(new HxFunctionArg(a, "", HxDefaultValue.NoDefault, false, false));
+						for (a in argNames)
+							values.push(EIdent(a));
 						// Constructors conceptually return an enum value; during bring-up we keep the
 						// type wide to avoid OCaml type errors in heavily-`Obj.magic` codegen.
-						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic", [], ""));
+						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic",
+							[SReturn(enumRuntimeValue(ctorName, values), HxPos.unknown())], ""));
 					}
 				}
 			}
