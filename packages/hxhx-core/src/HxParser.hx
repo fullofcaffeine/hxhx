@@ -1734,8 +1734,7 @@ class HxParser {
 		}
 
 		final values = new Array<HxExpr>();
-		final mapNames = new Array<String>();
-		final mapValues = new Array<HxExpr>();
+		final mapEntries = new Array<HxExpr>();
 		var sawMapEntry = false;
 
 		if (cur.kind.match(TOther("]".code))) {
@@ -1752,8 +1751,8 @@ class HxParser {
 				sawMapEntry = true;
 				bump(); // '='
 				bump(); // '>'
-				mapNames.push(mapLiteralKeyName(value));
-				mapValues.push(parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof)));
+				final mapValue = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
+				mapEntries.push(EBinop("=>", value, mapValue));
 			} else {
 				values.push(value);
 			}
@@ -1778,21 +1777,8 @@ class HxParser {
 			}
 		}
 		if (sawMapEntry)
-			return EAnon(mapNames, mapValues);
+			return EArrayDecl(mapEntries);
 		return EArrayDecl(values);
-	}
-
-	function mapLiteralKeyName(expr:HxExpr):String {
-		return switch (expr) {
-			case EString(v): v;
-			case EInt(v): Std.string(v);
-			case EFloat(v): Std.string(v);
-			case EBool(v): v ? "true" : "false";
-			case EIdent(name): name;
-			case EEnumValue(name): name;
-			case _:
-				"__hx_key";
-		}
 	}
 
 	function parseCallArg(stop:() -> Bool):HxExpr {

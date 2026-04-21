@@ -1966,10 +1966,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_array_add_assign($br, __hxhx_post_update_var($x, 1), 4);",
 			"PHP Map bracket add-assign should evaluate the index once through the indexed add helper");
 		assertContains(content, "__hxhx_add_string(__hxhx_array_get($br, 1))", "PHP Map bracket reads should dispatch through the indexed get helper");
-		assertContains(content, "__hxhx_map_literal_from_object((object)[\"1\" => 1])->toString()",
-			"PHP integer map literal toString should lower to the runtime Map shim");
-		assertContains(content, "__hxhx_map_literal_from_object((object)[\"foo\" => 1])->toString()",
-			"PHP string map literal toString should lower to the runtime Map shim");
+		assertContains(content, "__hxhx_map_literal([[1, 1]])->toString()", "PHP integer map literal toString should lower to the runtime Map shim");
+		assertContains(content, "__hxhx_map_literal([[\"foo\", 1]])->toString()", "PHP string map literal toString should lower to the runtime Map shim");
 		assertContains(content, "class Lambda {", "PHP source backend should emit a minimal Lambda helper");
 		assertContains(content, "class Reflect {", "PHP source backend should emit a minimal Reflect helper for Array.sort callbacks");
 		assertContains(content, "$values = Lambda::array($sm);", "PHP Lambda.array should accept Map-backed iterables");
