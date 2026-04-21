@@ -8,6 +8,12 @@ class M14JsExprEmitterRangeExprIntegrationTest {
 		}
 	}
 
+	static function assertNotContains(haystack:String, needle:String, label:String):Void {
+		if (haystack != null && haystack.indexOf(needle) >= 0) {
+			throw label + ": unexpected substring '" + needle + "' in '" + haystack + "'";
+		}
+	}
+
 	static function main() {
 		final scope = new JsFunctionScope(new haxe.ds.StringMap<String>());
 		final exprScope = scope.exprScope();
@@ -28,6 +34,10 @@ class M14JsExprEmitterRangeExprIntegrationTest {
 
 		final coalesceAssignJs = JsExprEmitter.emit(HxParser.parseExprText("target ??= fallback"), exprScope);
 		assertContains(coalesceAssignJs, "(target ??= fallback)", "null coalescing assignment should parse and emit as an assignment");
+
+		final parenthesizedAssignJs = JsExprEmitter.emit(HxParser.parseExprText("(c = file.data.get(p++)) != 10"), exprScope);
+		assertContains(parenthesizedAssignJs, "(c = file.data.get(", "parenthesized assignment should stay grouped for JS operator precedence");
+		assertNotContains(parenthesizedAssignJs, "__hxhx_parenthesized", "parser-only parenthesized marker should not leak to JS runtime output");
 
 		final nullEqJs = JsExprEmitter.emit(HxParser.parseExprText("pattern == null && globalPattern == null"), exprScope);
 		assertContains(nullEqJs, "(pattern == null)", "null equality should treat omitted optional args as null-like");

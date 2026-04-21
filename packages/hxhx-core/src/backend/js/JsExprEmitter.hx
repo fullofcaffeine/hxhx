@@ -901,6 +901,8 @@ class JsExprEmitter {
 			case EIdent("__hxhx_throw"):
 				final thrown = args.length > 0 ? emit(args[0], scope) : "null";
 				return "(function(){ throw " + thrown + "; })()";
+			case EIdent("__hxhx_parenthesized") if (args.length == 1):
+				return "(" + emit(args[0], scope) + ")";
 			case EIdent("__hxhx_spread"):
 				return args.length > 0 ? "..." + emit(args[0], scope) : "";
 			case EIdent("trace"):

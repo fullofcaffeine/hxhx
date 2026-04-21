@@ -2049,6 +2049,7 @@ and emitCall = fun callee args scope -> try let __fallback_result_551 = (
       | "__hxhx_for_in" -> raise (HxRuntime.Hx_return (Obj.repr (emitForInExpr (Obj.magic args) scope : string)))
       | "__hxhx_for_key_value" -> raise (HxRuntime.Hx_return (Obj.repr (emitForKeyValueExpr (Obj.magic args) scope : string)))
       | "__hxhx_map_comprehension" -> raise (HxRuntime.Hx_return (Obj.repr (emitMapComprehensionExpr (Obj.magic args) scope : string)))
+      | "__hxhx_parenthesized" -> ignore (if HxArray.length args = 1 then raise (HxRuntime.Hx_return (Obj.repr (("(" ^ HxString.toStdString (emit (Obj.magic (HxArray.get (Obj.magic args) 0)) scope)) ^ ")" : string))) else ignore ())
       | "__hxhx_spread" -> ignore (let tempResult = ref ("" : string) in (
         ignore (if HxArray.length args > 0 then let __assign_516 = ("..." ^ HxString.toStdString (emit (Obj.magic (HxArray.get (Obj.magic args) 0)) scope) : string) in (
           tempResult := __assign_516;
