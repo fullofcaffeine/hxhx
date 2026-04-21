@@ -274,13 +274,15 @@ class SourceNativeBackend {
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringCall(target, renderExpr(target, args[0]));
 			case EField(receiver, field):
-				fieldAccess(target, renderExpr(target, receiver), field);
+				fieldAccessExpr(target, receiver, field);
 			case EArrayAccess(receiver, index):
 				arrayAccessExpr(target, receiver, index);
 			case ECall(ELambda(lambdaArgs, lambdaBody), args):
 				lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
 			case ECall(ESuper, args):
 				superConstructorCallExpr(target, args);
+			case ECall(EField(receiver, field), args):
+				fieldCallExpr(target, receiver, field, args);
 			case ECall(callee, args):
 				callExpr(target, renderExpr(target, callee), args);
 			case EArrayDecl(items):
@@ -421,7 +423,30 @@ class SourceNativeBackend {
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 				}
-			case Java, Cs, Php, Lua:
+			case Php:
+				switch (expr) {
+					case EIdent(name):
+						"__hxhx_post_update_var(" + valueName(target, name) + ", " + Std.string(delta) + ")";
+					case EField(receiver, field):
+						"__hxhx_post_update_field("
+						+ renderExpr(target, receiver)
+						+ ", "
+						+ quoteString(sanitizeTypeName(field))
+						+ ", "
+						+ Std.string(delta)
+						+ ")";
+					case EArrayAccess(receiver, index):
+						"__hxhx_post_update_index("
+						+ renderExpr(target, receiver)
+						+ ", "
+						+ renderExpr(target, index)
+						+ ", "
+						+ Std.string(delta)
+						+ ")";
+					case _:
+						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
+				}
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + (delta < 0 ? "post--" : "post++");
 		};
 	}
@@ -475,6 +500,20 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function fieldAccessExpr(target:SourceNativeTarget, receiver:HxExpr, field:String):String {
+		return switch (target) {
+			case Php:
+				final typePath = phpStaticTypePath(receiver);
+				if (typePath != null) {
+					phpStaticPropertyAccess(typePath, field);
+				} else {
+					fieldAccess(target, renderExpr(target, receiver), field);
+				}
+			case Python, Java, Cs, Lua:
+				fieldAccess(target, renderExpr(target, receiver), field);
+		};
+	}
+
 	static function superExpr(target:SourceNativeTarget):String {
 		return switch (target) {
 			case Python: "super()";
@@ -495,6 +534,20 @@ class SourceNativeBackend {
 	static function callExpr(target:SourceNativeTarget, callee:String, args:Array<HxExpr>):String {
 		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
 		return callee + "(" + rendered + ")";
+	}
+
+	static function fieldCallExpr(target:SourceNativeTarget, receiver:HxExpr, field:String, args:Array<HxExpr>):String {
+		return switch (target) {
+			case Php:
+				final typePath = phpStaticTypePath(receiver);
+				if (typePath != null) {
+					phpStaticMethodCall(typePath, field, args);
+				} else {
+					callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), args);
+				}
+			case Python, Java, Cs, Lua:
+				callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), args);
+		};
 	}
 
 	static function lambdaCallExpr(target:SourceNativeTarget, lambdaArgs:Array<String>, lambdaBody:HxExpr, callArgs:Array<HxExpr>):String {
@@ -697,7 +750,7 @@ class SourceNativeBackend {
 
 	static function constructorExpr(target:SourceNativeTarget, typePath:String, args:Array<HxExpr>):String {
 		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
-		final safeType = sanitizeDottedPath(typePath);
+		final safeType = sanitizeTypePath(target, typePath);
 		return switch (target) {
 			case Python: safeType + "(" + rendered + ")";
 			case Java: "new " + safeType + "(" + rendered + ")";
@@ -707,10 +760,80 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function sanitizeTypePath(target:SourceNativeTarget, path:String):String {
+		return switch (target) {
+			case Php:
+				sanitizePhpTypePath(path);
+			case Python, Java, Cs, Lua:
+				sanitizeDottedPath(path);
+		};
+	}
+
 	static function sanitizeDottedPath(path:String):String {
 		if (path == null || path.length == 0)
 			return "Unknown";
 		return [for (part in path.split(".")) sanitizeTypeName(part)].join(".");
+	}
+
+	static function sanitizePhpTypePath(path:String):String {
+		if (path == null || path.length == 0)
+			return "Unknown";
+		return [for (part in path.split(".")) sanitizeTypeName(part)].join("\\");
+	}
+
+	static function phpStaticTypePath(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EIdent(name):
+				if (looksLikeTypePathRoot(name)) sanitizeTypeName(name) else null;
+			case EField(receiver, field):
+				final prefix = phpStaticTypePathPrefix(receiver);
+				if (prefix == null) {
+					null;
+				} else {
+					prefix + "\\" + sanitizeTypeName(field);
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function phpStaticTypePathPrefix(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EIdent(name):
+				if (looksLikeTypePathSegment(name)) sanitizeTypeName(name) else null;
+			case EField(receiver, field):
+				final prefix = phpStaticTypePathPrefix(receiver);
+				if (prefix == null) {
+					null;
+				} else {
+					prefix + "\\" + sanitizeTypeName(field);
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function looksLikeTypePathRoot(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		final ch = name.charAt(0);
+		return (ch >= "A" && ch <= "Z");
+	}
+
+	static function looksLikeTypePathSegment(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		final ch = name.charAt(0);
+		return (ch >= "A" && ch <= "Z") || (ch >= "a" && ch <= "z");
+	}
+
+	static function phpStaticPropertyAccess(typePath:String, field:String):String {
+		return typePath + "::$" + sanitizeTypeName(field);
+	}
+
+	static function phpStaticMethodCall(typePath:String, field:String, args:Array<HxExpr>):String {
+		final rendered = [for (arg in args) renderExpr(Php, arg)].join(", ");
+		return typePath + "::" + sanitizeTypeName(field) + "(" + rendered + ")";
 	}
 
 	static function rangeIterable(target:SourceNativeTarget, start:HxExpr, end:HxExpr):String {
@@ -740,7 +863,7 @@ class SourceNativeBackend {
 			case EIdent(name):
 				valueName(target, name);
 			case EField(receiver, field):
-				fieldAccess(target, renderExpr(target, receiver), field);
+				fieldAccessExpr(target, receiver, field);
 			case _:
 				throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 		};
@@ -1161,7 +1284,9 @@ class SourceNativeBackend {
 		return switch (target) {
 			case Python:
 				renderPythonSupportClasses(program, decl, mainClassName);
-			case Java | Cs | Php | Lua:
+			case Php:
+				renderPhpSupportClasses(program, decl, mainClassName);
+			case Java | Cs | Lua:
 				[];
 		};
 	}
@@ -1215,6 +1340,111 @@ class SourceNativeBackend {
 			for (line in renderPythonHelperClass(cls))
 				out.push(line);
 		}
+		return out;
+	}
+
+	static function renderPhpSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
+		final out = new Array<String>();
+		final seen = new Map<String, Bool>();
+		final pending = new Array<HxClassDecl>();
+		final mainPackage = HxModuleDecl.getPackagePath(decl);
+		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
+			if (HxModuleDecl.getPackagePath(moduleDecl) != mainPackage)
+				return;
+			if (isStdSourceFile(filePath))
+				return;
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final className = sanitizeTypeName(HxClassDecl.getName(cls));
+				if (className == mainClassName || seen.exists(className))
+					continue;
+				seen.set(className, true);
+				pending.push(cls);
+			}
+		}
+		appendDeclClasses(decl, "");
+		for (typed in program.getTypedModules())
+			appendDeclClasses(typed.getParsed().getDecl(), typed.getParsed().getFilePath());
+		for (cls in pending) {
+			if (out.length > 0)
+				out.push("");
+			for (line in renderPhpHelperClass(cls))
+				out.push(line);
+		}
+		return out;
+	}
+
+	static function isStdSourceFile(filePath:String):Bool {
+		if (filePath == null || filePath.length == 0)
+			return false;
+		final normalized = StringTools.replace(filePath, "\\", "/");
+		return normalized.indexOf("/std/") >= 0 || StringTools.startsWith(normalized, "std/");
+	}
+
+	static function renderPhpHelperClass(cls:HxClassDecl):Array<String> {
+		final className = sanitizeTypeName(HxClassDecl.getName(cls));
+		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
+		final classHeader = baseName == null
+			|| baseName.length == 0 ? "class " + className + " {" : "class "
+				+ className
+				+ " extends "
+				+ baseName
+				+ " {";
+		final out = [classHeader];
+		var memberCount = 0;
+		final instanceFields = new Array<HxFieldDecl>();
+		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = sanitizeTypeName(HxFieldDecl.getName(field));
+			if (!HxFieldDecl.getIsStatic(field)) {
+				instanceFields.push(field);
+				out.push("  public $" + fieldName + ";");
+				memberCount += 1;
+				continue;
+			}
+			final init = HxFieldDecl.getInit(field);
+			final rhs = init == null ? defaultValue(Php) : renderExpr(Php, init);
+			out.push("  public static $" + fieldName + " = " + rhs + ";");
+			memberCount += 1;
+		}
+		var sawConstructor = false;
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getName(fn) == "main")
+				continue;
+			final isStatic = HxFunctionDecl.getIsStatic(fn);
+			final isCtor = HxFunctionDecl.getName(fn) == "new";
+			if (isCtor)
+				sawConstructor = true;
+			final args = [
+				for (arg in HxFunctionDecl.getArgs(fn))
+					valueName(Php, HxFunctionArg.getName(arg))
+			].join(", ");
+			final methodName = isCtor ? "__construct" : sanitizeTypeName(HxFunctionDecl.getName(fn));
+			final prefix = isStatic && !isCtor ? "  public static function " : "  public function ";
+			out.push(prefix + methodName + "(" + args + ") {");
+			if (isCtor) {
+				for (field in instanceFields) {
+					final init = HxFieldDecl.getInit(field);
+					final rhs = init == null ? defaultValue(Php) : renderExpr(Php, init);
+					out.push("    $this->" + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs + ";");
+				}
+			}
+			for (line in renderStmts(Php, HxFunctionDecl.getBody(fn), "    "))
+				out.push(line);
+			out.push("  }");
+			memberCount += 1;
+		}
+		if (!sawConstructor && instanceFields.length > 0) {
+			out.push("  public function __construct() {");
+			for (field in instanceFields) {
+				final init = HxFieldDecl.getInit(field);
+				final rhs = init == null ? defaultValue(Php) : renderExpr(Php, init);
+				out.push("    $this->" + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs + ";");
+			}
+			out.push("  }");
+			memberCount += 1;
+		}
+		if (memberCount == 0)
+			out.push("");
+		out.push("}");
 		return out;
 	}
 
@@ -1285,6 +1515,13 @@ class SourceNativeBackend {
 		return sanitizeTypeName(parts[parts.length - 1]);
 	}
 
+	static function phpBaseClassName(extendsPath:String):String {
+		if (extendsPath == null || extendsPath.length == 0)
+			return "";
+		final parts = extendsPath.split(".");
+		return sanitizeTypeName(parts[parts.length - 1]);
+	}
+
 	static function renderProgram(target:SourceNativeTarget, program:GenIrProgram, decl:HxModuleDecl, className:String, body:Array<HxStmt>):String {
 		final lines = new Array<String>();
 		switch (target) {
@@ -1337,11 +1574,56 @@ class SourceNativeBackend {
 			case Php:
 				lines.push("<?php");
 				lines.push("// Generated by hxhx Stage3 PHP source backend MVP");
+				lines.push("namespace php {");
+				lines.push("  class Web {");
+				lines.push("    public static $isModNeko = false;");
+				lines.push("    public static function setHeader($name, $value) {");
+				lines.push("      if (!headers_sent()) {");
+				lines.push("        header($name . \": \" . $value);");
+				lines.push("      }");
+				lines.push("    }");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("namespace {");
+				lines.push("class __HxArray {");
+				lines.push("  private $items;");
+				lines.push("  public function __construct($items) {");
+				lines.push("    $this->items = $items;");
+				lines.push("  }");
+				lines.push("  public function indexOf($value) {");
+				lines.push("    $index = array_search($value, $this->items, true);");
+				lines.push("    return $index === false ? -1 : $index;");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("function __hxhx_post_update_var(&$value, $delta) {");
+				lines.push("  $old = $value;");
+				lines.push("  $value = $old + $delta;");
+				lines.push("  return $old;");
+				lines.push("}");
+				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
+				lines.push("  $old = $obj->$field;");
+				lines.push("  $obj->$field = $old + $delta;");
+				lines.push("  return $old;");
+				lines.push("}");
+				lines.push("function __hxhx_post_update_index(&$obj, $index, $delta) {");
+				lines.push("  $old = $obj[$index];");
+				lines.push("  $obj[$index] = $old + $delta;");
+				lines.push("  return $old;");
+				lines.push("}");
+				lines.push("class Sys {");
+				lines.push("  public static function args() {");
+				lines.push("    $argv = $GLOBALS[\"argv\"] ?? [];");
+				lines.push("    return new __HxArray(array_slice($argv, 1));");
+				lines.push("  }");
+				lines.push("}");
+				for (line in renderSupportClasses(target, program, decl, className))
+					lines.push(line);
 				lines.push("function " + className + "_main() {");
 				for (line in renderStmts(target, body, "  "))
 					lines.push(line);
 				lines.push("}");
 				lines.push(className + "_main();");
+				lines.push("}");
 			case Lua:
 				lines.push("-- Generated by hxhx Stage3 Lua source backend MVP");
 				lines.push("local function main()");

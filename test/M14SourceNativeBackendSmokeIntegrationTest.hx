@@ -300,6 +300,60 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStaticClassAccessProgram():GenIrProgram {
+		final src = [
+			"class Helper {",
+			"  public static function message() {",
+			"    return \"helper\";",
+			"  }",
+			"}",
+			"",
+			"class Flags {",
+			"  public static var ready:Bool = true;",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    if (Flags.ready) {",
+			"      Sys.println(Helper.message());",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpSysArgsProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var verbose = Sys.args().indexOf(\"-v\") >= 0;",
+			"    Sys.println(Std.string(verbose));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpWebProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    if (php.Web.isModNeko) {",
+			"      php.Web.setHeader(\"Content-Type\", \"text/plain\");",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -811,6 +865,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpPostfixExpressions():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_postfix_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(postfixExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_post_update_var(&$value, $delta) {", "PHP source backend should emit the postfix local helper");
+		assertContains(content, "function __hxhx_post_update_field($obj, $field, $delta) {", "PHP source backend should emit the postfix field helper");
+		assertContains(content, "function __hxhx_post_update_index(&$obj, $index, $delta) {", "PHP source backend should emit the postfix index helper");
+		assertContains(content, "$oldX = __hxhx_post_update_var($x, 1);", "PHP identifier postfix expressions should preserve old-value semantics");
+		assertContains(content, "$oldCount = __hxhx_post_update_field($info, \"count\", 1);",
+			"PHP field postfix expressions should lower through the field helper");
+		assertContains(content, "$oldFirst = __hxhx_post_update_index($values, 0, 1);",
+			"PHP indexed postfix expressions should lower through the index helper");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertUnsignedRightShiftExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_ushr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -837,6 +910,70 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "def message():", "helper static methods should be emitted");
 		assertContains(content, "return \"helper\"", "helper method bodies should be rendered");
 		assertContains(content, "print(Helper.message())", "main should still be able to call emitted helper classes");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpStaticClassAccess():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_static_class_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStaticClassAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Helper {", "PHP support classes should be emitted before main");
+		assertContains(content, "public static function message() {", "PHP support classes should include static methods");
+		assertContains(content, "if (Flags::$ready) {", "PHP static property access should use class property syntax");
+		assertContains(content, "echo Helper::message() . PHP_EOL;", "PHP static method access should use class method syntax");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpHelperInstanceFieldEmission():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_helper_field_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(helperInstanceFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Helper {", "PHP helper classes with instance fields should be emitted");
+		assertContains(content, "public $value;", "PHP helper instance fields should be declared");
+		assertContains(content, "public function __construct() {", "PHP helper constructors should lower to __construct");
+		assertContains(content, "$this->value = \"seed\";", "PHP helper instance fields should initialize inside __construct");
+		assertContains(content, "public function message() {", "PHP helper instance methods should be emitted");
+		assertContains(content, "return $this->value;", "PHP instance methods should read lowered fields");
+		assertContains(content, "$helper = new Helper();", "PHP main should instantiate helper classes");
+		assertContains(content, "echo $helper->message() . PHP_EOL;", "PHP main should call helper instance methods");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpRuntimeShim():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_runtime_shim_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpSysArgsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class __HxArray", "PHP source backend should emit a minimal array helper");
+		assertContains(content, "class Sys", "PHP source backend should emit a minimal Sys helper");
+		assertContains(content, "return new __HxArray(array_slice($argv, 1));", "Sys.args should expose CLI args without the script name");
+		assertContains(content, "$verbose = (Sys::args()->indexOf(\"-v\") >= 0);", "Sys.args should lower as a static call usable by indexOf");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpWebShim():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpWebProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "namespace php {", "PHP source backend should emit the php.Web namespace shim");
+		assertContains(content, "class Web", "PHP source backend should emit the php.Web class shim");
+		assertContains(content, "if (php\\Web::$isModNeko) {", "php.Web static fields should lower through PHP static property syntax");
+		assertContains(content, "php\\Web::setHeader(\"Content-Type\", \"text/plain\");", "php.Web static calls should lower through PHP static method syntax");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -1013,8 +1150,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpAnonymousObjectExpression();
 		assertLoopControlStatements();
 		assertPostfixExpressions();
+		assertPhpPostfixExpressions();
 		assertUnsignedRightShiftExpression();
 		assertHelperClassEmission();
+		assertPhpStaticClassAccess();
+		assertPhpRuntimeShim();
+		assertPhpWebShim();
+		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();
 		assertCrossModuleClassEmission();
