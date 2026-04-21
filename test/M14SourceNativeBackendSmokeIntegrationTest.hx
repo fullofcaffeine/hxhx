@@ -2683,6 +2683,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Template {", "PHP source backend should emit a minimal haxe.Template runtime shim");
 		assertContains(content, "function __hxhx_equals($left, $right)",
 			"PHP source backend should emit Haxe-style equality support for abstract-backed values");
+		assertContains(content, "function __hxhx_numeric_value($value)",
+			"PHP source backend should emit numeric unwrapping support for abstract-backed values");
 		assertContains(content, "$tpl = __hxhx_to_template_wrap(\"Hi ::t::\");",
 			"PHP abstract @:from-style typed variable declarations should construct the wrapper");
 		assertContains(content, "$text = __hxhx_to_string_value($tpl);", "PHP abstract @:to-style String declarations should use string conversion");
