@@ -827,17 +827,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function javaSupportClassProgram():GenIrProgram {
 		final src = [
+			"import Map;",
+			"import Type;",
+			"import StringTools;",
+			"",
 			"class Helper {",
 			"  public function new() {}",
 			"  public function label() {",
 			"    return \"helper\";",
 			"  }",
+			"  public function assert(message, ?pos) { }",
+			"  public function setNative(native) { }",
+			"  public function setUnderscore(_) { }",
 			"}",
 			"",
 			"class Main {",
 			"  static function main() {",
 			"    var helper = new Helper();",
 			"    Sys.println(Std.string(helper.label()));",
+			"    helper.assert(\"ok\");",
 			"  }",
 			"}",
 		].join("\n");
@@ -1813,7 +1821,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(FileSystem.exists(mainSourcePath), "Java source backend should emit the main Java source file");
 		assertTrue(FileSystem.exists(helperSourcePath), "Java source backend should emit sibling support classes before javac");
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should package a jar after compiling support classes");
-		assertContains(File.getContent(helperSourcePath), "public class Helper", "Java support source should declare the sibling class");
+		final mainContent = File.getContent(mainSourcePath);
+		final helperContent = File.getContent(helperSourcePath);
+		assertContains(helperContent, "public class Helper", "Java support source should declare the sibling class");
+		assertContains(helperContent, "assert_", "Java support source should sanitize reserved method names");
+		assertContains(helperContent, "Object native_", "Java support source should sanitize reserved argument names");
+		assertContains(helperContent, "Object __", "Java support source should sanitize underscore-only argument names");
+		assertContains(mainContent, "helper.assert_(\"ok\")", "Java main source should call sanitized support method names");
+		assertNotContains(mainContent, "import Map;", "Java main source should not import default-package classes");
+		assertNotContains(helperContent, "import Type;", "Java support source should not import default-package classes");
 		deleteRecursive(tmpRoot);
 	}
 

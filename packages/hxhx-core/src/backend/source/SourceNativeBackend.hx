@@ -299,23 +299,23 @@ class SourceNativeBackend {
 	}
 
 	static function javaSourcePath(sourceDir:String, packagePath:String, className:String):String {
-		final cleanClass = sanitizeTypeName(className);
+		final cleanClass = sanitizeJavaIdentifier(className);
 		if (packagePath == null || packagePath.length == 0)
 			return Path.join([sourceDir, cleanClass + ".java"]);
 		final parts = [
 			for (part in packagePath.split("."))
-				sanitizeTypeName(part)
+				sanitizeJavaIdentifier(part)
 		];
 		return Path.join([sourceDir].concat(parts).concat([cleanClass + ".java"]));
 	}
 
 	static function javaQualifiedClassName(packagePath:String, className:String):String {
-		final cleanClass = sanitizeTypeName(className);
+		final cleanClass = sanitizeJavaIdentifier(className);
 		if (packagePath == null || packagePath.length == 0)
 			return cleanClass;
 		return [
 			for (part in packagePath.split("."))
-				sanitizeTypeName(part)
+				sanitizeJavaIdentifier(part)
 		].concat([cleanClass]).join(".");
 	}
 
@@ -330,11 +330,31 @@ class SourceNativeBackend {
 		return out.toString();
 	}
 
+	static function sanitizeJavaIdentifier(name:String):String {
+		final clean = sanitizeTypeName(name);
+		return isJavaReservedIdentifier(clean) ? clean + "_" : clean;
+	}
+
+	static function isJavaReservedIdentifier(name:String):Bool {
+		return switch (name == null ? "" : name) {
+			case "_" | "abstract" | "assert" | "boolean" | "break" | "byte" | "case" | "catch" | "char" | "class" | "const" | "continue" | "default" | "do" |
+				"double" | "else" | "enum" | "extends" | "final" | "finally" | "float" | "for" | "goto" | "if" | "implements" | "import" | "instanceof" |
+				"int" | "interface" | "long" | "native" | "new" | "package" | "private" | "protected" | "public" | "return" | "short" | "static" |
+				"strictfp" | "super" | "switch" | "synchronized" | "this" | "throw" | "throws" | "transient" | "try" | "void" | "volatile" | "while" | "var" |
+				"yield" | "record" | "sealed" | "permits" | "non_sealed":
+				true;
+			case _:
+				false;
+		}
+	}
+
 	static function sanitizeTypeNameForTarget(target:SourceNativeTarget, name:String):String {
 		return switch (target) {
 			case Php:
 				sanitizePhpTypeName(name);
-			case Python, Java, Cs, Lua:
+			case Java:
+				sanitizeJavaIdentifier(name);
+			case Python, Cs, Lua:
 				sanitizeTypeName(name);
 		};
 	}
@@ -860,7 +880,7 @@ class SourceNativeBackend {
 		return switch (target) {
 			case Php: "$" + sanitizePhpValueName(name);
 			case Python: clean;
-			case Java: clean;
+			case Java: sanitizeJavaIdentifier(name);
 			case Cs: clean;
 			case Lua: clean;
 		};
@@ -886,7 +906,7 @@ class SourceNativeBackend {
 	}
 
 	static function fieldAccess(target:SourceNativeTarget, receiver:String, field:String):String {
-		final safeField = sanitizeTypeName(field);
+		final safeField = target == Java ? sanitizeJavaIdentifier(field) : sanitizeTypeName(field);
 		return switch (target) {
 			case Php: receiver + "->" + safeField;
 			case Python: receiver + "." + safeField;
@@ -1322,7 +1342,7 @@ class SourceNativeBackend {
 	static function javaForInExprStatements(iterable:HxExpr, bodyExpr:HxExpr, continuation:HxExpr, indent:String, appendReturn:Bool):Array<String> {
 		return switch (bodyExpr) {
 			case ELambda(args, body) if (args.length == 1):
-				final cleanName = sanitizeTypeName(args[0]);
+				final cleanName = sanitizeJavaIdentifier(args[0]);
 				final out = [indent + "for (var " + cleanName + " : " + renderExpr(Java, iterable) + ") {"];
 				for (line in javaExprAsStatements(body, indent + indentStep(Java), false))
 					out.push(line);
@@ -2606,7 +2626,7 @@ class SourceNativeBackend {
 				for (line in renderStmt(target, body, childIndent))
 					out.push(line);
 			case Java:
-				out.push(indent + "for (var " + cleanName + " : " + source + ") {");
+				out.push(indent + "for (var " + sanitizeJavaIdentifier(name) + " : " + source + ") {");
 				for (line in renderStmt(target, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
@@ -3068,7 +3088,7 @@ class SourceNativeBackend {
 		return switch (target) {
 			case Python: name + " = " + rhs;
 			case Lua: "local " + name + " = " + rhs;
-			case Java: "var " + name + " = " + rhs + ";";
+			case Java: "var " + sanitizeJavaIdentifier(name) + " = " + rhs + ";";
 			case Cs: "var " + name + " = " + rhs + ";";
 			case Php: "$" + sanitizePhpValueName(name) + " = " + rhs + ";";
 		};
@@ -3279,10 +3299,16 @@ class SourceNativeBackend {
 			out.push("package " + javaTypePath(packagePath) + ";");
 		for (imp in HxModuleDecl.getImports(decl)) {
 			final clean = javaTypePath(imp);
-			if (clean.length > 0)
+			if (javaImportPathIsValid(clean))
 				out.push("import " + clean + ";");
 		}
 		return out;
+	}
+
+	static function javaImportPathIsValid(path:String):Bool {
+		if (path == null || path.length == 0)
+			return false;
+		return path.indexOf(".") > 0;
 	}
 
 	static function javaTypePath(path:String):String {
@@ -3290,7 +3316,7 @@ class SourceNativeBackend {
 			return "";
 		return [
 			for (part in path.split("."))
-				part == "*" ? "*" : sanitizeTypeName(part)
+				part == "*" ? "*" : sanitizeJavaIdentifier(part)
 		].join(".");
 	}
 
@@ -3300,11 +3326,11 @@ class SourceNativeBackend {
 			out.push(line);
 		if (out.length > 1)
 			out.push("");
-		final className = sanitizeTypeName(HxClassDecl.getName(cls));
+		final className = sanitizeJavaIdentifier(HxClassDecl.getName(cls));
 		out.push("public class " + className + " {");
 		final emittedFields = new Map<String, Bool>();
 		for (field in HxClassDecl.getFields(cls)) {
-			final fieldName = sanitizeTypeName(HxFieldDecl.getName(field));
+			final fieldName = sanitizeJavaIdentifier(HxFieldDecl.getName(field));
 			if (emittedFields.exists(fieldName))
 				continue;
 			emittedFields.set(fieldName, true);
@@ -3319,24 +3345,28 @@ class SourceNativeBackend {
 				continue;
 			final args = HxFunctionDecl.getArgs(fn);
 			if (fnName == "new") {
-				final key = "new#" + Std.string(args.length);
+				sawConstructor = true;
+				for (count in javaStubArityRange(args)) {
+					final key = "new#" + Std.string(count);
+					if (emittedMethods.exists(key))
+						continue;
+					emittedMethods.set(key, true);
+					out.push("  public " + className + "(" + javaFunctionArgs(args, count) + ") {");
+					out.push("  }");
+				}
+				continue;
+			}
+			final methodName = sanitizeJavaIdentifier(fnName);
+			for (count in javaStubArityRange(args)) {
+				final key = methodName + "#" + Std.string(count);
 				if (emittedMethods.exists(key))
 					continue;
 				emittedMethods.set(key, true);
-				sawConstructor = true;
-				out.push("  public " + className + "(" + javaFunctionArgs(args) + ") {");
+				final prefix = HxFunctionDecl.getIsStatic(fn) ? "  public static Object " : "  public Object ";
+				out.push(prefix + methodName + "(" + javaFunctionArgs(args, count) + ") {");
+				out.push("    return null;");
 				out.push("  }");
-				continue;
 			}
-			final methodName = sanitizeTypeName(fnName);
-			final key = methodName + "#" + Std.string(args.length);
-			if (emittedMethods.exists(key))
-				continue;
-			emittedMethods.set(key, true);
-			final prefix = HxFunctionDecl.getIsStatic(fn) ? "  public static Object " : "  public Object ";
-			out.push(prefix + methodName + "(" + javaFunctionArgs(args) + ") {");
-			out.push("    return null;");
-			out.push("  }");
 		}
 		if (!sawConstructor) {
 			out.push("  public " + className + "() {");
@@ -3346,10 +3376,23 @@ class SourceNativeBackend {
 		return out.join("\n");
 	}
 
-	static function javaFunctionArgs(args:Array<HxFunctionArg>):String {
+	static function javaStubArityRange(args:Array<HxFunctionArg>):Array<Int> {
+		final max = args == null ? 0 : args.length;
+		var required = max;
+		for (i in 0...max) {
+			if (HxFunctionArg.getIsOptional(args[i])) {
+				required = i;
+				break;
+			}
+		}
+		return [for (count in required...max + 1) count];
+	}
+
+	static function javaFunctionArgs(args:Array<HxFunctionArg>, ?count:Int):String {
+		final limit = count == null ? (args == null ? 0 : args.length) : count;
 		return [
-			for (arg in args)
-				"Object " + sanitizeTypeName(HxFunctionArg.getName(arg))
+			for (i in 0...limit)
+				"Object " + sanitizeJavaIdentifier(HxFunctionArg.getName(args[i]))
 		].join(", ");
 	}
 
