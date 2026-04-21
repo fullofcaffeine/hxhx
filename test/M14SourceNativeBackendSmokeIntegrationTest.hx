@@ -874,7 +874,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var helper = new Helper();",
 			"    Sys.println(Std.string(helper.label()));",
 			"    helper.assert(\"ok\");",
-			"    testTopLevel(i -> Sys.println(i));",
+			"    testTopLevel(i -> Sys.println(\"callback\"));",
 			"  }",
 			"  static function multiply(a, b) {",
 			"    return a * b;",
@@ -1914,12 +1914,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(mainContent, "public static Object multiply(Object a, Object b)", "Java main helpers should emit compile-only static methods");
 		assertContains(mainContent, "testTopLevel(java.util.function.Function<Object, Object> arg0)",
 			"Java entrypoint body direct helper calls should expose lambda-compatible overloads");
+		assertContains(mainContent, "return arg0.apply(null)", "Java lambda-compatible helper stubs should invoke callbacks");
 		assertContains(mainContent, "helper.assert_(\"ok\")", "Java main source should call sanitized support method names");
 		assertNotContains(mainContent, "import Map;", "Java main source should not import default-package classes");
 		assertNotContains(helperContent, "import Type;", "Java support source should not import default-package classes");
 		final secondResult = backend.emit(javaSupportClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
 		assertTrue(secondResult.entryPath == jarPath, "Java source backend should reuse the same jar path on repeated output-dir emits");
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should recompile generated import/helper stubs on repeated output-dir emits");
+		final secondRun = commandOutput("java", ["-jar", jarPath]);
+		assertTrue(secondRun.code == 0, "Java source backend jar should still run after repeated emit: " + secondRun.stderr);
+		assertContains(secondRun.stdout, "callback", "Java functional helper stubs should execute callback bodies");
 		deleteRecursive(tmpRoot);
 	}
 

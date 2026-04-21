@@ -3799,6 +3799,7 @@ class SourceNativeBackend {
 		if (!emittedMethods.exists(consumerKey)) {
 			emittedMethods.set(consumerKey, true);
 			out.push(prefix + methodName + "(java.util.function.Consumer<Object> arg0) {");
+			out.push("    arg0.accept(null);");
 			out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
 			out.push("  }");
 		}
@@ -3806,16 +3807,20 @@ class SourceNativeBackend {
 		if (!emittedMethods.exists(functionKey)) {
 			emittedMethods.set(functionKey, true);
 			out.push(prefix + methodName + "(java.util.function.Function<Object, Object> arg0) {");
-			out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
+			out.push("    return " + javaFunctionalDefaultReturn(returnType, "arg0.apply(null)") + ";");
 			out.push("  }");
 		}
 		final biFunctionKey = methodName + "#bifunction";
 		if (!emittedMethods.exists(biFunctionKey)) {
 			emittedMethods.set(biFunctionKey, true);
 			out.push(prefix + methodName + "(java.util.function.BiFunction<Object, Object, Object> arg0) {");
-			out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
+			out.push("    return " + javaFunctionalDefaultReturn(returnType, "arg0.apply(null, null)") + ";");
 			out.push("  }");
 		}
+	}
+
+	static function javaFunctionalDefaultReturn(returnType:String, callbackExpr:String):String {
+		return returnType == "Object" ? callbackExpr : javaSupportDefaultReturn(returnType);
 	}
 
 	static function appendJavaEntryBodyCallSupportMembers(out:Array<String>, emittedMethods:Map<String, Bool>, body:Array<HxStmt>, className:String):Void {
