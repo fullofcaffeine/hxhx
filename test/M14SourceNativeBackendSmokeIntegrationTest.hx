@@ -920,6 +920,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStringFromCharCodeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(String.fromCharCode(77));",
+			"    Sys.println(String.fromCharCode(-1));",
+			"    Sys.println(String.fromCharCode(256));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -2044,6 +2059,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStringFromCharCode():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_from_char_code_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStringFromCharCodeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_string_from_char_code($code)", "PHP runtime should include a String.fromCharCode helper");
+		assertContains(content, "echo __hxhx_string_from_char_code(77) . PHP_EOL;", "PHP String.fromCharCode should lower through the helper");
+		assertContains(content, "echo __hxhx_string_from_char_code((-1)) . PHP_EOL;", "PHP negative char codes should route through the helper");
+		assertContains(content, "echo __hxhx_string_from_char_code(256) . PHP_EOL;", "PHP oversized char codes should route through the helper");
+		assertNotContains(content, "String::fromCharCode", "PHP should not emit calls to a missing String class");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpWebShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2727,6 +2758,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpMathRuntime();
 		assertPhpTernaryAssignmentLogical();
 		assertPhpStringIndexOf();
+		assertPhpStringFromCharCode();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();

@@ -1842,6 +1842,8 @@ class SourceNativeBackend {
 
 	static function phpStaticMethodCall(typePath:String, field:String, args:Array<HxExpr>):String {
 		final rendered = [for (arg in args) renderExpr(Php, arg)].join(", ");
+		if (typePath == "String" && field == "fromCharCode" && args.length == 1)
+			return "__hxhx_string_from_char_code(" + rendered + ")";
 		return typePath + "::" + sanitizeTypeName(field) + "(" + rendered + ")";
 	}
 
@@ -3417,6 +3419,11 @@ class SourceNativeBackend {
 				lines.push("  }");
 				lines.push("  $pos = strrpos($haystack, $n);");
 				lines.push("  return $pos === false ? -1 : $pos;");
+				lines.push("}");
+				lines.push("function __hxhx_string_from_char_code($code) {");
+				lines.push("  $value = (int)$code;");
+				lines.push("  $value = (($value % 256) + 256) % 256;");
+				lines.push("  return chr($value);");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
 				lines.push("  $old = $obj->$field;");
