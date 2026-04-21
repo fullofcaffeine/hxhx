@@ -884,7 +884,7 @@ class SourceNativeBackend {
 	}
 
 	static function phpStringFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
-		if (!phpStringLikeReceiver(receiver) && !phpVariableStringMethod(field))
+		if (!phpStringLikeReceiver(receiver) && !phpVariableStringReceiver(receiver, field))
 			return null;
 		final renderedReceiver = renderExpr(Php, receiver);
 		final renderedArgs = [for (arg in args) renderExpr(Php, arg)];
@@ -904,10 +904,15 @@ class SourceNativeBackend {
 		};
 	}
 
-	static function phpVariableStringMethod(field:String):Bool {
-		return switch (field) {
-			case "split" | "charCodeAt" | "substr":
-				true;
+	static function phpVariableStringReceiver(receiver:HxExpr, field:String):Bool {
+		return switch (receiver) {
+			case EIdent(_):
+				switch (field) {
+					case "indexOf" | "lastIndexOf" | "split" | "charCodeAt" | "substr":
+						true;
+					case _:
+						false;
+				}
 			case _:
 				false;
 		};
