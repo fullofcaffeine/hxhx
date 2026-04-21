@@ -603,8 +603,42 @@ class SourceNativeBackend {
 				};
 				final renderedGuard = guardExpr == null ? "" : " if " + renderExpr(target, guardExpr);
 				"[" + renderedYield + " for " + binder + " in " + renderedIterable + renderedGuard + "]";
-			case Java, Cs, Php, Lua:
+			case Php:
+				final binder = valueName(target, name);
+				final renderedIterable = switch (iterable) {
+					case ERange(start, end):
+						rangeIterable(target, start, end);
+					case _:
+						renderExpr(target, iterable);
+				};
+				final renderedYield = phpArrayComprehensionYield(name, yieldExpr);
+				final out = [
+					"(function() {",
+					"  $__hxhx_result = [];",
+					"  foreach (" + renderedIterable + " as " + binder + ") {"
+				];
+				if (guardExpr == null) {
+					out.push("    $__hxhx_result[] = " + renderedYield + ";");
+				} else {
+					out.push("    if (" + renderExpr(target, guardExpr) + ") {");
+					out.push("      $__hxhx_result[] = " + renderedYield + ";");
+					out.push("    }");
+				}
+				out.push("  }");
+				out.push("  return $__hxhx_result;");
+				out.push("})()");
+				out.join("\n");
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: EArrayComprehension";
+		};
+	}
+
+	static function phpArrayComprehensionYield(binderName:String, yieldExpr:HxExpr):String {
+		return switch (yieldExpr) {
+			case ELambda(args, body):
+				lambdaExprWithPhpUse(args, body, [binderName]);
+			case _:
+				renderExpr(Php, yieldExpr);
 		};
 	}
 
@@ -623,6 +657,17 @@ class SourceNativeBackend {
 			case Lua:
 				"function(" + renderedArgs + ") return " + renderedBody + " end";
 		};
+	}
+
+	static function lambdaExprWithPhpUse(args:Array<String>, body:HxExpr, useNames:Array<String>):String {
+		final renderedArgs = [for (arg in args) valueName(Php, arg)].join(", ");
+		final renderedBody = renderExpr(Php, body);
+		final captures = [
+			for (name in useNames)
+				valueName(Php, name)
+		];
+		final useClause = captures.length == 0 ? "" : " use (" + captures.join(", ") + ")";
+		return "function(" + renderedArgs + ")" + useClause + " { return " + renderedBody + "; }";
 	}
 
 	static function switchExpr(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {

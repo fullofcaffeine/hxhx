@@ -415,6 +415,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpArrayComprehensionClosureProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var funcs = [for (i in 0...2) value -> value * i];",
+			"    Sys.println(Std.string(funcs[0](10)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1102,6 +1116,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpArrayComprehensionClosure():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_comprehension_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpArrayComprehensionClosureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$funcs = (function() {", "PHP array comprehensions should lower through an immediate closure");
+		assertContains(content, "foreach (range(0, 2 - 1) as $i) {", "PHP range comprehensions should lower through foreach");
+		assertContains(content, "$__hxhx_result[] = function($value) use ($i) { return ($value * $i); };",
+			"PHP closures yielded from comprehensions should capture the comprehension binder");
+		assertContains(content, "return $__hxhx_result;", "PHP array comprehensions should return the collected array");
+		assertContains(content, "echo strval($funcs[0](10)) . PHP_EOL;",
+			"PHP array-comprehension-derived functions should still be callable from later statements");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperInstanceFieldEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1297,6 +1329,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpMacroExpr();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();
+		assertPhpArrayComprehensionClosure();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();
