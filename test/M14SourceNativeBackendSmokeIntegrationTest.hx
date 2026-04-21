@@ -415,6 +415,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    var values = new Array();",
 			"    Sys.println(Std.string(values.length));",
+			"    var items = [1, 2, 3];",
+			"    Sys.println(Std.string(items.length));",
+			"    Sys.println(Std.string(\"abc\".length));",
 			"  }",
 			"}",
 		].join("\n");
@@ -2085,7 +2088,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$values = [];", "PHP Array constructor should lower to array literal syntax");
+		assertContains(content, "function __hxhx_length($value)", "PHP runtime should include a Haxe length helper");
+		assertContains(content, "echo strval(__hxhx_length($values)) . PHP_EOL;", "PHP array constructor length should use the Haxe length helper");
+		assertContains(content, "echo strval(__hxhx_length($items)) . PHP_EOL;", "PHP array literal length should use the Haxe length helper");
+		assertContains(content, "echo strval(__hxhx_length(\"abc\")) . PHP_EOL;", "PHP string length should use the Haxe length helper");
 		assertNotContains(content, "new Array()", "PHP should not emit reserved Array constructor syntax");
+		assertNotContains(content, "$items->length", "PHP arrays should not use object-property length access");
 		deleteRecursive(tmpRoot);
 	}
 

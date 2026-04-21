@@ -3340,6 +3340,7 @@ and fieldAccessExpr = fun target receiver field -> try let __fallback_result_268
         | HxExpr.ECast (_, _) -> 26
         | HxExpr.EUntyped _ -> 27
         | HxExpr.EUnsupported _ -> 28) = 7 then raise (HxRuntime.Hx_return (Obj.repr (phpSuperGetterCall (field : string) : string))) else ignore ());
+      ignore (if HxString.equals field "length" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_length(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic receiver))) ^ ")" : string))) else ());
       let typePath = (phpStaticTypePath (Obj.magic receiver) : string) in if typePath != Obj.magic (HxRuntime.hx_null) then let __assign_264 = (phpStaticPropertyAccess (typePath : string) (field : string) : string) in (
         tempResult := __assign_264;
         __assign_264
@@ -7102,6 +7103,13 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  if ($right == 0) return NAN;");
       ignore (HxArray.push lines "  if (is_float($left) || is_float($right)) return fmod($left, $right);");
       ignore (HxArray.push lines "  return $left % $right;");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_length($value) {");
+      ignore (HxArray.push lines "  if ($value instanceof __HxArray) return count($value->toArray());");
+      ignore (HxArray.push lines "  if (is_array($value)) return count($value);");
+      ignore (HxArray.push lines "  if (is_string($value)) return strlen($value);");
+      ignore (HxArray.push lines "  if (is_object($value) && property_exists($value, \"length\")) return $value->length;");
+      ignore (HxArray.push lines "  return 0;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_string_index_of($value, $needle, $start = 0) {");
       ignore (HxArray.push lines "  $s = strval($value);");

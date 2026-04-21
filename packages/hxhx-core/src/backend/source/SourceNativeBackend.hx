@@ -712,6 +712,8 @@ class SourceNativeBackend {
 						return phpSuperGetterCall(field);
 					case _:
 				}
+				if (field == "length")
+					return "__hxhx_length(" + renderExpr(target, receiver) + ")";
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
 					phpStaticPropertyAccess(typePath, field);
@@ -3298,6 +3300,13 @@ class SourceNativeBackend {
 				lines.push("  if ($right == 0) return NAN;");
 				lines.push("  if (is_float($left) || is_float($right)) return fmod($left, $right);");
 				lines.push("  return $left % $right;");
+				lines.push("}");
+				lines.push("function __hxhx_length($value) {");
+				lines.push("  if ($value instanceof __HxArray) return count($value->toArray());");
+				lines.push("  if (is_array($value)) return count($value);");
+				lines.push("  if (is_string($value)) return strlen($value);");
+				lines.push("  if (is_object($value) && property_exists($value, \"length\")) return $value->length;");
+				lines.push("  return 0;");
 				lines.push("}");
 				lines.push("function __hxhx_string_index_of($value, $needle, $start = 0) {");
 				lines.push("  $s = strval($value);");
