@@ -6883,6 +6883,14 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  $obj[$index] = $old + $delta;");
       ignore (HxArray.push lines "  return $old;");
       ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "class Math {");
+      ignore (HxArray.push lines "  public static function isNaN($value) {");
+      ignore (HxArray.push lines "    return is_nan($value);");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function isFinite($value) {");
+      ignore (HxArray.push lines "    return is_finite($value);");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "class Sys {");
       ignore (HxArray.push lines "  public static function args() {");
       ignore (HxArray.push lines "    $argv = $GLOBALS[\"argv\"] ?? [];");

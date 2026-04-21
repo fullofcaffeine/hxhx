@@ -3277,6 +3277,14 @@ class SourceNativeBackend {
 				lines.push("  $obj[$index] = $old + $delta;");
 				lines.push("  return $old;");
 				lines.push("}");
+				lines.push("class Math {");
+				lines.push("  public static function isNaN($value) {");
+				lines.push("    return is_nan($value);");
+				lines.push("  }");
+				lines.push("  public static function isFinite($value) {");
+				lines.push("    return is_finite($value);");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("class Sys {");
 				lines.push("  public static function args() {");
 				lines.push("    $argv = $GLOBALS[\"argv\"] ?? [];");

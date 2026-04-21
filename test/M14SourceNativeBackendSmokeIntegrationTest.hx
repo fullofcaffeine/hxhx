@@ -848,6 +848,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpMathRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(Math.isNaN(5.0 % 0.0)));",
+			"    Sys.println(Std.string(Math.isFinite(1.5)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1920,6 +1934,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpMathRuntime():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_math_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpMathRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Math", "PHP source backend should emit a minimal Math runtime shim");
+		assertContains(content, "public static function isNaN($value)", "PHP Math shim should support isNaN");
+		assertContains(content, "public static function isFinite($value)", "PHP Math shim should support isFinite");
+		assertContains(content, "Math::isNaN(__hxhx_mod(5, 0))", "PHP Math.isNaN should be callable with modulo-derived NaN");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpWebShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2575,6 +2604,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpBitwiseEqualityPrecedence();
 		assertPhpModuloMultiplicationPrecedence();
 		assertPhpFloatModulo();
+		assertPhpMathRuntime();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();
