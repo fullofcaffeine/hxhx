@@ -447,6 +447,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return new MacroExpandedProgram([typed], false, []);
 	}
 
+	static function phpDuplicateMethodProgram():GenIrProgram {
+		final mainFn = new HxFunctionDecl("main", Public, true, [], "Void",
+			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("ok")]), HxPos.unknown())], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn], []);
+		final first = new HxFunctionDecl("test", Public, true, [], "String", [SReturn(EString("one"), HxPos.unknown())], "");
+		final second = new HxFunctionDecl("test", Public, true, [], "String", [SReturn(EString("two"), HxPos.unknown())], "");
+		final helperClass = new HxClassDecl("StaticOverloadClass", false, [first, second], []);
+		final decl = new HxModuleDecl("", [], mainClass, [mainClass, helperClass], false, false);
+		final parsed = new ParsedModule("", decl, "Main.hx");
+		final typed = new TypedModule(parsed, new TyModuleEnv("", [], new TyClassEnv("Main", [])));
+		return new MacroExpandedProgram([typed], false, []);
+	}
+
 	static function phpMacroTypeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1563,6 +1576,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpDuplicateMethodEmission():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_duplicate_method_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpDuplicateMethodProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		final first = content.indexOf("public static function test(");
+		assertTrue(first >= 0, "PHP support class should emit the test method once");
+		final second = content.indexOf("public static function test(", first + 1);
+		assertTrue(second < 0, "PHP support class should not emit duplicate method declarations");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2046,6 +2074,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpArrayConstructor();
 		assertPhpReservedTypeName();
 		assertPhpDuplicateStaticFieldEmission();
+		assertPhpDuplicateMethodEmission();
 		assertPhpMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();

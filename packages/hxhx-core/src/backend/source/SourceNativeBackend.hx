@@ -2542,6 +2542,7 @@ class SourceNativeBackend {
 		var memberCount = 0;
 		final instanceFields = new Array<HxFieldDecl>();
 		final emittedFields = new Map<String, Bool>();
+		final emittedMethods = new Map<String, Bool>();
 		if (phpClassNeedsThisValueSlot(cls)) {
 			out.push("  public $__hx_value;");
 			emittedFields.set("__hx_value", true);
@@ -2576,11 +2577,14 @@ class SourceNativeBackend {
 			final isCtor = HxFunctionDecl.getName(fn) == "new";
 			if (isCtor)
 				sawConstructor = true;
+			final methodName = isCtor ? "__construct" : sanitizeTypeName(HxFunctionDecl.getName(fn));
+			if (emittedMethods.exists(methodName))
+				continue;
+			emittedMethods.set(methodName, true);
 			final args = [
 				for (arg in HxFunctionDecl.getArgs(fn))
 					valueName(Php, HxFunctionArg.getName(arg))
 			].join(", ");
-			final methodName = isCtor ? "__construct" : sanitizeTypeName(HxFunctionDecl.getName(fn));
 			final prefix = isStatic && !isCtor ? "  public static function " : "  public function ";
 			out.push(prefix + methodName + "(" + args + ") {");
 			if (isCtor) {
