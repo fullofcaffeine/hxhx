@@ -815,15 +815,18 @@ let isPhpUnitTestHelperName = fun name -> let tempResult = ref (false : bool) in
 
 let phpTestHelperCall = fun callee renderedArgs -> try let __fallback_result_292 = (
   ignore (if not (StringTools.startsWith (callee : string) ("$" : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let name = (HxString.substr callee 1 (-1) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if isPhpUnitTestHelperName (name : string) then let __assign_289 = Obj.magic (((("$this->" ^ HxString.toStdString name) ^ "(") ^ HxString.toStdString renderedArgs) ^ ")" : string) in (
-      tempResult := __assign_289;
-      __assign_289
-    ) else let __assign_290 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempResult := __assign_290;
-      __assign_290
-    ));
-    !tempResult
+  let name = (HxString.substr callee 1 (-1) : string) in (
+    ignore (if HxString.equals name "f" && HxString.length renderedArgs = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+      ignore (if isPhpUnitTestHelperName (name : string) then let __assign_289 = Obj.magic (((("$this->" ^ HxString.toStdString name) ^ "(") ^ HxString.toStdString renderedArgs) ^ ")" : string) in (
+        tempResult := __assign_289;
+        __assign_289
+      ) else let __assign_290 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        tempResult := __assign_290;
+        __assign_290
+      ));
+      !tempResult
+    )
   )
 ) in Obj.magic __fallback_result_292 with
   | HxRuntime.Hx_return __ret_291 -> Obj.obj __ret_291

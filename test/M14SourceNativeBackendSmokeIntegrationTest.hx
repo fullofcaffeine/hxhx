@@ -770,6 +770,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpShadowedTestHelperClosureProgram():GenIrProgram {
+		final src = [
+			"class Test {",
+			"  public function new() {}",
+			"  function f(v:Bool) { }",
+			"  function unspec(f:()->Void) {",
+			"    f();",
+			"    this.f(false);",
+			"  }",
+			"}",
+			"",
+			"class Main extends Test {",
+			"  public function new() { super(); }",
+			"  static function main() {",
+			"    var main = new Main();",
+			"    main.unspec(function() {});",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpPlusSemanticsProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1903,6 +1927,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpShadowedTestHelperClosure():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_shadowed_test_helper_closure_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpShadowedTestHelperClosureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$f();", "PHP local closure calls named f should not be rewritten as unit helper dispatch");
+		assertContains(content, "$this->f(false);", "PHP explicit helper method calls should still dispatch through this");
+		assertNotContains(content, "$this->f();", "PHP should not call the boolean helper without its required value argument");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertNativeProtocolOptionalArgDecode():Void {
 		final encoded = [
 			"hxhx_frontend_v=2",
@@ -2748,6 +2786,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpSamePackageQualifiedStaticPath();
 		assertPhpInstanceFieldMethodCall();
 		assertPhpInheritedTestHelperCall();
+		assertPhpShadowedTestHelperClosure();
 		assertNativeProtocolOptionalArgDecode();
 		assertPhpPlusSemantics();
 		assertPhpBitwisePrecedence();

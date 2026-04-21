@@ -787,6 +787,8 @@ class SourceNativeBackend {
 		if (!StringTools.startsWith(callee, "$"))
 			return null;
 		final name = callee.substr(1);
+		if (name == "f" && renderedArgs.length == 0)
+			return null;
 		return if (isPhpUnitTestHelperName(name)) "$this->" + name + "(" + renderedArgs + ")" else null;
 	}
 
