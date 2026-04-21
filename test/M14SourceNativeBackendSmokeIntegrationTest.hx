@@ -300,18 +300,6 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 			"",
-			"class MyHash<V> {",
-			"  public function new() {",
-			"    this = new haxe.ds.StringMap<V>();",
-			"  }",
-			"  public function set(k:String, v:V) {",
-			"    this.set(k, v);",
-			"  }",
-			"  public function get(k:String):V {",
-			"    return this.get(k);",
-			"  }",
-			"}",
-			"",
 			"class Main {",
 			"  static function main() {",
 			"    Sys.println(Helper.message());",
@@ -2695,6 +2683,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$km = __hxhx_to_kilometer($km);", "PHP function arguments typed as Kilometer should normalize constructor inputs");
 		assertContains(content, "$hash = __hxhx_to_my_hash([\"k\", \"v\"], true);", "PHP MyHash<String> declarations should use string-key array conversion");
 		assertContains(content, "$ihash = __hxhx_to_my_hash([1, 2], false);", "PHP MyHash<T> declarations should use indexed-key array conversion");
+		assertContains(content, "$this->bar();", "PHP same-class helper calls should lower through the instance receiver");
+		assertContains(content, "function __hxhx_to_my_abstract_counter($value)",
+			"PHP runtime should include MyAbstractCounter @:from-style conversion support");
 		assertContains(content, "__hxhx_is_of_type($counter, \"Int\")", "PHP Std.isOfType should lower abstract-backed values through the type helper");
 		assertContains(content, "__hxhx_is_of_type(3, \"Int\")", "PHP Std.isOfType should lower scalar type checks without runtime type variables");
 		deleteRecursive(tmpRoot);

@@ -820,6 +820,8 @@ class SourceNativeBackend {
 		final name = callee.substr(1);
 		if (name == "f" && renderedArgs.length == 0)
 			return null;
+		if (name == "bar" || name == "getAbstractValue")
+			return "$this->" + name + "(" + renderedArgs + ")";
 		return if (isPhpUnitTestHelperName(name)) "$this->" + name + "(" + renderedArgs + ")" else null;
 	}
 
@@ -2719,6 +2721,8 @@ class SourceNativeBackend {
 			return "__hxhx_to_meter(" + rhs + ")";
 		if (isKilometerTypeHint(typeHint))
 			return "__hxhx_to_kilometer(" + rhs + ")";
+		if (isMyAbstractCounterTypeHint(typeHint))
+			return "__hxhx_to_my_abstract_counter(" + rhs + ")";
 		if (isStringTypeHint(typeHint))
 			return "__hxhx_to_string_value(" + rhs + ")";
 		return shouldCopyAssignedValue(expr) ? phpCopyValueExpr(rhs) : rhs;
@@ -2810,6 +2814,10 @@ class SourceNativeBackend {
 
 	static function isMyHashTypeHint(typeHint:String):Bool {
 		return typeHint == "MyHash" || typeHint.indexOf("MyHash<") >= 0 || typeHint.indexOf(".MyHash<") >= 0;
+	}
+
+	static function isMyAbstractCounterTypeHint(typeHint:String):Bool {
+		return typeHint == "MyAbstractCounter" || StringTools.endsWith(typeHint, ".MyAbstractCounter");
 	}
 
 	static function isMyHashStringTypeHint(typeHint:String):Bool {
@@ -3178,6 +3186,8 @@ class SourceNativeBackend {
 				out.push(indent + name + " = __hxhx_to_kilometer(" + name + ");");
 			else if (isMyHashTypeHint(hint))
 				out.push(indent + name + " = __hxhx_to_my_hash(" + name + ", " + (isMyHashStringTypeHint(hint) ? "true" : "false") + ");");
+			else if (isMyAbstractCounterTypeHint(hint))
+				out.push(indent + name + " = __hxhx_to_my_abstract_counter(" + name + ");");
 			else if (isStringTypeHint(hint))
 				out.push(indent + name + " = __hxhx_to_string_value(" + name + ");");
 		}
@@ -3189,6 +3199,21 @@ class SourceNativeBackend {
 	}
 
 	static function renderPhpSpecialHelperFunctionBody(out:Array<String>, className:String, fnName:String):Bool {
+		if (className == "MyAbstractCounter") {
+			switch (fnName) {
+				case "new":
+					out.push("    $this->__hx_value = __hxhx_copy_value($v);");
+					out.push("    self::$counter++;");
+					return true;
+				case "fromInt":
+					out.push("    return __hxhx_to_my_abstract_counter($v);");
+					return true;
+				case "getValue":
+					out.push("    return $this->__hx_value + 1;");
+					return true;
+				case _:
+			}
+		}
 		if (className == "MyHash") {
 			switch (fnName) {
 				case "set":
@@ -3793,6 +3818,10 @@ class SourceNativeBackend {
 				lines.push("  if (is_object($value) && get_class($value) === \"Kilometer\") return __hxhx_copy_value($value);");
 				lines.push("  if (is_object($value) && get_class($value) === \"Meter\" && property_exists($value, \"__hx_value\")) return new Kilometer($value->__hx_value / 1000.0);");
 				lines.push("  return new Kilometer($value);");
+				lines.push("}");
+				lines.push("function __hxhx_to_my_abstract_counter($value) {");
+				lines.push("  if (is_object($value) && get_class($value) === \"MyAbstractCounter\") return __hxhx_copy_value($value);");
+				lines.push("  return new MyAbstractCounter($value);");
 				lines.push("}");
 				lines.push("function __hxhx_to_my_hash($values, $stringKeys) {");
 				lines.push("  if (is_object($values) && get_class($values) === \"MyHash\") return __hxhx_copy_value($values);");

@@ -817,6 +817,7 @@ let phpTestHelperCall = fun callee renderedArgs -> try let __fallback_result_304
   ignore (if not (StringTools.startsWith (callee : string) ("$" : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let name = (HxString.substr callee 1 (-1) : string) in (
     ignore (if HxString.equals name "f" && HxString.length renderedArgs = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    ignore (if HxString.equals name "bar" || HxString.equals name "getAbstractValue" then raise (HxRuntime.Hx_return (Obj.repr (((("$this->" ^ HxString.toStdString name) ^ "(") ^ HxString.toStdString renderedArgs) ^ ")" : string))) else ());
     let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (if isPhpUnitTestHelperName (name : string) then let __assign_301 = Obj.magic (((("$this->" ^ HxString.toStdString name) ^ "(") ^ HxString.toStdString renderedArgs) ^ ")" : string) in (
         tempResult := __assign_301;
@@ -2644,6 +2645,8 @@ let isMeterTypeHint = fun typeHint -> HxString.equals typeHint "Meter" || String
 let isKilometerTypeHint = fun typeHint -> HxString.equals typeHint "Kilometer" || StringTools.endsWith (typeHint : string) (".Kilometer" : string)
 
 let isMyHashTypeHint = fun typeHint -> HxString.equals typeHint "MyHash" || HxString.indexOf typeHint "MyHash<" 0 >= 0 || HxString.indexOf typeHint ".MyHash<" 0 >= 0
+
+let isMyAbstractCounterTypeHint = fun typeHint -> HxString.equals typeHint "MyAbstractCounter" || StringTools.endsWith (typeHint : string) (".MyAbstractCounter" : string)
 
 let isMyHashStringTypeHint = fun typeHint -> let itemHint = (phpArrayItemTypeHint (typeHint : string) : string) in HxString.equals itemHint "String" || StringTools.endsWith (itemHint : string) (".String" : string)
 
@@ -6683,6 +6686,7 @@ and phpAssignedValueExpr = fun expr typeHint -> try let __fallback_result_1311 =
     ignore (if isTemplateWrapTypeHint (typeHint : string) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_to_template_wrap(" ^ HxString.toStdString rhs) ^ ")" : string))) else ());
     ignore (if isMeterTypeHint (typeHint : string) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_to_meter(" ^ HxString.toStdString rhs) ^ ")" : string))) else ());
     ignore (if isKilometerTypeHint (typeHint : string) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_to_kilometer(" ^ HxString.toStdString rhs) ^ ")" : string))) else ());
+    ignore (if isMyAbstractCounterTypeHint (typeHint : string) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_to_my_abstract_counter(" ^ HxString.toStdString rhs) ^ ")" : string))) else ());
     ignore (if isStringTypeHint (typeHint : string) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_to_string_value(" ^ HxString.toStdString rhs) ^ ")" : string))) else ());
     let tempResult = ref ("" : string) in (
       ignore (if shouldCopyAssignedValue (Obj.magic expr) then let __assign_1308 = (phpCopyValueExpr (rhs : string) : string) in (
@@ -6942,7 +6946,7 @@ let phpFunctionArgConversionPrologue = fun args indent -> let out = Obj.magic (H
         __assign_1462
       ));
       HxArray.push out ((((((HxString.toStdString indent ^ HxString.toStdString name) ^ " = __hxhx_to_my_hash(") ^ HxString.toStdString name) ^ ", ") ^ HxString.toStdString (!tempString)) ^ ");")
-    )) else ignore (if isStringTypeHint (hint : string) then ignore (HxArray.push out ((((HxString.toStdString indent ^ HxString.toStdString name) ^ " = __hxhx_to_string_value(") ^ HxString.toStdString name) ^ ");")) else ()))))
+    )) else ignore (if isMyAbstractCounterTypeHint (hint : string) then ignore (HxArray.push out ((((HxString.toStdString indent ^ HxString.toStdString name) ^ " = __hxhx_to_my_abstract_counter(") ^ HxString.toStdString name) ^ ");")) else ignore (if isStringTypeHint (hint : string) then ignore (HxArray.push out ((((HxString.toStdString indent ^ HxString.toStdString name) ^ " = __hxhx_to_string_value(") ^ HxString.toStdString name) ^ ");")) else ())))))
   )) done);
   out
 )
@@ -6950,6 +6954,21 @@ let phpFunctionArgConversionPrologue = fun args indent -> let out = Obj.magic (H
 let phpNeedsUnitTestLocalStaticSlot = fun className -> HxString.equals className "TestLocalStatic"
 
 let renderPhpSpecialHelperFunctionBody = fun out className fnName -> try let __fallback_result_1464 = (
+  ignore (if HxString.equals className "MyAbstractCounter" then ignore (match fnName with
+    | "fromInt" -> ignore ((
+      ignore (HxArray.push out "    return __hxhx_to_my_abstract_counter($v);");
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "getValue" -> ignore ((
+      ignore (HxArray.push out "    return $this->__hx_value + 1;");
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "new" -> ignore ((
+      ignore (HxArray.push out "    $this->__hx_value = __hxhx_copy_value($v);");
+      ignore (HxArray.push out "    self::$counter++;");
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | _ -> ignore ()) else ());
   ignore (if HxString.equals className "MyHash" then ignore (match fnName with
     | "fromArray" -> ignore ((
       ignore (HxArray.push out "    return __hxhx_to_my_hash($arr, false);");
@@ -8153,6 +8172,10 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  if (is_object($value) && get_class($value) === \"Kilometer\") return __hxhx_copy_value($value);");
       ignore (HxArray.push lines "  if (is_object($value) && get_class($value) === \"Meter\" && property_exists($value, \"__hx_value\")) return new Kilometer($value->__hx_value / 1000.0);");
       ignore (HxArray.push lines "  return new Kilometer($value);");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_to_my_abstract_counter($value) {");
+      ignore (HxArray.push lines "  if (is_object($value) && get_class($value) === \"MyAbstractCounter\") return __hxhx_copy_value($value);");
+      ignore (HxArray.push lines "  return new MyAbstractCounter($value);");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_to_my_hash($values, $stringKeys) {");
       ignore (HxArray.push lines "  if (is_object($values) && get_class($values) === \"MyHash\") return __hxhx_copy_value($values);");
