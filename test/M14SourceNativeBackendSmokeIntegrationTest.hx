@@ -837,6 +837,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(\"\" + [1, 2]));",
 			"    Sys.println(Std.string(\"\" + [[1], [2, 3]]));",
 			"    Sys.println(Std.string([\"x\"]));",
+			"    var s = \"\";",
+			"    function next() {",
+			"      s += \"b\";",
+			"      return s;",
+			"    }",
+			"    Sys.println(next());",
 			"  }",
 			"}",
 		].join("\n");
@@ -2145,6 +2151,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_add(\"\", [1, 2])", "PHP array string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", [[1], [2, 3]])", "PHP nested array string plus should lower through Haxe helper");
 		assertContains(content, "echo __hxhx_add_string([\"x\"]) . PHP_EOL;", "PHP Std.string on array literals should use Haxe stringification");
+		assertContains(content, "function() use (&$s)", "PHP local functions that mutate outer locals should capture by reference");
+		assertContains(content, "function($__hxhx_lambda_seq_0) use (&$s)", "PHP local function statement continuations should see call-argument mutations");
+		assertContains(content, "$s = __hxhx_add($s, \"b\")", "PHP string-like add-assign should use Haxe plus semantics");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2213,8 +2222,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpModuloMultiplicationPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "__hxhx_add_string((5 * __hxhx_mod(10, 3)))", "PHP modulo should bind tighter than multiplication for implicit grouping");
-		assertContains(content, "__hxhx_add_string(__hxhx_mod((5 * 10), 3))",
+		assertContains(content, "__hxhx_add_string(__hxhx_mul(5, __hxhx_mod(10, 3)))",
+			"PHP modulo should bind tighter than multiplication for implicit grouping");
+		assertContains(content, "__hxhx_add_string(__hxhx_mod(__hxhx_mul(5, 10), 3))",
 			"PHP modulo/multiplication lowering should preserve explicit multiplication grouping");
 		deleteRecursive(tmpRoot);
 	}
@@ -2642,7 +2652,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "$funcs = (function() {", "PHP array comprehensions should lower through an immediate closure");
 		assertContains(content, "foreach (range(0, 2 - 1) as $i) {", "PHP range comprehensions should lower through foreach");
-		assertContains(content, "$__hxhx_result[] = function($value) use ($i) { return ($value * $i); };",
+		assertContains(content, "$__hxhx_result[] = function($value) use ($i) { return __hxhx_mul($value, $i); };",
 			"PHP closures yielded from comprehensions should capture the comprehension binder");
 		assertContains(content, "return $__hxhx_result;", "PHP array comprehensions should return the collected array");
 		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get($funcs, 0)(10)) . PHP_EOL;",
@@ -2663,7 +2673,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$this->__hx_value = __hxhx_copy_value($i);", "PHP abstract constructor assignments to this should target the backing slot");
 		assertContains(content, "$this->__hx_value = ($this->__hx_value + 1);", "PHP statement-position postfix this updates should target the backing slot");
 		assertContains(content, "return $this->__hx_value;", "PHP abstract-style return this should return the backing value");
-		assertContains(content, "return $this->__hx_value += 1;", "PHP abstract-style prefix this updates should mutate and return the backing value");
+		assertContains(content, "return $this->__hx_value = __hxhx_add($this->__hx_value, 1);",
+			"PHP abstract-style prefix this updates should mutate and return the backing value");
 		assertContains(content, "$mirror = __hxhx_copy_value($counter);", "PHP abstract-style variable copies should not alias the backing slot");
 		assertContains(content, "return __hxhx_post_update_field($this, \"__hx_value\", 1);",
 			"PHP expression-position postfix this updates should target the backing slot");
@@ -2673,6 +2684,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP source backend should emit Haxe-style equality support for abstract-backed values");
 		assertContains(content, "function __hxhx_numeric_value($value)",
 			"PHP source backend should emit numeric unwrapping support for abstract-backed values");
+		assertContains(content, "function __hxhx_is_point3($value)", "PHP runtime should identify MyVector/MyPoint3-style abstract operator payloads");
+		assertContains(content, "function __hxhx_mul($left, $right)", "PHP runtime should dispatch abstract scalar multiplication");
+		assertContains(content, "function __hxhx_mul_assign(&$left, $right)", "PHP runtime should preserve mutating abstract multiply-assignment");
+		assertContains(content, "function __hxhx_div($left, $right)", "PHP runtime should dispatch abstract string slicing division");
 		assertContains(content, "$tpl = __hxhx_to_template_wrap(\"Hi ::t::\");",
 			"PHP abstract @:from-style typed variable declarations should construct the wrapper");
 		assertContains(content, "$text = __hxhx_to_string_value($tpl);", "PHP abstract @:to-style String declarations should use string conversion");

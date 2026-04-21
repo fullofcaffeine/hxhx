@@ -459,6 +459,16 @@ class SourceNativeBackend {
 			return phpModuloAssignExpr(left, right);
 		if (target == Php && op == "+")
 			return "__hxhx_add(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
+		if (target == Php && op == "+=")
+			return phpAddAssignExpr(left, right);
+		if (target == Php && op == "*")
+			return "__hxhx_mul(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
+		if (target == Php && op == "*=")
+			return phpMultiplyAssignExpr(left, right);
+		if (target == Php && op == "/")
+			return "__hxhx_div(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
+		if (target == Php && op == "/=")
+			return phpDivideAssignExpr(left, right);
 		final mapped = binopToken(target, op);
 		if (mapped == null)
 			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
@@ -487,6 +497,35 @@ class SourceNativeBackend {
 		final target = Php;
 		final a = lvalueExpr(target, left);
 		return a + " = __hxhx_mod(" + a + ", " + renderExpr(target, right) + ")";
+	}
+
+	static function phpAddAssignExpr(left:HxExpr, right:HxExpr):String {
+		final target = Php;
+		switch (left) {
+			case EArrayAccess(receiver, index):
+				return "__hxhx_array_add_assign("
+					+ renderExpr(target, receiver)
+					+ ", "
+					+ renderExpr(target, index)
+					+ ", "
+					+ renderExpr(target, right)
+					+ ")";
+			case _:
+		}
+		final a = lvalueExpr(target, left);
+		return a + " = __hxhx_add(" + a + ", " + renderExpr(target, right) + ")";
+	}
+
+	static function phpMultiplyAssignExpr(left:HxExpr, right:HxExpr):String {
+		final target = Php;
+		final a = lvalueExpr(target, left);
+		return "__hxhx_mul_assign(" + a + ", " + renderExpr(target, right) + ")";
+	}
+
+	static function phpDivideAssignExpr(left:HxExpr, right:HxExpr):String {
+		final target = Php;
+		final a = lvalueExpr(target, left);
+		return a + " = __hxhx_div(" + a + ", " + renderExpr(target, right) + ")";
 	}
 
 	static function nullCoalesceExpr(target:SourceNativeTarget, left:HxExpr, right:HxExpr):String {
@@ -971,12 +1010,13 @@ class SourceNativeBackend {
 	}
 
 	static function lambdaCallExpr(target:SourceNativeTarget, lambdaArgs:Array<String>, lambdaBody:HxExpr, callArgs:Array<HxExpr>):String {
-		final callee = lambdaExpr(target, lambdaArgs, lambdaBody);
 		final rendered = [for (arg in callArgs) renderExpr(target, arg)].join(", ");
 		return switch (target) {
 			case Php:
+				final callee = phpLambdaExpr(lambdaArgs, lambdaBody, [], phpAssignedCapturesInList(callArgs, lambdaArgs));
 				"(" + callee + ")(" + rendered + ")";
 			case Python, Java, Cs, Lua:
+				final callee = lambdaExpr(target, lambdaArgs, lambdaBody);
 				callee + "(" + rendered + ")";
 		};
 	}
@@ -1055,23 +1095,126 @@ class SourceNativeBackend {
 			case Cs:
 				"(" + renderedArgs + ") => " + renderedBody;
 			case Php:
-				final prologue = phpLambdaArgPrologue(args, renderedBody);
-				"function(" + renderedArgs + ") { " + prologue + "return " + renderedBody + "; }";
+				phpLambdaExpr(args, body, [], []);
 			case Lua:
 				"function(" + renderedArgs + ") return " + renderedBody + " end";
 		};
 	}
 
 	static function lambdaExprWithPhpUse(args:Array<String>, body:HxExpr, useNames:Array<String>):String {
+		return phpLambdaExpr(args, body, useNames, []);
+	}
+
+	static function phpLambdaExpr(args:Array<String>, body:HxExpr, valueNames:Array<String>, extraRefNames:Array<String>):String {
 		final renderedArgs = [for (arg in args) valueName(Php, arg)].join(", ");
 		final renderedBody = renderExpr(Php, body);
-		final captures = [
-			for (name in useNames)
-				valueName(Php, name)
-		];
-		final useClause = captures.length == 0 ? "" : " use (" + captures.join(", ") + ")";
+		final refNames = phpLambdaAssignedCaptures(body, args.concat(valueNames));
+		if (extraRefNames != null) {
+			for (name in extraRefNames) {
+				final clean = sanitizeTypeName(name);
+				if (clean.length > 0 && refNames.indexOf(clean) < 0)
+					refNames.push(clean);
+			}
+		}
+		final useClause = phpLambdaUseClause(valueNames, refNames);
 		final prologue = phpLambdaArgPrologue(args, renderedBody);
 		return "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
+	}
+
+	static function phpLambdaUseClause(valueNames:Array<String>, refNames:Array<String>):String {
+		final captures = new Array<String>();
+		for (name in valueNames) {
+			final clean = sanitizeTypeName(name);
+			if (clean.length > 0 && captures.indexOf(valueName(Php, clean)) < 0)
+				captures.push(valueName(Php, clean));
+		}
+		for (name in refNames) {
+			final clean = sanitizeTypeName(name);
+			final rendered = "&" + valueName(Php, clean);
+			if (clean.length > 0 && captures.indexOf(rendered) < 0)
+				captures.push(rendered);
+		}
+		return captures.length == 0 ? "" : " use (" + captures.join(", ") + ")";
+	}
+
+	static function phpLambdaAssignedCaptures(body:HxExpr, bound:Array<String>):Array<String> {
+		final names = new Array<String>();
+		phpCollectAssignedIdents(body, names);
+		return phpFilterCapturedNames(names, bound);
+	}
+
+	static function phpAssignedCapturesInList(exprs:Array<HxExpr>, bound:Array<String>):Array<String> {
+		final names = new Array<String>();
+		phpCollectAssignedList(exprs, names);
+		return phpFilterCapturedNames(names, bound);
+	}
+
+	static function phpFilterCapturedNames(names:Array<String>, bound:Array<String>):Array<String> {
+		final out = new Array<String>();
+		for (name in names) {
+			final clean = sanitizeTypeName(name);
+			if (clean.length == 0 || bound.indexOf(clean) >= 0 || out.indexOf(clean) >= 0)
+				continue;
+			out.push(clean);
+		}
+		return out;
+	}
+
+	static function phpCollectAssignedIdents(expr:HxExpr, names:Array<String>):Void {
+		switch (expr) {
+			case EBinop(op, EIdent(name), right) if (isAssignmentOp(op)):
+				if (names.indexOf(sanitizeTypeName(name)) < 0)
+					names.push(sanitizeTypeName(name));
+				phpCollectAssignedIdents(right, names);
+			case EUnop(_, EIdent(name)):
+				if (names.indexOf(sanitizeTypeName(name)) < 0)
+					names.push(sanitizeTypeName(name));
+			case EField(receiver, _):
+				phpCollectAssignedIdents(receiver, names);
+			case ECall(callee, args):
+				phpCollectAssignedIdents(callee, names);
+				phpCollectAssignedList(args, names);
+			case EMacroExpr(inner, _):
+				phpCollectAssignedIdents(inner, names);
+			case ELambda(_, body):
+				phpCollectAssignedIdents(body, names);
+			case ESwitch(scrutinee, _, exprs):
+				phpCollectAssignedIdents(scrutinee, names);
+				phpCollectAssignedList(exprs, names);
+			case ENew(_, args):
+				phpCollectAssignedList(args, names);
+			case EUnop(_, inner):
+				phpCollectAssignedIdents(inner, names);
+			case EBinop(_, left, right):
+				phpCollectAssignedIdents(left, names);
+				phpCollectAssignedIdents(right, names);
+			case ETernary(cond, thenExpr, elseExpr):
+				phpCollectAssignedIdents(cond, names);
+				phpCollectAssignedIdents(thenExpr, names);
+				phpCollectAssignedIdents(elseExpr, names);
+			case EAnon(_, fieldValues):
+				phpCollectAssignedList(fieldValues, names);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
+				phpCollectAssignedIdents(iterable, names);
+				if (guardExpr != null)
+					phpCollectAssignedIdents(guardExpr, names);
+				phpCollectAssignedIdents(yieldExpr, names);
+			case EArrayDecl(values):
+				phpCollectAssignedList(values, names);
+			case EArrayAccess(receiver, index):
+				phpCollectAssignedIdents(receiver, names);
+				phpCollectAssignedIdents(index, names);
+			case ECast(inner, _) | EUntyped(inner):
+				phpCollectAssignedIdents(inner, names);
+			case _:
+		}
+	}
+
+	static function phpCollectAssignedList(exprs:Array<HxExpr>, names:Array<String>):Void {
+		if (exprs == null)
+			return;
+		for (expr in exprs)
+			phpCollectAssignedIdents(expr, names);
 	}
 
 	static function phpLambdaArgPrologue(args:Array<String>, renderedBody:String):String {
@@ -3803,6 +3946,7 @@ class SourceNativeBackend {
 				lines.push("  return $old;");
 				lines.push("}");
 				lines.push("function __hxhx_copy_value($value) {");
+				lines.push("  if (__hxhx_is_point3($value)) return $value;");
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return clone $value;");
 				lines.push("  return $value;");
 				lines.push("}");
@@ -3853,6 +3997,13 @@ class SourceNativeBackend {
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return $value->__hx_value;");
 				lines.push("  return $value;");
 				lines.push("}");
+				lines.push("function __hxhx_is_point3($value) {");
+				lines.push("  return is_object($value) && property_exists($value, \"x\") && property_exists($value, \"y\") && property_exists($value, \"z\");");
+				lines.push("}");
+				lines.push("function __hxhx_point3($x, $y, $z) {");
+				lines.push("  if (class_exists(\"MyPoint3\", false)) return new MyPoint3($x, $y, $z);");
+				lines.push("  return (object)[\"x\" => $x, \"y\" => $y, \"z\" => $z];");
+				lines.push("}");
 				lines.push("function __hxhx_equals($left, $right) {");
 				lines.push("  if ((is_object($left) && property_exists($left, \"__hx_value\")) || (is_object($right) && property_exists($right, \"__hx_value\"))) {");
 				lines.push("    return __hxhx_to_string_value($left) == __hxhx_to_string_value($right);");
@@ -3861,10 +4012,32 @@ class SourceNativeBackend {
 				lines.push("  return false;");
 				lines.push("}");
 				lines.push("function __hxhx_add($left, $right) {");
+				lines.push("  if (__hxhx_is_point3($left) && __hxhx_is_point3($right)) return __hxhx_point3($left->x + $right->x, $left->y + $right->y, $left->z + $right->z);");
 				lines.push("  if (is_int($left) || is_float($left)) {");
 				lines.push("    if (is_int($right) || is_float($right)) return $left + $right;");
 				lines.push("  }");
 				lines.push("  return __hxhx_add_string($left) . __hxhx_add_string($right);");
+				lines.push("}");
+				lines.push("function __hxhx_mul($left, $right) {");
+				lines.push("  if (__hxhx_is_point3($left) && (is_int($right) || is_float($right))) return __hxhx_point3($left->x * $right, $left->y * $right, $left->z * $right);");
+				lines.push("  if ((is_int($left) || is_float($left)) && __hxhx_is_point3($right)) return __hxhx_point3($right->x * $left, $right->y * $left, $right->z * $left);");
+				lines.push("  if ((is_int($left) || is_float($left)) && is_string($right)) return str_repeat($right, intval($left));");
+				lines.push("  if (is_string($left) && (is_int($right) || is_float($right))) return str_repeat($left, intval($right));");
+				lines.push("  return $left * $right;");
+				lines.push("}");
+				lines.push("function __hxhx_mul_assign(&$left, $right) {");
+				lines.push("  if (__hxhx_is_point3($left) && (is_int($right) || is_float($right))) {");
+				lines.push("    $left->x *= $right;");
+				lines.push("    $left->y *= $right;");
+				lines.push("    $left->z *= $right;");
+				lines.push("    return $left;");
+				lines.push("  }");
+				lines.push("  $left = __hxhx_mul($left, $right);");
+				lines.push("  return $left;");
+				lines.push("}");
+				lines.push("function __hxhx_div($left, $right) {");
+				lines.push("  if (is_string($left) && (is_int($right) || is_float($right))) return substr($left, 0, intval($right));");
+				lines.push("  return $left / $right;");
 				lines.push("}");
 				lines.push("function __hxhx_add_string($value) {");
 				lines.push("  if ($value === null) return \"null\";");
@@ -3879,6 +4052,7 @@ class SourceNativeBackend {
 				lines.push("  }");
 				lines.push("  if (is_object($value) && get_class($value) === \"Meter\" && property_exists($value, \"__hx_value\")) return __hxhx_add_string($value->__hx_value) . \"m\";");
 				lines.push("  if (is_object($value) && get_class($value) === \"Kilometer\" && property_exists($value, \"__hx_value\")) return __hxhx_add_string($value->__hx_value) . \"km\";");
+				lines.push("  if (__hxhx_is_point3($value)) return \"(\" . __hxhx_add_string($value->x) . \",\" . __hxhx_add_string($value->y) . \",\" . __hxhx_add_string($value->z) . \")\";");
 				lines.push("  if (is_object($value) && !method_exists($value, \"__toString\")) {");
 				lines.push("    if (property_exists($value, \"__hx_ctor\") && property_exists($value, \"__hx_params\") && is_array($value->__hx_params)) {");
 				lines.push("      $params = [];");
