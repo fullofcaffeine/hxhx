@@ -2541,16 +2541,22 @@ class SourceNativeBackend {
 		final out = [classHeader];
 		var memberCount = 0;
 		final instanceFields = new Array<HxFieldDecl>();
+		final emittedFields = new Map<String, Bool>();
 		if (phpClassNeedsThisValueSlot(cls)) {
 			out.push("  public $__hx_value;");
+			emittedFields.set("__hx_value", true);
 			memberCount += 1;
 		}
 		if (phpNeedsUnitTestLocalStaticSlot(className)) {
 			out.push("  public static $__basic_x = null;");
+			emittedFields.set("__basic_x", true);
 			memberCount += 1;
 		}
 		for (field in HxClassDecl.getFields(cls)) {
 			final fieldName = sanitizeTypeName(HxFieldDecl.getName(field));
+			if (emittedFields.exists(fieldName))
+				continue;
+			emittedFields.set(fieldName, true);
 			if (!HxFieldDecl.getIsStatic(field)) {
 				instanceFields.push(field);
 				out.push("  public $" + fieldName + ";");

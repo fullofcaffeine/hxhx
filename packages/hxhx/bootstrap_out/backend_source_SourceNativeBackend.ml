@@ -6051,13 +6051,15 @@ let renderPhpHelperClass = fun cls -> let className = (sanitizePhpTypeName (HxCl
   let out = Obj.magic (let __arr_1189 = HxArray.create () in (
     ignore (HxArray.push __arr_1189 (!tempString));
     __arr_1189
-  )) in let memberCount = ref 0 in let instanceFields = Obj.magic (HxArray.create ()) in (
+  )) in let memberCount = ref 0 in let instanceFields = Obj.magic (HxArray.create ()) in let emittedFields = HxMap.create_string () in (
     ignore (if phpClassNeedsThisValueSlot (Obj.magic cls) then ignore ((
       ignore (HxArray.push out "  public $__hx_value;");
+      ignore (HxMap.set_string emittedFields "__hx_value" true);
       memberCount := HxInt.add (!memberCount) 1
     )) else ());
     ignore (if phpNeedsUnitTestLocalStaticSlot (className : string) then ignore ((
       ignore (HxArray.push out "  public static $__basic_x = null;");
+      ignore (HxMap.set_string emittedFields "__basic_x" true);
       memberCount := HxInt.add (!memberCount) 1
     )) else ());
     ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in try while !_g < HxArray.length _g1 do try ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -6066,6 +6068,8 @@ let renderPhpHelperClass = fun cls -> let className = (sanitizePhpTypeName (HxCl
         __new_1191
       ));
       let fieldName = (sanitizeTypeName (HxFieldDecl.getName (Obj.magic field) : string) : string) in (
+        ignore (if HxMap.exists_string emittedFields fieldName then raise (HxRuntime.Hx_continue) else ());
+        ignore (HxMap.set_string emittedFields fieldName true);
         ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) then ignore ((
           ignore (HxArray.push instanceFields field);
           ignore (HxArray.push out (("  public $" ^ HxString.toStdString fieldName) ^ ";"));

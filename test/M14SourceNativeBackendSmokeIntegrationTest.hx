@@ -435,6 +435,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpDuplicateStaticFieldProgram():GenIrProgram {
+		final mainFn = new HxFunctionDecl("main", Public, true, [], "Void",
+			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("ok")]), HxPos.unknown())], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn], []);
+		final duplicate = new HxFieldDecl("Expr", Public, true, "", null);
+		final helperClass = new HxClassDecl("Expr", false, [], [duplicate, duplicate]);
+		final decl = new HxModuleDecl("", [], mainClass, [mainClass, helperClass], false, false);
+		final parsed = new ParsedModule("", decl, "Main.hx");
+		final typed = new TypedModule(parsed, new TyModuleEnv("", [], new TyClassEnv("Main", [])));
+		return new MacroExpandedProgram([typed], false, []);
+	}
+
 	static function phpMacroTypeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1536,6 +1548,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpDuplicateStaticFieldEmission():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_duplicate_static_field_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpDuplicateStaticFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		final first = content.indexOf("public static $Expr = null;");
+		assertTrue(first >= 0, "PHP support class should emit the Expr static placeholder once");
+		final second = content.indexOf("public static $Expr = null;", first + 1);
+		assertTrue(second < 0, "PHP support class should not emit duplicate static field placeholders");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2018,6 +2045,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpInt64LiteralExtension();
 		assertPhpArrayConstructor();
 		assertPhpReservedTypeName();
+		assertPhpDuplicateStaticFieldEmission();
 		assertPhpMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();
