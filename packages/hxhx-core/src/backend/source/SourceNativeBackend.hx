@@ -734,6 +734,8 @@ class SourceNativeBackend {
 				}
 				if (field == "length")
 					return "__hxhx_length(" + renderExpr(target, receiver) + ")";
+				if (field == "code" && phpStringLikeReceiver(receiver))
+					return "__hxhx_string_char_code_at(" + renderExpr(target, receiver) + ", 0)";
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
 					phpStaticPropertyAccess(typePath, field);
@@ -882,7 +884,7 @@ class SourceNativeBackend {
 	}
 
 	static function phpStringFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
-		if (!phpStringLikeReceiver(receiver))
+		if (!phpStringLikeReceiver(receiver) && !phpVariableStringMethod(field))
 			return null;
 		final renderedReceiver = renderExpr(Php, receiver);
 		final renderedArgs = [for (arg in args) renderExpr(Php, arg)];
@@ -893,8 +895,19 @@ class SourceNativeBackend {
 				"__hxhx_string_last_index_of(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "split" if (args.length == 1):
 				"__hxhx_string_split(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "charCodeAt" if (args.length == 1):
+				"__hxhx_string_char_code_at(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case _:
 				null;
+		};
+	}
+
+	static function phpVariableStringMethod(field:String):Bool {
+		return switch (field) {
+			case "split" | "charCodeAt":
+				true;
+			case _:
+				false;
 		};
 	}
 
@@ -3437,6 +3450,12 @@ class SourceNativeBackend {
 				lines.push("  $d = strval($delimiter);");
 				lines.push("  if ($d === \"\") return str_split($s);");
 				lines.push("  return explode($d, $s);");
+				lines.push("}");
+				lines.push("function __hxhx_string_char_code_at($value, $index) {");
+				lines.push("  $s = strval($value);");
+				lines.push("  $i = (int)$index;");
+				lines.push("  if ($i < 0 || $i >= strlen($s)) return null;");
+				lines.push("  return ord($s[$i]);");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
 				lines.push("  $old = $obj->$field;");

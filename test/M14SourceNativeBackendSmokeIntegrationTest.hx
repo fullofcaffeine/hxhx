@@ -940,6 +940,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(\"foofoofoobarbar\".lastIndexOf(\"bar\", 11)));",
 			"    Sys.println(Std.string(\"abc\".split(\"\").length));",
 			"    Sys.println(Std.string(\"a,b,c\".split(\",\")[1]));",
+			"    Sys.println(Std.string(\"abc\".charCodeAt(0)));",
+			"    Sys.println(Std.string(\"abc\".charCodeAt(99)));",
+			"    Sys.println(Std.string(\"a\".code));",
+			"    var str = \"abc\";",
+			"    Sys.println(Std.string(str.charCodeAt(1)));",
 			"  }",
 			"}",
 		].join("\n");
@@ -2096,6 +2101,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_string_last_index_of($value, $needle, $start = null)",
 			"PHP runtime should include a String.lastIndexOf helper");
 		assertContains(content, "function __hxhx_string_split($value, $delimiter)", "PHP runtime should include a String.split helper");
+		assertContains(content, "function __hxhx_string_char_code_at($value, $index)", "PHP runtime should include a String.charCodeAt helper");
 		assertContains(content, "echo strval(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")) . PHP_EOL;",
 			"PHP string-like concatenation receivers should lower indexOf through the helper");
 		assertContains(content, "echo strval(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)) . PHP_EOL;",
@@ -2106,8 +2112,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP string split should compose with array length");
 		assertContains(content, "echo strval(__hxhx_array_get(__hxhx_string_split(\"a,b,c\", \",\"), 1)) . PHP_EOL;",
 			"PHP string split results should use safe array reads");
+		assertContains(content, "echo strval(__hxhx_string_char_code_at(\"abc\", 0)) . PHP_EOL;", "PHP string charCodeAt should lower through the helper");
+		assertContains(content, "echo strval(__hxhx_string_char_code_at(\"abc\", 99)) . PHP_EOL;",
+			"PHP out-of-range charCodeAt should lower through the nullable helper");
+		assertContains(content, "echo strval(__hxhx_string_char_code_at(\"a\", 0)) . PHP_EOL;", "PHP string literal .code should lower through the helper");
+		assertContains(content, "echo strval(__hxhx_string_char_code_at($str, 1)) . PHP_EOL;",
+			"PHP string variable charCodeAt should lower through the helper");
 		assertNotContains(content, "__hxhx_add(\"bla\", \"x\")->indexOf", "PHP string-like receivers should not emit object-method calls on raw strings");
 		assertNotContains(content, "\"abc\"->split", "PHP string literals should not emit object-method split calls");
+		assertNotContains(content, "\"abc\"->charCodeAt", "PHP string literals should not emit object-method charCodeAt calls");
+		assertNotContains(content, "\"a\"->code", "PHP string literal .code should not emit property access on raw strings");
+		assertNotContains(content, "$str->charCodeAt", "PHP string variables should not emit object-method charCodeAt calls");
 		deleteRecursive(tmpRoot);
 	}
 
