@@ -938,6 +938,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string((\"bla\" + \"x\").indexOf(\"x\")));",
 			"    Sys.println(Std.string(\"foo1bar\".indexOf(\"o\", 2)));",
 			"    Sys.println(Std.string(\"foofoofoobarbar\".lastIndexOf(\"bar\", 11)));",
+			"    Sys.println(Std.string(\"abc\".split(\"\").length));",
+			"    Sys.println(Std.string(\"a,b,c\".split(\",\")[1]));",
 			"  }",
 			"}",
 		].join("\n");
@@ -2093,13 +2095,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_string_index_of($value, $needle, $start = 0)", "PHP runtime should include a String.indexOf helper");
 		assertContains(content, "function __hxhx_string_last_index_of($value, $needle, $start = null)",
 			"PHP runtime should include a String.lastIndexOf helper");
+		assertContains(content, "function __hxhx_string_split($value, $delimiter)", "PHP runtime should include a String.split helper");
 		assertContains(content, "echo strval(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")) . PHP_EOL;",
 			"PHP string-like concatenation receivers should lower indexOf through the helper");
 		assertContains(content, "echo strval(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)) . PHP_EOL;",
 			"PHP string literal receivers should lower indexOf with a start index");
 		assertContains(content, "echo strval(__hxhx_string_last_index_of(\"foofoofoobarbar\", \"bar\", 11)) . PHP_EOL;",
 			"PHP string literal receivers should lower lastIndexOf with a start index");
+		assertContains(content, "echo strval(__hxhx_length(__hxhx_string_split(\"abc\", \"\"))) . PHP_EOL;",
+			"PHP string split should compose with array length");
+		assertContains(content, "echo strval(__hxhx_array_get(__hxhx_string_split(\"a,b,c\", \",\"), 1)) . PHP_EOL;",
+			"PHP string split results should use safe array reads");
 		assertNotContains(content, "__hxhx_add(\"bla\", \"x\")->indexOf", "PHP string-like receivers should not emit object-method calls on raw strings");
+		assertNotContains(content, "\"abc\"->split", "PHP string literals should not emit object-method split calls");
 		deleteRecursive(tmpRoot);
 	}
 

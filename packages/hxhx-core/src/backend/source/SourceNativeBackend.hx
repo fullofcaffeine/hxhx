@@ -891,6 +891,8 @@ class SourceNativeBackend {
 				"__hxhx_string_index_of(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "lastIndexOf":
 				"__hxhx_string_last_index_of(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "split" if (args.length == 1):
+				"__hxhx_string_split(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case _:
 				null;
 		};
@@ -3429,6 +3431,12 @@ class SourceNativeBackend {
 				lines.push("  $value = (int)$code;");
 				lines.push("  $value = (($value % 256) + 256) % 256;");
 				lines.push("  return chr($value);");
+				lines.push("}");
+				lines.push("function __hxhx_string_split($value, $delimiter) {");
+				lines.push("  $s = strval($value);");
+				lines.push("  $d = strval($delimiter);");
+				lines.push("  if ($d === \"\") return str_split($s);");
+				lines.push("  return explode($d, $s);");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
 				lines.push("  $old = $obj->$field;");
