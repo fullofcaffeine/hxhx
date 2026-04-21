@@ -857,6 +857,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"",
 			"class Main {",
 			"  static function main() {",
+			"    TestIssues.addIssueClasses(\"src/unit/issues\", \"unit.issues\");",
 			"    Sys.println(\"ok\");",
 			"  }",
 			"}",
@@ -2152,6 +2153,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertNotContains(content, "class TestIssues", "PHP support emission should skip compile-time-only macro helper classes");
+		assertContains(content, "/* hxhx skipped TestIssues.addIssueClasses */ null;",
+			"PHP compile-time-only TestIssues.addIssueClasses should not become a runtime class call");
 		assertContains(content, "echo \"ok\" . PHP_EOL;", "PHP main output should still emit when compile-time-only helpers are skipped");
 		deleteRecursive(tmpRoot);
 	}

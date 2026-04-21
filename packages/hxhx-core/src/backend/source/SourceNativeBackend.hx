@@ -744,6 +744,10 @@ class SourceNativeBackend {
 						// additional spec classes. PHP source bring-up cannot execute that macro
 						// result at runtime, so keep the harness moving with an empty spec list.
 						"[]";
+					} else if (typePath == "TestIssues" && field == "addIssueClasses") {
+						// Same compile-time-only harness pattern as UnitBuilder.generateSpec:
+						// the real macro mutates the test class list during compilation.
+						"/* hxhx skipped TestIssues.addIssueClasses */ null";
 					} else {
 						phpStaticMethodCall(typePath, field, args);
 					}
