@@ -151,6 +151,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function ternaryProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var label = true ? \"yes\" : \"no\";",
+			"    Sys.println(Std.string(label));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function helperClassProgram():GenIrProgram {
 		final src = [
 			"class Helper {",
@@ -162,6 +176,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class Main {",
 			"  static function main() {",
 			"    Sys.println(Helper.message());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function tryCatchProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    try {",
+			"      throw \"boom\";",
+			"    } catch (e:Dynamic) {",
+			"      Sys.println(\"caught\");",
+			"    }",
 			"  }",
 			"}",
 		].join("\n");
@@ -342,6 +373,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function switchStatementProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    switch (\"python\") {",
+			"      case \"python\":",
+			"        Sys.println(\"py\");",
+			"      case _:",
+			"        Sys.println(\"other\");",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function emit(targetId:String, label:String, expectedFile:String, expectedNeedle:String):Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_" + targetId + "_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -467,6 +516,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertTernaryExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_ternary_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(ternaryProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "label = (\"yes\" if (True) else \"no\")", "ternary expressions should lower to the Python conditional form");
+		assertContains(content, "print(str(label))", "ternary-derived locals should still flow through later statements");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertTryCatchStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_try_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(tryCatchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "try:", "try statements should render the Python try header");
+		assertContains(content, "raise Exception(\"boom\")", "throw statements should lower to Python exception raises");
+		assertContains(content, "except Exception as e:", "catch clauses should lower to Python except clauses");
+		assertContains(content, "print(\"caught\")", "catch bodies should still render nested statements");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperClassEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -587,6 +664,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertSwitchStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_switch_stmt_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "if (\"python\" == \"python\"):", "switch statements should lower the first pattern as an if");
+		assertContains(content, "print(\"py\")", "switch statement branch bodies should render");
+		assertContains(content, "elif True:", "wildcard switch branches should lower as an elif true catch-all");
+		assertContains(content, "print(\"other\")", "later switch statement branches should still render");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function main():Void {
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
@@ -601,6 +693,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTraceStatement();
 		assertUnaryOperators();
 		assertPostfixStatements();
+		assertTernaryExpression();
+		assertTryCatchStatement();
 		assertHelperClassEmission();
 		assertHelperInstanceFieldEmission();
 		assertCrossModuleClassEmission();
@@ -611,5 +705,6 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertEnumValue();
 		assertLambdaExpression();
 		assertSwitchExpression();
+		assertSwitchStatement();
 	}
 }

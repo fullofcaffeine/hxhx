@@ -261,6 +261,8 @@ class SourceNativeBackend {
 				valueName(target, name);
 			case EBinop(op, left, right):
 				binopExpr(target, op, left, right);
+			case ETernary(cond, thenExpr, elseExpr):
+				conditionalExpr(target, renderExpr(target, cond), renderExpr(target, thenExpr), renderExpr(target, elseExpr));
 			case ECast(inner, _):
 				renderExpr(target, inner);
 			case EUntyped(inner):
@@ -635,6 +637,12 @@ class SourceNativeBackend {
 				renderForIn(target, name, iterable, body, indent);
 			case SWhile(cond, body, _):
 				renderWhile(target, cond, body, indent);
+			case SSwitch(scrutinee, patterns, bodies, _):
+				renderSwitchStmt(target, scrutinee, patterns, bodies, indent);
+			case STry(tryBody, catches, _):
+				renderTry(target, tryBody, catches, indent);
+			case SThrow(expr, _):
+				[indent + throwStmt(target, renderExpr(target, expr))];
 			case SReturn(expr, _):
 				[indent + returnStmt(target, renderExpr(target, expr))];
 			case SReturnVoid(_):
@@ -816,6 +824,110 @@ class SourceNativeBackend {
 		return out;
 	}
 
+	static function renderSwitchStmt(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
+			indent:String):Array<String> {
+		final scrutineeExpr = renderExpr(target, scrutinee);
+		final childIndent = indent + indentStep(target);
+		final out = new Array<String>();
+		final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
+		switch (target) {
+			case Python:
+				if (count == 0) {
+					out.push(indent + emptyStmt(target));
+					return out;
+				}
+				for (i in 0...count) {
+					final keyword = i == 0 ? "if" : "elif";
+					out.push(indent + keyword + " " + switchPatternCond(target, scrutineeExpr, patterns[i]) + ":");
+					for (line in renderStmt(target, bodies[i], childIndent))
+						out.push(line);
+				}
+			case Java | Cs | Php | Lua:
+				throw targetLabel(target) + " source backend MVP unsupported statement: SSwitch";
+		}
+		return out;
+	}
+
+	static function renderTry(target:SourceNativeTarget, tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>,
+			indent:String):Array<String> {
+		final childIndent = indent + indentStep(target);
+		final out = new Array<String>();
+		switch (target) {
+			case Python:
+				out.push(indent + "try:");
+				for (line in renderStmt(target, tryBody, childIndent))
+					out.push(line);
+				if (catches == null || catches.length == 0) {
+					out.push(indent + "except Exception:");
+					out.push(childIndent + "raise");
+				} else {
+					for (c in catches) {
+						final catchName = sanitizeTypeName(c.name);
+						out.push(indent + "except Exception as " + catchName + ":");
+						for (line in renderStmt(target, c.body, childIndent))
+							out.push(line);
+					}
+				}
+			case Java:
+				out.push(indent + "try {");
+				for (line in renderStmt(target, tryBody, childIndent))
+					out.push(line);
+				out.push(indent + "}");
+				if (catches == null || catches.length == 0) {
+					out.push(indent + "catch (RuntimeException e) {");
+					out.push(childIndent + "throw e;");
+					out.push(indent + "}");
+				} else {
+					for (c in catches) {
+						final catchName = sanitizeTypeName(c.name);
+						out.push(indent + "catch (RuntimeException " + catchName + ") {");
+						for (line in renderStmt(target, c.body, childIndent))
+							out.push(line);
+						out.push(indent + "}");
+					}
+				}
+			case Cs:
+				out.push(indent + "try {");
+				for (line in renderStmt(target, tryBody, childIndent))
+					out.push(line);
+				out.push(indent + "}");
+				if (catches == null || catches.length == 0) {
+					out.push(indent + "catch (System.Exception e) {");
+					out.push(childIndent + "throw;");
+					out.push(indent + "}");
+				} else {
+					for (c in catches) {
+						final catchName = sanitizeTypeName(c.name);
+						out.push(indent + "catch (System.Exception " + catchName + ") {");
+						for (line in renderStmt(target, c.body, childIndent))
+							out.push(line);
+						out.push(indent + "}");
+					}
+				}
+			case Php:
+				out.push(indent + "try {");
+				for (line in renderStmt(target, tryBody, childIndent))
+					out.push(line);
+				out.push(indent + "}");
+				if (catches == null || catches.length == 0) {
+					out.push(indent + "catch (\\Exception $e) {");
+					out.push(childIndent + "throw $e;");
+					out.push(indent + "}");
+				} else {
+					for (c in catches) {
+						final catchName = sanitizeTypeName(c.name);
+						out.push(indent + "catch (\\Exception $" + catchName + ") {");
+						for (line in renderStmt(target, c.body, childIndent))
+							out.push(line);
+						out.push(indent + "}");
+					}
+				}
+			case Lua:
+				throw targetLabel(target) + " source backend MVP unsupported statement: STry";
+		}
+		return out;
+	}
+
 	static function defaultValue(target:SourceNativeTarget):String {
 		return switch (target) {
 			case Python: "None";
@@ -863,6 +975,16 @@ class SourceNativeBackend {
 			case Cs: "return;";
 			case Php: "return;";
 			case Lua: "return";
+		};
+	}
+
+	static function throwStmt(target:SourceNativeTarget, expr:String):String {
+		return switch (target) {
+			case Python: "raise Exception(" + expr + ")";
+			case Java: "throw new RuntimeException(String.valueOf(" + expr + "));";
+			case Cs: "throw new System.Exception(System.Convert.ToString(" + expr + "));";
+			case Php: "throw new \\Exception(strval(" + expr + "));";
+			case Lua: "error(" + expr + ")";
 		};
 	}
 
