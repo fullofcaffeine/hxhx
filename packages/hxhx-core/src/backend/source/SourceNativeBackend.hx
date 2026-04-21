@@ -2034,6 +2034,8 @@ class SourceNativeBackend {
 				[indent + continueStmt(target)];
 			case SThrow(expr, _):
 				[indent + throwStmt(target, renderExpr(target, expr))];
+			case SReturn(EThis, _) if (target == Php):
+				[indent + returnStmt(target, phpThisValueExpr())];
 			case SReturn(expr, _):
 				[indent + returnStmt(target, renderExpr(target, expr))];
 			case SReturnVoid(_):
