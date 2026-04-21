@@ -3528,6 +3528,7 @@ and fieldCallExpr = fun target receiver field args -> try let __fallback_result_
       ignore (if stringCall != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (stringCall : string))) else ());
       let arrayCall = (phpArrayFieldCall (Obj.magic receiver) (field : string) (Obj.magic args) : string) in (
         ignore (if arrayCall != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (arrayCall : string))) else ());
+        ignore (if HxString.equals field "iterator" && HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_iterator(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ")" : string))) else ());
         ignore (if HxString.equals field "ofInt" && phpIntLiteralExtensionReceiver (Obj.magic receiver) then raise (HxRuntime.Hx_return (Obj.repr (phpStaticMethodCall (sanitizePhpTypePath ("haxe.Int64" : string) : string) (field : string) (Obj.magic (let __arr_295 = HxArray.create () in (
           ignore (HxArray.push __arr_295 receiver);
           __arr_295
@@ -7156,6 +7157,19 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "    return $this->items;");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "class __HxArrayIterator {");
+      ignore (HxArray.push lines "  private $items;");
+      ignore (HxArray.push lines "  private $index = 0;");
+      ignore (HxArray.push lines "  public function __construct($items) {");
+      ignore (HxArray.push lines "    $this->items = array_values($items);");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public function hasNext() {");
+      ignore (HxArray.push lines "    return $this->index < count($this->items);");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public function next() {");
+      ignore (HxArray.push lines "    return $this->items[$this->index++];");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "class Map {");
       ignore (HxArray.push lines "  private $items;");
       ignore (HxArray.push lines "  private $keys;");
@@ -7383,6 +7397,12 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  if ($array instanceof __HxArray) $array = $array->toArray();");
       ignore (HxArray.push lines "  if (!is_array($array)) return [];");
       ignore (HxArray.push lines "  return array_splice($array, (int)$pos, (int)$len);");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_iterator($value) {");
+      ignore (HxArray.push lines "  if ($value instanceof __HxArray) return new __HxArrayIterator($value->toArray());");
+      ignore (HxArray.push lines "  if (is_array($value)) return new __HxArrayIterator($value);");
+      ignore (HxArray.push lines "  if (is_object($value) && method_exists($value, \"iterator\")) return $value->iterator();");
+      ignore (HxArray.push lines "  return $value;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_string_index_of($value, $needle, $start = 0) {");
       ignore (HxArray.push lines "  $s = strval($value);");

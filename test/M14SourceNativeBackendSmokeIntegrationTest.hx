@@ -437,6 +437,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(a[1]));",
 			"    a.splice(1, 1);",
 			"    Sys.println(Std.string(a.length));",
+			"    var it = a.iterator();",
+			"    Sys.println(Std.string(it.hasNext()));",
+			"    Sys.println(Std.string(it.next()));",
 			"    var m = new Map();",
 			"    m.remove(\"a\");",
 			"  }",
@@ -2253,11 +2256,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_array_get($array, $index)", "PHP runtime should include a safe Haxe array read helper");
 		assertContains(content, "function __hxhx_array_remove(&$array, $value)", "PHP runtime should include an Array.remove helper");
 		assertContains(content, "function __hxhx_array_splice(&$array, $pos, $len)", "PHP runtime should include an Array.splice helper");
+		assertContains(content, "class __HxArrayIterator", "PHP runtime should include a Haxe array iterator wrapper");
+		assertContains(content, "function __hxhx_iterator($value)", "PHP runtime should include an iterator helper");
 		assertContains(content, "echo strval(__hxhx_array_get($a, 3)) . PHP_EOL;", "PHP out-of-bounds array reads should go through safe Haxe read helper");
 		assertContains(content, "__hxhx_array_remove($a, 2);", "PHP Array.remove should lower through the mutating helper");
 		assertContains(content, "__hxhx_array_splice($a, 1, 1);", "PHP Array.splice should lower through the mutating helper");
+		assertContains(content, "$it = __hxhx_iterator($a);", "PHP Array.iterator should lower through the iterator helper");
 		assertContains(content, "$m->remove(\"a\");", "PHP Map.remove should remain an object method call");
 		assertNotContains(content, "$a->remove(2)", "PHP arrays should not emit object-method remove calls on raw arrays");
+		assertNotContains(content, "$a->iterator()", "PHP arrays should not emit object-method iterator calls on raw arrays");
 		assertNotContains(content, "$a[3]", "PHP expression reads should not emit direct array access for missing-index semantics");
 		deleteRecursive(tmpRoot);
 	}

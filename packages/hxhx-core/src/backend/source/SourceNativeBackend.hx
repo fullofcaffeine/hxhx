@@ -812,6 +812,8 @@ class SourceNativeBackend {
 				final arrayCall = phpArrayFieldCall(receiver, field, args);
 				if (arrayCall != null)
 					return arrayCall;
+				if (field == "iterator" && args.length == 0)
+					return "__hxhx_iterator(" + renderExpr(Php, receiver) + ")";
 				if (field == "ofInt" && phpIntLiteralExtensionReceiver(receiver))
 					return phpStaticMethodCall(sanitizePhpTypePath("haxe.Int64"), field, [receiver]);
 				final typePath = phpStaticTypePath(receiver);
@@ -3210,6 +3212,19 @@ class SourceNativeBackend {
 				lines.push("    return $this->items;");
 				lines.push("  }");
 				lines.push("}");
+				lines.push("class __HxArrayIterator {");
+				lines.push("  private $items;");
+				lines.push("  private $index = 0;");
+				lines.push("  public function __construct($items) {");
+				lines.push("    $this->items = array_values($items);");
+				lines.push("  }");
+				lines.push("  public function hasNext() {");
+				lines.push("    return $this->index < count($this->items);");
+				lines.push("  }");
+				lines.push("  public function next() {");
+				lines.push("    return $this->items[$this->index++];");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("class Map {");
 				lines.push("  private $items;");
 				lines.push("  private $keys;");
@@ -3437,6 +3452,12 @@ class SourceNativeBackend {
 				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
 				lines.push("  if (!is_array($array)) return [];");
 				lines.push("  return array_splice($array, (int)$pos, (int)$len);");
+				lines.push("}");
+				lines.push("function __hxhx_iterator($value) {");
+				lines.push("  if ($value instanceof __HxArray) return new __HxArrayIterator($value->toArray());");
+				lines.push("  if (is_array($value)) return new __HxArrayIterator($value);");
+				lines.push("  if (is_object($value) && method_exists($value, \"iterator\")) return $value->iterator();");
+				lines.push("  return $value;");
 				lines.push("}");
 				lines.push("function __hxhx_string_index_of($value, $needle, $start = 0) {");
 				lines.push("  $s = strval($value);");
