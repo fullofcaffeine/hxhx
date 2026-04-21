@@ -830,6 +830,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"import Map;",
 			"import Type;",
 			"import StringTools;",
+			"import haxe.ds.List;",
+			"import haxe.io.Bytes;",
+			"import utest.ui.common.IReport;",
+			"import MyClass.UsingBase;",
 			"",
 			"class Helper {",
 			"  public function new() {}",
@@ -1816,17 +1820,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final result = backend.emit(javaSupportClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
 		final mainSourcePath = Path.join([outputDir, "src", "Main.java"]);
 		final helperSourcePath = Path.join([outputDir, "src", "Helper.java"]);
+		final listStubPath = Path.join([outputDir, "src", "haxe", "ds", "List.java"]);
+		final bytesStubPath = Path.join([outputDir, "src", "haxe", "io", "Bytes.java"]);
+		final reportStubPath = Path.join([outputDir, "src", "utest", "ui", "common", "IReport.java"]);
+		final moduleLocalStubPath = Path.join([outputDir, "src", "MyClass", "UsingBase.java"]);
 		final jarPath = outputDir + ".jar";
 		assertTrue(result.entryPath == jarPath, "Java source backend should still report the packaged jar for support-class programs");
 		assertTrue(FileSystem.exists(mainSourcePath), "Java source backend should emit the main Java source file");
 		assertTrue(FileSystem.exists(helperSourcePath), "Java source backend should emit sibling support classes before javac");
+		assertTrue(FileSystem.exists(listStubPath), "Java source backend should synthesize stubs for imported Haxe package classes");
+		assertTrue(FileSystem.exists(bytesStubPath), "Java source backend should synthesize stubs for imported Haxe package classes beyond haxe.ds");
+		assertTrue(FileSystem.exists(reportStubPath), "Java source backend should synthesize stubs for imported interface-like package classes");
+		assertTrue(FileSystem.exists(moduleLocalStubPath), "Java source backend should synthesize stubs for module-local dotted imports");
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should package a jar after compiling support classes");
 		final mainContent = File.getContent(mainSourcePath);
 		final helperContent = File.getContent(helperSourcePath);
+		final reportContent = File.getContent(reportStubPath);
 		assertContains(helperContent, "public class Helper", "Java support source should declare the sibling class");
 		assertContains(helperContent, "assert_", "Java support source should sanitize reserved method names");
 		assertContains(helperContent, "Object native_", "Java support source should sanitize reserved argument names");
 		assertContains(helperContent, "Object __", "Java support source should sanitize underscore-only argument names");
+		assertContains(reportContent, "public interface IReport", "Java import stubs should model interface-like names as interfaces");
 		assertContains(mainContent, "helper.assert_(\"ok\")", "Java main source should call sanitized support method names");
 		assertNotContains(mainContent, "import Map;", "Java main source should not import default-package classes");
 		assertNotContains(helperContent, "import Type;", "Java support source should not import default-package classes");
