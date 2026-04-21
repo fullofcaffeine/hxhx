@@ -271,6 +271,8 @@ class SourceNativeBackend {
 				renderExpr(target, inner);
 			case EUntyped(inner):
 				renderExpr(target, inner);
+			case EMacroExpr(inner, wrappers):
+				macroExpr(target, inner, wrappers);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringCall(target, renderExpr(target, args[0]));
 			case EField(receiver, field):
@@ -651,6 +653,90 @@ class SourceNativeBackend {
 				"(object)[" + pairs.join(", ") + "]";
 			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: EAnon";
+		};
+	}
+
+	static function macroExpr(target:SourceNativeTarget, expr:HxExpr, wrappers:Array<String>):String {
+		return switch (target) {
+			case Php:
+				phpMacroExpr(expr, wrappers);
+			case Python, Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported expression: EMacroExpr";
+		};
+	}
+
+	static function phpMacroExpr(expr:HxExpr, wrappers:Array<String>):String {
+		var exprDef = phpMacroExprDef(expr);
+		if (wrappers != null) {
+			var i = wrappers.length;
+			while (i > 0) {
+				i--;
+				exprDef = switch (wrappers[i]) {
+					case "parenthesis":
+						phpMacroEnum("EParenthesis", [phpMacroExprObject(exprDef)]);
+					case "untyped":
+						phpMacroEnum("EUntyped", [phpMacroExprObject(exprDef)]);
+					case _:
+						exprDef;
+				}
+			}
+		}
+		return phpMacroExprObject(exprDef);
+	}
+
+	static function phpMacroExprObject(exprDef:String):String {
+		return "(object)[\"expr\" => " + exprDef + ", \"pos\" => null]";
+	}
+
+	static function phpMacroEnum(name:String, params:Array<String>):String {
+		final paramText = params == null ? "" : params.join(", ");
+		return "(object)[\"__hx_ctor\" => " + quoteString(name) + ", \"__hx_index\" => 0, \"__hx_params\" => [" + paramText + "]]";
+	}
+
+	static function phpMacroExprDef(expr:HxExpr):String {
+		return switch (expr) {
+			case EString(value):
+				phpMacroEnum("EConst", [phpMacroEnum("CString", [quoteString(value)])]);
+			case EInt(value):
+				phpMacroEnum("EConst", [phpMacroEnum("CInt", [quoteString(Std.string(value))])]);
+			case EFloat(value):
+				phpMacroEnum("EConst", [phpMacroEnum("CFloat", [quoteString(Std.string(value))])]);
+			case ENull:
+				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quoteString("null")])]);
+			case EIdent(name):
+				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quoteString(name)])]);
+			case EField(receiver, field):
+				phpMacroEnum("EField", [phpMacroExpr(receiver, []), quoteString(field)]);
+			case EArrayAccess(receiver, index):
+				phpMacroEnum("EArray", [phpMacroExpr(receiver, []), phpMacroExpr(index, [])]);
+			case EArrayDecl(values):
+				final items = values == null ? [] : [for (value in values) phpMacroExpr(value, [])];
+				phpMacroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
+			case EBinop("in", left, right):
+				phpMacroEnum("EBinop", [phpMacroEnum("OpIn", []), phpMacroExpr(left, []), phpMacroExpr(right, [])]);
+			case ECall(EIdent("__hxhx_macro_if"), args):
+				final cond = args.length > 0 ? args[0] : HxExpr.EBool(false);
+				final thenExpr = args.length > 1 ? args[1] : HxExpr.ENull;
+				final elseExpr = if (args.length > 2) {
+					switch (args[2]) {
+						case EIdent("__hxhx_macro_missing_else"):
+							"null";
+						case other:
+							phpMacroExpr(other, []);
+					}
+				} else {
+					"null";
+				}
+				phpMacroEnum("EIf", [phpMacroExpr(cond, []), phpMacroExpr(thenExpr, []), elseExpr]);
+			case ECall(callee, args):
+				final loweredArgs = args == null ? [] : [for (arg in args) phpMacroExpr(arg, [])];
+				phpMacroEnum("ECall", [phpMacroExpr(callee, []), "[" + loweredArgs.join(", ") + "]"]);
+			case EUntyped(inner):
+				phpMacroEnum("EUntyped", [phpMacroExpr(inner, [])]);
+			case EUnop(op, inner):
+				phpMacroEnum("EUnop", [quoteString(op), phpMacroExpr(inner, [])]);
+			case _:
+				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quoteString(renderExpr(Php, expr))])]);
 		};
 	}
 
