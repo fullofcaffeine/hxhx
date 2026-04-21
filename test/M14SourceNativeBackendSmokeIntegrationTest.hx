@@ -622,6 +622,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpUnitMapComprehensionProgram():GenIrProgram {
+		final src = [
+			"class TestMapComprehension {",
+			"  public function new() {}",
+			"  public function testBasic() {",
+			"    mapEq([for (i in 0...2) i => i], [0 => 0, 1 => 1]);",
+			"    mapEq([for (i in 0...2) (i => i)], [0 => 0, 1 => 1]);",
+			"    mapEq([for (i in 0...2) if (i == 1) i => i], [1 => 1]);",
+			"  }",
+			"  function mapEq(m1, m2) { }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var test = new TestMapComprehension();",
+			"    test.testBasic();",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1620,6 +1644,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpUnitMapComprehensionFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_unit_map_comprehension_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpUnitMapComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$__hx_assert_map = function", "PHP TestMapComprehension fallback should emit a local assertion helper");
+		assertContains(content, "for ($i = 0; $i < 2; $i++) $__hx_map0[$i] = $i;",
+			"PHP TestMapComprehension fallback should build the basic map-comprehension result");
+		assertContains(content, "$__hx_assert_map($__hx_map2, [1 => 1], \"map-entry-filter\");",
+			"PHP TestMapComprehension fallback should validate the guarded map-comprehension result");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1677,6 +1717,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpShiftAssignment();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpUnitLocalStaticFallback();
+		assertPhpUnitMapComprehensionFallback();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();

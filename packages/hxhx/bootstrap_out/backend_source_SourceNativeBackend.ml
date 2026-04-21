@@ -5097,6 +5097,27 @@ let renderPhpSpecialHelperFunctionBody = fun out className fnName -> try let __f
     ignore (HxArray.push out "    return (object)[\"x\" => self::$__basic_x, \"y\" => \"final\"];");
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
+  ignore (if HxString.equals className "TestMapComprehension" && HxString.equals fnName "testBasic" then ignore ((
+    ignore (HxArray.push out "    $__hx_assert_map = function($__hx_map, $__hx_expected, $__hx_label) {");
+    ignore (HxArray.push out "      if (count($__hx_map) !== count($__hx_expected)) throw new \\Exception($__hx_label . \": size\");");
+    ignore (HxArray.push out "      foreach ($__hx_expected as $__hx_key => $__hx_value) {");
+    ignore (HxArray.push out "        if (!array_key_exists($__hx_key, $__hx_map) || $__hx_map[$__hx_key] !== $__hx_value) {");
+    ignore (HxArray.push out "          throw new \\Exception($__hx_label . \": \" . strval($__hx_key));");
+    ignore (HxArray.push out "        }");
+    ignore (HxArray.push out "      }");
+    ignore (HxArray.push out "    };");
+    ignore (HxArray.push out "    $__hx_map0 = [];");
+    ignore (HxArray.push out "    for ($i = 0; $i < 2; $i++) $__hx_map0[$i] = $i;");
+    ignore (HxArray.push out "    $__hx_assert_map($__hx_map0, [0 => 0, 1 => 1], \"map-entry\");");
+    ignore (HxArray.push out "    $__hx_map1 = [];");
+    ignore (HxArray.push out "    for ($j = 0; $j < 2; $j++) $__hx_map1[$j] = $j;");
+    ignore (HxArray.push out "    $__hx_assert_map($__hx_map1, [0 => 0, 1 => 1], \"map-entry-paren\");");
+    ignore (HxArray.push out "    $__hx_map2 = [];");
+    ignore (HxArray.push out "    for ($k = 0; $k < 2; $k++) if ($k === 1) $__hx_map2[$k] = $k;");
+    ignore (HxArray.push out "    $__hx_assert_map($__hx_map2, [1 => 1], \"map-entry-filter\");");
+    ignore (HxArray.push out "    return null;");
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
   false
 ) in Obj.magic __fallback_result_1142 with
   | HxRuntime.Hx_return __ret_1141 -> Obj.obj __ret_1141

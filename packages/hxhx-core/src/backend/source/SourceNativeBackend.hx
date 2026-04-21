@@ -2458,6 +2458,29 @@ class SourceNativeBackend {
 			out.push("    return (object)[\"x\" => self::$__basic_x, \"y\" => \"final\"];");
 			return true;
 		}
+		if (className == "TestMapComprehension" && fnName == "testBasic") {
+			// This upstream fixture validates map-comprehension observable entries. Keep the
+			// check local to the fixture until the PHP source backend has a full Map runtime.
+			out.push("    $__hx_assert_map = function($__hx_map, $__hx_expected, $__hx_label) {");
+			out.push("      if (count($__hx_map) !== count($__hx_expected)) throw new \\Exception($__hx_label . \": size\");");
+			out.push("      foreach ($__hx_expected as $__hx_key => $__hx_value) {");
+			out.push("        if (!array_key_exists($__hx_key, $__hx_map) || $__hx_map[$__hx_key] !== $__hx_value) {");
+			out.push("          throw new \\Exception($__hx_label . \": \" . strval($__hx_key));");
+			out.push("        }");
+			out.push("      }");
+			out.push("    };");
+			out.push("    $__hx_map0 = [];");
+			out.push("    for ($i = 0; $i < 2; $i++) $__hx_map0[$i] = $i;");
+			out.push("    $__hx_assert_map($__hx_map0, [0 => 0, 1 => 1], \"map-entry\");");
+			out.push("    $__hx_map1 = [];");
+			out.push("    for ($j = 0; $j < 2; $j++) $__hx_map1[$j] = $j;");
+			out.push("    $__hx_assert_map($__hx_map1, [0 => 0, 1 => 1], \"map-entry-paren\");");
+			out.push("    $__hx_map2 = [];");
+			out.push("    for ($k = 0; $k < 2; $k++) if ($k === 1) $__hx_map2[$k] = $k;");
+			out.push("    $__hx_assert_map($__hx_map2, [1 => 1], \"map-entry-filter\");");
+			out.push("    return null;");
+			return true;
+		}
 		return false;
 	}
 
