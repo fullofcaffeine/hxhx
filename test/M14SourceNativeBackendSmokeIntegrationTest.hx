@@ -1644,6 +1644,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Runner", "PHP source backend should emit an explicit utest Runner bring-up shim");
 		assertContains(content, "get_class_methods($case)", "PHP Runner shim should execute public test/spec methods instead of faking success");
 		assertContains(content, "class Report", "PHP source backend should emit an explicit utest Report bring-up shim");
+		assertContains(content, "class Assert", "PHP source backend should emit a minimal utest Assert bring-up shim");
+		assertContains(content, "public static function equals($expected, $value, $message = null, $pos = null)",
+			"PHP Assert shim should support equality checks with optional message and position args");
+		assertContains(content, "throw new \\Exception($message === null ? \"assertion failed\" : strval($message));",
+			"PHP Assert shim should throw on failed assertions instead of faking success");
 		assertContains(content, "class ValueException extends \\Exception", "PHP source backend should emit a minimal ValueException helper");
 		assertContains(content, "public static function thrown($value)", "PHP ValueException helper should support thrown values");
 		assertContains(content, "class Sys", "PHP source backend should emit a minimal Sys helper");
