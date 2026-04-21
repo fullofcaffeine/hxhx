@@ -579,6 +579,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpNullCoalescingProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var fallback = 2;",
+			"    var value:Null<Int> = null;",
+			"    var got = value ?? fallback;",
+			"    value ??= 3;",
+			"    Sys.println(Std.string(got));",
+			"    Sys.println(Std.string(value));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpCompileTimeOnlyMacroSupportProgram():GenIrProgram {
 		final src = [
 			"class TestIssues {",
@@ -1661,6 +1679,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpNullCoalescing():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_null_coalescing_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpNullCoalescingProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$got = ($value ?? $fallback);", "PHP null coalescing should lower to the native ?? operator");
+		assertContains(content, "$value ??= 3;", "PHP null coalescing assignment should lower to native ??=");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpCompileTimeOnlyMacroSupportSkipped():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_compile_time_macro_skip_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1791,6 +1822,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpForKeyValue();
 		assertPhpTypeCheck();
 		assertPhpShiftAssignment();
+		assertPhpNullCoalescing();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpUnitLocalStaticFallback();
 		assertPhpUnitMapComprehensionFallback();

@@ -383,6 +383,10 @@ class SourceNativeBackend {
 			return unsignedRightShiftExpr(target, renderExpr(target, left), renderExpr(target, right));
 		if (op == ">>>=")
 			return unsignedRightShiftAssignExpr(target, left, right);
+		if (op == "??")
+			return nullCoalesceExpr(target, left, right);
+		if (op == "??=")
+			return nullCoalesceAssignExpr(target, left, right);
 		if (op == "is")
 			return typeCheckExpr(target, left, right);
 		final mapped = binopToken(target, op);
@@ -402,6 +406,24 @@ class SourceNativeBackend {
 		if (isAssignmentOp(op))
 			return a + " " + mapped + " " + b;
 		return "(" + a + " " + mapped + " " + b + ")";
+	}
+
+	static function nullCoalesceExpr(target:SourceNativeTarget, left:HxExpr, right:HxExpr):String {
+		return switch (target) {
+			case Php:
+				"(" + renderExpr(target, left) + " ?? " + renderExpr(target, right) + ")";
+			case Python, Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported binary operator: ??";
+		};
+	}
+
+	static function nullCoalesceAssignExpr(target:SourceNativeTarget, left:HxExpr, right:HxExpr):String {
+		return switch (target) {
+			case Php:
+				renderExpr(target, left) + " ??= " + renderExpr(target, right);
+			case Python, Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported binary operator: ??=";
+		};
 	}
 
 	static function isAssignmentOp(op:String):Bool {
