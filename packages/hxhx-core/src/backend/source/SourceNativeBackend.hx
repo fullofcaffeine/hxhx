@@ -771,8 +771,13 @@ class SourceNativeBackend {
 					].join(op);
 					"(" + parts + ")";
 				}
-			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
-				PUnsupportedGuard(_):
+			case PUnsupportedGuard(inner):
+				"(("
+				+ switchPatternCond(target, scrutinee, inner)
+				+ ") "
+				+ (target == Python || target == Lua ? "and" : "&&")
+				+ " false)";
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _):
 				throw targetLabel(target) + " source backend MVP unsupported switch pattern: " + patternKind(pattern);
 		};
 	}

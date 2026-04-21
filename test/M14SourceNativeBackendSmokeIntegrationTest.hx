@@ -604,6 +604,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function guardedSwitchExpressionProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var label = switch (1) {",
+			"      case 1 if (unknownGuard): \"bad\";",
+			"      case _: \"ok\";",
+			"    };",
+			"    Sys.println(Std.string(label));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function switchStatementProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1141,6 +1158,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertUnsupportedSwitchGuardExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_guarded_switch_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(guardedSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "&& false", "unsupported switch guards should preserve the inner match and disable the branch");
+		assertContains(content, "$label = (", "guarded switch expressions should still lower to PHP conditional expressions");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1198,6 +1228,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLambdaExpression();
 		assertPhpLambdaImmediateCallExpression();
 		assertSwitchExpression();
+		assertUnsupportedSwitchGuardExpression();
 		assertSwitchStatement();
 	}
 }
