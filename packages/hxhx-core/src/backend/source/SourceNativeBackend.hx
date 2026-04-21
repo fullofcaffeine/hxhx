@@ -324,8 +324,10 @@ class SourceNativeBackend {
 				continue;
 			seen.set(key, true);
 			final path = javaSourcePath(sourceDir, "unit", className);
-			if (sys.FileSystem.exists(path))
+			if (sys.FileSystem.exists(path)) {
+				sourcePaths.push(path);
 				continue;
+			}
 			ensureParentDirectory(path);
 			sys.io.File.saveContent(path, renderJavaRunciHelperStub(className));
 			sourcePaths.push(path);
@@ -364,8 +366,10 @@ class SourceNativeBackend {
 			final className = owner.substr(lastDot + 1);
 			final path = javaSourcePath(sourceDir, packagePath, className);
 			seen.set(owner, true);
-			if (sys.FileSystem.exists(path))
+			if (sys.FileSystem.exists(path)) {
+				sourcePaths.push(path);
 				continue;
+			}
 			ensureParentDirectory(path);
 			sys.io.File.saveContent(path, renderJavaImportStub(packagePath, className, nestedByOwner.get(owner)));
 			sourcePaths.push(path);
@@ -383,8 +387,10 @@ class SourceNativeBackend {
 			final stubClassName = className == "*" ? "HxWildcardStub" : className;
 			final path = javaSourcePath(sourceDir, packagePath, stubClassName);
 			seen.set(clean, true);
-			if (sys.FileSystem.exists(path))
+			if (sys.FileSystem.exists(path)) {
+				sourcePaths.push(path);
 				continue;
+			}
 			ensureParentDirectory(path);
 			sys.io.File.saveContent(path, renderJavaImportStub(packagePath, className));
 			sourcePaths.push(path);

@@ -308,31 +308,6 @@ let stage1args_parse = fun args permissive -> let permissive = if Obj.repr permi
         ));
         i := HxInt.add (!i) 2
       ))
-      | "--dce" -> ignore (if permissive then ignore ((
-        ignore (if HxInt.add (!i) 1 >= HxArray.length expanded then ignore ((
-          ignore (print_endline "hxhx(stage1): missing value after --dce");
-          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-        )) else ());
-        ignore (HxArray.push defines2 ("dce=" ^ HxString.toStdString (HxArray.get (Obj.magic expanded) (HxInt.add (!i) 1))));
-        i := HxInt.add (!i) 2
-      )) else ignore ((
-        ignore (if StringTools.startsWith (a : string) ("-" : string) then ignore ((
-          ignore (if permissive then ignore ((
-            ignore (print_endline ("hxhx(stage1): ignoring unsupported flag in permissive mode: " ^ HxString.toStdString a));
-            ignore (i := HxInt.add (!i) 1);
-            raise (HxRuntime.Hx_continue)
-          )) else ());
-          ignore (print_endline ("hxhx(stage1): unsupported flag: " ^ HxString.toStdString a));
-          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-        )) else ());
-        ignore (if permissive then ignore ((
-          ignore (HxArray.push roots2 a);
-          ignore (i := HxInt.add (!i) 1);
-          raise (HxRuntime.Hx_continue)
-        )) else ());
-        ignore (print_endline ("hxhx(stage1): unsupported argument: " ^ HxString.toStdString a));
-        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-      )))
       | "--debug" -> ignore (if permissive then ignore ((
         ignore (HxArray.push defines2 "debug=1");
         i := HxInt.add (!i) 1
@@ -556,6 +531,31 @@ let stage1args_parse = fun args permissive -> let permissive = if Obj.repr permi
           hadCmd2 := __assign_17;
           __assign_17
         ));
+        i := HxInt.add (!i) 2
+      )) else ignore ((
+        ignore (if StringTools.startsWith (a : string) ("-" : string) then ignore ((
+          ignore (if permissive then ignore ((
+            ignore (print_endline ("hxhx(stage1): ignoring unsupported flag in permissive mode: " ^ HxString.toStdString a));
+            ignore (i := HxInt.add (!i) 1);
+            raise (HxRuntime.Hx_continue)
+          )) else ());
+          ignore (print_endline ("hxhx(stage1): unsupported flag: " ^ HxString.toStdString a));
+          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+        )) else ());
+        ignore (if permissive then ignore ((
+          ignore (HxArray.push roots2 a);
+          ignore (i := HxInt.add (!i) 1);
+          raise (HxRuntime.Hx_continue)
+        )) else ());
+        ignore (print_endline ("hxhx(stage1): unsupported argument: " ^ HxString.toStdString a));
+        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+      )))
+      | "--dce" | "-dce" -> ignore (if permissive then ignore ((
+        ignore (if HxInt.add (!i) 1 >= HxArray.length expanded then ignore ((
+          ignore (print_endline ("hxhx(stage1): missing value after " ^ HxString.toStdString a));
+          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+        )) else ());
+        ignore (HxArray.push defines2 ("dce=" ^ HxString.toStdString (HxArray.get (Obj.magic expanded) (HxInt.add (!i) 1))));
         i := HxInt.add (!i) 2
       )) else ignore ((
         ignore (if StringTools.startsWith (a : string) ("-" : string) then ignore ((

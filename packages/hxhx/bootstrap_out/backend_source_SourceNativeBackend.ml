@@ -8016,7 +8016,10 @@ let emitJavaRunciHelperStubs = fun sourceDir sourcePaths seen -> ignore (let hel
     ignore (if HxMap.exists_string seen key then raise (HxRuntime.Hx_continue) else ());
     ignore (HxMap.set_string seen key true);
     let path = (javaSourcePath (sourceDir : string) ("unit" : string) (className : string) : string) in (
-      ignore (if HxFileSystem.exists path then raise (HxRuntime.Hx_continue) else ());
+      ignore (if HxFileSystem.exists path then ignore ((
+        ignore (HxArray.push sourcePaths path);
+        raise (HxRuntime.Hx_continue)
+      )) else ());
       ignore (ensureParentDirectory (path : string));
       let content = (renderJavaRunciHelperStub (className : string) : string) in (
         ignore (HxFile.saveContent (path : string) (content : string));
@@ -8110,7 +8113,10 @@ let emitJavaImportStubs = fun program sourceDir sourcePaths seen -> ignore (let 
       ignore (if lastDot <= 0 then raise (HxRuntime.Hx_continue) else ());
       let packagePath = (HxString.substr owner2 0 lastDot : string) in let className = (HxString.substr owner2 (HxInt.add lastDot 1) (-1) : string) in let path = (javaSourcePath (sourceDir : string) (packagePath : string) (className : string) : string) in (
         ignore (HxMap.set_string seen owner2 true);
-        ignore (if HxFileSystem.exists path then raise (HxRuntime.Hx_continue) else ());
+        ignore (if HxFileSystem.exists path then ignore ((
+          ignore (HxArray.push sourcePaths path);
+          raise (HxRuntime.Hx_continue)
+        )) else ());
         ignore (ensureParentDirectory (path : string));
         ignore (let content = (renderJavaImportStub (packagePath : string) (className : string) (Obj.magic (HxMap.get_string nestedByOwner owner2)) : string) in HxFile.saveContent (path : string) (content : string));
         HxArray.push sourcePaths path
@@ -8137,7 +8143,10 @@ let emitJavaImportStubs = fun program sourceDir sourcePaths seen -> ignore (let 
       ));
       let stubClassName = (!tempString : string) in let path = (javaSourcePath (sourceDir : string) (packagePath : string) (stubClassName : string) : string) in (
         ignore (HxMap.set_string seen clean true);
-        ignore (if HxFileSystem.exists path then raise (HxRuntime.Hx_continue) else ());
+        ignore (if HxFileSystem.exists path then ignore ((
+          ignore (HxArray.push sourcePaths path);
+          raise (HxRuntime.Hx_continue)
+        )) else ());
         ignore (ensureParentDirectory (path : string));
         ignore (let content = (renderJavaImportStub (packagePath : string) (className : string) (Obj.magic (HxRuntime.hx_null)) : string) in HxFile.saveContent (path : string) (content : string));
         HxArray.push sourcePaths path

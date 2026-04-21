@@ -1878,6 +1878,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(mainContent, "helper.assert_(\"ok\")", "Java main source should call sanitized support method names");
 		assertNotContains(mainContent, "import Map;", "Java main source should not import default-package classes");
 		assertNotContains(helperContent, "import Type;", "Java support source should not import default-package classes");
+		final secondResult = backend.emit(javaSupportClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		assertTrue(secondResult.entryPath == jarPath, "Java source backend should reuse the same jar path on repeated output-dir emits");
+		assertTrue(FileSystem.exists(jarPath), "Java source backend should recompile generated import/helper stubs on repeated output-dir emits");
 		deleteRecursive(tmpRoot);
 	}
 

@@ -298,9 +298,9 @@ class Stage1Args {
 					i += 2;
 				case "--display-details", "--times" if (permissive):
 					i += 1;
-				case "--dce" if (permissive):
+				case "--dce" | "-dce" if (permissive):
 					if (i + 1 >= expanded.length) {
-						Sys.println("hxhx(stage1): missing value after --dce");
+						Sys.println("hxhx(stage1): missing value after " + a);
 						return null;
 					}
 					defines.push("dce=" + expanded[i + 1]);

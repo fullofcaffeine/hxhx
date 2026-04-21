@@ -105,6 +105,12 @@ class M14Stage1StdRootInferenceIntegrationTest {
 			assertTrue(hasValue(nativeLibDefines, "hxhx_java_lib=1"), "expected --java-lib to seed native Java library define");
 			assertTrue(hasValue(nativeLibDefines, "hxhx_net_lib=1"), "expected --net-lib to seed native .NET library define");
 
+			final shortDceParsed = Stage1Args.parse(["--cwd", projectDir, "-cp", "src", "-main", "Main", "-dce", "no", "-D", "Mac"], true);
+			assertTrue(shortDceParsed != null, "expected short -dce args to parse in permissive Stage1 mode");
+			final shortDceDefines = Stage1Args.getDefines(shortDceParsed);
+			assertTrue(hasValue(shortDceDefines, "dce=no"), "expected short -dce to seed dce define");
+			assertTrue(Stage1Args.getRoots(shortDceParsed).length == 0, "short -dce value should not be treated as a positional root");
+
 			var found = false;
 			for (cp in classPaths) {
 				if (Path.normalize(cp) == expectedStd) {
