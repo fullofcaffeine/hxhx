@@ -3385,7 +3385,15 @@ class SourceNativeBackend {
 				lines.push("  return __hxhx_add_string($left) . __hxhx_add_string($right);");
 				lines.push("}");
 				lines.push("function __hxhx_add_string($value) {");
-				lines.push("  return $value === null ? \"null\" : strval($value);");
+				lines.push("  if ($value === null) return \"null\";");
+				lines.push("  if (is_object($value) && !method_exists($value, \"__toString\")) {");
+				lines.push("    $parts = [];");
+				lines.push("    foreach (get_object_vars($value) as $key => $fieldValue) {");
+				lines.push("      $parts[] = $key . \": \" . __hxhx_add_string($fieldValue);");
+				lines.push("    }");
+				lines.push("    return \"{\" . implode(\", \", $parts) . \"}\";");
+				lines.push("  }");
+				lines.push("  return strval($value);");
 				lines.push("}");
 				lines.push("function __hxhx_mod($left, $right) {");
 				lines.push("  if ($right == 0) return NAN;");

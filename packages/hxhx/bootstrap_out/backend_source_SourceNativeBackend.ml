@@ -7299,7 +7299,15 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  return __hxhx_add_string($left) . __hxhx_add_string($right);");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_add_string($value) {");
-      ignore (HxArray.push lines "  return $value === null ? \"null\" : strval($value);");
+      ignore (HxArray.push lines "  if ($value === null) return \"null\";");
+      ignore (HxArray.push lines "  if (is_object($value) && !method_exists($value, \"__toString\")) {");
+      ignore (HxArray.push lines "    $parts = [];");
+      ignore (HxArray.push lines "    foreach (get_object_vars($value) as $key => $fieldValue) {");
+      ignore (HxArray.push lines "      $parts[] = $key . \": \" . __hxhx_add_string($fieldValue);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    return \"{\" . implode(\", \", $parts) . \"}\";");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  return strval($value);");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_mod($left, $right) {");
       ignore (HxArray.push lines "  if ($right == 0) return NAN;");
