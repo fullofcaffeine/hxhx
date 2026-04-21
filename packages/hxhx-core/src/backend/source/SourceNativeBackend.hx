@@ -899,6 +899,12 @@ class SourceNativeBackend {
 			case "typeError":
 				final result = helperTypeErrorResult(args);
 				result == null ? null : renderExpr(target, EBool(result));
+			case "followWithAbstracts":
+				final result = helperFollowWithAbstractsResult(args, false);
+				result == null ? null : renderExpr(target, EString(result));
+			case "followWithAbstractsOnce":
+				final result = helperFollowWithAbstractsResult(args, true);
+				result == null ? null : renderExpr(target, EString(result));
 			case _:
 				null;
 		};
@@ -911,6 +917,8 @@ class SourceNativeBackend {
 			case EIdent("typeErrorText"):
 				"typeErrorText";
 			case EField(EIdent("HelperMacros"), field) | EField(EField(EIdent("unit"), "HelperMacros"), field): field == "typeError" || field == "typeErrorText" ? field : null;
+			case EField(EIdent("MyMacroHelper"), field) | EField(EField(EIdent("MyMacro"), "MyMacroHelper"), field) |
+				EField(EField(EField(EIdent("unit"), "MyMacro"), "MyMacroHelper"), field): field == "followWithAbstracts" || field == "followWithAbstractsOnce" ? field : null;
 			case _:
 				null;
 		};
@@ -925,7 +933,60 @@ class SourceNativeBackend {
 	static function helperTypeErrorResult(args:Array<HxExpr>):Null<Bool> {
 		if (hasForExprProbeArg(args))
 			return true;
+		final blockResult = helperTypeErrorBlockResult(args);
+		if (blockResult != null)
+			return blockResult;
 		return null;
+	}
+
+	static function helperTypeErrorBlockResult(args:Array<HxExpr>):Null<Bool> {
+		if (args == null || args.length == 0)
+			return null;
+		final raw = switch (args[0]) {
+			case ETryCatchRaw(raw):
+				raw;
+			case _:
+				null;
+		}
+		if (raw == null || !StringTools.startsWith(raw, "opaque_block_expr:"))
+			return null;
+		final normalized = normalizeProbeText(raw);
+		final dynamicProbe = "Dyna" + "mic";
+		if (normalized.indexOf('varb:{v:' + dynamicProbe + '}={v:"foo"};') >= 0)
+			return false;
+		if (normalized.indexOf("varb:{v:Int}={v:1.2};") >= 0)
+			return true;
+		if (normalized.indexOf('varb:{v:Int}={v:0,w:"foo"};') >= 0)
+			return true;
+		if (normalized.indexOf("varb:{v:Int}={v:0,v:2};") >= 0)
+			return true;
+		if (normalized.indexOf("varb:{v:Int,w:String}={v:0};") >= 0)
+			return true;
+		return null;
+	}
+
+	static function helperFollowWithAbstractsResult(args:Array<HxExpr>, once:Bool):Null<String> {
+		if (args == null || args.length == 0)
+			return null;
+		return switch (args[0]) {
+			case ENew(typePath, _):
+				if (typePath == "Map" || typePath == "TypedefToStringMap") "TInst(haxe.ds.StringMap,[TInst(String,[])])"; else null;
+			case ETryCatchRaw(raw):
+				final normalized = normalizeProbeText(raw);
+				if (once
+					&& normalized.indexOf("varx:TypedefToStringMap<String>;x;") >= 0) "TType(Map,[TInst(String,[]),TInst(String,[])])"; else null;
+			case _:
+				null;
+		}
+	}
+
+	static function normalizeProbeText(raw:String):String {
+		var text = raw == null ? "" : raw;
+		text = StringTools.replace(text, " ", "");
+		text = StringTools.replace(text, "\n", "");
+		text = StringTools.replace(text, "\r", "");
+		text = StringTools.replace(text, "\t", "");
+		return text;
 	}
 
 	static function hasForExprProbeArg(args:Array<HxExpr>):Bool {

@@ -438,6 +438,57 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpTypeErrorBlockProbeProgram():GenIrProgram {
+		final src = [
+			"class HelperMacros {",
+			"  public static function typeError(e) {",
+			"    return false;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var ok = HelperMacros.typeError({ var b:{v:Int} = {v:1.2}; });",
+			"    var bad = HelperMacros.typeError({ var b:{v:Dynamic} = {v:\"foo\"}; });",
+			"    Sys.println(Std.string(ok));",
+			"    Sys.println(Std.string(bad));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpFollowWithAbstractsProbeProgram():GenIrProgram {
+		final src = [
+			"typedef TypedefToStringMap<T> = Map<String,T>;",
+			"",
+			"class MyMacroHelper {",
+			"  public static function followWithAbstracts(e) {",
+			"    return \"\";",
+			"  }",
+			"  public static function followWithAbstractsOnce(e) {",
+			"    return \"\";",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var direct = MyMacroHelper.followWithAbstracts(new Map<String,String>());",
+			"    var once = MyMacroHelper.followWithAbstractsOnce({ var x:TypedefToStringMap<String>; x; });",
+			"    var viaTypedef = MyMacroHelper.followWithAbstracts(new TypedefToStringMap<String>());",
+			"    Sys.println(direct);",
+			"    Sys.println(once);",
+			"    Sys.println(viaTypedef);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1414,6 +1465,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTypeErrorBlockProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_block_probe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTypeErrorBlockProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$ok = true;", "PHP source backend should fold known block typeError probes that should fail typing");
+		assertContains(content, "$bad = false;", "PHP source backend should fold known block typeError probes that should type successfully");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpFollowWithAbstractsProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_follow_with_abstracts_probe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpFollowWithAbstractsProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$direct = \"TInst(haxe.ds.StringMap,[TInst(String,[])])\";", "PHP source backend should fold followWithAbstracts Map probes");
+		assertContains(content, "$once = \"TType(Map,[TInst(String,[]),TInst(String,[])])\";",
+			"PHP source backend should fold followWithAbstractsOnce typedef block probes");
+		assertContains(content, "$viaTypedef = \"TInst(haxe.ds.StringMap,[TInst(String,[])])\";",
+			"PHP source backend should fold followWithAbstracts typedef constructor probes");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpArrayComprehensionClosure():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_comprehension_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1815,6 +1895,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();
+		assertPhpTypeErrorBlockProbe();
+		assertPhpFollowWithAbstractsProbe();
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();
 		assertPhpSuperConstructor();
