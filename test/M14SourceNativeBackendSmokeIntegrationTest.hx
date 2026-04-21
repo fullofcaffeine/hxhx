@@ -895,6 +895,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function javaLibraryEnumProgram():GenIrProgram {
+		final presentArg = new HxFunctionArg("v", "String", HxDefaultValue.NoDefault);
+		final presentRuntime = HxExpr.EAnon(["__hx_ctor", "__hx_index", "__hx_params"], [
+			HxExpr.EString("Present"),
+			HxExpr.EInt(0),
+			HxExpr.EArrayDecl([HxExpr.EIdent("v")])
+		]);
+		final absentRuntime = HxExpr.EAnon(["__hx_ctor", "__hx_index", "__hx_params"], [HxExpr.EString("Absent"), HxExpr.EInt(1), HxExpr.EArrayDecl([])]);
+		final present = new HxFunctionDecl("Present", HxVisibility.Public, true, [presentArg], "Dynamic", [HxStmt.SReturn(presentRuntime, HxPos.unknown())],
+			"");
+		final absent = new HxFieldDecl("Absent", HxVisibility.Public, true, "Dynamic", absentRuntime);
+		final maybeClass = new HxClassDecl("Maybe", false, [present], [absent]);
+		final decl = new HxModuleDecl("demo", [], maybeClass, [maybeClass], false, false);
+		final parsed = new ParsedModule("", decl, "demo/Maybe.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpInheritedTestHelperCallProgram():GenIrProgram {
 		final src = [
 			"class Test {",
@@ -1827,6 +1845,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final sourceContent = File.getContent(sourcePath);
 		assertContains(sourceContent, "class Std", "Java source backend should provide minimal Std support class");
 		assertContains(sourceContent, "class Sys", "Java source backend should provide minimal Sys support class");
+		assertContains(sourceContent, "public static int command(Object... args)",
+			"Java Sys.command support should execute helper commands used by upstream Java misc projects");
+		assertContains(sourceContent, "public static String systemName()",
+			"Java Sys.systemName support should let helper programs choose the platform classpath separator");
+		assertContains(sourceContent, "public static void exit(Object code)", "Java Sys.exit support should propagate helper command failures");
 		final run = commandOutput("java", ["-jar", jarPath]);
 		assertTrue(run.code == 0, "Java source backend jar should run: " + run.stderr);
 		assertContains(run.stdout, "source-native:java", "Java source backend jar should execute generated main");
@@ -1949,6 +1972,47 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(secondRun.stdout, "callback", "Java functional helper stubs should execute callback bodies");
 		assertContains(secondRun.stdout, "8", "Java function/value overloads should execute one-arg same-class method references");
 		assertContains(secondRun.stdout, "16", "Java function/value overloads should execute two-arg same-class method references");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertJavaLibraryEnumJarPackaging():Void {
+		if (!commandExists("javac") || !commandExists("jar") || !commandExists("java"))
+			return;
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_library_enum_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final outputDir = Path.join([tmpRoot, "bin", "java"]);
+		final jarPath = Path.join([tmpRoot, "bin", "haxe.jar"]);
+		final backend = BackendRegistry.requireForTarget("java-native");
+		final result = backend.emit(javaLibraryEnumProgram(), new BackendContext(outputDir, jarPath, "demo.Maybe", true, true, new StringMap<String>()));
+		final maybeSourcePath = Path.join([outputDir, "src", "demo", "Maybe.java"]);
+		assertTrue(result.entryPath == jarPath, "Java library emission should report the requested jar path as primary artifact");
+		assertTrue(FileSystem.exists(jarPath), "Java library emission should package a jar without requiring a Haxe main");
+		assertTrue(FileSystem.exists(maybeSourcePath), "Java library emission should emit the enum support source");
+		final maybeContent = File.getContent(maybeSourcePath);
+		assertContains(maybeContent, "public static class Present extends Maybe", "Java enum-like library source should expose constructor classes");
+		assertContains(maybeContent, "public Object v;", "Java enum-like constructor classes should expose payload fields");
+		assertContains(maybeContent, "public static Maybe Present(Object v)", "Java enum-like library source should expose constructor factories");
+		final probePath = Path.join([tmpRoot, "Main.java"]);
+		File.saveContent(probePath, [
+			"import demo.Maybe;",
+			"",
+			"class Main {",
+			"  public static void main(String[] args) {",
+			"    Maybe value = Maybe.Present(\"ok\");",
+			"    if (value instanceof Maybe.Present && ((Maybe.Present)value).v.equals(\"ok\")) {",
+			"      System.out.println(\"library-enum-ok\");",
+			"      return;",
+			"    }",
+			"    throw new RuntimeException(\"enum payload mismatch\");",
+			"  }",
+			"}",
+		].join("\n"));
+		final javac = commandOutput("javac", ["-d", Path.join([tmpRoot, "bin"]), "-cp", jarPath, probePath]);
+		assertTrue(javac.code == 0, "External Java should compile against the generated library jar: " + javac.stderr);
+		final separator = Sys.systemName() == "Windows" ? ";" : ":";
+		final run = commandOutput("java", ["-cp", jarPath + separator + Path.join([tmpRoot, "bin"]), "Main"]);
+		assertTrue(run.code == 0, "External Java should run against the generated library jar: " + run.stderr);
+		assertContains(run.stdout, "library-enum-ok", "External Java should observe generated enum payloads");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -3342,6 +3406,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaJarPackaging();
 		assertJavaLambdaSequenceCallback();
 		assertJavaSupportClassJarPackaging();
+		assertJavaLibraryEnumJarPackaging();
 		assertUnsupportedDiagnostic();
 		assertWhileStatement();
 		assertIfStatement();

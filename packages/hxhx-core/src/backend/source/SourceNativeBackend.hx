@@ -197,7 +197,7 @@ class SourceNativeBackend {
 			ensureDirectory(parent);
 	}
 
-	static function mainModule(program:GenIrProgram, context:BackendContext):{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl} {
+	static function findMainModule(program:GenIrProgram, context:BackendContext):Null<{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}> {
 		final wanted = context.mainModule == null ? "" : context.mainModule;
 		var fallback:Null<{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}> = null;
 		for (typed in program.getTypedModules()) {
@@ -219,11 +219,24 @@ class SourceNativeBackend {
 		}
 		if (fallback != null)
 			return fallback;
+		return null;
+	}
+
+	static function mainModule(program:GenIrProgram, context:BackendContext):{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl} {
+		final found = findMainModule(program, context);
+		if (found != null)
+			return found;
 		throw "source target MVP requires a static main entrypoint";
 	}
 
 	static function emitTarget(target:SourceNativeTarget, program:GenIrProgram, context:BackendContext):EmitResult {
-		final main = mainModule(program, context);
+		final maybeMain = findMainModule(program, context);
+		if (maybeMain == null) {
+			if (target == Java && context.buildExecutable)
+				return emitJavaLibraryJar(program, context);
+			throw "source target MVP requires a static main entrypoint";
+		}
+		final main = maybeMain;
 		final className = sanitizeTypeNameForTarget(target, HxClassDecl.getName(main.cls));
 		if (target == Java && context.buildExecutable)
 			return emitJavaJar(program, context, main.decl, className, HxFunctionDecl.getBody(main.fn));
@@ -268,6 +281,36 @@ class SourceNativeBackend {
 		return new EmitResult(jarPath, artifacts, false);
 	}
 
+	static function emitJavaLibraryJar(program:GenIrProgram, context:BackendContext):EmitResult {
+		final sourceDir = Path.join([context.outputDir, "src"]);
+		final classesDir = Path.join([context.outputDir, "obj"]);
+		final jarPath = javaJarPath(context.outputDir, javaLibraryFallbackName(context), context.outputFileHint);
+		ensureDirectory(sourceDir);
+		ensureDirectory(classesDir);
+		ensureParentDirectory(jarPath);
+		final sourcePaths = emitJavaLibrarySourceSet(program, sourceDir);
+		if (sourcePaths.length == 0)
+			throw "Java source backend MVP library emission found no source modules";
+		final javacCode = Sys.command("javac", ["-d", classesDir].concat(sourcePaths));
+		if (javacCode != 0)
+			throw "Java source backend MVP javac failed with exit code " + javacCode;
+		final jarCode = Sys.command("jar", ["cf", jarPath, "-C", classesDir, "."]);
+		if (jarCode != 0)
+			throw "Java source backend MVP jar packaging failed with exit code " + jarCode;
+		final artifacts = [new EmitArtifact("entry_java_jar", jarPath)];
+		for (path in sourcePaths)
+			artifacts.push(new EmitArtifact("support_java_source", path));
+		return new EmitResult(jarPath, artifacts, false);
+	}
+
+	static function javaLibraryFallbackName(context:BackendContext):String {
+		final main = context.mainModule == null ? "" : context.mainModule;
+		if (main.length == 0)
+			return "Library";
+		final parts = main.split(".");
+		return parts[parts.length - 1];
+	}
+
 	static function javaJarPath(outputDir:String, className:String, ?outputFileHint:String):String {
 		if (outputFileHint != null && outputFileHint.length > 0)
 			return Path.normalize(outputFileHint);
@@ -276,6 +319,28 @@ class SourceNativeBackend {
 		if (base == "java")
 			return Path.join([normalized, sanitizeJavaIdentifier(className) + "-Debug.jar"]);
 		return normalized + ".jar";
+	}
+
+	static function emitJavaLibrarySourceSet(program:GenIrProgram, sourceDir:String):Array<String> {
+		final sourcePaths = new Array<String>();
+		final seen = new Map<String, Bool>();
+		for (typed in program.getTypedModules()) {
+			final moduleDecl = typed.getParsed().getDecl();
+			final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final className = sanitizeTypeName(HxClassDecl.getName(cls));
+				final key = javaQualifiedClassName(packagePath, className);
+				if (seen.exists(key) || isCompileTimeOnlySupportClass(cls))
+					continue;
+				seen.set(key, true);
+				final path = javaSourcePath(sourceDir, packagePath, className);
+				ensureParentDirectory(path);
+				sys.io.File.saveContent(path, renderJavaSupportClass(program, moduleDecl, cls, true));
+				sourcePaths.push(path);
+			}
+		}
+		emitJavaImportStubs(program, sourceDir, sourcePaths, seen);
+		return sourcePaths;
 	}
 
 	static function emitJavaSourceSet(program:GenIrProgram, sourceDir:String, mainDecl:HxModuleDecl, mainClassName:String,
@@ -301,7 +366,7 @@ class SourceNativeBackend {
 				seen.set(key, true);
 				final path = javaSourcePath(sourceDir, packagePath, className);
 				ensureParentDirectory(path);
-				sys.io.File.saveContent(path, renderJavaSupportClass(program, moduleDecl, cls));
+				sys.io.File.saveContent(path, renderJavaSupportClass(program, moduleDecl, cls, false));
 				sourcePaths.push(path);
 			}
 		}
@@ -3475,7 +3540,7 @@ class SourceNativeBackend {
 		].join(".");
 	}
 
-	static function renderJavaSupportClass(program:GenIrProgram, decl:HxModuleDecl, cls:HxClassDecl):String {
+	static function renderJavaSupportClass(program:GenIrProgram, decl:HxModuleDecl, cls:HxClassDecl, allowEnumConstructors:Bool):String {
 		final out = ["// Generated by hxhx Stage3 Java source backend MVP"];
 		final rawClassName = HxClassDecl.getName(cls);
 		for (line in renderJavaHeader(decl, rawClassName))
@@ -3483,6 +3548,10 @@ class SourceNativeBackend {
 		if (out.length > 1)
 			out.push("");
 		final className = sanitizeJavaIdentifier(rawClassName);
+		if (allowEnumConstructors && javaEnumLikeClass(cls)) {
+			appendJavaEnumLikeClass(out, cls, className);
+			return out.join("\n");
+		}
 		out.push("public class " + className + " {");
 		final emittedFields = new Map<String, Bool>();
 		for (field in HxClassDecl.getFields(cls)) {
@@ -3552,6 +3621,81 @@ class SourceNativeBackend {
 			appendJavaNestedImportStub(out, nested);
 		out.push("}");
 		return out.join("\n");
+	}
+
+	static function javaEnumLikeClass(cls:HxClassDecl):Bool {
+		var count = 0;
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field) || !javaUpperStart(HxFieldDecl.getName(field)))
+				return false;
+			if (!javaEnumRuntimeExpr(HxFieldDecl.getInit(field)))
+				return false;
+			count += 1;
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn) || !javaUpperStart(HxFunctionDecl.getName(fn)))
+				return false;
+			final body = HxFunctionDecl.getBody(fn);
+			if (body.length != 1)
+				return false;
+			switch (body[0]) {
+				case SReturn(expr, _):
+					if (!javaEnumRuntimeExpr(expr))
+						return false;
+				case _:
+					return false;
+			}
+			count += 1;
+		}
+		return count > 0;
+	}
+
+	static function javaEnumRuntimeExpr(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EAnon(names, _): names.length > 0 && names[0] == "__hx_ctor";
+			case _:
+				false;
+		}
+	}
+
+	static function javaUpperStart(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		final c = name.charCodeAt(0);
+		return c >= "A".code && c <= "Z".code;
+	}
+
+	static function appendJavaEnumLikeClass(out:Array<String>, cls:HxClassDecl, className:String):Void {
+		out.push("public class " + className + " {");
+		for (field in HxClassDecl.getFields(cls)) {
+			final ctorName = sanitizeJavaIdentifier(HxFieldDecl.getName(field));
+			out.push("  public static class " + ctorName + " extends " + className + " {");
+			out.push("    public " + ctorName + "() {");
+			out.push("    }");
+			out.push("  }");
+			out.push("  public static " + className + " " + ctorName + " = new " + ctorName + "();");
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final ctorName = sanitizeJavaIdentifier(HxFunctionDecl.getName(fn));
+			final args = HxFunctionDecl.getArgs(fn);
+			out.push("  public static class " + ctorName + " extends " + className + " {");
+			for (arg in args)
+				out.push("    public Object " + sanitizeJavaIdentifier(HxFunctionArg.getName(arg)) + ";");
+			out.push("    public " + ctorName + "(" + javaFunctionArgs(args) + ") {");
+			for (arg in args) {
+				final argName = sanitizeJavaIdentifier(HxFunctionArg.getName(arg));
+				out.push("      this." + argName + " = " + argName + ";");
+			}
+			out.push("    }");
+			out.push("  }");
+			out.push("  public static " + className + " " + ctorName + "(" + javaFunctionArgs(args) + ") {");
+			out.push("    return new "
+				+ ctorName
+				+ "("
+				+ [for (arg in args) sanitizeJavaIdentifier(HxFunctionArg.getName(arg))].join(", ") + ");");
+			out.push("  }");
+		}
+		out.push("}");
 	}
 
 	static function renderJavaImportStub(packagePath:String, className:String, ?nestedNames:Array<String>):String {
@@ -4056,8 +4200,27 @@ class SourceNativeBackend {
 		out.push("}");
 		out.push("");
 		out.push("class Sys {");
-		out.push("  public static Object command(Object... args) {");
-		out.push("    return 0;");
+		out.push("  public static int command(Object... args) {");
+		out.push("    if (args == null || args.length == 0 || args[0] == null) return 0;");
+		out.push("    try {");
+		out.push("      Process process = new ProcessBuilder(__hxhx_shellCommand(String.valueOf(args[0]))).inheritIO().start();");
+		out.push("      return process.waitFor();");
+		out.push("    } catch (Exception e) {");
+		out.push("      return -1;");
+		out.push("    }");
+		out.push("  }");
+		out.push("  public static String systemName() {");
+		out.push("    String os = System.getProperty(\"os.name\", \"\").toLowerCase();");
+		out.push("    if (os.contains(\"win\")) return \"Windows\";");
+		out.push("    if (os.contains(\"mac\")) return \"Mac\";");
+		out.push("    return \"Linux\";");
+		out.push("  }");
+		out.push("  public static void exit(Object code) {");
+		out.push("    System.exit(code instanceof Number ? ((Number)code).intValue() : 0);");
+		out.push("  }");
+		out.push("  private static String[] __hxhx_shellCommand(String command) {");
+		out.push("    if (\"Windows\".equals(systemName())) return new String[] {\"cmd\", \"/c\", command};");
+		out.push("    return new String[] {\"sh\", \"-c\", command};");
 		out.push("  }");
 		out.push("}");
 	}
