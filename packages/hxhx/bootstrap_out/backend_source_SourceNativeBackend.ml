@@ -2037,15 +2037,124 @@ and renderForIn = fun target name iterable body indent -> let cleanName = (sanit
   out
 )
 
-let renderProgram = fun target className body -> let lines = Obj.magic (HxArray.create ()) in (
+let renderPythonHelperClass = fun cls -> let className = (sanitizeTypeName (HxClassDecl.getName (Obj.magic cls) : string) : string) in let out = Obj.magic (let __arr_374 = HxArray.create () in (
+  ignore (HxArray.push __arr_374 (("class " ^ HxString.toStdString className) ^ ":"));
+  __arr_374
+)) in let memberCount = ref 0 in (
+  ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_375 = !_g in let __new_376 = HxInt.add __old_375 1 in (
+      ignore (_g := __new_376);
+      __new_376
+    ));
+    ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("Python source backend MVP unsupported helper instance field: " ^ HxString.toStdString className) ^ ".") ^ HxString.toStdString (HxFieldDecl.getName (Obj.magic field)))) ["Dynamic"; "String"]) else ());
+    let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in let tempString = ref ("" : string) in (
+      ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_377 = (defaultValue (Obj.magic Python) : string) in (
+        tempString := __assign_377;
+        __assign_377
+      ) else let __assign_378 = (renderExpr (Obj.magic Python) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
+        tempString := __assign_378;
+        __assign_378
+      ));
+      let rhs = (!tempString : string) in (
+        ignore (HxArray.push out ((("    " ^ HxString.toStdString (sanitizeTypeName (HxFieldDecl.getName (Obj.magic field) : string))) ^ " = ") ^ HxString.toStdString rhs));
+        memberCount := HxInt.add (!memberCount) 1
+      )
+    )
+  )) done);
+  ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_379 = !_g in let __new_380 = HxInt.add __old_379 1 in (
+      ignore (_g := __new_380);
+      __new_380
+    ));
+    ignore (if HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "main" then raise (HxRuntime.Hx_continue) else ());
+    ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("Python source backend MVP unsupported helper instance function: " ^ HxString.toStdString className) ^ ".") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn)))) ["Dynamic"; "String"]) else ());
+    ignore (HxArray.push out "    @staticmethod");
+    let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+      ignore (let _g2 = Obj.magic (let __arr_381 = HxArray.create () in __arr_381) in (
+        ignore (let _g3 = ref 0 in let _g4 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in while !_g3 < HxArray.length _g4 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g4) (!_g3)) in (
+          ignore (let __old_382 = !_g3 in let __new_383 = HxInt.add __old_382 1 in (
+            ignore (_g3 := __new_383);
+            __new_383
+          ));
+          HxArray.push _g2 (sanitizeTypeName (HxFunctionArg.getName (Obj.magic arg) : string))
+        )) done);
+        let __assign_384 = Obj.magic _g2 in (
+          tempArray := __assign_384;
+          __assign_384
+        )
+      ));
+      let args = (HxArray.join (!tempArray) ", " (fun x -> x) : string) in (
+        ignore (HxArray.push out (((("    def " ^ HxString.toStdString (sanitizeTypeName (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ "(") ^ HxString.toStdString args) ^ "):"));
+        ignore (let _g2 = ref 0 in let _g3 = Obj.magic (renderStmts (Obj.magic Python) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) ("        " : string)) in while !_g2 < HxArray.length _g3 do ignore (let line = (HxArray.get (Obj.magic _g3) (!_g2) : string) in (
+          ignore (let __old_385 = !_g2 in let __new_386 = HxInt.add __old_385 1 in (
+            ignore (_g2 := __new_386);
+            __new_386
+          ));
+          HxArray.push out line
+        )) done);
+        memberCount := HxInt.add (!memberCount) 1
+      )
+    )
+  )) with
+    | HxRuntime.Hx_continue -> () done with
+    | HxRuntime.Hx_break -> ());
+  ignore (if !memberCount = 0 then ignore (HxArray.push out "    pass") else ());
+  out
+)
+
+let renderPythonSupportClasses = fun decl mainClassName -> let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in (
+  ignore (try while !_g < HxArray.length _g1 do try ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_370 = !_g in let __new_371 = HxInt.add __old_370 1 in (
+      ignore (_g := __new_371);
+      __new_371
+    ));
+    let className = (sanitizeTypeName (HxClassDecl.getName (Obj.magic cls) : string) : string) in (
+      ignore (if HxString.equals className mainClassName then raise (HxRuntime.Hx_continue) else ());
+      ignore (if HxArray.length out > 0 then ignore (HxArray.push out "") else ());
+      let _g2 = ref 0 in let _g3 = Obj.magic (renderPythonHelperClass (Obj.magic cls)) in while !_g2 < HxArray.length _g3 do ignore (let line = (HxArray.get (Obj.magic _g3) (!_g2) : string) in (
+        ignore (let __old_372 = !_g2 in let __new_373 = HxInt.add __old_372 1 in (
+          ignore (_g2 := __new_373);
+          __new_373
+        ));
+        HxArray.push out line
+      )) done
+    )
+  )) with
+    | HxRuntime.Hx_continue -> () done with
+    | HxRuntime.Hx_break -> ());
+  out
+)
+
+let renderSupportClasses = fun target decl mainClassName -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+  ignore (match target with
+    | Python -> let __assign_367 = Obj.magic (renderPythonSupportClasses (Obj.magic decl) (mainClassName : string)) in (
+      tempResult := __assign_367;
+      __assign_367
+    )
+    | _ -> let __assign_368 = Obj.magic (let __arr_369 = HxArray.create () in __arr_369) in (
+      tempResult := __assign_368;
+      __assign_368
+    ));
+  !tempResult
+)
+
+let renderProgram = fun target decl className body -> let lines = Obj.magic (HxArray.create ()) in (
   ignore (match target with
     | Python -> ignore ((
       ignore (HxArray.push lines "# Generated by hxhx Stage3 Python source backend MVP");
+      ignore (let _g = ref 0 in let _g1 = Obj.magic (renderSupportClasses (Obj.magic target) (Obj.magic decl) (className : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+        ignore (let __old_387 = !_g in let __new_388 = HxInt.add __old_387 1 in (
+          ignore (_g := __new_388);
+          __new_388
+        ));
+        HxArray.push lines line
+      )) done);
+      ignore (if not (HxString.equals (HxArray.get (Obj.magic lines) (HxInt.sub (HxArray.length lines) 1)) "# Generated by hxhx Stage3 Python source backend MVP") then ignore (HxArray.push lines "") else ());
       ignore (HxArray.push lines "def main():");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderStmts (Obj.magic target) (Obj.magic body) ("    " : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_367 = !_g in let __new_368 = HxInt.add __old_367 1 in (
-          ignore (_g := __new_368);
-          __new_368
+        ignore (let __old_389 = !_g in let __new_390 = HxInt.add __old_389 1 in (
+          ignore (_g := __new_390);
+          __new_390
         ));
         HxArray.push lines line
       )) done);
@@ -2058,9 +2167,9 @@ let renderProgram = fun target className body -> let lines = Obj.magic (HxArray.
       ignore (HxArray.push lines (("public class " ^ HxString.toStdString className) ^ " {"));
       ignore (HxArray.push lines "  public static void main(String[] args) {");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderStmts (Obj.magic target) (Obj.magic body) ("    " : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_369 = !_g in let __new_370 = HxInt.add __old_369 1 in (
-          ignore (_g := __new_370);
-          __new_370
+        ignore (let __old_391 = !_g in let __new_392 = HxInt.add __old_391 1 in (
+          ignore (_g := __new_392);
+          __new_392
         ));
         HxArray.push lines line
       )) done);
@@ -2072,9 +2181,9 @@ let renderProgram = fun target className body -> let lines = Obj.magic (HxArray.
       ignore (HxArray.push lines (("public class " ^ HxString.toStdString className) ^ " {"));
       ignore (HxArray.push lines "  public static void Main(string[] args) {");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderStmts (Obj.magic target) (Obj.magic body) ("    " : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_371 = !_g in let __new_372 = HxInt.add __old_371 1 in (
-          ignore (_g := __new_372);
-          __new_372
+        ignore (let __old_393 = !_g in let __new_394 = HxInt.add __old_393 1 in (
+          ignore (_g := __new_394);
+          __new_394
         ));
         HxArray.push lines line
       )) done);
@@ -2086,9 +2195,9 @@ let renderProgram = fun target className body -> let lines = Obj.magic (HxArray.
       ignore (HxArray.push lines "// Generated by hxhx Stage3 PHP source backend MVP");
       ignore (HxArray.push lines (("function " ^ HxString.toStdString className) ^ "_main() {"));
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderStmts (Obj.magic target) (Obj.magic body) ("  " : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_373 = !_g in let __new_374 = HxInt.add __old_373 1 in (
-          ignore (_g := __new_374);
-          __new_374
+        ignore (let __old_395 = !_g in let __new_396 = HxInt.add __old_395 1 in (
+          ignore (_g := __new_396);
+          __new_396
         ));
         HxArray.push lines line
       )) done);
@@ -2099,9 +2208,9 @@ let renderProgram = fun target className body -> let lines = Obj.magic (HxArray.
       ignore (HxArray.push lines "-- Generated by hxhx Stage3 Lua source backend MVP");
       ignore (HxArray.push lines "local function main()");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderStmts (Obj.magic target) (Obj.magic body) ("  " : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_375 = !_g in let __new_376 = HxInt.add __old_375 1 in (
-          ignore (_g := __new_376);
-          __new_376
+        ignore (let __old_397 = !_g in let __new_398 = HxInt.add __old_397 1 in (
+          ignore (_g := __new_398);
+          __new_398
         ));
         HxArray.push lines line
       )) done);
@@ -2124,7 +2233,7 @@ let emitTarget = fun target program context -> let main = mainModule (Obj.magic 
     __assign_37
   ));
   ignore (ensureParentDirectory (!tempMaybeString : string));
-  let content = (renderProgram (Obj.magic target) (className : string) (Obj.magic (HxFunctionDecl.getBody (Obj.magic (Obj.obj (HxAnon.get main "fn"))))) : string) in (
+  let content = (renderProgram (Obj.magic target) (Obj.magic (Obj.obj (HxAnon.get main "decl"))) (className : string) (Obj.magic (HxFunctionDecl.getBody (Obj.magic (Obj.obj (HxAnon.get main "fn"))))) : string) in (
     ignore (HxFile.saveContent (!tempMaybeString : string) (content : string));
     Backend_EmitResult.create (!tempMaybeString : string) (Obj.magic (let __arr_39 = HxArray.create () in (
       ignore (HxArray.push __arr_39 (Backend_EmitArtifact.create (artifactKind (Obj.magic target) : string) (!tempMaybeString : string)));

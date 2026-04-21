@@ -987,6 +987,23 @@ class Stage3Compiler {
 		return out;
 	}
 
+	static function builtinExprMacros():Array<String> {
+		return ["unit.HelperMacros.getCompilationDate()", "HelperMacros.getCompilationDate()"];
+	}
+
+	static function mergeExprMacroAllowlist(explicit:Array<String>):Array<String> {
+		final out = new Array<String>();
+		for (expr in builtinExprMacros())
+			if (out.indexOf(expr) == -1)
+				out.push(expr);
+		if (explicit != null) {
+			for (expr in explicit)
+				if (expr != null && expr.length > 0 && out.indexOf(expr) == -1)
+					out.push(expr);
+		}
+		return out;
+	}
+
 	static function collectDeclarationValues(rawDefines:Array<String>, envName:String, defineNames:Array<String>):Array<String> {
 		final out = parseDelimitedList(Sys.getEnv(envName));
 		if (rawDefines == null || defineNames == null || defineNames.length == 0)
@@ -1320,7 +1337,7 @@ class Stage3Compiler {
 		//
 		// These are call sites in *normal code* (not CLI `--macro`) that we will attempt to expand
 		// before typing by asking the macro host for a replacement expression snippet.
-		final exprMacros = parseDelimitedList(Sys.getEnv("HXHX_EXPR_MACROS"));
+		final exprMacros = mergeExprMacroAllowlist(parseDelimitedList(Sys.getEnv("HXHX_EXPR_MACROS")));
 
 		var macroSession:Null<MacroRuntimeSession> = null;
 		inline function closeMacroSession():Void {

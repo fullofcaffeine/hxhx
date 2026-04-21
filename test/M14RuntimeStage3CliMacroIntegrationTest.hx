@@ -114,6 +114,53 @@ class M14RuntimeStage3CliMacroIntegrationTest {
 		final stdout = run.stdout;
 		assertTrue(stdout.indexOf("macro_run[0]=ran:0") >= 0, "expected CLI macro result in stdout, got:\n" + stdout);
 
+		final exprProjectRoot = Path.join([tmpRoot, "expr_project"]);
+		final exprSrcDir = Path.join([exprProjectRoot, "src"]);
+		sys.FileSystem.createDirectory(exprProjectRoot);
+		sys.FileSystem.createDirectory(exprSrcDir);
+
+		File.saveContent(Path.join([exprSrcDir, "HelperMacros.hx"]), [
+			"import haxe.macro.Expr;",
+			"class HelperMacros {",
+			"\tpublic static macro function getCompilationDate() {",
+			"\t\treturn macro $v{\"<original>\"};",
+			"\t}",
+			"}"
+		].join("\n"));
+
+		File.saveContent(Path.join([exprSrcDir, "Main.hx"]), [
+			"class Main {",
+			"\tstatic function main() {",
+			"\t\ttrace(\"Generated at: \" + HelperMacros.getCompilationDate());",
+			"\t}",
+			"}"
+		].join("\n"));
+
+		final exprOutArg = Path.join(["bin", "unit.py"]);
+		final exprOut = Path.join([exprProjectRoot, "bin", "unit.py"]);
+		final exprRun = runShell("HAXE_STD_PATH="
+			+ shellQuote(Path.join([repoRoot, "vendor", "haxe", "std"]))
+			+ " timeout 20s "
+			+ quotedHxCmd
+			+ " --hxhx-stage3 -C "
+			+ shellQuote(Path.normalize(Path.join([repoRoot, exprProjectRoot])))
+			+ " -cp src -main Main --python "
+			+ shellQuote(exprOutArg)
+			+ " --hxhx-backend python-native --hxhx-no-run",
+			repoRoot);
+		if (exprRun.code != 0)
+			fail("stage3 expr macro python compile failed:\nSTDOUT:\n"
+				+ exprRun.stdout
+				+ "\nSTDERR:\n"
+				+ exprRun.stderr
+				+ "\nEXIT:"
+				+ exprRun.code);
+
+		final emittedPython = File.getContent(exprOut);
+		assertTrue(emittedPython.indexOf("<compilation-date>") >= 0, "expected builtin expr macro expansion in emitted python, got:\n" + emittedPython);
+		assertTrue(emittedPython.indexOf("HelperMacros.getCompilationDate()") == -1,
+			"expected expr macro call to be removed from emitted python, got:\n" + emittedPython);
+
 		deleteRecursive(tmpRoot);
 	}
 }

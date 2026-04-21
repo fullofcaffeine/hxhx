@@ -102,6 +102,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function helperClassProgram():GenIrProgram {
+		final src = [
+			"class Helper {",
+			"  public static function message() {",
+			"    return \"helper\";",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Helper.message());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function arrayLiteralProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -285,6 +304,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertHelperClassEmission():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(helperClassProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Helper:", "helper classes should be emitted before main");
+		assertContains(content, "def message():", "helper static methods should be emitted");
+		assertContains(content, "return \"helper\"", "helper method bodies should be rendered");
+		assertContains(content, "print(Helper.message())", "main should still be able to call emitted helper classes");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertArrayLiteral():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_array_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -383,6 +417,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertIfStatement();
 		assertGenericCallStatement();
 		assertTraceStatement();
+		assertHelperClassEmission();
 		assertArrayLiteral();
 		assertConstructorExpression();
 		assertForInStatement();
