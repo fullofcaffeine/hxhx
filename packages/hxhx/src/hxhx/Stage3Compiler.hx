@@ -418,6 +418,26 @@ class Stage3Compiler {
 		return ran ? 0 : null;
 	}
 
+	static function runSafeJavaJarHookForArtifact(commands:Array<String>, cwd:String, artifactPath:String):Null<Int> {
+		if (commands == null || commands.length == 0 || artifactPath == null || artifactPath.length == 0)
+			return null;
+		final artifactAbs = Path.normalize(artifactPath);
+		var matched:Null<String> = null;
+		for (command in commands) {
+			final javaJar = parseSafeJavaJarCommand(command);
+			if (javaJar == null)
+				return null;
+			final jarAbs = absFromCwd(cwd, javaJar);
+			if (jarAbs == artifactAbs) {
+				matched = javaJar;
+				break;
+			}
+		}
+		if (matched == null)
+			return null;
+		return runCommandInCwd("java", ["-jar", matched], cwd);
+	}
+
 	static function parseSafeJavaJarCommand(command:String):Null<String> {
 		final words = splitCommandWords(command);
 		if (words.length != 3)
@@ -2372,6 +2392,15 @@ class Stage3Compiler {
 		}
 
 		if (!emitted.builtExecutable) {
+			if (backendId == "java-native" && parsedHadCmd) {
+				final cmdCode = runSafeJavaJarHookForArtifact(parsedCmdCommands, cwd, emitted.entryPath);
+				if (cmdCode != null) {
+					if (cmdCode != 0)
+						return error("command hook failed with exit code " + Std.string(cmdCode));
+					Sys.println("stage3=cmd_ok");
+					return 0;
+				}
+			}
 			if (backendId == "js-native") {
 				if (!canRunNode()) {
 					Sys.println("run=skipped_node_missing");

@@ -644,6 +644,21 @@ if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
 export HAXE_BIN="${STAGE0_HAXE}"
+run_hxhx_filtered() {
+  set +e
+  if [ "\${HXHX_FORBID_STAGE0:-0}" = "1" ]; then
+    "${HXHX_BIN}" "\$@" | sed -E '/^(hxhx_macro_runtime_mode=|resolved_modules=|expr_macros_expanded=|stage3=|stage3_driver=|outDir=|exe=|artifact=|run=)/d'
+  else
+    "${HXHX_BIN}" --compat "\$@" | sed -E '/^(hxhx_macro_runtime_mode=|resolved_modules=|expr_macros_expanded=|stage3=|stage3_driver=|outDir=|exe=|artifact=|run=)/d'
+  fi
+  local code="\${PIPESTATUS[0]}"
+  set -e
+  return "\$code"
+}
+if [ "\${HXHX_RUNCI_FILTER_STAGE3_OUTPUT:-1}" = "1" ]; then
+  run_hxhx_filtered "\$@"
+  exit "\$?"
+fi
 if [ "\${HXHX_FORBID_STAGE0:-0}" = "1" ]; then
   exec "${HXHX_BIN}" "\$@"
 fi
