@@ -2492,10 +2492,25 @@ class SourceNativeBackend {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
 		final pending = new Array<HxClassDecl>();
-		final mainPackage = HxModuleDecl.getPackagePath(decl);
+		var mainFilePath = "";
+		var mainPackage = HxModuleDecl.getPackagePath(decl);
+		for (typed in program.getTypedModules()) {
+			final moduleDecl = typed.getParsed().getDecl();
+			if (moduleHasClass(moduleDecl, mainClassName)) {
+				mainFilePath = typed.getParsed().getFilePath();
+				if (mainPackage == null || mainPackage.length == 0)
+					mainPackage = phpSupportPackage(moduleDecl, mainFilePath);
+				break;
+			}
+		}
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
-			if (HxModuleDecl.getPackagePath(moduleDecl) != mainPackage)
+			final modulePackage = phpSupportPackage(moduleDecl, filePath);
+			if (mainPackage != null && mainPackage.length > 0) {
+				if (modulePackage != mainPackage)
+					return;
+			} else if (modulePackage.length > 0) {
 				return;
+			}
 			if (isStdSourceFile(filePath))
 				return;
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
@@ -2508,7 +2523,7 @@ class SourceNativeBackend {
 				pending.push(cls);
 			}
 		}
-		appendDeclClasses(decl, "");
+		appendDeclClasses(decl, mainFilePath);
 		for (typed in program.getTypedModules())
 			appendDeclClasses(typed.getParsed().getDecl(), typed.getParsed().getFilePath());
 		for (cls in pending) {
@@ -2518,6 +2533,36 @@ class SourceNativeBackend {
 				out.push(line);
 		}
 		return out;
+	}
+
+	static function moduleHasClass(decl:HxModuleDecl, className:String):Bool {
+		for (cls in HxModuleDecl.getClasses(decl)) {
+			if (sanitizePhpTypeName(HxClassDecl.getName(cls)) == className)
+				return true;
+		}
+		return false;
+	}
+
+	static function phpSupportPackage(decl:HxModuleDecl, filePath:String):String {
+		final parsed = HxModuleDecl.getPackagePath(decl);
+		if (parsed != null && parsed.length > 0)
+			return parsed;
+		return packageFromSourcePath(filePath);
+	}
+
+	static function packageFromSourcePath(filePath:String):String {
+		if (filePath == null || filePath.length == 0)
+			return "";
+		final normalized = StringTools.replace(filePath, "\\", "/");
+		final marker = "/src/";
+		final markerIndex = normalized.indexOf(marker);
+		if (markerIndex < 0)
+			return "";
+		final after = normalized.substr(markerIndex + marker.length);
+		final slash = after.lastIndexOf("/");
+		if (slash <= 0)
+			return "";
+		return after.substr(0, slash).split("/").join(".");
 	}
 
 	static function isCompileTimeOnlySupportClass(cls:HxClassDecl):Bool {

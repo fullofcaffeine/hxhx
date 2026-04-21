@@ -494,6 +494,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpCrossPackageSupportClassProgram():GenIrProgram {
+		final mainFn = new HxFunctionDecl("main", Public, true, [], "Void",
+			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("ok")]), HxPos.unknown())], "");
+		final mainClass = new HxClassDecl("TestMain", true, [mainFn], []);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final mainParsed = new ParsedModule("", mainDecl, "tests/unit/src/unit/TestMain.hx");
+		final mainTyped = new TypedModule(mainParsed, new TyModuleEnv("", [], new TyClassEnv("TestMain", [])));
+		final helperClass = new HxClassDecl("TestBytes", false, [], []);
+		final helperDecl = new HxModuleDecl("unit", [], helperClass, [helperClass], false, false);
+		final helperParsed = new ParsedModule("", helperDecl, "unit/TestBytes.hx");
+		final helperTyped = new TypedModule(helperParsed, new TyModuleEnv("unit", [], new TyClassEnv("TestBytes", [])));
+		final externalClass = new HxClassDecl("Runner", false, [], []);
+		final externalDecl = new HxModuleDecl("utest", [], externalClass, [externalClass], false, false);
+		final externalParsed = new ParsedModule("", externalDecl, "tests/.haxelib/utest/git/src/utest/Runner.hx");
+		final externalTyped = new TypedModule(externalParsed, new TyModuleEnv("utest", [], new TyClassEnv("Runner", [])));
+		return new MacroExpandedProgram([mainTyped, helperTyped, externalTyped], false, []);
+	}
+
 	static function phpMacroTypeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1655,6 +1673,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpCrossPackageSupportClassEmission():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_cross_package_support_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpCrossPackageSupportClassProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class TestBytes {", "PHP support class emission should include non-std typed modules across parser package boundaries");
+		assertNotContains(content, "class Runner {", "PHP support class emission should not include unrelated haxelib packages");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2141,6 +2172,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpDuplicateMethodEmission();
 		assertPhpReservedValueName();
 		assertPhpNonConstantStaticFieldDefault();
+		assertPhpCrossPackageSupportClassEmission();
 		assertPhpMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();
