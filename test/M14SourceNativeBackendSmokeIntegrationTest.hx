@@ -451,6 +451,62 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpSuperConstructorProgram():GenIrProgram {
+		final src = [
+			"class Base {",
+			"  public function new() { }",
+			"}",
+			"",
+			"class Child extends Base {",
+			"  public function new() {",
+			"    super();",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var child = new Child();",
+			"    Sys.println(Std.string(child));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpSuperPropertyProgram():GenIrProgram {
+		final src = [
+			"class Base {",
+			"  public var prop(get, set):Int;",
+			"  public var fProp(get, null):Int->String;",
+			"  public function new() { }",
+			"  function get_prop() return 1;",
+			"  function set_prop(v:Int) return v;",
+			"  function get_fProp() return function(i:Int) return \"test\" + i;",
+			"}",
+			"",
+			"class Child extends Base {",
+			"  public override function get_prop() return super.prop + 1;",
+			"  public override function set_prop(v) return (super.prop = v) + 1;",
+			"  public override function get_fProp() {",
+			"    var s = super.fProp(0);",
+			"    return function(i:Int) return s + i;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var child = new Child();",
+			"    Sys.println(Std.string(child.prop));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1171,6 +1227,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpSuperConstructor():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_super_ctor_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpSuperConstructorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Child extends Base {", "PHP support classes should preserve simple inheritance headers");
+		assertContains(content, "parent::__construct();", "PHP super constructor calls should lower through parent::__construct");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpSuperProperty():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_super_property_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpSuperPropertyProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "return (parent::get_prop() . 1);", "PHP super property reads should lower through parent getters");
+		assertContains(content, "return (parent::set_prop($v) . 1);", "PHP super property writes should lower through parent setters");
+		assertContains(content, "$s = (parent::get_fProp())(0);",
+			"PHP calls through super property getter results should lower through parent getters before invocation");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperInstanceFieldEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1368,6 +1452,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTypeErrorProbe();
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();
+		assertPhpSuperConstructor();
+		assertPhpSuperProperty();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();

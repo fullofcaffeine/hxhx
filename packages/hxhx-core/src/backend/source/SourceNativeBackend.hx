@@ -377,6 +377,8 @@ class SourceNativeBackend {
 			switch (left) {
 				case EThis:
 					return phpThisValueExpr() + " " + mapped + " " + b;
+				case EField(ESuper, field) if (op == "="):
+					return phpSuperSetterCall(field, [right]);
 				case _:
 			}
 		}
@@ -532,6 +534,11 @@ class SourceNativeBackend {
 	static function fieldAccessExpr(target:SourceNativeTarget, receiver:HxExpr, field:String):String {
 		return switch (target) {
 			case Php:
+				switch (receiver) {
+					case ESuper:
+						return phpSuperGetterCall(field);
+					case _:
+				}
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
 					phpStaticPropertyAccess(typePath, field);
@@ -555,7 +562,8 @@ class SourceNativeBackend {
 		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
 		return switch (target) {
 			case Python: "super().__init__(" + rendered + ")";
-			case Java, Cs, Php, Lua:
+			case Php: "parent::__construct(" + rendered + ")";
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: ESuper";
 		};
 	}
@@ -572,7 +580,12 @@ class SourceNativeBackend {
 				if (typePath != null) {
 					phpStaticMethodCall(typePath, field, args);
 				} else {
-					callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), args);
+					switch (receiver) {
+						case ESuper:
+							callExpr(target, "(" + phpSuperGetterCall(field) + ")", args);
+						case _:
+							callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), args);
+					}
 				}
 			case Python, Java, Cs, Lua:
 				callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), args);
@@ -1150,6 +1163,15 @@ class SourceNativeBackend {
 	static function phpStaticMethodCall(typePath:String, field:String, args:Array<HxExpr>):String {
 		final rendered = [for (arg in args) renderExpr(Php, arg)].join(", ");
 		return typePath + "::" + sanitizeTypeName(field) + "(" + rendered + ")";
+	}
+
+	static function phpSuperGetterCall(field:String):String {
+		return "parent::get_" + sanitizeTypeName(field) + "()";
+	}
+
+	static function phpSuperSetterCall(field:String, args:Array<HxExpr>):String {
+		final rendered = [for (arg in args) renderExpr(Php, arg)].join(", ");
+		return "parent::set_" + sanitizeTypeName(field) + "(" + rendered + ")";
 	}
 
 	static function phpThisValueExpr():String {
