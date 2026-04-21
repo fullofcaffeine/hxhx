@@ -209,6 +209,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function loopControlProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var i = 0;",
+			"    while (i < 5) {",
+			"      i += 1;",
+			"      if (i == 2) continue;",
+			"      if (i == 4) break;",
+			"      Sys.println(Std.string(i));",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function helperClassProgram():GenIrProgram {
 		final src = [
 			"class Helper {",
@@ -630,6 +649,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertLoopControlStatements():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_loop_control_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(loopControlProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "while (i < 5):", "loop-control smoke should still render the surrounding while loop");
+		assertContains(content, "if (i == 2):", "continue smoke should still render the guarding if");
+		assertContains(content, "    continue", "continue statements should lower directly inside loop bodies");
+		assertContains(content, "if (i == 4):", "break smoke should still render the guarding if");
+		assertContains(content, "    break", "break statements should lower directly inside loop bodies");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperClassEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -784,6 +819,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertArrayAccessExpression();
 		assertArrayComprehensionExpression();
 		assertAnonymousObjectExpression();
+		assertLoopControlStatements();
 		assertHelperClassEmission();
 		assertHelperInstanceFieldEmission();
 		assertCrossModuleClassEmission();

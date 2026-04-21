@@ -686,6 +686,10 @@ class SourceNativeBackend {
 				renderSwitchStmt(target, scrutinee, patterns, bodies, indent);
 			case STry(tryBody, catches, _):
 				renderTry(target, tryBody, catches, indent);
+			case SBreak(_):
+				[indent + breakStmt(target)];
+			case SContinue(_):
+				[indent + continueStmt(target)];
 			case SThrow(expr, _):
 				[indent + throwStmt(target, renderExpr(target, expr))];
 			case SReturn(expr, _):
@@ -1020,6 +1024,26 @@ class SourceNativeBackend {
 			case Cs: "return;";
 			case Php: "return;";
 			case Lua: "return";
+		};
+	}
+
+	static function breakStmt(target:SourceNativeTarget):String {
+		return switch (target) {
+			case Python: "break";
+			case Java: "break;";
+			case Cs: "break;";
+			case Php: "break;";
+			case Lua: "break";
+		};
+	}
+
+	static function continueStmt(target:SourceNativeTarget):String {
+		return switch (target) {
+			case Python: "continue";
+			case Java: "continue;";
+			case Cs: "continue;";
+			case Php: "continue;";
+			case Lua: "continue";
 		};
 	}
 
