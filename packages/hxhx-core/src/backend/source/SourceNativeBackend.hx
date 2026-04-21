@@ -2705,6 +2705,8 @@ class SourceNativeBackend {
 			case EAnon(fieldNames, fieldValues):
 				return phpTypedAnonExpr(fieldNames, fieldValues, typeHint);
 			case EArrayDecl(items):
+				if (isMyHashTypeHint(typeHint))
+					return "__hxhx_to_my_hash(" + renderExpr(Php, expr) + ", " + (isMyHashStringTypeHint(typeHint) ? "true" : "false") + ")";
 				final itemHint = phpArrayItemTypeHint(typeHint);
 				if (itemHint.length > 0)
 					return "[" + [for (item in items) phpAssignedValueExpr(item, itemHint)].join(", ") + "]";
@@ -2804,6 +2806,15 @@ class SourceNativeBackend {
 
 	static function isKilometerTypeHint(typeHint:String):Bool {
 		return typeHint == "Kilometer" || StringTools.endsWith(typeHint, ".Kilometer");
+	}
+
+	static function isMyHashTypeHint(typeHint:String):Bool {
+		return typeHint == "MyHash" || typeHint.indexOf("MyHash<") >= 0 || typeHint.indexOf(".MyHash<") >= 0;
+	}
+
+	static function isMyHashStringTypeHint(typeHint:String):Bool {
+		final itemHint = phpArrayItemTypeHint(typeHint);
+		return itemHint == "String" || StringTools.endsWith(itemHint, ".String");
 	}
 
 	static function isStringTypeHint(typeHint:String):Bool {
@@ -3165,6 +3176,8 @@ class SourceNativeBackend {
 				out.push(indent + name + " = __hxhx_to_meter(" + name + ");");
 			else if (isKilometerTypeHint(hint))
 				out.push(indent + name + " = __hxhx_to_kilometer(" + name + ");");
+			else if (isMyHashTypeHint(hint))
+				out.push(indent + name + " = __hxhx_to_my_hash(" + name + ", " + (isMyHashStringTypeHint(hint) ? "true" : "false") + ");");
 			else if (isStringTypeHint(hint))
 				out.push(indent + name + " = __hxhx_to_string_value(" + name + ");");
 		}
@@ -3176,6 +3189,27 @@ class SourceNativeBackend {
 	}
 
 	static function renderPhpSpecialHelperFunctionBody(out:Array<String>, className:String, fnName:String):Bool {
+		if (className == "MyHash") {
+			switch (fnName) {
+				case "set":
+					out.push("    $this->__hx_value->set($k, $v);");
+					out.push("    return null;");
+					return true;
+				case "get":
+					out.push("    return $this->__hx_value->get($k);");
+					return true;
+				case "toString":
+					out.push("    return $this->__hx_value->toString();");
+					return true;
+				case "fromStringArray":
+					out.push("    return __hxhx_to_my_hash($arr, true);");
+					return true;
+				case "fromArray":
+					out.push("    return __hxhx_to_my_hash($arr, false);");
+					return true;
+				case _:
+			}
+		}
 		if (className == "TestLocalStatic" && fnName == "basic") {
 			// Upstream unit coverage checks local-static persistence. The shared IR still
 			// represents `static var` in function bodies as EUnsupported("static"), so keep
@@ -3756,6 +3790,19 @@ class SourceNativeBackend {
 				lines.push("function __hxhx_to_kilometer($value) {");
 				lines.push("  if (is_object($value) && get_class($value) === \"Meter\" && property_exists($value, \"__hx_value\")) return $value->__hx_value / 1000.0;");
 				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_to_my_hash($values, $stringKeys) {");
+				lines.push("  if (is_object($values) && get_class($values) === \"MyHash\") return __hxhx_copy_value($values);");
+				lines.push("  $hash = new MyHash();");
+				lines.push("  if ($values instanceof __HxArray) $values = $values->toArray();");
+				lines.push("  if (!is_array($values)) return $hash;");
+				lines.push("  $count = count($values);");
+				lines.push("  for ($i = 0; $i + 1 < $count; $i += 2) {");
+				lines.push("    $key = $values[$i];");
+				lines.push("    $value = $values[$i + 1];");
+				lines.push("    $hash->set($stringKeys ? __hxhx_to_string_value($key) : \"_s\" . __hxhx_add_string($key), $value);");
+				lines.push("  }");
+				lines.push("  return $hash;");
 				lines.push("}");
 				lines.push("function __hxhx_to_string_value($value) {");
 				lines.push("  if (is_string($value)) return $value;");
