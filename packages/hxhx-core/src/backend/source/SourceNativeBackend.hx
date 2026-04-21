@@ -344,7 +344,7 @@ class SourceNativeBackend {
 			case ETryCatchRaw(raw):
 				tryCatchRawExpr(target, raw);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
-				stringCall(target, renderExpr(target, args[0]));
+				stdStringCall(target, args[0]);
 			case EField(receiver, field):
 				fieldAccessExpr(target, receiver, field);
 			case EArrayAccess(receiver, index):
@@ -710,6 +710,20 @@ class SourceNativeBackend {
 			case Cs: "System.Convert.ToString(" + expr + ")";
 			case Php: "strval(" + expr + ")";
 			case Lua: "tostring(" + expr + ")";
+		};
+	}
+
+	static function stdStringCall(target:SourceNativeTarget, expr:HxExpr):String {
+		return switch (target) {
+			case Php:
+				switch (expr) {
+					case EArrayDecl(_):
+						"__hxhx_add_string(" + renderExpr(Php, expr) + ")";
+					case _:
+						stringCall(Php, renderExpr(Php, expr));
+				}
+			case Python, Java, Cs, Lua:
+				stringCall(target, renderExpr(target, expr));
 		};
 	}
 

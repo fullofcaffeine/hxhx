@@ -809,6 +809,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(\"\" + {a: 1}));",
 			"    Sys.println(Std.string(\"\" + [1, 2]));",
 			"    Sys.println(Std.string(\"\" + [[1], [2, 3]]));",
+			"    Sys.println(Std.string([\"x\"]));",
 			"  }",
 			"}",
 		].join("\n");
@@ -2003,6 +2004,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_add(\"\", (object)[\"a\" => 1])", "PHP anonymous object string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", [1, 2])", "PHP array string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", [[1], [2, 3]])", "PHP nested array string plus should lower through Haxe helper");
+		assertContains(content, "echo __hxhx_add_string([\"x\"]) . PHP_EOL;", "PHP Std.string on array literals should use Haxe stringification");
 		deleteRecursive(tmpRoot);
 	}
 
