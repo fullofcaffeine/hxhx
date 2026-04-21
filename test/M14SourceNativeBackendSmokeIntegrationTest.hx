@@ -494,6 +494,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpArrayPostfixStatementProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values = [0];",
+			"    var index = 0;",
+			"    values[index]++;",
+			"    Sys.println(Std.string(values[index]));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpCrossPackageSupportClassProgram():GenIrProgram {
 		final mainFn = new HxFunctionDecl("main", Public, true, [], "Void",
 			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("ok")]), HxPos.unknown())], "");
@@ -1673,6 +1689,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpArrayPostfixStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_postfix_stmt_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpArrayPostfixStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_post_update_index($values, $index, 1);", "PHP array postfix statements should use index update helper");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpCrossPackageSupportClassEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_cross_package_support_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2172,6 +2200,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpDuplicateMethodEmission();
 		assertPhpReservedValueName();
 		assertPhpNonConstantStaticFieldDefault();
+		assertPhpArrayPostfixStatement();
 		assertPhpCrossPackageSupportClassEmission();
 		assertPhpMacroType();
 		assertPhpTryCatchExpression();

@@ -1714,6 +1714,11 @@ class SourceNativeBackend {
 	}
 
 	static function postIncrementStmt(target:SourceNativeTarget, expr:HxExpr, delta:Int):String {
+		switch (expr) {
+			case EArrayAccess(_, _):
+				return exprStmt(target, postIncrementExpr(target, expr, delta));
+			case _:
+		}
 		final targetExpr = switch (expr) {
 			case EIdent(name):
 				valueName(target, name);
