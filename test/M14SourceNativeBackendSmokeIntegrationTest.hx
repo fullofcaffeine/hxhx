@@ -431,6 +431,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class Main {",
 			"  static function main() {",
 			"    var a:Array<Null<Int>> = [1, 2, 3];",
+			"    a.sort(Reflect.compare);",
+			"    Sys.println(a.join(\"#\"));",
 			"    Sys.println(Std.string(a[3]));",
 			"    a.remove(2);",
 			"    Sys.println(Std.string(a.length));",
@@ -694,6 +696,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var sm = new haxe.ds.StringMap<Int>();",
 			"    sm.set(\"b\", 2);",
 			"    Sys.println(Std.string(sm.get(\"b\")));",
+			"    var values = Lambda.array(sm);",
+			"    Sys.println(values.join(\"#\"));",
+			"    var keys = Lambda.array({ iterator: sm.keys });",
+			"    Sys.println(keys.join(\"#\"));",
 			"  }",
 			"}",
 		].join("\n");
@@ -1941,6 +1947,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_add_string($m->get(\"a\"))", "PHP Map.get should be usable in expressions");
 		assertContains(content, "__hxhx_add_string($m->remove(\"a\"))", "PHP Map.remove should be usable in expressions");
 		assertContains(content, "__hxhx_add_string($sm->get(\"b\"))", "PHP haxe.ds.StringMap.get should be usable in expressions");
+		assertContains(content, "class Lambda {", "PHP source backend should emit a minimal Lambda helper");
+		assertContains(content, "class Reflect {", "PHP source backend should emit a minimal Reflect helper for Array.sort callbacks");
+		assertContains(content, "$values = Lambda::array($sm);", "PHP Lambda.array should accept Map-backed iterables");
+		assertContains(content, "echo __hxhx_array_join($values, \"#\") . PHP_EOL;", "PHP Array.join should lower for Lambda.array results");
+		assertContains(content, "$keys = Lambda::array((object)[\"iterator\" => (function() use ($sm) { return $sm->keys(); })]);",
+			"PHP Lambda.array should accept structural iterator method closures");
+		assertContains(content, "echo __hxhx_array_join($keys, \"#\") . PHP_EOL;", "PHP Array.join should lower for structural iterator results");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2329,10 +2342,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_array_get($array, $index)", "PHP runtime should include a safe Haxe array read helper");
 		assertContains(content, "function __hxhx_array_remove(&$array, $value)", "PHP runtime should include an Array.remove helper");
 		assertContains(content, "function __hxhx_array_splice(&$array, $pos, $len)", "PHP runtime should include an Array.splice helper");
+		assertContains(content, "function __hxhx_array_sort(&$array, $compare)", "PHP runtime should include an Array.sort helper");
+		assertContains(content, "function __hxhx_array_join($array, $separator)", "PHP runtime should include an Array.join helper");
 		assertContains(content, "class __HxArrayIterator", "PHP runtime should include a Haxe array iterator wrapper");
 		assertContains(content, "function __hxhx_iterator($value)", "PHP runtime should include an iterator helper");
 		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get($a, 3)) . PHP_EOL;",
 			"PHP out-of-bounds array reads should go through safe Haxe read helper");
+		assertContains(content, "__hxhx_array_sort($a, [Reflect::class, \"compare\"]);", "PHP Array.sort should lower through the mutating helper");
+		assertContains(content, "echo __hxhx_array_join($a, \"#\") . PHP_EOL;", "PHP Array.join should lower through the join helper");
 		assertContains(content, "__hxhx_array_remove($a, 2);", "PHP Array.remove should lower through the mutating helper");
 		assertContains(content, "__hxhx_array_splice($a, 1, 1);", "PHP Array.splice should lower through the mutating helper");
 		assertContains(content, "$it = __hxhx_iterator($a);", "PHP Array.iterator should lower through the iterator helper");

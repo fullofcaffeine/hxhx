@@ -745,9 +745,16 @@ class SourceNativeBackend {
 					return "__hxhx_length(" + renderExpr(target, receiver) + ")";
 				if (field == "code" && phpStringLikeReceiver(receiver))
 					return "__hxhx_string_char_code_at(" + renderExpr(target, receiver) + ", 0)";
+				if (field == "keys" || field == "iterator") {
+					final renderedReceiver = renderExpr(target, receiver);
+					return "(function() use (" + renderedReceiver + ") { return " + renderedReceiver + "->" + sanitizeTypeName(field) + "(); })";
+				}
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
-					phpStaticPropertyAccess(typePath, field);
+					if (typePath == "Reflect" && field == "compare")
+						"[Reflect::class, \"compare\"]";
+					else
+						phpStaticPropertyAccess(typePath, field);
 				} else {
 					fieldAccess(target, renderExpr(target, receiver), field);
 				}
@@ -871,6 +878,10 @@ class SourceNativeBackend {
 				+ ", "
 				+ renderExpr(Php, args[1])
 				+ ")";
+			case "sort" if (args.length == 1):
+				"__hxhx_array_sort(" + mutableReceiver + ", " + renderExpr(Php, args[0]) + ")";
+			case "join" if (args.length == 1):
+				"__hxhx_array_join(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 			case _:
 				null;
 		};
@@ -3294,6 +3305,75 @@ class SourceNativeBackend {
 				lines.push("    return $this->toString();");
 				lines.push("  }");
 				lines.push("}");
+				lines.push("class Lambda {");
+				lines.push("  private static function toArray($value) {");
+				lines.push("    if ($value instanceof __HxArray) return array_values($value->toArray());");
+				lines.push("    if (is_array($value)) return array_values($value);");
+				lines.push("    if ($value instanceof Map) return self::toArray($value->iterator());");
+				lines.push("    if ($value instanceof __HxArrayIterator) {");
+				lines.push("      $items = [];");
+				lines.push("      while ($value->hasNext()) $items[] = $value->next();");
+				lines.push("      return $items;");
+				lines.push("    }");
+				lines.push("    if (is_object($value)) {");
+				lines.push("      if (method_exists($value, \"iterator\")) return self::toArray($value->iterator());");
+				lines.push("      if (property_exists($value, \"iterator\")) {");
+				lines.push("        $iterator = $value->iterator;");
+				lines.push("        return is_callable($iterator) ? self::toArray($iterator()) : self::toArray($iterator);");
+				lines.push("      }");
+				lines.push("    }");
+				lines.push("    return [];");
+				lines.push("  }");
+				lines.push("  public static function array($value) {");
+				lines.push("    return self::toArray($value);");
+				lines.push("  }");
+				lines.push("  public static function count($value, $predicate = null) {");
+				lines.push("    $count = 0;");
+				lines.push("    foreach (self::toArray($value) as $item) {");
+				lines.push("      if ($predicate === null || $predicate($item)) $count++;");
+				lines.push("    }");
+				lines.push("    return $count;");
+				lines.push("  }");
+				lines.push("  public static function has($value, $match) {");
+				lines.push("    return in_array($match, self::toArray($value), true);");
+				lines.push("  }");
+				lines.push("  public static function exists($value, $predicate) {");
+				lines.push("    foreach (self::toArray($value) as $item) if ($predicate($item)) return true;");
+				lines.push("    return false;");
+				lines.push("  }");
+				lines.push("  public static function foreach($value, $predicate) {");
+				lines.push("    foreach (self::toArray($value) as $item) if (!$predicate($item)) return false;");
+				lines.push("    return true;");
+				lines.push("  }");
+				lines.push("  public static function iter($value, $callback) {");
+				lines.push("    foreach (self::toArray($value) as $item) $callback($item);");
+				lines.push("    return null;");
+				lines.push("  }");
+				lines.push("  public static function map($value, $callback) {");
+				lines.push("    $out = [];");
+				lines.push("    foreach (self::toArray($value) as $item) $out[] = $callback($item);");
+				lines.push("    return $out;");
+				lines.push("  }");
+				lines.push("  public static function filter($value, $predicate) {");
+				lines.push("    $out = [];");
+				lines.push("    foreach (self::toArray($value) as $item) if ($predicate === null || $predicate($item)) $out[] = $item;");
+				lines.push("    return $out;");
+				lines.push("  }");
+				lines.push("  public static function fold($value, $callback, $first) {");
+				lines.push("    $acc = $first;");
+				lines.push("    foreach (self::toArray($value) as $item) $acc = $callback($item, $acc);");
+				lines.push("    return $acc;");
+				lines.push("  }");
+				lines.push("  public static function concat($a, $b) {");
+				lines.push("    return array_merge(self::toArray($a), self::toArray($b));");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("class Reflect {");
+				lines.push("  public static function compare($a, $b) {");
+				lines.push("    if ($a == $b) return 0;");
+				lines.push("    return $a < $b ? -1 : 1;");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("class __HxDispatcher {");
 				lines.push("  public function add($listener) {");
 				lines.push("    return $listener;");
@@ -3478,6 +3558,19 @@ class SourceNativeBackend {
 				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
 				lines.push("  if (!is_array($array)) return [];");
 				lines.push("  return array_splice($array, (int)$pos, (int)$len);");
+				lines.push("}");
+				lines.push("function __hxhx_array_sort(&$array, $compare) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) return null;");
+				lines.push("  usort($array, $compare);");
+				lines.push("  return null;");
+				lines.push("}");
+				lines.push("function __hxhx_array_join($array, $separator) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) return \"\";");
+				lines.push("  $parts = [];");
+				lines.push("  foreach ($array as $item) $parts[] = __hxhx_add_string($item);");
+				lines.push("  return implode(strval($separator), $parts);");
 				lines.push("}");
 				lines.push("function __hxhx_iterator($value) {");
 				lines.push("  if ($value instanceof __HxArray) return new __HxArrayIterator($value->toArray());");
