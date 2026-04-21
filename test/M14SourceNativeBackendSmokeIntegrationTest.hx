@@ -881,6 +881,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStringIndexOfProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string((\"bla\" + \"x\").indexOf(\"x\")));",
+			"    Sys.println(Std.string(\"foo1bar\".indexOf(\"o\", 2)));",
+			"    Sys.println(Std.string(\"foofoofoobarbar\".lastIndexOf(\"bar\", 11)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1984,6 +1999,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStringIndexOf():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_indexof_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStringIndexOfProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_string_index_of($value, $needle, $start = 0)", "PHP runtime should include a String.indexOf helper");
+		assertContains(content, "function __hxhx_string_last_index_of($value, $needle, $start = null)",
+			"PHP runtime should include a String.lastIndexOf helper");
+		assertContains(content, "echo strval(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")) . PHP_EOL;",
+			"PHP string-like concatenation receivers should lower indexOf through the helper");
+		assertContains(content, "echo strval(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)) . PHP_EOL;",
+			"PHP string literal receivers should lower indexOf with a start index");
+		assertContains(content, "echo strval(__hxhx_string_last_index_of(\"foofoofoobarbar\", \"bar\", 11)) . PHP_EOL;",
+			"PHP string literal receivers should lower lastIndexOf with a start index");
+		assertNotContains(content, "__hxhx_add(\"bla\", \"x\")->indexOf", "PHP string-like receivers should not emit object-method calls on raw strings");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpWebShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2641,6 +2677,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpFloatModulo();
 		assertPhpMathRuntime();
 		assertPhpTernaryAssignmentLogical();
+		assertPhpStringIndexOf();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();

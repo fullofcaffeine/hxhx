@@ -780,6 +780,9 @@ class SourceNativeBackend {
 	static function fieldCallExpr(target:SourceNativeTarget, receiver:HxExpr, field:String, args:Array<HxExpr>):String {
 		return switch (target) {
 			case Php:
+				final stringCall = phpStringFieldCall(receiver, field, args);
+				if (stringCall != null)
+					return stringCall;
 				if (field == "ofInt" && phpIntLiteralExtensionReceiver(receiver))
 					return phpStaticMethodCall(sanitizePhpTypePath("haxe.Int64"), field, [receiver]);
 				final typePath = phpStaticTypePath(receiver);
@@ -806,6 +809,33 @@ class SourceNativeBackend {
 				}
 			case Python, Java, Cs, Lua:
 				callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), args);
+		};
+	}
+
+	static function phpStringFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		if (!phpStringLikeReceiver(receiver))
+			return null;
+		final renderedReceiver = renderExpr(Php, receiver);
+		final renderedArgs = [for (arg in args) renderExpr(Php, arg)];
+		return switch (field) {
+			case "indexOf":
+				"__hxhx_string_index_of(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "lastIndexOf":
+				"__hxhx_string_last_index_of(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case _:
+				null;
+		};
+	}
+
+	static function phpStringLikeReceiver(receiver:HxExpr):Bool {
+		return switch (receiver) {
+			case EString(_):
+				true;
+			case EBinop("+", left, right): phpStringLikeReceiver(left) || phpStringLikeReceiver(right);
+			case ECall(EField(EIdent("Std"), "string"), _):
+				true;
+			case _:
+				false;
 		};
 	}
 
@@ -3268,6 +3298,31 @@ class SourceNativeBackend {
 				lines.push("  if ($right == 0) return NAN;");
 				lines.push("  if (is_float($left) || is_float($right)) return fmod($left, $right);");
 				lines.push("  return $left % $right;");
+				lines.push("}");
+				lines.push("function __hxhx_string_index_of($value, $needle, $start = 0) {");
+				lines.push("  $s = strval($value);");
+				lines.push("  $n = strval($needle);");
+				lines.push("  $len = strlen($s);");
+				lines.push("  $offset = $start === null ? 0 : (int)$start;");
+				lines.push("  if ($offset < 0) $offset = max(0, $len + $offset);");
+				lines.push("  if ($offset > $len) return $n === \"\" ? $len : -1;");
+				lines.push("  $pos = strpos($s, $n, $offset);");
+				lines.push("  return $pos === false ? -1 : $pos;");
+				lines.push("}");
+				lines.push("function __hxhx_string_last_index_of($value, $needle, $start = null) {");
+				lines.push("  $s = strval($value);");
+				lines.push("  $n = strval($needle);");
+				lines.push("  $len = strlen($s);");
+				lines.push("  if ($start === null) {");
+				lines.push("    $haystack = $s;");
+				lines.push("  } else {");
+				lines.push("    $offset = (int)$start;");
+				lines.push("    if ($offset < 0) $offset = $len + $offset;");
+				lines.push("    if ($offset < 0) return -1;");
+				lines.push("    $haystack = substr($s, 0, min($len, $offset + strlen($n)));");
+				lines.push("  }");
+				lines.push("  $pos = strrpos($haystack, $n);");
+				lines.push("  return $pos === false ? -1 : $pos;");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
 				lines.push("  $old = $obj->$field;");
