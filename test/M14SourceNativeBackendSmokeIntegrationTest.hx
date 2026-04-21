@@ -1506,6 +1506,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class __HxArray", "PHP source backend should emit a minimal array helper");
+		assertContains(content, "class ValueException extends \\Exception", "PHP source backend should emit a minimal ValueException helper");
+		assertContains(content, "public static function thrown($value)", "PHP ValueException helper should support thrown values");
 		assertContains(content, "class Sys", "PHP source backend should emit a minimal Sys helper");
 		assertContains(content, "return new __HxArray(array_slice($argv, 1));", "Sys.args should expose CLI args without the script name");
 		assertContains(content, "$verbose = (Sys::args()->indexOf(\"-v\") >= 0);", "Sys.args should lower as a static call usable by indexOf");

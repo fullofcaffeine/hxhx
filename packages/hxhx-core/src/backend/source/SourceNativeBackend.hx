@@ -2952,6 +2952,18 @@ class SourceNativeBackend {
 				lines.push("    return $index === false ? -1 : $index;");
 				lines.push("  }");
 				lines.push("}");
+				lines.push("class ValueException extends \\Exception {");
+				lines.push("  public $value;");
+				lines.push("  public $stack;");
+				lines.push("  public function __construct($value = null) {");
+				lines.push("    $this->value = $value;");
+				lines.push("    $this->stack = [];");
+				lines.push("    parent::__construct(strval($value));");
+				lines.push("  }");
+				lines.push("  public static function thrown($value) {");
+				lines.push("    return new ValueException($value);");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("function __hxhx_post_update_var(&$value, $delta) {");
 				lines.push("  $old = $value;");
 				lines.push("  $value = $old + $delta;");

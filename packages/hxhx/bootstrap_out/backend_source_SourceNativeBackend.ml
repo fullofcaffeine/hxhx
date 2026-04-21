@@ -6480,6 +6480,18 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "    return $index === false ? -1 : $index;");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "class ValueException extends \\Exception {");
+      ignore (HxArray.push lines "  public $value;");
+      ignore (HxArray.push lines "  public $stack;");
+      ignore (HxArray.push lines "  public function __construct($value = null) {");
+      ignore (HxArray.push lines "    $this->value = $value;");
+      ignore (HxArray.push lines "    $this->stack = [];");
+      ignore (HxArray.push lines "    parent::__construct(strval($value));");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function thrown($value) {");
+      ignore (HxArray.push lines "    return new ValueException($value);");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_post_update_var(&$value, $delta) {");
       ignore (HxArray.push lines "  $old = $value;");
       ignore (HxArray.push lines "  $value = $old + $delta;");
