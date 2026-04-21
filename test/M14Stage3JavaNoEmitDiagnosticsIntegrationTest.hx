@@ -47,6 +47,46 @@ class M14Stage3JavaNoEmitDiagnosticsIntegrationTest {
 		assertContains(abstractDiagnostic,
 			"Main.hx:12: characters 7-15 : This class extends abstract class BaseAbstract but doesn't implement the following method", "abstract diagnostic");
 		assertContains(abstractDiagnostic, "Main.hx:9: characters 11-19 : ... required(i:Int)", "abstract diagnostic missing method");
+
+		final mixedCollisionSource = [
+			"class Main {",
+			"\tstatic function main() {}",
+			"",
+			"\t@:overload static function bridge(fn:(Int)->String) {}",
+			"\t@:overload static function bridge(fn:(Bool)->String) {}",
+			"",
+			"\t@:overload static function mirror(fn:(Int)->String) {}",
+			"\t@:overload static function mirror(fn:(Int)->String) {}",
+			"}"
+		].join("\n");
+		final mixedCollisionDiagnostic = JavaNoEmitDiagnostics.overloadCollisionDiagnostic([typedModule(mixedCollisionSource)]);
+		assertTrue(mixedCollisionDiagnostic != null, "expected mixed overload collision diagnostic");
+		assertContains(mixedCollisionDiagnostic, "Main.hx:4: characters 13-56 : Another overloaded field of similar signature was already declared : bridge",
+			"similar overload diagnostic");
+		assertContains(mixedCollisionDiagnostic, "Main.hx:4: characters 13-56 : ... The signatures are different in Haxe, but not in the target language",
+			"similar overload diagnostic explanation");
+		assertContains(mixedCollisionDiagnostic, "Main.hx:5: characters 13-57 : ... The second field is declared here",
+			"similar overload diagnostic second field");
+		assertContains(mixedCollisionDiagnostic, "Main.hx:7: characters 13-56 : Another overloaded field of same signature was already declared : mirror",
+			"same overload diagnostic");
+		assertContains(mixedCollisionDiagnostic, "Main.hx:8: characters 13-56 : ... The second field is declared here",
+			"same overload diagnostic second field");
+
+		final overloadedThenDuplicateSource = [
+			"class Main {",
+			"\t@:overload static function choose(s:String) {}",
+			"\t@:overload static function choose(i:Int) {}",
+			"\t@:overload static function choose(i:Int) {}",
+			"",
+			"\tstatic public function main() {}",
+			"}"
+		].join("\n");
+		final overloadedThenDuplicateDiagnostic = JavaNoEmitDiagnostics.overloadCollisionDiagnostic([typedModule(overloadedThenDuplicateSource)]);
+		assertTrue(overloadedThenDuplicateDiagnostic != null, "expected overloaded duplicate diagnostic");
+		assertContains(overloadedThenDuplicateDiagnostic,
+			"Main.hx:4: characters 13-45 : Another overloaded field of same signature was already declared : choose", "overloaded duplicate diagnostic");
+		assertContains(overloadedThenDuplicateDiagnostic, "Main.hx:3: characters 13-45 : ... The second field is declared here",
+			"overloaded duplicate diagnostic prior field");
 	}
 
 	static function typedModule(source:String):TypedModule {

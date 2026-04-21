@@ -21,6 +21,21 @@ private typedef JavaNoEmitClassInfo = {
 	final implementations:Array<String>;
 };
 
+private typedef JavaNoEmitOverloadInfo = {
+	final name:String;
+	final rawSig:String;
+	final erasedSig:String;
+	final line:Int;
+	final column:Int;
+	final endColumn:Int;
+};
+
+private typedef JavaNoEmitOverloadCollision = {
+	final relation:String;
+	final primary:JavaNoEmitOverloadInfo;
+	final secondary:JavaNoEmitOverloadInfo;
+};
+
 /**
 	Target-specific compile-fail diagnostics for the Stage3 Java no-emit lane.
 
@@ -75,6 +90,29 @@ class JavaNoEmitDiagnostics {
 				continue;
 			final parsed = typed.getParsed();
 			final diagnostic = abstractOverloadImplementationDiagnosticForParsed(parsed);
+			if (diagnostic != null)
+				return diagnostic;
+		}
+		return null;
+	}
+
+	/**
+		Return Java overload-erasure diagnostics for no-output compile-fail runs.
+
+		Target mapping:
+		- Haxe overloads can differ only by function type hints, while Java erases Haxe
+		  function-typed values to one target surface.
+		- Stage3 no-emit validates that mismatch before emit so upstream Java compile-fail
+		  workloads still see the target-specific Haxe diagnostic.
+	**/
+	public static function overloadCollisionDiagnostic(typedModules:Array<TypedModule>):Null<String> {
+		if (typedModules == null)
+			return null;
+		for (typed in typedModules) {
+			if (typed == null)
+				continue;
+			final parsed = typed.getParsed();
+			final diagnostic = overloadCollisionDiagnosticForParsed(parsed);
 			if (diagnostic != null)
 				return diagnostic;
 		}
@@ -137,6 +175,138 @@ class JavaNoEmitDiagnostics {
 				return renderMissingAbstractOverloads(parsed.getFilePath(), cls, cls.extendsName, missing);
 		}
 		return null;
+	}
+
+	static function overloadCollisionDiagnosticForParsed(parsed:ParsedModule):Null<String> {
+		if (parsed == null)
+			return null;
+		final source = parsed.getSource();
+		if (source == null || source.length == 0 || source.indexOf("@:overload") < 0)
+			return null;
+		final sourceLines = source.split("\n");
+		final collisions = new Array<JavaNoEmitOverloadCollision>();
+		for (cls in HxModuleDecl.getClasses(parsed.getDecl())) {
+			final seen = new Map<String, JavaNoEmitOverloadInfo>();
+			final byName = new Map<String, Array<JavaNoEmitOverloadInfo>>();
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				final meta = HxFunctionDecl.getMetadata(fn);
+				if (!hasOverloadMetadata(meta))
+					continue;
+				final info = javaNoEmitOverloadInfo(fn, sourceLines);
+				final key = info.name + "#" + info.erasedSig;
+				final previous = seen.get(key);
+				if (previous != null) {
+					final relation = previous.rawSig == info.rawSig ? "same" : "similar";
+					final sameNameSeen = byName.get(info.name);
+					if (relation == "same" && sameNameSeen != null && hasEarlierDifferentRawSignature(sameNameSeen, previous.rawSig)) {
+						collisions.push({
+							relation: relation,
+							primary: info,
+							secondary: previous
+						});
+					} else {
+						collisions.push({
+							relation: relation,
+							primary: previous,
+							secondary: info
+						});
+					}
+				} else {
+					seen.set(key, info);
+				}
+				final named = byName.get(info.name);
+				if (named == null)
+					byName.set(info.name, [info]);
+				else
+					named.push(info);
+			}
+		}
+		if (collisions.length == 0)
+			return null;
+		return renderOverloadCollisions(parsed.getFilePath(), collisions);
+	}
+
+	static function javaNoEmitOverloadInfo(fn:HxFunctionDecl, sourceLines:Array<String>):JavaNoEmitOverloadInfo {
+		final pos = HxFunctionDecl.getPos(fn);
+		final line = pos == null ? 0 : pos.getLine();
+		final rawLine = line > 0 && line <= sourceLines.length ? stripTrailingCarriage(sourceLines[line - 1]) : "";
+		return {
+			name: HxFunctionDecl.getName(fn),
+			rawSig: javaRawOverloadSignature(fn),
+			erasedSig: javaErasedOverloadSignature(fn),
+			line: line,
+			column: overloadDeclarationColumn(rawLine, pos),
+			endColumn: rawLine.length + 1
+		};
+	}
+
+	static function hasOverloadMetadata(meta:Array<String>):Bool {
+		if (meta == null)
+			return false;
+		for (item in meta) {
+			if (item == "overload" || item == "@:overload")
+				return true;
+		}
+		return false;
+	}
+
+	static function overloadDeclarationColumn(rawLine:String, pos:HxPos):Int {
+		final staticIndex = rawLine.indexOf("static");
+		if (staticIndex >= 0)
+			return staticIndex + 1;
+		final functionIndex = rawLine.indexOf("function");
+		if (functionIndex >= 0)
+			return functionIndex + 1;
+		return pos == null ? 0 : pos.getColumn();
+	}
+
+	static function javaRawOverloadSignature(fn:HxFunctionDecl):String {
+		final parts = new Array<String>();
+		for (arg in HxFunctionDecl.getArgs(fn))
+			parts.push(StringTools.trim(HxFunctionArg.getTypeHint(arg)));
+		return parts.join(",");
+	}
+
+	static function javaErasedOverloadSignature(fn:HxFunctionDecl):String {
+		final parts = new Array<String>();
+		for (arg in HxFunctionDecl.getArgs(fn))
+			parts.push(javaErasedOverloadArg(StringTools.trim(HxFunctionArg.getTypeHint(arg))));
+		return parts.join(",");
+	}
+
+	static function javaErasedOverloadArg(typeHint:String):String {
+		final compact = StringTools.replace(typeHint == null ? "" : typeHint, " ", "");
+		if (compact.indexOf("->") >= 0)
+			return "Function";
+		if (compact.length == 0)
+			return "Object";
+		return compact;
+	}
+
+	static function hasEarlierDifferentRawSignature(seen:Array<JavaNoEmitOverloadInfo>, rawSig:String):Bool {
+		for (info in seen) {
+			if (info.rawSig != rawSig)
+				return true;
+		}
+		return false;
+	}
+
+	static function renderOverloadCollisions(filePath:String, collisions:Array<JavaNoEmitOverloadCollision>):String {
+		final file = diagnosticFileName(filePath);
+		final lines = new Array<String>();
+		for (collision in collisions) {
+			final primary = collision.primary;
+			lines.push(renderOverloadSpan(file, primary) + " : Another overloaded field of " + collision.relation + " signature was already declared : "
+				+ primary.name);
+			if (collision.relation == "similar")
+				lines.push(renderOverloadSpan(file, primary) + " : ... The signatures are different in Haxe, but not in the target language");
+			lines.push(renderOverloadSpan(file, collision.secondary) + " : ... The second field is declared here");
+		}
+		return lines.join("\n");
+	}
+
+	static function renderOverloadSpan(file:String, info:JavaNoEmitOverloadInfo):String {
+		return file + ":" + Std.string(info.line) + ": characters " + Std.string(info.column) + "-" + Std.string(info.endColumn);
 	}
 
 	static function scanJavaNoEmitClasses(source:String):Array<JavaNoEmitClassInfo> {
