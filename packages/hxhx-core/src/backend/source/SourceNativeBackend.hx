@@ -235,6 +235,20 @@ class SourceNativeBackend {
 		return isPhpReservedTypeName(clean) ? clean + "_" : clean;
 	}
 
+	static function sanitizePhpValueName(name:String):String {
+		final clean = sanitizeTypeName(name);
+		return isPhpReservedVariableName(clean) ? clean + "_" : clean;
+	}
+
+	static function isPhpReservedVariableName(name:String):Bool {
+		return switch (name == null ? "" : name) {
+			case "GLOBALS" | "_SERVER" | "_GET" | "_POST" | "_FILES" | "_COOKIE" | "_REQUEST" | "_ENV" | "_SESSION":
+				true;
+			case _:
+				false;
+		};
+	}
+
 	static function isPhpReservedTypeName(name:String):Bool {
 		return switch (name == null ? "" : name.toLowerCase()) {
 			case "abstract" | "and" | "array" | "as" | "break" | "callable" | "case" | "catch" | "class" | "clone" | "const" | "continue" | "declare" |
@@ -647,7 +661,7 @@ class SourceNativeBackend {
 	static function valueName(target:SourceNativeTarget, name:String):String {
 		final clean = sanitizeTypeName(name);
 		return switch (target) {
-			case Php: "$" + clean;
+			case Php: "$" + sanitizePhpValueName(name);
 			case Python: clean;
 			case Java: clean;
 			case Cs: clean;
@@ -2357,7 +2371,7 @@ class SourceNativeBackend {
 			case Lua: "local " + name + " = " + rhs;
 			case Java: "var " + name + " = " + rhs + ";";
 			case Cs: "var " + name + " = " + rhs + ";";
-			case Php: "$" + name + " = " + rhs + ";";
+			case Php: "$" + sanitizePhpValueName(name) + " = " + rhs + ";";
 		};
 	}
 

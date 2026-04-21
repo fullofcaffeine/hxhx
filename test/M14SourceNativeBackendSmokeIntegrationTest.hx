@@ -460,6 +460,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return new MacroExpandedProgram([typed], false, []);
 	}
 
+	static function phpReservedValueNameProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var GLOBALS = 1;",
+			"    var _SERVER = 2;",
+			"    Sys.println(Std.string(GLOBALS + _SERVER));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpMacroTypeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1591,6 +1606,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpReservedValueName():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reserved_value_name_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpReservedValueNameProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$GLOBALS_ = 1;", "PHP local variable names should avoid the GLOBALS superglobal");
+		assertContains(content, "$_SERVER_ = 2;", "PHP local variable names should avoid PHP superglobals");
+		assertNotContains(content, "$GLOBALS = 1;", "PHP should not assign to the GLOBALS superglobal");
+		assertNotContains(content, "$_SERVER = 2;", "PHP should not assign to PHP superglobals");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2075,6 +2105,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpReservedTypeName();
 		assertPhpDuplicateStaticFieldEmission();
 		assertPhpDuplicateMethodEmission();
+		assertPhpReservedValueName();
 		assertPhpMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();
