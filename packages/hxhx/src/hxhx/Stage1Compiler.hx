@@ -556,26 +556,43 @@ class Stage1Args {
 	public static function expandHxmlArgs(args:Array<String>):Null<Array<String>> {
 		var sawHxml = false;
 		final out = new Array<String>();
+		var cwd = sys.FileSystem.absolutePath(".");
 
-		for (a in args) {
-			if (a == null || a.length == 0)
+		var i = 0;
+		while (i < args.length) {
+			final a = args[i];
+			if (a == null || a.length == 0) {
+				i += 1;
 				continue;
+			}
+
+			if ((a == "-C" || a == "--cwd") && i + 1 < args.length) {
+				final next = args[i + 1];
+				out.push(a);
+				out.push(next);
+				cwd = Path.isAbsolute(next) ? sys.FileSystem.absolutePath(next) : sys.FileSystem.absolutePath(cwd + "/" + next);
+				i += 2;
+				continue;
+			}
 
 			if (!StringTools.startsWith(a, "-") && StringTools.endsWith(a, ".hxml")) {
 				sawHxml = true;
-				if (!sys.FileSystem.exists(a) || sys.FileSystem.isDirectory(a)) {
-					Sys.println("hxhx(stage1): hxml path is not a file: " + a);
+				final hxmlPath = Path.isAbsolute(a) ? sys.FileSystem.absolutePath(a) : sys.FileSystem.absolutePath(cwd + "/" + a);
+				if (!sys.FileSystem.exists(hxmlPath) || sys.FileSystem.isDirectory(hxmlPath)) {
+					Sys.println("hxhx(stage1): hxml path is not a file: " + hxmlPath);
 					return null;
 				}
-				final expanded = Hxml.parseFile(a);
+				final expanded = Hxml.parseFile(hxmlPath);
 				if (expanded == null)
 					return null;
 				for (t in expanded)
 					out.push(t);
+				i += 1;
 				continue;
 			}
 
 			out.push(a);
+			i += 1;
 		}
 
 		return sawHxml ? out : args;

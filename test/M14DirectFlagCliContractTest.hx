@@ -201,6 +201,15 @@ class M14DirectFlagCliContractTest {
 		final sysJs = plan([sysJsHxmlPath]);
 		assertEquals(sysJs.lane, "native-js", "sys-style mixed helper js hxml lane");
 		assertTrue(hasDefine(sysJs.forwarded, "js"), "sys-style mixed helper js hxml define");
+
+		final cwdHxmlDir = tmpDir + "/cwd-java";
+		if (!FileSystem.exists(cwdHxmlDir))
+			FileSystem.createDirectory(cwdHxmlDir);
+		File.saveContent(cwdHxmlDir + "/build.hxml", "--java java_out\n-main Main\n");
+		final javaCwdHxml = plan(["--cwd", cwdHxmlDir, "build.hxml"]);
+		assertEquals(javaCwdHxml.lane, "native-java", "cwd-relative java hxml lane");
+		assertTrue(hasDefine(javaCwdHxml.forwarded, "java"), "cwd-relative java hxml define");
+
 		assertTrue(CliRouting.isJsNativeHelperUnit([
 			"-p",
 			"src",

@@ -175,52 +175,83 @@ let stage1args_inferStdRoot = fun cwd2 -> try let __fallback_result_30 = (
 
 let stage1args_inferStdRootForCwd = fun cwd2 -> stage1args_inferStdRoot (cwd2 : string)
 
-let stage1args_expandHxmlArgs = fun args -> try let __fallback_result_57 = let sawHxml = ref false in let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
-  ignore (try while !_g < HxArray.length args do try ignore (let a = (HxArray.get (Obj.magic args) (!_g) : string) in (
-    ignore (let __old_49 = !_g in let __new_50 = HxInt.add __old_49 1 in (
-      ignore (_g := __new_50);
-      __new_50
-    ));
-    ignore (if a == Obj.magic (HxRuntime.hx_null) || HxString.length a = 0 then raise (HxRuntime.Hx_continue) else ());
+let stage1args_expandHxmlArgs = fun args -> try let __fallback_result_60 = let sawHxml = ref false in let out = Obj.magic (HxArray.create ()) in let cwd2 = ref (HxFileSystem.absolutePath "." : string) in let i = ref 0 in (
+  ignore (try while !i < HxArray.length args do try ignore (let a = (HxArray.get (Obj.magic args) (!i) : string) in (
+    ignore (if a == Obj.magic (HxRuntime.hx_null) || HxString.length a = 0 then ignore ((
+      ignore (i := HxInt.add (!i) 1);
+      raise (HxRuntime.Hx_continue)
+    )) else ());
+    ignore (if (HxString.equals a "-C" || HxString.equals a "--cwd") && HxInt.add (!i) 1 < HxArray.length args then ignore (let next = (HxArray.get (Obj.magic args) (HxInt.add (!i) 1) : string) in (
+      ignore (HxArray.push out a);
+      ignore (HxArray.push out next);
+      let tempRight = ref ("" : string) in (
+        ignore (if Haxe_io_Path.isAbsolute (next : string) then let __assign_49 = (HxFileSystem.absolutePath next : string) in (
+          tempRight := __assign_49;
+          __assign_49
+        ) else let __assign_50 = (HxFileSystem.absolutePath ((HxString.toStdString (!cwd2) ^ "/") ^ HxString.toStdString next) : string) in (
+          tempRight := __assign_50;
+          __assign_50
+        ));
+        ignore (let __assign_51 = (!tempRight : string) in (
+          cwd2 := __assign_51;
+          __assign_51
+        ));
+        ignore (i := HxInt.add (!i) 2);
+        raise (HxRuntime.Hx_continue)
+      )
+    )) else ());
     ignore (if not (StringTools.startsWith (a : string) ("-" : string)) && StringTools.endsWith (a : string) (".hxml" : string) then ignore ((
-      ignore (let __assign_51 = true in (
-        sawHxml := __assign_51;
-        __assign_51
+      ignore (let __assign_52 = true in (
+        sawHxml := __assign_52;
+        __assign_52
       ));
-      ignore (if not (HxFileSystem.exists a) || HxFileSystem.isDirectory a then ignore ((
-        ignore (print_endline ("hxhx(stage1): hxml path is not a file: " ^ HxString.toStdString a));
-        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-      )) else ());
-      let expanded = Obj.magic (Hxhx_Hxml.parseFile (a : string)) in (
-        ignore (if expanded == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
-        let _g2 = ref 0 in (
-          ignore (while !_g2 < HxArray.length expanded do ignore (let t = (HxArray.get (Obj.magic expanded) (!_g2) : string) in (
-            ignore (let __old_52 = !_g2 in let __new_53 = HxInt.add __old_52 1 in (
-              ignore (_g2 := __new_53);
-              __new_53
-            ));
-            HxArray.push out t
-          )) done);
-          raise (HxRuntime.Hx_continue)
+      let tempString = ref ("" : string) in (
+        ignore (if Haxe_io_Path.isAbsolute (a : string) then let __assign_53 = (HxFileSystem.absolutePath a : string) in (
+          tempString := __assign_53;
+          __assign_53
+        ) else let __assign_54 = (HxFileSystem.absolutePath ((HxString.toStdString (!cwd2) ^ "/") ^ HxString.toStdString a) : string) in (
+          tempString := __assign_54;
+          __assign_54
+        ));
+        let hxmlPath = (!tempString : string) in (
+          ignore (if not (HxFileSystem.exists hxmlPath) || HxFileSystem.isDirectory hxmlPath then ignore ((
+            ignore (print_endline ("hxhx(stage1): hxml path is not a file: " ^ HxString.toStdString hxmlPath));
+            raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+          )) else ());
+          let expanded = Obj.magic (Hxhx_Hxml.parseFile (hxmlPath : string)) in (
+            ignore (if expanded == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+            let _g = ref 0 in (
+              ignore (while !_g < HxArray.length expanded do ignore (let t = (HxArray.get (Obj.magic expanded) (!_g) : string) in (
+                ignore (let __old_55 = !_g in let __new_56 = HxInt.add __old_55 1 in (
+                  ignore (_g := __new_56);
+                  __new_56
+                ));
+                HxArray.push out t
+              )) done);
+              ignore (i := HxInt.add (!i) 1);
+              raise (HxRuntime.Hx_continue)
+            )
+          )
         )
       )
     )) else ());
-    HxArray.push out a
+    ignore (HxArray.push out a);
+    i := HxInt.add (!i) 1
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-    ignore (if !sawHxml then let __assign_54 = Obj.magic (Obj.magic out) in (
-      tempResult := __assign_54;
-      __assign_54
-    ) else let __assign_55 = Obj.magic (Obj.magic args) in (
-      tempResult := __assign_55;
-      __assign_55
+    ignore (if !sawHxml then let __assign_57 = Obj.magic (Obj.magic out) in (
+      tempResult := __assign_57;
+      __assign_57
+    ) else let __assign_58 = Obj.magic (Obj.magic args) in (
+      tempResult := __assign_58;
+      __assign_58
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_57 with
-  | HxRuntime.Hx_return __ret_56 -> Obj.obj __ret_56
+) in Obj.magic __fallback_result_60 with
+  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59
 
 let stage1args_parse = fun args permissive -> let permissive = if Obj.repr permissive == HxRuntime.hx_null then false else permissive in try let __fallback_result_23 = let expanded = Obj.magic (stage1args_expandHxmlArgs (Obj.magic args)) in (
   ignore (if expanded == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());

@@ -43,6 +43,12 @@ class Hxml {
 		return sys.FileSystem.absolutePath(path);
 	}
 
+	static function resolveAgainstCwd(cwd:String, path:String):String {
+		if (Path.isAbsolute(path))
+			return normalizeFsPath(path);
+		return normalizeFsPath(joinPath(cwd, path));
+	}
+
 	public static function parseFile(path:String):Null<Array<String>> {
 		final seen = new Map<String, Bool>();
 		return parseFileRec(normalizeFsPath(path), seen, 0, false);
@@ -94,16 +100,29 @@ class Hxml {
 		final seen = new Map<String, Bool>();
 		final toks = new Array<String>();
 
-		for (a in args) {
+		var cwd = normalizeFsPath(".");
+		var i = 0;
+		while (i < args.length) {
+			final a = args[i];
+			if ((a == "-C" || a == "--cwd") && i + 1 < args.length) {
+				final next = args[i + 1];
+				toks.push(a);
+				toks.push(next);
+				cwd = resolveAgainstCwd(cwd, next);
+				i += 2;
+				continue;
+			}
 			if (a != null && a.length > 0 && !StringTools.startsWith(a, "-") && StringTools.endsWith(a, ".hxml")) {
-				final expanded = parseFileRec(normalizeFsPath(a), seen, 0, true);
+				final expanded = parseFileRec(resolveAgainstCwd(cwd, a), seen, 0, true);
 				if (expanded == null)
 					return null;
 				for (t in expanded)
 					toks.push(t);
+				i += 1;
 				continue;
 			}
 			toks.push(a);
+			i += 1;
 		}
 
 		return splitIntoUnits(toks);

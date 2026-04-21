@@ -1820,7 +1820,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.ExprMacroExpander" [];
   HxType.register_class_static_fields "hxhx.ExprMacroExpander" [ "buildImportMap"; "escapeStringLiteral"; "expandResolvedModules"; "exprKind"; "isTrueEnv"; "matchAllowlistedCall"; "renderCalleePath"; "renderSimpleCall"; "rewriteExpr"; "rewriteStmt"; "shortenCall" ];
   HxType.register_class_instance_fields "hxhx.Hxml" [];
-  HxType.register_class_static_fields "hxhx.Hxml" [ "expandArgsToUnits"; "isSpace"; "joinPath"; "normalizeFsPath"; "parseFile"; "parseFileRec"; "parseFileUnits"; "splitIntoUnits"; "tokenizeLine" ];
+  HxType.register_class_static_fields "hxhx.Hxml" [ "expandArgsToUnits"; "isSpace"; "joinPath"; "normalizeFsPath"; "parseFile"; "parseFileRec"; "parseFileUnits"; "resolveAgainstCwd"; "splitIntoUnits"; "tokenizeLine" ];
   HxType.register_class_instance_fields "hxhx.LibraryResolver" [];
   HxType.register_class_static_fields "hxhx.LibraryResolver" [ "emptySpec"; "findScopedHxml"; "haxelibBin"; "lixBin"; "resolve"; "resolveFromHxml"; "resolveViaProcess"; "tryResolveViaCommand" ];
   HxType.register_class_instance_fields "hxhx.Main" [];
