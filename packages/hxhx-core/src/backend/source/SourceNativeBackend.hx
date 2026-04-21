@@ -345,6 +345,12 @@ class SourceNativeBackend {
 				tryCatchRawExpr(target, raw);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stdStringCall(target, args[0]);
+			case ECall(EField(EIdent("Std"), "isOfType"), args) if (target == Php && args.length == 2):
+				"__hxhx_is_of_type("
+				+ renderExpr(Php, args[0])
+				+ ", "
+				+ quotePhpString(phpTypeExprName(args[1]))
+				+ ")";
 			case EField(receiver, field):
 				fieldAccessExpr(target, receiver, field);
 			case EArrayAccess(receiver, index):
@@ -1862,6 +1868,18 @@ class SourceNativeBackend {
 				}
 			case _:
 				null;
+		};
+	}
+
+	static function phpTypeExprName(expr:HxExpr):String {
+		return switch (expr) {
+			case EIdent(name) | EEnumValue(name):
+				name;
+			case EField(receiver, field):
+				final prefix = phpTypeExprName(receiver);
+				if (prefix.length == 0) field else prefix + "." + field;
+			case _:
+				"Dynamic";
 		};
 	}
 
@@ -3546,6 +3564,23 @@ class SourceNativeBackend {
 				lines.push("    return \"{\" . implode(\", \", $parts) . \"}\";");
 				lines.push("  }");
 				lines.push("  return strval($value);");
+				lines.push("}");
+				lines.push("function __hxhx_is_of_type($value, $type) {");
+				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) $value = $value->__hx_value;");
+				lines.push("  switch ($type) {");
+				lines.push("    case \"Int\": return is_int($value);");
+				lines.push("    case \"Float\": return is_int($value) || is_float($value);");
+				lines.push("    case \"String\": return is_string($value);");
+				lines.push("    case \"Bool\": return is_bool($value);");
+				lines.push("    case \"Array\": return is_array($value) || $value instanceof __HxArray;");
+				lines.push("    case \"Dynamic\": return true;");
+				lines.push("  }");
+				lines.push("  if (!is_object($value)) return false;");
+				lines.push("  $candidates = [$type, str_replace(\".\", \"\\\\\", $type), substr($type, strrpos($type, \".\") === false ? 0 : strrpos($type, \".\") + 1)];");
+				lines.push("  foreach ($candidates as $candidate) {");
+				lines.push("    if (is_string($candidate) && $candidate !== \"\" && class_exists($candidate) && $value instanceof $candidate) return true;");
+				lines.push("  }");
+				lines.push("  return false;");
 				lines.push("}");
 				lines.push("function __hxhx_mod($left, $right) {");
 				lines.push("  if ($right == 0) return NAN;");

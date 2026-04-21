@@ -1065,6 +1065,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class Main {",
 			"  static function main() {",
 			"    var counter = new Counter(2);",
+			"    Sys.println(Std.string(Std.isOfType(counter, Int)));",
+			"    Sys.println(Std.string(Std.isOfType(3, Int)));",
 			"    Sys.println(Std.string(counter));",
 			"  }",
 			"}",
@@ -2602,6 +2604,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public $__hx_value;", "PHP abstract-style this values should get a backing slot");
 		assertContains(content, "$this->__hx_value = $i;", "PHP abstract constructor assignments to this should target the backing slot");
 		assertContains(content, "$this->__hx_value = ($this->__hx_value + 1);", "PHP statement-position postfix this updates should target the backing slot");
+		assertContains(content, "__hxhx_is_of_type($counter, \"Int\")", "PHP Std.isOfType should lower abstract-backed values through the type helper");
+		assertContains(content, "__hxhx_is_of_type(3, \"Int\")", "PHP Std.isOfType should lower scalar type checks without runtime type variables");
 		deleteRecursive(tmpRoot);
 	}
 
