@@ -165,6 +165,50 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function arrayAccessProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values = [1, 2];",
+			"    var first = values[0];",
+			"    Sys.println(Std.string(first));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function arrayComprehensionProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values = [1, 2];",
+			"    var doubled = [for (value in values) value * 2];",
+			"    Sys.println(Std.string(doubled));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function anonymousObjectProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var info = { label: \"ok\", count: 1 };",
+			"    Sys.println(info.label);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function helperClassProgram():GenIrProgram {
 		final src = [
 			"class Helper {",
@@ -544,6 +588,48 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertArrayAccessExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_array_access_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(arrayAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "values = [1, 2]", "array access smoke should still render array literals");
+		assertContains(content, "first = values[0]", "array access expressions should lower to Python index syntax");
+		assertContains(content, "print(str(first))", "array-access-derived locals should still flow through later statements");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertArrayComprehensionExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_array_comprehension_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(arrayComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "values = [1, 2]", "array comprehension smoke should still render the iterable source");
+		assertContains(content, "doubled = [(value * 2) for value in values]", "array comprehensions should lower to Python list comprehensions");
+		assertContains(content, "print(str(doubled))", "array-comprehension-derived locals should still flow through later statements");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertAnonymousObjectExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_anon_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def __hxhx_anon(**kwargs):", "Python source backend should emit the anonymous-object helper");
+		assertContains(content, "info = __hxhx_anon(label=\"ok\", count=1)", "anonymous object literals should lower through the helper");
+		assertContains(content, "print(info.label)", "anonymous object field access should keep using attribute syntax");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperClassEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -695,6 +781,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPostfixStatements();
 		assertTernaryExpression();
 		assertTryCatchStatement();
+		assertArrayAccessExpression();
+		assertArrayComprehensionExpression();
+		assertAnonymousObjectExpression();
 		assertHelperClassEmission();
 		assertHelperInstanceFieldEmission();
 		assertCrossModuleClassEmission();
