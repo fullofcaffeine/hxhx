@@ -845,6 +845,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  public function setUnderscore(_) { }",
 			"}",
 			"",
+			"class JavaObjectShape {",
+			"  public function new() {}",
+			"  public function toString() { return \"shape\"; }",
+			"  public function hashCode() { return 1; }",
+			"  public function equals(other) { return true; }",
+			"  public function wide(a, b, c, d) { }",
+			"}",
+			"",
 			"class Main {",
 			"  static function main() {",
 			"    var helper = new Helper();",
@@ -1820,6 +1828,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final result = backend.emit(javaSupportClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
 		final mainSourcePath = Path.join([outputDir, "src", "Main.java"]);
 		final helperSourcePath = Path.join([outputDir, "src", "Helper.java"]);
+		final objectShapeSourcePath = Path.join([outputDir, "src", "JavaObjectShape.java"]);
 		final listStubPath = Path.join([outputDir, "src", "haxe", "ds", "List.java"]);
 		final bytesStubPath = Path.join([outputDir, "src", "haxe", "io", "Bytes.java"]);
 		final reportStubPath = Path.join([outputDir, "src", "utest", "ui", "common", "IReport.java"]);
@@ -1828,6 +1837,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(result.entryPath == jarPath, "Java source backend should still report the packaged jar for support-class programs");
 		assertTrue(FileSystem.exists(mainSourcePath), "Java source backend should emit the main Java source file");
 		assertTrue(FileSystem.exists(helperSourcePath), "Java source backend should emit sibling support classes before javac");
+		assertTrue(FileSystem.exists(objectShapeSourcePath), "Java source backend should emit sibling classes with Object override-shaped methods");
 		assertTrue(FileSystem.exists(listStubPath), "Java source backend should synthesize stubs for imported Haxe package classes");
 		assertTrue(FileSystem.exists(bytesStubPath), "Java source backend should synthesize stubs for imported Haxe package classes beyond haxe.ds");
 		assertTrue(FileSystem.exists(reportStubPath), "Java source backend should synthesize stubs for imported interface-like package classes");
@@ -1835,12 +1845,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should package a jar after compiling support classes");
 		final mainContent = File.getContent(mainSourcePath);
 		final helperContent = File.getContent(helperSourcePath);
+		final objectShapeContent = File.getContent(objectShapeSourcePath);
 		final reportContent = File.getContent(reportStubPath);
 		assertContains(helperContent, "public class Helper", "Java support source should declare the sibling class");
 		assertContains(helperContent, "assert_", "Java support source should sanitize reserved method names");
 		assertContains(helperContent, "Object native_", "Java support source should sanitize reserved argument names");
 		assertContains(helperContent, "Object __", "Java support source should sanitize underscore-only argument names");
 		assertContains(reportContent, "public interface IReport", "Java import stubs should model interface-like names as interfaces");
+		assertContains(objectShapeContent, "public String toString()", "Java support source should preserve Object-compatible toString signatures");
+		assertContains(objectShapeContent, "public int hashCode()", "Java support source should preserve Object-compatible hashCode signatures");
+		assertContains(objectShapeContent, "public boolean equals(Object other)", "Java support source should preserve Object-compatible equals signatures");
+		assertContains(objectShapeContent, "public Object wide(Object... args)", "Java support methods should include varargs fallback overloads");
 		assertContains(mainContent, "helper.assert_(\"ok\")", "Java main source should call sanitized support method names");
 		assertNotContains(mainContent, "import Map;", "Java main source should not import default-package classes");
 		assertNotContains(helperContent, "import Type;", "Java support source should not import default-package classes");

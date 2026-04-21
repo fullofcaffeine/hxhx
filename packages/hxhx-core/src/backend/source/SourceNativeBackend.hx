@@ -3423,9 +3423,19 @@ class SourceNativeBackend {
 				if (emittedMethods.exists(key))
 					continue;
 				emittedMethods.set(key, true);
-				final prefix = HxFunctionDecl.getIsStatic(fn) ? "  public static Object " : "  public Object ";
+				final returnType = javaSupportMethodReturnType(methodName, count);
+				final prefix = HxFunctionDecl.getIsStatic(fn) ? "  public static " + returnType + " " : "  public " + returnType + " ";
 				out.push(prefix + methodName + "(" + javaFunctionArgs(args, count) + ") {");
-				out.push("    return null;");
+				out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
+				out.push("  }");
+			}
+			final varargsKey = methodName + "#varargs";
+			if (!emittedMethods.exists(varargsKey)) {
+				emittedMethods.set(varargsKey, true);
+				final returnType = javaSupportMethodReturnType(methodName, args.length);
+				final prefix = HxFunctionDecl.getIsStatic(fn) ? "  public static " + returnType + " " : "  public " + returnType + " ";
+				out.push(prefix + methodName + "(Object... args) {");
+				out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
 				out.push("  }");
 			}
 		}
@@ -3514,6 +3524,24 @@ class SourceNativeBackend {
 			for (i in 0...limit)
 				"Object " + sanitizeJavaIdentifier(HxFunctionArg.getName(args[i]))
 		].join(", ");
+	}
+
+	static function javaSupportMethodReturnType(methodName:String, arity:Int):String {
+		return switch (methodName) {
+			case "toString" if (arity == 0): "String";
+			case "hashCode" if (arity == 0): "int";
+			case "equals" if (arity == 1): "boolean";
+			case _: "Object";
+		}
+	}
+
+	static function javaSupportDefaultReturn(returnType:String):String {
+		return switch (returnType) {
+			case "String": "\"\"";
+			case "int": "0";
+			case "boolean": "false";
+			case _: "null";
+		}
 	}
 
 	static function renderPythonSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
