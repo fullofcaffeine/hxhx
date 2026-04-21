@@ -228,6 +228,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function postfixExpressionProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var x = 1;",
+			"    var oldX = x++;",
+			"    var info = { count: 3 };",
+			"    var oldCount = info.count++;",
+			"    var values = [5];",
+			"    var oldFirst = values[0]++;",
+			"    Sys.println(Std.string(oldX));",
+			"    Sys.println(Std.string(oldCount));",
+			"    Sys.println(Std.string(oldFirst));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function helperClassProgram():GenIrProgram {
 		final src = [
 			"class Helper {",
@@ -665,6 +686,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPostfixExpressions():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_postfix_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(postfixExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def __hxhx_post_update_attr(obj, field, delta):", "Python source backend should emit the postfix attribute helper");
+		assertContains(content, "def __hxhx_post_update_index(obj, index, delta):", "Python source backend should emit the postfix index helper");
+		assertContains(content, "oldX = ((__hxhx_post_old := x), (x := (__hxhx_post_old + 1)), __hxhx_post_old)[2]",
+			"identifier postfix expressions should preserve old-value semantics");
+		assertContains(content, "oldCount = __hxhx_post_update_attr(info, \"count\", 1)",
+			"field postfix expressions should lower through the attribute helper");
+		assertContains(content, "oldFirst = __hxhx_post_update_index(values, 0, 1)", "indexed postfix expressions should lower through the index helper");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperClassEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -820,6 +859,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertArrayComprehensionExpression();
 		assertAnonymousObjectExpression();
 		assertLoopControlStatements();
+		assertPostfixExpressions();
 		assertHelperClassEmission();
 		assertHelperInstanceFieldEmission();
 		assertCrossModuleClassEmission();

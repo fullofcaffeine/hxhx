@@ -354,10 +354,52 @@ class SourceNativeBackend {
 		return switch (op) {
 			case "!":
 				if (target == Python || target == Lua) "(not " + rendered + ")"; else "(!" + rendered + ")";
+			case "post++":
+				postIncrementExpr(target, inner, 1);
+			case "post--":
+				postIncrementExpr(target, inner, -1);
 			case "-", "+", "~":
 				"(" + op + rendered + ")";
 			default:
 				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + op;
+		};
+	}
+
+	static function postIncrementExpr(target:SourceNativeTarget, expr:HxExpr, delta:Int):String {
+		return switch (target) {
+			case Python:
+				final suffix = delta < 0 ? " - " + Std.string(-delta) : " + " + Std.string(delta);
+				switch (expr) {
+					case EIdent(name):
+						final targetName = valueName(target, name);
+						"((__hxhx_post_old := "
+						+ targetName
+						+ "), ("
+						+ targetName
+						+ " := (__hxhx_post_old"
+						+ suffix
+						+ ")), __hxhx_post_old)[2]";
+					case EField(receiver, field):
+						"__hxhx_post_update_attr("
+						+ renderExpr(target, receiver)
+						+ ", "
+						+ quoteString(sanitizeTypeName(field))
+						+ ", "
+						+ Std.string(delta)
+						+ ")";
+					case EArrayAccess(receiver, index):
+						"__hxhx_post_update_index("
+						+ renderExpr(target, receiver)
+						+ ", "
+						+ renderExpr(target, index)
+						+ ", "
+						+ Std.string(delta)
+						+ ")";
+					case _:
+						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
+				}
+			case Java, Cs, Php, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + (delta < 0 ? "post--" : "post++");
 		};
 	}
 
@@ -1153,6 +1195,16 @@ class SourceNativeBackend {
 				lines.push("    obj = type(\"HxAnon\", (), {})()");
 				lines.push("    obj.__dict__.update(kwargs)");
 				lines.push("    return obj");
+				lines.push("");
+				lines.push("def __hxhx_post_update_attr(obj, field, delta):");
+				lines.push("    old = getattr(obj, field)");
+				lines.push("    setattr(obj, field, (old + delta))");
+				lines.push("    return old");
+				lines.push("");
+				lines.push("def __hxhx_post_update_index(obj, index, delta):");
+				lines.push("    old = obj[index]");
+				lines.push("    obj[index] = (old + delta)");
+				lines.push("    return old");
 				lines.push("");
 				for (line in renderSupportClasses(target, program, decl, className))
 					lines.push(line);
