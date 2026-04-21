@@ -67,6 +67,14 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function javaCapabilities():BackendCapabilities {
+		return {
+			supportsNoEmit: true,
+			supportsBuildExecutable: true,
+			supportsCustomOutputFile: false
+		};
+	}
+
 	static function descriptor(targetId:String, implId:String, description:String, hostCap:String):TargetDescriptor {
 		return {
 			id: targetId,
@@ -83,12 +91,26 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function descriptorWithCapabilities(targetId:String, implId:String, description:String, hostCap:String,
+			capabilities:BackendCapabilities):TargetDescriptor {
+		final d = descriptor(targetId, implId, description, hostCap);
+		return {
+			id: d.id,
+			implId: d.implId,
+			abiVersion: d.abiVersion,
+			priority: d.priority,
+			description: d.description,
+			capabilities: capabilities,
+			requires: d.requires
+		};
+	}
+
 	public static function pythonDescriptor():TargetDescriptor {
 		return descriptor(PYTHON_TARGET_ID, "builtin/python-native-source-mvp", "Native Python source backend (MVP)", "python");
 	}
 
 	public static function javaDescriptor():TargetDescriptor {
-		return descriptor(JAVA_TARGET_ID, "builtin/java-native-source-mvp", "Native Java source backend (MVP)", "java");
+		return descriptorWithCapabilities(JAVA_TARGET_ID, "builtin/java-native-source-mvp", "Native Java source backend (MVP)", "java", javaCapabilities());
 	}
 
 	public static function csDescriptor():TargetDescriptor {
@@ -203,11 +225,34 @@ class SourceNativeBackend {
 	static function emitTarget(target:SourceNativeTarget, program:GenIrProgram, context:BackendContext):EmitResult {
 		final main = mainModule(program, context);
 		final className = sanitizeTypeNameForTarget(target, HxClassDecl.getName(main.cls));
+		if (target == Java && context.buildExecutable)
+			return emitJavaJar(program, context, main.decl, className, HxFunctionDecl.getBody(main.fn));
 		final outputPath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([context.outputDir, defaultFileName(target, className)]);
 		ensureParentDirectory(outputPath);
 		sys.io.File.saveContent(outputPath, renderProgram(target, program, main.decl, className, HxFunctionDecl.getBody(main.fn)));
 		return new EmitResult(outputPath, [new EmitArtifact(artifactKind(target), outputPath)], false);
+	}
+
+	static function emitJavaJar(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
+		final sourceDir = Path.join([context.outputDir, "src"]);
+		final classesDir = Path.join([context.outputDir, "obj"]);
+		final sourcePath = Path.join([sourceDir, className + ".java"]);
+		final jarPath = context.outputDir + ".jar";
+		ensureDirectory(sourceDir);
+		ensureDirectory(classesDir);
+		ensureParentDirectory(jarPath);
+		sys.io.File.saveContent(sourcePath, renderProgram(Java, program, decl, className, body));
+		final javacCode = Sys.command("javac", ["-d", classesDir, sourcePath]);
+		if (javacCode != 0)
+			throw "Java source backend MVP javac failed with exit code " + javacCode;
+		final jarCode = Sys.command("jar", ["cfe", jarPath, className, "-C", classesDir, "."]);
+		if (jarCode != 0)
+			throw "Java source backend MVP jar packaging failed with exit code " + jarCode;
+		return new EmitResult(jarPath, [
+			new EmitArtifact("entry_java_source", sourcePath),
+			new EmitArtifact("entry_java_jar", jarPath)
+		], false);
 	}
 
 	static function sanitizeTypeName(name:String):String {

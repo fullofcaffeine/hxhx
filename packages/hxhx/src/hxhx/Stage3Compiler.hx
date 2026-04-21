@@ -338,6 +338,8 @@ class Stage3Compiler {
 		// Source backends that can execute directly from a target output directory should preserve
 		// the original target path so upstream runners keep working against the emitted artifact.
 		return switch (backendId) {
+			case "java-native":
+				["-java", "--java", "-jvm", "--jvm"];
 			case "php-native":
 				["-php", "--php"];
 			case _:

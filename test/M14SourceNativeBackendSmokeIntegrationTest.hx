@@ -22,6 +22,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			throw message + " (unexpected `" + needle + "` in `" + haystack + "`)";
 	}
 
+	static function commandExists(name:String):Bool {
+		return Sys.command("sh", ["-c", "command -v " + name + " >/dev/null 2>&1"]) == 0;
+	}
+
+	static function commandOutput(command:String, args:Array<String>):{code:Int, stdout:String, stderr:String} {
+		final process = new sys.io.Process(command, args);
+		final stdout = process.stdout.readAll().toString();
+		final stderr = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		return {code: code, stdout: stdout, stderr: stderr};
+	}
+
 	static function protocolLine(key:String, payload:String):String {
 		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
 			"\t", "\\t");
@@ -1692,6 +1705,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertJavaJarPackaging():Void {
+		if (!commandExists("javac") || !commandExists("jar") || !commandExists("java"))
+			return;
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_jar_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final outputDir = Path.join([tmpRoot, "bin", "java", "TestMain-Debug"]);
+		final backend = BackendRegistry.requireForTarget("java-native");
+		final result = backend.emit(program("java"), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final sourcePath = Path.join([outputDir, "src", "Main.java"]);
+		final jarPath = outputDir + ".jar";
+		assertTrue(result.entryPath == jarPath, "Java source backend should report the packaged jar as primary artifact");
+		assertTrue(FileSystem.exists(sourcePath), "Java source backend should emit source under the target output directory");
+		assertTrue(FileSystem.exists(jarPath), "Java source backend should package the jar path expected by upstream runci");
+		final run = commandOutput("java", ["-jar", jarPath]);
+		assertTrue(run.code == 0, "Java source backend jar should run: " + run.stderr);
+		assertContains(run.stdout, "source-native:java", "Java source backend jar should execute generated main");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertUnsupportedDiagnostic():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_unsupported_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3079,6 +3111,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("php-native", "php", "index.php", "echo __hxhx_add(\"source-native:\", \"php\") . PHP_EOL;");
 		emit("lua-native", "lua", "Main.lua", "print((\"source-native:\" .. \"lua\"))");
 		assertPythonOutputHint();
+		assertJavaJarPackaging();
 		assertUnsupportedDiagnostic();
 		assertWhileStatement();
 		assertIfStatement();
