@@ -445,6 +445,10 @@ class SourceNativeBackend {
 			return nullCoalesceAssignExpr(target, left, right);
 		if (op == "is")
 			return typeCheckExpr(target, left, right);
+		if (target == Php && op == "%")
+			return "__hxhx_mod(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
+		if (target == Php && op == "%=")
+			return phpModuloAssignExpr(left, right);
 		if (target == Php && op == "+")
 			return "__hxhx_add(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		final mapped = binopToken(target, op);
@@ -464,6 +468,12 @@ class SourceNativeBackend {
 		if (isAssignmentOp(op))
 			return a + " " + mapped + " " + b;
 		return "(" + a + " " + mapped + " " + b + ")";
+	}
+
+	static function phpModuloAssignExpr(left:HxExpr, right:HxExpr):String {
+		final target = Php;
+		final a = renderExpr(target, left);
+		return a + " = __hxhx_mod(" + a + ", " + renderExpr(target, right) + ")";
 	}
 
 	static function nullCoalesceExpr(target:SourceNativeTarget, left:HxExpr, right:HxExpr):String {
@@ -3251,6 +3261,11 @@ class SourceNativeBackend {
 				lines.push("    if (is_int($right) || is_float($right)) return $left + $right;");
 				lines.push("  }");
 				lines.push("  return strval($left) . strval($right);");
+				lines.push("}");
+				lines.push("function __hxhx_mod($left, $right) {");
+				lines.push("  if ($right == 0) return NAN;");
+				lines.push("  if (is_float($left) || is_float($right)) return fmod($left, $right);");
+				lines.push("  return $left % $right;");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
 				lines.push("  $old = $obj->$field;");

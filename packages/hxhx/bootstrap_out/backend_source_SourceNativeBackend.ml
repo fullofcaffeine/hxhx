@@ -2889,6 +2889,8 @@ and binopExpr = fun target op left right -> try let __fallback_result_188 = (
   ignore (if HxString.equals op "??" then raise (HxRuntime.Hx_return (Obj.repr (nullCoalesceExpr (Obj.magic target) (Obj.magic left) (Obj.magic right) : string))) else ());
   ignore (if HxString.equals op "??=" then raise (HxRuntime.Hx_return (Obj.repr (nullCoalesceAssignExpr (Obj.magic target) (Obj.magic left) (Obj.magic right) : string))) else ());
   ignore (if HxString.equals op "is" then raise (HxRuntime.Hx_return (Obj.repr (typeCheckExpr (Obj.magic target) (Obj.magic left) (Obj.magic right) : string))) else ());
+  ignore (if target = Php && HxString.equals op "%" then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_mod(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic left))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic right))) ^ ")" : string))) else ());
+  ignore (if target = Php && HxString.equals op "%=" then raise (HxRuntime.Hx_return (Obj.repr (phpModuloAssignExpr (Obj.magic left) (Obj.magic right) : string))) else ());
   ignore (if target = Php && HxString.equals op "+" then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_add(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic left))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic right))) ^ ")" : string))) else ());
   let mapped = (binopToken (Obj.magic target) (op : string) : string) in (
     ignore (if mapped == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ((HxString.toStdString (targetLabel (Obj.magic target)) ^ " source backend MVP unsupported binary operator: ") ^ HxString.toStdString op)) ["Dynamic"; "String"]) else ());
@@ -2937,6 +2939,7 @@ and binopExpr = fun target op left right -> try let __fallback_result_188 = (
   )
 ) in Obj.magic __fallback_result_188 with
   | HxRuntime.Hx_return __ret_187 -> Obj.obj __ret_187
+and phpModuloAssignExpr = fun left right -> let target = Obj.magic Php in let a = (renderExpr (Obj.magic target) (Obj.magic left) : string) in ((((HxString.toStdString a ^ " = __hxhx_mod(") ^ HxString.toStdString a) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic right))) ^ ")"
 and nullCoalesceExpr = fun target left right -> let tempResult = ref ("" : string) in (
   ignore (match target with
     | Php -> let __assign_189 = (((("(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic left))) ^ " ?? ") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic right))) ^ ")" : string) in (
@@ -6864,6 +6867,11 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "    if (is_int($right) || is_float($right)) return $left + $right;");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  return strval($left) . strval($right);");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_mod($left, $right) {");
+      ignore (HxArray.push lines "  if ($right == 0) return NAN;");
+      ignore (HxArray.push lines "  if (is_float($left) || is_float($right)) return fmod($left, $right);");
+      ignore (HxArray.push lines "  return $left % $right;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_post_update_field($obj, $field, $delta) {");
       ignore (HxArray.push lines "  $old = $obj->$field;");

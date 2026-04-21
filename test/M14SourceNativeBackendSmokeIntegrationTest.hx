@@ -827,6 +827,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpFloatModuloProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(101.5 % 100));",
+			"    Sys.println(Std.string(-101.5 % 100));",
+			"    var x = 101.5;",
+			"    x %= 100;",
+			"    Sys.println(Std.string(x));",
+			"    var values = [-101.5];",
+			"    values[0] %= 100;",
+			"    Sys.println(Std.string(values[0]));",
+			"    Sys.println(Std.string(5.0 % 0.0));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1878,8 +1899,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpModuloMultiplicationPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "strval((5 * (10 % 3)))", "PHP modulo should bind tighter than multiplication for implicit grouping");
-		assertContains(content, "strval(((5 * 10) % 3))", "PHP modulo/multiplication lowering should preserve explicit multiplication grouping");
+		assertContains(content, "strval((5 * __hxhx_mod(10, 3)))", "PHP modulo should bind tighter than multiplication for implicit grouping");
+		assertContains(content, "strval(__hxhx_mod((5 * 10), 3))", "PHP modulo/multiplication lowering should preserve explicit multiplication grouping");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpFloatModulo():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_float_modulo_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpFloatModuloProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_mod($left, $right)", "PHP source backend should emit a Haxe modulo helper");
+		assertContains(content, "__hxhx_mod(101.5, 100)", "PHP float modulo expressions should lower through the helper");
+		assertContains(content, "__hxhx_mod((-101.5), 100)", "PHP negative float modulo expressions should lower through the helper");
+		assertContains(content, "$x = __hxhx_mod($x, 100);", "PHP local modulo assignment should lower through the helper");
+		assertContains(content, "__hxhx_mod(5, 0)", "PHP modulo-by-zero expressions should lower through the helper for NaN behavior");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2537,6 +2574,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpSameClassStaticHelperCall();
 		assertPhpBitwiseEqualityPrecedence();
 		assertPhpModuloMultiplicationPrecedence();
+		assertPhpFloatModulo();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();
