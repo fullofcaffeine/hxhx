@@ -387,6 +387,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpInt64LiteralExtensionProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var a = 32.ofInt();",
+			"    var b = (-4).ofInt();",
+			"    Sys.println(Std.string(a));",
+			"    Sys.println(Std.string(b));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpMacroTypeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1447,6 +1463,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpInt64LiteralExtension():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_int64_literal_extension_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpInt64LiteralExtensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$a = haxe\\Int64::ofInt(32);", "PHP Int64 literal extension calls should lower to static calls");
+		assertContains(content, "$b = haxe\\Int64::ofInt((-4));", "PHP negative Int64 literal extension calls should lower to static calls");
+		assertNotContains(content, "32->ofInt()", "PHP should not emit instance calls on integer literals");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1926,6 +1956,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();
+		assertPhpInt64LiteralExtension();
 		assertPhpMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();

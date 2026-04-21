@@ -693,6 +693,8 @@ class SourceNativeBackend {
 	static function fieldCallExpr(target:SourceNativeTarget, receiver:HxExpr, field:String, args:Array<HxExpr>):String {
 		return switch (target) {
 			case Php:
+				if (field == "ofInt" && phpIntLiteralExtensionReceiver(receiver))
+					return phpStaticMethodCall(sanitizePhpTypePath("haxe.Int64"), field, [receiver]);
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
 					phpStaticMethodCall(typePath, field, args);
@@ -706,6 +708,17 @@ class SourceNativeBackend {
 				}
 			case Python, Java, Cs, Lua:
 				callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), args);
+		};
+	}
+
+	static function phpIntLiteralExtensionReceiver(receiver:HxExpr):Bool {
+		return switch (receiver) {
+			case EInt(_):
+				true;
+			case EUnop("-", EInt(_)):
+				true;
+			case _:
+				false;
 		};
 	}
 
