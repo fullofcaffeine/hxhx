@@ -537,29 +537,34 @@ def cmd_patch_stage1_std_root_termination(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
-    old = """        let __assign_37 = (Haxe_io_Path.normalize (Haxe_io_Path.join (Obj.magic (let __arr_38 = HxArray.create () in (
-          ignore (HxArray.push __arr_38 (!dir));
-          ignore (HxArray.push __arr_38 "..");
-          __arr_38
-        ))) : string) : string) in (
-          dir := __assign_37;
-          __assign_37
-        )"""
+    pattern = re.compile(
+        r"""        let __assign_(?P<assign>\d+) = \(Haxe_io_Path\.normalize \(Haxe_io_Path\.join \(Obj\.magic \(let __arr_(?P<arr>\d+) = HxArray\.create \(\) in \(
+          ignore \(HxArray\.push __arr_(?P=arr) \(!dir\)\);
+          ignore \(HxArray\.push __arr_(?P=arr) "\.\."\);
+          __arr_(?P=arr)
+        \)\)\) : string\) : string\) in \(
+          dir := __assign_(?P=assign);
+          __assign_(?P=assign)
+        \)""",
+        re.MULTILINE,
+    )
 
-    new = """        let nextDir = (Haxe_io_Path.normalize (Haxe_io_Path.join (Obj.magic (let __arr_38 = HxArray.create () in (
-          ignore (HxArray.push __arr_38 (!dir));
-          ignore (HxArray.push __arr_38 "..");
-          __arr_38
+    match = pattern.search(src)
+    if match is None:
+        fail("build-hxhx: failed to locate bootstrap Stage1 std-root repair anchor\n")
+    assign = match.group("assign")
+    arr = match.group("arr")
+    new = f"""        let nextDir = (Haxe_io_Path.normalize (Haxe_io_Path.join (Obj.magic (let __arr_{arr} = HxArray.create () in (
+          ignore (HxArray.push __arr_{arr} (!dir));
+          ignore (HxArray.push __arr_{arr} "..");
+          __arr_{arr}
         ))) : string) : string) in (
-          let __assign_37 = (if nextDir == Obj.magic (HxRuntime.hx_null) || HxString.length nextDir = 0 || HxString.equals nextDir "." || HxString.equals nextDir ".." || StringTools.startsWith (nextDir : string) ("../" : string) then (!dir : string) else (nextDir : string)) in (
-            dir := __assign_37;
-            __assign_37
+          let __assign_{assign} = (if nextDir == Obj.magic (HxRuntime.hx_null) || HxString.length nextDir = 0 || HxString.equals nextDir "." || HxString.equals nextDir ".." || StringTools.startsWith (nextDir : string) ("../" : string) then (!dir : string) else (nextDir : string)) in (
+            dir := __assign_{assign};
+            __assign_{assign}
           )
         )"""
-
-    if old not in src:
-        fail("build-hxhx: failed to locate bootstrap Stage1 std-root repair anchor\n")
-    write_text(path_str, src.replace(old, new, 1))
+    write_text(path_str, src[: match.start()] + new + src[match.end() :])
 
 
 def cmd_patch_allowed_ident_fallback(argv: list[str]) -> None:

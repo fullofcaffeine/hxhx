@@ -237,9 +237,10 @@ class Stage1Args {
 	public final displayRequest:Null<String>;
 	public final cwd:String;
 	public final hadCmd:Bool;
+	public final cmdCommands:Array<String>;
 
 	function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>,
-			displayRequest:Null<String>, cwd:String, hadCmd:Bool) {
+			displayRequest:Null<String>, cwd:String, hadCmd:Bool, cmdCommands:Array<String>) {
 		this.classPaths = classPaths;
 		this.main = main;
 		this.noOutput = noOutput;
@@ -250,6 +251,7 @@ class Stage1Args {
 		this.displayRequest = displayRequest;
 		this.cwd = cwd;
 		this.hadCmd = hadCmd;
+		this.cmdCommands = cmdCommands == null ? [] : cmdCommands;
 	}
 
 	public static function parse(args:Array<String>, permissive:Bool = false):Null<Stage1Args> {
@@ -264,6 +266,7 @@ class Stage1Args {
 		final defines = new Array<String>();
 		final libs = new Array<String>();
 		final macros = new Array<String>();
+		final cmdCommands = new Array<String>();
 		var displayRequest:Null<String> = null;
 		var cwd = ".";
 		var stdRoot = "";
@@ -330,6 +333,7 @@ class Stage1Args {
 						return null;
 					}
 					hadCmd = true;
+					cmdCommands.push(expanded[i + 1]);
 					i += 2;
 				case "-cmd" if (permissive):
 					// Upstream also supports the short form `-cmd <shell...>` (used by tests/unit/compile-flash.hxml).
@@ -339,6 +343,7 @@ class Stage1Args {
 						return null;
 					}
 					hadCmd = true;
+					cmdCommands.push(expanded[i + 1]);
 					i += 2;
 				case "-swf-lib" if (permissive):
 					// Flash-specific support flags: consume the 1-arg payload so it doesn't become a positional root.
@@ -474,7 +479,7 @@ class Stage1Args {
 			stdRoot = inferStdRoot(cwd);
 		if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1)
 			classPaths.push(stdRoot);
-		return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, displayRequest, cwd, hadCmd);
+		return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, displayRequest, cwd, hadCmd, cmdCommands);
 	}
 
 	static function inferStdRoot(cwd:String):String {
@@ -636,6 +641,9 @@ class Stage1Args {
 
 	public static function getHadCmd(a:Stage1Args):Bool
 		return a.hadCmd;
+
+	public static function getCmdCommands(a:Stage1Args):Array<String>
+		return a.cmdCommands;
 }
 
 /**

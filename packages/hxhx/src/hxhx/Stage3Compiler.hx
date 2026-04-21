@@ -402,6 +402,82 @@ class Stage3Compiler {
 		}
 	}
 
+	static function runSafeCommandOnlyHooks(commands:Array<String>, cwd:String):Null<Int> {
+		if (commands == null || commands.length == 0)
+			return null;
+		var ran = false;
+		for (command in commands) {
+			final javaJar = parseSafeJavaJarCommand(command);
+			if (javaJar == null)
+				return null;
+			final code = runCommandInCwd("java", ["-jar", javaJar], cwd);
+			if (code != 0)
+				return code;
+			ran = true;
+		}
+		return ran ? 0 : null;
+	}
+
+	static function parseSafeJavaJarCommand(command:String):Null<String> {
+		final words = splitCommandWords(command);
+		if (words.length != 3)
+			return null;
+		if (words[0] != "java" || words[1] != "-jar")
+			return null;
+		final jar = words[2];
+		if (jar.length == 0 || jar.indexOf(";") >= 0 || jar.indexOf("&&") >= 0 || jar.indexOf("|") >= 0)
+			return null;
+		return jar;
+	}
+
+	static function splitCommandWords(command:String):Array<String> {
+		final out = new Array<String>();
+		if (command == null)
+			return out;
+		var current = new StringBuf();
+		var quote = 0;
+		var i = 0;
+		while (i < command.length) {
+			final ch = command.charCodeAt(i);
+			if (quote == 0 && (ch == " ".code || ch == "\t".code || ch == "\r".code || ch == "\n".code)) {
+				if (current.length > 0) {
+					out.push(current.toString());
+					current = new StringBuf();
+				}
+			} else if (ch == "\"".code || ch == "'".code) {
+				if (quote == 0) {
+					quote = ch;
+				} else if (quote == ch) {
+					quote = 0;
+				} else {
+					current.addChar(ch);
+				}
+			} else {
+				current.addChar(ch);
+			}
+			i += 1;
+		}
+		if (current.length > 0)
+			out.push(current.toString());
+		return out;
+	}
+
+	static function runCommandInCwd(command:String, args:Array<String>, cwd:String):Int {
+		final previous = Sys.getCwd();
+		try {
+			Sys.setCwd(cwd);
+			final code = Sys.command(command, args);
+			Sys.setCwd(previous);
+			return code;
+		} catch (e:haxe.Exception) {
+			Sys.setCwd(previous);
+			throw e;
+		} catch (raw:String) {
+			Sys.setCwd(previous);
+			throw raw;
+		}
+	}
+
 	/**
 		Decode a single `--wait stdio` request frame.
 
@@ -1302,6 +1378,7 @@ class Stage3Compiler {
 		final parsedClassPaths = Stage1Args.getClassPaths(parsed);
 		final parsedLibs = Stage1Args.getLibs(parsed);
 		final parsedHadCmd = Stage1Args.getHadCmd(parsed);
+		final parsedCmdCommands = Stage1Args.getCmdCommands(parsed);
 		// Upstream often uses `--interp` as “compile + run now”. In Stage3 (native OCaml),
 		// we emulate this by enabling the full-body emission rung.
 		final sawInterp = parsedDefines != null && parsedDefines.indexOf("interp=1") != -1;
@@ -1409,8 +1486,16 @@ class Stage3Compiler {
 			// For Stage3 bring-up we do not execute `-cmd`/`--cmd`; treat these units as skipped so
 			// diagnostic runners can still traverse the rest of the multi-unit file.
 			if (parsedHadCmd) {
-				Sys.println("stage3=skipped_cmd_only");
-				return 0;
+				final cmdCode = runSafeCommandOnlyHooks(parsedCmdCommands, cwd);
+				if (cmdCode != null) {
+					if (cmdCode != 0)
+						return error("command hook failed with exit code " + Std.string(cmdCode));
+					Sys.println("stage3=cmd_ok");
+					return 0;
+				} else {
+					Sys.println("stage3=skipped_cmd_only");
+					return 0;
+				}
 			}
 			return error("missing -main <TypeName>");
 		}
