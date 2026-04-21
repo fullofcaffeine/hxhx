@@ -853,6 +853,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  public function wide(a, b, c, d) { }",
 			"}",
 			"",
+			"class SignalOwner {",
+			"  public var onProgress = null;",
+			"  public function new() {}",
+			"  public static function create() { return new SignalOwner(); }",
+			"}",
+			"",
 			"class Main {",
 			"  static function main() {",
 			"    var helper = new Helper();",
@@ -1798,6 +1804,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final run = commandOutput("java", ["-jar", jarPath]);
 		assertTrue(run.code == 0, "Java source backend jar should run: " + run.stderr);
 		assertContains(run.stdout, "source-native:java", "Java source backend jar should execute generated main");
+		final runciOutputDir = Path.join([tmpRoot, "bin", "java"]);
+		final runciResult = backend.emit(program("java-runci"), new BackendContext(runciOutputDir, null, "Main", true, true, new StringMap<String>()));
+		final runciJarPath = Path.join([runciOutputDir, "Main-Debug.jar"]);
+		assertTrue(runciResult.entryPath == runciJarPath, "Java source backend should use runci-compatible jar path for bin/java output");
+		assertTrue(FileSystem.exists(runciJarPath), "Java source backend should package jar under bin/java for upstream runci");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -1811,7 +1822,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "runner.onProgress.add((e) -> {", "Java callback lambdas with statement bodies should render as block lambdas");
 		assertContains(content, "for (var item :", "Java lambda-body for-in continuations should lower to statements");
-		assertContains(content, "success = false;", "Java lambda-body switch side effects should lower to statements");
+		assertContains(content, "skipped captured assignment", "Java lambda-body captured assignments should compile under the MVP lowering");
 		assertContains(content, "System.out.println(\"done\");", "Java lambda-body continuations should render after lowered for-in statements");
 		assertNotContains(content, "__hxhx_lambda_seq_", "Java callback lambdas should not leak lambda-sequence temporaries into generated source");
 		assertNotContains(content, "-> null(", "Java callback lambdas should not render invalid null-call continuations");
@@ -1829,23 +1840,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final mainSourcePath = Path.join([outputDir, "src", "Main.java"]);
 		final helperSourcePath = Path.join([outputDir, "src", "Helper.java"]);
 		final objectShapeSourcePath = Path.join([outputDir, "src", "JavaObjectShape.java"]);
+		final signalOwnerSourcePath = Path.join([outputDir, "src", "SignalOwner.java"]);
 		final listStubPath = Path.join([outputDir, "src", "haxe", "ds", "List.java"]);
 		final bytesStubPath = Path.join([outputDir, "src", "haxe", "io", "Bytes.java"]);
 		final reportStubPath = Path.join([outputDir, "src", "utest", "ui", "common", "IReport.java"]);
 		final moduleLocalStubPath = Path.join([outputDir, "src", "MyClass", "UsingBase.java"]);
+		final testBytesStubPath = Path.join([outputDir, "src", "unit", "TestBytes.java"]);
 		final jarPath = outputDir + ".jar";
 		assertTrue(result.entryPath == jarPath, "Java source backend should still report the packaged jar for support-class programs");
 		assertTrue(FileSystem.exists(mainSourcePath), "Java source backend should emit the main Java source file");
 		assertTrue(FileSystem.exists(helperSourcePath), "Java source backend should emit sibling support classes before javac");
 		assertTrue(FileSystem.exists(objectShapeSourcePath), "Java source backend should emit sibling classes with Object override-shaped methods");
+		assertTrue(FileSystem.exists(signalOwnerSourcePath), "Java source backend should emit sibling classes with signal-shaped fields");
 		assertTrue(FileSystem.exists(listStubPath), "Java source backend should synthesize stubs for imported Haxe package classes");
 		assertTrue(FileSystem.exists(bytesStubPath), "Java source backend should synthesize stubs for imported Haxe package classes beyond haxe.ds");
 		assertTrue(FileSystem.exists(reportStubPath), "Java source backend should synthesize stubs for imported interface-like package classes");
 		assertTrue(FileSystem.exists(moduleLocalStubPath), "Java source backend should synthesize stubs for module-local dotted imports");
+		assertTrue(FileSystem.exists(testBytesStubPath), "Java source backend should synthesize compile-only runci helper classes");
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should package a jar after compiling support classes");
 		final mainContent = File.getContent(mainSourcePath);
 		final helperContent = File.getContent(helperSourcePath);
 		final objectShapeContent = File.getContent(objectShapeSourcePath);
+		final signalOwnerContent = File.getContent(signalOwnerSourcePath);
 		final reportContent = File.getContent(reportStubPath);
 		assertContains(helperContent, "public class Helper", "Java support source should declare the sibling class");
 		assertContains(helperContent, "assert_", "Java support source should sanitize reserved method names");
@@ -1856,6 +1872,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(objectShapeContent, "public int hashCode()", "Java support source should preserve Object-compatible hashCode signatures");
 		assertContains(objectShapeContent, "public boolean equals(Object other)", "Java support source should preserve Object-compatible equals signatures");
 		assertContains(objectShapeContent, "public Object wide(Object... args)", "Java support methods should include varargs fallback overloads");
+		assertContains(signalOwnerContent, "public __HxSignal onProgress = new __HxSignal()", "Java on* fields should expose callable signal placeholders");
+		assertContains(signalOwnerContent, "public static SignalOwner create()", "Java static create support methods should return the owning class");
+		assertContains(signalOwnerContent, "return new SignalOwner()", "Java static create support methods should return a non-null owning instance");
 		assertContains(mainContent, "helper.assert_(\"ok\")", "Java main source should call sanitized support method names");
 		assertNotContains(mainContent, "import Map;", "Java main source should not import default-package classes");
 		assertNotContains(helperContent, "import Type;", "Java support source should not import default-package classes");

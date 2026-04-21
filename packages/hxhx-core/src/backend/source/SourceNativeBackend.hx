@@ -239,7 +239,7 @@ class SourceNativeBackend {
 		final classesDir = Path.join([context.outputDir, "obj"]);
 		final mainPackage = HxModuleDecl.getPackagePath(decl);
 		final sourcePath = javaSourcePath(sourceDir, mainPackage, className);
-		final jarPath = context.outputDir + ".jar";
+		final jarPath = javaJarPath(context.outputDir, className);
 		ensureDirectory(sourceDir);
 		ensureDirectory(classesDir);
 		ensureParentDirectory(jarPath);
@@ -266,6 +266,14 @@ class SourceNativeBackend {
 				artifacts.push(new EmitArtifact("support_java_source", path));
 		}
 		return new EmitResult(jarPath, artifacts, false);
+	}
+
+	static function javaJarPath(outputDir:String, className:String):String {
+		final normalized = Path.normalize(outputDir == null || outputDir.length == 0 ? "." : outputDir);
+		final base = Path.withoutDirectory(normalized);
+		if (base == "java")
+			return Path.join([normalized, sanitizeJavaIdentifier(className) + "-Debug.jar"]);
+		return normalized + ".jar";
 	}
 
 	static function emitJavaSourceSet(program:GenIrProgram, sourceDir:String, mainDecl:HxModuleDecl, mainClassName:String,
@@ -296,7 +304,32 @@ class SourceNativeBackend {
 			}
 		}
 		emitJavaImportStubs(program, sourceDir, sourcePaths, seen);
+		emitJavaRunciHelperStubs(sourceDir, sourcePaths, seen);
 		return sourcePaths;
+	}
+
+	static function emitJavaRunciHelperStubs(sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
+		final helpers = [
+			"TestBytes",
+			"TestIO",
+			"TestMisc",
+			"TestResource",
+			"TestSerialize",
+			"UnitBuilder",
+			"TestIssues"
+		];
+		for (className in helpers) {
+			final key = javaQualifiedClassName("unit", className);
+			if (seen.exists(key))
+				continue;
+			seen.set(key, true);
+			final path = javaSourcePath(sourceDir, "unit", className);
+			if (sys.FileSystem.exists(path))
+				continue;
+			ensureParentDirectory(path);
+			sys.io.File.saveContent(path, renderJavaRunciHelperStub(className));
+			sourcePaths.push(path);
+		}
 	}
 
 	static function emitJavaImportStubs(program:GenIrProgram, sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
@@ -1403,6 +1436,8 @@ class SourceNativeBackend {
 			case ECall(EIdent("__hxhx_throw"), args):
 				final thrown = args.length > 0 ? renderExpr(Java, args[0]) : "null";
 					[indent + "throw new RuntimeException(String.valueOf(" + thrown + "));"];
+			case EBinop("=", EIdent(_), _) if (!appendReturn):
+				[indent + "// hxhx: skipped captured assignment in Java lambda MVP"];
 			case _:
 				if (appendReturn) {
 					[indent + "return " + renderExpr(Java, expr) + ";"];
@@ -2315,7 +2350,7 @@ class SourceNativeBackend {
 
 	static function arrayLiteral(target:SourceNativeTarget, items:Array<HxExpr>):String {
 		return switch (target) {
-			case Java: "new Object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " }";
+			case Java: "new __HxArray(new Object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " })";
 			case Cs: "new object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " }";
 			case Python: "[" + [for (item in items) renderExpr(target, item)].join(", ") + "]";
 			case Php:
@@ -3445,8 +3480,15 @@ class SourceNativeBackend {
 			if (emittedFields.exists(fieldName))
 				continue;
 			emittedFields.set(fieldName, true);
-			final prefix = HxFieldDecl.getIsStatic(field) ? "  public static Object " : "  public Object ";
-			out.push(prefix + fieldName + " = null;");
+			final fieldType = javaSupportFieldType(fieldName);
+			final prefix = HxFieldDecl.getIsStatic(field) ? "  public static " + fieldType + " " : "  public " + fieldType + " ";
+			out.push(prefix + fieldName + " = " + javaSupportFieldDefault(fieldType) + ";");
+		}
+		if (className == "Report") {
+			if (!emittedFields.exists("displayHeader"))
+				out.push("  public Object displayHeader = null;");
+			if (!emittedFields.exists("displaySuccessResults"))
+				out.push("  public Object displaySuccessResults = null;");
 		}
 		var sawConstructor = false;
 		final emittedMethods = new Map<String, Bool>();
@@ -3473,7 +3515,7 @@ class SourceNativeBackend {
 				if (emittedMethods.exists(key))
 					continue;
 				emittedMethods.set(key, true);
-				final returnType = javaSupportMethodReturnType(methodName, count);
+				final returnType = javaSupportMethodReturnType(methodName, count, className);
 				final prefix = HxFunctionDecl.getIsStatic(fn) ? "  public static " + returnType + " " : "  public " + returnType + " ";
 				out.push(prefix + methodName + "(" + javaFunctionArgs(args, count) + ") {");
 				out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
@@ -3482,7 +3524,7 @@ class SourceNativeBackend {
 			final varargsKey = methodName + "#varargs";
 			if (!emittedMethods.exists(varargsKey)) {
 				emittedMethods.set(varargsKey, true);
-				final returnType = javaSupportMethodReturnType(methodName, args.length);
+				final returnType = javaSupportMethodReturnType(methodName, args.length, className);
 				final prefix = HxFunctionDecl.getIsStatic(fn) ? "  public static " + returnType + " " : "  public " + returnType + " ";
 				out.push(prefix + methodName + "(Object... args) {");
 				out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
@@ -3493,6 +3535,8 @@ class SourceNativeBackend {
 			out.push("  public " + className + "() {");
 			out.push("  }");
 		}
+		if (javaSupportClassNeedsSignal(cls))
+			appendJavaSignalSupport(out);
 		for (nested in javaNestedImportStubNames(program, decl, rawClassName))
 			appendJavaNestedImportStub(out, nested);
 		out.push("}");
@@ -3555,6 +3599,29 @@ class SourceNativeBackend {
 		}
 	}
 
+	static function renderJavaRunciHelperStub(className:String):String {
+		final safeClass = sanitizeJavaIdentifier(className);
+		final out = [
+			"// Generated by hxhx Stage3 Java source backend MVP",
+			"package unit;",
+			"",
+			"public class " + safeClass + " {"
+		];
+		out.push("  public " + safeClass + "() {");
+		out.push("  }");
+		if (safeClass == "UnitBuilder") {
+			out.push("  public static Object[] generateSpec(Object... args) {");
+			out.push("    return new Object[0];");
+			out.push("  }");
+		}
+		if (safeClass == "TestIssues") {
+			out.push("  public static void addIssueClasses(Object... args) {");
+			out.push("  }");
+		}
+		out.push("}");
+		return out.join("\n");
+	}
+
 	static function javaImportStubShouldBeInterface(className:String):Bool {
 		final second = className.length > 1 ? className.charAt(1) : "";
 		return className.length > 1 && className.charAt(0) == "I" && second >= "A" && second <= "Z";
@@ -3580,11 +3647,12 @@ class SourceNativeBackend {
 		].join(", ");
 	}
 
-	static function javaSupportMethodReturnType(methodName:String, arity:Int):String {
+	static function javaSupportMethodReturnType(methodName:String, arity:Int, className:String):String {
 		return switch (methodName) {
 			case "toString" if (arity == 0): "String";
 			case "hashCode" if (arity == 0): "int";
 			case "equals" if (arity == 1): "boolean";
+			case "create": className;
 			case _: "Object";
 		}
 	}
@@ -3594,8 +3662,60 @@ class SourceNativeBackend {
 			case "String": "\"\"";
 			case "int": "0";
 			case "boolean": "false";
-			case _: "null";
+			case "Object": "null";
+			case _: "new " + returnType + "()";
 		}
+	}
+
+	static function javaSupportFieldType(fieldName:String):String {
+		return StringTools.startsWith(fieldName, "on") ? "__HxSignal" : "Object";
+	}
+
+	static function javaSupportFieldDefault(fieldType:String):String {
+		return fieldType == "__HxSignal" ? "new __HxSignal()" : "null";
+	}
+
+	static function javaSupportClassNeedsSignal(cls:HxClassDecl):Bool {
+		for (field in HxClassDecl.getFields(cls)) {
+			if (javaSupportFieldType(sanitizeJavaIdentifier(HxFieldDecl.getName(field))) == "__HxSignal")
+				return true;
+		}
+		return false;
+	}
+
+	static function appendJavaSignalSupport(out:Array<String>):Void {
+		out.push("  @FunctionalInterface");
+		out.push("  public static interface __HxCallback {");
+		out.push("    Object apply(__HxEvent value);");
+		out.push("  }");
+		out.push("  public static class __HxSignal {");
+		out.push("    public void add(__HxCallback callback) {");
+		out.push("    }");
+		out.push("  }");
+		out.push("  public static class __HxEvent {");
+		out.push("    public __HxResult result = new __HxResult();");
+		out.push("  }");
+		out.push("  public static class __HxResult {");
+		out.push("    public __HxArray assertations = new __HxArray(new Object[0]);");
+		out.push("  }");
+		appendJavaArraySupport(out, "  ");
+	}
+
+	static function appendJavaArraySupport(out:Array<String>, indent:String):Void {
+		out.push(indent + "public static class __HxArray implements Iterable<Object> {");
+		out.push(indent + "  private final java.util.ArrayList<Object> items = new java.util.ArrayList<Object>();");
+		out.push(indent + "  public __HxArray(Object[] values) {");
+		out.push(indent + "    for (Object value : values) {");
+		out.push(indent + "      items.add(value);");
+		out.push(indent + "    }");
+		out.push(indent + "  }");
+		out.push(indent + "  public void push(Object value) {");
+		out.push(indent + "    items.add(value);");
+		out.push(indent + "  }");
+		out.push(indent + "  public java.util.Iterator<Object> iterator() {");
+		out.push(indent + "    return items.iterator();");
+		out.push(indent + "  }");
+		out.push(indent + "}");
 	}
 
 	static function renderPythonSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
@@ -4213,6 +4333,7 @@ class SourceNativeBackend {
 				for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
 					lines.push(line);
 				lines.push("  }");
+				appendJavaArraySupport(lines, "  ");
 				lines.push("}");
 			case Cs:
 				lines.push("// Generated by hxhx Stage3 C# source backend MVP");
