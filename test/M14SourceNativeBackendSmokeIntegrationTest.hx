@@ -1105,6 +1105,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 			"",
+			"class MySpecialString {",
+			"  public function new(value:String) {",
+			"    this = value;",
+			"  }",
+			"  public function substr(i:Int, ?len:Int) {",
+			"    return len == null ? this.substr(i) : this.substr(i, len);",
+			"  }",
+			"}",
+			"",
 			"class Main {",
 			"  static function main() {",
 			"    var counter = new Counter(2);",
@@ -1132,6 +1141,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(hash.get(\"k\"));",
 			"    var ihash:MyHash<Int> = [1, 2];",
 			"    Sys.println(Std.string(ihash.get(\"_s1\")));",
+			"    var special = new MySpecialString(\"My debugging abstract\");",
+			"    Sys.println(special.substr(3));",
 			"  }",
 			"}",
 		].join("\n");
@@ -2306,6 +2317,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_string_split($value, $delimiter)", "PHP runtime should include a String.split helper");
 		assertContains(content, "function __hxhx_string_char_code_at($value, $index)", "PHP runtime should include a String.charCodeAt helper");
 		assertContains(content, "function __hxhx_string_substr($value, $pos, $len = null)", "PHP runtime should include a String.substr helper");
+		assertContains(content, "function __hxhx_string_value($value)", "PHP runtime should include abstract-aware string receiver support");
+		assertContains(content, "$s = __hxhx_string_value($value);", "PHP string helpers should unwrap abstract string receivers before conversion");
 		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")) . PHP_EOL;",
 			"PHP string-like concatenation receivers should lower indexOf through the helper");
 		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)) . PHP_EOL;",
@@ -2701,6 +2714,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$km = __hxhx_to_kilometer($km);", "PHP function arguments typed as Kilometer should normalize constructor inputs");
 		assertContains(content, "$hash = __hxhx_to_my_hash([\"k\", \"v\"], true);", "PHP MyHash<String> declarations should use string-key array conversion");
 		assertContains(content, "$ihash = __hxhx_to_my_hash([1, 2], false);", "PHP MyHash<T> declarations should use indexed-key array conversion");
+		assertContains(content, "$this->__hx_value = __hxhx_copy_value($value);", "PHP MySpecialString constructor should preserve the backing string");
+		assertContains(content, "return $len === null ? __hxhx_string_substr($this->__hx_value, $i) : __hxhx_string_substr($this->__hx_value, $i, $len);",
+			"PHP MySpecialString substr should delegate to the string runtime helper");
 		assertContains(content, "$this->bar();", "PHP same-class helper calls should lower through the instance receiver");
 		assertContains(content, "function __hxhx_to_my_abstract_counter($value)",
 			"PHP runtime should include MyAbstractCounter @:from-style conversion support");

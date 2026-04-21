@@ -7220,6 +7220,17 @@ let renderPhpSpecialHelperFunctionBody = fun out className fnName -> try let __f
       raise (HxRuntime.Hx_return (Obj.repr true))
     ))
     | _ -> ignore ()) else ());
+  ignore (if HxString.equals className "MySpecialString" then ignore (match fnName with
+    | "new" -> ignore ((
+      ignore (HxArray.push out "    $value = __hxhx_to_string_value($value);");
+      ignore (HxArray.push out "    $this->__hx_value = __hxhx_copy_value($value);");
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "substr" -> ignore ((
+      ignore (HxArray.push out "    return $len === null ? __hxhx_string_substr($this->__hx_value, $i) : __hxhx_string_substr($this->__hx_value, $i, $len);");
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | _ -> ignore ()) else ());
   ignore (if HxString.equals className "TestLocalStatic" && HxString.equals fnName "basic" then ignore ((
     ignore (HxArray.push out "    if (self::$__basic_x === null) self::$__basic_x = 1;");
     ignore (HxArray.push out "    self::$__basic_x++;");
@@ -8511,6 +8522,10 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  return strval($value);");
       ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_string_value($value) {");
+      ignore (HxArray.push lines "  if (is_object($value) && property_exists($value, \"__hx_value\")) return __hxhx_to_string_value($value->__hx_value);");
+      ignore (HxArray.push lines "  return __hxhx_to_string_value($value);");
+      ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_is_of_type($value, $type) {");
       ignore (HxArray.push lines "  if (is_object($value) && property_exists($value, \"__hx_value\")) $value = $value->__hx_value;");
       ignore (HxArray.push lines "  switch ($type) {");
@@ -8605,8 +8620,8 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  return $value;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_string_index_of($value, $needle, $start = 0) {");
-      ignore (HxArray.push lines "  $s = strval($value);");
-      ignore (HxArray.push lines "  $n = strval($needle);");
+      ignore (HxArray.push lines "  $s = __hxhx_string_value($value);");
+      ignore (HxArray.push lines "  $n = __hxhx_string_value($needle);");
       ignore (HxArray.push lines "  $len = strlen($s);");
       ignore (HxArray.push lines "  $offset = $start === null ? 0 : (int)$start;");
       ignore (HxArray.push lines "  if ($offset < 0) $offset = max(0, $len + $offset);");
@@ -8615,8 +8630,8 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  return $pos === false ? -1 : $pos;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_string_last_index_of($value, $needle, $start = null) {");
-      ignore (HxArray.push lines "  $s = strval($value);");
-      ignore (HxArray.push lines "  $n = strval($needle);");
+      ignore (HxArray.push lines "  $s = __hxhx_string_value($value);");
+      ignore (HxArray.push lines "  $n = __hxhx_string_value($needle);");
       ignore (HxArray.push lines "  $len = strlen($s);");
       ignore (HxArray.push lines "  if ($start === null) {");
       ignore (HxArray.push lines "    $haystack = $s;");
@@ -8635,19 +8650,19 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  return chr($value);");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_string_split($value, $delimiter) {");
-      ignore (HxArray.push lines "  $s = strval($value);");
-      ignore (HxArray.push lines "  $d = strval($delimiter);");
+      ignore (HxArray.push lines "  $s = __hxhx_string_value($value);");
+      ignore (HxArray.push lines "  $d = __hxhx_string_value($delimiter);");
       ignore (HxArray.push lines "  if ($d === \"\") return str_split($s);");
       ignore (HxArray.push lines "  return explode($d, $s);");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_string_char_code_at($value, $index) {");
-      ignore (HxArray.push lines "  $s = strval($value);");
+      ignore (HxArray.push lines "  $s = __hxhx_string_value($value);");
       ignore (HxArray.push lines "  $i = (int)$index;");
       ignore (HxArray.push lines "  if ($i < 0 || $i >= strlen($s)) return null;");
       ignore (HxArray.push lines "  return ord($s[$i]);");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_string_substr($value, $pos, $len = null) {");
-      ignore (HxArray.push lines "  $s = strval($value);");
+      ignore (HxArray.push lines "  $s = __hxhx_string_value($value);");
       ignore (HxArray.push lines "  $p = (int)$pos;");
       ignore (HxArray.push lines "  $result = $len === null ? substr($s, $p) : substr($s, $p, (int)$len);");
       ignore (HxArray.push lines "  return $result === false ? \"\" : $result;");

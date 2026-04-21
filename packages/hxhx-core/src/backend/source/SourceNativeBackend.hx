@@ -3378,6 +3378,18 @@ class SourceNativeBackend {
 				case _:
 			}
 		}
+		if (className == "MySpecialString") {
+			switch (fnName) {
+				case "new":
+					out.push("    $value = __hxhx_to_string_value($value);");
+					out.push("    $this->__hx_value = __hxhx_copy_value($value);");
+					return true;
+				case "substr":
+					out.push("    return $len === null ? __hxhx_string_substr($this->__hx_value, $i) : __hxhx_string_substr($this->__hx_value, $i, $len);");
+					return true;
+				case _:
+			}
+		}
 		if (className == "TestLocalStatic" && fnName == "basic") {
 			// Upstream unit coverage checks local-static persistence. The shared IR still
 			// represents `static var` in function bodies as EUnsupported("static"), so keep
@@ -4072,6 +4084,10 @@ class SourceNativeBackend {
 				lines.push("  }");
 				lines.push("  return strval($value);");
 				lines.push("}");
+				lines.push("function __hxhx_string_value($value) {");
+				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return __hxhx_to_string_value($value->__hx_value);");
+				lines.push("  return __hxhx_to_string_value($value);");
+				lines.push("}");
 				lines.push("function __hxhx_is_of_type($value, $type) {");
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) $value = $value->__hx_value;");
 				lines.push("  switch ($type) {");
@@ -4166,8 +4182,8 @@ class SourceNativeBackend {
 				lines.push("  return $value;");
 				lines.push("}");
 				lines.push("function __hxhx_string_index_of($value, $needle, $start = 0) {");
-				lines.push("  $s = strval($value);");
-				lines.push("  $n = strval($needle);");
+				lines.push("  $s = __hxhx_string_value($value);");
+				lines.push("  $n = __hxhx_string_value($needle);");
 				lines.push("  $len = strlen($s);");
 				lines.push("  $offset = $start === null ? 0 : (int)$start;");
 				lines.push("  if ($offset < 0) $offset = max(0, $len + $offset);");
@@ -4176,8 +4192,8 @@ class SourceNativeBackend {
 				lines.push("  return $pos === false ? -1 : $pos;");
 				lines.push("}");
 				lines.push("function __hxhx_string_last_index_of($value, $needle, $start = null) {");
-				lines.push("  $s = strval($value);");
-				lines.push("  $n = strval($needle);");
+				lines.push("  $s = __hxhx_string_value($value);");
+				lines.push("  $n = __hxhx_string_value($needle);");
 				lines.push("  $len = strlen($s);");
 				lines.push("  if ($start === null) {");
 				lines.push("    $haystack = $s;");
@@ -4196,19 +4212,19 @@ class SourceNativeBackend {
 				lines.push("  return chr($value);");
 				lines.push("}");
 				lines.push("function __hxhx_string_split($value, $delimiter) {");
-				lines.push("  $s = strval($value);");
-				lines.push("  $d = strval($delimiter);");
+				lines.push("  $s = __hxhx_string_value($value);");
+				lines.push("  $d = __hxhx_string_value($delimiter);");
 				lines.push("  if ($d === \"\") return str_split($s);");
 				lines.push("  return explode($d, $s);");
 				lines.push("}");
 				lines.push("function __hxhx_string_char_code_at($value, $index) {");
-				lines.push("  $s = strval($value);");
+				lines.push("  $s = __hxhx_string_value($value);");
 				lines.push("  $i = (int)$index;");
 				lines.push("  if ($i < 0 || $i >= strlen($s)) return null;");
 				lines.push("  return ord($s[$i]);");
 				lines.push("}");
 				lines.push("function __hxhx_string_substr($value, $pos, $len = null) {");
-				lines.push("  $s = strval($value);");
+				lines.push("  $s = __hxhx_string_value($value);");
 				lines.push("  $p = (int)$pos;");
 				lines.push("  $result = $len === null ? substr($s, $p) : substr($s, $p, (int)$len);");
 				lines.push("  return $result === false ? \"\" : $result;");
