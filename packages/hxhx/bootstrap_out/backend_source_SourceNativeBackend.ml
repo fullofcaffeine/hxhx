@@ -7252,7 +7252,10 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  if (is_int($left) || is_float($left)) {");
       ignore (HxArray.push lines "    if (is_int($right) || is_float($right)) return $left + $right;");
       ignore (HxArray.push lines "  }");
-      ignore (HxArray.push lines "  return strval($left) . strval($right);");
+      ignore (HxArray.push lines "  return __hxhx_add_string($left) . __hxhx_add_string($right);");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_add_string($value) {");
+      ignore (HxArray.push lines "  return $value === null ? \"null\" : strval($value);");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_mod($left, $right) {");
       ignore (HxArray.push lines "  if ($right == 0) return NAN;");

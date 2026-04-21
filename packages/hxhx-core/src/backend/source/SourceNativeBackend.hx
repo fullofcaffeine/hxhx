@@ -3365,7 +3365,10 @@ class SourceNativeBackend {
 				lines.push("  if (is_int($left) || is_float($left)) {");
 				lines.push("    if (is_int($right) || is_float($right)) return $left + $right;");
 				lines.push("  }");
-				lines.push("  return strval($left) . strval($right);");
+				lines.push("  return __hxhx_add_string($left) . __hxhx_add_string($right);");
+				lines.push("}");
+				lines.push("function __hxhx_add_string($value) {");
+				lines.push("  return $value === null ? \"null\" : strval($value);");
 				lines.push("}");
 				lines.push("function __hxhx_mod($left, $right) {");
 				lines.push("  if ($right == 0) return NAN;");

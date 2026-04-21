@@ -800,6 +800,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    Sys.println(Std.string(1 + 2 + \"\"));",
 			"    Sys.println(Std.string(1 + (2 + \"\")));",
+			"    Sys.println(Std.string(null + \"x\"));",
+			"    Sys.println(Std.string(\"x\" + null));",
 			"  }",
 			"}",
 		].join("\n");
@@ -1968,9 +1970,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_add($left, $right)", "PHP source backend should emit a Haxe plus-semantics helper");
+		assertContains(content, "function __hxhx_add_string($value)", "PHP plus helper should include Haxe stringification support");
+		assertContains(content, "return $value === null ? \"null\" : strval($value);", "PHP plus helper should stringify null like Haxe");
 		assertContains(content, "__hxhx_add(__hxhx_add(1, 2), \"\")",
 			"PHP plus lowering should preserve left-associative numeric addition before string conversion");
 		assertContains(content, "__hxhx_add(1, __hxhx_add(2, \"\"))", "PHP plus lowering should preserve explicit string-concat grouping");
+		assertContains(content, "__hxhx_add(null, \"x\")", "PHP null-left string plus should lower through Haxe helper");
+		assertContains(content, "__hxhx_add(\"x\", null)", "PHP null-right string plus should lower through Haxe helper");
 		deleteRecursive(tmpRoot);
 	}
 
