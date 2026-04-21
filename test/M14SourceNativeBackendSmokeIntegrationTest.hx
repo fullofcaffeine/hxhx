@@ -860,11 +860,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  public static function create() { return new SignalOwner(); }",
 			"}",
 			"",
+			"class FunctionalSupport {",
+			"  public function new() {}",
+			"  public static function consume(callback) { }",
+			"}",
+			"",
 			"class Main {",
 			"  static function main() {",
 			"    var helper = new Helper();",
 			"    Sys.println(Std.string(helper.label()));",
 			"    helper.assert(\"ok\");",
+			"  }",
+			"  static function multiply(a, b) {",
+			"    return a * b;",
 			"  }",
 			"}",
 		].join("\n");
@@ -1802,6 +1810,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(result.entryPath == jarPath, "Java source backend should report the packaged jar as primary artifact");
 		assertTrue(FileSystem.exists(sourcePath), "Java source backend should emit source under the target output directory");
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should package the jar path expected by upstream runci");
+		final sourceContent = File.getContent(sourcePath);
+		assertContains(sourceContent, "class Std", "Java source backend should provide minimal Std support class");
+		assertContains(sourceContent, "class Sys", "Java source backend should provide minimal Sys support class");
 		final run = commandOutput("java", ["-jar", jarPath]);
 		assertTrue(run.code == 0, "Java source backend jar should run: " + run.stderr);
 		assertContains(run.stdout, "source-native:java", "Java source backend jar should execute generated main");
@@ -1847,6 +1858,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final helperSourcePath = Path.join([outputDir, "src", "Helper.java"]);
 		final objectShapeSourcePath = Path.join([outputDir, "src", "JavaObjectShape.java"]);
 		final signalOwnerSourcePath = Path.join([outputDir, "src", "SignalOwner.java"]);
+		final functionalSupportSourcePath = Path.join([outputDir, "src", "FunctionalSupport.java"]);
 		final listStubPath = Path.join([outputDir, "src", "haxe", "ds", "List.java"]);
 		final bytesStubPath = Path.join([outputDir, "src", "haxe", "io", "Bytes.java"]);
 		final reportStubPath = Path.join([outputDir, "src", "utest", "ui", "common", "IReport.java"]);
@@ -1859,6 +1871,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(FileSystem.exists(helperSourcePath), "Java source backend should emit sibling support classes before javac");
 		assertTrue(FileSystem.exists(objectShapeSourcePath), "Java source backend should emit sibling classes with Object override-shaped methods");
 		assertTrue(FileSystem.exists(signalOwnerSourcePath), "Java source backend should emit sibling classes with signal-shaped fields");
+		assertTrue(FileSystem.exists(functionalSupportSourcePath), "Java source backend should emit sibling classes with functional overload stubs");
 		assertTrue(FileSystem.exists(listStubPath), "Java source backend should synthesize stubs for imported Haxe package classes");
 		assertTrue(FileSystem.exists(bytesStubPath), "Java source backend should synthesize stubs for imported Haxe package classes beyond haxe.ds");
 		assertTrue(FileSystem.exists(reportStubPath), "Java source backend should synthesize stubs for imported interface-like package classes");
@@ -1870,6 +1883,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final helperContent = File.getContent(helperSourcePath);
 		final objectShapeContent = File.getContent(objectShapeSourcePath);
 		final signalOwnerContent = File.getContent(signalOwnerSourcePath);
+		final functionalSupportContent = File.getContent(functionalSupportSourcePath);
 		final reportContent = File.getContent(reportStubPath);
 		final callStackContent = File.getContent(callStackStubPath);
 		assertContains(helperContent, "public class Helper", "Java support source should declare the sibling class");
@@ -1885,6 +1899,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(signalOwnerContent, "public __HxSignal onProgress = new __HxSignal()", "Java on* fields should expose callable signal placeholders");
 		assertContains(signalOwnerContent, "public static SignalOwner create()", "Java static create support methods should return the owning class");
 		assertContains(signalOwnerContent, "return new SignalOwner()", "Java static create support methods should return a non-null owning instance");
+		assertContains(functionalSupportContent, "java.util.function.Consumer<Object>", "Java support methods should expose one-arg functional overloads");
+		assertContains(functionalSupportContent, "java.util.function.Function<Object, Object>",
+			"Java support methods should expose returning one-arg functional overloads");
+		assertContains(functionalSupportContent, "java.util.function.BiFunction<Object, Object, Object>",
+			"Java support methods should expose two-arg functional overloads");
+		assertContains(mainContent, "java.util.function.BiFunction<Object, Object, Object> multiply = Main::multiply",
+			"Java main helpers should expose method-reference fields");
+		assertContains(mainContent, "public static Object multiply(Object a, Object b)", "Java main helpers should emit compile-only static methods");
 		assertContains(mainContent, "helper.assert_(\"ok\")", "Java main source should call sanitized support method names");
 		assertNotContains(mainContent, "import Map;", "Java main source should not import default-package classes");
 		assertNotContains(helperContent, "import Type;", "Java support source should not import default-package classes");

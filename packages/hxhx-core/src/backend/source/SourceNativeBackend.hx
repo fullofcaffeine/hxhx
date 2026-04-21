@@ -742,6 +742,8 @@ class SourceNativeBackend {
 			return "__hxhx_div(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "/=")
 			return phpDivideAssignExpr(left, right);
+		if (target == Java && (op == "-" || op == "*" || op == "/" || op == "%"))
+			return "(Std.int_(" + renderExpr(Java, left) + ") " + op + " Std.int_(" + renderExpr(Java, right) + "))";
 		final mapped = binopToken(target, op);
 		if (mapped == null)
 			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
@@ -3538,6 +3540,7 @@ class SourceNativeBackend {
 				out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
 				out.push("  }");
 			}
+			appendJavaFunctionalOverloads(out, emittedMethods, methodName, args.length, HxFunctionDecl.getIsStatic(fn), className);
 		}
 		if (!sawConstructor) {
 			out.push("  public " + className + "() {");
@@ -3734,6 +3737,99 @@ class SourceNativeBackend {
 		out.push(indent + "    return items.iterator();");
 		out.push(indent + "  }");
 		out.push(indent + "}");
+	}
+
+	static function appendJavaMainSupportMembers(out:Array<String>, decl:HxModuleDecl, className:String):Void {
+		final emittedMethods = new Map<String, Bool>();
+		for (fn in HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl))) {
+			final fnName = HxFunctionDecl.getName(fn);
+			if (fnName == "main" || fnName == "new" || !HxFunctionDecl.getIsStatic(fn))
+				continue;
+			final methodName = sanitizeJavaIdentifier(fnName);
+			final args = HxFunctionDecl.getArgs(fn);
+			appendJavaFunctionalField(out, methodName, args.length, className);
+			final key = methodName + "#" + Std.string(args.length);
+			if (!emittedMethods.exists(key)) {
+				emittedMethods.set(key, true);
+				out.push("  public static Object " + methodName + "(" + javaFunctionArgs(args) + ") {");
+				out.push("    return null;");
+				out.push("  }");
+			}
+			final varargsKey = methodName + "#varargs";
+			if (!emittedMethods.exists(varargsKey)) {
+				emittedMethods.set(varargsKey, true);
+				out.push("  public static Object " + methodName + "(Object... args) {");
+				out.push("    return null;");
+				out.push("  }");
+			}
+			appendJavaFunctionalOverloads(out, emittedMethods, methodName, args.length, true, className);
+		}
+	}
+
+	static function appendJavaFunctionalField(out:Array<String>, methodName:String, arity:Int, className:String):Void {
+		switch (arity) {
+			case 1:
+				out.push("  public static java.util.function.Function<Object, Object> "
+					+ methodName
+					+ " = "
+					+ className
+					+ "::"
+					+ methodName
+					+ ";");
+			case 2:
+				out.push("  public static java.util.function.BiFunction<Object, Object, Object> "
+					+ methodName
+					+ " = "
+					+ className
+					+ "::"
+					+ methodName
+					+ ";");
+			case _:
+		}
+	}
+
+	static function appendJavaFunctionalOverloads(out:Array<String>, emittedMethods:Map<String, Bool>, methodName:String, declaredArity:Int, isStatic:Bool,
+			className:String):Void {
+		if (declaredArity != 1)
+			return;
+		final returnType = javaSupportMethodReturnType(methodName, declaredArity, className);
+		final prefix = isStatic ? "  public static " + returnType + " " : "  public " + returnType + " ";
+		final consumerKey = methodName + "#consumer";
+		if (!emittedMethods.exists(consumerKey)) {
+			emittedMethods.set(consumerKey, true);
+			out.push(prefix + methodName + "(java.util.function.Consumer<Object> arg0) {");
+			out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
+			out.push("  }");
+		}
+		final functionKey = methodName + "#function";
+		if (!emittedMethods.exists(functionKey)) {
+			emittedMethods.set(functionKey, true);
+			out.push(prefix + methodName + "(java.util.function.Function<Object, Object> arg0) {");
+			out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
+			out.push("  }");
+		}
+		final biFunctionKey = methodName + "#bifunction";
+		if (!emittedMethods.exists(biFunctionKey)) {
+			emittedMethods.set(biFunctionKey, true);
+			out.push(prefix + methodName + "(java.util.function.BiFunction<Object, Object, Object> arg0) {");
+			out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
+			out.push("  }");
+		}
+	}
+
+	static function appendJavaStdSupport(out:Array<String>):Void {
+		out.push("");
+		out.push("class Std {");
+		out.push("  public static int int_(Object value) {");
+		out.push("    return value instanceof Number ? ((Number)value).intValue() : 0;");
+		out.push("  }");
+		out.push("}");
+		out.push("");
+		out.push("class Sys {");
+		out.push("  public static Object command(Object... args) {");
+		out.push("    return 0;");
+		out.push("  }");
+		out.push("}");
 	}
 
 	static function renderPythonSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
@@ -4347,12 +4443,14 @@ class SourceNativeBackend {
 				if (lines.length > 1)
 					lines.push("");
 				lines.push("public class " + className + " {");
+				appendJavaMainSupportMembers(lines, decl, className);
 				lines.push("  public static void main(String[] args) {");
 				for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
 					lines.push(line);
 				lines.push("  }");
 				appendJavaArraySupport(lines, "  ");
 				lines.push("}");
+				appendJavaStdSupport(lines);
 			case Cs:
 				lines.push("// Generated by hxhx Stage3 C# source backend MVP");
 				lines.push("public class " + className + " {");
