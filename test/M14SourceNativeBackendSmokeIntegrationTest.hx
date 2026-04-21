@@ -646,6 +646,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpObjectPatternSwitchExpressionProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var e = { expr: \"ok\" };",
+			"    var got = switch (e) {",
+			"      case { expr: const = \"ok\" }: const;",
+			"      case _: \"bad\";",
+			"    };",
+			"    Sys.println(got);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1660,6 +1678,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpObjectPatternSwitchExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_switch_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpObjectPatternSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$__hxhx_switch = $e;", "PHP switch expressions should evaluate the scrutinee once inside a closure");
+		assertContains(content, "property_exists($__hxhx_switch, \"expr\")", "PHP object switch patterns should check object field existence");
+		assertContains(content, "$const = $__hxhx_switch->expr;", "PHP object switch captures should bind the matched field value");
+		assertContains(content, "return $const;", "PHP switch expression branches should return captured values");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1718,6 +1751,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpUnitLocalStaticFallback();
 		assertPhpUnitMapComprehensionFallback();
+		assertPhpObjectPatternSwitchExpression();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();

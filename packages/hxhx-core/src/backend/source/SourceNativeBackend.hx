@@ -774,6 +774,8 @@ class SourceNativeBackend {
 	}
 
 	static function switchExpr(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
+		if (target == Php)
+			return phpSwitchExpr(scrutinee, patterns, exprs);
 		final scrutineeExpr = renderExpr(target, scrutinee);
 		var chain = defaultValue(target);
 		if (patterns != null && exprs != null) {
@@ -786,6 +788,24 @@ class SourceNativeBackend {
 			}
 		}
 		return chain;
+	}
+
+	static function phpSwitchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
+		final out = ["(function() {", "  $__hxhx_switch = " + renderExpr(Php, scrutinee) + ";"];
+		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+		for (i in 0...count) {
+			final lowered = lowerSourceSwitchPattern(Php, patterns[i], "$__hxhx_switch");
+			final keyword = i == 0 ? "if" : "} elseif";
+			out.push("  " + keyword + " (" + lowered.cond + ") {");
+			for (binding in lowered.bindings)
+				out.push("    " + varDecl(Php, sanitizeTypeName(binding.name), binding.expr));
+			out.push("    return " + renderExpr(Php, exprs[i]) + ";");
+		}
+		if (count > 0)
+			out.push("  }");
+		out.push("  return null;");
+		out.push("})()");
+		return out.join("\n");
 	}
 
 	static function conditionalExpr(target:SourceNativeTarget, cond:String, thenExpr:String, elseExpr:String):String {
