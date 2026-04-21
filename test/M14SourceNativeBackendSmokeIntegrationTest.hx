@@ -649,6 +649,45 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpMapRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var m = new Map<String,Int>();",
+			"    m.set(\"a\", 1);",
+			"    Sys.println(Std.string(m.exists(\"a\")));",
+			"    Sys.println(Std.string(m.get(\"a\")));",
+			"    Sys.println(Std.string(m.remove(\"a\")));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpSamePackageQualifiedStaticProgram():GenIrProgram {
+		final src = [
+			"package unit;",
+			"",
+			"class UnitBuilder {",
+			"  public static function generateSpec(path:String) {",
+			"    return [path];",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var specs = unit.UnitBuilder.generateSpec(\"src/unitstd\");",
+			"    Sys.println(Std.string(specs.length));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1540,11 +1579,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class __HxArray", "PHP source backend should emit a minimal array helper");
+		assertContains(content, "class Map", "PHP source backend should emit a minimal Map helper");
+		assertContains(content, "public function set($key, $value)", "PHP Map helper should support set");
+		assertContains(content, "public function get($key)", "PHP Map helper should support get");
 		assertContains(content, "class ValueException extends \\Exception", "PHP source backend should emit a minimal ValueException helper");
 		assertContains(content, "public static function thrown($value)", "PHP ValueException helper should support thrown values");
 		assertContains(content, "class Sys", "PHP source backend should emit a minimal Sys helper");
 		assertContains(content, "return new __HxArray(array_slice($argv, 1));", "Sys.args should expose CLI args without the script name");
 		assertContains(content, "$verbose = (Sys::args()->indexOf(\"-v\") >= 0);", "Sys.args should lower as a static call usable by indexOf");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpMapRuntimeShim():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpMapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$m = new Map();", "PHP Map construction should lower to the runtime shim");
+		assertContains(content, "$m->set(\"a\", 1);", "PHP Map.set should lower as an instance method call");
+		assertContains(content, "strval($m->exists(\"a\"))", "PHP Map.exists should be usable in expressions");
+		assertContains(content, "strval($m->get(\"a\"))", "PHP Map.get should be usable in expressions");
+		assertContains(content, "strval($m->remove(\"a\"))", "PHP Map.remove should be usable in expressions");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpSamePackageQualifiedStaticPath():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_package_static_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpSamePackageQualifiedStaticProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class UnitBuilder", "PHP support class should be emitted in the current global class model");
+		assertContains(content, "$specs = [];", "PHP compile-time-only UnitBuilder.generateSpec should not become a runtime class call");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2190,6 +2261,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertHelperClassEmission();
 		assertPhpStaticClassAccess();
 		assertPhpRuntimeShim();
+		assertPhpMapRuntimeShim();
+		assertPhpSamePackageQualifiedStaticPath();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();
