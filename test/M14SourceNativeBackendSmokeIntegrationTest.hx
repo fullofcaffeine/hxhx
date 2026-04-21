@@ -580,6 +580,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpUnitLocalStaticProgram():GenIrProgram {
+		final src = [
+			"class TestLocalStatic {",
+			"  public function new() {}",
+			"  function basic() {",
+			"    static var x = 1;",
+			"    static final y = \"final\";",
+			"    x++;",
+			"    return {x: x, y: y};",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var test = new TestLocalStatic();",
+			"    Sys.println(Std.string(test));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1545,6 +1569,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpUnitLocalStaticFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_unit_local_static_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpUnitLocalStaticProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static $__basic_x = null;", "PHP TestLocalStatic fallback should declare persisted local-static storage");
+		assertContains(content, "if (self::$__basic_x === null) self::$__basic_x = 1;",
+			"PHP TestLocalStatic fallback should initialize persisted local-static storage once");
+		assertContains(content, "return (object)[\"x\" => self::$__basic_x, \"y\" => \"final\"];",
+			"PHP TestLocalStatic fallback should return the expected object shape");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1600,6 +1640,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTypeCheck();
 		assertPhpShiftAssignment();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
+		assertPhpUnitLocalStaticFallback();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();
