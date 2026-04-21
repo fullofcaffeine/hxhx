@@ -426,6 +426,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpArrayOperationsProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var a:Array<Null<Int>> = [1, 2, 3];",
+			"    Sys.println(Std.string(a[3]));",
+			"    a.remove(2);",
+			"    Sys.println(Std.string(a.length));",
+			"    Sys.println(Std.string(a[1]));",
+			"    a.splice(1, 1);",
+			"    Sys.println(Std.string(a.length));",
+			"    var m = new Map();",
+			"    m.remove(\"a\");",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpReservedTypeNameProgram():GenIrProgram {
 		final src = [
 			"class Abstract {",
@@ -2097,6 +2118,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpArrayOperations():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_operations_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpArrayOperationsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_array_get($array, $index)", "PHP runtime should include a safe Haxe array read helper");
+		assertContains(content, "function __hxhx_array_remove(&$array, $value)", "PHP runtime should include an Array.remove helper");
+		assertContains(content, "function __hxhx_array_splice(&$array, $pos, $len)", "PHP runtime should include an Array.splice helper");
+		assertContains(content, "echo strval(__hxhx_array_get($a, 3)) . PHP_EOL;", "PHP out-of-bounds array reads should go through safe Haxe read helper");
+		assertContains(content, "__hxhx_array_remove($a, 2);", "PHP Array.remove should lower through the mutating helper");
+		assertContains(content, "__hxhx_array_splice($a, 1, 1);", "PHP Array.splice should lower through the mutating helper");
+		assertContains(content, "$m->remove(\"a\");", "PHP Map.remove should remain an object method call");
+		assertNotContains(content, "$a->remove(2)", "PHP arrays should not emit object-method remove calls on raw arrays");
+		assertNotContains(content, "$a[3]", "PHP expression reads should not emit direct array access for missing-index semantics");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpReservedTypeName():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reserved_type_name_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2287,7 +2328,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$__hxhx_result[] = function($value) use ($i) { return ($value * $i); };",
 			"PHP closures yielded from comprehensions should capture the comprehension binder");
 		assertContains(content, "return $__hxhx_result;", "PHP array comprehensions should return the collected array");
-		assertContains(content, "echo strval($funcs[0](10)) . PHP_EOL;",
+		assertContains(content, "echo strval(__hxhx_array_get($funcs, 0)(10)) . PHP_EOL;",
 			"PHP array-comprehension-derived functions should still be callable from later statements");
 		deleteRecursive(tmpRoot);
 	}
@@ -2691,6 +2732,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpDollarString();
 		assertPhpInt64LiteralExtension();
 		assertPhpArrayConstructor();
+		assertPhpArrayOperations();
 		assertPhpReservedTypeName();
 		assertPhpDuplicateStaticFieldEmission();
 		assertPhpDuplicateMethodEmission();

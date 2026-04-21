@@ -466,7 +466,7 @@ class SourceNativeBackend {
 				case _:
 			}
 		}
-		final a = renderExpr(target, left);
+		final a = lvalueExpr(target, left);
 		if (isAssignmentOp(op))
 			return a + " " + mapped + " " + b;
 		return "(" + a + " " + mapped + " " + b + ")";
@@ -474,7 +474,7 @@ class SourceNativeBackend {
 
 	static function phpModuloAssignExpr(left:HxExpr, right:HxExpr):String {
 		final target = Php;
-		final a = renderExpr(target, left);
+		final a = lvalueExpr(target, left);
 		return a + " = __hxhx_mod(" + a + ", " + renderExpr(target, right) + ")";
 	}
 
@@ -490,9 +490,29 @@ class SourceNativeBackend {
 	static function nullCoalesceAssignExpr(target:SourceNativeTarget, left:HxExpr, right:HxExpr):String {
 		return switch (target) {
 			case Php:
-				renderExpr(target, left) + " ??= " + renderExpr(target, right);
+				lvalueExpr(target, left) + " ??= " + renderExpr(target, right);
 			case Python, Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported binary operator: ??=";
+		};
+	}
+
+	static function lvalueExpr(target:SourceNativeTarget, expr:HxExpr):String {
+		return switch (target) {
+			case Php:
+				phpLvalueExpr(expr);
+			case Python, Java, Cs, Lua:
+				renderExpr(target, expr);
+		};
+	}
+
+	static function phpLvalueExpr(expr:HxExpr):String {
+		return switch (expr) {
+			case EThis:
+				phpThisValueExpr();
+			case EArrayAccess(receiver, index):
+				renderExpr(Php, receiver) + "[" + renderExpr(Php, index) + "]";
+			case _:
+				renderExpr(Php, expr);
 		};
 	}
 
@@ -565,7 +585,7 @@ class SourceNativeBackend {
 					case EThis:
 						phpThisValueExpr();
 					case _:
-						renderExpr(target, left);
+						lvalueExpr(target, left);
 				};
 				lhs + " = " + unsignedRightShiftExpr(target, lhs, renderedRight);
 			case Java:
@@ -785,6 +805,9 @@ class SourceNativeBackend {
 				final stringCall = phpStringFieldCall(receiver, field, args);
 				if (stringCall != null)
 					return stringCall;
+				final arrayCall = phpArrayFieldCall(receiver, field, args);
+				if (arrayCall != null)
+					return arrayCall;
 				if (field == "ofInt" && phpIntLiteralExtensionReceiver(receiver))
 					return phpStaticMethodCall(sanitizePhpTypePath("haxe.Int64"), field, [receiver]);
 				final typePath = phpStaticTypePath(receiver);
@@ -811,6 +834,48 @@ class SourceNativeBackend {
 				}
 			case Python, Java, Cs, Lua:
 				callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), args);
+		};
+	}
+
+	static function phpArrayFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		final mutableReceiver = phpMutableReceiverExpr(receiver);
+		if (mutableReceiver == null)
+			return null;
+		return switch (field) {
+			case "remove" if (args.length == 1 && phpArrayRemoveCandidateArg(args[0])):
+				"__hxhx_array_remove("
+				+ mutableReceiver
+				+ ", "
+				+ renderExpr(Php, args[0])
+				+ ")";
+			case "splice" if (args.length == 2):
+				"__hxhx_array_splice("
+				+ mutableReceiver
+				+ ", "
+				+ renderExpr(Php, args[0])
+				+ ", "
+				+ renderExpr(Php, args[1])
+				+ ")";
+			case _:
+				null;
+		};
+	}
+
+	static function phpMutableReceiverExpr(receiver:HxExpr):Null<String> {
+		return switch (receiver) {
+			case EIdent(_) | EThis | EField(_, _) | EArrayAccess(_, _):
+				phpLvalueExpr(receiver);
+			case _:
+				null;
+		};
+	}
+
+	static function phpArrayRemoveCandidateArg(arg:HxExpr):Bool {
+		return switch (arg) {
+			case EString(_):
+				false;
+			case _:
+				true;
 		};
 	}
 
@@ -867,7 +932,9 @@ class SourceNativeBackend {
 		final renderedReceiver = renderExpr(target, receiver);
 		final renderedIndex = renderExpr(target, index);
 		return switch (target) {
-			case Python, Java, Cs, Php, Lua:
+			case Php:
+				"__hxhx_array_get(" + renderedReceiver + ", " + renderedIndex + ")";
+			case Python, Java, Cs, Lua:
 				renderedReceiver + "[" + renderedIndex + "]";
 		};
 	}
@@ -3307,6 +3374,24 @@ class SourceNativeBackend {
 				lines.push("  if (is_string($value)) return strlen($value);");
 				lines.push("  if (is_object($value) && property_exists($value, \"length\")) return $value->length;");
 				lines.push("  return 0;");
+				lines.push("}");
+				lines.push("function __hxhx_array_get($array, $index) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) return null;");
+				lines.push("  return array_key_exists($index, $array) ? $array[$index] : null;");
+				lines.push("}");
+				lines.push("function __hxhx_array_remove(&$array, $value) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) return false;");
+				lines.push("  $index = array_search($value, $array, true);");
+				lines.push("  if ($index === false) return false;");
+				lines.push("  array_splice($array, $index, 1);");
+				lines.push("  return true;");
+				lines.push("}");
+				lines.push("function __hxhx_array_splice(&$array, $pos, $len) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) return [];");
+				lines.push("  return array_splice($array, (int)$pos, (int)$len);");
 				lines.push("}");
 				lines.push("function __hxhx_string_index_of($value, $needle, $start = 0) {");
 				lines.push("  $s = strval($value);");
