@@ -429,6 +429,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpAbstractThisPostfixProgram():GenIrProgram {
+		final src = [
+			"class Counter {",
+			"  public function new(i:Int) {",
+			"    this = i;",
+			"    bar();",
+			"  }",
+			"  function bar() this++;",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var counter = new Counter(2);",
+			"    Sys.println(Std.string(counter));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1134,6 +1156,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpAbstractThisPostfix():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_this_postfix_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpAbstractThisPostfixProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Counter {", "PHP abstract-like helper classes should still emit as support classes");
+		assertContains(content, "public $__hx_value;", "PHP abstract-style this values should get a backing slot");
+		assertContains(content, "$this->__hx_value = $i;", "PHP abstract constructor assignments to this should target the backing slot");
+		assertContains(content, "$this->__hx_value = ($this->__hx_value + 1);", "PHP statement-position postfix this updates should target the backing slot");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperInstanceFieldEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1330,6 +1367,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();
 		assertPhpArrayComprehensionClosure();
+		assertPhpAbstractThisPostfix();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();

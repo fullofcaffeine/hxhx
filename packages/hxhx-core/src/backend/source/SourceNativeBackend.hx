@@ -367,13 +367,20 @@ class SourceNativeBackend {
 	}
 
 	static function binopExpr(target:SourceNativeTarget, op:String, left:HxExpr, right:HxExpr):String {
-		final a = renderExpr(target, left);
-		final b = renderExpr(target, right);
 		if (op == ">>>")
-			return unsignedRightShiftExpr(target, a, b);
+			return unsignedRightShiftExpr(target, renderExpr(target, left), renderExpr(target, right));
 		final mapped = binopToken(target, op);
 		if (mapped == null)
 			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
+		final b = renderExpr(target, right);
+		if (target == Php && (op == "=" || op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")) {
+			switch (left) {
+				case EThis:
+					return phpThisValueExpr() + " " + mapped + " " + b;
+				case _:
+			}
+		}
+		final a = renderExpr(target, left);
 		if (op == "=" || op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
 			return a + " " + mapped + " " + b;
 		return "(" + a + " " + mapped + " " + b + ")";
@@ -440,6 +447,8 @@ class SourceNativeBackend {
 						+ ", "
 						+ Std.string(delta)
 						+ ")";
+					case EThis:
+						"__hxhx_post_update_field($this, " + quoteString("__hx_value") + ", " + Std.string(delta) + ")";
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 				}
@@ -1143,6 +1152,10 @@ class SourceNativeBackend {
 		return typePath + "::" + sanitizeTypeName(field) + "(" + rendered + ")";
 	}
 
+	static function phpThisValueExpr():String {
+		return "$this->__hx_value";
+	}
+
 	static function rangeIterable(target:SourceNativeTarget, start:HxExpr, end:HxExpr):String {
 		final a = renderExpr(target, start);
 		final b = renderExpr(target, end);
@@ -1171,6 +1184,8 @@ class SourceNativeBackend {
 				valueName(target, name);
 			case EField(receiver, field):
 				fieldAccessExpr(target, receiver, field);
+			case EThis if (target == Php):
+				phpThisValueExpr();
 			case _:
 				throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 		};
@@ -1713,6 +1728,10 @@ class SourceNativeBackend {
 		final out = [classHeader];
 		var memberCount = 0;
 		final instanceFields = new Array<HxFieldDecl>();
+		if (phpClassNeedsThisValueSlot(cls)) {
+			out.push("  public $__hx_value;");
+			memberCount += 1;
+		}
 		for (field in HxClassDecl.getFields(cls)) {
 			final fieldName = sanitizeTypeName(HxFieldDecl.getName(field));
 			if (!HxFieldDecl.getIsStatic(field)) {
@@ -1767,6 +1786,92 @@ class SourceNativeBackend {
 			out.push("");
 		out.push("}");
 		return out;
+	}
+
+	static function phpClassNeedsThisValueSlot(cls:HxClassDecl):Bool {
+		for (fn in HxClassDecl.getFunctions(cls))
+			if (phpStmtListTouchesThis(HxFunctionDecl.getBody(fn)))
+				return true;
+		return false;
+	}
+
+	static function phpStmtListTouchesThis(stmts:Array<HxStmt>):Bool {
+		if (stmts == null)
+			return false;
+		for (stmt in stmts)
+			if (phpStmtTouchesThis(stmt))
+				return true;
+		return false;
+	}
+
+	static function phpStmtTouchesThis(stmt:HxStmt):Bool {
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				phpStmtListTouchesThis(stmts);
+			case SVar(_, _, init, _): init != null && phpExprTouchesThis(init);
+			case SIf(cond, thenBranch, elseBranch, _): phpExprTouchesThis(cond) || phpStmtTouchesThis(thenBranch) || (elseBranch != null
+					&& phpStmtTouchesThis(elseBranch));
+			case SForIn(_, iterable, body, _): phpExprTouchesThis(iterable) || phpStmtTouchesThis(body);
+			case SForKeyValue(_, _, iterable, body, _): phpExprTouchesThis(iterable) || phpStmtTouchesThis(body);
+			case SWhile(cond, body, _): phpExprTouchesThis(cond) || phpStmtTouchesThis(body);
+			case SDoWhile(body, cond, _): phpStmtTouchesThis(body) || phpExprTouchesThis(cond);
+			case SSwitch(scrutinee, _, bodies, _): phpExprTouchesThis(scrutinee) || phpStmtListTouchesThis(bodies);
+			case STry(tryBody, catches, _):
+				if (phpStmtTouchesThis(tryBody)) {
+					true;
+				} else {
+					var found = false;
+					if (catches != null)
+						for (c in catches)
+							if (phpStmtTouchesThis(c.body))
+								found = true;
+					found;
+				}
+			case SThrow(expr, _) | SReturn(expr, _) | SExpr(expr, _):
+				phpExprTouchesThis(expr);
+			case SBreak(_) | SContinue(_) | SReturnVoid(_):
+				false;
+		};
+	}
+
+	static function phpExprTouchesThis(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EThis:
+				true;
+			case EField(receiver, _):
+				phpExprTouchesThis(receiver);
+			case ECall(callee, args): phpExprTouchesThis(callee) || phpExprListTouchesThis(args);
+			case EMacroExpr(inner, _):
+				phpExprTouchesThis(inner);
+			case ELambda(_, body):
+				phpExprTouchesThis(body);
+			case ESwitch(scrutinee, _, exprs): phpExprTouchesThis(scrutinee) || phpExprListTouchesThis(exprs);
+			case ENew(_, args):
+				phpExprListTouchesThis(args);
+			case EUnop(_, inner):
+				phpExprTouchesThis(inner);
+			case EBinop(_, left, right): phpExprTouchesThis(left) || phpExprTouchesThis(right);
+			case ETernary(cond, thenExpr, elseExpr): phpExprTouchesThis(cond) || phpExprTouchesThis(thenExpr) || phpExprTouchesThis(elseExpr);
+			case EAnon(_, fieldValues):
+				phpExprListTouchesThis(fieldValues);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr): phpExprTouchesThis(iterable) || (guardExpr != null && phpExprTouchesThis(guardExpr)) || phpExprTouchesThis(yieldExpr);
+			case EArrayDecl(values):
+				phpExprListTouchesThis(values);
+			case EArrayAccess(receiver, index): phpExprTouchesThis(receiver) || phpExprTouchesThis(index);
+			case ECast(inner, _) | EUntyped(inner):
+				phpExprTouchesThis(inner);
+			case _:
+				false;
+		};
+	}
+
+	static function phpExprListTouchesThis(exprs:Array<HxExpr>):Bool {
+		if (exprs == null)
+			return false;
+		for (expr in exprs)
+			if (phpExprTouchesThis(expr))
+				return true;
+		return false;
 	}
 
 	static function renderPythonHelperClass(cls:HxClassDecl):Array<String> {
