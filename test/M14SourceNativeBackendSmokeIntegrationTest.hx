@@ -691,6 +691,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(m.exists(\"a\")));",
 			"    Sys.println(Std.string(m.get(\"a\")));",
 			"    Sys.println(Std.string(m.remove(\"a\")));",
+			"    var sm = new haxe.ds.StringMap<Int>();",
+			"    sm.set(\"b\", 2);",
+			"    Sys.println(Std.string(sm.get(\"b\")));",
 			"  }",
 			"}",
 		].join("\n");
@@ -1931,10 +1934,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$m = new Map();", "PHP Map construction should lower to the runtime shim");
+		assertContains(content, "$sm = new Map();", "PHP haxe.ds.StringMap construction should lower to the runtime shim");
 		assertContains(content, "$m->set(\"a\", 1);", "PHP Map.set should lower as an instance method call");
+		assertContains(content, "$sm->set(\"b\", 2);", "PHP haxe.ds.StringMap.set should use the runtime shim");
 		assertContains(content, "__hxhx_add_string($m->exists(\"a\"))", "PHP Map.exists should be usable in expressions");
 		assertContains(content, "__hxhx_add_string($m->get(\"a\"))", "PHP Map.get should be usable in expressions");
 		assertContains(content, "__hxhx_add_string($m->remove(\"a\"))", "PHP Map.remove should be usable in expressions");
+		assertContains(content, "__hxhx_add_string($sm->get(\"b\"))", "PHP haxe.ds.StringMap.get should be usable in expressions");
 		deleteRecursive(tmpRoot);
 	}
 

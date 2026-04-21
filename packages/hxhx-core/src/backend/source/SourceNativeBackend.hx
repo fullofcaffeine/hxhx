@@ -1787,8 +1787,17 @@ class SourceNativeBackend {
 			case Java: "new " + safeType + "(" + rendered + ")";
 			case Cs: "new " + safeType + "(" + rendered + ")";
 			case Php:
-				if (typePath == "Array") "[]"; else "new " + safeType + "(" + rendered + ")";
+				if (typePath == "Array") "[]"; else if (phpRuntimeMapType(typePath)) "new Map(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
 			case Lua: safeType + ".new(" + rendered + ")";
+		};
+	}
+
+	static function phpRuntimeMapType(typePath:String):Bool {
+		return switch (typePath) {
+			case "Map" | "haxe.ds.StringMap" | "haxe.ds.IntMap" | "haxe.ds.ObjectMap":
+				true;
+			case _:
+				false;
 		};
 	}
 
