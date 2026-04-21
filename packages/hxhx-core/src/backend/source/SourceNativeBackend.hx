@@ -4006,6 +4006,9 @@ class SourceNativeBackend {
 				lines.push("}");
 				lines.push("function __hxhx_equals($left, $right) {");
 				lines.push("  if ((is_object($left) && property_exists($left, \"__hx_value\")) || (is_object($right) && property_exists($right, \"__hx_value\"))) {");
+				lines.push("    $leftValue = __hxhx_numeric_value($left);");
+				lines.push("    $rightValue = __hxhx_numeric_value($right);");
+				lines.push("    if ((is_int($leftValue) || is_float($leftValue)) && (is_int($rightValue) || is_float($rightValue))) return $leftValue == $rightValue;");
 				lines.push("    return __hxhx_to_string_value($left) == __hxhx_to_string_value($right);");
 				lines.push("  }");
 				lines.push("  if ($left == $right) return true;");

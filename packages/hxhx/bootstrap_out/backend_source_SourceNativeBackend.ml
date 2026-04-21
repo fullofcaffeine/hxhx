@@ -8445,6 +8445,9 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_equals($left, $right) {");
       ignore (HxArray.push lines "  if ((is_object($left) && property_exists($left, \"__hx_value\")) || (is_object($right) && property_exists($right, \"__hx_value\"))) {");
+      ignore (HxArray.push lines "    $leftValue = __hxhx_numeric_value($left);");
+      ignore (HxArray.push lines "    $rightValue = __hxhx_numeric_value($right);");
+      ignore (HxArray.push lines "    if ((is_int($leftValue) || is_float($leftValue)) && (is_int($rightValue) || is_float($rightValue))) return $leftValue == $rightValue;");
       ignore (HxArray.push lines "    return __hxhx_to_string_value($left) == __hxhx_to_string_value($right);");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if ($left == $right) return true;");

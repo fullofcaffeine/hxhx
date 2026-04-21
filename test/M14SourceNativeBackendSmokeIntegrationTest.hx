@@ -2684,6 +2684,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP source backend should emit Haxe-style equality support for abstract-backed values");
 		assertContains(content, "function __hxhx_numeric_value($value)",
 			"PHP source backend should emit numeric unwrapping support for abstract-backed values");
+		assertContains(content,
+			"if ((is_int($leftValue) || is_float($leftValue)) && (is_int($rightValue) || is_float($rightValue))) return $leftValue == $rightValue;",
+			"PHP equality should compare numeric abstract backing values before stringifying wrappers");
 		assertContains(content, "function __hxhx_is_point3($value)", "PHP runtime should identify MyVector/MyPoint3-style abstract operator payloads");
 		assertContains(content, "function __hxhx_mul($left, $right)", "PHP runtime should dispatch abstract scalar multiplication");
 		assertContains(content, "function __hxhx_mul_assign(&$left, $right)", "PHP runtime should preserve mutating abstract multiply-assignment");
