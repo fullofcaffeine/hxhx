@@ -283,6 +283,8 @@ class SourceNativeBackend {
 				renderExpr(target, inner);
 			case EMacroExpr(inner, wrappers):
 				macroExpr(target, inner, wrappers);
+			case EMacroType(typeText):
+				macroTypeExpr(target, typeText);
 			case ETryCatchRaw(raw):
 				tryCatchRawExpr(target, raw);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
@@ -829,6 +831,15 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function macroTypeExpr(target:SourceNativeTarget, typeText:String):String {
+		return switch (target) {
+			case Php:
+				phpMacroComplexType(typeText);
+			case Python, Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported expression: EMacroType";
+		};
+	}
+
 	static function tryCatchRawExpr(target:SourceNativeTarget, raw:String):String {
 		return switch (target) {
 			case Php:
@@ -1008,6 +1019,252 @@ class SourceNativeBackend {
 	static function phpMacroEnum(name:String, params:Array<String>):String {
 		final paramText = params == null ? "" : params.join(", ");
 		return "(object)[\"__hx_ctor\" => " + quoteString(name) + ", \"__hx_index\" => 0, \"__hx_params\" => [" + paramText + "]]";
+	}
+
+	static function phpMacroComplexType(raw:String):String {
+		final text = trimLeadingTypeColon(raw);
+		final arrowParts = splitTopLevelArrow(text);
+		if (arrowParts.length > 1) {
+			final args = new Array<String>();
+			for (i in 0...arrowParts.length - 1) {
+				for (arg in phpMacroFunctionArgTypes(arrowParts[i]))
+					args.push(arg);
+			}
+			return phpMacroEnum("TFunction", [
+				"[" + args.join(", ") + "]",
+				phpMacroComplexType(arrowParts[arrowParts.length - 1])
+			]);
+		}
+
+		final trimmed = StringTools.trim(text);
+		if (trimmed.length == 0)
+			return phpMacroTypePath("");
+
+		final namedColon = findTopLevelChar(trimmed, ":".code);
+		if (namedColon > 0) {
+			final namePart = StringTools.trim(trimmed.substring(0, namedColon));
+			final typePart = trimmed.substr(namedColon + 1);
+			if (StringTools.startsWith(namePart, "?")) {
+				final name = StringTools.trim(namePart.substr(1));
+				return phpMacroEnum("TOptional", [phpMacroEnum("TNamed", [quoteString(name), phpMacroComplexType(typePart)])]);
+			}
+			return phpMacroEnum("TNamed", [quoteString(namePart), phpMacroComplexType(typePart)]);
+		}
+
+		if (StringTools.startsWith(trimmed, "?"))
+			return phpMacroEnum("TOptional", [phpMacroComplexType(trimmed.substr(1))]);
+
+		final parenEnd = matchingOuterParen(trimmed);
+		if (parenEnd == trimmed.length - 1)
+			return phpMacroEnum("TParent", [phpMacroComplexType(trimmed.substring(1, trimmed.length - 1))]);
+
+		return phpMacroTypePath(trimmed);
+	}
+
+	static function phpMacroFunctionArgTypes(raw:String):Array<String> {
+		final trimmed = StringTools.trim(raw);
+		final parenEnd = matchingOuterParen(trimmed);
+		if (parenEnd == trimmed.length - 1) {
+			final inner = trimmed.substring(1, trimmed.length - 1);
+			final commaParts = splitTopLevelComma(inner);
+			if (commaParts.length > 1)
+				return [for (part in commaParts) phpMacroComplexType(part)];
+		}
+		return [phpMacroComplexType(trimmed)];
+	}
+
+	static function phpMacroTypePath(raw:String):String {
+		final path = StringTools.trim(stripGenericTypeParams(raw));
+		final parts = path.length == 0 ? [""] : path.split(".");
+		final name = parts[parts.length - 1];
+		final pack = new Array<String>();
+		if (parts.length > 1) {
+			for (i in 0...parts.length - 1)
+				pack.push(quoteString(parts[i]));
+		}
+		final typePath = "(object)[\"pack\" => ["
+			+ pack.join(", ")
+			+ "], \"name\" => "
+			+ quoteString(name)
+			+ ", \"params\" => [], \"sub\" => null]";
+		return phpMacroEnum("TPath", [typePath]);
+	}
+
+	static function trimLeadingTypeColon(raw:String):String {
+		var text = StringTools.trim(raw == null ? "" : raw);
+		if (StringTools.startsWith(text, ":"))
+			text = StringTools.trim(text.substr(1));
+		return text;
+	}
+
+	static function stripGenericTypeParams(raw:String):String {
+		var paren = 0;
+		var bracket = 0;
+		var brace = 0;
+		for (i in 0...raw.length) {
+			final c = raw.charCodeAt(i);
+			if (c == "<".code && paren == 0 && bracket == 0 && brace == 0)
+				return raw.substr(0, i);
+			switch (c) {
+				case "(".code:
+					paren++;
+				case ")".code:
+					if (paren > 0)
+						paren--;
+				case "[".code:
+					bracket++;
+				case "]".code:
+					if (bracket > 0)
+						bracket--;
+				case "{".code:
+					brace++;
+				case "}".code:
+					if (brace > 0)
+						brace--;
+				case _:
+			}
+		}
+		return raw;
+	}
+
+	static function splitTopLevelArrow(raw:String):Array<String> {
+		final out = new Array<String>();
+		var start = 0;
+		var i = 0;
+		var paren = 0;
+		var bracket = 0;
+		var angle = 0;
+		var brace = 0;
+		while (i + 1 < raw.length) {
+			final c = raw.charCodeAt(i);
+			if (c == "-".code && paren == 0 && bracket == 0 && angle == 0 && brace == 0 && raw.charCodeAt(i + 1) == ">".code) {
+				out.push(raw.substring(start, i));
+				i += 2;
+				start = i;
+				continue;
+			}
+			switch (c) {
+				case "(".code:
+					paren++;
+				case ")".code:
+					if (paren > 0)
+						paren--;
+				case "[".code:
+					bracket++;
+				case "]".code:
+					if (bracket > 0)
+						bracket--;
+				case "{".code:
+					brace++;
+				case "}".code:
+					if (brace > 0)
+						brace--;
+				case "<".code:
+					angle++;
+				case ">".code:
+					if (angle > 0)
+						angle--;
+				case _:
+			}
+			i++;
+		}
+		out.push(raw.substr(start));
+		return out;
+	}
+
+	static function splitTopLevelComma(raw:String):Array<String> {
+		final out = new Array<String>();
+		var start = 0;
+		var paren = 0;
+		var bracket = 0;
+		var angle = 0;
+		var brace = 0;
+		for (i in 0...raw.length) {
+			final c = raw.charCodeAt(i);
+			if (c == ",".code && paren == 0 && bracket == 0 && angle == 0 && brace == 0) {
+				out.push(raw.substring(start, i));
+				start = i + 1;
+				continue;
+			}
+			switch (c) {
+				case "(".code:
+					paren++;
+				case ")".code:
+					if (paren > 0)
+						paren--;
+				case "[".code:
+					bracket++;
+				case "]".code:
+					if (bracket > 0)
+						bracket--;
+				case "{".code:
+					brace++;
+				case "}".code:
+					if (brace > 0)
+						brace--;
+				case "<".code:
+					angle++;
+				case ">".code:
+					if (angle > 0)
+						angle--;
+				case _:
+			}
+		}
+		out.push(raw.substr(start));
+		return out;
+	}
+
+	static function findTopLevelChar(raw:String, target:Int):Int {
+		var paren = 0;
+		var bracket = 0;
+		var angle = 0;
+		var brace = 0;
+		for (i in 0...raw.length) {
+			final c = raw.charCodeAt(i);
+			if (c == target && paren == 0 && bracket == 0 && angle == 0 && brace == 0)
+				return i;
+			switch (c) {
+				case "(".code:
+					paren++;
+				case ")".code:
+					if (paren > 0)
+						paren--;
+				case "[".code:
+					bracket++;
+				case "]".code:
+					if (bracket > 0)
+						bracket--;
+				case "{".code:
+					brace++;
+				case "}".code:
+					if (brace > 0)
+						brace--;
+				case "<".code:
+					angle++;
+				case ">".code:
+					if (angle > 0)
+						angle--;
+				case _:
+			}
+		}
+		return -1;
+	}
+
+	static function matchingOuterParen(raw:String):Int {
+		if (raw == null || raw.length == 0 || raw.charCodeAt(0) != "(".code)
+			return -1;
+		var depth = 1;
+		for (i in 1...raw.length) {
+			final c = raw.charCodeAt(i);
+			if (c == "(".code) {
+				depth++;
+			} else if (c == ")".code) {
+				depth--;
+				if (depth == 0)
+					return i;
+			}
+		}
+		return -1;
 	}
 
 	static function phpMacroExprDef(expr:HxExpr):String {

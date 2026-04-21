@@ -373,6 +373,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpMacroTypeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var fn = macro :X -> Y;",
+			"    var named = macro :(a:Int) -> String;",
+			"    var optional = macro :?Int;",
+			"    Sys.println(Std.string(fn));",
+			"    Sys.println(Std.string(named));",
+			"    Sys.println(Std.string(optional));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTryCatchExpressionProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1259,6 +1277,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpMacroType():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpMacroTypeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "\"__hx_ctor\" => \"TFunction\"", "PHP macro type arrows should lower to TFunction nodes");
+		assertContains(content, "\"__hx_ctor\" => \"TPath\"", "PHP macro type paths should lower to TPath nodes");
+		assertContains(content, "\"name\" => \"X\"", "PHP macro type paths should preserve argument names");
+		assertContains(content, "\"name\" => \"Y\"", "PHP macro type paths should preserve return names");
+		assertContains(content, "\"__hx_ctor\" => \"TNamed\"", "PHP macro named function arguments should lower to TNamed nodes");
+		assertContains(content, "\"__hx_ctor\" => \"TOptional\"", "PHP macro optional types should lower to TOptional nodes");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpTryCatchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_try_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1630,6 +1665,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpRuntimeShim();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
+		assertPhpMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();
 		assertPhpArrayComprehensionClosure();
