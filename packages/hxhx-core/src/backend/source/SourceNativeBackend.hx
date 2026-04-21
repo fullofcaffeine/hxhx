@@ -341,12 +341,29 @@ class SourceNativeBackend {
 	static function binopExpr(target:SourceNativeTarget, op:String, left:HxExpr, right:HxExpr):String {
 		final a = renderExpr(target, left);
 		final b = renderExpr(target, right);
+		if (op == ">>>")
+			return unsignedRightShiftExpr(target, a, b);
 		final mapped = binopToken(target, op);
 		if (mapped == null)
 			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
 		if (op == "=" || op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
 			return a + " " + mapped + " " + b;
 		return "(" + a + " " + mapped + " " + b + ")";
+	}
+
+	static function unsignedRightShiftExpr(target:SourceNativeTarget, left:String, right:String):String {
+		return switch (target) {
+			case Python:
+				"__hxhx_ushr(" + left + ", " + right + ")";
+			case Java:
+				"(" + left + " >>> " + right + ")";
+			case Cs:
+				"((int)((uint)(" + left + ") >> (" + right + ")))";
+			case Php:
+				"__hxhx_ushr(" + left + ", " + right + ")";
+			case Lua:
+				"__hxhx_ushr(" + left + ", " + right + ")";
+		};
 	}
 
 	static function unopExpr(target:SourceNativeTarget, op:String, inner:HxExpr):String {
@@ -1205,6 +1222,9 @@ class SourceNativeBackend {
 				lines.push("    old = obj[index]");
 				lines.push("    obj[index] = (old + delta)");
 				lines.push("    return old");
+				lines.push("");
+				lines.push("def __hxhx_ushr(value, bits):");
+				lines.push("    return ((value & 0xffffffff) >> (bits & 31))");
 				lines.push("");
 				for (line in renderSupportClasses(target, program, decl, className))
 					lines.push(line);

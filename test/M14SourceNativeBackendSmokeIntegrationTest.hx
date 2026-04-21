@@ -249,6 +249,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function unsignedRightShiftProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var shifted = -1 >>> 1;",
+			"    Sys.println(Std.string(shifted));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function helperClassProgram():GenIrProgram {
 		final src = [
 			"class Helper {",
@@ -704,6 +718,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertUnsignedRightShiftExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_ushr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(unsignedRightShiftProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def __hxhx_ushr(value, bits):", "Python source backend should emit the unsigned-right-shift helper");
+		assertContains(content, "shifted = __hxhx_ushr((-1), 1)", "unsigned right shift should lower through the helper");
+		assertContains(content, "print(str(shifted))", "unsigned-right-shift results should still flow through later statements");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperClassEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -860,6 +888,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertAnonymousObjectExpression();
 		assertLoopControlStatements();
 		assertPostfixExpressions();
+		assertUnsignedRightShiftExpression();
 		assertHelperClassEmission();
 		assertHelperInstanceFieldEmission();
 		assertCrossModuleClassEmission();
