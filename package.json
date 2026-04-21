@@ -297,7 +297,8 @@
     "test:m14:hih-load-template-fallback-stub": "haxe test/m14_hxhx_stage3_load_template_fallback_stub_integration_test.hxml",
     "test:m14:stage1-std-root-inference": "haxe test/m14_stage1_std_root_inference_integration_test.hxml",
     "test:m14:direct-flag-cli-contract": "haxe test/m14_direct_flag_cli_contract_test.hxml",
-    "test:hxhx:cli-contract": "haxe test/m14_direct_flag_cli_contract_test.hxml"
+    "test:hxhx:cli-contract": "haxe test/m14_direct_flag_cli_contract_test.hxml",
+    "test:m14:resolver-implicit-cwd": "haxe test/m14_resolver_implicit_cwd_classpath_integration_test.hxml"
   },
   "release": {
     "branches": [

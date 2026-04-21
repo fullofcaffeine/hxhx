@@ -27,6 +27,33 @@ import haxe.io.Path;
 	  or the native OCaml frontend hook (see `ParserStage` hxdoc).
 **/
 class ResolverStage {
+	/**
+		Return classpaths with the compiler working directory available as the last lookup root.
+
+		Why:
+		- Upstream Haxe can still resolve root-level modules from the active working directory
+		  even when a project passes explicit `-cp` entries.
+		- Several upstream runci projects rely on that compatibility shape: helper sources sit
+		  beside the hxml while the hxml also includes a narrower classpath.
+
+		How:
+		- Preserve caller order so explicit `-cp`, library, macro, generated, and std roots keep
+		  priority.
+		- Append `cwd` only when it is not already represented after path normalization.
+	**/
+	public static function withImplicitCwdClassPath(classPaths:Array<String>, cwd:String):Array<String> {
+		final out = classPaths == null ? [] : classPaths.copy();
+		if (cwd == null || cwd.length == 0)
+			return out;
+		final cwdNorm = Path.normalize(cwd);
+		for (cp in out) {
+			if (Path.normalize(cp) == cwdNorm)
+				return out;
+		}
+		out.push(cwd);
+		return out;
+	}
+
 	static function traceResolverDepsEnabled():Bool {
 		final v = Sys.getEnv("HXHX_TRACE_RESOLVER_DEPS");
 		if (v == null)

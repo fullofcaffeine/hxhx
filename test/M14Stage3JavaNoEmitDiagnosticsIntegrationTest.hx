@@ -87,6 +87,49 @@ class M14Stage3JavaNoEmitDiagnosticsIntegrationTest {
 			"Main.hx:4: characters 13-45 : Another overloaded field of same signature was already declared : choose", "overloaded duplicate diagnostic");
 		assertContains(overloadedThenDuplicateDiagnostic, "Main.hx:3: characters 13-45 : ... The second field is declared here",
 			"overloaded duplicate diagnostic prior field");
+
+		final multilineCollisionSource = [
+			'class Main {',
+			'\tpublic static inline overload function perform(op:Int->Int, value:Int) {',
+			'\t\treturn op(value);',
+			'\t}',
+			'',
+			'\tpublic static inline overload function perform(op:Int->Int->Int, value:Int) {',
+			'\t\treturn op(value, value);',
+			'\t}',
+			'}'
+		].join("\n");
+		final multilineCollisionDiagnostic = JavaNoEmitDiagnostics.overloadCollisionDiagnostic([typedModule(multilineCollisionSource)]);
+		assertTrue(multilineCollisionDiagnostic != null, "expected multiline overload collision diagnostic");
+		assertContains(multilineCollisionDiagnostic, "Main.hx:2: lines 2-4 : Another overloaded field of similar signature was already declared : perform",
+			"multiline overload diagnostic");
+		assertContains(multilineCollisionDiagnostic, "Main.hx:2: lines 2-4 : ... The signatures are different in Haxe, but not in the target language",
+			"multiline overload explanation");
+		assertContains(multilineCollisionDiagnostic, "Main.hx:6: lines 6-8 : ... The second field is declared here", "multiline overload second field");
+
+		final externOverloadSource = [
+			'extern class NativeMath {',
+			'\tpublic static inline overload function perform(op:Int->Int, value:Int) {',
+			'\t\treturn op(value);',
+			'\t}',
+			'',
+			'\tpublic static inline overload function perform(op:Int->Int->Int, value:Int) {',
+			'\t\treturn op(value, value);',
+			'\t}',
+			'}',
+			'',
+			'class WrappedNativeMath {',
+			'\tpublic static extern inline overload function perform(op:Int->Int, value:Int) {',
+			'\t\treturn op(value);',
+			'\t}',
+			'',
+			'\tpublic static extern inline overload function perform(op:Int->Int->Int, value:Int) {',
+			'\t\treturn op(value, value);',
+			'\t}',
+			'}'
+		].join("\n");
+		final externOverloadDiagnostic = JavaNoEmitDiagnostics.overloadCollisionDiagnostic([typedModule(externOverloadSource)]);
+		assertTrue(externOverloadDiagnostic == null, "extern overload declarations should not be rejected");
 	}
 
 	static function typedModule(source:String):TypedModule {

@@ -26,6 +26,7 @@ private typedef JavaNoEmitOverloadInfo = {
 	final rawSig:String;
 	final erasedSig:String;
 	final line:Int;
+	final endLine:Int;
 	final column:Int;
 	final endColumn:Int;
 };
@@ -119,6 +120,27 @@ class JavaNoEmitDiagnostics {
 		return null;
 	}
 
+	/**
+		Return Java overload-erasure diagnostics for resolved modules before typing.
+
+		Why:
+		- Some invalid Java overload declarations should fail as declaration diagnostics.
+		- Waiting until call typing can produce a misleading "Ambiguous overload" at the call
+		  site before the target-specific declaration check gets a chance to run.
+	**/
+	public static function overloadCollisionDiagnosticForResolved(resolved:Array<ResolvedModule>):Null<String> {
+		if (resolved == null)
+			return null;
+		for (module in resolved) {
+			if (module == null)
+				continue;
+			final diagnostic = overloadCollisionDiagnosticForParsed(ResolvedModule.getParsed(module));
+			if (diagnostic != null)
+				return diagnostic;
+		}
+		return null;
+	}
+
 	static function jvmAnnotationMetadataDiagnosticForParsed(parsed:ParsedModule):Null<String> {
 		if (parsed == null)
 			return null;
@@ -148,7 +170,7 @@ class JavaNoEmitDiagnostics {
 		if (parsed == null)
 			return null;
 		final source = parsed.getSource();
-		if (source == null || source.length == 0 || source.indexOf("@:overload") < 0)
+		if (source == null || source.length == 0 || source.indexOf("overload") < 0)
 			return null;
 		final classes = scanJavaNoEmitClasses(source);
 		if (classes.length == 0)
@@ -181,11 +203,13 @@ class JavaNoEmitDiagnostics {
 		if (parsed == null)
 			return null;
 		final source = parsed.getSource();
-		if (source == null || source.length == 0 || source.indexOf("@:overload") < 0)
+		if (source == null || source.length == 0 || source.indexOf("overload") < 0)
 			return null;
 		final sourceLines = source.split("\n");
 		final collisions = new Array<JavaNoEmitOverloadCollision>();
 		for (cls in HxModuleDecl.getClasses(parsed.getDecl())) {
+			if (isExternClass(cls, sourceLines))
+				continue;
 			final seen = new Map<String, JavaNoEmitOverloadInfo>();
 			final byName = new Map<String, Array<JavaNoEmitOverloadInfo>>();
 			for (fn in HxClassDecl.getFunctions(cls)) {
@@ -193,6 +217,8 @@ class JavaNoEmitDiagnostics {
 				if (!hasOverloadMetadata(meta))
 					continue;
 				final info = javaNoEmitOverloadInfo(fn, sourceLines);
+				if (isExternFunctionLine(sourceLines, info.line))
+					continue;
 				final key = info.name + "#" + info.erasedSig;
 				final previous = seen.get(key);
 				if (previous != null) {
@@ -235,9 +261,60 @@ class JavaNoEmitDiagnostics {
 			rawSig: javaRawOverloadSignature(fn),
 			erasedSig: javaErasedOverloadSignature(fn),
 			line: line,
+			endLine: functionDeclarationEndLine(sourceLines, line),
 			column: overloadDeclarationColumn(rawLine, pos),
 			endColumn: rawLine.length + 1
 		};
+	}
+
+	static function isExternClass(cls:HxClassDecl, sourceLines:Array<String>):Bool {
+		final name = HxClassDecl.getName(cls);
+		for (line in sourceLines) {
+			final words = line.split(" ");
+			var sawExtern = false;
+			var i = 0;
+			while (i < words.length) {
+				final word = cleanJavaNoEmitWord(words[i]);
+				switch (word) {
+					case "" | "@:keep" | "public" | "private":
+					case "extern":
+						sawExtern = true;
+					case "class" | "interface":
+						return sawExtern && i + 1 < words.length && cleanJavaNoEmitWord(words[i + 1]) == name;
+					case _:
+				}
+				i += 1;
+			}
+		}
+		return false;
+	}
+
+	static function isExternFunctionLine(sourceLines:Array<String>, line:Int):Bool {
+		if (line <= 0 || line > sourceLines.length)
+			return false;
+		for (word in sourceLines[line - 1].split(" ")) {
+			if (cleanJavaNoEmitWord(word) == "extern")
+				return true;
+		}
+		return false;
+	}
+
+	static function functionDeclarationEndLine(sourceLines:Array<String>, line:Int):Int {
+		if (line <= 0 || line > sourceLines.length)
+			return line;
+		var depth = 0;
+		var sawBrace = false;
+		for (i in (line - 1)...sourceLines.length) {
+			final delta = braceDelta(sourceLines[i]);
+			if (sourceLines[i].indexOf("{") >= 0)
+				sawBrace = true;
+			depth += delta;
+			if (sawBrace && depth <= 0)
+				return i + 1;
+			if (!sawBrace && sourceLines[i].indexOf(";") >= 0)
+				return i + 1;
+		}
+		return line;
 	}
 
 	static function hasOverloadMetadata(meta:Array<String>):Bool {
@@ -306,6 +383,8 @@ class JavaNoEmitDiagnostics {
 	}
 
 	static function renderOverloadSpan(file:String, info:JavaNoEmitOverloadInfo):String {
+		if (info.endLine > info.line)
+			return file + ":" + Std.string(info.line) + ": lines " + Std.string(info.line) + "-" + Std.string(info.endLine);
 		return file + ":" + Std.string(info.line) + ": characters " + Std.string(info.column) + "-" + Std.string(info.endColumn);
 	}
 

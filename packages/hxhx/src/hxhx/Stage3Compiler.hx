@@ -1685,7 +1685,7 @@ class Stage3Compiler {
 				if (!hasStd)
 					out.push(inferredStd);
 			}
-			out;
+			ResolverStage.withImplicitCwdClassPath(out, cwd);
 		}
 
 		// Defines available for conditional compilation filtering.
@@ -1726,6 +1726,13 @@ class Stage3Compiler {
 		if (resolved.length == 0)
 			return error("resolver returned an empty module graph");
 		Sys.println("resolved_modules=" + resolved.length);
+		if (backendId == "java-native") {
+			final overloadDiagnostic = JavaNoEmitDiagnostics.overloadCollisionDiagnosticForResolved(resolved);
+			if (overloadDiagnostic != null) {
+				closeMacroSession();
+				return haxeDiagnosticError(overloadDiagnostic);
+			}
+		}
 
 		// Stage4 bring-up: apply `@:build(...)` macros by asking the macro host to emit raw
 		// member snippets (reverse RPC) that we merge into the parsed module surface before typing.
