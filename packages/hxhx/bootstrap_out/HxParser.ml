@@ -8797,7 +8797,7 @@ let binopPrec = fun op -> let tempResult = ref (0 : int) in (
       tempResult := __assign_4373;
       __assign_4373
     )
-    | "&" | "^" | "|" -> let __assign_4374 = 3 in (
+    | "&" | "^" | "|" -> let __assign_4374 = 5 in (
       tempResult := __assign_4374;
       __assign_4374
     )

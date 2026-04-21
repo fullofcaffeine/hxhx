@@ -796,6 +796,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpBitwiseEqualityPrecedenceProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string((1 & 0x8000) != 0));",
+			"    Sys.println(Std.string(1 & 0x8000 != 0));",
+			"    Sys.println(Std.string(0 != (1 & 0x8000)));",
+			"    Sys.println(Std.string(0 != 1 & 0x8000));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpArrayComprehensionClosureProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1824,6 +1840,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpBitwiseEqualityPrecedence():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_bitwise_equality_precedence_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpBitwiseEqualityPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "strval(((1 & 32768) != 0))", "PHP bitwise/equality lowering should preserve explicit left grouping");
+		assertContains(content, "strval((0 != (1 & 32768)))", "PHP bitwise/equality lowering should preserve explicit right grouping");
+		assertNotContains(content, "(1 & (32768 != 0))", "PHP bitwise operators should bind tighter than equality on the left");
+		assertNotContains(content, "((0 != 1) & 32768)", "PHP bitwise operators should bind tighter than equality on the right");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpWebShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_web_shim_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2476,6 +2507,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpPlusSemantics();
 		assertPhpBitwisePrecedence();
 		assertPhpSameClassStaticHelperCall();
+		assertPhpBitwiseEqualityPrecedence();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
 		assertPhpDollarString();
