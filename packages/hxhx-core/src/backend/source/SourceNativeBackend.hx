@@ -3391,6 +3391,14 @@ class SourceNativeBackend {
 				lines.push("}");
 				lines.push("function __hxhx_add_string($value) {");
 				lines.push("  if ($value === null) return \"null\";");
+				lines.push("  if ($value instanceof __HxArray) $value = $value->toArray();");
+				lines.push("  if (is_array($value)) {");
+				lines.push("    $parts = [];");
+				lines.push("    foreach ($value as $item) {");
+				lines.push("      $parts[] = __hxhx_add_string($item);");
+				lines.push("    }");
+				lines.push("    return \"[\" . implode(\",\", $parts) . \"]\";");
+				lines.push("  }");
 				lines.push("  if (is_object($value) && !method_exists($value, \"__toString\")) {");
 				lines.push("    $parts = [];");
 				lines.push("    foreach (get_object_vars($value) as $key => $fieldValue) {");

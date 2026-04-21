@@ -7337,6 +7337,14 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_add_string($value) {");
       ignore (HxArray.push lines "  if ($value === null) return \"null\";");
+      ignore (HxArray.push lines "  if ($value instanceof __HxArray) $value = $value->toArray();");
+      ignore (HxArray.push lines "  if (is_array($value)) {");
+      ignore (HxArray.push lines "    $parts = [];");
+      ignore (HxArray.push lines "    foreach ($value as $item) {");
+      ignore (HxArray.push lines "      $parts[] = __hxhx_add_string($item);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    return \"[\" . implode(\",\", $parts) . \"]\";");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if (is_object($value) && !method_exists($value, \"__toString\")) {");
       ignore (HxArray.push lines "    $parts = [];");
       ignore (HxArray.push lines "    foreach (get_object_vars($value) as $key => $fieldValue) {");

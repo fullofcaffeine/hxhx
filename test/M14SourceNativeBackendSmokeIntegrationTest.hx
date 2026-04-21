@@ -804,6 +804,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(\"x\" + null));",
 			"    Sys.println(Std.string(\"\" + {}));",
 			"    Sys.println(Std.string(\"\" + {a: 1}));",
+			"    Sys.println(Std.string(\"\" + [1, 2]));",
+			"    Sys.println(Std.string(\"\" + [[1], [2, 3]]));",
 			"  }",
 			"}",
 		].join("\n");
@@ -1986,6 +1988,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_add($left, $right)", "PHP source backend should emit a Haxe plus-semantics helper");
 		assertContains(content, "function __hxhx_add_string($value)", "PHP plus helper should include Haxe stringification support");
 		assertContains(content, "if ($value === null) return \"null\";", "PHP plus helper should stringify null like Haxe");
+		assertContains(content, "if ($value instanceof __HxArray) $value = $value->toArray();", "PHP plus helper should unwrap Haxe arrays");
+		assertContains(content, "return \"[\" . implode(\",\", $parts) . \"]\";", "PHP plus helper should recursively stringify arrays like Haxe");
 		assertContains(content, "foreach (get_object_vars($value) as $key => $fieldValue)", "PHP plus helper should stringify anonymous objects like Haxe");
 		assertContains(content, "__hxhx_add(__hxhx_add(1, 2), \"\")",
 			"PHP plus lowering should preserve left-associative numeric addition before string conversion");
@@ -1994,6 +1998,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_add(\"x\", null)", "PHP null-right string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", (object)[])", "PHP empty anonymous object string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", (object)[\"a\" => 1])", "PHP anonymous object string plus should lower through Haxe helper");
+		assertContains(content, "__hxhx_add(\"\", [1, 2])", "PHP array string plus should lower through Haxe helper");
+		assertContains(content, "__hxhx_add(\"\", [[1], [2, 3]])", "PHP nested array string plus should lower through Haxe helper");
 		deleteRecursive(tmpRoot);
 	}
 
