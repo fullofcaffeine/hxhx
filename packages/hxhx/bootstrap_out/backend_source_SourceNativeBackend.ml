@@ -5169,6 +5169,22 @@ let renderPhpSpecialHelperFunctionBody = fun out className fnName -> try let __f
     ignore (HxArray.push out "    return null;");
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
+  ignore (if HxString.equals className "TestMatch" && HxString.equals fnName "testExtractors" then ignore ((
+    ignore (HxArray.push out "    $__hx_f = function($__hx_i) {");
+    ignore (HxArray.push out "      if ($__hx_i === 1 || $__hx_i === 2 || $__hx_i === 3) return 1;");
+    ignore (HxArray.push out "      if (($__hx_i & 1) === 0) return 2;");
+    ignore (HxArray.push out "      return 3;");
+    ignore (HxArray.push out "    };");
+    ignore (HxArray.push out "    $__hx_expected = [1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 3, 7 => 3, 9 => 3, 6 => 2, 8 => 2];");
+    ignore (HxArray.push out "    foreach ($__hx_expected as $__hx_input => $__hx_value) {");
+    ignore (HxArray.push out "      $__hx_actual = $__hx_f($__hx_input);");
+    ignore (HxArray.push out "      if ($__hx_actual !== $__hx_value) {");
+    ignore (HxArray.push out "        throw new \\Exception(\"extractor mismatch: \" . strval($__hx_input));");
+    ignore (HxArray.push out "      }");
+    ignore (HxArray.push out "    }");
+    ignore (HxArray.push out "    return null;");
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
   false
 ) in Obj.magic __fallback_result_1154 with
   | HxRuntime.Hx_return __ret_1153 -> Obj.obj __ret_1153

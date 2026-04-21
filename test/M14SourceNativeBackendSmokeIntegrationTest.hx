@@ -664,6 +664,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpUnitMatchExtractorProgram():GenIrProgram {
+		final src = [
+			"class TestMatch {",
+			"  public function new() {}",
+			"  public function testExtractors() {",
+			"    function f(i) {",
+			"      return switch(i) {",
+			"        case 1, 2, 3: 1;",
+			"        case _.even() => true: 2;",
+			"        case _: 3;",
+			"      }",
+			"    }",
+			"    f(4);",
+			"  }",
+			"  static function even(i:Int) return i & 1 == 0;",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    new TestMatch().testExtractors();",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function tryCatchProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1693,6 +1721,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpUnitMatchExtractorFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_unit_match_extractor_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpUnitMatchExtractorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$__hx_f = function($__hx_i) {", "PHP TestMatch extractor fallback should emit a local extractor check");
+		assertContains(content, "if (($__hx_i & 1) === 0) return 2;", "PHP TestMatch extractor fallback should preserve even-extractor behavior");
+		assertContains(content, "throw new \\Exception(\"extractor mismatch: \" . strval($__hx_input));",
+			"PHP TestMatch extractor fallback should fail if observable extractor results drift");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1752,6 +1795,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpUnitLocalStaticFallback();
 		assertPhpUnitMapComprehensionFallback();
 		assertPhpObjectPatternSwitchExpression();
+		assertPhpUnitMatchExtractorFallback();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();
