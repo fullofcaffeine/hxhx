@@ -3739,7 +3739,7 @@ class SourceNativeBackend {
 		out.push(indent + "}");
 	}
 
-	static function appendJavaMainSupportMembers(out:Array<String>, decl:HxModuleDecl, className:String):Void {
+	static function appendJavaMainSupportMembers(out:Array<String>, decl:HxModuleDecl, className:String, body:Array<HxStmt>):Void {
 		final emittedMethods = new Map<String, Bool>();
 		for (fn in HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl))) {
 			final fnName = HxFunctionDecl.getName(fn);
@@ -3764,6 +3764,7 @@ class SourceNativeBackend {
 			}
 			appendJavaFunctionalOverloads(out, emittedMethods, methodName, args.length, true, className);
 		}
+		appendJavaEntryBodyCallSupportMembers(out, emittedMethods, body, className);
 	}
 
 	static function appendJavaFunctionalField(out:Array<String>, methodName:String, arity:Int, className:String):Void {
@@ -3815,6 +3816,126 @@ class SourceNativeBackend {
 			out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
 			out.push("  }");
 		}
+	}
+
+	static function appendJavaEntryBodyCallSupportMembers(out:Array<String>, emittedMethods:Map<String, Bool>, body:Array<HxStmt>, className:String):Void {
+		final calls = new Array<{name:String, arity:Int}>();
+		for (stmt in body)
+			collectJavaEntryBodyDirectCalls(stmt, calls);
+		for (call in calls) {
+			final methodName = sanitizeJavaIdentifier(call.name);
+			if (methodName.length == 0 || isJavaBuiltinDirectCall(methodName))
+				continue;
+			final key = methodName + "#" + Std.string(call.arity);
+			if (!emittedMethods.exists(key)) {
+				emittedMethods.set(key, true);
+				out.push("  public static Object " + methodName + "(" + javaSyntheticObjectArgs(call.arity) + ") {");
+				out.push("    return null;");
+				out.push("  }");
+			}
+			appendJavaFunctionalOverloads(out, emittedMethods, methodName, call.arity, true, className);
+		}
+	}
+
+	static function collectJavaEntryBodyDirectCalls(stmt:HxStmt, out:Array<{name:String, arity:Int}>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (child in stmts)
+					collectJavaEntryBodyDirectCalls(child, out);
+			case SVar(_, _, init, _):
+				if (init != null)
+					collectJavaEntryBodyDirectCallsInExpr(init, out);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectJavaEntryBodyDirectCallsInExpr(cond, out);
+				collectJavaEntryBodyDirectCalls(thenBranch, out);
+				if (elseBranch != null)
+					collectJavaEntryBodyDirectCalls(elseBranch, out);
+			case SForIn(_, iterable, body, _):
+				collectJavaEntryBodyDirectCallsInExpr(iterable, out);
+				collectJavaEntryBodyDirectCalls(body, out);
+			case SForKeyValue(_, _, iterable, body, _):
+				collectJavaEntryBodyDirectCallsInExpr(iterable, out);
+				collectJavaEntryBodyDirectCalls(body, out);
+			case SWhile(cond, body, _):
+				collectJavaEntryBodyDirectCallsInExpr(cond, out);
+				collectJavaEntryBodyDirectCalls(body, out);
+			case SDoWhile(body, cond, _):
+				collectJavaEntryBodyDirectCalls(body, out);
+				collectJavaEntryBodyDirectCallsInExpr(cond, out);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectJavaEntryBodyDirectCallsInExpr(scrutinee, out);
+				for (body in bodies)
+					collectJavaEntryBodyDirectCalls(body, out);
+			case STry(tryBody, catches, _):
+				collectJavaEntryBodyDirectCalls(tryBody, out);
+				for (c in catches)
+					collectJavaEntryBodyDirectCalls(c.body, out);
+			case SThrow(expr, _), SReturn(expr, _), SExpr(expr, _):
+				collectJavaEntryBodyDirectCallsInExpr(expr, out);
+			case SBreak(_), SContinue(_), SReturnVoid(_):
+		}
+	}
+
+	static function collectJavaEntryBodyDirectCallsInExpr(expr:HxExpr, out:Array<{name:String, arity:Int}>):Void {
+		switch (expr) {
+			case ECall(EIdent(name), args):
+				addJavaEntryBodyDirectCall(out, name, args.length);
+				for (arg in args)
+					collectJavaEntryBodyDirectCallsInExpr(arg, out);
+			case ECall(callee, args):
+				collectJavaEntryBodyDirectCallsInExpr(callee, out);
+				for (arg in args)
+					collectJavaEntryBodyDirectCallsInExpr(arg, out);
+			case EField(receiver, _), EUnop(_, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
+				collectJavaEntryBodyDirectCallsInExpr(receiver, out);
+			case EBinop(_, left, right):
+				collectJavaEntryBodyDirectCallsInExpr(left, out);
+				collectJavaEntryBodyDirectCallsInExpr(right, out);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectJavaEntryBodyDirectCallsInExpr(cond, out);
+				collectJavaEntryBodyDirectCallsInExpr(thenExpr, out);
+				collectJavaEntryBodyDirectCallsInExpr(elseExpr, out);
+			case EAnon(_, values), EArrayDecl(values):
+				for (value in values)
+					collectJavaEntryBodyDirectCallsInExpr(value, out);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
+				collectJavaEntryBodyDirectCallsInExpr(iterable, out);
+				if (guardExpr != null)
+					collectJavaEntryBodyDirectCallsInExpr(guardExpr, out);
+				collectJavaEntryBodyDirectCallsInExpr(yieldExpr, out);
+			case EArrayAccess(receiver, index), ERange(receiver, index):
+				collectJavaEntryBodyDirectCallsInExpr(receiver, out);
+				collectJavaEntryBodyDirectCallsInExpr(index, out);
+			case ELambda(_, body):
+				collectJavaEntryBodyDirectCallsInExpr(body, out);
+			case ESwitch(scrutinee, _, exprs):
+				collectJavaEntryBodyDirectCallsInExpr(scrutinee, out);
+				for (item in exprs)
+					collectJavaEntryBodyDirectCallsInExpr(item, out);
+			case ENew(_, args):
+				for (arg in args)
+					collectJavaEntryBodyDirectCallsInExpr(arg, out);
+			case _:
+		}
+	}
+
+	static function addJavaEntryBodyDirectCall(out:Array<{name:String, arity:Int}>, name:String, arity:Int):Void {
+		for (call in out) {
+			if (call.name == name && call.arity == arity)
+				return;
+		}
+		out.push({name: name, arity: arity});
+	}
+
+	static function isJavaBuiltinDirectCall(name:String):Bool {
+		return name == "trace" || name == "__hxhx_parenthesized" || name == "__hxhx_int_literal" || name == "__hxhx_for_in" || name == "__hxhx_throw";
+	}
+
+	static function javaSyntheticObjectArgs(arity:Int):String {
+		final args = new Array<String>();
+		for (i in 0...arity)
+			args.push("Object arg" + Std.string(i));
+		return args.join(", ");
 	}
 
 	static function appendJavaStdSupport(out:Array<String>):Void {
@@ -4443,7 +4564,7 @@ class SourceNativeBackend {
 				if (lines.length > 1)
 					lines.push("");
 				lines.push("public class " + className + " {");
-				appendJavaMainSupportMembers(lines, decl, className);
+				appendJavaMainSupportMembers(lines, decl, className, body);
 				lines.push("  public static void main(String[] args) {");
 				for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
 					lines.push(line);

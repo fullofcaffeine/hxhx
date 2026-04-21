@@ -836,6 +836,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"import utest.ui.common.IReport;",
 			"import MyClass.UsingBase;",
 			"",
+			"function testTopLevel(callback) {",
+			"  callback(1);",
+			"}",
+			"",
 			"class Helper {",
 			"  public function new() {}",
 			"  public function label() {",
@@ -870,6 +874,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var helper = new Helper();",
 			"    Sys.println(Std.string(helper.label()));",
 			"    helper.assert(\"ok\");",
+			"    testTopLevel(i -> Sys.println(i));",
 			"  }",
 			"  static function multiply(a, b) {",
 			"    return a * b;",
@@ -1907,6 +1912,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(mainContent, "java.util.function.BiFunction<Object, Object, Object> multiply = Main::multiply",
 			"Java main helpers should expose method-reference fields");
 		assertContains(mainContent, "public static Object multiply(Object a, Object b)", "Java main helpers should emit compile-only static methods");
+		assertContains(mainContent, "testTopLevel(java.util.function.Function<Object, Object> arg0)",
+			"Java entrypoint body direct helper calls should expose lambda-compatible overloads");
 		assertContains(mainContent, "helper.assert_(\"ok\")", "Java main source should call sanitized support method names");
 		assertNotContains(mainContent, "import Map;", "Java main source should not import default-package classes");
 		assertNotContains(helperContent, "import Type;", "Java support source should not import default-package classes");
