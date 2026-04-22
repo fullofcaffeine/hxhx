@@ -5812,6 +5812,89 @@ class SourceNativeBackend {
 		}
 	}
 
+	static function pythonInstanceMethodNames(cls:HxClassDecl):Map<String, Bool> {
+		final names:Map<String, Bool> = [];
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) != "new")
+				names.set(HxFunctionDecl.getName(fn), true);
+		}
+		return names;
+	}
+
+	static function copyStringArray(values:Array<String>):Array<String> {
+		return values == null ? [] : values.copy();
+	}
+
+	static function pythonRewriteSameClassCallsInStmts(stmts:Array<HxStmt>, methodNames:Map<String, Bool>, locals:Array<String>):Array<HxStmt> {
+		return [for (stmt in stmts) pythonRewriteSameClassCallsInStmt(stmt, methodNames, locals)];
+	}
+
+	static function pythonRewriteSameClassCallsInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, locals:Array<String>):HxStmt {
+		return switch (stmt) {
+			case SBlock(stmts, pos):
+				SBlock(pythonRewriteSameClassCallsInStmts(stmts, methodNames, copyStringArray(locals)), pos);
+			case SVar(name, typeHint, init, pos):
+				final rewrittenInit = init == null ? null : pythonRewriteSameClassCallExpr(init, methodNames, locals);
+				if (locals.indexOf(name) < 0)
+					locals.push(name);
+				SVar(name, typeHint, rewrittenInit, pos);
+			case SIf(cond, thenBranch, elseBranch, pos):
+				SIf(pythonRewriteSameClassCallExpr(cond, methodNames, locals),
+					pythonRewriteSameClassCallsInStmt(thenBranch, methodNames, copyStringArray(locals)),
+					elseBranch == null ? null : pythonRewriteSameClassCallsInStmt(elseBranch, methodNames, copyStringArray(locals)), pos);
+			case SForIn(name, iterable, body, pos):
+				final bodyLocals = copyStringArray(locals);
+				if (bodyLocals.indexOf(name) < 0)
+					bodyLocals.push(name);
+				SForIn(name, pythonRewriteSameClassCallExpr(iterable, methodNames, locals), pythonRewriteSameClassCallsInStmt(body, methodNames, bodyLocals),
+					pos);
+			case SForKeyValue(keyName, valueName, iterable, body, pos):
+				final bodyLocals = copyStringArray(locals);
+				if (bodyLocals.indexOf(keyName) < 0)
+					bodyLocals.push(keyName);
+				if (bodyLocals.indexOf(valueName) < 0)
+					bodyLocals.push(valueName);
+				SForKeyValue(keyName, valueName, pythonRewriteSameClassCallExpr(iterable, methodNames, locals),
+					pythonRewriteSameClassCallsInStmt(body, methodNames, bodyLocals), pos);
+			case SWhile(cond, body, pos):
+				SWhile(pythonRewriteSameClassCallExpr(cond, methodNames, locals),
+					pythonRewriteSameClassCallsInStmt(body, methodNames, copyStringArray(locals)), pos);
+			case SDoWhile(body, cond, pos):
+				SDoWhile(pythonRewriteSameClassCallsInStmt(body, methodNames, copyStringArray(locals)),
+					pythonRewriteSameClassCallExpr(cond, methodNames, locals), pos);
+			case SSwitch(scrutinee, patterns, bodies, pos):
+				SSwitch(pythonRewriteSameClassCallExpr(scrutinee, methodNames, locals), patterns, [
+					for (body in bodies)
+						pythonRewriteSameClassCallsInStmt(body, methodNames, copyStringArray(locals))
+				], pos);
+			case STry(tryBody, catches, pos):
+				STry(pythonRewriteSameClassCallsInStmt(tryBody, methodNames, copyStringArray(locals)), [
+					for (c in catches) {
+						final catchLocals = copyStringArray(locals);
+						if (catchLocals.indexOf(c.name) < 0) catchLocals.push(c.name);
+						{name: c.name, typeHint: c.typeHint, body: pythonRewriteSameClassCallsInStmt(c.body, methodNames, catchLocals)};
+					}
+				], pos);
+			case SThrow(expr, pos):
+				SThrow(pythonRewriteSameClassCallExpr(expr, methodNames, locals), pos);
+			case SReturn(expr, pos):
+				SReturn(pythonRewriteSameClassCallExpr(expr, methodNames, locals), pos);
+			case SExpr(expr, pos):
+				SExpr(pythonRewriteSameClassCallExpr(expr, methodNames, locals), pos);
+			case SBreak(_) | SContinue(_) | SReturnVoid(_):
+				stmt;
+		}
+	}
+
+	static function pythonRewriteSameClassCallExpr(expr:HxExpr, methodNames:Map<String, Bool>, locals:Array<String>):HxExpr {
+		return switch (expr) {
+			case ECall(EIdent(name), args) if (methodNames.exists(name) && locals.indexOf(name) < 0):
+				ECall(EField(EThis, name), args);
+			case _:
+				expr;
+		}
+	}
+
 	static function renderPythonHelperClass(cls:HxClassDecl, ?postStaticInitializers:Array<String>):Array<String> {
 		final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 		final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
@@ -5838,6 +5921,7 @@ class SourceNativeBackend {
 			memberCount += 1;
 		}
 		var sawConstructor = false;
+		final instanceMethodNames = pythonInstanceMethodNames(cls);
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (isCompileTimeOnlyFunction(fn))
 				continue;
@@ -5866,7 +5950,10 @@ class SourceNativeBackend {
 				}
 			}
 			if (!renderPythonSpecialHelperFunctionBody(out, className, HxFunctionDecl.getName(fn))) {
-				for (line in renderFunctionStmts(Python, HxFunctionDecl.getBody(fn), "        ", className + "." + HxFunctionDecl.getName(fn)))
+				final body = !isStatic
+					|| isCtor ? pythonRewriteSameClassCallsInStmts(HxFunctionDecl.getBody(fn), instanceMethodNames,
+						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : HxFunctionDecl.getBody(fn);
+				for (line in renderFunctionStmts(Python, body, "        ", className + "." + HxFunctionDecl.getName(fn)))
 					out.push(line);
 			}
 			memberCount += 1;

@@ -2307,6 +2307,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonSameClassInstanceMethodCall():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_same_class_instance_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final addCaseFn = new HxFunctionDecl("addCase", HxVisibility.Public, false, [new HxFunctionArg("test", "Dynamic", NoDefault)], "Void",
+			[SExpr(ECall(EIdent("addCaseOld"), [EIdent("test")]), pos)], "");
+		final addCaseOldFn = new HxFunctionDecl("addCaseOld", HxVisibility.Public, false, [new HxFunctionArg("test", "Dynamic", NoDefault)], "Void",
+			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("test")]), pos)], "");
+		final runnerClass = new HxClassDecl("Runner", false, [addCaseFn, addCaseOldFn]);
+		final runnerDecl = new HxModuleDecl("", [], runnerClass, [runnerClass], false, false);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("runner", "", ENew("Runner", []), pos),
+			SExpr(ECall(EField(EIdent("runner"), "addCase"), [EString("case")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("Runner.hx", runnerDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "self.addCaseOld(test)", "Python same-class instance calls should dispatch through self");
+		assertNotContains(content, "        addCaseOld(test)", "Python same-class instance calls should not emit an unqualified global call");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python same-class instance calls should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "case", "generated Python should dispatch the same-class helper method");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4883,6 +4918,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonArrayRuntimeShim();
 		assertPythonMacroCompilerStdFallback();
 		assertPythonOptionalMethodArguments();
+		assertPythonSameClassInstanceMethodCall();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
