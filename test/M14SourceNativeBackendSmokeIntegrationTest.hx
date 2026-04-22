@@ -1640,6 +1640,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function pythonPlainTextReportSetHandlerProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		final handlerArg = new HxFunctionArg("handler", "Dynamic", HxDefaultValue.NoDefault);
+		final setHandler = new HxFunctionDecl("setHandler", HxVisibility.Public, false, [handlerArg], "Void", [SExpr(EUnsupported("="), pos)], "");
+		final reportClass = new HxClassDecl("PlainTextReport", false, [setHandler]);
+		final reportDecl = new HxModuleDecl("utest.ui.text", [], reportClass, [reportClass], false, false);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("report", "", ENew("PlainTextReport", []), pos),
+			SExpr(ECall(EField(EIdent("report"), "setHandler"), [EString("handler")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		return MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("utest/ui/text/PlainTextReport.hx", reportDecl)
+		], []);
+	}
+
 	static function phpObjectPatternSwitchExpressionProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -3904,6 +3922,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonPlainTextReportSetHandlerFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_plain_text_report_set_handler_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(pythonPlainTextReportSetHandlerProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class PlainTextReport:", "Python utest helper support class should be emitted");
+		assertContains(content, "    def setHandler(self, handler):", "Python utest setHandler helper should be emitted");
+		assertContains(content, "        self.handler = handler", "Python utest setHandler fallback should preserve handler assignment");
+		assertNotContains(content, "EUnsupported", "Python utest setHandler fallback should not leak unsupported assignment placeholders");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpObjectPatternSwitchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4055,6 +4088,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpUnitMapComprehensionFallback();
 		assertPythonUnitMapComprehensionFallback();
 		assertPythonDoWhileExpressionFallback();
+		assertPythonPlainTextReportSetHandlerFallback();
 		assertPhpObjectPatternSwitchExpression();
 		assertPythonObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();

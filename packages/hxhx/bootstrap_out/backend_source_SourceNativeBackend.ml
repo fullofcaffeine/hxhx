@@ -12098,6 +12098,11 @@ let renderPythonSpecialHelperFunctionBody = fun out className fnName -> try let 
     ignore (HxArray.push out "        return None");
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
+  ignore (if HxString.equals className "PlainTextReport" && HxString.equals fnName "setHandler" then ignore ((
+    ignore (HxArray.push out "        self.handler = handler");
+    ignore (HxArray.push out "        return None");
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
   false
 ) in Obj.magic __fallback_result_2352 with
   | HxRuntime.Hx_return __ret_2351 -> Obj.obj __ret_2351

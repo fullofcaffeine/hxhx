@@ -5477,6 +5477,14 @@ class SourceNativeBackend {
 			out.push("        return None");
 			return true;
 		}
+		if (className == "PlainTextReport" && fnName == "setHandler") {
+			// Upstream utest parses this helper setter as an unsupported assignment
+			// expression in the current Stage3 text path. Model the observable helper
+			// behavior directly until assignment-expression lowering is generalized.
+			out.push("        self.handler = handler");
+			out.push("        return None");
+			return true;
+		}
 		return false;
 	}
 
