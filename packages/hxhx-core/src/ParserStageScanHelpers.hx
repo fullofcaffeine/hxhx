@@ -40,7 +40,7 @@ class ParserStageScanHelpers {
 		  - then find class-level `static var/final/function` declarations at brace depth 1.
 
 		Limitations
-		- This scanner only discovers module-local `class` declarations.
+		- This scanner only discovers module-local `class` / `interface` declarations.
 		- `typedef` / `abstract` declarations are handled by dedicated scanners.
 		- Ignores field initializers (emitter stubs use `Obj.magic` placeholders).
 	**/
@@ -71,10 +71,10 @@ class ParserStageScanHelpers {
 
 			if (braceDepth != 0)
 				continue;
-			if (t.text != "class")
+			if (t.text != "class" && t.text != "interface")
 				continue;
 
-			// class <Name> ...
+			// class/interface <Name> ...
 			var nameTok = scanNextToken(source, i);
 			// Skip stray symbols/metadata between `class` and the identifier.
 			while (nameTok.text.length > 0 && !nameTok.isIdent)
@@ -989,8 +989,11 @@ class ParserStageScanHelpers {
 						wantName = false;
 						if (name == null || name.length == 0)
 							continue;
+						final typeHint = scanFieldTypeHint(source, ft.nextPos);
 						final initText = scanFieldInitializer(source, ft.nextPos);
-						fields.push(new HxFieldDecl(name, fieldVis, wantStatic, "", parseSimpleInitExpr(initText)));
+						fields.push(new HxFieldDecl(name, fieldVis, wantStatic, typeHint, parseModuleStaticInitExpr(initText), pendingMetadata.copy(),
+							posFromIndex(source, declarationStart), posFromIndex(source, scanFieldDeclarationEnd(source, ft.nextPos)), t.text == "final", "",
+							"", initText));
 					}
 
 					sawStatic = false;
@@ -1114,10 +1117,10 @@ class ParserStageScanHelpers {
 						i = scannedReturn.nextPos;
 					}
 
-					final shouldCaptureBody = fnName == "new" || !wantStaticFn;
-					final bodyCapture = scanFunctionBody(source, i, shouldCaptureBody);
-					final body = shouldCaptureBody ? bodyCapture.body : [];
-					final bodyText = shouldCaptureBody ? bodyCapture.bodyText : "";
+					final bodyCapture = scanFunctionBody(source, i, true);
+					final keepBody = fnName == "new" || !wantStaticFn || scannedStaticBodyIsSafe(bodyCapture.body);
+					final body = keepBody ? bodyCapture.body : [];
+					final bodyText = keepBody ? bodyCapture.bodyText : "";
 					if (bodyCapture.nextPos > i)
 						i = bodyCapture.nextPos;
 
@@ -1164,6 +1167,47 @@ class ParserStageScanHelpers {
 			}
 		}
 		return new HxPos(index, line, index - lineStart + 1);
+	}
+
+	static function scanFieldTypeHint(source:String, start:Int):String {
+		var i = start;
+		var colonAt = -1;
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var angleDepth = 0;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			if (c == "\"".code || c == "'".code) {
+				i = skipQuotedSource(source, i);
+				continue;
+			}
+			switch (c) {
+				case ":".code:
+					if (parenDepth == 0 && bracketDepth == 0 && angleDepth == 0 && colonAt < 0)
+						colonAt = i;
+				case "(".code:
+					parenDepth += 1;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth -= 1;
+				case "[".code:
+					bracketDepth += 1;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth -= 1;
+				case "<".code:
+					angleDepth += 1;
+				case ">".code:
+					if (angleDepth > 0)
+						angleDepth -= 1;
+				case "=".code | ",".code | ";".code | "}".code:
+					if (parenDepth == 0 && bracketDepth == 0 && angleDepth == 0)
+						return colonAt < 0 ? "" : StringTools.trim(source.substring(colonAt + 1, i));
+				case _:
+			}
+			i += 1;
+		}
+		return "";
 	}
 
 	static function scanFieldInitializer(source:String, start:Int):String {
@@ -1267,6 +1311,8 @@ class ParserStageScanHelpers {
 	static function parseSimpleInitExpr(raw:String):Null<HxExpr> {
 		final text = raw == null ? "" : StringTools.trim(raw);
 		if (text.length == 0)
+			return null;
+		if (StringTools.startsWith(text, "untyped ") || StringTools.startsWith(text, "if "))
 			return null;
 		if (text == "null")
 			return ENull;
@@ -1374,6 +1420,18 @@ class ParserStageScanHelpers {
 			if (hasUnsupportedStmt(stmt))
 				return true;
 		return false;
+	}
+
+	static function scannedStaticBodyIsSafe(stmts:Array<HxStmt>):Bool {
+		if (stmts == null || stmts.length != 1)
+			return false;
+		return switch (stmts[0]) {
+			case SReturn(ECall(EField(EIdent(_), _), callArgs), _): callArgs != null && callArgs.length <= 2;
+			case SReturn(ENew(_, _), _):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function hasUnsupportedStmt(stmt:HxStmt):Bool {

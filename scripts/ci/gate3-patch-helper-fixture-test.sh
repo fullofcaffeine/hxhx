@@ -54,6 +54,16 @@ class Js {
 }
 EOF
 
+cat >"$fixture/tests/runci/targets/Java.hx" <<'EOF'
+class Java {
+	static public function run(args:Array<String>) {
+		changeDirectory(sysDir);
+		runCommand("haxe", ["compile-java.hxml"].concat(args));
+		runSysTest("java", ["-jar", "bin/java/Main-Debug.jar"]);
+	}
+}
+EOF
+
 cat >"$fixture/tests/runci/System.hx" <<'EOF'
 class System {
 	static public function runSysTest(cmd:String, ?args:Array<String>) {
@@ -79,6 +89,8 @@ python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" node-echo-server --upstream
 
 grep -Fq "HXHX Gate runner: skip JS sys compile on macOS" "$fixture/tests/runci/targets/Js.hx"
 grep -Fq "Skipping JS sys tests on Mac" "$fixture/tests/runci/targets/Js.hx"
+grep -Fq "HXHX Gate runner: skip Java sys compile on macOS" "$fixture/tests/runci/targets/Java.hx"
+grep -Fq "Skipping Java sys tests on Mac" "$fixture/tests/runci/targets/Java.hx"
 grep -Fq "HXHX Gate runner: upstream tests/sys contains unicode filename fixtures" "$fixture/tests/runci/System.hx"
 grep -Fq 'runCommand("haxelib", ["path", "utest"])' "$fixture/tests/RunCi.hx"
 grep -Fq 'runCommand("haxelib", ["path", "haxeserver"])' "$fixture/tests/runci/targets/Macro.hx"

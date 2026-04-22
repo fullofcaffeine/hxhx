@@ -358,7 +358,7 @@ class HxParser {
 					shifted.push(rebaseFunctionBodyStmt(s, base, bodyStartIndex));
 				SBlock(shifted, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SVar(name, typeHint, init, pos):
-				SVar(name, typeHint, init, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SVar(name, typeHint, rebaseFunctionBodyExpr(init, base), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SIf(cond, thenBranch, elseBranch, pos):
 				SIf(cond, rebaseFunctionBodyStmt(thenBranch, base, bodyStartIndex),
 					elseBranch == null ? null : rebaseFunctionBodyStmt(elseBranch, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
@@ -386,14 +386,45 @@ class HxParser {
 			case SContinue(pos):
 				SContinue(rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SThrow(expr, pos):
-				SThrow(expr, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SThrow(rebaseFunctionBodyExpr(expr, base), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SReturnVoid(pos):
 				SReturnVoid(rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SReturn(expr, pos):
-				SReturn(expr, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SReturn(rebaseFunctionBodyExpr(expr, base), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SExpr(expr, pos):
-				SExpr(expr, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SExpr(rebaseFunctionBodyExpr(expr, base), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 		}
+	}
+
+	static function rebaseFunctionBodyExpr(expr:Null<HxExpr>, base:HxPos):Null<HxExpr> {
+		if (expr == null)
+			return null;
+		return switch (expr) {
+			case ECall(EIdent(name), args) if (StringTools.startsWith(name, "__hxhx_trace_at_")):
+				final line = Std.parseInt(name.substr("__hxhx_trace_at_".length));
+				final rebased = line == null ? 0 : base.getLine() + line - 2;
+				ECall(EIdent("__hxhx_trace_at_" + Std.string(rebased)), [for (arg in args) rebaseFunctionBodyExpr(arg, base)]);
+			case ECall(callee, args):
+				ECall(rebaseFunctionBodyExpr(callee, base), [for (arg in args) rebaseFunctionBodyExpr(arg, base)]);
+			case EField(obj, field):
+				EField(rebaseFunctionBodyExpr(obj, base), field);
+			case EBinop(op, left, right):
+				EBinop(op, rebaseFunctionBodyExpr(left, base), rebaseFunctionBodyExpr(right, base));
+			case EUnop(op, value):
+				EUnop(op, rebaseFunctionBodyExpr(value, base));
+			case ELambda(args, body):
+				ELambda(args, rebaseFunctionBodyExpr(body, base));
+			case EArrayDecl(values):
+				EArrayDecl([for (value in values) rebaseFunctionBodyExpr(value, base)]);
+			case EArrayAccess(left, right):
+				EArrayAccess(rebaseFunctionBodyExpr(left, base), rebaseFunctionBodyExpr(right, base));
+			case ECast(inner, hint):
+				ECast(rebaseFunctionBodyExpr(inner, base), hint);
+			case EUntyped(inner):
+				EUntyped(rebaseFunctionBodyExpr(inner, base));
+			case _:
+				expr;
+		};
 	}
 
 	public static function offsetFunctionBodyColumns(stmts:Array<HxStmt>, delta:Int):Array<HxStmt> {
@@ -2457,8 +2488,9 @@ class HxParser {
 				final parenLambda = tryReadParenthesizedLambdaArgs();
 				if (parenLambda != null) {
 					consumeUntilIndex(parenLambda.endIndex);
+					final bodyLine = cur.getPos().getLine();
 					final body = parseExpr(stop);
-					return ELambda(parenLambda.args, body);
+					return ELambda(parenLambda.args, markTraceExpressionLine(body, bodyLine));
 				}
 			case TIdent(name):
 				if (peekKind().match(TOther("-".code)) && peekKind2().match(TOther(">".code))) {
@@ -2466,12 +2498,22 @@ class HxParser {
 					bump(); // ident
 					bump(); // '-'
 					bump(); // '>'
+					final bodyLine = cur.getPos().getLine();
 					final body = parseExpr(stop);
-					return ELambda([name], body);
+					return ELambda([name], markTraceExpressionLine(body, bodyLine));
 				}
 			case _:
 		}
 		return null;
+	}
+
+	static function markTraceExpressionLine(expr:HxExpr, line:Int):HxExpr {
+		return switch (expr) {
+			case ECall(EIdent("trace"), args) if (line > 0):
+				ECall(EIdent("__hxhx_trace_at_" + Std.string(line)), args);
+			case _:
+				expr;
+		};
 	}
 
 	function tryReadParenthesizedLambdaArgs():Null<{args:Array<String>, endIndex:Int}> {
@@ -4024,8 +4066,8 @@ class HxParser {
 				case _:
 			}
 			switch (cur.kind) {
-				case TKeyword(KClass):
-					bump(); // 'class'
+				case TKeyword(KClass) | TIdent("interface"):
+					bump(); // 'class' / 'interface'
 					final className = readIdent("class name");
 					var extendsPath = "";
 					// Capture the simple superclass path while still ignoring generic

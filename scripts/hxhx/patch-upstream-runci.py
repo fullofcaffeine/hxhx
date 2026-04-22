@@ -101,6 +101,37 @@ def patch_skip_sys_on_macos(upstream_dir: str) -> None:
     if changed_start:
         write_lines(js_target_path, out)
 
+    java_target_path = upstream_path(upstream_dir, "tests/runci/targets/Java.hx")
+    if not java_target_path.is_file():
+        return
+
+    marker = "HXHX Gate runner: skip Java sys compile on macOS"
+    lines = read_lines(java_target_path)
+    if any(marker in line for line in lines):
+        return
+
+    out = []
+    changed_start = False
+    changed_end = False
+    for line in lines:
+        if not changed_start and "changeDirectory(sysDir);" in line:
+            indent = line.split("changeDirectory(sysDir);", 1)[0]
+            out.append(indent + f"// {marker}\n")
+            out.append(indent + "if (Sys.systemName() == \"Mac\" && Sys.getEnv(\"HXHX_RUNCi_FORCE_SYS\") != \"1\") {\n")
+            out.append(indent + "\tinfoMsg(\"Skipping Java sys tests on Mac (HXHX Gate runner; set HXHX_RUNCi_FORCE_SYS=1 to enable)\");\n")
+            out.append(indent + "} else {\n")
+            changed_start = True
+        out.append(line)
+        if changed_start and not changed_end and "runSysTest(" in line:
+            indent = line.split("runSysTest(", 1)[0]
+            out.append(indent + "}\n")
+            changed_end = True
+
+    if changed_start != changed_end:
+        fail("Java.hx sys skip patch could not find a complete sys test block")
+    if changed_start:
+        write_lines(java_target_path, out)
+
 
 def patch_js_server_timeouts_on_macos(upstream_dir: str, timeout_ms: str) -> None:
     if platform.system() != "Darwin":

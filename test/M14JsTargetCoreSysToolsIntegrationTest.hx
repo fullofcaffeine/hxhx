@@ -1070,6 +1070,61 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		assertTrue(sawSuper, "helper class scanner should parse super constructor calls");
 	}
 
+	static function assertScannedHelperOperationFields():Void {
+		final source = [
+			"interface BinaryOp {",
+			"  function run(a:Int, b:Int):Int;",
+			"}",
+			"class Ops {",
+			"  static public final add:BinaryOp = (a, b) -> a + b;",
+			"  static var opaque:Int->Int->Int = untyped if (Math.imul != null) Math.imul else function(a, b) return a * b;",
+			"  static public function apply(op:BinaryOp) {",
+			"    return op.run(8, 4);",
+			"  }",
+			"}"
+		].join("\n");
+		final classes = ParserStageScanHelpers.scanModuleLocalHelperClasses(source, null);
+		var opInterface:Null<HxClassDecl> = null;
+		var ops:Null<HxClassDecl> = null;
+		for (cls in classes) {
+			switch (HxClassDecl.getName(cls)) {
+				case "BinaryOp":
+					opInterface = cls;
+				case "Ops":
+					ops = cls;
+				case _:
+			}
+		}
+		assertTrue(opInterface != null, "helper scanner should discover module-local operation interfaces");
+		assertTrue(ops != null, "helper scanner should discover module-local operation classes");
+		assertTrue(HxClassDecl.getFunctions(opInterface).length == 1, "operation interface methods should be retained");
+		final fields = HxClassDecl.getFields(ops);
+		assertTrue(fields.length == 2, "operation helper should expose static fields");
+		final addField = fields[0];
+		final opaqueField = fields[1];
+		assertTrue(HxFieldDecl.getTypeHint(addField) == "BinaryOp", "operation helper static lambda field should retain its interface type hint");
+		switch (HxFieldDecl.getInit(addField)) {
+			case HxExpr.ELambda(args, HxExpr.EBinop("+", HxExpr.EIdent("a"), HxExpr.EIdent("b"))):
+				assertTrue(args.length == 2, "operation helper static lambda field should parse lambda args");
+			case _:
+				throw "operation helper static lambda field should parse as a lambda initializer";
+		}
+		assertTrue(HxFieldDecl.getName(opaqueField) == "opaque", "operation helper should retain opaque static field names");
+		assertTrue(HxFieldDecl.getInit(opaqueField) == null, "unsupported untyped-if static field initializers should stay as raw text only");
+		var apply:Null<HxFunctionDecl> = null;
+		for (fn in HxClassDecl.getFunctions(ops)) {
+			if (HxFunctionDecl.getName(fn) == "apply")
+				apply = fn;
+		}
+		assertTrue(apply != null, "operation helper should expose its static dispatcher");
+		switch (HxFunctionDecl.getBody(apply)) {
+			case [HxStmt.SReturn(HxExpr.ECall(HxExpr.EField(HxExpr.EIdent("op"), "run"), args), _)]:
+				assertTrue(args.length == 2, "operation helper static dispatcher should retain the receiver call body");
+			case _:
+				throw "operation helper static dispatcher should retain a simple operation call body";
+		}
+	}
+
 	static function assertScannedHelperAbstractExpressionBody():Void {
 		final source = [
 			"abstract LocalWrap(Int) from Int {",
@@ -1146,6 +1201,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		assertNativeStaticFinalDecode();
 		assertNativeSwitchFieldInitializerDecode();
 		assertScannedHelperClassInheritance();
+		assertScannedHelperOperationFields();
 		assertScannedHelperAbstractExpressionBody();
 		assertScannedModuleStaticFields();
 		assertEmptyAnonThisAssignmentJs();

@@ -143,6 +143,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function javaLambdaTraceProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var f = i -> trace(12);",
+			"    f(1);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function unaryOperatorProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -909,6 +923,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final maybeClass = new HxClassDecl("Maybe", false, [present], [absent]);
 		final decl = new HxModuleDecl("demo", [], maybeClass, [maybeClass], false, false);
 		final parsed = new ParsedModule("", decl, "demo/Maybe.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function javaOperationInterfaceProgram():GenIrProgram {
+		final src = [
+			"interface BinaryOp {",
+			"  function run(a:Int, b:Int):Int;",
+			"}",
+			"",
+			"class Calc {",
+			"  static public final sum:BinaryOp = (a, b) -> a + b;",
+			"  static public final diff:BinaryOp = (a, b) -> a - b;",
+			"  static public function apply(op:BinaryOp) {",
+			"    return op.run(9, 3);",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println('sum=' + Calc.apply(Calc.sum));",
+			"    Sys.println('diff=' + Calc.apply(Calc.diff));",
+			"    Sys.println('product=' + Calc.apply(product));",
+			"    Sys.println('quotient=' + Calc.apply(function(a, b):Int {",
+			"      return Std.int(a / b);",
+			"    }));",
+			"  }",
+			"  static function product(a, b):Int {",
+			"    return a * b;",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		return MacroStage.expandProgram([typed], []);
 	}
@@ -1854,10 +1901,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(run.code == 0, "Java source backend jar should run: " + run.stderr);
 		assertContains(run.stdout, "source-native:java", "Java source backend jar should execute generated main");
 		final runciOutputDir = Path.join([tmpRoot, "bin", "java"]);
-		final runciResult = backend.emit(program("java-runci"), new BackendContext(runciOutputDir, null, "Main", true, true, new StringMap<String>()));
+		final debugDefines = new StringMap<String>();
+		debugDefines.set("debug", "1");
+		final runciResult = backend.emit(program("java-runci"), new BackendContext(runciOutputDir, null, "Main", true, true, debugDefines));
 		final runciJarPath = Path.join([runciOutputDir, "Main-Debug.jar"]);
 		assertTrue(runciResult.entryPath == runciJarPath, "Java source backend should use runci-compatible jar path for bin/java output");
 		assertTrue(FileSystem.exists(runciJarPath), "Java source backend should package jar under bin/java for upstream runci");
+		final threadsOutputDir = Path.join([tmpRoot, "threads", "java"]);
+		final threadsResult = backend.emit(program("java-runci"), new BackendContext(threadsOutputDir, null, "Main", true, true, new StringMap<String>()));
+		final threadsJarPath = Path.join([threadsOutputDir, "Main.jar"]);
+		assertTrue(threadsResult.entryPath == threadsJarPath, "Java source backend should omit -Debug from non-debug bin/java jars");
+		assertTrue(FileSystem.exists(threadsJarPath), "Java source backend should package the non-debug jar expected by upstream threads");
 		final jvmBuildDir = Path.join([tmpRoot, "bin", "jvm"]);
 		final jvmJarPath = Path.join([tmpRoot, "jvm.jar"]);
 		final jvmResult = backend.emit(program("java"), new BackendContext(jvmBuildDir, jvmJarPath, "Main", true, true, new StringMap<String>()));
@@ -2016,6 +2070,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertJavaOperationInterfaceRuntime():Void {
+		if (!commandExists("javac") || !commandExists("jar") || !commandExists("java"))
+			return;
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_operation_interface_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final outputDir = Path.join([tmpRoot, "bin", "java", "OperationMain-Debug"]);
+		final backend = BackendRegistry.requireForTarget("java-native");
+		final result = backend.emit(javaOperationInterfaceProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final jarPath = outputDir + ".jar";
+		final calcSourcePath = Path.join([outputDir, "src", "Calc.java"]);
+		final opSourcePath = Path.join([outputDir, "src", "BinaryOp.java"]);
+		assertTrue(result.entryPath == jarPath, "Java operation interface program should package an executable jar");
+		assertTrue(FileSystem.exists(calcSourcePath), "Java operation interface program should emit the helper class");
+		assertTrue(FileSystem.exists(opSourcePath), "Java operation interface program should emit the operation interface");
+		final opContent = File.getContent(opSourcePath);
+		final calcContent = File.getContent(calcSourcePath);
+		assertContains(opContent, "public interface BinaryOp", "Single-method operation declarations should render as Java interfaces");
+		assertContains(calcContent, "public static BinaryOp sum", "Typed static lambda fields should keep their operation interface type");
+		assertContains(calcContent, "getMethod(\"run\", Object.class, Object.class)", "Operation helper methods should dispatch interface calls");
+		final run = commandOutput("java", ["-jar", jarPath]);
+		assertTrue(run.code == 0, "Java operation interface jar should run: " + run.stderr);
+		assertContains(run.stdout, "sum=12", "Static lambda operation fields should execute through the interface helper");
+		assertContains(run.stdout, "diff=6", "Second static lambda operation field should execute through the interface helper");
+		assertContains(run.stdout, "product=27", "Same-class method references should adapt to operation helpers");
+		assertContains(run.stdout, "quotient=3", "Inline lambdas should adapt to operation helpers");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertUnsupportedDiagnostic():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_unsupported_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -2079,6 +2161,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(traceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		assertContains(File.getContent(outputPath), "print(\"trace-native\")", "trace calls should lower to the target print statement");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertJavaTraceRuntimePrefix():Void {
+		if (!commandExists("javac") || !commandExists("jar") || !commandExists("java"))
+			return;
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_trace_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final outputDir = Path.join([tmpRoot, "bin", "java", "TraceMain-Debug"]);
+		final backend = BackendRegistry.requireForTarget("java-native");
+		backend.emit(traceProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final run = commandOutput("java", ["-jar", outputDir + ".jar"]);
+		assertTrue(run.code == 0, "Java trace jar should run: " + run.stderr);
+		assertContains(run.stdout, "Main.hx:3: trace-native", "Java trace should include Haxe-style file and line prefix");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertJavaLambdaTraceSourcePrefix():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_lambda_trace_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final outputDir = Path.join([tmpRoot, "bin", "java", "LambdaTraceMain-Debug"]);
+		final backend = BackendRegistry.requireForTarget("java-native");
+		backend.emit(javaLambdaTraceProgram(), new BackendContext(outputDir, null, "Main", true, false, new StringMap<String>()));
+		final content = File.getContent(Path.join([outputDir, "Main.java"]));
+		assertContains(content, "System.out.println(\"Main.hx:3: \" + 12);", "Java lambda trace should include the lambda body source line");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -3407,11 +3514,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaLambdaSequenceCallback();
 		assertJavaSupportClassJarPackaging();
 		assertJavaLibraryEnumJarPackaging();
+		assertJavaOperationInterfaceRuntime();
 		assertUnsupportedDiagnostic();
 		assertWhileStatement();
 		assertIfStatement();
 		assertGenericCallStatement();
 		assertTraceStatement();
+		assertJavaTraceRuntimePrefix();
+		assertJavaLambdaTraceSourcePrefix();
 		assertUnaryOperators();
 		assertPostfixStatements();
 		assertTernaryExpression();

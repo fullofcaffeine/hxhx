@@ -252,7 +252,7 @@ class SourceNativeBackend {
 		final classesDir = Path.join([context.outputDir, "obj"]);
 		final mainPackage = HxModuleDecl.getPackagePath(decl);
 		final sourcePath = javaSourcePath(sourceDir, mainPackage, className);
-		final jarPath = javaJarPath(context.outputDir, className, context.outputFileHint);
+		final jarPath = javaJarPath(context.outputDir, className, context.outputFileHint, context.hasDefine("debug"));
 		ensureDirectory(sourceDir);
 		ensureDirectory(classesDir);
 		ensureParentDirectory(jarPath);
@@ -284,7 +284,7 @@ class SourceNativeBackend {
 	static function emitJavaLibraryJar(program:GenIrProgram, context:BackendContext):EmitResult {
 		final sourceDir = Path.join([context.outputDir, "src"]);
 		final classesDir = Path.join([context.outputDir, "obj"]);
-		final jarPath = javaJarPath(context.outputDir, javaLibraryFallbackName(context), context.outputFileHint);
+		final jarPath = javaJarPath(context.outputDir, javaLibraryFallbackName(context), context.outputFileHint, context.hasDefine("debug"));
 		ensureDirectory(sourceDir);
 		ensureDirectory(classesDir);
 		ensureParentDirectory(jarPath);
@@ -311,13 +311,13 @@ class SourceNativeBackend {
 		return parts[parts.length - 1];
 	}
 
-	static function javaJarPath(outputDir:String, className:String, ?outputFileHint:String):String {
+	static function javaJarPath(outputDir:String, className:String, ?outputFileHint:String, debug:Bool = false):String {
 		if (outputFileHint != null && outputFileHint.length > 0)
 			return Path.normalize(outputFileHint);
 		final normalized = Path.normalize(outputDir == null || outputDir.length == 0 ? "." : outputDir);
 		final base = Path.withoutDirectory(normalized);
 		if (base == "java")
-			return Path.join([normalized, sanitizeJavaIdentifier(className) + "-Debug.jar"]);
+			return Path.join([normalized, sanitizeJavaIdentifier(className) + (debug ? "-Debug" : "") + ".jar"]);
 		return normalized + ".jar";
 	}
 
@@ -807,6 +807,8 @@ class SourceNativeBackend {
 			return "__hxhx_div(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "/=")
 			return phpDivideAssignExpr(left, right);
+		if (target == Java && op == "+" && !javaStringLikeOperand(left) && !javaStringLikeOperand(right))
+			return "Std.add_(" + renderExpr(Java, left) + ", " + renderExpr(Java, right) + ")";
 		if (target == Java && (op == "-" || op == "*" || op == "/" || op == "%"))
 			return "(Std.int_(" + renderExpr(Java, left) + ") " + op + " Std.int_(" + renderExpr(Java, right) + "))";
 		final mapped = binopToken(target, op);
@@ -1347,6 +1349,18 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function javaStringLikeOperand(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EString(_):
+				true;
+			case EBinop("+", left, right): javaStringLikeOperand(left) || javaStringLikeOperand(right);
+			case ECall(EField(EIdent("Std"), "string"), _):
+				true;
+			case _:
+				false;
+		};
+	}
+
 	static function phpIntLiteralExtensionReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
 			case EInt(_):
@@ -1476,6 +1490,11 @@ class SourceNativeBackend {
 				javaSwitchExprStatements(scrutinee, patterns, exprs, indent, appendReturn);
 			case ECall(EField(EIdent("Sys"), "println"), args) if (args.length == 1):
 				final out = [indent + printStmt(Java, renderExpr(Java, args[0]))];
+				if (appendReturn)
+					out.push(indent + "return null;");
+				out;
+			case ECall(EIdent(name), args) if (javaTraceAtLine(name) > 0 && args.length >= 1):
+				final out = [indent + traceStmtAtLine(Java, renderExpr(Java, args[0]), javaTraceAtLine(name))];
 				if (appendReturn)
 					out.push(indent + "return null;");
 				out;
@@ -2610,6 +2629,71 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function traceStmt(target:SourceNativeTarget, expr:String, pos:HxPos):String {
+		if (target == Java && pos != null && pos.getLine() > 0)
+			return traceStmtAtLine(Java, expr, pos.getLine());
+		return printStmt(target, expr);
+	}
+
+	static function traceStmtAtLine(target:SourceNativeTarget, expr:String, line:Int):String {
+		if (target == Java && line > 0)
+			return printStmt(Java, quoteString("Main.hx:" + Std.string(line) + ": ") + " + " + expr);
+		return printStmt(target, expr);
+	}
+
+	static function javaTraceAtLine(name:String):Int {
+		final prefix = "__hxhx_trace_at_";
+		if (name == null || !StringTools.startsWith(name, prefix))
+			return 0;
+		final parsed = Std.parseInt(name.substr(prefix.length));
+		return parsed == null ? 0 : parsed;
+	}
+
+	static function javaExprWithStmtTraceLine(expr:HxExpr, pos:HxPos):HxExpr {
+		if (pos == null || pos.getLine() <= 0)
+			return expr;
+		final line = pos.getLine();
+		return switch (expr) {
+			case ECall(EIdent(name), args) if (javaTraceAtLine(name) > 0 && javaTraceAtLine(name) != line):
+				ECall(EIdent("__hxhx_trace_at_" + Std.string(line)), [for (arg in args) javaExprWithStmtTraceLine(arg, pos)]);
+			case ECall(callee, args):
+				ECall(javaExprWithStmtTraceLine(callee, pos), [for (arg in args) javaExprWithStmtTraceLine(arg, pos)]);
+			case EField(obj, field):
+				EField(javaExprWithStmtTraceLine(obj, pos), field);
+			case EMacroExpr(inner, wrappers):
+				EMacroExpr(javaExprWithStmtTraceLine(inner, pos), wrappers);
+			case ESwitch(scrutinee, patterns, exprs):
+				ESwitch(javaExprWithStmtTraceLine(scrutinee, pos), patterns, [for (value in exprs) javaExprWithStmtTraceLine(value, pos)]);
+			case ENew(typePath, args):
+				ENew(typePath, [for (arg in args) javaExprWithStmtTraceLine(arg, pos)]);
+			case EUnop(op, inner):
+				EUnop(op, javaExprWithStmtTraceLine(inner, pos));
+			case EBinop(op, left, right):
+				EBinop(op, javaExprWithStmtTraceLine(left, pos), javaExprWithStmtTraceLine(right, pos));
+			case ETernary(cond, thenExpr, elseExpr):
+				ETernary(javaExprWithStmtTraceLine(cond, pos), javaExprWithStmtTraceLine(thenExpr, pos), javaExprWithStmtTraceLine(elseExpr, pos));
+			case EAnon(fieldNames, fieldValues):
+				EAnon(fieldNames, [for (value in fieldValues) javaExprWithStmtTraceLine(value, pos)]);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				EArrayComprehension(name, javaExprWithStmtTraceLine(iterable, pos), guardExpr == null ? null : javaExprWithStmtTraceLine(guardExpr, pos),
+					javaExprWithStmtTraceLine(yieldExpr, pos));
+			case EArrayDecl(values):
+				EArrayDecl([for (value in values) javaExprWithStmtTraceLine(value, pos)]);
+			case EArrayAccess(array, index):
+				EArrayAccess(javaExprWithStmtTraceLine(array, pos), javaExprWithStmtTraceLine(index, pos));
+			case ERange(start, end):
+				ERange(javaExprWithStmtTraceLine(start, pos), javaExprWithStmtTraceLine(end, pos));
+			case ECast(inner, typeHint):
+				ECast(javaExprWithStmtTraceLine(inner, pos), typeHint);
+			case EUntyped(inner):
+				EUntyped(javaExprWithStmtTraceLine(inner, pos));
+			case ELambda(args, body):
+				ELambda(args, javaExprWithStmtTraceLine(body, pos));
+			case _:
+				expr;
+		};
+	}
+
 	static function postIncrementStmt(target:SourceNativeTarget, expr:HxExpr, delta:Int):String {
 		switch (expr) {
 			case EArrayAccess(_, _):
@@ -2647,16 +2731,18 @@ class SourceNativeBackend {
 				renderStmts(target, stmts, indent);
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
 				[indent + printStmt(target, renderExpr(target, args[0]))];
-			case SExpr(ECall(EIdent("trace"), args), _) if (args.length >= 1):
-				[indent + printStmt(target, renderExpr(target, args[0]))];
+			case SExpr(ECall(EIdent("trace"), args), pos) if (args.length >= 1):
+				[indent + traceStmt(target, renderExpr(target, args[0]), pos)];
 			case SExpr(EUnop("post++", inner), _):
 				[indent + postIncrementStmt(target, inner, 1)];
 			case SExpr(EUnop("post--", inner), _):
 				[indent + postIncrementStmt(target, inner, -1)];
-			case SExpr(expr, _):
-				[indent + exprStmt(target, renderExpr(target, expr))];
-			case SVar(name, _typeHint, init, _):
-				final rhs = init == null ? defaultValue(target) : assignedValueExpr(target, init);
+			case SExpr(expr, pos):
+				final rendered = target == Java ? javaExprWithStmtTraceLine(expr, pos) : expr;
+					[indent + exprStmt(target, renderExpr(target, rendered))];
+			case SVar(name, _typeHint, init, pos):
+				final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
+				final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value);
 					[indent + varDecl(target, sanitizeTypeName(name), rhs)];
 			case SIf(cond, thenBranch, elseBranch, _):
 				renderIf(target, cond, thenBranch, elseBranch, indent);
@@ -2674,12 +2760,14 @@ class SourceNativeBackend {
 				[indent + breakStmt(target)];
 			case SContinue(_):
 				[indent + continueStmt(target)];
-			case SThrow(expr, _):
-				[indent + throwStmt(target, renderExpr(target, expr))];
+			case SThrow(expr, pos):
+				final rendered = target == Java ? javaExprWithStmtTraceLine(expr, pos) : expr;
+					[indent + throwStmt(target, renderExpr(target, rendered))];
 			case SReturn(EThis, _) if (target == Php):
 				[indent + returnStmt(target, phpThisValueExpr())];
-			case SReturn(expr, _):
-				[indent + returnStmt(target, renderExpr(target, expr))];
+			case SReturn(expr, pos):
+				final rendered = target == Java ? javaExprWithStmtTraceLine(expr, pos) : expr;
+					[indent + returnStmt(target, renderExpr(target, rendered))];
 			case SReturnVoid(_):
 				[indent + returnVoidStmt(target)];
 			case _:
@@ -2720,11 +2808,12 @@ class SourceNativeBackend {
 
 	static function renderStmtWithLocals(target:SourceNativeTarget, stmt:HxStmt, indent:String, localTypes:haxe.ds.StringMap<String>):Array<String> {
 		switch (stmt) {
-			case SVar(name, typeHint, init, _):
+			case SVar(name, typeHint, init, pos):
 				final cleanName = sanitizeTypeName(name);
 				if (typeHint != null && StringTools.trim(typeHint).length > 0)
 					localTypes.set(cleanName, typeHint);
-				final rhs = init == null ? defaultValue(target) : assignedValueExpr(target, init, typeHint);
+				final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
+				final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
 				return [indent + varDecl(target, cleanName, rhs)];
 			case SExpr(EBinop("=", EIdent(name), rhsExpr), _) if (target == Php && localTypes.exists(sanitizeTypeName(name))):
 				final cleanName = sanitizeTypeName(name);
@@ -3548,6 +3637,10 @@ class SourceNativeBackend {
 		if (out.length > 1)
 			out.push("");
 		final className = sanitizeJavaIdentifier(rawClassName);
+		if (javaSingleMethodInterfaceClass(cls)) {
+			appendJavaInterfaceClass(out, cls, className);
+			return out.join("\n");
+		}
 		if (allowEnumConstructors && javaEnumLikeClass(cls)) {
 			appendJavaEnumLikeClass(out, cls, className);
 			return out.join("\n");
@@ -3559,9 +3652,14 @@ class SourceNativeBackend {
 			if (emittedFields.exists(fieldName))
 				continue;
 			emittedFields.set(fieldName, true);
-			final fieldType = javaSupportFieldType(fieldName);
+			final fieldType = javaSupportFieldDeclType(field);
 			final prefix = HxFieldDecl.getIsStatic(field) ? "  public static " + fieldType + " " : "  public " + fieldType + " ";
-			out.push(prefix + fieldName + " = " + javaSupportFieldDefault(fieldType) + ";");
+			final init = HxFieldDecl.getInit(field);
+			final value = init == null
+				|| fieldType == "__HxSignal"
+				|| !javaSupportFieldInitSupported(init,
+					fieldType) ? javaSupportFieldDefault(fieldType) : assignedValueExpr(Java, init, HxFieldDecl.getTypeHint(field));
+			out.push(prefix + fieldName + " = " + value + ";");
 		}
 		if (className == "Report") {
 			if (!emittedFields.exists("displayHeader"))
@@ -3589,6 +3687,7 @@ class SourceNativeBackend {
 				continue;
 			}
 			final methodName = sanitizeJavaIdentifier(fnName);
+			final declaredReturnType = javaSupportMethodReturnType(methodName, args.length, className);
 			for (count in javaStubArityRange(args)) {
 				final key = methodName + "#" + Std.string(count);
 				if (emittedMethods.exists(key))
@@ -3597,7 +3696,16 @@ class SourceNativeBackend {
 				final returnType = javaSupportMethodReturnType(methodName, count, className);
 				final prefix = HxFunctionDecl.getIsStatic(fn) ? "  public static " + returnType + " " : "  public " + returnType + " ";
 				out.push(prefix + methodName + "(" + javaFunctionArgs(args, count) + ") {");
-				out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
+				final operationCall = count == args.length ? javaOperationReturnCall(fn) : null;
+				if (operationCall != null) {
+					for (line in javaOperationDispatchBody(operationCall, returnType, "    "))
+						out.push(line);
+				} else if (HxFunctionDecl.getIsStatic(fn) && javaCreateReturnsNewOwner(fn, className)) {
+					for (line in javaMainHelperBody(fn, returnType, className, methodName))
+						out.push(line);
+				} else {
+					out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
+				}
 				out.push("  }");
 			}
 			final varargsKey = methodName + "#varargs";
@@ -3609,6 +3717,7 @@ class SourceNativeBackend {
 				out.push("    return " + javaSupportDefaultReturn(returnType) + ";");
 				out.push("  }");
 			}
+			appendJavaOperationFunctionalOverloads(out, emittedMethods, methodName, fn, declaredReturnType, HxFunctionDecl.getIsStatic(fn), className);
 			appendJavaFunctionalOverloads(out, emittedMethods, methodName, args.length, HxFunctionDecl.getIsStatic(fn), className);
 		}
 		if (!sawConstructor) {
@@ -3621,6 +3730,32 @@ class SourceNativeBackend {
 			appendJavaNestedImportStub(out, nested);
 		out.push("}");
 		return out.join("\n");
+	}
+
+	static function javaSingleMethodInterfaceClass(cls:HxClassDecl):Bool {
+		if (HxClassDecl.getFields(cls).length > 0 || HxClassDecl.getHasStaticMain(cls))
+			return false;
+		final fns = HxClassDecl.getFunctions(cls);
+		if (fns.length == 0)
+			return false;
+		for (fn in fns) {
+			if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new" || HxFunctionDecl.getBody(fn).length > 0)
+				return false;
+		}
+		return true;
+	}
+
+	static function appendJavaInterfaceClass(out:Array<String>, cls:HxClassDecl, className:String):Void {
+		out.push("public interface " + className + " {");
+		final emitted = new Map<String, Bool>();
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final methodName = sanitizeJavaIdentifier(HxFunctionDecl.getName(fn));
+			if (emitted.exists(methodName))
+				continue;
+			emitted.set(methodName, true);
+			out.push("  Object " + methodName + "(" + javaFunctionArgs(HxFunctionDecl.getArgs(fn)) + ");");
+		}
+		out.push("}");
 	}
 
 	static function javaEnumLikeClass(cls:HxClassDecl):Bool {
@@ -3832,8 +3967,50 @@ class SourceNativeBackend {
 		}
 	}
 
+	static function javaSupportFieldDeclType(field:HxFieldDecl):String {
+		final fieldName = sanitizeJavaIdentifier(HxFieldDecl.getName(field));
+		if (javaSupportFieldType(fieldName) == "__HxSignal")
+			return "__HxSignal";
+		final init = HxFieldDecl.getInit(field);
+		if (init != null && javaLambdaFieldInit(init)) {
+			final hinted = javaSupportTypeHint(HxFieldDecl.getTypeHint(field), "Object");
+			if (hinted != "Object" && hinted != "String" && hinted != "void")
+				return hinted;
+		}
+		return "Object";
+	}
+
+	static function javaSupportFieldInitSupported(init:HxExpr, fieldType:String):Bool {
+		return fieldType != "Object" && javaLambdaFieldInit(init);
+	}
+
+	static function javaLambdaFieldInit(init:HxExpr):Bool {
+		return switch (init) {
+			case ELambda(_, _): true;
+			case _:
+				false;
+		};
+	}
+
 	static function javaSupportFieldType(fieldName:String):String {
 		return StringTools.startsWith(fieldName, "on") ? "__HxSignal" : "Object";
+	}
+
+	static function javaSupportTypeHint(typeHint:String, fallback:String):String {
+		var hint = typeHint == null ? "" : StringTools.trim(typeHint);
+		if (hint.length == 0)
+			return fallback;
+		if (StringTools.startsWith(hint, "?"))
+			hint = StringTools.trim(hint.substr(1));
+		final genericAt = hint.indexOf("<");
+		if (genericAt >= 0)
+			hint = StringTools.trim(hint.substr(0, genericAt));
+		return switch (hint) {
+			case "Int" | "Float" | "Bool" | "Dynamic" | "Any": "Object";
+			case "String": "String";
+			case "Void": "void";
+			case _: javaTypePath(hint);
+		}
 	}
 
 	static function javaSupportFieldDefault(fieldType:String):String {
@@ -4053,6 +4230,80 @@ class SourceNativeBackend {
 		}
 	}
 
+	static function appendJavaOperationFunctionalOverloads(out:Array<String>, emittedMethods:Map<String, Bool>, methodName:String, fn:HxFunctionDecl,
+			returnType:String, isStatic:Bool, className:String):Void {
+		final operationCall = javaOperationReturnCall(fn);
+		if (operationCall == null)
+			return;
+		final arity = operationCall.args.length;
+		if (arity != 1 && arity != 2)
+			return;
+		final prefix = isStatic ? "  public static " + returnType + " " : "  public " + returnType + " ";
+		final key = methodName + (arity == 1 ? "#function" : "#bifunction");
+		if (emittedMethods.exists(key))
+			return;
+		emittedMethods.set(key, true);
+		final functionalType = arity == 1 ? "java.util.function.Function<Object, Object>" : "java.util.function.BiFunction<Object, Object, Object>";
+		out.push(prefix + methodName + "(" + functionalType + " " + operationCall.paramName + ") {");
+		final renderedArgs = [for (arg in operationCall.args) renderExpr(Java, arg)].join(", ");
+		final call = arity == 1 ? operationCall.paramName + ".apply(" + renderedArgs + ")" : operationCall.paramName
+			+ ".apply("
+			+ renderedArgs
+			+ ")";
+		out.push("    return " + javaFunctionalDefaultReturn(returnType, call) + ";");
+		out.push("  }");
+	}
+
+	static function javaOperationReturnCall(fn:HxFunctionDecl):Null<{paramName:String, methodName:String, args:Array<HxExpr>}> {
+		final args = HxFunctionDecl.getArgs(fn);
+		if (args.length != 1)
+			return null;
+		final paramName = sanitizeJavaIdentifier(HxFunctionArg.getName(args[0]));
+		final body = HxFunctionDecl.getBody(fn);
+		if (body.length != 1)
+			return null;
+		return switch (body[0]) {
+			case SReturn(ECall(EField(EIdent(name), methodName), callArgs), _)
+				if (sanitizeJavaIdentifier(name) == paramName && (callArgs.length == 1 || callArgs.length == 2)):
+				{paramName: paramName, methodName: sanitizeJavaIdentifier(methodName), args: callArgs};
+			case _:
+				null;
+		};
+	}
+
+	static function javaCreateReturnsNewOwner(fn:HxFunctionDecl, className:String):Bool {
+		if (HxFunctionDecl.getName(fn) != "create" || HxFunctionDecl.getArgs(fn).length != 0)
+			return false;
+		final body = HxFunctionDecl.getBody(fn);
+		if (body.length != 1)
+			return false;
+		return switch (body[0]) {
+			case SReturn(ENew(typePath, _), _):
+				sanitizeJavaIdentifier(typePath) == className;
+			case _:
+				false;
+		};
+	}
+
+	static function javaOperationDispatchBody(operationCall:{paramName:String, methodName:String, args:Array<HxExpr>}, returnType:String,
+			indent:String):Array<String> {
+		final out = new Array<String>();
+		final renderedArgs = [for (arg in operationCall.args) renderExpr(Java, arg)].join(", ");
+		final paramName = operationCall.paramName;
+		final methodArgTypes = [for (_ in operationCall.args) "Object.class"].join(", ");
+		out.push(indent + "try {");
+		out.push(indent + "  java.lang.reflect.Method method = " + paramName + ".getClass().getMethod(\"" + operationCall.methodName + "\", "
+			+ methodArgTypes + ");");
+		out.push(indent
+			+ "  return "
+			+ javaFunctionalDefaultReturn(returnType, "method.invoke(" + paramName + ", " + renderedArgs + ")")
+			+ ";");
+		out.push(indent + "} catch (Exception ignored) {");
+		out.push(indent + "}");
+		out.push(indent + "return " + javaSupportDefaultReturn(returnType) + ";");
+		return out;
+	}
+
 	static function javaFunctionalDefaultReturn(returnType:String, callbackExpr:String):String {
 		return returnType == "Object" ? callbackExpr : javaSupportDefaultReturn(returnType);
 	}
@@ -4196,6 +4447,10 @@ class SourceNativeBackend {
 		out.push("class Std {");
 		out.push("  public static int int_(Object value) {");
 		out.push("    return value instanceof Number ? ((Number)value).intValue() : 0;");
+		out.push("  }");
+		out.push("  public static Object add_(Object left, Object right) {");
+		out.push("    if (left instanceof String || right instanceof String) return String.valueOf(left) + String.valueOf(right);");
+		out.push("    return int_(left) + int_(right);");
 		out.push("  }");
 		out.push("}");
 		out.push("");

@@ -691,10 +691,10 @@ class ParserStage {
 
 			if (braceDepth != 0)
 				continue;
-			if (t.text != "class")
+			if (t.text != "class" && t.text != "interface")
 				continue;
 
-			// class <Name> ...
+			// class/interface <Name> ...
 			var nameTok = scanNextToken(source, i);
 			// Skip stray symbols/metadata between `class` and the identifier.
 			while (nameTok.text.length > 0 && !nameTok.isIdent)
@@ -1463,8 +1463,10 @@ class ParserStage {
 						wantName = false;
 						if (name == null || name.length == 0)
 							continue;
+						final typeHint = scanFieldTypeHint(source, ft.nextPos);
 						final initText = scanFieldInitializer(source, ft.nextPos);
-						fields.push(new HxFieldDecl(name, fieldVis, wantStatic, "", parseSimpleInitExpr(initText)));
+						fields.push(new HxFieldDecl(name, fieldVis, wantStatic, typeHint, parseSimpleInitExpr(initText), null, null, null, t.text == "final",
+							"", "", initText));
 					}
 
 					sawStatic = false;
@@ -1569,10 +1571,10 @@ class ParserStage {
 						}
 					}
 
-					final shouldCaptureBody = fnName == "new" || !wantStaticFn;
-					final bodyCapture = scanFunctionBody(source, i, shouldCaptureBody);
-					final body = shouldCaptureBody ? bodyCapture.body : [];
-					final bodyText = shouldCaptureBody ? bodyCapture.bodyText : "";
+					final bodyCapture = scanFunctionBody(source, i, true);
+					final keepBody = fnName == "new" || !wantStaticFn || scannedStaticBodyIsSafe(bodyCapture.body);
+					final body = keepBody ? bodyCapture.body : [];
+					final bodyText = keepBody ? bodyCapture.bodyText : "";
 					if (bodyCapture.nextPos > i)
 						i = bodyCapture.nextPos;
 
@@ -1589,6 +1591,47 @@ class ParserStage {
 		}
 
 		return {nextPos: i, fields: fields, functions: functions};
+	}
+
+	static function scanFieldTypeHint(source:String, start:Int):String {
+		var i = start;
+		var colonAt = -1;
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var angleDepth = 0;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			if (c == "\"".code || c == "'".code) {
+				i = skipQuotedSource(source, i);
+				continue;
+			}
+			switch (c) {
+				case ":".code:
+					if (parenDepth == 0 && bracketDepth == 0 && angleDepth == 0 && colonAt < 0)
+						colonAt = i;
+				case "(".code:
+					parenDepth += 1;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth -= 1;
+				case "[".code:
+					bracketDepth += 1;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth -= 1;
+				case "<".code:
+					angleDepth += 1;
+				case ">".code:
+					if (angleDepth > 0)
+						angleDepth -= 1;
+				case "=".code | ",".code | ";".code | "}".code:
+					if (parenDepth == 0 && bracketDepth == 0 && angleDepth == 0)
+						return colonAt < 0 ? "" : StringTools.trim(source.substring(colonAt + 1, i));
+				case _:
+			}
+			i += 1;
+		}
+		return "";
 	}
 
 	static function scanFieldInitializer(source:String, start:Int):String {
@@ -1655,6 +1698,8 @@ class ParserStage {
 		final text = raw == null ? "" : StringTools.trim(raw);
 		if (text.length == 0)
 			return null;
+		if (StringTools.startsWith(text, "untyped ") || StringTools.startsWith(text, "if "))
+			return null;
 		if (text == "null")
 			return ENull;
 		if (text == "true")
@@ -1666,6 +1711,10 @@ class ParserStage {
 		final intRe = ~/^-?[0-9]+$/;
 		if (intRe.match(text))
 			return EInt(Std.parseInt(text));
+		try {
+			final parsed = HxParser.parseExprText(text);
+			return hasUnsupportedExpr(parsed) ? null : parsed;
+		} catch (_:HxParseError) {} catch (_:String) {}
 		return null;
 	}
 
@@ -1744,6 +1793,18 @@ class ParserStage {
 			if (hasUnsupportedStmt(stmt))
 				return true;
 		return false;
+	}
+
+	static function scannedStaticBodyIsSafe(stmts:Array<HxStmt>):Bool {
+		if (stmts == null || stmts.length != 1)
+			return false;
+		return switch (stmts[0]) {
+			case SReturn(ECall(EField(EIdent(_), _), callArgs), _): callArgs != null && callArgs.length <= 2;
+			case SReturn(ENew(_, _), _):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function hasUnsupportedStmt(stmt:HxStmt):Bool {
@@ -2039,8 +2100,11 @@ class ParserStage {
 								final bodySource = payload.substr(nl + 1);
 								methodBodies.set(name, bodySource);
 								if (source != null && source.length > 0 && bodySource.length > 0) {
+									final fallbackStart = findFunctionBodyStart(source, name);
 									final bodyStart = source.indexOf(bodySource);
-									if (bodyStart >= 0)
+									if (fallbackStart >= 0)
+										methodBodyStarts.set(name, fallbackStart);
+									else if (bodyStart >= 0)
 										methodBodyStarts.set(name, bodyStart);
 								}
 							}
@@ -2237,6 +2301,24 @@ class ParserStage {
 		#end
 
 		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
+	}
+
+	static function findFunctionBodyStart(source:String, name:String):Int {
+		if (source == null || name == null || name.length == 0)
+			return -1;
+		final needle = "function " + name;
+		var index = source.indexOf(needle);
+		while (index >= 0) {
+			final afterName = index + needle.length;
+			final open = source.indexOf("{", afterName);
+			if (open < 0)
+				return -1;
+			final semi = source.indexOf(";", afterName);
+			if (semi < 0 || open < semi)
+				return open + 1;
+			index = source.indexOf(needle, index + 1);
+		}
+		return -1;
 	}
 
 	static function decodeFieldPayload(payload:String, isFinal:Bool = false):Null<HxFieldDecl> {

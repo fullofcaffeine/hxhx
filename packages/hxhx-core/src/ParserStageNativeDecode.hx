@@ -108,8 +108,11 @@ class ParserStageNativeDecode {
 								final bodySource = payload.substr(nl + 1);
 								methodBodies.set(name, bodySource);
 								if (source != null && source.length > 0 && bodySource.length > 0) {
+									final fallbackStart = findFunctionBodyStart(source, name);
 									final bodyStart = source.indexOf(bodySource);
-									if (bodyStart >= 0)
+									if (fallbackStart >= 0)
+										methodBodyStarts.set(name, fallbackStart);
+									else if (bodyStart >= 0)
 										methodBodyStarts.set(name, bodyStart);
 								}
 							}
@@ -306,6 +309,24 @@ class ParserStageNativeDecode {
 		#end
 
 		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
+	}
+
+	static function findFunctionBodyStart(source:String, name:String):Int {
+		if (source == null || name == null || name.length == 0)
+			return -1;
+		final needle = "function " + name;
+		var index = source.indexOf(needle);
+		while (index >= 0) {
+			final afterName = index + needle.length;
+			final open = source.indexOf("{", afterName);
+			if (open < 0)
+				return -1;
+			final semi = source.indexOf(";", afterName);
+			if (semi < 0 || open < semi)
+				return open + 1;
+			index = source.indexOf(needle, index + 1);
+		}
+		return -1;
 	}
 
 	static function decodeFieldPayload(payload:String, isFinal:Bool = false):Null<HxFieldDecl> {
