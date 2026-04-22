@@ -542,6 +542,22 @@ class SourceNativeBackend {
 		return isJavaReservedIdentifier(clean) ? clean + "_" : clean;
 	}
 
+	static function sanitizePythonIdentifier(name:String):String {
+		final clean = sanitizeTypeName(name);
+		return isPythonReservedIdentifier(clean) ? clean + "_" : clean;
+	}
+
+	static function isPythonReservedIdentifier(name:String):Bool {
+		return switch (name == null ? "" : name) {
+			case "False" | "None" | "True" | "and" | "as" | "assert" | "async" | "await" | "break" | "class" | "continue" | "def" | "del" | "elif" | "else" |
+				"except" | "finally" | "for" | "from" | "global" | "if" | "import" | "in" | "is" | "lambda" | "nonlocal" | "not" | "or" | "pass" | "raise" |
+				"return" | "try" | "while" | "with" | "yield" | "match" | "case" | "_":
+				true;
+			case _:
+				false;
+		}
+	}
+
 	static function isJavaReservedIdentifier(name:String):Bool {
 		return switch (name == null ? "" : name) {
 			case "_" | "abstract" | "assert" | "boolean" | "break" | "byte" | "case" | "catch" | "char" | "class" | "const" | "continue" | "default" | "do" |
@@ -561,7 +577,9 @@ class SourceNativeBackend {
 				sanitizePhpTypeName(name);
 			case Java:
 				sanitizeJavaIdentifier(name);
-			case Python, Cs, Lua:
+			case Python:
+				sanitizePythonIdentifier(name);
+			case Cs, Lua:
 				sanitizeTypeName(name);
 		};
 	}
@@ -1121,7 +1139,7 @@ class SourceNativeBackend {
 		final clean = sanitizeTypeName(name);
 		return switch (target) {
 			case Php: "$" + sanitizePhpValueName(name);
-			case Python: clean;
+			case Python: sanitizePythonIdentifier(name);
 			case Java: sanitizeJavaIdentifier(name);
 			case Cs: clean;
 			case Lua: clean;
@@ -1148,7 +1166,11 @@ class SourceNativeBackend {
 	}
 
 	static function fieldAccess(target:SourceNativeTarget, receiver:String, field:String):String {
-		final safeField = target == Java ? sanitizeJavaIdentifier(field) : sanitizeTypeName(field);
+		final safeField = switch (target) {
+			case Java: sanitizeJavaIdentifier(field);
+			case Python: sanitizePythonIdentifier(field);
+			case Php, Cs, Lua: sanitizeTypeName(field);
+		};
 		return switch (target) {
 			case Php: receiver + "->" + safeField;
 			case Python: receiver + "." + safeField;
@@ -4859,7 +4881,7 @@ class SourceNativeBackend {
 			if (isStdSourceFile(filePath))
 				return;
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
-				final className = sanitizeTypeName(HxClassDecl.getName(cls));
+				final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 				if (isCompileTimeOnlySupportClass(cls))
 					continue;
 				if (className == mainClassName || seen.exists(className))
@@ -4873,7 +4895,7 @@ class SourceNativeBackend {
 			appendDeclClasses(typed.getParsed().getDecl(), typed.getParsed().getFilePath());
 		final pendingNames = new Map<String, Bool>();
 		for (cls in pending)
-			pendingNames.set(sanitizeTypeName(HxClassDecl.getName(cls)), true);
+			pendingNames.set(sanitizePythonIdentifier(HxClassDecl.getName(cls)), true);
 		final ordered = new Array<HxClassDecl>();
 		final emittedNames = new Map<String, Bool>();
 		final remaining = pending.copy();
@@ -4885,7 +4907,7 @@ class SourceNativeBackend {
 				final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
 				if (baseName == null || baseName.length == 0 || !pendingNames.exists(baseName) || emittedNames.exists(baseName)) {
 					ordered.push(cls);
-					emittedNames.set(sanitizeTypeName(HxClassDecl.getName(cls)), true);
+					emittedNames.set(sanitizePythonIdentifier(HxClassDecl.getName(cls)), true);
 					remaining.splice(i, 1);
 					progressed = true;
 					continue;
@@ -5359,7 +5381,7 @@ class SourceNativeBackend {
 	}
 
 	static function renderPythonHelperClass(cls:HxClassDecl):Array<String> {
-		final className = sanitizeTypeName(HxClassDecl.getName(cls));
+		final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 		final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
 		final classHeader = baseName == null
 			|| baseName.length == 0 ? "class " + className + ":" : "class " + className + "(" + baseName + "):";
@@ -5378,7 +5400,7 @@ class SourceNativeBackend {
 			}
 			final init = HxFieldDecl.getInit(field);
 			final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
-			out.push("    " + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs);
+			out.push("    " + sanitizePythonIdentifier(HxFieldDecl.getName(field)) + " = " + rhs);
 			memberCount += 1;
 		}
 		var sawConstructor = false;
@@ -5397,8 +5419,8 @@ class SourceNativeBackend {
 			if (!isStatic || isCtor)
 				args.push("self");
 			for (arg in HxFunctionDecl.getArgs(fn))
-				args.push(sanitizeTypeName(HxFunctionArg.getName(arg)));
-			final methodName = isCtor ? "__init__" : sanitizeTypeName(HxFunctionDecl.getName(fn));
+				args.push(sanitizePythonIdentifier(HxFunctionArg.getName(arg)));
+			final methodName = isCtor ? "__init__" : sanitizePythonIdentifier(HxFunctionDecl.getName(fn));
 			out.push("    def " + methodName + "(" + args.join(", ") + "):");
 			if (isCtor) {
 				if (needsThisValueSlot)
@@ -5406,7 +5428,7 @@ class SourceNativeBackend {
 				for (field in instanceFields) {
 					final init = HxFieldDecl.getInit(field);
 					final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
-					out.push("        self." + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs);
+					out.push("        self." + sanitizePythonIdentifier(HxFieldDecl.getName(field)) + " = " + rhs);
 				}
 			}
 			if (!renderPythonSpecialHelperFunctionBody(out, className, HxFunctionDecl.getName(fn))) {
@@ -5422,7 +5444,7 @@ class SourceNativeBackend {
 			for (field in instanceFields) {
 				final init = HxFieldDecl.getInit(field);
 				final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
-				out.push("        self." + sanitizeTypeName(HxFieldDecl.getName(field)) + " = " + rhs);
+				out.push("        self." + sanitizePythonIdentifier(HxFieldDecl.getName(field)) + " = " + rhs);
 			}
 			memberCount += 1;
 		}
@@ -5510,7 +5532,7 @@ class SourceNativeBackend {
 		if (extendsPath == null || extendsPath.length == 0)
 			return "";
 		final parts = extendsPath.split(".");
-		return sanitizeTypeName(parts[parts.length - 1]);
+		return sanitizePythonIdentifier(parts[parts.length - 1]);
 	}
 
 	static function phpBaseClassName(extendsPath:String):String {

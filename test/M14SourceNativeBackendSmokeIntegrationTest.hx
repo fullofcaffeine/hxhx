@@ -3950,6 +3950,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonReservedMethodNameSanitized():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_reserved_method_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final messageArg = new HxFunctionArg("message", "String", HxDefaultValue.NoDefault);
+		final posArg = new HxFunctionArg("pos", "Dynamic", HxDefaultValue.NoDefault);
+		final assertFn = new HxFunctionDecl("assert", HxVisibility.Public, false, [messageArg, posArg], "Void", [SReturn(ENull, pos)], "");
+		final reporterClass = new HxClassDecl("Reporter", false, [assertFn]);
+		final reporterDecl = new HxModuleDecl("", [], reporterClass, [reporterClass], false, false);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("reporter", "", ENew("Reporter", []), pos),
+			SExpr(ECall(EField(EIdent("reporter"), "assert"), [EString("ok"), ENull]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("Reporter.hx", reporterDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "    def assert_(self, message, pos):", "Python reserved method definitions should be sanitized");
+		assertContains(content, "reporter.assert_(\"ok\", None)", "Python reserved method calls should use the sanitized method name");
+		assertNotContains(content, "def assert(self", "Python should not emit reserved method definitions");
+		assertNotContains(content, "reporter.assert(", "Python should not emit reserved method calls");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpObjectPatternSwitchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4103,6 +4134,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonUnitMapComprehensionFallback();
 		assertPythonDoWhileExpressionFallback();
 		assertPythonPlainTextReportSetHandlerFallback();
+		assertPythonReservedMethodNameSanitized();
 		assertPhpObjectPatternSwitchExpression();
 		assertPythonObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();
