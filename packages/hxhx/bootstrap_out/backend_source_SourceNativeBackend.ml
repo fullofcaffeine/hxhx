@@ -3420,7 +3420,7 @@ let emptyStmt = fun target -> let tempResult = ref ("" : string) in (
 
 let varDecl = fun target name rhs -> let tempResult = ref ("" : string) in (
   ignore (match target with
-    | Python -> let __assign_1859 = ((HxString.toStdString name ^ " = ") ^ HxString.toStdString rhs : string) in (
+    | Python -> let __assign_1859 = ((HxString.toStdString (valueName (Obj.magic Python) (name : string)) ^ " = ") ^ HxString.toStdString rhs : string) in (
       tempResult := __assign_1859;
       __assign_1859
     )

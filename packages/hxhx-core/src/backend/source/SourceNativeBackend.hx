@@ -3747,7 +3747,7 @@ class SourceNativeBackend {
 
 	static function varDecl(target:SourceNativeTarget, name:String, rhs:String):String {
 		return switch (target) {
-			case Python: name + " = " + rhs;
+			case Python: valueName(Python, name) + " = " + rhs;
 			case Lua: "local " + name + " = " + rhs;
 			case Java: "var " + sanitizeJavaIdentifier(name) + " = " + rhs + ";";
 			case Cs: "var " + name + " = " + rhs + ";";

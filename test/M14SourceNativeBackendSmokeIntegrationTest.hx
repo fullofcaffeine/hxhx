@@ -3981,6 +3981,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonReservedLocalNameSanitized():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_reserved_local_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("from", "", ELambda(["tpl"], EIdent("tpl")), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EIdent("from"), [EString("works")])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "from_ = lambda tpl: tpl", "Python reserved local variable declarations should be sanitized");
+		assertContains(content, "print(from_(\"works\"))", "Python reserved local references should use the sanitized name");
+		assertNotContains(content, "from = lambda", "Python should not emit reserved local declarations");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpObjectPatternSwitchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4135,6 +4157,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonDoWhileExpressionFallback();
 		assertPythonPlainTextReportSetHandlerFallback();
 		assertPythonReservedMethodNameSanitized();
+		assertPythonReservedLocalNameSanitized();
 		assertPhpObjectPatternSwitchExpression();
 		assertPythonObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();
