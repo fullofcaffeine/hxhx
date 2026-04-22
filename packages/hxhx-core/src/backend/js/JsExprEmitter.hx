@@ -76,7 +76,7 @@ class JsExprEmitter {
 			case EAnon(fieldNames, fieldValues):
 				emitAnon(fieldNames, fieldValues, scope);
 			case EArrayDecl(values):
-				"[" + values.map(v -> emit(v, scope)).join(", ") + "]";
+				if (isMapLiteral(values)) emitMapLiteral(values, scope); else "[" + values.map(v -> emit(v, scope)).join(", ") + "]";
 			case EArrayAccess(array, index):
 				emitArrayRead(array, index, scope);
 			case ELambda(args, body):
@@ -1894,6 +1894,39 @@ class JsExprEmitter {
 			final key = JsNameMangler.quoteString(fieldNames[i]);
 			final value = emit(fieldValues[i], scope);
 			pairs.push(key + ": " + value);
+		}
+		return "{" + pairs.join(", ") + "}";
+	}
+
+	static function isMapLiteral(values:Array<HxExpr>):Bool {
+		if (values == null || values.length == 0)
+			return false;
+		for (value in values) {
+			switch (value) {
+				case EBinop("=>", _, _):
+				case _:
+					return false;
+			}
+		}
+		return true;
+	}
+
+	static function emitMapLiteral(values:Array<HxExpr>, scope:JsEmitScope):String {
+		final pairs = new Array<String>();
+		for (value in values) {
+			switch (value) {
+				case EBinop("=>", key, mapValue):
+					final keyText = switch (key) {
+						case EString(s):
+							JsNameMangler.quoteString(s);
+						case EInt(i):
+							JsNameMangler.quoteString(Std.string(i));
+						case _:
+							"[" + emit(key, scope) + "]";
+					}
+					pairs.push(keyText + ": " + emit(mapValue, scope));
+				case _:
+			}
 		}
 		return "{" + pairs.join(", ") + "}";
 	}

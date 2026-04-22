@@ -516,7 +516,7 @@ class Stage1Args {
 			return "";
 
 		final startDir = if (cwd == null || cwd.length == 0) "." else cwd;
-		var dir = haxe.io.Path.normalize(startDir);
+		var dir = haxe.io.Path.normalize(sys.FileSystem.absolutePath(startDir));
 		var previous = "";
 
 		while (dir != previous) {
@@ -533,7 +533,8 @@ class Stage1Args {
 				}
 			}
 			previous = dir;
-			dir = haxe.io.Path.normalize(haxe.io.Path.join([dir, ".."]));
+			final parentInput = StringTools.endsWith(dir, "/") ? dir + ".." : dir + "/..";
+			dir = haxe.io.Path.normalize(sys.FileSystem.absolutePath(parentInput));
 		}
 		return "";
 	}

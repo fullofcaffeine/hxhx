@@ -13,25 +13,39 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend._OcamlPr
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend._OcamlProfile.OcamlProfile_Impl_" } : t)
 
-let fromDefineValue = fun raw -> try let __fallback_result_4 = (
+let isTrimCode = fun code -> code = 32 || code = 9 || code = 13 || code = 10
+
+let trimAscii = fun value -> let start = ref 0 in let hx_end = ref (HxString.length value) in (
+  ignore (while !start < !hx_end && isTrimCode (let __nullable_int_1 = HxString.charCodeAt value (!start) in if __nullable_int_1 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1) do ignore (let __old_2 = !start in let __new_3 = HxInt.add __old_2 1 in (
+    ignore (start := __new_3);
+    __old_2
+  )) done);
+  ignore (while !hx_end > !start && isTrimCode (let __nullable_int_4 = HxString.charCodeAt value (HxInt.sub (!hx_end) 1) in if __nullable_int_4 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_4) do ignore (let __old_5 = !hx_end in let __new_6 = HxInt.add __old_5 (-1) in (
+    ignore (hx_end := __new_6);
+    __old_5
+  )) done);
+  HxString.substr value (!start) (HxInt.sub (!hx_end) (!start))
+)
+
+let fromDefineValue = fun raw -> try let __fallback_result_10 = (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("portable" : string))) else ());
-  let trimmed = (StringTools.trim (raw : string) : string) in (
+  let trimmed = (trimAscii (raw : string) : string) in (
     ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_return (Obj.repr ("portable" : string))) else ());
     let normalized = (HxString.toLowerCase trimmed () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (match normalized with
-        | "metal" -> let __assign_1 = ("metal" : string) in (
-          tempResult := __assign_1;
-          __assign_1
+        | "metal" -> let __assign_7 = ("metal" : string) in (
+          tempResult := __assign_7;
+          __assign_7
         )
-        | "portable" -> let __assign_2 = ("portable" : string) in (
-          tempResult := __assign_2;
-          __assign_2
+        | "portable" -> let __assign_8 = ("portable" : string) in (
+          tempResult := __assign_8;
+          __assign_8
         )
         | _ -> HxType.hx_throw_typed_rtti (Obj.repr (("invalid -D ocaml_profile=" ^ HxString.toStdString raw) ^ " (expected portable|metal)")) ["Dynamic"; "String"]);
       !tempResult
     )
   )
-) in Obj.magic __fallback_result_4 with
-  | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3
+) in Obj.magic __fallback_result_10 with
+  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
 
 let toDefineValue = fun profile -> profile

@@ -3396,9 +3396,21 @@ let ocamlProfileBootstrapShimSourceForStage3 = fun () -> HxArray.join (let __arr
   ignore (HxArray.push __arr_2271 "[@@@warning \"-20-27-32\"]");
   ignore (HxArray.push __arr_2271 "let portable = \"portable\"");
   ignore (HxArray.push __arr_2271 "let metal = \"metal\"");
+  ignore (HxArray.push __arr_2271 "let is_trim_code (code : int) : bool =");
+  ignore (HxArray.push __arr_2271 "  code = 32 || code = 9 || code = 13 || code = 10");
+  ignore (HxArray.push __arr_2271 "let trim_ascii (value : string) : string =");
+  ignore (HxArray.push __arr_2271 "  let start = ref 0 in");
+  ignore (HxArray.push __arr_2271 "  let stop = ref (HxString.length value) in");
+  ignore (HxArray.push __arr_2271 "  while !start < !stop && is_trim_code (HxRuntime.nullable_int_unwrap (HxString.charCodeAt value !start)) do");
+  ignore (HxArray.push __arr_2271 "    incr start");
+  ignore (HxArray.push __arr_2271 "  done;");
+  ignore (HxArray.push __arr_2271 "  while !stop > !start && is_trim_code (HxRuntime.nullable_int_unwrap (HxString.charCodeAt value (!stop - 1))) do");
+  ignore (HxArray.push __arr_2271 "    decr stop");
+  ignore (HxArray.push __arr_2271 "  done;");
+  ignore (HxArray.push __arr_2271 "  HxString.substr value !start (!stop - !start)");
   ignore (HxArray.push __arr_2271 "let fromDefineValue (raw : Obj.t) : string =");
   ignore (HxArray.push __arr_2271 "  if raw == HxRuntime.hx_null then portable else");
-  ignore (HxArray.push __arr_2271 "  let trimmed = StringTools.trim (Obj.obj raw : string) in");
+  ignore (HxArray.push __arr_2271 "  let trimmed = trim_ascii (Obj.obj raw : string) in");
   ignore (HxArray.push __arr_2271 "  if HxString.length trimmed = 0 then portable else");
   ignore (HxArray.push __arr_2271 "  let normalized = HxString.toLowerCase trimmed () in");
   ignore (HxArray.push __arr_2271 "  match normalized with");
@@ -3421,7 +3433,7 @@ let patchStage3OcamlProfileShimForStage3 = fun outAbs -> try let __fallback_resu
     raise (HxRuntime.Hx_return (Obj.repr shimFile))
   )) else ());
   let contents = (HxFile.getContent (shimPath : string) : string) in (
-    ignore (if HxString.indexOf contents "let toDefineValue" 0 = -1 || HxString.indexOf contents "let fromDefineValue" 0 = -1 then ignore (HxFile.saveContent (shimPath : string) (source : string)) else ());
+    ignore (if HxString.indexOf contents "let toDefineValue" 0 = -1 || HxString.indexOf contents "let fromDefineValue" 0 = -1 || HxString.indexOf contents "StringTools.trim" 0 <> -1 then ignore (HxFile.saveContent (shimPath : string) (source : string)) else ());
     Obj.magic (HxRuntime.hx_null)
   )
 ) in Obj.magic __fallback_result_2274 with
@@ -19282,8 +19294,8 @@ ignore (patchStage3MacroContextLoadShimForStage3 (outAbs : string));
                                           ignore (HxArray.push __arr_3148 outAbs);
                                           ignore (HxArray.push __arr_3148 shimFile);
                                           __arr_3148
-                                        ))) : string) in try if HxFileSystem.exists shimPath then ignore (let contents = (HxFile.getContent (shimPath : string) : string) in let trimmed = (StringTools.trim (contents : string) : string) in let hasParse = StringTools.startsWith (trimmed : string) ("let parse" : string) || StringTools.startsWith (trimmed : string) ("let rec parse" : string) || HxString.indexOf contents "\nlet parse" 0 <> -1 || HxString.indexOf contents "\nlet rec parse" 0 <> -1 in if not (hasParse) then ignore (HxFile.saveContent (shimPath : string) (HxString.toStdString contents ^ "\n\nlet parse (_s : string) : _ = (Obj.magic 0)\n" : string)) else ()) else ignore ((
-                                          ignore (HxFile.saveContent (shimPath : string) (("(* hxhx(stage3) bootstrap shim: haxe.xml.Parser.parse *)\n" ^ "[@@@warning \"-21-26\"]\n") ^ "let parse (_s : string) : _ = (Obj.magic 0)\n" : string));
+                                        ))) : string) in let shimSource = ((("(* hxhx(stage3) bootstrap shim: haxe.xml.Parser.parse *)\n" ^ "[@@@warning \"-21-26\"]\n") ^ "let escapes : _ = (Obj.magic 0)\n") ^ "let parse (_s : string) : _ = (Obj.magic 0)\n" : string) in try if HxFileSystem.exists shimPath then ignore (let contents = (HxFile.getContent (shimPath : string) : string) in let trimmed = (StringTools.trim (contents : string) : string) in let hasParse = StringTools.startsWith (trimmed : string) ("let parse" : string) || StringTools.startsWith (trimmed : string) ("let rec parse" : string) || HxString.indexOf contents "\nlet parse" 0 <> -1 || HxString.indexOf contents "\nlet rec parse" 0 <> -1 in let hasUnsafePlaceholderStatic = HxString.indexOf contents "HxAnon.get" 0 <> -1 && HxString.indexOf contents "let escapes" 0 <> -1 in if not (hasParse) || hasUnsafePlaceholderStatic then ignore (HxFile.saveContent (shimPath : string) (shimSource : string)) else ()) else ignore ((
+                                          ignore (HxFile.saveContent (shimPath : string) (shimSource : string));
                                           HxArray.push generatedPaths shimFile
                                         )) with
                                           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)

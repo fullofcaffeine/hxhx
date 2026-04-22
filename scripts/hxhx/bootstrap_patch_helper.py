@@ -551,6 +551,8 @@ def cmd_patch_stage1_std_root_termination(argv: list[str]) -> None:
 
     match = pattern.search(src)
     if match is None:
+        if "HxFileSystem.absolutePath (Haxe_io_Path.join" in src or "HxFileSystem.absolutePath parentInput" in src:
+            return
         fail("build-hxhx: failed to locate bootstrap Stage1 std-root repair anchor\n")
     assign = match.group("assign")
     arr = match.group("arr")

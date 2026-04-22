@@ -111,6 +111,15 @@ class M14Stage1StdRootInferenceIntegrationTest {
 			assertTrue(hasValue(shortDceDefines, "dce=no"), "expected short -dce to seed dce define");
 			assertTrue(Stage1Args.getRoots(shortDceParsed).length == 0, "short -dce value should not be treated as a positional root");
 
+			final noHaxercDir = Path.join([tmpRoot, "no_haxerc"]);
+			FileSystem.createDirectory(noHaxercDir);
+			Sys.putEnv("HAXE_STD_PATH", "");
+			Sys.putEnv("HAXEPATH", "");
+			final noHaxercParsed = Stage1Args.parse(["--cwd", noHaxercDir, "--run", "Main", "arg1", "--js", "out.js"], true);
+			assertTrue(noHaxercParsed != null, "expected relative no-.haxerc cwd parse to terminate");
+			assertTrue(Stage1Args.getMain(noHaxercParsed) == "Main", "expected --run to set the main module");
+			assertTrue(Stage1Args.getRoots(noHaxercParsed).length == 0, "runtime args after --run should not become roots");
+
 			var found = false;
 			for (cp in classPaths) {
 				if (Path.normalize(cp) == expectedStd) {

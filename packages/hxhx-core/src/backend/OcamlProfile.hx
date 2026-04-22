@@ -24,10 +24,24 @@ enum abstract OcamlProfile(String) from String to String {
 	var Portable = "portable";
 	var Metal = "metal";
 
+	static function isTrimCode(code:Int):Bool {
+		return code == " ".code || code == "\t".code || code == "\r".code || code == "\n".code;
+	}
+
+	static function trimAscii(value:String):String {
+		var start = 0;
+		var end = value.length;
+		while (start < end && isTrimCode(value.charCodeAt(start)))
+			start++;
+		while (end > start && isTrimCode(value.charCodeAt(end - 1)))
+			end--;
+		return value.substr(start, end - start);
+	}
+
 	public static function fromDefineValue(raw:Null<String>):OcamlProfile {
 		if (raw == null)
 			return Portable;
-		final trimmed = StringTools.trim(raw);
+		final trimmed = trimAscii(raw);
 		if (trimmed.length == 0)
 			return Portable;
 		final normalized = trimmed.toLowerCase();

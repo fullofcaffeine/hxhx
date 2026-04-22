@@ -6486,9 +6486,21 @@ class EmitterStage {
 			"[@@@warning \"-20-27-32\"]",
 			"let portable = \"portable\"",
 			"let metal = \"metal\"",
+			"let is_trim_code (code : int) : bool =",
+			"  code = 32 || code = 9 || code = 13 || code = 10",
+			"let trim_ascii (value : string) : string =",
+			"  let start = ref 0 in",
+			"  let stop = ref (HxString.length value) in",
+			"  while !start < !stop && is_trim_code (HxRuntime.nullable_int_unwrap (HxString.charCodeAt value !start)) do",
+			"    incr start",
+			"  done;",
+			"  while !stop > !start && is_trim_code (HxRuntime.nullable_int_unwrap (HxString.charCodeAt value (!stop - 1))) do",
+			"    decr stop",
+			"  done;",
+			"  HxString.substr value !start (!stop - !start)",
 			"let fromDefineValue (raw : Obj.t) : string =",
 			"  if raw == HxRuntime.hx_null then portable else",
-			"  let trimmed = StringTools.trim (Obj.obj raw : string) in",
+			"  let trimmed = trim_ascii (Obj.obj raw : string) in",
 			"  if HxString.length trimmed = 0 then portable else",
 			"  let normalized = HxString.toLowerCase trimmed () in",
 			"  match normalized with",
@@ -6511,7 +6523,9 @@ class EmitterStage {
 			return shimFile;
 		}
 		final contents = sys.io.File.getContent(shimPath);
-		if (contents.indexOf("let toDefineValue") == -1 || contents.indexOf("let fromDefineValue") == -1)
+		if (contents.indexOf("let toDefineValue") == -1
+			|| contents.indexOf("let fromDefineValue") == -1
+			|| contents.indexOf("StringTools.trim") != -1)
 			sys.io.File.saveContent(shimPath, source);
 		return null;
 	}
@@ -8446,6 +8460,10 @@ class EmitterStage {
 			final shimName = "Haxe_xml_Parser";
 			final shimFile = shimName + ".ml";
 			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+			final shimSource = "(* hxhx(stage3) bootstrap shim: haxe.xml.Parser.parse *)\n"
+				+ "[@@@warning \"-21-26\"]\n"
+				+ "let escapes : _ = (Obj.magic 0)\n"
+				+ "let parse (_s : string) : _ = (Obj.magic 0)\n";
 			try {
 				if (sys.FileSystem.exists(shimPath)) {
 					final contents = sys.io.File.getContent(shimPath);
@@ -8454,13 +8472,11 @@ class EmitterStage {
 						|| StringTools.startsWith(trimmed, "let rec parse")
 						|| contents.indexOf("\nlet parse") != -1
 						|| contents.indexOf("\nlet rec parse") != -1;
-					if (!hasParse) {
-						sys.io.File.saveContent(shimPath, contents + "\n\nlet parse (_s : string) : _ = (Obj.magic 0)\n");
-					}
+					final hasUnsafePlaceholderStatic = contents.indexOf("HxAnon.get") != -1 && contents.indexOf("let escapes") != -1;
+					if (!hasParse || hasUnsafePlaceholderStatic)
+						sys.io.File.saveContent(shimPath, shimSource);
 				} else {
-					sys.io.File.saveContent(shimPath,
-						"(* hxhx(stage3) bootstrap shim: haxe.xml.Parser.parse *)\n" + "[@@@warning \"-21-26\"]\n" +
-						"let parse (_s : string) : _ = (Obj.magic 0)\n");
+					sys.io.File.saveContent(shimPath, shimSource);
 					generatedPaths.push(shimFile);
 				}
 			} catch (_:haxe.io.Error) {} catch (_:String) {}
