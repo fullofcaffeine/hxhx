@@ -1826,9 +1826,11 @@ class SourceNativeBackend {
 
 	static function tryCatchRawExpr(target:SourceNativeTarget, raw:String):String {
 		return switch (target) {
+			case Python:
+				pythonTryCatchRawExpr(raw);
 			case Php:
 				phpTryCatchRawExpr(raw);
-			case Python, Java, Cs, Lua:
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: ETryCatchRaw";
 		};
 	}
@@ -1956,6 +1958,45 @@ class SourceNativeBackend {
 				renderPhpTryExpr(tryBody, catches);
 			case _:
 				throw "PHP source backend MVP unsupported expression: ETryCatchRaw";
+		};
+	}
+
+	static function pythonTryCatchRawExpr(raw:String):String {
+		if (raw == null || raw.length == 0 || StringTools.startsWith(raw, "opaque_block_expr:"))
+			throw "Python source backend MVP unsupported expression: ETryCatchRaw";
+		final stmts = HxParser.parseFunctionBodyText(raw);
+		if (stmts.length != 1)
+			throw "Python source backend MVP unsupported expression: ETryCatchRaw";
+		return switch (stmts[0]) {
+			case STry(tryBody, catches, _):
+				renderPythonTryExpr(tryBody, catches);
+			case _:
+				throw "Python source backend MVP unsupported expression: ETryCatchRaw";
+		};
+	}
+
+	static function renderPythonTryExpr(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>):String {
+		final tryExpr = pythonReturningExpr(tryBody);
+		if (catches == null || catches.length == 0)
+			return "__hxhx_try(lambda: " + tryExpr + ", lambda __hx_err: __hxhx_throw(__hx_err))";
+		final c = catches[0];
+		final catchName = sanitizeTypeName(c.name);
+		final catchExpr = pythonReturningExpr(c.body);
+		return "__hxhx_try(lambda: " + tryExpr + ", lambda " + catchName + ": " + catchExpr + ")";
+	}
+
+	static function pythonReturningExpr(stmt:HxStmt):String {
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				if (stmts == null || stmts.length == 0) defaultValue(Python); else pythonReturningExpr(stmts[stmts.length - 1]);
+			case SExpr(expr, _) | SReturn(expr, _):
+				renderExpr(Python, expr);
+			case SReturnVoid(_):
+				defaultValue(Python);
+			case SThrow(expr, _):
+				"__hxhx_throw(" + renderExpr(Python, expr) + ")";
+			case _:
+				throw "Python source backend MVP unsupported expression: ETryCatchRaw";
 		};
 	}
 
@@ -5303,6 +5344,15 @@ class SourceNativeBackend {
 				lines.push("");
 				lines.push("def __hxhx_key_value_iter(value):");
 				lines.push("    return value.items() if hasattr(value, \"items\") else enumerate(value)");
+				lines.push("");
+				lines.push("def __hxhx_throw(value):");
+				lines.push("    raise value");
+				lines.push("");
+				lines.push("def __hxhx_try(try_fn, catch_fn):");
+				lines.push("    try:");
+				lines.push("        return try_fn()");
+				lines.push("    except Exception as e:");
+				lines.push("        return catch_fn(e)");
 				lines.push("");
 				lines.push("def __hxhx_ushr(value, bits):");
 				lines.push("    return ((value & 0xffffffff) >> (bits & 31))");

@@ -1467,6 +1467,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function pythonTryCatchRawExpressionProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var caught = try throw new Exception(\"boom\") catch (e:Exception) e;",
+			"    Sys.println(Std.string(caught));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeCheckProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -3431,6 +3445,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonTryCatchRawExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_try_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(pythonTryCatchRawExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def __hxhx_throw(value):", "Python try/catch expressions should emit the throw expression helper");
+		assertContains(content, "def __hxhx_try(try_fn, catch_fn):", "Python try/catch expressions should emit the expression helper");
+		assertContains(content, "caught = __hxhx_try(lambda: __hxhx_throw(Exception(\"boom\")), lambda e: e)",
+			"Python raw try/catch expressions should lower through lambda-based expression helpers");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperInstanceFieldEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3854,6 +3883,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpSuperProperty();
 		assertPhpForKeyValue();
 		assertPythonForKeyValue();
+		assertPythonTryCatchRawExpression();
 		assertPhpTypeCheck();
 		assertPhpShiftAssignment();
 		assertPhpNullCoalescing();
