@@ -5025,9 +5025,15 @@ class SourceNativeBackend {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
 		final pending = new Array<HxClassDecl>();
+		var sawStdDateTools = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
-			if (isStdSourceFile(filePath))
+			if (isStdSourceFile(filePath)) {
+				for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+					if (sanitizePythonIdentifier(HxClassDecl.getName(cls)) == "DateTools")
+						sawStdDateTools = true;
+				}
 				return;
+			}
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 				if (isCompileTimeOnlySupportClass(cls))
@@ -5073,8 +5079,13 @@ class SourceNativeBackend {
 				break;
 			}
 		}
-		if (needsValueExceptionBase && !pendingNames.exists("ValueException"))
+		if (sawStdDateTools && !pendingNames.exists("DateTools"))
+			appendPythonDateToolsSupport(out);
+		if (needsValueExceptionBase && !pendingNames.exists("ValueException")) {
+			if (out.length > 0)
+				out.push("");
 			appendPythonValueExceptionBase(out);
+		}
 		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
 			if (out.length > 0)
@@ -5089,6 +5100,25 @@ class SourceNativeBackend {
 				out.push(line);
 		}
 		return out;
+	}
+
+	static function appendPythonDateToolsSupport(out:Array<String>):Void {
+		out.push("class DateTools:");
+		out.push("    @staticmethod");
+		out.push("    def seconds(n):");
+		out.push("        return (n * 1000.0)");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def minutes(n):");
+		out.push("        return (n * 60.0 * 1000.0)");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def hours(n):");
+		out.push("        return (n * 60.0 * 60.0 * 1000.0)");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def days(n):");
+		out.push("        return (n * 24.0 * 60.0 * 60.0 * 1000.0)");
 	}
 
 	static function appendPythonValueExceptionBase(out:Array<String>):Void {

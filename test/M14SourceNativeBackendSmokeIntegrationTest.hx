@@ -1925,6 +1925,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonStdDateToolsSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_std_datetools_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EField(EIdent("InitBase"), "sinline")])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final staticInit = new HxFieldDecl("sinline", HxVisibility.Public, true, "Float", ECall(EField(EIdent("DateTools"), "minutes"), [EInt(1)]));
+		final initBaseClass = new HxClassDecl("InitBase", false, [], [staticInit]);
+		final initBaseDecl = new HxModuleDecl("", [], initBaseClass, [initBaseClass], false, false);
+		final stdMinutesFn = new HxFunctionDecl("minutes", HxVisibility.Public, true, [new HxFunctionArg("value", "Float", NoDefault)], "Float",
+			[SExpr(EUnsupported("std-datetools-source-should-not-render"), pos)], "");
+		final dateToolsClass = new HxClassDecl("DateTools", false, [stdMinutesFn]);
+		final dateToolsDecl = new HxModuleDecl("", [], dateToolsClass, [dateToolsClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("InitBase.hx", initBaseDecl),
+			typedSyntheticModule("/repo/std/DateTools.hx", dateToolsDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class DateTools:", "Python std support should provide a small DateTools helper when std DateTools is skipped");
+		assertContains(content, "def minutes(n):", "Python std DateTools helper should include minute conversion");
+		assertContains(content, "InitBase.sinline = DateTools.minutes(1)", "Python static initializer should be able to reference std DateTools");
+		assertNotContains(content, "std-datetools-source-should-not-render", "Python DateTools support should not dump the upstream std source body");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python std DateTools helper should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "60000", "generated Python should observe DateTools.minutes(1) in milliseconds");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4404,6 +4442,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonSkipsStdSupportClasses();
 		assertPythonSkipsMacroSupportMethods();
 		assertPythonStaticInitializersAfterSupportClasses();
+		assertPythonStdDateToolsSupport();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
