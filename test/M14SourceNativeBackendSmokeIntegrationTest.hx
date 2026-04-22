@@ -3897,6 +3897,69 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonMapRuntimeShim():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_map_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("grid", "", ENew("Map", []), pos),
+			SExpr(EBinop("=", EArrayAccess(EIdent("grid"), ENew("Point", [EInt(0), EInt(0)])), EString("a")), pos),
+			SExpr(EBinop("=", EArrayAccess(EIdent("grid"), ENew("Point", [EInt(0), EInt(1)])), EString("b")), pos),
+			SExpr(EBinop("=", EArrayAccess(EIdent("grid"), ENew("Point", [EInt(1), EInt(0)])), EString("c")), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EArrayAccess(EIdent("grid"), ENew("Point", [EInt(1), EInt(0)]))]), pos),
+			SVar("count", "", EInt(0), pos),
+			SForKeyValue("point", "label", EIdent("grid"), SBlock([
+				SIf(ECall(EField(EIdent("point"), "equals"), [ENew("Point", [EInt(0), EInt(1)])]),
+					SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("label")]), pos), null, pos),
+				SExpr(EBinop("+=", EIdent("count"), EInt(1)), pos)
+			], pos), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EIdent("count")])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final pointCtor = new HxFunctionDecl("new", HxVisibility.Public, false, [
+			new HxFunctionArg("x", "Int", NoDefault),
+			new HxFunctionArg("y", "Int", NoDefault)
+		], "Void", [
+			SExpr(EBinop("=", EField(EThis, "x"), EIdent("x")), pos),
+			SExpr(EBinop("=", EField(EThis, "y"), EIdent("y")), pos)
+		], "");
+		final equalsFn = new HxFunctionDecl("equals", HxVisibility.Public, false, [new HxFunctionArg("point", "Point", NoDefault)], "Bool", [
+			SReturn(EBinop("&&", EBinop("==", EField(EThis, "x"), EField(EIdent("point"), "x")),
+				EBinop("==", EField(EThis, "y"), EField(EIdent("point"), "y"))),
+				pos)
+		], "");
+		final hashCodeFn = new HxFunctionDecl("hashCode", HxVisibility.Public, false, [], "Int", [
+			SReturn(EBinop("+", EField(EThis, "x"), EBinop("*", EInt(10000), EField(EThis, "y"))), pos)
+		], "");
+		final pointClass = new HxClassDecl("Point", false, [pointCtor, equalsFn, hashCodeFn], [
+			new HxFieldDecl("x", HxVisibility.Public, false, "Int", null),
+			new HxFieldDecl("y", HxVisibility.Public, false, "Int", null)
+		]);
+		final pointDecl = new HxModuleDecl("", [], pointClass, [pointClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("Point.hx", pointDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Map:", "Python source backend should emit a minimal Map runtime helper");
+		assertContains(content, "def __hx_key_equals(self, left, right):", "Python Map helper should compare object keys with equals when available");
+		assertContains(content, "grid = Map()", "Python Map construction should lower to the runtime shim");
+		assertContains(content, "grid[Point(0, 0)] = \"a\"", "Python Map bracket writes should dispatch through __setitem__");
+		assertContains(content, "print(grid[Point(1, 0)])", "Python Map bracket reads should dispatch through index access");
+		assertContains(content, "for point, label in hxhx_key_value_iter(grid):", "Python Map key/value loops should use the runtime items iterator");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python Map runtime should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "c\nb\n3", "generated Python should read object keys and iterate all Map entries");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertConstructorExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_constructor_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4583,6 +4646,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
+		assertPythonMapRuntimeShim();
 		assertConstructorExpression();
 		assertForInStatement();
 		assertBinaryOperators();

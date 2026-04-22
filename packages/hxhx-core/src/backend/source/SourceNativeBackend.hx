@@ -2869,12 +2869,22 @@ class SourceNativeBackend {
 		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
 		final safeType = sanitizeTypePath(target, typePath);
 		return switch (target) {
-			case Python: safeType + "(" + rendered + ")";
+			case Python:
+				if (pythonRuntimeMapType(typePath)) "Map(" + rendered + ")"; else safeType + "(" + rendered + ")";
 			case Java: "new " + safeType + "(" + rendered + ")";
 			case Cs: "new " + safeType + "(" + rendered + ")";
 			case Php:
 				if (typePath == "Array") "[]"; else if (phpRuntimeMapType(typePath)) "new Map(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
 			case Lua: safeType + ".new(" + rendered + ")";
+		};
+	}
+
+	static function pythonRuntimeMapType(typePath:String):Bool {
+		return switch (typePath) {
+			case "Map" | "haxe.ds.StringMap" | "haxe.ds.IntMap" | "haxe.ds.ObjectMap" | "haxe.ds.HashMap":
+				true;
+			case _:
+				false;
 		};
 	}
 
@@ -5895,6 +5905,74 @@ class SourceNativeBackend {
 				lines.push("    obj = type(\"HxAnon\", (), {})()");
 				lines.push("    obj.__dict__.update(kwargs)");
 				lines.push("    return obj");
+				lines.push("");
+				lines.push("class Map:");
+				lines.push("    def __init__(self, pairs=None):");
+				lines.push("        self.__hx_entries = []");
+				lines.push("        if pairs is not None:");
+				lines.push("            for key, value in pairs:");
+				lines.push("                self.set(key, value)");
+				lines.push("");
+				lines.push("    def __hx_key_equals(self, left, right):");
+				lines.push("        if left is right:");
+				lines.push("            return True");
+				lines.push("        if hasattr(left, \"equals\"):");
+				lines.push("            try:");
+				lines.push("                return bool(left.equals(right))");
+				lines.push("            except Exception:");
+				lines.push("                pass");
+				lines.push("        try:");
+				lines.push("            return left == right");
+				lines.push("        except Exception:");
+				lines.push("            return False");
+				lines.push("");
+				lines.push("    def __hx_find_index(self, key):");
+				lines.push("        for index, pair in enumerate(self.__hx_entries):");
+				lines.push("            if self.__hx_key_equals(pair[0], key):");
+				lines.push("                return index");
+				lines.push("        return -1");
+				lines.push("");
+				lines.push("    def set(self, key, value):");
+				lines.push("        index = self.__hx_find_index(key)");
+				lines.push("        if index >= 0:");
+				lines.push("            self.__hx_entries[index] = (self.__hx_entries[index][0], value)");
+				lines.push("        else:");
+				lines.push("            self.__hx_entries.append((key, value))");
+				lines.push("");
+				lines.push("    def get(self, key):");
+				lines.push("        index = self.__hx_find_index(key)");
+				lines.push("        return self.__hx_entries[index][1] if index >= 0 else None");
+				lines.push("");
+				lines.push("    def exists(self, key):");
+				lines.push("        return self.__hx_find_index(key) >= 0");
+				lines.push("");
+				lines.push("    def remove(self, key):");
+				lines.push("        index = self.__hx_find_index(key)");
+				lines.push("        if index < 0:");
+				lines.push("            return False");
+				lines.push("        self.__hx_entries.pop(index)");
+				lines.push("        return True");
+				lines.push("");
+				lines.push("    def keys(self):");
+				lines.push("        return [pair[0] for pair in self.__hx_entries]");
+				lines.push("");
+				lines.push("    def iterator(self):");
+				lines.push("        return [pair[1] for pair in self.__hx_entries]");
+				lines.push("");
+				lines.push("    def items(self):");
+				lines.push("        return list(self.__hx_entries)");
+				lines.push("");
+				lines.push("    def __setitem__(self, key, value):");
+				lines.push("        self.set(key, value)");
+				lines.push("");
+				lines.push("    def __getitem__(self, key):");
+				lines.push("        index = self.__hx_find_index(key)");
+				lines.push("        if index < 0:");
+				lines.push("            raise KeyError(key)");
+				lines.push("        return self.__hx_entries[index][1]");
+				lines.push("");
+				lines.push("    def __len__(self):");
+				lines.push("        return len(self.__hx_entries)");
 				lines.push("");
 				lines.push("def hxhx_post_update_attr(obj, field, delta):");
 				lines.push("    old = getattr(obj, field)");
