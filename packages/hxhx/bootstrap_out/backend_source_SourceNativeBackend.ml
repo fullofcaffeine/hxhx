@@ -6418,7 +6418,7 @@ and anonExpr = fun target fieldNames fieldValues -> let tempResult = ref ("" : s
         ignore (let _g = ref 0 in let _g1 = count in while !_g < _g1 do ignore (let i = let __old_766 = !_g in let __new_767 = HxInt.add __old_766 1 in (
           ignore (_g := __new_767);
           __old_766
-        ) in HxArray.push pairs ((HxString.toStdString (sanitizeTypeName (HxArray.get (Obj.magic fieldNames) i : string)) ^ "=") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic (HxArray.get (Obj.magic fieldValues) i))))) done);
+        ) in HxArray.push pairs ((HxString.toStdString (sanitizePythonIdentifier (HxArray.get (Obj.magic fieldNames) i : string)) ^ "=") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic (HxArray.get (Obj.magic fieldValues) i))))) done);
         let __assign_768 = (("__hxhx_anon(" ^ HxString.toStdString (HxArray.join pairs ", " (fun x -> x))) ^ ")" : string) in (
           tempResult := __assign_768;
           __assign_768

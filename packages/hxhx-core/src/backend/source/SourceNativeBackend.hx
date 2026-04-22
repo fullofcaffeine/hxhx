@@ -1969,7 +1969,7 @@ class SourceNativeBackend {
 				final pairs = new Array<String>();
 				final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
 				for (i in 0...count)
-					pairs.push(sanitizeTypeName(fieldNames[i]) + "=" + renderExpr(target, fieldValues[i]));
+					pairs.push(sanitizePythonIdentifier(fieldNames[i]) + "=" + renderExpr(target, fieldValues[i]));
 				"__hxhx_anon(" + pairs.join(", ") + ")";
 			case Php:
 				final pairs = new Array<String>();

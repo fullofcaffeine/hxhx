@@ -2552,6 +2552,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonAnonymousObjectReservedFieldSyntax():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_anon_reserved_field_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("info", "", EAnon(["def"], [EInt(1)]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EField(EIdent("info"), "def")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "info = __hxhx_anon(def_=1)", "Python anonymous object fields should sanitize reserved keyword names");
+		assertContains(content, "print(info.def_)", "Python anonymous object field access should use the same sanitized name");
+		assertNotContains(content, "__hxhx_anon(def=1)", "Python should not emit reserved keywords as anonymous-object kwargs");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpAnonymousObjectExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_anon_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4214,6 +4236,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertArrayComprehensionExpression();
 		assertGuardedArrayComprehensionExpression();
 		assertAnonymousObjectExpression();
+		assertPythonAnonymousObjectReservedFieldSyntax();
 		assertPhpAnonymousObjectExpression();
 		assertLoopControlStatements();
 		assertPostfixExpressions();
