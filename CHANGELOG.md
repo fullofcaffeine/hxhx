@@ -1,3 +1,13 @@
+## [0.15.1](https://github.com/fullofcaffeine/hxhx/compare/v0.15.0...v0.15.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* **cs:** allow no-package native externs ([b384da6](https://github.com/fullofcaffeine/hxhx/commit/b384da66fb3249a3b0b9a381c6016f05b0ca9108))
+* **java:** pass strict sys target gate ([2c1f95a](https://github.com/fullofcaffeine/hxhx/commit/2c1f95aebec2f85b9547adadbeae600d0adafef0))
+* **java:** run UtilityProcess sys helper ([c4d3f2d](https://github.com/fullofcaffeine/hxhx/commit/c4d3f2d485038c65fec458f2a5d6f4cca5f7eae2))
+* **stage3:** report dynamic emit exceptions ([0cc8524](https://github.com/fullofcaffeine/hxhx/commit/0cc85246427801ae5b4ec8340b140660956b6f3d))
+
 # [0.15.0](https://github.com/fullofcaffeine/hxhx/compare/v0.14.0...v0.15.0) (2026-04-03)
 
 
