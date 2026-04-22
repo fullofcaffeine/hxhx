@@ -5042,6 +5042,7 @@ class SourceNativeBackend {
 		var sawTestIssuesMacro = false;
 		var sawMacroCompiler = false;
 		var sawStdReflect = false;
+		var sawStdType = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			if (isStdSourceFile(filePath)) {
 				final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
@@ -5055,6 +5056,8 @@ class SourceNativeBackend {
 						sawMacroCompiler = true;
 					if ((packagePath == null || packagePath.length == 0) && className == "Reflect")
 						sawStdReflect = true;
+					if ((packagePath == null || packagePath.length == 0) && className == "Type")
+						sawStdType = true;
 				}
 				return;
 			}
@@ -5148,6 +5151,11 @@ class SourceNativeBackend {
 			if (out.length > 0)
 				out.push("");
 			appendPythonReflectSupport(out);
+		}
+		if (sawStdType && !pendingNames.exists("Type")) {
+			if (out.length > 0)
+				out.push("");
+			appendPythonTypeSupport(out);
 		}
 		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
@@ -5366,6 +5374,54 @@ class SourceNativeBackend {
 		out.push("    @staticmethod");
 		out.push("    def compare(left, right):");
 		out.push("        return (left > right) - (left < right)");
+	}
+
+	static function appendPythonTypeSupport(out:Array<String>):Void {
+		out.push("class Type:");
+		out.push("    @staticmethod");
+		out.push("    def resolveClass(name):");
+		out.push("        if name is None:");
+		out.push("            return None");
+		out.push("        return globals().get(str(name).split(\".\")[-1], None)");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def getClass(value):");
+		out.push("        if value is None:");
+		out.push("            return None");
+		out.push("        return value if isinstance(value, type) else value.__class__");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def getClassName(cls):");
+		out.push("        if cls is None:");
+		out.push("            return None");
+		out.push("        target = cls if isinstance(cls, type) else Type.getClass(cls)");
+		out.push("        return getattr(target, \"__name__\", str(target))");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def getInstanceFields(cls):");
+		out.push("        if cls is None:");
+		out.push("            return Array()");
+		out.push("        fields = []");
+		out.push("        for current in reversed(getattr(cls, \"__mro__\", [cls])):");
+		out.push("            for name, value in getattr(current, \"__dict__\", {}).items():");
+		out.push("                if name.startswith(\"__\") or isinstance(value, (staticmethod, classmethod)):");
+		out.push("                    continue");
+		out.push("                if name not in fields:");
+		out.push("                    fields.append(name)");
+		out.push("        return Array(fields)");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def getClassFields(cls):");
+		out.push("        if cls is None:");
+		out.push("            return Array()");
+		out.push("        fields = []");
+		out.push("        for current in reversed(getattr(cls, \"__mro__\", [cls])):");
+		out.push("            for name, value in getattr(current, \"__dict__\", {}).items():");
+		out.push("                if name.startswith(\"__\") or not isinstance(value, (staticmethod, classmethod)):");
+		out.push("                    continue");
+		out.push("                if name not in fields:");
+		out.push("                    fields.append(name)");
+		out.push("        return Array(fields)");
 	}
 
 	static function appendPythonValueExceptionBase(out:Array<String>):Void {

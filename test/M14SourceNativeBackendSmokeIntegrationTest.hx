@@ -2391,6 +2391,63 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonTypeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_type_support_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		function printContains(fieldName:String):HxStmt {
+			return SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				ECall(EField(EIdent("Std"), "string"), [ECall(EField(EIdent("fields"), "contains"), [EString(fieldName)])])
+			]), pos);
+		}
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("test", "", ENew("MyTest", []), pos),
+			SVar("cls", "", ECall(EField(EIdent("Type"), "getClass"), [EIdent("test")]), pos),
+			SVar("fields", "", ECall(EField(EIdent("Type"), "getInstanceFields"), [EIdent("cls")]), pos),
+			SVar("staticFields", "", ECall(EField(EIdent("Type"), "getClassFields"), [EIdent("cls")]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Type"), "getClassName"), [EIdent("cls")])]), pos),
+			printContains("setup"),
+			printContains("staticOnly"),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				ECall(EField(EIdent("Std"), "string"), [ECall(EField(EIdent("staticFields"), "contains"), [EString("staticOnly")])])
+			]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final setupFn = new HxFunctionDecl("setup", HxVisibility.Public, false, [], "Void", [SReturnVoid(pos)], "");
+		final staticOnlyFn = new HxFunctionDecl("staticOnly", HxVisibility.Public, true, [], "Void", [SReturnVoid(pos)], "");
+		final testClass = new HxClassDecl("MyTest", false, [setupFn, staticOnlyFn]);
+		final testDecl = new HxModuleDecl("", [], testClass, [testClass], false, false);
+		final valueArg = new HxFunctionArg("value", "Dynamic", NoDefault);
+		final typeFn = new HxFunctionDecl("getClass", HxVisibility.Public, true, [valueArg], "Dynamic",
+			[SExpr(EUnsupported("std-type-source-should-not-render"), pos)], "");
+		final typeClass = new HxClassDecl("Type", false, [typeFn]);
+		final typeDecl = new HxModuleDecl("", [], typeClass, [typeClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("MyTest.hx", testDecl),
+			typedSyntheticModule("/repo/std/Type.hx", typeDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Type:", "Python std Type fallback should emit when std Type is excluded from helper classes");
+		assertContains(content, "def getClass(value):", "Python std Type fallback should expose getClass");
+		assertContains(content, "def getClassName(cls):", "Python std Type fallback should expose getClassName");
+		assertContains(content, "def getInstanceFields(cls):", "Python std Type fallback should expose getInstanceFields");
+		assertContains(content, "def getClassFields(cls):", "Python std Type fallback should expose getClassFields");
+		assertNotContains(content, "std-type-source-should-not-render", "Python Type support should not dump the skipped std Type source body");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python Type fallback should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "MyTest\nTrue\nFalse\nTrue",
+				"generated Python Type fallback should name classes, include instance methods, and expose static fields separately");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4969,6 +5026,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonOptionalMethodArguments();
 		assertPythonSameClassInstanceMethodCall();
 		assertPythonReflectSupport();
+		assertPythonTypeSupport();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
