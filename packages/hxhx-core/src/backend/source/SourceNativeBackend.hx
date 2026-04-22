@@ -989,6 +989,14 @@ class SourceNativeBackend {
 	static function unsignedRightShiftAssignExpr(target:SourceNativeTarget, left:HxExpr, right:HxExpr):String {
 		final renderedRight = renderExpr(target, right);
 		return switch (target) {
+			case Python:
+				final lhs = switch (left) {
+					case EThis:
+						pythonThisValueExpr();
+					case _:
+						lvalueExpr(target, left);
+				};
+				lhs + " = " + unsignedRightShiftExpr(target, lhs, renderedRight);
 			case Php:
 				final lhs = switch (left) {
 					case EThis:
@@ -999,7 +1007,7 @@ class SourceNativeBackend {
 				lhs + " = " + unsignedRightShiftExpr(target, lhs, renderedRight);
 			case Java:
 				renderExpr(target, left) + " >>>= " + renderedRight;
-			case Python, Cs, Lua:
+			case Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported binary operator: >>>=";
 		};
 	}

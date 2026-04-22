@@ -3729,6 +3729,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonShiftAssignment():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_shift_assignment_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(phpShiftAssignmentProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "a <<= 2", "Python signed left-shift assignment should render directly");
+		assertContains(content, "a >>= 1", "Python signed right-shift assignment should render directly");
+		assertContains(content, "a = __hxhx_ushr(a, 1)", "Python unsigned right-shift assignment should reuse the unsigned-shift helper");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpNullCoalescing():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_null_coalescing_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3917,6 +3931,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTypeCheck();
 		assertPhpTypeCheck();
 		assertPhpShiftAssignment();
+		assertPythonShiftAssignment();
 		assertPhpNullCoalescing();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpUnitLocalStaticFallback();
