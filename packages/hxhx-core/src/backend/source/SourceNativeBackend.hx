@@ -930,6 +930,14 @@ class SourceNativeBackend {
 		return "__hxhx_update_index(" + receiver + ", " + index + ", " + quoteString(op) + ", " + value + ")";
 	}
 
+	static function pythonNullCoalesceAttrExpr(receiver:String, field:String, value:String):String {
+		return "__hxhx_null_coalesce_attr(" + receiver + ", " + quoteString(field) + ", " + value + ")";
+	}
+
+	static function pythonNullCoalesceIndexExpr(receiver:String, index:String, value:String):String {
+		return "__hxhx_null_coalesce_index(" + receiver + ", " + index + ", " + value + ")";
+	}
+
 	static function phpModuloAssignExpr(left:HxExpr, right:HxExpr):String {
 		final target = Php;
 		final a = lvalueExpr(target, left);
@@ -980,12 +988,45 @@ class SourceNativeBackend {
 	static function nullCoalesceAssignExpr(target:SourceNativeTarget, left:HxExpr, right:HxExpr):String {
 		return switch (target) {
 			case Python:
-				final a = lvalueExpr(target, left);
-				a + " = (" + a + " if " + a + " is not None else " + renderExpr(target, right) + ")";
+				pythonNullCoalesceAssignExpr(left, right);
 			case Php:
 				lvalueExpr(target, left) + " ??= " + renderExpr(target, right);
 			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported binary operator: ??=";
+		};
+	}
+
+	static function pythonNullCoalesceAssignExpr(left:HxExpr, right:HxExpr):String {
+		final renderedRight = renderExpr(Python, right);
+		return switch (left) {
+			case EIdent(name):
+				final targetName = valueName(Python, name);
+				"(" + targetName + " := (" + targetName + " if " + targetName + " is not None else " + renderedRight + "))";
+			case EThis:
+				pythonNullCoalesceAttrExpr("self", "__hx_value", renderedRight);
+			case EField(receiver, field):
+				pythonNullCoalesceAttrExpr(renderExpr(Python, receiver), sanitizePythonIdentifier(field), renderedRight);
+			case EArrayAccess(receiver, index):
+				pythonNullCoalesceIndexExpr(renderExpr(Python, receiver), renderExpr(Python, index), renderedRight);
+			case _:
+				throw "Python source backend MVP unsupported null-coalescing assignment target: " + exprKind(left);
+		};
+	}
+
+	static function pythonNullCoalesceAssignStmt(left:HxExpr, right:HxExpr):String {
+		final renderedRight = renderExpr(Python, right);
+		return switch (left) {
+			case EIdent(name):
+				final targetName = valueName(Python, name);
+				targetName + " = (" + targetName + " if " + targetName + " is not None else " + renderedRight + ")";
+			case EThis:
+				pythonNullCoalesceAttrExpr("self", "__hx_value", renderedRight);
+			case EField(receiver, field):
+				pythonNullCoalesceAttrExpr(renderExpr(Python, receiver), sanitizePythonIdentifier(field), renderedRight);
+			case EArrayAccess(receiver, index):
+				pythonNullCoalesceIndexExpr(renderExpr(Python, receiver), renderExpr(Python, index), renderedRight);
+			case _:
+				throw "Python source backend MVP unsupported null-coalescing assignment target: " + exprKind(left);
 		};
 	}
 
@@ -3177,6 +3218,8 @@ class SourceNativeBackend {
 				final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 				final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
 				return [indent + varDecl(target, cleanName, rhs)];
+			case SExpr(EBinop("??=", left, right), _) if (target == Python):
+				return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
 			case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
 				return [indent + exprStmt(target, pythonAssignmentStmt(op, left, right))];
 			case SExpr(EBinop("=", EIdent(name), rhsExpr), _) if (target == Php && localTypes.exists(sanitizeTypeName(name))):
@@ -5667,6 +5710,20 @@ class SourceNativeBackend {
 				lines.push("    return value");
 				lines.push("");
 				lines.push("def __hxhx_assign_index(obj, index, value):");
+				lines.push("    obj[index] = value");
+				lines.push("    return value");
+				lines.push("");
+				lines.push("def __hxhx_null_coalesce_attr(obj, field, value):");
+				lines.push("    current = getattr(obj, field)");
+				lines.push("    if current is not None:");
+				lines.push("        return current");
+				lines.push("    setattr(obj, field, value)");
+				lines.push("    return value");
+				lines.push("");
+				lines.push("def __hxhx_null_coalesce_index(obj, index, value):");
+				lines.push("    current = obj[index]");
+				lines.push("    if current is not None:");
+				lines.push("        return current");
 				lines.push("    obj[index] = value");
 				lines.push("    return value");
 				lines.push("");

@@ -3842,6 +3842,32 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonNullCoalescingAssignmentExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_null_coalescing_assign_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function eq(left:Int, right:Int):Void {}",
+			"  static function main() {",
+			"    var a:Null<Int> = null;",
+			"    eq(a ??= 5, 5);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "eq((a := (a if a is not None else 5)), 5)",
+			"Python null-coalescing assignment expressions should lower to parseable value-returning expressions");
+		assertNotContains(content, "eq(a = (a if a is not None else 5), 5)", "Python should not emit assignment syntax inside call arguments");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpCompileTimeOnlyMacroSupportSkipped():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_compile_time_macro_skip_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4248,6 +4274,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonShiftAssignment();
 		assertPhpNullCoalescing();
 		assertPythonNullCoalescing();
+		assertPythonNullCoalescingAssignmentExpression();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();
