@@ -3075,12 +3075,16 @@ class SourceNativeBackend {
 		final childIndent = indent + indentStep(target);
 		final out = new Array<String>();
 		switch (target) {
+			case Python:
+				out.push(indent + "for " + keyValue + ", " + itemValue + " in __hxhx_key_value_iter(" + source + "):");
+				for (line in renderStmt(target, body, childIndent))
+					out.push(line);
 			case Php:
 				out.push(indent + "foreach (" + source + " as " + keyValue + " => " + itemValue + ") {");
 				for (line in renderStmt(target, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
-			case Python, Java, Cs, Lua:
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported statement: SForKeyValue";
 		}
 		return out;
@@ -5296,6 +5300,9 @@ class SourceNativeBackend {
 				lines.push("    old = obj[index]");
 				lines.push("    obj[index] = (old + delta)");
 				lines.push("    return old");
+				lines.push("");
+				lines.push("def __hxhx_key_value_iter(value):");
+				lines.push("    return value.items() if hasattr(value, \"items\") else enumerate(value)");
 				lines.push("");
 				lines.push("def __hxhx_ushr(value, bits):");
 				lines.push("    return ((value & 0xffffffff) >> (bits & 31))");

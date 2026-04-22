@@ -1447,6 +1447,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function pythonForKeyValueProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values = [10, 20];",
+			"    for (index => value in values) {",
+			"      Sys.println(Std.string(index) + Std.string(value));",
+			"    }",
+			"    var lookup = [\"a\" => 1, \"b\" => 2];",
+			"    for (key => item in lookup) {",
+			"      Sys.println(key + Std.string(item));",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeCheckProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -3396,6 +3416,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonForKeyValue():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_for_key_value_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(pythonForKeyValueProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def __hxhx_key_value_iter(value):", "Python key/value loops should emit an iterator helper");
+		assertContains(content, "for index, value in __hxhx_key_value_iter(values):", "Python key/value loops over arrays should lower through the helper");
+		assertContains(content, "lookup = {\"a\": 1, \"b\": 2}", "Python map literals should provide dict inputs for key/value loops");
+		assertContains(content, "for key, item in __hxhx_key_value_iter(lookup):", "Python key/value loops over map literals should lower through the helper");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperInstanceFieldEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3818,6 +3853,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpSuperConstructor();
 		assertPhpSuperProperty();
 		assertPhpForKeyValue();
+		assertPythonForKeyValue();
 		assertPhpTypeCheck();
 		assertPhpShiftAssignment();
 		assertPhpNullCoalescing();
