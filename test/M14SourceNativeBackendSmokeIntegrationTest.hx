@@ -1963,6 +1963,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonPackageQualifiedSupportClassReference():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_package_class_ref_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EField(EIdent("DCEClass"), "c")])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("unit", [], mainClass, [mainClass], false, false);
+		final usedClass = new HxClassDecl("UsedReferenced2", false, []);
+		final usedDecl = new HxModuleDecl("unit", [], usedClass, [usedClass], false, false);
+		final staticInit = new HxFieldDecl("c", HxVisibility.Public, true, "Array<Dynamic>", EArrayDecl([ENull, EField(EIdent("unit"), "UsedReferenced2")]));
+		final dceClass = new HxClassDecl("DCEClass", false, [], [staticInit]);
+		final dceDecl = new HxModuleDecl("unit", [], dceClass, [dceClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("unit/Main.hx", mainDecl),
+			typedSyntheticModule("unit/UsedReferenced2.hx", usedDecl),
+			typedSyntheticModule("unit/DCEClass.hx", dceDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "unit = hxhx_anon()", "Python support should synthesize a package namespace for qualified references");
+		assertContains(content, "unit.UsedReferenced2 = UsedReferenced2", "Python support should expose flat helper classes through the package namespace");
+		assertContains(content, "DCEClass.c = [None, unit.UsedReferenced2]", "Python static initializer should preserve the package-qualified class reference");
+		assertTrue(content.indexOf("unit.UsedReferenced2 = UsedReferenced2") < content.indexOf("DCEClass.c = [None, unit.UsedReferenced2]"),
+			"Python package namespace aliases should be emitted before deferred static initializers");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python package-qualified class reference should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "UsedReferenced2", "generated Python should print the qualified class reference");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4443,6 +4480,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonSkipsMacroSupportMethods();
 		assertPythonStaticInitializersAfterSupportClasses();
 		assertPythonStdDateToolsSupport();
+		assertPythonPackageQualifiedSupportClassReference();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();

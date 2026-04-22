@@ -5025,6 +5025,7 @@ class SourceNativeBackend {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
 		final pending = new Array<HxClassDecl>();
+		final packageByClassName = new Map<String, String>();
 		var sawStdDateTools = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			if (isStdSourceFile(filePath)) {
@@ -5041,6 +5042,7 @@ class SourceNativeBackend {
 				if (className == mainClassName || seen.exists(className))
 					continue;
 				seen.set(className, true);
+				packageByClassName.set(className, HxModuleDecl.getPackagePath(moduleDecl));
 				pending.push(cls);
 			}
 		}
@@ -5093,11 +5095,72 @@ class SourceNativeBackend {
 			for (line in renderPythonHelperClass(cls, postStaticInitializers))
 				out.push(line);
 		}
+		final namespaceAliases = renderPythonPackageNamespaceAliases(ordered, packageByClassName);
+		if (namespaceAliases.length > 0) {
+			if (out.length > 0)
+				out.push("");
+			for (line in namespaceAliases)
+				out.push(line);
+		}
 		if (postStaticInitializers.length > 0) {
 			if (out.length > 0)
 				out.push("");
 			for (line in postStaticInitializers)
 				out.push(line);
+		}
+		return out;
+	}
+
+	static function renderPythonPackageNamespaceAliases(classes:Array<HxClassDecl>, packageByClassName:Map<String, String>):Array<String> {
+		final classesByPackage = new Map<String, Array<String>>();
+		final packageNames = new Array<String>();
+		for (cls in classes) {
+			final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
+			final packagePath = packageByClassName.get(className);
+			if (packagePath == null || packagePath.length == 0)
+				continue;
+			if (!classesByPackage.exists(packagePath)) {
+				classesByPackage.set(packagePath, []);
+				packageNames.push(packagePath);
+			}
+			classesByPackage.get(packagePath).push(className);
+		}
+		packageNames.sort(function(a, b) {
+			final depth = a.split(".").length - b.split(".").length;
+			if (depth != 0)
+				return depth;
+			if (a < b)
+				return -1;
+			return a > b ? 1 : 0;
+		});
+		final out = new Array<String>();
+		final emittedNamespaces = new Map<String, Bool>();
+		for (packagePath in packageNames) {
+			final parts = [
+				for (part in packagePath.split("."))
+					sanitizePythonIdentifier(part)
+			];
+			var namespaceExpr = "";
+			for (i in 0...parts.length) {
+				final part = parts[i];
+				final parentExpr = namespaceExpr;
+				namespaceExpr = namespaceExpr.length == 0 ? part : namespaceExpr + "." + part;
+				if (emittedNamespaces.exists(namespaceExpr))
+					continue;
+				emittedNamespaces.set(namespaceExpr, true);
+				if (parentExpr.length == 0)
+					out.push(namespaceExpr + " = hxhx_anon()");
+				else
+					out.push(parentExpr + "." + part + " = hxhx_anon()");
+			}
+			final classNames = classesByPackage.get(packagePath);
+			classNames.sort(function(a, b) {
+				if (a < b)
+					return -1;
+				return a > b ? 1 : 0;
+			});
+			for (className in classNames)
+				out.push(namespaceExpr + "." + className + " = " + className);
 		}
 		return out;
 	}
