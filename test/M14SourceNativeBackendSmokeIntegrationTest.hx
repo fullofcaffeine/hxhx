@@ -3108,6 +3108,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function javaFileSystemFullPathProgram(linkPath:String):GenIrProgram {
+		final escapedLink = StringTools.replace(linkPath, "\\", "\\\\");
+		final src = [
+			"import sys.FileSystem;",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(FileSystem.fullPath(\"" + escapedLink + "\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function emit(targetId:String, label:String, expectedFile:String, expectedNeedle:String):Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_" + targetId + "_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -5007,6 +5023,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertJavaFileSystemFullPathResolvesSymlink():Void {
+		if (!commandExists("javac") || !commandExists("jar") || !commandExists("java") || !commandExists("ln"))
+			return;
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_filesystem_" + Std.string(Date.now().getTime()));
+		function cleanup() {
+			if (commandExists("rm"))
+				Sys.command("rm", ["-rf", tmpRoot]);
+			else
+				deleteRecursive(tmpRoot);
+		}
+		cleanup();
+		final targetDir = Path.join([tmpRoot, "real-target"]);
+		final linkPath = Path.join([tmpRoot, "linked-target"]);
+		FileSystem.createDirectory(tmpRoot);
+		FileSystem.createDirectory(targetDir);
+		final linkCode = Sys.command("ln", ["-s", FileSystem.fullPath(targetDir), linkPath]);
+		if (linkCode != 0) {
+			cleanup();
+			return;
+		}
+		final outputDir = Path.join([tmpRoot, "bin", "java", "Main-Debug"]);
+		final backend = BackendRegistry.requireForTarget("java-native");
+		final result = backend.emit(javaFileSystemFullPathProgram(FileSystem.fullPath(linkPath)),
+			new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final sourcePath = Path.join([outputDir, "src", "sys", "FileSystem.java"]);
+		assertTrue(FileSystem.exists(sourcePath), "Java source backend should emit a sys.FileSystem support stub");
+		final run = commandOutput("java", ["-jar", result.entryPath]);
+		assertTrue(run.code == 0, "Java FileSystem.fullPath symlink case should run: " + run.stderr);
+		assertContains(Path.normalize(run.stdout), Path.normalize(FileSystem.fullPath(targetDir)),
+			"Java FileSystem.fullPath should resolve symlinks to their real target");
+		cleanup();
+	}
+
 	static function assertPhpTypeCheck():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -5604,6 +5653,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertSwitchStatement();
 		assertJavaArraySwitchStatement();
 		assertJavaUtilityProcessRuntime();
+		assertJavaFileSystemFullPathResolvesSymlink();
 		assertPhpSwitchStatement();
 	}
 }

@@ -4411,6 +4411,48 @@ class SourceNativeBackend {
 
 	static function appendJavaImportStubMembers(out:Array<String>, packagePath:String, className:String):Void {
 		final qualified = javaQualifiedClassName(packagePath, className);
+		if (qualified == "sys.FileSystem") {
+			out.push("  public static boolean exists(Object path) {");
+			out.push("    return java.nio.file.Files.exists(java.nio.file.Paths.get(String.valueOf(path)));");
+			out.push("  }");
+			out.push("  public static boolean isDirectory(Object path) {");
+			out.push("    return java.nio.file.Files.isDirectory(java.nio.file.Paths.get(String.valueOf(path)));");
+			out.push("  }");
+			out.push("  public static java.util.ArrayList<String> readDirectory(Object path) {");
+			out.push("    java.util.ArrayList<String> out = new java.util.ArrayList<String>();");
+			out.push("    try (java.nio.file.DirectoryStream<java.nio.file.Path> stream = java.nio.file.Files.newDirectoryStream(java.nio.file.Paths.get(String.valueOf(path)))) {");
+			out.push("      for (java.nio.file.Path entry : stream) out.add(entry.getFileName().toString());");
+			out.push("    } catch (Exception e) {");
+			out.push("      throw new RuntimeException(e);");
+			out.push("    }");
+			out.push("    return out;");
+			out.push("  }");
+			out.push("  public static void createDirectory(Object path) {");
+			out.push("    try { java.nio.file.Files.createDirectories(java.nio.file.Paths.get(String.valueOf(path))); }");
+			out.push("    catch (Exception e) { throw new RuntimeException(e); }");
+			out.push("  }");
+			out.push("  public static void deleteFile(Object path) {");
+			out.push("    try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(String.valueOf(path))); }");
+			out.push("    catch (Exception e) { throw new RuntimeException(e); }");
+			out.push("  }");
+			out.push("  public static void deleteDirectory(Object path) {");
+			out.push("    deleteFile(path);");
+			out.push("  }");
+			out.push("  public static void rename(Object from, Object to) {");
+			out.push("    try { java.nio.file.Files.move(java.nio.file.Paths.get(String.valueOf(from)), java.nio.file.Paths.get(String.valueOf(to)), java.nio.file.StandardCopyOption.REPLACE_EXISTING); }");
+			out.push("    catch (Exception e) { throw new RuntimeException(e); }");
+			out.push("  }");
+			out.push("  public static Object stat(Object path) {");
+			out.push("    return exists(path) ? new Object() : null;");
+			out.push("  }");
+			out.push("  public static String absolutePath(Object path) {");
+			out.push("    return java.nio.file.Paths.get(String.valueOf(path)).toAbsolutePath().normalize().toString();");
+			out.push("  }");
+			out.push("  public static String fullPath(Object path) {");
+			out.push("    try { return java.nio.file.Paths.get(String.valueOf(path)).toRealPath().toString(); }");
+			out.push("    catch (Exception e) { return absolutePath(path); }");
+			out.push("  }");
+		}
 		if (qualified == "haxe.CallStack") {
 			out.push("  public static Object exceptionStack(Object... args) {");
 			out.push("    return null;");

@@ -541,7 +541,7 @@ Notes:
 - Long-run observability/guardrails: `HXHX_GATE3_TARGET_HEARTBEAT_SEC=20` prints periodic progress (set `0` to disable) and `HXHX_GATE3_TARGET_TIMEOUT_SEC=0` controls per-target timeout (set a non-zero value to fail hard hangs). The weekly CI baseline sets `HXHX_GATE3_TARGET_TIMEOUT_SEC=3600`.
 - On macOS, the upstream `Js` server stage remains enabled, but Gate 3 relaxes async timeouts (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000` by default). Set `HXHX_GATE3_FORCE_JS_SERVER=1` to run without timeout patches (debug mode).
 - Python target runs default to no-install mode (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`): both `python3` and `pypy3` must already be on `PATH`. Set `HXHX_GATE3_PYTHON_ALLOW_INSTALL=1` to allow upstream installer/network fallback.
-- Java is validated as an opt-in Gate3 target (`HXHX_GATE3_TARGETS=Java`) and intentionally kept out of the default set (`Macro,Js,Neko`) to keep routine runs faster.
+- Java is validated as an opt-in Gate3 target (`HXHX_GATE3_TARGETS=Java`), including the forced sys-suite lane (`HXHX_RUNCi_FORCE_SYS=1`), and intentionally kept out of the default set (`Macro,Js,Neko`) to keep routine runs faster.
 - `HXHX_GATE3_MACRO_MODE` controls how Gate 3 executes the `Macro` target:
   - `direct` (default): route `Macro` through the non-delegating Gate 2 direct runner (`--hxhx-stage3 --hxhx-no-emit`).
   - `stage0_shim`: use the historical stage0 RunCi harness path.

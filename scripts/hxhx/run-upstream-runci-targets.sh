@@ -486,6 +486,14 @@ patch_runci_skip_sys_on_macos() {
   python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-sys-on-macos --upstream-dir "$UPSTREAM_DIR"
 }
 
+patch_runci_valid_unicode_fs_on_macos() {
+  if [ "$(uname -s)" != "Darwin" ]; then
+    return 0
+  fi
+
+  python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" valid-unicode-fs-on-macos --upstream-dir "$UPSTREAM_DIR"
+}
+
 patch_runci_python_skip_missing_misc() {
   local python_target="$UPSTREAM_DIR/tests/runci/targets/Python.hx"
   [ -f "$python_target" ] || return 0
@@ -825,6 +833,7 @@ fi
     PATH="$WRAP_DIR:$PATH" haxelib newrepo >/dev/null
   fi
   export UPSTREAM_DIR
+  patch_runci_valid_unicode_fs_on_macos
   patch_runci_skip_sys_on_macos
   if [ "$want_python_patches" = "1" ]; then
     patch_runci_python_skip_missing_misc

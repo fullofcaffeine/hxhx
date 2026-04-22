@@ -118,7 +118,7 @@ Meaning in plain terms:
 - On macOS, `Js` server stage stays enabled by default, with deterministic timeout relaxation (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS`) instead of skipping the stage.
 - Macro target now defaults to non-delegating direct execution (`HXHX_GATE3_MACRO_MODE=direct`) in Gate3 runners/CI.
 - Python runs now default to no-install behavior (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`) so local validation does not implicitly mutate host package state.
-- Java target has a validated baseline run and is intentionally kept opt-in (not in default `Macro,Js,Neko`) to keep common Gate3 runs fast.
+- Java target has validated baseline and forced sys-suite runs and is intentionally kept opt-in (not in default `Macro,Js,Neko`) to keep common Gate3 runs fast.
 - Gate1, Gate2, and Gate3 now have weekly Linux scheduled baselines in CI, while PR/push CI remains fast.
 - Linked builtin target smoke (`--ocaml` vs delegated `--ocaml-eval`) now has a reproducible runner and weekly/manual CI cadence.
 - A debug escape hatch remains available (`HXHX_GATE3_FORCE_JS_SERVER=1`).

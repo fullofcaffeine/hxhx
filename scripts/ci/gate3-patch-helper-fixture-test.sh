@@ -12,6 +12,7 @@ trap cleanup EXIT
 rm -rf "$fixture"
 mkdir -p \
   "$fixture/tests/runci/targets" \
+  "$fixture/tests/sys" \
   "$fixture/tests/echoServer/www" \
   "$fixture/tests/sourcemaps/src" \
   "$fixture/tests/server/src/utils/macro" \
@@ -89,6 +90,13 @@ class System {
 }
 EOF
 
+cat >"$fixture/tests/sys/compile-fs.hxml" <<'EOF'
+# comment the following line to disable testing the filesystem with invalid
+# Unicode codepoints; these will not work on APFS
+
+-D TEST_INVALID_UNICODE_FS
+EOF
+
 cat >"$fixture/tests/sourcemaps/src/Test.hx" <<'EOF'
 class Test {
   static function main() {
@@ -98,6 +106,7 @@ class Test {
 EOF
 
 HXHX_PATCH_HELPER_FORCE_DARWIN=1 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-sys-on-macos --upstream-dir "$fixture"
+HXHX_PATCH_HELPER_FORCE_DARWIN=1 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" valid-unicode-fs-on-macos --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" python-skip-missing-misc --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-utest-install-if-present --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-skip-haxeserver-install-if-present --upstream-dir "$fixture"
@@ -110,6 +119,11 @@ grep -Fq "Skipping JS sys tests on Mac" "$fixture/tests/runci/targets/Js.hx"
 grep -Fq "HXHX Gate runner: skip Java sys compile on macOS" "$fixture/tests/runci/targets/Java.hx"
 grep -Fq "Skipping Java sys tests on Mac" "$fixture/tests/runci/targets/Java.hx"
 grep -Fq "HXHX Gate runner: upstream tests/sys contains unicode filename fixtures" "$fixture/tests/runci/System.hx"
+grep -Fq "HXHX Gate runner: APFS rejects the invalid-Unicode filename subset" "$fixture/tests/sys/compile-fs.hxml"
+if grep -Fq -- "-D TEST_INVALID_UNICODE_FS" "$fixture/tests/sys/compile-fs.hxml"; then
+  echo "compile-fs.hxml still enables invalid Unicode filesystem fixtures on Darwin" >&2
+  exit 1
+fi
 grep -Fq "HXHX Gate runner: skip missing Python misc directories" "$fixture/tests/runci/targets/Python.hx"
 grep -Fq "Skipping Python misc tests" "$fixture/tests/runci/targets/Python.hx"
 grep -Fq "Skipping Python import misc tests" "$fixture/tests/runci/targets/Python.hx"

@@ -9857,11 +9857,55 @@ let javaEnumLikeClass = fun cls -> try let __fallback_result_2032 = let count = 
 ) in Obj.magic __fallback_result_2032 with
   | HxRuntime.Hx_return __ret_2031 -> Obj.obj __ret_2031
 
-let appendJavaImportStubMembers = fun out packagePath className -> ignore (let qualified = (javaQualifiedClassName (packagePath : string) (className : string) : string) in if HxString.equals qualified "haxe.CallStack" then ignore ((
-  ignore (HxArray.push out "  public static Object exceptionStack(Object... args) {");
-  ignore (HxArray.push out "    return null;");
-  HxArray.push out "  }"
-)) else ())
+let appendJavaImportStubMembers = fun out packagePath className -> ignore (let qualified = (javaQualifiedClassName (packagePath : string) (className : string) : string) in (
+  ignore (if HxString.equals qualified "sys.FileSystem" then ignore ((
+    ignore (HxArray.push out "  public static boolean exists(Object path) {");
+    ignore (HxArray.push out "    return java.nio.file.Files.exists(java.nio.file.Paths.get(String.valueOf(path)));");
+    ignore (HxArray.push out "  }");
+    ignore (HxArray.push out "  public static boolean isDirectory(Object path) {");
+    ignore (HxArray.push out "    return java.nio.file.Files.isDirectory(java.nio.file.Paths.get(String.valueOf(path)));");
+    ignore (HxArray.push out "  }");
+    ignore (HxArray.push out "  public static java.util.ArrayList<String> readDirectory(Object path) {");
+    ignore (HxArray.push out "    java.util.ArrayList<String> out = new java.util.ArrayList<String>();");
+    ignore (HxArray.push out "    try (java.nio.file.DirectoryStream<java.nio.file.Path> stream = java.nio.file.Files.newDirectoryStream(java.nio.file.Paths.get(String.valueOf(path)))) {");
+    ignore (HxArray.push out "      for (java.nio.file.Path entry : stream) out.add(entry.getFileName().toString());");
+    ignore (HxArray.push out "    } catch (Exception e) {");
+    ignore (HxArray.push out "      throw new RuntimeException(e);");
+    ignore (HxArray.push out "    }");
+    ignore (HxArray.push out "    return out;");
+    ignore (HxArray.push out "  }");
+    ignore (HxArray.push out "  public static void createDirectory(Object path) {");
+    ignore (HxArray.push out "    try { java.nio.file.Files.createDirectories(java.nio.file.Paths.get(String.valueOf(path))); }");
+    ignore (HxArray.push out "    catch (Exception e) { throw new RuntimeException(e); }");
+    ignore (HxArray.push out "  }");
+    ignore (HxArray.push out "  public static void deleteFile(Object path) {");
+    ignore (HxArray.push out "    try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(String.valueOf(path))); }");
+    ignore (HxArray.push out "    catch (Exception e) { throw new RuntimeException(e); }");
+    ignore (HxArray.push out "  }");
+    ignore (HxArray.push out "  public static void deleteDirectory(Object path) {");
+    ignore (HxArray.push out "    deleteFile(path);");
+    ignore (HxArray.push out "  }");
+    ignore (HxArray.push out "  public static void rename(Object from, Object to) {");
+    ignore (HxArray.push out "    try { java.nio.file.Files.move(java.nio.file.Paths.get(String.valueOf(from)), java.nio.file.Paths.get(String.valueOf(to)), java.nio.file.StandardCopyOption.REPLACE_EXISTING); }");
+    ignore (HxArray.push out "    catch (Exception e) { throw new RuntimeException(e); }");
+    ignore (HxArray.push out "  }");
+    ignore (HxArray.push out "  public static Object stat(Object path) {");
+    ignore (HxArray.push out "    return exists(path) ? new Object() : null;");
+    ignore (HxArray.push out "  }");
+    ignore (HxArray.push out "  public static String absolutePath(Object path) {");
+    ignore (HxArray.push out "    return java.nio.file.Paths.get(String.valueOf(path)).toAbsolutePath().normalize().toString();");
+    ignore (HxArray.push out "  }");
+    ignore (HxArray.push out "  public static String fullPath(Object path) {");
+    ignore (HxArray.push out "    try { return java.nio.file.Paths.get(String.valueOf(path)).toRealPath().toString(); }");
+    ignore (HxArray.push out "    catch (Exception e) { return absolutePath(path); }");
+    HxArray.push out "  }"
+  )) else ());
+  if HxString.equals qualified "haxe.CallStack" then ignore ((
+    ignore (HxArray.push out "  public static Object exceptionStack(Object... args) {");
+    ignore (HxArray.push out "    return null;");
+    HxArray.push out "  }"
+  )) else ()
+))
 
 let javaNestedImportStubNames = fun program decl className -> let currentPath = (javaQualifiedClassName (HxModuleDecl.getPackagePath (Obj.magic decl) : string) (className : string) : string) in let prefix = (HxString.toStdString currentPath ^ "." : string) in let seen = HxMap.create_string () in let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic program) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let typed = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (

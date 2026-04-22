@@ -133,6 +133,33 @@ def patch_skip_sys_on_macos(upstream_dir: str) -> None:
         write_lines(java_target_path, out)
 
 
+def patch_valid_unicode_fs_on_macos(upstream_dir: str) -> None:
+    if not is_darwin_patch_host():
+        return
+
+    path = upstream_path(upstream_dir, "tests/sys/compile-fs.hxml")
+    if not path.is_file():
+        return
+
+    marker = "# HXHX Gate runner: APFS rejects the invalid-Unicode filename subset."
+    lines = read_lines(path)
+    if any(marker in line for line in lines):
+        return
+
+    out: list[str] = []
+    changed = False
+    for line in lines:
+        if line.strip() == "-D TEST_INVALID_UNICODE_FS":
+            out.append(marker + "\n")
+            out.append("# Removed on macOS so HXHX_RUNCi_FORCE_SYS=1 runs the valid Unicode filesystem subset.\n")
+            changed = True
+        else:
+            out.append(line)
+
+    if changed:
+        write_lines(path, out)
+
+
 def patch_python_skip_missing_misc(upstream_dir: str) -> None:
     path = upstream_path(upstream_dir, "tests/runci/targets/Python.hx")
     if not path.is_file():
@@ -396,6 +423,7 @@ def main(argv: list[str]) -> None:
     args = parse_args(argv)
     commands = {
         "skip-sys-on-macos": lambda: patch_skip_sys_on_macos(args.upstream_dir),
+        "valid-unicode-fs-on-macos": lambda: patch_valid_unicode_fs_on_macos(args.upstream_dir),
         "python-skip-missing-misc": lambda: patch_python_skip_missing_misc(args.upstream_dir),
         "js-server-timeouts-on-macos": lambda: patch_js_server_timeouts_on_macos(args.upstream_dir, args.timeout_ms),
         "skip-utest-install-if-present": lambda: patch_skip_utest_install_if_present(args.upstream_dir),
