@@ -2134,6 +2134,47 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonTestIssuesMacroFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_test_issues_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final addIssueClassesCall:HxExpr = ECall(EField(EIdent("TestIssues"), "addIssueClasses"), [EString("src/unit/issues"), EString("unit.issues")]);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(addIssueClassesCall, pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("ok")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final testIssuesFn = new HxFunctionDecl("addIssueClasses", HxVisibility.Public, true, [
+			new HxFunctionArg("dir", "String", NoDefault),
+			new HxFunctionArg("pack", "String", NoDefault)
+		], "Void",
+			[SExpr(EUnsupported("test-issues-macro-source-should-not-render"), pos)], "", ["macro"]);
+		final testIssuesClass = new HxClassDecl("TestIssues", false, [testIssuesFn]);
+		final testIssuesDecl = new HxModuleDecl("unit", [], testIssuesClass, [testIssuesClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("unit/TestIssues.hx", testIssuesDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class TestIssues:", "Python support should synthesize a TestIssues runtime fallback for macro-only issue registration");
+		assertContains(content, "def addIssueClasses(dir, pack):", "Python TestIssues fallback should expose the static registration hook");
+		assertContains(content, "unit.TestIssues = TestIssues", "Python support should expose TestIssues through the unit namespace");
+		assertContains(content, "TestIssues.addIssueClasses(\"src/unit/issues\", \"unit.issues\")",
+			"Python main code should preserve imported/bare TestIssues.addIssueClasses calls");
+		assertNotContains(content, "test-issues-macro-source-should-not-render", "Python TestIssues support should not render macro-only source bodies");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python TestIssues fallback should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "ok", "generated Python should continue after the no-op issue registration fallback");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4681,6 +4722,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonStdStringMapNamespaceReference();
 		assertPythonTypeNameHelpersForStaticInitializers();
 		assertPythonUnitBuilderMacroNamespaceFallback();
+		assertPythonTestIssuesMacroFallback();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();

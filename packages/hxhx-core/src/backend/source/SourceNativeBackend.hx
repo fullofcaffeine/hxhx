@@ -5039,6 +5039,7 @@ class SourceNativeBackend {
 		var sawStdDateTools = false;
 		var sawStdStringMap = false;
 		var sawUnitBuilderMacro = false;
+		var sawTestIssuesMacro = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			if (isStdSourceFile(filePath)) {
 				final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
@@ -5056,6 +5057,8 @@ class SourceNativeBackend {
 				if (isCompileTimeOnlySupportClass(cls)) {
 					if (HxModuleDecl.getPackagePath(moduleDecl) == "unit" && className == "UnitBuilder")
 						sawUnitBuilderMacro = true;
+					if (HxModuleDecl.getPackagePath(moduleDecl) == "unit" && className == "TestIssues")
+						sawTestIssuesMacro = true;
 					continue;
 				}
 				if (className == mainClassName || seen.exists(className))
@@ -5125,6 +5128,11 @@ class SourceNativeBackend {
 				out.push("");
 			appendPythonUnitBuilderSupport(out);
 		}
+		if (sawTestIssuesMacro && !pendingNames.exists("TestIssues")) {
+			if (out.length > 0)
+				out.push("");
+			appendPythonTestIssuesSupport(out);
+		}
 		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
 			if (out.length > 0)
@@ -5140,6 +5148,10 @@ class SourceNativeBackend {
 		if (sawUnitBuilderMacro && !pendingNames.exists("UnitBuilder")) {
 			extraNamespaceClasses.push("UnitBuilder");
 			packageByClassName.set("UnitBuilder", "unit");
+		}
+		if (sawTestIssuesMacro && !pendingNames.exists("TestIssues")) {
+			extraNamespaceClasses.push("TestIssues");
+			packageByClassName.set("TestIssues", "unit");
 		}
 		final namespaceAliases = renderPythonPackageNamespaceAliases(ordered, packageByClassName, extraNamespaceClasses);
 		if (namespaceAliases.length > 0) {
@@ -5287,6 +5299,13 @@ class SourceNativeBackend {
 		out.push("    @staticmethod");
 		out.push("    def generateSpec(basePath):");
 		out.push("        return []");
+	}
+
+	static function appendPythonTestIssuesSupport(out:Array<String>):Void {
+		out.push("class TestIssues:");
+		out.push("    @staticmethod");
+		out.push("    def addIssueClasses(dir, pack):");
+		out.push("        return None");
 	}
 
 	static function appendPythonValueExceptionBase(out:Array<String>):Void {
