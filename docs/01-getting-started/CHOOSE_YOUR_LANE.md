@@ -7,6 +7,7 @@ Pick one lane based on your goal. If terms are unfamiliar, read `docs/01-getting
 | Goal | Lane | First command | Next doc |
 | --- | --- | --- | --- |
 | I want OCaml output in my project with upstream `haxe` behavior | Upstream `haxe` + `reflaxe.ocaml` | `haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output` | `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md` |
+| I want to test `reflaxe.ocaml` through `hxhx` | Experimental `hxhx + reflaxe.ocaml` lane | `HXHX_FORBID_STAGE0=1 "$(bash scripts/hxhx/build-hxhx.sh)" --ocaml --hxhx-no-emit -cp src -main Main` | `docs/01-getting-started/REFLAXE_OCAML_WITH_HXHX.md` |
 | I want native binaries now, even if some work still delegates | `hxhx` compat lane (`--ocaml-eval` or `--compat --js <file>`) | `"$(bash scripts/hxhx/build-hxhx.sh)" --ocaml-eval -cp src -main Main` | `docs/01-getting-started/QUICKSTART_COMPAT.md` |
 | I want strict non-delegating behavior checks | `hxhx` native lane (`--ocaml` / `--js <file>`) with stage0 forbidden | `HXHX_FORBID_STAGE0=1 "$(bash scripts/hxhx/build-hxhx.sh)" --ocaml --hxhx-no-emit -cp src -main Main` | `docs/01-getting-started/QUICKSTART_NATIVE.md` |
 | I want compiler parity/replacement-readiness confidence | Replacement-ready strict gate lane | `npm run test:upstream:replacement-ready:strict` | `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md` |

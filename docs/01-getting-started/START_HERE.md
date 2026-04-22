@@ -76,6 +76,7 @@ npm run test:upstream:replacement-ready:strict
 
 Read:
 - `docs/00-project/STAGE0_POLICY.md`
+- `docs/01-getting-started/REFLAXE_OCAML_WITH_HXHX.md`
 - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
 - `docs/02-user-guide/concepts/execution_modes.md`
 - `docs/00-project/CI_GATES.md`

@@ -12,6 +12,7 @@ If you need deeper architectural details, use:
 | Workflow | Command shape | Current status | Notes |
 | --- | --- | --- | --- |
 | Upstream Haxe + `reflaxe.ocaml` | `haxe -lib reflaxe.ocaml ...` | Working | Compatibility-first baseline path. |
+| `hxhx` + `reflaxe.ocaml` | `hxhx --ocaml ...` with `reflaxe.ocaml` validation/promotion docs | Experimental | Use for native compiler and hosting evidence, not as the default production route. |
 | `hxhx` compat lane | `hxhx --ocaml-eval ...` / `hxhx --compat --js out.js ...` | Working | Delegates runtime compile to stage0 upstream `haxe`. |
 | `hxhx` native OCaml lane | `hxhx --ocaml ...` | Working (scoped native lane) | Non-delegating runtime lane; use `HXHX_FORBID_STAGE0=1` for strict checks. |
 | `hxhx` native JS lane | `hxhx --js out.js ...` | Working (scoped MVP) | Scope is intentionally bounded; see `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`. |
@@ -25,6 +26,7 @@ If you need deeper architectural details, use:
 | compile immediately with least risk | `docs/01-getting-started/QUICKSTART_COMPAT.md` |
 | validate non-delegating runtime paths | `docs/01-getting-started/QUICKSTART_NATIVE.md` |
 | compile to OCaml native executable with upstream `haxe` | `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md` |
+| test `reflaxe.ocaml` through `hxhx` | `docs/01-getting-started/REFLAXE_OCAML_WITH_HXHX.md` |
 | promote a Reflaxe backend to native plugin artifact | `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md` |
 
 ## High-signal verification commands

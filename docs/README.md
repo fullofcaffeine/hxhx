@@ -11,6 +11,7 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - Quickstart (native lane): `docs/01-getting-started/QUICKSTART_NATIVE.md`
 - Beginner status snapshot: `docs/01-getting-started/WHAT_WORKS_TODAY.md`
 - Use upstream `haxe` + `reflaxe.ocaml`: `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
+- Use `reflaxe.ocaml` through `hxhx`: `docs/01-getting-started/REFLAXE_OCAML_WITH_HXHX.md`
 - `reflaxe.ocaml` production install/use/troubleshooting: `docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md`
 - Choose a Reflaxe promotion path: `docs/01-getting-started/CHOOSE_A_REFLAXE_PROMOTION_PATH.md`
 - Promote Reflaxe backends to native plugin artifacts: `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`

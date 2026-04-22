@@ -215,6 +215,10 @@ Operational rule:
 | Non-delegating compiler/runtime validation | `hxhx` native lanes | Different product claim |
 | Builtin target/plugin host experiments | `hxhx` workflows | Outside standalone `reflaxe.ocaml` target scope |
 
+For the current `hxhx + reflaxe.ocaml` status, use:
+
+- `docs/01-getting-started/REFLAXE_OCAML_WITH_HXHX.md`
+
 Hard rule:
 
 - do not cite `hxhx Full 1.0` claims as proof that your upstream-Haxe `reflaxe.ocaml` path is production-ready
