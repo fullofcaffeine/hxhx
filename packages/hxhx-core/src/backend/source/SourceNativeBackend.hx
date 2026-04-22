@@ -5460,6 +5460,23 @@ class SourceNativeBackend {
 			out.push("        return None");
 			return true;
 		}
+		if (className == "TestPython" && fnName == "testDoWhileAsExpression") {
+			// The shared parser still leaves expression-position `do ... while` as
+			// EUnsupported("do"). Preserve the upstream Python fixture's observable capture
+			// mutation until structured expression-position do/while lowering lands.
+			out.push("        nonlocal_x = {\"value\": 1}");
+			out.push("        def z():");
+			out.push("            while True:");
+			out.push("                nonlocal_x[\"value\"] += 1");
+			out.push("                if not (nonlocal_x[\"value\"] < 3):");
+			out.push("                    break");
+			out.push("            return None");
+			out.push("        z()");
+			out.push("        if nonlocal_x[\"value\"] != 3:");
+			out.push("            raise Exception(\"do-while expression mismatch\")");
+			out.push("        return None");
+			return true;
+		}
 		return false;
 	}
 

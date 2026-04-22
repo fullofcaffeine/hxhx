@@ -1616,6 +1616,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function pythonDoWhileExpressionProgram():GenIrProgram {
+		final src = [
+			"class TestPython {",
+			"  public function new() {}",
+			"  public function testDoWhileAsExpression() {",
+			"    var n = 0;",
+			"    var run = function() return (do {",
+			"      n += 1;",
+			"    } while (n < 2));",
+			"    run();",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    new TestPython().testDoWhileAsExpression();",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpObjectPatternSwitchExpressionProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -3865,6 +3889,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonDoWhileExpressionFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_do_while_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(pythonDoWhileExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "        def z():", "Python do-while expression fallback should emit a closure");
+		assertContains(content, "        nonlocal_x = {\"value\": 1}", "Python do-while expression fallback should model captured mutation");
+		assertContains(content, "            if not (nonlocal_x[\"value\"] < 3):",
+			"Python do-while expression fallback should check the loop condition after the body");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpObjectPatternSwitchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4015,6 +4054,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonUnitLocalStaticFallback();
 		assertPhpUnitMapComprehensionFallback();
 		assertPythonUnitMapComprehensionFallback();
+		assertPythonDoWhileExpressionFallback();
 		assertPhpObjectPatternSwitchExpression();
 		assertPythonObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();

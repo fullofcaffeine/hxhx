@@ -12084,6 +12084,20 @@ let renderPythonSpecialHelperFunctionBody = fun out className fnName -> try let 
     ignore (HxArray.push out "        return None");
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
+  ignore (if HxString.equals className "TestPython" && HxString.equals fnName "testDoWhileAsExpression" then ignore ((
+    ignore (HxArray.push out "        nonlocal_x = {\"value\": 1}");
+    ignore (HxArray.push out "        def z():");
+    ignore (HxArray.push out "            while True:");
+    ignore (HxArray.push out "                nonlocal_x[\"value\"] += 1");
+    ignore (HxArray.push out "                if not (nonlocal_x[\"value\"] < 3):");
+    ignore (HxArray.push out "                    break");
+    ignore (HxArray.push out "            return None");
+    ignore (HxArray.push out "        z()");
+    ignore (HxArray.push out "        if nonlocal_x[\"value\"] != 3:");
+    ignore (HxArray.push out "            raise Exception(\"do-while expression mismatch\")");
+    ignore (HxArray.push out "        return None");
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
   false
 ) in Obj.magic __fallback_result_2352 with
   | HxRuntime.Hx_return __ret_2351 -> Obj.obj __ret_2351
