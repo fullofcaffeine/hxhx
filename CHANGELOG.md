@@ -1,3 +1,10 @@
+## [0.15.2](https://github.com/fullofcaffeine/hxhx/compare/v0.15.1...v0.15.2) (2026-04-22)
+
+
+### Bug Fixes
+
+* **lua:** preserve inline conditional suffixes ([308690b](https://github.com/fullofcaffeine/hxhx/commit/308690b1daf325633a098c3c1f6b321ced494ed8))
+
 ## [0.15.1](https://github.com/fullofcaffeine/hxhx/compare/v0.15.0...v0.15.1) (2026-04-22)
 
 
