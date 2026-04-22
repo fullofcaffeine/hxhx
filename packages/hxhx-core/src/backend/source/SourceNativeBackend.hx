@@ -687,8 +687,8 @@ class SourceNativeBackend {
 				conditionalExpr(target, renderExpr(target, cond), renderExpr(target, thenExpr), renderExpr(target, elseExpr));
 			case EAnon(fieldNames, fieldValues):
 				anonExpr(target, fieldNames, fieldValues);
-			case ECast(inner, _):
-				renderExpr(target, inner);
+			case ECast(inner, typeHint):
+				castExpr(target, inner, typeHint);
 			case EUntyped(inner):
 				renderExpr(target, inner);
 			case EMacroExpr(inner, wrappers):
@@ -1375,6 +1375,28 @@ class SourceNativeBackend {
 			case Python, Java, Cs, Lua:
 				raw;
 		};
+	}
+
+	static function castExpr(target:SourceNativeTarget, inner:HxExpr, typeHint:String):String {
+		if (target == Php && isUIntTypeHint(typeHint)) {
+			switch (inner) {
+				case EInt(value) if (value < 0):
+					return unsigned32IntText(value);
+				case _:
+			}
+		}
+		return renderExpr(target, inner);
+	}
+
+	static function isUIntTypeHint(typeHint:String):Bool {
+		final trimmed = StringTools.trim(typeHint == null ? "" : typeHint);
+		return trimmed == "UInt" || trimmed == "StdTypes.UInt";
+	}
+
+	static function unsigned32IntText(value:Int):String {
+		if (value >= 0)
+			return Std.string(value);
+		return Std.string(4294967296.0 + value);
 	}
 
 	static function phpSameClassStaticHelperCall(callee:String, renderedArgs:String):Null<String> {
@@ -7305,6 +7327,11 @@ class SourceNativeBackend {
 				lines.push("    $hex = ltrim(substr($clean, 2), \"0\");");
 				lines.push("    if ($hex === \"\") return 0;");
 				lines.push("    if (($suffix === \"i64\" || $suffix === \"u64\") && strlen($hex) > 16) $hex = substr($hex, -16);");
+				lines.push("    if (($suffix === \"i32\" || $suffix === \"u32\") && strlen($hex) > 8) $hex = substr($hex, -8);");
+				lines.push("    if ($suffix === \"i32\") {");
+				lines.push("      $value32 = hexdec($hex);");
+				lines.push("      return $value32 >= 2147483648 ? intval($value32 - 4294967296) : intval($value32);");
+				lines.push("    }");
 				lines.push("    if ($suffix === \"i64\" && strlen($hex) === 16 && hexdec(substr($hex, 0, 1)) >= 8) {");
 				lines.push("      if ($hex === \"ffffffffffffffff\") return -1;");
 				lines.push("      if ($hex === \"8000000000000000\") return \"-9223372036854775808\";");

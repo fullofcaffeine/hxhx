@@ -1603,7 +1603,7 @@ class HxParser {
 		if (raw == null || suffix == null)
 			return EInt(value);
 		final normalizedSuffix = suffix.toLowerCase();
-		if (normalizedSuffix == "i64" || normalizedSuffix == "u64")
+		if (normalizedSuffix == "i32" || normalizedSuffix == "u32" || normalizedSuffix == "i64" || normalizedSuffix == "u64")
 			return ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(normalizedSuffix)]);
 		return EInt(value);
 	}
@@ -2507,8 +2507,9 @@ class HxParser {
 		}
 		if (!stop() && cur.kind.match(TColon)) {
 			bump();
-			readTypeHintText(() -> stop() || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TSemicolon)
-				|| cur.kind.match(TEof));
+			final hint = readTypeHintText(() -> stop() || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace)
+				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+			e = ECast(e, hint);
 		}
 		return e;
 	}

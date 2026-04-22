@@ -446,10 +446,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var b = (-4).ofInt();",
 			"    var c = 3000000000000i64 + \"\";",
 			"    var d = 0xFFFFFFFFFFFFFFFFi64 + \"\";",
+			"    var e = 0xFFFFFFFFu32;",
+			"    var f = (0xFFFFFFFF : UInt);",
+			"    var g = 0xFFFFFFFFi32;",
 			"    Sys.println(Std.string(a));",
 			"    Sys.println(Std.string(b));",
 			"    Sys.println(c);",
 			"    Sys.println(d);",
+			"    Sys.println(Std.string(e));",
+			"    Sys.println(Std.string(f));",
+			"    Sys.println(Std.string(g));",
 			"  }",
 			"}",
 		].join("\n");
@@ -4220,6 +4226,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP i64 decimal suffix literals should preserve raw text before runtime string conversion");
 		assertContains(content, "$d = __hxhx_add(__hxhx_int_literal(\"0xFFFFFFFFFFFFFFFF\", \"i64\"), \"\");",
 			"PHP i64 hex suffix literals should preserve raw text before runtime string conversion");
+		assertContains(content, "$e = __hxhx_int_literal(\"0xFFFFFFFF\", \"u32\");", "PHP u32 hex suffix literals should preserve raw text");
+		assertContains(content, "$f = 4294967295;", "PHP UInt casts of signed hex literals should render as unsigned 32-bit values");
+		assertContains(content, "$g = __hxhx_int_literal(\"0xFFFFFFFF\", \"i32\");", "PHP i32 hex suffix literals should preserve raw text");
+		assertContains(content, "if ($suffix === \"i32\")", "PHP runtime should normalize signed i32 literals");
 		assertContains(content, "function __hxhx_int_literal($text, $suffix)", "PHP runtime should include numeric suffix literal normalization support");
 		assertNotContains(content, "32->ofInt()", "PHP should not emit instance calls on integer literals");
 		deleteRecursive(tmpRoot);

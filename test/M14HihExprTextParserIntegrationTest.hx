@@ -660,7 +660,7 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected null coalescing assignment expression");
 		}
 		switch (nullCoalescingStmts[2]) {
-			case SVar("notNull", _, EBinop("??", EIdent("one"), ECall(EIdent("__hxhx_throw"), [EString("")])), _):
+			case SVar("notNull", _, EBinop("??", ECast(EIdent("one"), "Null<Float>"), ECall(EIdent("__hxhx_throw"), [EString("")])), _):
 			case SVar(_, _, EUnsupported(raw), _):
 				fail("null coalescing throw fallback parsed as unsupported: " + raw);
 			case _:
@@ -711,6 +711,19 @@ class M14HihExprTextParserIntegrationTest {
 			]), _):
 			case _:
 				fail("expected i64 decimal suffix to preserve raw literal text");
+		}
+		switch (numericSuffixStmts[0]) {
+			case SExpr(ECall(EIdent("eq"), [ECall(EIdent("__hxhx_int_literal"), [EString("7"), EString("i32")]), EInt(7)]), _):
+			case _:
+				fail("expected i32 suffix to preserve raw literal text");
+		}
+		switch (numericSuffixStmts[3]) {
+			case SExpr(ECall(EIdent("eq"), [
+				ECall(EIdent("__hxhx_int_literal"), [EString("0xFFFFFFFF"), EString("u32")]),
+				ECast(EInt(-1), "UInt")
+			]), _):
+			case _:
+				fail("expected u32 hex suffix and UInt cast to preserve numeric intent");
 		}
 
 		final floatSuffixTypeTestStmts = HxParser.parseFunctionBodyText('eq(1f64 is Float, true); eq(.0f64, 0.0); eq(7e+0f64, 7e+0);');
