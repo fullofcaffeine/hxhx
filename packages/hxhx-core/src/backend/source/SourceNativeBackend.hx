@@ -2531,7 +2531,9 @@ class SourceNativeBackend {
 		return switch (target) {
 			case Java: "new __HxArray(new Object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " })";
 			case Cs: "new object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " }";
-			case Python: "[" + [for (item in items) renderExpr(target, item)].join(", ") + "]";
+			case Python:
+				final mapPairs = pythonMapLiteralPairs(items);
+				if (mapPairs != null) "{" + mapPairs.join(", ") + "}" else "[" + [for (item in items) renderExpr(target, item)].join(", ") + "]";
 			case Php:
 				final mapPairs = phpMapLiteralPairs(items);
 				if (mapPairs != null) "__hxhx_map_literal([" + mapPairs.join(", ") + "])"; else "["
@@ -2548,6 +2550,21 @@ class SourceNativeBackend {
 			switch (item) {
 				case EBinop("=>", key, value):
 					pairs.push("[" + renderExpr(Php, key) + ", " + renderExpr(Php, value) + "]");
+				case _:
+					return null;
+			}
+		}
+		return pairs;
+	}
+
+	static function pythonMapLiteralPairs(items:Array<HxExpr>):Null<Array<String>> {
+		if (items.length == 0)
+			return null;
+		final pairs = new Array<String>();
+		for (item in items) {
+			switch (item) {
+				case EBinop("=>", key, value):
+					pairs.push(renderExpr(Python, key) + ": " + renderExpr(Python, value));
 				case _:
 					return null;
 			}

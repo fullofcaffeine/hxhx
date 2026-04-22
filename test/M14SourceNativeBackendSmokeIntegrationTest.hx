@@ -1780,6 +1780,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function mapLiteralWithLambdaProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var callbacks = [1 => value -> value + 1, 2 => value -> value + 2];",
+			"    Sys.println(Std.string(callbacks));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function constructorProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -3382,6 +3396,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonMapLiteralWithLambda():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_map_lambda_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(mapLiteralWithLambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "callbacks = {1: lambda value: (value + 1), 2: lambda value: (value + 2)}",
+			"Python map literals with lambda values should render as dictionary entries");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertConstructorExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_constructor_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3759,6 +3786,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonSkipsStdSupportClasses();
 		assertPythonSkipsMacroSupportMethods();
 		assertArrayLiteral();
+		assertPythonMapLiteralWithLambda();
 		assertConstructorExpression();
 		assertForInStatement();
 		assertBinaryOperators();
