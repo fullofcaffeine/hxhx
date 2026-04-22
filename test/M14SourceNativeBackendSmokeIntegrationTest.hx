@@ -2175,6 +2175,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonArrayRuntimeShim():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_array_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values = new Array();",
+			"    values.push(\"a\");",
+			"    values.push(\"b\");",
+			"    Sys.println(Std.string(values.length));",
+			"    Sys.println(values.join(\"#\"));",
+			"    Sys.println(Std.string(values.remove(\"a\")));",
+			"    var it = values.iterator();",
+			"    Sys.println(Std.string(it.hasNext()));",
+			"    Sys.println(it.next());",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Array(list):", "Python runtime should define a Haxe-style Array constructor shim");
+		assertContains(content, "def push(self, value):", "Python Array shim should expose push for upstream utest handlers");
+		assertContains(content, "def length(self):", "Python Array shim should expose Haxe length as a property");
+		assertContains(content, "def iterator(self):", "Python Array shim should expose Haxe-style iterators");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python Array runtime shim should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "2\na#b\nTrue\nTrue\nb", "generated Python should support Array(), push, length, join, remove, and iterator");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4723,6 +4761,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTypeNameHelpersForStaticInitializers();
 		assertPythonUnitBuilderMacroNamespaceFallback();
 		assertPythonTestIssuesMacroFallback();
+		assertPythonArrayRuntimeShim();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
