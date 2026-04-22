@@ -2546,8 +2546,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "def __hxhx_anon(**kwargs):", "Python source backend should emit the anonymous-object helper");
-		assertContains(content, "info = __hxhx_anon(label=\"ok\", count=1)", "anonymous object literals should lower through the helper");
+		assertContains(content, "def hxhx_anon(**kwargs):", "Python source backend should emit the anonymous-object helper");
+		assertContains(content, "info = hxhx_anon(label=\"ok\", count=1)", "anonymous object literals should lower through the helper");
 		assertContains(content, "print(info.label)", "anonymous object field access should keep using attribute syntax");
 		deleteRecursive(tmpRoot);
 	}
@@ -2568,9 +2568,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "info = __hxhx_anon(def_=1)", "Python anonymous object fields should sanitize reserved keyword names");
+		assertContains(content, "info = hxhx_anon(def_=1)", "Python anonymous object fields should sanitize reserved keyword names");
 		assertContains(content, "print(info.def_)", "Python anonymous object field access should use the same sanitized name");
-		assertNotContains(content, "__hxhx_anon(def=1)", "Python should not emit reserved keywords as anonymous-object kwargs");
+		assertNotContains(content, "hxhx_anon(def=1)", "Python should not emit reserved keywords as anonymous-object kwargs");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPythonClassBodyHelperNamesAvoidMangling():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_class_body_helpers_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def hxhx_anon(**kwargs):", "Python helper definitions should avoid leading double-underscore names");
+		assertContains(content, "info = hxhx_anon(label=\"ok\", count=1)", "Python helper calls should avoid leading double-underscore names");
+		assertNotContains(content, "def __hxhx_anon(**kwargs):", "Python helpers should not use names that class scopes mangle");
+		assertNotContains(content, "info = __hxhx_anon(label=\"ok\", count=1)", "Python helper calls should not use names that class scopes mangle");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2612,13 +2627,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(postfixExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "def __hxhx_post_update_attr(obj, field, delta):", "Python source backend should emit the postfix attribute helper");
-		assertContains(content, "def __hxhx_post_update_index(obj, index, delta):", "Python source backend should emit the postfix index helper");
-		assertContains(content, "oldX = ((__hxhx_post_old := x), (x := (__hxhx_post_old + 1)), __hxhx_post_old)[2]",
+		assertContains(content, "def hxhx_post_update_attr(obj, field, delta):", "Python source backend should emit the postfix attribute helper");
+		assertContains(content, "def hxhx_post_update_index(obj, index, delta):", "Python source backend should emit the postfix index helper");
+		assertContains(content, "oldX = ((hxhx_post_old := x), (x := (hxhx_post_old + 1)), hxhx_post_old)[2]",
 			"identifier postfix expressions should preserve old-value semantics");
-		assertContains(content, "oldCount = __hxhx_post_update_attr(info, \"count\", 1)",
-			"field postfix expressions should lower through the attribute helper");
-		assertContains(content, "oldFirst = __hxhx_post_update_index(values, 0, 1)", "indexed postfix expressions should lower through the index helper");
+		assertContains(content, "oldCount = hxhx_post_update_attr(info, \"count\", 1)", "field postfix expressions should lower through the attribute helper");
+		assertContains(content, "oldFirst = hxhx_post_update_index(values, 0, 1)", "indexed postfix expressions should lower through the index helper");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -2649,8 +2663,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(unsignedRightShiftProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "def __hxhx_ushr(value, bits):", "Python source backend should emit the unsigned-right-shift helper");
-		assertContains(content, "shifted = __hxhx_ushr((-1), 1)", "unsigned right shift should lower through the helper");
+		assertContains(content, "def hxhx_ushr(value, bits):", "Python source backend should emit the unsigned-right-shift helper");
+		assertContains(content, "shifted = hxhx_ushr((-1), 1)", "unsigned right shift should lower through the helper");
 		assertContains(content, "print(str(shifted))", "unsigned-right-shift results should still flow through later statements");
 		deleteRecursive(tmpRoot);
 	}
@@ -3115,7 +3129,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpMacroExprProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "__hxhx_anon(expr=", "Python macro expressions should lower to macro object shapes");
+		assertContains(content, "hxhx_anon(expr=", "Python macro expressions should lower to macro object shapes");
 		assertContains(content, "__hx_ctor=\"EUntyped\"", "Python macro expressions should preserve untyped wrappers");
 		assertContains(content, "__hx_ctor=\"EParenthesis\"", "Python macro expressions should preserve parenthesis wrappers");
 		assertContains(content, "__hx_ctor=\"CString\"", "Python macro string constants should lower to CString nodes");
@@ -3493,7 +3507,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "self.__hx_value = i", "Python constructor assignments to this should target the backing slot");
 		assertContains(content, "self.__hx_value = (self.__hx_value + 1)", "Python statement-position postfix this updates should target the backing slot");
 		assertContains(content, "return self.__hx_value", "Python abstract-style return this should return the backing value");
-		assertContains(content, "return __hxhx_post_update_attr(self, \"__hx_value\", 1)",
+		assertContains(content, "return hxhx_post_update_attr(self, \"__hx_value\", 1)",
 			"Python expression-position postfix this updates should target the backing slot");
 		deleteRecursive(tmpRoot);
 	}
@@ -3548,10 +3562,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(pythonForKeyValueProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "def __hxhx_key_value_iter(value):", "Python key/value loops should emit an iterator helper");
-		assertContains(content, "for index, value in __hxhx_key_value_iter(values):", "Python key/value loops over arrays should lower through the helper");
+		assertContains(content, "def hxhx_key_value_iter(value):", "Python key/value loops should emit an iterator helper");
+		assertContains(content, "for index, value in hxhx_key_value_iter(values):", "Python key/value loops over arrays should lower through the helper");
 		assertContains(content, "lookup = {\"a\": 1, \"b\": 2}", "Python map literals should provide dict inputs for key/value loops");
-		assertContains(content, "for key, item in __hxhx_key_value_iter(lookup):", "Python key/value loops over map literals should lower through the helper");
+		assertContains(content, "for key, item in hxhx_key_value_iter(lookup):", "Python key/value loops over map literals should lower through the helper");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -3563,9 +3577,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(pythonTryCatchRawExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "def __hxhx_throw(value):", "Python try/catch expressions should emit the throw expression helper");
-		assertContains(content, "def __hxhx_try(try_fn, catch_fn):", "Python try/catch expressions should emit the expression helper");
-		assertContains(content, "caught = __hxhx_try(lambda: __hxhx_throw(Exception(\"boom\")), lambda e: e)",
+		assertContains(content, "def hxhx_throw(value):", "Python try/catch expressions should emit the throw expression helper");
+		assertContains(content, "def hxhx_try(try_fn, catch_fn):", "Python try/catch expressions should emit the expression helper");
+		assertContains(content, "caught = hxhx_try(lambda: hxhx_throw(Exception(\"boom\")), lambda e: e)",
 			"Python raw try/catch expressions should lower through lambda-based expression helpers");
 		deleteRecursive(tmpRoot);
 	}
@@ -3578,9 +3592,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(pythonTypeCheckProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "def __hxhx_is_of_type(value, type_name):", "Python type checks should emit the Haxe type helper");
-		assertContains(content, "print(str(__hxhx_is_of_type(number, \"Int\")))", "Python Int type checks should lower through the helper");
-		assertContains(content, "print(str(__hxhx_is_of_type(text, \"String\")))", "Python String type checks should lower through the helper");
+		assertContains(content, "def hxhx_is_of_type(value, type_name):", "Python type checks should emit the Haxe type helper");
+		assertContains(content, "print(str(hxhx_is_of_type(number, \"Int\")))", "Python Int type checks should lower through the helper");
+		assertContains(content, "print(str(hxhx_is_of_type(text, \"String\")))", "Python String type checks should lower through the helper");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -3834,7 +3848,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "a <<= 2", "Python signed left-shift assignment should render directly");
 		assertContains(content, "a >>= 1", "Python signed right-shift assignment should render directly");
-		assertContains(content, "a = __hxhx_ushr(a, 1)", "Python unsigned right-shift assignment should reuse the unsigned-shift helper");
+		assertContains(content, "a = hxhx_ushr(a, 1)", "Python unsigned right-shift assignment should reuse the unsigned-shift helper");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -3931,7 +3945,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "    __basic_x = None", "Python TestLocalStatic fallback should declare persisted local-static storage");
 		assertContains(content, "        if TestLocalStatic.__basic_x is None:", "Python TestLocalStatic fallback should initialize storage once");
-		assertContains(content, "        return __hxhx_anon(x=TestLocalStatic.__basic_x, y=\"final\")",
+		assertContains(content, "        return hxhx_anon(x=TestLocalStatic.__basic_x, y=\"final\")",
 			"Python TestLocalStatic fallback should return the expected object shape");
 		deleteRecursive(tmpRoot);
 	}
@@ -4089,8 +4103,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "def __hxhx_update_index(obj, index, op, value):", "Python runtime should include expression-position index update helper");
-		assertContains(content, "print(__hxhx_update_index(arr, 0, \"+\", 3))", "Python array update expressions should lower to parseable helper calls");
+		assertContains(content, "def hxhx_update_index(obj, index, op, value):", "Python runtime should include expression-position index update helper");
+		assertContains(content, "print(hxhx_update_index(arr, 0, \"+\", 3))", "Python array update expressions should lower to parseable helper calls");
 		assertNotContains(content, "print(arr[0] += 3)", "Python should not emit augmented assignment syntax inside calls");
 		deleteRecursive(tmpRoot);
 	}
@@ -4117,8 +4131,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "def __hxhx_assign_attr(obj, field, value):", "Python runtime should include expression-position attr assignment helper");
-		assertContains(content, "return __hxhx_assign_attr(self, \"__hx_value\", (self.__hx_value + 1))",
+		assertContains(content, "def hxhx_assign_attr(obj, field, value):", "Python runtime should include expression-position attr assignment helper");
+		assertContains(content, "return hxhx_assign_attr(self, \"__hx_value\", (self.__hx_value + 1))",
 			"Python this-value update return expressions should lower to parseable helper calls");
 		assertNotContains(content, "return self.__hx_value += 1", "Python should not emit augmented assignment syntax in return expressions");
 		deleteRecursive(tmpRoot);
@@ -4237,6 +4251,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertGuardedArrayComprehensionExpression();
 		assertAnonymousObjectExpression();
 		assertPythonAnonymousObjectReservedFieldSyntax();
+		assertPythonClassBodyHelperNamesAvoidMangling();
 		assertPhpAnonymousObjectExpression();
 		assertLoopControlStatements();
 		assertPostfixExpressions();

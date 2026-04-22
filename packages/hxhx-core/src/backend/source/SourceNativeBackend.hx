@@ -919,23 +919,23 @@ class SourceNativeBackend {
 	}
 
 	static function pythonAssignAttrExpr(receiver:String, field:String, value:String):String {
-		return "__hxhx_assign_attr(" + receiver + ", " + quoteString(field) + ", " + value + ")";
+		return "hxhx_assign_attr(" + receiver + ", " + quoteString(field) + ", " + value + ")";
 	}
 
 	static function pythonAssignIndexExpr(receiver:String, index:String, value:String):String {
-		return "__hxhx_assign_index(" + receiver + ", " + index + ", " + value + ")";
+		return "hxhx_assign_index(" + receiver + ", " + index + ", " + value + ")";
 	}
 
 	static function pythonUpdateIndexExpr(receiver:String, index:String, op:String, value:String):String {
-		return "__hxhx_update_index(" + receiver + ", " + index + ", " + quoteString(op) + ", " + value + ")";
+		return "hxhx_update_index(" + receiver + ", " + index + ", " + quoteString(op) + ", " + value + ")";
 	}
 
 	static function pythonNullCoalesceAttrExpr(receiver:String, field:String, value:String):String {
-		return "__hxhx_null_coalesce_attr(" + receiver + ", " + quoteString(field) + ", " + value + ")";
+		return "hxhx_null_coalesce_attr(" + receiver + ", " + quoteString(field) + ", " + value + ")";
 	}
 
 	static function pythonNullCoalesceIndexExpr(receiver:String, index:String, value:String):String {
-		return "__hxhx_null_coalesce_index(" + receiver + ", " + index + ", " + value + ")";
+		return "hxhx_null_coalesce_index(" + receiver + ", " + index + ", " + value + ")";
 	}
 
 	static function phpModuloAssignExpr(left:HxExpr, right:HxExpr):String {
@@ -1071,7 +1071,7 @@ class SourceNativeBackend {
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported type check RHS: " + exprKind(typeExpr);
 				}
-				"__hxhx_is_of_type(" + renderedValue + ", " + quoteString(typeName) + ")";
+				"hxhx_is_of_type(" + renderedValue + ", " + quoteString(typeName) + ")";
 			case Php:
 				final typeName = switch (typeExpr) {
 					case EIdent(name) | EEnumValue(name):
@@ -1109,7 +1109,7 @@ class SourceNativeBackend {
 	static function unsignedRightShiftExpr(target:SourceNativeTarget, left:String, right:String):String {
 		return switch (target) {
 			case Python:
-				"__hxhx_ushr(" + left + ", " + right + ")";
+				"hxhx_ushr(" + left + ", " + right + ")";
 			case Java:
 				"(" + left + " >>> " + right + ")";
 			case Cs:
@@ -1170,15 +1170,15 @@ class SourceNativeBackend {
 				switch (expr) {
 					case EIdent(name):
 						final targetName = valueName(target, name);
-						"((__hxhx_post_old := "
+						"((hxhx_post_old := "
 						+ targetName
 						+ "), ("
 						+ targetName
-						+ " := (__hxhx_post_old"
+						+ " := (hxhx_post_old"
 						+ suffix
-						+ ")), __hxhx_post_old)[2]";
+						+ ")), hxhx_post_old)[2]";
 					case EField(receiver, field):
-						"__hxhx_post_update_attr("
+						"hxhx_post_update_attr("
 						+ renderExpr(target, receiver)
 						+ ", "
 						+ quoteString(sanitizeTypeName(field))
@@ -1186,7 +1186,7 @@ class SourceNativeBackend {
 						+ Std.string(delta)
 						+ ")";
 					case EArrayAccess(receiver, index):
-						"__hxhx_post_update_index("
+						"hxhx_post_update_index("
 						+ renderExpr(target, receiver)
 						+ ", "
 						+ renderExpr(target, index)
@@ -1194,7 +1194,7 @@ class SourceNativeBackend {
 						+ Std.string(delta)
 						+ ")";
 					case EThis:
-						"__hxhx_post_update_attr(self, " + quoteString("__hx_value") + ", " + Std.string(delta) + ")";
+						"hxhx_post_update_attr(self, " + quoteString("__hx_value") + ", " + Std.string(delta) + ")";
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 				}
@@ -1970,7 +1970,7 @@ class SourceNativeBackend {
 				final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
 				for (i in 0...count)
 					pairs.push(sanitizePythonIdentifier(fieldNames[i]) + "=" + renderExpr(target, fieldValues[i]));
-				"__hxhx_anon(" + pairs.join(", ") + ")";
+				"hxhx_anon(" + pairs.join(", ") + ")";
 			case Php:
 				final pairs = new Array<String>();
 				final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
@@ -2158,11 +2158,11 @@ class SourceNativeBackend {
 	static function renderPythonTryExpr(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>):String {
 		final tryExpr = pythonReturningExpr(tryBody);
 		if (catches == null || catches.length == 0)
-			return "__hxhx_try(lambda: " + tryExpr + ", lambda __hx_err: __hxhx_throw(__hx_err))";
+			return "hxhx_try(lambda: " + tryExpr + ", lambda __hx_err: hxhx_throw(__hx_err))";
 		final c = catches[0];
 		final catchName = sanitizeTypeName(c.name);
 		final catchExpr = pythonReturningExpr(c.body);
-		return "__hxhx_try(lambda: " + tryExpr + ", lambda " + catchName + ": " + catchExpr + ")";
+		return "hxhx_try(lambda: " + tryExpr + ", lambda " + catchName + ": " + catchExpr + ")";
 	}
 
 	static function pythonReturningExpr(stmt:HxStmt):String {
@@ -2174,7 +2174,7 @@ class SourceNativeBackend {
 			case SReturnVoid(_):
 				defaultValue(Python);
 			case SThrow(expr, _):
-				"__hxhx_throw(" + renderExpr(Python, expr) + ")";
+				"hxhx_throw(" + renderExpr(Python, expr) + ")";
 			case _:
 				throw "Python source backend MVP unsupported expression: ETryCatchRaw";
 		};
@@ -2283,12 +2283,12 @@ class SourceNativeBackend {
 	}
 
 	static function pythonMacroExprObject(exprDef:String):String {
-		return "__hxhx_anon(expr=" + exprDef + ", pos=None)";
+		return "hxhx_anon(expr=" + exprDef + ", pos=None)";
 	}
 
 	static function pythonMacroEnum(name:String, params:Array<String>):String {
 		final paramText = params == null ? "" : params.join(", ");
-		return "__hxhx_anon(__hx_ctor=" + quoteString(name) + ", __hx_index=0, __hx_params=[" + paramText + "])";
+		return "hxhx_anon(__hx_ctor=" + quoteString(name) + ", __hx_index=0, __hx_params=[" + paramText + "])";
 	}
 
 	static function pythonMacroExprDef(expr:HxExpr):String {
@@ -2402,7 +2402,7 @@ class SourceNativeBackend {
 			for (i in 0...parts.length - 1)
 				pack.push(quoteString(parts[i]));
 		}
-		final typePath = "__hxhx_anon(pack=[" + pack.join(", ") + "], name=" + quoteString(name) + ", params=[], sub=None)";
+		final typePath = "hxhx_anon(pack=[" + pack.join(", ") + "], name=" + quoteString(name) + ", params=[], sub=None)";
 		return pythonMacroEnum("TPath", [typePath]);
 	}
 
@@ -3379,7 +3379,7 @@ class SourceNativeBackend {
 		final out = new Array<String>();
 		switch (target) {
 			case Python:
-				out.push(indent + "for " + keyValue + ", " + itemValue + " in __hxhx_key_value_iter(" + source + "):");
+				out.push(indent + "for " + keyValue + ", " + itemValue + " in hxhx_key_value_iter(" + source + "):");
 				for (line in renderStmt(target, body, childIndent))
 					out.push(line);
 			case Php:
@@ -5613,7 +5613,7 @@ class SourceNativeBackend {
 			out.push("        if TestLocalStatic.__basic_x is None:");
 			out.push("            TestLocalStatic.__basic_x = 1");
 			out.push("        TestLocalStatic.__basic_x += 1");
-			out.push("        return __hxhx_anon(x=TestLocalStatic.__basic_x, y=\"final\")");
+			out.push("        return hxhx_anon(x=TestLocalStatic.__basic_x, y=\"final\")");
 			return true;
 		}
 		if (className == "TestMapComprehension" && fnName == "testBasic") {
@@ -5695,39 +5695,39 @@ class SourceNativeBackend {
 		switch (target) {
 			case Python:
 				lines.push("# Generated by hxhx Stage3 Python source backend MVP");
-				lines.push("def __hxhx_anon(**kwargs):");
+				lines.push("def hxhx_anon(**kwargs):");
 				lines.push("    obj = type(\"HxAnon\", (), {})()");
 				lines.push("    obj.__dict__.update(kwargs)");
 				lines.push("    return obj");
 				lines.push("");
-				lines.push("def __hxhx_post_update_attr(obj, field, delta):");
+				lines.push("def hxhx_post_update_attr(obj, field, delta):");
 				lines.push("    old = getattr(obj, field)");
 				lines.push("    setattr(obj, field, (old + delta))");
 				lines.push("    return old");
 				lines.push("");
-				lines.push("def __hxhx_assign_attr(obj, field, value):");
+				lines.push("def hxhx_assign_attr(obj, field, value):");
 				lines.push("    setattr(obj, field, value)");
 				lines.push("    return value");
 				lines.push("");
-				lines.push("def __hxhx_assign_index(obj, index, value):");
+				lines.push("def hxhx_assign_index(obj, index, value):");
 				lines.push("    obj[index] = value");
 				lines.push("    return value");
 				lines.push("");
-				lines.push("def __hxhx_null_coalesce_attr(obj, field, value):");
+				lines.push("def hxhx_null_coalesce_attr(obj, field, value):");
 				lines.push("    current = getattr(obj, field)");
 				lines.push("    if current is not None:");
 				lines.push("        return current");
 				lines.push("    setattr(obj, field, value)");
 				lines.push("    return value");
 				lines.push("");
-				lines.push("def __hxhx_null_coalesce_index(obj, index, value):");
+				lines.push("def hxhx_null_coalesce_index(obj, index, value):");
 				lines.push("    current = obj[index]");
 				lines.push("    if current is not None:");
 				lines.push("        return current");
 				lines.push("    obj[index] = value");
 				lines.push("    return value");
 				lines.push("");
-				lines.push("def __hxhx_update_index(obj, index, op, value):");
+				lines.push("def hxhx_update_index(obj, index, op, value):");
 				lines.push("    old = obj[index]");
 				lines.push("    if op == \"+\":");
 				lines.push("        next_value = (old + value)");
@@ -5754,24 +5754,24 @@ class SourceNativeBackend {
 				lines.push("    obj[index] = next_value");
 				lines.push("    return next_value");
 				lines.push("");
-				lines.push("def __hxhx_post_update_index(obj, index, delta):");
+				lines.push("def hxhx_post_update_index(obj, index, delta):");
 				lines.push("    old = obj[index]");
 				lines.push("    obj[index] = (old + delta)");
 				lines.push("    return old");
 				lines.push("");
-				lines.push("def __hxhx_key_value_iter(value):");
+				lines.push("def hxhx_key_value_iter(value):");
 				lines.push("    return value.items() if hasattr(value, \"items\") else enumerate(value)");
 				lines.push("");
-				lines.push("def __hxhx_throw(value):");
+				lines.push("def hxhx_throw(value):");
 				lines.push("    raise value");
 				lines.push("");
-				lines.push("def __hxhx_try(try_fn, catch_fn):");
+				lines.push("def hxhx_try(try_fn, catch_fn):");
 				lines.push("    try:");
 				lines.push("        return try_fn()");
 				lines.push("    except Exception as e:");
 				lines.push("        return catch_fn(e)");
 				lines.push("");
-				lines.push("def __hxhx_is_of_type(value, type_name):");
+				lines.push("def hxhx_is_of_type(value, type_name):");
 				lines.push("    if type_name == \"Int\":");
 				lines.push("        return isinstance(value, int) and not isinstance(value, bool)");
 				lines.push("    if type_name == \"Float\":");
@@ -5787,7 +5787,7 @@ class SourceNativeBackend {
 				lines.push("    cls = globals().get(type_name)");
 				lines.push("    return isinstance(value, cls) if isinstance(cls, type) else False");
 				lines.push("");
-				lines.push("def __hxhx_ushr(value, bits):");
+				lines.push("def hxhx_ushr(value, bits):");
 				lines.push("    return ((value & 0xffffffff) >> (bits & 31))");
 				lines.push("");
 				for (line in renderSupportClasses(target, program, decl, className))
