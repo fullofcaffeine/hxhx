@@ -4054,6 +4054,32 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonSwitchExpressionGuardSyntax():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_switch_guard_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final switchExpr = HxExpr.ESwitch(EIdent("items"), [
+			HxSwitchPattern.PLengthGuard(HxSwitchPattern.PBind("matched"), "matched", 3),
+			HxSwitchPattern.PBind("fallback")
+		], [EString("three"), EString("other")]);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("items", "", EArrayDecl([EString("a"), EString("b"), EString("c")]), pos),
+			SVar("label", "", switchExpr, pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("label")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "and (len(items) == 3)", "Python switch guard expressions should use Python conjunction syntax");
+		assertNotContains(content, "&&", "Python switch guard expressions should not emit C-style conjunctions");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpObjectPatternSwitchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4211,6 +4237,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonReservedLocalNameSanitized();
 		assertPythonLambdaUpdateExpressionSyntax();
 		assertPythonThisUpdateReturnExpressionSyntax();
+		assertPythonSwitchExpressionGuardSyntax();
 		assertPhpObjectPatternSwitchExpression();
 		assertPythonObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();

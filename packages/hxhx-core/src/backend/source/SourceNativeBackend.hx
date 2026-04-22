@@ -3470,22 +3470,42 @@ class SourceNativeBackend {
 				};
 			case PUnsupportedGuard(inner):
 				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
-				{cond: "((" + lowered.cond + ") && false)", bindings: lowered.bindings};
+				{cond: "((" + lowered.cond + ") " + sourceAndOp(target) + " " + falseLiteral(target) + ")", bindings: lowered.bindings};
 			case PLengthGuard(inner, bindingName, length):
 				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
 				final value = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
-				{cond: "((" + lowered.cond + ") && (" + sourceLengthExpr(target, value) + " == " + Std.string(length) + "))", bindings: lowered.bindings};
+				{cond: "(("
+					+ lowered.cond
+					+ ") "
+					+ sourceAndOp(target)
+					+ " ("
+					+ sourceLengthExpr(target, value)
+					+ " == "
+					+ Std.string(length)
+					+ "))",
+					bindings: lowered.bindings
+				};
 			case PStartsWithGuard(inner, bindingName, prefix):
 				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
 				final value = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
-				{cond: "((" + lowered.cond + ") && (" + sourceStartsWithExpr(target, value, prefix) + "))", bindings: lowered.bindings};
+				{
+					cond: "((" + lowered.cond + ") " + sourceAndOp(target) + " (" + sourceStartsWithExpr(target, value, prefix) + "))",
+					bindings: lowered.bindings
+				};
 			case PIntEqualsGuard(inner, bindingName, value):
 				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
 				final bound = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
-				{cond: "((" + lowered.cond + ") && " + equalityCond(target, bound, Std.string(value)) + ")", bindings: lowered.bindings};
+				{
+					cond: "((" + lowered.cond + ") " + sourceAndOp(target) + " " + equalityCond(target, bound, Std.string(value)) + ")",
+					bindings: lowered.bindings
+				};
 			case PExtractor(extractorText, resultPattern):
 				lowerSourceExtractorPattern(target, extractorText, resultPattern, scrutinee);
 		};
+	}
+
+	static function sourceAndOp(target:SourceNativeTarget):String {
+		return target == Python || target == Lua ? "and" : "&&";
 	}
 
 	static function lowerSourceExtractorPattern(target:SourceNativeTarget, extractorText:String, resultPattern:HxSwitchPattern,
