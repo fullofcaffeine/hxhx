@@ -5174,10 +5174,13 @@ class SourceNativeBackend {
 			appendPythonMetaSupport(out);
 		}
 		final postStaticInitializers = new Array<String>();
+		final pythonClassesByName = new Map<String, HxClassDecl>();
+		for (cls in pending)
+			pythonClassesByName.set(sanitizePythonIdentifier(HxClassDecl.getName(cls)), cls);
 		for (cls in ordered) {
 			if (out.length > 0)
 				out.push("");
-			for (line in renderPythonHelperClass(cls, postStaticInitializers))
+			for (line in renderPythonHelperClass(cls, postStaticInitializers, pythonClassesByName))
 				out.push(line);
 		}
 		final extraNamespaceClasses = new Array<String>();
@@ -5949,8 +5952,14 @@ class SourceNativeBackend {
 		}
 	}
 
-	static function pythonInstanceMethodNames(cls:HxClassDecl):Map<String, Bool> {
+	static function pythonInstanceMethodNames(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>, visited:Map<String, Bool>):Map<String, Bool> {
 		final names:Map<String, Bool> = [];
+		final base = pythonBaseClassDecl(cls, classesByName);
+		if (base != null && !pythonClassVisited(base, visited)) {
+			final baseNames = pythonInstanceMethodNames(base, classesByName, pythonMarkClassVisited(base, visited));
+			for (name in baseNames.keys())
+				names.set(name, true);
+		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (!HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) != "new")
 				names.set(HxFunctionDecl.getName(fn), true);
@@ -5958,13 +5967,43 @@ class SourceNativeBackend {
 		return names;
 	}
 
-	static function pythonInstanceFieldNames(cls:HxClassDecl):Map<String, Bool> {
+	static function pythonInstanceFieldNames(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>, visited:Map<String, Bool>):Map<String, Bool> {
 		final names:Map<String, Bool> = [];
+		final base = pythonBaseClassDecl(cls, classesByName);
+		if (base != null && !pythonClassVisited(base, visited)) {
+			final baseNames = pythonInstanceFieldNames(base, classesByName, pythonMarkClassVisited(base, visited));
+			for (name in baseNames.keys())
+				names.set(name, true);
+		}
 		for (field in HxClassDecl.getFields(cls)) {
 			if (!HxFieldDecl.getIsStatic(field))
 				names.set(HxFieldDecl.getName(field), true);
 		}
 		return names;
+	}
+
+	static function pythonBaseClassDecl(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>):HxClassDecl {
+		if (classesByName == null)
+			return null;
+		final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
+		if (baseName == null || baseName.length == 0)
+			return null;
+		return classesByName.get(baseName);
+	}
+
+	static function pythonClassVisited(cls:HxClassDecl, visited:Map<String, Bool>):Bool {
+		if (visited == null)
+			return false;
+		return visited.exists(sanitizePythonIdentifier(HxClassDecl.getName(cls)));
+	}
+
+	static function pythonMarkClassVisited(cls:HxClassDecl, visited:Map<String, Bool>):Map<String, Bool> {
+		final next:Map<String, Bool> = [];
+		if (visited != null)
+			for (name in visited.keys())
+				next.set(name, true);
+		next.set(sanitizePythonIdentifier(HxClassDecl.getName(cls)), true);
+		return next;
 	}
 
 	static function copyStringArray(values:Array<String>):Array<String> {
@@ -6066,6 +6105,9 @@ class SourceNativeBackend {
 			case EArrayAccess(array, index):
 				EArrayAccess(pythonRewriteSameClassMemberExpr(array, methodNames, fieldNames, locals),
 					pythonRewriteSameClassMemberExpr(index, methodNames, fieldNames, locals));
+			case ERange(start, end):
+				ERange(pythonRewriteSameClassMemberExpr(start, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMemberExpr(end, methodNames, fieldNames, locals));
 			case EArrayDecl(values):
 				EArrayDecl([
 					for (value in values)
@@ -6103,7 +6145,7 @@ class SourceNativeBackend {
 		}
 	}
 
-	static function renderPythonHelperClass(cls:HxClassDecl, ?postStaticInitializers:Array<String>):Array<String> {
+	static function renderPythonHelperClass(cls:HxClassDecl, postStaticInitializers:Array<String>, classesByName:Map<String, HxClassDecl>):Array<String> {
 		final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 		final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
 		final classHeader = baseName == null
@@ -6129,8 +6171,10 @@ class SourceNativeBackend {
 			memberCount += 1;
 		}
 		var sawConstructor = false;
-		final instanceMethodNames = pythonInstanceMethodNames(cls);
-		final instanceFieldNames = pythonInstanceFieldNames(cls);
+		final methodVisited:Map<String, Bool> = [];
+		final fieldVisited:Map<String, Bool> = [];
+		final instanceMethodNames = pythonInstanceMethodNames(cls, classesByName, methodVisited);
+		final instanceFieldNames = pythonInstanceFieldNames(cls, classesByName, fieldVisited);
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (isCompileTimeOnlyFunction(fn))
 				continue;

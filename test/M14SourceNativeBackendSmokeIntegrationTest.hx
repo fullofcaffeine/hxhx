@@ -1809,6 +1809,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function pythonInheritedFieldReferenceProgram():GenIrProgram {
+		final src = [
+			"class Base {",
+			"  public var pos:Int = 1;",
+			"  public function new() {}",
+			"}",
+			"",
+			"class Child extends Base {",
+			"  public function new() {",
+			"    super();",
+			"  }",
+			"  public function run() {",
+			"    var total = 0;",
+			"    for (i in pos...3) {",
+			"      total += i;",
+			"    }",
+			"    return total;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var child = new Child();",
+			"    Sys.println(Std.string(child.run()));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function assertCrossModuleClassEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cross_module_" + Std.string(Date.now().getTime()));
 		final srcDir = Path.join([tmpRoot, "src"]);
@@ -4464,6 +4496,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonInheritedFieldReference():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_inherited_field_ref_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(pythonInheritedFieldReferenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "for i in range(self.pos, 3):", "Python inherited instance fields should rewrite through self in ranges");
+		assertNotContains(content, "range(pos, 3)", "Python inherited instance fields should not emit unbound identifiers");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python inherited field references should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "3", "generated Python should preserve inherited field references in range bounds");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertArrayLiteral():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_array_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -5228,6 +5278,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();
 		assertPythonSuperMethodReference();
+		assertPythonInheritedFieldReference();
 		assertCrossModuleClassEmission();
 		assertPythonSkipsStdSupportClasses();
 		assertPythonSkipsMacroSupportMethods();
