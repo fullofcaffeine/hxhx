@@ -844,6 +844,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"import Map;",
 			"import Type;",
 			"import StringTools;",
+			"import Helper.label;",
 			"import haxe.ds.List;",
 			"import haxe.io.Bytes;",
 			"import haxe.CallStack;",
@@ -1847,6 +1848,45 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function javaArraySwitchStatementProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var args = Sys.args();",
+			"    switch (args) {",
+			"      case [\"ping\"]:",
+			"        Sys.println(\"pong\");",
+			"      case [\"code\", Std.parseInt(_) => code]:",
+			"        Sys.println(Std.string(code));",
+			"      case _:",
+			"        Sys.println(\"other\");",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function javaUtilityProcessCompileShimProgram():GenIrProgram {
+		final src = [
+			"class UtilityProcess {",
+			"  static function main() {",
+			"    var args = Sys.args();",
+			"    switch (args) {",
+			"      case [Std.parseInt(_) => code]:",
+			"        Sys.exit(code);",
+			"      case _:",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "UtilityProcess.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function emit(targetId:String, label:String, expectedFile:String, expectedNeedle:String):Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_" + targetId + "_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -1891,9 +1931,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should package the jar path expected by upstream runci");
 		final sourceContent = File.getContent(sourcePath);
 		assertContains(sourceContent, "class Std", "Java source backend should provide minimal Std support class");
+		assertContains(sourceContent, "public static int parseInt(String value)", "Java Std.parseInt support should handle sys helper exit codes");
 		assertContains(sourceContent, "class Sys", "Java source backend should provide minimal Sys support class");
 		assertContains(sourceContent, "public static int command(Object... args)",
 			"Java Sys.command support should execute helper commands used by upstream Java misc projects");
+		assertContains(sourceContent, "public static String[] args()", "Java Sys.args support should expose CLI args to sys tests");
+		assertContains(sourceContent, "java.lang.Process process = new ProcessBuilder",
+			"Java Sys.command support should avoid ambiguity with sys.io.Process imports");
 		assertContains(sourceContent, "public static String systemName()",
 			"Java Sys.systemName support should let helper programs choose the platform classpath separator");
 		assertContains(sourceContent, "public static void exit(Object code)", "Java Sys.exit support should propagate helper command failures");
@@ -2017,6 +2061,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(mainContent, "return arg0.apply(null)", "Java lambda-compatible helper stubs should invoke callbacks");
 		assertContains(mainContent, "helper.assert_(\"ok\")", "Java main source should call sanitized support method names");
 		assertNotContains(mainContent, "import Map;", "Java main source should not import default-package classes");
+		assertNotContains(mainContent, "import Helper.label;", "Java main source should not import default-package module members");
 		assertNotContains(helperContent, "import Type;", "Java support source should not import default-package classes");
 		final secondResult = backend.emit(javaSupportClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
 		assertTrue(secondResult.entryPath == jarPath, "Java source backend should reuse the same jar path on repeated output-dir emits");
@@ -3370,6 +3415,42 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertJavaArraySwitchStatement():Void {
+		if (!commandExists("javac") || !commandExists("jar") || !commandExists("java"))
+			return;
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_array_switch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final outputDir = Path.join([tmpRoot, "bin", "java", "Main-Debug"]);
+		final backend = BackendRegistry.requireForTarget("java-native");
+		final result = backend.emit(javaArraySwitchStatementProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final sourcePath = Path.join([outputDir, "src", "Main.java"]);
+		final content = File.getContent(sourcePath);
+		assertContains(content, "main(String[] __hxhx_cli_args)", "Java entrypoint args should use an internal name so Haxe locals named args still compile");
+		assertContains(content, "if (args != null && args.length == 1", "Java array switch statements should lower array length guards");
+		assertContains(content, "java.util.Objects.equals(args[0], \"ping\")", "Java array switch statements should use value equality for string items");
+		assertContains(content, "Std.parseInt(args[1])", "Java array switch extractor patterns should lower Std.parseInt");
+		final run = commandOutput("java", ["-jar", result.entryPath]);
+		assertTrue(run.code == 0, "Java array switch jar should run: " + run.stderr);
+		assertContains(run.stdout, "other", "Java array switch wildcard branch should execute");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertJavaUtilityProcessCompileShim():Void {
+		if (!commandExists("javac") || !commandExists("jar"))
+			return;
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_utility_process_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final outputDir = Path.join([tmpRoot, "bin", "java", "UtilityProcess-Debug"]);
+		final backend = BackendRegistry.requireForTarget("java-native");
+		final result = backend.emit(javaUtilityProcessCompileShimProgram(),
+			new BackendContext(outputDir, null, "UtilityProcess", true, true, new StringMap<String>()));
+		final sourcePath = Path.join([outputDir, "src", "UtilityProcess.java"]);
+		final content = File.getContent(sourcePath);
+		assertContains(content, "hxhx Java sys compile shim", "Java UtilityProcess entrypoint should use the compile-only shim");
+		assertTrue(FileSystem.exists(result.entryPath), "Java UtilityProcess compile shim should still package a jar");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpTypeCheck():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3600,6 +3681,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertSwitchExpression();
 		assertUnsupportedSwitchGuardExpression();
 		assertSwitchStatement();
+		assertJavaArraySwitchStatement();
+		assertJavaUtilityProcessCompileShim();
 		assertPhpSwitchStatement();
 	}
 }

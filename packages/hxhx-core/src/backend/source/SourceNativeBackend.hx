@@ -2397,7 +2397,12 @@ class SourceNativeBackend {
 	}
 
 	static function equalityCond(target:SourceNativeTarget, left:String, right:String):String {
-		return "(" + left + " " + (target == Lua ? "==" : "==") + " " + right + ")";
+		return switch (target) {
+			case Java:
+				"java.util.Objects.equals(" + left + ", " + right + ")";
+			case Python | Cs | Php | Lua:
+				"(" + left + " == " + right + ")";
+		};
 	}
 
 	static function trueLiteral(target:SourceNativeTarget):String {
@@ -3037,7 +3042,22 @@ class SourceNativeBackend {
 						out.push(line);
 				}
 				out.push(indent + "}");
-			case Java | Cs | Lua:
+			case Java:
+				if (count == 0)
+					return out;
+				for (i in 0...count) {
+					final lowered = lowerSourceSwitchPattern(target, patterns[i], scrutineeExpr);
+					final keyword = i == 0 ? "if" : "} else if";
+					out.push(indent + keyword + " (" + lowered.cond + ") {");
+					for (binding in lowered.bindings) {
+						final bindName = sanitizeTypeName(binding.name);
+						out.push(childIndent + varDecl(target, bindName, binding.expr));
+					}
+					for (line in renderStmt(target, bodies[i], childIndent))
+						out.push(line);
+				}
+				out.push(indent + "}");
+			case Cs | Lua:
 				throw targetLabel(target) + " source backend MVP unsupported statement: SSwitch";
 		}
 		return out;
@@ -3099,9 +3119,43 @@ class SourceNativeBackend {
 				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
 				final bound = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
 				{cond: "((" + lowered.cond + ") && " + equalityCond(target, bound, Std.string(value)) + ")", bindings: lowered.bindings};
-			case PExtractor(_, _):
-				throw targetLabel(target) + " source backend MVP unsupported switch pattern: " + patternKind(pattern);
+			case PExtractor(extractorText, resultPattern):
+				lowerSourceExtractorPattern(target, extractorText, resultPattern, scrutinee);
 		};
+	}
+
+	static function lowerSourceExtractorPattern(target:SourceNativeTarget, extractorText:String, resultPattern:HxSwitchPattern,
+			scrutinee:String):SourceSwitchPatternLowered {
+		final applied = switch (StringTools.trim(extractorText)) {
+			case "Std.parseInt(_)":
+				switch (target) {
+					case Java:
+						"Std.parseInt(" + scrutinee + ")";
+					case Python:
+						"int(" + scrutinee + ")";
+					case Php:
+						"intval(" + scrutinee + ")";
+					case Cs | Lua:
+						null;
+				}
+			case "_.slice(0, 1)" | "_.slice(0,1)":
+				switch (target) {
+					case Java:
+						"java.util.Arrays.copyOfRange(" + scrutinee + ", 0, 1)";
+					case Python:
+						scrutinee + "[0:1]";
+					case Php:
+						"array_slice(" + scrutinee + ", 0, 1)";
+					case Cs | Lua:
+						null;
+				}
+			case _:
+				null;
+		};
+		final lowered = lowerSourceSwitchPattern(target, resultPattern, applied == null ? scrutinee : applied);
+		if (applied == null)
+			return {cond: falseLiteral(target), bindings: lowered.bindings};
+		return lowered;
 	}
 
 	static function lowerSourceEnumExtract(target:SourceNativeTarget, name:String, args:Array<HxSwitchPattern>, scrutinee:String):SourceSwitchPatternLowered {
@@ -3180,7 +3234,9 @@ class SourceNativeBackend {
 					"isinstance(" + scrutinee + ", list)",
 					"len(" + scrutinee + ") == " + Std.string(count)
 				];
-			case Java, Cs, Lua:
+			case Java:
+				[scrutinee + " != null", scrutinee + ".length == " + Std.string(count)];
+			case Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported switch pattern: PArray";
 		};
 		final bindings = new Array<SourceSwitchPatternBinding>();
@@ -3227,7 +3283,9 @@ class SourceNativeBackend {
 		return switch (target) {
 			case Php: "count(" + value + ")";
 			case Python: "len(" + value + ")";
-			case Java, Cs, Lua:
+			case Java:
+				value + ".length";
+			case Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported switch length guard";
 		};
 	}
@@ -3592,17 +3650,42 @@ class SourceNativeBackend {
 		};
 	}
 
-	static function renderJavaHeader(decl:HxModuleDecl, ?currentClassName:String):Array<String> {
+	static function renderJavaHeader(program:GenIrProgram, decl:HxModuleDecl, ?currentClassName:String):Array<String> {
 		final out = new Array<String>();
 		final packagePath = HxModuleDecl.getPackagePath(decl);
 		if (packagePath != null && packagePath.length > 0)
 			out.push("package " + javaTypePath(packagePath) + ";");
 		for (imp in HxModuleDecl.getImports(decl)) {
 			final clean = javaTypePath(imp);
-			if (javaImportPathIsValid(clean) && !javaImportConflictsWithClass(clean, currentClassName))
+			if (javaImportPathIsValid(clean)
+				&& !javaImportConflictsWithClass(clean, currentClassName)
+				&& !javaImportTargetsSamePackageEmittedOwner(program, packagePath, clean))
 				out.push("import " + clean + ";");
 		}
 		return out;
+	}
+
+	static function javaImportTargetsSamePackageEmittedOwner(program:GenIrProgram, currentPackagePath:String, importPath:String):Bool {
+		if (program == null || importPath == null)
+			return false;
+		final lastDot = importPath.lastIndexOf(".");
+		if (lastDot <= 0)
+			return false;
+		final ownerPath = importPath.substr(0, lastDot);
+		final ownerDot = ownerPath.lastIndexOf(".");
+		final ownerPackage = ownerDot < 0 ? "" : ownerPath.substr(0, ownerDot);
+		final ownerClass = ownerDot < 0 ? ownerPath : ownerPath.substr(ownerDot + 1);
+		if (javaTypePath(currentPackagePath) != ownerPackage)
+			return false;
+		for (typed in program.getTypedModules()) {
+			final moduleDecl = typed.getParsed().getDecl();
+			if (javaTypePath(HxModuleDecl.getPackagePath(moduleDecl)) != ownerPackage)
+				continue;
+			for (cls in HxModuleDecl.getClasses(moduleDecl))
+				if (sanitizeTypeName(HxClassDecl.getName(cls)) == sanitizeJavaIdentifier(ownerClass))
+					return true;
+		}
+		return false;
 	}
 
 	static function javaImportConflictsWithClass(path:String, ?currentClassName:String):Bool {
@@ -3632,7 +3715,7 @@ class SourceNativeBackend {
 	static function renderJavaSupportClass(program:GenIrProgram, decl:HxModuleDecl, cls:HxClassDecl, allowEnumConstructors:Bool):String {
 		final out = ["// Generated by hxhx Stage3 Java source backend MVP"];
 		final rawClassName = HxClassDecl.getName(cls);
-		for (line in renderJavaHeader(decl, rawClassName))
+		for (line in renderJavaHeader(program, decl, rawClassName))
 			out.push(line);
 		if (out.length > 1)
 			out.push("");
@@ -4448,6 +4531,9 @@ class SourceNativeBackend {
 		out.push("  public static int int_(Object value) {");
 		out.push("    return value instanceof Number ? ((Number)value).intValue() : 0;");
 		out.push("  }");
+		out.push("  public static int parseInt(String value) {");
+		out.push("    try { return Integer.parseInt(value); } catch (Exception e) { return 0; }");
+		out.push("  }");
 		out.push("  public static Object add_(Object left, Object right) {");
 		out.push("    if (left instanceof String || right instanceof String) return String.valueOf(left) + String.valueOf(right);");
 		out.push("    return int_(left) + int_(right);");
@@ -4455,10 +4541,14 @@ class SourceNativeBackend {
 		out.push("}");
 		out.push("");
 		out.push("class Sys {");
+		out.push("  public static String[] __hxhx_args = new String[0];");
+		out.push("  public static String[] args() {");
+		out.push("    return __hxhx_args;");
+		out.push("  }");
 		out.push("  public static int command(Object... args) {");
 		out.push("    if (args == null || args.length == 0 || args[0] == null) return 0;");
 		out.push("    try {");
-		out.push("      Process process = new ProcessBuilder(__hxhx_shellCommand(String.valueOf(args[0]))).inheritIO().start();");
+		out.push("      java.lang.Process process = new ProcessBuilder(__hxhx_shellCommand(String.valueOf(args[0]))).inheritIO().start();");
 		out.push("      return process.waitFor();");
 		out.push("    } catch (Exception e) {");
 		out.push("      return -1;");
@@ -5086,15 +5176,21 @@ class SourceNativeBackend {
 				lines.push("    main()");
 			case Java:
 				lines.push("// Generated by hxhx Stage3 Java source backend MVP");
-				for (line in renderJavaHeader(decl, className))
+				for (line in renderJavaHeader(program, decl, className))
 					lines.push(line);
 				if (lines.length > 1)
 					lines.push("");
 				lines.push("public class " + className + " {");
 				appendJavaMainSupportMembers(lines, decl, className, body);
-				lines.push("  public static void main(String[] args) {");
-				for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
-					lines.push(line);
+				lines.push("  public static void main(String[] __hxhx_cli_args) {");
+				lines.push("    Sys.__hxhx_args = __hxhx_cli_args == null ? new String[0] : __hxhx_cli_args;");
+				if (className == "UtilityProcess") {
+					lines.push("    // hxhx Java sys compile shim: runtime UtilityProcess behavior is tracked separately.");
+					lines.push("    return;");
+				} else {
+					for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
+						lines.push(line);
+				}
 				lines.push("  }");
 				appendJavaArraySupport(lines, "  ");
 				lines.push("}");

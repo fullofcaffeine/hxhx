@@ -15,6 +15,13 @@ private typedef StandardTargetScan = {
 	final missingValueFlag:Null<String>;
 }
 
+private typedef NativeSourceTarget = {
+	final target:String;
+	final lane:String;
+	final backendId:String;
+	final defineName:String;
+}
+
 class CliRouting {
 	public static inline final LANE_NATIVE_OCAML:String = "native-ocaml";
 	public static inline final LANE_NATIVE_JS:String = "native-js";
@@ -169,7 +176,7 @@ class CliRouting {
 			};
 		}
 
-		final sourceTarget = pureSourceTarget(flattened);
+		final sourceTarget = sourceTargetForUnits(planningUnits);
 		if (!targetScan.hasJs && sourceTarget != null) {
 			final nativeSource = baseForwarded.copy();
 			addDefineIfMissing(nativeSource, sourceTarget.defineName);
@@ -425,7 +432,7 @@ class CliRouting {
 				case "-python", "--python":
 					if (target != "python")
 						return true;
-				case "-java", "--java":
+				case "-java", "--java", "-jvm", "--jvm":
 					if (target != "java")
 						return true;
 				case "-cs", "--cs":
@@ -443,8 +450,8 @@ class CliRouting {
 		return false;
 	}
 
-	static function pureSourceTarget(args:Array<String>):Null<{lane:String, backendId:String, defineName:String}> {
-		final candidates = [
+	static function sourceTargetCandidates():Array<NativeSourceTarget> {
+		return [
 			{
 				target: "python",
 				lane: LANE_NATIVE_PYTHON,
@@ -476,11 +483,58 @@ class CliRouting {
 				defineName: "lua"
 			}
 		];
+	}
+
+	static function pureSourceTarget(args:Array<String>):Null<NativeSourceTarget> {
+		final candidates = sourceTargetCandidates();
 		for (candidate in candidates) {
 			if (hasSourceTargetFlag(args, candidate.target) && !hasNonSourceStandardTargetFlag(args, candidate.target))
-				return {lane: candidate.lane, backendId: candidate.backendId, defineName: candidate.defineName};
+				return {
+					target: candidate.target,
+					lane: candidate.lane,
+					backendId: candidate.backendId,
+					defineName: candidate.defineName
+				};
 		}
 		return null;
+	}
+
+	static function sourceTargetForUnits(units:Array<Array<String>>):Null<NativeSourceTarget> {
+		if (units == null || units.length == 0)
+			return null;
+		final flattened = flattenUnits(units);
+		final pure = pureSourceTarget(flattened);
+		if (pure != null)
+			return pure;
+		final candidates = sourceTargetCandidates();
+		for (candidate in candidates) {
+			if (canRouteMixedUnitsAsNativeSource(units, candidate))
+				return {
+					target: candidate.target,
+					lane: candidate.lane,
+					backendId: candidate.backendId,
+					defineName: candidate.defineName
+				};
+		}
+		return null;
+	}
+
+	static function canRouteMixedUnitsAsNativeSource(units:Array<Array<String>>, candidate:NativeSourceTarget):Bool {
+		if (units == null || units.length == 0)
+			return false;
+		var sawSourceTarget = false;
+		for (unit in units) {
+			if (hasSourceTargetFlag(unit, candidate.target)) {
+				if (hasNonSourceStandardTargetFlag(unit, candidate.target))
+					return false;
+				sawSourceTarget = true;
+				continue;
+			}
+			if (isNativeNekoCommandHelperUnit(unit))
+				continue;
+			return false;
+		}
+		return sawSourceTarget;
 	}
 
 	static function hasNonNekoStandardTargetFlag(args:Array<String>):Bool {
@@ -525,7 +579,11 @@ class CliRouting {
 	}
 
 	public static function isJsNativeHelperUnit(args:Array<String>):Bool {
-		return !hasStandardJsTargetFlag(args) && hasNekoTargetFlag(args) && hasCommandHook(args) && !hasNonNekoStandardTargetFlag(args);
+		return !hasStandardJsTargetFlag(args) && isNativeNekoCommandHelperUnit(args);
+	}
+
+	static function isNativeNekoCommandHelperUnit(args:Array<String>):Bool {
+		return hasNekoTargetFlag(args) && hasCommandHook(args) && !hasNonNekoStandardTargetFlag(args);
 	}
 
 	static function canRouteMixedUnitsAsNativeJs(units:Array<Array<String>>):Bool {
