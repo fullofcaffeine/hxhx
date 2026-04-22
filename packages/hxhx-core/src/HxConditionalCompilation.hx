@@ -347,15 +347,14 @@ class HxConditionalCompilation {
 				break;
 			}
 		}
-		if (keepStart < 0 || keepEnd < keepStart) {
-			// No matching branch and no else branch: keep nothing.
-			return makeBlankLineLike(line);
-		}
-
 		// Build an output line of the same length that keeps:
 		// - prefix before #if
-		// - chosen branch payload
+		// - chosen branch payload, if any
 		// - suffix after #end
+		//
+		// If no branch matches and there is no #else, only the conditional payload is blanked.
+		// The suffix still matters for inline modifier patterns such as:
+		//   #if someTarget inline #end public static function f() {}
 		final outCodes = new Array<Int>();
 		outCodes.resize(line.length);
 		for (i in 0...line.length) {
@@ -372,7 +371,8 @@ class HxConditionalCompilation {
 		}
 
 		copyRange(0, idxIf);
-		copyRange(keepStart, keepEnd);
+		if (keepStart >= 0 && keepEnd >= keepStart)
+			copyRange(keepStart, keepEnd);
 		copyRange(idxEnd + 4, line.length); // "#end".length == 4
 
 		final b = new StringBuf();
@@ -562,13 +562,17 @@ class HxConditionalCompilation {
 		// we would push to the stack but never observe `#end`, causing the remainder
 		// of the file to be blanked (catastrophic for parsing).
 		//
-		// Heuristic: if there's any additional `#` after the initial one, treat the
+		// Heuristic: if there is a same-line `#end`, let the inline conditional
+		// filter below preserve the active payload and any suffix after `#end`.
+		// Otherwise, if there's any additional `#` after the initial one, treat the
 		// line as an opaque preprocessor construct. We still blank it (so parsers
 		// never see `#` tokens), but we do not mutate the conditional stack.
 		//
 		// Strip trailing `//` comment text first so cases like:
 		//   #if cs // issue #996
 		// do not get misclassified as opaque.
+		if (restNoComment.indexOf("#end") != -1)
+			return null;
 		if (restNoComment.indexOf("#") != -1)
 			return {kind: "opaque", expr: ""};
 		final trimmed = StringTools.trim(restNoComment);

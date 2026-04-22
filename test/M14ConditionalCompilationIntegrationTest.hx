@@ -224,6 +224,34 @@ class M14ConditionalCompilationIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function testInlineInactiveModifierKeepsSuffix():Void {
+		final luaInlineModifier = '#if (!java && !cpp && !lua && !eval) inline #end public static function urlDecode(s:String):String {';
+		final luaModifierFiltered = HxConditionalCompilation.filterSource(luaInlineModifier, defines(["lua"]));
+		assertContains(luaModifierFiltered, "public static function urlDecode", "inline conditional with no matching branch should preserve suffix after #end");
+		assertNotContains(luaModifierFiltered, "inline", "inactive inline modifier should be blanked for lua");
+		assertNotContains(luaModifierFiltered, "#if", "inline conditional directive should be blanked for lua");
+		assertNotContains(luaModifierFiltered, "#end", "inline conditional terminator should be blanked for lua");
+
+		final luaSource = [
+			"class LuaFilteredCallback {",
+			"  #if (!java && !cpp && !lua && !eval) inline #end public static function decode(s:String):String {",
+			"    #if java",
+			"    return s;",
+			"    #elseif lua",
+			'    s = lua.NativeStringTools.gsub(s, "%%(%x%x)", function(h) {',
+			"      return lua.NativeStringTools.char(lua.Lua.tonumber(h, 16));",
+			"    });",
+			"    return s;",
+			"    #end",
+			"  }",
+			"}",
+		].join("\n");
+		final luaFiltered = HxConditionalCompilation.filterSource(luaSource, defines(["lua"]));
+		assertContains(luaFiltered, "public static function decode", "inline modifier filtering should leave the method declaration parseable");
+		assertNotContains(luaFiltered, "#elseif", "block conditional directives should be blanked before parsing");
+		ParserStage.parse(luaFiltered, "LuaFilteredCallback.hx");
+	}
+
 	static function main():Void {
 		final inlineElseIf = 'if (#if flash Flash.path() #elseif php php.Global.method_exists(v, "hxSerialize") #else v.hxSerialize != null #end) keep();';
 		final jsFiltered = HxConditionalCompilation.filterSource(inlineElseIf, defines(["js"]));
@@ -239,5 +267,6 @@ class M14ConditionalCompilationIntegrationTest {
 		testInactiveTargetQualifiedDeps();
 		testActiveTargetNativeExternImports();
 		testActiveNativeLibraryExternImports();
+		testInlineInactiveModifierKeepsSuffix();
 	}
 }
