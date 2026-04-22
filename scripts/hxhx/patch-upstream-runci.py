@@ -133,6 +133,58 @@ def patch_skip_sys_on_macos(upstream_dir: str) -> None:
         write_lines(java_target_path, out)
 
 
+def patch_python_skip_missing_misc(upstream_dir: str) -> None:
+    path = upstream_path(upstream_dir, "tests/runci/targets/Python.hx")
+    if not path.is_file():
+        return
+
+    marker = "HXHX Gate runner: skip missing Python misc directories"
+    src = read_text(path)
+    if marker in src:
+        return
+
+    misc_needle = (
+        '\t\tchangeDirectory(getMiscSubDir("python"));\n'
+        '\t\trunCommand("haxe", ["run.hxml"]);\n'
+    )
+    misc_replacement = (
+        f"\t\t// {marker}\n"
+        '\t\tfinal hxhxPythonMiscDir = getMiscSubDir("python");\n'
+        "\t\tif (FileSystem.exists(hxhxPythonMiscDir)) {\n"
+        "\t\t\tchangeDirectory(hxhxPythonMiscDir);\n"
+        '\t\t\trunCommand("haxe", ["run.hxml"]);\n'
+        "\t\t} else {\n"
+        '\t\t\tinfoMsg("Skipping Python misc tests (HXHX Gate runner; tests/misc/python missing)");\n'
+        "\t\t}\n"
+    )
+    if misc_needle not in src:
+        fail("Python.hx misc/python block not found")
+    src = src.replace(misc_needle, misc_replacement, 1)
+
+    import_needle = (
+        '\t\tchangeDirectory(getMiscSubDir(\'python\', "pythonImport"));\n'
+        '\t\trunCommand("haxe", ["compile.hxml"]);\n'
+        "\t\tfor (py in pys) {\n"
+        '\t\t\trunCommand(py, ["test.py"]);\n'
+        "\t\t}\n"
+    )
+    import_replacement = (
+        "\t\tfinal hxhxPythonImportDir = getMiscSubDir('python', \"pythonImport\");\n"
+        "\t\tif (FileSystem.exists(hxhxPythonImportDir)) {\n"
+        "\t\t\tchangeDirectory(hxhxPythonImportDir);\n"
+        '\t\t\trunCommand("haxe", ["compile.hxml"]);\n'
+        "\t\t\tfor (py in pys) {\n"
+        '\t\t\t\trunCommand(py, ["test.py"]);\n'
+        "\t\t\t}\n"
+        "\t\t} else {\n"
+        '\t\t\tinfoMsg("Skipping Python import misc tests (HXHX Gate runner; tests/misc/python/pythonImport missing)");\n'
+        "\t\t}\n"
+    )
+    if import_needle not in src:
+        fail("Python.hx misc/pythonImport block not found")
+    write_text(path, src.replace(import_needle, import_replacement, 1))
+
+
 def patch_js_server_timeouts_on_macos(upstream_dir: str, timeout_ms: str) -> None:
     if platform.system() != "Darwin":
         return
@@ -344,6 +396,7 @@ def main(argv: list[str]) -> None:
     args = parse_args(argv)
     commands = {
         "skip-sys-on-macos": lambda: patch_skip_sys_on_macos(args.upstream_dir),
+        "python-skip-missing-misc": lambda: patch_python_skip_missing_misc(args.upstream_dir),
         "js-server-timeouts-on-macos": lambda: patch_js_server_timeouts_on_macos(args.upstream_dir, args.timeout_ms),
         "skip-utest-install-if-present": lambda: patch_skip_utest_install_if_present(args.upstream_dir),
         "macro-skip-haxeserver-install-if-present": lambda: patch_macro_skip_haxeserver_install_if_present(args.upstream_dir),

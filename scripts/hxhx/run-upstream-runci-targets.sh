@@ -486,7 +486,12 @@ patch_runci_skip_sys_on_macos() {
   python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-sys-on-macos --upstream-dir "$UPSTREAM_DIR"
 }
 
+patch_runci_python_skip_missing_misc() {
+  local python_target="$UPSTREAM_DIR/tests/runci/targets/Python.hx"
+  [ -f "$python_target" ] || return 0
 
+  python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" python-skip-missing-misc --upstream-dir "$UPSTREAM_DIR"
+}
 
 patch_runci_js_server_timeouts_on_macos() {
   if [ "$(uname -s)" != "Darwin" ]; then
@@ -783,10 +788,14 @@ strict_node_echo_server="${HXHX_GATE3_NODE_ECHO_SERVER:-${HXHX_FORBID_STAGE0:-0}
 want_macro_patches=0
 want_js_patches=0
 want_node_echo_patch=0
+want_python_patches=0
 for t in "${targets[@]}"; do
   t_norm="$(echo "$t" | tr '[:upper:]' '[:lower:]')"
   if [ "$t_norm" = "macro" ]; then
     want_macro_patches=1
+  fi
+  if [ "$t_norm" = "python" ]; then
+    want_python_patches=1
   fi
   if [ "$t_norm" = "js" ]; then
     want_js_patches=1
@@ -798,6 +807,9 @@ done
 
 if [ "$want_macro_patches" = "1" ]; then
   need_cmd python3 "patch upstream runci to reduce network dependency for Macro target"
+fi
+if [ "$want_python_patches" = "1" ]; then
+  need_cmd python3 "patch upstream runci Python target for optional misc directories"
 fi
 if [ "$want_js_patches" = "1" ] && [ "$(uname -s)" = "Darwin" ] && [ "${HXHX_GATE3_FORCE_JS_SERVER:-0}" != "1" ]; then
   need_cmd python3 "patch upstream runci Js/server async timeouts for macOS stability"
@@ -814,6 +826,9 @@ fi
   fi
   export UPSTREAM_DIR
   patch_runci_skip_sys_on_macos
+  if [ "$want_python_patches" = "1" ]; then
+    patch_runci_python_skip_missing_misc
+  fi
   if [ "$want_js_patches" = "1" ]; then
     patch_runci_js_server_timeouts_on_macos
   fi

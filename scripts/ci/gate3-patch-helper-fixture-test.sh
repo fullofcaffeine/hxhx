@@ -64,6 +64,23 @@ class Java {
 }
 EOF
 
+cat >"$fixture/tests/runci/targets/Python.hx" <<'EOF'
+class Python {
+	static public function run(args:Array<String>) {
+		final pys = ["python3"];
+
+		changeDirectory(getMiscSubDir("python"));
+		runCommand("haxe", ["run.hxml"]);
+
+		changeDirectory(getMiscSubDir('python', "pythonImport"));
+		runCommand("haxe", ["compile.hxml"]);
+		for (py in pys) {
+			runCommand(py, ["test.py"]);
+		}
+	}
+}
+EOF
+
 cat >"$fixture/tests/runci/System.hx" <<'EOF'
 class System {
 	static public function runSysTest(cmd:String, ?args:Array<String>) {
@@ -81,6 +98,7 @@ class Test {
 EOF
 
 HXHX_PATCH_HELPER_FORCE_DARWIN=1 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-sys-on-macos --upstream-dir "$fixture"
+python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" python-skip-missing-misc --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-utest-install-if-present --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-skip-haxeserver-install-if-present --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-optional-skip-party --upstream-dir "$fixture"
@@ -92,6 +110,9 @@ grep -Fq "Skipping JS sys tests on Mac" "$fixture/tests/runci/targets/Js.hx"
 grep -Fq "HXHX Gate runner: skip Java sys compile on macOS" "$fixture/tests/runci/targets/Java.hx"
 grep -Fq "Skipping Java sys tests on Mac" "$fixture/tests/runci/targets/Java.hx"
 grep -Fq "HXHX Gate runner: upstream tests/sys contains unicode filename fixtures" "$fixture/tests/runci/System.hx"
+grep -Fq "HXHX Gate runner: skip missing Python misc directories" "$fixture/tests/runci/targets/Python.hx"
+grep -Fq "Skipping Python misc tests" "$fixture/tests/runci/targets/Python.hx"
+grep -Fq "Skipping Python import misc tests" "$fixture/tests/runci/targets/Python.hx"
 grep -Fq 'runCommand("haxelib", ["path", "utest"])' "$fixture/tests/RunCi.hx"
 grep -Fq 'runCommand("haxelib", ["path", "haxeserver"])' "$fixture/tests/runci/targets/Macro.hx"
 grep -Fq "HXHX_GATE2_SKIP_PARTY" "$fixture/tests/runci/targets/Macro.hx"
