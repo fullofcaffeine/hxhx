@@ -23,8 +23,22 @@ package hxhx;
 	- Once socket IO is fully reliable in the Haxe layer for our bootstrap path, this bridge can be
 	  replaced by a pure-Haxe transport without changing Stage3 CLI surface behavior.
 **/
+// `--interp` tests can import Stage3Compiler without linking the OCaml runtime bridge.
+// Real socket transport still requires the native implementation below.
+#if interp
+class NativeCompilerServer {
+	public static function waitSocket(_mode:String):Int {
+		throw "NativeCompilerServer.waitSocket is only available in the native hxhx runtime";
+	}
+
+	public static function connect(_mode:String, _request:String):String {
+		throw "NativeCompilerServer.connect is only available in the native hxhx runtime";
+	}
+}
+#else
 @:native("HxHxCompilerServer")
 extern class NativeCompilerServer {
 	public static function waitSocket(mode:String):Int;
 	public static function connect(mode:String, request:String):String;
 }
+#end

@@ -127,6 +127,7 @@
     "test:m14:backend-plugin-loader": "haxe test/m14_backend_plugin_loader_integration_test.hxml",
     "test:m14:native-backend-plugin-host-abi": "haxe test/m14_native_backend_plugin_host_abi_integration_test.hxml",
     "test:m14:native-macro-module-host-abi": "haxe test/m14_native_macro_module_host_abi_integration_test.hxml",
+    "test:m14:stage3-emit-dynamic-exception-diagnostic": "haxe test/m14_stage3_emit_dynamic_exception_diagnostic_integration_test.hxml",
     "test:m14:source-native-backend-smoke": "haxe test/m14_source_native_backend_smoke_integration_test.hxml",
     "test:m14:stage3-java-noemit-diagnostics": "haxe test/m14_stage3_java_noemit_diagnostics_integration_test.hxml",
     "test:m14:macro-runtime-mode-switch": "haxe test/m14_macro_runtime_mode_switch_integration_test.hxml",

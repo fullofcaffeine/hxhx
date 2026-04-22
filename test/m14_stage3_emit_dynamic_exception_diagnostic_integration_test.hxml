@@ -1,0 +1,7 @@
+-cp test
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+
+-D reflaxe
+-main M14Stage3EmitDynamicExceptionDiagnosticIntegrationTest
+--interp

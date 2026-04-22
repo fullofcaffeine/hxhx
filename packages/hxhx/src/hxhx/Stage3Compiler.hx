@@ -1030,6 +1030,15 @@ class Stage3Compiler {
 		return TyperStage.extractRawDiagnostic(e.getMessage());
 	}
 
+	static function formatDynamicException(e:Dynamic):String {
+		if (Std.isOfType(e, haxe.Exception)) {
+			final ex:haxe.Exception = cast e;
+			if (ex.message != null && ex.message.length > 0)
+				return ex.message;
+		}
+		return Std.string(e);
+	}
+
 	static function resolveHaxelibSpec(lib:String, cwd:String, seen:Map<String, Bool>, depth:Int):HaxelibSpec {
 		return LibraryResolver.resolve(lib, cwd, seen, depth);
 	}
@@ -2407,6 +2416,11 @@ class Stage3Compiler {
 		} catch (e:String) {
 			closeMacroSession();
 			return error("emit failed: " + e);
+		} catch (e:Dynamic) {
+			// Exception boundary: target backends may throw haxe.Exception or other non-string
+			// values. Keep Stage3 diagnostics structured instead of leaking an OCaml runtime fatal.
+			closeMacroSession();
+			return error("emit failed: " + formatDynamicException(e));
 		}
 
 		Sys.println("stage3=ok");
