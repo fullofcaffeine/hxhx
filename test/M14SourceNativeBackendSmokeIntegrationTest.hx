@@ -67,6 +67,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
+		final mainClass = HxModuleDecl.getMainClass(decl);
+		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getImports(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
+		return new TypedModule(new ParsedModule("", decl, filePath), env);
+	}
+
 	static function unsupportedDoWhileProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1694,6 +1700,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "return \"ops\"", "cross-module instance method bodies should be rendered");
 		assertContains(content, "ops = TestOps()", "main should still be able to instantiate emitted support classes");
 		assertContains(content, "print(ops.label())", "main should still be able to call emitted support methods");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPythonSkipsStdSupportClasses():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_skip_std_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("helper", "", ENew("LocalSupport", []), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("helper"), "label"), [])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final localFn = new HxFunctionDecl("label", HxVisibility.Public, false, [], "String", [SReturn(EString("local"), pos)], "");
+		final localClass = new HxClassDecl("LocalSupport", false, [localFn]);
+		final localDecl = new HxModuleDecl("", [], localClass, [localClass], false, false);
+		final stdFn = new HxFunctionDecl("readLine", HxVisibility.Public, false, [], "String", [SExpr(EUnsupported("<eof-stmt>"), pos)], "");
+		final stdClass = new HxClassDecl("Input", false, [stdFn]);
+		final stdDecl = new HxModuleDecl("haxe.io", [], stdClass, [stdClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("LocalSupport.hx", localDecl),
+			typedSyntheticModule("/repo/std/haxe/io/Input.hx", stdDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class LocalSupport:", "Python support emission should keep user support classes");
+		assertContains(content, "def label(self):", "Python support emission should keep user support methods");
+		assertNotContains(content, "class Input:", "Python support emission should not dump upstream std support classes");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -3671,6 +3709,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();
 		assertCrossModuleClassEmission();
+		assertPythonSkipsStdSupportClasses();
 		assertArrayLiteral();
 		assertConstructorExpression();
 		assertForInStatement();

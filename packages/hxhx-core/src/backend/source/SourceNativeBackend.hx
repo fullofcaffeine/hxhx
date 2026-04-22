@@ -4574,18 +4574,22 @@ class SourceNativeBackend {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
 		final pending = new Array<HxClassDecl>();
-		function appendDeclClasses(moduleDecl:HxModuleDecl):Void {
+		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
+			if (isStdSourceFile(filePath))
+				return;
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final className = sanitizeTypeName(HxClassDecl.getName(cls));
+				if (isCompileTimeOnlySupportClass(cls))
+					continue;
 				if (className == mainClassName || seen.exists(className))
 					continue;
 				seen.set(className, true);
 				pending.push(cls);
 			}
 		}
-		appendDeclClasses(decl);
+		appendDeclClasses(decl, "");
 		for (typed in program.getTypedModules())
-			appendDeclClasses(typed.getParsed().getDecl());
+			appendDeclClasses(typed.getParsed().getDecl(), typed.getParsed().getFilePath());
 		final pendingNames = new Map<String, Bool>();
 		for (cls in pending)
 			pendingNames.set(sanitizeTypeName(HxClassDecl.getName(cls)), true);
