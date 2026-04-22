@@ -1184,7 +1184,17 @@ class SourceNativeBackend {
 					fieldAccess(target, renderExpr(target, receiver), field);
 				}
 			case Python, Java, Cs, Lua:
-				fieldAccess(target, renderExpr(target, receiver), field);
+				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExpr(target, receiver);
+				fieldAccess(target, renderedReceiver, field);
+		};
+	}
+
+	static function pythonFieldReceiverExpr(receiver:HxExpr):String {
+		return switch (receiver) {
+			case EInt(_) | EFloat(_):
+				"(" + renderExpr(Python, receiver) + ")";
+			case _:
+				renderExpr(Python, receiver);
 		};
 	}
 
@@ -1296,7 +1306,8 @@ class SourceNativeBackend {
 					}
 				}
 			case Python, Java, Cs, Lua:
-				callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), args);
+				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExpr(target, receiver);
+				callExpr(target, fieldAccess(target, renderedReceiver, field), args);
 		};
 	}
 

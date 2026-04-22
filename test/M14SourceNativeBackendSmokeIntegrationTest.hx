@@ -3131,6 +3131,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonNumericLiteralFieldCallSyntax():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_numeric_literal_field_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(phpInt64LiteralExtensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "a = (32).ofInt()", "Python numeric literal field calls should parenthesize integer receivers");
+		assertNotContains(content, "a = 32.ofInt()", "Python should not emit invalid decimal-literal field-call syntax");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpArrayConstructor():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_constructor_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4053,6 +4066,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonMacroExpr();
 		assertPhpDollarString();
 		assertPhpInt64LiteralExtension();
+		assertPythonNumericLiteralFieldCallSyntax();
 		assertPhpArrayConstructor();
 		assertPhpArrayOperations();
 		assertPhpReservedTypeName();
