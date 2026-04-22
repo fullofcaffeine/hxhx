@@ -180,6 +180,7 @@ class M14ConditionalCompilationIntegrationTest {
 		File.saveContent(haxe.io.Path.join([csUnitDir, "TestCSharp.hx"]), [
 			"package unit;",
 			"import haxe.test.Base.Base_InnerClass;",
+			"import NoPackage;",
 			"class TestCSharp { public static function main():Void {} }",
 		].join("\n"));
 
@@ -210,6 +211,8 @@ class M14ConditionalCompilationIntegrationTest {
 			final csPaths = modulePaths(csResolved);
 			assertContains(csPaths, "unit.TestCSharp", "C# native-library root should resolve");
 			assertNotContains(csPaths, "haxe.test.Base.Base_InnerClass", "C# native-library extern import should not require a .hx module");
+			assertNotContains(csPaths, "unit.NoPackage", "C# no-package native-library extern import should not be rewritten into the current Haxe package");
+			assertNotContains(csPaths, "NoPackage", "C# no-package native-library extern import should not require a .hx module");
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

@@ -220,23 +220,29 @@ class HxConditionalCompilation {
 		  library flags are present, so ordinary missing Haxe imports remain strict.
 
 		What
-		- For Java, any dotted missing import can be external when `java` and
+		- For Java, dotted missing imports can be external when `java` and
 		  `hxhx_java_lib` are active.
-		- For C#, any dotted missing import can be external when `cs` and `hxhx_net_lib`
-		  are active.
+		- For C#, dotted imports and no-package native type imports can be external when
+		  `cs` and `hxhx_net_lib` are active.
 	**/
 	public static function isActiveNativeLibraryExternPath(typePath:String, defines:haxe.ds.StringMap<String>):Bool {
 		if (typePath == null)
 			return false;
 		final s = StringTools.trim(typePath);
-		if (s.length == 0 || s.indexOf(".") <= 0)
+		if (s.length == 0)
 			return false;
 		if (defines == null)
 			return false;
-		if (defines.exists("java") && defines.exists("hxhx_java_lib"))
+
+		final dot = s.indexOf(".");
+		if (dot > 0 && defines.exists("java") && defines.exists("hxhx_java_lib"))
 			return true;
-		if (defines.exists("cs") && defines.exists("hxhx_net_lib"))
-			return true;
+		if (defines.exists("cs") && defines.exists("hxhx_net_lib")) {
+			if (dot > 0)
+				return true;
+			final first = s.charCodeAt(0);
+			return first >= "A".code && first <= "Z".code;
+		}
 		return false;
 	}
 

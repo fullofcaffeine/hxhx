@@ -119,6 +119,7 @@ Meaning in plain terms:
 - Macro target now defaults to non-delegating direct execution (`HXHX_GATE3_MACRO_MODE=direct`) in Gate3 runners/CI.
 - Python runs now default to no-install behavior (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`) so local validation does not implicitly mutate host package state.
 - Java target has validated baseline and forced sys-suite runs and is intentionally kept opt-in (not in default `Macro,Js,Neko`) to keep common Gate3 runs fast.
+- C# has no-emit resolver evidence for native-library no-package externs; a full local C# target run still requires a host with `dotnet` or `mono`.
 - Gate1, Gate2, and Gate3 now have weekly Linux scheduled baselines in CI, while PR/push CI remains fast.
 - Linked builtin target smoke (`--ocaml` vs delegated `--ocaml-eval`) now has a reproducible runner and weekly/manual CI cadence.
 - A debug escape hatch remains available (`HXHX_GATE3_FORCE_JS_SERVER=1`).
