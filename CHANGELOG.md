@@ -1,3 +1,10 @@
+## [0.15.4](https://github.com/fullofcaffeine/hxhx/compare/v0.15.3...v0.15.4) (2026-04-22)
+
+
+### Bug Fixes
+
+* **php:** preserve numeric suffix semantics ([11a93a2](https://github.com/fullofcaffeine/hxhx/commit/11a93a2f7298f4ba790de2800b20034fc071dc81))
+
 ## [0.15.3](https://github.com/fullofcaffeine/hxhx/compare/v0.15.2...v0.15.3) (2026-04-22)
 
 
