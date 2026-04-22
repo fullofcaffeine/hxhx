@@ -842,6 +842,23 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected expression-position for-in to lower to helper");
 		}
 
+		final switchBreakCallback = HxParser.parseFunctionBodyText("run(async, () -> { for (i in 0...items.length) { switch [src.get(i), items.get(i)] { case [a, b] if (a != b): assert('bad'); break; case _: } } noAssert(); async.done(); });");
+		assertTrue(switchBreakCallback.length == 1, "expected callback with switch/break body");
+		switch (switchBreakCallback[0]) {
+			case SExpr(ECall(EIdent("run"), [_, ELambda(_, body)]), _):
+				switch (body) {
+					case ETryCatchRaw(raw):
+						fail("callback switch/break body should lower structurally instead of opaque raw block: " + raw);
+					case EUnsupported(raw):
+						fail("callback switch/break body parsed as unsupported: " + raw);
+					case _:
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("callback switch/break statement parsed as unsupported: " + raw);
+			case _:
+				fail("expected run call with callback lambda");
+		}
+
 		final privateAccessStmts = HxParser.parseFunctionBodyText("result.push(@:privateAccess (Exception.thrown(''):Exception).stack);");
 		assertTrue(privateAccessStmts.length == 1, "expected privateAccess push statement");
 		switch (privateAccessStmts[0]) {

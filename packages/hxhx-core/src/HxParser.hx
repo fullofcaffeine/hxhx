@@ -1543,6 +1543,11 @@ class HxParser {
 					ESwitch(scrutinee, loweredPatterns, loweredExprs);
 				case SThrow(expr, _):
 					ECall(EIdent("__hxhx_throw"), [expr]);
+				case SBreak(_) | SContinue(_):
+					// Expression-lowered callback bodies use a continuation chain. During source
+					// target bring-up, preserve parseability for switch/loop branches that end in
+					// `break`/`continue` by terminating that branch without forcing an opaque raw block.
+					ENull;
 				case SForKeyValue(keyName, valueName, iterable, body, _):
 					final bodyExpr = lowerStmtWithContinuation(body, ENull);
 					if (bodyExpr == null)
