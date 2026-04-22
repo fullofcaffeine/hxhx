@@ -865,6 +865,12 @@ class SourceNativeBackend {
 
 	static function pythonAssignmentExpr(op:String, left:HxExpr, renderedRight:String):Null<String> {
 		return switch (left) {
+			case EThis:
+				pythonAssignAttrExpr("self", "__hx_value", pythonAssignedValueExpr(op, pythonThisValueExpr(), renderedRight));
+			case EField(receiver, field):
+				final renderedReceiver = renderExpr(Python, receiver);
+				final renderedField = sanitizePythonIdentifier(field);
+				pythonAssignAttrExpr(renderedReceiver, renderedField, pythonAssignedValueExpr(op, fieldAccess(Python, renderedReceiver, field), renderedRight));
 			case EIdent(name):
 				final targetName = valueName(Python, name);
 				switch (op) {
@@ -887,6 +893,22 @@ class SourceNativeBackend {
 			case _:
 				null;
 		};
+	}
+
+	static function pythonAssignedValueExpr(op:String, left:String, renderedRight:String):String {
+		return switch (op) {
+			case "=":
+				renderedRight;
+			case "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=":
+				final valueOp = op.substr(0, op.length - 1);
+				"(" + left + " " + valueOp + " " + renderedRight + ")";
+			case _:
+				renderedRight;
+		};
+	}
+
+	static function pythonAssignAttrExpr(receiver:String, field:String, value:String):String {
+		return "__hxhx_assign_attr(" + receiver + ", " + quoteString(field) + ", " + value + ")";
 	}
 
 	static function phpModuloAssignExpr(left:HxExpr, right:HxExpr):String {
@@ -5600,6 +5622,10 @@ class SourceNativeBackend {
 				lines.push("    old = getattr(obj, field)");
 				lines.push("    setattr(obj, field, (old + delta))");
 				lines.push("    return old");
+				lines.push("");
+				lines.push("def __hxhx_assign_attr(obj, field, value):");
+				lines.push("    setattr(obj, field, value)");
+				lines.push("    return value");
 				lines.push("");
 				lines.push("def __hxhx_post_update_index(obj, index, delta):");
 				lines.push("    old = obj[index]");

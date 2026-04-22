@@ -4025,6 +4025,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonThisUpdateReturnExpressionSyntax():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_this_update_return_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final nextFn = new HxFunctionDecl("next", HxVisibility.Public, false, [], "Int", [SReturn(EBinop("+=", EThis, EInt(1)), pos)], "");
+		final boxClass = new HxClassDecl("Box", false, [nextFn]);
+		final boxDecl = new HxModuleDecl("", [], boxClass, [boxClass], false, false);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("box", "", ENew("Box", []), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("box"), "next"), [])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("Box.hx", boxDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def __hxhx_assign_attr(obj, field, value):", "Python runtime should include expression-position attr assignment helper");
+		assertContains(content, "return __hxhx_assign_attr(self, \"__hx_value\", (self.__hx_value + 1))",
+			"Python this-value update return expressions should lower to parseable helper calls");
+		assertNotContains(content, "return self.__hx_value += 1", "Python should not emit augmented assignment syntax in return expressions");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpObjectPatternSwitchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4181,6 +4210,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonReservedMethodNameSanitized();
 		assertPythonReservedLocalNameSanitized();
 		assertPythonLambdaUpdateExpressionSyntax();
+		assertPythonThisUpdateReturnExpressionSyntax();
 		assertPhpObjectPatternSwitchExpression();
 		assertPythonObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();
