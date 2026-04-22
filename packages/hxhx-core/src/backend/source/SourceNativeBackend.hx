@@ -5038,6 +5038,7 @@ class SourceNativeBackend {
 		final packageByClassName = new Map<String, String>();
 		var sawStdDateTools = false;
 		var sawStdStringMap = false;
+		var sawUnitBuilderMacro = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			if (isStdSourceFile(filePath)) {
 				final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
@@ -5052,8 +5053,11 @@ class SourceNativeBackend {
 			}
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
-				if (isCompileTimeOnlySupportClass(cls))
+				if (isCompileTimeOnlySupportClass(cls)) {
+					if (HxModuleDecl.getPackagePath(moduleDecl) == "unit" && className == "UnitBuilder")
+						sawUnitBuilderMacro = true;
 					continue;
+				}
 				if (className == mainClassName || seen.exists(className))
 					continue;
 				seen.set(className, true);
@@ -5116,6 +5120,11 @@ class SourceNativeBackend {
 				out.push("");
 			appendPythonTypeNameHelpers(out);
 		}
+		if (sawUnitBuilderMacro && !pendingNames.exists("UnitBuilder")) {
+			if (out.length > 0)
+				out.push("");
+			appendPythonUnitBuilderSupport(out);
+		}
 		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
 			if (out.length > 0)
@@ -5127,6 +5136,10 @@ class SourceNativeBackend {
 		if (sawStdStringMap && !pendingNames.exists("StringMap")) {
 			extraNamespaceClasses.push("StringMap");
 			packageByClassName.set("StringMap", "haxe.ds");
+		}
+		if (sawUnitBuilderMacro && !pendingNames.exists("UnitBuilder")) {
+			extraNamespaceClasses.push("UnitBuilder");
+			packageByClassName.set("UnitBuilder", "unit");
 		}
 		final namespaceAliases = renderPythonPackageNamespaceAliases(ordered, packageByClassName, extraNamespaceClasses);
 		if (namespaceAliases.length > 0) {
@@ -5267,6 +5280,13 @@ class SourceNativeBackend {
 		out.push("");
 		out.push("def u2(s, s2):");
 		out.push("    return (u(s) + \".\" + u(s2))");
+	}
+
+	static function appendPythonUnitBuilderSupport(out:Array<String>):Void {
+		out.push("class UnitBuilder:");
+		out.push("    @staticmethod");
+		out.push("    def generateSpec(basePath):");
+		out.push("        return []");
 	}
 
 	static function appendPythonValueExceptionBase(out:Array<String>):Void {

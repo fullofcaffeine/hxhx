@@ -2097,6 +2097,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonUnitBuilderMacroNamespaceFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_unit_builder_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final generateSpecCall:HxExpr = ECall(EField(EField(EIdent("unit"), "UnitBuilder"), "generateSpec"), [EString("src/unitstd")]);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [generateSpecCall])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final unitBuilderFn = new HxFunctionDecl("generateSpec", HxVisibility.Public, true, [new HxFunctionArg("basePath", "String", NoDefault)],
+			"Array<Dynamic>", [SExpr(EUnsupported("unit-builder-macro-source-should-not-render"), pos)], "", ["macro"]);
+		final unitBuilderClass = new HxClassDecl("UnitBuilder", false, [unitBuilderFn]);
+		final unitBuilderDecl = new HxModuleDecl("unit", [], unitBuilderClass, [unitBuilderClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("unit/UnitBuilder.hx", unitBuilderDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class UnitBuilder:", "Python support should synthesize a UnitBuilder runtime fallback for macro-only generateSpec");
+		assertContains(content, "def generateSpec(basePath):", "Python UnitBuilder fallback should expose the package-qualified static method");
+		assertContains(content, "unit.UnitBuilder = UnitBuilder", "Python support should expose UnitBuilder through the unit namespace");
+		assertContains(content, "print(str(unit.UnitBuilder.generateSpec(\"src/unitstd\")))",
+			"Python main code should preserve package-qualified UnitBuilder.generateSpec calls");
+		assertNotContains(content, "unit-builder-macro-source-should-not-render", "Python UnitBuilder support should not render macro-only source bodies");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python UnitBuilder fallback should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "[]", "generated Python UnitBuilder fallback should return an empty runtime spec iterable");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4643,6 +4680,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonPackageQualifiedSupportClassReference();
 		assertPythonStdStringMapNamespaceReference();
 		assertPythonTypeNameHelpersForStaticInitializers();
+		assertPythonUnitBuilderMacroNamespaceFallback();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
