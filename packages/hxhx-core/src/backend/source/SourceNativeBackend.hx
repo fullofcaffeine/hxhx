@@ -835,6 +835,9 @@ class SourceNativeBackend {
 		final b0 = renderExpr(target, right);
 		final b = target == Php && op == "=" && shouldCopyAssignedValue(right) ? phpCopyValueExpr(b0) : b0;
 		if (target == Python && isAssignmentOp(op)) {
+			final assignmentExpr = pythonAssignmentExpr(op, left, b);
+			if (assignmentExpr != null)
+				return assignmentExpr;
 			switch (left) {
 				case EThis:
 					return pythonThisValueExpr() + " " + mapped + " " + b;
@@ -858,6 +861,32 @@ class SourceNativeBackend {
 		if (isAssignmentOp(op))
 			return a + " " + mapped + " " + b;
 		return "(" + a + " " + mapped + " " + b + ")";
+	}
+
+	static function pythonAssignmentExpr(op:String, left:HxExpr, renderedRight:String):Null<String> {
+		return switch (left) {
+			case EIdent(name):
+				final targetName = valueName(Python, name);
+				switch (op) {
+					case "=":
+						"(" + targetName + " := " + renderedRight + ")";
+					case "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=":
+						final valueOp = op.substr(0, op.length - 1);
+						"("
+						+ targetName
+						+ " := ("
+						+ targetName
+						+ " "
+						+ valueOp
+						+ " "
+						+ renderedRight
+						+ "))";
+					case _:
+						null;
+				}
+			case _:
+				null;
+		};
 	}
 
 	static function phpModuloAssignExpr(left:HxExpr, right:HxExpr):String {
@@ -3107,6 +3136,8 @@ class SourceNativeBackend {
 				final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 				final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
 				return [indent + varDecl(target, cleanName, rhs)];
+			case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
+				return [indent + exprStmt(target, pythonAssignmentStmt(op, left, right))];
 			case SExpr(EBinop("=", EIdent(name), rhsExpr), _) if (target == Php && localTypes.exists(sanitizeTypeName(name))):
 				final cleanName = sanitizeTypeName(name);
 				final rhs = assignedValueExpr(target, rhsExpr, localTypes.get(cleanName));
@@ -3122,6 +3153,19 @@ class SourceNativeBackend {
 			case _:
 				return renderStmt(target, stmt, indent);
 		}
+	}
+
+	static function pythonAssignmentStmt(op:String, left:HxExpr, right:HxExpr):String {
+		final mapped = binopToken(Python, op);
+		if (mapped == null)
+			throw "Python source backend MVP unsupported binary operator: " + op;
+		final lhs = switch (left) {
+			case EThis:
+				pythonThisValueExpr();
+			case _:
+				lvalueExpr(Python, left);
+		};
+		return lhs + " " + mapped + " " + renderExpr(Python, right);
 	}
 
 	static function renderFunctionStmts(target:SourceNativeTarget, body:Array<HxStmt>, indent:String, context:String):Array<String> {

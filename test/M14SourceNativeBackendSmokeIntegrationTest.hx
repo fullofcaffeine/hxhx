@@ -4003,6 +4003,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonLambdaUpdateExpressionSyntax():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_lambda_update_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("s", "", EString("a"), pos),
+			SVar("update", "", ELambda([], EBinop("+=", EIdent("s"), EString("b"))), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EIdent("update"), [])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "update = lambda : (s := (s + \"b\"))", "Python lambda update expressions should lower to parseable named expressions");
+		assertNotContains(content, "s += \"b\"", "Python should not emit augmented assignment syntax inside lambda expressions");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpObjectPatternSwitchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4158,6 +4180,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonPlainTextReportSetHandlerFallback();
 		assertPythonReservedMethodNameSanitized();
 		assertPythonReservedLocalNameSanitized();
+		assertPythonLambdaUpdateExpressionSyntax();
 		assertPhpObjectPatternSwitchExpression();
 		assertPythonObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();
