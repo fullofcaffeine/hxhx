@@ -2415,6 +2415,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			]), pos);
 		}
 		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("meta", "", EAnon(["testMethod"], [EString("ignored")]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				ECall(EField(EIdent("Reflect"), "getProperty"), [EIdent("meta"), EString("testMethod")])
+			]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				ECall(EField(EIdent("Std"), "string"), [
+					EBinop("==", ECall(EField(EIdent("Reflect"), "getProperty"), [EIdent("meta"), EString("missing")]), ENull)
+				])
+			]), pos),
 			printIsObject(EAnon(["x"], [EInt(1)])),
 			printIsObject(EString("s")),
 			printIsObject(EInt(1)),
@@ -2424,7 +2433,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
 		final valueArg = new HxFunctionArg("value", "Dynamic", NoDefault);
 		final reflectFn = new HxFunctionDecl("isObject", HxVisibility.Public, true, [valueArg], "Bool", [SReturn(EBool(false), pos)], "");
-		final reflectClass = new HxClassDecl("Reflect", false, [reflectFn]);
+		final getPropertyFn = new HxFunctionDecl("getProperty", HxVisibility.Public, true, [
+			new HxFunctionArg("obj", "Dynamic", NoDefault),
+			new HxFunctionArg("name", "String", NoDefault)
+		], "Dynamic", [SReturn(ENull, pos)], "");
+		final reflectClass = new HxClassDecl("Reflect", false, [reflectFn, getPropertyFn]);
 		final reflectDecl = new HxModuleDecl("", [], reflectClass, [reflectClass], false, false);
 		final program = MacroStage.expandProgram([
 			typedSyntheticModule("Main.hx", mainDecl),
@@ -2436,12 +2449,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Reflect:", "Python std Reflect fallback should emit when std Reflect is excluded from helper classes");
+		assertContains(content, "def getProperty(obj, name):", "Python std Reflect fallback should expose getProperty");
 		assertContains(content, "def isObject(value):", "Python std Reflect fallback should expose isObject");
+		assertContains(content, "Reflect.getProperty(meta, \"testMethod\")", "Python Reflect.getProperty calls should target the fallback helper");
 		assertContains(content, "Reflect.isObject(hxhx_anon(x=1))", "Python Reflect.isObject calls should target the fallback helper");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python Reflect fallback should execute, stderr:\n" + run.stderr);
-			assertContains(run.stdout, "True\nTrue\nFalse\nFalse", "generated Python Reflect.isObject should handle objects, strings, scalars, and null");
+			assertContains(run.stdout, "ignored\nTrue\nTrue\nTrue\nFalse\nFalse",
+				"generated Python Reflect fallback should handle getProperty plus isObject for objects, strings, scalars, and null");
 		}
 		deleteRecursive(tmpRoot);
 	}

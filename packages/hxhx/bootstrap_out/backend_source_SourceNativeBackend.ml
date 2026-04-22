@@ -11899,6 +11899,10 @@ let appendPythonReflectSupport = fun out -> ignore ((
   ignore (HxArray.push out "        return getattr(obj, name, None)");
   ignore (HxArray.push out "");
   ignore (HxArray.push out "    @staticmethod");
+  ignore (HxArray.push out "    def getProperty(obj, name):");
+  ignore (HxArray.push out "        return Reflect.field(obj, name)");
+  ignore (HxArray.push out "");
+  ignore (HxArray.push out "    @staticmethod");
   ignore (HxArray.push out "    def isFunction(value):");
   ignore (HxArray.push out "        return callable(value)");
   ignore (HxArray.push out "");

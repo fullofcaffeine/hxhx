@@ -5384,6 +5384,10 @@ class SourceNativeBackend {
 		out.push("        return getattr(obj, name, None)");
 		out.push("");
 		out.push("    @staticmethod");
+		out.push("    def getProperty(obj, name):");
+		out.push("        return Reflect.field(obj, name)");
+		out.push("");
+		out.push("    @staticmethod");
 		out.push("    def isFunction(value):");
 		out.push("        return callable(value)");
 		out.push("");
