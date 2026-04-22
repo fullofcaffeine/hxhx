@@ -5800,6 +5800,18 @@ class SourceNativeBackend {
 		return false;
 	}
 
+	static function renderPythonFunctionArg(arg:HxFunctionArg):String {
+		final name = sanitizePythonIdentifier(HxFunctionArg.getName(arg));
+		if (HxFunctionArg.getIsRest(arg))
+			return "*" + name;
+		return switch (HxFunctionArg.getDefaultValue(arg)) {
+			case Default(expr):
+				name + "=" + renderExpr(Python, expr);
+			case NoDefault:
+				HxFunctionArg.getIsOptional(arg) ? name + "=None" : name;
+		}
+	}
+
 	static function renderPythonHelperClass(cls:HxClassDecl, ?postStaticInitializers:Array<String>):Array<String> {
 		final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 		final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
@@ -5841,7 +5853,7 @@ class SourceNativeBackend {
 			if (!isStatic || isCtor)
 				args.push("self");
 			for (arg in HxFunctionDecl.getArgs(fn))
-				args.push(sanitizePythonIdentifier(HxFunctionArg.getName(arg)));
+				args.push(renderPythonFunctionArg(arg));
 			final methodName = isCtor ? "__init__" : sanitizePythonIdentifier(HxFunctionDecl.getName(fn));
 			out.push("    def " + methodName + "(" + args.join(", ") + "):");
 			if (isCtor) {

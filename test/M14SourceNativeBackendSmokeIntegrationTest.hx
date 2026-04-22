@@ -2262,6 +2262,51 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonOptionalMethodArguments():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_optional_method_args_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final addCaseFn = new HxFunctionDecl("addCase", HxVisibility.Public, false, [
+			new HxFunctionArg("c", "Dynamic", NoDefault),
+			new HxFunctionArg("setup", "Dynamic", NoDefault, true),
+			new HxFunctionArg("teardown", "Dynamic", NoDefault, true),
+			new HxFunctionArg("prefix", "String", Default(EString("default-prefix")), true),
+			new HxFunctionArg("pattern", "String", NoDefault, true),
+			new HxFunctionArg("setupAsync", "Dynamic", NoDefault, true),
+			new HxFunctionArg("teardownAsync", "Dynamic", NoDefault, true)
+		], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("setup")]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("prefix")]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("pattern")]), pos)
+		], "");
+		final runnerClass = new HxClassDecl("Runner", false, [addCaseFn]);
+		final runnerDecl = new HxModuleDecl("", [], runnerClass, [runnerClass], false, false);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("runner", "", ENew("Runner", []), pos),
+			SExpr(ECall(EField(EIdent("runner"), "addCase"), [EString("case")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("Runner.hx", runnerDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content,
+			"def addCase(self, c, setup=None, teardown=None, prefix=\"default-prefix\", pattern=None, setupAsync=None, teardownAsync=None):",
+			"Python support methods should make optional/default arguments omittable at runtime");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python optional method arguments should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "None\ndefault-prefix\nNone", "generated Python should apply None/default values for omitted method arguments");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3261,6 +3306,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(HxFunctionArg.getName(args[2]) == "pos", "native protocol should strip optional marker from arg names");
 		assertTrue(HxFunctionArg.getIsOptional(args[2]), "native protocol should preserve optional argument metadata");
 		assertTrue(HxFunctionArg.getTypeHint(args[2]) == "haxe.PosInfos", "native protocol should preserve optional argument type hints");
+	}
+
+	static function assertNativeProtocolDefaultArgSourceDecode():Void {
+		final source = [
+			"class Runner {",
+			"  public function addCase(test:Dynamic, setup = \"setup\", teardown = \"teardown\", prefix = \"test\", ?pattern:Dynamic, setupAsync = \"setupAsync\", teardownAsync = \"teardownAsync\") {}",
+			"}"
+		].join("\n");
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("class", "Runner"),
+			"ast static_main 0",
+			protocolLine("method", "addCase|public|0|test,setup,teardown,prefix,?pattern,setupAsync,teardownAsync|Void|||test:Dynamic,pattern:Dynamic|"),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
+		final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl));
+		assertTrue(functions.length == 1, "native protocol should decode the source-backed addCase method");
+		final args = HxFunctionDecl.getArgs(functions[0]);
+		assertTrue(args.length == 7, "native protocol should preserve source-backed addCase arity");
+		assertTrue(HxFunctionArg.getIsOptional(args[1]), "native protocol should recover defaulted args as omittable from source");
+		assertTrue(HxFunctionArg.getDefaultValueText(args[1]) == "\"setup\"", "native protocol should recover the setup default text");
+		assertTrue(HxFunctionArg.getIsOptional(args[4]), "native protocol should preserve explicit optional args from payload/source");
+		assertTrue(HxFunctionArg.getDefaultValueText(args[5]) == "\"setupAsync\"", "native protocol should recover later defaults after optional args");
 	}
 
 	static function assertPhpPlusSemantics():Void {
@@ -4734,6 +4803,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpInheritedTestHelperCall();
 		assertPhpShadowedTestHelperClosure();
 		assertNativeProtocolOptionalArgDecode();
+		assertNativeProtocolDefaultArgSourceDecode();
 		assertPhpPlusSemantics();
 		assertPhpEnumString();
 		assertPhpBitwisePrecedence();
@@ -4812,6 +4882,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTestIssuesMacroFallback();
 		assertPythonArrayRuntimeShim();
 		assertPythonMacroCompilerStdFallback();
+		assertPythonOptionalMethodArguments();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
