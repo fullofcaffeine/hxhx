@@ -2110,6 +2110,29 @@ out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only "$tmpcmd/build.hxml")"
 test "$(echo "$out" | grep -c '^stage3=skipped_cmd_only$')" -eq 1
 test "$(echo "$out" | grep -c '^stage3=type_only_ok$')" -eq 1
 
+if command -v python3 >/dev/null 2>&1; then
+  echo "== Stage3 bring-up: Python .hxml -cmd runs emitted artifact"
+  tmppythoncmd="$tmpdir/python_cmd_hxml"
+  mkdir -p "$tmppythoncmd/src" "$tmppythoncmd/bin"
+  cat >"$tmppythoncmd/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    Sys.println("python-cmd-ran");
+  }
+}
+HX
+  cat >"$tmppythoncmd/build.hxml" <<HX
+--cwd $tmppythoncmd
+-cp src
+-main Main
+-python bin/main.py
+-cmd python3 bin/main.py
+HX
+  out="$(HXHX_FORBID_STAGE0=1 "$HXHX_BIN" "$tmppythoncmd/build.hxml")"
+  echo "$out" | grep -q "^python-cmd-ran$"
+  echo "$out" | grep -q "^stage3=cmd_ok$"
+fi
+
 echo "== Stage3 bring-up: lazy type-driven module loading (same-package type)"
 tmplazy="$tmpdir/lazy_module_loading"
 mkdir -p "$tmplazy/src/p"

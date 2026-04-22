@@ -813,6 +813,8 @@ class SourceNativeBackend {
 			return "__hxhx_mod(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "%=")
 			return phpModuloAssignExpr(left, right);
+		if (target == Python && op == "%")
+			return "hxhx_mod(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "+")
 			return "__hxhx_add(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "+=")
@@ -889,6 +891,8 @@ class SourceNativeBackend {
 						"(" + targetName + " := " + renderedRight + ")";
 					case "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=":
 						final valueOp = op.substr(0, op.length - 1);
+						if (valueOp == "%")
+							return "(" + targetName + " := hxhx_mod(" + targetName + ", " + renderedRight + "))";
 						"("
 						+ targetName
 						+ " := ("
@@ -912,6 +916,8 @@ class SourceNativeBackend {
 				renderedRight;
 			case "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=":
 				final valueOp = op.substr(0, op.length - 1);
+				if (valueOp == "%")
+					return "hxhx_mod(" + left + ", " + renderedRight + ")";
 				"(" + left + " " + valueOp + " " + renderedRight + ")";
 			case _:
 				renderedRight;
@@ -3259,6 +3265,8 @@ class SourceNativeBackend {
 			case _:
 				lvalueExpr(Python, left);
 		};
+		if (op == "%=")
+			return lhs + " = hxhx_mod(" + lhs + ", " + renderExpr(Python, right) + ")";
 		return lhs + " " + mapped + " " + renderExpr(Python, right);
 	}
 
@@ -5044,6 +5052,7 @@ class SourceNativeBackend {
 		var sawStdReflect = false;
 		var sawStdType = false;
 		var sawStdStringTools = false;
+		var sawStdVector = false;
 		var sawStdMeta = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			if (isStdSourceFile(filePath)) {
@@ -5062,6 +5071,8 @@ class SourceNativeBackend {
 						sawStdType = true;
 					if ((packagePath == null || packagePath.length == 0) && className == "StringTools")
 						sawStdStringTools = true;
+					if (packagePath == "haxe.ds" && className == "Vector")
+						sawStdVector = true;
 					if (packagePath == "haxe.rtti" && className == "Meta")
 						sawStdMeta = true;
 				}
@@ -5168,6 +5179,11 @@ class SourceNativeBackend {
 				out.push("");
 			appendPythonStringToolsSupport(out);
 		}
+		if (sawStdVector && !pendingNames.exists("Vector")) {
+			if (out.length > 0)
+				out.push("");
+			appendPythonVectorSupport(out);
+		}
 		if (sawStdMeta && !pendingNames.exists("Meta")) {
 			if (out.length > 0)
 				out.push("");
@@ -5203,6 +5219,10 @@ class SourceNativeBackend {
 		if (sawStdMeta && !pendingNames.exists("Meta")) {
 			extraNamespaceClasses.push("Meta");
 			packageByClassName.set("Meta", "haxe.rtti");
+		}
+		if (sawStdVector && !pendingNames.exists("Vector")) {
+			extraNamespaceClasses.push("Vector");
+			packageByClassName.set("Vector", "haxe.ds");
 		}
 		final namespaceAliases = renderPythonPackageNamespaceAliases(ordered, packageByClassName, extraNamespaceClasses);
 		if (namespaceAliases.length > 0) {
@@ -5460,6 +5480,26 @@ class SourceNativeBackend {
 		out.push("    @staticmethod");
 		out.push("    def endsWith(value, suffix):");
 		out.push("        return str(value).endswith(str(suffix))");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def hex(value, digits=None):");
+		out.push("        n = int(value)");
+		out.push("        if n < 0:");
+		out.push("            n = n & 0xffffffff");
+		out.push("        text = format(n, \"X\")");
+		out.push("        return text if digits is None else text.rjust(int(digits), \"0\")");
+	}
+
+	static function appendPythonVectorSupport(out:Array<String>):Void {
+		out.push("class Vector(Array):");
+		out.push("    def __init__(self, length):");
+		out.push("        super().__init__([None] * max(0, int(length)))");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def fromArrayCopy(array):");
+		out.push("        vector = Vector(0)");
+		out.push("        vector.extend(list(array))");
+		out.push("        return vector");
 	}
 
 	static function appendPythonMetaSupport(out:Array<String>):Void {
@@ -6512,6 +6552,33 @@ class SourceNativeBackend {
 				lines.push("    def __len__(self):");
 				lines.push("        return len(self.__hx_entries)");
 				lines.push("");
+				lines.push("class Sys:");
+				lines.push("    @staticmethod");
+				lines.push("    def environment():");
+				lines.push("        import os");
+				lines.push("        return Map(os.environ.items())");
+				lines.push("");
+				lines.push("    @staticmethod");
+				lines.push("    def systemName():");
+				lines.push("        import platform");
+				lines.push("        name = platform.system().lower()");
+				lines.push("        if \"windows\" in name:");
+				lines.push("            return \"Windows\"");
+				lines.push("        if \"darwin\" in name:");
+				lines.push("            return \"Mac\"");
+				lines.push("        return \"Linux\"");
+				lines.push("");
+				lines.push("    @staticmethod");
+				lines.push("    def exit(code=0):");
+				lines.push("        import sys");
+				lines.push("        sys.exit(0 if code is None else int(code))");
+				lines.push("");
+				lines.push("def hxhx_mod(left, right):");
+				lines.push("    import math");
+				lines.push("    if right == 0:");
+				lines.push("        return float(\"nan\")");
+				lines.push("    return left - math.trunc(left / right) * right");
+				lines.push("");
 				lines.push("def hxhx_post_update_attr(obj, field, delta):");
 				lines.push("    old = getattr(obj, field)");
 				lines.push("    setattr(obj, field, (old + delta))");
@@ -6550,7 +6617,7 @@ class SourceNativeBackend {
 				lines.push("    elif op == \"/\":");
 				lines.push("        next_value = (old / value)");
 				lines.push("    elif op == \"%\":");
-				lines.push("        next_value = (old % value)");
+				lines.push("        next_value = hxhx_mod(old, value)");
 				lines.push("    elif op == \"&\":");
 				lines.push("        next_value = (old & value)");
 				lines.push("    elif op == \"|\":");

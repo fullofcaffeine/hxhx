@@ -2682,7 +2682,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
 			printBool(ECall(EField(EIdent("StringTools"), "startsWith"), [EString("testCase"), EString("test")])),
 			printBool(ECall(EField(EIdent("StringTools"), "startsWith"), [EString("testCase"), EString("case")])),
-			printBool(ECall(EField(EIdent("StringTools"), "endsWith"), [EString("testCase"), EString("Case")]))
+			printBool(ECall(EField(EIdent("StringTools"), "endsWith"), [EString("testCase"), EString("Case")])),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("StringTools"), "hex"), [EInt(1), EInt(6)])]), pos)
 		], "");
 		final mainClass = new HxClassDecl("Main", true, [mainFn]);
 		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
@@ -2709,10 +2710,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "def startsWith(value, prefix):", "Python std StringTools fallback should expose startsWith");
 		assertContains(content, "StringTools.startsWith(\"testCase\", \"test\")", "Python StringTools.startsWith calls should target the fallback helper");
 		assertContains(content, "def endsWith(value, suffix):", "Python std StringTools fallback should expose endsWith");
+		assertContains(content, "def hex(value, digits=None):", "Python std StringTools fallback should expose hex");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python StringTools fallback should execute, stderr:\n" + run.stderr);
-			assertContains(run.stdout, "True\nFalse\nTrue", "generated Python StringTools fallback should match startsWith/endsWith basics");
+			assertContains(run.stdout, "True\nFalse\nTrue\n000001", "generated Python StringTools fallback should match startsWith/endsWith/hex basics");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPythonStdVectorNamespaceSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_std_vector_namespace_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EArrayAccess(ENew("haxe.ds.Vector", [EInt(1)]), EInt(0))]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final vectorClass = new HxClassDecl("Vector", false, []);
+		final vectorDecl = new HxModuleDecl("haxe.ds", [], vectorClass, [vectorClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("/repo/std/haxe/ds/Vector.hx", vectorDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Vector(Array):", "Python std Vector fallback should emit when std Vector is excluded from helper classes");
+		assertContains(content, "haxe.ds.Vector = Vector", "Python std Vector fallback should be reachable through haxe.ds namespace");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python Vector fallback should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "None", "new haxe.ds.Vector(1)[0] should read the default null slot");
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -4683,6 +4715,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonSysEnvironmentRuntimeShim():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_sys_environment_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final existsCall:HxExpr = ECall(EField(ECall(EField(EIdent("Sys"), "environment"), []), "exists"), [EString("__HXHX_NO_SUCH_ENV__")]);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [existsCall])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Sys:", "Python runtime should define Sys for direct Sys.environment calls");
+		assertContains(content, "def environment():", "Python Sys shim should expose environment");
+		assertContains(content, "return Map(os.environ.items())", "Python Sys.environment should return a map-like object with exists");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python Sys.environment shim should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "False", "missing environment keys should report false through exists");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertConstructorExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_constructor_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4875,6 +4934,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "a <<= 2", "Python signed left-shift assignment should render directly");
 		assertContains(content, "a >>= 1", "Python signed right-shift assignment should render directly");
 		assertContains(content, "a = hxhx_ushr(a, 1)", "Python unsigned right-shift assignment should reuse the unsigned-shift helper");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPythonModuloUsesHaxeRemainderSemantics():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_modulo_semantics_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var a:Int = -5;",
+			"    a %= 7;",
+			"    Sys.println(Std.string(a));",
+			"    Sys.println(Std.string(-5 % 7));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def hxhx_mod(left, right):", "Python runtime should include a Haxe-style modulo helper");
+		assertContains(content, "a = hxhx_mod(a, 7)", "Python modulo assignment should lower through the Haxe-style modulo helper");
+		assertContains(content, "hxhx_mod((-5), 7)", "Python modulo expressions should lower through the Haxe-style modulo helper");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python modulo helper should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "-5\n-5", "generated Python modulo should preserve Haxe signed remainder behavior");
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -5337,6 +5428,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTypeCheck();
 		assertPhpShiftAssignment();
 		assertPythonShiftAssignment();
+		assertPythonModuloUsesHaxeRemainderSemantics();
 		assertPhpNullCoalescing();
 		assertPythonNullCoalescing();
 		assertPythonNullCoalescingAssignmentExpression();
@@ -5381,11 +5473,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonReflectSupport();
 		assertPythonTypeSupport();
 		assertPythonStringToolsSupport();
+		assertPythonStdVectorNamespaceSupport();
 		assertPythonMetaSupport();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
 		assertPythonMapRuntimeShim();
+		assertPythonSysEnvironmentRuntimeShim();
 		assertConstructorExpression();
 		assertForInStatement();
 		assertBinaryOperators();

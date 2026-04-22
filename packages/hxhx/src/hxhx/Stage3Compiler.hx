@@ -438,6 +438,26 @@ class Stage3Compiler {
 		return runCommandInCwd("java", ["-jar", matched], cwd);
 	}
 
+	static function runSafePythonHookForArtifact(commands:Array<String>, cwd:String, artifactPath:String):Null<Int> {
+		if (commands == null || commands.length == 0 || artifactPath == null || artifactPath.length == 0)
+			return null;
+		final artifactAbs = Path.normalize(artifactPath);
+		var matched:Null<{command:String, script:String}> = null;
+		for (command in commands) {
+			final python = parseSafePythonScriptCommand(command);
+			if (python == null)
+				return null;
+			final scriptAbs = absFromCwd(cwd, python.script);
+			if (scriptAbs == artifactAbs) {
+				matched = python;
+				break;
+			}
+		}
+		if (matched == null)
+			return null;
+		return runCommandInCwd(matched.command, [matched.script], cwd);
+	}
+
 	static function parseSafeJavaJarCommand(command:String):Null<String> {
 		final words = splitCommandWords(command);
 		if (words.length != 3)
@@ -448,6 +468,19 @@ class Stage3Compiler {
 		if (jar.length == 0 || jar.indexOf(";") >= 0 || jar.indexOf("&&") >= 0 || jar.indexOf("|") >= 0)
 			return null;
 		return jar;
+	}
+
+	static function parseSafePythonScriptCommand(command:String):Null<{command:String, script:String}> {
+		final words = splitCommandWords(command);
+		if (words.length != 2)
+			return null;
+		final runner = words[0];
+		if (runner != "python3" && runner != "python" && runner != "pypy3")
+			return null;
+		final script = words[1];
+		if (script.length == 0 || script.indexOf(";") >= 0 || script.indexOf("&&") >= 0 || script.indexOf("|") >= 0)
+			return null;
+		return {command: runner, script: script};
 	}
 
 	static function splitCommandWords(command:String):Array<String> {
@@ -2394,6 +2427,15 @@ class Stage3Compiler {
 		if (!emitted.builtExecutable) {
 			if (backendId == "java-native" && parsedHadCmd) {
 				final cmdCode = runSafeJavaJarHookForArtifact(parsedCmdCommands, cwd, emitted.entryPath);
+				if (cmdCode != null) {
+					if (cmdCode != 0)
+						return error("command hook failed with exit code " + Std.string(cmdCode));
+					Sys.println("stage3=cmd_ok");
+					return 0;
+				}
+			}
+			if (backendId == "python-native" && parsedHadCmd) {
+				final cmdCode = runSafePythonHookForArtifact(parsedCmdCommands, cwd, emitted.entryPath);
 				if (cmdCode != null) {
 					if (cmdCode != 0)
 						return error("command hook failed with exit code " + Std.string(cmdCode));
