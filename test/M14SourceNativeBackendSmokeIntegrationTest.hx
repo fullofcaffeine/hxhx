@@ -3774,6 +3774,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonNullCoalescing():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_null_coalescing_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(phpNullCoalescingProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "got = (value if value is not None else fallback)", "Python null coalescing should lower to a None check expression");
+		assertContains(content, "value = (value if value is not None else 3)", "Python null coalescing assignment should lower to assignment with None check");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpCompileTimeOnlyMacroSupportSkipped():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_compile_time_macro_skip_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3996,6 +4009,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpShiftAssignment();
 		assertPythonShiftAssignment();
 		assertPhpNullCoalescing();
+		assertPythonNullCoalescing();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();

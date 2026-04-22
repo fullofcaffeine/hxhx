@@ -879,18 +879,24 @@ class SourceNativeBackend {
 
 	static function nullCoalesceExpr(target:SourceNativeTarget, left:HxExpr, right:HxExpr):String {
 		return switch (target) {
+			case Python:
+				final a = renderExpr(target, left);
+				"(" + a + " if " + a + " is not None else " + renderExpr(target, right) + ")";
 			case Php:
 				"(" + renderExpr(target, left) + " ?? " + renderExpr(target, right) + ")";
-			case Python, Java, Cs, Lua:
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported binary operator: ??";
 		};
 	}
 
 	static function nullCoalesceAssignExpr(target:SourceNativeTarget, left:HxExpr, right:HxExpr):String {
 		return switch (target) {
+			case Python:
+				final a = lvalueExpr(target, left);
+				a + " = (" + a + " if " + a + " is not None else " + renderExpr(target, right) + ")";
 			case Php:
 				lvalueExpr(target, left) + " ??= " + renderExpr(target, right);
-			case Python, Java, Cs, Lua:
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported binary operator: ??=";
 		};
 	}
