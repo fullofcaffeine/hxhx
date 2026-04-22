@@ -24,6 +24,9 @@ class M14HihExprTextParserIntegrationTest {
 	}
 
 	static function main() {
+		assertTrue(ParserStageScanHelpers.hasUnsupportedStmtList([SExpr(ECall(EIdent("f"), [EUnsupported("<eof-stmt>")]), HxPos.unknown())]),
+			"unsupported scanner must inspect call arguments");
+
 		// Native parser payloads can compact escaped quote strings to `"""`.
 		// This should still parse as a normal string literal (`"`).
 		final denseArrayRaw = '[" ".code,"(".code,")".code,"%".code,"!".code,"^".code,""".code,"<".code,">".code,"&".code,"|".code,"\\n".code,"\\r".code,",".code,";".code]';
@@ -558,6 +561,67 @@ class M14HihExprTextParserIntegrationTest {
 				fail("local try function parsed as unsupported statement: " + raw);
 			case _:
 				fail("expected local try function to lower to try sentinel lambda");
+		}
+
+		final inlineNekoElseThrowStmts = HxParser.parseFunctionBodyText('try { read(); } catch(e:haxe.io.Eof) { if (s.length == 0) #if neko neko.Lib.rethrow #else throw #end (e); }');
+		assertTrue(inlineNekoElseThrowStmts.length == 1, "expected inline neko/else throw try statement");
+		switch (inlineNekoElseThrowStmts[0]) {
+			case STry(_, catches, _):
+				assertTrue(catches.length == 1, "expected one inline neko/else throw catch");
+				switch (catches[0].body) {
+					case SBlock([SIf(_, SThrow(EIdent("e"), _), null, _)], _):
+					case SBlock([SIf(_, SBlock([SThrow(EIdent("e"), _)], _), null, _)], _):
+					case SBlock([SIf(_, SExpr(EUnsupported(raw), _), null, _)], _):
+						fail("inline neko/else throw parsed as unsupported expression: " + raw);
+					case SBlock([SIf(_, SThrow(EUnsupported(raw), _), null, _)], _):
+						fail("inline neko/else throw payload parsed as unsupported: " + raw);
+					case SBlock([SIf(_, SBlock([SThrow(EUnsupported(raw), _)], _), null, _)], _):
+						fail("inline neko/else throw payload parsed as unsupported: " + raw);
+					case SBlock([SExpr(EUnsupported(raw), _)], _):
+						fail("inline neko/else throw catch parsed as unsupported: " + raw);
+					case _:
+						fail("expected inline neko/else throw to normalize to if/throw catch body: " + Std.string(catches[0].body));
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("inline neko/else throw try parsed as unsupported statement: " + raw);
+			case _:
+				fail("expected inline neko/else throw to parse as try statement");
+		}
+
+		final inlineNekoElseModule = [
+			"class InputLike {",
+			"  public function readLine():String {",
+			"    var s = \"\";",
+			"    try {",
+			"      read();",
+			"    } catch (e:Eof) {",
+			"      if (s.length == 0)",
+			"        #if neko neko.Lib.rethrow #else throw #end (e);",
+			"    }",
+			"    return s;",
+			"  }",
+			"}"
+		].join("\n");
+		final inlineNekoElseDecl = new HxParser(inlineNekoElseModule).parseModule("InputLike");
+		final inlineNekoElseFns = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(inlineNekoElseDecl));
+		assertTrue(inlineNekoElseFns.length == 1, "expected inline neko/else module function");
+		switch (HxFunctionDecl.getBody(inlineNekoElseFns[0])) {
+			case [SVar("s", _, _, _), STry(_, catches, _), SReturn(EIdent("s"), _)]:
+				assertTrue(catches.length == 1, "expected module inline neko/else catch");
+				switch (catches[0].body) {
+					case SBlock([SIf(_, SThrow(EIdent("e"), _), null, _)], _):
+					case SBlock([SIf(_, SBlock([SThrow(EIdent("e"), _)], _), null, _)], _):
+					case SBlock([SIf(_, SExpr(EUnsupported(raw), _), _, _)], _):
+						fail("module inline neko/else throw parsed as unsupported expression: " + raw);
+					case SBlock([SIf(_, SThrow(EUnsupported(raw), _), _, _)], _):
+						fail("module inline neko/else throw payload parsed as unsupported: " + raw);
+					case _:
+						fail("expected module inline neko/else throw catch body: " + Std.string(catches[0].body));
+				}
+			case [_, STry(_, catches, _), _] if (catches.length > 0):
+				fail("expected module inline neko/else function body without parser drift: " + Std.string(catches[0].body));
+			case body:
+				fail("expected module inline neko/else function body shape: " + Std.string(body));
 		}
 		switch (localBlockThrowFunctionStmts[1]) {
 			case SVar("s", _, ETryCatchRaw(_), _):

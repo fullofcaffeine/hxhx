@@ -491,6 +491,8 @@ class HxParser {
 		// Stage3 body slices can still contain inline conditional-compilation markers,
 		// notably upstream JS-specific assertions shaped like:
 		//   expr #if js || js.Browser... #end
+		// and stdlib rethrow forms shaped like:
+		//   #if neko neko.Lib.rethrow #else throw #end (e)
 		//
 		// Top-level directive lines are handled by statement parsing, but inline markers
 		// appear in the middle of an expression and otherwise surface as `body_parse_error`.
@@ -498,9 +500,35 @@ class HxParser {
 		// marker text and preserve the guarded JS expression tokens.
 		if (bodySource == null || bodySource.indexOf("#") < 0)
 			return bodySource == null ? "" : bodySource;
-		var normalized = StringTools.replace(bodySource, "#if js", " ");
+		var normalized = normalizeInlineNekoElseConditionalMarkers(bodySource);
+		normalized = StringTools.replace(normalized, "#if js", " ");
 		normalized = StringTools.replace(normalized, "#end", " ");
 		return normalized;
+	}
+
+	static function normalizeInlineNekoElseConditionalMarkers(source:String):String {
+		if (source == null || source.indexOf("#if neko") < 0 || source.indexOf("#else") < 0 || source.indexOf("#end") < 0)
+			return source;
+		var out = source;
+		var search = 0;
+		while (search < out.length) {
+			final idxIf = out.indexOf("#if neko", search);
+			if (idxIf < 0)
+				break;
+			final idxElse = out.indexOf("#else", idxIf + 8);
+			final idxEnd = out.indexOf("#end", idxIf + 8);
+			if (idxElse < 0 || idxEnd < 0 || idxElse > idxEnd)
+				break;
+			final lineEnd = out.indexOf("\n", idxIf);
+			if (lineEnd >= 0 && idxEnd > lineEnd)
+				break;
+			final prefix = out.substr(0, idxIf);
+			final elsePayload = out.substr(idxElse + 5, idxEnd - (idxElse + 5));
+			final suffix = out.substr(idxEnd + 4);
+			out = prefix + elsePayload + suffix;
+			search = prefix.length + elsePayload.length;
+		}
+		return out;
 	}
 
 	inline function bump():Void {
@@ -3224,6 +3252,10 @@ class HxParser {
 			return SExpr(EUnsupported("<eof-stmt>"), HxPos.unknown());
 
 		final pos = cur.pos;
+		final inlineNekoElseThrow = tryParseInlineNekoElseThrowStmt(pos);
+		if (inlineNekoElseThrow != null)
+			return inlineNekoElseThrow;
+
 		return switch (cur.kind) {
 			case TLBrace:
 				bump();
@@ -3552,6 +3584,30 @@ class HxParser {
 				syncToStmtEndUntil(stop);
 				SExpr(expr, pos);
 		}
+	}
+
+	function tryParseInlineNekoElseThrowStmt(pos:HxPos):Null<HxStmt> {
+		if (!cur.kind.match(TOther("#".code)))
+			return null;
+		final idxIf = currentIndex();
+		if (source.substr(idxIf, 8) != "#if neko")
+			return null;
+		final idxElse = source.indexOf("#else", idxIf + 8);
+		final idxEnd = source.indexOf("#end", idxIf + 8);
+		if (idxElse < 0 || idxEnd < 0 || idxElse > idxEnd)
+			return null;
+		final lineEnd = source.indexOf("\n", idxIf);
+		if (lineEnd >= 0 && idxEnd > lineEnd)
+			return null;
+		final elsePayload = StringTools.trim(source.substr(idxElse + 5, idxEnd - (idxElse + 5)));
+		if (elsePayload != "throw")
+			return null;
+		final afterEnd = idxEnd + 4;
+		while (!cur.kind.match(TEof) && currentIndex() < afterEnd)
+			bump();
+		final thrown = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+		syncToStmtEnd();
+		return SThrow(thrown, pos);
 	}
 
 	function parseFunctionBodyStatements():Array<HxStmt> {

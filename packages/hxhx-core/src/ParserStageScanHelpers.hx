@@ -1415,7 +1415,7 @@ class ParserStageScanHelpers {
 		return i;
 	}
 
-	static function hasUnsupportedStmtList(stmts:Array<HxStmt>):Bool {
+	public static function hasUnsupportedStmtList(stmts:Array<HxStmt>):Bool {
 		for (stmt in stmts)
 			if (hasUnsupportedStmt(stmt))
 				return true;
@@ -1473,8 +1473,16 @@ class ParserStageScanHelpers {
 		return switch (expr) {
 			case EUnsupported(_):
 				true;
-			case EField(obj, _), ECall(obj, _), EUnop(_, obj), ECast(obj, _), EUntyped(obj):
+			case EField(obj, _), EUnop(_, obj), ECast(obj, _), EUntyped(obj):
 				hasUnsupportedExpr(obj);
+			case ECall(obj, args):
+				if (hasUnsupportedExpr(obj)) true; else {
+					var found = false;
+					for (arg in args)
+						if (hasUnsupportedExpr(arg))
+							found = true;
+					found;
+				}
 			case EBinop(_, left, right), EArrayAccess(left, right), ERange(left, right): hasUnsupportedExpr(left) || hasUnsupportedExpr(right);
 			case ETernary(cond, thenExpr, elseExpr): hasUnsupportedExpr(cond) || hasUnsupportedExpr(thenExpr) || hasUnsupportedExpr(elseExpr);
 			case EAnon(_, values) | EArrayDecl(values):
