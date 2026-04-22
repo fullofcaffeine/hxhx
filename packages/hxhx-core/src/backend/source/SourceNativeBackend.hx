@@ -5027,11 +5027,16 @@ class SourceNativeBackend {
 		final pending = new Array<HxClassDecl>();
 		final packageByClassName = new Map<String, String>();
 		var sawStdDateTools = false;
+		var sawStdStringMap = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			if (isStdSourceFile(filePath)) {
+				final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
 				for (cls in HxModuleDecl.getClasses(moduleDecl)) {
-					if (sanitizePythonIdentifier(HxClassDecl.getName(cls)) == "DateTools")
+					final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
+					if (className == "DateTools")
 						sawStdDateTools = true;
+					if (packagePath == "haxe.ds" && className == "StringMap")
+						sawStdStringMap = true;
 				}
 				return;
 			}
@@ -5083,6 +5088,11 @@ class SourceNativeBackend {
 		}
 		if (sawStdDateTools && !pendingNames.exists("DateTools"))
 			appendPythonDateToolsSupport(out);
+		if (sawStdStringMap && !pendingNames.exists("StringMap")) {
+			if (out.length > 0)
+				out.push("");
+			appendPythonStringMapSupport(out);
+		}
 		if (needsValueExceptionBase && !pendingNames.exists("ValueException")) {
 			if (out.length > 0)
 				out.push("");
@@ -5095,7 +5105,12 @@ class SourceNativeBackend {
 			for (line in renderPythonHelperClass(cls, postStaticInitializers))
 				out.push(line);
 		}
-		final namespaceAliases = renderPythonPackageNamespaceAliases(ordered, packageByClassName);
+		final extraNamespaceClasses = new Array<String>();
+		if (sawStdStringMap && !pendingNames.exists("StringMap")) {
+			extraNamespaceClasses.push("StringMap");
+			packageByClassName.set("StringMap", "haxe.ds");
+		}
+		final namespaceAliases = renderPythonPackageNamespaceAliases(ordered, packageByClassName, extraNamespaceClasses);
 		if (namespaceAliases.length > 0) {
 			if (out.length > 0)
 				out.push("");
@@ -5111,11 +5126,19 @@ class SourceNativeBackend {
 		return out;
 	}
 
-	static function renderPythonPackageNamespaceAliases(classes:Array<HxClassDecl>, packageByClassName:Map<String, String>):Array<String> {
+	static function renderPythonPackageNamespaceAliases(classes:Array<HxClassDecl>, packageByClassName:Map<String, String>,
+			?extraClassNames:Array<String>):Array<String> {
 		final classesByPackage = new Map<String, Array<String>>();
 		final packageNames = new Array<String>();
-		for (cls in classes) {
-			final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
+		final classNames = [
+			for (cls in classes)
+				sanitizePythonIdentifier(HxClassDecl.getName(cls))
+		];
+		if (extraClassNames != null) {
+			for (className in extraClassNames)
+				classNames.push(className);
+		}
+		for (className in classNames) {
 			final packagePath = packageByClassName.get(className);
 			if (packagePath == null || packagePath.length == 0)
 				continue;
@@ -5163,6 +5186,30 @@ class SourceNativeBackend {
 				out.push(namespaceExpr + "." + className + " = " + className);
 		}
 		return out;
+	}
+
+	static function appendPythonStringMapSupport(out:Array<String>):Void {
+		out.push("class StringMap(dict):");
+		out.push("    def set(self, key, value):");
+		out.push("        self[key] = value");
+		out.push("");
+		out.push("    def get(self, key):");
+		out.push("        return dict.get(self, key, None)");
+		out.push("");
+		out.push("    def exists(self, key):");
+		out.push("        return key in self");
+		out.push("");
+		out.push("    def remove(self, key):");
+		out.push("        if key not in self:");
+		out.push("            return False");
+		out.push("        del self[key]");
+		out.push("        return True");
+		out.push("");
+		out.push("    def keys(self):");
+		out.push("        return list(dict.keys(self))");
+		out.push("");
+		out.push("    def iterator(self):");
+		out.push("        return list(dict.values(self))");
 	}
 
 	static function appendPythonDateToolsSupport(out:Array<String>):Void {

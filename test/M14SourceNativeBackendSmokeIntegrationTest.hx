@@ -2000,6 +2000,54 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonStdStringMapNamespaceReference():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_std_string_map_ref_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				ECall(EField(EIdent("Std"), "string"), [EArrayAccess(EField(EIdent("TestReflect"), "TYPES"), EInt(0))])
+			]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final stringMapRef:HxExpr = EField(EField(EIdent("haxe"), "ds"), "StringMap");
+		final typesField = new HxFieldDecl("TYPES", HxVisibility.Public, true, "Array<Dynamic>", EArrayDecl([stringMapRef]));
+		final reflectClass = new HxClassDecl("TestReflect", false, [], [typesField]);
+		final reflectDecl = new HxModuleDecl("", [], reflectClass, [reflectClass], false, false);
+		final stdSetFn = new HxFunctionDecl("set", HxVisibility.Public, false, [
+			new HxFunctionArg("key", "String", NoDefault),
+			new HxFunctionArg("value", "Dynamic", NoDefault)
+		], "Void",
+			[SExpr(EUnsupported("std-string-map-source-should-not-render"), pos)], "");
+		final stringMapClass = new HxClassDecl("StringMap", false, [stdSetFn]);
+		final stringMapDecl = new HxModuleDecl("haxe.ds", [], stringMapClass, [stringMapClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("TestReflect.hx", reflectDecl),
+			typedSyntheticModule("/repo/std/haxe/ds/StringMap.hx", stringMapDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class StringMap(dict):", "Python std support should provide a small StringMap helper when std StringMap is skipped");
+		assertContains(content, "haxe = hxhx_anon()", "Python support should synthesize the haxe namespace for std type references");
+		assertContains(content, "haxe.ds = hxhx_anon()", "Python support should synthesize the haxe.ds namespace for std type references");
+		assertContains(content, "haxe.ds.StringMap = StringMap", "Python support should expose StringMap through haxe.ds");
+		assertContains(content, "TestReflect.TYPES = [haxe.ds.StringMap]", "Python static initializer should preserve haxe.ds.StringMap references");
+		assertTrue(content.indexOf("haxe.ds.StringMap = StringMap") < content.indexOf("TestReflect.TYPES = [haxe.ds.StringMap]"),
+			"Python std namespace aliases should be emitted before deferred static initializers");
+		assertNotContains(content, "std-string-map-source-should-not-render", "Python StringMap support should not dump the upstream std source body");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python std StringMap namespace reference should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "StringMap", "generated Python should print the std StringMap class reference");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4481,6 +4529,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonStaticInitializersAfterSupportClasses();
 		assertPythonStdDateToolsSupport();
 		assertPythonPackageQualifiedSupportClassReference();
+		assertPythonStdStringMapNamespaceReference();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
