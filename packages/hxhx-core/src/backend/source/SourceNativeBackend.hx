@@ -1799,9 +1799,11 @@ class SourceNativeBackend {
 
 	static function macroExpr(target:SourceNativeTarget, expr:HxExpr, wrappers:Array<String>):String {
 		return switch (target) {
+			case Python:
+				pythonMacroExpr(expr, wrappers);
 			case Php:
 				phpMacroExpr(expr, wrappers);
-			case Python, Java, Cs, Lua:
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: EMacroExpr";
 		};
 	}
@@ -2031,6 +2033,84 @@ class SourceNativeBackend {
 				throw targetLabel(target) + " source backend MVP unsupported returning if";
 		}
 		return out;
+	}
+
+	static function pythonMacroExpr(expr:HxExpr, wrappers:Array<String>):String {
+		var exprDef = pythonMacroExprDef(expr);
+		if (wrappers != null) {
+			var i = wrappers.length;
+			while (i > 0) {
+				i--;
+				exprDef = switch (wrappers[i]) {
+					case "parenthesis":
+						pythonMacroEnum("EParenthesis", [pythonMacroExprObject(exprDef)]);
+					case "untyped":
+						pythonMacroEnum("EUntyped", [pythonMacroExprObject(exprDef)]);
+					case _:
+						exprDef;
+				}
+			}
+		}
+		return pythonMacroExprObject(exprDef);
+	}
+
+	static function pythonMacroExprObject(exprDef:String):String {
+		return "__hxhx_anon(expr=" + exprDef + ", pos=None)";
+	}
+
+	static function pythonMacroEnum(name:String, params:Array<String>):String {
+		final paramText = params == null ? "" : params.join(", ");
+		return "__hxhx_anon(__hx_ctor=" + quoteString(name) + ", __hx_index=0, __hx_params=[" + paramText + "])";
+	}
+
+	static function pythonMacroExprDef(expr:HxExpr):String {
+		return switch (expr) {
+			case EString(value):
+				pythonMacroEnum("EConst", [pythonMacroEnum("CString", [quoteString(value)])]);
+			case EInt(value):
+				pythonMacroEnum("EConst", [pythonMacroEnum("CInt", [quoteString(Std.string(value))])]);
+			case EFloat(value):
+				pythonMacroEnum("EConst", [pythonMacroEnum("CFloat", [quoteString(Std.string(value))])]);
+			case ENull:
+				pythonMacroEnum("EConst", [pythonMacroEnum("CIdent", [quoteString("null")])]);
+			case EIdent(name):
+				pythonMacroEnum("EConst", [pythonMacroEnum("CIdent", [quoteString(name)])]);
+			case EField(receiver, field):
+				pythonMacroEnum("EField", [pythonMacroExpr(receiver, []), quoteString(field)]);
+			case EArrayAccess(receiver, index):
+				pythonMacroEnum("EArray", [pythonMacroExpr(receiver, []), pythonMacroExpr(index, [])]);
+			case EArrayDecl(values):
+				final items = values == null ? [] : [for (value in values) pythonMacroExpr(value, [])];
+				pythonMacroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
+			case EBinop("in", left, right):
+				pythonMacroEnum("EBinop", [pythonMacroEnum("OpIn", []), pythonMacroExpr(left, []), pythonMacroExpr(right, [])]);
+			case ECall(EIdent("__hxhx_macro_if"), args):
+				final cond = args.length > 0 ? args[0] : HxExpr.EBool(false);
+				final thenExpr = args.length > 1 ? args[1] : HxExpr.ENull;
+				final elseExpr = if (args.length > 2) {
+					switch (args[2]) {
+						case EIdent("__hxhx_macro_missing_else"):
+							"None";
+						case other:
+							pythonMacroExpr(other, []);
+					}
+				} else {
+					"None";
+				}
+				pythonMacroEnum("EIf", [pythonMacroExpr(cond, []), pythonMacroExpr(thenExpr, []), elseExpr]);
+			case ECall(EIdent("__hxhx_macro_ident_splice"), args):
+				final nameExpr = args.length > 0 ? args[0] : HxExpr.EString("");
+				pythonMacroEnum("EConst", [pythonMacroEnum("CIdent", ["str(" + renderExpr(Python, nameExpr) + ")"])]);
+			case ECall(callee, args):
+				final loweredArgs = args == null ? [] : [for (arg in args) pythonMacroExpr(arg, [])];
+				pythonMacroEnum("ECall", [pythonMacroExpr(callee, []), "[" + loweredArgs.join(", ") + "]"]);
+			case EUntyped(inner):
+				pythonMacroEnum("EUntyped", [pythonMacroExpr(inner, [])]);
+			case EUnop(op, inner):
+				pythonMacroEnum("EUnop", [quoteString(op), pythonMacroExpr(inner, [])]);
+			case _:
+				pythonMacroEnum("EConst", [pythonMacroEnum("CIdent", [quoteString(renderExpr(Python, expr))])]);
+		};
 	}
 
 	static function phpMacroExpr(expr:HxExpr, wrappers:Array<String>):String {
@@ -4715,10 +4795,14 @@ class SourceNativeBackend {
 		if (fns.length == 0)
 			return false;
 		for (fn in fns) {
-			if (HxFunctionDecl.getMetadata(fn).indexOf("macro") < 0)
+			if (!isCompileTimeOnlyFunction(fn))
 				return false;
 		}
 		return true;
+	}
+
+	static function isCompileTimeOnlyFunction(fn:HxFunctionDecl):Bool {
+		return HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0;
 	}
 
 	static function isStdSourceFile(filePath:String):Bool {
@@ -4809,6 +4893,8 @@ class SourceNativeBackend {
 		}
 		var sawConstructor = false;
 		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (isCompileTimeOnlyFunction(fn))
+				continue;
 			if (HxFunctionDecl.getName(fn) == "main")
 				continue;
 			final isStatic = HxFunctionDecl.getIsStatic(fn);
@@ -5091,6 +5177,8 @@ class SourceNativeBackend {
 		}
 		var sawConstructor = false;
 		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (isCompileTimeOnlyFunction(fn))
+				continue;
 			if (HxFunctionDecl.getName(fn) == "main")
 				continue;
 			final isStatic = HxFunctionDecl.getIsStatic(fn);

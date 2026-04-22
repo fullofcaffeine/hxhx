@@ -1735,6 +1735,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonSkipsMacroSupportMethods():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_skip_macro_methods_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("runner", "", ENew("Runner", []), pos),
+			SExpr(ECall(EField(EIdent("runner"), "addCase"), [EString("case")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final addCase = new HxFunctionDecl("addCase", HxVisibility.Public, false, [new HxFunctionArg("value", "", NoDefault)], "Void",
+			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("value")]), pos)], "");
+		final addCases = new HxFunctionDecl("addCases", HxVisibility.Public, false, [], "Void", [SExpr(EUnsupported("body_parse_error"), pos)], "", ["macro"]);
+		final runnerClass = new HxClassDecl("Runner", false, [addCase, addCases]);
+		final runnerDecl = new HxModuleDecl("", [], runnerClass, [runnerClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("Runner.hx", runnerDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Runner:", "Python support emission should keep runtime support classes");
+		assertContains(content, "def addCase(self, value):", "Python support emission should keep runtime support methods");
+		assertNotContains(content, "def addCases", "Python support emission should skip macro-only support methods");
+		assertNotContains(content, "body_parse_error", "skipped macro-only methods should not leak unsupported parser placeholders");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function arrayLiteralProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -2919,6 +2950,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonMacroExpr():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_macro_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(phpMacroExprProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_anon(expr=", "Python macro expressions should lower to macro object shapes");
+		assertContains(content, "__hx_ctor=\"EUntyped\"", "Python macro expressions should preserve untyped wrappers");
+		assertContains(content, "__hx_ctor=\"EParenthesis\"", "Python macro expressions should preserve parenthesis wrappers");
+		assertContains(content, "__hx_ctor=\"CString\"", "Python macro string constants should lower to CString nodes");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpDollarString():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_dollar_string_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3676,6 +3722,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStringFromCharCode();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
+		assertPythonMacroExpr();
 		assertPhpDollarString();
 		assertPhpInt64LiteralExtension();
 		assertPhpArrayConstructor();
@@ -3710,6 +3757,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertSuperEmission();
 		assertCrossModuleClassEmission();
 		assertPythonSkipsStdSupportClasses();
+		assertPythonSkipsMacroSupportMethods();
 		assertArrayLiteral();
 		assertConstructorExpression();
 		assertForInStatement();
