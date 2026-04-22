@@ -2048,6 +2048,55 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonTypeNameHelpersForStaticInitializers():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_type_name_helpers_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				EBinop("+", EBinop("+", EArrayAccess(EField(EIdent("TestReflect"), "TNAMES"), EInt(0)), EString(",")),
+					EArrayAccess(EField(EIdent("TestReflect"), "TNAMES"), EInt(1)))
+			]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final typeNamesField = new HxFieldDecl("TNAMES", HxVisibility.Public, true, "Array<String>", EArrayDecl([
+			ECall(EIdent("u"), [EString("haxe.ds.StringMap")]),
+			ECall(EIdent("u2"), [EString("unit"), EString("MyEnum")])
+		]));
+		final uFn = new HxFunctionDecl("u", HxVisibility.Public, true, [new HxFunctionArg("s", "String", NoDefault)], "String", [SReturn(EIdent("s"), pos)],
+			"");
+		final u2Fn = new HxFunctionDecl("u2", HxVisibility.Public, true, [
+			new HxFunctionArg("s", "String", NoDefault),
+			new HxFunctionArg("s2", "String", NoDefault)
+		], "String", [
+			SReturn(EBinop("+", EBinop("+", ECall(EIdent("u"), [EIdent("s")]), EString(".")), ECall(EIdent("u"), [EIdent("s2")])), pos)
+		], "");
+		final reflectClass = new HxClassDecl("TestReflect", false, [uFn, u2Fn], [typeNamesField]);
+		final reflectDecl = new HxModuleDecl("", [], reflectClass, [reflectClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("TestReflect.hx", reflectDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def u(s):", "Python support should synthesize the global type-name helper used by static initializers");
+		assertContains(content, "def u2(s, s2):", "Python support should synthesize the qualified type-name helper used by static initializers");
+		assertContains(content, "TestReflect.TNAMES = [u(\"haxe.ds.StringMap\"), u2(\"unit\", \"MyEnum\")]",
+			"Python static initializer should preserve generated type-name helper calls");
+		assertTrue(content.indexOf("def u(s):") < content.indexOf("TestReflect.TNAMES = [u(\"haxe.ds.StringMap\"), u2(\"unit\", \"MyEnum\")]"),
+			"Python type-name helpers should be emitted before deferred static initializers");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python type-name helpers should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "haxe.ds.StringMap,unit.MyEnum", "generated Python should evaluate type-name helper calls");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4530,6 +4579,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonStdDateToolsSupport();
 		assertPythonPackageQualifiedSupportClassReference();
 		assertPythonStdStringMapNamespaceReference();
+		assertPythonTypeNameHelpersForStaticInitializers();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();

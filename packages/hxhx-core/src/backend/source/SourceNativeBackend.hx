@@ -5056,11 +5056,14 @@ class SourceNativeBackend {
 			appendDeclClasses(typed.getParsed().getDecl(), typed.getParsed().getFilePath());
 		final pendingNames = new Map<String, Bool>();
 		var needsValueExceptionBase = false;
+		var needsTypeNameHelpers = false;
 		for (cls in pending) {
 			final pendingName = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 			pendingNames.set(pendingName, true);
 			if (pythonBaseClassName(HxClassDecl.getExtendsPath(cls)) == "ValueException")
 				needsValueExceptionBase = true;
+			if (pythonClassDefinesTypeNameHelper(cls))
+				needsTypeNameHelpers = true;
 		}
 		final ordered = new Array<HxClassDecl>();
 		final emittedNames = new Map<String, Bool>();
@@ -5097,6 +5100,11 @@ class SourceNativeBackend {
 			if (out.length > 0)
 				out.push("");
 			appendPythonValueExceptionBase(out);
+		}
+		if (needsTypeNameHelpers) {
+			if (out.length > 0)
+				out.push("");
+			appendPythonTypeNameHelpers(out);
 		}
 		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
@@ -5229,6 +5237,26 @@ class SourceNativeBackend {
 		out.push("    @staticmethod");
 		out.push("    def days(n):");
 		out.push("        return (n * 24.0 * 60.0 * 60.0 * 1000.0)");
+	}
+
+	static function pythonClassDefinesTypeNameHelper(cls:HxClassDecl):Bool {
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn))
+				continue;
+			final name = HxFunctionDecl.getName(fn);
+			final arity = HxFunctionDecl.getArgs(fn).length;
+			if ((name == "u" && arity == 1) || (name == "u2" && arity == 2))
+				return true;
+		}
+		return false;
+	}
+
+	static function appendPythonTypeNameHelpers(out:Array<String>):Void {
+		out.push("def u(s):");
+		out.push("    return s");
+		out.push("");
+		out.push("def u2(s, s2):");
+		out.push("    return (u(s) + \".\" + u(s2))");
 	}
 
 	static function appendPythonValueExceptionBase(out:Array<String>):Void {
