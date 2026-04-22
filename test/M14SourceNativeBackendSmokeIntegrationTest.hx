@@ -3254,6 +3254,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonMacroType():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_macro_type_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(phpMacroTypeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hx_ctor=\"TFunction\"", "Python macro type arrows should lower to TFunction nodes");
+		assertContains(content, "__hx_ctor=\"TPath\"", "Python macro type paths should lower to TPath nodes");
+		assertContains(content, "name=\"X\"", "Python macro type paths should preserve argument names");
+		assertContains(content, "name=\"Y\"", "Python macro type paths should preserve return names");
+		assertContains(content, "__hx_ctor=\"TNamed\"", "Python macro named function arguments should lower to TNamed nodes");
+		assertContains(content, "__hx_ctor=\"TOptional\"", "Python macro optional types should lower to TOptional nodes");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpTryCatchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_try_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3931,6 +3948,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpArrayPostfixStatement();
 		assertPhpCrossPackageSupportClassEmission();
 		assertPhpMacroType();
+		assertPythonMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpTypeErrorProbe();
 		assertPhpTypeErrorBlockProbe();

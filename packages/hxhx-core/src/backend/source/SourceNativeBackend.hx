@@ -1835,9 +1835,11 @@ class SourceNativeBackend {
 
 	static function macroTypeExpr(target:SourceNativeTarget, typeText:String):String {
 		return switch (target) {
+			case Python:
+				pythonMacroComplexType(typeText);
 			case Php:
 				phpMacroComplexType(typeText);
-			case Python, Java, Cs, Lua:
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: EMacroType";
 		};
 	}
@@ -2177,6 +2179,71 @@ class SourceNativeBackend {
 			case _:
 				pythonMacroEnum("EConst", [pythonMacroEnum("CIdent", [quoteString(renderExpr(Python, expr))])]);
 		};
+	}
+
+	static function pythonMacroComplexType(raw:String):String {
+		final text = trimLeadingTypeColon(raw);
+		final arrowParts = splitTopLevelArrow(text);
+		if (arrowParts.length > 1) {
+			final args = new Array<String>();
+			for (i in 0...arrowParts.length - 1) {
+				for (arg in pythonMacroFunctionArgTypes(arrowParts[i]))
+					args.push(arg);
+			}
+			return pythonMacroEnum("TFunction", [
+				"[" + args.join(", ") + "]",
+				pythonMacroComplexType(arrowParts[arrowParts.length - 1])
+			]);
+		}
+
+		final trimmed = StringTools.trim(text);
+		if (trimmed.length == 0)
+			return pythonMacroTypePath("");
+
+		final namedColon = findTopLevelChar(trimmed, ":".code);
+		if (namedColon > 0) {
+			final namePart = StringTools.trim(trimmed.substring(0, namedColon));
+			final typePart = trimmed.substr(namedColon + 1);
+			if (StringTools.startsWith(namePart, "?")) {
+				final name = StringTools.trim(namePart.substr(1));
+				return pythonMacroEnum("TOptional", [pythonMacroEnum("TNamed", [quoteString(name), pythonMacroComplexType(typePart)])]);
+			}
+			return pythonMacroEnum("TNamed", [quoteString(namePart), pythonMacroComplexType(typePart)]);
+		}
+
+		if (StringTools.startsWith(trimmed, "?"))
+			return pythonMacroEnum("TOptional", [pythonMacroComplexType(trimmed.substr(1))]);
+
+		final parenEnd = matchingOuterParen(trimmed);
+		if (parenEnd == trimmed.length - 1)
+			return pythonMacroEnum("TParent", [pythonMacroComplexType(trimmed.substring(1, trimmed.length - 1))]);
+
+		return pythonMacroTypePath(trimmed);
+	}
+
+	static function pythonMacroFunctionArgTypes(raw:String):Array<String> {
+		final trimmed = StringTools.trim(raw);
+		final parenEnd = matchingOuterParen(trimmed);
+		if (parenEnd == trimmed.length - 1) {
+			final inner = trimmed.substring(1, trimmed.length - 1);
+			final commaParts = splitTopLevelComma(inner);
+			if (commaParts.length > 1)
+				return [for (part in commaParts) pythonMacroComplexType(part)];
+		}
+		return [pythonMacroComplexType(trimmed)];
+	}
+
+	static function pythonMacroTypePath(raw:String):String {
+		final path = StringTools.trim(stripGenericTypeParams(raw));
+		final parts = path.length == 0 ? [""] : path.split(".");
+		final name = parts[parts.length - 1];
+		final pack = new Array<String>();
+		if (parts.length > 1) {
+			for (i in 0...parts.length - 1)
+				pack.push(quoteString(parts[i]));
+		}
+		final typePath = "__hxhx_anon(pack=[" + pack.join(", ") + "], name=" + quoteString(name) + ", params=[], sub=None)";
+		return pythonMacroEnum("TPath", [typePath]);
 	}
 
 	static function phpMacroExpr(expr:HxExpr, wrappers:Array<String>):String {
