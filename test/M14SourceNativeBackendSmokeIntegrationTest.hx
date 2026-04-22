@@ -1989,8 +1989,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "unit = hxhx_anon()", "Python support should synthesize a package namespace for qualified references");
 		assertContains(content, "unit.UsedReferenced2 = UsedReferenced2", "Python support should expose flat helper classes through the package namespace");
-		assertContains(content, "DCEClass.c = [None, unit.UsedReferenced2]", "Python static initializer should preserve the package-qualified class reference");
-		assertTrue(content.indexOf("unit.UsedReferenced2 = UsedReferenced2") < content.indexOf("DCEClass.c = [None, unit.UsedReferenced2]"),
+		assertContains(content, "DCEClass.c = Array([None, unit.UsedReferenced2])",
+			"Python static initializer should preserve the package-qualified class reference");
+		assertTrue(content.indexOf("unit.UsedReferenced2 = UsedReferenced2") < content.indexOf("DCEClass.c = Array([None, unit.UsedReferenced2])"),
 			"Python package namespace aliases should be emitted before deferred static initializers");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
@@ -2036,8 +2037,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "haxe = hxhx_anon()", "Python support should synthesize the haxe namespace for std type references");
 		assertContains(content, "haxe.ds = hxhx_anon()", "Python support should synthesize the haxe.ds namespace for std type references");
 		assertContains(content, "haxe.ds.StringMap = StringMap", "Python support should expose StringMap through haxe.ds");
-		assertContains(content, "TestReflect.TYPES = [haxe.ds.StringMap]", "Python static initializer should preserve haxe.ds.StringMap references");
-		assertTrue(content.indexOf("haxe.ds.StringMap = StringMap") < content.indexOf("TestReflect.TYPES = [haxe.ds.StringMap]"),
+		assertContains(content, "TestReflect.TYPES = Array([haxe.ds.StringMap])", "Python static initializer should preserve haxe.ds.StringMap references");
+		assertTrue(content.indexOf("haxe.ds.StringMap = StringMap") < content.indexOf("TestReflect.TYPES = Array([haxe.ds.StringMap])"),
 			"Python std namespace aliases should be emitted before deferred static initializers");
 		assertNotContains(content, "std-string-map-source-should-not-render", "Python StringMap support should not dump the upstream std source body");
 		if (commandExists("python3")) {
@@ -2085,9 +2086,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "def u(s):", "Python support should synthesize the global type-name helper used by static initializers");
 		assertContains(content, "def u2(s, s2):", "Python support should synthesize the qualified type-name helper used by static initializers");
-		assertContains(content, "TestReflect.TNAMES = [u(\"haxe.ds.StringMap\"), u2(\"unit\", \"MyEnum\")]",
+		assertContains(content, "TestReflect.TNAMES = Array([u(\"haxe.ds.StringMap\"), u2(\"unit\", \"MyEnum\")])",
 			"Python static initializer should preserve generated type-name helper calls");
-		assertTrue(content.indexOf("def u(s):") < content.indexOf("TestReflect.TNAMES = [u(\"haxe.ds.StringMap\"), u2(\"unit\", \"MyEnum\")]"),
+		assertTrue(content.indexOf("def u(s):") < content.indexOf("TestReflect.TNAMES = Array([u(\"haxe.ds.StringMap\"), u2(\"unit\", \"MyEnum\")])"),
 			"Python type-name helpers should be emitted before deferred static initializers");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
@@ -2190,6 +2191,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var it = values.iterator();",
 			"    Sys.println(Std.string(it.hasNext()));",
 			"    Sys.println(it.next());",
+			"    var literal = [\"c\"];",
+			"    literal.push(\"d\");",
+			"    Sys.println(literal.join(\"#\"));",
 			"  }",
 			"}"
 		].join("\n");
@@ -2203,12 +2207,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Array(list):", "Python runtime should define a Haxe-style Array constructor shim");
 		assertContains(content, "def push(self, value):", "Python Array shim should expose push for upstream utest handlers");
+		assertContains(content, "literal = Array([\"c\"])", "Python array literals should use the Array shim so push remains available");
 		assertContains(content, "def length(self):", "Python Array shim should expose Haxe length as a property");
 		assertContains(content, "def iterator(self):", "Python Array shim should expose Haxe-style iterators");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python Array runtime shim should execute, stderr:\n" + run.stderr);
-			assertContains(run.stdout, "2\na#b\nTrue\nTrue\nb", "generated Python should support Array(), push, length, join, remove, and iterator");
+			assertContains(run.stdout, "2\na#b\nTrue\nTrue\nb\nc#d",
+				"generated Python should support Array(), array literals, push, length, join, remove, and iterator");
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -3253,7 +3259,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(arrayAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "values = [1, 2]", "array access smoke should still render array literals");
+		assertContains(content, "values = Array([1, 2])", "array access smoke should render array literals through the Python Array shim");
 		assertContains(content, "first = values[0]", "array access expressions should lower to Python index syntax");
 		assertContains(content, "print(str(first))", "array-access-derived locals should still flow through later statements");
 		deleteRecursive(tmpRoot);
@@ -3267,8 +3273,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(arrayComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "values = [1, 2]", "array comprehension smoke should still render the iterable source");
-		assertContains(content, "doubled = [(value * 2) for value in values]", "array comprehensions should lower to Python list comprehensions");
+		assertContains(content, "values = Array([1, 2])", "array comprehension smoke should render the iterable source through the Python Array shim");
+		assertContains(content, "doubled = Array([(value * 2) for value in values])",
+			"array comprehensions should lower to Python comprehensions wrapped in the Array shim");
 		assertContains(content, "print(str(doubled))", "array-comprehension-derived locals should still flow through later statements");
 		deleteRecursive(tmpRoot);
 	}
@@ -3281,8 +3288,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(guardedArrayComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "kept = [value for value in values if keep(value)]",
-			"guarded array comprehensions should lower to Python list comprehensions with trailing if");
+		assertContains(content, "kept = Array([value for value in values if keep(value)])",
+			"guarded array comprehensions should lower to Python comprehensions wrapped in the Array shim");
 		assertContains(content, "print(str(kept))", "guarded array-comprehension-derived locals should still flow through later statements");
 		deleteRecursive(tmpRoot);
 	}
@@ -4413,7 +4420,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final backend = BackendRegistry.requireForTarget("python-native");
 		backend.emit(arrayLiteralProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
-		assertContains(File.getContent(outputPath), "values = [1, 2]", "array literals should render in variable initializers");
+		assertContains(File.getContent(outputPath), "values = Array([1, 2])", "array literals should render through the Python Array shim");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -4512,7 +4519,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(forInProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "for value in [1, 2]:", "for-in statements should render iterable loops");
+		assertContains(content, "for value in Array([1, 2]):", "for-in statements should render iterable loops");
 		assertContains(content, "    print(str(value))", "for-in bodies should render with nested indentation");
 		deleteRecursive(tmpRoot);
 	}

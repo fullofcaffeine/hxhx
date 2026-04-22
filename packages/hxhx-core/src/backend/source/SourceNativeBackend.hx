@@ -1582,7 +1582,7 @@ class SourceNativeBackend {
 						renderExpr(target, iterable);
 				};
 				final renderedGuard = guardExpr == null ? "" : " if " + renderExpr(target, guardExpr);
-				"[" + renderedYield + " for " + binder + " in " + renderedIterable + renderedGuard + "]";
+				"Array([" + renderedYield + " for " + binder + " in " + renderedIterable + renderedGuard + "])";
 			case Php:
 				final binder = valueName(target, name);
 				final renderedIterable = switch (iterable) {
@@ -2826,7 +2826,7 @@ class SourceNativeBackend {
 			case Cs: "new object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " }";
 			case Python:
 				final mapPairs = pythonMapLiteralPairs(items);
-				if (mapPairs != null) "{" + mapPairs.join(", ") + "}" else "[" + [for (item in items) renderExpr(target, item)].join(", ") + "]";
+				if (mapPairs != null) "{" + mapPairs.join(", ") + "}" else "Array([" + [for (item in items) renderExpr(target, item)].join(", ") + "])";
 			case Php:
 				final mapPairs = phpMapLiteralPairs(items);
 				if (mapPairs != null) "__hxhx_map_literal([" + mapPairs.join(", ") + "])"; else "["

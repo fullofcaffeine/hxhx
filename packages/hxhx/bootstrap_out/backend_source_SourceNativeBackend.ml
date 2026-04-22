@@ -5477,7 +5477,7 @@ and arrayComprehensionExpr = fun target name iterable guardExpr yieldExpr -> let
           tempString1 := __assign_552;
           __assign_552
         ));
-        let renderedGuard = (!tempString1 : string) in let __assign_553 = ((((((("[" ^ HxString.toStdString renderedYield) ^ " for ") ^ HxString.toStdString binder) ^ " in ") ^ HxString.toStdString renderedIterable) ^ HxString.toStdString renderedGuard) ^ "]" : string) in (
+        let renderedGuard = (!tempString1 : string) in let __assign_553 = ((((((("Array([" ^ HxString.toStdString renderedYield) ^ " for ") ^ HxString.toStdString binder) ^ " in ") ^ HxString.toStdString renderedIterable) ^ HxString.toStdString renderedGuard) ^ "])" : string) in (
           tempResult := __assign_553;
           __assign_553
         )
@@ -7623,7 +7623,7 @@ and arrayLiteral = fun target items -> let tempResult = ref ("" : string) in (
           __assign_1340
         )
       ));
-      let __assign_1341 = (("[" ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ "]" : string) in (
+      let __assign_1341 = (("Array([" ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ "])" : string) in (
         tempResult := __assign_1341;
         __assign_1341
       )
