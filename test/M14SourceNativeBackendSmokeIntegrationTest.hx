@@ -2342,6 +2342,47 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonReflectSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_reflect_support_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		function printIsObject(value:HxExpr):HxStmt {
+			return SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				ECall(EField(EIdent("Std"), "string"), [ECall(EField(EIdent("Reflect"), "isObject"), [value])])
+			]), pos);
+		}
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			printIsObject(EAnon(["x"], [EInt(1)])),
+			printIsObject(EString("s")),
+			printIsObject(EInt(1)),
+			printIsObject(ENull)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final valueArg = new HxFunctionArg("value", "Dynamic", NoDefault);
+		final reflectFn = new HxFunctionDecl("isObject", HxVisibility.Public, true, [valueArg], "Bool", [SReturn(EBool(false), pos)], "");
+		final reflectClass = new HxClassDecl("Reflect", false, [reflectFn]);
+		final reflectDecl = new HxModuleDecl("", [], reflectClass, [reflectClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("/repo/std/Reflect.hx", reflectDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Reflect:", "Python std Reflect fallback should emit when std Reflect is excluded from helper classes");
+		assertContains(content, "def isObject(value):", "Python std Reflect fallback should expose isObject");
+		assertContains(content, "Reflect.isObject(hxhx_anon(x=1))", "Python Reflect.isObject calls should target the fallback helper");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python Reflect fallback should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "True\nTrue\nFalse\nFalse", "generated Python Reflect.isObject should handle objects, strings, scalars, and null");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4919,6 +4960,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonMacroCompilerStdFallback();
 		assertPythonOptionalMethodArguments();
 		assertPythonSameClassInstanceMethodCall();
+		assertPythonReflectSupport();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();

@@ -5041,6 +5041,7 @@ class SourceNativeBackend {
 		var sawUnitBuilderMacro = false;
 		var sawTestIssuesMacro = false;
 		var sawMacroCompiler = false;
+		var sawStdReflect = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			if (isStdSourceFile(filePath)) {
 				final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
@@ -5052,6 +5053,8 @@ class SourceNativeBackend {
 						sawStdStringMap = true;
 					if (packagePath == "haxe.macro" && className == "Compiler")
 						sawMacroCompiler = true;
+					if ((packagePath == null || packagePath.length == 0) && className == "Reflect")
+						sawStdReflect = true;
 				}
 				return;
 			}
@@ -5140,6 +5143,11 @@ class SourceNativeBackend {
 			if (out.length > 0)
 				out.push("");
 			appendPythonMacroCompilerSupport(out);
+		}
+		if (sawStdReflect && !pendingNames.exists("Reflect")) {
+			if (out.length > 0)
+				out.push("");
+			appendPythonReflectSupport(out);
 		}
 		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
@@ -5335,6 +5343,29 @@ class SourceNativeBackend {
 		out.push("    @staticmethod");
 		out.push("    def excludeFile(path):");
 		out.push("        return None");
+	}
+
+	static function appendPythonReflectSupport(out:Array<String>):Void {
+		out.push("class Reflect:");
+		out.push("    @staticmethod");
+		out.push("    def field(obj, name):");
+		out.push("        if obj is None:");
+		out.push("            return None");
+		out.push("        if isinstance(obj, dict):");
+		out.push("            return obj.get(name, None)");
+		out.push("        return getattr(obj, name, None)");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def isFunction(value):");
+		out.push("        return callable(value)");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def isObject(value):");
+		out.push("        return value is not None and not callable(value) and not isinstance(value, (bool, int, float))");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def compare(left, right):");
+		out.push("        return (left > right) - (left < right)");
 	}
 
 	static function appendPythonValueExceptionBase(out:Array<String>):Void {
