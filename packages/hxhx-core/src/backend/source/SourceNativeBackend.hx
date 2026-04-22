@@ -5920,7 +5920,27 @@ class SourceNativeBackend {
 	static function pythonRewriteSameClassCallExpr(expr:HxExpr, methodNames:Map<String, Bool>, locals:Array<String>):HxExpr {
 		return switch (expr) {
 			case ECall(EIdent(name), args) if (methodNames.exists(name) && locals.indexOf(name) < 0):
-				ECall(EField(EThis, name), args);
+				ECall(EField(EThis, name), [for (arg in args) pythonRewriteSameClassCallExpr(arg, methodNames, locals)]);
+			case ECall(callee, args):
+				ECall(pythonRewriteSameClassCallExpr(callee, methodNames, locals),
+					[for (arg in args) pythonRewriteSameClassCallExpr(arg, methodNames, locals)]);
+			case EUnop(op, inner):
+				EUnop(op, pythonRewriteSameClassCallExpr(inner, methodNames, locals));
+			case EBinop(op, left, right):
+				EBinop(op, pythonRewriteSameClassCallExpr(left, methodNames, locals), pythonRewriteSameClassCallExpr(right, methodNames, locals));
+			case ETernary(cond, thenExpr, elseExpr):
+				ETernary(pythonRewriteSameClassCallExpr(cond, methodNames, locals), pythonRewriteSameClassCallExpr(thenExpr, methodNames, locals),
+					pythonRewriteSameClassCallExpr(elseExpr, methodNames, locals));
+			case EField(obj, field):
+				EField(pythonRewriteSameClassCallExpr(obj, methodNames, locals), field);
+			case EArrayAccess(array, index):
+				EArrayAccess(pythonRewriteSameClassCallExpr(array, methodNames, locals), pythonRewriteSameClassCallExpr(index, methodNames, locals));
+			case EArrayDecl(values):
+				EArrayDecl([for (value in values) pythonRewriteSameClassCallExpr(value, methodNames, locals)]);
+			case ECast(inner, typeHint):
+				ECast(pythonRewriteSameClassCallExpr(inner, methodNames, locals), typeHint);
+			case EUntyped(inner):
+				EUntyped(pythonRewriteSameClassCallExpr(inner, methodNames, locals));
 			case _:
 				expr;
 		}

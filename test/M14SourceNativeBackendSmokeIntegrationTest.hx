@@ -2313,9 +2313,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final pos = HxPos.unknown();
 		final addCaseFn = new HxFunctionDecl("addCase", HxVisibility.Public, false, [new HxFunctionArg("test", "Dynamic", NoDefault)], "Void",
 			[SExpr(ECall(EIdent("addCaseOld"), [EIdent("test")]), pos)], "");
-		final addCaseOldFn = new HxFunctionDecl("addCaseOld", HxVisibility.Public, false, [new HxFunctionArg("test", "Dynamic", NoDefault)], "Void",
-			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("test")]), pos)], "");
-		final runnerClass = new HxClassDecl("Runner", false, [addCaseFn, addCaseOldFn]);
+		final addCaseOldFn = new HxFunctionDecl("addCaseOld", HxVisibility.Public, false, [new HxFunctionArg("test", "Dynamic", NoDefault)], "Void", [
+			SIf(EUnop("!", ECall(EIdent("isMethod"), [EIdent("test")])), SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("not-method")]), pos), null,
+				pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("test")]), pos)
+		], "");
+		final isMethodFn = new HxFunctionDecl("isMethod", HxVisibility.Public, false, [new HxFunctionArg("test", "Dynamic", NoDefault)], "Bool",
+			[SReturn(EBool(true), pos)], "");
+		final runnerClass = new HxClassDecl("Runner", false, [addCaseFn, addCaseOldFn, isMethodFn]);
 		final runnerDecl = new HxModuleDecl("", [], runnerClass, [runnerClass], false, false);
 		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
 			SVar("runner", "", ENew("Runner", []), pos),
@@ -2334,10 +2339,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "self.addCaseOld(test)", "Python same-class instance calls should dispatch through self");
 		assertNotContains(content, "        addCaseOld(test)", "Python same-class instance calls should not emit an unqualified global call");
+		assertContains(content, "(not self.isMethod(test))", "Python nested same-class condition calls should dispatch through self");
+		assertNotContains(content, "(not isMethod(test))", "Python nested same-class condition calls should not emit an unqualified global call");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python same-class instance calls should execute, stderr:\n" + run.stderr);
 			assertContains(run.stdout, "case", "generated Python should dispatch the same-class helper method");
+			assertNotContains(run.stdout, "not-method", "generated Python should call the nested same-class helper inside the condition");
 		}
 		deleteRecursive(tmpRoot);
 	}
