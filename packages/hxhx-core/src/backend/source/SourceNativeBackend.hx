@@ -927,6 +927,16 @@ class SourceNativeBackend {
 	static function typeCheckExpr(target:SourceNativeTarget, value:HxExpr, typeExpr:HxExpr):String {
 		final renderedValue = renderExpr(target, value);
 		return switch (target) {
+			case Python:
+				final typeName = switch (typeExpr) {
+					case EIdent(name) | EEnumValue(name):
+						name;
+					case EField(receiver, field):
+						sanitizeDottedPath(renderExpr(target, receiver) + "." + field);
+					case _:
+						throw targetLabel(target) + " source backend MVP unsupported type check RHS: " + exprKind(typeExpr);
+				}
+				"__hxhx_is_of_type(" + renderedValue + ", " + quoteString(typeName) + ")";
 			case Php:
 				final typeName = switch (typeExpr) {
 					case EIdent(name) | EEnumValue(name):
@@ -937,7 +947,7 @@ class SourceNativeBackend {
 						throw targetLabel(target) + " source backend MVP unsupported type check RHS: " + exprKind(typeExpr);
 				}
 				phpTypeCheckExpr(renderedValue, typeName);
-			case Python, Java, Cs, Lua:
+			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported binary operator: is";
 		};
 	}
@@ -5353,6 +5363,22 @@ class SourceNativeBackend {
 				lines.push("        return try_fn()");
 				lines.push("    except Exception as e:");
 				lines.push("        return catch_fn(e)");
+				lines.push("");
+				lines.push("def __hxhx_is_of_type(value, type_name):");
+				lines.push("    if type_name == \"Int\":");
+				lines.push("        return isinstance(value, int) and not isinstance(value, bool)");
+				lines.push("    if type_name == \"Float\":");
+				lines.push("        return (isinstance(value, int) or isinstance(value, float)) and not isinstance(value, bool)");
+				lines.push("    if type_name == \"String\":");
+				lines.push("        return isinstance(value, str)");
+				lines.push("    if type_name == \"Bool\":");
+				lines.push("        return isinstance(value, bool)");
+				lines.push("    if type_name == \"Array\":");
+				lines.push("        return isinstance(value, list)");
+				lines.push("    if type_name == \"Dynamic\" or type_name == \"Any\":");
+				lines.push("        return True");
+				lines.push("    cls = globals().get(type_name)");
+				lines.push("    return isinstance(value, cls) if isinstance(cls, type) else False");
 				lines.push("");
 				lines.push("def __hxhx_ushr(value, bits):");
 				lines.push("    return ((value & 0xffffffff) >> (bits & 31))");

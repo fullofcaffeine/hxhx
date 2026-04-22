@@ -1481,6 +1481,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function pythonTypeCheckProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var number = 12;",
+			"    var text = \"12\";",
+			"    Sys.println(Std.string(number is Int));",
+			"    Sys.println(Std.string(text is String));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeCheckProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -3460,6 +3476,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonTypeCheck():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_type_check_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(pythonTypeCheckProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def __hxhx_is_of_type(value, type_name):", "Python type checks should emit the Haxe type helper");
+		assertContains(content, "print(str(__hxhx_is_of_type(number, \"Int\")))", "Python Int type checks should lower through the helper");
+		assertContains(content, "print(str(__hxhx_is_of_type(text, \"String\")))", "Python String type checks should lower through the helper");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertHelperInstanceFieldEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_helper_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3884,6 +3914,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpForKeyValue();
 		assertPythonForKeyValue();
 		assertPythonTryCatchRawExpression();
+		assertPythonTypeCheck();
 		assertPhpTypeCheck();
 		assertPhpShiftAssignment();
 		assertPhpNullCoalescing();
