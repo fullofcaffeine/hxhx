@@ -1887,6 +1887,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonStaticInitializersAfterSupportClasses():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_static_init_order_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EField(EIdent("InitBase"), "sinline")])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final staticInit = new HxFieldDecl("sinline", HxVisibility.Public, true, "Int", ECall(EField(EIdent("DateTools"), "minutes"), [EInt(1)]));
+		final initBaseClass = new HxClassDecl("InitBase", false, [], [staticInit]);
+		final initBaseDecl = new HxModuleDecl("", [], initBaseClass, [initBaseClass], false, false);
+		final minutesFn = new HxFunctionDecl("minutes", HxVisibility.Public, true, [new HxFunctionArg("value", "Int", NoDefault)], "Int",
+			[SReturn(EBinop("*", EIdent("value"), EInt(60)), pos)], "");
+		final dateToolsClass = new HxClassDecl("DateTools", false, [minutesFn]);
+		final dateToolsDecl = new HxModuleDecl("", [], dateToolsClass, [dateToolsClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("InitBase.hx", initBaseDecl),
+			typedSyntheticModule("DateTools.hx", dateToolsDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class InitBase:", "Python support emission should keep the class with the static initializer");
+		assertContains(content, "class DateTools:", "Python support emission should keep the referenced helper class");
+		assertContains(content, "    sinline = None", "Python class bodies should reserve static fields without evaluating cross-class initializers");
+		assertContains(content, "InitBase.sinline = DateTools.minutes(1)", "Python static initializers should run after all support classes are defined");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python static initializer order should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "60", "generated Python should observe the deferred static initializer value");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function arrayLiteralProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -4335,6 +4373,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCrossModuleClassEmission();
 		assertPythonSkipsStdSupportClasses();
 		assertPythonSkipsMacroSupportMethods();
+		assertPythonStaticInitializersAfterSupportClasses();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
 		assertConstructorExpression();

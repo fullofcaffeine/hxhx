@@ -5068,10 +5068,17 @@ class SourceNativeBackend {
 				break;
 			}
 		}
+		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
 			if (out.length > 0)
 				out.push("");
-			for (line in renderPythonHelperClass(cls))
+			for (line in renderPythonHelperClass(cls, postStaticInitializers))
+				out.push(line);
+		}
+		if (postStaticInitializers.length > 0) {
+			if (out.length > 0)
+				out.push("");
+			for (line in postStaticInitializers)
 				out.push(line);
 		}
 		return out;
@@ -5528,7 +5535,7 @@ class SourceNativeBackend {
 		return false;
 	}
 
-	static function renderPythonHelperClass(cls:HxClassDecl):Array<String> {
+	static function renderPythonHelperClass(cls:HxClassDecl, ?postStaticInitializers:Array<String>):Array<String> {
 		final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 		final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
 		final classHeader = baseName == null
@@ -5546,9 +5553,11 @@ class SourceNativeBackend {
 				instanceFields.push(field);
 				continue;
 			}
+			final fieldName = sanitizePythonIdentifier(HxFieldDecl.getName(field));
 			final init = HxFieldDecl.getInit(field);
-			final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
-			out.push("    " + sanitizePythonIdentifier(HxFieldDecl.getName(field)) + " = " + rhs);
+			out.push("    " + fieldName + " = " + defaultValue(Python));
+			if (init != null && postStaticInitializers != null)
+				postStaticInitializers.push(className + "." + fieldName + " = " + renderExpr(Python, init));
 			memberCount += 1;
 		}
 		var sawConstructor = false;
