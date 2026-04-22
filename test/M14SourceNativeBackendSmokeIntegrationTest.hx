@@ -35,6 +35,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return {code: code, stdout: stdout, stderr: stderr};
 	}
 
+	static function commandOutputWithInput(command:String, args:Array<String>, input:String):{code:Int, stdout:String, stderr:String} {
+		final process = new sys.io.Process(command, args);
+		process.stdin.writeString(input);
+		process.stdin.flush();
+		process.stdin.close();
+		final stdout = process.stdout.readAll().toString();
+		final stderr = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		return {code: code, stdout: stdout, stderr: stderr};
+	}
+
 	static function protocolLine(key:String, payload:String):String {
 		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
 			"\t", "\\t");
@@ -3078,7 +3090,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
-	static function javaUtilityProcessCompileShimProgram():GenIrProgram {
+	static function javaUtilityProcessRuntimeProgram():GenIrProgram {
 		final src = [
 			"class UtilityProcess {",
 			"  static function main() {",
@@ -3145,7 +3157,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(sourceContent, "public static int command(Object... args)",
 			"Java Sys.command support should execute helper commands used by upstream Java misc projects");
 		assertContains(sourceContent, "public static String[] args()", "Java Sys.args support should expose CLI args to sys tests");
-		assertContains(sourceContent, "java.lang.Process process = new ProcessBuilder",
+		assertContains(sourceContent, "java.lang.Process process = builder.start()",
 			"Java Sys.command support should avoid ambiguity with sys.io.Process imports");
 		assertContains(sourceContent, "public static String systemName()",
 			"Java Sys.systemName support should let helper programs choose the platform classpath separator");
@@ -4951,19 +4963,47 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
-	static function assertJavaUtilityProcessCompileShim():Void {
-		if (!commandExists("javac") || !commandExists("jar"))
+	static function assertJavaUtilityProcessRuntime():Void {
+		if (!commandExists("javac") || !commandExists("jar") || !commandExists("java"))
 			return;
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_utility_process_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		final outputDir = Path.join([tmpRoot, "bin", "java", "UtilityProcess-Debug"]);
 		final backend = BackendRegistry.requireForTarget("java-native");
-		final result = backend.emit(javaUtilityProcessCompileShimProgram(),
+		final result = backend.emit(javaUtilityProcessRuntimeProgram(),
 			new BackendContext(outputDir, null, "UtilityProcess", true, true, new StringMap<String>()));
 		final sourcePath = Path.join([outputDir, "src", "UtilityProcess.java"]);
 		final content = File.getContent(sourcePath);
-		assertContains(content, "hxhx Java sys compile shim", "Java UtilityProcess entrypoint should use the compile-only shim");
-		assertTrue(FileSystem.exists(result.entryPath), "Java UtilityProcess compile shim should still package a jar");
+		assertContains(content, "hxhx Java sys runtime shim", "Java UtilityProcess entrypoint should use the runtime shim");
+		assertNotContains(content, "compile shim", "Java UtilityProcess should not keep the compile-only shim");
+		assertTrue(FileSystem.exists(result.entryPath), "Java UtilityProcess runtime shim should still package a jar");
+		final argsRun = commandOutput("java", ["-jar", result.entryPath, "args", "hello"]);
+		assertTrue(argsRun.code == 0, "Java UtilityProcess args case should exit cleanly: " + argsRun.stderr);
+		assertContains(argsRun.stdout, "hello", "Java UtilityProcess args case should print the provided argument");
+		final stdinRun = commandOutputWithInput("java", ["-jar", result.entryPath, "stdin.readLine"], "line-one\n");
+		assertTrue(stdinRun.code == 0, "Java UtilityProcess stdin.readLine case should exit cleanly: " + stdinRun.stderr);
+		assertContains(stdinRun.stdout, "line-one", "Java UtilityProcess stdin.readLine case should echo one input line");
+		final stdoutRun = commandOutput("java", ["-jar", result.entryPath, "stdout.writeString", "out-text", "nfc"]);
+		assertTrue(stdoutRun.code == 0, "Java UtilityProcess stdout.writeString case should exit cleanly: " + stdoutRun.stderr);
+		assertContains(stdoutRun.stdout, "out-text", "Java UtilityProcess stdout.writeString case should write to stdout");
+		final unicodeRun = commandOutput("java", ["-jar", result.entryPath, "stdout.writeString", "14", "nfd"]);
+		final unicodeExpected = String.fromCharCode(0x0061) + String.fromCharCode(0x0307);
+		assertTrue(unicodeRun.code == 0, "Java UtilityProcess indexed Unicode case should exit cleanly: " + unicodeRun.stderr);
+		assertTrue(unicodeRun.stdout == unicodeExpected, "Java UtilityProcess indexed Unicode case should decode sequence arguments");
+		final stderrRun = commandOutput("java", ["-jar", result.entryPath, "stderr.writeString", "err-text", "nfc"]);
+		assertTrue(stderrRun.code == 0, "Java UtilityProcess stderr.writeString case should exit cleanly");
+		assertContains(stderrRun.stderr, "err-text", "Java UtilityProcess stderr.writeString case should write to stderr");
+		final envRun = commandOutput("java", [
+			"-Dhxhx.utility.test=value",
+			"-jar",
+			result.entryPath,
+			"getEnv",
+			"hxhx.utility.test"
+		]);
+		assertTrue(envRun.code == 0, "Java UtilityProcess getEnv case should exit cleanly: " + envRun.stderr);
+		assertContains(envRun.stdout, "value", "Java UtilityProcess getEnv should read JVM/system environment values");
+		final exitRun = commandOutput("java", ["-jar", result.entryPath, "exitCode", "7"]);
+		assertTrue(exitRun.code == 7, "Java UtilityProcess exitCode case should propagate exit status");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -5563,7 +5603,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertUnsupportedSwitchGuardExpression();
 		assertSwitchStatement();
 		assertJavaArraySwitchStatement();
-		assertJavaUtilityProcessCompileShim();
+		assertJavaUtilityProcessRuntime();
 		assertPhpSwitchStatement();
 	}
 }

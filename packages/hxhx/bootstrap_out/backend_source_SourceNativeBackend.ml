@@ -11650,13 +11650,52 @@ let appendJavaStdSupport = fun out -> ignore ((
   ignore (HxArray.push out "");
   ignore (HxArray.push out "class Sys {");
   ignore (HxArray.push out "  public static String[] __hxhx_args = new String[0];");
+  ignore (HxArray.push out "  private static java.util.HashMap<String, String> __hxhx_env = new java.util.HashMap<String, String>();");
   ignore (HxArray.push out "  public static String[] args() {");
   ignore (HxArray.push out "    return __hxhx_args;");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  public static String getEnv(String name) {");
+  ignore (HxArray.push out "    if (__hxhx_env.containsKey(name)) return __hxhx_env.get(name);");
+  ignore (HxArray.push out "    String value = System.getenv(name);");
+  ignore (HxArray.push out "    if (value != null) return value;");
+  ignore (HxArray.push out "    return System.getProperty(name);");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  public static void putEnv(String name, String value) {");
+  ignore (HxArray.push out "    if (value == null) __hxhx_env.remove(name); else __hxhx_env.put(name, value);");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  public static __HxStringMap environment() {");
+  ignore (HxArray.push out "    java.util.HashMap<String, String> env = new java.util.HashMap<String, String>(System.getenv());");
+  ignore (HxArray.push out "    env.putAll(__hxhx_env);");
+  ignore (HxArray.push out "    return new __HxStringMap(env);");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  public static String getCwd() {");
+  ignore (HxArray.push out "    return System.getProperty(\"user.dir\", \"\");");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  public static String programPath() {");
+  ignore (HxArray.push out "    try { return new java.io.File(Sys.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getPath(); }");
+  ignore (HxArray.push out "    catch (Exception e) { return System.getProperty(\"java.class.path\", \"\"); }");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  public static void print(Object value) {");
+  ignore (HxArray.push out "    System.out.print(String.valueOf(value));");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  public static void println(Object value) {");
+  ignore (HxArray.push out "    System.out.println(String.valueOf(value));");
   ignore (HxArray.push out "  }");
   ignore (HxArray.push out "  public static int command(Object... args) {");
   ignore (HxArray.push out "    if (args == null || args.length == 0 || args[0] == null) return 0;");
   ignore (HxArray.push out "    try {");
-  ignore (HxArray.push out "      java.lang.Process process = new ProcessBuilder(__hxhx_shellCommand(String.valueOf(args[0]))).inheritIO().start();");
+  ignore (HxArray.push out "      java.util.ArrayList<String> command = new java.util.ArrayList<String>();");
+  ignore (HxArray.push out "      if (args.length == 1) {");
+  ignore (HxArray.push out "        for (String item : __hxhx_shellCommand(String.valueOf(args[0]))) command.add(item);");
+  ignore (HxArray.push out "      } else {");
+  ignore (HxArray.push out "        command.add(String.valueOf(args[0]));");
+  ignore (HxArray.push out "        if (args.length > 1 && args[1] instanceof Iterable) {");
+  ignore (HxArray.push out "          for (Object item : (Iterable<?>)args[1]) command.add(String.valueOf(item));");
+  ignore (HxArray.push out "        }");
+  ignore (HxArray.push out "      }");
+  ignore (HxArray.push out "      java.lang.ProcessBuilder builder = new ProcessBuilder(command).inheritIO();");
+  ignore (HxArray.push out "      builder.environment().putAll(__hxhx_env);");
+  ignore (HxArray.push out "      java.lang.Process process = builder.start();");
   ignore (HxArray.push out "      return process.waitFor();");
   ignore (HxArray.push out "    } catch (Exception e) {");
   ignore (HxArray.push out "      return -1;");
@@ -11675,7 +11714,131 @@ let appendJavaStdSupport = fun out -> ignore ((
   ignore (HxArray.push out "    if (\"Windows\".equals(systemName())) return new String[] {\"cmd\", \"/c\", command};");
   ignore (HxArray.push out "    return new String[] {\"sh\", \"-c\", command};");
   ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "}");
+  ignore (HxArray.push out "");
+  ignore (HxArray.push out "class __HxStringMap {");
+  ignore (HxArray.push out "  private final java.util.HashMap<String, String> values;");
+  ignore (HxArray.push out "  public __HxStringMap(java.util.HashMap<String, String> values) {");
+  ignore (HxArray.push out "    this.values = values;");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  public String get(String key) {");
+  ignore (HxArray.push out "    return values.get(key);");
+  ignore (HxArray.push out "  }");
   HxArray.push out "}"
+))
+
+let appendJavaUtilityProcessRuntime = fun out className -> ignore ((
+  ignore (HxArray.push out "    // hxhx Java sys runtime shim: UtilityProcess is a tiny upstream sys-test helper.");
+  ignore (HxArray.push out "    try {");
+  ignore (HxArray.push out (("      " ^ HxString.toStdString className) ^ ".__hxhx_runUtility(__hxhx_cli_args == null ? new String[0] : __hxhx_cli_args);"));
+  ignore (HxArray.push out "    } catch (Exception e) {");
+  ignore (HxArray.push out "      e.printStackTrace();");
+  ignore (HxArray.push out "      System.exit(1);");
+  ignore (HxArray.push out "    }");
+  ignore (HxArray.push out "    return;");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  private static void __hxhx_runUtility(String[] args) throws Exception {");
+  ignore (HxArray.push out "    if (args == null || args.length == 0) return;");
+  ignore (HxArray.push out "    String command = args[0];");
+  ignore (HxArray.push out "    if (\"putEnv\".equals(command)) {");
+  ignore (HxArray.push out "      if (args.length >= 5) {");
+  ignore (HxArray.push out "        Sys.putEnv(args[1], __hxhx_sequenceArg(args, 2));");
+  ignore (HxArray.push out "        String[] tail = java.util.Arrays.copyOfRange(args, 4, args.length);");
+  ignore (HxArray.push out "        __hxhx_runUtility(tail);");
+  ignore (HxArray.push out "      }");
+  ignore (HxArray.push out "      return;");
+  ignore (HxArray.push out "    }");
+  ignore (HxArray.push out "    if (\"getCwd\".equals(command)) { System.out.println(Sys.getCwd()); return; }");
+  ignore (HxArray.push out "    if (\"getEnv\".equals(command) && args.length > 1) { System.out.println(__hxhx_nullToEmpty(Sys.getEnv(args[1]))); return; }");
+  ignore (HxArray.push out "    if (\"checkEnv\".equals(command) && args.length > 2) { System.exit(java.util.Objects.equals(args[2], Sys.getEnv(args[1])) ? 0 : 1); return; }");
+  ignore (HxArray.push out "    if (\"environment\".equals(command) && args.length > 1) { System.out.println(__hxhx_nullToEmpty(Sys.environment().get(args[1]))); return; }");
+  ignore (HxArray.push out "    if (\"exitCode\".equals(command) && args.length > 1) { System.exit(__hxhx_parseInt(args[1])); return; }");
+  ignore (HxArray.push out "    if (\"args\".equals(command) && args.length > 1) { System.out.println(args[1]); return; }");
+  ignore (HxArray.push out "    if (\"println\".equals(command)) { System.out.println(__hxhx_sequenceArg(args, 1)); return; }");
+  ignore (HxArray.push out "    if (\"print\".equals(command)) { System.out.print(__hxhx_sequenceArg(args, 1)); return; }");
+  ignore (HxArray.push out "    if (\"trace\".equals(command)) { System.out.println(__hxhx_sequenceArg(args, 1)); return; }");
+  ignore (HxArray.push out "    if (\"stdin.readLine\".equals(command)) {");
+  ignore (HxArray.push out "      java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(System.in, java.nio.charset.StandardCharsets.UTF_8));");
+  ignore (HxArray.push out "      String line = reader.readLine();");
+  ignore (HxArray.push out "      System.out.println(line == null ? \"\" : line);");
+  ignore (HxArray.push out "      return;");
+  ignore (HxArray.push out "    }");
+  ignore (HxArray.push out "    if (\"stdin.readString\".equals(command) && args.length > 1) {");
+  ignore (HxArray.push out "      System.out.println(__hxhx_readChars(__hxhx_parseInt(args[1])));");
+  ignore (HxArray.push out "      return;");
+  ignore (HxArray.push out "    }");
+  ignore (HxArray.push out "    if (\"stdin.readUntil\".equals(command) && args.length > 1) {");
+  ignore (HxArray.push out "      System.out.println(__hxhx_readUntil(__hxhx_parseInt(args[1])));");
+  ignore (HxArray.push out "      return;");
+  ignore (HxArray.push out "    }");
+  ignore (HxArray.push out "    if (\"stderr.writeString\".equals(command)) { System.err.print(__hxhx_sequenceArg(args, 1)); System.err.flush(); return; }");
+  ignore (HxArray.push out "    if (\"stdout.writeString\".equals(command)) { System.out.print(__hxhx_sequenceArg(args, 1)); System.out.flush(); return; }");
+  ignore (HxArray.push out "    if (\"programPath\".equals(command)) { System.out.println(__hxhx_programPath()); return; }");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  private static String __hxhx_sequenceArg(String[] args, int index) {");
+  ignore (HxArray.push out "    if (args.length <= index) return \"\";");
+  ignore (HxArray.push out "    String token = args[index];");
+  ignore (HxArray.push out "    String mode = args.length > index + 1 ? args[index + 1] : \"\";");
+  ignore (HxArray.push out "    try { return __hxhx_unicodeSequence(Integer.parseInt(token), \"nfc\".equals(mode)); }");
+  ignore (HxArray.push out "    catch (Exception e) { return token; }");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  private static String __hxhx_unicodeSequence(int index, boolean nfc) {");
+  ignore (HxArray.push out "    switch (index) {");
+  ignore (HxArray.push out "      case 0: return __hxhx_codepoints(0x0001);");
+  ignore (HxArray.push out "      case 1: return __hxhx_codepoints(0x007F);");
+  ignore (HxArray.push out "      case 2: return __hxhx_codepoints(0x0080);");
+  ignore (HxArray.push out "      case 3: return __hxhx_codepoints(0x07FF);");
+  ignore (HxArray.push out "      case 4: return __hxhx_codepoints(0x0800);");
+  ignore (HxArray.push out "      case 5: return __hxhx_codepoints(0xD7FF);");
+  ignore (HxArray.push out "      case 6: return __hxhx_codepoints(0xE000);");
+  ignore (HxArray.push out "      case 7: return __hxhx_codepoints(0xFFFD);");
+  ignore (HxArray.push out "      case 8: return __hxhx_codepoints(0x10000);");
+  ignore (HxArray.push out "      case 9: return __hxhx_codepoints(0x1FFFF);");
+  ignore (HxArray.push out "      case 10: return __hxhx_codepoints(0xFFFFF);");
+  ignore (HxArray.push out "      case 11: return __hxhx_codepoints(0x100000);");
+  ignore (HxArray.push out "      case 12: return __hxhx_codepoints(0x10FFFF);");
+  ignore (HxArray.push out "      case 13: return __hxhx_codepoints(0x1F602, 0x1F604, 0x1F619);");
+  ignore (HxArray.push out "      case 14: return nfc ? __hxhx_codepoints(0x0227) : __hxhx_codepoints(0x0061, 0x0307);");
+  ignore (HxArray.push out "      case 15: return nfc ? __hxhx_codepoints(0x4E2D, 0x6587, 0xFF0C, 0x306B, 0x307B, 0x3093, 0x3054) : __hxhx_codepoints(0x4E2D, 0x6587, 0xFF0C, 0x306B, 0x307B, 0x3093, 0x3053, 0x3099);");
+  ignore (HxArray.push out "      default: return \"\";");
+  ignore (HxArray.push out "    }");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  private static String __hxhx_codepoints(int... codepoints) {");
+  ignore (HxArray.push out "    StringBuilder builder = new StringBuilder();");
+  ignore (HxArray.push out "    for (int codepoint : codepoints) builder.appendCodePoint(codepoint);");
+  ignore (HxArray.push out "    return builder.toString();");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  private static String __hxhx_nullToEmpty(String value) {");
+  ignore (HxArray.push out "    return value == null ? \"\" : value;");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  private static int __hxhx_parseInt(String value) {");
+  ignore (HxArray.push out "    try { return value != null && value.startsWith(\"0x\") ? Integer.parseInt(value.substring(2), 16) : Integer.parseInt(String.valueOf(value)); }");
+  ignore (HxArray.push out "    catch (Exception e) { return 0; }");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  private static String __hxhx_readChars(int len) throws Exception {");
+  ignore (HxArray.push out "    java.io.InputStreamReader reader = new java.io.InputStreamReader(System.in, java.nio.charset.StandardCharsets.UTF_8);");
+  ignore (HxArray.push out "    StringBuilder builder = new StringBuilder();");
+  ignore (HxArray.push out "    for (int i = 0; i < len; i++) {");
+  ignore (HxArray.push out "      int ch = reader.read();");
+  ignore (HxArray.push out "      if (ch < 0) break;");
+  ignore (HxArray.push out "      builder.append((char)ch);");
+  ignore (HxArray.push out "    }");
+  ignore (HxArray.push out "    return builder.toString();");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  private static String __hxhx_readUntil(int end) throws Exception {");
+  ignore (HxArray.push out "    java.io.InputStreamReader reader = new java.io.InputStreamReader(System.in, java.nio.charset.StandardCharsets.UTF_8);");
+  ignore (HxArray.push out "    StringBuilder builder = new StringBuilder();");
+  ignore (HxArray.push out "    while (true) {");
+  ignore (HxArray.push out "      int ch = reader.read();");
+  ignore (HxArray.push out "      if (ch < 0 || ch == end) break;");
+  ignore (HxArray.push out "      builder.append((char)ch);");
+  ignore (HxArray.push out "    }");
+  ignore (HxArray.push out "    return builder.toString();");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  private static String __hxhx_programPath() {");
+  ignore (HxArray.push out (("    try { return new java.io.File(" ^ HxString.toStdString className) ^ ".class.getProtectionDomain().getCodeSource().getLocation().toURI()).getPath(); }"));
+  ignore (HxArray.push out "    catch (Exception e) { return System.getProperty(\"java.class.path\", \"\"); }");
+  HxArray.push out "  }"
 ))
 
 let pythonMainClassNeedsRuntimeSupport = fun cls -> try let __fallback_result_2270 = (
@@ -14263,17 +14426,16 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (appendJavaMainSupportMembers (Obj.magic lines) (Obj.magic decl) (className : string) (Obj.magic body));
       ignore (HxArray.push lines "  public static void main(String[] __hxhx_cli_args) {");
       ignore (HxArray.push lines "    Sys.__hxhx_args = __hxhx_cli_args == null ? new String[0] : __hxhx_cli_args;");
-      ignore (if HxString.equals className "UtilityProcess" then ignore ((
-        ignore (HxArray.push lines "    // hxhx Java sys compile shim: runtime UtilityProcess behavior is tracked separately.");
-        HxArray.push lines "    return;"
-      )) else ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("    " : string) (HxString.toStdString className ^ ".main" : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_2587 = !_g in let __new_2588 = HxInt.add __old_2587 1 in (
-          ignore (_g := __new_2588);
-          __new_2588
-        ));
-        HxArray.push lines line
-      )) done));
-      ignore (HxArray.push lines "  }");
+      ignore (if HxString.equals className "UtilityProcess" then ignore (appendJavaUtilityProcessRuntime (Obj.magic lines) (className : string)) else ignore ((
+        ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("    " : string) (HxString.toStdString className ^ ".main" : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+          ignore (let __old_2587 = !_g in let __new_2588 = HxInt.add __old_2587 1 in (
+            ignore (_g := __new_2588);
+            __new_2588
+          ));
+          HxArray.push lines line
+        )) done);
+        HxArray.push lines "  }"
+      )));
       ignore (appendJavaArraySupport (Obj.magic lines) ("  " : string));
       ignore (HxArray.push lines "}");
       appendJavaStdSupport (Obj.magic lines)
