@@ -1952,6 +1952,48 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonUtestRunnerAddCasesMacroStub():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_utest_add_cases_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("runner", "", ENew("Runner", []), pos),
+			SExpr(ECall(EField(EIdent("runner"), "addCases"), [EString("cases")]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("after-addCases")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final addCase = new HxFunctionDecl("addCase", HxVisibility.Public, false, [new HxFunctionArg("value", "", NoDefault)], "Void",
+			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("value")]), pos)], "");
+		final addCases = new HxFunctionDecl("addCases", HxVisibility.Public, false, [
+			new HxFunctionArg("eThis", "Dynamic", NoDefault),
+			new HxFunctionArg("path", "String", NoDefault),
+			new HxFunctionArg("recursive", "Bool", Default(EBool(true)), true)
+		], "Void", [SExpr(EUnsupported("body_parse_error"), pos)], "", ["macro"]);
+		final runnerClass = new HxClassDecl("Runner", false, [addCase, addCases]);
+		final runnerDecl = new HxModuleDecl("utest", [], runnerClass, [runnerClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("tests/.haxelib/utest/git/src/utest/Runner.hx", runnerDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Runner:", "Python utest Runner should still emit runtime support");
+		assertContains(content, "def addCases(self, path, recursive=True):", "Python utest Runner addCases should omit macro eThis and keep callable defaults");
+		assertContains(content, "return None", "Python utest Runner addCases macro body should lower to a neutral runtime stub");
+		assertContains(content, "utest.Runner = Runner", "Python utest Runner should remain package-addressable");
+		assertNotContains(content, "body_parse_error", "Python utest Runner addCases should not leak its macro-only source body");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python utest Runner addCases stub should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "after-addCases", "generated Python should continue after the addCases runtime stub");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonStaticInitializersAfterSupportClasses():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_static_init_order_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -5485,6 +5527,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCrossModuleClassEmission();
 		assertPythonSkipsStdSupportClasses();
 		assertPythonSkipsMacroSupportMethods();
+		assertPythonUtestRunnerAddCasesMacroStub();
 		assertPythonStaticInitializersAfterSupportClasses();
 		assertPythonStdDateToolsSupport();
 		assertPythonTimerRuntimeShim();

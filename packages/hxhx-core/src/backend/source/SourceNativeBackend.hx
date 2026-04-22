@@ -5196,7 +5196,8 @@ class SourceNativeBackend {
 		for (cls in ordered) {
 			if (out.length > 0)
 				out.push("");
-			for (line in renderPythonHelperClass(cls, postStaticInitializers, pythonClassesByName))
+			final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
+			for (line in renderPythonHelperClass(cls, postStaticInitializers, pythonClassesByName, packageByClassName.get(className)))
 				out.push(line);
 		}
 		final extraNamespaceClasses = new Array<String>();
@@ -6197,8 +6198,11 @@ class SourceNativeBackend {
 		}
 	}
 
-	static function renderPythonHelperClass(cls:HxClassDecl, postStaticInitializers:Array<String>, classesByName:Map<String, HxClassDecl>):Array<String> {
+	static function renderPythonHelperClass(cls:HxClassDecl, postStaticInitializers:Array<String>, classesByName:Map<String, HxClassDecl>,
+			packagePath:String):Array<String> {
 		final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
+		final fullName = packagePath != null
+			&& packagePath.length > 0 ? packagePath + "." + HxClassDecl.getName(cls) : HxClassDecl.getName(cls);
 		final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
 		final classHeader = baseName == null
 			|| baseName.length == 0 ? "class " + className + ":" : "class " + className + "(" + baseName + "):";
@@ -6228,7 +6232,7 @@ class SourceNativeBackend {
 		final instanceMethodNames = pythonInstanceMethodNames(cls, classesByName, methodVisited);
 		final instanceFieldNames = pythonInstanceFieldNames(cls, classesByName, fieldVisited);
 		for (fn in HxClassDecl.getFunctions(cls)) {
-			if (isCompileTimeOnlyFunction(fn))
+			if (isCompileTimeOnlyFunction(fn) && !pythonShouldEmitNeutralCompileTimeOnlyFunction(fullName, fn))
 				continue;
 			if (HxFunctionDecl.getName(fn) == "main")
 				continue;
@@ -6241,8 +6245,11 @@ class SourceNativeBackend {
 			final args = new Array<String>();
 			if (!isStatic || isCtor)
 				args.push("self");
-			for (arg in HxFunctionDecl.getArgs(fn))
+			for (arg in HxFunctionDecl.getArgs(fn)) {
+				if (pythonShouldSkipNeutralCompileTimeOnlyRuntimeArg(fullName, fn, arg))
+					continue;
 				args.push(renderPythonFunctionArg(arg));
+			}
 			final methodName = isCtor ? "__init__" : sanitizePythonIdentifier(HxFunctionDecl.getName(fn));
 			out.push("    def " + methodName + "(" + args.join(", ") + "):");
 			if (isCtor) {
@@ -6254,7 +6261,7 @@ class SourceNativeBackend {
 					out.push("        self." + sanitizePythonIdentifier(HxFieldDecl.getName(field)) + " = " + rhs);
 				}
 			}
-			if (!renderPythonSpecialHelperFunctionBody(out, className, HxFunctionDecl.getName(fn))) {
+			if (!renderPythonSpecialHelperFunctionBody(out, fullName, className, HxFunctionDecl.getName(fn))) {
 				final body = !isStatic
 					|| isCtor ? pythonRewriteSameClassMembersInStmts(HxFunctionDecl.getBody(fn), instanceMethodNames, instanceFieldNames,
 						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : HxFunctionDecl.getBody(fn);
@@ -6283,7 +6290,19 @@ class SourceNativeBackend {
 		return className == "TestLocalStatic";
 	}
 
-	static function renderPythonSpecialHelperFunctionBody(out:Array<String>, className:String, fnName:String):Bool {
+	static function pythonShouldEmitNeutralCompileTimeOnlyFunction(fullName:String, fn:HxFunctionDecl):Bool {
+		return fullName == "utest.Runner" && HxFunctionDecl.getName(fn) == "addCases";
+	}
+
+	static function pythonShouldSkipNeutralCompileTimeOnlyRuntimeArg(fullName:String, fn:HxFunctionDecl, arg:HxFunctionArg):Bool {
+		return fullName == "utest.Runner" && HxFunctionDecl.getName(fn) == "addCases" && HxFunctionArg.getName(arg) == "eThis";
+	}
+
+	static function renderPythonSpecialHelperFunctionBody(out:Array<String>, fullName:String, className:String, fnName:String):Bool {
+		if (fullName == "utest.Runner" && fnName == "addCases") {
+			out.push("        return None");
+			return true;
+		}
 		if (className == "TestLocalStatic" && fnName == "basic") {
 			// Upstream unit coverage checks local-static persistence. The shared IR still
 			// represents `static var` in function bodies as EUnsupported("static"), so keep
