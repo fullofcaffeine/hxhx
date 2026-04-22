@@ -1753,12 +1753,22 @@ class SourceNativeBackend {
 			final count = patterns.length < exprs.length ? patterns.length : exprs.length;
 			for (i in 0...count) {
 				final idx = count - 1 - i;
-				final cond = switchPatternCond(target, scrutineeExpr, patterns[idx]);
-				final body = renderExpr(target, exprs[idx]);
+				final lowered = target == Python ? lowerSourceSwitchPattern(target, patterns[idx], scrutineeExpr) : null;
+				final cond = lowered == null ? switchPatternCond(target, scrutineeExpr, patterns[idx]) : lowered.cond;
+				final body = lowered == null ? renderExpr(target, exprs[idx]) : renderExprWithSourceSwitchBindings(target, exprs[idx], lowered.bindings);
 				chain = conditionalExpr(target, cond, body, chain);
 			}
 		}
 		return chain;
+	}
+
+	static function renderExprWithSourceSwitchBindings(target:SourceNativeTarget, expr:HxExpr, bindings:Array<SourceSwitchPatternBinding>):String {
+		return switch (expr) {
+			case EIdent(name):
+				sourceSwitchBindingValue(target, sanitizeTypeName(name), bindings);
+			case _:
+				renderExpr(target, expr);
+		};
 	}
 
 	static function phpSwitchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
@@ -3261,9 +3271,16 @@ class SourceNativeBackend {
 					out.push(indent + emptyStmt(target));
 					return out;
 				}
+				final switchValue = "__hxhx_switch";
+				out.push(indent + switchValue + " = " + scrutineeExpr);
 				for (i in 0...count) {
+					final lowered = lowerSourceSwitchPattern(target, patterns[i], switchValue);
 					final keyword = i == 0 ? "if" : "elif";
-					out.push(indent + keyword + " " + switchPatternCond(target, scrutineeExpr, patterns[i]) + ":");
+					out.push(indent + keyword + " " + lowered.cond + ":");
+					for (binding in lowered.bindings) {
+						final bindName = sanitizeTypeName(binding.name);
+						out.push(childIndent + varDecl(target, bindName, binding.expr));
+					}
 					for (line in renderStmt(target, bodies[i], childIndent))
 						out.push(line);
 				}
@@ -3451,8 +3468,13 @@ class SourceNativeBackend {
 			for (i in 0...count) {
 				final field = sanitizeTypeName(fieldNames[i]);
 				final fieldExpr = sourceSwitchFieldExpr(target, scrutinee, field);
-				if (target == Php)
-					conds.push("property_exists(" + scrutinee + ", " + quoteString(field) + ")");
+				switch (target) {
+					case Php:
+						conds.push("property_exists(" + scrutinee + ", " + quoteString(field) + ")");
+					case Python:
+						conds.push("hasattr(" + scrutinee + ", " + quoteString(field) + ")");
+					case Java, Cs, Lua:
+				}
 				final lowered = lowerSourceSwitchPattern(target, fieldPatterns[i], fieldExpr);
 				if (lowered.cond != trueLiteral(target))
 					conds.push("(" + lowered.cond + ")");

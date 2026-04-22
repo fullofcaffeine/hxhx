@@ -3676,7 +3676,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "if (\"python\" == \"python\"):", "switch statements should lower the first pattern as an if");
+		assertContains(content, "__hxhx_switch = \"python\"", "switch statements should evaluate the scrutinee once");
+		assertContains(content, "if (__hxhx_switch == \"python\"):", "switch statements should lower the first pattern as an if");
 		assertContains(content, "print(\"py\")", "switch statement branch bodies should render");
 		assertContains(content, "elif True:", "wildcard switch branches should lower as an elif true catch-all");
 		assertContains(content, "print(\"other\")", "later switch statement branches should still render");
@@ -3867,6 +3868,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonObjectPatternSwitchExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_object_switch_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(phpObjectPatternSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "hasattr(e, \"expr\")", "Python object switch expressions should check object field existence");
+		assertContains(content, "got = (e.expr if", "Python object switch expression captures should lower to the matched field value");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpUnitMatchExtractorFallback():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_unit_match_extractor_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3988,6 +4002,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpUnitMapComprehensionFallback();
 		assertPythonUnitMapComprehensionFallback();
 		assertPhpObjectPatternSwitchExpression();
+		assertPythonObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
