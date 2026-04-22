@@ -1,3 +1,10 @@
+## [0.15.3](https://github.com/fullofcaffeine/hxhx/compare/v0.15.2...v0.15.3) (2026-04-22)
+
+
+### Bug Fixes
+
+* **source:** lower switch break callbacks structurally ([1841e0f](https://github.com/fullofcaffeine/hxhx/commit/1841e0f54f93f0de89f98b86bcb9eb78ec118ce2))
+
 ## [0.15.2](https://github.com/fullofcaffeine/hxhx/compare/v0.15.1...v0.15.2) (2026-04-22)
 
 
