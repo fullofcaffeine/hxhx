@@ -13856,6 +13856,12 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "        self.__hx_index += 1");
       ignore (HxArray.push lines "        return value");
       ignore (HxArray.push lines "");
+      ignore (HxArray.push lines "class Timer:");
+      ignore (HxArray.push lines "    @staticmethod");
+      ignore (HxArray.push lines "    def stamp():");
+      ignore (HxArray.push lines "        import time");
+      ignore (HxArray.push lines "        return time.perf_counter()");
+      ignore (HxArray.push lines "");
       ignore (HxArray.push lines "class Array(list):");
       ignore (HxArray.push lines "    @property");
       ignore (HxArray.push lines "    def length(self):");

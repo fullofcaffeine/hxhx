@@ -2028,6 +2028,45 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonTimerRuntimeShim():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_std_timer_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final stampCall:HxExpr = ECall(EField(EIdent("Timer"), "stamp"), []);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("before", "Float", stampCall, pos),
+			SVar("after", "Float", stampCall, pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				ECall(EField(EIdent("Std"), "string"), [EBinop(">=", EIdent("after"), EIdent("before"))])
+			]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final stdStampFn = new HxFunctionDecl("stamp", HxVisibility.Public, true, [], "Float",
+			[SExpr(EUnsupported("std-timer-source-should-not-render"), pos)], "");
+		final timerClass = new HxClassDecl("Timer", false, [stdStampFn]);
+		final timerDecl = new HxModuleDecl("", [], timerClass, [timerClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("/repo/std/Timer.hx", timerDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Timer:", "Python runtime should provide a small Timer helper for upstream utest handlers");
+		assertContains(content, "def stamp():", "Python Timer helper should expose stamp for upstream utest handlers");
+		assertContains(content, "before = Timer.stamp()", "Python code should preserve Timer.stamp calls against the helper");
+		assertNotContains(content, "std-timer-source-should-not-render", "Python Timer support should not dump the upstream std source body");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python Timer runtime shim should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "True", "generated Python should observe monotonic Timer.stamp readings");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonPackageQualifiedSupportClassReference():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_package_class_ref_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -5327,6 +5366,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonSkipsMacroSupportMethods();
 		assertPythonStaticInitializersAfterSupportClasses();
 		assertPythonStdDateToolsSupport();
+		assertPythonTimerRuntimeShim();
 		assertPythonPackageQualifiedSupportClassReference();
 		assertPythonStdStringMapNamespaceReference();
 		assertPythonTypeNameHelpersForStaticInitializers();

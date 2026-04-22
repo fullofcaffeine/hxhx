@@ -6339,6 +6339,12 @@ class SourceNativeBackend {
 				lines.push("        self.__hx_index += 1");
 				lines.push("        return value");
 				lines.push("");
+				lines.push("class Timer:");
+				lines.push("    @staticmethod");
+				lines.push("    def stamp():");
+				lines.push("        import time");
+				lines.push("        return time.perf_counter()");
+				lines.push("");
 				lines.push("class Array(list):");
 				lines.push("    @property");
 				lines.push("    def length(self):");
