@@ -3787,6 +3787,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonUnitLocalStaticFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_unit_local_static_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(phpUnitLocalStaticProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "    __basic_x = None", "Python TestLocalStatic fallback should declare persisted local-static storage");
+		assertContains(content, "        if TestLocalStatic.__basic_x is None:", "Python TestLocalStatic fallback should initialize storage once");
+		assertContains(content, "        return __hxhx_anon(x=TestLocalStatic.__basic_x, y=\"final\")",
+			"Python TestLocalStatic fallback should return the expected object shape");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpUnitMapComprehensionFallback():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_unit_map_comprehension_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3935,6 +3950,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpNullCoalescing();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpUnitLocalStaticFallback();
+		assertPythonUnitLocalStaticFallback();
 		assertPhpUnitMapComprehensionFallback();
 		assertPhpObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();
