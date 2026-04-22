@@ -3835,6 +3835,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonUnitMapComprehensionFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_unit_map_comprehension_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(phpUnitMapComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "        def __hx_assert_map(__hx_map, __hx_expected, __hx_label):",
+			"Python TestMapComprehension fallback should emit a local assertion helper");
+		assertContains(content, "        for i in range(0, 2):", "Python TestMapComprehension fallback should build the basic map-comprehension result");
+		assertContains(content, "        __hx_assert_map(map2, {1: 1}, \"map-entry-filter\")",
+			"Python TestMapComprehension fallback should validate the guarded map-comprehension result");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpObjectPatternSwitchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3970,6 +3986,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();
 		assertPhpUnitMapComprehensionFallback();
+		assertPythonUnitMapComprehensionFallback();
 		assertPhpObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();
 		assertPhpHelperInstanceFieldEmission();

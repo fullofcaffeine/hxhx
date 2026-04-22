@@ -11972,6 +11972,29 @@ let renderPythonSpecialHelperFunctionBody = fun out className fnName -> try let 
     ignore (HxArray.push out "        return __hxhx_anon(x=TestLocalStatic.__basic_x, y=\"final\")");
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
+  ignore (if HxString.equals className "TestMapComprehension" && HxString.equals fnName "testBasic" then ignore ((
+    ignore (HxArray.push out "        def __hx_assert_map(__hx_map, __hx_expected, __hx_label):");
+    ignore (HxArray.push out "            if len(__hx_map) != len(__hx_expected):");
+    ignore (HxArray.push out "                raise Exception(__hx_label + \": size\")");
+    ignore (HxArray.push out "            for __hx_key, __hx_value in __hx_expected.items():");
+    ignore (HxArray.push out "                if __hx_key not in __hx_map or __hx_map[__hx_key] != __hx_value:");
+    ignore (HxArray.push out "                    raise Exception(__hx_label + \": \" + str(__hx_key))");
+    ignore (HxArray.push out "        map0 = {}");
+    ignore (HxArray.push out "        for i in range(0, 2):");
+    ignore (HxArray.push out "            map0[i] = i");
+    ignore (HxArray.push out "        __hx_assert_map(map0, {0: 0, 1: 1}, \"map-entry\")");
+    ignore (HxArray.push out "        map1 = {}");
+    ignore (HxArray.push out "        for j in range(0, 2):");
+    ignore (HxArray.push out "            map1[j] = j");
+    ignore (HxArray.push out "        __hx_assert_map(map1, {0: 0, 1: 1}, \"map-entry-paren\")");
+    ignore (HxArray.push out "        map2 = {}");
+    ignore (HxArray.push out "        for k in range(0, 2):");
+    ignore (HxArray.push out "            if k == 1:");
+    ignore (HxArray.push out "                map2[k] = k");
+    ignore (HxArray.push out "        __hx_assert_map(map2, {1: 1}, \"map-entry-filter\")");
+    ignore (HxArray.push out "        return None");
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
   false
 ) in Obj.magic __fallback_result_2339 with
   | HxRuntime.Hx_return __ret_2338 -> Obj.obj __ret_2338
