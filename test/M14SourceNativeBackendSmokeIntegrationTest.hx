@@ -1776,6 +1776,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function pythonSuperMethodReferenceProgram():GenIrProgram {
+		final src = [
+			"class Base {",
+			"  public var handler:Dynamic;",
+			"  public function new(handler:Dynamic) {",
+			"    this.handler = handler;",
+			"  }",
+			"  public function run() {",
+			"    return handler();",
+			"  }",
+			"}",
+			"",
+			"class Child extends Base {",
+			"  public function new() {",
+			"    super(_handler);",
+			"  }",
+			"  function _handler() {",
+			"    return \"bound\";",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var child = new Child();",
+			"    Sys.println(child.run());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function assertCrossModuleClassEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cross_module_" + Std.string(Date.now().getTime()));
 		final srcDir = Path.join([tmpRoot, "src"]);
@@ -4413,6 +4446,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonSuperMethodReference():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_super_method_ref_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(pythonSuperMethodReferenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "super().__init__(self._handler)", "constructor super calls should bind same-class method references through self");
+		assertNotContains(content, "super().__init__(_handler)", "constructor super calls should not emit unbound same-class method references");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python same-class method references should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "bound", "generated Python should preserve bound same-class method references");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertArrayLiteral():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_array_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -5176,6 +5227,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpHelperInstanceFieldEmission();
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();
+		assertPythonSuperMethodReference();
 		assertCrossModuleClassEmission();
 		assertPythonSkipsStdSupportClasses();
 		assertPythonSkipsMacroSupportMethods();

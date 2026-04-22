@@ -6048,6 +6048,8 @@ class SourceNativeBackend {
 					for (arg in args)
 						pythonRewriteSameClassMemberExpr(arg, methodNames, fieldNames, locals)
 				]);
+			case EIdent(name) if (methodNames.exists(name) && locals.indexOf(name) < 0):
+				EField(EThis, name);
 			case EIdent(name) if (fieldNames.exists(name) && locals.indexOf(name) < 0):
 				EField(EThis, name);
 			case EUnop(op, inner):
