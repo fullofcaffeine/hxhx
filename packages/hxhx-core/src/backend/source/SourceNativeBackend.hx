@@ -816,6 +816,13 @@ class SourceNativeBackend {
 			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
 		final b0 = renderExpr(target, right);
 		final b = target == Php && op == "=" && shouldCopyAssignedValue(right) ? phpCopyValueExpr(b0) : b0;
+		if (target == Python && isAssignmentOp(op)) {
+			switch (left) {
+				case EThis:
+					return pythonThisValueExpr() + " " + mapped + " " + b;
+				case _:
+			}
+		}
 		if (target == Php && isAssignmentOp(op)) {
 			switch (left) {
 				case EThis:
@@ -1034,7 +1041,7 @@ class SourceNativeBackend {
 						+ Std.string(delta)
 						+ ")";
 					case EThis:
-						"__hxhx_post_update_field($this, " + quoteString("__hx_value") + ", " + Std.string(delta) + ")";
+						"__hxhx_post_update_attr(self, " + quoteString("__hx_value") + ", " + Std.string(delta) + ")";
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 				}
@@ -2709,6 +2716,10 @@ class SourceNativeBackend {
 		return "$this->__hx_value";
 	}
 
+	static function pythonThisValueExpr():String {
+		return "self.__hx_value";
+	}
+
 	static function rangeIterable(target:SourceNativeTarget, start:HxExpr, end:HxExpr):String {
 		final a = renderExpr(target, start);
 		final b = renderExpr(target, end);
@@ -2807,6 +2818,8 @@ class SourceNativeBackend {
 				valueName(target, name);
 			case EField(receiver, field):
 				fieldAccessExpr(target, receiver, field);
+			case EThis if (target == Python):
+				pythonThisValueExpr();
 			case EThis if (target == Php):
 				phpThisValueExpr();
 			case _:
@@ -2865,6 +2878,8 @@ class SourceNativeBackend {
 			case SThrow(expr, pos):
 				final rendered = target == Java ? javaExprWithStmtTraceLine(expr, pos) : expr;
 					[indent + throwStmt(target, renderExpr(target, rendered))];
+			case SReturn(EThis, _) if (target == Python):
+				[indent + returnStmt(target, pythonThisValueExpr())];
 			case SReturn(EThis, _) if (target == Php):
 				[indent + returnStmt(target, phpThisValueExpr())];
 			case SReturn(expr, pos):
@@ -5182,6 +5197,7 @@ class SourceNativeBackend {
 		final out = [classHeader];
 		var memberCount = 0;
 		final instanceFields = new Array<HxFieldDecl>();
+		final needsThisValueSlot = pythonClassNeedsThisValueSlot(cls);
 		for (field in HxClassDecl.getFields(cls)) {
 			if (!HxFieldDecl.getIsStatic(field)) {
 				instanceFields.push(field);
@@ -5212,6 +5228,8 @@ class SourceNativeBackend {
 			final methodName = isCtor ? "__init__" : sanitizeTypeName(HxFunctionDecl.getName(fn));
 			out.push("    def " + methodName + "(" + args.join(", ") + "):");
 			if (isCtor) {
+				if (needsThisValueSlot)
+					out.push("        self.__hx_value = None");
 				for (field in instanceFields) {
 					final init = HxFieldDecl.getInit(field);
 					final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
@@ -5222,8 +5240,10 @@ class SourceNativeBackend {
 				out.push(line);
 			memberCount += 1;
 		}
-		if (!sawConstructor && instanceFields.length > 0) {
+		if (!sawConstructor && (instanceFields.length > 0 || needsThisValueSlot)) {
 			out.push("    def __init__(self):");
+			if (needsThisValueSlot)
+				out.push("        self.__hx_value = None");
 			for (field in instanceFields) {
 				final init = HxFieldDecl.getInit(field);
 				final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
@@ -5234,6 +5254,13 @@ class SourceNativeBackend {
 		if (memberCount == 0)
 			out.push("    pass");
 		return out;
+	}
+
+	static function pythonClassNeedsThisValueSlot(cls:HxClassDecl):Bool {
+		for (fn in HxClassDecl.getFunctions(cls))
+			if (phpStmtListTouchesThis(HxFunctionDecl.getBody(fn)))
+				return true;
+		return false;
 	}
 
 	static function pythonBaseClassName(extendsPath:String):String {

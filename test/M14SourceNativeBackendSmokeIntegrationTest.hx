@@ -1346,6 +1346,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function pythonAbstractThisPostfixProgram():GenIrProgram {
+		final src = [
+			"class Counter {",
+			"  public function new(i:Int) {",
+			"    this = i;",
+			"    bar();",
+			"  }",
+			"  public function toInt():Int {",
+			"    return this;",
+			"  }",
+			"  public function post():Int {",
+			"    return this++;",
+			"  }",
+			"  function bar() this++;",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var counter = new Counter(2);",
+			"    Sys.println(Std.string(counter.toInt()));",
+			"    Sys.println(Std.string(counter.post()));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpSuperConstructorProgram():GenIrProgram {
 		final src = [
 			"class Base {",
@@ -3308,6 +3337,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonAbstractThisPostfix():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_abstract_this_postfix_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(pythonAbstractThisPostfixProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "self.__hx_value = None", "Python abstract-style helper classes should initialize a backing slot");
+		assertContains(content, "self.__hx_value = i", "Python constructor assignments to this should target the backing slot");
+		assertContains(content, "self.__hx_value = (self.__hx_value + 1)", "Python statement-position postfix this updates should target the backing slot");
+		assertContains(content, "return self.__hx_value", "Python abstract-style return this should return the backing value");
+		assertContains(content, "return __hxhx_post_update_attr(self, \"__hx_value\", 1)",
+			"Python expression-position postfix this updates should target the backing slot");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSuperConstructor():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_super_ctor_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -3768,6 +3814,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpFollowWithAbstractsProbe();
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();
+		assertPythonAbstractThisPostfix();
 		assertPhpSuperConstructor();
 		assertPhpSuperProperty();
 		assertPhpForKeyValue();
