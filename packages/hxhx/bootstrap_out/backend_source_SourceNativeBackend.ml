@@ -11678,36 +11678,56 @@ let appendJavaStdSupport = fun out -> ignore ((
   HxArray.push out "}"
 ))
 
+let pythonMainClassNeedsRuntimeSupport = fun cls -> try let __fallback_result_2270 = (
+  ignore (if HxClassDecl.getExtendsPath (Obj.magic cls) != Obj.magic (HxRuntime.hx_null) && HxString.length (HxClassDecl.getExtendsPath (Obj.magic cls)) > 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_2265 = !_g in let __new_2266 = HxInt.add __old_2265 1 in (
+      ignore (_g := __new_2266);
+      __new_2266
+    ));
+    if not (HxFieldDecl.getIsStatic (Obj.magic field)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+  )) done);
+  ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_2267 = !_g in let __new_2268 = HxInt.add __old_2267 1 in (
+      ignore (_g := __new_2268);
+      __new_2268
+    ));
+    if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+  )) done);
+  false
+) in Obj.magic __fallback_result_2270 with
+  | HxRuntime.Hx_return __ret_2269 -> Obj.obj __ret_2269
+
 let renderPythonPackageNamespaceAliases = fun classes packageByClassName extraClassNames -> let classesByPackage = HxMap.create_string () in let packageNames = Obj.magic (HxArray.create ()) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-  ignore (let _g = Obj.magic (let __arr_2265 = HxArray.create () in __arr_2265) in (
+  ignore (let _g = Obj.magic (let __arr_2271 = HxArray.create () in __arr_2271) in (
     ignore (let _g1 = ref 0 in while !_g1 < HxArray.length classes do ignore (let cls = Obj.magic (HxArray.get (Obj.magic classes) (!_g1)) in (
-      ignore (let __old_2266 = !_g1 in let __new_2267 = HxInt.add __old_2266 1 in (
-        ignore (_g1 := __new_2267);
-        __new_2267
+      ignore (let __old_2272 = !_g1 in let __new_2273 = HxInt.add __old_2272 1 in (
+        ignore (_g1 := __new_2273);
+        __new_2273
       ));
       HxArray.push _g (sanitizePythonIdentifier (HxClassDecl.getName (Obj.magic cls) : string))
     )) done);
-    let __assign_2268 = Obj.magic _g in (
-      tempArray := __assign_2268;
-      __assign_2268
+    let __assign_2274 = Obj.magic _g in (
+      tempArray := __assign_2274;
+      __assign_2274
     )
   ));
   ignore (if extraClassNames != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length extraClassNames do ignore (let className = (HxArray.get (Obj.magic extraClassNames) (!_g) : string) in (
-    ignore (let __old_2269 = !_g in let __new_2270 = HxInt.add __old_2269 1 in (
-      ignore (_g := __new_2270);
-      __new_2270
+    ignore (let __old_2275 = !_g in let __new_2276 = HxInt.add __old_2275 1 in (
+      ignore (_g := __new_2276);
+      __new_2276
     ));
     HxArray.push (!tempArray) className
   )) done) else ());
   ignore (let _g = ref 0 in try while !_g < HxArray.length (!tempArray) do try ignore (let className = (HxArray.get (Obj.magic (!tempArray)) (!_g) : string) in (
-    ignore (let __old_2271 = !_g in let __new_2272 = HxInt.add __old_2271 1 in (
-      ignore (_g := __new_2272);
-      __new_2272
+    ignore (let __old_2277 = !_g in let __new_2278 = HxInt.add __old_2277 1 in (
+      ignore (_g := __new_2278);
+      __new_2278
     ));
     let packagePath = (HxMap.get_string packageByClassName className : string) in (
       ignore (if packagePath == Obj.magic (HxRuntime.hx_null) || HxString.length packagePath = 0 then raise (HxRuntime.Hx_continue) else ());
       ignore (if not (HxMap.exists_string classesByPackage packagePath) then ignore ((
-        ignore (HxMap.set_string classesByPackage packagePath (let __arr_2273 = HxArray.create () in __arr_2273));
+        ignore (HxMap.set_string classesByPackage packagePath (let __arr_2279 = HxArray.create () in __arr_2279));
         HxArray.push packageNames packagePath
       )) else ());
       HxArray.push (HxMap.get_string classesByPackage packagePath) className
@@ -11715,56 +11735,56 @@ let renderPythonPackageNamespaceAliases = fun classes packageByClassName extraCl
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  ignore (HxArray.sort packageNames (fun a b -> try let __fallback_result_2277 = let depth = HxInt.sub (HxArray.length (HxString.split a ".")) (HxArray.length (HxString.split b ".")) in (
+  ignore (HxArray.sort packageNames (fun a b -> try let __fallback_result_2283 = let depth = HxInt.sub (HxArray.length (HxString.split a ".")) (HxArray.length (HxString.split b ".")) in (
     ignore (if depth <> 0 then raise (HxRuntime.Hx_return (Obj.repr depth)) else ());
     ignore (if a < b then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
     let tempResult = ref (0 : int) in (
-      ignore (if a > b then let __assign_2274 = 1 in (
-        tempResult := __assign_2274;
-        __assign_2274
-      ) else let __assign_2275 = 0 in (
-        tempResult := __assign_2275;
-        __assign_2275
+      ignore (if a > b then let __assign_2280 = 1 in (
+        tempResult := __assign_2280;
+        __assign_2280
+      ) else let __assign_2281 = 0 in (
+        tempResult := __assign_2281;
+        __assign_2281
       ));
       !tempResult
     )
-  ) in Obj.magic __fallback_result_2277 with
-    | HxRuntime.Hx_return __ret_2276 -> Obj.obj __ret_2276));
+  ) in Obj.magic __fallback_result_2283 with
+    | HxRuntime.Hx_return __ret_2282 -> Obj.obj __ret_2282));
   let out = Obj.magic (HxArray.create ()) in let emittedNamespaces = HxMap.create_string () in (
     ignore (let _g = ref 0 in while !_g < HxArray.length packageNames do ignore (let packagePath = (HxArray.get (Obj.magic packageNames) (!_g) : string) in (
-      ignore (let __old_2278 = !_g in let __new_2279 = HxInt.add __old_2278 1 in (
-        ignore (_g := __new_2279);
-        __new_2279
+      ignore (let __old_2284 = !_g in let __new_2285 = HxInt.add __old_2284 1 in (
+        ignore (_g := __new_2285);
+        __new_2285
       ));
       let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-        ignore (let _g2 = Obj.magic (let __arr_2280 = HxArray.create () in __arr_2280) in (
+        ignore (let _g2 = Obj.magic (let __arr_2286 = HxArray.create () in __arr_2286) in (
           ignore (let _g1 = ref 0 in let _g3 = Obj.magic (HxString.split packagePath ".") in while !_g1 < HxArray.length _g3 do ignore (let part = (HxArray.get (Obj.magic _g3) (!_g1) : string) in (
-            ignore (let __old_2281 = !_g1 in let __new_2282 = HxInt.add __old_2281 1 in (
-              ignore (_g1 := __new_2282);
-              __new_2282
+            ignore (let __old_2287 = !_g1 in let __new_2288 = HxInt.add __old_2287 1 in (
+              ignore (_g1 := __new_2288);
+              __new_2288
             ));
             HxArray.push _g2 (sanitizePythonIdentifier (part : string))
           )) done);
-          let __assign_2283 = Obj.magic _g2 in (
-            tempArray1 := __assign_2283;
-            __assign_2283
+          let __assign_2289 = Obj.magic _g2 in (
+            tempArray1 := __assign_2289;
+            __assign_2289
           )
         ));
         let parts = Obj.magic (!tempArray1) in let namespaceExpr = ref ("" : string) in (
-          ignore (let _g2 = ref 0 in let _g1 = HxArray.length parts in try while !_g2 < _g1 do try ignore (let i = let __old_2284 = !_g2 in let __new_2285 = HxInt.add __old_2284 1 in (
-            ignore (_g2 := __new_2285);
-            __old_2284
+          ignore (let _g2 = ref 0 in let _g1 = HxArray.length parts in try while !_g2 < _g1 do try ignore (let i = let __old_2290 = !_g2 in let __new_2291 = HxInt.add __old_2290 1 in (
+            ignore (_g2 := __new_2291);
+            __old_2290
           ) in let part = (HxArray.get (Obj.magic parts) i : string) in let parentExpr = (!namespaceExpr : string) in let tempRight = ref ("" : string) in (
-            ignore (if HxString.length (!namespaceExpr) = 0 then let __assign_2286 = (part : string) in (
-              tempRight := __assign_2286;
-              __assign_2286
-            ) else let __assign_2287 = ((HxString.toStdString (!namespaceExpr) ^ ".") ^ HxString.toStdString part : string) in (
-              tempRight := __assign_2287;
-              __assign_2287
+            ignore (if HxString.length (!namespaceExpr) = 0 then let __assign_2292 = (part : string) in (
+              tempRight := __assign_2292;
+              __assign_2292
+            ) else let __assign_2293 = ((HxString.toStdString (!namespaceExpr) ^ ".") ^ HxString.toStdString part : string) in (
+              tempRight := __assign_2293;
+              __assign_2293
             ));
-            ignore (let __assign_2288 = (!tempRight : string) in (
-              namespaceExpr := __assign_2288;
-              __assign_2288
+            ignore (let __assign_2294 = (!tempRight : string) in (
+              namespaceExpr := __assign_2294;
+              __assign_2294
             ));
             ignore (if HxMap.exists_string emittedNamespaces (!namespaceExpr) then raise (HxRuntime.Hx_continue) else ());
             ignore (HxMap.set_string emittedNamespaces (!namespaceExpr) true);
@@ -11773,24 +11793,24 @@ let renderPythonPackageNamespaceAliases = fun classes packageByClassName extraCl
             | HxRuntime.Hx_continue -> () done with
             | HxRuntime.Hx_break -> ());
           let classNames2 = Obj.magic (HxMap.get_string classesByPackage packagePath) in (
-            ignore (HxArray.sort classNames2 (fun a b -> try let __fallback_result_2292 = (
+            ignore (HxArray.sort classNames2 (fun a b -> try let __fallback_result_2298 = (
               ignore (if a < b then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
               let tempResult1 = ref (0 : int) in (
-                ignore (if a > b then let __assign_2289 = 1 in (
-                  tempResult1 := __assign_2289;
-                  __assign_2289
-                ) else let __assign_2290 = 0 in (
-                  tempResult1 := __assign_2290;
-                  __assign_2290
+                ignore (if a > b then let __assign_2295 = 1 in (
+                  tempResult1 := __assign_2295;
+                  __assign_2295
+                ) else let __assign_2296 = 0 in (
+                  tempResult1 := __assign_2296;
+                  __assign_2296
                 ));
                 !tempResult1
               )
-            ) in Obj.magic __fallback_result_2292 with
-              | HxRuntime.Hx_return __ret_2291 -> Obj.obj __ret_2291));
+            ) in Obj.magic __fallback_result_2298 with
+              | HxRuntime.Hx_return __ret_2297 -> Obj.obj __ret_2297));
             let _g2 = ref 0 in while !_g2 < HxArray.length classNames2 do ignore (let className = (HxArray.get (Obj.magic classNames2) (!_g2) : string) in (
-              ignore (let __old_2293 = !_g2 in let __new_2294 = HxInt.add __old_2293 1 in (
-                ignore (_g2 := __new_2294);
-                __new_2294
+              ignore (let __old_2299 = !_g2 in let __new_2300 = HxInt.add __old_2299 1 in (
+                ignore (_g2 := __new_2300);
+                __new_2300
               ));
               HxArray.push out ((((HxString.toStdString (!namespaceExpr) ^ ".") ^ HxString.toStdString className) ^ " = ") ^ HxString.toStdString className)
             )) done
@@ -11845,11 +11865,11 @@ let appendPythonDateToolsSupport = fun out -> ignore ((
   HxArray.push out "        return (n * 24.0 * 60.0 * 60.0 * 1000.0)"
 ))
 
-let pythonClassDefinesTypeNameHelper = fun cls -> try let __fallback_result_2298 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
+let pythonClassDefinesTypeNameHelper = fun cls -> try let __fallback_result_2304 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
   ignore (try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_2295 = !_g in let __new_2296 = HxInt.add __old_2295 1 in (
-      ignore (_g := __new_2296);
-      __new_2296
+    ignore (let __old_2301 = !_g in let __new_2302 = HxInt.add __old_2301 1 in (
+      ignore (_g := __new_2302);
+      __new_2302
     ));
     ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) then raise (HxRuntime.Hx_continue) else ());
     let name = (HxFunctionDecl.getName (Obj.magic fn) : string) in let arity = HxArray.length (HxFunctionDecl.getArgs (Obj.magic fn)) in if HxString.equals name "u" && arity = 1 || HxString.equals name "u2" && arity = 2 then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
@@ -11857,8 +11877,8 @@ let pythonClassDefinesTypeNameHelper = fun cls -> try let __fallback_result_2298
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   false
-) in Obj.magic __fallback_result_2298 with
-  | HxRuntime.Hx_return __ret_2297 -> Obj.obj __ret_2297
+) in Obj.magic __fallback_result_2304 with
+  | HxRuntime.Hx_return __ret_2303 -> Obj.obj __ret_2303
 
 let appendPythonTypeNameHelpers = fun out -> ignore ((
   ignore (HxArray.push out "def u(s):");
@@ -12032,25 +12052,25 @@ let appendPythonValueExceptionBase = fun out -> ignore ((
   HxArray.push out "        return ValueException(value)"
 ))
 
-let phpShouldEmitSupportPackage = fun mainPackage modulePackage -> try let __fallback_result_2313 = (
+let phpShouldEmitSupportPackage = fun mainPackage modulePackage -> try let __fallback_result_2319 = (
   ignore (if mainPackage != Obj.magic (HxRuntime.hx_null) && HxString.length mainPackage > 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.equals modulePackage mainPackage))) else ());
   modulePackage == Obj.magic (HxRuntime.hx_null) || HxString.length modulePackage = 0
-) in Obj.magic __fallback_result_2313 with
-  | HxRuntime.Hx_return __ret_2312 -> Obj.obj __ret_2312
+) in Obj.magic __fallback_result_2319 with
+  | HxRuntime.Hx_return __ret_2318 -> Obj.obj __ret_2318
 
-let moduleHasClass = fun decl className -> try let __fallback_result_2317 = let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in (
+let moduleHasClass = fun decl className -> try let __fallback_result_2323 = let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_2314 = !_g in let __new_2315 = HxInt.add __old_2314 1 in (
-      ignore (_g := __new_2315);
-      __new_2315
+    ignore (let __old_2320 = !_g in let __new_2321 = HxInt.add __old_2320 1 in (
+      ignore (_g := __new_2321);
+      __new_2321
     ));
     if HxString.equals (sanitizePhpTypeName (HxClassDecl.getName (Obj.magic cls) : string)) className then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_2317 with
-  | HxRuntime.Hx_return __ret_2316 -> Obj.obj __ret_2316
+) in Obj.magic __fallback_result_2323 with
+  | HxRuntime.Hx_return __ret_2322 -> Obj.obj __ret_2322
 
-let packageFromSourcePath = fun filePath -> try let __fallback_result_2321 = (
+let packageFromSourcePath = fun filePath -> try let __fallback_result_2327 = (
   ignore (if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   let normalized = (StringTools.replace (filePath : string) ("\\" : string) ("/" : string) : string) in let marker = ("/src/" : string) in let markerIndex = HxString.indexOf normalized marker 0 in (
     ignore (if markerIndex < 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
@@ -12059,35 +12079,35 @@ let packageFromSourcePath = fun filePath -> try let __fallback_result_2321 = (
       HxArray.join (HxString.split (HxString.substr after 0 slash) "/") "." (fun x -> x)
     )
   )
-) in Obj.magic __fallback_result_2321 with
-  | HxRuntime.Hx_return __ret_2320 -> Obj.obj __ret_2320
+) in Obj.magic __fallback_result_2327 with
+  | HxRuntime.Hx_return __ret_2326 -> Obj.obj __ret_2326
 
-let phpSupportPackage = fun decl filePath -> try let __fallback_result_2319 = let parsed = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in (
+let phpSupportPackage = fun decl filePath -> try let __fallback_result_2325 = let parsed = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in (
   ignore (if parsed != Obj.magic (HxRuntime.hx_null) && HxString.length parsed > 0 then raise (HxRuntime.Hx_return (Obj.repr (parsed : string))) else ());
   packageFromSourcePath (filePath : string)
-) in Obj.magic __fallback_result_2319 with
-  | HxRuntime.Hx_return __ret_2318 -> Obj.obj __ret_2318
+) in Obj.magic __fallback_result_2325 with
+  | HxRuntime.Hx_return __ret_2324 -> Obj.obj __ret_2324
 
 let isCompileTimeOnlyFunction = fun fn -> HxArray.indexOf (HxFunctionDecl.getMetadata (Obj.magic fn)) "macro" 0 >= 0
 
-let isCompileTimeOnlySupportClass = fun cls -> try let __fallback_result_2325 = let className = (sanitizeTypeName (HxClassDecl.getName (Obj.magic cls) : string) : string) in (
+let isCompileTimeOnlySupportClass = fun cls -> try let __fallback_result_2331 = let className = (sanitizeTypeName (HxClassDecl.getName (Obj.magic cls) : string) : string) in (
   ignore (if HxString.equals className "HelperMacros" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxArray.length (HxClassDecl.getFields (Obj.magic cls)) > 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let fns = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
     ignore (if HxArray.length fns = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let _g = ref 0 in (
       ignore (while !_g < HxArray.length fns do ignore (let fn = Obj.magic (HxArray.get (Obj.magic fns) (!_g)) in (
-        ignore (let __old_2322 = !_g in let __new_2323 = HxInt.add __old_2322 1 in (
-          ignore (_g := __new_2323);
-          __new_2323
+        ignore (let __old_2328 = !_g in let __new_2329 = HxInt.add __old_2328 1 in (
+          ignore (_g := __new_2329);
+          __new_2329
         ));
         if not (isCompileTimeOnlyFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ()
       )) done);
       true
     )
   )
-) in Obj.magic __fallback_result_2325 with
-  | HxRuntime.Hx_return __ret_2324 -> Obj.obj __ret_2324
+) in Obj.magic __fallback_result_2331 with
+  | HxRuntime.Hx_return __ret_2330 -> Obj.obj __ret_2330
 
 let emitJavaLibrarySourceSet = fun program sourceDir -> let sourcePaths = Obj.magic (HxArray.create ()) in let seen = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic program) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let typed = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -12166,131 +12186,131 @@ let emitJavaLibraryJar = fun program context -> let sourceDir = (Haxe_io_Path.jo
   )
 )
 
-let isStdSourceFile = fun filePath -> try let __fallback_result_2327 = (
+let isStdSourceFile = fun filePath -> try let __fallback_result_2333 = (
   ignore (if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let normalized = (StringTools.replace (filePath : string) ("\\" : string) ("/" : string) : string) in HxString.indexOf normalized "/std/" 0 >= 0 || StringTools.startsWith (normalized : string) ("std/" : string)
-) in Obj.magic __fallback_result_2327 with
-  | HxRuntime.Hx_return __ret_2326 -> Obj.obj __ret_2326
+) in Obj.magic __fallback_result_2333 with
+  | HxRuntime.Hx_return __ret_2332 -> Obj.obj __ret_2332
 
 let rec phpExprIsConstantDefault = fun expr -> let tempResult = ref (false : bool) in (
   ignore (match expr with
-    | HxExpr.ENull -> let __assign_2333 = true in (
-      tempResult := __assign_2333;
-      __assign_2333
+    | HxExpr.ENull -> let __assign_2339 = true in (
+      tempResult := __assign_2339;
+      __assign_2339
     )
     | HxExpr.EBool _p0 -> (
       ignore _p0;
-      let __assign_2334 = true in (
-        tempResult := __assign_2334;
-        __assign_2334
+      let __assign_2340 = true in (
+        tempResult := __assign_2340;
+        __assign_2340
       )
     )
     | HxExpr.EString _p0 -> (
       ignore _p0;
-      let __assign_2335 = true in (
-        tempResult := __assign_2335;
-        __assign_2335
+      let __assign_2341 = true in (
+        tempResult := __assign_2341;
+        __assign_2341
       )
     )
     | HxExpr.EInt _p0 -> (
       ignore _p0;
-      let __assign_2336 = true in (
-        tempResult := __assign_2336;
-        __assign_2336
+      let __assign_2342 = true in (
+        tempResult := __assign_2342;
+        __assign_2342
       )
     )
     | HxExpr.EFloat _p0 -> (
       ignore _p0;
-      let __assign_2337 = true in (
-        tempResult := __assign_2337;
-        __assign_2337
+      let __assign_2343 = true in (
+        tempResult := __assign_2343;
+        __assign_2343
       )
     )
     | HxExpr.EUnop (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in if HxString.equals _g "-" then let value = Obj.magic _g1 in match value with
       | HxExpr.EInt _p0 -> (
         ignore _p0;
-        let __assign_2339 = true in (
-          tempResult := __assign_2339;
-          __assign_2339
+        let __assign_2345 = true in (
+          tempResult := __assign_2345;
+          __assign_2345
         )
       )
       | HxExpr.EFloat _p0 -> (
         ignore _p0;
-        let __assign_2340 = true in (
-          tempResult := __assign_2340;
-          __assign_2340
+        let __assign_2346 = true in (
+          tempResult := __assign_2346;
+          __assign_2346
         )
       )
-      | _ -> let __assign_2338 = false in (
-        tempResult := __assign_2338;
-        __assign_2338
-      ) else let __assign_2341 = false in (
-      tempResult := __assign_2341;
-      __assign_2341
+      | _ -> let __assign_2344 = false in (
+        tempResult := __assign_2344;
+        __assign_2344
+      ) else let __assign_2347 = false in (
+      tempResult := __assign_2347;
+      __assign_2347
     )
     | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let ok = ref true in (
       ignore (let _g2 = ref 0 in try while !_g2 < HxArray.length values do try ignore (let value = Obj.magic (HxArray.get (Obj.magic values) (!_g2)) in (
-        ignore (let __old_2342 = !_g2 in let __new_2343 = HxInt.add __old_2342 1 in (
-          ignore (_g2 := __new_2343);
-          __new_2343
+        ignore (let __old_2348 = !_g2 in let __new_2349 = HxInt.add __old_2348 1 in (
+          ignore (_g2 := __new_2349);
+          __new_2349
         ));
         if not (phpExprIsConstantDefault (Obj.magic value)) then ignore ((
-          ignore (let __assign_2344 = false in (
-            ok := __assign_2344;
-            __assign_2344
+          ignore (let __assign_2350 = false in (
+            ok := __assign_2350;
+            __assign_2350
           ));
           raise (HxRuntime.Hx_break)
         )) else ()
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      let __assign_2345 = !ok in (
-        tempResult := __assign_2345;
-        __assign_2345
+      let __assign_2351 = !ok in (
+        tempResult := __assign_2351;
+        __assign_2351
       )
     )
-    | _ -> let __assign_2332 = false in (
-      tempResult := __assign_2332;
-      __assign_2332
+    | _ -> let __assign_2338 = false in (
+      tempResult := __assign_2338;
+      __assign_2338
     ));
   !tempResult
 )
 
-let phpStaticFieldDefault = fun init -> try let __fallback_result_2331 = (
+let phpStaticFieldDefault = fun init -> try let __fallback_result_2337 = (
   ignore (if init == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (defaultValue (Obj.magic Php) : string))) else ());
   let tempResult = ref ("" : string) in (
-    ignore (if phpExprIsConstantDefault (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) then let __assign_2328 = (renderExpr (Obj.magic Php) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
-      tempResult := __assign_2328;
-      __assign_2328
-    ) else let __assign_2329 = (defaultValue (Obj.magic Php) : string) in (
-      tempResult := __assign_2329;
-      __assign_2329
+    ignore (if phpExprIsConstantDefault (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) then let __assign_2334 = (renderExpr (Obj.magic Php) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
+      tempResult := __assign_2334;
+      __assign_2334
+    ) else let __assign_2335 = (defaultValue (Obj.magic Php) : string) in (
+      tempResult := __assign_2335;
+      __assign_2335
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_2331 with
-  | HxRuntime.Hx_return __ret_2330 -> Obj.obj __ret_2330
+) in Obj.magic __fallback_result_2337 with
+  | HxRuntime.Hx_return __ret_2336 -> Obj.obj __ret_2336
 
 let renderPhpFunctionArg = fun arg -> let name = (valueName (Obj.magic Php) (HxFunctionArg.getName (Obj.magic arg) : string) : string) in let tempResult = ref ("" : string) in (
   ignore (let _g = Obj.magic (HxFunctionArg.getDefaultValue (Obj.magic arg)) in match _g with
-    | HxDefaultValue.NoDefault -> if HxFunctionArg.getIsOptional (Obj.magic arg) then let __assign_2346 = (HxString.toStdString name ^ " = null" : string) in (
-      tempResult := __assign_2346;
-      __assign_2346
-    ) else let __assign_2347 = (name : string) in (
-      tempResult := __assign_2347;
-      __assign_2347
+    | HxDefaultValue.NoDefault -> if HxFunctionArg.getIsOptional (Obj.magic arg) then let __assign_2352 = (HxString.toStdString name ^ " = null" : string) in (
+      tempResult := __assign_2352;
+      __assign_2352
+    ) else let __assign_2353 = (name : string) in (
+      tempResult := __assign_2353;
+      __assign_2353
     )
     | HxDefaultValue.Default _p0 -> let _g2 = Obj.magic _p0 in let expr = Obj.magic _g2 in let tempString = ref ("" : string) in (
-      ignore (if phpExprIsConstantDefault (Obj.magic expr) then let __assign_2348 = (renderExpr (Obj.magic Php) (Obj.magic expr) : string) in (
-        tempString := __assign_2348;
-        __assign_2348
-      ) else let __assign_2349 = (defaultValue (Obj.magic Php) : string) in (
-        tempString := __assign_2349;
-        __assign_2349
+      ignore (if phpExprIsConstantDefault (Obj.magic expr) then let __assign_2354 = (renderExpr (Obj.magic Php) (Obj.magic expr) : string) in (
+        tempString := __assign_2354;
+        __assign_2354
+      ) else let __assign_2355 = (defaultValue (Obj.magic Php) : string) in (
+        tempString := __assign_2355;
+        __assign_2355
       ));
-      let __assign_2350 = ((HxString.toStdString name ^ " = ") ^ HxString.toStdString (!tempString) : string) in (
-        tempResult := __assign_2350;
-        __assign_2350
+      let __assign_2356 = ((HxString.toStdString name ^ " = ") ^ HxString.toStdString (!tempString) : string) in (
+        tempResult := __assign_2356;
+        __assign_2356
       )
     ));
   !tempResult
@@ -12298,17 +12318,17 @@ let renderPhpFunctionArg = fun arg -> let name = (valueName (Obj.magic Php) (HxF
 
 let phpFunctionArgConversionPrologue = fun args indent -> let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
   ignore (while !_g < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g)) in (
-    ignore (let __old_2379 = !_g in let __new_2380 = HxInt.add __old_2379 1 in (
-      ignore (_g := __new_2380);
-      __new_2380
+    ignore (let __old_2385 = !_g in let __new_2386 = HxInt.add __old_2385 1 in (
+      ignore (_g := __new_2386);
+      __new_2386
     ));
     let name = (valueName (Obj.magic Php) (HxFunctionArg.getName (Obj.magic arg) : string) : string) in let hint = (normalizeTypeHint (HxFunctionArg.getTypeHint (Obj.magic arg) : string) : string) in if isTemplateWrapTypeHint (hint : string) then ignore (HxArray.push out ((((HxString.toStdString indent ^ HxString.toStdString name) ^ " = __hxhx_to_template_wrap(") ^ HxString.toStdString name) ^ ");")) else ignore (if isMeterTypeHint (hint : string) then ignore (HxArray.push out ((((HxString.toStdString indent ^ HxString.toStdString name) ^ " = __hxhx_to_meter(") ^ HxString.toStdString name) ^ ");")) else ignore (if isKilometerTypeHint (hint : string) then ignore (HxArray.push out ((((HxString.toStdString indent ^ HxString.toStdString name) ^ " = __hxhx_to_kilometer(") ^ HxString.toStdString name) ^ ");")) else ignore (if isMyHashTypeHint (hint : string) then ignore (let tempString = ref ("" : string) in (
-      ignore (if isMyHashStringTypeHint (hint : string) then let __assign_2381 = ("true" : string) in (
-        tempString := __assign_2381;
-        __assign_2381
-      ) else let __assign_2382 = ("false" : string) in (
-        tempString := __assign_2382;
-        __assign_2382
+      ignore (if isMyHashStringTypeHint (hint : string) then let __assign_2387 = ("true" : string) in (
+        tempString := __assign_2387;
+        __assign_2387
+      ) else let __assign_2388 = ("false" : string) in (
+        tempString := __assign_2388;
+        __assign_2388
       ));
       HxArray.push out ((((((HxString.toStdString indent ^ HxString.toStdString name) ^ " = __hxhx_to_my_hash(") ^ HxString.toStdString name) ^ ", ") ^ HxString.toStdString (!tempString)) ^ ");")
     )) else ignore (if isMyAbstractCounterTypeHint (hint : string) then ignore (HxArray.push out ((((HxString.toStdString indent ^ HxString.toStdString name) ^ " = __hxhx_to_my_abstract_counter(") ^ HxString.toStdString name) ^ ");")) else ignore (if isStringTypeHint (hint : string) then ignore (HxArray.push out ((((HxString.toStdString indent ^ HxString.toStdString name) ^ " = __hxhx_to_string_value(") ^ HxString.toStdString name) ^ ");")) else ())))))
@@ -12318,7 +12338,7 @@ let phpFunctionArgConversionPrologue = fun args indent -> let out = Obj.magic (H
 
 let phpNeedsUnitTestLocalStaticSlot = fun className -> HxString.equals className "TestLocalStatic"
 
-let renderPhpSpecialHelperFunctionBody = fun out className fnName -> try let __fallback_result_2384 = (
+let renderPhpSpecialHelperFunctionBody = fun out className fnName -> try let __fallback_result_2390 = (
   ignore (if HxString.equals className "MyAbstractCounter" then ignore (match fnName with
     | "fromInt" -> ignore ((
       ignore (HxArray.push out "    return __hxhx_to_my_abstract_counter($v);");
@@ -12412,147 +12432,147 @@ let renderPhpSpecialHelperFunctionBody = fun out className fnName -> try let __f
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
   false
-) in Obj.magic __fallback_result_2384 with
-  | HxRuntime.Hx_return __ret_2383 -> Obj.obj __ret_2383
+) in Obj.magic __fallback_result_2390 with
+  | HxRuntime.Hx_return __ret_2389 -> Obj.obj __ret_2389
 
 let rec phpExprTouchesThis = fun expr -> let tempResult = ref (false : bool) in (
   ignore (match expr with
-    | HxExpr.EThis -> let __assign_2413 = true in (
-      tempResult := __assign_2413;
-      __assign_2413
+    | HxExpr.EThis -> let __assign_2419 = true in (
+      tempResult := __assign_2419;
+      __assign_2419
     )
     | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let receiver = Obj.magic _g in let __assign_2414 = phpExprTouchesThis (Obj.magic receiver) in (
-        tempResult := __assign_2414;
-        __assign_2414
-      )
-    )
-    | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let callee = Obj.magic _g in let args = Obj.magic _g1 in let __assign_2415 = phpExprTouchesThis (Obj.magic callee) || phpExprListTouchesThis (Obj.magic args) in (
-      tempResult := __assign_2415;
-      __assign_2415
-    )
-    | HxExpr.EMacroExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
-      ignore _p1;
-      let inner = Obj.magic _g in let __assign_2416 = phpExprTouchesThis (Obj.magic inner) in (
-        tempResult := __assign_2416;
-        __assign_2416
-      )
-    )
-    | HxExpr.ELambda (_p0, _p1) -> (
-      ignore _p0;
-      let _g2 = Obj.magic _p1 in let body = Obj.magic _g2 in let __assign_2417 = phpExprTouchesThis (Obj.magic body) in (
-        tempResult := __assign_2417;
-        __assign_2417
-      )
-    )
-    | HxExpr.ESwitch (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
-      ignore _p1;
-      let _g2 = Obj.magic _p2 in let scrutinee = Obj.magic _g in let exprs = Obj.magic _g2 in let __assign_2418 = phpExprTouchesThis (Obj.magic scrutinee) || phpExprListTouchesThis (Obj.magic exprs) in (
-        tempResult := __assign_2418;
-        __assign_2418
-      )
-    )
-    | HxExpr.ENew (_p0, _p1) -> (
-      ignore _p0;
-      let _g2 = Obj.magic _p1 in let args = Obj.magic _g2 in let __assign_2419 = phpExprListTouchesThis (Obj.magic args) in (
-        tempResult := __assign_2419;
-        __assign_2419
-      )
-    )
-    | HxExpr.EUnop (_p0, _p1) -> (
-      ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_2420 = phpExprTouchesThis (Obj.magic inner) in (
+      let receiver = Obj.magic _g in let __assign_2420 = phpExprTouchesThis (Obj.magic receiver) in (
         tempResult := __assign_2420;
         __assign_2420
       )
     )
-    | HxExpr.EBinop (_p0, _p1, _p2) -> (
-      ignore _p0;
-      let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let left = Obj.magic _g2 in let right = Obj.magic _g1 in let __assign_2421 = phpExprTouchesThis (Obj.magic left) || phpExprTouchesThis (Obj.magic right) in (
-        tempResult := __assign_2421;
-        __assign_2421
+    | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let callee = Obj.magic _g in let args = Obj.magic _g1 in let __assign_2421 = phpExprTouchesThis (Obj.magic callee) || phpExprListTouchesThis (Obj.magic args) in (
+      tempResult := __assign_2421;
+      __assign_2421
+    )
+    | HxExpr.EMacroExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let inner = Obj.magic _g in let __assign_2422 = phpExprTouchesThis (Obj.magic inner) in (
+        tempResult := __assign_2422;
+        __assign_2422
       )
     )
-    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in let __assign_2422 = phpExprTouchesThis (Obj.magic cond) || phpExprTouchesThis (Obj.magic thenExpr) || phpExprTouchesThis (Obj.magic elseExpr) in (
-      tempResult := __assign_2422;
-      __assign_2422
-    )
-    | HxExpr.EAnon (_p0, _p1) -> (
+    | HxExpr.ELambda (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let __assign_2423 = phpExprListTouchesThis (Obj.magic fieldValues) in (
+      let _g2 = Obj.magic _p1 in let body = Obj.magic _g2 in let __assign_2423 = phpExprTouchesThis (Obj.magic body) in (
         tempResult := __assign_2423;
         __assign_2423
       )
     )
-    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> (
-      ignore _p0;
-      let _g2 = Obj.magic _p1 in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpr = Obj.magic _g3 in let __assign_2424 = phpExprTouchesThis (Obj.magic iterable) || guardExpr != Obj.magic (HxRuntime.hx_null) && phpExprTouchesThis (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) || phpExprTouchesThis (Obj.magic yieldExpr) in (
+    | HxExpr.ESwitch (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let _g2 = Obj.magic _p2 in let scrutinee = Obj.magic _g in let exprs = Obj.magic _g2 in let __assign_2424 = phpExprTouchesThis (Obj.magic scrutinee) || phpExprListTouchesThis (Obj.magic exprs) in (
         tempResult := __assign_2424;
         __assign_2424
       )
     )
-    | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let __assign_2425 = phpExprListTouchesThis (Obj.magic values) in (
-      tempResult := __assign_2425;
-      __assign_2425
+    | HxExpr.ENew (_p0, _p1) -> (
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let args = Obj.magic _g2 in let __assign_2425 = phpExprListTouchesThis (Obj.magic args) in (
+        tempResult := __assign_2425;
+        __assign_2425
+      )
     )
-    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let receiver = Obj.magic _g in let index = Obj.magic _g1 in let __assign_2426 = phpExprTouchesThis (Obj.magic receiver) || phpExprTouchesThis (Obj.magic index) in (
-      tempResult := __assign_2426;
-      __assign_2426
+    | HxExpr.EUnop (_p0, _p1) -> (
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_2426 = phpExprTouchesThis (Obj.magic inner) in (
+        tempResult := __assign_2426;
+        __assign_2426
+      )
     )
-    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in (
-      ignore _p1;
-      let inner = Obj.magic _g in let __assign_2427 = phpExprTouchesThis (Obj.magic inner) in (
+    | HxExpr.EBinop (_p0, _p1, _p2) -> (
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let left = Obj.magic _g2 in let right = Obj.magic _g1 in let __assign_2427 = phpExprTouchesThis (Obj.magic left) || phpExprTouchesThis (Obj.magic right) in (
         tempResult := __assign_2427;
         __assign_2427
       )
     )
-    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_2428 = phpExprTouchesThis (Obj.magic inner) in (
+    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in let __assign_2428 = phpExprTouchesThis (Obj.magic cond) || phpExprTouchesThis (Obj.magic thenExpr) || phpExprTouchesThis (Obj.magic elseExpr) in (
       tempResult := __assign_2428;
       __assign_2428
     )
-    | _ -> let __assign_2412 = false in (
-      tempResult := __assign_2412;
-      __assign_2412
+    | HxExpr.EAnon (_p0, _p1) -> (
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let __assign_2429 = phpExprListTouchesThis (Obj.magic fieldValues) in (
+        tempResult := __assign_2429;
+        __assign_2429
+      )
+    )
+    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> (
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpr = Obj.magic _g3 in let __assign_2430 = phpExprTouchesThis (Obj.magic iterable) || guardExpr != Obj.magic (HxRuntime.hx_null) && phpExprTouchesThis (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) || phpExprTouchesThis (Obj.magic yieldExpr) in (
+        tempResult := __assign_2430;
+        __assign_2430
+      )
+    )
+    | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let __assign_2431 = phpExprListTouchesThis (Obj.magic values) in (
+      tempResult := __assign_2431;
+      __assign_2431
+    )
+    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let receiver = Obj.magic _g in let index = Obj.magic _g1 in let __assign_2432 = phpExprTouchesThis (Obj.magic receiver) || phpExprTouchesThis (Obj.magic index) in (
+      tempResult := __assign_2432;
+      __assign_2432
+    )
+    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let inner = Obj.magic _g in let __assign_2433 = phpExprTouchesThis (Obj.magic inner) in (
+        tempResult := __assign_2433;
+        __assign_2433
+      )
+    )
+    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_2434 = phpExprTouchesThis (Obj.magic inner) in (
+      tempResult := __assign_2434;
+      __assign_2434
+    )
+    | _ -> let __assign_2418 = false in (
+      tempResult := __assign_2418;
+      __assign_2418
     ));
   !tempResult
 )
-and phpExprListTouchesThis = fun exprs -> try let __fallback_result_2432 = (
+and phpExprListTouchesThis = fun exprs -> try let __fallback_result_2438 = (
   ignore (if exprs == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length exprs do ignore (let expr = Obj.magic (HxArray.get (Obj.magic exprs) (!_g)) in (
-      ignore (let __old_2429 = !_g in let __new_2430 = HxInt.add __old_2429 1 in (
-        ignore (_g := __new_2430);
-        __new_2430
+      ignore (let __old_2435 = !_g in let __new_2436 = HxInt.add __old_2435 1 in (
+        ignore (_g := __new_2436);
+        __new_2436
       ));
       if phpExprTouchesThis (Obj.magic expr) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
-) in Obj.magic __fallback_result_2432 with
-  | HxRuntime.Hx_return __ret_2431 -> Obj.obj __ret_2431
+) in Obj.magic __fallback_result_2438 with
+  | HxRuntime.Hx_return __ret_2437 -> Obj.obj __ret_2437
 
-let rec phpStmtListTouchesThis = fun stmts -> try let __fallback_result_2392 = (
+let rec phpStmtListTouchesThis = fun stmts -> try let __fallback_result_2398 = (
   ignore (if stmts == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length stmts do ignore (let stmt = Obj.magic (HxArray.get (Obj.magic stmts) (!_g)) in (
-      ignore (let __old_2389 = !_g in let __new_2390 = HxInt.add __old_2389 1 in (
-        ignore (_g := __new_2390);
-        __new_2390
+      ignore (let __old_2395 = !_g in let __new_2396 = HxInt.add __old_2395 1 in (
+        ignore (_g := __new_2396);
+        __new_2396
       ));
       if phpStmtTouchesThis (Obj.magic stmt) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
-) in Obj.magic __fallback_result_2392 with
-  | HxRuntime.Hx_return __ret_2391 -> Obj.obj __ret_2391
+) in Obj.magic __fallback_result_2398 with
+  | HxRuntime.Hx_return __ret_2397 -> Obj.obj __ret_2397
 and phpStmtTouchesThis = fun stmt -> let tempResult = ref (false : bool) in (
   ignore (match stmt with
     | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let stmts = Obj.magic _g in let __assign_2393 = phpStmtListTouchesThis (Obj.magic stmts) in (
-        tempResult := __assign_2393;
-        __assign_2393
+      let stmts = Obj.magic _g in let __assign_2399 = phpStmtListTouchesThis (Obj.magic stmts) in (
+        tempResult := __assign_2399;
+        __assign_2399
       )
     )
     | HxStmt.SVar (_p0, _p1, _p2, _p3) -> (
@@ -12560,26 +12580,26 @@ and phpStmtTouchesThis = fun stmt -> let tempResult = ref (false : bool) in (
       ignore _p1;
       let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
         ignore _p3;
-        let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_2394 = init != Obj.magic (HxRuntime.hx_null) && phpExprTouchesThis (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in (
-          tempResult := __assign_2394;
-          __assign_2394
+        let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_2400 = init != Obj.magic (HxRuntime.hx_null) && phpExprTouchesThis (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in (
+          tempResult := __assign_2400;
+          __assign_2400
         )
       )
     )
     | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
       ignore _p3;
-      let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_2395 = phpExprTouchesThis (Obj.magic cond) || phpStmtTouchesThis (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && phpStmtTouchesThis (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
-        tempResult := __assign_2395;
-        __assign_2395
+      let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_2401 = phpExprTouchesThis (Obj.magic cond) || phpStmtTouchesThis (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && phpStmtTouchesThis (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
+        tempResult := __assign_2401;
+        __assign_2401
       )
     )
     | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> (
       ignore _p0;
       let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in (
         ignore _p3;
-        let iterable = Obj.magic _g2 in let body = Obj.magic _g1 in let __assign_2396 = phpExprTouchesThis (Obj.magic iterable) || phpStmtTouchesThis (Obj.magic body) in (
-          tempResult := __assign_2396;
-          __assign_2396
+        let iterable = Obj.magic _g2 in let body = Obj.magic _g1 in let __assign_2402 = phpExprTouchesThis (Obj.magic iterable) || phpStmtTouchesThis (Obj.magic body) in (
+          tempResult := __assign_2402;
+          __assign_2402
         )
       )
     )
@@ -12588,143 +12608,143 @@ and phpStmtTouchesThis = fun stmt -> let tempResult = ref (false : bool) in (
       ignore _p1;
       let _g3 = Obj.magic _p2 in let _g1 = Obj.magic _p3 in (
         ignore _p4;
-        let iterable = Obj.magic _g3 in let body = Obj.magic _g1 in let __assign_2397 = phpExprTouchesThis (Obj.magic iterable) || phpStmtTouchesThis (Obj.magic body) in (
-          tempResult := __assign_2397;
-          __assign_2397
+        let iterable = Obj.magic _g3 in let body = Obj.magic _g1 in let __assign_2403 = phpExprTouchesThis (Obj.magic iterable) || phpStmtTouchesThis (Obj.magic body) in (
+          tempResult := __assign_2403;
+          __assign_2403
         )
       )
     )
     | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
       ignore _p2;
-      let cond = Obj.magic _g in let body = Obj.magic _g1 in let __assign_2398 = phpExprTouchesThis (Obj.magic cond) || phpStmtTouchesThis (Obj.magic body) in (
-        tempResult := __assign_2398;
-        __assign_2398
+      let cond = Obj.magic _g in let body = Obj.magic _g1 in let __assign_2404 = phpExprTouchesThis (Obj.magic cond) || phpStmtTouchesThis (Obj.magic body) in (
+        tempResult := __assign_2404;
+        __assign_2404
       )
     )
     | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
       ignore _p2;
-      let body = Obj.magic _g in let cond = Obj.magic _g1 in let __assign_2399 = phpStmtTouchesThis (Obj.magic body) || phpExprTouchesThis (Obj.magic cond) in (
-        tempResult := __assign_2399;
-        __assign_2399
+      let body = Obj.magic _g in let cond = Obj.magic _g1 in let __assign_2405 = phpStmtTouchesThis (Obj.magic body) || phpExprTouchesThis (Obj.magic cond) in (
+        tempResult := __assign_2405;
+        __assign_2405
       )
     )
     | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in (
       ignore _p1;
       let _g2 = Obj.magic _p2 in (
         ignore _p3;
-        let scrutinee = Obj.magic _g in let bodies = Obj.magic _g2 in let __assign_2400 = phpExprTouchesThis (Obj.magic scrutinee) || phpStmtListTouchesThis (Obj.magic bodies) in (
-          tempResult := __assign_2400;
-          __assign_2400
+        let scrutinee = Obj.magic _g in let bodies = Obj.magic _g2 in let __assign_2406 = phpExprTouchesThis (Obj.magic scrutinee) || phpStmtListTouchesThis (Obj.magic bodies) in (
+          tempResult := __assign_2406;
+          __assign_2406
         )
       )
     )
     | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
       ignore _p2;
-      let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in if phpStmtTouchesThis (Obj.magic tryBody) then let __assign_2401 = true in (
-        tempResult := __assign_2401;
-        __assign_2401
+      let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in if phpStmtTouchesThis (Obj.magic tryBody) then let __assign_2407 = true in (
+        tempResult := __assign_2407;
+        __assign_2407
       ) else let found = ref false in (
         ignore (if catches != Obj.magic (HxRuntime.hx_null) then ignore (let _g3 = ref 0 in while !_g3 < HxArray.length catches do ignore (let c = HxArray.get (Obj.magic catches) (!_g3) in (
-          ignore (let __old_2402 = !_g3 in let __new_2403 = HxInt.add __old_2402 1 in (
-            ignore (_g3 := __new_2403);
-            __new_2403
+          ignore (let __old_2408 = !_g3 in let __new_2409 = HxInt.add __old_2408 1 in (
+            ignore (_g3 := __new_2409);
+            __new_2409
           ));
-          if phpStmtTouchesThis (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) then ignore (let __assign_2404 = true in (
-            found := __assign_2404;
-            __assign_2404
+          if phpStmtTouchesThis (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) then ignore (let __assign_2410 = true in (
+            found := __assign_2410;
+            __assign_2410
           )) else ()
         )) done) else ());
-        let __assign_2405 = !found in (
-          tempResult := __assign_2405;
-          __assign_2405
+        let __assign_2411 = !found in (
+          tempResult := __assign_2411;
+          __assign_2411
         )
       )
     )
     | HxStmt.SBreak _p0 -> (
       ignore _p0;
-      let __assign_2406 = false in (
-        tempResult := __assign_2406;
-        __assign_2406
+      let __assign_2412 = false in (
+        tempResult := __assign_2412;
+        __assign_2412
       )
     )
     | HxStmt.SContinue _p0 -> (
       ignore _p0;
-      let __assign_2407 = false in (
-        tempResult := __assign_2407;
-        __assign_2407
+      let __assign_2413 = false in (
+        tempResult := __assign_2413;
+        __assign_2413
       )
     )
     | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let expr = Obj.magic _g in let __assign_2408 = phpExprTouchesThis (Obj.magic expr) in (
-        tempResult := __assign_2408;
-        __assign_2408
+      let expr = Obj.magic _g in let __assign_2414 = phpExprTouchesThis (Obj.magic expr) in (
+        tempResult := __assign_2414;
+        __assign_2414
       )
     )
     | HxStmt.SReturnVoid _p0 -> (
       ignore _p0;
-      let __assign_2409 = false in (
-        tempResult := __assign_2409;
-        __assign_2409
+      let __assign_2415 = false in (
+        tempResult := __assign_2415;
+        __assign_2415
       )
     )
     | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let expr = Obj.magic _g in let __assign_2410 = phpExprTouchesThis (Obj.magic expr) in (
-        tempResult := __assign_2410;
-        __assign_2410
+      let expr = Obj.magic _g in let __assign_2416 = phpExprTouchesThis (Obj.magic expr) in (
+        tempResult := __assign_2416;
+        __assign_2416
       )
     )
     | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let expr = Obj.magic _g in let __assign_2411 = phpExprTouchesThis (Obj.magic expr) in (
-        tempResult := __assign_2411;
-        __assign_2411
+      let expr = Obj.magic _g in let __assign_2417 = phpExprTouchesThis (Obj.magic expr) in (
+        tempResult := __assign_2417;
+        __assign_2417
       )
     ));
   !tempResult
 )
 
-let phpClassNeedsThisValueSlot = fun cls -> try let __fallback_result_2388 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
+let phpClassNeedsThisValueSlot = fun cls -> try let __fallback_result_2394 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_2385 = !_g in let __new_2386 = HxInt.add __old_2385 1 in (
-      ignore (_g := __new_2386);
-      __new_2386
+    ignore (let __old_2391 = !_g in let __new_2392 = HxInt.add __old_2391 1 in (
+      ignore (_g := __new_2392);
+      __new_2392
     ));
     if phpStmtListTouchesThis (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_2388 with
-  | HxRuntime.Hx_return __ret_2387 -> Obj.obj __ret_2387
+) in Obj.magic __fallback_result_2394 with
+  | HxRuntime.Hx_return __ret_2393 -> Obj.obj __ret_2393
 
-let renderPythonFunctionArg = fun arg -> try let __fallback_result_2437 = let name = (sanitizePythonIdentifier (HxFunctionArg.getName (Obj.magic arg) : string) : string) in (
+let renderPythonFunctionArg = fun arg -> try let __fallback_result_2443 = let name = (sanitizePythonIdentifier (HxFunctionArg.getName (Obj.magic arg) : string) : string) in (
   ignore (if HxFunctionArg.getIsRest (Obj.magic arg) then raise (HxRuntime.Hx_return (Obj.repr ("*" ^ HxString.toStdString name : string))) else ());
   let tempResult = ref ("" : string) in (
     ignore (let _g = Obj.magic (HxFunctionArg.getDefaultValue (Obj.magic arg)) in match _g with
-      | HxDefaultValue.NoDefault -> if HxFunctionArg.getIsOptional (Obj.magic arg) then let __assign_2433 = (HxString.toStdString name ^ "=None" : string) in (
-        tempResult := __assign_2433;
-        __assign_2433
-      ) else let __assign_2434 = (name : string) in (
-        tempResult := __assign_2434;
-        __assign_2434
+      | HxDefaultValue.NoDefault -> if HxFunctionArg.getIsOptional (Obj.magic arg) then let __assign_2439 = (HxString.toStdString name ^ "=None" : string) in (
+        tempResult := __assign_2439;
+        __assign_2439
+      ) else let __assign_2440 = (name : string) in (
+        tempResult := __assign_2440;
+        __assign_2440
       )
-      | HxDefaultValue.Default _p0 -> let _g2 = Obj.magic _p0 in let expr = Obj.magic _g2 in let __assign_2435 = ((HxString.toStdString name ^ "=") ^ HxString.toStdString (renderExpr (Obj.magic Python) (Obj.magic expr)) : string) in (
-        tempResult := __assign_2435;
-        __assign_2435
+      | HxDefaultValue.Default _p0 -> let _g2 = Obj.magic _p0 in let expr = Obj.magic _g2 in let __assign_2441 = ((HxString.toStdString name ^ "=") ^ HxString.toStdString (renderExpr (Obj.magic Python) (Obj.magic expr)) : string) in (
+        tempResult := __assign_2441;
+        __assign_2441
       ));
     !tempResult
   )
-) in Obj.magic __fallback_result_2437 with
-  | HxRuntime.Hx_return __ret_2436 -> Obj.obj __ret_2436
+) in Obj.magic __fallback_result_2443 with
+  | HxRuntime.Hx_return __ret_2442 -> Obj.obj __ret_2442
 
-let pythonClassVisited = fun cls visited -> try let __fallback_result_2449 = (
+let pythonClassVisited = fun cls visited -> try let __fallback_result_2455 = (
   ignore (if visited == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let key = (sanitizePythonIdentifier (HxClassDecl.getName (Obj.magic cls) : string) : string) in let tempResult = HxMap.exists_string visited key in tempResult
-) in Obj.magic __fallback_result_2449 with
-  | HxRuntime.Hx_return __ret_2448 -> Obj.obj __ret_2448
+) in Obj.magic __fallback_result_2455 with
+  | HxRuntime.Hx_return __ret_2454 -> Obj.obj __ret_2454
 
 let pythonMarkClassVisited = fun cls visited -> let next = HxMap.create_string () in (
-  ignore (if visited != Obj.magic (HxRuntime.hx_null) then ignore (let name = HxIterator.of_array (HxMap.keys_string visited) in while (let __iter_2450 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_2450)) () do ignore (let name2 = ((let __iter_2451 = name in fun () -> HxIterator.next (Obj.magic __iter_2451)) () : string) in HxMap.set_string next name2 true) done) else ());
+  ignore (if visited != Obj.magic (HxRuntime.hx_null) then ignore (let name = HxIterator.of_array (HxMap.keys_string visited) in while (let __iter_2456 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_2456)) () do ignore (let name2 = ((let __iter_2457 = name in fun () -> HxIterator.next (Obj.magic __iter_2457)) () : string) in HxMap.set_string next name2 true) done) else ());
   let key = (sanitizePythonIdentifier (HxClassDecl.getName (Obj.magic cls) : string) : string) in (
     ignore (HxMap.set_string next key true);
     next
@@ -12732,31 +12752,31 @@ let pythonMarkClassVisited = fun cls visited -> let next = HxMap.create_string (
 )
 
 let copyStringArray = fun values -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-  ignore (if values == Obj.magic (HxRuntime.hx_null) then let __assign_2452 = Obj.magic (let __arr_2453 = HxArray.create () in __arr_2453) in (
-    tempResult := __assign_2452;
-    __assign_2452
-  ) else let __assign_2454 = Obj.magic (HxArray.copy values) in (
-    tempResult := __assign_2454;
-    __assign_2454
+  ignore (if values == Obj.magic (HxRuntime.hx_null) then let __assign_2458 = Obj.magic (let __arr_2459 = HxArray.create () in __arr_2459) in (
+    tempResult := __assign_2458;
+    __assign_2458
+  ) else let __assign_2460 = Obj.magic (HxArray.copy values) in (
+    tempResult := __assign_2460;
+    __assign_2460
   ));
   !tempResult
 )
 
 let rec pythonRewriteSameClassMemberExpr = fun expr methodNames fieldNames locals -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
   ignore (match expr with
-    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in if HxMap.exists_string methodNames name && HxArray.indexOf locals name 0 < 0 then let __assign_2487 = Obj.magic (HxExpr.EField (Obj.magic (HxExpr.EThis), (name : string))) in (
-      tempResult := __assign_2487;
-      __assign_2487
-    ) else let name2 = (_g : string) in if HxMap.exists_string fieldNames name2 && HxArray.indexOf locals name2 0 < 0 then let __assign_2488 = Obj.magic (HxExpr.EField (Obj.magic (HxExpr.EThis), (name2 : string))) in (
-      tempResult := __assign_2488;
-      __assign_2488
-    ) else let __assign_2489 = Obj.magic expr in (
-      tempResult := __assign_2489;
-      __assign_2489
+    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in if HxMap.exists_string methodNames name && HxArray.indexOf locals name 0 < 0 then let __assign_2493 = Obj.magic (HxExpr.EField (Obj.magic (HxExpr.EThis), (name : string))) in (
+      tempResult := __assign_2493;
+      __assign_2493
+    ) else let name2 = (_g : string) in if HxMap.exists_string fieldNames name2 && HxArray.indexOf locals name2 0 < 0 then let __assign_2494 = Obj.magic (HxExpr.EField (Obj.magic (HxExpr.EThis), (name2 : string))) in (
+      tempResult := __assign_2494;
+      __assign_2494
+    ) else let __assign_2495 = Obj.magic expr in (
+      tempResult := __assign_2495;
+      __assign_2495
     )
-    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_2490 = Obj.magic (HxExpr.EField (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic obj) methodNames fieldNames (Obj.magic locals)), (field : string))) in (
-      tempResult := __assign_2490;
-      __assign_2490
+    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_2496 = Obj.magic (HxExpr.EField (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic obj) methodNames fieldNames (Obj.magic locals)), (field : string))) in (
+      tempResult := __assign_2496;
+      __assign_2496
     )
     | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in if (match _g with
       | HxExpr.ENull -> 0
@@ -12788,188 +12808,188 @@ let rec pythonRewriteSameClassMemberExpr = fun expr methodNames fieldNames local
       | HxExpr.ECast (_, _) -> 26
       | HxExpr.EUntyped _ -> 27
       | HxExpr.EUnsupported _ -> 28) = 8 then let _g2 = (match _g with
-      | HxExpr.EIdent __enum_param_2491 -> __enum_param_2491
+      | HxExpr.EIdent __enum_param_2497 -> __enum_param_2497
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let args = Obj.magic _g1 in if HxMap.exists_string methodNames name && HxArray.indexOf locals name 0 < 0 then let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-      ignore (let _g3 = Obj.magic (let __arr_2492 = HxArray.create () in __arr_2492) in (
+      ignore (let _g3 = Obj.magic (let __arr_2498 = HxArray.create () in __arr_2498) in (
         ignore (let _g4 = ref 0 in while !_g4 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g4)) in (
-          ignore (let __old_2493 = !_g4 in let __new_2494 = HxInt.add __old_2493 1 in (
-            ignore (_g4 := __new_2494);
-            __new_2494
+          ignore (let __old_2499 = !_g4 in let __new_2500 = HxInt.add __old_2499 1 in (
+            ignore (_g4 := __new_2500);
+            __new_2500
           ));
           HxArray.push _g3 (pythonRewriteSameClassMemberExpr (Obj.magic arg) methodNames fieldNames (Obj.magic locals))
         )) done);
-        let __assign_2495 = Obj.magic _g3 in (
-          tempArray := __assign_2495;
-          __assign_2495
+        let __assign_2501 = Obj.magic _g3 in (
+          tempArray := __assign_2501;
+          __assign_2501
         )
       ));
-      let __assign_2496 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EField (Obj.magic (HxExpr.EThis), (name : string))), Obj.magic (!tempArray))) in (
-        tempResult := __assign_2496;
-        __assign_2496
+      let __assign_2502 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EField (Obj.magic (HxExpr.EThis), (name : string))), Obj.magic (!tempArray))) in (
+        tempResult := __assign_2502;
+        __assign_2502
       )
     ) else let callee = Obj.magic _g in let args2 = Obj.magic _g1 in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-      ignore (let _g3 = Obj.magic (let __arr_2497 = HxArray.create () in __arr_2497) in (
+      ignore (let _g3 = Obj.magic (let __arr_2503 = HxArray.create () in __arr_2503) in (
         ignore (let _g4 = ref 0 in while !_g4 < HxArray.length args2 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args2) (!_g4)) in (
-          ignore (let __old_2498 = !_g4 in let __new_2499 = HxInt.add __old_2498 1 in (
-            ignore (_g4 := __new_2499);
-            __new_2499
+          ignore (let __old_2504 = !_g4 in let __new_2505 = HxInt.add __old_2504 1 in (
+            ignore (_g4 := __new_2505);
+            __new_2505
           ));
           HxArray.push _g3 (pythonRewriteSameClassMemberExpr (Obj.magic arg) methodNames fieldNames (Obj.magic locals))
         )) done);
-        let __assign_2500 = Obj.magic _g3 in (
-          tempArray1 := __assign_2500;
-          __assign_2500
+        let __assign_2506 = Obj.magic _g3 in (
+          tempArray1 := __assign_2506;
+          __assign_2506
         )
       ));
-      let __assign_2501 = Obj.magic (HxExpr.ECall (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic callee) methodNames fieldNames (Obj.magic locals)), Obj.magic (!tempArray1))) in (
-        tempResult := __assign_2501;
-        __assign_2501
+      let __assign_2507 = Obj.magic (HxExpr.ECall (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic callee) methodNames fieldNames (Obj.magic locals)), Obj.magic (!tempArray1))) in (
+        tempResult := __assign_2507;
+        __assign_2507
       )
     ) else let callee = Obj.magic _g in let args = Obj.magic _g1 in let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-      ignore (let _g2 = Obj.magic (let __arr_2502 = HxArray.create () in __arr_2502) in (
+      ignore (let _g2 = Obj.magic (let __arr_2508 = HxArray.create () in __arr_2508) in (
         ignore (let _g3 = ref 0 in while !_g3 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g3)) in (
-          ignore (let __old_2503 = !_g3 in let __new_2504 = HxInt.add __old_2503 1 in (
-            ignore (_g3 := __new_2504);
-            __new_2504
+          ignore (let __old_2509 = !_g3 in let __new_2510 = HxInt.add __old_2509 1 in (
+            ignore (_g3 := __new_2510);
+            __new_2510
           ));
           HxArray.push _g2 (pythonRewriteSameClassMemberExpr (Obj.magic arg) methodNames fieldNames (Obj.magic locals))
         )) done);
-        let __assign_2505 = Obj.magic _g2 in (
-          tempArray2 := __assign_2505;
-          __assign_2505
+        let __assign_2511 = Obj.magic _g2 in (
+          tempArray2 := __assign_2511;
+          __assign_2511
         )
       ));
-      let __assign_2506 = Obj.magic (HxExpr.ECall (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic callee) methodNames fieldNames (Obj.magic locals)), Obj.magic (!tempArray2))) in (
-        tempResult := __assign_2506;
-        __assign_2506
+      let __assign_2512 = Obj.magic (HxExpr.ECall (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic callee) methodNames fieldNames (Obj.magic locals)), Obj.magic (!tempArray2))) in (
+        tempResult := __assign_2512;
+        __assign_2512
       )
     )
     | HxExpr.ELambda (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let args = Obj.magic _g in let body = Obj.magic _g1 in let bodyLocals = Obj.magic (copyStringArray (Obj.magic locals)) in (
       ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let arg = (HxArray.get (Obj.magic args) (!_g2) : string) in (
-        ignore (let __old_2507 = !_g2 in let __new_2508 = HxInt.add __old_2507 1 in (
-          ignore (_g2 := __new_2508);
-          __new_2508
+        ignore (let __old_2513 = !_g2 in let __new_2514 = HxInt.add __old_2513 1 in (
+          ignore (_g2 := __new_2514);
+          __new_2514
         ));
         if HxArray.indexOf bodyLocals arg 0 < 0 then ignore (HxArray.push bodyLocals arg) else ()
       )) done);
-      let __assign_2509 = Obj.magic (HxExpr.ELambda (Obj.magic args, Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic body) methodNames fieldNames (Obj.magic bodyLocals)))) in (
-        tempResult := __assign_2509;
-        __assign_2509
+      let __assign_2515 = Obj.magic (HxExpr.ELambda (Obj.magic args, Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic body) methodNames fieldNames (Obj.magic bodyLocals)))) in (
+        tempResult := __assign_2515;
+        __assign_2515
       )
     )
     | HxExpr.ENew (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let typePath = (_g : string) in let args = Obj.magic _g1 in let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-      ignore (let _g2 = Obj.magic (let __arr_2510 = HxArray.create () in __arr_2510) in (
+      ignore (let _g2 = Obj.magic (let __arr_2516 = HxArray.create () in __arr_2516) in (
         ignore (let _g3 = ref 0 in while !_g3 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g3)) in (
-          ignore (let __old_2511 = !_g3 in let __new_2512 = HxInt.add __old_2511 1 in (
-            ignore (_g3 := __new_2512);
-            __new_2512
+          ignore (let __old_2517 = !_g3 in let __new_2518 = HxInt.add __old_2517 1 in (
+            ignore (_g3 := __new_2518);
+            __new_2518
           ));
           HxArray.push _g2 (pythonRewriteSameClassMemberExpr (Obj.magic arg) methodNames fieldNames (Obj.magic locals))
         )) done);
-        let __assign_2513 = Obj.magic _g2 in (
-          tempArray3 := __assign_2513;
-          __assign_2513
+        let __assign_2519 = Obj.magic _g2 in (
+          tempArray3 := __assign_2519;
+          __assign_2519
         )
       ));
-      let __assign_2514 = Obj.magic (HxExpr.ENew ((typePath : string), Obj.magic (!tempArray3))) in (
-        tempResult := __assign_2514;
-        __assign_2514
+      let __assign_2520 = Obj.magic (HxExpr.ENew ((typePath : string), Obj.magic (!tempArray3))) in (
+        tempResult := __assign_2520;
+        __assign_2520
       )
     )
-    | HxExpr.EUnop (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let op = (_g : string) in let inner = Obj.magic _g1 in let __assign_2515 = Obj.magic (HxExpr.EUnop ((op : string), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic inner) methodNames fieldNames (Obj.magic locals)))) in (
-      tempResult := __assign_2515;
-      __assign_2515
+    | HxExpr.EUnop (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let op = (_g : string) in let inner = Obj.magic _g1 in let __assign_2521 = Obj.magic (HxExpr.EUnop ((op : string), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic inner) methodNames fieldNames (Obj.magic locals)))) in (
+      tempResult := __assign_2521;
+      __assign_2521
     )
-    | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = (_g : string) in let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_2516 = Obj.magic (HxExpr.EBinop ((op : string), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic left) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic right) methodNames fieldNames (Obj.magic locals)))) in (
-      tempResult := __assign_2516;
-      __assign_2516
+    | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = (_g : string) in let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_2522 = Obj.magic (HxExpr.EBinop ((op : string), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic left) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic right) methodNames fieldNames (Obj.magic locals)))) in (
+      tempResult := __assign_2522;
+      __assign_2522
     )
-    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in let __assign_2517 = Obj.magic (HxExpr.ETernary (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic cond) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic thenExpr) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic elseExpr) methodNames fieldNames (Obj.magic locals)))) in (
-      tempResult := __assign_2517;
-      __assign_2517
+    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in let __assign_2523 = Obj.magic (HxExpr.ETernary (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic cond) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic thenExpr) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic elseExpr) methodNames fieldNames (Obj.magic locals)))) in (
+      tempResult := __assign_2523;
+      __assign_2523
     )
     | HxExpr.EAnon (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let anonFieldNames = Obj.magic _g in let fieldValues = Obj.magic _g1 in let tempArray4 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-      ignore (let _g2 = Obj.magic (let __arr_2518 = HxArray.create () in __arr_2518) in (
+      ignore (let _g2 = Obj.magic (let __arr_2524 = HxArray.create () in __arr_2524) in (
         ignore (let _g3 = ref 0 in while !_g3 < HxArray.length fieldValues do ignore (let value = Obj.magic (HxArray.get (Obj.magic fieldValues) (!_g3)) in (
-          ignore (let __old_2519 = !_g3 in let __new_2520 = HxInt.add __old_2519 1 in (
-            ignore (_g3 := __new_2520);
-            __new_2520
+          ignore (let __old_2525 = !_g3 in let __new_2526 = HxInt.add __old_2525 1 in (
+            ignore (_g3 := __new_2526);
+            __new_2526
           ));
           HxArray.push _g2 (pythonRewriteSameClassMemberExpr (Obj.magic value) methodNames fieldNames (Obj.magic locals))
         )) done);
-        let __assign_2521 = Obj.magic _g2 in (
-          tempArray4 := __assign_2521;
-          __assign_2521
+        let __assign_2527 = Obj.magic _g2 in (
+          tempArray4 := __assign_2527;
+          __assign_2527
         )
       ));
-      let __assign_2522 = Obj.magic (HxExpr.EAnon (Obj.magic anonFieldNames, Obj.magic (!tempArray4))) in (
-        tempResult := __assign_2522;
-        __assign_2522
+      let __assign_2528 = Obj.magic (HxExpr.EAnon (Obj.magic anonFieldNames, Obj.magic (!tempArray4))) in (
+        tempResult := __assign_2528;
+        __assign_2528
       )
     )
     | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let yieldExpr = Obj.magic _g3 in let bodyLocals = Obj.magic (copyStringArray (Obj.magic locals)) in (
       ignore (if HxArray.indexOf bodyLocals name 0 < 0 then ignore (HxArray.push bodyLocals name) else ());
       let tempMaybeHxExpr = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-        ignore (if guardExpr == Obj.magic (HxRuntime.hx_null) then let __assign_2523 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (HxRuntime.hx_null)))) in (
-          tempMaybeHxExpr := __assign_2523;
-          __assign_2523
-        ) else let __assign_2524 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (pythonRewriteSameClassMemberExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) methodNames fieldNames (Obj.magic bodyLocals)))) in (
-          tempMaybeHxExpr := __assign_2524;
-          __assign_2524
+        ignore (if guardExpr == Obj.magic (HxRuntime.hx_null) then let __assign_2529 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (HxRuntime.hx_null)))) in (
+          tempMaybeHxExpr := __assign_2529;
+          __assign_2529
+        ) else let __assign_2530 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (pythonRewriteSameClassMemberExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) methodNames fieldNames (Obj.magic bodyLocals)))) in (
+          tempMaybeHxExpr := __assign_2530;
+          __assign_2530
         ));
-        let __assign_2525 = Obj.magic (HxExpr.EArrayComprehension ((name : string), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic iterable) methodNames fieldNames (Obj.magic locals)), Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (!tempMaybeHxExpr))), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic yieldExpr) methodNames fieldNames (Obj.magic bodyLocals)))) in (
-          tempResult := __assign_2525;
-          __assign_2525
+        let __assign_2531 = Obj.magic (HxExpr.EArrayComprehension ((name : string), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic iterable) methodNames fieldNames (Obj.magic locals)), Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (!tempMaybeHxExpr))), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic yieldExpr) methodNames fieldNames (Obj.magic bodyLocals)))) in (
+          tempResult := __assign_2531;
+          __assign_2531
         )
       )
     )
     | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let tempArray5 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-      ignore (let _g2 = Obj.magic (let __arr_2526 = HxArray.create () in __arr_2526) in (
+      ignore (let _g2 = Obj.magic (let __arr_2532 = HxArray.create () in __arr_2532) in (
         ignore (let _g1 = ref 0 in while !_g1 < HxArray.length values do ignore (let value = Obj.magic (HxArray.get (Obj.magic values) (!_g1)) in (
-          ignore (let __old_2527 = !_g1 in let __new_2528 = HxInt.add __old_2527 1 in (
-            ignore (_g1 := __new_2528);
-            __new_2528
+          ignore (let __old_2533 = !_g1 in let __new_2534 = HxInt.add __old_2533 1 in (
+            ignore (_g1 := __new_2534);
+            __new_2534
           ));
           HxArray.push _g2 (pythonRewriteSameClassMemberExpr (Obj.magic value) methodNames fieldNames (Obj.magic locals))
         )) done);
-        let __assign_2529 = Obj.magic _g2 in (
-          tempArray5 := __assign_2529;
-          __assign_2529
+        let __assign_2535 = Obj.magic _g2 in (
+          tempArray5 := __assign_2535;
+          __assign_2535
         )
       ));
-      let __assign_2530 = Obj.magic (HxExpr.EArrayDecl (Obj.magic (!tempArray5))) in (
-        tempResult := __assign_2530;
-        __assign_2530
+      let __assign_2536 = Obj.magic (HxExpr.EArrayDecl (Obj.magic (!tempArray5))) in (
+        tempResult := __assign_2536;
+        __assign_2536
       )
     )
-    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let array = Obj.magic _g in let index = Obj.magic _g1 in let __assign_2531 = Obj.magic (HxExpr.EArrayAccess (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic array) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic index) methodNames fieldNames (Obj.magic locals)))) in (
-      tempResult := __assign_2531;
-      __assign_2531
+    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let array = Obj.magic _g in let index = Obj.magic _g1 in let __assign_2537 = Obj.magic (HxExpr.EArrayAccess (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic array) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic index) methodNames fieldNames (Obj.magic locals)))) in (
+      tempResult := __assign_2537;
+      __assign_2537
     )
-    | HxExpr.ERange (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let start = Obj.magic _g in let hx_end = Obj.magic _g1 in let __assign_2532 = Obj.magic (HxExpr.ERange (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic start) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic hx_end) methodNames fieldNames (Obj.magic locals)))) in (
-      tempResult := __assign_2532;
-      __assign_2532
+    | HxExpr.ERange (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let start = Obj.magic _g in let hx_end = Obj.magic _g1 in let __assign_2538 = Obj.magic (HxExpr.ERange (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic start) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic hx_end) methodNames fieldNames (Obj.magic locals)))) in (
+      tempResult := __assign_2538;
+      __assign_2538
     )
-    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in let __assign_2533 = Obj.magic (HxExpr.ECast (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic inner) methodNames fieldNames (Obj.magic locals)), (typeHint : string))) in (
-      tempResult := __assign_2533;
-      __assign_2533
+    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in let __assign_2539 = Obj.magic (HxExpr.ECast (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic inner) methodNames fieldNames (Obj.magic locals)), (typeHint : string))) in (
+      tempResult := __assign_2539;
+      __assign_2539
     )
-    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_2534 = Obj.magic (HxExpr.EUntyped (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic inner) methodNames fieldNames (Obj.magic locals)))) in (
-      tempResult := __assign_2534;
-      __assign_2534
+    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_2540 = Obj.magic (HxExpr.EUntyped (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic inner) methodNames fieldNames (Obj.magic locals)))) in (
+      tempResult := __assign_2540;
+      __assign_2540
     )
-    | _ -> let __assign_2486 = Obj.magic expr in (
-      tempResult := __assign_2486;
-      __assign_2486
+    | _ -> let __assign_2492 = Obj.magic expr in (
+      tempResult := __assign_2492;
+      __assign_2492
     ));
   !tempResult
 )
 
-let rec pythonRewriteSameClassMembersInStmts = fun stmts methodNames fieldNames locals -> let _g = Obj.magic (let __arr_2455 = HxArray.create () in __arr_2455) in let _g1 = ref 0 in (
+let rec pythonRewriteSameClassMembersInStmts = fun stmts methodNames fieldNames locals -> let _g = Obj.magic (let __arr_2461 = HxArray.create () in __arr_2461) in let _g1 = ref 0 in (
   ignore (while !_g1 < HxArray.length stmts do ignore (let stmt = Obj.magic (HxArray.get (Obj.magic stmts) (!_g1)) in (
-    ignore (let __old_2456 = !_g1 in let __new_2457 = HxInt.add __old_2456 1 in (
-      ignore (_g1 := __new_2457);
-      __new_2457
+    ignore (let __old_2462 = !_g1 in let __new_2463 = HxInt.add __old_2462 1 in (
+      ignore (_g1 := __new_2463);
+      __new_2463
     ));
     HxArray.push _g (pythonRewriteSameClassMembersInStmt (Obj.magic stmt) methodNames fieldNames (Obj.magic locals))
   )) done);
@@ -12977,147 +12997,147 @@ let rec pythonRewriteSameClassMembersInStmts = fun stmts methodNames fieldNames 
 )
 and pythonRewriteSameClassMembersInStmt = fun stmt methodNames fieldNames locals -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt) in (
   ignore (match stmt with
-    | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let stmts = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_2458 = Obj.magic (HxStmt.SBlock (Obj.magic (pythonRewriteSameClassMembersInStmts (Obj.magic stmts) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))), Obj.magic pos)) in (
-      tempResult := __assign_2458;
-      __assign_2458
+    | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let stmts = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_2464 = Obj.magic (HxStmt.SBlock (Obj.magic (pythonRewriteSameClassMembersInStmts (Obj.magic stmts) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))), Obj.magic pos)) in (
+      tempResult := __assign_2464;
+      __assign_2464
     )
     | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let pos = Obj.magic _g3 in let tempMaybeHxExpr = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-      ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2459 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (HxRuntime.hx_null)))) in (
-        tempMaybeHxExpr := __assign_2459;
-        __assign_2459
-      ) else let __assign_2460 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (pythonRewriteSameClassMemberExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) methodNames fieldNames (Obj.magic locals)))) in (
-        tempMaybeHxExpr := __assign_2460;
-        __assign_2460
+      ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2465 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (HxRuntime.hx_null)))) in (
+        tempMaybeHxExpr := __assign_2465;
+        __assign_2465
+      ) else let __assign_2466 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (pythonRewriteSameClassMemberExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) methodNames fieldNames (Obj.magic locals)))) in (
+        tempMaybeHxExpr := __assign_2466;
+        __assign_2466
       ));
       let rewrittenInit = HxEnum.box_if_needed "HxExpr" (Obj.magic (!tempMaybeHxExpr)) in (
         ignore (if HxArray.indexOf locals name 0 < 0 then ignore (HxArray.push locals name) else ());
-        let __assign_2461 = Obj.magic (HxStmt.SVar ((name : string), (typeHint : string), Obj.obj (HxEnum.unbox_or_obj "HxExpr" rewrittenInit), Obj.magic pos)) in (
-          tempResult := __assign_2461;
-          __assign_2461
+        let __assign_2467 = Obj.magic (HxStmt.SVar ((name : string), (typeHint : string), Obj.obj (HxEnum.unbox_or_obj "HxExpr" rewrittenInit), Obj.magic pos)) in (
+          tempResult := __assign_2467;
+          __assign_2467
         )
       )
     )
     | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let pos = Obj.magic _g3 in let tempMaybeHxStmt = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-      ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_2462 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (HxRuntime.hx_null)))) in (
-        tempMaybeHxStmt := __assign_2462;
-        __assign_2462
-      ) else let __assign_2463 = Obj.magic (HxEnum.box_if_needed "HxStmt" (Obj.repr (pythonRewriteSameClassMembersInStmt (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))))) in (
-        tempMaybeHxStmt := __assign_2463;
-        __assign_2463
+      ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_2468 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (HxRuntime.hx_null)))) in (
+        tempMaybeHxStmt := __assign_2468;
+        __assign_2468
+      ) else let __assign_2469 = Obj.magic (HxEnum.box_if_needed "HxStmt" (Obj.repr (pythonRewriteSameClassMembersInStmt (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))))) in (
+        tempMaybeHxStmt := __assign_2469;
+        __assign_2469
       ));
-      let __assign_2464 = Obj.magic (HxStmt.SIf (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic cond) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic thenBranch) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))), Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (!tempMaybeHxStmt))), Obj.magic pos)) in (
-        tempResult := __assign_2464;
-        __assign_2464
+      let __assign_2470 = Obj.magic (HxStmt.SIf (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic cond) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic thenBranch) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))), Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (!tempMaybeHxStmt))), Obj.magic pos)) in (
+        tempResult := __assign_2470;
+        __assign_2470
       )
     )
     | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let body = Obj.magic _g2 in let pos = Obj.magic _g3 in let bodyLocals = Obj.magic (copyStringArray (Obj.magic locals)) in (
       ignore (if HxArray.indexOf bodyLocals name 0 < 0 then ignore (HxArray.push bodyLocals name) else ());
-      let __assign_2465 = Obj.magic (HxStmt.SForIn ((name : string), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic iterable) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic body) methodNames fieldNames (Obj.magic bodyLocals)), Obj.magic pos)) in (
-        tempResult := __assign_2465;
-        __assign_2465
+      let __assign_2471 = Obj.magic (HxStmt.SForIn ((name : string), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic iterable) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic body) methodNames fieldNames (Obj.magic bodyLocals)), Obj.magic pos)) in (
+        tempResult := __assign_2471;
+        __assign_2471
       )
     )
     | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let keyName = (_g : string) in let valueName = (_g1 : string) in let iterable = Obj.magic _g2 in let body = Obj.magic _g3 in let pos = Obj.magic _g4 in let bodyLocals = Obj.magic (copyStringArray (Obj.magic locals)) in (
       ignore (if HxArray.indexOf bodyLocals keyName 0 < 0 then ignore (HxArray.push bodyLocals keyName) else ());
       ignore (if HxArray.indexOf bodyLocals valueName 0 < 0 then ignore (HxArray.push bodyLocals valueName) else ());
-      let __assign_2466 = Obj.magic (HxStmt.SForKeyValue ((keyName : string), (valueName : string), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic iterable) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic body) methodNames fieldNames (Obj.magic bodyLocals)), Obj.magic pos)) in (
-        tempResult := __assign_2466;
-        __assign_2466
+      let __assign_2472 = Obj.magic (HxStmt.SForKeyValue ((keyName : string), (valueName : string), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic iterable) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic body) methodNames fieldNames (Obj.magic bodyLocals)), Obj.magic pos)) in (
+        tempResult := __assign_2472;
+        __assign_2472
       )
     )
-    | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let body = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_2467 = Obj.magic (HxStmt.SWhile (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic cond) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic body) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))), Obj.magic pos)) in (
-      tempResult := __assign_2467;
-      __assign_2467
+    | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let body = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_2473 = Obj.magic (HxStmt.SWhile (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic cond) methodNames fieldNames (Obj.magic locals)), Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic body) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))), Obj.magic pos)) in (
+      tempResult := __assign_2473;
+      __assign_2473
     )
-    | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let body = Obj.magic _g in let cond = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_2468 = Obj.magic (HxStmt.SDoWhile (Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic body) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic cond) methodNames fieldNames (Obj.magic locals)), Obj.magic pos)) in (
-      tempResult := __assign_2468;
-      __assign_2468
+    | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let body = Obj.magic _g in let cond = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_2474 = Obj.magic (HxStmt.SDoWhile (Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic body) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))), Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic cond) methodNames fieldNames (Obj.magic locals)), Obj.magic pos)) in (
+      tempResult := __assign_2474;
+      __assign_2474
     )
     | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let scrutinee = Obj.magic _g in let patterns = Obj.magic _g1 in let bodies = Obj.magic _g2 in let pos = Obj.magic _g3 in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in (
-      ignore (let _g4 = Obj.magic (let __arr_2469 = HxArray.create () in __arr_2469) in (
+      ignore (let _g4 = Obj.magic (let __arr_2475 = HxArray.create () in __arr_2475) in (
         ignore (let _g5 = ref 0 in while !_g5 < HxArray.length bodies do ignore (let body = Obj.magic (HxArray.get (Obj.magic bodies) (!_g5)) in (
-          ignore (let __old_2470 = !_g5 in let __new_2471 = HxInt.add __old_2470 1 in (
-            ignore (_g5 := __new_2471);
-            __new_2471
+          ignore (let __old_2476 = !_g5 in let __new_2477 = HxInt.add __old_2476 1 in (
+            ignore (_g5 := __new_2477);
+            __new_2477
           ));
           HxArray.push _g4 (pythonRewriteSameClassMembersInStmt (Obj.magic body) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals))))
         )) done);
-        let __assign_2472 = Obj.magic _g4 in (
-          tempArray := __assign_2472;
-          __assign_2472
-        )
-      ));
-      let __assign_2473 = Obj.magic (HxStmt.SSwitch (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic scrutinee) methodNames fieldNames (Obj.magic locals)), Obj.magic patterns, Obj.magic (!tempArray), Obj.magic pos)) in (
-        tempResult := __assign_2473;
-        __assign_2473
-      )
-    )
-    | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in let pos = Obj.magic _g2 in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
-      ignore (let _g3 = Obj.magic (let __arr_2474 = HxArray.create () in __arr_2474) in (
-        ignore (let _g4 = ref 0 in while !_g4 < HxArray.length catches do ignore (let c = HxArray.get (Obj.magic catches) (!_g4) in (
-          ignore (let __old_2475 = !_g4 in let __new_2476 = HxInt.add __old_2475 1 in (
-            ignore (_g4 := __new_2476);
-            __new_2476
-          ));
-          let catchLocals = Obj.magic (copyStringArray (Obj.magic locals)) in (
-            ignore (if HxArray.indexOf catchLocals (Obj.obj (HxAnon.get c "name")) 0 < 0 then ignore (HxArray.push catchLocals (Obj.obj (HxAnon.get c "name"))) else ());
-            HxArray.push _g3 (let __anon_2477 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_2477 "name" (Obj.repr (Obj.obj (HxAnon.get c "name"))));
-              ignore (HxAnon.set __anon_2477 "typeHint" (Obj.repr (Obj.obj (HxAnon.get c "typeHint"))));
-              ignore (HxAnon.set __anon_2477 "body" (HxEnum.box_if_needed "HxStmt" (Obj.repr (pythonRewriteSameClassMembersInStmt (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) methodNames fieldNames (Obj.magic catchLocals)))));
-              __anon_2477
-            ))
-          )
-        )) done);
-        let __assign_2478 = Obj.magic _g3 in (
-          tempArray1 := __assign_2478;
+        let __assign_2478 = Obj.magic _g4 in (
+          tempArray := __assign_2478;
           __assign_2478
         )
       ));
-      let __assign_2479 = Obj.magic (HxStmt.STry (Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic tryBody) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))), Obj.magic (!tempArray1), Obj.magic pos)) in (
+      let __assign_2479 = Obj.magic (HxStmt.SSwitch (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic scrutinee) methodNames fieldNames (Obj.magic locals)), Obj.magic patterns, Obj.magic (!tempArray), Obj.magic pos)) in (
         tempResult := __assign_2479;
         __assign_2479
       )
     )
+    | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in let pos = Obj.magic _g2 in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
+      ignore (let _g3 = Obj.magic (let __arr_2480 = HxArray.create () in __arr_2480) in (
+        ignore (let _g4 = ref 0 in while !_g4 < HxArray.length catches do ignore (let c = HxArray.get (Obj.magic catches) (!_g4) in (
+          ignore (let __old_2481 = !_g4 in let __new_2482 = HxInt.add __old_2481 1 in (
+            ignore (_g4 := __new_2482);
+            __new_2482
+          ));
+          let catchLocals = Obj.magic (copyStringArray (Obj.magic locals)) in (
+            ignore (if HxArray.indexOf catchLocals (Obj.obj (HxAnon.get c "name")) 0 < 0 then ignore (HxArray.push catchLocals (Obj.obj (HxAnon.get c "name"))) else ());
+            HxArray.push _g3 (let __anon_2483 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_2483 "name" (Obj.repr (Obj.obj (HxAnon.get c "name"))));
+              ignore (HxAnon.set __anon_2483 "typeHint" (Obj.repr (Obj.obj (HxAnon.get c "typeHint"))));
+              ignore (HxAnon.set __anon_2483 "body" (HxEnum.box_if_needed "HxStmt" (Obj.repr (pythonRewriteSameClassMembersInStmt (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) methodNames fieldNames (Obj.magic catchLocals)))));
+              __anon_2483
+            ))
+          )
+        )) done);
+        let __assign_2484 = Obj.magic _g3 in (
+          tempArray1 := __assign_2484;
+          __assign_2484
+        )
+      ));
+      let __assign_2485 = Obj.magic (HxStmt.STry (Obj.magic (pythonRewriteSameClassMembersInStmt (Obj.magic tryBody) methodNames fieldNames (Obj.magic (copyStringArray (Obj.magic locals)))), Obj.magic (!tempArray1), Obj.magic pos)) in (
+        tempResult := __assign_2485;
+        __assign_2485
+      )
+    )
     | HxStmt.SBreak _p0 -> (
       ignore _p0;
-      let __assign_2480 = Obj.magic stmt in (
-        tempResult := __assign_2480;
-        __assign_2480
+      let __assign_2486 = Obj.magic stmt in (
+        tempResult := __assign_2486;
+        __assign_2486
       )
     )
     | HxStmt.SContinue _p0 -> (
       ignore _p0;
-      let __assign_2481 = Obj.magic stmt in (
-        tempResult := __assign_2481;
-        __assign_2481
+      let __assign_2487 = Obj.magic stmt in (
+        tempResult := __assign_2487;
+        __assign_2487
       )
     )
-    | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_2482 = Obj.magic (HxStmt.SThrow (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic expr) methodNames fieldNames (Obj.magic locals)), Obj.magic pos)) in (
-      tempResult := __assign_2482;
-      __assign_2482
+    | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_2488 = Obj.magic (HxStmt.SThrow (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic expr) methodNames fieldNames (Obj.magic locals)), Obj.magic pos)) in (
+      tempResult := __assign_2488;
+      __assign_2488
     )
     | HxStmt.SReturnVoid _p0 -> (
       ignore _p0;
-      let __assign_2483 = Obj.magic stmt in (
-        tempResult := __assign_2483;
-        __assign_2483
+      let __assign_2489 = Obj.magic stmt in (
+        tempResult := __assign_2489;
+        __assign_2489
       )
     )
-    | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_2484 = Obj.magic (HxStmt.SReturn (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic expr) methodNames fieldNames (Obj.magic locals)), Obj.magic pos)) in (
-      tempResult := __assign_2484;
-      __assign_2484
+    | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_2490 = Obj.magic (HxStmt.SReturn (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic expr) methodNames fieldNames (Obj.magic locals)), Obj.magic pos)) in (
+      tempResult := __assign_2490;
+      __assign_2490
     )
-    | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_2485 = Obj.magic (HxStmt.SExpr (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic expr) methodNames fieldNames (Obj.magic locals)), Obj.magic pos)) in (
-      tempResult := __assign_2485;
-      __assign_2485
+    | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_2491 = Obj.magic (HxStmt.SExpr (Obj.magic (pythonRewriteSameClassMemberExpr (Obj.magic expr) methodNames fieldNames (Obj.magic locals)), Obj.magic pos)) in (
+      tempResult := __assign_2491;
+      __assign_2491
     ));
   !tempResult
 )
 
 let pythonNeedsUnitTestLocalStaticSlot = fun className -> HxString.equals className "TestLocalStatic"
 
-let renderPythonSpecialHelperFunctionBody = fun out className fnName -> try let __fallback_result_2564 = (
+let renderPythonSpecialHelperFunctionBody = fun out className fnName -> try let __fallback_result_2570 = (
   ignore (if HxString.equals className "TestLocalStatic" && HxString.equals fnName "basic" then ignore ((
     ignore (HxArray.push out "        if TestLocalStatic.__basic_x is None:");
     ignore (HxArray.push out "            TestLocalStatic.__basic_x = 1");
@@ -13168,43 +13188,43 @@ let renderPythonSpecialHelperFunctionBody = fun out className fnName -> try let 
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ());
   false
-) in Obj.magic __fallback_result_2564 with
-  | HxRuntime.Hx_return __ret_2563 -> Obj.obj __ret_2563
+) in Obj.magic __fallback_result_2570 with
+  | HxRuntime.Hx_return __ret_2569 -> Obj.obj __ret_2569
 
-let pythonClassNeedsThisValueSlot = fun cls -> try let __fallback_result_2568 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
+let pythonClassNeedsThisValueSlot = fun cls -> try let __fallback_result_2574 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_2565 = !_g in let __new_2566 = HxInt.add __old_2565 1 in (
-      ignore (_g := __new_2566);
-      __new_2566
+    ignore (let __old_2571 = !_g in let __new_2572 = HxInt.add __old_2571 1 in (
+      ignore (_g := __new_2572);
+      __new_2572
     ));
     if phpStmtListTouchesThis (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_2568 with
-  | HxRuntime.Hx_return __ret_2567 -> Obj.obj __ret_2567
+) in Obj.magic __fallback_result_2574 with
+  | HxRuntime.Hx_return __ret_2573 -> Obj.obj __ret_2573
 
-let pythonBaseClassName = fun extendsPath -> try let __fallback_result_2570 = (
+let pythonBaseClassName = fun extendsPath -> try let __fallback_result_2576 = (
   ignore (if extendsPath == Obj.magic (HxRuntime.hx_null) || HxString.length extendsPath = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   let parts = Obj.magic (HxString.split extendsPath ".") in sanitizePythonIdentifier (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string)
-) in Obj.magic __fallback_result_2570 with
-  | HxRuntime.Hx_return __ret_2569 -> Obj.obj __ret_2569
+) in Obj.magic __fallback_result_2576 with
+  | HxRuntime.Hx_return __ret_2575 -> Obj.obj __ret_2575
 
-let pythonBaseClassDecl = fun cls classesByName -> try let __fallback_result_2447 = (
+let pythonBaseClassDecl = fun cls classesByName -> try let __fallback_result_2453 = (
   ignore (if classesByName == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   let baseName = (pythonBaseClassName (HxClassDecl.getExtendsPath (Obj.magic cls) : string) : string) in (
     ignore (if baseName == Obj.magic (HxRuntime.hx_null) || HxString.length baseName = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
     HxMap.get_string classesByName baseName
   )
-) in Obj.magic __fallback_result_2447 with
-  | HxRuntime.Hx_return __ret_2446 -> Obj.obj __ret_2446
+) in Obj.magic __fallback_result_2453 with
+  | HxRuntime.Hx_return __ret_2452 -> Obj.obj __ret_2452
 
 let rec pythonInstanceMethodNames = fun cls classesByName visited -> let names = HxMap.create_string () in let base = Obj.magic (pythonBaseClassDecl (Obj.magic cls) classesByName) in (
-  ignore (if base != Obj.magic (HxRuntime.hx_null) && not (pythonClassVisited (Obj.magic base) visited) then ignore (let baseNames = pythonInstanceMethodNames (Obj.magic base) classesByName (pythonMarkClassVisited (Obj.magic base) visited) in let name = HxIterator.of_array (HxMap.keys_string baseNames) in while (let __iter_2438 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_2438)) () do ignore (let name2 = ((let __iter_2439 = name in fun () -> HxIterator.next (Obj.magic __iter_2439)) () : string) in HxMap.set_string names name2 true) done) else ());
+  ignore (if base != Obj.magic (HxRuntime.hx_null) && not (pythonClassVisited (Obj.magic base) visited) then ignore (let baseNames = pythonInstanceMethodNames (Obj.magic base) classesByName (pythonMarkClassVisited (Obj.magic base) visited) in let name = HxIterator.of_array (HxMap.keys_string baseNames) in while (let __iter_2444 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_2444)) () do ignore (let name2 = ((let __iter_2445 = name in fun () -> HxIterator.next (Obj.magic __iter_2445)) () : string) in HxMap.set_string names name2 true) done) else ());
   let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_2440 = !_g in let __new_2441 = HxInt.add __old_2440 1 in (
-        ignore (_g := __new_2441);
-        __new_2441
+      ignore (let __old_2446 = !_g in let __new_2447 = HxInt.add __old_2446 1 in (
+        ignore (_g := __new_2447);
+        __new_2447
       ));
       if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) && not (HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new") then ignore (let key = (HxFunctionDecl.getName (Obj.magic fn) : string) in HxMap.set_string names key true) else ()
     )) done);
@@ -13213,12 +13233,12 @@ let rec pythonInstanceMethodNames = fun cls classesByName visited -> let names =
 )
 
 let rec pythonInstanceFieldNames = fun cls classesByName visited -> let names = HxMap.create_string () in let base = Obj.magic (pythonBaseClassDecl (Obj.magic cls) classesByName) in (
-  ignore (if base != Obj.magic (HxRuntime.hx_null) && not (pythonClassVisited (Obj.magic base) visited) then ignore (let baseNames = pythonInstanceFieldNames (Obj.magic base) classesByName (pythonMarkClassVisited (Obj.magic base) visited) in let name = HxIterator.of_array (HxMap.keys_string baseNames) in while (let __iter_2442 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_2442)) () do ignore (let name2 = ((let __iter_2443 = name in fun () -> HxIterator.next (Obj.magic __iter_2443)) () : string) in HxMap.set_string names name2 true) done) else ());
+  ignore (if base != Obj.magic (HxRuntime.hx_null) && not (pythonClassVisited (Obj.magic base) visited) then ignore (let baseNames = pythonInstanceFieldNames (Obj.magic base) classesByName (pythonMarkClassVisited (Obj.magic base) visited) in let name = HxIterator.of_array (HxMap.keys_string baseNames) in while (let __iter_2448 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_2448)) () do ignore (let name2 = ((let __iter_2449 = name in fun () -> HxIterator.next (Obj.magic __iter_2449)) () : string) in HxMap.set_string names name2 true) done) else ());
   let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_2444 = !_g in let __new_2445 = HxInt.add __old_2444 1 in (
-        ignore (_g := __new_2445);
-        __new_2445
+      ignore (let __old_2450 = !_g in let __new_2451 = HxInt.add __old_2450 1 in (
+        ignore (_g := __new_2451);
+        __new_2451
       ));
       if not (HxFieldDecl.getIsStatic (Obj.magic field)) then ignore (let key = (HxFieldDecl.getName (Obj.magic field) : string) in HxMap.set_string names key true) else ()
     )) done);
@@ -13227,25 +13247,25 @@ let rec pythonInstanceFieldNames = fun cls classesByName visited -> let names = 
 )
 
 let renderPythonHelperClass = fun cls postStaticInitializers classesByName -> let className = (sanitizePythonIdentifier (HxClassDecl.getName (Obj.magic cls) : string) : string) in let baseName = (pythonBaseClassName (HxClassDecl.getExtendsPath (Obj.magic cls) : string) : string) in let tempString = ref ("" : string) in (
-  ignore (if baseName == Obj.magic (HxRuntime.hx_null) || HxString.length baseName = 0 then let __assign_2535 = (("class " ^ HxString.toStdString className) ^ ":" : string) in (
-    tempString := __assign_2535;
-    __assign_2535
-  ) else let __assign_2536 = (((("class " ^ HxString.toStdString className) ^ "(") ^ HxString.toStdString baseName) ^ "):" : string) in (
-    tempString := __assign_2536;
-    __assign_2536
+  ignore (if baseName == Obj.magic (HxRuntime.hx_null) || HxString.length baseName = 0 then let __assign_2541 = (("class " ^ HxString.toStdString className) ^ ":" : string) in (
+    tempString := __assign_2541;
+    __assign_2541
+  ) else let __assign_2542 = (((("class " ^ HxString.toStdString className) ^ "(") ^ HxString.toStdString baseName) ^ "):" : string) in (
+    tempString := __assign_2542;
+    __assign_2542
   ));
-  let out = Obj.magic (let __arr_2537 = HxArray.create () in (
-    ignore (HxArray.push __arr_2537 (!tempString));
-    __arr_2537
+  let out = Obj.magic (let __arr_2543 = HxArray.create () in (
+    ignore (HxArray.push __arr_2543 (!tempString));
+    __arr_2543
   )) in let memberCount = ref 0 in let instanceFields = Obj.magic (HxArray.create ()) in let needsThisValueSlot = pythonClassNeedsThisValueSlot (Obj.magic cls) in (
     ignore (if pythonNeedsUnitTestLocalStaticSlot (className : string) then ignore ((
       ignore (HxArray.push out "    __basic_x = None");
       memberCount := HxInt.add (!memberCount) 1
     )) else ());
     ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in try while !_g < HxArray.length _g1 do try ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_2538 = !_g in let __new_2539 = HxInt.add __old_2538 1 in (
-        ignore (_g := __new_2539);
-        __new_2539
+      ignore (let __old_2544 = !_g in let __new_2545 = HxInt.add __old_2544 1 in (
+        ignore (_g := __new_2545);
+        __new_2545
       ));
       ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) then ignore ((
         ignore (HxArray.push instanceFields field);
@@ -13261,51 +13281,51 @@ let renderPythonHelperClass = fun cls postStaticInitializers classesByName -> le
       | HxRuntime.Hx_break -> ());
     let sawConstructor = ref false in let methodVisited = HxMap.create_string () in let fieldVisited = HxMap.create_string () in let instanceMethodNames = pythonInstanceMethodNames (Obj.magic cls) classesByName methodVisited in let instanceFieldNames = pythonInstanceFieldNames (Obj.magic cls) classesByName fieldVisited in (
       ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-        ignore (let __old_2540 = !_g in let __new_2541 = HxInt.add __old_2540 1 in (
-          ignore (_g := __new_2541);
-          __new_2541
+        ignore (let __old_2546 = !_g in let __new_2547 = HxInt.add __old_2546 1 in (
+          ignore (_g := __new_2547);
+          __new_2547
         ));
         ignore (if isCompileTimeOnlyFunction (Obj.magic fn) then raise (HxRuntime.Hx_continue) else ());
         ignore (if HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "main" then raise (HxRuntime.Hx_continue) else ());
         let isStatic = HxFunctionDecl.getIsStatic (Obj.magic fn) in let isCtor = HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new" in (
-          ignore (if isCtor then ignore (let __assign_2542 = true in (
-            sawConstructor := __assign_2542;
-            __assign_2542
+          ignore (if isCtor then ignore (let __assign_2548 = true in (
+            sawConstructor := __assign_2548;
+            __assign_2548
           )) else ());
           ignore (if isStatic && not (isCtor) then ignore (HxArray.push out "    @staticmethod") else ());
           let args = Obj.magic (HxArray.create ()) in (
             ignore (if not (isStatic) || isCtor then ignore (HxArray.push args "self") else ());
             ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in while !_g2 < HxArray.length _g3 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-              ignore (let __old_2543 = !_g2 in let __new_2544 = HxInt.add __old_2543 1 in (
-                ignore (_g2 := __new_2544);
-                __new_2544
+              ignore (let __old_2549 = !_g2 in let __new_2550 = HxInt.add __old_2549 1 in (
+                ignore (_g2 := __new_2550);
+                __new_2550
               ));
               HxArray.push args (renderPythonFunctionArg (Obj.magic arg))
             )) done);
             let tempString1 = ref ("" : string) in (
-              ignore (if isCtor then let __assign_2545 = ("__init__" : string) in (
-                tempString1 := __assign_2545;
-                __assign_2545
-              ) else let __assign_2546 = (sanitizePythonIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
-                tempString1 := __assign_2546;
-                __assign_2546
+              ignore (if isCtor then let __assign_2551 = ("__init__" : string) in (
+                tempString1 := __assign_2551;
+                __assign_2551
+              ) else let __assign_2552 = (sanitizePythonIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
+                tempString1 := __assign_2552;
+                __assign_2552
               ));
               let methodName = (!tempString1 : string) in (
                 ignore (HxArray.push out (((("    def " ^ HxString.toStdString methodName) ^ "(") ^ HxString.toStdString (HxArray.join args ", " (fun x -> x))) ^ "):"));
                 ignore (if isCtor then ignore ((
                   ignore (if needsThisValueSlot then ignore (HxArray.push out "        self.__hx_value = None") else ());
                   let _g2 = ref 0 in while !_g2 < HxArray.length instanceFields do ignore (let field = Obj.magic (HxArray.get (Obj.magic instanceFields) (!_g2)) in (
-                    ignore (let __old_2547 = !_g2 in let __new_2548 = HxInt.add __old_2547 1 in (
-                      ignore (_g2 := __new_2548);
-                      __new_2548
+                    ignore (let __old_2553 = !_g2 in let __new_2554 = HxInt.add __old_2553 1 in (
+                      ignore (_g2 := __new_2554);
+                      __new_2554
                     ));
                     let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in let tempString2 = ref ("" : string) in (
-                      ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2549 = (defaultValue (Obj.magic Python) : string) in (
-                        tempString2 := __assign_2549;
-                        __assign_2549
-                      ) else let __assign_2550 = (renderExpr (Obj.magic Python) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
-                        tempString2 := __assign_2550;
-                        __assign_2550
+                      ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2555 = (defaultValue (Obj.magic Python) : string) in (
+                        tempString2 := __assign_2555;
+                        __assign_2555
+                      ) else let __assign_2556 = (renderExpr (Obj.magic Python) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
+                        tempString2 := __assign_2556;
+                        __assign_2556
                       ));
                       let rhs = (!tempString2 : string) in HxArray.push out ((("        self." ^ HxString.toStdString (sanitizePythonIdentifier (HxFieldDecl.getName (Obj.magic field) : string))) ^ " = ") ^ HxString.toStdString rhs)
                     )
@@ -13313,31 +13333,31 @@ let renderPythonHelperClass = fun cls postStaticInitializers classesByName -> le
                 )) else ());
                 ignore (if not (renderPythonSpecialHelperFunctionBody (Obj.magic out) (className : string) (HxFunctionDecl.getName (Obj.magic fn) : string)) then ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in (
                   ignore (if not (isStatic) || isCtor then let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-                    ignore (let _g2 = Obj.magic (let __arr_2551 = HxArray.create () in __arr_2551) in (
+                    ignore (let _g2 = Obj.magic (let __arr_2557 = HxArray.create () in __arr_2557) in (
                       ignore (let _g3 = ref 0 in let _g4 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in while !_g3 < HxArray.length _g4 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g4) (!_g3)) in (
-                        ignore (let __old_2552 = !_g3 in let __new_2553 = HxInt.add __old_2552 1 in (
-                          ignore (_g3 := __new_2553);
-                          __new_2553
+                        ignore (let __old_2558 = !_g3 in let __new_2559 = HxInt.add __old_2558 1 in (
+                          ignore (_g3 := __new_2559);
+                          __new_2559
                         ));
                         HxArray.push _g2 (HxFunctionArg.getName (Obj.magic arg))
                       )) done);
-                      let __assign_2554 = Obj.magic _g2 in (
-                        tempArray1 := __assign_2554;
-                        __assign_2554
+                      let __assign_2560 = Obj.magic _g2 in (
+                        tempArray1 := __assign_2560;
+                        __assign_2560
                       )
                     ));
-                    let __assign_2555 = Obj.magic (pythonRewriteSameClassMembersInStmts (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) instanceMethodNames instanceFieldNames (Obj.magic (!tempArray1))) in (
-                      tempArray := __assign_2555;
-                      __assign_2555
+                    let __assign_2561 = Obj.magic (pythonRewriteSameClassMembersInStmts (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) instanceMethodNames instanceFieldNames (Obj.magic (!tempArray1))) in (
+                      tempArray := __assign_2561;
+                      __assign_2561
                     )
-                  ) else let __assign_2556 = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in (
-                    tempArray := __assign_2556;
-                    __assign_2556
+                  ) else let __assign_2562 = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in (
+                    tempArray := __assign_2562;
+                    __assign_2562
                   ));
                   let body = Obj.magic (!tempArray) in let _g2 = ref 0 in let _g3 = Obj.magic (renderFunctionStmts (Obj.magic Python) (Obj.magic body) ("        " : string) ((HxString.toStdString className ^ ".") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn)) : string)) in while !_g2 < HxArray.length _g3 do ignore (let line = (HxArray.get (Obj.magic _g3) (!_g2) : string) in (
-                    ignore (let __old_2557 = !_g2 in let __new_2558 = HxInt.add __old_2557 1 in (
-                      ignore (_g2 := __new_2558);
-                      __new_2558
+                    ignore (let __old_2563 = !_g2 in let __new_2564 = HxInt.add __old_2563 1 in (
+                      ignore (_g2 := __new_2564);
+                      __new_2564
                     ));
                     HxArray.push out line
                   )) done
@@ -13354,17 +13374,17 @@ let renderPythonHelperClass = fun cls postStaticInitializers classesByName -> le
         ignore (HxArray.push out "    def __init__(self):");
         ignore (if needsThisValueSlot then ignore (HxArray.push out "        self.__hx_value = None") else ());
         ignore (let _g = ref 0 in while !_g < HxArray.length instanceFields do ignore (let field = Obj.magic (HxArray.get (Obj.magic instanceFields) (!_g)) in (
-          ignore (let __old_2559 = !_g in let __new_2560 = HxInt.add __old_2559 1 in (
-            ignore (_g := __new_2560);
-            __new_2560
+          ignore (let __old_2565 = !_g in let __new_2566 = HxInt.add __old_2565 1 in (
+            ignore (_g := __new_2566);
+            __new_2566
           ));
           let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in let tempString3 = ref ("" : string) in (
-            ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2561 = (defaultValue (Obj.magic Python) : string) in (
-              tempString3 := __assign_2561;
-              __assign_2561
-            ) else let __assign_2562 = (renderExpr (Obj.magic Python) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
-              tempString3 := __assign_2562;
-              __assign_2562
+            ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2567 = (defaultValue (Obj.magic Python) : string) in (
+              tempString3 := __assign_2567;
+              __assign_2567
+            ) else let __assign_2568 = (renderExpr (Obj.magic Python) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
+              tempString3 := __assign_2568;
+              __assign_2568
             ));
             let rhs = (!tempString3 : string) in HxArray.push out ((("        self." ^ HxString.toStdString (sanitizePythonIdentifier (HxFieldDecl.getName (Obj.magic field) : string))) ^ " = ") ^ HxString.toStdString rhs)
           )
@@ -13438,7 +13458,7 @@ let renderPythonSupportClasses = fun program decl mainClassName -> let out = Obj
         )) else ());
         raise (HxRuntime.Hx_continue)
       )) else ());
-      ignore (if HxString.equals className mainClassName || HxMap.exists_string seen className then raise (HxRuntime.Hx_continue) else ());
+      ignore (if HxString.equals className mainClassName && not (pythonMainClassNeedsRuntimeSupport (Obj.magic cls)) || HxMap.exists_string seen className then raise (HxRuntime.Hx_continue) else ());
       ignore (HxMap.set_string seen className true);
       ignore (let value = (HxModuleDecl.getPackagePath (Obj.magic moduleDecl) : string) in HxMap.set_string packageByClassName className value);
       HxArray.push pending cls
@@ -13628,23 +13648,23 @@ let renderPythonSupportClasses = fun program decl mainClassName -> let out = Obj
   )
 )
 
-let phpBaseClassName = fun extendsPath -> try let __fallback_result_2572 = (
+let phpBaseClassName = fun extendsPath -> try let __fallback_result_2578 = (
   ignore (if extendsPath == Obj.magic (HxRuntime.hx_null) || HxString.length extendsPath = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   let parts = Obj.magic (HxString.split extendsPath ".") in sanitizePhpTypeName (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string)
-) in Obj.magic __fallback_result_2572 with
-  | HxRuntime.Hx_return __ret_2571 -> Obj.obj __ret_2571
+) in Obj.magic __fallback_result_2578 with
+  | HxRuntime.Hx_return __ret_2577 -> Obj.obj __ret_2577
 
 let renderPhpHelperClass = fun cls -> let className = (sanitizePhpTypeName (HxClassDecl.getName (Obj.magic cls) : string) : string) in let baseName = (phpBaseClassName (HxClassDecl.getExtendsPath (Obj.magic cls) : string) : string) in let tempString = ref ("" : string) in (
-  ignore (if baseName == Obj.magic (HxRuntime.hx_null) || HxString.length baseName = 0 then let __assign_2351 = (("class " ^ HxString.toStdString className) ^ " {" : string) in (
-    tempString := __assign_2351;
-    __assign_2351
-  ) else let __assign_2352 = (((("class " ^ HxString.toStdString className) ^ " extends ") ^ HxString.toStdString baseName) ^ " {" : string) in (
-    tempString := __assign_2352;
-    __assign_2352
+  ignore (if baseName == Obj.magic (HxRuntime.hx_null) || HxString.length baseName = 0 then let __assign_2357 = (("class " ^ HxString.toStdString className) ^ " {" : string) in (
+    tempString := __assign_2357;
+    __assign_2357
+  ) else let __assign_2358 = (((("class " ^ HxString.toStdString className) ^ " extends ") ^ HxString.toStdString baseName) ^ " {" : string) in (
+    tempString := __assign_2358;
+    __assign_2358
   ));
-  let out = Obj.magic (let __arr_2353 = HxArray.create () in (
-    ignore (HxArray.push __arr_2353 (!tempString));
-    __arr_2353
+  let out = Obj.magic (let __arr_2359 = HxArray.create () in (
+    ignore (HxArray.push __arr_2359 (!tempString));
+    __arr_2359
   )) in let memberCount = ref 0 in let instanceFields = Obj.magic (HxArray.create ()) in let emittedFields = HxMap.create_string () in let emittedMethods = HxMap.create_string () in (
     ignore (if phpClassNeedsThisValueSlot (Obj.magic cls) then ignore ((
       ignore (HxArray.push out "  public $__hx_value;");
@@ -13657,9 +13677,9 @@ let renderPhpHelperClass = fun cls -> let className = (sanitizePhpTypeName (HxCl
       memberCount := HxInt.add (!memberCount) 1
     )) else ());
     ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in try while !_g < HxArray.length _g1 do try ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_2354 = !_g in let __new_2355 = HxInt.add __old_2354 1 in (
-        ignore (_g := __new_2355);
-        __new_2355
+      ignore (let __old_2360 = !_g in let __new_2361 = HxInt.add __old_2360 1 in (
+        ignore (_g := __new_2361);
+        __new_2361
       ));
       let fieldName = (sanitizeTypeName (HxFieldDecl.getName (Obj.magic field) : string) : string) in (
         ignore (if HxMap.exists_string emittedFields fieldName then raise (HxRuntime.Hx_continue) else ());
@@ -13680,79 +13700,79 @@ let renderPhpHelperClass = fun cls -> let className = (sanitizePhpTypeName (HxCl
       | HxRuntime.Hx_break -> ());
     let sawConstructor = ref false in (
       ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-        ignore (let __old_2356 = !_g in let __new_2357 = HxInt.add __old_2356 1 in (
-          ignore (_g := __new_2357);
-          __new_2357
+        ignore (let __old_2362 = !_g in let __new_2363 = HxInt.add __old_2362 1 in (
+          ignore (_g := __new_2363);
+          __new_2363
         ));
         ignore (if isCompileTimeOnlyFunction (Obj.magic fn) then raise (HxRuntime.Hx_continue) else ());
         ignore (if HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "main" then raise (HxRuntime.Hx_continue) else ());
         let isStatic = HxFunctionDecl.getIsStatic (Obj.magic fn) in let isCtor = HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new" in (
-          ignore (if isCtor then ignore (let __assign_2358 = true in (
-            sawConstructor := __assign_2358;
-            __assign_2358
+          ignore (if isCtor then ignore (let __assign_2364 = true in (
+            sawConstructor := __assign_2364;
+            __assign_2364
           )) else ());
           let tempString1 = ref ("" : string) in (
-            ignore (if isCtor then let __assign_2359 = ("__construct" : string) in (
-              tempString1 := __assign_2359;
-              __assign_2359
-            ) else let __assign_2360 = (sanitizeTypeName (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
-              tempString1 := __assign_2360;
-              __assign_2360
+            ignore (if isCtor then let __assign_2365 = ("__construct" : string) in (
+              tempString1 := __assign_2365;
+              __assign_2365
+            ) else let __assign_2366 = (sanitizeTypeName (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
+              tempString1 := __assign_2366;
+              __assign_2366
             ));
             let methodName = (!tempString1 : string) in (
               ignore (if HxMap.exists_string emittedMethods methodName then raise (HxRuntime.Hx_continue) else ());
               ignore (HxMap.set_string emittedMethods methodName true);
               let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-                ignore (let _g2 = Obj.magic (let __arr_2361 = HxArray.create () in __arr_2361) in (
+                ignore (let _g2 = Obj.magic (let __arr_2367 = HxArray.create () in __arr_2367) in (
                   ignore (let _g3 = ref 0 in let _g4 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in while !_g3 < HxArray.length _g4 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g4) (!_g3)) in (
-                    ignore (let __old_2362 = !_g3 in let __new_2363 = HxInt.add __old_2362 1 in (
-                      ignore (_g3 := __new_2363);
-                      __new_2363
+                    ignore (let __old_2368 = !_g3 in let __new_2369 = HxInt.add __old_2368 1 in (
+                      ignore (_g3 := __new_2369);
+                      __new_2369
                     ));
                     HxArray.push _g2 (renderPhpFunctionArg (Obj.magic arg))
                   )) done);
-                  let __assign_2364 = Obj.magic _g2 in (
-                    tempArray := __assign_2364;
-                    __assign_2364
+                  let __assign_2370 = Obj.magic _g2 in (
+                    tempArray := __assign_2370;
+                    __assign_2370
                   )
                 ));
                 let args = (HxArray.join (!tempArray) ", " (fun x -> x) : string) in let tempString2 = ref ("" : string) in (
-                  ignore (if isStatic && not (isCtor) then let __assign_2365 = ("  public static function " : string) in (
-                    tempString2 := __assign_2365;
-                    __assign_2365
-                  ) else let __assign_2366 = ("  public function " : string) in (
-                    tempString2 := __assign_2366;
-                    __assign_2366
+                  ignore (if isStatic && not (isCtor) then let __assign_2371 = ("  public static function " : string) in (
+                    tempString2 := __assign_2371;
+                    __assign_2371
+                  ) else let __assign_2372 = ("  public function " : string) in (
+                    tempString2 := __assign_2372;
+                    __assign_2372
                   ));
                   let prefix = (!tempString2 : string) in (
                     ignore (HxArray.push out ((((HxString.toStdString prefix ^ HxString.toStdString methodName) ^ "(") ^ HxString.toStdString args) ^ ") {"));
                     ignore (if isCtor then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length instanceFields do ignore (let field = Obj.magic (HxArray.get (Obj.magic instanceFields) (!_g2)) in (
-                      ignore (let __old_2367 = !_g2 in let __new_2368 = HxInt.add __old_2367 1 in (
-                        ignore (_g2 := __new_2368);
-                        __new_2368
+                      ignore (let __old_2373 = !_g2 in let __new_2374 = HxInt.add __old_2373 1 in (
+                        ignore (_g2 := __new_2374);
+                        __new_2374
                       ));
                       let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in let tempString3 = ref ("" : string) in (
-                        ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2369 = (defaultValue (Obj.magic Php) : string) in (
-                          tempString3 := __assign_2369;
-                          __assign_2369
-                        ) else let __assign_2370 = (renderExpr (Obj.magic Php) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
-                          tempString3 := __assign_2370;
-                          __assign_2370
+                        ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2375 = (defaultValue (Obj.magic Php) : string) in (
+                          tempString3 := __assign_2375;
+                          __assign_2375
+                        ) else let __assign_2376 = (renderExpr (Obj.magic Php) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
+                          tempString3 := __assign_2376;
+                          __assign_2376
                         ));
                         let rhs = (!tempString3 : string) in HxArray.push out (((("    $this->" ^ HxString.toStdString (sanitizeTypeName (HxFieldDecl.getName (Obj.magic field) : string))) ^ " = ") ^ HxString.toStdString rhs) ^ ";")
                       )
                     )) done) else ());
                     ignore (let _g2 = ref 0 in let _g3 = Obj.magic (phpFunctionArgConversionPrologue (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) ("    " : string)) in while !_g2 < HxArray.length _g3 do ignore (let line = (HxArray.get (Obj.magic _g3) (!_g2) : string) in (
-                      ignore (let __old_2371 = !_g2 in let __new_2372 = HxInt.add __old_2371 1 in (
-                        ignore (_g2 := __new_2372);
-                        __new_2372
+                      ignore (let __old_2377 = !_g2 in let __new_2378 = HxInt.add __old_2377 1 in (
+                        ignore (_g2 := __new_2378);
+                        __new_2378
                       ));
                       HxArray.push out line
                     )) done);
                     ignore (if not (renderPhpSpecialHelperFunctionBody (Obj.magic out) (className : string) (HxFunctionDecl.getName (Obj.magic fn) : string)) then ignore (let _g2 = ref 0 in let _g3 = Obj.magic (renderFunctionStmts (Obj.magic Php) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) ("    " : string) ((HxString.toStdString className ^ ".") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn)) : string)) in while !_g2 < HxArray.length _g3 do ignore (let line = (HxArray.get (Obj.magic _g3) (!_g2) : string) in (
-                      ignore (let __old_2373 = !_g2 in let __new_2374 = HxInt.add __old_2373 1 in (
-                        ignore (_g2 := __new_2374);
-                        __new_2374
+                      ignore (let __old_2379 = !_g2 in let __new_2380 = HxInt.add __old_2379 1 in (
+                        ignore (_g2 := __new_2380);
+                        __new_2380
                       ));
                       HxArray.push out line
                     )) done) else ());
@@ -13770,17 +13790,17 @@ let renderPhpHelperClass = fun cls -> let className = (sanitizePhpTypeName (HxCl
       ignore (if not (!sawConstructor) && HxArray.length instanceFields > 0 then ignore ((
         ignore (HxArray.push out "  public function __construct() {");
         ignore (let _g = ref 0 in while !_g < HxArray.length instanceFields do ignore (let field = Obj.magic (HxArray.get (Obj.magic instanceFields) (!_g)) in (
-          ignore (let __old_2375 = !_g in let __new_2376 = HxInt.add __old_2375 1 in (
-            ignore (_g := __new_2376);
-            __new_2376
+          ignore (let __old_2381 = !_g in let __new_2382 = HxInt.add __old_2381 1 in (
+            ignore (_g := __new_2382);
+            __new_2382
           ));
           let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in let tempString4 = ref ("" : string) in (
-            ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2377 = (defaultValue (Obj.magic Php) : string) in (
-              tempString4 := __assign_2377;
-              __assign_2377
-            ) else let __assign_2378 = (renderExpr (Obj.magic Php) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
-              tempString4 := __assign_2378;
-              __assign_2378
+            ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2383 = (defaultValue (Obj.magic Php) : string) in (
+              tempString4 := __assign_2383;
+              __assign_2383
+            ) else let __assign_2384 = (renderExpr (Obj.magic Php) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) : string) in (
+              tempString4 := __assign_2384;
+              __assign_2384
             ));
             let rhs = (!tempString4 : string) in HxArray.push out (((("    $this->" ^ HxString.toStdString (sanitizeTypeName (HxFieldDecl.getName (Obj.magic field) : string))) ^ " = ") ^ HxString.toStdString rhs) ^ ";")
           )
@@ -13797,18 +13817,18 @@ let renderPhpHelperClass = fun cls -> let className = (sanitizePhpTypeName (HxCl
 
 let renderPhpSupportClasses = fun program decl mainClassName -> let out = Obj.magic (HxArray.create ()) in let seen = HxMap.create_string () in let pending = Obj.magic (HxArray.create ()) in let mainFilePath = ref ("" : string) in let mainPackage = ref (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in (
   ignore (let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic program) ()) in try while !_g < HxArray.length _g1 do try ignore (let typed = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_2299 = !_g in let __new_2300 = HxInt.add __old_2299 1 in (
-      ignore (_g := __new_2300);
-      __new_2300
+    ignore (let __old_2305 = !_g in let __new_2306 = HxInt.add __old_2305 1 in (
+      ignore (_g := __new_2306);
+      __new_2306
     ));
     let moduleDecl = Obj.magic (ParsedModule.getDecl (Obj.magic (TypedModule.getParsed (Obj.magic typed) ())) ()) in if moduleHasClass (Obj.magic moduleDecl) (mainClassName : string) then ignore ((
-      ignore (let __assign_2301 = (ParsedModule.getFilePath (Obj.magic (TypedModule.getParsed (Obj.magic typed) ())) () : string) in (
-        mainFilePath := __assign_2301;
-        __assign_2301
+      ignore (let __assign_2307 = (ParsedModule.getFilePath (Obj.magic (TypedModule.getParsed (Obj.magic typed) ())) () : string) in (
+        mainFilePath := __assign_2307;
+        __assign_2307
       ));
-      ignore (if !mainPackage == Obj.magic (HxRuntime.hx_null) || HxString.length (!mainPackage) = 0 then ignore (let __assign_2302 = (phpSupportPackage (Obj.magic moduleDecl) (!mainFilePath : string) : string) in (
-        mainPackage := __assign_2302;
-        __assign_2302
+      ignore (if !mainPackage == Obj.magic (HxRuntime.hx_null) || HxString.length (!mainPackage) = 0 then ignore (let __assign_2308 = (phpSupportPackage (Obj.magic moduleDecl) (!mainFilePath : string) : string) in (
+        mainPackage := __assign_2308;
+        __assign_2308
       )) else ());
       raise (HxRuntime.Hx_break)
     )) else ()
@@ -13819,9 +13839,9 @@ let renderPhpSupportClasses = fun program decl mainClassName -> let out = Obj.ma
     ignore (if not (phpShouldEmitSupportPackage (!mainPackage : string) (modulePackage : string)) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     ignore (if isStdSourceFile (filePath : string) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic moduleDecl)) in try while !_g < HxArray.length _g1 do try ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_2303 = !_g in let __new_2304 = HxInt.add __old_2303 1 in (
-        ignore (_g := __new_2304);
-        __new_2304
+      ignore (let __old_2309 = !_g in let __new_2310 = HxInt.add __old_2309 1 in (
+        ignore (_g := __new_2310);
+        __new_2310
       ));
       let className = (sanitizePhpTypeName (HxClassDecl.getName (Obj.magic cls) : string) : string) in (
         ignore (if isCompileTimeOnlySupportClass (Obj.magic cls) then raise (HxRuntime.Hx_continue) else ());
@@ -13833,25 +13853,25 @@ let renderPhpSupportClasses = fun program decl mainClassName -> let out = Obj.ma
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ()
   ) with
-    | HxRuntime.Hx_return __ret_2305 -> Obj.obj __ret_2305) in (
+    | HxRuntime.Hx_return __ret_2311 -> Obj.obj __ret_2311) in (
     ignore (appendDeclClasses (Obj.magic decl) (!mainFilePath : string));
     ignore (let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic program) ()) in while !_g < HxArray.length _g1 do ignore (let typed = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_2306 = !_g in let __new_2307 = HxInt.add __old_2306 1 in (
-        ignore (_g := __new_2307);
-        __new_2307
+      ignore (let __old_2312 = !_g in let __new_2313 = HxInt.add __old_2312 1 in (
+        ignore (_g := __new_2313);
+        __new_2313
       ));
       appendDeclClasses (Obj.magic (ParsedModule.getDecl (Obj.magic (TypedModule.getParsed (Obj.magic typed) ())) ())) (ParsedModule.getFilePath (Obj.magic (TypedModule.getParsed (Obj.magic typed) ())) () : string)
     )) done);
     ignore (let _g = ref 0 in while !_g < HxArray.length pending do ignore (let cls = Obj.magic (HxArray.get (Obj.magic pending) (!_g)) in (
-      ignore (let __old_2308 = !_g in let __new_2309 = HxInt.add __old_2308 1 in (
-        ignore (_g := __new_2309);
-        __new_2309
+      ignore (let __old_2314 = !_g in let __new_2315 = HxInt.add __old_2314 1 in (
+        ignore (_g := __new_2315);
+        __new_2315
       ));
       ignore (if HxArray.length out > 0 then ignore (HxArray.push out "") else ());
       let _g2 = ref 0 in let _g1 = Obj.magic (renderPhpHelperClass (Obj.magic cls)) in while !_g2 < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g2) : string) in (
-        ignore (let __old_2310 = !_g2 in let __new_2311 = HxInt.add __old_2310 1 in (
-          ignore (_g2 := __new_2311);
-          __new_2311
+        ignore (let __old_2316 = !_g2 in let __new_2317 = HxInt.add __old_2316 1 in (
+          ignore (_g2 := __new_2317);
+          __new_2317
         ));
         HxArray.push out line
       )) done
@@ -14190,18 +14210,18 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "    return ((value & 0xffffffff) >> (bits & 31))");
       ignore (HxArray.push lines "");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderSupportClasses (Obj.magic target) (Obj.magic program) (Obj.magic decl) (className : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_2573 = !_g in let __new_2574 = HxInt.add __old_2573 1 in (
-          ignore (_g := __new_2574);
-          __new_2574
+        ignore (let __old_2579 = !_g in let __new_2580 = HxInt.add __old_2579 1 in (
+          ignore (_g := __new_2580);
+          __new_2580
         ));
         HxArray.push lines line
       )) done);
       ignore (if not (HxString.equals (HxArray.get (Obj.magic lines) (HxInt.sub (HxArray.length lines) 1)) "# Generated by hxhx Stage3 Python source backend MVP") then ignore (HxArray.push lines "") else ());
       ignore (HxArray.push lines "def main():");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("    " : string) (HxString.toStdString className ^ ".main" : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_2575 = !_g in let __new_2576 = HxInt.add __old_2575 1 in (
-          ignore (_g := __new_2576);
-          __new_2576
+        ignore (let __old_2581 = !_g in let __new_2582 = HxInt.add __old_2581 1 in (
+          ignore (_g := __new_2582);
+          __new_2582
         ));
         HxArray.push lines line
       )) done);
@@ -14212,9 +14232,9 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
     | Java -> ignore ((
       ignore (HxArray.push lines "// Generated by hxhx Stage3 Java source backend MVP");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderJavaHeader (Obj.magic program) (Obj.magic decl) (className : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_2577 = !_g in let __new_2578 = HxInt.add __old_2577 1 in (
-          ignore (_g := __new_2578);
-          __new_2578
+        ignore (let __old_2583 = !_g in let __new_2584 = HxInt.add __old_2583 1 in (
+          ignore (_g := __new_2584);
+          __new_2584
         ));
         HxArray.push lines line
       )) done);
@@ -14227,9 +14247,9 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
         ignore (HxArray.push lines "    // hxhx Java sys compile shim: runtime UtilityProcess behavior is tracked separately.");
         HxArray.push lines "    return;"
       )) else ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("    " : string) (HxString.toStdString className ^ ".main" : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_2579 = !_g in let __new_2580 = HxInt.add __old_2579 1 in (
-          ignore (_g := __new_2580);
-          __new_2580
+        ignore (let __old_2585 = !_g in let __new_2586 = HxInt.add __old_2585 1 in (
+          ignore (_g := __new_2586);
+          __new_2586
         ));
         HxArray.push lines line
       )) done));
@@ -14243,9 +14263,9 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines (("public class " ^ HxString.toStdString className) ^ " {"));
       ignore (HxArray.push lines "  public static void Main(string[] args) {");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("    " : string) (HxString.toStdString className ^ ".Main" : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_2581 = !_g in let __new_2582 = HxInt.add __old_2581 1 in (
-          ignore (_g := __new_2582);
-          __new_2582
+        ignore (let __old_2587 = !_g in let __new_2588 = HxInt.add __old_2587 1 in (
+          ignore (_g := __new_2588);
+          __new_2588
         ));
         HxArray.push lines line
       )) done);
@@ -14891,17 +14911,17 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderSupportClasses (Obj.magic target) (Obj.magic program) (Obj.magic decl) (className : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_2583 = !_g in let __new_2584 = HxInt.add __old_2583 1 in (
-          ignore (_g := __new_2584);
-          __new_2584
+        ignore (let __old_2589 = !_g in let __new_2590 = HxInt.add __old_2589 1 in (
+          ignore (_g := __new_2590);
+          __new_2590
         ));
         HxArray.push lines line
       )) done);
       ignore (HxArray.push lines (("function " ^ HxString.toStdString className) ^ "_main() {"));
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("  " : string) (HxString.toStdString className ^ "_main" : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_2585 = !_g in let __new_2586 = HxInt.add __old_2585 1 in (
-          ignore (_g := __new_2586);
-          __new_2586
+        ignore (let __old_2591 = !_g in let __new_2592 = HxInt.add __old_2591 1 in (
+          ignore (_g := __new_2592);
+          __new_2592
         ));
         HxArray.push lines line
       )) done);
@@ -14913,9 +14933,9 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "-- Generated by hxhx Stage3 Lua source backend MVP");
       ignore (HxArray.push lines "local function main()");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("  " : string) (HxString.toStdString className ^ ".main" : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_2587 = !_g in let __new_2588 = HxInt.add __old_2587 1 in (
-          ignore (_g := __new_2588);
-          __new_2588
+        ignore (let __old_2593 = !_g in let __new_2594 = HxInt.add __old_2593 1 in (
+          ignore (_g := __new_2594);
+          __new_2594
         ));
         HxArray.push lines line
       )) done);

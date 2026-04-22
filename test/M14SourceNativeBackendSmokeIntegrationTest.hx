@@ -2749,6 +2749,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonMainClassConstructedAtRuntime():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_main_class_constructed_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("fixture", "", ENew("Main", []), pos),
+			SExpr(ECall(EField(EIdent("fixture"), "testExtern"), []), pos)
+		], "");
+		final testFn = new HxFunctionDecl("testExtern", HxVisibility.Public, false, [], "Void",
+			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("case")]), pos)], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn, testFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Main:", "Python backend should emit a runtime main class when main constructs Main()");
+		assertContains(content, "fixture = Main()", "Python backend should preserve Main construction inside the entrypoint");
+		assertContains(content, "def testExtern(self):", "Python backend should keep instance test methods on the emitted main class");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python main-class construction should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "case", "generated Python should run the constructed main-class instance method");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonMetaSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_meta_support_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -5474,6 +5503,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTypeSupport();
 		assertPythonStringToolsSupport();
 		assertPythonStdVectorNamespaceSupport();
+		assertPythonMainClassConstructedAtRuntime();
 		assertPythonMetaSupport();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();

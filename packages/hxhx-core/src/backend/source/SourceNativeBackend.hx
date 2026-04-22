@@ -5087,7 +5087,7 @@ class SourceNativeBackend {
 						sawTestIssuesMacro = true;
 					continue;
 				}
-				if (className == mainClassName || seen.exists(className))
+				if ((className == mainClassName && !pythonMainClassNeedsRuntimeSupport(cls)) || seen.exists(className))
 					continue;
 				seen.set(className, true);
 				packageByClassName.set(className, HxModuleDecl.getPackagePath(moduleDecl));
@@ -5238,6 +5238,18 @@ class SourceNativeBackend {
 				out.push(line);
 		}
 		return out;
+	}
+
+	static function pythonMainClassNeedsRuntimeSupport(cls:HxClassDecl):Bool {
+		if (HxClassDecl.getExtendsPath(cls) != null && HxClassDecl.getExtendsPath(cls).length > 0)
+			return true;
+		for (field in HxClassDecl.getFields(cls))
+			if (!HxFieldDecl.getIsStatic(field))
+				return true;
+		for (fn in HxClassDecl.getFunctions(cls))
+			if (!HxFunctionDecl.getIsStatic(fn))
+				return true;
+		return false;
 	}
 
 	static function renderPythonPackageNamespaceAliases(classes:Array<HxClassDecl>, packageByClassName:Map<String, String>,
