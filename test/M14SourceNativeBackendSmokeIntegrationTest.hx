@@ -1925,6 +1925,36 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonValueExceptionBaseSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("value-exception-base")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final subclass = new HxClassDecl("NoConstructorValueException", false, [], [], "ValueException");
+		final subclassDecl = new HxModuleDecl("", [], subclass, [subclass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("NoConstructorValueException.hx", subclassDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class ValueException(Exception):", "Python source backend should emit the ValueException base helper when subclasses need it");
+		assertContains(content, "class NoConstructorValueException(ValueException):", "Python support subclasses should keep their ValueException base");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python ValueException base support should import/run, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "value-exception-base", "generated Python should run after defining the ValueException base helper");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function arrayLiteralProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -4374,6 +4404,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonSkipsStdSupportClasses();
 		assertPythonSkipsMacroSupportMethods();
 		assertPythonStaticInitializersAfterSupportClasses();
+		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
 		assertConstructorExpression();

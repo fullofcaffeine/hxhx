@@ -5042,8 +5042,13 @@ class SourceNativeBackend {
 		for (typed in program.getTypedModules())
 			appendDeclClasses(typed.getParsed().getDecl(), typed.getParsed().getFilePath());
 		final pendingNames = new Map<String, Bool>();
-		for (cls in pending)
-			pendingNames.set(sanitizePythonIdentifier(HxClassDecl.getName(cls)), true);
+		var needsValueExceptionBase = false;
+		for (cls in pending) {
+			final pendingName = sanitizePythonIdentifier(HxClassDecl.getName(cls));
+			pendingNames.set(pendingName, true);
+			if (pythonBaseClassName(HxClassDecl.getExtendsPath(cls)) == "ValueException")
+				needsValueExceptionBase = true;
+		}
 		final ordered = new Array<HxClassDecl>();
 		final emittedNames = new Map<String, Bool>();
 		final remaining = pending.copy();
@@ -5068,6 +5073,8 @@ class SourceNativeBackend {
 				break;
 			}
 		}
+		if (needsValueExceptionBase && !pendingNames.exists("ValueException"))
+			appendPythonValueExceptionBase(out);
 		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
 			if (out.length > 0)
@@ -5082,6 +5089,18 @@ class SourceNativeBackend {
 				out.push(line);
 		}
 		return out;
+	}
+
+	static function appendPythonValueExceptionBase(out:Array<String>):Void {
+		out.push("class ValueException(Exception):");
+		out.push("    def __init__(self, value=None):");
+		out.push("        self.value = value");
+		out.push("        self.stack = []");
+		out.push("        super().__init__(str(value))");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def thrown(value):");
+		out.push("        return ValueException(value)");
 	}
 
 	static function renderPhpSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
