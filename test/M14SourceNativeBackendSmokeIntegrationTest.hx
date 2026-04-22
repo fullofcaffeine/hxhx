@@ -4025,6 +4025,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonArrayUpdateExpressionSyntax():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_array_update_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("arr", "", EArrayDecl([EInt(4), EInt(5)]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EBinop("+=", EArrayAccess(EIdent("arr"), EInt(0)), EInt(3))]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "def __hxhx_update_index(obj, index, op, value):", "Python runtime should include expression-position index update helper");
+		assertContains(content, "print(__hxhx_update_index(arr, 0, \"+\", 3))", "Python array update expressions should lower to parseable helper calls");
+		assertNotContains(content, "print(arr[0] += 3)", "Python should not emit augmented assignment syntax inside calls");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonThisUpdateReturnExpressionSyntax():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_this_update_return_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4236,6 +4258,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonReservedMethodNameSanitized();
 		assertPythonReservedLocalNameSanitized();
 		assertPythonLambdaUpdateExpressionSyntax();
+		assertPythonArrayUpdateExpressionSyntax();
 		assertPythonThisUpdateReturnExpressionSyntax();
 		assertPythonSwitchExpressionGuardSyntax();
 		assertPhpObjectPatternSwitchExpression();

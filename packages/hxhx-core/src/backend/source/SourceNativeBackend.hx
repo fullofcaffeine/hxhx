@@ -871,6 +871,17 @@ class SourceNativeBackend {
 				final renderedReceiver = renderExpr(Python, receiver);
 				final renderedField = sanitizePythonIdentifier(field);
 				pythonAssignAttrExpr(renderedReceiver, renderedField, pythonAssignedValueExpr(op, fieldAccess(Python, renderedReceiver, field), renderedRight));
+			case EArrayAccess(receiver, index):
+				final renderedReceiver = renderExpr(Python, receiver);
+				final renderedIndex = renderExpr(Python, index);
+				switch (op) {
+					case "=":
+						pythonAssignIndexExpr(renderedReceiver, renderedIndex, renderedRight);
+					case "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=":
+						pythonUpdateIndexExpr(renderedReceiver, renderedIndex, op.substr(0, op.length - 1), renderedRight);
+					case _:
+						null;
+				}
 			case EIdent(name):
 				final targetName = valueName(Python, name);
 				switch (op) {
@@ -909,6 +920,14 @@ class SourceNativeBackend {
 
 	static function pythonAssignAttrExpr(receiver:String, field:String, value:String):String {
 		return "__hxhx_assign_attr(" + receiver + ", " + quoteString(field) + ", " + value + ")";
+	}
+
+	static function pythonAssignIndexExpr(receiver:String, index:String, value:String):String {
+		return "__hxhx_assign_index(" + receiver + ", " + index + ", " + value + ")";
+	}
+
+	static function pythonUpdateIndexExpr(receiver:String, index:String, op:String, value:String):String {
+		return "__hxhx_update_index(" + receiver + ", " + index + ", " + quoteString(op) + ", " + value + ")";
 	}
 
 	static function phpModuloAssignExpr(left:HxExpr, right:HxExpr):String {
@@ -5646,6 +5665,37 @@ class SourceNativeBackend {
 				lines.push("def __hxhx_assign_attr(obj, field, value):");
 				lines.push("    setattr(obj, field, value)");
 				lines.push("    return value");
+				lines.push("");
+				lines.push("def __hxhx_assign_index(obj, index, value):");
+				lines.push("    obj[index] = value");
+				lines.push("    return value");
+				lines.push("");
+				lines.push("def __hxhx_update_index(obj, index, op, value):");
+				lines.push("    old = obj[index]");
+				lines.push("    if op == \"+\":");
+				lines.push("        next_value = (old + value)");
+				lines.push("    elif op == \"-\":");
+				lines.push("        next_value = (old - value)");
+				lines.push("    elif op == \"*\":");
+				lines.push("        next_value = (old * value)");
+				lines.push("    elif op == \"/\":");
+				lines.push("        next_value = (old / value)");
+				lines.push("    elif op == \"%\":");
+				lines.push("        next_value = (old % value)");
+				lines.push("    elif op == \"&\":");
+				lines.push("        next_value = (old & value)");
+				lines.push("    elif op == \"|\":");
+				lines.push("        next_value = (old | value)");
+				lines.push("    elif op == \"^\":");
+				lines.push("        next_value = (old ^ value)");
+				lines.push("    elif op == \"<<\":");
+				lines.push("        next_value = (old << value)");
+				lines.push("    elif op == \">>\":");
+				lines.push("        next_value = (old >> value)");
+				lines.push("    else:");
+				lines.push("        raise ValueError(\"unsupported hxhx index update operator: \" + op)");
+				lines.push("    obj[index] = next_value");
+				lines.push("    return next_value");
 				lines.push("");
 				lines.push("def __hxhx_post_update_index(obj, index, delta):");
 				lines.push("    old = obj[index]");
