@@ -2548,6 +2548,48 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonMetaSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_meta_support_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final fieldsCall:HxExpr = ECall(EField(EIdent("Meta"), "getFields"), [ENull]);
+		final staticsCall:HxExpr = ECall(EField(EIdent("Meta"), "getStatics"), [ENull]);
+		final typeCall:HxExpr = ECall(EField(EIdent("Meta"), "getType"), [ENull]);
+		function printNotNull(expr:HxExpr):HxStmt {
+			return SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EBinop("!=", expr, ENull)])]), pos);
+		}
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void",
+			[printNotNull(fieldsCall), printNotNull(staticsCall), printNotNull(typeCall)], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final getFieldsFn = new HxFunctionDecl("getFields", HxVisibility.Public, true, [new HxFunctionArg("cls", "Dynamic", NoDefault)], "Dynamic",
+			[SReturn(ENull, pos)], "");
+		final getStaticsFn = new HxFunctionDecl("getStatics", HxVisibility.Public, true, [new HxFunctionArg("cls", "Dynamic", NoDefault)], "Dynamic",
+			[SReturn(ENull, pos)], "");
+		final getTypeFn = new HxFunctionDecl("getType", HxVisibility.Public, true, [new HxFunctionArg("cls", "Dynamic", NoDefault)], "Dynamic",
+			[SReturn(ENull, pos)], "");
+		final metaClass = new HxClassDecl("Meta", false, [getFieldsFn, getStaticsFn, getTypeFn]);
+		final metaDecl = new HxModuleDecl("haxe.rtti", [], metaClass, [metaClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("/repo/std/haxe/rtti/Meta.hx", metaDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Meta:", "Python std Meta fallback should emit when haxe.rtti.Meta is excluded from helper classes");
+		assertContains(content, "def getFields(cls):", "Python std Meta fallback should expose getFields");
+		assertContains(content, "Meta.getFields(None)", "Python Meta.getFields calls should target the fallback helper");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python Meta fallback should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "True\nTrue\nTrue", "generated Python Meta fallback should return empty metadata objects");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -5129,6 +5171,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonReflectSupport();
 		assertPythonTypeSupport();
 		assertPythonStringToolsSupport();
+		assertPythonMetaSupport();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();

@@ -5044,6 +5044,7 @@ class SourceNativeBackend {
 		var sawStdReflect = false;
 		var sawStdType = false;
 		var sawStdStringTools = false;
+		var sawStdMeta = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			if (isStdSourceFile(filePath)) {
 				final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
@@ -5061,6 +5062,8 @@ class SourceNativeBackend {
 						sawStdType = true;
 					if ((packagePath == null || packagePath.length == 0) && className == "StringTools")
 						sawStdStringTools = true;
+					if (packagePath == "haxe.rtti" && className == "Meta")
+						sawStdMeta = true;
 				}
 				return;
 			}
@@ -5165,6 +5168,11 @@ class SourceNativeBackend {
 				out.push("");
 			appendPythonStringToolsSupport(out);
 		}
+		if (sawStdMeta && !pendingNames.exists("Meta")) {
+			if (out.length > 0)
+				out.push("");
+			appendPythonMetaSupport(out);
+		}
 		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
 			if (out.length > 0)
@@ -5188,6 +5196,10 @@ class SourceNativeBackend {
 		if (sawMacroCompiler && !pendingNames.exists("Compiler")) {
 			extraNamespaceClasses.push("Compiler");
 			packageByClassName.set("Compiler", "haxe.macro");
+		}
+		if (sawStdMeta && !pendingNames.exists("Meta")) {
+			extraNamespaceClasses.push("Meta");
+			packageByClassName.set("Meta", "haxe.rtti");
 		}
 		final namespaceAliases = renderPythonPackageNamespaceAliases(ordered, packageByClassName, extraNamespaceClasses);
 		if (namespaceAliases.length > 0) {
@@ -5441,6 +5453,21 @@ class SourceNativeBackend {
 		out.push("    @staticmethod");
 		out.push("    def endsWith(value, suffix):");
 		out.push("        return str(value).endswith(str(suffix))");
+	}
+
+	static function appendPythonMetaSupport(out:Array<String>):Void {
+		out.push("class Meta:");
+		out.push("    @staticmethod");
+		out.push("    def getFields(cls):");
+		out.push("        return hxhx_anon()");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def getStatics(cls):");
+		out.push("        return hxhx_anon()");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def getType(cls):");
+		out.push("        return hxhx_anon()");
 	}
 
 	static function appendPythonValueExceptionBase(out:Array<String>):Void {
