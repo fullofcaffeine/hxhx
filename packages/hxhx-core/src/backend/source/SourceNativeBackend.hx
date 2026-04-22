@@ -5043,6 +5043,7 @@ class SourceNativeBackend {
 		var sawMacroCompiler = false;
 		var sawStdReflect = false;
 		var sawStdType = false;
+		var sawStdStringTools = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			if (isStdSourceFile(filePath)) {
 				final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
@@ -5058,6 +5059,8 @@ class SourceNativeBackend {
 						sawStdReflect = true;
 					if ((packagePath == null || packagePath.length == 0) && className == "Type")
 						sawStdType = true;
+					if ((packagePath == null || packagePath.length == 0) && className == "StringTools")
+						sawStdStringTools = true;
 				}
 				return;
 			}
@@ -5156,6 +5159,11 @@ class SourceNativeBackend {
 			if (out.length > 0)
 				out.push("");
 			appendPythonTypeSupport(out);
+		}
+		if (sawStdStringTools && !pendingNames.exists("StringTools")) {
+			if (out.length > 0)
+				out.push("");
+			appendPythonStringToolsSupport(out);
 		}
 		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
@@ -5422,6 +5430,17 @@ class SourceNativeBackend {
 		out.push("                if name not in fields:");
 		out.push("                    fields.append(name)");
 		out.push("        return Array(fields)");
+	}
+
+	static function appendPythonStringToolsSupport(out:Array<String>):Void {
+		out.push("class StringTools:");
+		out.push("    @staticmethod");
+		out.push("    def startsWith(value, prefix):");
+		out.push("        return str(value).startswith(str(prefix))");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def endsWith(value, suffix):");
+		out.push("        return str(value).endswith(str(suffix))");
 	}
 
 	static function appendPythonValueExceptionBase(out:Array<String>):Void {

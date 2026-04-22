@@ -2503,6 +2503,51 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonStringToolsSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_string_tools_support_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		function printBool(expr:HxExpr):HxStmt {
+			return SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [expr])]), pos);
+		}
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			printBool(ECall(EField(EIdent("StringTools"), "startsWith"), [EString("testCase"), EString("test")])),
+			printBool(ECall(EField(EIdent("StringTools"), "startsWith"), [EString("testCase"), EString("case")])),
+			printBool(ECall(EField(EIdent("StringTools"), "endsWith"), [EString("testCase"), EString("Case")]))
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final startsWithFn = new HxFunctionDecl("startsWith", HxVisibility.Public, true, [
+			new HxFunctionArg("value", "String", NoDefault),
+			new HxFunctionArg("prefix", "String", NoDefault)
+		], "Bool", [SReturn(EBool(false), pos)], "");
+		final endsWithFn = new HxFunctionDecl("endsWith", HxVisibility.Public, true, [
+			new HxFunctionArg("value", "String", NoDefault),
+			new HxFunctionArg("suffix", "String", NoDefault)
+		], "Bool", [SReturn(EBool(false), pos)], "");
+		final stringToolsClass = new HxClassDecl("StringTools", false, [startsWithFn, endsWithFn]);
+		final stringToolsDecl = new HxModuleDecl("", [], stringToolsClass, [stringToolsClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("/repo/std/StringTools.hx", stringToolsDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class StringTools:", "Python std StringTools fallback should emit when std StringTools is excluded from helper classes");
+		assertContains(content, "def startsWith(value, prefix):", "Python std StringTools fallback should expose startsWith");
+		assertContains(content, "StringTools.startsWith(\"testCase\", \"test\")", "Python StringTools.startsWith calls should target the fallback helper");
+		assertContains(content, "def endsWith(value, suffix):", "Python std StringTools fallback should expose endsWith");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python StringTools fallback should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "True\nFalse\nTrue", "generated Python StringTools fallback should match startsWith/endsWith basics");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -5083,6 +5128,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonSameClassInstanceFieldRead();
 		assertPythonReflectSupport();
 		assertPythonTypeSupport();
+		assertPythonStringToolsSupport();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
