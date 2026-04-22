@@ -2350,6 +2350,61 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonSameClassInstanceFieldRead():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_same_class_instance_field_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final printField:HxStmt = SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("globalPattern")]), pos);
+		final printArg:HxStmt = SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("pattern")]), pos);
+		final printLocal:HxStmt = SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("localPattern")]), pos);
+		final printStatic:HxStmt = SExpr(ECall(EField(EIdent("Sys"), "println"), [EField(EIdent("Runner"), "staticPattern")]), pos);
+		final addCaseFn = new HxFunctionDecl("addCase", HxVisibility.Public, false, [new HxFunctionArg("pattern", "String", NoDefault)], "Void", [
+			SVar("localPattern", "String", EString("local"), pos),
+			printField,
+			printArg,
+			printLocal,
+			printStatic,
+			SExpr(EBinop("=", EIdent("globalPattern"), EString("updated")), pos),
+			printField
+		], "");
+		final runnerClass = new HxClassDecl("Runner", false, [addCaseFn], [
+			new HxFieldDecl("globalPattern", HxVisibility.Public, false, "String", EString("global")),
+			new HxFieldDecl("staticPattern", HxVisibility.Public, true, "String", EString("static"))
+		]);
+		final runnerDecl = new HxModuleDecl("", [], runnerClass, [runnerClass], false, false);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("runner", "", ENew("Runner", []), pos),
+			SExpr(ECall(EField(EIdent("runner"), "addCase"), [EString("arg")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("Runner.hx", runnerDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "print(self.globalPattern)", "Python same-class instance field reads should dispatch through self");
+		assertContains(content, "self.globalPattern = \"updated\"", "Python same-class instance field writes should dispatch through self");
+		assertContains(content, "print(pattern)", "Python method arguments should remain local identifiers");
+		assertContains(content, "print(localPattern)", "Python local variables should remain local identifiers");
+		assertContains(content, "print(Runner.staticPattern)", "Python class-qualified static fields should remain class-qualified");
+		assertNotContains(content, "print(globalPattern)", "Python same-class instance field reads should not emit unqualified globals");
+		assertNotContains(content, "self.pattern", "Python arguments should not be rewritten as instance fields");
+		assertNotContains(content, "self.localPattern", "Python locals should not be rewritten as instance fields");
+		assertNotContains(content, "self.staticPattern", "Python static fields should not be rewritten as instance fields");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python same-class instance fields should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "global\narg\nlocal\nstatic\nupdated",
+				"generated Python should resolve instance fields, arguments, locals, and static fields distinctly");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonReflectSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_reflect_support_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -5025,6 +5080,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonMacroCompilerStdFallback();
 		assertPythonOptionalMethodArguments();
 		assertPythonSameClassInstanceMethodCall();
+		assertPythonSameClassInstanceFieldRead();
 		assertPythonReflectSupport();
 		assertPythonTypeSupport();
 		assertPythonValueExceptionBaseSupport();

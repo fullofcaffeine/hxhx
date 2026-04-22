@@ -5908,95 +5908,144 @@ class SourceNativeBackend {
 		return names;
 	}
 
+	static function pythonInstanceFieldNames(cls:HxClassDecl):Map<String, Bool> {
+		final names:Map<String, Bool> = [];
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				names.set(HxFieldDecl.getName(field), true);
+		}
+		return names;
+	}
+
 	static function copyStringArray(values:Array<String>):Array<String> {
 		return values == null ? [] : values.copy();
 	}
 
-	static function pythonRewriteSameClassCallsInStmts(stmts:Array<HxStmt>, methodNames:Map<String, Bool>, locals:Array<String>):Array<HxStmt> {
-		return [for (stmt in stmts) pythonRewriteSameClassCallsInStmt(stmt, methodNames, locals)];
+	static function pythonRewriteSameClassMembersInStmts(stmts:Array<HxStmt>, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
+			locals:Array<String>):Array<HxStmt> {
+		return [
+			for (stmt in stmts)
+				pythonRewriteSameClassMembersInStmt(stmt, methodNames, fieldNames, locals)
+		];
 	}
 
-	static function pythonRewriteSameClassCallsInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, locals:Array<String>):HxStmt {
+	static function pythonRewriteSameClassMembersInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>, locals:Array<String>):HxStmt {
 		return switch (stmt) {
 			case SBlock(stmts, pos):
-				SBlock(pythonRewriteSameClassCallsInStmts(stmts, methodNames, copyStringArray(locals)), pos);
+				SBlock(pythonRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, copyStringArray(locals)), pos);
 			case SVar(name, typeHint, init, pos):
-				final rewrittenInit = init == null ? null : pythonRewriteSameClassCallExpr(init, methodNames, locals);
+				final rewrittenInit = init == null ? null : pythonRewriteSameClassMemberExpr(init, methodNames, fieldNames, locals);
 				if (locals.indexOf(name) < 0)
 					locals.push(name);
 				SVar(name, typeHint, rewrittenInit, pos);
 			case SIf(cond, thenBranch, elseBranch, pos):
-				SIf(pythonRewriteSameClassCallExpr(cond, methodNames, locals),
-					pythonRewriteSameClassCallsInStmt(thenBranch, methodNames, copyStringArray(locals)),
-					elseBranch == null ? null : pythonRewriteSameClassCallsInStmt(elseBranch, methodNames, copyStringArray(locals)), pos);
+				SIf(pythonRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMembersInStmt(thenBranch, methodNames, fieldNames, copyStringArray(locals)),
+					elseBranch == null ? null : pythonRewriteSameClassMembersInStmt(elseBranch, methodNames, fieldNames, copyStringArray(locals)), pos);
 			case SForIn(name, iterable, body, pos):
 				final bodyLocals = copyStringArray(locals);
 				if (bodyLocals.indexOf(name) < 0)
 					bodyLocals.push(name);
-				SForIn(name, pythonRewriteSameClassCallExpr(iterable, methodNames, locals), pythonRewriteSameClassCallsInStmt(body, methodNames, bodyLocals),
-					pos);
+				SForIn(name, pythonRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMembersInStmt(body, methodNames, fieldNames, bodyLocals), pos);
 			case SForKeyValue(keyName, valueName, iterable, body, pos):
 				final bodyLocals = copyStringArray(locals);
 				if (bodyLocals.indexOf(keyName) < 0)
 					bodyLocals.push(keyName);
 				if (bodyLocals.indexOf(valueName) < 0)
 					bodyLocals.push(valueName);
-				SForKeyValue(keyName, valueName, pythonRewriteSameClassCallExpr(iterable, methodNames, locals),
-					pythonRewriteSameClassCallsInStmt(body, methodNames, bodyLocals), pos);
+				SForKeyValue(keyName, valueName, pythonRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMembersInStmt(body, methodNames, fieldNames, bodyLocals), pos);
 			case SWhile(cond, body, pos):
-				SWhile(pythonRewriteSameClassCallExpr(cond, methodNames, locals),
-					pythonRewriteSameClassCallsInStmt(body, methodNames, copyStringArray(locals)), pos);
+				SWhile(pythonRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMembersInStmt(body, methodNames, fieldNames, copyStringArray(locals)), pos);
 			case SDoWhile(body, cond, pos):
-				SDoWhile(pythonRewriteSameClassCallsInStmt(body, methodNames, copyStringArray(locals)),
-					pythonRewriteSameClassCallExpr(cond, methodNames, locals), pos);
+				SDoWhile(pythonRewriteSameClassMembersInStmt(body, methodNames, fieldNames, copyStringArray(locals)),
+					pythonRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals), pos);
 			case SSwitch(scrutinee, patterns, bodies, pos):
-				SSwitch(pythonRewriteSameClassCallExpr(scrutinee, methodNames, locals), patterns, [
+				SSwitch(pythonRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, locals), patterns, [
 					for (body in bodies)
-						pythonRewriteSameClassCallsInStmt(body, methodNames, copyStringArray(locals))
+						pythonRewriteSameClassMembersInStmt(body, methodNames, fieldNames, copyStringArray(locals))
 				], pos);
 			case STry(tryBody, catches, pos):
-				STry(pythonRewriteSameClassCallsInStmt(tryBody, methodNames, copyStringArray(locals)), [
+				STry(pythonRewriteSameClassMembersInStmt(tryBody, methodNames, fieldNames, copyStringArray(locals)), [
 					for (c in catches) {
 						final catchLocals = copyStringArray(locals);
 						if (catchLocals.indexOf(c.name) < 0) catchLocals.push(c.name);
-						{name: c.name, typeHint: c.typeHint, body: pythonRewriteSameClassCallsInStmt(c.body, methodNames, catchLocals)};
+						{name: c.name, typeHint: c.typeHint, body: pythonRewriteSameClassMembersInStmt(c.body, methodNames, fieldNames, catchLocals)};
 					}
 				], pos);
 			case SThrow(expr, pos):
-				SThrow(pythonRewriteSameClassCallExpr(expr, methodNames, locals), pos);
+				SThrow(pythonRewriteSameClassMemberExpr(expr, methodNames, fieldNames, locals), pos);
 			case SReturn(expr, pos):
-				SReturn(pythonRewriteSameClassCallExpr(expr, methodNames, locals), pos);
+				SReturn(pythonRewriteSameClassMemberExpr(expr, methodNames, fieldNames, locals), pos);
 			case SExpr(expr, pos):
-				SExpr(pythonRewriteSameClassCallExpr(expr, methodNames, locals), pos);
+				SExpr(pythonRewriteSameClassMemberExpr(expr, methodNames, fieldNames, locals), pos);
 			case SBreak(_) | SContinue(_) | SReturnVoid(_):
 				stmt;
 		}
 	}
 
-	static function pythonRewriteSameClassCallExpr(expr:HxExpr, methodNames:Map<String, Bool>, locals:Array<String>):HxExpr {
+	static function pythonRewriteSameClassMemberExpr(expr:HxExpr, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>, locals:Array<String>):HxExpr {
 		return switch (expr) {
 			case ECall(EIdent(name), args) if (methodNames.exists(name) && locals.indexOf(name) < 0):
-				ECall(EField(EThis, name), [for (arg in args) pythonRewriteSameClassCallExpr(arg, methodNames, locals)]);
+				ECall(EField(EThis, name), [
+					for (arg in args)
+						pythonRewriteSameClassMemberExpr(arg, methodNames, fieldNames, locals)
+				]);
 			case ECall(callee, args):
-				ECall(pythonRewriteSameClassCallExpr(callee, methodNames, locals),
-					[for (arg in args) pythonRewriteSameClassCallExpr(arg, methodNames, locals)]);
+				ECall(pythonRewriteSameClassMemberExpr(callee, methodNames, fieldNames, locals), [
+					for (arg in args)
+						pythonRewriteSameClassMemberExpr(arg, methodNames, fieldNames, locals)
+				]);
+			case EIdent(name) if (fieldNames.exists(name) && locals.indexOf(name) < 0):
+				EField(EThis, name);
 			case EUnop(op, inner):
-				EUnop(op, pythonRewriteSameClassCallExpr(inner, methodNames, locals));
+				EUnop(op, pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals));
 			case EBinop(op, left, right):
-				EBinop(op, pythonRewriteSameClassCallExpr(left, methodNames, locals), pythonRewriteSameClassCallExpr(right, methodNames, locals));
+				EBinop(op, pythonRewriteSameClassMemberExpr(left, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMemberExpr(right, methodNames, fieldNames, locals));
 			case ETernary(cond, thenExpr, elseExpr):
-				ETernary(pythonRewriteSameClassCallExpr(cond, methodNames, locals), pythonRewriteSameClassCallExpr(thenExpr, methodNames, locals),
-					pythonRewriteSameClassCallExpr(elseExpr, methodNames, locals));
+				ETernary(pythonRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMemberExpr(thenExpr, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMemberExpr(elseExpr, methodNames, fieldNames, locals));
 			case EField(obj, field):
-				EField(pythonRewriteSameClassCallExpr(obj, methodNames, locals), field);
+				EField(pythonRewriteSameClassMemberExpr(obj, methodNames, fieldNames, locals), field);
 			case EArrayAccess(array, index):
-				EArrayAccess(pythonRewriteSameClassCallExpr(array, methodNames, locals), pythonRewriteSameClassCallExpr(index, methodNames, locals));
+				EArrayAccess(pythonRewriteSameClassMemberExpr(array, methodNames, fieldNames, locals),
+					pythonRewriteSameClassMemberExpr(index, methodNames, fieldNames, locals));
 			case EArrayDecl(values):
-				EArrayDecl([for (value in values) pythonRewriteSameClassCallExpr(value, methodNames, locals)]);
+				EArrayDecl([
+					for (value in values)
+						pythonRewriteSameClassMemberExpr(value, methodNames, fieldNames, locals)
+				]);
+			case EAnon(anonFieldNames, fieldValues):
+				EAnon(anonFieldNames, [
+					for (value in fieldValues)
+						pythonRewriteSameClassMemberExpr(value, methodNames, fieldNames, locals)
+				]);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				final bodyLocals = copyStringArray(locals);
+				if (bodyLocals.indexOf(name) < 0)
+					bodyLocals.push(name);
+				EArrayComprehension(name, pythonRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, locals),
+					guardExpr == null ? null : pythonRewriteSameClassMemberExpr(guardExpr, methodNames, fieldNames, bodyLocals),
+					pythonRewriteSameClassMemberExpr(yieldExpr, methodNames, fieldNames, bodyLocals));
+			case ELambda(args, body):
+				final bodyLocals = copyStringArray(locals);
+				for (arg in args)
+					if (bodyLocals.indexOf(arg) < 0)
+						bodyLocals.push(arg);
+				ELambda(args, pythonRewriteSameClassMemberExpr(body, methodNames, fieldNames, bodyLocals));
+			case ENew(typePath, args):
+				ENew(typePath, [
+					for (arg in args)
+						pythonRewriteSameClassMemberExpr(arg, methodNames, fieldNames, locals)
+				]);
 			case ECast(inner, typeHint):
-				ECast(pythonRewriteSameClassCallExpr(inner, methodNames, locals), typeHint);
+				ECast(pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals), typeHint);
 			case EUntyped(inner):
-				EUntyped(pythonRewriteSameClassCallExpr(inner, methodNames, locals));
+				EUntyped(pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals));
 			case _:
 				expr;
 		}
@@ -6029,6 +6078,7 @@ class SourceNativeBackend {
 		}
 		var sawConstructor = false;
 		final instanceMethodNames = pythonInstanceMethodNames(cls);
+		final instanceFieldNames = pythonInstanceFieldNames(cls);
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (isCompileTimeOnlyFunction(fn))
 				continue;
@@ -6058,7 +6108,7 @@ class SourceNativeBackend {
 			}
 			if (!renderPythonSpecialHelperFunctionBody(out, className, HxFunctionDecl.getName(fn))) {
 				final body = !isStatic
-					|| isCtor ? pythonRewriteSameClassCallsInStmts(HxFunctionDecl.getBody(fn), instanceMethodNames,
+					|| isCtor ? pythonRewriteSameClassMembersInStmts(HxFunctionDecl.getBody(fn), instanceMethodNames, instanceFieldNames,
 						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : HxFunctionDecl.getBody(fn);
 				for (line in renderFunctionStmts(Python, body, "        ", className + "." + HxFunctionDecl.getName(fn)))
 					out.push(line);
