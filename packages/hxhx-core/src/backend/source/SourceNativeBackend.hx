@@ -5040,6 +5040,7 @@ class SourceNativeBackend {
 		var sawStdStringMap = false;
 		var sawUnitBuilderMacro = false;
 		var sawTestIssuesMacro = false;
+		var sawMacroCompiler = false;
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			if (isStdSourceFile(filePath)) {
 				final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
@@ -5049,6 +5050,8 @@ class SourceNativeBackend {
 						sawStdDateTools = true;
 					if (packagePath == "haxe.ds" && className == "StringMap")
 						sawStdStringMap = true;
+					if (packagePath == "haxe.macro" && className == "Compiler")
+						sawMacroCompiler = true;
 				}
 				return;
 			}
@@ -5133,6 +5136,11 @@ class SourceNativeBackend {
 				out.push("");
 			appendPythonTestIssuesSupport(out);
 		}
+		if (sawMacroCompiler && !pendingNames.exists("Compiler")) {
+			if (out.length > 0)
+				out.push("");
+			appendPythonMacroCompilerSupport(out);
+		}
 		final postStaticInitializers = new Array<String>();
 		for (cls in ordered) {
 			if (out.length > 0)
@@ -5152,6 +5160,10 @@ class SourceNativeBackend {
 		if (sawTestIssuesMacro && !pendingNames.exists("TestIssues")) {
 			extraNamespaceClasses.push("TestIssues");
 			packageByClassName.set("TestIssues", "unit");
+		}
+		if (sawMacroCompiler && !pendingNames.exists("Compiler")) {
+			extraNamespaceClasses.push("Compiler");
+			packageByClassName.set("Compiler", "haxe.macro");
 		}
 		final namespaceAliases = renderPythonPackageNamespaceAliases(ordered, packageByClassName, extraNamespaceClasses);
 		if (namespaceAliases.length > 0) {
@@ -5305,6 +5317,23 @@ class SourceNativeBackend {
 		out.push("class TestIssues:");
 		out.push("    @staticmethod");
 		out.push("    def addIssueClasses(dir, pack):");
+		out.push("        return None");
+	}
+
+	static function appendPythonMacroCompilerSupport(out:Array<String>):Void {
+		out.push("class Compiler:");
+		out.push("    __hx_defines = {}");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def getDefine(key):");
+		out.push("        return Compiler.__hx_defines.get(key, None)");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def define(key, value=\"1\"):");
+		out.push("        Compiler.__hx_defines[key] = value");
+		out.push("");
+		out.push("    @staticmethod");
+		out.push("    def excludeFile(path):");
 		out.push("        return None");
 	}
 

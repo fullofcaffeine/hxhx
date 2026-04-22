@@ -2213,6 +2213,55 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonMacroCompilerStdFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_macro_compiler_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final defineCall:HxExpr = ECall(EField(EIdent("Compiler"), "define"), [EString("UTEST_PATTERN"), EString("abc")]);
+		final getDefinedCall:HxExpr = ECall(EField(EIdent("Compiler"), "getDefine"), [EString("UTEST_PATTERN")]);
+		final getMissingCall:HxExpr = ECall(EField(EIdent("Compiler"), "getDefine"), [EString("MISSING")]);
+		final excludeCall:HxExpr = ECall(EField(EIdent("Compiler"), "excludeFile"), [EString("ignored.hx")]);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(defineCall, pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [getDefinedCall])]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [getMissingCall])]), pos),
+			SExpr(excludeCall, pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final keyArg = new HxFunctionArg("key", "String", NoDefault);
+		final valueArg = new HxFunctionArg("value", "String", NoDefault);
+		final pathArg = new HxFunctionArg("path", "String", NoDefault);
+		final compilerClass = new HxClassDecl("Compiler", false, [
+			new HxFunctionDecl("getDefine", HxVisibility.Public, true, [keyArg], "String",
+				[SExpr(EUnsupported("compiler-get-define-std-source-should-not-render"), pos)], ""),
+			new HxFunctionDecl("define", HxVisibility.Public, true, [keyArg, valueArg], "Void",
+				[SExpr(EUnsupported("compiler-define-std-source-should-not-render"), pos)], ""),
+			new HxFunctionDecl("excludeFile", HxVisibility.Public, true, [pathArg], "Void",
+				[SExpr(EUnsupported("compiler-exclude-file-std-source-should-not-render"), pos)], "")
+		]);
+		final compilerDecl = new HxModuleDecl("haxe.macro", [], compilerClass, [compilerClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("std/haxe/macro/Compiler.hx", compilerDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Compiler:", "Python support should synthesize a haxe.macro.Compiler fallback from std source");
+		assertContains(content, "def getDefine(key):", "Python Compiler fallback should expose getDefine");
+		assertContains(content, "haxe.macro.Compiler = Compiler", "Python support should expose Compiler through the haxe.macro namespace");
+		assertNotContains(content, "compiler-get-define-std-source-should-not-render", "Python Compiler fallback should not render std source bodies");
+		if (commandExists("python3")) {
+			final run = commandOutput("python3", [outputPath]);
+			assertTrue(run.code == 0, "generated Python Compiler fallback should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "abc\nNone", "generated Python Compiler fallback should store defines and return None for missing defines");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonValueExceptionBaseSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_value_exception_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -4762,6 +4811,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonUnitBuilderMacroNamespaceFallback();
 		assertPythonTestIssuesMacroFallback();
 		assertPythonArrayRuntimeShim();
+		assertPythonMacroCompilerStdFallback();
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
