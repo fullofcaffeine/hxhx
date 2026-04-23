@@ -845,6 +845,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpHelperMacroFoldProgram():GenIrProgram {
+		final src = [
+			"import haxe.Exception;",
+			"class HelperMacros {",
+			"  public static function parseAndPrint(s:String) { }",
+			"  public static function typeString(e) { return \"\"; }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    HelperMacros.parseAndPrint(\"try { } catch(e) { }\");",
+			"    Sys.println(HelperMacros.typeString(try throw new Exception(\"\") catch(e) e));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpNotImplementedExceptionProgram():GenIrProgram {
+		final src = [
+			"import haxe.exceptions.NotImplementedException;",
+			"class Main {",
+			"  static function main() {",
+			"    try {",
+			"      throw new NotImplementedException();",
+			"    } catch (e:NotImplementedException) {",
+			"      Sys.println(\"not-implemented\");",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeErrorProbeProgram():GenIrProgram {
 		final src = [
 			"class HelperMacros {",
@@ -4787,6 +4824,40 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "1", "generated PHP Std.downcast should recognize haxe.Exception values");
 		}
 		deleteRecursive(stackTmpRoot);
+
+		final macroTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_helper_macro_fold_" + Std.string(Date.now().getTime()));
+		deleteRecursive(macroTmpRoot);
+		FileSystem.createDirectory(macroTmpRoot);
+		backend.emit(phpHelperMacroFoldProgram(), new BackendContext(macroTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final macroContent = File.getContent(Path.join([macroTmpRoot, "index.php"]));
+		assertNotContains(macroContent, "HelperMacros::parseAndPrint", "PHP compile-time macro helper calls should fold away");
+		assertContains(macroContent, "\"haxe.Exception\"", "PHP HelperMacros.typeString try/catch probe should fold to haxe.Exception");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([macroTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP helper macro folds should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "haxe.Exception", "generated PHP helper macro typeString fold should preserve expected type string");
+		}
+		deleteRecursive(macroTmpRoot);
+
+		final notImplementedTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_not_implemented_exception_" + Std.string(Date.now().getTime()));
+		deleteRecursive(notImplementedTmpRoot);
+		FileSystem.createDirectory(notImplementedTmpRoot);
+		backend.emit(phpNotImplementedExceptionProgram(), new BackendContext(notImplementedTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final notImplementedContent = File.getContent(Path.join([notImplementedTmpRoot, "index.php"]));
+		assertContains(notImplementedContent, "class NotImplementedException extends PosException",
+			"PHP runtime should expose haxe.exceptions.NotImplementedException");
+		assertContains(notImplementedContent, "function __hxhx_class_name($name)", "PHP runtime should map emitted PHP class names back to Haxe names");
+		assertContains(notImplementedContent, "function __hxhx_pos_infos()", "PHP runtime should infer PosException position metadata from debug_backtrace");
+		assertContains(notImplementedContent, "new NotImplementedException()",
+			"PHP haxe.exceptions.NotImplementedException construction should emit a runtime class");
+		assertContains(notImplementedContent, "class_exists($short) && $caught instanceof $short",
+			"PHP catch matching should recognize runtime exception wrappers before unwrapping values");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([notImplementedTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP NotImplementedException support should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "not-implemented", "generated PHP should catch haxe.exceptions.NotImplementedException");
+		}
+		deleteRecursive(notImplementedTmpRoot);
 	}
 
 	static function assertPhpTypeErrorProbe():Void {

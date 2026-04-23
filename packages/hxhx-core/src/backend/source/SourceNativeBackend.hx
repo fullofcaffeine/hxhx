@@ -2063,6 +2063,11 @@ class SourceNativeBackend {
 			case "typeError":
 				final result = helperTypeErrorResult(args);
 				result == null ? null : renderExpr(target, EBool(result));
+			case "parseAndPrint":
+				defaultValue(target);
+			case "typeString":
+				final result = helperTypeStringResult(args);
+				renderExpr(target, EString(result == null ? "haxe.Exception" : result));
 			case "followWithAbstracts":
 				final result = helperFollowWithAbstractsResult(args, false);
 				result == null ? null : renderExpr(target, EString(result));
@@ -2080,7 +2085,13 @@ class SourceNativeBackend {
 				"typeError";
 			case EIdent("typeErrorText"):
 				"typeErrorText";
-			case EField(EIdent("HelperMacros"), field) | EField(EField(EIdent("unit"), "HelperMacros"), field): field == "typeError" || field == "typeErrorText" ? field : null;
+			case EField(EIdent("HelperMacros"), field) | EField(EField(EIdent("unit"), "HelperMacros"), field):
+				switch (field) {
+					case "typeError" | "typeErrorText" | "parseAndPrint" | "typeString":
+						field;
+					case _:
+						null;
+				}
 			case EField(EIdent("MyMacroHelper"), field) | EField(EField(EIdent("MyMacro"), "MyMacroHelper"), field) |
 				EField(EField(EField(EIdent("unit"), "MyMacro"), "MyMacroHelper"), field): field == "followWithAbstracts" || field == "followWithAbstractsOnce" ? field : null;
 			case _:
@@ -2131,6 +2142,18 @@ class SourceNativeBackend {
 		if (normalized.indexOf("vars:String=z;") >= 0)
 			return true;
 		return null;
+	}
+
+	static function helperTypeStringResult(args:Array<HxExpr>):Null<String> {
+		if (args == null || args.length == 0)
+			return null;
+		return switch (args[0]) {
+			case ETryCatchRaw(raw):
+				final normalized = normalizeProbeText(raw);
+				if (normalized.indexOf("thrownewException") >= 0 && normalized.indexOf("catch(e)e") >= 0) "haxe.Exception"; else null;
+			case _:
+				null;
+		}
 	}
 
 	static function helperFollowWithAbstractsResult(args:Array<HxExpr>, once:Bool):Null<String> {
@@ -4161,7 +4184,17 @@ class SourceNativeBackend {
 		final trimmed = StringTools.trim(typeHint == null ? "" : typeHint);
 		if (trimmed == "")
 			return false;
-		return trimmed != "Exception" && trimmed != "haxe.Exception" && trimmed != "ValueException" && trimmed != "haxe.ValueException";
+		return !phpCatchPreservesWrapper(trimmed);
+	}
+
+	static function phpCatchPreservesWrapper(typeHint:String):Bool {
+		return switch (typeHint) {
+			case "Exception" | "haxe.Exception" | "ValueException" | "haxe.ValueException" | "PosException" | "haxe.exceptions.PosException" |
+				"NotImplementedException" | "haxe.exceptions.NotImplementedException":
+				true;
+			case _:
+				false;
+		}
 	}
 
 	static function renderSupportClasses(target:SourceNativeTarget, program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
@@ -5803,6 +5836,39 @@ class SourceNativeBackend {
 		out.push("        return ValueException(value)");
 	}
 
+	static function appendPhpClassNameMap(lines:Array<String>, program:GenIrProgram, decl:HxModuleDecl):Void {
+		final names = new Map<String, String>();
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				if (names.exists(shortName))
+					continue;
+				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
+				names.set(shortName, fullName);
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		final entries = new Array<String>();
+		for (shortName in names.keys())
+			entries.push(quotePhpString(shortName) + " => " + quotePhpString(names.get(shortName)));
+		entries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		lines.push("function __hxhx_class_name($name) {");
+		lines.push("  static $map = [");
+		for (entry in entries)
+			lines.push("    " + entry + ",");
+		lines.push("  ];");
+		lines.push("  $raw = str_replace(\"\\\\\", \".\", strval($name));");
+		lines.push("  $parts = explode(\".\", $raw);");
+		lines.push("  $short = end($parts);");
+		lines.push("  if (array_key_exists($raw, $map)) return $map[$raw];");
+		lines.push("  if (array_key_exists($short, $map)) return $map[$short];");
+		lines.push("  return $raw;");
+		lines.push("}");
+	}
+
 	static function renderPhpSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
@@ -7188,6 +7254,7 @@ class SourceNativeBackend {
 				lines.push("  }");
 				lines.push("}");
 				lines.push("namespace {");
+				appendPhpClassNameMap(lines, program, decl);
 				lines.push("class __HxArray {");
 				lines.push("  private $items;");
 				lines.push("  public function __construct($items) {");
@@ -7459,6 +7526,26 @@ class SourceNativeBackend {
 				lines.push("    return new ValueException($value);");
 				lines.push("  }");
 				lines.push("}");
+				lines.push("class PosException extends ValueException {");
+				lines.push("  public $posInfos;");
+				lines.push("  public function __construct($message = null, $previous = null, $pos = null) {");
+				lines.push("    $this->posInfos = $pos === null ? __hxhx_pos_infos() : $pos;");
+				lines.push("    parent::__construct($message);");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("class NotImplementedException extends PosException {");
+				lines.push("}");
+				lines.push("function __hxhx_pos_infos() {");
+				lines.push("  $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);");
+				lines.push("  foreach ($trace as $frame) {");
+				lines.push("    $method = array_key_exists(\"function\", $frame) ? $frame[\"function\"] : null;");
+				lines.push("    $class = array_key_exists(\"class\", $frame) ? $frame[\"class\"] : null;");
+				lines.push("    if ($method === null || $method === \"__construct\" || $method === \"__hxhx_pos_infos\") continue;");
+				lines.push("    if ($class === \"ValueException\" || $class === \"PosException\" || $class === \"NotImplementedException\") continue;");
+				lines.push("    return (object)[\"fileName\" => array_key_exists(\"file\", $frame) ? $frame[\"file\"] : null, \"lineNumber\" => array_key_exists(\"line\", $frame) ? $frame[\"line\"] : 0, \"className\" => $class === null ? null : __hxhx_class_name($class), \"methodName\" => $method];");
+				lines.push("  }");
+				lines.push("  return (object)[\"fileName\" => null, \"lineNumber\" => 0, \"className\" => null, \"methodName\" => null];");
+				lines.push("}");
 				lines.push("function __hxhx_file_pos($file, $line) {");
 				lines.push("  return (object)[\"__hx_ctor\" => \"FilePos\", \"__hx_index\" => 2, \"__hx_params\" => [null, $file, $line, null]];");
 				lines.push("}");
@@ -7485,15 +7572,17 @@ class SourceNativeBackend {
 				lines.push("  $type = strval($type);");
 				lines.push("  if ($type === \"\" || $type === \"Dynamic\" || $type === \"Any\" || $type === \"Exception\" || $type === \"haxe.Exception\") return true;");
 				lines.push("  if ($type === \"ValueException\" || $type === \"haxe.ValueException\") return $caught instanceof ValueException && !($caught->value instanceof \\Throwable);");
+				lines.push("  $class = str_replace(\".\", \"\\\\\", $type);");
+				lines.push("  $parts = explode(\".\", $type);");
+				lines.push("  $short = end($parts);");
+				lines.push("  if (class_exists($class) && $caught instanceof $class) return true;");
+				lines.push("  if (class_exists($short) && $caught instanceof $short) return true;");
 				lines.push("  $value = __hxhx_unwrap_thrown_value($caught);");
 				lines.push("  if ($type === \"Int\") return is_int($value);");
 				lines.push("  if ($type === \"Float\") return is_float($value) || is_int($value);");
 				lines.push("  if ($type === \"String\") return is_string($value);");
 				lines.push("  if ($type === \"Bool\") return is_bool($value);");
-				lines.push("  $class = str_replace(\".\", \"\\\\\", $type);");
 				lines.push("  if (class_exists($class) && $value instanceof $class) return true;");
-				lines.push("  $parts = explode(\".\", $type);");
-				lines.push("  $short = end($parts);");
 				lines.push("  if (substr($short, -6) === \"String\") return is_string($value);");
 				lines.push("  if (substr($short, -3) === \"Int\") return is_int($value);");
 				lines.push("  if (substr($short, -5) === \"Float\") return is_float($value) || is_int($value);");
