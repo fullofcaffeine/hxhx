@@ -1,3 +1,10 @@
+## [0.15.6](https://github.com/fullofcaffeine/hxhx/compare/v0.15.5...v0.15.6) (2026-04-23)
+
+
+### Bug Fixes
+
+* **php:** match abstract and enum catches ([63c8f99](https://github.com/fullofcaffeine/hxhx/commit/63c8f9933feed444b6b16e3a29b9a9a81dd74c01))
+
 ## [0.15.5](https://github.com/fullofcaffeine/hxhx/compare/v0.15.4...v0.15.5) (2026-04-23)
 
 
