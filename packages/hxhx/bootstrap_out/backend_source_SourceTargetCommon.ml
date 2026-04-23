@@ -6668,7 +6668,7 @@ let appendPhpXmlRuntime = fun lines -> ignore ((
   ignore (HxArray.push lines "  }");
   ignore (HxArray.push lines "  public function __toString() { return $this->toString(); }");
   ignore (HxArray.push lines "  private static function escapeAttr($value) {");
-  ignore (HxArray.push lines "    return str_replace([\"&\", \"\\\"\", \"'\", \"<\", \">\"], [\"&amp;\", \"&quot;\", \"&apos;\", \"&lt;\", \"&gt;\"], strval($value));");
+  ignore (HxArray.push lines "    return str_replace([\"&\", \"\\\"\", \"'\", \"<\", \">\"], [\"&amp;\", \"&quot;\", \"&#039;\", \"&lt;\", \"&gt;\"], strval($value));");
   ignore (HxArray.push lines "  }");
   HxArray.push lines "}"
 ))

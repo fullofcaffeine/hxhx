@@ -6377,7 +6377,7 @@ class SourceTargetCommon {
 		lines.push("  }");
 		lines.push("  public function __toString() { return $this->toString(); }");
 		lines.push("  private static function escapeAttr($value) {");
-		lines.push("    return str_replace([\"&\", \"\\\"\", \"'\", \"<\", \">\"], [\"&amp;\", \"&quot;\", \"&apos;\", \"&lt;\", \"&gt;\"], strval($value));");
+		lines.push("    return str_replace([\"&\", \"\\\"\", \"'\", \"<\", \">\"], [\"&amp;\", \"&quot;\", \"&#039;\", \"&lt;\", \"&gt;\"], strval($value));");
 		lines.push("  }");
 		lines.push("}");
 	}
