@@ -1319,6 +1319,8 @@ class SourceNativeBackend {
 						"[Reflect::class, \"compare\"]";
 					else
 						phpStaticPropertyAccess(typePath, field);
+				} else if (field == "message") {
+					"__hxhx_message_field(" + renderExpr(target, receiver) + ")";
 				} else {
 					fieldAccess(target, renderExpr(target, receiver), field);
 				}
@@ -2213,21 +2215,65 @@ class SourceNativeBackend {
 		for (line in renderReturningStmt(Php, tryBody, "    "))
 			out.push(line);
 		out.push("  }");
-		if (catches == null || catches.length == 0) {
-			out.push("  catch (\\Throwable $e) {");
-			out.push("    throw $e;");
-			out.push("  }");
-		} else {
-			for (c in catches) {
-				final catchName = sanitizeTypeName(c.name);
-				out.push("  catch (\\Throwable $" + catchName + ") {");
-				for (line in renderReturningStmt(Php, c.body, "    "))
-					out.push(line);
-				out.push("  }");
-			}
-		}
+		renderPhpCatchChain(out, "  ", "\\Throwable", catches, function(c, bodyIndent) return renderReturningStmt(Php, c.body, bodyIndent));
 		out.push("})()");
 		return out.join("\n");
+	}
+
+	static function renderPhpCatchChain(out:Array<String>, indent:String, catchType:String, catches:Array<{name:String, typeHint:String, body:HxStmt}>,
+			renderBody:{name:String, typeHint:String, body:HxStmt}->String->Array<String>):Void {
+		final childIndent = indent + "  ";
+		final bodyIndent = childIndent + "  ";
+		final caughtName = "__hxhx_caught";
+		out.push(indent + "catch (" + catchType + " $" + caughtName + ") {");
+		if (catches == null || catches.length == 0) {
+			out.push(childIndent + "throw $" + caughtName + ";");
+		} else {
+			for (i in 0...catches.length) {
+				final c = catches[i];
+				final keyword = i == 0 ? "if" : "else if";
+				out.push(childIndent + keyword + " (" + phpCatchMatches("$" + caughtName, c.typeHint) + ") {");
+				for (line in phpCatchBindLines(c, "$" + caughtName, bodyIndent))
+					out.push(line);
+				for (line in renderBody(c, bodyIndent))
+					out.push(line);
+				out.push(childIndent + "}");
+			}
+			out.push(childIndent + "else {");
+			out.push(bodyIndent + "throw $" + caughtName + ";");
+			out.push(childIndent + "}");
+		}
+		out.push(indent + "}");
+	}
+
+	static function phpCatchBindLines(c:{name:String, typeHint:String, body:HxStmt}, caughtExpr:String, indent:String):Array<String> {
+		final catchName = sanitizeTypeName(c.name);
+		final value = shouldUnwrapPhpCatch(c.typeHint) ? "__hxhx_unwrap_thrown_value(" + caughtExpr + ")" : caughtExpr;
+		return [indent + "$" + catchName + " = " + value + ";"];
+	}
+
+	static function phpCatchMatches(caughtExpr:String, typeHint:String):String {
+		final trimmed = StringTools.trim(typeHint == null ? "" : typeHint);
+		return switch (trimmed) {
+			case "" | "Dynamic" | "Any" | "Exception" | "haxe.Exception":
+				"true";
+			case "ValueException" | "haxe.ValueException":
+				caughtExpr + " instanceof ValueException";
+			case "Int":
+				"is_int(__hxhx_unwrap_thrown_value(" + caughtExpr + "))";
+			case "Float":
+				"(is_float(__hxhx_unwrap_thrown_value("
+				+ caughtExpr
+				+ ")) || is_int(__hxhx_unwrap_thrown_value("
+				+ caughtExpr
+				+ ")))";
+			case "String":
+				"is_string(__hxhx_unwrap_thrown_value(" + caughtExpr + "))";
+			case "Bool":
+				"is_bool(__hxhx_unwrap_thrown_value(" + caughtExpr + "))";
+			case _:
+				"__hxhx_unwrap_thrown_value(" + caughtExpr + ") instanceof " + sanitizePhpTypePath(trimmed);
+		}
 	}
 
 	static function renderReturningStmt(target:SourceNativeTarget, stmt:HxStmt, indent:String):Array<String> {
@@ -3894,19 +3940,7 @@ class SourceNativeBackend {
 				for (line in renderStmt(target, tryBody, childIndent))
 					out.push(line);
 				out.push(indent + "}");
-				if (catches == null || catches.length == 0) {
-					out.push(indent + "catch (\\Exception $e) {");
-					out.push(childIndent + "throw $e;");
-					out.push(indent + "}");
-				} else {
-					for (c in catches) {
-						final catchName = sanitizeTypeName(c.name);
-						out.push(indent + "catch (\\Exception $" + catchName + ") {");
-						for (line in renderStmt(target, c.body, childIndent))
-							out.push(line);
-						out.push(indent + "}");
-					}
-				}
+				renderPhpCatchChain(out, indent, "\\Exception", catches, function(c, bodyIndent) return renderStmt(target, c.body, bodyIndent));
 			case Lua:
 				throw targetLabel(target) + " source backend MVP unsupported statement: STry";
 		}
@@ -4125,9 +4159,14 @@ class SourceNativeBackend {
 			case Python: "raise Exception(" + expr + ")";
 			case Java: "throw new RuntimeException(String.valueOf(" + expr + "));";
 			case Cs: "throw new System.Exception(System.Convert.ToString(" + expr + "));";
-			case Php: "throw new \\Exception(strval(" + expr + "));";
+			case Php: "throw ValueException::thrown(" + expr + ");";
 			case Lua: "error(" + expr + ")";
 		};
+	}
+
+	static function shouldUnwrapPhpCatch(typeHint:String):Bool {
+		final trimmed = StringTools.trim(typeHint == null ? "" : typeHint);
+		return trimmed != "Exception" && trimmed != "haxe.Exception" && trimmed != "ValueException" && trimmed != "haxe.ValueException";
 	}
 
 	static function renderSupportClasses(target:SourceNativeTarget, program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
@@ -7261,8 +7300,17 @@ class SourceNativeBackend {
 				lines.push("    parent::__construct(strval($value));");
 				lines.push("  }");
 				lines.push("  public static function thrown($value) {");
+				lines.push("    if ($value instanceof ValueException) return $value;");
 				lines.push("    return new ValueException($value);");
 				lines.push("  }");
+				lines.push("}");
+				lines.push("function __hxhx_unwrap_thrown_value($value) {");
+				lines.push("  return $value instanceof ValueException ? $value->value : $value;");
+				lines.push("}");
+				lines.push("function __hxhx_message_field($value) {");
+				lines.push("  if ($value instanceof \\Throwable) return $value->getMessage();");
+				lines.push("  if (is_array($value) && array_key_exists(\"message\", $value)) return $value[\"message\"];");
+				lines.push("  return $value->message;");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_var(&$value, $delta) {");
 				lines.push("  $old = $value;");

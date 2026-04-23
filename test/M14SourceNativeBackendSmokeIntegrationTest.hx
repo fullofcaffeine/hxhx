@@ -654,6 +654,61 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpExceptionCatchProgram():GenIrProgram {
+		final src = [
+			"import haxe.Exception;",
+			"class Main {",
+			"  static function main() {",
+			"    try {",
+			"      throw 123;",
+			"    } catch (e:Exception) {",
+			"      Sys.println(e.message);",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpCustomExceptionCatchProgram():GenIrProgram {
+		final src = [
+			"import haxe.Exception;",
+			"class CustomHaxeException extends Exception { }",
+			"class Main {",
+			"  static function main() {",
+			"    try {",
+			"      throw new CustomHaxeException(\"boom\");",
+			"    } catch (e:CustomHaxeException) {",
+			"      Sys.println(e);",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpValueExceptionCatchProgram():GenIrProgram {
+		final src = [
+			"import haxe.ValueException;",
+			"class Main {",
+			"  static function main() {",
+			"    try {",
+			"      throw 123;",
+			"    } catch (e:ValueException) {",
+			"      Sys.println(e.value);",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeErrorProbeProgram():GenIrProgram {
 		final src = [
 			"class HelperMacros {",
@@ -4441,9 +4496,60 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$label = (function() {", "PHP try/catch expressions should lower through an immediate closure");
 		assertContains(content, "try {", "PHP try/catch expressions should preserve the try block");
 		assertContains(content, "return \"ok\";", "PHP try/catch expression try bodies should return their final value");
-		assertContains(content, "catch (\\Throwable $e) {", "PHP try/catch expressions should catch through Throwable");
+		assertContains(content, "catch (\\Throwable $__hxhx_caught) {", "PHP try/catch expressions should catch through Throwable");
+		assertContains(content, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);", "PHP try/catch expressions should bind the original Haxe thrown value");
 		assertContains(content, "return \"bad\";", "PHP try/catch expression catch bodies should return their final value");
 		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpThrownValueCatch():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_thrown_value_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(tryCatchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "throw ValueException::thrown(\"boom\");", "PHP throw statements should preserve Haxe thrown values");
+		assertContains(content, "catch (\\Exception $__hxhx_caught) {", "PHP try statements should catch through PHP exceptions");
+		assertContains(content, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);", "PHP catch variables should receive the original Haxe thrown value");
+		assertContains(content, "if ($value instanceof ValueException) return $value;", "PHP thrown-value wrapping should be idempotent for rethrows");
+		assertContains(content, "function __hxhx_unwrap_thrown_value($value)", "PHP runtime should expose thrown-value unwrapping");
+		deleteRecursive(tmpRoot);
+
+		final exceptionTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_exception_catch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(exceptionTmpRoot);
+		FileSystem.createDirectory(exceptionTmpRoot);
+		backend.emit(phpExceptionCatchProgram(), new BackendContext(exceptionTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final exceptionContent = File.getContent(Path.join([exceptionTmpRoot, "index.php"]));
+		assertContains(exceptionContent, "throw ValueException::thrown(123);", "PHP primitive throws should use the ValueException wrapper");
+		assertContains(exceptionContent, "catch (\\Exception $__hxhx_caught) {", "PHP Exception catches should catch the wrapper object");
+		assertNotContains(exceptionContent, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);",
+			"PHP Exception catches should preserve the ValueException object");
+		assertContains(exceptionContent, "echo __hxhx_message_field($e) . PHP_EOL;", "PHP Exception catch bodies should be able to read message");
+		assertContains(exceptionContent, "function __hxhx_message_field($value)", "PHP runtime should expose throwable-safe message reads");
+		deleteRecursive(exceptionTmpRoot);
+
+		final customTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_custom_exception_catch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(customTmpRoot);
+		FileSystem.createDirectory(customTmpRoot);
+		backend.emit(phpCustomExceptionCatchProgram(), new BackendContext(customTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final customContent = File.getContent(Path.join([customTmpRoot, "index.php"]));
+		assertContains(customContent, "throw ValueException::thrown(new CustomHaxeException(\"boom\"));",
+			"PHP custom Haxe exception throws should use the ValueException wrapper");
+		assertContains(customContent, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);",
+			"PHP custom Haxe exception catches should receive the original payload");
+		deleteRecursive(customTmpRoot);
+
+		final valueTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_value_exception_catch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(valueTmpRoot);
+		FileSystem.createDirectory(valueTmpRoot);
+		backend.emit(phpValueExceptionCatchProgram(), new BackendContext(valueTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final valueContent = File.getContent(Path.join([valueTmpRoot, "index.php"]));
+		assertContains(valueContent, "throw ValueException::thrown(123);", "PHP primitive throws should still wrap values for ValueException catches");
+		assertNotContains(valueContent, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);", "PHP ValueException catches should preserve the wrapper object");
+		assertContains(valueContent, "echo $e->value . PHP_EOL;", "PHP ValueException catch bodies should be able to read value");
+		deleteRecursive(valueTmpRoot);
 	}
 
 	static function assertPhpTypeErrorProbe():Void {
@@ -5583,6 +5689,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpMacroType();
 		assertPythonMacroType();
 		assertPhpTryCatchExpression();
+		assertPhpThrownValueCatch();
 		assertPhpTypeErrorProbe();
 		assertPhpTypeErrorBlockProbe();
 		assertPhpFollowWithAbstractsProbe();
