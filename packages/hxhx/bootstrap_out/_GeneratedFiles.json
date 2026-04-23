@@ -72,7 +72,11 @@
 		"haxe_DynamicAccess.ml",
 		"haxe_Constraints.ml",
 		"haxe_CallStack.ml",
+		"backend_source_SourceTargetCommon.ml",
 		"backend_source_SourceNativeBackend.ml",
+		"backend_source_SourceMvpTargetCore.ml",
+		"backend_source_PhpSourceTargetCore.ml",
+		"backend_source_JavaSourceTargetCore.ml",
 		"backend_reflaxe_ReflaxeTargetAdapter.ml",
 		"backend_plugin_ManifestJsonParser.ml",
 		"backend_plugin_ManifestJsonArray.ml",
@@ -159,7 +163,7 @@
 		"CompilerDriver.ml",
 		"Any.ml"
 	],
-	"id": 4,
+	"id": 6,
 	"wasCached": false,
 	"version": 1
 }
