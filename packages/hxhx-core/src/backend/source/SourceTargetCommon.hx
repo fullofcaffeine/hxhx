@@ -1448,6 +1448,8 @@ class SourceTargetCommon {
 						return "__hxhx_map_literal_from_object(" + renderExpr(Php, receiver) + ")->toString()";
 					case _:
 				}
+				if (field == "bind" && args.length > 0)
+					return "__hxhx_bind(" + ([renderExpr(Php, receiver)].concat([for (arg in args) renderExpr(Php, arg)])).join(", ") + ")";
 				final stringCall = phpStringFieldCall(receiver, field, args);
 				if (stringCall != null)
 					return stringCall;
@@ -9145,6 +9147,12 @@ class SourceTargetCommon {
 				lines.push("  if (is_array($value)) return new __HxArrayIterator($value);");
 				lines.push("  if (is_object($value) && method_exists($value, \"iterator\")) return $value->iterator();");
 				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_bind($callable, ...$boundArgs) {");
+				lines.push("  if (!is_callable($callable)) throw new \\Exception(\"Cannot bind non-callable value\");");
+				lines.push("  return function(...$args) use ($callable, $boundArgs) {");
+				lines.push("    return $callable(...array_merge($boundArgs, $args));");
+				lines.push("  };");
 				lines.push("}");
 				lines.push("function __hxhx_string_index_of($value, $needle, $start = 0) {");
 				lines.push("  $s = __hxhx_string_value($value);");
