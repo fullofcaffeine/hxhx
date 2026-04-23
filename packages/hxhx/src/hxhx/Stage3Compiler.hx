@@ -200,240 +200,11 @@ class Stage3Compiler {
 	}
 
 	static function escapeOneLine(s:String):String {
-		if (s == null)
-			return "";
-		// Keep logs parseable and stable even when we store raw source snippets.
-		//
-		// Note: avoid repeated local rebinding (`out = replace(out, ...)`) here. During
-		// Stage3 bring-up, `hxhx` is compiled by our OCaml backend, and conservative
-		// codegen can drop intermediate assignment values.
-		return StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(s, "\\", "\\\\"), "\r", "\\r"), "\n", "\\n"), "\t", "\\t");
+		return Stage3DiagnosticsSupport.escapeOneLine(s);
 	}
 
 	static function countUnsupportedExprsInExpr(e:Null<HxExpr>):Int {
-		if (e == null)
-			return 0;
-		return switch (e) {
-			case EUnsupported(_): 1;
-			case EField(obj, _): countUnsupportedExprsInExpr(obj);
-			case ECall(callee, args):
-				var c = countUnsupportedExprsInExpr(callee);
-				for (a in args)
-					c += countUnsupportedExprsInExpr(a);
-				c;
-			case ELambda(_args, body):
-				countUnsupportedExprsInExpr(body);
-			case ETryCatchRaw(_raw):
-				0;
-			case ENew(_typePath, args):
-				var c = 0;
-				for (a in args)
-					c += countUnsupportedExprsInExpr(a);
-				c;
-			case EUnop(_op, expr): countUnsupportedExprsInExpr(expr);
-			case EBinop(_op, left, right): countUnsupportedExprsInExpr(left) + countUnsupportedExprsInExpr(right);
-			case ETernary(cond, thenExpr, elseExpr):
-				countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInExpr(thenExpr) + countUnsupportedExprsInExpr(elseExpr);
-			case EAnon(_names, values):
-				var c = 0;
-				for (v in values)
-					c += countUnsupportedExprsInExpr(v);
-				c;
-			case EArrayDecl(values):
-				var c = 0;
-				for (v in values)
-					c += countUnsupportedExprsInExpr(v);
-				c;
-			case EArrayComprehension(_name, iterable, guardExpr, yieldExpr):
-				countUnsupportedExprsInExpr(iterable) + (guardExpr == null ? 0 : countUnsupportedExprsInExpr(guardExpr)) +
-				countUnsupportedExprsInExpr(yieldExpr);
-			case EArrayAccess(arr, idx):
-				countUnsupportedExprsInExpr(arr) + countUnsupportedExprsInExpr(idx);
-			case ECast(expr, _hint):
-				countUnsupportedExprsInExpr(expr);
-			case EUntyped(expr):
-				countUnsupportedExprsInExpr(expr);
-			case _:
-				0;
-		}
-	}
-
-	static function collectUnsupportedExprRawInExpr(e:Null<HxExpr>, out:Array<String>, max:Int):Void {
-		if (e == null)
-			return;
-		if (out.length >= max)
-			return;
-		switch (e) {
-			case EUnsupported(raw):
-				if (out.length < max)
-					out.push(raw);
-			case EField(obj, _):
-				collectUnsupportedExprRawInExpr(obj, out, max);
-			case ECall(callee, args):
-				collectUnsupportedExprRawInExpr(callee, out, max);
-				for (a in args)
-					collectUnsupportedExprRawInExpr(a, out, max);
-			case ELambda(_args, body):
-				collectUnsupportedExprRawInExpr(body, out, max);
-			case ETryCatchRaw(_raw):
-			case ENew(_typePath, args):
-				for (a in args)
-					collectUnsupportedExprRawInExpr(a, out, max);
-			case EUnop(_op, expr):
-				collectUnsupportedExprRawInExpr(expr, out, max);
-			case EBinop(_op, left, right):
-				collectUnsupportedExprRawInExpr(left, out, max);
-				collectUnsupportedExprRawInExpr(right, out, max);
-			case ETernary(cond, thenExpr, elseExpr):
-				collectUnsupportedExprRawInExpr(cond, out, max);
-				collectUnsupportedExprRawInExpr(thenExpr, out, max);
-				collectUnsupportedExprRawInExpr(elseExpr, out, max);
-			case EAnon(_names, values):
-				for (v in values)
-					collectUnsupportedExprRawInExpr(v, out, max);
-			case EArrayDecl(values):
-				for (v in values)
-					collectUnsupportedExprRawInExpr(v, out, max);
-			case EArrayComprehension(_name, iterable, guardExpr, yieldExpr):
-				collectUnsupportedExprRawInExpr(iterable, out, max);
-				if (guardExpr != null)
-					collectUnsupportedExprRawInExpr(guardExpr, out, max);
-				collectUnsupportedExprRawInExpr(yieldExpr, out, max);
-			case EArrayAccess(arr, idx):
-				collectUnsupportedExprRawInExpr(arr, out, max);
-				collectUnsupportedExprRawInExpr(idx, out, max);
-			case ECast(expr, _hint):
-				collectUnsupportedExprRawInExpr(expr, out, max);
-			case EUntyped(expr):
-				collectUnsupportedExprRawInExpr(expr, out, max);
-			case _:
-		}
-	}
-
-	static function collectUnsupportedExprRawInStmt(s:HxStmt, out:Array<String>, max:Int):Void {
-		if (out.length >= max)
-			return;
-		switch (s) {
-			case SBlock(stmts, _pos):
-				for (ss in stmts)
-					collectUnsupportedExprRawInStmt(ss, out, max);
-			case SVar(_name, _hint, init, _pos):
-				collectUnsupportedExprRawInExpr(init, out, max);
-			case SIf(cond, thenBranch, elseBranch, _pos):
-				collectUnsupportedExprRawInExpr(cond, out, max);
-				collectUnsupportedExprRawInStmt(thenBranch, out, max);
-				if (elseBranch != null)
-					collectUnsupportedExprRawInStmt(elseBranch, out, max);
-			case SWhile(cond, body, _pos):
-				collectUnsupportedExprRawInExpr(cond, out, max);
-				collectUnsupportedExprRawInStmt(body, out, max);
-			case SDoWhile(body, cond, _pos):
-				collectUnsupportedExprRawInStmt(body, out, max);
-				collectUnsupportedExprRawInExpr(cond, out, max);
-			case SForIn(_name, iterable, body, _pos):
-				collectUnsupportedExprRawInExpr(iterable, out, max);
-				collectUnsupportedExprRawInStmt(body, out, max);
-			case SForKeyValue(_keyName, _valueName, iterable, body, _pos):
-				collectUnsupportedExprRawInExpr(iterable, out, max);
-				collectUnsupportedExprRawInStmt(body, out, max);
-			case STry(tryBody, catches, _pos):
-				collectUnsupportedExprRawInStmt(tryBody, out, max);
-				for (c in catches)
-					collectUnsupportedExprRawInStmt(c.body, out, max);
-			case SBreak(_pos):
-			case SContinue(_pos):
-			case SThrow(expr, _pos):
-				collectUnsupportedExprRawInExpr(expr, out, max);
-			case SSwitch(scrutinee, _patterns, bodies, _pos):
-				collectUnsupportedExprRawInExpr(scrutinee, out, max);
-				for (body in bodies)
-					collectUnsupportedExprRawInStmt(body, out, max);
-			case SReturnVoid(_pos):
-			case SReturn(expr, _pos):
-				collectUnsupportedExprRawInExpr(expr, out, max);
-			case SExpr(expr, _pos):
-				collectUnsupportedExprRawInExpr(expr, out, max);
-		}
-	}
-
-	static function collectUnsupportedExprRawInModule(pm:ParsedModule, max:Int):Array<String> {
-		final decl = pm.getDecl();
-		final out = new Array<String>();
-		for (cls in HxModuleDecl.getClasses(decl)) {
-			for (f in HxClassDecl.getFields(cls))
-				collectUnsupportedExprRawInExpr(HxFieldDecl.getInit(f), out, max);
-			for (fn in HxClassDecl.getFunctions(cls)) {
-				for (s in HxFunctionDecl.getBody(fn))
-					collectUnsupportedExprRawInStmt(s, out, max);
-			}
-		}
-		return out;
-	}
-
-	static function countUnsupportedExprsInStmt(s:HxStmt):Int {
-		return switch (s) {
-			case SBlock(stmts, _pos):
-				var c = 0;
-				for (ss in stmts)
-					c += countUnsupportedExprsInStmt(ss);
-				c;
-			case SVar(_name, _hint, init, _pos):
-				countUnsupportedExprsInExpr(init);
-			case SIf(cond, thenBranch, elseBranch, _pos):
-				countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInStmt(thenBranch) +
-				(elseBranch == null ? 0 : countUnsupportedExprsInStmt(elseBranch));
-			case SWhile(cond, body, _pos):
-				countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInStmt(body);
-			case SDoWhile(body, cond, _pos):
-				countUnsupportedExprsInStmt(body) + countUnsupportedExprsInExpr(cond);
-			case SForIn(_name, iterable, body, _pos):
-				countUnsupportedExprsInExpr(iterable) + countUnsupportedExprsInStmt(body);
-			case SForKeyValue(_keyName, _valueName, iterable, body, _pos):
-				countUnsupportedExprsInExpr(iterable) + countUnsupportedExprsInStmt(body);
-			case STry(tryBody, catches, _pos):
-				var c = countUnsupportedExprsInStmt(tryBody);
-				for (cc in catches)
-					c += countUnsupportedExprsInStmt(cc.body);
-				c;
-			case SBreak(_pos):
-				0;
-			case SContinue(_pos):
-				0;
-			case SThrow(expr, _pos):
-				countUnsupportedExprsInExpr(expr);
-			case SSwitch(scrutinee, _patterns, bodies, _pos):
-				var c = countUnsupportedExprsInExpr(scrutinee);
-				for (body in bodies)
-					c += countUnsupportedExprsInStmt(body);
-				c;
-			case SReturnVoid(_pos):
-				0;
-			case SReturn(expr, _pos):
-				countUnsupportedExprsInExpr(expr);
-			case SExpr(expr, _pos):
-				countUnsupportedExprsInExpr(expr);
-		}
-	}
-
-	static function countUnsupportedExprsInModule(pm:ParsedModule):Int {
-		final decl = pm.getDecl();
-		var c = 0;
-		for (cls in HxModuleDecl.getClasses(decl)) {
-			for (f in HxClassDecl.getFields(cls))
-				c += countUnsupportedExprsInExpr(HxFieldDecl.getInit(f));
-			for (fn in HxClassDecl.getFunctions(cls)) {
-				for (s in HxFunctionDecl.getBody(fn))
-					c += countUnsupportedExprsInStmt(s);
-			}
-		}
-		return c;
-	}
-
-	static function countUnsupportedExprsInFunction(fn:HxFunctionDecl):Int {
-		var c = 0;
-		for (s in HxFunctionDecl.getBody(fn))
-			c += countUnsupportedExprsInStmt(s);
-		return c;
+		return Stage3DiagnosticsSupport.countUnsupportedExprsInExpr(e);
 	}
 
 	static function bool01(v:Bool):String
@@ -445,23 +216,27 @@ class Stage3Compiler {
 	}
 
 	static function formatException(e:TyperError):String {
-		final p = e.getPos();
-		final line = p == null ? 0 : p.getLine();
-		final col = p == null ? 0 : p.getColumn();
-		return e.getFilePath() + ":" + line + ":" + col + ": " + e.getMessage();
+		return Stage3DiagnosticsSupport.formatException(e);
 	}
 
 	static function rawTyperDiagnostic(e:TyperError):Null<String> {
-		return TyperStage.extractRawDiagnostic(e.getMessage());
+		return Stage3DiagnosticsSupport.rawTyperDiagnostic(e);
 	}
 
 	static function formatDynamicException(e:Dynamic):String {
-		if (Std.isOfType(e, haxe.Exception)) {
-			final ex:haxe.Exception = cast e;
-			if (ex.message != null && ex.message.length > 0)
-				return ex.message;
-		}
-		return Std.string(e);
+		return Stage3DiagnosticsSupport.formatDynamicException(e);
+	}
+
+	static function collectUnsupportedExprRawInModule(pm:ParsedModule, max:Int):Array<String> {
+		return Stage3DiagnosticsSupport.collectUnsupportedExprRawInModule(pm, max);
+	}
+
+	static function countUnsupportedExprsInModule(pm:ParsedModule):Int {
+		return Stage3DiagnosticsSupport.countUnsupportedExprsInModule(pm);
+	}
+
+	static function countUnsupportedExprsInFunction(fn:HxFunctionDecl):Int {
+		return Stage3DiagnosticsSupport.countUnsupportedExprsInFunction(fn);
 	}
 
 	static function resolveHaxelibSpec(lib:String, cwd:String, seen:Map<String, Bool>, depth:Int):HaxelibSpec {
