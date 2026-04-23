@@ -76,84 +76,11 @@ class Stage3Compiler {
 	}
 
 	static function hasFlag(args:Array<String>, flag:String):Bool {
-		if (args == null || flag == null || flag.length == 0)
-			return false;
-		for (a in args)
-			if (a == flag)
-				return true;
-		return false;
+		return Stage3Args.hasFlag(args, flag);
 	}
 
-	static function parseGlobalStage3Flags(args:Array<String>):{
-		outDir:String,
-		backendId:String,
-		macroRuntimeMode:Null<String>,
-		typeOnly:Bool,
-		emitFullBodies:Bool,
-		noEmit:Bool,
-		noRun:Bool,
-		rest:Array<String>
-	} {
-		var outDir = "";
-		var backendId = "ocaml-stage3";
-		var macroRuntimeMode:Null<String> = null;
-		var typeOnly = false;
-		var emitFullBodies = false;
-		var noEmit = false;
-		var noRun = false;
-		final rest = new Array<String>();
-
-		var i = 0;
-		while (i < args.length) {
-			final a = args[i];
-			switch (a) {
-				case "--hxhx-out":
-					if (i + 1 >= args.length) {
-						// Keep the existing user-facing error shape.
-						throw "missing value after --hxhx-out";
-					}
-					outDir = args[i + 1];
-					i += 2;
-				case "--hxhx-backend":
-					if (i + 1 >= args.length) {
-						throw "missing value after --hxhx-backend";
-					}
-					backendId = args[i + 1];
-					i += 2;
-				case "--hxhx-macro-runtime":
-					if (i + 1 >= args.length) {
-						throw "missing value after --hxhx-macro-runtime";
-					}
-					macroRuntimeMode = args[i + 1];
-					i += 2;
-				case "--hxhx-type-only":
-					typeOnly = true;
-					i += 1;
-				case "--hxhx-no-emit":
-					noEmit = true;
-					i += 1;
-				case "--hxhx-no-run":
-					noRun = true;
-					i += 1;
-				case "--hxhx-emit-full-bodies":
-					emitFullBodies = true;
-					i += 1;
-				case _:
-					rest.push(a);
-					i += 1;
-			}
-		}
-
-		return {
-			outDir: outDir,
-			backendId: backendId,
-			macroRuntimeMode: macroRuntimeMode,
-			typeOnly: typeOnly,
-			emitFullBodies: emitFullBodies,
-			noEmit: noEmit,
-			noRun: noRun,
-			rest: rest
-		};
+	static function parseGlobalStage3Flags(args:Array<String>) {
+		return Stage3Args.parseGlobalStage3Flags(args);
 	}
 
 	static inline function hasConfiguredExternalMacroHostExe():Bool {
@@ -217,96 +144,15 @@ class Stage3Compiler {
 	}
 
 	static function targetDefineForBackend(backendId:String):String {
-		return switch (backendId) {
-			case "js-native":
-				"js";
-			case "neko-native":
-				"neko";
-			case "hl-native":
-				"hl";
-			case "python-native":
-				"python";
-			case "java-native":
-				"java";
-			case "cs-native":
-				"cs";
-			case "php-native":
-				"php";
-			case "lua-native":
-				"lua";
-			case _:
-				"ocaml";
-		};
-	}
-
-	static function targetOutputFlags(backendId:String):Array<String> {
-		// Only file-shaped target flags belong in BackendContext.outputFileHint.
-		// Directory-shaped targets need target-specific layout support first.
-		return switch (backendId) {
-			case "js-native":
-				["-js", "--js"];
-			case "python-native":
-				["-python", "--python"];
-			case "lua-native":
-				["-lua", "--lua"];
-			case "java-native":
-				["-jvm", "--jvm"];
-			case _:
-				[];
-		};
-	}
-
-	static function targetOutputDirectoryFlags(backendId:String):Array<String> {
-		// Source backends that can execute directly from a target output directory should preserve
-		// the original target path so upstream runners keep working against the emitted artifact.
-		return switch (backendId) {
-			case "java-native":
-				["-java", "--java"];
-			case "php-native":
-				["-php", "--php"];
-			case _:
-				[];
-		};
+		return Stage3Args.targetDefineForBackend(backendId);
 	}
 
 	static function findTargetOutputFileHint(args:Array<String>, backendId:String):Null<String> {
-		final expanded = Stage1Args.expandHxmlArgs(args);
-		if (expanded == null)
-			return null;
-		final targetFlags = targetOutputFlags(backendId);
-		if (targetFlags.length == 0)
-			return null;
-		var i = 0;
-		while (i < expanded.length) {
-			final a = expanded[i];
-			if (targetFlags.indexOf(a) >= 0) {
-				if (i + 1 < expanded.length)
-					return expanded[i + 1];
-				return null;
-			}
-			i += 1;
-		}
-		return null;
+		return Stage3Args.findTargetOutputFileHint(args, backendId);
 	}
 
 	static function findTargetOutputDirectoryHint(args:Array<String>, backendId:String):Null<String> {
-		final expanded = Stage1Args.expandHxmlArgs(args);
-		if (expanded == null)
-			return null;
-		final targetFlags = targetOutputDirectoryFlags(backendId);
-		if (targetFlags.length == 0)
-			return null;
-		var i = 0;
-		while (i < expanded.length) {
-			final a = expanded[i];
-			if (targetFlags.indexOf(a) >= 0) {
-				if (i + 1 < expanded.length)
-					return expanded[i + 1];
-				return null;
-			}
-			i += 1;
-		}
-		return null;
+		return Stage3Args.findTargetOutputDirectoryHint(args, backendId);
 	}
 
 	static function canRunNode():Bool {
