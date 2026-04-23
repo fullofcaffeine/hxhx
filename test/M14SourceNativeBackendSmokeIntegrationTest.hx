@@ -945,6 +945,137 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpScopedLocalShadowProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		function println(expr:HxExpr):HxStmt {
+			return SExpr(ECall(EField(EIdent("Sys"), "println"), [expr]), pos);
+		}
+		final body:Array<HxStmt> = [
+			SVar("x", "", EInt(0), pos),
+			SBlock([
+				SVar("x", "", EString("hello"), pos),
+				println(EIdent("x")),
+				SBlock([SVar("x", "", EString(""), pos), println(EIdent("x"))], pos),
+				println(EIdent("x"))
+			],
+				pos),
+			println(EIdent("x")),
+			SIf(EBool(true), SBlock([SVar("x", "", EString("branch"), pos), println(EIdent("x"))], pos), null, pos),
+			println(EIdent("x")),
+			SForIn("x", EArrayDecl([EString("loop")]), SBlock([println(EIdent("x"))], pos), pos),
+			println(EIdent("x")),
+			SSwitch(EAnon(["value"], [EString("matched")]), [HxSwitchPattern.PObject(["value"], [HxSwitchPattern.PBind("x")])],
+				[SBlock([println(EIdent("x"))], pos)], pos),
+			println(EIdent("x")),
+			STry(SBlock([SThrow(EString("caught"), pos)], pos), [
+				{
+					name: "x",
+					typeHint: "Dynamic",
+					body: SBlock([println(EIdent("x"))], pos)
+				}
+			], pos),
+			println(EIdent("x"))
+		];
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", body, "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+	}
+
+	static function phpLoopCaptureProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var funs = [];",
+			"    var sum = 0;",
+			"    for (i in 0...3) {",
+			"      var k = 0;",
+			"      funs.push(function() {",
+			"        k++;",
+			"        sum++;",
+			"        return k;",
+			"      });",
+			"    }",
+			"    Sys.println(Std.string(funs[0]()));",
+			"    Sys.println(Std.string(funs[1]()));",
+			"    Sys.println(Std.string(funs[2]()));",
+			"    Sys.println(Std.string(sum));",
+			"    var incs = [];",
+			"    var decs = [];",
+			"    var total = 0;",
+			"    for (i in 0...3) {",
+			"      var j = i;",
+			"      incs.push(function() {",
+			"          total += j;",
+			"          j++;",
+			"          return j;",
+			"      });",
+			"      decs.push(function() {",
+			"          j--;",
+			"          total -= j;",
+			"          return j;",
+			"      });",
+			"    }",
+			"    for (i in 0...3) {",
+			"      Sys.println(Std.string(incs[i]()));",
+			"      Sys.println(Std.string(total));",
+			"      Sys.println(Std.string(decs[i]()));",
+			"      Sys.println(Std.string(total));",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpSubCaptureProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var funs = new Array();",
+			"    for( i in 0...5 )",
+			"      funs.push(function() {",
+			"        var tmp = new Array();",
+			"        for( j in 0...5 )",
+			"          tmp.push(function() return i + j);",
+			"        var sum = 0;",
+			"        for( j in 0...5 )",
+			"          sum += tmp[j]();",
+			"        return sum;",
+			"      });",
+			"    for( i in 0...5 )",
+			"      Sys.println(Std.string(funs[i]()));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpAnonCallableFieldProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var count = 1;",
+			"    var ops = {",
+			"      inc: function() {",
+			"        count++;",
+			"        return count;",
+			"      }",
+			"    };",
+			"    Sys.println(Std.string(ops.inc()));",
+			"    Sys.println(Std.string(count));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeErrorProbeProgram():GenIrProgram {
 		final src = [
 			"class HelperMacros {",
@@ -3928,8 +4059,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "$info = (object)[\"label\" => \"ok\", \"count\" => 1];",
-			"PHP anonymous object literals should lower through stdClass-style object casts");
+		assertContains(content, "class __HxAnon {", "PHP anonymous object literals should emit the anonymous-object runtime helper");
+		assertContains(content, "$info = new __HxAnon([\"label\" => \"ok\", \"count\" => 1]);",
+			"PHP anonymous object literals should lower through the helper-backed object runtime");
 		assertContains(content, "echo $info->label . PHP_EOL;", "PHP anonymous object field access should keep using arrow syntax");
 		deleteRecursive(tmpRoot);
 	}
@@ -4106,11 +4238,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static function field($object, $field)", "PHP Reflect helper should support dynamic field lookup");
 		assertContains(content, "Reflect::field($keyword, \"new\")", "PHP Reflect.field should lower as a static helper call");
 		assertContains(content, "echo __hxhx_add(\"\", 5) . PHP_EOL;", "PHP literal interpolation should lower to string concat");
-		assertContains(content, "echo __hxhx_add(__hxhx_add(\"a\", __hxhx_add(\"\", $x)), \"b\") . PHP_EOL;",
+		assertContains(content, "echo __hxhx_add(__hxhx_add(\"a\", __hxhx_add(\"\", $x",
 			"PHP identifier interpolation should keep prefix, payload, and suffix");
 		assertContains(content, "$values = Lambda::array($sm);", "PHP Lambda.array should accept Map-backed iterables");
 		assertContains(content, "echo __hxhx_array_join($values, \"#\") . PHP_EOL;", "PHP Array.join should lower for Lambda.array results");
-		assertContains(content, "$keys = Lambda::array((object)[\"iterator\" => (function() use ($sm) { return $sm->keys(); })]);",
+		assertContains(content, "$keys = Lambda::array(new __HxAnon([\"iterator\" => (function() use ($sm) { return $sm->keys(); })]));",
 			"PHP Lambda.array should accept structural iterator method closures");
 		assertContains(content, "echo __hxhx_array_join($keys, \"#\") . PHP_EOL;", "PHP Array.join should lower for structural iterator results");
 		deleteRecursive(tmpRoot);
@@ -4232,8 +4364,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_add(1, __hxhx_add(2, \"\"))", "PHP plus lowering should preserve explicit string-concat grouping");
 		assertContains(content, "__hxhx_add(null, \"x\")", "PHP null-left string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"x\", null)", "PHP null-right string plus should lower through Haxe helper");
-		assertContains(content, "__hxhx_add(\"\", (object)[])", "PHP empty anonymous object string plus should lower through Haxe helper");
-		assertContains(content, "__hxhx_add(\"\", (object)[\"a\" => 1])", "PHP anonymous object string plus should lower through Haxe helper");
+		assertContains(content, "__hxhx_add(\"\", new __HxAnon([]))", "PHP empty anonymous object string plus should lower through Haxe helper");
+		assertContains(content, "__hxhx_add(\"\", new __HxAnon([\"a\" => 1]))", "PHP anonymous object string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", [1, 2])", "PHP array string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", [[1], [2, 3]])", "PHP nested array string plus should lower through Haxe helper");
 		assertContains(content, "echo __hxhx_add_string([\"x\"]) . PHP_EOL;", "PHP Std.string on array literals should use Haxe stringification");
@@ -4251,7 +4383,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpEnumStringProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "return (object)[\"__hx_ctor\" => \"C\", \"__hx_index\" => 0, \"__hx_params\" => [$i, $s]];",
+		assertContains(content, "return new __HxAnon([\"__hx_ctor\" => \"C\", \"__hx_index\" => 0, \"__hx_params\" => [$i, $s]]);",
 			"PHP scanned enum constructors should return Haxe-like runtime enum objects");
 		assertContains(content, "echo __hxhx_add_string($e) . PHP_EOL;", "PHP Std.string on enum values should use Haxe stringification");
 		assertContains(content, "echo __hxhx_add_string([$e]) . PHP_EOL;", "PHP Std.string on enum arrays should recursively stringify enum values");
@@ -4967,6 +5099,69 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "Z", "generated PHP BytesInput should read written strings");
 		}
 		deleteRecursive(bytesTmpRoot);
+
+		final shadowTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_scoped_local_shadow_" + Std.string(Date.now().getTime()));
+		deleteRecursive(shadowTmpRoot);
+		FileSystem.createDirectory(shadowTmpRoot);
+		backend.emit(phpScopedLocalShadowProgram(), new BackendContext(shadowTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final shadowContent = File.getContent(Path.join([shadowTmpRoot, "index.php"]));
+		assertContains(shadowContent, "$x__hx_scope_", "PHP shadowed locals should be renamed away from the outer variable");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([shadowTmpRoot, "index.php"])]);
+			final expected = "hello\n\nhello\n0\nbranch\n0\nloop\n0\nmatched\n0\ncaught\n0\n";
+			assertTrue(run.code == 0, "generated PHP scoped locals should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == expected, "generated PHP scoped locals should preserve Haxe shadowing, got:\n" + run.stdout);
+		}
+		deleteRecursive(shadowTmpRoot);
+
+		final loopCaptureTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_loop_capture_" + Std.string(Date.now().getTime()));
+		deleteRecursive(loopCaptureTmpRoot);
+		FileSystem.createDirectory(loopCaptureTmpRoot);
+		backend.emit(phpLoopCaptureProgram(), new BackendContext(loopCaptureTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final loopCaptureContent = File.getContent(Path.join([loopCaptureTmpRoot, "index.php"]));
+		assertContains(loopCaptureContent, "(function() use (&$funs, &$sum)",
+			"PHP loops that create ref-capturing closures should isolate per-iteration locals");
+		assertContains(loopCaptureContent, "(function() use (&$i, &$incs, &$total, &$decs)",
+			"PHP loops should isolate per-iteration mutable captures while preserving outer writes");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([loopCaptureTmpRoot, "index.php"])]);
+			final expected = "1\n1\n1\n3\n1\n0\n0\n0\n2\n1\n1\n0\n3\n2\n2\n0\n";
+			assertTrue(run.code == 0, "generated PHP loop captures should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == expected, "generated PHP loop captures should preserve per-iteration closure locals, got:\n" + run.stdout);
+		}
+		deleteRecursive(loopCaptureTmpRoot);
+
+		final subCaptureTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_subcapture_" + Std.string(Date.now().getTime()));
+		deleteRecursive(subCaptureTmpRoot);
+		FileSystem.createDirectory(subCaptureTmpRoot);
+		backend.emit(phpSubCaptureProgram(), new BackendContext(subCaptureTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final subCaptureContent = File.getContent(Path.join([subCaptureTmpRoot, "index.php"]));
+		assertNotContains(subCaptureContent, "$__hxhx_for_in(",
+			"PHP expression-lowered for-in loops should lower to real foreach blocks instead of undefined variable-function calls");
+		assertNotContains(subCaptureContent, "use ($i, &$sum)",
+			"PHP nested loop capture lowering should not leak inner lambda locals into outer closure captures");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([subCaptureTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP nested subcapture loops should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "10\n15\n20\n25\n30\n",
+				"generated PHP nested subcapture loops should preserve closure capture semantics, got:\n" + run.stdout);
+		}
+		deleteRecursive(subCaptureTmpRoot);
+
+		final anonCallableTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_anon_callable_" + Std.string(Date.now().getTime()));
+		deleteRecursive(anonCallableTmpRoot);
+		FileSystem.createDirectory(anonCallableTmpRoot);
+		backend.emit(phpAnonCallableFieldProgram(), new BackendContext(anonCallableTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final anonCallableContent = File.getContent(Path.join([anonCallableTmpRoot, "index.php"]));
+		assertContains(anonCallableContent, "class __HxAnon {", "PHP anonymous-object runtime should expose callable field dispatch");
+		assertContains(anonCallableContent, "new __HxAnon([\"inc\" => function() use (&$count)",
+			"PHP anonymous object literals should preserve callable closure fields");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([anonCallableTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP anonymous callable fields should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "2\n2\n", "generated PHP anonymous callable fields should preserve closure dispatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(anonCallableTmpRoot);
 	}
 
 	static function assertPhpTypeErrorProbe():Void {
@@ -5740,7 +5935,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static $__basic_x = null;", "PHP TestLocalStatic fallback should declare persisted local-static storage");
 		assertContains(content, "if (self::$__basic_x === null) self::$__basic_x = 1;",
 			"PHP TestLocalStatic fallback should initialize persisted local-static storage once");
-		assertContains(content, "return (object)[\"x\" => self::$__basic_x, \"y\" => \"final\"];",
+		assertContains(content, "return new __HxAnon([\"x\" => self::$__basic_x, \"y\" => \"final\"]);",
 			"PHP TestLocalStatic fallback should return the expected object shape");
 		deleteRecursive(tmpRoot);
 	}

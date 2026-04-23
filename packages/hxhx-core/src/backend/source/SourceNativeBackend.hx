@@ -721,6 +721,8 @@ class SourceNativeBackend {
 				intLiteralExpr(target, raw, suffix);
 			case ECall(EIdent("__hxhx_throw"), args) if (target == Php):
 				"__hxhx_throw(" + (args.length > 0 ? renderExpr(Php, args[0]) : "null") + ")";
+			case ECall(EIdent("__hxhx_for_in"), args) if (target == Php && args.length >= 3):
+				phpForInExpr(args[0], args[1], args[2]);
 			case ECall(ELambda(lambdaArgs, lambdaBody), args):
 				lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
 			case ECall(ESuper, args):
@@ -1841,6 +1843,39 @@ class SourceNativeBackend {
 		return "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
 	}
 
+	static function phpForInExpr(iterable:HxExpr, bodyExpr:HxExpr, continuation:HxExpr):String {
+		return switch (bodyExpr) {
+			case ELambda(args, body) if (args.length == 1):
+				final cleanName = sanitizeTypeName(args[0]);
+				final valueCaptures = new Array<String>();
+				final refCaptures = new Array<String>();
+				for (name in phpLambdaUsedCaptures(body, args))
+					if (valueCaptures.indexOf(name) < 0)
+						valueCaptures.push(name);
+				for (name in phpLambdaUsedCaptures(continuation, []))
+					if (valueCaptures.indexOf(name) < 0)
+						valueCaptures.push(name);
+				for (name in phpLambdaAssignedCaptures(body, args))
+					if (refCaptures.indexOf(name) < 0)
+						refCaptures.push(name);
+				for (name in phpLambdaAssignedCaptures(continuation, []))
+					if (refCaptures.indexOf(name) < 0)
+						refCaptures.push(name);
+				final useClause = phpLambdaUseClause(valueCaptures, refCaptures);
+				final out = [
+					"(function()" + useClause + " {",
+					"  foreach (" + renderExpr(Php, iterable) + " as " + valueName(Php, cleanName) + ") {",
+					"    " + exprStmt(Php, renderExpr(Php, body)),
+					"  }",
+					"  return " + renderExpr(Php, continuation) + ";",
+					"})()"
+				];
+				out.join("\n");
+			case _:
+				callExpr(Php, "__hxhx_for_in", [iterable, bodyExpr, continuation]);
+		};
+	}
+
 	static function phpLambdaUseClause(valueNames:Array<String>, refNames:Array<String>):String {
 		final captures = new Array<String>();
 		for (name in valueNames) {
@@ -1974,8 +2009,11 @@ class SourceNativeBackend {
 				phpCollectAssignedList(args, names);
 			case EMacroExpr(inner, _):
 				phpCollectAssignedIdents(inner, names);
-			case ELambda(_, body):
-				phpCollectAssignedIdents(body, names);
+			case ELambda(args, body):
+				final nestedNames = phpLambdaAssignedCaptures(body, args);
+				for (name in nestedNames)
+					if (names.indexOf(name) < 0)
+						names.push(name);
 			case ESwitch(scrutinee, _, exprs):
 				phpCollectAssignedIdents(scrutinee, names);
 				phpCollectAssignedList(exprs, names);
@@ -2110,7 +2148,7 @@ class SourceNativeBackend {
 				final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
 				for (i in 0...count)
 					pairs.push(quoteString(sanitizeTypeName(fieldNames[i])) + " => " + renderExpr(target, fieldValues[i]));
-				"(object)[" + pairs.join(", ") + "]";
+				"new __HxAnon([" + pairs.join(", ") + "])";
 			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: EAnon";
 		};
@@ -3407,8 +3445,7 @@ class SourceNativeBackend {
 		switch (stmt) {
 			case SVar(name, typeHint, init, pos):
 				final cleanName = sanitizeTypeName(name);
-				if (typeHint != null && StringTools.trim(typeHint).length > 0)
-					localTypes.set(cleanName, typeHint);
+				localTypes.set(cleanName, typeHint == null ? "" : typeHint);
 				final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 				final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
 				return [indent + varDecl(target, cleanName, rhs)];
@@ -3420,10 +3457,20 @@ class SourceNativeBackend {
 				final cleanName = sanitizeTypeName(name);
 				final rhs = assignedValueExpr(target, rhsExpr, localTypes.get(cleanName));
 				return [indent + exprStmt(target, valueName(target, cleanName) + " = " + rhs)];
+			case SForIn(name, iterable, body, _) if (target == Php):
+				final phpLocals = copyStringMap(localTypes);
+				phpLocals.set(sanitizeTypeName(name), "");
+				return renderForIn(target, name, iterable, body, indent, phpLocals);
+			case SForKeyValue(keyName, valueName, iterable, body, _) if (target == Php):
+				final phpLocals = copyStringMap(localTypes);
+				phpLocals.set(sanitizeTypeName(keyName), "");
+				phpLocals.set(sanitizeTypeName(valueName), "");
+				return renderForKeyValue(target, keyName, valueName, iterable, body, indent, phpLocals);
 			case SBlock(stmts, _):
 				final out = new Array<String>();
+				final blockLocalTypes = copyStringMap(localTypes);
 				for (s in stmts)
-					for (line in renderStmtWithLocals(target, s, indent, localTypes))
+					for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
 						out.push(line);
 				if (out.length == 0)
 					out.push(indent + emptyStmt(target));
@@ -3450,7 +3497,7 @@ class SourceNativeBackend {
 
 	static function renderFunctionStmts(target:SourceNativeTarget, body:Array<HxStmt>, indent:String, context:String):Array<String> {
 		return try {
-			renderStmts(target, body, indent);
+			renderStmts(target, target == Php ? phpRenameScopedLocalStmts(body) : body, indent);
 		} catch (e:String) {
 			throw e + " while emitting " + context;
 		}
@@ -3530,7 +3577,8 @@ class SourceNativeBackend {
 		return out;
 	}
 
-	static function renderForIn(target:SourceNativeTarget, name:String, iterable:HxExpr, body:HxStmt, indent:String):Array<String> {
+	static function renderForIn(target:SourceNativeTarget, name:String, iterable:HxExpr, body:HxStmt, indent:String,
+			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null):Array<String> {
 		final cleanName = sanitizeTypeName(name);
 		final value = valueName(target, cleanName);
 		final source = renderExpr(target, iterable);
@@ -3553,7 +3601,7 @@ class SourceNativeBackend {
 				out.push(indent + "}");
 			case Php:
 				out.push(indent + "foreach (" + source + " as " + value + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderPhpLoopBody(body, childIndent, knownPhpLocals))
 					out.push(line);
 				out.push(indent + "}");
 			case Lua:
@@ -3565,7 +3613,8 @@ class SourceNativeBackend {
 		return out;
 	}
 
-	static function renderForKeyValue(target:SourceNativeTarget, keyName:String, itemName:String, iterable:HxExpr, body:HxStmt, indent:String):Array<String> {
+	static function renderForKeyValue(target:SourceNativeTarget, keyName:String, itemName:String, iterable:HxExpr, body:HxStmt, indent:String,
+			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null):Array<String> {
 		final cleanKey = sanitizeTypeName(keyName);
 		final cleanItem = sanitizeTypeName(itemName);
 		final keyValue = valueName(target, cleanKey);
@@ -3580,12 +3629,24 @@ class SourceNativeBackend {
 					out.push(line);
 			case Php:
 				out.push(indent + "foreach (" + source + " as " + keyValue + " => " + itemValue + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderPhpLoopBody(body, childIndent, knownPhpLocals))
 					out.push(line);
 				out.push(indent + "}");
 			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported statement: SForKeyValue";
 		}
+		return out;
+	}
+
+	static function renderPhpLoopBody(body:HxStmt, indent:String, knownPhpLocals:Null<haxe.ds.StringMap<String>>):Array<String> {
+		if (!phpLoopNeedsIterationScope(body, knownPhpLocals))
+			return renderStmt(Php, body, indent);
+		final useClause = phpLoopIterationUseClause(body, knownPhpLocals);
+		final childIndent = indent + indentStep(Php);
+		final out = [indent + "(function()" + useClause + " {"];
+		for (line in renderStmt(Php, body, childIndent))
+			out.push(line);
+		out.push(indent + "})();");
 		return out;
 	}
 
@@ -4132,7 +4193,7 @@ class SourceNativeBackend {
 			final value = fieldHint.length == 0 ? renderExpr(Php, fieldValues[i]) : phpAssignedValueExpr(fieldValues[i], fieldHint);
 			pairs.push(quoteString(fieldName) + " => " + value);
 		}
-		return "(object)[" + pairs.join(", ") + "]";
+		return "new __HxAnon([" + pairs.join(", ") + "])";
 	}
 
 	static function phpAnonFieldTypeHint(typeHint:String, fieldName:String):String {
@@ -6285,7 +6346,7 @@ class SourceNativeBackend {
 			// this fixture compileable without generalizing unsupported semantics.
 			out.push("    if (self::$__basic_x === null) self::$__basic_x = 1;");
 			out.push("    self::$__basic_x++;");
-			out.push("    return (object)[\"x\" => self::$__basic_x, \"y\" => \"final\"];");
+			out.push("    return new __HxAnon([\"x\" => self::$__basic_x, \"y\" => \"final\"]);");
 			return true;
 		}
 		if (className == "TestMapComprehension" && fnName == "testBasic") {
@@ -6419,6 +6480,275 @@ class SourceNativeBackend {
 		return false;
 	}
 
+	static function phpLoopNeedsIterationScope(body:HxStmt, knownPhpLocals:Null<haxe.ds.StringMap<String>>):Bool {
+		if (knownPhpLocals == null || phpStmtHasLoopControlEscape(body))
+			return false;
+		final declared = new Array<String>();
+		phpCollectDeclaredLocalsInStmt(body, declared);
+		if (declared.length == 0)
+			return false;
+		return phpStmtHasRefCaptureOfNames(body, declared);
+	}
+
+	static function phpLoopIterationUseClause(body:HxStmt, knownPhpLocals:Null<haxe.ds.StringMap<String>>):String {
+		if (knownPhpLocals == null)
+			return "";
+		final declared = new Array<String>();
+		phpCollectDeclaredLocalsInStmt(body, declared);
+		final used = new Array<String>();
+		phpCollectUsedIdentsInStmt(body, used);
+		final refNames = new Array<String>();
+		for (name in used) {
+			if (declared.indexOf(name) >= 0 || !knownPhpLocals.exists(name) || refNames.indexOf(name) >= 0)
+				continue;
+			refNames.push(name);
+		}
+		return phpLambdaUseClause([], refNames);
+	}
+
+	static function phpCollectDeclaredLocalsInStmt(stmt:HxStmt, names:Array<String>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				if (stmts != null)
+					for (inner in stmts)
+						phpCollectDeclaredLocalsInStmt(inner, names);
+			case SVar(name, _, _, _):
+				final clean = sanitizeTypeName(name);
+				if (clean.length > 0 && names.indexOf(clean) < 0)
+					names.push(clean);
+			case SIf(_, thenBranch, elseBranch, _):
+				phpCollectDeclaredLocalsInStmt(thenBranch, names);
+				if (elseBranch != null)
+					phpCollectDeclaredLocalsInStmt(elseBranch, names);
+			case SForIn(name, _, body, _):
+				final clean = sanitizeTypeName(name);
+				if (clean.length > 0 && names.indexOf(clean) < 0)
+					names.push(clean);
+				phpCollectDeclaredLocalsInStmt(body, names);
+			case SForKeyValue(keyName, valueName, _, body, _):
+				final cleanKey = sanitizeTypeName(keyName);
+				final cleanValue = sanitizeTypeName(valueName);
+				if (cleanKey.length > 0 && names.indexOf(cleanKey) < 0)
+					names.push(cleanKey);
+				if (cleanValue.length > 0 && names.indexOf(cleanValue) < 0)
+					names.push(cleanValue);
+				phpCollectDeclaredLocalsInStmt(body, names);
+			case SWhile(_, body, _) | SDoWhile(body, _, _):
+				phpCollectDeclaredLocalsInStmt(body, names);
+			case SSwitch(_, patterns, bodies, _):
+				if (patterns != null)
+					for (pattern in patterns)
+						phpCollectDeclaredLocalsInPattern(pattern, names);
+				if (bodies != null)
+					for (inner in bodies)
+						phpCollectDeclaredLocalsInStmt(inner, names);
+			case STry(tryBody, catches, _):
+				phpCollectDeclaredLocalsInStmt(tryBody, names);
+				if (catches != null)
+					for (c in catches) {
+						final clean = sanitizeTypeName(c.name);
+						if (clean.length > 0 && names.indexOf(clean) < 0)
+							names.push(clean);
+						phpCollectDeclaredLocalsInStmt(c.body, names);
+					}
+			case SExpr(_, _) | SThrow(_, _) | SReturn(_, _) | SBreak(_) | SContinue(_) | SReturnVoid(_):
+		}
+	}
+
+	static function phpCollectDeclaredLocalsInPattern(pattern:HxSwitchPattern, names:Array<String>):Void {
+		switch (pattern) {
+			case PBind(name):
+				final clean = sanitizeTypeName(name);
+				if (clean.length > 0 && names.indexOf(clean) < 0)
+					names.push(clean);
+			case PCapture(name, inner):
+				final clean = sanitizeTypeName(name);
+				if (clean.length > 0 && names.indexOf(clean) < 0)
+					names.push(clean);
+				phpCollectDeclaredLocalsInPattern(inner, names);
+			case PEnumExtract(_, args):
+				if (args != null)
+					for (arg in args)
+						phpCollectDeclaredLocalsInPattern(arg, names);
+			case PObject(_, fieldPatterns):
+				if (fieldPatterns != null)
+					for (fieldPattern in fieldPatterns)
+						phpCollectDeclaredLocalsInPattern(fieldPattern, names);
+			case PArray(items):
+				if (items != null)
+					for (item in items)
+						phpCollectDeclaredLocalsInPattern(item, names);
+			case PExtractor(_, resultPattern) | PLengthGuard(resultPattern, _, _) | PStartsWithGuard(resultPattern, _, _) |
+				PIntEqualsGuard(resultPattern, _, _) | PUnsupportedGuard(resultPattern):
+				phpCollectDeclaredLocalsInPattern(resultPattern, names);
+			case POr(patterns):
+				if (patterns != null)
+					for (item in patterns)
+						phpCollectDeclaredLocalsInPattern(item, names);
+			case _:
+		}
+	}
+
+	static function phpCollectUsedIdentsInStmt(stmt:HxStmt, names:Array<String>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				if (stmts != null)
+					for (inner in stmts)
+						phpCollectUsedIdentsInStmt(inner, names);
+			case SVar(_, _, init, _):
+				if (init != null)
+					phpCollectUsedIdents(init, names);
+			case SIf(cond, thenBranch, elseBranch, _):
+				phpCollectUsedIdents(cond, names);
+				phpCollectUsedIdentsInStmt(thenBranch, names);
+				if (elseBranch != null)
+					phpCollectUsedIdentsInStmt(elseBranch, names);
+			case SForIn(_, iterable, body, _):
+				phpCollectUsedIdents(iterable, names);
+				phpCollectUsedIdentsInStmt(body, names);
+			case SForKeyValue(_, _, iterable, body, _):
+				phpCollectUsedIdents(iterable, names);
+				phpCollectUsedIdentsInStmt(body, names);
+			case SWhile(cond, body, _):
+				phpCollectUsedIdents(cond, names);
+				phpCollectUsedIdentsInStmt(body, names);
+			case SDoWhile(body, cond, _):
+				phpCollectUsedIdentsInStmt(body, names);
+				phpCollectUsedIdents(cond, names);
+			case SSwitch(scrutinee, _, bodies, _):
+				phpCollectUsedIdents(scrutinee, names);
+				if (bodies != null)
+					for (inner in bodies)
+						phpCollectUsedIdentsInStmt(inner, names);
+			case STry(tryBody, catches, _):
+				phpCollectUsedIdentsInStmt(tryBody, names);
+				if (catches != null)
+					for (c in catches)
+						phpCollectUsedIdentsInStmt(c.body, names);
+			case SExpr(expr, _) | SThrow(expr, _) | SReturn(expr, _):
+				phpCollectUsedIdents(expr, names);
+			case SBreak(_) | SContinue(_) | SReturnVoid(_):
+		}
+	}
+
+	static function phpStmtHasRefCaptureOfNames(stmt:HxStmt, names:Array<String>):Bool {
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				phpStmtListHasRefCaptureOfNames(stmts, names);
+			case SVar(_, _, init, _): init != null && phpExprHasRefCaptureOfNames(init, names);
+			case SIf(cond, thenBranch, elseBranch, _): phpExprHasRefCaptureOfNames(cond,
+					names) || phpStmtHasRefCaptureOfNames(thenBranch, names) || (elseBranch != null
+					&& phpStmtHasRefCaptureOfNames(elseBranch, names));
+			case SForIn(_, iterable, body, _): phpExprHasRefCaptureOfNames(iterable, names) || phpStmtHasRefCaptureOfNames(body, names);
+			case SForKeyValue(_, _, iterable, body, _): phpExprHasRefCaptureOfNames(iterable, names) || phpStmtHasRefCaptureOfNames(body, names);
+			case SWhile(cond, body, _): phpExprHasRefCaptureOfNames(cond, names) || phpStmtHasRefCaptureOfNames(body, names);
+			case SDoWhile(body, cond, _): phpStmtHasRefCaptureOfNames(body, names) || phpExprHasRefCaptureOfNames(cond, names);
+			case SSwitch(scrutinee, _, bodies, _): phpExprHasRefCaptureOfNames(scrutinee, names) || phpStmtListHasRefCaptureOfNames(bodies, names);
+			case STry(tryBody, catches, _):
+				if (phpStmtHasRefCaptureOfNames(tryBody, names)) {
+					true;
+				} else {
+					var found = false;
+					if (catches != null)
+						for (c in catches)
+							if (phpStmtHasRefCaptureOfNames(c.body, names))
+								found = true;
+					found;
+				}
+			case SExpr(expr, _) | SThrow(expr, _) | SReturn(expr, _):
+				phpExprHasRefCaptureOfNames(expr, names);
+			case SBreak(_) | SContinue(_) | SReturnVoid(_):
+				false;
+		};
+	}
+
+	static function phpStmtListHasRefCaptureOfNames(stmts:Array<HxStmt>, names:Array<String>):Bool {
+		if (stmts == null)
+			return false;
+		for (stmt in stmts)
+			if (phpStmtHasRefCaptureOfNames(stmt, names))
+				return true;
+		return false;
+	}
+
+	static function phpExprHasRefCaptureOfNames(expr:HxExpr, names:Array<String>):Bool {
+		return switch (expr) {
+			case ELambda(args, body): final refNames = phpLambdaAssignedCaptures(body,
+					args); var found = false; for (name in refNames) if (names.indexOf(name) >= 0) found = true; found || phpExprHasRefCaptureOfNames(body, names);
+			case EField(receiver, _):
+				phpExprHasRefCaptureOfNames(receiver, names);
+			case ECall(callee, args): phpExprHasRefCaptureOfNames(callee, names) || phpExprListHasRefCaptureOfNames(args, names);
+			case EMacroExpr(inner, _):
+				phpExprHasRefCaptureOfNames(inner, names);
+			case ESwitch(scrutinee, _, exprs): phpExprHasRefCaptureOfNames(scrutinee, names) || phpExprListHasRefCaptureOfNames(exprs, names);
+			case ENew(_, args):
+				phpExprListHasRefCaptureOfNames(args, names);
+			case EUnop(_, inner):
+				phpExprHasRefCaptureOfNames(inner, names);
+			case EBinop(_, left, right): phpExprHasRefCaptureOfNames(left, names) || phpExprHasRefCaptureOfNames(right, names);
+			case ETernary(cond, thenExpr, elseExpr): phpExprHasRefCaptureOfNames(cond,
+					names) || phpExprHasRefCaptureOfNames(thenExpr, names) || phpExprHasRefCaptureOfNames(elseExpr, names);
+			case EAnon(_, fieldValues):
+				phpExprListHasRefCaptureOfNames(fieldValues, names);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr): phpExprHasRefCaptureOfNames(iterable,
+					names) || (guardExpr != null
+					&& phpExprHasRefCaptureOfNames(guardExpr, names)) || phpExprHasRefCaptureOfNames(yieldExpr, names);
+			case EArrayDecl(values):
+				phpExprListHasRefCaptureOfNames(values, names);
+			case EArrayAccess(receiver, index) | ERange(receiver, index): phpExprHasRefCaptureOfNames(receiver,
+					names) || phpExprHasRefCaptureOfNames(index, names);
+			case ECast(inner, _) | EUntyped(inner):
+				phpExprHasRefCaptureOfNames(inner, names);
+			case _:
+				false;
+		};
+	}
+
+	static function phpExprListHasRefCaptureOfNames(exprs:Array<HxExpr>, names:Array<String>):Bool {
+		if (exprs == null)
+			return false;
+		for (expr in exprs)
+			if (phpExprHasRefCaptureOfNames(expr, names))
+				return true;
+		return false;
+	}
+
+	static function phpStmtHasLoopControlEscape(stmt:HxStmt):Bool {
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				phpStmtListHasLoopControlEscape(stmts);
+			case SIf(_, thenBranch, elseBranch, _): phpStmtHasLoopControlEscape(thenBranch) || (elseBranch != null && phpStmtHasLoopControlEscape(elseBranch));
+			case SForIn(_, _, body, _) | SForKeyValue(_, _, _, body, _) | SWhile(_, body, _) | SDoWhile(body, _, _):
+				phpStmtHasLoopControlEscape(body);
+			case SSwitch(_, _, bodies, _):
+				phpStmtListHasLoopControlEscape(bodies);
+			case STry(tryBody, catches, _):
+				if (phpStmtHasLoopControlEscape(tryBody)) {
+					true;
+				} else {
+					var found = false;
+					if (catches != null)
+						for (c in catches)
+							if (phpStmtHasLoopControlEscape(c.body))
+								found = true;
+					found;
+				}
+			case SReturn(_, _) | SReturnVoid(_) | SBreak(_) | SContinue(_):
+				true;
+			case SVar(_, _, _, _) | SExpr(_, _) | SThrow(_, _):
+				false;
+		};
+	}
+
+	static function phpStmtListHasLoopControlEscape(stmts:Array<HxStmt>):Bool {
+		if (stmts == null)
+			return false;
+		for (stmt in stmts)
+			if (phpStmtHasLoopControlEscape(stmt))
+				return true;
+		return false;
+	}
+
 	static function renderPythonFunctionArg(arg:HxFunctionArg):String {
 		final name = sanitizePythonIdentifier(HxFunctionArg.getName(arg));
 		if (HxFunctionArg.getIsRest(arg))
@@ -6487,6 +6817,194 @@ class SourceNativeBackend {
 
 	static function copyStringArray(values:Array<String>):Array<String> {
 		return values == null ? [] : values.copy();
+	}
+
+	static function copyStringMap(values:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
+		final out = new haxe.ds.StringMap<String>();
+		if (values != null)
+			for (key in values.keys())
+				out.set(key, values.get(key));
+		return out;
+	}
+
+	static function copyIntMap(values:haxe.ds.StringMap<Int>):haxe.ds.StringMap<Int> {
+		final out = new haxe.ds.StringMap<Int>();
+		if (values != null)
+			for (key in values.keys())
+				out.set(key, values.get(key));
+		return out;
+	}
+
+	static function phpRenameScopedLocalStmts(stmts:Array<HxStmt>):Array<HxStmt> {
+		return phpRenameScopedLocalStmtList(stmts, new haxe.ds.StringMap<String>(), new haxe.ds.StringMap<Int>());
+	}
+
+	static function phpRenameScopedLocalStmtList(stmts:Array<HxStmt>, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>):Array<HxStmt> {
+		return [
+			for (stmt in stmts)
+				phpRenameScopedLocalStmt(stmt, env, counters)
+		];
+	}
+
+	static function phpDeclareScopedLocal(name:String, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>):String {
+		if (!env.exists(name)) {
+			env.set(name, name);
+			return name;
+		}
+		final next = counters.exists(name) ? counters.get(name) + 1 : 1;
+		counters.set(name, next);
+		final renamed = name + "__hx_scope_" + next;
+		env.set(name, renamed);
+		return renamed;
+	}
+
+	static function phpBindScopedLocal(name:String, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>):String {
+		return phpDeclareScopedLocal(name, env, counters);
+	}
+
+	static function phpRenameScopedLocalStmt(stmt:HxStmt, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>):HxStmt {
+		return switch (stmt) {
+			case SBlock(stmts, pos):
+				SBlock(phpRenameScopedLocalStmtList(stmts, copyStringMap(env), counters), pos);
+			case SVar(name, typeHint, init, pos):
+				final rewrittenInit = init == null ? null : phpRenameScopedLocalExpr(init, env, counters);
+				final renamed = phpDeclareScopedLocal(name, env, counters);
+				SVar(renamed, typeHint, rewrittenInit, pos);
+			case SIf(cond, thenBranch, elseBranch, pos):
+				SIf(phpRenameScopedLocalExpr(cond, env, counters), phpRenameScopedLocalStmt(thenBranch, copyStringMap(env), counters),
+					elseBranch == null ? null : phpRenameScopedLocalStmt(elseBranch, copyStringMap(env), counters), pos);
+			case SForIn(name, iterable, body, pos):
+				final bodyEnv = copyStringMap(env);
+				final renamed = phpBindScopedLocal(name, bodyEnv, counters);
+				SForIn(renamed, phpRenameScopedLocalExpr(iterable, env, counters), phpRenameScopedLocalStmt(body, bodyEnv, counters), pos);
+			case SForKeyValue(keyName, valueName, iterable, body, pos):
+				final bodyEnv = copyStringMap(env);
+				final renamedKey = phpBindScopedLocal(keyName, bodyEnv, counters);
+				final renamedValue = phpBindScopedLocal(valueName, bodyEnv, counters);
+				SForKeyValue(renamedKey, renamedValue, phpRenameScopedLocalExpr(iterable, env, counters), phpRenameScopedLocalStmt(body, bodyEnv, counters),
+					pos);
+			case SWhile(cond, body, pos):
+				SWhile(phpRenameScopedLocalExpr(cond, env, counters), phpRenameScopedLocalStmt(body, copyStringMap(env), counters), pos);
+			case SDoWhile(body, cond, pos):
+				SDoWhile(phpRenameScopedLocalStmt(body, copyStringMap(env), counters), phpRenameScopedLocalExpr(cond, env, counters), pos);
+			case SSwitch(scrutinee, patterns, bodies, pos):
+				final renamedPatterns = new Array<HxSwitchPattern>();
+				final renamedBodies = new Array<HxStmt>();
+				final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
+				for (i in 0...count) {
+					final caseEnv = copyStringMap(env);
+					renamedPatterns.push(phpRenameScopedPattern(patterns[i], caseEnv, counters));
+					renamedBodies.push(phpRenameScopedLocalStmt(bodies[i], caseEnv, counters));
+				}
+				SSwitch(phpRenameScopedLocalExpr(scrutinee, env, counters), renamedPatterns, renamedBodies, pos);
+			case STry(tryBody, catches, pos):
+				STry(phpRenameScopedLocalStmt(tryBody, copyStringMap(env), counters), [
+					for (c in catches) {
+						final catchEnv = copyStringMap(env);
+						final renamed = phpBindScopedLocal(c.name, catchEnv, counters);
+						{name: renamed, typeHint: c.typeHint, body: phpRenameScopedLocalStmt(c.body, catchEnv, counters)};
+					}
+				], pos);
+			case SThrow(expr, pos):
+				SThrow(phpRenameScopedLocalExpr(expr, env, counters), pos);
+			case SReturn(expr, pos):
+				SReturn(phpRenameScopedLocalExpr(expr, env, counters), pos);
+			case SExpr(expr, pos):
+				SExpr(phpRenameScopedLocalExpr(expr, env, counters), pos);
+			case SBreak(_) | SContinue(_) | SReturnVoid(_):
+				stmt;
+		}
+	}
+
+	static function phpRenameScopedLocalExpr(expr:HxExpr, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>):HxExpr {
+		return switch (expr) {
+			case EIdent(name):
+				env.exists(name) ? EIdent(env.get(name)) : expr;
+			case EField(obj, field):
+				EField(phpRenameScopedLocalExpr(obj, env, counters), field);
+			case ECall(callee, args):
+				ECall(phpRenameScopedLocalExpr(callee, env, counters), [for (arg in args) phpRenameScopedLocalExpr(arg, env, counters)]);
+			case EMacroExpr(inner, wrappers):
+				EMacroExpr(phpRenameScopedLocalExpr(inner, env, counters), wrappers);
+			case ELambda(args, body):
+				final lambdaEnv = copyStringMap(env);
+				for (arg in args)
+					lambdaEnv.set(arg, arg);
+				ELambda(args, phpRenameScopedLocalExpr(body, lambdaEnv, counters));
+			case ESwitch(scrutinee, patterns, exprs):
+				final renamedPatterns = new Array<HxSwitchPattern>();
+				final renamedExprs = new Array<HxExpr>();
+				final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+				for (i in 0...count) {
+					final caseEnv = copyStringMap(env);
+					renamedPatterns.push(phpRenameScopedPattern(patterns[i], caseEnv, counters));
+					renamedExprs.push(phpRenameScopedLocalExpr(exprs[i], caseEnv, counters));
+				}
+				ESwitch(phpRenameScopedLocalExpr(scrutinee, env, counters), renamedPatterns, renamedExprs);
+			case ENew(typePath, args):
+				ENew(typePath, [for (arg in args) phpRenameScopedLocalExpr(arg, env, counters)]);
+			case EUnop(op, inner):
+				EUnop(op, phpRenameScopedLocalExpr(inner, env, counters));
+			case EBinop(op, left, right):
+				EBinop(op, phpRenameScopedLocalExpr(left, env, counters), phpRenameScopedLocalExpr(right, env, counters));
+			case ETernary(cond, thenExpr, elseExpr):
+				ETernary(phpRenameScopedLocalExpr(cond, env, counters), phpRenameScopedLocalExpr(thenExpr, env, counters),
+					phpRenameScopedLocalExpr(elseExpr, env, counters));
+			case EAnon(fieldNames, fieldValues):
+				EAnon(fieldNames, [for (value in fieldValues) phpRenameScopedLocalExpr(value, env, counters)]);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				final bodyEnv = copyStringMap(env);
+				final renamed = phpBindScopedLocal(name, bodyEnv, counters);
+				EArrayComprehension(renamed, phpRenameScopedLocalExpr(iterable, env, counters),
+					guardExpr == null ? null : phpRenameScopedLocalExpr(guardExpr, bodyEnv, counters), phpRenameScopedLocalExpr(yieldExpr, bodyEnv, counters));
+			case EArrayDecl(values):
+				EArrayDecl([for (value in values) phpRenameScopedLocalExpr(value, env, counters)]);
+			case EArrayAccess(array, index):
+				EArrayAccess(phpRenameScopedLocalExpr(array, env, counters), phpRenameScopedLocalExpr(index, env, counters));
+			case ERange(start, end):
+				ERange(phpRenameScopedLocalExpr(start, env, counters), phpRenameScopedLocalExpr(end, env, counters));
+			case ECast(inner, typeHint):
+				ECast(phpRenameScopedLocalExpr(inner, env, counters), typeHint);
+			case EUntyped(inner):
+				EUntyped(phpRenameScopedLocalExpr(inner, env, counters));
+			case _:
+				expr;
+		};
+	}
+
+	static function phpRenameScopedPattern(pattern:HxSwitchPattern, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>):HxSwitchPattern {
+		return switch (pattern) {
+			case PBind(name):
+				PBind(phpBindScopedLocal(name, env, counters));
+			case PCapture(name, inner):
+				PCapture(phpBindScopedLocal(name, env, counters), phpRenameScopedPattern(inner, env, counters));
+			case PEnumExtract(name, args):
+				PEnumExtract(name, [for (arg in args) phpRenameScopedPattern(arg, env, counters)]);
+			case PObject(fieldNames, fieldPatterns):
+				PObject(fieldNames, [
+					for (fieldPattern in fieldPatterns)
+						phpRenameScopedPattern(fieldPattern, env, counters)
+				]);
+			case PArray(items):
+				PArray([for (item in items) phpRenameScopedPattern(item, env, counters)]);
+			case PExtractor(extractorText, resultPattern):
+				PExtractor(extractorText, phpRenameScopedPattern(resultPattern, env, counters));
+			case PLengthGuard(inner, bindingName, length):
+				PLengthGuard(phpRenameScopedPattern(inner, env, counters), env.exists(bindingName) ? env.get(bindingName) : bindingName, length);
+			case PStartsWithGuard(inner, bindingName, prefix):
+				PStartsWithGuard(phpRenameScopedPattern(inner, env, counters), env.exists(bindingName) ? env.get(bindingName) : bindingName, prefix);
+			case PIntEqualsGuard(inner, bindingName, value):
+				PIntEqualsGuard(phpRenameScopedPattern(inner, env, counters), env.exists(bindingName) ? env.get(bindingName) : bindingName, value);
+			case PUnsupportedGuard(inner):
+				PUnsupportedGuard(phpRenameScopedPattern(inner, env, counters));
+			case POr(patterns):
+				POr([
+					for (item in patterns)
+						phpRenameScopedPattern(item, copyStringMap(env), copyIntMap(counters))
+				]);
+			case _:
+				pattern;
+		};
 	}
 
 	static function pythonRewriteSameClassMembersInStmts(stmts:Array<HxStmt>, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
@@ -7570,6 +8088,17 @@ class SourceNativeBackend {
 				lines.push("}");
 				lines.push("namespace {");
 				appendPhpClassNameMap(lines, program, decl);
+				lines.push("#[\\AllowDynamicProperties]");
+				lines.push("class __HxAnon {");
+				lines.push("  public function __construct($fields = []) {");
+				lines.push("    foreach ($fields as $name => $value) $this->$name = $value;");
+				lines.push("  }");
+				lines.push("  public function __call($name, $args) {");
+				lines.push("    $value = $this->$name ?? null;");
+				lines.push("    if (is_callable($value)) return $value(...$args);");
+				lines.push("    throw new \\Error(\"Call to undefined method __HxAnon::\" . $name . \"()\");");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("class __HxArray {");
 				lines.push("  private $items;");
 				lines.push("  public function __construct($items) {");
