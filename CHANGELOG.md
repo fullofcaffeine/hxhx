@@ -1,3 +1,10 @@
+## [0.15.5](https://github.com/fullofcaffeine/hxhx/compare/v0.15.4...v0.15.5) (2026-04-23)
+
+
+### Bug Fixes
+
+* **php:** preserve thrown catch payloads ([61f5d53](https://github.com/fullofcaffeine/hxhx/commit/61f5d53e1d0bbf54cbcac709444ecd2f5e250a8e))
+
 ## [0.15.4](https://github.com/fullofcaffeine/hxhx/compare/v0.15.3...v0.15.4) (2026-04-22)
 
 
