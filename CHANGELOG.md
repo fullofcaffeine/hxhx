@@ -1,3 +1,10 @@
+## [0.15.10](https://github.com/fullofcaffeine/hxhx/compare/v0.15.9...v0.15.10) (2026-04-23)
+
+
+### Bug Fixes
+
+* **php:** lower locals capture loops natively ([58a891d](https://github.com/fullofcaffeine/hxhx/commit/58a891d703ea1beb3953d6fa1b91dbb57e5829f8))
+
 ## [0.15.9](https://github.com/fullofcaffeine/hxhx/compare/v0.15.8...v0.15.9) (2026-04-23)
 
 
