@@ -6406,7 +6406,7 @@ let appendPhpClassNameMap = fun lines program decl -> ignore (let names = HxMap.
 ))
 
 let appendPhpXmlRuntime = fun lines -> ignore ((
-  ignore (HxArray.push lines "class Xml {");
+  ignore (HxArray.push lines "class Xml implements \\IteratorAggregate {");
   ignore (HxArray.push lines "  public static $Element = 0;");
   ignore (HxArray.push lines "  public static $PCData = 1;");
   ignore (HxArray.push lines "  public static $CData = 2;");
@@ -6577,13 +6577,17 @@ let appendPhpXmlRuntime = fun lines -> ignore ((
   ignore (HxArray.push lines "  private function isValueNode() {");
   ignore (HxArray.push lines "    return $this->type === self::$PCData || $this->type === self::$CData || $this->type === self::$Comment || $this->type === self::$DocType || $this->type === self::$ProcessingInstruction;");
   ignore (HxArray.push lines "  }");
-  ignore (HxArray.push lines "  public function firstChild() { return count($this->children) > 0 ? $this->children[0] : null; }");
+  ignore (HxArray.push lines "  public function firstChild() { $this->requireParent(); return count($this->children) > 0 ? $this->children[0] : null; }");
   ignore (HxArray.push lines "  public function firstElement() {");
+  ignore (HxArray.push lines "    $this->requireParent();");
   ignore (HxArray.push lines "    foreach ($this->children as $child) if ($child instanceof Xml && $child->type === self::$Element) return $child;");
   ignore (HxArray.push lines "    return null;");
   ignore (HxArray.push lines "  }");
   ignore (HxArray.push lines "  private function requireElement() {");
   ignore (HxArray.push lines "    if ($this->type !== self::$Element) throw new \\Exception(\"Bad node type\");");
+  ignore (HxArray.push lines "  }");
+  ignore (HxArray.push lines "  private function requireParent() {");
+  ignore (HxArray.push lines "    if ($this->type !== self::$Element && $this->type !== self::$Document) throw new \\Exception(\"Bad node type\");");
   ignore (HxArray.push lines "  }");
   ignore (HxArray.push lines "  public function attributes() { $this->requireElement(); return array_keys($this->attrMap); }");
   ignore (HxArray.push lines "  public function get($name) { $this->requireElement(); return array_key_exists(strval($name), $this->attrMap) ? $this->attrMap[strval($name)] : null; }");
@@ -6596,13 +6600,25 @@ let appendPhpXmlRuntime = fun lines -> ignore ((
   ignore (HxArray.push lines "    unset($this->attrMap[$key]);");
   ignore (HxArray.push lines "    return $exists;");
   ignore (HxArray.push lines "  }");
-  ignore (HxArray.push lines "  public function iterator() { return new __HxArrayIterator($this->children); }");
+  ignore (HxArray.push lines "  public function addChild($child) { $this->requireParent(); $this->children[] = $child; return null; }");
+  ignore (HxArray.push lines "  public function removeChild($child) {");
+  ignore (HxArray.push lines "    $this->requireParent();");
+  ignore (HxArray.push lines "    $index = array_search($child, $this->children, true);");
+  ignore (HxArray.push lines "    if ($index === false) return false;");
+  ignore (HxArray.push lines "    array_splice($this->children, $index, 1);");
+  ignore (HxArray.push lines "    return true;");
+  ignore (HxArray.push lines "  }");
+  ignore (HxArray.push lines "  public function insertChild($child, $pos) { $this->requireParent(); array_splice($this->children, max(0, intval($pos)), 0, [$child]); return null; }");
+  ignore (HxArray.push lines "  public function iterator() { $this->requireParent(); return new __HxArrayIterator($this->children); }");
+  ignore (HxArray.push lines "  public function getIterator(): \\Traversable { return $this->iterator(); }");
   ignore (HxArray.push lines "  public function elements() {");
+  ignore (HxArray.push lines "    $this->requireParent();");
   ignore (HxArray.push lines "    $result = [];");
   ignore (HxArray.push lines "    foreach ($this->children as $child) if ($child instanceof Xml && $child->type === self::$Element) $result[] = $child;");
   ignore (HxArray.push lines "    return new __HxArrayIterator($result);");
   ignore (HxArray.push lines "  }");
   ignore (HxArray.push lines "  public function elementsNamed($name) {");
+  ignore (HxArray.push lines "    $this->requireParent();");
   ignore (HxArray.push lines "    $result = [];");
   ignore (HxArray.push lines "    foreach ($this->children as $child) if ($child instanceof Xml && $child->type === self::$Element && $child->name === strval($name)) $result[] = $child;");
   ignore (HxArray.push lines "    return new __HxArrayIterator($result);");

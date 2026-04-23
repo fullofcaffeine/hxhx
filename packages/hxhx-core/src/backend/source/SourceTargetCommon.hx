@@ -6110,7 +6110,7 @@ class SourceTargetCommon {
 	}
 
 	static function appendPhpXmlRuntime(lines:Array<String>):Void {
-		lines.push("class Xml {");
+		lines.push("class Xml implements \\IteratorAggregate {");
 		lines.push("  public static $Element = 0;");
 		lines.push("  public static $PCData = 1;");
 		lines.push("  public static $CData = 2;");
@@ -6281,13 +6281,17 @@ class SourceTargetCommon {
 		lines.push("  private function isValueNode() {");
 		lines.push("    return $this->type === self::$PCData || $this->type === self::$CData || $this->type === self::$Comment || $this->type === self::$DocType || $this->type === self::$ProcessingInstruction;");
 		lines.push("  }");
-		lines.push("  public function firstChild() { return count($this->children) > 0 ? $this->children[0] : null; }");
+		lines.push("  public function firstChild() { $this->requireParent(); return count($this->children) > 0 ? $this->children[0] : null; }");
 		lines.push("  public function firstElement() {");
+		lines.push("    $this->requireParent();");
 		lines.push("    foreach ($this->children as $child) if ($child instanceof Xml && $child->type === self::$Element) return $child;");
 		lines.push("    return null;");
 		lines.push("  }");
 		lines.push("  private function requireElement() {");
 		lines.push("    if ($this->type !== self::$Element) throw new \\Exception(\"Bad node type\");");
+		lines.push("  }");
+		lines.push("  private function requireParent() {");
+		lines.push("    if ($this->type !== self::$Element && $this->type !== self::$Document) throw new \\Exception(\"Bad node type\");");
 		lines.push("  }");
 		lines.push("  public function attributes() { $this->requireElement(); return array_keys($this->attrMap); }");
 		lines.push("  public function get($name) { $this->requireElement(); return array_key_exists(strval($name), $this->attrMap) ? $this->attrMap[strval($name)] : null; }");
@@ -6300,13 +6304,25 @@ class SourceTargetCommon {
 		lines.push("    unset($this->attrMap[$key]);");
 		lines.push("    return $exists;");
 		lines.push("  }");
-		lines.push("  public function iterator() { return new __HxArrayIterator($this->children); }");
+		lines.push("  public function addChild($child) { $this->requireParent(); $this->children[] = $child; return null; }");
+		lines.push("  public function removeChild($child) {");
+		lines.push("    $this->requireParent();");
+		lines.push("    $index = array_search($child, $this->children, true);");
+		lines.push("    if ($index === false) return false;");
+		lines.push("    array_splice($this->children, $index, 1);");
+		lines.push("    return true;");
+		lines.push("  }");
+		lines.push("  public function insertChild($child, $pos) { $this->requireParent(); array_splice($this->children, max(0, intval($pos)), 0, [$child]); return null; }");
+		lines.push("  public function iterator() { $this->requireParent(); return new __HxArrayIterator($this->children); }");
+		lines.push("  public function getIterator(): \\Traversable { return $this->iterator(); }");
 		lines.push("  public function elements() {");
+		lines.push("    $this->requireParent();");
 		lines.push("    $result = [];");
 		lines.push("    foreach ($this->children as $child) if ($child instanceof Xml && $child->type === self::$Element) $result[] = $child;");
 		lines.push("    return new __HxArrayIterator($result);");
 		lines.push("  }");
 		lines.push("  public function elementsNamed($name) {");
+		lines.push("    $this->requireParent();");
 		lines.push("    $result = [];");
 		lines.push("    foreach ($this->children as $child) if ($child instanceof Xml && $child->type === self::$Element && $child->name === strval($name)) $result[] = $child;");
 		lines.push("    return new __HxArrayIterator($result);");
