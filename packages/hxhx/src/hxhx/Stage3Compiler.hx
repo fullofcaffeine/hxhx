@@ -984,43 +984,10 @@ class Stage3Compiler {
 				}
 			}
 
-			if (macroSession != null) {
-				final hooks = hxhx.macro.MacroState.listAfterTypingHookIds();
-				for (i in 0...hooks.length) {
-					try {
-						macroSession.runHook("afterTyping", hooks[i]);
-					} catch (e:String) {
-						closeMacroSession();
-						return error("afterTyping hook failed: " + e);
-					}
-					Sys.println("hook_afterTyping[" + i + "]=ok");
-				}
-			}
-
-			if (macroSession != null) {
-				final hooks = hxhx.macro.MacroState.listOnGenerateHookIds();
-				for (i in 0...hooks.length) {
-					try {
-						macroSession.runHook("onGenerate", hooks[i]);
-					} catch (e:String) {
-						closeMacroSession();
-						return error("onGenerate hook failed: " + e);
-					}
-					Sys.println("hook_onGenerate[" + i + "]=ok");
-				}
-			}
-
-			if (macroSession != null) {
-				final hooks = hxhx.macro.MacroState.listAfterGenerateHookIds();
-				for (i in 0...hooks.length) {
-					try {
-						macroSession.runHook("afterGenerate", hooks[i]);
-					} catch (e:String) {
-						closeMacroSession();
-						return error("afterGenerate hook failed: " + e);
-					}
-					Sys.println("hook_afterGenerate[" + i + "]=ok");
-				}
+			final typeOnlyHookError = Stage3HookSupport.runStandardMacroHooks(macroSession);
+			if (typeOnlyHookError != null) {
+				closeMacroSession();
+				return error(typeOnlyHookError);
 			}
 
 			closeMacroSession();
@@ -1083,43 +1050,10 @@ class Stage3Compiler {
 			}
 		}
 
-		if (macroSession != null) {
-			final hooks = hxhx.macro.MacroState.listAfterTypingHookIds();
-			for (i in 0...hooks.length) {
-				try {
-					macroSession.runHook("afterTyping", hooks[i]);
-				} catch (e:String) {
-					closeMacroSession();
-					return error("afterTyping hook failed: " + e);
-				}
-				Sys.println("hook_afterTyping[" + i + "]=ok");
-			}
-		}
-
-		if (macroSession != null) {
-			final hooks = hxhx.macro.MacroState.listOnGenerateHookIds();
-			for (i in 0...hooks.length) {
-				try {
-					macroSession.runHook("onGenerate", hooks[i]);
-				} catch (e:String) {
-					closeMacroSession();
-					return error("onGenerate hook failed: " + e);
-				}
-				Sys.println("hook_onGenerate[" + i + "]=ok");
-			}
-		}
-
-		if (macroSession != null) {
-			final hooks = hxhx.macro.MacroState.listAfterGenerateHookIds();
-			for (i in 0...hooks.length) {
-				try {
-					macroSession.runHook("afterGenerate", hooks[i]);
-				} catch (e:String) {
-					closeMacroSession();
-					return error("afterGenerate hook failed: " + e);
-				}
-				Sys.println("hook_afterGenerate[" + i + "]=ok");
-			}
+		final hookError = Stage3HookSupport.runStandardMacroHooks(macroSession);
+		if (hookError != null) {
+			closeMacroSession();
+			return error(hookError);
 		}
 
 		final providerDefines = allDefines.copy();
