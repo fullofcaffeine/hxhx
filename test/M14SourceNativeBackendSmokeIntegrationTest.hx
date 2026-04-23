@@ -691,6 +691,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpCustomExceptionValueExceptionGuardProgram():GenIrProgram {
+		final src = [
+			"import haxe.Exception;",
+			"import haxe.ValueException;",
+			"class CustomHaxeException extends Exception { }",
+			"class Main {",
+			"  static function main() {",
+			"    try {",
+			"      throw new CustomHaxeException(\"boom\");",
+			"    } catch (e:ValueException) {",
+			"      Sys.println(\"bad\");",
+			"    } catch (e:Dynamic) {",
+			"      Sys.println(\"ok\");",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpValueExceptionCatchProgram():GenIrProgram {
 		final src = [
 			"import haxe.ValueException;",
@@ -706,6 +728,57 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		].join("\n");
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpAbstractCatchProgram():GenIrProgram {
+		final src = [
+			"import haxe.Exception;",
+			"private abstract AbstrString(String) from String { }",
+			"private class CustomHaxeException extends Exception { }",
+			"private abstract AbstrException(CustomHaxeException) from CustomHaxeException { }",
+			"class Main {",
+			"  static function main() {",
+			"    try {",
+			"      throw \"hello\";",
+			"    } catch (e:AbstrString) {",
+			"      Sys.println(e);",
+			"    }",
+			"    try {",
+			"      throw new CustomHaxeException(\"boom\");",
+			"    } catch (e:AbstrException) {",
+			"      Sys.println(e);",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpEnumCatchProgram():GenIrProgram {
+		final src = [
+			"private enum EnumError {",
+			"  EError;",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    try {",
+			"      throw EError;",
+			"    } catch (e:EnumError) {",
+			"      Sys.println(e);",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final baseDecl = parsed.getDecl();
+		final main = HxModuleDecl.getMainClass(baseDecl);
+		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
+		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
 		return MacroStage.expandProgram([typed], []);
 	}
 
@@ -4541,6 +4614,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP custom Haxe exception catches should receive the original payload");
 		deleteRecursive(customTmpRoot);
 
+		final customGuardTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_custom_exception_value_guard_" + Std.string(Date.now().getTime()));
+		deleteRecursive(customGuardTmpRoot);
+		FileSystem.createDirectory(customGuardTmpRoot);
+		backend.emit(phpCustomExceptionValueExceptionGuardProgram(),
+			new BackendContext(customGuardTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final customGuardContent = File.getContent(Path.join([customGuardTmpRoot, "index.php"]));
+		assertContains(customGuardContent,
+			"if ($type === \"ValueException\" || $type === \"haxe.ValueException\") return $caught instanceof ValueException && !($caught->value instanceof \\Throwable);",
+			"PHP ValueException catches should not match wrapped Throwable payloads");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([customGuardTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP ValueException guard should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "ok", "generated PHP ValueException catch should skip custom Haxe exceptions");
+			assertNotContains(run.stdout, "bad", "generated PHP ValueException catch should not catch custom Haxe exceptions");
+		}
+		deleteRecursive(customGuardTmpRoot);
+
 		final valueTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_value_exception_catch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(valueTmpRoot);
 		FileSystem.createDirectory(valueTmpRoot);
@@ -4550,6 +4640,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNotContains(valueContent, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);", "PHP ValueException catches should preserve the wrapper object");
 		assertContains(valueContent, "echo $e->value . PHP_EOL;", "PHP ValueException catch bodies should be able to read value");
 		deleteRecursive(valueTmpRoot);
+
+		final abstractTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_exception_catch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(abstractTmpRoot);
+		FileSystem.createDirectory(abstractTmpRoot);
+		backend.emit(phpAbstractCatchProgram(), new BackendContext(abstractTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final abstractContent = File.getContent(Path.join([abstractTmpRoot, "index.php"]));
+		assertContains(abstractContent, "__hxhx_catch_matches($__hxhx_caught, \"AbstrString\")",
+			"PHP abstract String catches should route through catch matching");
+		assertContains(abstractContent, "__hxhx_catch_matches($__hxhx_caught, \"AbstrException\")",
+			"PHP abstract Exception catches should route through catch matching");
+		assertContains(abstractContent, "function __hxhx_catch_matches($caught, $type)", "PHP runtime should expose Haxe catch matching");
+		assertContains(abstractContent, "if (substr($short, -6) === \"String\") return is_string($value);",
+			"PHP catch matching should follow erased String abstracts");
+		assertContains(abstractContent, "if (substr($short, -9) === \"Exception\") return $value instanceof \\Exception;",
+			"PHP catch matching should follow erased Exception abstracts");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([abstractTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP abstract catches should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "hello", "generated PHP abstract String catch should observe the thrown value");
+			assertContains(run.stdout, "CustomHaxeException", "generated PHP abstract Exception catch should observe the thrown value");
+		}
+		deleteRecursive(abstractTmpRoot);
+
+		final enumTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_enum_catch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(enumTmpRoot);
+		FileSystem.createDirectory(enumTmpRoot);
+		backend.emit(phpEnumCatchProgram(), new BackendContext(enumTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final enumContent = File.getContent(Path.join([enumTmpRoot, "index.php"]));
+		assertContains(enumContent, "__hxhx_catch_matches($__hxhx_caught, \"EnumError\")", "PHP enum catches should route through catch matching");
+		assertContains(enumContent,
+			"if (substr($short, 0, 4) === \"Enum\") return is_string($value) || (is_object($value) && property_exists($value, \"__hx_ctor\"));",
+			"PHP catch matching should follow the source backend enum value encodings");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([enumTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP enum catches should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "EError", "generated PHP enum catch should observe the thrown enum value");
+		}
+		deleteRecursive(enumTmpRoot);
 	}
 
 	static function assertPhpTypeErrorProbe():Void {

@@ -2254,26 +2254,7 @@ class SourceNativeBackend {
 
 	static function phpCatchMatches(caughtExpr:String, typeHint:String):String {
 		final trimmed = StringTools.trim(typeHint == null ? "" : typeHint);
-		return switch (trimmed) {
-			case "" | "Dynamic" | "Any" | "Exception" | "haxe.Exception":
-				"true";
-			case "ValueException" | "haxe.ValueException":
-				caughtExpr + " instanceof ValueException";
-			case "Int":
-				"is_int(__hxhx_unwrap_thrown_value(" + caughtExpr + "))";
-			case "Float":
-				"(is_float(__hxhx_unwrap_thrown_value("
-				+ caughtExpr
-				+ ")) || is_int(__hxhx_unwrap_thrown_value("
-				+ caughtExpr
-				+ ")))";
-			case "String":
-				"is_string(__hxhx_unwrap_thrown_value(" + caughtExpr + "))";
-			case "Bool":
-				"is_bool(__hxhx_unwrap_thrown_value(" + caughtExpr + "))";
-			case _:
-				"__hxhx_unwrap_thrown_value(" + caughtExpr + ") instanceof " + sanitizePhpTypePath(trimmed);
-		}
+		return "__hxhx_catch_matches(" + caughtExpr + ", " + quoteString(trimmed) + ")";
 	}
 
 	static function renderReturningStmt(target:SourceNativeTarget, stmt:HxStmt, indent:String):Array<String> {
@@ -7311,6 +7292,27 @@ class SourceNativeBackend {
 				lines.push("  if ($value instanceof \\Throwable) return $value->getMessage();");
 				lines.push("  if (is_array($value) && array_key_exists(\"message\", $value)) return $value[\"message\"];");
 				lines.push("  return $value->message;");
+				lines.push("}");
+				lines.push("function __hxhx_catch_matches($caught, $type) {");
+				lines.push("  $type = strval($type);");
+				lines.push("  if ($type === \"\" || $type === \"Dynamic\" || $type === \"Any\" || $type === \"Exception\" || $type === \"haxe.Exception\") return true;");
+				lines.push("  if ($type === \"ValueException\" || $type === \"haxe.ValueException\") return $caught instanceof ValueException && !($caught->value instanceof \\Throwable);");
+				lines.push("  $value = __hxhx_unwrap_thrown_value($caught);");
+				lines.push("  if ($type === \"Int\") return is_int($value);");
+				lines.push("  if ($type === \"Float\") return is_float($value) || is_int($value);");
+				lines.push("  if ($type === \"String\") return is_string($value);");
+				lines.push("  if ($type === \"Bool\") return is_bool($value);");
+				lines.push("  $class = str_replace(\".\", \"\\\\\", $type);");
+				lines.push("  if (class_exists($class) && $value instanceof $class) return true;");
+				lines.push("  $parts = explode(\".\", $type);");
+				lines.push("  $short = end($parts);");
+				lines.push("  if (substr($short, -6) === \"String\") return is_string($value);");
+				lines.push("  if (substr($short, -3) === \"Int\") return is_int($value);");
+				lines.push("  if (substr($short, -5) === \"Float\") return is_float($value) || is_int($value);");
+				lines.push("  if (substr($short, -4) === \"Bool\") return is_bool($value);");
+				lines.push("  if (substr($short, -9) === \"Exception\") return $value instanceof \\Exception;");
+				lines.push("  if (substr($short, 0, 4) === \"Enum\") return is_string($value) || (is_object($value) && property_exists($value, \"__hx_ctor\"));");
+				lines.push("  return false;");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_var(&$value, $delta) {");
 				lines.push("  $old = $value;");
