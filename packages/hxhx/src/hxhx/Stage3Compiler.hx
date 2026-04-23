@@ -1382,10 +1382,10 @@ class Stage3Compiler {
 				unitArgs.push(a);
 
 			if (Sys.getEnv("HXHX_TRACE_UNITS") == "1") {
-				final main = findFlagValue(u, "-main", "--main");
-				final cp = findManyFlagValues(u, "-cp", "--class-path", "-p");
+				final main = Stage3Args.findFlagValue(u, "-main", "--main");
+				final cp = Stage3Args.findManyFlagValues(u, "-cp", "--class-path", "-p");
 				Sys.println("hxhx(stage3): unit_begin idx=" + idx + " main=" + (main == null ? "<none>" : main) + " cp=" + cp.join(",") + " args="
-					+ summarizeArgs(u));
+					+ Stage3Args.summarizeArgs(u));
 			}
 
 			final code = runOne(unitArgs);
@@ -1393,40 +1393,5 @@ class Stage3Compiler {
 				return code;
 		}
 		return 0;
-	}
-
-	static function findFlagValue(args:Array<String>, a:String, b:String):Null<String> {
-		var i = 0;
-		while (i < args.length) {
-			final t = args[i];
-			if ((t == a || t == b) && i + 1 < args.length)
-				return args[i + 1];
-			i++;
-		}
-		return null;
-	}
-
-	static function findManyFlagValues(args:Array<String>, a:String, b:String, ?c:String):Array<String> {
-		final out = new Array<String>();
-		var i = 0;
-		while (i < args.length) {
-			final t = args[i];
-			final match = (t == a || t == b || (c != null && t == c));
-			if (match && i + 1 < args.length) {
-				out.push(args[i + 1]);
-				i += 2;
-				continue;
-			}
-			i++;
-		}
-		return out;
-	}
-
-	static function summarizeArgs(args:Array<String>):String {
-		final joined = args.join(" ");
-		final maxLen = 160;
-		if (joined.length <= maxLen)
-			return joined;
-		return joined.substr(0, maxLen) + "...";
 	}
 }

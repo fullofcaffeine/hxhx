@@ -13,6 +13,7 @@ import hxhx.Stage1Compiler.Stage1Args;
 	What
 	- Parses `--hxhx-*` Stage3 control flags.
 	- Maps backend IDs to target define/output hint behavior.
+	- Summarizes per-unit forwarded arguments for trace logging.
 	- Detects whether a flag is already present in a forwarded arg vector.
 
 	How
@@ -176,5 +177,40 @@ class Stage3Args {
 			i += 1;
 		}
 		return null;
+	}
+
+	public static function findFlagValue(args:Array<String>, a:String, b:String):Null<String> {
+		var i = 0;
+		while (i < args.length) {
+			final t = args[i];
+			if ((t == a || t == b) && i + 1 < args.length)
+				return args[i + 1];
+			i++;
+		}
+		return null;
+	}
+
+	public static function findManyFlagValues(args:Array<String>, a:String, b:String, ?c:String):Array<String> {
+		final out = new Array<String>();
+		var i = 0;
+		while (i < args.length) {
+			final t = args[i];
+			final match = (t == a || t == b || (c != null && t == c));
+			if (match && i + 1 < args.length) {
+				out.push(args[i + 1]);
+				i += 2;
+				continue;
+			}
+			i++;
+		}
+		return out;
+	}
+
+	public static function summarizeArgs(args:Array<String>):String {
+		final joined = args.join(" ");
+		final maxLen = 160;
+		if (joined.length <= maxLen)
+			return joined;
+		return joined.substr(0, maxLen) + "...";
 	}
 }
