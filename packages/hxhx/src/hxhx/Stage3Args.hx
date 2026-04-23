@@ -179,6 +179,24 @@ class Stage3Args {
 		return null;
 	}
 
+	public static function initialRoots(parsedMain:Null<String>, parsedRoots:Array<String>,
+			parsedMacros:Array<String>):{roots:Array<String>, missingMainFromMacro:Bool} {
+		final roots = new Array<String>();
+		if (parsedMain != null && parsedMain.length > 0) {
+			roots.push(parsedMain);
+		} else if (parsedRoots != null && parsedRoots.length > 0) {
+			for (r in parsedRoots)
+				if (r != null && r.length > 0)
+					roots.push(r);
+		} else if (parsedMacros.length > 0) {
+			final inferred = Stage3PathSupport.inferMainFromMacroExpr(parsedMacros[0]);
+			if (inferred.length == 0)
+				return {roots: roots, missingMainFromMacro: true};
+			roots.push(inferred);
+		}
+		return {roots: roots, missingMainFromMacro: false};
+	}
+
 	public static function findFlagValue(args:Array<String>, a:String, b:String):Null<String> {
 		var i = 0;
 		while (i < args.length) {

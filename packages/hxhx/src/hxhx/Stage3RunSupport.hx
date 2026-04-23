@@ -51,6 +51,20 @@ class Stage3RunSupport {
 		return ran ? 0 : null;
 	}
 
+	public static function runCommandOnlyUnit(parsedHadCmd:Bool, parsedCmdCommands:Array<String>, cwd:String):Null<String> {
+		if (!parsedHadCmd)
+			return "missing -main <TypeName>";
+		final cmdCode = runSafeCommandOnlyHooks(parsedCmdCommands, cwd);
+		if (cmdCode != null) {
+			if (cmdCode != 0)
+				return "command hook failed with exit code " + Std.string(cmdCode);
+			Sys.println("stage3=cmd_ok");
+			return null;
+		}
+		Sys.println("stage3=skipped_cmd_only");
+		return null;
+	}
+
 	public static function runSafeJavaJarHookForArtifact(commands:Array<String>, cwd:String, artifactPath:String):Null<Int> {
 		if (commands == null || commands.length == 0 || artifactPath == null || artifactPath.length == 0)
 			return null;

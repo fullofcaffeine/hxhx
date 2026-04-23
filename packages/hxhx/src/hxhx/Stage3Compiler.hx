@@ -125,10 +125,6 @@ class Stage3Compiler {
 		return Stage3Args.findTargetOutputDirectoryHint(args, backendId);
 	}
 
-	static function runSafeCommandOnlyHooks(commands:Array<String>, cwd:String):Null<Int> {
-		return Stage3RunSupport.runSafeCommandOnlyHooks(commands, cwd);
-	}
-
 	static function runWaitStdio(baseArgs:Array<String>):Int {
 		return Stage3WaitServer.runWaitStdio(baseArgs, runOne, error);
 	}
@@ -298,10 +294,6 @@ class Stage3Compiler {
 		if (outDir.length == 0)
 			noEmit = noEmit || parsedNoOutput;
 
-		function inferMainFromMacroExpr(expr:String):String {
-			return Stage3PathSupport.inferMainFromMacroExpr(expr);
-		}
-
 		// Upstream allows invocations without `-main`:
 		// - "macro-only" compilation (`--macro ...`) and/or
 		// - compile-time suites that pass "dot paths" as positional args (type/module roots).
@@ -310,20 +302,11 @@ class Stage3Compiler {
 		// 1) explicit `-main`
 		// 2) positional roots (`<pack.TypeName>` args)
 		// 3) first `--macro` entrypoint's type path (before the final `.method(...)`)
-		final roots0 = new Array<String>();
+		final initialRoots = Stage3Args.initialRoots(parsedMain, parsedRoots, parsedMacros);
+		if (initialRoots.missingMainFromMacro)
+			return error("missing -main <TypeName>");
+		final roots0 = initialRoots.roots;
 		final displayRequest = Stage1Args.getDisplayRequest(parsed);
-		if (parsedMain != null && parsedMain.length > 0) {
-			roots0.push(parsedMain);
-		} else if (parsedRoots != null && parsedRoots.length > 0) {
-			for (r in parsedRoots)
-				if (r != null && r.length > 0)
-					roots0.push(r);
-		} else if (parsedMacros.length > 0) {
-			final inferred = inferMainFromMacroExpr(parsedMacros[0]);
-			if (inferred.length == 0)
-				return error("missing -main <TypeName>");
-			roots0.push(inferred);
-		}
 
 		// Type-only mode is intended to answer “how far does the typer get?” without requiring a
 		// working macro host. Upstream-ish workloads (e.g. `tests/unit/compile-macro.hxml`) often
@@ -376,19 +359,10 @@ class Stage3Compiler {
 			//
 			// For Stage3 bring-up we do not execute `-cmd`/`--cmd`; treat these units as skipped so
 			// diagnostic runners can still traverse the rest of the multi-unit file.
-			if (parsedHadCmd) {
-				final cmdCode = runSafeCommandOnlyHooks(parsedCmdCommands, cwd);
-				if (cmdCode != null) {
-					if (cmdCode != 0)
-						return error("command hook failed with exit code " + Std.string(cmdCode));
-					Sys.println("stage3=cmd_ok");
-					return 0;
-				} else {
-					Sys.println("stage3=skipped_cmd_only");
-					return 0;
-				}
-			}
-			return error("missing -main <TypeName>");
+			final commandOnlyError = Stage3RunSupport.runCommandOnlyUnit(parsedHadCmd, parsedCmdCommands, cwd);
+			if (commandOnlyError != null)
+				return error(commandOnlyError);
+			return 0;
 		}
 
 		final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
