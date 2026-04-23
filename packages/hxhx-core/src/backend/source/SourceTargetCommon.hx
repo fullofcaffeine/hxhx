@@ -1891,6 +1891,11 @@ class SourceTargetCommon {
 				final cleanName = sanitizeTypeName(args[0]);
 				final valueCaptures = new Array<String>();
 				final refCaptures = new Array<String>();
+				final iterableNames = new Array<String>();
+				phpCollectUsedIdents(iterable, iterableNames);
+				for (name in phpFilterCapturedNames(iterableNames, []))
+					if (valueCaptures.indexOf(name) < 0)
+						valueCaptures.push(name);
 				for (name in phpLambdaUsedCaptures(body, args))
 					if (valueCaptures.indexOf(name) < 0)
 						valueCaptures.push(name);
