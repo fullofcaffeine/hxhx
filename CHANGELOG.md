@@ -1,3 +1,11 @@
+## [0.15.7](https://github.com/fullofcaffeine/hxhx/compare/v0.15.6...v0.15.7) (2026-04-23)
+
+
+### Bug Fixes
+
+* **php:** add minimal call stack runtime ([2539019](https://github.com/fullofcaffeine/hxhx/commit/2539019a253af57a033e5d418d730b753a300256))
+* **php:** route instance calls and array push ([3893983](https://github.com/fullofcaffeine/hxhx/commit/38939831004dc646ba39f8d5310f4484b5d31560))
+
 ## [0.15.6](https://github.com/fullofcaffeine/hxhx/compare/v0.15.5...v0.15.6) (2026-04-23)
 
 
