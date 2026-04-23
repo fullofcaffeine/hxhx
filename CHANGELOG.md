@@ -1,3 +1,12 @@
+## [0.15.8](https://github.com/fullofcaffeine/hxhx/compare/v0.15.7...v0.15.8) (2026-04-23)
+
+
+### Bug Fixes
+
+* **php:** fold helper macros and std exceptions ([8164025](https://github.com/fullofcaffeine/hxhx/commit/8164025f4d762e80bf73bdfeb3b8d6cb08634cf4))
+* **php:** lower expression throws and argument exceptions ([5a3e68c](https://github.com/fullofcaffeine/hxhx/commit/5a3e68c74746745f3949c47635574729fa0937d5))
+* **php:** support std downcast catches ([0083cc2](https://github.com/fullofcaffeine/hxhx/commit/0083cc2be32ea02769940c7d50ad14a677a4a391))
+
 ## [0.15.7](https://github.com/fullofcaffeine/hxhx/compare/v0.15.6...v0.15.7) (2026-04-23)
 
 
