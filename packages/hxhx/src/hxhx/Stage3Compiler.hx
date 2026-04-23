@@ -341,43 +341,7 @@ class Stage3Compiler {
 	}
 
 	static function parseDelimitedList(raw:String):Array<String> {
-		final out = new Array<String>();
-		final normalized = NullableRuntimeString.normalize(raw);
-		if (normalized == null)
-			return out;
-		final s = StringTools.trim(normalized);
-		if (s.length == 0)
-			return out;
-
-		// Accept either ';' or ',' as separators (bring-up convenience).
-		final parts = s.indexOf(";") != -1 ? s.split(";") : s.split(",");
-		for (p in parts) {
-			if (p == null)
-				continue;
-			final t = StringTools.trim(p);
-			if (t.length == 0)
-				continue;
-			if (out.indexOf(t) == -1)
-				out.push(t);
-		}
-		return out;
-	}
-
-	static function builtinExprMacros():Array<String> {
-		return ["unit.HelperMacros.getCompilationDate()", "HelperMacros.getCompilationDate()"];
-	}
-
-	static function mergeExprMacroAllowlist(explicit:Array<String>):Array<String> {
-		final out = new Array<String>();
-		for (expr in builtinExprMacros())
-			if (out.indexOf(expr) == -1)
-				out.push(expr);
-		if (explicit != null) {
-			for (expr in explicit)
-				if (expr != null && expr.length > 0 && out.indexOf(expr) == -1)
-					out.push(expr);
-		}
-		return out;
+		return Stage3MacroHostSupport.parseDelimitedList(raw);
 	}
 
 	static function loadDynamicBackendProviders(rawDefines:Array<String>):Void {
@@ -385,67 +349,19 @@ class Stage3Compiler {
 	}
 
 	static function isBuiltinMacroExpr(expr:String):Bool {
-		final e = trim(expr);
-		// Builtins compiled into the macro host binary (and/or treated as "no-op builtins" during bring-up).
-		//
-		// Why
-		// - Stage4 brings up a *safe* macro execution surface incrementally. Many upstream macro expressions
-		//   (especially in compiler test suites) are not supported as real "user macro entrypoints" yet.
-		// - Auto-building a macro host that tries to execute those expressions can crash the host (because
-		//   the runtime macro API surface is still incomplete).
-		//
-		// What
-		// - Treat a tiny allowlist as builtins so they are NOT included in the auto-built macro-host entrypoint list.
-		// - The expressions are still sent to the macro host via `macro.run`; the host may treat them as a no-op.
-		return StringTools.startsWith(e, "BuiltinMacros.")
-			|| StringTools.startsWith(e, "hxhxmacrohost.BuiltinMacros.")
-			|| StringTools.startsWith(e, "hxhxmacrohost.BuiltinMacros") // Upstream null-safety test suite macros (Gate2 diagnostics).
-			|| StringTools.startsWith(e, "nullSafety(")
-			|| StringTools.startsWith(e, "Validator.register(");
+		return Stage3MacroHostSupport.isBuiltinMacroExpr(expr);
 	}
 
 	static function anyNonBuiltinMacro(exprs:Array<String>):Bool {
-		for (e in exprs)
-			if (!isBuiltinMacroExpr(e))
-				return true;
-		return false;
+		return Stage3MacroHostSupport.anyNonBuiltinMacro(exprs);
 	}
 
 	static function shouldAutoBuildMacroHost():Bool {
-		final v = trim(Sys.getEnv("HXHX_MACRO_HOST_AUTO_BUILD"));
-		return v == "1" || v == "true" || v == "yes";
+		return Stage3MacroHostSupport.shouldAutoBuildMacroHost();
 	}
 
 	static function buildMacroHostExe(repoRoot:String, extraCp:Array<String>, entrypoints:Array<String>):String {
-		final script = Path.join([repoRoot, "scripts", "hxhx", "build-hxhx-macro-host.sh"]);
-		if (!sys.FileSystem.exists(script))
-			throw "missing macro host build script: " + script;
-
-		// Environment passed through to the script.
-		Sys.putEnv("HXHX_MACRO_HOST_EXTRA_CP", (extraCp != null && extraCp.length > 0) ? extraCp.join(":") : "");
-		Sys.putEnv("HXHX_MACRO_HOST_ENTRYPOINTS", (entrypoints != null && entrypoints.length > 0) ? entrypoints.join(";") : "");
-
-		final p = new sys.io.Process("bash", [script]);
-		final lines = new Array<String>();
-		try {
-			while (true)
-				lines.push(p.stdout.readLine());
-		} catch (_:Eof) {}
-
-		final code = p.exitCode();
-		p.close();
-		if (code != 0)
-			throw "macro host build failed with exit code " + code;
-
-		var exe = "";
-		for (i in 0...lines.length) {
-			final l = trim(lines[i]);
-			if (l.length > 0)
-				exe = l;
-		}
-		if (exe.length == 0)
-			throw "macro host build produced no executable path";
-		return exe;
+		return Stage3MacroHostSupport.buildMacroHostExe(repoRoot, extraCp, entrypoints);
 	}
 
 	static function parseGeneratedMembers(members:Array<String>):{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
@@ -604,7 +520,7 @@ class Stage3Compiler {
 		//
 		// These are call sites in *normal code* (not CLI `--macro`) that we will attempt to expand
 		// before typing by asking the macro host for a replacement expression snippet.
-		final exprMacros = mergeExprMacroAllowlist(parseDelimitedList(Sys.getEnv("HXHX_EXPR_MACROS")));
+		final exprMacros = Stage3MacroHostSupport.exprMacroAllowlistFromEnv();
 
 		var macroSession:Null<MacroRuntimeSession> = null;
 		inline function closeMacroSession():Void {
