@@ -6457,11 +6457,11 @@ let appendPhpXmlRuntime = fun lines -> ignore ((
   ignore (HxArray.push lines "    $len = strlen($source);");
   ignore (HxArray.push lines "    while ($i < $len) {");
   ignore (HxArray.push lines "      if (substr($source, $i, 2) === \"</\") {");
-  ignore (HxArray.push lines "        if ($closing === null) self::parseError();");
   ignore (HxArray.push lines "        $i += 2;");
   ignore (HxArray.push lines "        $name = self::readName($source, $i);");
   ignore (HxArray.push lines "        self::skipWhitespace($source, $i);");
-  ignore (HxArray.push lines "        if ($i >= $len || $source[$i] !== \">\" || $name !== $closing) self::parseError();");
+  ignore (HxArray.push lines "        if ($i >= $len || $source[$i] !== \">\") self::parseError();");
+  ignore (HxArray.push lines "        if ($closing === null || $name !== $closing) self::parseError(\"Unexpected </\" . $name . \">, tag is not open\");");
   ignore (HxArray.push lines "        $i++;");
   ignore (HxArray.push lines "        return $children;");
   ignore (HxArray.push lines "      }");
@@ -6489,7 +6489,7 @@ let appendPhpXmlRuntime = fun lines -> ignore ((
   ignore (HxArray.push lines "      while ($i < $len && $source[$i] !== \"<\") $i++;");
   ignore (HxArray.push lines "      if ($i > $start) $children[] = self::createPCData(substr($source, $start, $i - $start));");
   ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    if ($closing !== null) self::parseError();");
+  ignore (HxArray.push lines "    if ($closing !== null) self::parseError(\"Unclosed node <\" . $closing . \">\");");
   ignore (HxArray.push lines "    return $children;");
   ignore (HxArray.push lines "  }");
   ignore (HxArray.push lines "  private static function parseElement($source, &$i) {");
@@ -6551,7 +6551,7 @@ let appendPhpXmlRuntime = fun lines -> ignore ((
   ignore (HxArray.push lines "    $len = strlen($source);");
   ignore (HxArray.push lines "    while ($i < $len && preg_match('/\\\\s/', $source[$i]) === 1) $i++;");
   ignore (HxArray.push lines "  }");
-  ignore (HxArray.push lines "  private static function parseError() { throw new \\Exception(\"Xml parse error\"); }");
+  ignore (HxArray.push lines "  private static function parseError($message = \"Xml parse error\") { throw new \\Exception($message); }");
   ignore (HxArray.push lines "  public function __get($field) {");
   ignore (HxArray.push lines "    if ($field === \"nodeType\") return $this->type;");
   ignore (HxArray.push lines "    if ($field === \"nodeName\") {");

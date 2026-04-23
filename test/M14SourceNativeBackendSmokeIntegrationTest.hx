@@ -1010,6 +1010,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    try { haxe.xml.Parser.parse('<node attribute=\">\"/>', true); Sys.println('bad'); } catch (e:Dynamic) Sys.println('exc');",
 			"    var escapedAttr = haxe.xml.Parser.parse('<node attribute=\"something with &lt; &amp; &quot; &apos; special characters &gt;\"/>');",
 			"    Sys.println(escapedAttr.firstChild().get('attribute'));",
+			"    try { haxe.xml.Parser.parse('<flow>x'); Sys.println('bad'); } catch (e:Exception) Sys.println(Std.string(e.message.indexOf('Unclosed node <flow>') != -1));",
+			"    try { haxe.xml.Parser.parse('<f><f/></f></f>'); Sys.println('bad'); } catch (e:Exception) Sys.println(Std.string(e.message.indexOf('Unexpected </f>, tag is not open') != -1));",
+			"    try { haxe.xml.Parser.parse('<f><f></f>'); Sys.println('bad'); } catch (e:Exception) Sys.println(Std.string(e.message.indexOf('Unclosed node <f>') != -1));",
 			"    try { Xml.parse('<node>'); Sys.println('bad'); } catch (e:Dynamic) Sys.println('exc');",
 			"  }",
 			"}",
@@ -5227,7 +5230,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(xmlContent, "public static function parse($source)", "PHP Xml runtime should expose parse");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([xmlTmpRoot, "index.php"])]);
-			final expected = "true\ntrue\nexc\nexc\nexc\nexc\nexc\ntrue\na\n<b href=\"hello\">World<b/></b>\nhello\nfalse\nhref\n\n<b>World<b/></b>\nWorld\nb\n1\n<a><b><c/> <d/> \\n <e/><![CDATA[<x>]]></b></a>\n\"\n<!--Hello-->\nHello\n<![CDATA[<x>]]>\nHello\n<?XHTML?>\n<!DOCTYPE XHTML>\nexc\nexc\nexc\nexc\nexc\nexc\nexc\nexc\nexc\n<\n@\nô\n?\nÿ\n<a>&gt;<b>&lt;</b>&lt;&gt;<b>&gt;&lt;</b>\"</a>\n<i>I<a>A</a></i>\n<node key=\"a&quot;b&#039;&amp;c&gt;d&lt;e\"/>\nexc\nexc\nsomething with < & \" ' special characters >\nexc\n";
+			final expected = "true\ntrue\nexc\nexc\nexc\nexc\nexc\ntrue\na\n<b href=\"hello\">World<b/></b>\nhello\nfalse\nhref\n\n<b>World<b/></b>\nWorld\nb\n1\n<a><b><c/> <d/> \\n <e/><![CDATA[<x>]]></b></a>\n\"\n<!--Hello-->\nHello\n<![CDATA[<x>]]>\nHello\n<?XHTML?>\n<!DOCTYPE XHTML>\nexc\nexc\nexc\nexc\nexc\nexc\nexc\nexc\nexc\n<\n@\nô\n?\nÿ\n<a>&gt;<b>&lt;</b>&lt;&gt;<b>&gt;&lt;</b>\"</a>\n<i>I<a>A</a></i>\n<node key=\"a&quot;b&#039;&amp;c&gt;d&lt;e\"/>\nexc\nexc\nsomething with < & \" ' special characters >\ntrue\ntrue\ntrue\nexc\n";
 			assertTrue(run.code == 0, "generated PHP Xml runtime should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == expected, "generated PHP Xml runtime should match TestXML.testBasic subset, got:\n" + run.stdout);
 		}

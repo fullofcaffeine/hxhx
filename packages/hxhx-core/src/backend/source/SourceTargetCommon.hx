@@ -6168,11 +6168,11 @@ class SourceTargetCommon {
 		lines.push("    $len = strlen($source);");
 		lines.push("    while ($i < $len) {");
 		lines.push("      if (substr($source, $i, 2) === \"</\") {");
-		lines.push("        if ($closing === null) self::parseError();");
 		lines.push("        $i += 2;");
 		lines.push("        $name = self::readName($source, $i);");
 		lines.push("        self::skipWhitespace($source, $i);");
-		lines.push("        if ($i >= $len || $source[$i] !== \">\" || $name !== $closing) self::parseError();");
+		lines.push("        if ($i >= $len || $source[$i] !== \">\") self::parseError();");
+		lines.push("        if ($closing === null || $name !== $closing) self::parseError(\"Unexpected </\" . $name . \">, tag is not open\");");
 		lines.push("        $i++;");
 		lines.push("        return $children;");
 		lines.push("      }");
@@ -6200,7 +6200,7 @@ class SourceTargetCommon {
 		lines.push("      while ($i < $len && $source[$i] !== \"<\") $i++;");
 		lines.push("      if ($i > $start) $children[] = self::createPCData(substr($source, $start, $i - $start));");
 		lines.push("    }");
-		lines.push("    if ($closing !== null) self::parseError();");
+		lines.push("    if ($closing !== null) self::parseError(\"Unclosed node <\" . $closing . \">\");");
 		lines.push("    return $children;");
 		lines.push("  }");
 		lines.push("  private static function parseElement($source, &$i) {");
@@ -6262,7 +6262,7 @@ class SourceTargetCommon {
 		lines.push("    $len = strlen($source);");
 		lines.push("    while ($i < $len && preg_match('/\\\\s/', $source[$i]) === 1) $i++;");
 		lines.push("  }");
-		lines.push("  private static function parseError() { throw new \\Exception(\"Xml parse error\"); }");
+		lines.push("  private static function parseError($message = \"Xml parse error\") { throw new \\Exception($message); }");
 		lines.push("  public function __get($field) {");
 		lines.push("    if ($field === \"nodeType\") return $this->type;");
 		lines.push("    if ($field === \"nodeName\") {");
