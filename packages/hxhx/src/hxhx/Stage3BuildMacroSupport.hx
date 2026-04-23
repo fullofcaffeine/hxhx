@@ -1,5 +1,8 @@
 package hxhx;
 
+import hxhx.macro.BuildFieldSnapshotPayload;
+import hxhx.macro.MacroRuntimeSession;
+
 /**
 	Stage3 build-macro metadata and hook support helpers.
 
@@ -39,7 +42,7 @@ class Stage3BuildMacroSupport {
 	}
 
 	public static function buildFieldsPayloadForParsed(pm:ParsedModule):String {
-		return hxhx.macro.BuildFieldSnapshotPayload.encodeParsedModule(pm);
+		return BuildFieldSnapshotPayload.encodeParsedModule(pm);
 	}
 
 	public static function collectBuildMacroExprs(source:String, modulePath:String):Array<String> {

@@ -199,14 +199,6 @@ class Stage3Compiler {
 		return Stage3WaitServer.runConnect(connectMode, requestArgs, error);
 	}
 
-	static function escapeOneLine(s:String):String {
-		return Stage3DiagnosticsSupport.escapeOneLine(s);
-	}
-
-	static function countUnsupportedExprsInExpr(e:Null<HxExpr>):Int {
-		return Stage3DiagnosticsSupport.countUnsupportedExprsInExpr(e);
-	}
-
 	static function bool01(v:Bool):String
 		return v ? "1" : "0";
 
@@ -225,18 +217,6 @@ class Stage3Compiler {
 
 	static function formatDynamicException(e:Dynamic):String {
 		return Stage3DiagnosticsSupport.formatDynamicException(e);
-	}
-
-	static function collectUnsupportedExprRawInModule(pm:ParsedModule, max:Int):Array<String> {
-		return Stage3DiagnosticsSupport.collectUnsupportedExprRawInModule(pm, max);
-	}
-
-	static function countUnsupportedExprsInModule(pm:ParsedModule):Int {
-		return Stage3DiagnosticsSupport.countUnsupportedExprsInModule(pm);
-	}
-
-	static function countUnsupportedExprsInFunction(fn:HxFunctionDecl):Int {
-		return Stage3DiagnosticsSupport.countUnsupportedExprsInFunction(fn);
 	}
 
 	static function resolveHaxelibSpec(lib:String, cwd:String, seen:Map<String, Bool>, depth:Int):HaxelibSpec {
@@ -898,8 +878,7 @@ class Stage3Compiler {
 			var unsupportedExprsTotal = 0;
 			var unsupportedFilesCount = 0;
 			final traceUnsupported = isTrueEnv("HXHX_TRACE_UNSUPPORTED");
-			var unsupportedRawCount = 0;
-			var unsupportedFnCount = 0;
+			final unsupportedTraceCounters = Stage3DiagnosticsSupport.newUnsupportedTraceCounters();
 			final rootFilePath = ResolvedModule.getFilePath(resolved[0]);
 			var rootTyped:Null<TypedModule> = null;
 			// Worklist so the typer can lazily load modules on demand.
@@ -910,41 +889,16 @@ class Stage3Compiler {
 				cursor += 1;
 				try {
 					final pm = ResolvedModule.getParsed(m);
-					final unsupportedInFile = countUnsupportedExprsInModule(pm);
+					final unsupportedInFile = Stage3DiagnosticsSupport.reportUnsupportedForParsedModule(pm, ResolvedModule.getFilePath(m),
+						unsupportedFilesCount, traceUnsupported, unsupportedTraceCounters);
 					unsupportedExprsTotal += unsupportedInFile;
-					if (unsupportedInFile > 0) {
-						Sys.println("unsupported_file[" + unsupportedFilesCount + "]=" + ResolvedModule.getFilePath(m) + " header_only="
-							+ bool01(HxModuleDecl.getHeaderOnly(pm.getDecl())) + " unsupported_exprs=" + unsupportedInFile);
-						if (traceUnsupported) {
-							// Per-function summary so unsupported shapes are actionable even when raw payloads
-							// come from native protocol rungs (which may not preserve source locations yet).
-							final cls = HxModuleDecl.getMainClass(pm.getDecl());
-							for (fn in HxClassDecl.getFunctions(cls)) {
-								final fnUnsupported = countUnsupportedExprsInFunction(fn);
-								if (fnUnsupported <= 0)
-									continue;
-								Sys.println("unsupported_fn[" + unsupportedFnCount + "]=" + ResolvedModule.getFilePath(m) + ":" + HxFunctionDecl.getName(fn)
-									+ " unsupported_exprs=" + fnUnsupported);
-								unsupportedFnCount += 1;
-								if (unsupportedFnCount >= 50)
-									break;
-							}
-							for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
-								final escaped = escapeOneLine(raw);
-								Sys.println("unsupported_expr[" + unsupportedRawCount + "]=" + ResolvedModule.getFilePath(m) + ":raw=" + escaped + " len="
-									+ (raw == null ? 0 : raw.length));
-								unsupportedRawCount += 1;
-								if (unsupportedRawCount >= 50)
-									break;
-							}
-						}
+					if (unsupportedInFile > 0)
 						unsupportedFilesCount += 1;
-					}
 					if (HxModuleDecl.getHeaderOnly(pm.getDecl())) {
 						Sys.println("header_only_file[" + headerOnlyCount + "]=" + ResolvedModule.getFilePath(m));
 						headerOnlyCount += 1;
 					}
-					parsedMethodsTotal += HxClassDecl.getFunctions(HxModuleDecl.getMainClass(pm.getDecl())).length;
+					parsedMethodsTotal += Stage3DiagnosticsSupport.parsedMethodCount(pm);
 					final typed = TyperStage.typeResolvedModule(m, typerIndex, moduleLoader);
 					if (ResolvedModule.getFilePath(m) == rootFilePath)
 						rootTyped = typed;
@@ -967,22 +921,8 @@ class Stage3Compiler {
 			}
 
 			// Deterministic typer summary for the root module (bring-up diagnostics).
-			if (rootTyped != null) {
-				final fns = rootTyped.getEnv().getMainClass().getFunctions();
-				for (i in 0...fns.length) {
-					final tf = fns[i];
-					final locals = tf.getLocals();
-					final localsParts = new Array<String>();
-					for (l in locals)
-						localsParts.push(l.getName() + ":" + l.getType().toString());
-					final params = tf.getParams();
-					final paramParts = new Array<String>();
-					for (p in params)
-						paramParts.push(p.getName() + ":" + p.getType().toString());
-					Sys.println("typed_fn[" + i + "]=" + tf.getName() + " args=" + paramParts.join(",") + " locals=" + localsParts.join(",") + " ret="
-						+ tf.getReturnType().toString() + " inferred=" + tf.getReturnExprType().toString());
-				}
-			}
+			if (rootTyped != null)
+				Stage3DiagnosticsSupport.printTypedFunctionSummary(rootTyped);
 
 			final typeOnlyHookError = Stage3HookSupport.runStandardMacroHooks(macroSession);
 			if (typeOnlyHookError != null) {
@@ -1122,51 +1062,24 @@ class Stage3Compiler {
 				}
 			}
 
-			for (name in hxhx.macro.MacroState.listDefineNames()) {
-				if (StringTools.startsWith(name, "HXHX_")) {
-					Sys.println("macro_define2[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
-				}
-			}
+			Stage3DiagnosticsSupport.printHxMacroDefines("macro_define2");
 
 			var headerOnlyCount = 0;
 			var unsupportedExprsTotal = 0;
 			var unsupportedFilesCount = 0;
 			final traceUnsupported = isTrueEnv("HXHX_TRACE_UNSUPPORTED");
-			var unsupportedRawCount = 0;
-			var unsupportedFnCount = 0;
+			final unsupportedTraceCounters = Stage3DiagnosticsSupport.newUnsupportedTraceCounters();
 			var unsupportedFileIndex = 0;
 			for (typed in typedModules) {
 				final pm = typed.getParsed();
 				if (HxModuleDecl.getHeaderOnly(pm.getDecl()))
 					headerOnlyCount += 1;
-				final unsupportedInFile = countUnsupportedExprsInModule(pm);
+				final unsupportedInFile = Stage3DiagnosticsSupport.reportUnsupportedForParsedModule(pm, pm.getFilePath(), unsupportedFileIndex,
+					traceUnsupported, unsupportedTraceCounters);
 				unsupportedExprsTotal += unsupportedInFile;
 				if (unsupportedInFile > 0) {
 					unsupportedFilesCount += 1;
-					Sys.println("unsupported_file[" + unsupportedFileIndex + "]=" + pm.getFilePath() + " header_only="
-						+ bool01(HxModuleDecl.getHeaderOnly(pm.getDecl())) + " unsupported_exprs=" + unsupportedInFile);
 					unsupportedFileIndex += 1;
-					if (traceUnsupported) {
-						final cls = HxModuleDecl.getMainClass(pm.getDecl());
-						for (fn in HxClassDecl.getFunctions(cls)) {
-							final fnUnsupported = countUnsupportedExprsInFunction(fn);
-							if (fnUnsupported <= 0)
-								continue;
-							Sys.println("unsupported_fn[" + unsupportedFnCount + "]=" + pm.getFilePath() + ":" + HxFunctionDecl.getName(fn)
-								+ " unsupported_exprs=" + fnUnsupported);
-							unsupportedFnCount += 1;
-							if (unsupportedFnCount >= 50)
-								break;
-						}
-						for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
-							final escaped = escapeOneLine(raw);
-							Sys.println("unsupported_expr[" + unsupportedRawCount + "]=" + pm.getFilePath() + ":raw=" + escaped + " len="
-								+ (raw == null ? 0 : raw.length));
-							unsupportedRawCount += 1;
-							if (unsupportedRawCount >= 50)
-								break;
-						}
-					}
 				}
 			}
 			closeMacroSession();
@@ -1192,11 +1105,7 @@ class Stage3Compiler {
 		}
 
 		// Bring-up diagnostics: dump HXHX_* defines again after hooks.
-		for (name in hxhx.macro.MacroState.listDefineNames()) {
-			if (StringTools.startsWith(name, "HXHX_")) {
-				Sys.println("macro_define2[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
-			}
-		}
+		Stage3DiagnosticsSupport.printHxMacroDefines("macro_define2");
 
 		var emitted = new EmitResult("", [], false);
 		try {
@@ -1353,7 +1262,7 @@ class Stage3Compiler {
 		for (idx in 0...units.length) {
 			final u = units[idx];
 			if (global.backendId == "js-native" && CliRouting.isJsNativeHelperUnit(u)) {
-				Sys.println("hxhx(stage3): unit_skipped idx=" + idx + " reason=js_native_neko_cmd_helper args=" + summarizeArgs(u));
+				Sys.println("hxhx(stage3): unit_skipped idx=" + idx + " reason=js_native_neko_cmd_helper args=" + Stage3Args.summarizeArgs(u));
 				continue;
 			}
 			final unitArgs = new Array<String>();

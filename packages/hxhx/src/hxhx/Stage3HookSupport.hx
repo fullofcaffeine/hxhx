@@ -24,7 +24,7 @@ import hxhx.macro.MacroRuntimeSession;
 	  existing close-and-return behavior.
 **/
 class Stage3HookSupport {
-	static function runHookPhase(session:MacroRuntimeSession, phase:String, hookIds:Array<String>):Null<String> {
+	static function runHookPhase(session:MacroRuntimeSession, phase:String, hookIds:Array<Int>):Null<String> {
 		for (i in 0...hookIds.length) {
 			try {
 				session.runHook(phase, hookIds[i]);

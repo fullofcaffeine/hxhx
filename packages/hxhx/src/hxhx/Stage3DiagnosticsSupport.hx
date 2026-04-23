@@ -1,5 +1,10 @@
 package hxhx;
 
+private typedef UnsupportedTraceCounters = {
+	var rawCount:Int;
+	var fnCount:Int;
+}
+
 /**
 	Stage3 unsupported-expression analysis and diagnostic formatting helpers.
 
@@ -12,12 +17,17 @@ package hxhx;
 	- Counts unsupported expressions across expressions, statements, functions, and modules.
 	- Collects raw unsupported snippets for trace logging.
 	- Formats Stage3 typer and runtime diagnostics consistently.
+	- Prints repeated type-only/no-emit diagnostic reports.
 
 	How
 	- Preserve the existing walk shapes and message formatting exactly.
 	- Expose only the helper surface already used by `Stage3Compiler`.
 **/
 class Stage3DiagnosticsSupport {
+	static function bool01(v:Bool):String {
+		return v ? "1" : "0";
+	}
+
 	public static function escapeOneLine(source:String):String {
 		if (source == null)
 			return "";
@@ -246,6 +256,78 @@ class Stage3DiagnosticsSupport {
 		for (stmt in HxFunctionDecl.getBody(fn))
 			count += countUnsupportedExprsInStmt(stmt);
 		return count;
+	}
+
+	public static function newUnsupportedTraceCounters():UnsupportedTraceCounters {
+		return {rawCount: 0, fnCount: 0};
+	}
+
+	public static function reportUnsupportedForParsedModule(pm:ParsedModule, filePath:String, unsupportedFileIndex:Int, traceUnsupported:Bool,
+			counters:UnsupportedTraceCounters):Int {
+		final unsupportedInFile = countUnsupportedExprsInModule(pm);
+		if (unsupportedInFile <= 0)
+			return 0;
+
+		Sys.println("unsupported_file[" + unsupportedFileIndex + "]=" + filePath + " header_only=" + bool01(HxModuleDecl.getHeaderOnly(pm.getDecl()))
+			+ " unsupported_exprs=" + unsupportedInFile);
+
+		if (traceUnsupported) {
+			final cls = HxModuleDecl.getMainClass(pm.getDecl());
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				final fnUnsupported = countUnsupportedExprsInFunction(fn);
+				if (fnUnsupported <= 0)
+					continue;
+				Sys.println("unsupported_fn["
+					+ counters.fnCount
+					+ "]="
+					+ filePath
+					+ ":"
+					+ HxFunctionDecl.getName(fn)
+					+ " unsupported_exprs="
+					+ fnUnsupported);
+				counters.fnCount += 1;
+				if (counters.fnCount >= 50)
+					break;
+			}
+			for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
+				final escaped = escapeOneLine(raw);
+				Sys.println("unsupported_expr[" + counters.rawCount + "]=" + filePath + ":raw=" + escaped + " len=" + (raw == null ? 0 : raw.length));
+				counters.rawCount += 1;
+				if (counters.rawCount >= 50)
+					break;
+			}
+		}
+
+		return unsupportedInFile;
+	}
+
+	public static function parsedMethodCount(pm:ParsedModule):Int {
+		return HxClassDecl.getFunctions(HxModuleDecl.getMainClass(pm.getDecl())).length;
+	}
+
+	public static function printTypedFunctionSummary(rootTyped:TypedModule):Void {
+		final fns = rootTyped.getEnv().getMainClass().getFunctions();
+		for (i in 0...fns.length) {
+			final tf = fns[i];
+			final locals = tf.getLocals();
+			final localsParts = new Array<String>();
+			for (l in locals)
+				localsParts.push(l.getName() + ":" + l.getType().toString());
+			final params = tf.getParams();
+			final paramParts = new Array<String>();
+			for (p in params)
+				paramParts.push(p.getName() + ":" + p.getType().toString());
+			Sys.println("typed_fn[" + i + "]=" + tf.getName() + " args=" + paramParts.join(",") + " locals=" + localsParts.join(",") + " ret="
+				+ tf.getReturnType().toString() + " inferred=" + tf.getReturnExprType().toString());
+		}
+	}
+
+	public static function printHxMacroDefines(prefix:String):Void {
+		for (name in hxhx.macro.MacroState.listDefineNames()) {
+			if (StringTools.startsWith(name, "HXHX_")) {
+				Sys.println(prefix + "[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
+			}
+		}
 	}
 
 	public static function formatException(e:TyperError):String {
