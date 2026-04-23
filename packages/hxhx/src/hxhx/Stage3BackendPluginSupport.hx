@@ -1,7 +1,16 @@
 package hxhx;
 
 import backend.BackendRegistry;
+import backend.IBackend;
+import backend.TargetDescriptor;
 import hxhx.runtime.NullableRuntimeString;
+
+typedef Stage3BackendSelection = {
+	final backend:IBackend;
+	final descriptor:TargetDescriptor;
+	final supportsCustomOutputFile:Bool;
+	final supportsBuildExecutable:Bool;
+}
 
 /**
 	Stage3 backend plugin/provider declaration and registration helpers.
@@ -16,6 +25,7 @@ import hxhx.runtime.NullableRuntimeString;
 	- Normalizes plugin load requests across bundled and explicit sources.
 	- Shapes the define list passed into backend provider discovery.
 	- Loads the resulting dynamic registrations into `BackendRegistry`.
+	- Resolves the selected backend implementation and capability flags.
 
 	How
 	- Keep the current source precedence and tracing behavior intact.
@@ -179,5 +189,50 @@ class Stage3BackendPluginSupport {
 			}
 		}
 		return providerDefines;
+	}
+
+	public static function selectBackend(backendId:String, providerDefines:Array<String>):Stage3BackendSelection {
+		try {
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=before_load_dynamic_backend_providers");
+			}
+			loadDynamicBackendProviders(providerDefines);
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=after_load_dynamic_backend_providers");
+			}
+		} catch (e:String) {
+			throw "backend provider setup failed: " + e;
+		}
+
+		final backend = try {
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=before_resolve_builtin_backend id=" + backendId);
+			}
+			BackendRegistry.requireForTarget(backendId);
+		} catch (e:String) {
+			throw "backend setup failed: " + e;
+		}
+		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+			Sys.println("stage3_driver=after_resolve_builtin_backend");
+		}
+
+		final selected = BackendRegistry.descriptorForTarget(backendId);
+		if (isTrueEnv("HXHX_TRACE_BACKEND_SELECTION")) {
+			if (selected == null) {
+				Sys.println("backend_selected_impl=<unknown>");
+			} else {
+				Sys.println("backend_selected_impl=" + selected.implId);
+			}
+		}
+		if (selected == null)
+			throw "backend descriptor not found after selection: " + backendId;
+
+		final backendCaps = selected.capabilities;
+		return {
+			backend: backend,
+			descriptor: selected,
+			supportsCustomOutputFile: backendCaps.supportsCustomOutputFile == true,
+			supportsBuildExecutable: backendCaps.supportsBuildExecutable == true
+		};
 	}
 }

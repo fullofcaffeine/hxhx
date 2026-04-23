@@ -11,11 +11,8 @@ import hxhx.macro.MacroRuntimeMode;
 import hxhx.macro.MacroRuntimeSession;
 import backend.BackendContext;
 import backend.BackendDispatchBoundary;
-import backend.BackendRegistry;
 import backend.EmitResult;
 import backend.GenIrBoundary;
-import backend.GenIrProgram;
-import backend.IBackend;
 import backend.OcamlProfile;
 
 private typedef HaxelibSpec = LibraryResolver.LibrarySpec;
@@ -89,25 +86,6 @@ class Stage3Compiler {
 		#else
 		return MacroHostClient.resolveMacroHostExePath().length > 0;
 		#end
-	}
-
-	/**
-		Resolve a Stage3 builtin backend implementation by ID.
-
-		Why
-		- `hxhx --ocaml` and native `--js <file>` routes builtin targets through one Stage3 execution path.
-		- We need an explicit mapping from target IDs to backend implementations.
-
-		What
-		- Supports:
-		  - `ocaml-stage3` (existing linked OCaml backend)
-		  - `js-native` (MVP non-delegating JS backend)
-
-		How
-		- Fail fast on unknown IDs so callers never silently delegate or run the wrong backend.
-	**/
-	static function resolveBuiltinBackend(backendId:String):IBackend {
-		return BackendRegistry.requireForTarget(backendId);
 	}
 
 	/**
@@ -256,10 +234,6 @@ class Stage3Compiler {
 
 	static function parseDelimitedList(raw:String):Array<String> {
 		return Stage3MacroHostSupport.parseDelimitedList(raw);
-	}
-
-	static function loadDynamicBackendProviders(rawDefines:Array<String>):Void {
-		Stage3BackendPluginSupport.loadDynamicBackendProviders(rawDefines);
 	}
 
 	static function isBuiltinMacroExpr(expr:String):Bool {
@@ -997,45 +971,16 @@ class Stage3Compiler {
 		}
 
 		final providerDefines = Stage3BackendPluginSupport.buildProviderDefines(allDefines);
-		try {
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=before_load_dynamic_backend_providers");
-			}
-			loadDynamicBackendProviders(providerDefines);
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=after_load_dynamic_backend_providers");
-			}
+		final backendSelection = try {
+			Stage3BackendPluginSupport.selectBackend(backendId, providerDefines);
 		} catch (e:String) {
 			closeMacroSession();
-			return error("backend provider setup failed: " + e);
+			return error(e);
 		}
-		final backend = try {
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=before_resolve_builtin_backend id=" + backendId);
-			}
-			resolveBuiltinBackend(backendId);
-		} catch (e:String) {
-			closeMacroSession();
-			return error("backend setup failed: " + e);
-		}
-		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=after_resolve_builtin_backend");
-		}
-		final selected = BackendRegistry.descriptorForTarget(backendId);
-		if (isTrueEnv("HXHX_TRACE_BACKEND_SELECTION")) {
-			if (selected == null) {
-				Sys.println("backend_selected_impl=<unknown>");
-			} else {
-				Sys.println("backend_selected_impl=" + selected.implId);
-			}
-		}
-		if (selected == null) {
-			closeMacroSession();
-			return error("backend descriptor not found after selection: " + backendId);
-		}
-		final backendCaps = selected.capabilities;
-		final supportsCustomOutputFile:Bool = backendCaps.supportsCustomOutputFile == true;
-		final supportsBuildExecutable:Bool = backendCaps.supportsBuildExecutable == true;
+		final backend = backendSelection.backend;
+		final backendCaps = backendSelection.descriptor.capabilities;
+		final supportsCustomOutputFile = backendSelection.supportsCustomOutputFile;
+		final supportsBuildExecutable = backendSelection.supportsBuildExecutable;
 
 		// Diagnostic rung: stop after macros, typing, and backend selection so we can iterate Stage4
 		// macro model and Stage3 typer coverage without paying IR expansion or backend emit costs.
