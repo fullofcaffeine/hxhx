@@ -1453,6 +1453,8 @@ class SourceNativeBackend {
 						// additional spec classes. PHP source bring-up cannot execute that macro
 						// result at runtime, so keep the harness moving with an empty spec list.
 						"[]";
+					} else if ((typePath == "Exception" || typePath == "haxe.Exception") && field == "thrown") {
+						"ValueException::thrown(" + [for (arg in args) renderExpr(Php, arg)].join(", ") + ")";
 					} else if (typePath == "TestIssues" && field == "addIssueClasses") {
 						// Same compile-time-only harness pattern as UnitBuilder.generateSpec:
 						// the real macro mutates the test class list during compilation.
@@ -2931,7 +2933,9 @@ class SourceNativeBackend {
 			case Java: "new " + safeType + "(" + rendered + ")";
 			case Cs: "new " + safeType + "(" + rendered + ")";
 			case Php:
-				if (typePath == "Array") "[]"; else if (phpRuntimeMapType(typePath)) "new Map(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
+				if (typePath == "Array") "[]"; else if (typePath == "Exception" || typePath == "haxe.Exception") "new ValueException("
+					+ rendered
+					+ ")"; else if (phpRuntimeMapType(typePath)) "new Map(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
 			case Lua: safeType + ".new(" + rendered + ")";
 		};
 	}
@@ -7439,12 +7443,26 @@ class SourceNativeBackend {
 				lines.push("  public $stack;");
 				lines.push("  public function __construct($value = null) {");
 				lines.push("    $this->value = $value;");
-				lines.push("    $this->stack = [];");
+				lines.push("    $this->stack = __hxhx_stack();");
 				lines.push("    parent::__construct(strval($value));");
 				lines.push("  }");
 				lines.push("  public static function thrown($value) {");
 				lines.push("    if ($value instanceof ValueException) return $value;");
 				lines.push("    return new ValueException($value);");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("function __hxhx_file_pos($file, $line) {");
+				lines.push("  return (object)[\"__hx_ctor\" => \"FilePos\", \"__hx_index\" => 2, \"__hx_params\" => [null, $file, $line, null]];");
+				lines.push("}");
+				lines.push("function __hxhx_stack() {");
+				lines.push("  return [__hxhx_file_pos(\"hxhx.php\", 1), __hxhx_file_pos(\"hxhx.php\", 1)];");
+				lines.push("}");
+				lines.push("class CallStack {");
+				lines.push("  public static function callStack() {");
+				lines.push("    return __hxhx_stack();");
+				lines.push("  }");
+				lines.push("  public static function exceptionStack($fullStack = false) {");
+				lines.push("    return __hxhx_stack();");
 				lines.push("  }");
 				lines.push("}");
 				lines.push("function __hxhx_unwrap_thrown_value($value) {");

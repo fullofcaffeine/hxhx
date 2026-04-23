@@ -820,6 +820,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpCallStackProgram():GenIrProgram {
+		final src = [
+			"import haxe.CallStack;",
+			"import haxe.Exception;",
+			"import haxe.ValueException;",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(CallStack.callStack().length);",
+			"    Sys.println(new Exception(\"boom\").stack.length);",
+			"    Sys.println(new ValueException(\"boom\").stack.length);",
+			"    Sys.println(@:privateAccess (Exception.thrown(\"boom\"):Exception).stack.length);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeErrorProbeProgram():GenIrProgram {
 		final src = [
 			"class HelperMacros {",
@@ -4744,6 +4763,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "ok", "generated PHP Array.push should append the value");
 		}
 		deleteRecursive(pushTmpRoot);
+
+		final stackTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_call_stack_" + Std.string(Date.now().getTime()));
+		deleteRecursive(stackTmpRoot);
+		FileSystem.createDirectory(stackTmpRoot);
+		backend.emit(phpCallStackProgram(), new BackendContext(stackTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final stackContent = File.getContent(Path.join([stackTmpRoot, "index.php"]));
+		assertContains(stackContent, "class CallStack", "PHP runtime should expose haxe.CallStack support");
+		assertContains(stackContent, "function __hxhx_stack()", "PHP runtime should expose synthetic stack items");
+		assertContains(stackContent, "new ValueException(\"boom\")", "PHP haxe.Exception construction should use the stack-carrying wrapper");
+		assertContains(stackContent, "ValueException::thrown(\"boom\")", "PHP haxe.Exception.thrown should route through the throwable wrapper");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([stackTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP CallStack support should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "2", "generated PHP CallStack support should produce stack entries");
+		}
+		deleteRecursive(stackTmpRoot);
 	}
 
 	static function assertPhpTypeErrorProbe():Void {
