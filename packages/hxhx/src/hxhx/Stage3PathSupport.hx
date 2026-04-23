@@ -14,6 +14,7 @@ import haxe.io.Path;
 	- Normalizes relative paths against a Stage3 cwd.
 	- Infers a root type from a macro expression.
 	- Infers a root type from a `--display <file@mode>` request.
+	- Infers the repository root used by Stage3 helper scripts.
 
 	How
 	- Preserve the existing path resolution and fallback behavior exactly.
@@ -39,6 +40,43 @@ class Stage3PathSupport {
 		if (lastDot == -1)
 			return value;
 		return StringTools.trim(value.substr(0, lastDot));
+	}
+
+	public static function inferRepoRootForScripts():String {
+		final env = Sys.getEnv("HXHX_REPO_ROOT");
+		if (env != null && env.length > 0 && sys.FileSystem.exists(env) && sys.FileSystem.isDirectory(env)) {
+			return env;
+		}
+
+		final prog = Sys.programPath();
+		if (prog == null || prog.length == 0)
+			return "";
+
+		final abs = try sys.FileSystem.fullPath(prog) catch (_:String) prog;
+		var dir = try Path.directory(abs) catch (_:String) "";
+		if (dir == null || dir.length == 0)
+			return "";
+		dir = sys.FileSystem.absolutePath(dir);
+
+		inline function joinPath(base:String, tail:String):String {
+			if (base.length == 0)
+				return tail;
+			if (StringTools.endsWith(base, "/"))
+				return base + tail;
+			return base + "/" + tail;
+		}
+
+		for (_ in 0...10) {
+			final candidate = joinPath(dir, "scripts/hxhx/build-hxhx-macro-host.sh");
+			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate))
+				return dir;
+			final parent = sys.FileSystem.absolutePath(joinPath(dir, ".."));
+			if (parent == dir)
+				break;
+			dir = parent;
+		}
+
+		return "";
 	}
 
 	#if !hxhx_stage0_no_display

@@ -267,41 +267,7 @@ class Stage3Compiler {
 	#end
 
 	static function inferRepoRootForScripts():String {
-		final env = Sys.getEnv("HXHX_REPO_ROOT");
-		if (env != null && env.length > 0 && sys.FileSystem.exists(env) && sys.FileSystem.isDirectory(env)) {
-			return env;
-		}
-
-		final prog = Sys.programPath();
-		if (prog == null || prog.length == 0)
-			return "";
-
-		final abs = try sys.FileSystem.fullPath(prog) catch (_:String) prog;
-		var dir = try haxe.io.Path.directory(abs) catch (_:String) "";
-		if (dir == null || dir.length == 0)
-			return "";
-		dir = sys.FileSystem.absolutePath(dir);
-
-		inline function joinPath(base:String, tail:String):String {
-			if (base.length == 0)
-				return tail;
-			if (StringTools.endsWith(base, "/"))
-				return base + tail;
-			return base + "/" + tail;
-		}
-
-		// Walk upwards a few levels looking for `scripts/hxhx/build-hxhx-macro-host.sh`.
-		for (_ in 0...10) {
-			final candidate = joinPath(dir, "scripts/hxhx/build-hxhx-macro-host.sh");
-			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate))
-				return dir;
-			final parent = sys.FileSystem.absolutePath(joinPath(dir, ".."));
-			if (parent == dir)
-				break;
-			dir = parent;
-		}
-
-		return "";
+		return Stage3PathSupport.inferRepoRootForScripts();
 	}
 
 	static function trim(s:String):String {
