@@ -57,144 +57,6 @@ private class _PortableMetalizationScope {
 	}
 }
 
-private class _EmitterStageDebug {
-	/**
-		Emit a debug trace of computed call signatures.
-
-		Why
-		- Rest-arg bring-up depends on a signature map (`callSigByCallee`) built from parsed
-		  declarations. When it is wrong, the emitter can accidentally pack *all* call arguments
-		  into the rest array (or fail to pack any), which then shows up as confusing OCaml type
-		  errors at build time.
-
-		How
-		- Gated by `HXHX_TRACE_CALLSIG=1`.
-		- Written to stderr so it doesn't perturb tests that assert stdout output.
-	**/
-	public static function traceCallSig(modName:String, fnName:String, args:Array<HxFunctionArg>, required:Int, fixed:Int, hasRest:Bool,
-			needsReceiver:Bool):Void {
-		final enabled = Sys.getEnv("HXHX_TRACE_CALLSIG");
-		if (enabled != "1" && enabled != "true" && enabled != "yes")
-			return;
-		try {
-			final parts = new Array<String>();
-			if (args != null) {
-				for (a in args) {
-					final nm = HxFunctionArg.getName(a);
-					final kind = HxFunctionArg.getIsRest(a) ? "rest" : "fixed";
-					final hint = StringTools.trim(HxFunctionArg.getTypeHint(a));
-					parts.push(nm + ":" + kind + (hint.length == 0 ? "" : (":" + hint)));
-				}
-			}
-			Sys.stderr()
-				.writeString("callsig " + modName + "." + fnName + " required=" + required + " fixed=" + fixed + " hasRest=" + (hasRest ? "1" : "0")
-					+ " needsReceiver=" + (needsReceiver ? "1" : "0") + " args=[" + parts.join(",") + "]\n");
-		} catch (_:haxe.io.Error) {} catch (_:String) {}
-	}
-
-	/**
-		Emit a debug trace for Stage3 module emission progress.
-
-		Why
-		- Some Stage3 bring-up failures currently surface as hard crashes during module emission.
-		- A narrow per-module trace lets us identify the last module reached without perturbing
-		  normal stdout-based gate markers.
-
-		How
-		- Gated by `HXHX_TRACE_STAGE3_MODULE_EMIT=1`.
-		- Written to stderr so the existing stdout markers remain stable.
-	**/
-	static inline function traceStage3Enabled():Bool {
-		final enabled = Sys.getEnv("HXHX_TRACE_STAGE3_MODULE_EMIT");
-		return enabled == "1" || enabled == "true" || enabled == "yes";
-	}
-
-	public static function traceStage3Phase(label:String):Void {
-		if (!traceStage3Enabled())
-			return;
-		try {
-			final stderr = Sys.stderr();
-			stderr.writeString("stage3_emit_phase=" + label + "\n");
-			stderr.flush();
-		} catch (_:haxe.io.Error) {} catch (_:String) {}
-	}
-
-	public static function traceStage3Module(label:String, moduleName:String, filePath:Null<String>):Void {
-		if (!traceStage3Enabled())
-			return;
-		try {
-			final fileTag = filePath == null ? "<unknown>" : filePath;
-			final stderr = Sys.stderr();
-			stderr.writeString("stage3_emit[" + label + "]=" + moduleName + " file=" + fileTag + "\n");
-			stderr.flush();
-		} catch (_:haxe.io.Error) {} catch (_:String) {}
-	}
-
-	public static function traceStage3StmtList(phase:String, functionName:Null<String>, idx:Int, total:Int, stmt:HxStmt):Void {
-		if (!traceStage3Enabled())
-			return;
-		final fn = functionName == null ? "" : functionName;
-		final traceEnv = Sys.getEnv("HXHX_TRACE_STAGE3_STMT_LIST");
-		final traceAll = traceEnv == "1" || traceEnv == "true" || traceEnv == "yes";
-		if (!traceAll && fn != "emitToDir")
-			return;
-		final kindAndPos = switch (stmt) {
-			case SBlock(_, pos): {kind: "SBlock", pos: pos};
-			case SVar(_, _, _, pos): {kind: "SVar", pos: pos};
-			case SIf(_, _, _, pos): {kind: "SIf", pos: pos};
-			case SWhile(_, _, pos): {kind: "SWhile", pos: pos};
-			case SDoWhile(_, _, pos): {kind: "SDoWhile", pos: pos};
-			case SForIn(_, _, _, pos): {kind: "SForIn", pos: pos};
-			case SForKeyValue(_, _, _, _, pos): {kind: "SForKeyValue", pos: pos};
-			case STry(_, _, pos): {kind: "STry", pos: pos};
-			case SThrow(_, pos): {kind: "SThrow", pos: pos};
-			case SBreak(pos): {kind: "SBreak", pos: pos};
-			case SContinue(pos): {kind: "SContinue", pos: pos};
-			case SSwitch(_, _, _, pos): {kind: "SSwitch", pos: pos};
-			case SReturnVoid(pos): {kind: "SReturnVoid", pos: pos};
-			case SReturn(_, pos): {kind: "SReturn", pos: pos};
-			case SExpr(_, pos): {kind: "SExpr", pos: pos};
-		}
-		final pos = kindAndPos.pos;
-		final line = pos == null ? 0 : pos.getLine();
-		final col = pos == null ? 0 : pos.getColumn();
-		final detail = switch (stmt) {
-			case SVar(name, typeHint, _init, _):
-				":name=" + name + ":type=" + (typeHint == null ? "" : typeHint);
-			case SIf(_cond, _thenBranch, elseBranch, _):
-				":hasElse=" + (elseBranch == null ? "0" : "1");
-			case SForIn(name, _iterable, _body, _):
-				":name=" + name;
-			case SForKeyValue(keyName, valueName, _iterable, _body, _):
-				":key=" + keyName + ":value=" + valueName;
-			case SSwitch(_scrutinee, patterns, bodies, _):
-				":patterns="
-				+ (patterns == null ? "0" : Std.string(patterns.length))
-				+ ":bodies="
-				+ (bodies == null ? "0" : Std.string(bodies.length));
-			case SBlock(stmts, _):
-				":stmts=" + (stmts == null ? "0" : Std.string(stmts.length));
-			case _:
-				"";
-		}
-		traceStage3Phase("stmt_list_"
-			+ phase
-			+ ":"
-			+ fn
-			+ ":"
-			+ idx
-			+ "/"
-			+ total
-			+ ":"
-			+ kindAndPos.kind
-			+ ":line="
-			+ line
-			+ ":col="
-			+ col
-			+ detail);
-	}
-}
-
 private class _InstanceFieldEntry {
 	public final key:String;
 	public final fields:Array<HxFieldDecl>;
@@ -239,7 +101,7 @@ class EmitterStage {
 	static var moduleInitTrace:Bool = traceModuleInit();
 
 	static function traceModuleInit():Bool {
-		_EmitterStageDebug.traceStage3Phase("emitter_module_init");
+		EmitterStageDebug.traceStage3Phase("emitter_module_init");
 		return true;
 	}
 
@@ -366,7 +228,7 @@ class EmitterStage {
 	static var currentOcamlProfile:String = backend.OcamlProfile.toDefineValue(backend.OcamlProfile.Portable);
 
 	static inline function traceEmitToDirEntry(label:String):Void {
-		_EmitterStageDebug.traceStage3Phase(label);
+		EmitterStageDebug.traceStage3Phase(label);
 	}
 
 	static function requireEmitToDirOutAbs(outDir:String):String {
@@ -413,7 +275,7 @@ class EmitterStage {
 	static var currentPortableMetalizationRegionKey:String = "";
 
 	public static function installPortableMetalizationPlan(plan:Null<backend.ocaml.PortableMetalizationPlan>):_PortableMetalizationScope {
-		_EmitterStageDebug.traceStage3Phase("portable_plan_install");
+		EmitterStageDebug.traceStage3Phase("portable_plan_install");
 		final scope = new _PortableMetalizationScope(currentPortableMetalizationPlan, currentPortableMetalizationRegionKey);
 		currentPortableMetalizationPlan = plan;
 		currentPortableMetalizationRegionKey = "";
@@ -421,7 +283,7 @@ class EmitterStage {
 	}
 
 	public static function restorePortableMetalizationPlan(scope:_PortableMetalizationScope):Void {
-		_EmitterStageDebug.traceStage3Phase("portable_plan_restore");
+		EmitterStageDebug.traceStage3Phase("portable_plan_restore");
 		currentPortableMetalizationPlan = scope.previousPlan;
 		currentPortableMetalizationRegionKey = scope.previousRegionKey;
 	}
@@ -463,28 +325,28 @@ class EmitterStage {
 	public static function emitToDirWithPortableMetalizationPlan(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false,
 			buildExecutable:Bool = true, ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable,
 			?portableMetalizationPlan:backend.ocaml.PortableMetalizationPlan):String {
-		_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_install");
+		EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_install");
 		final scope = installPortableMetalizationPlan(portableMetalizationPlan);
 		var entryPath = "";
 		try {
-			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_emitToDir");
+			EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_emitToDir");
 			entryPath = emitToDir(p, outDir, emitFullBodies, buildExecutable, ocamlProfile);
-			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_after_emitToDir");
+			EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_after_emitToDir");
 		} catch (error:haxe.io.Error) {
-			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_catch_io_error");
+			EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_catch_io_error");
 			restorePortableMetalizationPlan(scope);
 			throw error;
 		} catch (error:String) {
-			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_catch_string");
+			EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_catch_string");
 			restorePortableMetalizationPlan(scope);
 			throw error;
 		} catch (error:haxe.Exception) {
-			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_catch_haxe_exception");
+			EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_catch_haxe_exception");
 			restorePortableMetalizationPlan(scope);
 			throw error;
 		}
 		restorePortableMetalizationPlan(scope);
-		_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_after_restore");
+		EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_after_restore");
 		return entryPath;
 	}
 
@@ -5641,7 +5503,7 @@ class EmitterStage {
 			final tyCtx:Map<String, TyType> = extendTyWithLocals(cast tyByIdent, localsBefore[idx]);
 			final prevStmtTyEntries = currentStmtTyEntries;
 			currentStmtTyEntries = buildStmtTyEntries(tyCtx);
-			_EmitterStageDebug.traceStage3StmtList("begin", currentFunctionName, idx, stmts.length, s);
+			EmitterStageDebug.traceStage3StmtList("begin", currentFunctionName, idx, stmts.length, s);
 			switch (s) {
 				case SVar(name, _typeHint, init, _pos):
 					final rhs = if (init == null) {
@@ -5742,7 +5604,7 @@ class EmitterStage {
 					}
 			}
 			currentStmtTyEntries = prevStmtTyEntries;
-			_EmitterStageDebug.traceStage3StmtList("done", currentFunctionName, idx, stmts.length, s);
+			EmitterStageDebug.traceStage3StmtList("done", currentFunctionName, idx, stmts.length, s);
 		}
 		currentMutableLocalRefNames = prevMutableLocalRefNames;
 		currentFunctionLocalTypeHints = previousStmtLocalTypeHints;
@@ -6262,7 +6124,7 @@ class EmitterStage {
 		var runtimeModuleCount = 0;
 		for (_ in runtimeModuleNames.keys())
 			runtimeModuleCount++;
-		_EmitterStageDebug.traceStage3Phase("after_runtime_module_names:" + runtimeModuleCount);
+		EmitterStageDebug.traceStage3Phase("after_runtime_module_names:" + runtimeModuleCount);
 		for (rootProvider in ["Type", "Lambda", "CallStack", "Reflect", "Xml", "Sys"])
 			runtimeModuleNames.set(rootProvider, true);
 		runtimeModuleNames.set("Haxe_Int64", true);
@@ -6581,20 +6443,20 @@ class EmitterStage {
 		installEmitToDirProfile(ocamlProfile);
 		ensureEmitToDirOutDir(outAbs);
 
-		_EmitterStageDebug.traceStage3Phase("emitToDir_before_generated_modules");
+		EmitterStageDebug.traceStage3Phase("emitToDir_before_generated_modules");
 		final generatedPaths = emitGeneratedOcamlModulesForStage3(p, outAbs);
-		_EmitterStageDebug.traceStage3Phase("emitToDir_after_generated_modules:" + generatedPaths.length);
-		_EmitterStageDebug.traceStage3Phase("emitToDir_before_runtime_copy");
+		EmitterStageDebug.traceStage3Phase("emitToDir_after_generated_modules:" + generatedPaths.length);
+		EmitterStageDebug.traceStage3Phase("emitToDir_before_runtime_copy");
 		final runtimePaths = copyStage3RuntimeForStage3(outAbs);
-		_EmitterStageDebug.traceStage3Phase("emitToDir_after_runtime_copy:" + runtimePaths.length);
-		_EmitterStageDebug.traceStage3Phase("emitToDir_before_bootstrap_shims");
+		EmitterStageDebug.traceStage3Phase("emitToDir_after_runtime_copy:" + runtimePaths.length);
+		EmitterStageDebug.traceStage3Phase("emitToDir_before_bootstrap_shims");
 		for (shimPath in emitStage3BootstrapShimsForStage3(outAbs))
 			generatedPaths.push(shimPath);
-		_EmitterStageDebug.traceStage3Phase("emitToDir_after_bootstrap_shims:" + generatedPaths.length);
+		EmitterStageDebug.traceStage3Phase("emitToDir_after_bootstrap_shims:" + generatedPaths.length);
 
-		_EmitterStageDebug.traceStage3Phase("before_typed_modules");
+		EmitterStageDebug.traceStage3Phase("before_typed_modules");
 		final typedModulesRaw = p.getTypedModules();
-		_EmitterStageDebug.traceStage3Phase("after_typed_modules_raw:" + typedModulesRaw.length);
+		EmitterStageDebug.traceStage3Phase("after_typed_modules_raw:" + typedModulesRaw.length);
 		if (typedModulesRaw.length == 0)
 			throw "stage3 emitter: empty typed module graph";
 
@@ -6620,7 +6482,7 @@ class EmitterStage {
 		}
 
 		final typedModules = uniqueTypedModules(typedModulesRaw);
-		_EmitterStageDebug.traceStage3Phase("after_typed_modules_unique:" + typedModules.length);
+		EmitterStageDebug.traceStage3Phase("after_typed_modules_unique:" + typedModules.length);
 
 		inline function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:String, typeName:String):String {
 			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
@@ -7000,7 +6862,7 @@ class EmitterStage {
 						requiredCount += 1;
 					}
 
-					_EmitterStageDebug.traceCallSig(modName, ocamlValueIdent(fnNameRaw), fnArgs, requiredCount, fixedCount, hasRest, needsReceiver);
+					EmitterStageDebug.traceCallSig(modName, ocamlValueIdent(fnNameRaw), fnArgs, requiredCount, fixedCount, hasRest, needsReceiver);
 					recordFunctionSig(modName, fn);
 				}
 			}
@@ -7061,7 +6923,7 @@ class EmitterStage {
 			if (className == null || className.length == 0 || className == "Unknown")
 				return {files: [], rootMain: null};
 			final mainModuleName = moduleNameForDecl(decl, moduleTypeName, className);
-			_EmitterStageDebug.traceStage3Module("module", mainModuleName, tm.getParsed().getFilePath());
+			EmitterStageDebug.traceStage3Module("module", mainModuleName, tm.getParsed().getFilePath());
 			final isRuntimeProvided = runtimeModuleNames.exists(mainModuleName);
 
 			// Import-driven resolution for `Int64.<field>` (Haxe `haxe.Int64` vs OCaml stdlib `Int64`).
@@ -7173,7 +7035,7 @@ class EmitterStage {
 				if (nm == null || nm.length == 0 || nm == "Unknown")
 					return null;
 				final moduleName = moduleNameForDecl(decl, moduleTypeName, nm);
-				_EmitterStageDebug.traceStage3Phase("emit_stub_begin:" + moduleName);
+				EmitterStageDebug.traceStage3Phase("emit_stub_begin:" + moduleName);
 
 				final prevInt64 = currentImportInt64;
 				currentImportInt64 = importInt64;
@@ -7216,7 +7078,7 @@ class EmitterStage {
 						if (knownType == null || (knownType.isUnknown() && !inferredType.isUnknown()))
 							staticTyByIdent.set(nameRaw, inferredType);
 					}
-					_EmitterStageDebug.traceStage3Phase("emit_stub_after_fields:" + moduleName);
+					EmitterStageDebug.traceStage3Phase("emit_stub_after_fields:" + moduleName);
 
 					// Emit function stubs with correct arity to avoid OCaml partial application issues.
 					for (fn in HxClassDecl.getFunctions(cls)) {
@@ -7235,13 +7097,13 @@ class EmitterStage {
 						out.push("let " + ocamlValueIdent(nameRaw) + " " + ocamlArgs + " = (Obj.magic 0)");
 						out.push("");
 					}
-					_EmitterStageDebug.traceStage3Phase("emit_stub_after_functions:" + moduleName);
+					EmitterStageDebug.traceStage3Phase("emit_stub_after_functions:" + moduleName);
 
 					final mlPath = haxe.io.Path.join([outAbs, moduleName + ".ml"]);
-					_EmitterStageDebug.traceStage3Phase("emit_stub_before_write:" + moduleName);
+					EmitterStageDebug.traceStage3Phase("emit_stub_before_write:" + moduleName);
 					sys.io.File.saveContent(mlPath, out.join("\n"));
-					_EmitterStageDebug.traceStage3Phase("emit_stub_after_write:" + moduleName);
-					_EmitterStageDebug.traceStage3Phase("emit_stub_done:" + moduleName);
+					EmitterStageDebug.traceStage3Phase("emit_stub_after_write:" + moduleName);
+					EmitterStageDebug.traceStage3Phase("emit_stub_done:" + moduleName);
 					currentImportInt64 = prevInt64;
 					return moduleName + ".ml";
 				} catch (e:TyperError) {
@@ -7351,7 +7213,7 @@ class EmitterStage {
 						}
 						final expected = fixedCount + (hasRest ? 1 : 0);
 						final needsReceiver = !isStaticFn;
-						_EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, requiredCount, fixedCount, hasRest, needsReceiver);
+						EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, requiredCount, fixedCount, hasRest, needsReceiver);
 						callSigByCallee.set(ocamlValueIdent(fnNameRaw), {
 							expected: expected,
 							required: requiredCount,
@@ -7731,7 +7593,7 @@ class EmitterStage {
 							final tf = group[i];
 							final nameRaw = tf.getName();
 							final name = ocamlValueIdent(nameRaw);
-							_EmitterStageDebug.traceStage3Phase("emit_fn_begin:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_begin:" + mainModuleName + ":" + nameRaw);
 							final previousFunctionName = currentFunctionName;
 							currentFunctionName = nameRaw;
 							final previousFunctionLocalTypeHints = currentFunctionLocalTypeHints;
@@ -7853,12 +7715,12 @@ class EmitterStage {
 								final arg1 = ocamlReadValueIdent(args[1].getName());
 								body = "compare (this_) (" + arg0 + ") (" + arg1 + ")";
 							}
-							_EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + mainModuleName + ":" + nameRaw);
 
 							final kw = i == 0 ? "let rec" : "and";
 							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 							out.push("");
-							_EmitterStageDebug.traceStage3Phase("emit_fn_done:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + mainModuleName + ":" + nameRaw);
 							currentFunctionName = previousFunctionName;
 							currentFunctionLocalTypeHints = previousFunctionLocalTypeHints;
 							currentPortableMetalizationRegionKey = previousRegionKey;
@@ -8357,11 +8219,11 @@ class EmitterStage {
 
 			final files = new Array<String>();
 			var rootMain:Null<String> = null;
-			_EmitterStageDebug.traceStage3Phase("emit_module_begin:" + className);
+			EmitterStageDebug.traceStage3Phase("emit_module_begin:" + className);
 
 			// Emit the main class first (typed, optional full bodies).
 			final mainPath = isRuntimeProvided ? null : emitMainClass();
-			_EmitterStageDebug.traceStage3Phase("emit_module_after_main:" + className);
+			EmitterStageDebug.traceStage3Phase("emit_module_after_main:" + className);
 			if (mainPath != null) {
 				files.push(mainPath);
 				if (isRoot)
@@ -8380,12 +8242,12 @@ class EmitterStage {
 					continue;
 				if (nm == className)
 					continue;
-				_EmitterStageDebug.traceStage3Module("stub", moduleNameForDecl(decl, moduleTypeName, nm), tm.getParsed().getFilePath());
+				EmitterStageDebug.traceStage3Module("stub", moduleNameForDecl(decl, moduleTypeName, nm), tm.getParsed().getFilePath());
 				final p = emitStubClass(c);
 				if (p != null)
 					files.push(p);
 			}
-			_EmitterStageDebug.traceStage3Phase("emit_module_done:" + className + ":" + files.length);
+			EmitterStageDebug.traceStage3Phase("emit_module_done:" + className + ":" + files.length);
 
 			return {files: files, rootMain: rootMain};
 		}
@@ -8400,21 +8262,21 @@ class EmitterStage {
 			for (f in r.files)
 				emittedModulePaths.push(f);
 		}
-		_EmitterStageDebug.traceStage3Phase("after_emit_deps:" + emittedModulePaths.length);
+		EmitterStageDebug.traceStage3Phase("after_emit_deps:" + emittedModulePaths.length);
 		final rr = emitModule(typedModules[0], true);
 		for (f in rr.files)
 			emittedModulePaths.push(f);
 		rootMainPath = rr.rootMain;
-		_EmitterStageDebug.traceStage3Phase("after_emit_root:" + emittedModulePaths.length);
+		EmitterStageDebug.traceStage3Phase("after_emit_root:" + emittedModulePaths.length);
 
 		final stringToolsShimPath = try patchStage3StringToolsShimForStage3(outAbs) catch (_:haxe.io.Error) null catch (_:String) null;
 		if (stringToolsShimPath != null)
 			generatedPaths.push(stringToolsShimPath);
-		_EmitterStageDebug.traceStage3Phase("after_shim_stringtools");
+		EmitterStageDebug.traceStage3Phase("after_shim_stringtools");
 		final ocamlProfileShimPath = try patchStage3OcamlProfileShimForStage3(outAbs) catch (_:haxe.io.Error) null catch (_:String) null;
 		if (ocamlProfileShimPath != null)
 			generatedPaths.push(ocamlProfileShimPath);
-		_EmitterStageDebug.traceStage3Phase("after_shim_ocaml_profile");
+		EmitterStageDebug.traceStage3Phase("after_shim_ocaml_profile");
 
 		// Stage 3 safety: avoid segfault-shaped behavior in generated macro context wrappers.
 		//
@@ -8427,7 +8289,7 @@ class EmitterStage {
 		// - Rewrite the generated `Haxe_macro_Context.load` binding to return arity-aware
 		//   fail-fast closures that raise a deterministic exception instead of crashing.
 		patchStage3MacroContextLoadShimForStage3(outAbs);
-		_EmitterStageDebug.traceStage3Phase("after_shim_macro_context");
+		EmitterStageDebug.traceStage3Phase("after_shim_macro_context");
 		// Stage 3 warning-20 noise control:
 		// add warning-20 suppression to generated modules where placeholder
 		// arity intentionally diverges during bring-up (macro bridge + syntax shims).
@@ -8449,7 +8311,7 @@ class EmitterStage {
 				} catch (_:haxe.io.Error) {} catch (_:String) {}
 			}
 		}
-		_EmitterStageDebug.traceStage3Phase("after_shim_warning20");
+		EmitterStageDebug.traceStage3Phase("after_shim_warning20");
 
 		// Stage 3 bring-up: upstream unit fixtures call `haxe.xml.Parser.parse(...)`, but our Stage3
 		// typing can emit a `Haxe_xml_Parser.ml` unit that only contains placeholder statics
@@ -8481,7 +8343,7 @@ class EmitterStage {
 				}
 			} catch (_:haxe.io.Error) {} catch (_:String) {}
 		}
-		_EmitterStageDebug.traceStage3Phase("after_shim_xml_parser");
+		EmitterStageDebug.traceStage3Phase("after_shim_xml_parser");
 
 		// Stage 3 bring-up: upstream unit fixtures use `Xml.*` helpers (e.g. `Xml.createElement`)
 		// but Stage3 typing doesn't yet guarantee an emitted provider module for `Xml`.
@@ -8524,7 +8386,7 @@ class EmitterStage {
 				generatedPaths.push(shimFile);
 			}
 		}
-		_EmitterStageDebug.traceStage3Phase("after_shim_xml");
+		EmitterStageDebug.traceStage3Phase("after_shim_xml");
 
 		// Stage 3 bring-up: upstream `php/Boot.hx` can emit unary minus over `php.Const.INF`
 		// through expression paths that still infer an int operator, yielding:
@@ -8542,7 +8404,7 @@ class EmitterStage {
 					sys.io.File.saveContent(shimPath, patched);
 			}
 		}
-		_EmitterStageDebug.traceStage3Phase("after_shim_php_boot");
+		EmitterStageDebug.traceStage3Phase("after_shim_php_boot");
 
 		// Stage 3 bring-up: explicit imports like `import haxe.CallStack;` allow referring to the
 		// type/module as `CallStack` in Haxe source.
@@ -8563,7 +8425,7 @@ class EmitterStage {
 				generatedPaths.push(shimFile);
 			}
 		}
-		_EmitterStageDebug.traceStage3Phase("after_shim_callstack");
+		EmitterStageDebug.traceStage3Phase("after_shim_callstack");
 
 		// Stage 3 bring-up: root stdlib `Type.*` calls in emitted runtime code must resolve to the
 		// target runtime helper module (`HxType`), not to `haxe.macro.Type`.
@@ -8596,7 +8458,7 @@ class EmitterStage {
 			if (generatedPaths.indexOf(shimFile) == -1)
 				generatedPaths.push(shimFile);
 		}
-		_EmitterStageDebug.traceStage3Phase("after_shim_type");
+		EmitterStageDebug.traceStage3Phase("after_shim_type");
 
 		// Stage 3 bring-up: explicit import short-name shims.
 		//
@@ -8710,7 +8572,7 @@ class EmitterStage {
 				existing.set(short, true);
 			}
 		}
-		_EmitterStageDebug.traceStage3Phase("after_alias_shims:" + generatedPaths.length);
+		EmitterStageDebug.traceStage3Phase("after_alias_shims:" + generatedPaths.length);
 
 		final exePath = haxe.io.Path.join([outAbs, "out.exe"]);
 		final pluginArtifactPath = emitPluginDuneLayoutIfRequestedForStage3(outAbs);
@@ -8790,7 +8652,7 @@ class EmitterStage {
 		var canonicalCount = 0;
 		for (_ in canonicalByLower.keys())
 			canonicalCount++;
-		_EmitterStageDebug.traceStage3Phase("after_scan_ml_dir:" + canonicalCount);
+		EmitterStageDebug.traceStage3Phase("after_scan_ml_dir:" + canonicalCount);
 		function canonicalize(relPath:String):String {
 			if (relPath == null || relPath.length == 0)
 				return relPath;
@@ -8837,9 +8699,9 @@ class EmitterStage {
 
 		final existingMl = listExistingMlUnits();
 		final allMl = uniqCaseInsensitive(existingMl.concat(runtimePaths).concat(generatedPaths).concat(emittedModulePaths).map(canonicalize));
-		_EmitterStageDebug.traceStage3Phase("before_ocamldep_sort:" + allMl.length);
+		EmitterStageDebug.traceStage3Phase("before_ocamldep_sort:" + allMl.length);
 		final orderedMl = uniqCaseInsensitive(ocamldepSort(allMl).map(canonicalize));
-		_EmitterStageDebug.traceStage3Phase("after_ocamldep_sort:" + orderedMl.length);
+		EmitterStageDebug.traceStage3Phase("after_ocamldep_sort:" + orderedMl.length);
 		final orderedNoRoot = new Array<String>();
 		final rootName = rootMainPath;
 		for (f in orderedMl)
@@ -8848,7 +8710,7 @@ class EmitterStage {
 		if (rootName != null)
 			orderedNoRoot.push(rootName);
 		final orderedNoRootUniq = uniqStrings(orderedNoRoot);
-		_EmitterStageDebug.traceStage3Phase("after_ordered_units:" + orderedNoRootUniq.length);
+		EmitterStageDebug.traceStage3Phase("after_ordered_units:" + orderedNoRootUniq.length);
 
 		final args = new Array<String>();
 		// OCaml 5: make the unix stdlib include directory explicit to silence the
@@ -8874,26 +8736,26 @@ class EmitterStage {
 		args.push("dynlink.cmxa");
 		for (p in orderedNoRootUniq)
 			args.push(p);
-		_EmitterStageDebug.traceStage3Phase("before_ocamlopt:" + args.length);
+		EmitterStageDebug.traceStage3Phase("before_ocamlopt:" + args.length);
 		final code = try {
 			Sys.command(ocamlopt, args);
 		} catch (e:haxe.io.Error) {
 			Sys.setCwd(prevCwd);
-			_EmitterStageDebug.traceStage3Phase("ocamlopt_io_error");
+			EmitterStageDebug.traceStage3Phase("ocamlopt_io_error");
 			throw e;
 		} catch (e:String) {
 			Sys.setCwd(prevCwd);
-			_EmitterStageDebug.traceStage3Phase("ocamlopt_string_error");
+			EmitterStageDebug.traceStage3Phase("ocamlopt_string_error");
 			throw e;
 		};
 		Sys.setCwd(prevCwd);
-		_EmitterStageDebug.traceStage3Phase("after_ocamlopt:" + code);
+		EmitterStageDebug.traceStage3Phase("after_ocamlopt:" + code);
 		if (code != 0)
 			throw "stage3 emitter: ocamlopt failed with exit code " + code;
-		_EmitterStageDebug.traceStage3Phase("before_missing_exe_check");
+		EmitterStageDebug.traceStage3Phase("before_missing_exe_check");
 		if (!sys.FileSystem.exists(exePath))
 			throw "stage3 emitter: missing built executable: " + exePath;
-		_EmitterStageDebug.traceStage3Phase("after_missing_exe_check");
+		EmitterStageDebug.traceStage3Phase("after_missing_exe_check");
 		return exePath;
 	}
 }

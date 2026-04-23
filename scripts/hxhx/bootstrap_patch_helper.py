@@ -2119,7 +2119,7 @@ def cmd_patch_stmt_list_trace(argv: list[str]) -> None:
     path_str = argv[0]
     src = read_text(path_str)
 
-    if "stmt_list_begin:" in src:
+    if "stmt_list_begin:" in src or 'EmitterStageDebug.traceStage3StmtList ("begin"' in src:
         return
 
     begin_anchor = """                          ));

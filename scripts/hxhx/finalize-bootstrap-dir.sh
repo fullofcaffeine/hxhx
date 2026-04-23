@@ -505,6 +505,10 @@ patch_bootstrap_emitter_stmt_list_trace() {
 		return 0
 	fi
 
+	if file_contains_literal 'EmitterStageDebug.traceStage3StmtList ("begin"' "$emitter_path"; then
+		return 0
+	fi
+
 	run_bootstrap_patch_helper patch-stmt-list-trace "$emitter_path"
 }
 

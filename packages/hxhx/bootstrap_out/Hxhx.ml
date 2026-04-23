@@ -17,4 +17,6 @@ module NativeBackendPluginHost = Hxhx_NativeBackendPluginHost
 module NativeBackendPluginHostAbi = Hxhx_NativeBackendPluginHostAbi
 module NativeBackendPluginLoader = Hxhx_NativeBackendPluginLoader
 module Stage1Compiler = Hxhx_Stage1Compiler
+module Stage3Args = Hxhx_Stage3Args
 module Stage3Compiler = Hxhx_Stage3Compiler
+module Stage3WaitServer = Hxhx_Stage3WaitServer
