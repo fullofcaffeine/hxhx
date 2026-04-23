@@ -1,3 +1,10 @@
+## [0.15.9](https://github.com/fullofcaffeine/hxhx/compare/v0.15.8...v0.15.9) (2026-04-23)
+
+
+### Bug Fixes
+
+* **php:** add bytes io runtime ([24c5a91](https://github.com/fullofcaffeine/hxhx/commit/24c5a912ae414a3c31200f1f9db2e66fdbc8256b))
+
 ## [0.15.8](https://github.com/fullofcaffeine/hxhx/compare/v0.15.7...v0.15.8) (2026-04-23)
 
 
