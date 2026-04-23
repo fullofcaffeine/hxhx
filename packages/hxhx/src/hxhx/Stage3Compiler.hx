@@ -129,20 +129,8 @@ class Stage3Compiler {
 		return Stage3Args.findTargetOutputDirectoryHint(args, backendId);
 	}
 
-	static function canRunNode():Bool {
-		return Stage3RunSupport.canRunNode();
-	}
-
 	static function runSafeCommandOnlyHooks(commands:Array<String>, cwd:String):Null<Int> {
 		return Stage3RunSupport.runSafeCommandOnlyHooks(commands, cwd);
-	}
-
-	static function runSafeJavaJarHookForArtifact(commands:Array<String>, cwd:String, artifactPath:String):Null<Int> {
-		return Stage3RunSupport.runSafeJavaJarHookForArtifact(commands, cwd, artifactPath);
-	}
-
-	static function runSafePythonHookForArtifact(commands:Array<String>, cwd:String, artifactPath:String):Null<Int> {
-		return Stage3RunSupport.runSafePythonHookForArtifact(commands, cwd, artifactPath);
 	}
 
 	static function runWaitStdio(baseArgs:Array<String>):Int {
@@ -1068,49 +1056,9 @@ class Stage3Compiler {
 
 		closeMacroSession();
 
-		if (noRun) {
-			Sys.println("run=skipped");
-			return 0;
-		}
-
-		if (!emitted.builtExecutable) {
-			if (backendId == "java-native" && parsedHadCmd) {
-				final cmdCode = runSafeJavaJarHookForArtifact(parsedCmdCommands, cwd, emitted.entryPath);
-				if (cmdCode != null) {
-					if (cmdCode != 0)
-						return error("command hook failed with exit code " + Std.string(cmdCode));
-					Sys.println("stage3=cmd_ok");
-					return 0;
-				}
-			}
-			if (backendId == "python-native" && parsedHadCmd) {
-				final cmdCode = runSafePythonHookForArtifact(parsedCmdCommands, cwd, emitted.entryPath);
-				if (cmdCode != null) {
-					if (cmdCode != 0)
-						return error("command hook failed with exit code " + Std.string(cmdCode));
-					Sys.println("stage3=cmd_ok");
-					return 0;
-				}
-			}
-			if (backendId == "js-native") {
-				if (!canRunNode()) {
-					Sys.println("run=skipped_node_missing");
-					return 0;
-				}
-				final jsCode = Sys.command("node", [emitted.entryPath]);
-				if (jsCode != 0)
-					return error("node run failed with exit code " + jsCode);
-				Sys.println("run=ok");
-				return 0;
-			}
-			Sys.println("run=skipped_non_executable_backend");
-			return 0;
-		}
-
-		final code = Sys.command(emitted.entryPath, []);
-		if (code != 0)
-			return error("built executable failed with exit code " + code);
-		Sys.println("run=ok");
+		final runError = Stage3RunSupport.runEmittedArtifact(backendId, parsedHadCmd, parsedCmdCommands, cwd, emitted, noRun);
+		if (runError != null)
+			return error(runError);
 		return 0;
 	}
 

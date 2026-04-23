@@ -1,5 +1,6 @@
 package hxhx;
 
+import backend.EmitResult;
 import haxe.io.Path;
 
 /**
@@ -14,6 +15,7 @@ import haxe.io.Path;
 	- Detects whether `node` is runnable.
 	- Parses safe `java -jar ...` and `python ...` command forms.
 	- Executes safe command-only hooks and artifact-matched hooks from a specific cwd.
+	- Runs or skips emitted Stage3 artifacts after backend dispatch.
 
 	How
 	- The support module stays deliberately narrow and only exposes the helper
@@ -87,6 +89,54 @@ class Stage3RunSupport {
 		if (matched == null)
 			return null;
 		return runCommandInCwd(matched.command, [matched.script], cwd);
+	}
+
+	public static function runEmittedArtifact(backendId:String, parsedHadCmd:Bool, parsedCmdCommands:Array<String>, cwd:String, emitted:EmitResult,
+			noRun:Bool):Null<String> {
+		if (noRun) {
+			Sys.println("run=skipped");
+			return null;
+		}
+
+		if (!emitted.builtExecutable) {
+			if (backendId == "java-native" && parsedHadCmd) {
+				final cmdCode = runSafeJavaJarHookForArtifact(parsedCmdCommands, cwd, emitted.entryPath);
+				if (cmdCode != null) {
+					if (cmdCode != 0)
+						return "command hook failed with exit code " + Std.string(cmdCode);
+					Sys.println("stage3=cmd_ok");
+					return null;
+				}
+			}
+			if (backendId == "python-native" && parsedHadCmd) {
+				final cmdCode = runSafePythonHookForArtifact(parsedCmdCommands, cwd, emitted.entryPath);
+				if (cmdCode != null) {
+					if (cmdCode != 0)
+						return "command hook failed with exit code " + Std.string(cmdCode);
+					Sys.println("stage3=cmd_ok");
+					return null;
+				}
+			}
+			if (backendId == "js-native") {
+				if (!canRunNode()) {
+					Sys.println("run=skipped_node_missing");
+					return null;
+				}
+				final jsCode = Sys.command("node", [emitted.entryPath]);
+				if (jsCode != 0)
+					return "node run failed with exit code " + jsCode;
+				Sys.println("run=ok");
+				return null;
+			}
+			Sys.println("run=skipped_non_executable_backend");
+			return null;
+		}
+
+		final code = Sys.command(emitted.entryPath, []);
+		if (code != 0)
+			return "built executable failed with exit code " + code;
+		Sys.println("run=ok");
+		return null;
 	}
 
 	static function parseSafeJavaJarCommand(command:String):Null<String> {
