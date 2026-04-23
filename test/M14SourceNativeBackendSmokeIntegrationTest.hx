@@ -1768,6 +1768,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(str.substr(1, 2));",
 			"    Sys.println(str.substr(3));",
 			"    Sys.println(str.substr(5));",
+			"    try { throw new Exception('Unclosed node <flow>'); } catch (exc:Exception) {",
+			"      Sys.println(Std.string(exc.message.indexOf('Unclosed node <flow>') != -1));",
+			"    }",
 			"  }",
 			"}",
 		].join("\n");
@@ -4663,6 +4666,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "echo __hxhx_string_substr($str, 1, 2) . PHP_EOL;", "PHP string variable substr should lower with explicit length");
 		assertContains(content, "echo __hxhx_string_substr($str, 3) . PHP_EOL;", "PHP string variable substr should lower with omitted length");
 		assertContains(content, "echo __hxhx_string_substr($str, 5) . PHP_EOL;", "PHP out-of-range substr should lower through the helper");
+		assertContains(content, "__hxhx_string_index_of(__hxhx_message_field($exc), \"Unclosed node <flow>\")",
+			"PHP exception message indexOf should lower through the string helper");
 		assertNotContains(content, "__hxhx_add(\"bla\", \"x\")->indexOf", "PHP string-like receivers should not emit object-method calls on raw strings");
 		assertNotContains(content, "\"abc\"->split", "PHP string literals should not emit object-method split calls");
 		assertNotContains(content, "\"abc\"->charCodeAt", "PHP string literals should not emit object-method charCodeAt calls");
@@ -4671,6 +4676,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNotContains(content, "$str->lastIndexOf", "PHP string variables should not emit object-method lastIndexOf calls");
 		assertNotContains(content, "$str->charCodeAt", "PHP string variables should not emit object-method charCodeAt calls");
 		assertNotContains(content, "$str->substr", "PHP string variables should not emit object-method substr calls");
+		assertNotContains(content, "__hxhx_message_field($exc)->indexOf", "PHP exception message indexOf should not emit object-method calls on strings");
 		deleteRecursive(tmpRoot);
 	}
 
