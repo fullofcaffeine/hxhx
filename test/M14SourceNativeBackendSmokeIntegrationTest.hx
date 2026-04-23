@@ -6080,6 +6080,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpSameNameLocalStaticField():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_name_local_static_field_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static var unit = 'testing package conflict';",
+			"  static function main() {",
+			"    Sys.println(unit);",
+			"    var unit = unit;",
+			"    Sys.println(unit);",
+			"    Sys.println(Main.unit);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$unit = Main::$unit;", "PHP same-name local initializers should read same-class static fields before shadowing");
+		assertNotContains(content, "$unit = $unit;", "PHP same-name local initializers should not read the uninitialized local");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP same-name local/static field support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "testing package conflict\ntesting package conflict\ntesting package conflict\n",
+				"generated PHP same-name local/static field support should match Haxe resolution, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpUnitLocalStaticFallback():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_unit_local_static_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6478,6 +6511,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonNullCoalescing();
 		assertPythonNullCoalescingAssignmentExpression();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
+		assertPhpSameNameLocalStaticField();
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();
 		assertPhpUnitMapComprehensionFallback();
