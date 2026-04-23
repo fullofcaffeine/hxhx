@@ -1056,15 +1056,7 @@ class Stage3Compiler {
 			return error(hookError);
 		}
 
-		final providerDefines = allDefines.copy();
-		for (name in hxhx.macro.MacroState.listDefineNames()) {
-			final value = hxhx.macro.MacroState.definedValue(name);
-			if (value == null || value.length == 0 || value == "1") {
-				providerDefines.push(name);
-			} else {
-				providerDefines.push(name + "=" + value);
-			}
-		}
+		final providerDefines = Stage3BackendPluginSupport.buildProviderDefines(allDefines);
 		try {
 			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 				Sys.println("stage3_driver=before_load_dynamic_backend_providers");

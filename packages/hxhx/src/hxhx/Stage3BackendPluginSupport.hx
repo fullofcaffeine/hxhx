@@ -14,6 +14,7 @@ import hxhx.runtime.NullableRuntimeString;
 	What
 	- Parses provider and manifest declarations from defines and env vars.
 	- Normalizes plugin load requests across bundled and explicit sources.
+	- Shapes the define list passed into backend provider discovery.
 	- Loads the resulting dynamic registrations into `BackendRegistry`.
 
 	How
@@ -165,5 +166,18 @@ class Stage3BackendPluginSupport {
 			Sys.println("backend_provider_requests=" + requests.length);
 			Sys.println("backend_provider_total=" + registered);
 		}
+	}
+
+	public static function buildProviderDefines(allDefines:Array<String>):Array<String> {
+		final providerDefines = allDefines.copy();
+		for (name in hxhx.macro.MacroState.listDefineNames()) {
+			final value = hxhx.macro.MacroState.definedValue(name);
+			if (value == null || value.length == 0 || value == "1") {
+				providerDefines.push(name);
+			} else {
+				providerDefines.push(name + "=" + value);
+			}
+		}
+		return providerDefines;
 	}
 }
