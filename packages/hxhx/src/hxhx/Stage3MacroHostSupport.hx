@@ -2,7 +2,14 @@ package hxhx;
 
 import haxe.io.Eof;
 import haxe.io.Path;
+import hxhx.macro.MacroRuntimeMode;
+import hxhx.macro.MacroRuntimeSession;
 import hxhx.runtime.NullableRuntimeString;
+
+typedef Stage3CliMacroRunResult = {
+	final session:Null<MacroRuntimeSession>;
+	final error:Null<String>;
+}
 
 /**
 	Stage3 macro expression allowlist and macro-host auto-build helpers.
@@ -17,6 +24,7 @@ import hxhx.runtime.NullableRuntimeString;
 	- Merges builtin expression macro allowlists.
 	- Detects builtin macro expressions and whether auto-build is enabled.
 	- Builds the external macro host via the repo script and returns the exe path.
+	- Runs requested CLI/library macros through the selected macro runtime.
 
 	How
 	- Preserve the current env var names, script contract, and filtering rules.
@@ -114,5 +122,55 @@ class Stage3MacroHostSupport {
 		if (exe.length == 0)
 			throw "macro host build produced no executable path";
 		return exe;
+	}
+
+	public static function runCliMacrosIfNeeded(macroRuntimeMode:MacroRuntimeMode, typeOnly:Bool, hasConfiguredExternalMacroHostExe:Bool,
+			parsedMacros:Array<String>, exprMacros:Array<String>, runHaxelibMacros:Bool, libMacros:Array<String>,
+			macroHostClassPaths:Array<String>):Stage3CliMacroRunResult {
+		if (typeOnly || !(parsedMacros.length > 0 || exprMacros.length > 0 || (runHaxelibMacros && libMacros.length > 0)))
+			return {session: null, error: null};
+
+		if (macroRuntimeMode == MacroRuntimeMode.EXTERNAL_HOST && !hasConfiguredExternalMacroHostExe && shouldAutoBuildMacroHost()) {
+			final repoRoot = Stage3PathSupport.inferRepoRootForScripts();
+			if (repoRoot.length == 0)
+				return {session: null, error: "macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)"};
+
+			try {
+				final entrypoints = new Array<String>();
+				if (runHaxelibMacros) {
+					for (e in libMacros)
+						if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1)
+							entrypoints.push(e);
+				}
+				if (anyNonBuiltinMacro(parsedMacros)) {
+					for (e in parsedMacros)
+						if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1)
+							entrypoints.push(e);
+				}
+				for (e in exprMacros)
+					if (entrypoints.indexOf(e) == -1)
+						entrypoints.push(e);
+				final exe = buildMacroHostExe(repoRoot, macroHostClassPaths, entrypoints);
+				Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
+			} catch (e:String) {
+				return {session: null, error: "macro host auto-build failed: " + e};
+			}
+		}
+
+		final session = try {
+			final macroSession = MacroRuntimeMode.openSession(macroRuntimeMode);
+			if (runHaxelibMacros) {
+				for (i in 0...libMacros.length)
+					Sys.println("lib_macro_run[" + i + "]=" + macroSession.run(libMacros[i]));
+			}
+			for (i in 0...parsedMacros.length)
+				Sys.println("macro_run[" + i + "]=" + macroSession.run(parsedMacros[i]));
+			macroSession;
+		} catch (e:String) {
+			return {session: null, error: "macro failed: " + e};
+		}
+
+		Stage3DiagnosticsSupport.printHxMacroDefines("macro_define");
+		return {session: session, error: null};
 	}
 }

@@ -209,10 +209,6 @@ class Stage3Compiler {
 		return Stage3MacroHostSupport.isBuiltinMacroExpr(expr);
 	}
 
-	static function anyNonBuiltinMacro(exprs:Array<String>):Bool {
-		return Stage3MacroHostSupport.anyNonBuiltinMacro(exprs);
-	}
-
 	static function shouldAutoBuildMacroHost():Bool {
 		return Stage3MacroHostSupport.shouldAutoBuildMacroHost();
 	}
@@ -383,71 +379,13 @@ class Stage3Compiler {
 
 		final macroHostClassPaths = Stage3SetupSupport.macroHostClassPaths(parsedClassPaths, libsResolved, cwd);
 
-		if (!typeOnly && (parsedMacros.length > 0 || exprMacros.length > 0 || (runHaxelibMacros && libMacros.length > 0))) {
-			// Stage3 dev/CI convenience: auto-build a macro host that includes the classpaths needed
-			// for:
-			// - requested CLI `--macro` entrypoints, and
-			// - expression macro allowlist entrypoints (HXHX_EXPR_MACROS).
-			//
-			// This is only enabled when `HXHX_MACRO_HOST_AUTO_BUILD=1` (or true/yes) is set.
-			//
-			// Notes
-			// - This is a bring-up tool. It is not meant to be used for production builds.
-			// - The produced macro host is built via stage0 `haxe` (the script), not via hxhx itself.
-			if (macroRuntimeMode == MacroRuntimeMode.EXTERNAL_HOST && !hasConfiguredExternalMacroHostExe() && shouldAutoBuildMacroHost()) {
-				final repoRoot = inferRepoRootForScripts();
-				if (repoRoot.length == 0)
-					return error("macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)");
-
-				try {
-					final entrypoints = new Array<String>();
-					// Library-provided macros (from `haxelib path <lib>` output) when enabled.
-					if (runHaxelibMacros) {
-						for (e in libMacros)
-							if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1)
-								entrypoints.push(e);
-					}
-					// CLI macros: include only non-builtin expressions (builtins are already compiled into the host).
-					if (anyNonBuiltinMacro(parsedMacros)) {
-						for (e in parsedMacros)
-							if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1)
-								entrypoints.push(e);
-					}
-					// Expression macros: always include (they are not builtins by default).
-					for (e in exprMacros)
-						if (entrypoints.indexOf(e) == -1)
-							entrypoints.push(e);
-					final exe = buildMacroHostExe(repoRoot, macroHostClassPaths, entrypoints);
-					Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
-				} catch (e:String) {
-					return error("macro host auto-build failed: " + e);
-				}
-			}
-
-			// Stage 4 bring-up slice: support CLI `--macro` by routing expressions to the macro host.
-			//
-			// This does not yet allow macros to transform the typed AST (e.g. `@:build`). It is purely
-			// “execute macro expressions and surface deterministic results/errors”.
-			try {
-				macroSession = MacroRuntimeMode.openSession(macroRuntimeMode);
-				if (runHaxelibMacros) {
-					for (i in 0...libMacros.length)
-						Sys.println("lib_macro_run[" + i + "]=" + macroSession.run(libMacros[i]));
-				}
-				for (i in 0...parsedMacros.length)
-					Sys.println("macro_run[" + i + "]=" + macroSession.run(parsedMacros[i]));
-			} catch (e:String) {
-				closeMacroSession();
-				return error("macro failed: " + e);
-			}
-
-			// Bring-up diagnostics: dump HXHX_* defines set by macros so tests can assert macro effects.
-			for (name in hxhx.macro.MacroState.listDefineNames()) {
-				if (StringTools.startsWith(name, "HXHX_")) {
-					Sys.println("macro_define[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
-				}
-			}
+		final cliMacroRun = Stage3MacroHostSupport.runCliMacrosIfNeeded(macroRuntimeMode, typeOnly, hasConfiguredExternalMacroHostExe(), parsedMacros,
+			exprMacros, runHaxelibMacros, libMacros, macroHostClassPaths);
+		if (cliMacroRun.error != null) {
+			closeMacroSession();
+			return error(cliMacroRun.error);
 		}
+		macroSession = cliMacroRun.session;
 
 		final classPaths = Stage3SetupSupport.projectClassPaths(parsedClassPaths, libsResolved, cwd);
 
