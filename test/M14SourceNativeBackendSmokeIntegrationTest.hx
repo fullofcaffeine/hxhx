@@ -1076,6 +1076,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpERegProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var groups = ~/a+(b)?(c*)a+/;",
+			"    Sys.println(\"m1=\" + Std.string(groups.match(\"xxaabcayyy\")));",
+			"    Sys.println(\"g0=\" + groups.matched(0));",
+			"    Sys.println(\"g1=\" + Std.string(groups.matched(1)));",
+			"    Sys.println(\"g2=\" + Std.string(groups.matched(2)));",
+			"    Sys.println(\"left=\" + groups.matchedLeft());",
+			"    Sys.println(\"right=\" + groups.matchedRight());",
+			"    var pos = groups.matchedPos();",
+			"    Sys.println(\"pos=\" + Std.string(pos.pos) + \",len=\" + Std.string(pos.len));",
+			"    var digits = new EReg(\"\\\\d+\", \"g\");",
+			"    Sys.println(\"m2=\" + Std.string(digits.match(\"ab12cd\")));",
+			"    Sys.println(\"dg0=\" + digits.matched(0));",
+			"    Sys.println(\"dleft=\" + digits.matchedLeft());",
+			"    Sys.println(\"dright=\" + digits.matchedRight());",
+			"    Sys.println(\"rep=\" + digits.replace(\"a1b22c\", \"#\"));",
+			"    Sys.println(\"parts=\" + digits.split(\"a1b22c\").join(\"|\"));",
+			"    Sys.println(\"map=\" + digits.map(\"a1b22c\", function(e) return \"[\" + e.matched(0) + \"]\"));",
+			"    Sys.println(\"mapsub=\" + ~/a+/g.map(\"aaabacx\", function(r) return \"[\" + r.matched(0).substr(1) + \"]\"));",
+			"    Sys.println(\"mapzero=\" + ~/x?/g.map(\"aaabacx\", function(r) return \"[\" + r.matched(0) + \"]\"));",
+			"    var sub = ~/a+/;",
+			"    Sys.println(\"sub0=\" + Std.string(sub.matchSub(\"abab\", 0)));",
+			"    Sys.println(\"sub0right=\" + sub.matchedRight());",
+			"    Sys.println(\"sub1=\" + Std.string(sub.matchSub(\"abab\", 1)));",
+			"    Sys.println(\"sub1left=\" + sub.matchedLeft());",
+			"    Sys.println(\"sub1right=\" + sub.matchedRight());",
+			"    Sys.println(\"esc=\" + EReg.escape(\"a+b\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeErrorProbeProgram():GenIrProgram {
 		final src = [
 			"class HelperMacros {",
@@ -5147,6 +5185,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				"generated PHP nested subcapture loops should preserve closure capture semantics, got:\n" + run.stdout);
 		}
 		deleteRecursive(subCaptureTmpRoot);
+
+		final eRegTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_ereg_" + Std.string(Date.now().getTime()));
+		deleteRecursive(eRegTmpRoot);
+		FileSystem.createDirectory(eRegTmpRoot);
+		backend.emit(phpERegProgram(), new BackendContext(eRegTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final eRegContent = File.getContent(Path.join([eRegTmpRoot, "index.php"]));
+		assertContains(eRegContent, "class EReg {", "PHP source-native runtime should emit an EReg support class");
+		assertContains(eRegContent, "if ($this->last === null || !array_key_exists(0, $this->matches) || $n < 0) throw new \\Exception(\"EReg::matched\");",
+			"PHP EReg.matched should throw when called before any successful match");
+		assertContains(eRegContent, "__hxhx_string_substr($r->matched(0), 1)",
+			"PHP should lower chained EReg.matched(...).substr(...) through the string helper");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([eRegTmpRoot, "index.php"])]);
+			final expected = "m1=true\n" + "g0=aabca\n" + "g1=b\n" + "g2=c\n" + "left=xx\n" + "right=yyy\n" + "pos=2,len=5\n" + "m2=true\n" + "dg0=12\n"
+				+ "dleft=ab\n" + "dright=cd\n" + "rep=a#b#c\n" + "parts=a|b|c\n" + "map=a[1]b[22]c\n" + "mapsub=[aa]b[]cx\n"
+				+ "mapzero=[]a[]a[]a[]b[]a[]c[x]\n" + "sub0=true\n" + "sub0right=bab\n" + "sub1=true\n" + "sub1left=ab\n" + "sub1right=b\n" + "esc=a\\+b\n";
+			assertTrue(run.code == 0, "generated PHP EReg runtime should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == expected, "generated PHP EReg runtime should preserve core regex behavior, got:\n" + run.stdout);
+		}
+		deleteRecursive(eRegTmpRoot);
 
 		final anonCallableTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_anon_callable_" + Std.string(Date.now().getTime()));
 		deleteRecursive(anonCallableTmpRoot);

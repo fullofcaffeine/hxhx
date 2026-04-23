@@ -1489,6 +1489,8 @@ class SourceNativeBackend {
 	}
 
 	static function phpArrayFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		if (field == "join" && args.length == 1)
+			return "__hxhx_array_join(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 		final mutableReceiver = phpMutableReceiverExpr(receiver);
 		if (mutableReceiver == null)
 			return null;
@@ -1507,8 +1509,6 @@ class SourceNativeBackend {
 				+ ")";
 			case "sort" if (args.length == 1):
 				"__hxhx_array_sort(" + mutableReceiver + ", " + renderExpr(Php, args[0]) + ")";
-			case "join" if (args.length == 1):
-				"__hxhx_array_join(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 			case _:
 				null;
 		};
@@ -1524,7 +1524,7 @@ class SourceNativeBackend {
 	}
 
 	static function phpStringFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
-		if (!phpStringLikeReceiver(receiver) && !phpVariableStringReceiver(receiver, field))
+		if (!phpStringLikeReceiver(receiver) && !phpVariableStringReceiver(receiver, field) && !phpKnownStringResultReceiver(receiver))
 			return null;
 		final renderedReceiver = renderExpr(Php, receiver);
 		final renderedArgs = [for (arg in args) renderExpr(Php, arg)];
@@ -1544,15 +1544,53 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function phpKnownStringResultReceiver(receiver:HxExpr):Bool {
+		return switch (receiver) {
+			case ECall(EField(base, field), _):
+				switch (field) {
+					case "matched" | "matchedLeft" | "matchedRight":
+						true;
+					case "replace":
+						phpERegLikeReceiver(base);
+					case _:
+						false;
+				}
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				phpKnownStringResultReceiver(inner);
+			case _:
+				false;
+		};
+	}
+
 	static function phpVariableStringReceiver(receiver:HxExpr, field:String):Bool {
 		return switch (receiver) {
-			case EIdent(_):
+			case EIdent(name):
+				final hint = phpLocalTypeHint(name);
+				if (hint == "EReg")
+					return false;
+				if (hint.length > 0)
+					return hint == "String";
 				switch (field) {
 					case "indexOf" | "lastIndexOf" | "split" | "charCodeAt" | "substr":
 						true;
 					case _:
 						false;
 				}
+			case _:
+				false;
+		};
+	}
+
+	static function phpERegLikeReceiver(receiver:HxExpr):Bool {
+		return switch (receiver) {
+			case EIdent(name):
+				phpLocalTypeHint(name) == "EReg";
+			case ENew(typePath, _):
+				typePath == "EReg";
+			case ECast(_, castHint):
+				StringTools.trim(castHint == null ? "" : castHint) == "EReg";
+			case EUntyped(inner) | EMacroExpr(inner, _):
+				phpERegLikeReceiver(inner);
 			case _:
 				false;
 		};
@@ -3441,43 +3479,86 @@ class SourceNativeBackend {
 		return out;
 	}
 
-	static function renderStmtWithLocals(target:SourceNativeTarget, stmt:HxStmt, indent:String, localTypes:haxe.ds.StringMap<String>):Array<String> {
-		switch (stmt) {
-			case SVar(name, typeHint, init, pos):
-				final cleanName = sanitizeTypeName(name);
-				localTypes.set(cleanName, typeHint == null ? "" : typeHint);
-				final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
-				final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
-				return [indent + varDecl(target, cleanName, rhs)];
-			case SExpr(EBinop("??=", left, right), _) if (target == Python):
-				return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
-			case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
-				return [indent + exprStmt(target, pythonAssignmentStmt(op, left, right))];
-			case SExpr(EBinop("=", EIdent(name), rhsExpr), _) if (target == Php && localTypes.exists(sanitizeTypeName(name))):
-				final cleanName = sanitizeTypeName(name);
-				final rhs = assignedValueExpr(target, rhsExpr, localTypes.get(cleanName));
-				return [indent + exprStmt(target, valueName(target, cleanName) + " = " + rhs)];
-			case SForIn(name, iterable, body, _) if (target == Php):
-				final phpLocals = copyStringMap(localTypes);
-				phpLocals.set(sanitizeTypeName(name), "");
-				return renderForIn(target, name, iterable, body, indent, phpLocals);
-			case SForKeyValue(keyName, valueName, iterable, body, _) if (target == Php):
-				final phpLocals = copyStringMap(localTypes);
-				phpLocals.set(sanitizeTypeName(keyName), "");
-				phpLocals.set(sanitizeTypeName(valueName), "");
-				return renderForKeyValue(target, keyName, valueName, iterable, body, indent, phpLocals);
-			case SBlock(stmts, _):
-				final out = new Array<String>();
-				final blockLocalTypes = copyStringMap(localTypes);
-				for (s in stmts)
-					for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
-						out.push(line);
-				if (out.length == 0)
-					out.push(indent + emptyStmt(target));
-				return out;
-			case _:
-				return renderStmt(target, stmt, indent);
+	static var phpRenderLocalTypes:Null<haxe.ds.StringMap<String>> = null;
+
+	static function withPhpLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
+		if (target != Php)
+			return f();
+		final previous = phpRenderLocalTypes;
+		phpRenderLocalTypes = localTypes;
+		try {
+			final result = f();
+			phpRenderLocalTypes = previous;
+			return result;
+		} catch (e) {
+			phpRenderLocalTypes = previous;
+			throw e;
 		}
+	}
+
+	static function phpLocalTypeHint(name:String):String {
+		if (phpRenderLocalTypes == null)
+			return "";
+		final clean = sanitizeTypeName(name);
+		return phpRenderLocalTypes.exists(clean) ? phpRenderLocalTypes.get(clean) : "";
+	}
+
+	static function inferLocalTypeHint(typeHint:Null<String>, init:Null<HxExpr>):String {
+		if (typeHint != null && StringTools.trim(typeHint).length > 0)
+			return typeHint;
+		return switch (init) {
+			case EString(_):
+				"String";
+			case ENew(typePath, _):
+				typePath;
+			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
+				castHint;
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				inferLocalTypeHint("", inner);
+			case _:
+				"";
+		};
+	}
+
+	static function renderStmtWithLocals(target:SourceNativeTarget, stmt:HxStmt, indent:String, localTypes:haxe.ds.StringMap<String>):Array<String> {
+		return withPhpLocalTypes(target, localTypes, function() {
+			switch (stmt) {
+				case SVar(name, typeHint, init, pos):
+					final cleanName = sanitizeTypeName(name);
+					localTypes.set(cleanName, inferLocalTypeHint(typeHint, init));
+					final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
+					final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
+					return [indent + varDecl(target, cleanName, rhs)];
+				case SExpr(EBinop("??=", left, right), _) if (target == Python):
+					return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
+				case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
+					return [indent + exprStmt(target, pythonAssignmentStmt(op, left, right))];
+				case SExpr(EBinop("=", EIdent(name), rhsExpr), _) if (target == Php && localTypes.exists(sanitizeTypeName(name))):
+					final cleanName = sanitizeTypeName(name);
+					final rhs = assignedValueExpr(target, rhsExpr, localTypes.get(cleanName));
+					return [indent + exprStmt(target, valueName(target, cleanName) + " = " + rhs)];
+				case SForIn(name, iterable, body, _) if (target == Php):
+					final phpLocals = copyStringMap(localTypes);
+					phpLocals.set(sanitizeTypeName(name), "");
+					return renderForIn(target, name, iterable, body, indent, phpLocals);
+				case SForKeyValue(keyName, valueName, iterable, body, _) if (target == Php):
+					final phpLocals = copyStringMap(localTypes);
+					phpLocals.set(sanitizeTypeName(keyName), "");
+					phpLocals.set(sanitizeTypeName(valueName), "");
+					return renderForKeyValue(target, keyName, valueName, iterable, body, indent, phpLocals);
+				case SBlock(stmts, _):
+					final out = new Array<String>();
+					final blockLocalTypes = copyStringMap(localTypes);
+					for (s in stmts)
+						for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
+							out.push(line);
+					if (out.length == 0)
+						out.push(indent + emptyStmt(target));
+					return out;
+				case _:
+					return renderStmt(target, stmt, indent);
+			}
+		});
 	}
 
 	static function pythonAssignmentStmt(op:String, left:HxExpr, right:HxExpr):String {
@@ -8097,6 +8178,124 @@ class SourceNativeBackend {
 				lines.push("    $value = $this->$name ?? null;");
 				lines.push("    if (is_callable($value)) return $value(...$args);");
 				lines.push("    throw new \\Error(\"Call to undefined method __HxAnon::\" . $name . \"()\");");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("class EReg {");
+				lines.push("  private $pattern;");
+				lines.push("  private $modifiers;");
+				lines.push("  private $global;");
+				lines.push("  private $last = null;");
+				lines.push("  private $matches = [];");
+				lines.push("  public function __construct($pattern, $options) {");
+				lines.push("    $this->pattern = strval($pattern);");
+				lines.push("    $raw = strval($options);");
+				lines.push("    $this->global = strpos($raw, \"g\") !== false;");
+				lines.push("    $this->modifiers = str_replace(\"g\", \"\", $raw);");
+				lines.push("  }");
+				lines.push("  private function delimiterPattern() {");
+				lines.push("    return str_replace(\"~\", \"\\\\~\", $this->pattern);");
+				lines.push("  }");
+				lines.push("  private function regex($unicode) {");
+				lines.push("    $mods = $this->modifiers;");
+				lines.push("    if ($unicode && strpos($mods, \"u\") === false) $mods .= \"u\";");
+				lines.push("    return \"~\" . $this->delimiterPattern() . \"~\" . $mods;");
+				lines.push("  }");
+				lines.push("  private function stringLength($value) {");
+				lines.push("    $text = strval($value);");
+				lines.push("    return function_exists(\"mb_strlen\") ? mb_strlen($text) : strlen($text);");
+				lines.push("  }");
+				lines.push("  private function runMatch($source, $offset) {");
+				lines.push("    $subject = strval($source);");
+				lines.push("    $flags = PREG_OFFSET_CAPTURE;");
+				lines.push("    if (defined(\"PREG_UNMATCHED_AS_NULL\")) $flags |= PREG_UNMATCHED_AS_NULL;");
+				lines.push("    $matches = [];");
+				lines.push("    $result = @preg_match($this->regex(true), $subject, $matches, $flags, max(0, intval($offset)));");
+				lines.push("    if ($result === false) {");
+				lines.push("      $matches = [];");
+				lines.push("      $result = @preg_match($this->regex(false), $subject, $matches, $flags, max(0, intval($offset)));");
+				lines.push("    }");
+				lines.push("    if ($result === false) throw new \\Exception(\"EReg: preg_match failed\");");
+				lines.push("    $this->matches = $matches;");
+				lines.push("    $this->last = $result > 0 ? $source : null;");
+				lines.push("    return $result > 0;");
+				lines.push("  }");
+				lines.push("  private function requireMatch() {");
+				lines.push("    if ($this->last === null || !array_key_exists(0, $this->matches)) throw new \\Exception(\"No string matched\");");
+				lines.push("    return $this->matches[0];");
+				lines.push("  }");
+				lines.push("  public function match($source) {");
+				lines.push("    return $this->runMatch($source, 0);");
+				lines.push("  }");
+				lines.push("  public function matched($index) {");
+				lines.push("    $n = intval($index);");
+				lines.push("    if ($this->last === null || !array_key_exists(0, $this->matches) || $n < 0) throw new \\Exception(\"EReg::matched\");");
+				lines.push("    if (!array_key_exists($n, $this->matches)) return null;");
+				lines.push("    $entry = $this->matches[$n];");
+				lines.push("    if (!is_array($entry) || count($entry) < 2) return null;");
+				lines.push("    if ($entry[1] === -1 || $entry[0] === null) return null;");
+				lines.push("    return $entry[0];");
+				lines.push("  }");
+				lines.push("  public function matchedLeft() {");
+				lines.push("    $match = $this->requireMatch();");
+				lines.push("    return substr(strval($this->last), 0, $match[1]);");
+				lines.push("  }");
+				lines.push("  public function matchedRight() {");
+				lines.push("    $match = $this->requireMatch();");
+				lines.push("    $offset = $match[1] + strlen(strval($match[0]));");
+				lines.push("    return substr(strval($this->last), $offset);");
+				lines.push("  }");
+				lines.push("  public function matchedPos() {");
+				lines.push("    $match = $this->requireMatch();");
+				lines.push("    return (object)[\"pos\" => $this->stringLength(substr(strval($this->last), 0, $match[1])), \"len\" => $this->stringLength($match[0])];");
+				lines.push("  }");
+				lines.push("  public function matchSub($source, $pos, $len = -1) {");
+				lines.push("    $text = strval($source);");
+				lines.push("    $start = max(0, intval($pos));");
+				lines.push("    $subject = intval($len) < 0 ? $text : substr($text, 0, $start + max(0, intval($len)));");
+				lines.push("    return $this->runMatch($subject, $start) ? ($this->last = $text) || true : false;");
+				lines.push("  }");
+				lines.push("  public function split($source) {");
+				lines.push("    $subject = strval($source);");
+				lines.push("    $limit = $this->global ? -1 : 2;");
+				lines.push("    $parts = @preg_split($this->regex(true), $subject, $limit);");
+				lines.push("    if ($parts === false) $parts = @preg_split($this->regex(false), $subject, $limit);");
+				lines.push("    if ($parts === false) throw new \\Exception(\"EReg: preg_split failed\");");
+				lines.push("    return array_values($parts);");
+				lines.push("  }");
+				lines.push("  public function replace($source, $replacement) {");
+				lines.push("    $subject = strval($source);");
+				lines.push("    $limit = $this->global ? -1 : 1;");
+				lines.push("    $result = @preg_replace($this->regex(true), strval($replacement), $subject, $limit);");
+				lines.push("    if ($result === null) $result = @preg_replace($this->regex(false), strval($replacement), $subject, $limit);");
+				lines.push("    if ($result === null) throw new \\Exception(\"EReg: preg_replace failed\");");
+				lines.push("    return $result;");
+				lines.push("  }");
+				lines.push("  public function map($source, $callback) {");
+				lines.push("    $text = strval($source);");
+				lines.push("    if (!$this->runMatch($text, 0)) return $text;");
+				lines.push("    $result = \"\";");
+				lines.push("    $offset = 0;");
+				lines.push("    $total = strlen($text);");
+				lines.push("    do {");
+				lines.push("      $match = $this->matches[0];");
+				lines.push("      $matchText = strval($match[0]);");
+				lines.push("      $matchOffset = $match[1];");
+				lines.push("      $result .= substr($text, $offset, $matchOffset - $offset);");
+				lines.push("      $result .= $callback($this);");
+				lines.push("      $offset = $matchOffset;");
+				lines.push("      if ($matchText === \"\") {");
+				lines.push("        if ($offset >= $total) break;");
+				lines.push("        $result .= substr($text, $offset, 1);");
+				lines.push("        $offset += 1;");
+				lines.push("      } else {");
+				lines.push("        $offset += strlen($matchText);");
+				lines.push("      }");
+				lines.push("    } while ($this->global && $offset < $total && $this->runMatch($text, $offset));");
+				lines.push("    $result .= substr($text, $offset);");
+				lines.push("    return $result;");
+				lines.push("  }");
+				lines.push("  public static function escape($value) {");
+				lines.push("    return preg_quote(strval($value));");
 				lines.push("  }");
 				lines.push("}");
 				lines.push("class __HxArray {");
