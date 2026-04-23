@@ -9,10 +9,6 @@ import hxhx.macro.MacroHostClient;
 #end
 import hxhx.macro.MacroRuntimeMode;
 import hxhx.macro.MacroRuntimeSession;
-import backend.BackendContext;
-import backend.BackendDispatchBoundary;
-import backend.EmitResult;
-import backend.GenIrBoundary;
 import backend.OcamlProfile;
 
 private typedef HaxelibSpec = LibraryResolver.LibrarySpec;
@@ -176,9 +172,6 @@ class Stage3Compiler {
 	static function runConnect(connectMode:String, requestArgs:Array<String>):Int {
 		return Stage3WaitServer.runConnect(connectMode, requestArgs, error);
 	}
-
-	static function bool01(v:Bool):String
-		return v ? "1" : "0";
 
 	static function isTrueEnv(name:String):Bool {
 		final v = trim(Sys.getEnv(name));
@@ -1052,49 +1045,9 @@ class Stage3Compiler {
 		// Bring-up diagnostics: dump HXHX_* defines again after hooks.
 		Stage3DiagnosticsSupport.printHxMacroDefines("macro_define2");
 
-		var emitted = new EmitResult("", [], false);
-		try {
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=before_output_file_hint");
-			}
-			final outputFileHint = if (supportsCustomOutputFile && targetOutputHintRaw != null && targetOutputHintRaw.length > 0) {
-				Path.isAbsolute(targetOutputHintRaw) ? Path.normalize(targetOutputHintRaw) : absFromCwd(cwd, targetOutputHintRaw);
-			} else {
-				null;
-			}
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=after_output_file_hint");
-				Sys.println("stage3_driver=before_backend_context");
-			}
-			final outputDirAbs = if (targetOutputDirHintRaw != null && targetOutputDirHintRaw.length > 0) {
-				Path.isAbsolute(targetOutputDirHintRaw) ? Path.normalize(targetOutputDirHintRaw) : absFromCwd(cwd, targetOutputDirHintRaw);
-			} else {
-				outAbs;
-			}
-			final context = new BackendContext(outputDirAbs, outputFileHint, parsedMain, emitFullBodies, supportsBuildExecutable, definesMap);
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=after_backend_context");
-				Sys.println("stage3_driver=before_emit_trace_backend_id");
-			}
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=after_emit_trace_backend_id");
-				Sys.println("stage3_driver=before_emit backend=" + backendId + " typed_modules=" + typedModules.length + " out=" + outputDirAbs);
-			}
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=emitWithBackend_before_genir_boundary");
-			}
-			final expandedProgram = GenIrBoundary.fromDynamic(cast expanded);
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=emitWithBackend_after_genir_boundary");
-				Sys.println("stage3_driver=emitWithBackend_before_dispatch_boundary");
-			}
-			emitted = BackendDispatchBoundary.emit(backend, expandedProgram, context);
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=emitWithBackend_after_dispatch_boundary");
-			}
-			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=after_emit entry=" + emitted.entryPath + " built_executable=" + bool01(emitted.builtExecutable));
-			}
+		final emitted = try {
+			Stage3EmitSupport.emitWithBackend(backend, expanded, backendId, typedModules.length, cwd, outAbs, targetOutputHintRaw, targetOutputDirHintRaw,
+				parsedMain, emitFullBodies, supportsCustomOutputFile, supportsBuildExecutable, definesMap);
 		} catch (e:String) {
 			closeMacroSession();
 			return error("emit failed: " + e);
