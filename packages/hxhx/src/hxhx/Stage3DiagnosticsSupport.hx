@@ -341,6 +341,15 @@ class Stage3DiagnosticsSupport {
 		return TyperStage.extractRawDiagnostic(e.getMessage());
 	}
 
+	/**
+		Why: backend and macro execution can throw values that cross Haxe's typed
+		exception boundary as `Dynamic`, and diagnostics must still print a stable,
+		user-facing message.
+		What: converts that boundary value into a string without letting `Dynamic`
+		escape into the rest of Stage3 orchestration.
+		How: preserve `haxe.Exception.message` when present, then fall back to
+		`Std.string` for other thrown values.
+	**/
 	public static function formatDynamicException(error:Dynamic):String {
 		if (Std.isOfType(error, haxe.Exception)) {
 			final ex:haxe.Exception = cast error;

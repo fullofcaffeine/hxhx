@@ -124,9 +124,8 @@ class Stage3MacroHostSupport {
 		return exe;
 	}
 
-	public static function runCliMacrosIfNeeded(macroRuntimeMode:MacroRuntimeMode, typeOnly:Bool, hasConfiguredExternalMacroHostExe:Bool,
-			parsedMacros:Array<String>, exprMacros:Array<String>, runHaxelibMacros:Bool, libMacros:Array<String>,
-			macroHostClassPaths:Array<String>):Stage3CliMacroRunResult {
+	public static function runCliMacrosIfNeeded(macroRuntimeMode:String, typeOnly:Bool, hasConfiguredExternalMacroHostExe:Bool, parsedMacros:Array<String>,
+			exprMacros:Array<String>, runHaxelibMacros:Bool, libMacros:Array<String>, macroHostClassPaths:Array<String>):Stage3CliMacroRunResult {
 		if (typeOnly || !(parsedMacros.length > 0 || exprMacros.length > 0 || (runHaxelibMacros && libMacros.length > 0)))
 			return {session: null, error: null};
 

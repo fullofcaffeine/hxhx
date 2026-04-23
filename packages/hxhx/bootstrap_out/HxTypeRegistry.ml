@@ -121,9 +121,15 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.Stage1Resolver");
   ignore (HxType.class_ "hxhx.Stage3Args");
   ignore (HxType.class_ "hxhx.Stage3BackendPluginSupport");
+  ignore (HxType.class_ "hxhx.Stage3BuildMacroSupport");
   ignore (HxType.class_ "hxhx.Stage3Compiler");
   ignore (HxType.class_ "hxhx.Stage3DiagnosticsSupport");
+  ignore (HxType.class_ "hxhx.Stage3EmitSupport");
+  ignore (HxType.class_ "hxhx.Stage3HookSupport");
+  ignore (HxType.class_ "hxhx.Stage3MacroHostSupport");
+  ignore (HxType.class_ "hxhx.Stage3PathSupport");
   ignore (HxType.class_ "hxhx.Stage3RunSupport");
+  ignore (HxType.class_ "hxhx.Stage3SetupSupport");
   ignore (HxType.class_ "hxhx.Stage3WaitServer");
   ignore (HxType.class_ "hxhx.macro.BuildFieldSnapshotPayload");
   ignore (HxType.class_ "hxhx.macro.InProcGeneratedEntrypoints");
@@ -1378,14 +1384,32 @@ let init () : unit =
   HxType.register_class_ctor "hxhx.Stage3BackendPluginSupport" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage3BackendPluginSupport.create ())
   );
+  HxType.register_class_ctor "hxhx.Stage3BuildMacroSupport" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_Stage3BuildMacroSupport.create ())
+  );
   HxType.register_class_ctor "hxhx.Stage3Compiler" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage3Compiler.create ())
   );
   HxType.register_class_ctor "hxhx.Stage3DiagnosticsSupport" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage3DiagnosticsSupport.create ())
   );
+  HxType.register_class_ctor "hxhx.Stage3EmitSupport" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_Stage3EmitSupport.create ())
+  );
+  HxType.register_class_ctor "hxhx.Stage3HookSupport" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_Stage3HookSupport.create ())
+  );
+  HxType.register_class_ctor "hxhx.Stage3MacroHostSupport" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_Stage3MacroHostSupport.create ())
+  );
+  HxType.register_class_ctor "hxhx.Stage3PathSupport" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_Stage3PathSupport.create ())
+  );
   HxType.register_class_ctor "hxhx.Stage3RunSupport" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage3RunSupport.create ())
+  );
+  HxType.register_class_ctor "hxhx.Stage3SetupSupport" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_Stage3SetupSupport.create ())
   );
   HxType.register_class_ctor "hxhx.Stage3WaitServer" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage3WaitServer.create ())
@@ -1642,9 +1666,15 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.Stage1Resolver" (fun () -> Obj.repr (Hxhx_Stage1Compiler.stage1resolver___empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3Args" (fun () -> Obj.repr (Hxhx_Stage3Args.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3BackendPluginSupport" (fun () -> Obj.repr (Hxhx_Stage3BackendPluginSupport.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.Stage3BuildMacroSupport" (fun () -> Obj.repr (Hxhx_Stage3BuildMacroSupport.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3Compiler" (fun () -> Obj.repr (Hxhx_Stage3Compiler.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3DiagnosticsSupport" (fun () -> Obj.repr (Hxhx_Stage3DiagnosticsSupport.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.Stage3EmitSupport" (fun () -> Obj.repr (Hxhx_Stage3EmitSupport.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.Stage3HookSupport" (fun () -> Obj.repr (Hxhx_Stage3HookSupport.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.Stage3MacroHostSupport" (fun () -> Obj.repr (Hxhx_Stage3MacroHostSupport.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.Stage3PathSupport" (fun () -> Obj.repr (Hxhx_Stage3PathSupport.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3RunSupport" (fun () -> Obj.repr (Hxhx_Stage3RunSupport.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.Stage3SetupSupport" (fun () -> Obj.repr (Hxhx_Stage3SetupSupport.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3WaitServer" (fun () -> Obj.repr (Hxhx_Stage3WaitServer.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.BuildFieldSnapshotPayload" (fun () -> Obj.repr (Hxhx_macro_BuildFieldSnapshotPayload.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.InProcGeneratedEntrypoints" (fun () -> Obj.repr (Hxhx_macro_InProcGeneratedEntrypoints.__empty ()));
@@ -1909,15 +1939,27 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.Stage1Resolver" [];
   HxType.register_class_static_fields "hxhx.Stage1Resolver" [ "normalizeSep"; "resolveClassPath"; "resolveMain"; "resolveModule" ];
   HxType.register_class_instance_fields "hxhx.Stage3Args" [];
-  HxType.register_class_static_fields "hxhx.Stage3Args" [ "findTargetOutputDirectoryHint"; "findTargetOutputFileHint"; "hasFlag"; "parseGlobalStage3Flags"; "targetDefineForBackend"; "targetOutputDirectoryFlags"; "targetOutputFlags" ];
+  HxType.register_class_static_fields "hxhx.Stage3Args" [ "findFlagValue"; "findManyFlagValues"; "findTargetOutputDirectoryHint"; "findTargetOutputFileHint"; "hasFlag"; "initialRoots"; "parseGlobalStage3Flags"; "summarizeArgs"; "targetDefineForBackend"; "targetOutputDirectoryFlags"; "targetOutputFlags" ];
   HxType.register_class_instance_fields "hxhx.Stage3BackendPluginSupport" [];
-  HxType.register_class_static_fields "hxhx.Stage3BackendPluginSupport" [ "appendManifestRequests"; "appendPluginLoadRequest"; "appendProviderRequests"; "collectBundledBackendPluginManifestPaths"; "collectBundledBackendProviderTypeNames"; "collectDeclarationValues"; "collectExplicitBackendPluginManifestPaths"; "collectExplicitBackendProviderTypeNames"; "isTrueEnv"; "loadDynamicBackendProviders"; "parseDelimitedList"; "trim" ];
+  HxType.register_class_static_fields "hxhx.Stage3BackendPluginSupport" [ "appendManifestRequests"; "appendPluginLoadRequest"; "appendProviderRequests"; "buildProviderDefines"; "collectBundledBackendPluginManifestPaths"; "collectBundledBackendProviderTypeNames"; "collectDeclarationValues"; "collectExplicitBackendPluginManifestPaths"; "collectExplicitBackendProviderTypeNames"; "isTrueEnv"; "loadDynamicBackendProviders"; "parseDelimitedList"; "selectBackend"; "trim" ];
+  HxType.register_class_instance_fields "hxhx.Stage3BuildMacroSupport" [];
+  HxType.register_class_static_fields "hxhx.Stage3BuildMacroSupport" [ "buildFieldsPayloadForParsed"; "collectBuildMacroExprs"; "dispatchOnTypeNotFoundHooks"; "parseGeneratedMembers" ];
   HxType.register_class_instance_fields "hxhx.Stage3Compiler" [];
-  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "anyNonBuiltinMacro"; "bool01"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "builtinExprMacros"; "canRunNode"; "collectBuildMacroExprs"; "collectUnsupportedExprRawInModule"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "dispatchOnTypeNotFoundHooks"; "error"; "escapeOneLine"; "findFlagValue"; "findManyFlagValues"; "findTargetOutputDirectoryHint"; "findTargetOutputFileHint"; "formatDynamicException"; "formatException"; "hasConfiguredExternalMacroHostExe"; "hasFlag"; "haxeDiagnosticError"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "loadDynamicBackendProviders"; "mergeExprMacroAllowlist"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "rawTyperDiagnostic"; "resolveBuiltinBackend"; "resolveHaxelibSpec"; "run"; "runConnect"; "runOne"; "runSafeCommandOnlyHooks"; "runSafeJavaJarHookForArtifact"; "runSafePythonHookForArtifact"; "runWaitSocket"; "runWaitStdio"; "shouldAutoBuildMacroHost"; "summarizeArgs"; "targetDefineForBackend"; "trim" ];
+  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "collectBuildMacroExprs"; "dispatchOnTypeNotFoundHooks"; "error"; "findTargetOutputDirectoryHint"; "findTargetOutputFileHint"; "formatDynamicException"; "formatException"; "hasConfiguredExternalMacroHostExe"; "hasFlag"; "haxeDiagnosticError"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "rawTyperDiagnostic"; "run"; "runConnect"; "runOne"; "runWaitSocket"; "runWaitStdio"; "shouldAutoBuildMacroHost"; "targetDefineForBackend"; "trim" ];
   HxType.register_class_instance_fields "hxhx.Stage3DiagnosticsSupport" [];
-  HxType.register_class_static_fields "hxhx.Stage3DiagnosticsSupport" [ "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "escapeOneLine"; "formatDynamicException"; "formatException"; "rawTyperDiagnostic" ];
+  HxType.register_class_static_fields "hxhx.Stage3DiagnosticsSupport" [ "bool01"; "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "escapeOneLine"; "formatDynamicException"; "formatException"; "newUnsupportedTraceCounters"; "parsedMethodCount"; "printHxMacroDefines"; "printTypedFunctionSummary"; "rawTyperDiagnostic"; "reportUnsupportedForParsedModule" ];
+  HxType.register_class_instance_fields "hxhx.Stage3EmitSupport" [];
+  HxType.register_class_static_fields "hxhx.Stage3EmitSupport" [ "bool01"; "emitWithBackend"; "isTrueEnv" ];
+  HxType.register_class_instance_fields "hxhx.Stage3HookSupport" [];
+  HxType.register_class_static_fields "hxhx.Stage3HookSupport" [ "runHookPhase"; "runStandardMacroHooks" ];
+  HxType.register_class_instance_fields "hxhx.Stage3MacroHostSupport" [];
+  HxType.register_class_static_fields "hxhx.Stage3MacroHostSupport" [ "anyNonBuiltinMacro"; "buildMacroHostExe"; "builtinExprMacros"; "exprMacroAllowlistFromEnv"; "isBuiltinMacroExpr"; "parseDelimitedList"; "runCliMacrosIfNeeded"; "shouldAutoBuildMacroHost"; "trim" ];
+  HxType.register_class_instance_fields "hxhx.Stage3PathSupport" [];
+  HxType.register_class_static_fields "hxhx.Stage3PathSupport" [ "absFromCwd"; "inferMainFromDisplayRequest"; "inferMainFromMacroExpr"; "inferRepoRootForScripts" ];
   HxType.register_class_instance_fields "hxhx.Stage3RunSupport" [];
-  HxType.register_class_static_fields "hxhx.Stage3RunSupport" [ "absFromCwd"; "canRunNode"; "parseSafeJavaJarCommand"; "parseSafePythonScriptCommand"; "runCommandInCwd"; "runSafeCommandOnlyHooks"; "runSafeJavaJarHookForArtifact"; "runSafePythonHookForArtifact"; "splitCommandWords" ];
+  HxType.register_class_static_fields "hxhx.Stage3RunSupport" [ "absFromCwd"; "canRunNode"; "parseSafeJavaJarCommand"; "parseSafePythonScriptCommand"; "runCommandInCwd"; "runCommandOnlyUnit"; "runEmittedArtifact"; "runSafeCommandOnlyHooks"; "runSafeJavaJarHookForArtifact"; "runSafePythonHookForArtifact"; "splitCommandWords" ];
+  HxType.register_class_instance_fields "hxhx.Stage3SetupSupport" [];
+  HxType.register_class_static_fields "hxhx.Stage3SetupSupport" [ "buildDefinesMap"; "collectLibraryDefines"; "collectLibraryMacros"; "collectMacroStdPaths"; "macroHostClassPaths"; "projectClassPaths"; "resolveLibraries"; "trim" ];
   HxType.register_class_instance_fields "hxhx.Stage3WaitServer" [];
   HxType.register_class_static_fields "hxhx.Stage3WaitServer" [ "decodeWaitStdioRequest"; "encodeConnectRequest"; "findSingleFlagValue"; "hasDefineFlag"; "parseConnectMode"; "parseWaitMode"; "processConnectResponse"; "readConnectDisplayStdin"; "runConnect"; "runWaitSocket"; "runWaitStdio"; "runWaitStdioRequest"; "synthesizeDisplayResponse"; "writeWaitStdioReply" ];
   HxType.register_class_instance_fields "hxhx.macro.BuildFieldSnapshotPayload" [];
@@ -2140,9 +2182,15 @@ let init () : unit =
   HxType.register_class_tags "hxhx.Stage1Resolver" [ "hxhx.Stage1Resolver" ];
   HxType.register_class_tags "hxhx.Stage3Args" [ "hxhx.Stage3Args" ];
   HxType.register_class_tags "hxhx.Stage3BackendPluginSupport" [ "hxhx.Stage3BackendPluginSupport" ];
+  HxType.register_class_tags "hxhx.Stage3BuildMacroSupport" [ "hxhx.Stage3BuildMacroSupport" ];
   HxType.register_class_tags "hxhx.Stage3Compiler" [ "hxhx.Stage3Compiler" ];
   HxType.register_class_tags "hxhx.Stage3DiagnosticsSupport" [ "hxhx.Stage3DiagnosticsSupport" ];
+  HxType.register_class_tags "hxhx.Stage3EmitSupport" [ "hxhx.Stage3EmitSupport" ];
+  HxType.register_class_tags "hxhx.Stage3HookSupport" [ "hxhx.Stage3HookSupport" ];
+  HxType.register_class_tags "hxhx.Stage3MacroHostSupport" [ "hxhx.Stage3MacroHostSupport" ];
+  HxType.register_class_tags "hxhx.Stage3PathSupport" [ "hxhx.Stage3PathSupport" ];
   HxType.register_class_tags "hxhx.Stage3RunSupport" [ "hxhx.Stage3RunSupport" ];
+  HxType.register_class_tags "hxhx.Stage3SetupSupport" [ "hxhx.Stage3SetupSupport" ];
   HxType.register_class_tags "hxhx.Stage3WaitServer" [ "hxhx.Stage3WaitServer" ];
   HxType.register_class_tags "hxhx.macro.BuildFieldSnapshotPayload" [ "hxhx.macro.BuildFieldSnapshotPayload" ];
   HxType.register_class_tags "hxhx.macro.InProcGeneratedEntrypoints" [ "hxhx.macro.InProcGeneratedEntrypoints" ];

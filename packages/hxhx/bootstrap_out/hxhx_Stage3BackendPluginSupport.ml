@@ -311,3 +311,65 @@ let loadDynamicBackendProviders = fun rawDefines -> ignore (try (
   )
 ) with
   | HxRuntime.Hx_return __ret_62 -> Obj.obj __ret_62)
+
+let buildProviderDefines = fun allDefines -> let providerDefines = Obj.magic (HxArray.copy allDefines) in let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefineNames ()) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let name = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+    ignore (let __old_63 = !_g in let __new_64 = HxInt.add __old_63 1 in (
+      ignore (_g := __new_64);
+      __new_64
+    ));
+    let value = (Hxhx_macro_MacroState.definedValue (name : string) : string) in if value == Obj.magic (HxRuntime.hx_null) || HxString.length value = 0 || HxString.equals value "1" then ignore (HxArray.push providerDefines name) else ignore (HxArray.push providerDefines ((HxString.toStdString name ^ "=") ^ HxString.toStdString value))
+  )) done);
+  providerDefines
+)
+
+let selectBackend = fun backendId providerDefines -> (
+  ignore (try (
+    ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline "stage3_driver=before_load_dynamic_backend_providers") else ());
+    ignore (loadDynamicBackendProviders (Obj.magic providerDefines));
+    if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline "stage3_driver=after_load_dynamic_backend_providers") else ()
+  ) with
+    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_65 -> raise (HxRuntime.Hx_return __ret_65)
+    | HxRuntime.Hx_exception (__exn_v_66, __exn_tags_67) -> if HxRuntime.tags_has __exn_tags_67 "String" then let e = (Obj.obj __exn_v_66 : string) in (
+      ignore e;
+      HxType.hx_throw_typed_rtti (Obj.repr ("backend provider setup failed: " ^ HxString.toStdString e)) ["Dynamic"; "String"]
+    ) else HxRuntime.hx_throw_typed __exn_v_66 __exn_tags_67
+    | __exn_68 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_68) : string) in (
+      ignore e;
+      HxType.hx_throw_typed_rtti (Obj.repr ("backend provider setup failed: " ^ HxString.toStdString e)) ["Dynamic"; "String"]
+    ) else raise (__exn_68));
+  let tempIBackend = ref (Obj.magic (HxRuntime.hx_null) : Backend_IBackend.t) in (
+    ignore (try (
+      ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline ("stage3_driver=before_resolve_builtin_backend id=" ^ HxString.toStdString backendId)) else ());
+      let __assign_69 = Obj.magic (Backend_BackendRegistry.requireForTarget (backendId : string)) in (
+        tempIBackend := __assign_69;
+        __assign_69
+      )
+    ) with
+      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_70 -> raise (HxRuntime.Hx_return __ret_70)
+      | HxRuntime.Hx_exception (__exn_v_71, __exn_tags_72) -> if HxRuntime.tags_has __exn_tags_72 "String" then let e = (Obj.obj __exn_v_71 : string) in (
+        ignore e;
+        HxType.hx_throw_typed_rtti (Obj.repr ("backend setup failed: " ^ HxString.toStdString e)) ["Dynamic"; "String"]
+      ) else HxRuntime.hx_throw_typed __exn_v_71 __exn_tags_72
+      | __exn_73 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_73) : string) in (
+        ignore e;
+        HxType.hx_throw_typed_rtti (Obj.repr ("backend setup failed: " ^ HxString.toStdString e)) ["Dynamic"; "String"]
+      ) else raise (__exn_73));
+    ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline "stage3_driver=after_resolve_builtin_backend") else ());
+    let selected = Backend_BackendRegistry.descriptorForTarget (backendId : string) in (
+      ignore (if isTrueEnv ("HXHX_TRACE_BACKEND_SELECTION" : string) then ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore (print_endline "backend_selected_impl=<unknown>") else ignore (print_endline ("backend_selected_impl=" ^ HxString.toStdString (Obj.obj (HxAnon.get selected "implId"))))) else ());
+      ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("backend descriptor not found after selection: " ^ HxString.toStdString backendId)) ["Dynamic"; "String"]) else ());
+      let backendCaps = Obj.obj (HxAnon.get selected "capabilities") in let __anon_74 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_74 "backend" (Obj.repr (!tempIBackend)));
+        ignore (HxAnon.set __anon_74 "descriptor" selected);
+        ignore (HxAnon.set __anon_74 "supportsCustomOutputFile" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get backendCaps "supportsCustomOutputFile") = true)));
+        ignore (HxAnon.set __anon_74 "supportsBuildExecutable" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get backendCaps "supportsBuildExecutable") = true)));
+        __anon_74
+      )
+    )
+  )
+)

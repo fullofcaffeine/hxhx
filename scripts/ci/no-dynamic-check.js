@@ -34,6 +34,7 @@ const boundaryFileAllowlist = new Set([
   'packages/hxhx-core/src/backend/BackendDispatchBoundary.hx',
   'packages/hxhx-core/src/backend/GenIrBoundary.hx',
   'packages/hxhx/src/hxhx/Stage3Compiler.hx',
+  'packages/hxhx/src/hxhx/Stage3DiagnosticsSupport.hx',
   'packages/hxhx/src/hxhx/BackendPluginManifestResolver.hx',
 ])
 

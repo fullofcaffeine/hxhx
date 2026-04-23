@@ -241,3 +241,61 @@ let findTargetOutputDirectoryHint = fun args backendId -> try let __fallback_res
   )
 ) in Obj.magic __fallback_result_41 with
   | HxRuntime.Hx_return __ret_40 -> Obj.obj __ret_40
+
+let initialRoots = fun parsedMain parsedRoots parsedMacros -> try let __fallback_result_47 = let roots = Obj.magic (HxArray.create ()) in (
+  ignore (if parsedMain != Obj.magic (HxRuntime.hx_null) && HxString.length parsedMain > 0 then ignore (HxArray.push roots parsedMain) else ignore (if parsedRoots != Obj.magic (HxRuntime.hx_null) && HxArray.length parsedRoots > 0 then ignore (let _g = ref 0 in while !_g < HxArray.length parsedRoots do ignore (let r = (HxArray.get (Obj.magic parsedRoots) (!_g) : string) in (
+    ignore (let __old_42 = !_g in let __new_43 = HxInt.add __old_42 1 in (
+      ignore (_g := __new_43);
+      __new_43
+    ));
+    if r != Obj.magic (HxRuntime.hx_null) && HxString.length r > 0 then ignore (HxArray.push roots r) else ()
+  )) done) else ignore (if HxArray.length parsedMacros > 0 then ignore (let inferred = (Hxhx_Stage3PathSupport.inferMainFromMacroExpr (HxArray.get (Obj.magic parsedMacros) 0 : string) : string) in (
+    ignore (if HxString.length inferred = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_44 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_44 "roots" (Obj.repr roots));
+      ignore (HxAnon.set __anon_44 "missingMainFromMacro" (HxRuntime.box_bool true));
+      __anon_44
+    )))) else ());
+    HxArray.push roots inferred
+  )) else ())));
+  let __anon_45 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_45 "roots" (Obj.repr roots));
+    ignore (HxAnon.set __anon_45 "missingMainFromMacro" (HxRuntime.box_bool false));
+    __anon_45
+  )
+) in Obj.magic __fallback_result_47 with
+  | HxRuntime.Hx_return __ret_46 -> Obj.magic __ret_46
+
+let findFlagValue = fun args a b -> try let __fallback_result_51 = let i = ref 0 in (
+  ignore (while !i < HxArray.length args do ignore (let t = (HxArray.get (Obj.magic args) (!i) : string) in (
+    ignore (if (HxString.equals t a || HxString.equals t b) && HxInt.add (!i) 1 < HxArray.length args then raise (HxRuntime.Hx_return (Obj.repr (HxArray.get (Obj.magic args) (HxInt.add (!i) 1) : string))) else ());
+    let __old_48 = !i in let __new_49 = HxInt.add __old_48 1 in (
+      ignore (i := __new_49);
+      __old_48
+    )
+  )) done);
+  Obj.magic (HxRuntime.hx_null)
+) in Obj.magic __fallback_result_51 with
+  | HxRuntime.Hx_return __ret_50 -> Obj.obj __ret_50
+
+let findManyFlagValues = fun args a b c -> let out = Obj.magic (HxArray.create ()) in let i = ref 0 in (
+  ignore (try while !i < HxArray.length args do try ignore (let t = (HxArray.get (Obj.magic args) (!i) : string) in let hx_match = HxString.equals t a || HxString.equals t b || c != Obj.magic (HxRuntime.hx_null) && HxString.equals t c in (
+    ignore (if hx_match && HxInt.add (!i) 1 < HxArray.length args then ignore ((
+      ignore (HxArray.push out (HxArray.get (Obj.magic args) (HxInt.add (!i) 1)));
+      ignore (i := HxInt.add (!i) 2);
+      raise (HxRuntime.Hx_continue)
+    )) else ());
+    let __old_52 = !i in let __new_53 = HxInt.add __old_52 1 in (
+      ignore (i := __new_53);
+      __old_52
+    )
+  )) with
+    | HxRuntime.Hx_continue -> () done with
+    | HxRuntime.Hx_break -> ());
+  out
+)
+
+let summarizeArgs = fun args -> try let __fallback_result_55 = let joined = (HxArray.join args " " (fun x -> x) : string) in let maxLen = 160 in (
+  ignore (if HxString.length joined <= maxLen then raise (HxRuntime.Hx_return (Obj.repr (joined : string))) else ());
+  HxString.toStdString (HxString.substr joined 0 maxLen) ^ "..."
+) in Obj.magic __fallback_result_55 with
+  | HxRuntime.Hx_return __ret_54 -> Obj.obj __ret_54

@@ -24,9 +24,15 @@
 		"hxhx_macro_InProcGeneratedEntrypoints.ml",
 		"hxhx_macro_BuildFieldSnapshotPayload.ml",
 		"hxhx_Stage3WaitServer.ml",
+		"hxhx_Stage3SetupSupport.ml",
 		"hxhx_Stage3RunSupport.ml",
+		"hxhx_Stage3PathSupport.ml",
+		"hxhx_Stage3MacroHostSupport.ml",
+		"hxhx_Stage3HookSupport.ml",
+		"hxhx_Stage3EmitSupport.ml",
 		"hxhx_Stage3DiagnosticsSupport.ml",
 		"hxhx_Stage3Compiler.ml",
+		"hxhx_Stage3BuildMacroSupport.ml",
 		"hxhx_Stage3BackendPluginSupport.ml",
 		"hxhx_Stage3Args.ml",
 		"hxhx_Stage1Compiler.ml",
@@ -170,7 +176,7 @@
 		"CompilerDriver.ml",
 		"Any.ml"
 	],
-	"id": 4,
+	"id": 1,
 	"wasCached": false,
 	"version": 1
 }
