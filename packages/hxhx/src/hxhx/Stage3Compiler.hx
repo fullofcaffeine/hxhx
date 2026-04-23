@@ -1,6 +1,5 @@
 package hxhx;
 
-import haxe.io.Path;
 import hxhx.runtime.NullableRuntimeString;
 import haxe.io.Eof;
 import hxhx.Stage1Compiler.Stage1Args;
@@ -9,9 +8,6 @@ import hxhx.macro.MacroHostClient;
 #end
 import hxhx.macro.MacroRuntimeMode;
 import hxhx.macro.MacroRuntimeSession;
-import backend.OcamlProfile;
-
-private typedef HaxelibSpec = LibraryResolver.LibrarySpec;
 
 /**
 	Stage 3 native compiler lane (`--hxhx-stage3`).
@@ -176,10 +172,6 @@ class Stage3Compiler {
 
 	static function formatDynamicException(e:Dynamic):String {
 		return Stage3DiagnosticsSupport.formatDynamicException(e);
-	}
-
-	static function resolveHaxelibSpec(lib:String, cwd:String, seen:Map<String, Bool>, depth:Int):HaxelibSpec {
-		return LibraryResolver.resolve(lib, cwd, seen, depth);
 	}
 
 	static function absFromCwd(cwd:String, path:String):String {
@@ -403,84 +395,19 @@ class Stage3Compiler {
 
 		// Macro state exists even in non-macro runs; it is a no-op unless the macro host calls back.
 		hxhx.macro.MacroState.reset();
-		final libsResolved = {
-			final seen = new Map<String, Bool>();
-			final out = new Array<HaxelibSpec>();
-			for (lib in parsedLibs)
-				out.push(resolveHaxelibSpec(lib, cwd, seen, 0));
-			out;
-		}
-		final libDefines = {
-			final out = new Array<String>();
-			for (s in libsResolved)
-				for (d in s.defines)
-					if (out.indexOf(d) == -1)
-						out.push(d);
-			out;
-		}
+		final libsResolved = Stage3SetupSupport.resolveLibraries(parsedLibs, cwd);
+		final libDefines = Stage3SetupSupport.collectLibraryDefines(libsResolved);
 		final allDefines = parsedDefines.concat(libDefines);
 		hxhx.macro.MacroState.seedFromCliDefines(allDefines);
-		final macroStdPaths = {
-			final out = new Array<String>();
-			final envStd = trim(Sys.getEnv("HAXE_STD_PATH"));
-			if (envStd.length > 0)
-				out.push(Path.normalize(envStd));
-			final inferredStd = Stage1Args.inferStdRootForCwd(cwd);
-			if (inferredStd.length > 0) {
-				final normalized = Path.normalize(inferredStd);
-				var seen = false;
-				for (cp in out) {
-					if (Path.normalize(cp) == normalized) {
-						seen = true;
-						break;
-					}
-				}
-				if (!seen)
-					out.push(inferredStd);
-			}
-			out;
-		}
+		final macroStdPaths = Stage3SetupSupport.collectMacroStdPaths(cwd);
 		final backendTargetDefine = targetDefineForBackend(backendId);
 		hxhx.macro.MacroState.seedCompilerConfiguration(args, macroStdPaths, backendTargetDefine);
 		hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
 
-		final libMacros = {
-			final out = new Array<String>();
-			for (s in libsResolved)
-				for (m in s.macros)
-					if (out.indexOf(m) == -1)
-						out.push(m);
-			out;
-		}
+		final libMacros = Stage3SetupSupport.collectLibraryMacros(libsResolved);
 		final runHaxelibMacros = isTrueEnv("HXHX_RUN_HAXELIB_MACROS");
 
-		final macroHostClassPaths = {
-			final base = parsedClassPaths.map(cp -> absFromCwd(cwd, cp));
-			final libs = new Array<String>();
-			for (s in libsResolved)
-				for (p in s.classPaths)
-					libs.push(absFromCwd(cwd, p));
-			final outAll = base.concat(libs);
-
-			// Avoid passing an explicit std classpath to the macro host build.
-			//
-			// Why
-			// - The macro host is compiled with stage0 `haxe`, which already has its own std.
-			// - Adding `HAXE_STD_PATH` to the classpath can change resolution order and shadow our
-			//   macro-host overrides (e.g. `haxe.macro.Context`), causing compile failures.
-			final stdCp = trim(Sys.getEnv("HAXE_STD_PATH"));
-			if (stdCp.length > 0) {
-				final stdAbs = Path.normalize(stdCp);
-				final filtered = new Array<String>();
-				for (cp in outAll) {
-					if (Path.normalize(cp) != stdAbs)
-						filtered.push(cp);
-				}
-				filtered;
-			} else {
-				outAll;
-			}
-		}
+		final macroHostClassPaths = Stage3SetupSupport.macroHostClassPaths(parsedClassPaths, libsResolved, cwd);
 
 		if (!typeOnly && (parsedMacros.length > 0 || exprMacros.length > 0 || (runHaxelibMacros && libMacros.length > 0))) {
 			// Stage3 dev/CI convenience: auto-build a macro host that includes the classpaths needed
@@ -548,44 +475,7 @@ class Stage3Compiler {
 			}
 		}
 
-		final classPaths = {
-			final base = parsedClassPaths.map(cp -> absFromCwd(cwd, cp));
-			final libs = new Array<String>();
-			for (s in libsResolved)
-				for (p in s.classPaths)
-					libs.push(absFromCwd(cwd, p));
-			final extra = hxhx.macro.MacroState.listClassPaths().map(cp -> absFromCwd(cwd, cp));
-			final out = base.concat(libs).concat(extra);
-			final generatedHxDir = hxhx.macro.MacroState.getGeneratedHxDir();
-			if (generatedHxDir != null && generatedHxDir.length > 0) {
-				final generatedNorm = Path.normalize(generatedHxDir);
-				var hasGeneratedDir = false;
-				for (cp in out) {
-					if (Path.normalize(cp) == generatedNorm) {
-						hasGeneratedDir = true;
-						break;
-					}
-				}
-				if (!hasGeneratedDir)
-					out.push(generatedHxDir);
-			}
-			// Defensive fallback: ensure std root is present even when Stage1 parse paths are
-			// provided in permissive mode via target presets and env std vars are unset.
-			final inferredStd = Stage1Args.inferStdRootForCwd(cwd);
-			if (inferredStd.length > 0) {
-				final inferredNorm = Path.normalize(inferredStd);
-				var hasStd = false;
-				for (cp in out) {
-					if (Path.normalize(cp) == inferredNorm) {
-						hasStd = true;
-						break;
-					}
-				}
-				if (!hasStd)
-					out.push(inferredStd);
-			}
-			ResolverStage.withImplicitCwdClassPath(out, cwd);
-		}
+		final classPaths = Stage3SetupSupport.projectClassPaths(parsedClassPaths, libsResolved, cwd);
 
 		// Defines available for conditional compilation filtering.
 		//
@@ -593,20 +483,11 @@ class Stage3Compiler {
 		// - CLI `-D` defines were seeded into MacroState at the start of the run.
 		// - Macro-time `Compiler.define(...)` calls (reverse RPC) also populate MacroState.
 		// - ResolverStage will use this map to strip inactive `#if` branches before parsing.
-		final definesMap = HxDefineMap.fromRawDefines(allDefines);
-		definesMap.set("sys", "1");
-		definesMap.set(backendTargetDefine, "1");
-		for (n in hxhx.macro.MacroState.listDefineNames()) {
-			definesMap.set(n, hxhx.macro.MacroState.definedValue(n));
-		}
-		if (backendId == "ocaml-stage3") {
-			try {
-				final profile = OcamlProfile.fromDefineValue(definesMap.get("ocaml_profile"));
-				definesMap.set("ocaml_profile", OcamlProfile.toDefineValue(profile));
-			} catch (e:String) {
-				closeMacroSession();
-				return error(e);
-			}
+		final definesMap = try {
+			Stage3SetupSupport.buildDefinesMap(allDefines, backendTargetDefine, backendId);
+		} catch (e:String) {
+			closeMacroSession();
+			return error(e);
 		}
 
 		final roots = roots0.concat(hxhx.macro.MacroState.listIncludedModules());
