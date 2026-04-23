@@ -971,7 +971,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(x.firstChild().nodeValue);",
 			"    Sys.println(x.firstElement().nodeName);",
 			"    var y = Xml.parse('<a><b><c/> <d/> \\n <e/><![CDATA[<x>]]></b></a>');",
-			"    Sys.println(y.toString());",
+			"    Sys.println(y.toString().split('\\n').join('\\\\n'));",
 			"    Sys.println(Xml.parse('\"').toString());",
 			"    Sys.println(Xml.createComment('Hello').toString());",
 			"    Sys.println(Xml.parse('<!--Hello-->').firstChild().nodeValue);",
@@ -5190,7 +5190,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(xmlContent, "public static function parse($source)", "PHP Xml runtime should expose parse");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([xmlTmpRoot, "index.php"])]);
-			final expected = "true\ntrue\nexc\nexc\nexc\nexc\nexc\ntrue\na\n<b href=\"hello\">World<b/></b>\nhello\nfalse\nhref\n\n<b>World<b/></b>\nWorld\nb\n<a><b><c/> <d/> \n <e/><![CDATA[<x>]]></b></a>\n\"\n<!--Hello-->\nHello\n<![CDATA[<x>]]>\nHello\n<?XHTML?>\n<!DOCTYPE XHTML>\nexc\n";
+			final expected = "true\ntrue\nexc\nexc\nexc\nexc\nexc\ntrue\na\n<b href=\"hello\">World<b/></b>\nhello\nfalse\nhref\n\n<b>World<b/></b>\nWorld\nb\n<a><b><c/> <d/> \\n <e/><![CDATA[<x>]]></b></a>\n\"\n<!--Hello-->\nHello\n<![CDATA[<x>]]>\nHello\n<?XHTML?>\n<!DOCTYPE XHTML>\nexc\n";
 			assertTrue(run.code == 0, "generated PHP Xml runtime should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == expected, "generated PHP Xml runtime should match TestXML.testBasic subset, got:\n" + run.stdout);
 		}

@@ -1546,10 +1546,12 @@ class SourceTargetCommon {
 
 	static function phpKnownStringResultReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
-			case ECall(EField(base, field), _):
+			case ECall(EField(base, field), args):
 				switch (field) {
 					case "matched" | "matchedLeft" | "matchedRight":
 						true;
+					case "toString":
+						args.length == 0;
 					case "replace":
 						phpERegLikeReceiver(base);
 					case _:
