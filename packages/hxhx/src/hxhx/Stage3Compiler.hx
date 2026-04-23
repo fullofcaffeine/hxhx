@@ -244,9 +244,7 @@ class Stage3Compiler {
 	}
 
 	static function absFromCwd(cwd:String, path:String):String {
-		if (path == null || path.length == 0)
-			return cwd;
-		return Path.isAbsolute(path) ? Path.normalize(path) : Path.normalize(Path.join([cwd, path]));
+		return Stage3PathSupport.absFromCwd(cwd, path);
 	}
 
 	/**
@@ -264,37 +262,7 @@ class Stage3Compiler {
 	**/
 	#if !hxhx_stage0_no_display
 	static function inferMainFromDisplayRequest(displayRequest:String, classPaths:Array<String>, cwd:String):String {
-		if (displayRequest == null)
-			return "";
-		final trimmed = StringTools.trim(displayRequest);
-		if (trimmed.length == 0)
-			return "";
-
-		final at = trimmed.indexOf("@");
-		final rawPath = at == -1 ? trimmed : trimmed.substr(0, at);
-		if (rawPath.length == 0 || !StringTools.endsWith(rawPath, ".hx"))
-			return "";
-
-		final displayAbs = absFromCwd(cwd, rawPath);
-		final displayNorm = Path.normalize(displayAbs);
-
-		for (cp in classPaths) {
-			final cpAbs = absFromCwd(cwd, cp);
-			var cpNorm = Path.normalize(cpAbs);
-			if (!StringTools.endsWith(cpNorm, "/"))
-				cpNorm += "/";
-			if (!StringTools.startsWith(displayNorm, cpNorm))
-				continue;
-			var rel = displayNorm.substr(cpNorm.length);
-			if (StringTools.endsWith(rel, ".hx"))
-				rel = rel.substr(0, rel.length - 3);
-			rel = StringTools.replace(rel, "\\", "/");
-			rel = StringTools.replace(rel, "/", ".");
-			if (rel.length > 0)
-				return rel;
-		}
-
-		return Path.withoutExtension(Path.withoutDirectory(displayNorm));
+		return Stage3PathSupport.inferMainFromDisplayRequest(displayRequest, classPaths, cwd);
 	}
 	#end
 
@@ -464,18 +432,7 @@ class Stage3Compiler {
 			noEmit = noEmit || parsedNoOutput;
 
 		function inferMainFromMacroExpr(expr:String):String {
-			if (expr == null)
-				return "";
-			var s = StringTools.trim(expr);
-			if (s.length == 0)
-				return "";
-			final p = s.indexOf("(");
-			if (p != -1)
-				s = StringTools.trim(s.substr(0, p));
-			final lastDot = s.lastIndexOf(".");
-			if (lastDot == -1)
-				return s;
-			return StringTools.trim(s.substr(0, lastDot));
+			return Stage3PathSupport.inferMainFromMacroExpr(expr);
 		}
 
 		// Upstream allows invocations without `-main`:
