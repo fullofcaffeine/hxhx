@@ -705,6 +705,12 @@ class SourceNativeBackend {
 				+ ", "
 				+ quotePhpString(phpTypeExprName(args[1]))
 				+ ")";
+			case ECall(EField(EIdent("Std"), "downcast"), args) if (target == Php && args.length == 2):
+				"__hxhx_downcast("
+				+ renderExpr(Php, args[0])
+				+ ", "
+				+ quotePhpString(phpTypeExprName(args[1]))
+				+ ")";
 			case EField(receiver, field):
 				fieldAccessExpr(target, receiver, field);
 			case EArrayAccess(receiver, index):
@@ -4153,6 +4159,8 @@ class SourceNativeBackend {
 
 	static function shouldUnwrapPhpCatch(typeHint:String):Bool {
 		final trimmed = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (trimmed == "")
+			return false;
 		return trimmed != "Exception" && trimmed != "haxe.Exception" && trimmed != "ValueException" && trimmed != "haxe.ValueException";
 	}
 
@@ -7494,6 +7502,9 @@ class SourceNativeBackend {
 				lines.push("  if (substr($short, 0, 4) === \"Enum\") return is_string($value) || (is_object($value) && property_exists($value, \"__hx_ctor\"));");
 				lines.push("  return false;");
 				lines.push("}");
+				lines.push("function __hxhx_downcast($value, $type) {");
+				lines.push("  return __hxhx_is_of_type($value, $type) ? $value : null;");
+				lines.push("}");
 				lines.push("function __hxhx_post_update_var(&$value, $delta) {");
 				lines.push("  $old = $value;");
 				lines.push("  $value = $old + $delta;");
@@ -7667,6 +7678,8 @@ class SourceNativeBackend {
 				lines.push("    case \"String\": return is_string($value);");
 				lines.push("    case \"Bool\": return is_bool($value);");
 				lines.push("    case \"Array\": return is_array($value) || $value instanceof __HxArray;");
+				lines.push("    case \"Exception\": return $value instanceof \\Throwable;");
+				lines.push("    case \"haxe.Exception\": return $value instanceof \\Throwable;");
 				lines.push("    case \"Dynamic\": return true;");
 				lines.push("  }");
 				lines.push("  if (!is_object($value)) return false;");

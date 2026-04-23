@@ -831,6 +831,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(new Exception(\"boom\").stack.length);",
 			"    Sys.println(new ValueException(\"boom\").stack.length);",
 			"    Sys.println(@:privateAccess (Exception.thrown(\"boom\"):Exception).stack.length);",
+			"    Sys.println(Std.downcast(new Exception(\"boom\"), Exception) != null);",
+			"    try {",
+			"      throw new Exception(\"boom\");",
+			"    } catch (e) {",
+			"      Sys.println(Std.downcast(e, Exception) != null);",
+			"    }",
 			"  }",
 			"}",
 		].join("\n");
@@ -4773,10 +4779,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(stackContent, "function __hxhx_stack()", "PHP runtime should expose synthetic stack items");
 		assertContains(stackContent, "new ValueException(\"boom\")", "PHP haxe.Exception construction should use the stack-carrying wrapper");
 		assertContains(stackContent, "ValueException::thrown(\"boom\")", "PHP haxe.Exception.thrown should route through the throwable wrapper");
+		assertContains(stackContent, "__hxhx_downcast(new ValueException(\"boom\"), \"Exception\")", "PHP Std.downcast should lower through type helper");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([stackTmpRoot, "index.php"])]);
 			assertTrue(run.code == 0, "generated PHP CallStack support should execute, stderr:\n" + run.stderr);
 			assertContains(run.stdout, "2", "generated PHP CallStack support should produce stack entries");
+			assertContains(run.stdout, "1", "generated PHP Std.downcast should recognize haxe.Exception values");
 		}
 		deleteRecursive(stackTmpRoot);
 	}
