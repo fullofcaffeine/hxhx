@@ -1368,6 +1368,8 @@ class SourceNativeBackend {
 	static function callExpr(target:SourceNativeTarget, callee:String, args:Array<HxExpr>):String {
 		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
 		if (target == Php) {
+			if (callee == "$fget")
+				return "\\haxe\\io\\Bytes::fastGet(" + rendered + ")";
 			final staticHelper = phpSameClassStaticHelperCall(callee, rendered);
 			if (staticHelper != null)
 				return staticHelper;
@@ -1814,7 +1816,19 @@ class SourceNativeBackend {
 	static function phpLambdaExpr(args:Array<String>, body:HxExpr, valueNames:Array<String>, extraRefNames:Array<String>):String {
 		final renderedArgs = [for (arg in args) valueName(Php, arg)].join(", ");
 		final renderedBody = renderExpr(Php, body);
-		final refNames = phpLambdaAssignedCaptures(body, args.concat(valueNames));
+		final refNames = phpLambdaAssignedCaptures(body, args);
+		final valueCaptures = new Array<String>();
+		if (valueNames != null) {
+			for (name in valueNames) {
+				final clean = sanitizeTypeName(name);
+				if (clean.length > 0 && refNames.indexOf(clean) < 0 && valueCaptures.indexOf(clean) < 0)
+					valueCaptures.push(clean);
+			}
+		}
+		for (name in phpLambdaUsedCaptures(body, args.concat(valueCaptures))) {
+			if (refNames.indexOf(name) < 0 && valueCaptures.indexOf(name) < 0)
+				valueCaptures.push(name);
+		}
 		if (extraRefNames != null) {
 			for (name in extraRefNames) {
 				final clean = sanitizeTypeName(name);
@@ -1822,7 +1836,7 @@ class SourceNativeBackend {
 					refNames.push(clean);
 			}
 		}
-		final useClause = phpLambdaUseClause(valueNames, refNames);
+		final useClause = phpLambdaUseClause(valueCaptures, refNames);
 		final prologue = phpLambdaArgPrologue(args, renderedBody);
 		return "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
 	}
@@ -1831,7 +1845,7 @@ class SourceNativeBackend {
 		final captures = new Array<String>();
 		for (name in valueNames) {
 			final clean = sanitizeTypeName(name);
-			if (clean.length > 0 && captures.indexOf(valueName(Php, clean)) < 0)
+			if (clean.length > 0 && refNames.indexOf(clean) < 0 && captures.indexOf(valueName(Php, clean)) < 0)
 				captures.push(valueName(Php, clean));
 		}
 		for (name in refNames) {
@@ -1841,6 +1855,84 @@ class SourceNativeBackend {
 				captures.push(rendered);
 		}
 		return captures.length == 0 ? "" : " use (" + captures.join(", ") + ")";
+	}
+
+	static function phpLambdaUsedCaptures(body:HxExpr, bound:Array<String>):Array<String> {
+		final names = new Array<String>();
+		phpCollectUsedIdents(body, names);
+		return phpFilterCapturedNames(names, bound);
+	}
+
+	static function phpCollectUsedIdents(expr:HxExpr, names:Array<String>):Void {
+		switch (expr) {
+			case EIdent(name):
+				final clean = sanitizeTypeName(name);
+				if (clean.length > 0 && !isPhpImplicitIdentifier(clean) && names.indexOf(clean) < 0)
+					names.push(clean);
+			case EField(receiver, _):
+				phpCollectUsedIdents(receiver, names);
+			case ECall(callee, args):
+				phpCollectUsedIdents(callee, names);
+				phpCollectUsedList(args, names);
+			case EMacroExpr(inner, _):
+				phpCollectUsedIdents(inner, names);
+			case ELambda(args, body):
+				final nestedNames = phpLambdaUsedCaptures(body, args);
+				for (name in nestedNames)
+					if (names.indexOf(name) < 0)
+						names.push(name);
+			case ESwitch(scrutinee, _, exprs):
+				phpCollectUsedIdents(scrutinee, names);
+				phpCollectUsedList(exprs, names);
+			case ENew(_, args):
+				phpCollectUsedList(args, names);
+			case EUnop(_, inner):
+				phpCollectUsedIdents(inner, names);
+			case EBinop(_, left, right):
+				phpCollectUsedIdents(left, names);
+				phpCollectUsedIdents(right, names);
+			case ETernary(cond, thenExpr, elseExpr):
+				phpCollectUsedIdents(cond, names);
+				phpCollectUsedIdents(thenExpr, names);
+				phpCollectUsedIdents(elseExpr, names);
+			case EAnon(_, fieldValues):
+				phpCollectUsedList(fieldValues, names);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				phpCollectUsedIdents(iterable, names);
+				if (guardExpr != null)
+					phpCollectUsedIdents(guardExpr, names);
+				phpCollectUsedIdents(yieldExpr, names);
+				names.remove(sanitizeTypeName(name));
+			case EArrayDecl(values):
+				phpCollectUsedList(values, names);
+			case EArrayAccess(receiver, index) | ERange(receiver, index):
+				phpCollectUsedIdents(receiver, names);
+				phpCollectUsedIdents(index, names);
+			case ECast(inner, _) | EUntyped(inner):
+				phpCollectUsedIdents(inner, names);
+			case _:
+		}
+	}
+
+	static function phpCollectUsedList(exprs:Array<HxExpr>, names:Array<String>):Void {
+		if (exprs == null)
+			return;
+		for (expr in exprs)
+			phpCollectUsedIdents(expr, names);
+	}
+
+	static function isPhpImplicitIdentifier(name:String):Bool {
+		if (name == null || name.length == 0)
+			return true;
+		if (StringTools.startsWith(name, "__hxhx_"))
+			return true;
+		return switch (name) {
+			case "haxe" | "php" | "Std" | "Sys" | "Math" | "Type" | "StringTools" | "Lambda" | "Reflect" | "Map" | "Array" | "Exception" | "ValueException" |
+				"PosException" | "ArgumentException" | "NotImplementedException" | "true" | "false" | "null" | "this":
+				true;
+			case _:
+				false;
+		}
 	}
 
 	static function phpLambdaAssignedCaptures(body:HxExpr, bound:Array<String>):Array<String> {
@@ -7255,6 +7347,227 @@ class SourceNativeBackend {
 				lines.push("    }");
 				lines.push("  }");
 				lines.push("}");
+				lines.push("namespace haxe\\io {");
+				lines.push("  class BytesData {");
+				lines.push("    public $bytes;");
+				lines.push("    public function __construct($bytes) {");
+				lines.push("      $this->bytes = array_values($bytes);");
+				lines.push("    }");
+				lines.push("  }");
+				lines.push("  class Bytes {");
+				lines.push("    public $length;");
+				lines.push("    private $data;");
+				lines.push("    public function __construct($data) {");
+				lines.push("      $this->data = $data instanceof BytesData ? $data : new BytesData($data);");
+				lines.push("      $this->length = count($this->data->bytes);");
+				lines.push("    }");
+				lines.push("    public static function alloc($length) {");
+				lines.push("      return new Bytes(new BytesData(array_fill(0, max(0, intval($length)), 0)));");
+				lines.push("    }");
+				lines.push("    public static function ofString($value) {");
+				lines.push("      $items = strlen($value) === 0 ? [] : array_values(unpack(\"C*\", strval($value)));");
+				lines.push("      return new Bytes(new BytesData($items));");
+				lines.push("    }");
+				lines.push("    public static function ofData($data) {");
+				lines.push("      return new Bytes($data);");
+				lines.push("    }");
+				lines.push("    public static function ofHex($hex) {");
+				lines.push("      $bytes = [];");
+				lines.push("      $text = strval($hex);");
+				lines.push("      for ($i = 0; $i + 1 < strlen($text); $i += 2) $bytes[] = hexdec(substr($text, $i, 2));");
+				lines.push("      return new Bytes(new BytesData($bytes));");
+				lines.push("    }");
+				lines.push("    public static function fastGet($data, $pos) {");
+				lines.push("      $items = $data instanceof BytesData ? $data->bytes : $data;");
+				lines.push("      return $items[intval($pos)] ?? 0;");
+				lines.push("    }");
+				lines.push("    public function getData() {");
+				lines.push("      return $this->data;");
+				lines.push("    }");
+				lines.push("    public function get($pos) {");
+				lines.push("      return $this->data->bytes[intval($pos)] ?? 0;");
+				lines.push("    }");
+				lines.push("    public function set($pos, $value) {");
+				lines.push("      $index = intval($pos);");
+				lines.push("      if ($index < 0 || $index >= $this->length) return null;");
+				lines.push("      $this->data->bytes[$index] = intval($value) & 255;");
+				lines.push("      return null;");
+				lines.push("    }");
+				lines.push("    public function blit($pos, $src, $srcpos, $len) {");
+				lines.push("      $pos = intval($pos); $srcpos = intval($srcpos); $len = intval($len);");
+				lines.push("      if ($pos < 0 || $srcpos < 0 || $len < 0 || $pos + $len > $this->length || $srcpos + $len > $src->length) throw new \\Exception(\"Bytes.blit out of bounds\");");
+				lines.push("      $slice = array_slice($src->data->bytes, $srcpos, $len);");
+				lines.push("      for ($i = 0; $i < $len; $i++) $this->data->bytes[$pos + $i] = $slice[$i];");
+				lines.push("      return null;");
+				lines.push("    }");
+				lines.push("    public function getString($pos, $len) {");
+				lines.push("      $pos = intval($pos); $len = intval($len);");
+				lines.push("      if ($pos < 0 || $len < 0 || $pos + $len > $this->length) throw new \\Exception(\"Bytes.getString out of bounds\");");
+				lines.push("      $out = \"\";");
+				lines.push("      foreach (array_slice($this->data->bytes, $pos, $len) as $byte) $out .= chr(intval($byte) & 255);");
+				lines.push("      return $out;");
+				lines.push("    }");
+				lines.push("    public function toString() {");
+				lines.push("      return $this->getString(0, $this->length);");
+				lines.push("    }");
+				lines.push("    public function __toString() {");
+				lines.push("      return $this->toString();");
+				lines.push("    }");
+				lines.push("    public function compare($other) {");
+				lines.push("      $cmp = strcmp($this->toString(), $other->toString());");
+				lines.push("      return $cmp < 0 ? -1 : ($cmp > 0 ? 1 : 0);");
+				lines.push("    }");
+				lines.push("    public function sub($pos, $len) {");
+				lines.push("      $pos = intval($pos); $len = intval($len);");
+				lines.push("      if ($pos < 0 || $len < 0 || $pos + $len > $this->length) throw new \\Exception(\"Bytes.sub out of bounds\");");
+				lines.push("      return new Bytes(new BytesData(array_slice($this->data->bytes, $pos, $len)));");
+				lines.push("    }");
+				lines.push("    public function toHex() {");
+				lines.push("      $out = \"\";");
+				lines.push("      foreach ($this->data->bytes as $byte) $out .= sprintf(\"%02x\", intval($byte) & 255);");
+				lines.push("      return $out;");
+				lines.push("    }");
+				lines.push("  }");
+				lines.push("  class BytesInput {");
+				lines.push("    private $bytes;");
+				lines.push("    private $positionValue = 0;");
+				lines.push("    public $length;");
+				lines.push("    public $bigEndian = false;");
+				lines.push("    public function __construct($bytes) {");
+				lines.push("      $this->bytes = $bytes;");
+				lines.push("      $this->length = $bytes->length;");
+				lines.push("    }");
+				lines.push("    public function __get($name) {");
+				lines.push("      if ($name === \"position\") return $this->positionValue;");
+				lines.push("      return null;");
+				lines.push("    }");
+				lines.push("    public function __set($name, $value) {");
+				lines.push("      if ($name === \"position\") $this->positionValue = max(0, min($this->length, intval($value)));");
+				lines.push("    }");
+				lines.push("    private function fail($name) {");
+				lines.push("      throw \\ValueException::thrown($name);");
+				lines.push("    }");
+				lines.push("    private function ensure($len) {");
+				lines.push("      if ($this->positionValue + $len > $this->length) $this->fail(\"OutsideBounds\");");
+				lines.push("    }");
+				lines.push("    public function read($len) {");
+				lines.push("      $len = intval($len);");
+				lines.push("      $this->ensure($len);");
+				lines.push("      $out = $this->bytes->sub($this->positionValue, $len);");
+				lines.push("      $this->positionValue += $len;");
+				lines.push("      return $out;");
+				lines.push("    }");
+				lines.push("    public function readBytes($buf, $pos, $len) {");
+				lines.push("      $pos = intval($pos); $len = intval($len);");
+				lines.push("      if ($pos < 0 || $len < 0 || $pos + $len > $buf->length) $this->fail(\"OutsideBounds\");");
+				lines.push("      $available = $this->length - $this->positionValue;");
+				lines.push("      if ($available <= 0) $this->fail(\"OutsideBounds\");");
+				lines.push("      $count = min($len, $available);");
+				lines.push("      $buf->blit($pos, $this->bytes, $this->positionValue, $count);");
+				lines.push("      $this->positionValue += $count;");
+				lines.push("      return $count;");
+				lines.push("    }");
+				lines.push("    public function readByte() {");
+				lines.push("      $this->ensure(1);");
+				lines.push("      return $this->bytes->get($this->positionValue++);");
+				lines.push("    }");
+				lines.push("    private function readUnsigned($count) {");
+				lines.push("      $value = 0;");
+				lines.push("      if ($this->bigEndian) {");
+				lines.push("        for ($i = 0; $i < $count; $i++) $value = ($value * 256) + $this->readByte();");
+				lines.push("      } else {");
+				lines.push("        $shift = 1;");
+				lines.push("        for ($i = 0; $i < $count; $i++) { $value += $this->readByte() * $shift; $shift *= 256; }");
+				lines.push("      }");
+				lines.push("      return $value;");
+				lines.push("    }");
+				lines.push("    private function signed($value, $bits) {");
+				lines.push("      $limit = 1 << ($bits - 1);");
+				lines.push("      $mod = 1 << $bits;");
+				lines.push("      return $value >= $limit ? $value - $mod : $value;");
+				lines.push("    }");
+				lines.push("    public function readInt8() { return $this->signed($this->readUnsigned(1), 8); }");
+				lines.push("    public function readInt16() { return $this->signed($this->readUnsigned(2), 16); }");
+				lines.push("    public function readUInt16() { return $this->readUnsigned(2); }");
+				lines.push("    public function readInt24() { return $this->signed($this->readUnsigned(3), 24); }");
+				lines.push("    public function readUInt24() { return $this->readUnsigned(3); }");
+				lines.push("    public function readInt32() {");
+				lines.push("      $value = $this->readUnsigned(4);");
+				lines.push("      return $value >= 0x80000000 ? $value - 0x100000000 : $value;");
+				lines.push("    }");
+				lines.push("    public function readFloat() {");
+				lines.push("      $raw = $this->read(4)->toString();");
+				lines.push("      $data = unpack($this->bigEndian ? \"G\" : \"g\", $raw);");
+				lines.push("      return $data[1];");
+				lines.push("    }");
+				lines.push("    public function readDouble() {");
+				lines.push("      $raw = $this->read(8)->toString();");
+				lines.push("      $data = unpack($this->bigEndian ? \"E\" : \"e\", $raw);");
+				lines.push("      return $data[1];");
+				lines.push("    }");
+				lines.push("    public function readString($len) {");
+				lines.push("      return $this->read($len)->toString();");
+				lines.push("    }");
+				lines.push("    public function readAll() {");
+				lines.push("      return $this->read($this->length - $this->positionValue);");
+				lines.push("    }");
+				lines.push("  }");
+				lines.push("  class BytesOutput {");
+				lines.push("    private $items = [];");
+				lines.push("    public $length = 0;");
+				lines.push("    public $bigEndian = false;");
+				lines.push("    public function prepare($nbytes) { return null; }");
+				lines.push("    private function fail($name) {");
+				lines.push("      throw \\ValueException::thrown($name);");
+				lines.push("    }");
+				lines.push("    public function writeByte($c) {");
+				lines.push("      $this->items[] = intval($c) & 255;");
+				lines.push("      $this->length = count($this->items);");
+				lines.push("      return null;");
+				lines.push("    }");
+				lines.push("    public function write($bytes) {");
+				lines.push("      $this->writeBytes($bytes, 0, $bytes->length);");
+				lines.push("      return null;");
+				lines.push("    }");
+				lines.push("    public function writeBytes($bytes, $pos, $len) {");
+				lines.push("      $pos = intval($pos); $len = intval($len);");
+				lines.push("      if ($pos < 0 || $len < 0 || $pos + $len > $bytes->length) $this->fail(\"OutsideBounds\");");
+				lines.push("      for ($i = 0; $i < $len; $i++) $this->writeByte($bytes->get($pos + $i));");
+				lines.push("      return $len;");
+				lines.push("    }");
+				lines.push("    private function checkSigned($value, $bits) {");
+				lines.push("      $min = -(1 << ($bits - 1)); $max = (1 << ($bits - 1)) - 1;");
+				lines.push("      if ($value < $min || $value > $max) $this->fail(\"Overflow\");");
+				lines.push("    }");
+				lines.push("    private function checkUnsigned($value, $bits) {");
+				lines.push("      $max = (1 << $bits) - 1;");
+				lines.push("      if ($value < 0 || $value > $max) $this->fail(\"Overflow\");");
+				lines.push("    }");
+				lines.push("    private function writeUnsigned($value, $count) {");
+				lines.push("      $value = intval($value);");
+				lines.push("      if ($this->bigEndian) {");
+				lines.push("        for ($i = $count - 1; $i >= 0; $i--) $this->writeByte(intdiv($value, 1 << ($i * 8)));");
+				lines.push("      } else {");
+				lines.push("        for ($i = 0; $i < $count; $i++) $this->writeByte(intdiv($value, 1 << ($i * 8)));");
+				lines.push("      }");
+				lines.push("    }");
+				lines.push("    public function writeInt8($x) { $this->checkSigned($x, 8); $this->writeByte($x); }");
+				lines.push("    public function writeUInt8($x) { $this->checkUnsigned($x, 8); $this->writeByte($x); }");
+				lines.push("    public function writeInt16($x) { $this->checkSigned($x, 16); $this->writeUnsigned($x & 0xFFFF, 2); }");
+				lines.push("    public function writeUInt16($x) { $this->checkUnsigned($x, 16); $this->writeUnsigned($x, 2); }");
+				lines.push("    public function writeInt24($x) { $this->checkSigned($x, 24); $this->writeUnsigned($x & 0xFFFFFF, 3); }");
+				lines.push("    public function writeUInt24($x) { $this->checkUnsigned($x, 24); $this->writeUnsigned($x, 3); }");
+				lines.push("    public function writeInt32($x) { $this->writeUnsigned($x & 0xFFFFFFFF, 4); }");
+				lines.push("    public function writeFloat($x) {");
+				lines.push("      foreach (array_values(unpack(\"C*\", pack($this->bigEndian ? \"G\" : \"g\", floatval($x)))) as $byte) $this->writeByte($byte);");
+				lines.push("    }");
+				lines.push("    public function writeDouble($x) {");
+				lines.push("      foreach (array_values(unpack(\"C*\", pack($this->bigEndian ? \"E\" : \"e\", floatval($x)))) as $byte) $this->writeByte($byte);");
+				lines.push("    }");
+				lines.push("    public function writeString($s) { $this->write(Bytes::ofString(strval($s))); }");
+				lines.push("    public function getBytes() { return new Bytes(new BytesData($this->items)); }");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("namespace {");
 				appendPhpClassNameMap(lines, program, decl);
 				lines.push("class __HxArray {");
@@ -7667,14 +7980,18 @@ class SourceNativeBackend {
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return $value->__hx_value;");
 				lines.push("  return $value;");
 				lines.push("}");
+				lines.push("function __hxhx_int32_value($value) {");
+				lines.push("  $value = intval($value) & 0xFFFFFFFF;");
+				lines.push("  return $value >= 0x80000000 ? $value - 0x100000000 : $value;");
+				lines.push("}");
 				lines.push("function __hxhx_int_literal($text, $suffix) {");
 				lines.push("  $clean = str_replace(\"_\", \"\", strtolower($text));");
 				lines.push("  if (strpos($clean, \"0x\") === 0) {");
 				lines.push("    $hex = ltrim(substr($clean, 2), \"0\");");
 				lines.push("    if ($hex === \"\") return 0;");
 				lines.push("    if (($suffix === \"i64\" || $suffix === \"u64\") && strlen($hex) > 16) $hex = substr($hex, -16);");
-				lines.push("    if (($suffix === \"i32\" || $suffix === \"u32\") && strlen($hex) > 8) $hex = substr($hex, -8);");
-				lines.push("    if ($suffix === \"i32\") {");
+				lines.push("    if (($suffix === \"\" || $suffix === \"i32\" || $suffix === \"u32\") && strlen($hex) > 8) $hex = substr($hex, -8);");
+				lines.push("    if ($suffix === \"\" || $suffix === \"i32\") {");
 				lines.push("      $value32 = hexdec($hex);");
 				lines.push("      return $value32 >= 2147483648 ? intval($value32 - 4294967296) : intval($value32);");
 				lines.push("    }");
@@ -7703,9 +8020,11 @@ class SourceNativeBackend {
 				lines.push("  if ((is_object($left) && property_exists($left, \"__hx_value\")) || (is_object($right) && property_exists($right, \"__hx_value\"))) {");
 				lines.push("    $leftValue = __hxhx_numeric_value($left);");
 				lines.push("    $rightValue = __hxhx_numeric_value($right);");
+				lines.push("    if (is_int($leftValue) && is_int($rightValue)) return $leftValue == $rightValue || __hxhx_int32_value($leftValue) == __hxhx_int32_value($rightValue);");
 				lines.push("    if ((is_int($leftValue) || is_float($leftValue)) && (is_int($rightValue) || is_float($rightValue))) return $leftValue == $rightValue;");
 				lines.push("    return __hxhx_to_string_value($left) == __hxhx_to_string_value($right);");
 				lines.push("  }");
+				lines.push("  if (is_int($left) && is_int($right)) return $left == $right || __hxhx_int32_value($left) == __hxhx_int32_value($right);");
 				lines.push("  if ($left == $right) return true;");
 				lines.push("  return false;");
 				lines.push("}");

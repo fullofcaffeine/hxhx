@@ -449,6 +449,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var e = 0xFFFFFFFFu32;",
 			"    var f = (0xFFFFFFFF : UInt);",
 			"    var g = 0xFFFFFFFFi32;",
+			"    var h = 0xA0FFEEDD;",
 			"    Sys.println(Std.string(a));",
 			"    Sys.println(Std.string(b));",
 			"    Sys.println(c);",
@@ -456,6 +457,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(e));",
 			"    Sys.println(Std.string(f));",
 			"    Sys.println(Std.string(g));",
+			"    Sys.println(Std.string(h));",
 			"  }",
 			"}",
 		].join("\n");
@@ -896,6 +898,45 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"      Sys.println(\"lambda-throw\");",
 			"      Sys.println(e.argument);",
 			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpBytesRuntimeProgram():GenIrProgram {
+		final src = [
+			"import haxe.io.Bytes.fastGet as fget;",
+			"class Main {",
+			"  static function main() {",
+			"    var b = haxe.io.Bytes.alloc(4);",
+			"    b.set(1, 0xF756);",
+			"    var read = function() return b.get(1);",
+			"    Sys.println(b.length);",
+			"    Sys.println(read());",
+			"    var text = haxe.io.Bytes.ofString(\"ABé\");",
+			"    Sys.println(text.length);",
+			"    Sys.println(text.getString(2, 2));",
+			"    var shared = haxe.io.Bytes.ofData(text.getData());",
+			"    shared.set(0, \"C\".code);",
+			"    Sys.println(text.getString(0, 2));",
+			"    Sys.println(haxe.io.Bytes.fastGet(text.getData(), 0));",
+			"    Sys.println(fget(text.getData(), 0));",
+			"    Sys.println(haxe.io.Bytes.ofHex(text.toHex()).toString());",
+			"    Sys.println(new haxe.io.BytesInput(text).readAll().toString());",
+			"    var out = new haxe.io.BytesOutput();",
+			"    out.bigEndian = true;",
+			"    out.writeByte(\"A\".code);",
+			"    out.writeInt16(-2);",
+			"    out.writeString(\"Z\");",
+			"    var input = new haxe.io.BytesInput(out.getBytes());",
+			"    input.bigEndian = true;",
+			"    Sys.println(out.length);",
+			"    Sys.println(input.readByte());",
+			"    Sys.println(input.readInt16());",
+			"    Sys.println(input.readString(1));",
 			"  }",
 			"}",
 		].join("\n");
@@ -4479,7 +4520,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$e = __hxhx_int_literal(\"0xFFFFFFFF\", \"u32\");", "PHP u32 hex suffix literals should preserve raw text");
 		assertContains(content, "$f = 4294967295;", "PHP UInt casts of signed hex literals should render as unsigned 32-bit values");
 		assertContains(content, "$g = __hxhx_int_literal(\"0xFFFFFFFF\", \"i32\");", "PHP i32 hex suffix literals should preserve raw text");
-		assertContains(content, "if ($suffix === \"i32\")", "PHP runtime should normalize signed i32 literals");
+		assertContains(content, "$h = -1593839907;", "PHP unsuffixed large hex literals should emit signed Haxe Int values");
+		assertContains(content, "if ($suffix === \"\" || $suffix === \"i32\")", "PHP runtime should normalize signed Int/i32 literals");
+		assertContains(content, "function __hxhx_int32_value($value)", "PHP runtime should normalize high-bit integer equality as Haxe Int");
 		assertContains(content, "function __hxhx_int_literal($text, $suffix)", "PHP runtime should include numeric suffix literal normalization support");
 		assertNotContains(content, "32->ofInt()", "PHP should not emit instance calls on integer literals");
 		deleteRecursive(tmpRoot);
@@ -4898,6 +4941,32 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "i", "generated PHP ArgumentException should preserve the argument field");
 		}
 		deleteRecursive(lambdaThrowTmpRoot);
+
+		final bytesTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_bytes_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(bytesTmpRoot);
+		FileSystem.createDirectory(bytesTmpRoot);
+		backend.emit(phpBytesRuntimeProgram(), new BackendContext(bytesTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final bytesContent = File.getContent(Path.join([bytesTmpRoot, "index.php"]));
+		assertContains(bytesContent, "namespace haxe\\io {", "PHP runtime should expose haxe.io namespace helpers");
+		assertContains(bytesContent, "class Bytes {", "PHP runtime should expose haxe.io.Bytes");
+		assertContains(bytesContent, "class BytesInput {", "PHP runtime should expose haxe.io.BytesInput");
+		assertContains(bytesContent, "class BytesOutput {", "PHP runtime should expose haxe.io.BytesOutput");
+		assertContains(bytesContent, "use ($b)", "PHP lambdas should capture outer locals that are read from closure bodies");
+		assertContains(bytesContent, "\\haxe\\io\\Bytes::fastGet", "PHP imported haxe.io.Bytes.fastGet aliases should call the runtime static method");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([bytesTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP Bytes runtime should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "4", "generated PHP Bytes.alloc should preserve length");
+			assertContains(run.stdout, "86", "generated PHP Bytes.set should mask values to one byte");
+			assertContains(run.stdout, "é", "generated PHP Bytes UTF-8 string helpers should preserve byte slices");
+			assertContains(run.stdout, "CB", "generated PHP Bytes.ofData should share backing data");
+			assertContains(run.stdout, "67", "generated PHP Bytes.fastGet should read shared byte data");
+			assertContains(run.stdout, "4", "generated PHP BytesOutput should track written length");
+			assertContains(run.stdout, "65", "generated PHP BytesInput should read written bytes");
+			assertContains(run.stdout, "-2", "generated PHP BytesInput should read signed int16 values");
+			assertContains(run.stdout, "Z", "generated PHP BytesInput should read written strings");
+		}
+		deleteRecursive(bytesTmpRoot);
 	}
 
 	static function assertPhpTypeErrorProbe():Void {
