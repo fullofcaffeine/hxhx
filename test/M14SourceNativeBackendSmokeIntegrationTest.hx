@@ -782,6 +782,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpInstanceMethodCallProgram():GenIrProgram {
+		final src = [
+			"class Worker {",
+			"  public function new() { }",
+			"  public function outer() {",
+			"    return inner();",
+			"  }",
+			"  public function inner() {",
+			"    return \"ok\";",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(new Worker().outer());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpArrayPushProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values:Array<String> = [];",
+			"    var length = values.push(\"ok\");",
+			"    Sys.println(length);",
+			"    Sys.println(values[0]);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeErrorProbeProgram():GenIrProgram {
 		final src = [
 			"class HelperMacros {",
@@ -4678,6 +4716,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "EError", "generated PHP enum catch should observe the thrown enum value");
 		}
 		deleteRecursive(enumTmpRoot);
+
+		final methodTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_method_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(methodTmpRoot);
+		FileSystem.createDirectory(methodTmpRoot);
+		backend.emit(phpInstanceMethodCallProgram(), new BackendContext(methodTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final methodContent = File.getContent(Path.join([methodTmpRoot, "index.php"]));
+		assertContains(methodContent, "return $this->inner();", "PHP helper classes should rewrite same-class instance method calls through $this");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([methodTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP same-class instance method calls should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "ok", "generated PHP same-class instance method calls should preserve behavior");
+		}
+		deleteRecursive(methodTmpRoot);
+
+		final pushTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_push_" + Std.string(Date.now().getTime()));
+		deleteRecursive(pushTmpRoot);
+		FileSystem.createDirectory(pushTmpRoot);
+		backend.emit(phpArrayPushProgram(), new BackendContext(pushTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final pushContent = File.getContent(Path.join([pushTmpRoot, "index.php"]));
+		assertContains(pushContent, "__hxhx_array_push($values, \"ok\")", "PHP Array.push should lower through the runtime helper");
+		assertContains(pushContent, "function __hxhx_array_push(&$array, $value)", "PHP runtime should expose Array.push helper");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([pushTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP Array.push should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "1", "generated PHP Array.push should return the new length");
+			assertContains(run.stdout, "ok", "generated PHP Array.push should append the value");
+		}
+		deleteRecursive(pushTmpRoot);
 	}
 
 	static function assertPhpTypeErrorProbe():Void {

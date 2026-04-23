@@ -1479,6 +1479,8 @@ class SourceNativeBackend {
 		if (mutableReceiver == null)
 			return null;
 		return switch (field) {
+			case "push" if (args.length == 1):
+				"__hxhx_array_push(" + mutableReceiver + ", " + renderExpr(Php, args[0]) + ")";
 			case "remove" if (args.length == 1):
 				"__hxhx_remove(" + mutableReceiver + ", " + renderExpr(Php, args[0]) + ")";
 			case "splice" if (args.length == 2):
@@ -5975,6 +5977,8 @@ class SourceNativeBackend {
 			memberCount += 1;
 		}
 		var sawConstructor = false;
+		final instanceMethodNames = phpCurrentClassInstanceMethodNames(cls);
+		final instanceFieldNames = phpCurrentClassInstanceFieldNames(cls);
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (isCompileTimeOnlyFunction(fn))
 				continue;
@@ -6004,7 +6008,10 @@ class SourceNativeBackend {
 			for (line in phpFunctionArgConversionPrologue(HxFunctionDecl.getArgs(fn), "    "))
 				out.push(line);
 			if (!renderPhpSpecialHelperFunctionBody(out, className, HxFunctionDecl.getName(fn))) {
-				for (line in renderFunctionStmts(Php, HxFunctionDecl.getBody(fn), "    ", className + "." + HxFunctionDecl.getName(fn)))
+				final body = !isStatic
+					|| isCtor ? phpRewriteSameClassMembersInStmts(HxFunctionDecl.getBody(fn), instanceMethodNames, instanceFieldNames,
+						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : HxFunctionDecl.getBody(fn);
+				for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn)))
 					out.push(line);
 			}
 			out.push("  }");
@@ -6440,6 +6447,161 @@ class SourceNativeBackend {
 				ECast(pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals), typeHint);
 			case EUntyped(inner):
 				EUntyped(pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals));
+			case _:
+				expr;
+		}
+	}
+
+	static function phpCurrentClassInstanceMethodNames(cls:HxClassDecl):Map<String, Bool> {
+		final names:Map<String, Bool> = [];
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getIsStatic(fn))
+				continue;
+			names.set(HxFunctionDecl.getName(fn), true);
+		}
+		return names;
+	}
+
+	static function phpCurrentClassInstanceFieldNames(cls:HxClassDecl):Map<String, Bool> {
+		final names:Map<String, Bool> = [];
+		for (field in HxClassDecl.getFields(cls)) {
+			if (HxFieldDecl.getIsStatic(field))
+				continue;
+			names.set(HxFieldDecl.getName(field), true);
+		}
+		return names;
+	}
+
+	static function phpRewriteSameClassMembersInStmts(stmts:Array<HxStmt>, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
+			locals:Array<String>):Array<HxStmt> {
+		return [
+			for (stmt in stmts)
+				phpRewriteSameClassMembersInStmt(stmt, methodNames, fieldNames, locals)
+		];
+	}
+
+	static function phpRewriteSameClassMembersInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>, locals:Array<String>):HxStmt {
+		return switch (stmt) {
+			case SBlock(stmts, pos):
+				SBlock(phpRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, copyStringArray(locals)), pos);
+			case SVar(name, typeHint, init, pos):
+				final rewrittenInit = init == null ? null : phpRewriteSameClassMemberExpr(init, methodNames, fieldNames, locals);
+				if (locals.indexOf(name) < 0)
+					locals.push(name);
+				SVar(name, typeHint, rewrittenInit, pos);
+			case SIf(cond, thenBranch, elseBranch, pos):
+				SIf(phpRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals),
+					phpRewriteSameClassMembersInStmt(thenBranch, methodNames, fieldNames, copyStringArray(locals)),
+					elseBranch == null ? null : phpRewriteSameClassMembersInStmt(elseBranch, methodNames, fieldNames, copyStringArray(locals)), pos);
+			case SForIn(name, iterable, body, pos):
+				final bodyLocals = copyStringArray(locals);
+				if (bodyLocals.indexOf(name) < 0)
+					bodyLocals.push(name);
+				SForIn(name, phpRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, locals),
+					phpRewriteSameClassMembersInStmt(body, methodNames, fieldNames, bodyLocals), pos);
+			case SForKeyValue(keyName, valueName, iterable, body, pos):
+				final bodyLocals = copyStringArray(locals);
+				if (bodyLocals.indexOf(keyName) < 0)
+					bodyLocals.push(keyName);
+				if (bodyLocals.indexOf(valueName) < 0)
+					bodyLocals.push(valueName);
+				SForKeyValue(keyName, valueName, phpRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, locals),
+					phpRewriteSameClassMembersInStmt(body, methodNames, fieldNames, bodyLocals), pos);
+			case SWhile(cond, body, pos):
+				SWhile(phpRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals),
+					phpRewriteSameClassMembersInStmt(body, methodNames, fieldNames, copyStringArray(locals)), pos);
+			case SDoWhile(body, cond, pos):
+				SDoWhile(phpRewriteSameClassMembersInStmt(body, methodNames, fieldNames, copyStringArray(locals)),
+					phpRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals), pos);
+			case SSwitch(scrutinee, patterns, bodies, pos):
+				SSwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, locals), patterns, [
+					for (body in bodies)
+						phpRewriteSameClassMembersInStmt(body, methodNames, fieldNames, copyStringArray(locals))
+				], pos);
+			case STry(tryBody, catches, pos):
+				STry(phpRewriteSameClassMembersInStmt(tryBody, methodNames, fieldNames, copyStringArray(locals)), [
+					for (c in catches) {
+						final catchLocals = copyStringArray(locals);
+						if (catchLocals.indexOf(c.name) < 0) catchLocals.push(c.name);
+						{name: c.name, typeHint: c.typeHint, body: phpRewriteSameClassMembersInStmt(c.body, methodNames, fieldNames, catchLocals)};
+					}
+				], pos);
+			case SThrow(expr, pos):
+				SThrow(phpRewriteSameClassMemberExpr(expr, methodNames, fieldNames, locals), pos);
+			case SReturn(expr, pos):
+				SReturn(phpRewriteSameClassMemberExpr(expr, methodNames, fieldNames, locals), pos);
+			case SExpr(expr, pos):
+				SExpr(phpRewriteSameClassMemberExpr(expr, methodNames, fieldNames, locals), pos);
+			case SBreak(_) | SContinue(_) | SReturnVoid(_):
+				stmt;
+		}
+	}
+
+	static function phpRewriteSameClassMemberExpr(expr:HxExpr, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>, locals:Array<String>):HxExpr {
+		return switch (expr) {
+			case ECall(EIdent(name), args) if (methodNames.exists(name) && locals.indexOf(name) < 0):
+				ECall(EField(EThis, name), [
+					for (arg in args)
+						phpRewriteSameClassMemberExpr(arg, methodNames, fieldNames, locals)
+				]);
+			case ECall(callee, args):
+				ECall(phpRewriteSameClassMemberExpr(callee, methodNames, fieldNames, locals), [
+					for (arg in args)
+						phpRewriteSameClassMemberExpr(arg, methodNames, fieldNames, locals)
+				]);
+			case EIdent(name) if (methodNames.exists(name) && locals.indexOf(name) < 0):
+				EField(EThis, name);
+			case EIdent(name) if (fieldNames.exists(name) && locals.indexOf(name) < 0):
+				EField(EThis, name);
+			case EUnop(op, inner):
+				EUnop(op, phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals));
+			case EBinop(op, left, right):
+				EBinop(op, phpRewriteSameClassMemberExpr(left, methodNames, fieldNames, locals),
+					phpRewriteSameClassMemberExpr(right, methodNames, fieldNames, locals));
+			case ETernary(cond, thenExpr, elseExpr):
+				ETernary(phpRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals),
+					phpRewriteSameClassMemberExpr(thenExpr, methodNames, fieldNames, locals),
+					phpRewriteSameClassMemberExpr(elseExpr, methodNames, fieldNames, locals));
+			case EField(obj, field):
+				EField(phpRewriteSameClassMemberExpr(obj, methodNames, fieldNames, locals), field);
+			case EArrayAccess(array, index):
+				EArrayAccess(phpRewriteSameClassMemberExpr(array, methodNames, fieldNames, locals),
+					phpRewriteSameClassMemberExpr(index, methodNames, fieldNames, locals));
+			case ERange(start, end):
+				ERange(phpRewriteSameClassMemberExpr(start, methodNames, fieldNames, locals),
+					phpRewriteSameClassMemberExpr(end, methodNames, fieldNames, locals));
+			case EArrayDecl(values):
+				EArrayDecl([
+					for (value in values)
+						phpRewriteSameClassMemberExpr(value, methodNames, fieldNames, locals)
+				]);
+			case EAnon(anonFieldNames, fieldValues):
+				EAnon(anonFieldNames, [
+					for (value in fieldValues)
+						phpRewriteSameClassMemberExpr(value, methodNames, fieldNames, locals)
+				]);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				final bodyLocals = copyStringArray(locals);
+				if (bodyLocals.indexOf(name) < 0)
+					bodyLocals.push(name);
+				EArrayComprehension(name, phpRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, locals),
+					guardExpr == null ? null : phpRewriteSameClassMemberExpr(guardExpr, methodNames, fieldNames, bodyLocals),
+					phpRewriteSameClassMemberExpr(yieldExpr, methodNames, fieldNames, bodyLocals));
+			case ELambda(args, body):
+				final bodyLocals = copyStringArray(locals);
+				for (arg in args)
+					if (bodyLocals.indexOf(arg) < 0)
+						bodyLocals.push(arg);
+				ELambda(args, phpRewriteSameClassMemberExpr(body, methodNames, fieldNames, bodyLocals));
+			case ENew(typePath, args):
+				ENew(typePath, [
+					for (arg in args)
+						phpRewriteSameClassMemberExpr(arg, methodNames, fieldNames, locals)
+				]);
+			case ECast(inner, typeHint):
+				ECast(phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals), typeHint);
+			case EUntyped(inner):
+				EUntyped(phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals));
 			case _:
 				expr;
 		}
@@ -7323,6 +7485,10 @@ class SourceNativeBackend {
 				lines.push("  if (__hxhx_is_point3($value)) return $value;");
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return clone $value;");
 				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_array_push(&$array, $value) {");
+				lines.push("  $array[] = $value;");
+				lines.push("  return count($array);");
 				lines.push("}");
 				lines.push("function __hxhx_to_template_wrap($value) {");
 				lines.push("  if (is_object($value) && get_class($value) === \"TemplateWrap\") return __hxhx_copy_value($value);");
