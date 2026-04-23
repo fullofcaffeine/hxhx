@@ -24,7 +24,10 @@
 		"hxhx_macro_InProcGeneratedEntrypoints.ml",
 		"hxhx_macro_BuildFieldSnapshotPayload.ml",
 		"hxhx_Stage3WaitServer.ml",
+		"hxhx_Stage3RunSupport.ml",
+		"hxhx_Stage3DiagnosticsSupport.ml",
 		"hxhx_Stage3Compiler.ml",
+		"hxhx_Stage3BackendPluginSupport.ml",
 		"hxhx_Stage3Args.ml",
 		"hxhx_Stage1Compiler.ml",
 		"hxhx_NativeBackendPluginLoader.ml",
@@ -162,11 +165,12 @@
 		"FrontendFixture.ml",
 		"EnumValue.ml",
 		"EmitterStageDebug.ml",
+		"EmitterStageBuildSupport.ml",
 		"EmitterStage.ml",
 		"CompilerDriver.ml",
 		"Any.ml"
 	],
-	"id": 3,
+	"id": 4,
 	"wasCached": false,
 	"version": 1
 }
