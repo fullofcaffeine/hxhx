@@ -882,6 +882,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpThrowExpressionLambdaProgram():GenIrProgram {
+		final src = [
+			"import haxe.exceptions.ArgumentException;",
+			"class Main {",
+			"  static function main() {",
+			"    function negativeOnly(i:Int) {",
+			"      if (i >= 0) throw new ArgumentException(\"i\");",
+			"    }",
+			"    try {",
+			"      negativeOnly(1);",
+			"    } catch (e:ArgumentException) {",
+			"      Sys.println(\"lambda-throw\");",
+			"      Sys.println(e.argument);",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeErrorProbeProgram():GenIrProgram {
 		final src = [
 			"class HelperMacros {",
@@ -4858,6 +4880,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "not-implemented", "generated PHP should catch haxe.exceptions.NotImplementedException");
 		}
 		deleteRecursive(notImplementedTmpRoot);
+
+		final lambdaThrowTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_throw_expression_lambda_" + Std.string(Date.now().getTime()));
+		deleteRecursive(lambdaThrowTmpRoot);
+		FileSystem.createDirectory(lambdaThrowTmpRoot);
+		backend.emit(phpThrowExpressionLambdaProgram(), new BackendContext(lambdaThrowTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final lambdaThrowContent = File.getContent(Path.join([lambdaThrowTmpRoot, "index.php"]));
+		assertContains(lambdaThrowContent, "class ArgumentException extends PosException", "PHP runtime should expose haxe.exceptions.ArgumentException");
+		assertContains(lambdaThrowContent, "function __hxhx_throw($value)", "PHP runtime should expose expression-position throw helper");
+		assertContains(lambdaThrowContent, "__hxhx_throw(new ArgumentException(\"i\"))",
+			"PHP expression-position throw helper calls should not render as captured variable callables");
+		assertNotContains(lambdaThrowContent, "$__hxhx_throw", "PHP expression-position throw helper calls should not capture an undefined callable variable");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([lambdaThrowTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP expression-position throw helper should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "lambda-throw", "generated PHP should throw from local-function/lambda bodies");
+			assertContains(run.stdout, "i", "generated PHP ArgumentException should preserve the argument field");
+		}
+		deleteRecursive(lambdaThrowTmpRoot);
 	}
 
 	static function assertPhpTypeErrorProbe():Void {

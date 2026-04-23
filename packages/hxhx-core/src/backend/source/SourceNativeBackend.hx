@@ -719,6 +719,8 @@ class SourceNativeBackend {
 				"(" + renderExpr(target, args[0]) + ")";
 			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]):
 				intLiteralExpr(target, raw, suffix);
+			case ECall(EIdent("__hxhx_throw"), args) if (target == Php):
+				"__hxhx_throw(" + (args.length > 0 ? renderExpr(Php, args[0]) : "null") + ")";
 			case ECall(ELambda(lambdaArgs, lambdaBody), args):
 				lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
 			case ECall(ESuper, args):
@@ -4190,7 +4192,7 @@ class SourceNativeBackend {
 	static function phpCatchPreservesWrapper(typeHint:String):Bool {
 		return switch (typeHint) {
 			case "Exception" | "haxe.Exception" | "ValueException" | "haxe.ValueException" | "PosException" | "haxe.exceptions.PosException" |
-				"NotImplementedException" | "haxe.exceptions.NotImplementedException":
+				"NotImplementedException" | "haxe.exceptions.NotImplementedException" | "ArgumentException" | "haxe.exceptions.ArgumentException":
 				true;
 			case _:
 				false;
@@ -7534,6 +7536,16 @@ class SourceNativeBackend {
 				lines.push("  }");
 				lines.push("}");
 				lines.push("class NotImplementedException extends PosException {");
+				lines.push("}");
+				lines.push("class ArgumentException extends PosException {");
+				lines.push("  public $argument;");
+				lines.push("  public function __construct($argument = null, $message = null, $previous = null, $pos = null) {");
+				lines.push("    $this->argument = $argument;");
+				lines.push("    parent::__construct($message === null ? $argument : $message, $previous, $pos);");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("function __hxhx_throw($value) {");
+				lines.push("  throw ValueException::thrown($value);");
 				lines.push("}");
 				lines.push("function __hxhx_pos_infos() {");
 				lines.push("  $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);");
