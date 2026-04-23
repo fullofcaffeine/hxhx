@@ -945,6 +945,49 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpXmlRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var x = Xml.parse('<a href=\"hello\">World<b/></a>');",
+			"    Sys.println(Std.string(x.firstChild() == x.firstChild()));",
+			"    Sys.println(Std.string(x.nodeType == Xml.Document));",
+			"    try { x.nodeName; Sys.println('bad'); } catch (e:Dynamic) Sys.println('exc');",
+			"    try { x.nodeValue; Sys.println('bad'); } catch (e:Dynamic) Sys.println('exc');",
+			"    try { x.attributes(); Sys.println('bad'); } catch (e:Dynamic) Sys.println('exc');",
+			"    try { x.get('att'); Sys.println('bad'); } catch (e:Dynamic) Sys.println('exc');",
+			"    try { x.exists('att'); Sys.println('bad'); } catch (e:Dynamic) Sys.println('exc');",
+			"    x = x.firstChild();",
+			"    Sys.println(Std.string(x.nodeType == Xml.Element));",
+			"    Sys.println(x.nodeName);",
+			"    x.nodeName = 'b';",
+			"    Sys.println(x.toString());",
+			"    Sys.println(x.get('href'));",
+			"    Sys.println(Std.string(x.exists('other')));",
+			"    Sys.println(Lambda.array({ iterator: x.attributes }).join('#'));",
+			"    x.remove('href');",
+			"    Sys.println(Lambda.array({ iterator: x.attributes }).join('#'));",
+			"    Sys.println(x.toString());",
+			"    Sys.println(x.firstChild().nodeValue);",
+			"    Sys.println(x.firstElement().nodeName);",
+			"    var y = Xml.parse('<a><b><c/> <d/> \\n <e/><![CDATA[<x>]]></b></a>');",
+			"    Sys.println(y.toString());",
+			"    Sys.println(Xml.parse('\"').toString());",
+			"    Sys.println(Xml.createComment('Hello').toString());",
+			"    Sys.println(Xml.parse('<!--Hello-->').firstChild().nodeValue);",
+			"    Sys.println(Xml.createCData('<x>').toString());",
+			"    Sys.println(Xml.parse('<![CDATA[Hello]]>').firstChild().nodeValue);",
+			"    Sys.println(Xml.createProcessingInstruction('XHTML').toString());",
+			"    Sys.println(Xml.createDocType('XHTML').toString());",
+			"    try { Xml.parse('<node>'); Sys.println('bad'); } catch (e:Dynamic) Sys.println('exc');",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpScopedLocalShadowProgram():GenIrProgram {
 		final pos = HxPos.unknown();
 		function println(expr:HxExpr):HxStmt {
@@ -5137,6 +5180,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "Z", "generated PHP BytesInput should read written strings");
 		}
 		deleteRecursive(bytesTmpRoot);
+
+		final xmlTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_xml_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(xmlTmpRoot);
+		FileSystem.createDirectory(xmlTmpRoot);
+		backend.emit(phpXmlRuntimeProgram(), new BackendContext(xmlTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final xmlContent = File.getContent(Path.join([xmlTmpRoot, "index.php"]));
+		assertContains(xmlContent, "class Xml", "PHP runtime should expose a minimal Xml class");
+		assertContains(xmlContent, "public static function parse($source)", "PHP Xml runtime should expose parse");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([xmlTmpRoot, "index.php"])]);
+			final expected = "true\ntrue\nexc\nexc\nexc\nexc\nexc\ntrue\na\n<b href=\"hello\">World<b/></b>\nhello\nfalse\nhref\n\n<b>World<b/></b>\nWorld\nb\n<a><b><c/> <d/> \n <e/><![CDATA[<x>]]></b></a>\n\"\n<!--Hello-->\nHello\n<![CDATA[<x>]]>\nHello\n<?XHTML?>\n<!DOCTYPE XHTML>\nexc\n";
+			assertTrue(run.code == 0, "generated PHP Xml runtime should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == expected, "generated PHP Xml runtime should match TestXML.testBasic subset, got:\n" + run.stdout);
+		}
+		deleteRecursive(xmlTmpRoot);
 
 		final shadowTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_scoped_local_shadow_" + Std.string(Date.now().getTime()));
 		deleteRecursive(shadowTmpRoot);
