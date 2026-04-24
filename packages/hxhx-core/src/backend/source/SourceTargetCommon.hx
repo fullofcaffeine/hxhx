@@ -7425,6 +7425,44 @@ class SourceTargetCommon {
 		lines.push("}");
 	}
 
+	static function appendPhpStringBufRuntime(lines:Array<String>):Void {
+		lines.push("class StringBuf {");
+		lines.push("  private $parts = [];");
+		lines.push("  public $length = 0;");
+		lines.push("  private function appendText($text) {");
+		lines.push("    $value = strval($text);");
+		lines.push("    $this->parts[] = $value;");
+		lines.push("    $this->length += function_exists(\"mb_strlen\") ? mb_strlen($value, \"UTF-8\") : strlen($value);");
+		lines.push("  }");
+		lines.push("  public function add($value) {");
+		lines.push("    $this->appendText(__hxhx_add_string($value));");
+		lines.push("    return null;");
+		lines.push("  }");
+		lines.push("  public function addSub($value, $pos, $len = null) {");
+		lines.push("    $text = strval($value);");
+		lines.push("    $start = (int)$pos;");
+		lines.push("    if (function_exists(\"mb_substr\")) {");
+		lines.push("      $part = $len === null ? mb_substr($text, $start, null, \"UTF-8\") : mb_substr($text, $start, (int)$len, \"UTF-8\");");
+		lines.push("    } else {");
+		lines.push("      $part = $len === null ? substr($text, $start) : substr($text, $start, (int)$len);");
+		lines.push("    }");
+		lines.push("    $this->appendText($part === false ? \"\" : $part);");
+		lines.push("    return null;");
+		lines.push("  }");
+		lines.push("  public function addChar($code) {");
+		lines.push("    $value = (int)$code;");
+		lines.push("    if (function_exists(\"mb_chr\")) {");
+		lines.push("      $this->appendText(mb_chr($value, \"UTF-8\"));");
+		lines.push("    } else {");
+		lines.push("      $this->appendText(html_entity_decode(\"&#\" . $value . \";\", ENT_NOQUOTES, \"UTF-8\"));");
+		lines.push("    }");
+		lines.push("    return null;");
+		lines.push("  }");
+		lines.push("  public function toString() { return implode(\"\", $this->parts); }");
+		lines.push("  public function __toString() { return $this->toString(); }");
+		lines.push("}");
+	}
+
 	static function renderPhpSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
@@ -9880,6 +9918,7 @@ class SourceTargetCommon {
 				lines.push("}");
 				appendPhpXmlRuntime(lines);
 				appendPhpDateRuntime(lines);
+				appendPhpStringBufRuntime(lines);
 				lines.push("class EReg {");
 				lines.push("  private $pattern;");
 				lines.push("  private $modifiers;");
