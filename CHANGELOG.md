@@ -1,3 +1,16 @@
+## [0.15.12](https://github.com/fullofcaffeine/hxhx/compare/v0.15.11...v0.15.12) (2026-04-24)
+
+
+### Bug Fixes
+
+* **php:** add Base64 crypto shim ([7692067](https://github.com/fullofcaffeine/hxhx/commit/76920670447ace896e72f4cced3bb4b8773224d2))
+* **php:** add BaseCode crypto shim ([f47f06f](https://github.com/fullofcaffeine/hxhx/commit/f47f06f2461cf024ebf1fd925515d521943c87a2))
+* **php:** add Md5.make shim ([7ba067b](https://github.com/fullofcaffeine/hxhx/commit/7ba067b7fb5f6a0c9fb034596a4acc1db8f49fdd))
+* **php:** add Reflect.makeVarArgs shim ([d887fe9](https://github.com/fullofcaffeine/hxhx/commit/d887fe9f50421eef9836c84a2addfccec41063f7))
+* **php:** add Sha1 crypto shim ([7c4020a](https://github.com/fullofcaffeine/hxhx/commit/7c4020a74ddb1103b42c73a95bc892d5e329bcda))
+* **php:** add StringTools URL helpers ([f749a28](https://github.com/fullofcaffeine/hxhx/commit/f749a28173b954f2c71191f3be72a10fee5b7fae))
+* **php:** support dynamic method closures ([38d77e5](https://github.com/fullofcaffeine/hxhx/commit/38d77e5e849284c947064f1538128c396bda36e0))
+
 ## [0.15.11](https://github.com/fullofcaffeine/hxhx/compare/v0.15.10...v0.15.11) (2026-04-24)
 
 
