@@ -6561,6 +6561,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpHaxeJsonRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_json_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var parsed = haxe.Json.parse(\"{\\\"name\\\":\\\"hx\\\",\\\"nums\\\":[1,2],\\\"ok\\\":true}\");",
+			"    Sys.println(parsed.name + \":\" + parsed.nums[1] + \":\" + parsed.ok);",
+			"    var encoded = haxe.Json.stringify({name: \"hx\", nums: [1, 2], ok: true});",
+			"    Sys.println(haxe.Json.parse(encoded).name);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Json {", "PHP haxe namespace support should provide haxe.Json");
+		assertContains(content, "haxe\\Json::parse", "PHP haxe.Json static calls should reference the namespaced runtime class");
+		assertContains(content, "haxe\\Json::stringify", "PHP haxe.Json stringify should reference the namespaced runtime class");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP haxe.Json runtime support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "hx:2:true\nhx\n", "generated PHP haxe.Json runtime support output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStdDateToolsSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_datetools_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7710,6 +7742,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonNullCoalescingAssignmentExpression();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpDateRuntimeSupport();
+		assertPhpHaxeJsonRuntimeSupport();
 		assertPhpStdDateToolsSupport();
 		assertPhpPackageQualifiedClassReference();
 		assertPhpStdStringMapClassReference();
