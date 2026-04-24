@@ -14588,6 +14588,7 @@ and fieldCallExpr = fun target receiver field args -> try let __fallback_result_
         let arrayCall = (phpArrayFieldCall (Obj.magic receiver) (field : string) (Obj.magic phpArgs) : string) in (
           ignore (if arrayCall != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (arrayCall : string))) else ());
           ignore (if HxString.equals field "iterator" && HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_iterator(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ")" : string))) else ());
+          ignore (if HxString.equals field "toStr" && HxArray.length args = 0 && phpStaticTypePath (Obj.magic receiver) == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_to_str(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ")" : string))) else ());
           ignore (if HxString.equals field "ofInt" && phpIntLiteralExtensionReceiver (Obj.magic receiver) then raise (HxRuntime.Hx_return (Obj.repr (phpStaticMethodCall (phpInt64TypePath () : string) (field : string) (Obj.magic (let __arr_577 = HxArray.create () in (
             ignore (HxArray.push __arr_577 receiver);
             __arr_577
@@ -22084,6 +22085,11 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  return __hxhx_add_string($value);");
       ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_to_str($value) {");
+      ignore (HxArray.push lines "  if (__hxhx_is_int64($value)) return __hxhx_int64_to_string($value);");
+      ignore (HxArray.push lines "  if (is_object($value) && method_exists($value, \"toStr\")) return $value->toStr();");
+      ignore (HxArray.push lines "  return __hxhx_add_string($value);");
+      ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_numeric_value($value) {");
       ignore (HxArray.push lines "  if (is_object($value) && property_exists($value, \"__hx_value\")) return $value->__hx_value;");
       ignore (HxArray.push lines "  return $value;");
@@ -22491,6 +22497,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  if ($obj === null) throw ValueException::thrown(\"NPE\");");
       ignore (HxArray.push lines "  if (is_object($obj)) {");
       ignore (HxArray.push lines "    if (property_exists($obj, $name)) return $obj->$name;");
+      ignore (HxArray.push lines "    if (__hxhx_is_int64($obj) && $name === \"toStr\") return function() use ($obj) { return __hxhx_int64_to_string($obj); };");
       ignore (HxArray.push lines "    if (method_exists($obj, $name)) return function(...$args) use ($obj, $name) { return $obj->$name(...$args); };");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if (is_array($obj) && array_key_exists($name, $obj)) return $obj[$name];");

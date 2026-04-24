@@ -1614,6 +1614,8 @@ class SourceTargetCommon {
 					return arrayCall;
 				if (field == "iterator" && args.length == 0)
 					return "__hxhx_iterator(" + renderExpr(Php, receiver) + ")";
+				if (field == "toStr" && args.length == 0 && phpStaticTypePath(receiver) == null)
+					return "__hxhx_to_str(" + renderExpr(Php, receiver) + ")";
 				if (field == "ofInt" && phpIntLiteralExtensionReceiver(receiver))
 					return phpStaticMethodCall(phpInt64TypePath(), field, [receiver]);
 				final typePath = phpStaticTypePath(receiver);
@@ -10977,6 +10979,11 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("  return __hxhx_add_string($value);");
 				lines.push("}");
+				lines.push("function __hxhx_to_str($value) {");
+				lines.push("  if (__hxhx_is_int64($value)) return __hxhx_int64_to_string($value);");
+				lines.push("  if (is_object($value) && method_exists($value, \"toStr\")) return $value->toStr();");
+				lines.push("  return __hxhx_add_string($value);");
+				lines.push("}");
 				lines.push("function __hxhx_numeric_value($value) {");
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return $value->__hx_value;");
 				lines.push("  return $value;");
@@ -11384,6 +11391,7 @@ class SourceTargetCommon {
 				lines.push("  if ($obj === null) throw ValueException::thrown(\"NPE\");");
 				lines.push("  if (is_object($obj)) {");
 				lines.push("    if (property_exists($obj, $name)) return $obj->$name;");
+				lines.push("    if (__hxhx_is_int64($obj) && $name === \"toStr\") return function() use ($obj) { return __hxhx_int64_to_string($obj); };");
 				lines.push("    if (method_exists($obj, $name)) return function(...$args) use ($obj, $name) { return $obj->$name(...$args); };");
 				lines.push("  }");
 				lines.push("  if (is_array($obj) && array_key_exists($name, $obj)) return $obj[$name];");
