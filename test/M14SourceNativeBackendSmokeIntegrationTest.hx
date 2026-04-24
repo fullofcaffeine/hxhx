@@ -993,6 +993,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpBaseCodeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var alt = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString(\"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-\"));",
+			"    Sys.println(alt.encodeString(\"Héllow\"));",
+			"    Sys.println(alt.decodeString(\"iceFr6NLtM\"));",
+			"    var base32 = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString(\"0123456789ABCDEFGHIJKLMNOPQRSTUV\"));",
+			"    Sys.println(base32.encodeString(\"foo\"));",
+			"    Sys.println(base32.decodeString(\"CPNMU\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpXmlRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5365,6 +5383,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "exc", "generated PHP Base64.decode should reject invalid input");
 		}
 		deleteRecursive(base64TmpRoot);
+
+		final baseCodeTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_basecode_" + Std.string(Date.now().getTime()));
+		deleteRecursive(baseCodeTmpRoot);
+		FileSystem.createDirectory(baseCodeTmpRoot);
+		backend.emit(phpBaseCodeProgram(), new BackendContext(baseCodeTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final baseCodeContent = File.getContent(Path.join([baseCodeTmpRoot, "index.php"]));
+		assertContains(baseCodeContent, "class BaseCode", "PHP haxe.crypto.BaseCode should be emitted");
+		assertContains(baseCodeContent, "public function encodeString($value)", "PHP BaseCode should expose encodeString");
+		assertContains(baseCodeContent, "public function decodeString($value)", "PHP BaseCode should expose decodeString");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([baseCodeTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP BaseCode support should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "iceFr6NLtM", "generated PHP BaseCode should encode alternate base64");
+			assertContains(run.stdout, "Héllow", "generated PHP BaseCode should decode alternate base64");
+			assertContains(run.stdout, "CPNMU", "generated PHP BaseCode should encode base32-hex");
+			assertContains(run.stdout, "foo", "generated PHP BaseCode should decode base32-hex");
+		}
+		deleteRecursive(baseCodeTmpRoot);
 
 		final xmlTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_xml_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(xmlTmpRoot);
