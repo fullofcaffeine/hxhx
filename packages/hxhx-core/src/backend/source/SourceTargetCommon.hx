@@ -820,6 +820,10 @@ class SourceTargetCommon {
 	}
 
 	static function binopExpr(target:SourceNativeTarget, op:String, left:HxExpr, right:HxExpr):String {
+		if (target == Php && op == ">>>" && phpExprIsInt64Value(left))
+			return "__hxhx_int64_ushr(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
+		if (target == Php && op == ">>>=" && phpExprIsInt64Value(left))
+			return phpInt64ShiftAssignExpr(">>>", left, right);
 		if (op == ">>>")
 			return unsignedRightShiftExpr(target, renderExpr(target, left), renderExpr(target, right));
 		if (op == ">>>=")
@@ -852,6 +856,15 @@ class SourceTargetCommon {
 			return "__hxhx_div(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "/=")
 			return phpDivideAssignExpr(left, right);
+		if (target == Php && (op == "<<" || op == ">>") && phpExprIsInt64Value(left))
+			return (op == "<<" ? "__hxhx_int64_shl" : "__hxhx_int64_shr")
+				+ "("
+				+ renderExpr(target, left)
+				+ ", "
+				+ renderExpr(target, right)
+				+ ")";
+		if (target == Php && (op == "<<=" || op == ">>=") && phpExprIsInt64Value(left))
+			return phpInt64ShiftAssignExpr(op.substr(0, 2), left, right);
 		if (target == Php && (op == "&" || op == "|" || op == "^") && (phpExprIsInt64Value(left) || phpExprIsInt64Value(right)))
 			return phpInt64BitwiseExpr(op, left, right);
 		if (target == Php && (op == "==" || op == "!=") && phpEqualityNeedsHelper(left, right)) {
@@ -997,6 +1010,18 @@ class SourceTargetCommon {
 				throw "PHP source backend MVP unsupported Int64 bitwise operator: " + op;
 		};
 		return helper + "(" + renderExpr(Php, left) + ", " + renderExpr(Php, right) + ")";
+	}
+
+	static function phpInt64ShiftAssignExpr(op:String, left:HxExpr, right:HxExpr):String {
+		final helper = switch (op) {
+			case "<<": "__hxhx_int64_shl";
+			case ">>": "__hxhx_int64_shr";
+			case ">>>": "__hxhx_int64_ushr";
+			case _:
+				throw "PHP source backend MVP unsupported Int64 shift assignment operator: " + op;
+		};
+		final lhs = lvalueExpr(Php, left);
+		return lhs + " = " + helper + "(" + lhs + ", " + renderExpr(Php, right) + ")";
 	}
 
 	static function phpAddAssignExpr(left:HxExpr, right:HxExpr):String {
@@ -4387,7 +4412,8 @@ class SourceTargetCommon {
 			case ECall(callee, _):
 				phpInt64StaticCall(callee);
 			case EBinop("*", left, right), EBinop("+", left, right), EBinop("-", left, right), EBinop("/", left, right), EBinop("%", left, right),
-				EBinop("&", left, right), EBinop("|", left, right), EBinop("^", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
+				EBinop("&", left, right), EBinop("|", left, right), EBinop("^", left, right), EBinop("<<", left, right), EBinop(">>", left, right),
+				EBinop(">>>", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
 			case EUnop("-", inner), EUnop("~", inner):
 				phpExprIsInt64Value(inner);
 			case EMacroExpr(inner, _) | EUntyped(inner):
@@ -11119,6 +11145,29 @@ class SourceTargetCommon {
 				lines.push("  $high = $value->high & 0xFFFFFFFF;");
 				lines.push("  $low = $value->low & 0xFFFFFFFF;");
 				lines.push("  return __hxhx_int64_make_u($high >> 1, (($high & 1) << 31) | ($low >> 1));");
+				lines.push("}");
+				lines.push("function __hxhx_int64_shr1($value) {");
+				lines.push("  $value = __hxhx_int64_value($value);");
+				lines.push("  $low = $value->low & 0xFFFFFFFF;");
+				lines.push("  return __hxhx_int64_make_u($value->high >> 1, (($value->high & 1) << 31) | ($low >> 1));");
+				lines.push("}");
+				lines.push("function __hxhx_int64_shl($value, $bits) {");
+				lines.push("  $bits = intval($bits) & 63;");
+				lines.push("  $value = __hxhx_int64_value($value);");
+				lines.push("  for ($i = 0; $i < $bits; $i++) $value = __hxhx_int64_shl1($value);");
+				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_int64_shr($value, $bits) {");
+				lines.push("  $bits = intval($bits) & 63;");
+				lines.push("  $value = __hxhx_int64_value($value);");
+				lines.push("  for ($i = 0; $i < $bits; $i++) $value = __hxhx_int64_shr1($value);");
+				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_int64_ushr($value, $bits) {");
+				lines.push("  $bits = intval($bits) & 63;");
+				lines.push("  $value = __hxhx_int64_value($value);");
+				lines.push("  for ($i = 0; $i < $bits; $i++) $value = __hxhx_int64_ushr1($value);");
+				lines.push("  return $value;");
 				lines.push("}");
 				lines.push("function __hxhx_int64_add($left, $right) {");
 				lines.push("  $left = __hxhx_int64_value($left);");

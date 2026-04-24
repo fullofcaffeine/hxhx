@@ -5217,6 +5217,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(haxe.Int64.toStr(bwXor));",
 			"    var bwNot = ~haxe.Int64.ofInt(6);",
 			"    Sys.println(haxe.Int64.toStr(bwNot));",
+			"    var shl = haxe.Int64.ofInt(1) << 33;",
+			"    Sys.println(haxe.Int64.toStr(shl));",
+			"    var shr = haxe.Int64.parseString(\"-8\") >> 1;",
+			"    Sys.println(haxe.Int64.toStr(shr));",
+			"    var ushr = haxe.Int64.parseString(\"-8\") >>> 1;",
+			"    Sys.println(haxe.Int64.toStr(ushr));",
+			"    var shiftAssign:haxe.Int64 = 1;",
+			"    shiftAssign <<= 33;",
+			"    Sys.println(haxe.Int64.toStr(shiftAssign));",
+			"    shiftAssign >>= 32;",
+			"    Sys.println(haxe.Int64.toStr(shiftAssign));",
+			"    shiftAssign >>>= 1;",
+			"    Sys.println(haxe.Int64.toStr(shiftAssign));",
 			"    var q = haxe.Int64.divMod(haxe.Int64.ofInt(23), haxe.Int64.ofInt(5));",
 			"    Sys.println(haxe.Int64.toStr(q.quotient));",
 			"    Sys.println(haxe.Int64.toStr(q.modulus));",
@@ -5296,6 +5309,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$bwXor = __hxhx_int64_xor(\\haxe\\Int64::ofInt(6), \\haxe\\Int64::ofInt(3));",
 			"PHP typed Int64 bitwise xor should lower through the runtime helper");
 		assertContains(content, "$bwNot = __hxhx_int64_not(\\haxe\\Int64::ofInt(6));", "PHP typed Int64 bitwise not should lower through the runtime helper");
+		assertContains(content, "$shl = __hxhx_int64_shl(\\haxe\\Int64::ofInt(1), 33);", "PHP typed Int64 left shift should lower through the runtime helper");
+		assertContains(content, "$shr = __hxhx_int64_shr(\\haxe\\Int64::parseString(\"-8\"), 1);",
+			"PHP typed Int64 signed right shift should lower through the runtime helper");
+		assertContains(content, "$ushr = __hxhx_int64_ushr(\\haxe\\Int64::parseString(\"-8\"), 1);",
+			"PHP typed Int64 unsigned right shift should lower through the runtime helper");
+		assertContains(content, "$shiftAssign = __hxhx_int64_shl($shiftAssign, 33);",
+			"PHP typed Int64 left-shift assignment should lower through the runtime helper");
+		assertContains(content, "$shiftAssign = __hxhx_int64_shr($shiftAssign, 32);",
+			"PHP typed Int64 signed right-shift assignment should lower through the runtime helper");
+		assertContains(content, "$shiftAssign = __hxhx_int64_ushr($shiftAssign, 1);",
+			"PHP typed Int64 unsigned right-shift assignment should lower through the runtime helper");
 		assertContains(content, "$qi = __hxhx_int64_div_mod(\\haxe\\Int64::ofInt(23), \\haxe\\Int64::ofInt(5));",
 			"PHP Int64 instance divMod should bind the receiver as the first argument");
 		assertContains(content, "$result = __hxhx_int64_div_mod($left, $right);", "PHP runtime division should dispatch Int64 operands through divMod");
@@ -5307,7 +5331,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Int64 runtime support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\ntrue\n0\n42\n0\n14\n-1\n-4\n-1\n-4\n0\n42\n4\n3\n2\n7\n5\n-7\n4\n3\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
+			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\ntrue\n0\n42\n0\n14\n-1\n-4\n-1\n-4\n0\n42\n4\n3\n2\n7\n5\n-7\n8589934592\n-4\n9223372036854775804\n8589934592\n2\n1\n4\n3\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
 				"generated PHP haxe.Int64 output mismatch, got:\n"
 				+ run.stdout);
 		}
