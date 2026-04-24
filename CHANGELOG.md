@@ -1,3 +1,33 @@
+## [0.15.11](https://github.com/fullofcaffeine/hxhx/compare/v0.15.10...v0.15.11) (2026-04-24)
+
+
+### Bug Fixes
+
+* **parser:** preserve static accessor bodies ([b31f355](https://github.com/fullofcaffeine/hxhx/commit/b31f355710c87afb8cbf975a2db04427cfe47e40))
+* **php:** add date runtime support ([069b0d4](https://github.com/fullofcaffeine/hxhx/commit/069b0d4c7d4c07f4cdecd4b87bceef86b5900d39))
+* **php:** add enum equality runtime ([8dd5105](https://github.com/fullofcaffeine/hxhx/commit/8dd51056111d2b3b552362da878f466a8a85ad38))
+* **php:** add source Xml runtime seam ([1d79788](https://github.com/fullofcaffeine/hxhx/commit/1d79788d2644b23ca5fd68cec9f89bb0ff378012))
+* **php:** add xml parser shim ([d620846](https://github.com/fullofcaffeine/hxhx/commit/d6208469a57b5e24757a1fe8bd75d485facb2290))
+* **php:** bind instance method values ([2d95aac](https://github.com/fullofcaffeine/hxhx/commit/2d95aacec9012f60aab65ff07ef00236268a6bb1))
+* **php:** bind same-instance method values ([6998154](https://github.com/fullofcaffeine/hxhx/commit/6998154e3ca1c2b84de97395310fc1b0e1d9b5ce))
+* **php:** capture for-in iterables ([dbea649](https://github.com/fullofcaffeine/hxhx/commit/dbea6493b823b8b723d7d6d378b4d42ecafe0b8d))
+* **php:** capture mutable closure locals ([e678247](https://github.com/fullofcaffeine/hxhx/commit/e67824797a95cc77371eb891621de2a487518b6b))
+* **php:** guard xml scalar operations ([6174953](https://github.com/fullofcaffeine/hxhx/commit/617495337c1ade7ecda786f78cf1e4bebcac47bf))
+* **php:** implement source-native EReg runtime ([add5676](https://github.com/fullofcaffeine/hxhx/commit/add567647de68021dfd71425cd17989d889e148b))
+* **php:** lower enum constructor values ([fe73060](https://github.com/fullofcaffeine/hxhx/commit/fe73060cc2c4f295cf2aa3f4b34dbec48410d2cf))
+* **php:** lower message string indexOf calls ([11125aa](https://github.com/fullofcaffeine/hxhx/commit/11125aa017c483a85319d2a2df041628a76dc3e6))
+* **php:** lower split on string results ([8fe1635](https://github.com/fullofcaffeine/hxhx/commit/8fe16357b6f23cf7c9f8bfb98e9af766a9992990))
+* **php:** lower string length in binary reads ([49d4ba7](https://github.com/fullofcaffeine/hxhx/commit/49d4ba7bd5c6841562cf8441272038de732c1eab))
+* **php:** match xml apostrophe attribute escaping ([12291da](https://github.com/fullofcaffeine/hxhx/commit/12291da74dfbe204dcaa5a38d5c3258ad9d23e9a))
+* **php:** move xml children on reparent ([ad6e47f](https://github.com/fullofcaffeine/hxhx/commit/ad6e47f342fb0fe252b4e7fb532da23b999445d2))
+* **php:** preserve local closure helper names ([bd943ed](https://github.com/fullofcaffeine/hxhx/commit/bd943ed28cdc2d021ff1a16112867a8bc77937f3))
+* **php:** preserve std package roots ([1c7b34e](https://github.com/fullofcaffeine/hxhx/commit/1c7b34e1f9e955acf6f7e9d0e838554070829a14))
+* **php:** reject raw angles in strict xml attrs ([0a442f7](https://github.com/fullofcaffeine/hxhx/commit/0a442f7f527079fa7d41b71b4a73c568b2e7f73a))
+* **php:** report xml parser node errors ([052c858](https://github.com/fullofcaffeine/hxhx/commit/052c858102dec724583f840c2701be0d620d10f2))
+* **php:** resolve same-name static locals ([f4d8848](https://github.com/fullofcaffeine/hxhx/commit/f4d8848a14a6bbdd14925e574e0c315fd4f42640))
+* **php:** route static property getters ([5d366f0](https://github.com/fullofcaffeine/hxhx/commit/5d366f0330f558d1c3821bad9fb3b9a5dfa661ea))
+* **php:** support callable bind lowering ([eae1f40](https://github.com/fullofcaffeine/hxhx/commit/eae1f40f6dbede603f13656621e626d9459cb671))
+
 ## [0.15.10](https://github.com/fullofcaffeine/hxhx/compare/v0.15.9...v0.15.10) (2026-04-23)
 
 
