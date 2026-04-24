@@ -1336,6 +1336,8 @@ class SourceTargetCommon {
 				if (typePath != null) {
 					if (typePath == "Reflect" && field == "compare")
 						"[Reflect::class, \"compare\"]";
+					else if (phpKnownStaticMethod(typePath, field))
+						phpStaticMethodValueAccess(typePath, field);
 					else
 						phpStaticPropertyAccess(typePath, field);
 				} else if (field == "message") {
@@ -1889,15 +1891,19 @@ class SourceTargetCommon {
 					valueCaptures.push(clean);
 			}
 		}
-		for (name in phpLambdaUsedCaptures(body, args.concat(valueCaptures))) {
-			if (refNames.indexOf(name) < 0 && valueCaptures.indexOf(name) < 0)
-				valueCaptures.push(name);
-		}
 		if (extraRefNames != null) {
 			for (name in extraRefNames) {
 				final clean = sanitizeTypeName(name);
 				if (clean.length > 0 && refNames.indexOf(clean) < 0)
 					refNames.push(clean);
+			}
+		}
+		for (name in phpLambdaUsedCaptures(body, args.concat(valueCaptures))) {
+			if (refNames.indexOf(name) < 0 && valueCaptures.indexOf(name) < 0) {
+				if (phpShouldRefCaptureLocal(name))
+					refNames.push(name);
+				else
+					valueCaptures.push(name);
 			}
 		}
 		final useClause = phpLambdaUseClause(valueCaptures, refNames);
@@ -2118,6 +2124,82 @@ class SourceTargetCommon {
 			return;
 		for (expr in exprs)
 			phpCollectAssignedIdents(expr, names);
+	}
+
+	static function phpLaterAssignedLocalsByStmt(stmts:Array<HxStmt>):Array<Array<String>> {
+		final result = new Array<Array<String>>();
+		if (stmts == null)
+			return result;
+		var suffix = new Array<String>();
+		var i = stmts.length;
+		while (i > 0) {
+			i--;
+			result.unshift(suffix.copy());
+			final assigned = new Array<String>();
+			phpCollectAssignedIdentsInStmt(stmts[i], assigned);
+			for (name in assigned) {
+				final clean = sanitizeTypeName(name);
+				if (clean.length > 0 && suffix.indexOf(clean) < 0)
+					suffix.push(clean);
+			}
+		}
+		return result;
+	}
+
+	static function phpMergeRefCaptureLocals(a:Null<Array<String>>, b:Null<Array<String>>):Array<String> {
+		final merged = new Array<String>();
+		for (source in [a, b]) {
+			if (source == null)
+				continue;
+			for (name in source) {
+				final clean = sanitizeTypeName(name);
+				if (clean.length > 0 && merged.indexOf(clean) < 0)
+					merged.push(clean);
+			}
+		}
+		return merged;
+	}
+
+	static function phpCollectAssignedIdentsInStmt(stmt:HxStmt, names:Array<String>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				if (stmts != null)
+					for (inner in stmts)
+						phpCollectAssignedIdentsInStmt(inner, names);
+			case SVar(_, _, init, _):
+				if (init != null)
+					phpCollectAssignedIdents(init, names);
+			case SIf(cond, thenBranch, elseBranch, _):
+				phpCollectAssignedIdents(cond, names);
+				phpCollectAssignedIdentsInStmt(thenBranch, names);
+				if (elseBranch != null)
+					phpCollectAssignedIdentsInStmt(elseBranch, names);
+			case SForIn(_, iterable, body, _):
+				phpCollectAssignedIdents(iterable, names);
+				phpCollectAssignedIdentsInStmt(body, names);
+			case SForKeyValue(_, _, iterable, body, _):
+				phpCollectAssignedIdents(iterable, names);
+				phpCollectAssignedIdentsInStmt(body, names);
+			case SWhile(cond, body, _):
+				phpCollectAssignedIdents(cond, names);
+				phpCollectAssignedIdentsInStmt(body, names);
+			case SDoWhile(body, cond, _):
+				phpCollectAssignedIdentsInStmt(body, names);
+				phpCollectAssignedIdents(cond, names);
+			case SSwitch(scrutinee, _, bodies, _):
+				phpCollectAssignedIdents(scrutinee, names);
+				if (bodies != null)
+					for (inner in bodies)
+						phpCollectAssignedIdentsInStmt(inner, names);
+			case STry(tryBody, catches, _):
+				phpCollectAssignedIdentsInStmt(tryBody, names);
+				if (catches != null)
+					for (c in catches)
+						phpCollectAssignedIdentsInStmt(c.body, names);
+			case SExpr(expr, _) | SThrow(expr, _) | SReturn(expr, _):
+				phpCollectAssignedIdents(expr, names);
+			case SBreak(_) | SContinue(_) | SReturnVoid(_):
+		}
 	}
 
 	static function phpLambdaArgPrologue(args:Array<String>, renderedBody:String):String {
@@ -3281,6 +3363,25 @@ class SourceTargetCommon {
 		return typePath + "::$" + sanitizeTypeName(field);
 	}
 
+	static function phpStaticMethodValueAccess(typePath:String, field:String):String {
+		return "function(...$__hxhx_args) { return " + typePath + "::" + sanitizeTypeName(field) + "(...$__hxhx_args); }";
+	}
+
+	static function phpKnownStaticMethod(typePath:String, field:String):Bool {
+		return switch (typePath) {
+			case "Math":
+				switch (field) {
+					case "abs" | "acos" | "asin" | "atan" | "atan2" | "ceil" | "cos" | "exp" | "fceil" | "ffloor" | "floor" | "fround" | "isFinite" |
+						"isNaN" | "log" | "max" | "min" | "pow" | "round" | "sin" | "sqrt" | "tan":
+						true;
+					case _:
+						false;
+				}
+			case _:
+				false;
+		};
+	}
+
 	static function phpStaticMethodCall(typePath:String, field:String, args:Array<HxExpr>):String {
 		final rendered = [for (arg in args) renderExpr(Php, arg)].join(", ");
 		if (typePath == "String" && field == "fromCharCode" && args.length == 1)
@@ -3500,9 +3601,16 @@ class SourceTargetCommon {
 	static function renderStmts(target:SourceNativeTarget, stmts:Array<HxStmt>, indent:String):Array<String> {
 		final out = new Array<String>();
 		final localTypes = new haxe.ds.StringMap<String>();
-		for (stmt in stmts)
-			for (line in renderStmtWithLocals(target, stmt, indent, localTypes))
-				out.push(line);
+		final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
+		final baseRefCaptures = phpRenderRefCaptureLocals;
+		for (i in 0...stmts.length) {
+			final stmt = stmts[i];
+			final refCaptures = target == Php ? phpMergeRefCaptureLocals(baseRefCaptures, refCapturesByStmt[i]) : null;
+			withPhpRefCaptureLocals(target, refCaptures, function() {
+				for (line in renderStmtWithLocals(target, stmt, indent, localTypes))
+					out.push(line);
+			});
+		}
 		if (out.length == 0)
 			out.push(indent + emptyStmt(target));
 		return out;
@@ -3510,6 +3618,7 @@ class SourceTargetCommon {
 
 	static var phpRenderLocalTypes:Null<haxe.ds.StringMap<String>> = null;
 	static var phpRenderInstanceMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
+	static var phpRenderRefCaptureLocals:Null<Array<String>> = null;
 
 	static function withPhpLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
 		if (target != Php)
@@ -3531,6 +3640,27 @@ class SourceTargetCommon {
 			return "";
 		final clean = sanitizeTypeName(name);
 		return phpRenderLocalTypes.exists(clean) ? phpRenderLocalTypes.get(clean) : "";
+	}
+
+	static function withPhpRefCaptureLocals<T>(target:SourceNativeTarget, refCaptures:Null<Array<String>>, f:() -> T):T {
+		if (target != Php)
+			return f();
+		final previous = phpRenderRefCaptureLocals;
+		phpRenderRefCaptureLocals = refCaptures;
+		try {
+			final result = f();
+			phpRenderRefCaptureLocals = previous;
+			return result;
+		} catch (e) {
+			phpRenderRefCaptureLocals = previous;
+			throw e;
+		}
+	}
+
+	static function phpShouldRefCaptureLocal(name:String):Bool {
+		if (phpRenderRefCaptureLocals == null)
+			return false;
+		return phpRenderRefCaptureLocals.indexOf(sanitizeTypeName(name)) >= 0;
 	}
 
 	static function phpLocalHasInstanceMethod(name:String, field:String):Bool {
@@ -3605,9 +3735,16 @@ class SourceTargetCommon {
 				case SBlock(stmts, _):
 					final out = new Array<String>();
 					final blockLocalTypes = copyStringMap(localTypes);
-					for (s in stmts)
-						for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
-							out.push(line);
+					final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
+					final baseRefCaptures = phpRenderRefCaptureLocals;
+					for (i in 0...stmts.length) {
+						final s = stmts[i];
+						final refCaptures = target == Php ? phpMergeRefCaptureLocals(baseRefCaptures, refCapturesByStmt[i]) : null;
+						withPhpRefCaptureLocals(target, refCaptures, function() {
+							for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
+								out.push(line);
+						});
+					}
 					if (out.length == 0)
 						out.push(indent + emptyStmt(target));
 					return out;
@@ -9484,11 +9621,53 @@ class SourceTargetCommon {
 				lines.push("  return $old;");
 				lines.push("}");
 				lines.push("class Math {");
+				lines.push("  public static function abs($value) {");
+				lines.push("    return abs($value);");
+				lines.push("  }");
+				lines.push("  public static function acos($value) {");
+				lines.push("    return acos($value);");
+				lines.push("  }");
+				lines.push("  public static function asin($value) {");
+				lines.push("    return asin($value);");
+				lines.push("  }");
+				lines.push("  public static function atan($value) {");
+				lines.push("    return atan($value);");
+				lines.push("  }");
+				lines.push("  public static function atan2($y, $x) {");
+				lines.push("    return atan2($y, $x);");
+				lines.push("  }");
+				lines.push("  public static function cos($value) {");
+				lines.push("    return cos($value);");
+				lines.push("  }");
+				lines.push("  public static function exp($value) {");
+				lines.push("    return exp($value);");
+				lines.push("  }");
 				lines.push("  public static function isNaN($value) {");
 				lines.push("    return is_nan($value);");
 				lines.push("  }");
 				lines.push("  public static function isFinite($value) {");
 				lines.push("    return is_finite($value);");
+				lines.push("  }");
+				lines.push("  public static function log($value) {");
+				lines.push("    return log($value);");
+				lines.push("  }");
+				lines.push("  public static function max($a, $b) {");
+				lines.push("    return max($a, $b);");
+				lines.push("  }");
+				lines.push("  public static function min($a, $b) {");
+				lines.push("    return min($a, $b);");
+				lines.push("  }");
+				lines.push("  public static function pow($a, $b) {");
+				lines.push("    return pow($a, $b);");
+				lines.push("  }");
+				lines.push("  public static function sin($value) {");
+				lines.push("    return sin($value);");
+				lines.push("  }");
+				lines.push("  public static function sqrt($value) {");
+				lines.push("    return sqrt($value);");
+				lines.push("  }");
+				lines.push("  public static function tan($value) {");
+				lines.push("    return tan($value);");
 				lines.push("  }");
 				lines.push("  public static function floor($value) {");
 				lines.push("    return floor($value);");

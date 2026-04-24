@@ -5204,7 +5204,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(bytesContent, "class Bytes {", "PHP runtime should expose haxe.io.Bytes");
 		assertContains(bytesContent, "class BytesInput {", "PHP runtime should expose haxe.io.BytesInput");
 		assertContains(bytesContent, "class BytesOutput {", "PHP runtime should expose haxe.io.BytesOutput");
-		assertContains(bytesContent, "use ($b)", "PHP lambdas should capture outer locals that are read from closure bodies");
+		assertContains(bytesContent, "use ($b)", "PHP lambdas should value-capture outer object locals that are not reassigned later");
 		assertContains(bytesContent, "\\haxe\\io\\Bytes::fastGet", "PHP imported haxe.io.Bytes.fastGet aliases should call the runtime static method");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([bytesTmpRoot, "index.php"])]);
@@ -6156,6 +6156,42 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpClosureCapturesMutableLocalByReference():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_closure_mutable_capture_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var x = 4;",
+			"    var f = function() return x;",
+			"    Sys.println(f());",
+			"    x++;",
+			"    Sys.println(f());",
+			"    var o = { f: f };",
+			"    Sys.println(o.f());",
+			"    var m = { cos: Math.cos };",
+			"    Sys.println(m.cos(0));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "use (&$x)", "PHP closures should capture mutable locals by reference");
+		assertContains(content, "return Math::cos(...$__hxhx_args);", "PHP static method values should lower to callable closures");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP mutable closure capture support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "4\n5\n5\n1\n", "generated PHP mutable closure capture should observe later local mutation, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStringLengthInCharCodeAtArg():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_length_char_code_at_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6618,6 +6654,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpDateRuntimeSupport();
 		assertPhpInstanceMethodValueBind();
+		assertPhpClosureCapturesMutableLocalByReference();
 		assertPhpStringLengthInCharCodeAtArg();
 		assertPhpSameNameLocalStaticField();
 		assertPhpUnitLocalStaticFallback();
