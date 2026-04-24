@@ -28,15 +28,17 @@ class BackendContext {
 	public final emitFullBodies:Bool;
 	public final buildExecutable:Bool;
 	public final defines:haxe.ds.StringMap<String>;
+	public final resources:Array<BackendResource>;
 
 	public function new(outputDir:String, outputFileHint:Null<String>, mainModule:String, emitFullBodies:Bool, buildExecutable:Bool,
-			defines:haxe.ds.StringMap<String>) {
+			defines:haxe.ds.StringMap<String>, ?resources:Array<BackendResource>) {
 		this.outputDir = outputDir;
 		this.outputFileHint = outputFileHint;
 		this.mainModule = mainModule == null ? "" : mainModule;
 		this.emitFullBodies = emitFullBodies;
 		this.buildExecutable = buildExecutable;
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
+		this.resources = resources == null ? [] : resources;
 	}
 
 	public function hasDefine(name:String):Bool {

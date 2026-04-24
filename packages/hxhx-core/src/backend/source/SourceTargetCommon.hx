@@ -243,7 +243,7 @@ class SourceTargetCommon {
 		final outputPath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([context.outputDir, defaultFileName(target, className)]);
 		ensureParentDirectory(outputPath);
-		sys.io.File.saveContent(outputPath, renderProgram(target, program, main.decl, className, HxFunctionDecl.getBody(main.fn)));
+		sys.io.File.saveContent(outputPath, renderProgram(target, program, context, main.decl, className, HxFunctionDecl.getBody(main.fn)));
 		return new EmitResult(outputPath, [new EmitArtifact(artifactKind(target), outputPath)], false);
 	}
 
@@ -256,7 +256,7 @@ class SourceTargetCommon {
 		ensureDirectory(sourceDir);
 		ensureDirectory(classesDir);
 		ensureParentDirectory(jarPath);
-		final sourcePaths = emitJavaSourceSet(program, sourceDir, decl, className, body);
+		final sourcePaths = emitJavaSourceSet(program, context, sourceDir, decl, className, body);
 		final javacCode = Sys.command("javac", ["-d", classesDir].concat(sourcePaths));
 		if (javacCode != 0)
 			throw "Java source backend MVP javac failed with exit code " + javacCode;
@@ -343,14 +343,14 @@ class SourceTargetCommon {
 		return sourcePaths;
 	}
 
-	static function emitJavaSourceSet(program:GenIrProgram, sourceDir:String, mainDecl:HxModuleDecl, mainClassName:String,
+	static function emitJavaSourceSet(program:GenIrProgram, context:BackendContext, sourceDir:String, mainDecl:HxModuleDecl, mainClassName:String,
 			mainBody:Array<HxStmt>):Array<String> {
 		final sourcePaths = new Array<String>();
 		final seen = new Map<String, Bool>();
 		final mainPackage = HxModuleDecl.getPackagePath(mainDecl);
 		final mainPath = javaSourcePath(sourceDir, mainPackage, mainClassName);
 		ensureParentDirectory(mainPath);
-		sys.io.File.saveContent(mainPath, renderProgram(Java, program, mainDecl, mainClassName, mainBody));
+		sys.io.File.saveContent(mainPath, renderProgram(Java, program, context, mainDecl, mainClassName, mainBody));
 		sourcePaths.push(mainPath);
 		seen.set(javaQualifiedClassName(mainPackage, mainClassName), true);
 		for (typed in program.getTypedModules()) {
@@ -7605,6 +7605,35 @@ class SourceTargetCommon {
 		lines.push("}");
 	}
 
+	static function appendPhpResourceRuntime(lines:Array<String>, resources:Array<backend.BackendResource>):Void {
+		lines.push("  class Resource {");
+		lines.push("    private static $content = [");
+		for (resource in resources) {
+			lines.push("      [\"name\" => " + quotePhpString(resource.name) + ", \"hex\" => " + quotePhpString(resource.data.toHex()) + "],");
+		}
+		lines.push("    ];");
+		lines.push("    private static function find($name) {");
+		lines.push("      foreach (self::$content as $entry) if ($entry[\"name\"] === strval($name)) return $entry;");
+		lines.push("      return null;");
+		lines.push("    }");
+		lines.push("    public static function listNames() {");
+		lines.push("      $names = [];");
+		lines.push("      foreach (self::$content as $entry) $names[] = $entry[\"name\"];");
+		lines.push("      return new \\__HxArray($names);");
+		lines.push("    }");
+		lines.push("    public static function getString($name) {");
+		lines.push("      $entry = self::find($name);");
+		lines.push("      if ($entry === null) return null;");
+		lines.push("      return \\haxe\\io\\Bytes::ofHex($entry[\"hex\"])->toString();");
+		lines.push("    }");
+		lines.push("    public static function getBytes($name) {");
+		lines.push("      $entry = self::find($name);");
+		lines.push("      if ($entry === null) return null;");
+		lines.push("      return \\haxe\\io\\Bytes::ofHex($entry[\"hex\"]);");
+		lines.push("    }");
+		lines.push("  }");
+	}
+
 	static function renderPhpSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
@@ -9345,7 +9374,8 @@ class SourceTargetCommon {
 		return sanitizePhpTypeName(parts[parts.length - 1]);
 	}
 
-	static function renderProgram(target:SourceNativeTarget, program:GenIrProgram, decl:HxModuleDecl, className:String, body:Array<HxStmt>):String {
+	static function renderProgram(target:SourceNativeTarget, program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String,
+			body:Array<HxStmt>):String {
 		final lines = new Array<String>();
 		final previousPhpInstanceMethodsByType = phpRenderInstanceMethodsByType;
 		final previousPhpInstanceMethodArgsByType = phpRenderInstanceMethodArgsByType;
@@ -9767,6 +9797,7 @@ class SourceTargetCommon {
 				lines.push("      return json_encode(self::encodeValue($value, $replacer, \"\"), JSON_UNESCAPED_SLASHES);");
 				lines.push("    }");
 				lines.push("  }");
+				appendPhpResourceRuntime(lines, context.resources);
 				lines.push("}");
 				lines.push("namespace haxe\\format {");
 				lines.push("  class JsonParser {");
@@ -10292,7 +10323,7 @@ class SourceTargetCommon {
 				lines.push("    return preg_quote(strval($value));");
 				lines.push("  }");
 				lines.push("}");
-				lines.push("class __HxArray {");
+				lines.push("class __HxArray implements \\ArrayAccess {");
 				lines.push("  private $items;");
 				lines.push("  public function __construct($items) {");
 				lines.push("    $this->items = $items;");
@@ -10301,8 +10332,25 @@ class SourceTargetCommon {
 				lines.push("    $index = array_search($value, $this->items, true);");
 				lines.push("    return $index === false ? -1 : $index;");
 				lines.push("  }");
+				lines.push("  public function filter($predicate) {");
+				lines.push("    $out = [];");
+				lines.push("    foreach ($this->items as $item) if ($predicate === null || $predicate($item)) $out[] = $item;");
+				lines.push("    return new __HxArray($out);");
+				lines.push("  }");
 				lines.push("  public function toArray() {");
 				lines.push("    return $this->items;");
+				lines.push("  }");
+				lines.push("  public function offsetExists($offset): bool {");
+				lines.push("    return array_key_exists($offset, $this->items);");
+				lines.push("  }");
+				lines.push("  public function offsetGet($offset): mixed {");
+				lines.push("    return $this->items[$offset] ?? null;");
+				lines.push("  }");
+				lines.push("  public function offsetSet($offset, $value): void {");
+				lines.push("    if ($offset === null) $this->items[] = $value; else $this->items[$offset] = $value;");
+				lines.push("  }");
+				lines.push("  public function offsetUnset($offset): void {");
+				lines.push("    unset($this->items[$offset]);");
 				lines.push("  }");
 				lines.push("}");
 				lines.push("class __HxArrayIterator {");

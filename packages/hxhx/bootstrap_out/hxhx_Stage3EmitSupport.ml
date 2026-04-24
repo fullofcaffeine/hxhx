@@ -45,7 +45,7 @@ let isTrueEnv = fun name -> let tempString = ref ("" : string) in let s = (HxSys
   HxString.equals (!tempString) "1" || HxString.equals (!tempString) "true" || HxString.equals (!tempString) "yes"
 )
 
-let emitWithBackend = fun backend expanded backendId typedModuleCount cwd outAbs targetOutputHintRaw targetOutputDirHintRaw parsedMain emitFullBodies supportsCustomOutputFile supportsBuildExecutable definesMap -> (
+let emitWithBackend = fun backend expanded backendId typedModuleCount cwd outAbs targetOutputHintRaw targetOutputDirHintRaw parsedMain emitFullBodies supportsCustomOutputFile supportsBuildExecutable definesMap resources -> (
   ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline "stage3_driver=before_output_file_hint") else ());
   let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (if supportsCustomOutputFile && targetOutputHintRaw != Obj.magic (HxRuntime.hx_null) && HxString.length targetOutputHintRaw > 0 then if Haxe_io_Path.isAbsolute (targetOutputHintRaw : string) then let __assign_8 = Obj.magic (Haxe_io_Path.normalize (targetOutputHintRaw : string) : string) in (
@@ -74,7 +74,7 @@ let emitWithBackend = fun backend expanded backendId typedModuleCount cwd outAbs
           tempString := __assign_13;
           __assign_13
         ));
-        let context = Obj.magic (Backend_BackendContext.create (!tempString : string) (outputFileHint : string) (parsedMain : string) emitFullBodies supportsBuildExecutable (Obj.magic definesMap)) in (
+        let context = Obj.magic (Backend_BackendContext.create (!tempString : string) (outputFileHint : string) (parsedMain : string) emitFullBodies supportsBuildExecutable (Obj.magic definesMap) (Obj.magic resources)) in (
           ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore ((
             ignore (print_endline "stage3_driver=after_backend_context");
             print_endline "stage3_driver=before_emit_trace_backend_id"

@@ -174,6 +174,24 @@ class Stage3Compiler {
 		return Stage3PathSupport.absFromCwd(cwd, path);
 	}
 
+	static function collectBackendResources(specs:Array<String>, cwd:String):Array<backend.BackendResource> {
+		final out = new Array<backend.BackendResource>();
+		for (spec in specs) {
+			if (spec == null || spec.length == 0)
+				continue;
+			final separator = spec.lastIndexOf("@");
+			final filePart = separator >= 0 ? spec.substr(0, separator) : spec;
+			final namePart = separator >= 0 ? spec.substr(separator + 1) : haxe.io.Path.withoutDirectory(filePart);
+			if (filePart.length == 0 || namePart.length == 0)
+				throw "invalid --resource spec: " + spec;
+			final path = absFromCwd(cwd, filePart);
+			if (!sys.FileSystem.exists(path))
+				throw "resource file not found: " + path;
+			out.push({name: namePart, data: sys.io.File.getBytes(path)});
+		}
+		return out;
+	}
+
 	/**
 		Infer a module/type root from a `--display <path@mode>` request.
 
@@ -268,6 +286,7 @@ class Stage3Compiler {
 		final parsedMain = Stage1Args.getMain(parsed);
 		final parsedRoots = Stage1Args.getRoots(parsed);
 		final parsedMacros = Stage1Args.getMacros(parsed);
+		final parsedResourceSpecs = Stage1Args.getResourceSpecs(parsed);
 		final parsedCwd = Stage1Args.getCwd(parsed);
 		final parsedClassPaths = Stage1Args.getClassPaths(parsed);
 		final parsedLibs = Stage1Args.getLibs(parsed);
@@ -362,6 +381,11 @@ class Stage3Compiler {
 		}
 
 		final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
+		final backendResources = try {
+			collectBackendResources(parsedResourceSpecs, cwd);
+		} catch (e:String) {
+			return error(e);
+		}
 
 		// Macro state exists even in non-macro runs; it is a no-op unless the macro host calls back.
 		hxhx.macro.MacroState.reset();
@@ -828,7 +852,7 @@ class Stage3Compiler {
 
 		final emitted = try {
 			Stage3EmitSupport.emitWithBackend(backend, expanded, backendId, typedModules.length, cwd, outAbs, targetOutputHintRaw, targetOutputDirHintRaw,
-				parsedMain, emitFullBodies, supportsCustomOutputFile, supportsBuildExecutable, definesMap);
+				parsedMain, emitFullBodies, supportsCustomOutputFile, supportsBuildExecutable, definesMap, backendResources);
 		} catch (e:String) {
 			closeMacroSession();
 			return error("emit failed: " + e);

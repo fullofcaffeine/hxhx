@@ -6722,6 +6722,49 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpHaxeResourceRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_resource_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final textName = "re/s?!%[]))(\"'1.txt";
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var names = haxe.Resource.listNames().filter(function(name) return name != \"serializedValues.txt\");",
+			"    Sys.println(names.length);",
+			"    Sys.println(names[0] == \"re/s?!%[]))(\\\"'1.txt\");",
+			"    Sys.println(haxe.Resource.getString(\"re/s?!%[]))(\\\"'1.txt\"));",
+			"    Sys.println(haxe.Resource.getBytes(\"re/s?!%[]))(\\\"'1.bin\").sub(0, 5).toString());",
+			"    Sys.println(haxe.Resource.getBytes(\"re/s?!%[]))(\\\"'1.bin\").get(5));",
+			"    Sys.println(haxe.Resource.getString(\"nope\") == null);",
+			"    Sys.println(haxe.Resource.getBytes(\"nope\") == null);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		final resources = [
+			{name: textName, data: haxe.io.Bytes.ofString("Héllo World !")},
+			{name: "re/s?!%[]))(\"'1.bin", data: haxe.io.Bytes.ofHex("48656c6c6f0021576f726c64")},
+			{name: "serializedValues.txt", data: haxe.io.Bytes.ofString("skip")}
+		];
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>(), resources));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Resource {", "PHP runtime should expose haxe.Resource");
+		assertContains(content, "public static function listNames()", "PHP haxe.Resource should list embedded resource names");
+		assertContains(content, "public static function getBytes($name)", "PHP haxe.Resource should expose embedded bytes");
+		assertContains(content, "48656c6c6f0021576f726c64", "PHP haxe.Resource should embed binary payloads as hex");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP haxe.Resource runtime support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "2\n1\nHéllo World !\nHello\n0\n1\n1\n", "generated PHP haxe.Resource output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStdDateToolsSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_datetools_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7905,6 +7948,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpHaxeJsonNonFiniteMathConstants();
 		assertPhpHaxeFormatJsonPrinterRuntimeSupport();
 		assertPhpHaxeFormatJsonParserRuntimeSupport();
+		assertPhpHaxeResourceRuntimeSupport();
 		assertPhpStdDateToolsSupport();
 		assertPhpPackageQualifiedClassReference();
 		assertPhpStdStringMapClassReference();

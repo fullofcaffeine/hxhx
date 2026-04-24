@@ -234,13 +234,14 @@ class Stage1Args {
 	public final defines:Array<String>;
 	public final libs:Array<String>;
 	public final macros:Array<String>;
+	public final resourceSpecs:Array<String>;
 	public final displayRequest:Null<String>;
 	public final cwd:String;
 	public final hadCmd:Bool;
 	public final cmdCommands:Array<String>;
 
 	function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>,
-			displayRequest:Null<String>, cwd:String, hadCmd:Bool, cmdCommands:Array<String>) {
+			resourceSpecs:Array<String>, displayRequest:Null<String>, cwd:String, hadCmd:Bool, cmdCommands:Array<String>) {
 		this.classPaths = classPaths;
 		this.main = main;
 		this.noOutput = noOutput;
@@ -248,6 +249,7 @@ class Stage1Args {
 		this.defines = defines;
 		this.libs = libs;
 		this.macros = macros;
+		this.resourceSpecs = resourceSpecs == null ? [] : resourceSpecs;
 		this.displayRequest = displayRequest;
 		this.cwd = cwd;
 		this.hadCmd = hadCmd;
@@ -266,6 +268,7 @@ class Stage1Args {
 		final defines = new Array<String>();
 		final libs = new Array<String>();
 		final macros = new Array<String>();
+		final resourceSpecs = new Array<String>();
 		final cmdCommands = new Array<String>();
 		var displayRequest:Null<String> = null;
 		var cwd = ".";
@@ -313,6 +316,7 @@ class Stage1Args {
 						Sys.println("hxhx(stage1): missing value after --resource");
 						return null;
 					}
+					resourceSpecs.push(expanded[i + 1]);
 					i += 2;
 				// Target selection flags: Stage3 bring-up does not emit target artifacts, but we must
 				// consume these flags (and their output path) so the output file is not mis-parsed as
@@ -479,7 +483,7 @@ class Stage1Args {
 			stdRoot = inferStdRoot(cwd);
 		if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1)
 			classPaths.push(stdRoot);
-		return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, displayRequest, cwd, hadCmd, cmdCommands);
+		return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, resourceSpecs, displayRequest, cwd, hadCmd, cmdCommands);
 	}
 
 	static function inferStdRoot(cwd:String):String {
@@ -633,6 +637,9 @@ class Stage1Args {
 
 	public static function getMacros(a:Stage1Args):Array<String>
 		return a.macros;
+
+	public static function getResourceSpecs(a:Stage1Args):Array<String>
+		return a.resourceSpecs;
 
 	public static function getDisplayRequest(a:Stage1Args):Null<String>
 		return a.displayRequest;
