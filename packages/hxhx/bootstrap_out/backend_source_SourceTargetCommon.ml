@@ -20350,6 +20350,7 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "    private static function encodeValue($value, $replacer = null, $key = \"\") {");
       ignore (HxArray.push lines "      if (is_callable($replacer)) $value = $replacer(strval($key), $value);");
       ignore (HxArray.push lines "      if ($value instanceof \\__HxArray) $value = $value->toArray();");
+      ignore (HxArray.push lines "      if (is_callable($value)) return \"<fun>\";");
       ignore (HxArray.push lines "      if (is_array($value)) {");
       ignore (HxArray.push lines "        $out = [];");
       ignore (HxArray.push lines "        foreach ($value as $itemKey => $item) $out[$itemKey] = self::encodeValue($item, $replacer, $itemKey);");
@@ -20360,6 +20361,7 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "        $out = new \\stdClass();");
       ignore (HxArray.push lines "        foreach (get_object_vars($value) as $key => $item) {");
       ignore (HxArray.push lines "          if (strpos($key, \"__hx_\") === 0) continue;");
+      ignore (HxArray.push lines "          if (is_callable($item)) continue;");
       ignore (HxArray.push lines "          $out->$key = self::encodeValue($item, $replacer, $key);");
       ignore (HxArray.push lines "        }");
       ignore (HxArray.push lines "        return $out;");
@@ -20369,6 +20371,13 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    public static function stringify($value, $replacer = null, $space = null) {");
       ignore (HxArray.push lines "      return json_encode(self::encodeValue($value, $replacer, \"\"), JSON_UNESCAPED_SLASHES);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "namespace haxe\\format {");
+      ignore (HxArray.push lines "  class JsonPrinter {");
+      ignore (HxArray.push lines "    public static function print($value, $replacer = null, $space = null) {");
+      ignore (HxArray.push lines "      return \\haxe\\Json::stringify($value, $replacer, $space);");
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");

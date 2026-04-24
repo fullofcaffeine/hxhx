@@ -9742,6 +9742,7 @@ class SourceTargetCommon {
 				lines.push("    private static function encodeValue($value, $replacer = null, $key = \"\") {");
 				lines.push("      if (is_callable($replacer)) $value = $replacer(strval($key), $value);");
 				lines.push("      if ($value instanceof \\__HxArray) $value = $value->toArray();");
+				lines.push("      if (is_callable($value)) return \"<fun>\";");
 				lines.push("      if (is_array($value)) {");
 				lines.push("        $out = [];");
 				lines.push("        foreach ($value as $itemKey => $item) $out[$itemKey] = self::encodeValue($item, $replacer, $itemKey);");
@@ -9752,6 +9753,7 @@ class SourceTargetCommon {
 				lines.push("        $out = new \\stdClass();");
 				lines.push("        foreach (get_object_vars($value) as $key => $item) {");
 				lines.push("          if (strpos($key, \"__hx_\") === 0) continue;");
+				lines.push("          if (is_callable($item)) continue;");
 				lines.push("          $out->$key = self::encodeValue($item, $replacer, $key);");
 				lines.push("        }");
 				lines.push("        return $out;");
@@ -9761,6 +9763,13 @@ class SourceTargetCommon {
 				lines.push("    }");
 				lines.push("    public static function stringify($value, $replacer = null, $space = null) {");
 				lines.push("      return json_encode(self::encodeValue($value, $replacer, \"\"), JSON_UNESCAPED_SLASHES);");
+				lines.push("    }");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("namespace haxe\\format {");
+				lines.push("  class JsonPrinter {");
+				lines.push("    public static function print($value, $replacer = null, $space = null) {");
+				lines.push("      return \\haxe\\Json::stringify($value, $replacer, $space);");
 				lines.push("    }");
 				lines.push("  }");
 				lines.push("}");
