@@ -869,9 +869,16 @@ class SourceTargetCommon {
 				case _:
 			}
 		}
-		final a = lvalueExpr(target, left);
-		if (isAssignmentOp(op))
+		if (isAssignmentOp(op)) {
+			final a = lvalueExpr(target, left);
 			return a + " " + mapped + " " + b;
+		}
+		final a = switch (left) {
+			case EField(_, "length") if (target == Php):
+				renderExpr(target, left);
+			case _:
+				lvalueExpr(target, left);
+		};
 		return "(" + a + " " + mapped + " " + b + ")";
 	}
 

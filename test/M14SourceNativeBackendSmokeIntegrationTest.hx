@@ -6156,6 +6156,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStringLengthInCharCodeAtArg():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_length_char_code_at_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    final value = '[foo => 1]';",
+			"    Sys.println(value.charCodeAt(value.length - 1));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_length($value) - 1", "PHP string .length inside charCodeAt arguments should lower through __hxhx_length");
+		assertNotContains(content, "$value->length - 1", "PHP string .length should not emit object-property access inside charCodeAt arguments");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP string length/charCodeAt support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "93\n", "generated PHP string length/charCodeAt support should return the final char code, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSameNameLocalStaticField():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_name_local_static_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6589,6 +6618,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpDateRuntimeSupport();
 		assertPhpInstanceMethodValueBind();
+		assertPhpStringLengthInCharCodeAtArg();
 		assertPhpSameNameLocalStaticField();
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();
