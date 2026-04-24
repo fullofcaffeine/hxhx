@@ -9737,7 +9737,9 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("  class Json {");
 				lines.push("    public static function parse($text) {");
-				lines.push("      return json_decode(strval($text));");
+				lines.push("      $decoded = json_decode(strval($text));");
+				lines.push("      if (json_last_error() !== JSON_ERROR_NONE) throw new \\Exception(json_last_error_msg());");
+				lines.push("      return $decoded;");
 				lines.push("    }");
 				lines.push("    private static function encodeValue($value, $replacer = null, $key = \"\") {");
 				lines.push("      if (is_callable($replacer)) $value = $replacer(strval($key), $value);");
@@ -9767,6 +9769,11 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("}");
 				lines.push("namespace haxe\\format {");
+				lines.push("  class JsonParser {");
+				lines.push("    public static function parse($text) {");
+				lines.push("      return \\haxe\\Json::parse($text);");
+				lines.push("    }");
+				lines.push("  }");
 				lines.push("  class JsonPrinter {");
 				lines.push("    public static function print($value, $replacer = null, $space = null) {");
 				lines.push("      return \\haxe\\Json::stringify($value, $replacer, $space);");

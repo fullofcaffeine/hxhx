@@ -20345,7 +20345,9 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  class Json {");
       ignore (HxArray.push lines "    public static function parse($text) {");
-      ignore (HxArray.push lines "      return json_decode(strval($text));");
+      ignore (HxArray.push lines "      $decoded = json_decode(strval($text));");
+      ignore (HxArray.push lines "      if (json_last_error() !== JSON_ERROR_NONE) throw new \\Exception(json_last_error_msg());");
+      ignore (HxArray.push lines "      return $decoded;");
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    private static function encodeValue($value, $replacer = null, $key = \"\") {");
       ignore (HxArray.push lines "      if (is_callable($replacer)) $value = $replacer(strval($key), $value);");
@@ -20375,6 +20377,11 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "namespace haxe\\format {");
+      ignore (HxArray.push lines "  class JsonParser {");
+      ignore (HxArray.push lines "    public static function parse($text) {");
+      ignore (HxArray.push lines "      return \\haxe\\Json::parse($text);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  class JsonPrinter {");
       ignore (HxArray.push lines "    public static function print($value, $replacer = null, $space = null) {");
       ignore (HxArray.push lines "      return \\haxe\\Json::stringify($value, $replacer, $space);");
