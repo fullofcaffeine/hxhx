@@ -1356,7 +1356,10 @@ class SourceTargetCommon {
 					return packageTypeRef;
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
-					if (typePath == "Reflect" && field == "compare")
+					final mathConstant = typePath == "Math" ? phpMathConstantAccess(field) : null;
+					if (mathConstant != null)
+						mathConstant;
+					else if (typePath == "Reflect" && field == "compare")
 						"[Reflect::class, \"compare\"]";
 					else if (phpKnownStaticMethod(typePath, field))
 						phpStaticMethodValueAccess(typePath, field);
@@ -3595,6 +3598,15 @@ class SourceTargetCommon {
 		if (!phpInStaticPropertyAccessor(cleanField) && phpKnownStaticMethod(typePath, getter))
 			return typePath + "::" + getter + "()";
 		return typePath + "::$" + cleanField;
+	}
+
+	static function phpMathConstantAccess(field:String):Null<String> {
+		return switch (field) {
+			case "POSITIVE_INFINITY": "INF";
+			case "NEGATIVE_INFINITY": "-INF";
+			case "NaN": "NAN";
+			case _: null;
+		};
 	}
 
 	static function phpInStaticPropertyAccessor(field:String):Bool {
@@ -9744,6 +9756,7 @@ class SourceTargetCommon {
 				lines.push("        }");
 				lines.push("        return $out;");
 				lines.push("      }");
+				lines.push("      if (is_float($value) && (is_nan($value) || is_infinite($value))) return null;");
 				lines.push("      return $value;");
 				lines.push("    }");
 				lines.push("    public static function stringify($value, $replacer = null, $space = null) {");

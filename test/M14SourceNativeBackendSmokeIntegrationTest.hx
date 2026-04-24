@@ -6624,6 +6624,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpHaxeJsonNonFiniteMathConstants():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_json_nonfinite_math_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(haxe.Json.stringify(Math.POSITIVE_INFINITY));",
+			"    Sys.println(haxe.Json.stringify(Math.NEGATIVE_INFINITY));",
+			"    Sys.println(haxe.Json.stringify(Math.NaN));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "haxe\\Json::stringify(INF)", "PHP Math.POSITIVE_INFINITY should lower to the native INF constant");
+		assertContains(content, "haxe\\Json::stringify(-INF)", "PHP Math.NEGATIVE_INFINITY should lower to the native -INF constant");
+		assertContains(content, "haxe\\Json::stringify(NAN)", "PHP Math.NaN should lower to the native NAN constant");
+		assertNotContains(content, "Math::$POSITIVE_INFINITY", "PHP Math.POSITIVE_INFINITY should not render as an undeclared static property");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP haxe.Json non-finite Math constants should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "null\nnull\nnull\n", "generated PHP haxe.Json non-finite Math constants output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStdDateToolsSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_datetools_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7804,6 +7836,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpDateRuntimeSupport();
 		assertPhpHaxeJsonRuntimeSupport();
 		assertPhpHaxeJsonStringifyReplacer();
+		assertPhpHaxeJsonNonFiniteMathConstants();
 		assertPhpStdDateToolsSupport();
 		assertPhpPackageQualifiedClassReference();
 		assertPhpStdStringMapClassReference();
