@@ -9741,6 +9741,11 @@ class SourceTargetCommon {
 				lines.push("    return floor($value + 0.5);");
 				lines.push("  }");
 				lines.push("}");
+				lines.push("class Type {");
+				lines.push("  public static function enumEq($left, $right) {");
+				lines.push("    return __hxhx_equals($left, $right);");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("class Sys {");
 				lines.push("  public static function args() {");
 				lines.push("    $argv = $GLOBALS[\"argv\"] ?? [];");

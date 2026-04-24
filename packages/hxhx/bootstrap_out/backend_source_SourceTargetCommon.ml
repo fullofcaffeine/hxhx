@@ -19291,6 +19291,11 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "    return floor($value + 0.5);");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "class Type {");
+      ignore (HxArray.push lines "  public static function enumEq($left, $right) {");
+      ignore (HxArray.push lines "    return __hxhx_equals($left, $right);");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "class Sys {");
       ignore (HxArray.push lines "  public static function args() {");
       ignore (HxArray.push lines "    $argv = $GLOBALS[\"argv\"] ?? [];");

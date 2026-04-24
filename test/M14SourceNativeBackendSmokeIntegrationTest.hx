@@ -1615,6 +1615,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(e));",
 			"    Sys.println(Std.string([e]));",
 			"    Sys.println(Std.string(e2));",
+			"    Sys.println(Type.enumEq(e2, MyEnum.C(1, \"x\")));",
 			"  }",
 			"}",
 		].join("\n");
@@ -4507,12 +4508,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "return new __HxAnon([\"__hx_ctor\" => \"C\", \"__hx_index\" => 0, \"__hx_params\" => [$i, $s]]);",
 			"PHP scanned enum constructors should return Haxe-like runtime enum objects");
 		assertContains(content, "return MyEnum::C(...$__hxhx_args);", "PHP enum constructor values should lower to callable closures");
+		assertContains(content, "Type::enumEq($e2, MyEnum::C(1, \"x\"))", "PHP Type.enumEq should remain a static runtime call");
 		assertContains(content, "echo __hxhx_add_string($e) . PHP_EOL;", "PHP Std.string on enum values should use Haxe stringification");
 		assertContains(content, "echo __hxhx_add_string([$e]) . PHP_EOL;", "PHP Std.string on enum arrays should recursively stringify enum values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum constructor values should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n", "generated PHP enum constructor values should stringify correctly, got:\n" + run.stdout);
+			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\n", "generated PHP enum constructor values should stringify correctly, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
