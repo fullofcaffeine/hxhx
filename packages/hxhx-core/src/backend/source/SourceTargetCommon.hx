@@ -6384,6 +6384,58 @@ class SourceTargetCommon {
 		lines.push("}");
 	}
 
+	static function appendPhpDateRuntime(lines:Array<String>):Void {
+		lines.push("class Date {");
+		lines.push("  private $timestamp;");
+		lines.push("  public function __construct($year, $month, $day, $hour, $min, $sec) {");
+		lines.push("    $this->timestamp = mktime((int)$hour, (int)$min, (int)$sec, (int)$month + 1, (int)$day, (int)$year);");
+		lines.push("  }");
+		lines.push("  private static function fromSeconds($seconds) {");
+		lines.push("    $date = new self(1970, 0, 1, 0, 0, 0);");
+		lines.push("    $date->timestamp = (float)$seconds;");
+		lines.push("    return $date;");
+		lines.push("  }");
+		lines.push("  public static function now() { return self::fromSeconds(microtime(true)); }");
+		lines.push("  public static function fromTime($t) { return self::fromSeconds(((float)$t) / 1000.0); }");
+		lines.push("  public static function fromString($s) {");
+		lines.push("    $text = strval($s);");
+		lines.push("    if (preg_match('/^(\\d{4})-(\\d{2})-(\\d{2})(?:[ T](\\d{2}):(\\d{2}):(\\d{2}))?$/', $text, $m)) {");
+		lines.push("      $hour = isset($m[4]) && $m[4] !== '' ? (int)$m[4] : 0;");
+		lines.push("      $min = isset($m[5]) && $m[5] !== '' ? (int)$m[5] : 0;");
+		lines.push("      $sec = isset($m[6]) && $m[6] !== '' ? (int)$m[6] : 0;");
+		lines.push("      return new self((int)$m[1], (int)$m[2] - 1, (int)$m[3], $hour, $min, $sec);");
+		lines.push("    }");
+		lines.push("    if (preg_match('/^(\\d{2}):(\\d{2}):(\\d{2})$/', $text, $m)) {");
+		lines.push("      return self::fromSeconds(gmmktime((int)$m[1], (int)$m[2], (int)$m[3], 1, 1, 1970));");
+		lines.push("    }");
+		lines.push("    throw new \\Exception(\"Invalid date format: \" . $text);");
+		lines.push("  }");
+		lines.push("  private function local($format) { return (int)date($format, (int)floor($this->timestamp)); }");
+		lines.push("  private function utc($format) { return (int)gmdate($format, (int)floor($this->timestamp)); }");
+		lines.push("  public function getTime() { return $this->timestamp * 1000.0; }");
+		lines.push("  public function getHours() { return $this->local(\"G\"); }");
+		lines.push("  public function getMinutes() { return $this->local(\"i\"); }");
+		lines.push("  public function getSeconds() { return $this->local(\"s\"); }");
+		lines.push("  public function getFullYear() { return $this->local(\"Y\"); }");
+		lines.push("  public function getMonth() { return $this->local(\"n\") - 1; }");
+		lines.push("  public function getDate() { return $this->local(\"j\"); }");
+		lines.push("  public function getDay() { return $this->local(\"w\"); }");
+		lines.push("  public function getUTCHours() { return $this->utc(\"G\"); }");
+		lines.push("  public function getUTCMinutes() { return $this->utc(\"i\"); }");
+		lines.push("  public function getUTCSeconds() { return $this->utc(\"s\"); }");
+		lines.push("  public function getUTCFullYear() { return $this->utc(\"Y\"); }");
+		lines.push("  public function getUTCMonth() { return $this->utc(\"n\") - 1; }");
+		lines.push("  public function getUTCDate() { return $this->utc(\"j\"); }");
+		lines.push("  public function getUTCDay() { return $this->utc(\"w\"); }");
+		lines.push("  public function getTimezoneOffset() {");
+		lines.push("    $dt = (new \\DateTimeImmutable(\"@\" . strval((int)floor($this->timestamp))))->setTimezone(new \\DateTimeZone(date_default_timezone_get()));");
+		lines.push("    return (int)(-((int)$dt->format(\"Z\")) / 60);");
+		lines.push("  }");
+		lines.push("  public function toString() { return date(\"Y-m-d H:i:s\", (int)floor($this->timestamp)); }");
+		lines.push("  public function __toString() { return $this->toString(); }");
+		lines.push("}");
+	}
+
 	static function renderPhpSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
@@ -8547,6 +8599,7 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("}");
 				appendPhpXmlRuntime(lines);
+				appendPhpDateRuntime(lines);
 				lines.push("class EReg {");
 				lines.push("  private $pattern;");
 				lines.push("  private $modifiers;");

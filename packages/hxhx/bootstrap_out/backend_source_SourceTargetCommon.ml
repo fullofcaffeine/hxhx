@@ -6673,6 +6673,58 @@ let appendPhpXmlRuntime = fun lines -> ignore ((
   HxArray.push lines "}"
 ))
 
+let appendPhpDateRuntime = fun lines -> ignore ((
+  ignore (HxArray.push lines "class Date {");
+  ignore (HxArray.push lines "  private $timestamp;");
+  ignore (HxArray.push lines "  public function __construct($year, $month, $day, $hour, $min, $sec) {");
+  ignore (HxArray.push lines "    $this->timestamp = mktime((int)$hour, (int)$min, (int)$sec, (int)$month + 1, (int)$day, (int)$year);");
+  ignore (HxArray.push lines "  }");
+  ignore (HxArray.push lines "  private static function fromSeconds($seconds) {");
+  ignore (HxArray.push lines "    $date = new self(1970, 0, 1, 0, 0, 0);");
+  ignore (HxArray.push lines "    $date->timestamp = (float)$seconds;");
+  ignore (HxArray.push lines "    return $date;");
+  ignore (HxArray.push lines "  }");
+  ignore (HxArray.push lines "  public static function now() { return self::fromSeconds(microtime(true)); }");
+  ignore (HxArray.push lines "  public static function fromTime($t) { return self::fromSeconds(((float)$t) / 1000.0); }");
+  ignore (HxArray.push lines "  public static function fromString($s) {");
+  ignore (HxArray.push lines "    $text = strval($s);");
+  ignore (HxArray.push lines "    if (preg_match('/^(\\d{4})-(\\d{2})-(\\d{2})(?:[ T](\\d{2}):(\\d{2}):(\\d{2}))?$/', $text, $m)) {");
+  ignore (HxArray.push lines "      $hour = isset($m[4]) && $m[4] !== '' ? (int)$m[4] : 0;");
+  ignore (HxArray.push lines "      $min = isset($m[5]) && $m[5] !== '' ? (int)$m[5] : 0;");
+  ignore (HxArray.push lines "      $sec = isset($m[6]) && $m[6] !== '' ? (int)$m[6] : 0;");
+  ignore (HxArray.push lines "      return new self((int)$m[1], (int)$m[2] - 1, (int)$m[3], $hour, $min, $sec);");
+  ignore (HxArray.push lines "    }");
+  ignore (HxArray.push lines "    if (preg_match('/^(\\d{2}):(\\d{2}):(\\d{2})$/', $text, $m)) {");
+  ignore (HxArray.push lines "      return self::fromSeconds(gmmktime((int)$m[1], (int)$m[2], (int)$m[3], 1, 1, 1970));");
+  ignore (HxArray.push lines "    }");
+  ignore (HxArray.push lines "    throw new \\Exception(\"Invalid date format: \" . $text);");
+  ignore (HxArray.push lines "  }");
+  ignore (HxArray.push lines "  private function local($format) { return (int)date($format, (int)floor($this->timestamp)); }");
+  ignore (HxArray.push lines "  private function utc($format) { return (int)gmdate($format, (int)floor($this->timestamp)); }");
+  ignore (HxArray.push lines "  public function getTime() { return $this->timestamp * 1000.0; }");
+  ignore (HxArray.push lines "  public function getHours() { return $this->local(\"G\"); }");
+  ignore (HxArray.push lines "  public function getMinutes() { return $this->local(\"i\"); }");
+  ignore (HxArray.push lines "  public function getSeconds() { return $this->local(\"s\"); }");
+  ignore (HxArray.push lines "  public function getFullYear() { return $this->local(\"Y\"); }");
+  ignore (HxArray.push lines "  public function getMonth() { return $this->local(\"n\") - 1; }");
+  ignore (HxArray.push lines "  public function getDate() { return $this->local(\"j\"); }");
+  ignore (HxArray.push lines "  public function getDay() { return $this->local(\"w\"); }");
+  ignore (HxArray.push lines "  public function getUTCHours() { return $this->utc(\"G\"); }");
+  ignore (HxArray.push lines "  public function getUTCMinutes() { return $this->utc(\"i\"); }");
+  ignore (HxArray.push lines "  public function getUTCSeconds() { return $this->utc(\"s\"); }");
+  ignore (HxArray.push lines "  public function getUTCFullYear() { return $this->utc(\"Y\"); }");
+  ignore (HxArray.push lines "  public function getUTCMonth() { return $this->utc(\"n\") - 1; }");
+  ignore (HxArray.push lines "  public function getUTCDate() { return $this->utc(\"j\"); }");
+  ignore (HxArray.push lines "  public function getUTCDay() { return $this->utc(\"w\"); }");
+  ignore (HxArray.push lines "  public function getTimezoneOffset() {");
+  ignore (HxArray.push lines "    $dt = (new \\DateTimeImmutable(\"@\" . strval((int)floor($this->timestamp))))->setTimezone(new \\DateTimeZone(date_default_timezone_get()));");
+  ignore (HxArray.push lines "    return (int)(-((int)$dt->format(\"Z\")) / 60);");
+  ignore (HxArray.push lines "  }");
+  ignore (HxArray.push lines "  public function toString() { return date(\"Y-m-d H:i:s\", (int)floor($this->timestamp)); }");
+  ignore (HxArray.push lines "  public function __toString() { return $this->toString(); }");
+  HxArray.push lines "}"
+))
+
 let phpMainClassNeedsRuntimeSupport = fun cls -> try let __fallback_result_2501 = (
   ignore (if HxClassDecl.getExtendsPath (Obj.magic cls) != Obj.magic (HxRuntime.hx_null) && HxString.length (HxClassDecl.getExtendsPath (Obj.magic cls)) > 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxArray.length (HxClassDecl.getFields (Obj.magic cls)) > 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
@@ -17828,6 +17880,7 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (appendPhpXmlRuntime (Obj.magic lines));
+      ignore (appendPhpDateRuntime (Obj.magic lines));
       ignore (HxArray.push lines "class EReg {");
       ignore (HxArray.push lines "  private $pattern;");
       ignore (HxArray.push lines "  private $modifiers;");

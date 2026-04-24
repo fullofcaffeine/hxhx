@@ -6080,6 +6080,42 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpDateRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_date_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var d = new Date(2012, 7, 17, 1, 2, 3);",
+			"    Sys.println(d.getDay());",
+			"    Sys.println(d.getDate());",
+			"    Sys.println(d.getMonth());",
+			"    Sys.println(d.getFullYear());",
+			"    Sys.println(d.getHours());",
+			"    Sys.println(d.getMinutes());",
+			"    Sys.println(d.getSeconds());",
+			"    Sys.println(d.toString());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Date {", "PHP runtime should provide the Haxe Date class");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Date runtime support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "5\n17\n7\n2012\n1\n2\n3\n2012-08-17 01:02:03\n",
+				"generated PHP Date runtime support should match Haxe local Date getters, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSameNameLocalStaticField():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_name_local_static_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6511,6 +6547,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonNullCoalescing();
 		assertPythonNullCoalescingAssignmentExpression();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
+		assertPhpDateRuntimeSupport();
 		assertPhpSameNameLocalStaticField();
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();
