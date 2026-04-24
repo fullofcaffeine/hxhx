@@ -7306,10 +7306,84 @@ class SourceTargetCommon {
 		lines.push("}");
 	}
 
+	static function appendPhpDateToolsSupport(lines:Array<String>):Void {
+		lines.push("class DateTools {");
+		lines.push("  private static function pad($value, $pad, $len) { return str_pad(strval($value), $len, strval($pad), STR_PAD_LEFT); }");
+		lines.push("  private static function formatGet($d, $e) {");
+		lines.push("    static $dayShort = [\"Sun\", \"Mon\", \"Tue\", \"Wed\", \"Thu\", \"Fri\", \"Sat\"];");
+		lines.push("    static $dayLong = [\"Sunday\", \"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\"];");
+		lines.push("    static $monthShort = [\"Jan\", \"Feb\", \"Mar\", \"Apr\", \"May\", \"Jun\", \"Jul\", \"Aug\", \"Sep\", \"Oct\", \"Nov\", \"Dec\"];");
+		lines.push("    static $monthLong = [\"January\", \"February\", \"March\", \"April\", \"May\", \"June\", \"July\", \"August\", \"September\", \"October\", \"November\", \"December\"];");
+		lines.push("    switch (strval($e)) {");
+		lines.push("      case \"%\": return \"%\";");
+		lines.push("      case \"a\": return $dayShort[$d->getDay()];");
+		lines.push("      case \"A\": return $dayLong[$d->getDay()];");
+		lines.push("      case \"b\": case \"h\": return $monthShort[$d->getMonth()];");
+		lines.push("      case \"B\": return $monthLong[$d->getMonth()];");
+		lines.push("      case \"C\": return self::pad(intdiv($d->getFullYear(), 100), \"0\", 2);");
+		lines.push("      case \"d\": return self::pad($d->getDate(), \"0\", 2);");
+		lines.push("      case \"D\": return self::format($d, \"%m/%d/%y\");");
+		lines.push("      case \"e\": return strval($d->getDate());");
+		lines.push("      case \"F\": return self::format($d, \"%Y-%m-%d\");");
+		lines.push("      case \"H\": return self::pad($d->getHours(), \"0\", 2);");
+		lines.push("      case \"k\": return self::pad($d->getHours(), \" \", 2);");
+		lines.push("      case \"I\": $hour = $d->getHours() % 12; return self::pad($hour == 0 ? 12 : $hour, \"0\", 2);");
+		lines.push("      case \"l\": $hour = $d->getHours() % 12; return self::pad($hour == 0 ? 12 : $hour, \" \", 2);");
+		lines.push("      case \"m\": return self::pad($d->getMonth() + 1, \"0\", 2);");
+		lines.push("      case \"M\": return self::pad($d->getMinutes(), \"0\", 2);");
+		lines.push("      case \"n\": return \"\\n\";");
+		lines.push("      case \"p\": return $d->getHours() > 11 ? \"PM\" : \"AM\";");
+		lines.push("      case \"r\": return self::format($d, \"%I:%M:%S %p\");");
+		lines.push("      case \"R\": return self::format($d, \"%H:%M\");");
+		lines.push("      case \"s\": return strval((int)floor($d->getTime() / 1000.0));");
+		lines.push("      case \"S\": return self::pad($d->getSeconds(), \"0\", 2);");
+		lines.push("      case \"t\": return \"\\t\";");
+		lines.push("      case \"T\": return self::format($d, \"%H:%M:%S\");");
+		lines.push("      case \"u\": $day = $d->getDay(); return $day == 0 ? \"7\" : strval($day);");
+		lines.push("      case \"w\": return strval($d->getDay());");
+		lines.push("      case \"y\": return self::pad($d->getFullYear() % 100, \"0\", 2);");
+		lines.push("      case \"Y\": return strval($d->getFullYear());");
+		lines.push("      default: throw new \\Exception(\"Date.format %\" . strval($e) . \" not implemented yet.\");");
+		lines.push("    }");
+		lines.push("  }");
+		lines.push("  public static function format($d, $f) {");
+		lines.push("    $format = strval($f);");
+		lines.push("    $out = \"\";");
+		lines.push("    $offset = 0;");
+		lines.push("    while (($pos = strpos($format, \"%\", $offset)) !== false) {");
+		lines.push("      $out .= substr($format, $offset, $pos - $offset);");
+		lines.push("      $out .= self::formatGet($d, substr($format, $pos + 1, 1));");
+		lines.push("      $offset = $pos + 2;");
+		lines.push("    }");
+		lines.push("    return $out . substr($format, $offset);");
+		lines.push("  }");
+		lines.push("  public static function delta($d, $t) { return Date::fromTime($d->getTime() + (float)$t); }");
+		lines.push("  public static function getMonthDays($d) {");
+		lines.push("    $month = $d->getMonth();");
+		lines.push("    if ($month != 1) return [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][$month];");
+		lines.push("    $year = $d->getFullYear();");
+		lines.push("    return (($year % 4 == 0 && $year % 100 != 0) || $year % 400 == 0) ? 29 : 28;");
+		lines.push("  }");
+		lines.push("  public static function seconds($n) { return (float)$n * 1000.0; }");
+		lines.push("  public static function minutes($n) { return (float)$n * 60.0 * 1000.0; }");
+		lines.push("  public static function hours($n) { return (float)$n * 60.0 * 60.0 * 1000.0; }");
+		lines.push("  public static function days($n) { return (float)$n * 24.0 * 60.0 * 60.0 * 1000.0; }");
+		lines.push("  public static function parse($t) {");
+		lines.push("    $s = (float)$t / 1000.0;");
+		lines.push("    $m = $s / 60.0;");
+		lines.push("    $h = $m / 60.0;");
+		lines.push("    return new __HxAnon([\"ms\" => fmod((float)$t, 1000.0), \"seconds\" => (int)floor(fmod($s, 60.0)), \"minutes\" => (int)floor(fmod($m, 60.0)), \"hours\" => (int)floor(fmod($h, 24.0)), \"days\" => (int)floor($h / 24.0)]);");
+		lines.push("  }");
+		lines.push("  public static function make($o) { return $o->ms + 1000.0 * ($o->seconds + 60.0 * ($o->minutes + 60.0 * ($o->hours + 24.0 * $o->days))); }");
+		lines.push("  public static function makeUtc($year, $month, $day, $hour, $min, $sec) { return gmmktime((int)$hour, (int)$min, (int)$sec, (int)$month + 1, (int)$day, (int)$year) * 1000.0; }");
+		lines.push("}");
+	}
+
 	static function renderPhpSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
 		final pending = new Array<HxClassDecl>();
+		var sawStdDateTools = false;
 		var mainFilePath = "";
 		var mainPackage = HxModuleDecl.getPackagePath(decl);
 		for (typed in program.getTypedModules()) {
@@ -7324,9 +7398,13 @@ class SourceTargetCommon {
 		final classesByName:Map<String, HxClassDecl> = [];
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			final modulePackage = phpSupportPackage(moduleDecl, filePath);
-			if (!phpShouldEmitSupportPackage(mainPackage, modulePackage))
+			if (isStdSourceFile(filePath)) {
+				for (cls in HxModuleDecl.getClasses(moduleDecl))
+					if (sanitizePhpTypeName(HxClassDecl.getName(cls)) == "DateTools")
+						sawStdDateTools = true;
 				return;
-			if (isStdSourceFile(filePath))
+			}
+			if (!phpShouldEmitSupportPackage(mainPackage, modulePackage))
 				return;
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
@@ -7342,6 +7420,11 @@ class SourceTargetCommon {
 		appendDeclClasses(decl, mainFilePath);
 		for (typed in program.getTypedModules())
 			appendDeclClasses(typed.getParsed().getDecl(), typed.getParsed().getFilePath());
+		final pendingNames = new Map<String, Bool>();
+		for (cls in pending)
+			pendingNames.set(sanitizePhpTypeName(HxClassDecl.getName(cls)), true);
+		if (sawStdDateTools && !pendingNames.exists("DateTools"))
+			appendPhpDateToolsSupport(out);
 		final postStaticInitializers = new Array<String>();
 		for (cls in pending) {
 			if (out.length > 0)

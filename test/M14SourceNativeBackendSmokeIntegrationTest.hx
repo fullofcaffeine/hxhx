@@ -6490,6 +6490,50 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStdDateToolsSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_datetools_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EField(EIdent("InitBase"), "sinline")])]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				ECall(EField(EIdent("DateTools"), "format"), [
+					ENew("Date", [EInt(2012), EInt(7), EInt(17), EInt(1), EInt(2), EInt(3)]),
+					EString("%F %T")
+				])
+			]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final staticInit = new HxFieldDecl("sinline", HxVisibility.Public, true, "Float", ECall(EField(EIdent("DateTools"), "minutes"), [EInt(1)]));
+		final initBaseClass = new HxClassDecl("InitBase", false, [], [staticInit]);
+		final initBaseDecl = new HxModuleDecl("", [], initBaseClass, [initBaseClass], false, false);
+		final stdMinutesFn = new HxFunctionDecl("minutes", HxVisibility.Public, true, [new HxFunctionArg("value", "Float", NoDefault)], "Float",
+			[SExpr(EUnsupported("std-datetools-source-should-not-render"), pos)], "");
+		final dateToolsClass = new HxClassDecl("DateTools", false, [stdMinutesFn]);
+		final dateToolsDecl = new HxModuleDecl("", [], dateToolsClass, [dateToolsClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("InitBase.hx", initBaseDecl),
+			typedSyntheticModule("/repo/std/DateTools.hx", dateToolsDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class DateTools {", "PHP std support should provide a DateTools helper when std DateTools is skipped");
+		assertContains(content, "public static function minutes($n)", "PHP DateTools helper should include minute conversion");
+		assertContains(content, "InitBase::$sinline = DateTools::minutes(1);", "PHP static initializer should be able to reference std DateTools");
+		assertNotContains(content, "std-datetools-source-should-not-render", "PHP DateTools support should not dump the upstream std source body");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP std DateTools helper should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "60000\n2012-08-17 01:02:03\n", "generated PHP std DateTools helper output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpInstanceMethodValueBind():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_method_value_bind_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7230,6 +7274,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonNullCoalescingAssignmentExpression();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpDateRuntimeSupport();
+		assertPhpStdDateToolsSupport();
 		assertPhpInstanceMethodValueBind();
 		assertPhpClosureCapturesMutableLocalByReference();
 		assertPhpStringLengthInCharCodeAtArg();
