@@ -6116,6 +6116,46 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpInstanceMethodValueBind():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_method_value_bind_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class MyClass {",
+			"  var base:Int;",
+			"  public function new(base:Int) {",
+			"    this.base = base;",
+			"  }",
+			"  public function add(x:Int, y:Int):Int {",
+			"    return base + x + y;",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var c = new MyClass(100);",
+			"    var add = c.add;",
+			"    Sys.println(c.add(1, 2));",
+			"    Sys.println(c.add.bind(1)(2));",
+			"    Sys.println(add(1, 2));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_field($c, \"add\")", "PHP instance method values should lower through the callable field helper");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP instance method-value bind support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "103\n103\n103\n", "generated PHP method-value bind support should preserve receiver binding, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSameNameLocalStaticField():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_name_local_static_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6548,6 +6588,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonNullCoalescingAssignmentExpression();
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpDateRuntimeSupport();
+		assertPhpInstanceMethodValueBind();
 		assertPhpSameNameLocalStaticField();
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();
