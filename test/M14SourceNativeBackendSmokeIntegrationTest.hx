@@ -6774,6 +6774,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTryCatchRawRenamesScopedLocalFunctions():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_try_raw_scoped_local_function_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    function test():String {",
+			"      throw \"never call me\";",
+			"    }",
+			"    var s = try test() catch(e:String) e;",
+			"    Sys.println(s);",
+			"    function test():String throw \"never call me\";",
+			"    var s = try test() catch(e:String) e;",
+			"    Sys.println(s);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$test__hx_scope_1 = function()", "PHP duplicate local functions should receive scoped names");
+		assertContains(content, "return $test__hx_scope_1();", "PHP raw try/catch expressions should use renamed local function bindings");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP scoped try/catch local functions should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "never call me\nnever call me\n", "generated PHP scoped try/catch local function output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpConstructorDefaultArgs():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_constructor_default_args_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7614,6 +7649,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStdStringMapClassReference();
 		assertPhpTypeNameHelpersForStaticInitializers();
 		assertPhpDefaultArgsOnOverrides();
+		assertPhpTryCatchRawRenamesScopedLocalFunctions();
 		assertPhpConstructorDefaultArgs();
 		assertPhpStringBufRuntimeSupport();
 		assertPhpInstanceMethodValueBind();

@@ -2625,13 +2625,38 @@ class SourceTargetCommon {
 	}
 
 	static function renderPhpTryExpr(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>):String {
-		final out = ["(function() {", "  try {"];
+		final useClause = phpTryExprUseClause(tryBody, catches);
+		final out = ["(function()" + useClause + " {", "  try {"];
 		for (line in renderReturningStmt(Php, tryBody, "    "))
 			out.push(line);
 		out.push("  }");
 		renderPhpCatchChain(out, "  ", "\\Throwable", catches, function(c, bodyIndent) return renderReturningStmt(Php, c.body, bodyIndent));
 		out.push("})()");
 		return out.join("\n");
+	}
+
+	static function phpTryExprUseClause(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>):String {
+		if (phpRenderLocalTypes == null)
+			return "";
+		final declared = new Array<String>();
+		phpCollectDeclaredLocalsInStmt(tryBody, declared);
+		final used = new Array<String>();
+		phpCollectUsedIdentsInStmt(tryBody, used);
+		if (catches != null)
+			for (c in catches) {
+				final catchName = sanitizeTypeName(c.name);
+				if (catchName.length > 0 && declared.indexOf(catchName) < 0)
+					declared.push(catchName);
+				phpCollectDeclaredLocalsInStmt(c.body, declared);
+				phpCollectUsedIdentsInStmt(c.body, used);
+			}
+		final refNames = new Array<String>();
+		for (name in used) {
+			if (declared.indexOf(name) >= 0 || !phpRenderLocalTypes.exists(name) || refNames.indexOf(name) >= 0)
+				continue;
+			refNames.push(name);
+		}
+		return phpLambdaUseClause([], refNames);
 	}
 
 	static function renderPhpCatchChain(out:Array<String>, indent:String, catchType:String, catches:Array<{name:String, typeHint:String, body:HxStmt}>,
@@ -8466,6 +8491,8 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EIdent(name):
 				env.exists(name) ? EIdent(env.get(name)) : expr;
+			case ETryCatchRaw(raw):
+				ETryCatchRaw(phpRenameScopedRawText(raw, env));
 			case EField(obj, field):
 				EField(phpRenameScopedLocalExpr(obj, env, counters), field);
 			case ECall(callee, args):
@@ -8516,6 +8543,58 @@ class SourceTargetCommon {
 			case _:
 				expr;
 		};
+	}
+
+	static function phpRenameScopedRawText(raw:String, env:haxe.ds.StringMap<String>):String {
+		if (raw == null || raw.length == 0 || env == null)
+			return raw;
+		final out = new StringBuf();
+		var i = 0;
+		inline function isIdentStart(c:Int):Bool
+			return (c >= "A".code && c <= "Z".code) || (c >= "a".code && c <= "z".code) || c == "_".code;
+		inline function isIdentPart(c:Int):Bool
+			return isIdentStart(c) || (c >= "0".code && c <= "9".code);
+		function previousNonWsIsDot(pos:Int):Bool {
+			var j = pos - 1;
+			while (j >= 0) {
+				final c = raw.charCodeAt(j);
+				if (c != 9 && c != 10 && c != 13 && c != 32)
+					return c == ".".code;
+				j -= 1;
+			}
+			return false;
+		}
+		while (i < raw.length) {
+			final c = raw.charCodeAt(i);
+			if (c == "\"".code || c == "'".code) {
+				final start = i;
+				final quote = c;
+				i += 1;
+				while (i < raw.length) {
+					final cc = raw.charCodeAt(i);
+					i += 1;
+					if (cc == "\\".code) {
+						if (i < raw.length)
+							i += 1;
+						continue;
+					}
+					if (cc == quote)
+						break;
+				}
+				out.add(raw.substr(start, i - start));
+			} else if (isIdentStart(c)) {
+				final start = i;
+				i += 1;
+				while (i < raw.length && isIdentPart(raw.charCodeAt(i)))
+					i += 1;
+				final name = raw.substr(start, i - start);
+				out.add(!previousNonWsIsDot(start) && env.exists(name) ? env.get(name) : name);
+			} else {
+				out.addChar(c);
+				i += 1;
+			}
+		}
+		return out.toString();
 	}
 
 	static function phpRenameScopedPattern(pattern:HxSwitchPattern, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>):HxSwitchPattern {
