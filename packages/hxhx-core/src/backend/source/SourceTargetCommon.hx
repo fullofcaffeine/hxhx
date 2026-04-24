@@ -1198,6 +1198,8 @@ class SourceTargetCommon {
 				postIncrementExpr(target, inner, 1);
 			case "post--":
 				postIncrementExpr(target, inner, -1);
+			case "-" if (target == Php && phpExprIsInt64Value(inner)):
+				"__hxhx_int64_neg(" + rendered + ")";
 			case "-", "+", "~":
 				"(" + op + rendered + ")";
 			default:
@@ -4273,12 +4275,67 @@ class SourceTargetCommon {
 				"String";
 			case ENew(typePath, _):
 				typePath;
+			case _ if (phpExprReturnsInt64(init)):
+				"haxe.Int64";
 			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
 				castHint;
 			case EMacroExpr(inner, _) | EUntyped(inner):
 				inferLocalTypeHint("", inner);
 			case _:
 				"";
+		};
+	}
+
+	static function phpExprReturnsInt64(expr:Null<HxExpr>):Bool {
+		if (expr == null)
+			return false;
+		return switch (expr) {
+			case ECall(EIdent("__hxhx_int_literal"), [EString(_), EString(suffix)]) if (suffix == "i64" || suffix == "u64"):
+				true;
+			case ECall(callee, _):
+				phpInt64StaticCall(callee);
+			case EBinop("*", left, right), EBinop("+", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
+			case EUnop("-", inner):
+				phpExprIsInt64Value(inner);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpExprReturnsInt64(inner);
+			case _:
+				false;
+		};
+	}
+
+	static function phpExprIsInt64Value(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EIdent(name):
+				isInt64TypeHint(phpLocalTypeHint(name));
+			case ECall(_, _) | EBinop(_, _, _) | EUnop(_, _) | EMacroExpr(_, _) | EUntyped(_):
+				phpExprReturnsInt64(expr);
+			case _:
+				false;
+		};
+	}
+
+	static function phpInt64StaticCall(callee:HxExpr):Bool {
+		return switch (callee) {
+			case EField(receiver, field):
+				final typePath = phpStaticTypePath(receiver);
+				if (typePath == null) {
+					false;
+				} else {
+					isInt64TypeHint(typePath) && phpInt64StaticMethodReturnsInt64(field)
+					;
+				}
+			case _:
+				false;
+		};
+	}
+
+	static function phpInt64StaticMethodReturnsInt64(field:String):Bool {
+		return switch (sanitizeTypeName(field)) {
+			case "make", "ofInt", "parseString", "add", "sub", "mul":
+				true;
+			case _:
+				false;
 		};
 	}
 
@@ -5170,7 +5227,7 @@ class SourceTargetCommon {
 	}
 
 	static function isInt64TypeHint(typeHint:String):Bool {
-		final normalized = normalizeTypeHint(typeHint);
+		final normalized = StringTools.replace(normalizeTypeHint(typeHint), "\\", ".");
 		return normalized == "Int64" || normalized == "haxe.Int64";
 	}
 
@@ -10885,6 +10942,55 @@ class SourceTargetCommon {
 				lines.push("  if ($negative) $value = -$value;");
 				lines.push("  return Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
 				lines.push("}");
+				lines.push("function __hxhx_is_int64($value) {");
+				lines.push("  return $value instanceof \\haxe\\Int64;");
+				lines.push("}");
+				lines.push("function __hxhx_int64_value($value) {");
+				lines.push("  if (__hxhx_is_int64($value)) return $value;");
+				lines.push("  if (is_string($value)) return __hxhx_int64_parse_string($value);");
+				lines.push("  return Int64::ofInt(intval($value));");
+				lines.push("}");
+				lines.push("function __hxhx_int64_make_u($high, $low) {");
+				lines.push("  return Int64::make($high & 0xFFFFFFFF, $low & 0xFFFFFFFF);");
+				lines.push("}");
+				lines.push("function __hxhx_int64_add($left, $right) {");
+				lines.push("  $left = __hxhx_int64_value($left);");
+				lines.push("  $right = __hxhx_int64_value($right);");
+				lines.push("  $leftLow = $left->low & 0xFFFFFFFF;");
+				lines.push("  $rightLow = $right->low & 0xFFFFFFFF;");
+				lines.push("  $low = $leftLow + $rightLow;");
+				lines.push("  $carry = $low > 0xFFFFFFFF ? 1 : 0;");
+				lines.push("  $high = ($left->high & 0xFFFFFFFF) + ($right->high & 0xFFFFFFFF) + $carry;");
+				lines.push("  return __hxhx_int64_make_u($high, $low);");
+				lines.push("}");
+				lines.push("function __hxhx_int64_neg($value) {");
+				lines.push("  $value = __hxhx_int64_value($value);");
+				lines.push("  $low = ((~($value->low & 0xFFFFFFFF)) + 1) & 0xFFFFFFFF;");
+				lines.push("  $high = ((~($value->high & 0xFFFFFFFF)) + (($value->low & 0xFFFFFFFF) === 0 ? 1 : 0)) & 0xFFFFFFFF;");
+				lines.push("  return __hxhx_int64_make_u($high, $low);");
+				lines.push("}");
+				lines.push("function __hxhx_int64_sub($left, $right) {");
+				lines.push("  return __hxhx_int64_add($left, __hxhx_int64_neg($right));");
+				lines.push("}");
+				lines.push("function __hxhx_int64_mul($left, $right) {");
+				lines.push("  $left = __hxhx_int64_value($left);");
+				lines.push("  $right = __hxhx_int64_value($right);");
+				lines.push("  $a0 = $left->low & 0xFFFF;");
+				lines.push("  $a1 = (($left->low & 0xFFFFFFFF) >> 16) & 0xFFFF;");
+				lines.push("  $a2 = $left->high & 0xFFFF;");
+				lines.push("  $a3 = (($left->high & 0xFFFFFFFF) >> 16) & 0xFFFF;");
+				lines.push("  $b0 = $right->low & 0xFFFF;");
+				lines.push("  $b1 = (($right->low & 0xFFFFFFFF) >> 16) & 0xFFFF;");
+				lines.push("  $b2 = $right->high & 0xFFFF;");
+				lines.push("  $b3 = (($right->high & 0xFFFFFFFF) >> 16) & 0xFFFF;");
+				lines.push("  $c0 = $a0 * $b0;");
+				lines.push("  $c1 = ($c0 >> 16) + $a1 * $b0 + $a0 * $b1;");
+				lines.push("  $c2 = ($c1 >> 16) + $a2 * $b0 + $a1 * $b1 + $a0 * $b2;");
+				lines.push("  $c3 = ($c2 >> 16) + $a3 * $b0 + $a2 * $b1 + $a1 * $b2 + $a0 * $b3;");
+				lines.push("  $low = (($c1 & 0xFFFF) << 16) | ($c0 & 0xFFFF);");
+				lines.push("  $high = (($c3 & 0xFFFF) << 16) | ($c2 & 0xFFFF);");
+				lines.push("  return __hxhx_int64_make_u($high, $low);");
+				lines.push("}");
 				lines.push("function __hxhx_int_literal($text, $suffix) {");
 				lines.push("  $clean = str_replace(\"_\", \"\", strtolower($text));");
 				lines.push("  if (strpos($clean, \"0x\") === 0) {");
@@ -10930,13 +11036,23 @@ class SourceTargetCommon {
 				lines.push("  return false;");
 				lines.push("}");
 				lines.push("function __hxhx_add($left, $right) {");
+				lines.push("  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) return __hxhx_int64_add($left, $right);");
 				lines.push("  if (__hxhx_is_point3($left) && __hxhx_is_point3($right)) return __hxhx_point3($left->x + $right->x, $left->y + $right->y, $left->z + $right->z);");
 				lines.push("  if (is_int($left) || is_float($left)) {");
 				lines.push("    if (is_int($right) || is_float($right)) return $left + $right;");
 				lines.push("  }");
 				lines.push("  return __hxhx_add_string($left) . __hxhx_add_string($right);");
 				lines.push("}");
+				lines.push("function __hxhx_sub($left, $right) {");
+				lines.push("  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) return __hxhx_int64_sub($left, $right);");
+				lines.push("  return $left - $right;");
+				lines.push("}");
+				lines.push("function __hxhx_neg($value) {");
+				lines.push("  if (__hxhx_is_int64($value)) return __hxhx_int64_neg($value);");
+				lines.push("  return -$value;");
+				lines.push("}");
 				lines.push("function __hxhx_mul($left, $right) {");
+				lines.push("  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) return __hxhx_int64_mul($left, $right);");
 				lines.push("  if (__hxhx_is_point3($left) && (is_int($right) || is_float($right))) return __hxhx_point3($left->x * $right, $left->y * $right, $left->z * $right);");
 				lines.push("  if ((is_int($left) || is_float($left)) && __hxhx_is_point3($right)) return __hxhx_point3($right->x * $left, $right->y * $left, $right->z * $left);");
 				lines.push("  if ((is_int($left) || is_float($left)) && is_string($right)) return str_repeat($right, intval($left));");
