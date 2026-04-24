@@ -471,6 +471,13 @@ let parse_module_from_tokens (src : string) (toks : token array)
           | Kw ("null", _) -> cur_default_hint := Some "Dynamic"
           | _ -> ());
           bump ()
+      | Sym ('=', _) when !paren = 1 && !cur_name <> None && !reading_type
+                            && type_hint_top_level () ->
+          (* A typed parameter default starts after the type hint. Stop collecting type
+             text here so `?x:Null<Int> = 5` remains `Null<Int>`, not
+             `Null<Int>=5`. *)
+          reading_type := false;
+          bump ()
       | tok ->
           if !reading_type then cur_type_parts := !cur_type_parts @ [ tok_to_text tok ];
           bump ()

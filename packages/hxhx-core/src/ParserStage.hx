@@ -2183,6 +2183,280 @@ class ParserStage {
 		return new HxModuleDecl(packagePath, imports, cls, [cls], headerOnly, hasToplevelMain);
 	}
 
+	static function findMatchingParen(source:String, open:Int):Int {
+		var depth = 0;
+		var inString = false;
+		var quote = "";
+		var i = open;
+		while (i < source.length) {
+			final ch = source.charAt(i);
+			if (inString) {
+				if (ch == "\\") {
+					i += 2;
+					continue;
+				}
+				if (ch == quote)
+					inString = false;
+				i += 1;
+				continue;
+			}
+			if (ch == "\"" || ch == "'") {
+				inString = true;
+				quote = ch;
+				i += 1;
+				continue;
+			}
+			if (ch == "(")
+				depth += 1;
+			else if (ch == ")") {
+				depth -= 1;
+				if (depth == 0)
+					return i;
+			}
+			i += 1;
+		}
+		return -1;
+	}
+
+	static function splitTopLevelComma(text:String):Array<String> {
+		final out = new Array<String>();
+		var start = 0;
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var braceDepth = 0;
+		var angleDepth = 0;
+		var inString = false;
+		var quote = "";
+		var i = 0;
+		while (i < text.length) {
+			final ch = text.charAt(i);
+			if (inString) {
+				if (ch == "\\") {
+					i += 2;
+					continue;
+				}
+				if (ch == quote)
+					inString = false;
+				i += 1;
+				continue;
+			}
+			if (ch == "\"" || ch == "'") {
+				inString = true;
+				quote = ch;
+			} else {
+				switch (ch) {
+					case "(":
+						parenDepth += 1;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth -= 1;
+					case "[":
+						bracketDepth += 1;
+					case "]":
+						if (bracketDepth > 0)
+							bracketDepth -= 1;
+					case "{":
+						braceDepth += 1;
+					case "}":
+						if (braceDepth > 0)
+							braceDepth -= 1;
+					case "<":
+						angleDepth += 1;
+					case ">":
+						if (angleDepth > 0)
+							angleDepth -= 1;
+					case ",":
+						if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0) {
+							out.push(text.substr(start, i - start));
+							start = i + 1;
+						}
+					case _:
+				}
+			}
+			i += 1;
+		}
+		out.push(text.substr(start));
+		return out;
+	}
+
+	static function findTopLevelEquals(text:String):Int {
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var braceDepth = 0;
+		var angleDepth = 0;
+		var inString = false;
+		var quote = "";
+		var i = 0;
+		while (i < text.length) {
+			final ch = text.charAt(i);
+			if (inString) {
+				if (ch == "\\") {
+					i += 2;
+					continue;
+				}
+				if (ch == quote)
+					inString = false;
+				i += 1;
+				continue;
+			}
+			if (ch == "\"" || ch == "'") {
+				inString = true;
+				quote = ch;
+			} else {
+				switch (ch) {
+					case "(":
+						parenDepth += 1;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth -= 1;
+					case "[":
+						bracketDepth += 1;
+					case "]":
+						if (bracketDepth > 0)
+							bracketDepth -= 1;
+					case "{":
+						braceDepth += 1;
+					case "}":
+						if (braceDepth > 0)
+							braceDepth -= 1;
+					case "<":
+						angleDepth += 1;
+					case ">":
+						if (angleDepth > 0)
+							angleDepth -= 1;
+					case "=":
+						if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0)
+							return i;
+					case _:
+				}
+			}
+			i += 1;
+		}
+		return -1;
+	}
+
+	static function sourceSignatureArgHints(name:String, ?source:String, methodBodyStart:Int = -1):Array<{
+		name:String,
+		isOptional:Bool,
+		typeHint:String,
+		defaultText:String
+	}> {
+		if (source == null || source.length == 0 || name == null || name.length == 0)
+			return [];
+		final needle = "function " + name;
+		var fnIndex = methodBodyStart > 0 ? source.lastIndexOf(needle, methodBodyStart) : -1;
+		if (fnIndex < 0)
+			fnIndex = source.indexOf(needle);
+		if (fnIndex < 0)
+			return [];
+		final open = source.indexOf("(", fnIndex);
+		if (open < 0)
+			return [];
+		final close = findMatchingParen(source, open);
+		if (close < 0)
+			return [];
+		return parseSourceSignatureArgs(source.substr(open + 1, close - open - 1));
+	}
+
+	static function parseSourceSignatureArgs(text:String):Array<{
+		name:String,
+		isOptional:Bool,
+		typeHint:String,
+		defaultText:String
+	}> {
+		final out = new Array<{
+			name:String,
+			isOptional:Bool,
+			typeHint:String,
+			defaultText:String
+		}>();
+		for (segment in splitTopLevelComma(text)) {
+			var working = StringTools.trim(segment);
+			if (working.length == 0)
+				continue;
+			if (StringTools.startsWith(working, "..."))
+				working = StringTools.trim(working.substr(3));
+			var isOptional = false;
+			if (StringTools.startsWith(working, "?")) {
+				isOptional = true;
+				working = StringTools.trim(working.substr(1));
+			}
+			final nameMatch = ~/^([A-Za-z_][A-Za-z0-9_]*)/;
+			if (!nameMatch.match(working))
+				continue;
+			final argName = nameMatch.matched(1);
+			final afterName = StringTools.trim(working.substr(nameMatch.matchedPos().pos + nameMatch.matchedPos().len));
+			final eqIndex = findTopLevelEquals(afterName);
+			final typeSource = eqIndex >= 0 ? StringTools.trim(afterName.substr(0, eqIndex)) : afterName;
+			final typeHint = StringTools.startsWith(typeSource, ":") ? StringTools.trim(typeSource.substr(1)) : "";
+			final defaultText = eqIndex >= 0 ? StringTools.trim(afterName.substr(eqIndex + 1)) : "";
+			out.push({
+				name: argName,
+				isOptional: isOptional || defaultText.length > 0,
+				typeHint: typeHint,
+				defaultText: defaultText
+			});
+		}
+		return out;
+	}
+
+	static function sourceArgHintByName(hints:Array<{
+		name:String,
+		isOptional:Bool,
+		typeHint:String,
+		defaultText:String
+	}>, name:String):Null<{
+		name:String,
+		isOptional:Bool,
+		typeHint:String,
+		defaultText:String
+	}> {
+		for (hint in hints)
+			if (hint.name == name)
+				return hint;
+		return null;
+	}
+
+	static function compactTypeHint(typeHint:String):String {
+		var compact = StringTools.trim(typeHint == null ? "" : typeHint);
+		compact = StringTools.replace(compact, " ", "");
+		compact = StringTools.replace(compact, "\t", "");
+		compact = StringTools.replace(compact, "\r", "");
+		compact = StringTools.replace(compact, "\n", "");
+		return compact;
+	}
+
+	static function sourceTypeHintIsMoreSpecific(nativeTypeHint:String, sourceTypeHint:String):Bool {
+		final source = compactTypeHint(sourceTypeHint);
+		if (source.length == 0)
+			return false;
+		final native = compactTypeHint(nativeTypeHint);
+		if (native.length == 0)
+			return true;
+		return (native == "Null" || native == "StdTypes.Null")
+			&& (StringTools.startsWith(source, "Null<") || StringTools.startsWith(source, "StdTypes.Null<"));
+	}
+
+	static function defaultValueFromText(text:String):HxDefaultValue {
+		final trimmed = StringTools.trim(text == null ? "" : text);
+		if (trimmed.length == 0)
+			return HxDefaultValue.NoDefault;
+		if (trimmed == "null")
+			return HxDefaultValue.Default(HxExpr.ENull);
+		if (trimmed == "true")
+			return HxDefaultValue.Default(HxExpr.EBool(true));
+		if (trimmed == "false")
+			return HxDefaultValue.Default(HxExpr.EBool(false));
+		final first = trimmed.charAt(0);
+		final last = trimmed.charAt(trimmed.length - 1);
+		if ((first == "\"" && last == "\"") || (first == "'" && last == "'"))
+			return HxDefaultValue.Default(HxExpr.EString(trimmed.substr(1, trimmed.length - 2)));
+		final intValue = Std.parseInt(trimmed);
+		if (intValue != null && Std.string(intValue) == trimmed)
+			return HxDefaultValue.Default(HxExpr.EInt(intValue));
+		return HxDefaultValue.Default(HxExpr.ENull);
+	}
+
 	static function decodeMethodPayload(payload:String, methodBodySrc:Null<String>, methodBodyStart:Int = -1, ?source:String):HxFunctionDecl {
 		// Bootstrap note: payload is a `|` separated list (unescaped for '|').
 		//
@@ -2236,6 +2510,7 @@ class ParserStage {
 		}
 
 		final args = new Array<HxFunctionArg>();
+		final sourceHints = sourceSignatureArgHints(name, source, methodBodyStart);
 		final argsPayload = parts[3];
 		if (argsPayload.length > 0) {
 			for (a in argsPayload.split(",")) {
@@ -2257,6 +2532,17 @@ class ParserStage {
 				var ty = argTypes.exists(rawName) ? argTypes.get(rawName) : "";
 				if (!isOptional && optionalArgsByName.exists(rawName))
 					isOptional = true;
+				final sourceHint = sourceArgHintByName(sourceHints, rawName);
+				var defaultValue = HxDefaultValue.NoDefault;
+				var defaultValueText = "";
+				if (sourceHint != null) {
+					if (sourceHint.isOptional)
+						isOptional = true;
+					if (sourceTypeHintIsMoreSpecific(ty, sourceHint.typeHint))
+						ty = sourceHint.typeHint;
+					defaultValueText = sourceHint.defaultText;
+					defaultValue = defaultValueFromText(defaultValueText);
+				}
 
 				if (isRest) {
 					// Stage3 bring-up: lower rest args to a single `Array<T>` parameter.
@@ -2265,7 +2551,7 @@ class ParserStage {
 					isOptional = true;
 				}
 
-				args.push(new HxFunctionArg(rawName, ty, HxDefaultValue.NoDefault, isOptional, isRest));
+				args.push(new HxFunctionArg(rawName, ty, defaultValue, isOptional, isRest, defaultValueText));
 			}
 		}
 

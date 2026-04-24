@@ -159,7 +159,12 @@ class ParserStageNativeDecode {
 		return new HxModuleDecl(packagePath, imports, cls, [cls], headerOnly, hasToplevelMain);
 	}
 
-	static function sourceSignatureArgHints(name:String, ?source:String, methodBodyStart:Int = -1):Array<{name:String, isOptional:Bool, defaultText:String}> {
+	static function sourceSignatureArgHints(name:String, ?source:String, methodBodyStart:Int = -1):Array<{
+		name:String,
+		isOptional:Bool,
+		typeHint:String,
+		defaultText:String
+	}> {
 		if (source == null || source.length == 0 || name == null || name.length == 0)
 			return [];
 		final needle = "function " + name;
@@ -329,8 +334,18 @@ class ParserStageNativeDecode {
 		return -1;
 	}
 
-	static function parseSourceSignatureArgs(text:String):Array<{name:String, isOptional:Bool, defaultText:String}> {
-		final out = new Array<{name:String, isOptional:Bool, defaultText:String}>();
+	static function parseSourceSignatureArgs(text:String):Array<{
+		name:String,
+		isOptional:Bool,
+		typeHint:String,
+		defaultText:String
+	}> {
+		final out = new Array<{
+			name:String,
+			isOptional:Bool,
+			typeHint:String,
+			defaultText:String
+		}>();
 		for (segment in splitTopLevelComma(text)) {
 			var working = StringTools.trim(segment);
 			if (working.length == 0)
@@ -348,21 +363,54 @@ class ParserStageNativeDecode {
 			final argName = nameMatch.matched(1);
 			final afterName = StringTools.trim(working.substr(nameMatch.matchedPos().pos + nameMatch.matchedPos().len));
 			final eqIndex = findTopLevelEquals(afterName);
+			final typeSource = eqIndex >= 0 ? StringTools.trim(afterName.substr(0, eqIndex)) : afterName;
+			final typeHint = StringTools.startsWith(typeSource, ":") ? StringTools.trim(typeSource.substr(1)) : "";
 			final defaultText = eqIndex >= 0 ? StringTools.trim(afterName.substr(eqIndex + 1)) : "";
-			out.push({name: argName, isOptional: isOptional || defaultText.length > 0, defaultText: defaultText});
+			out.push({
+				name: argName,
+				isOptional: isOptional || defaultText.length > 0,
+				typeHint: typeHint,
+				defaultText: defaultText
+			});
 		}
 		return out;
 	}
 
-	static function sourceArgHintByName(hints:Array<{name:String, isOptional:Bool, defaultText:String}>, name:String):Null<{
+	static function sourceArgHintByName(hints:Array<{
 		name:String,
 		isOptional:Bool,
+		typeHint:String,
+		defaultText:String
+	}>, name:String):Null<{
+		name:String,
+		isOptional:Bool,
+		typeHint:String,
 		defaultText:String
 	}> {
 		for (hint in hints)
 			if (hint.name == name)
 				return hint;
 		return null;
+	}
+
+	static function compactTypeHint(typeHint:String):String {
+		var compact = StringTools.trim(typeHint == null ? "" : typeHint);
+		compact = StringTools.replace(compact, " ", "");
+		compact = StringTools.replace(compact, "\t", "");
+		compact = StringTools.replace(compact, "\r", "");
+		compact = StringTools.replace(compact, "\n", "");
+		return compact;
+	}
+
+	static function sourceTypeHintIsMoreSpecific(nativeTypeHint:String, sourceTypeHint:String):Bool {
+		final source = compactTypeHint(sourceTypeHint);
+		if (source.length == 0)
+			return false;
+		final native = compactTypeHint(nativeTypeHint);
+		if (native.length == 0)
+			return true;
+		return (native == "Null" || native == "StdTypes.Null")
+			&& (StringTools.startsWith(source, "Null<") || StringTools.startsWith(source, "StdTypes.Null<"));
 	}
 
 	static function defaultValueFromText(text:String):HxDefaultValue {
@@ -466,6 +514,8 @@ class ParserStageNativeDecode {
 				if (sourceHint != null) {
 					if (sourceHint.isOptional)
 						isOptional = true;
+					if (sourceTypeHintIsMoreSpecific(ty, sourceHint.typeHint))
+						ty = sourceHint.typeHint;
 					defaultValueText = sourceHint.defaultText;
 					defaultValue = defaultValueFromText(defaultValueText);
 				}

@@ -1043,6 +1043,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  public function optNullableDefaults(?x:Null<Int> = 5, ?y:Null<Float> = 6) {",
 			"    return { x: x, y: y };",
 			"  }",
+			"  public function optNullableDefaultsSpaced(?x : Null<Int> = 5, ?y : Null<Float> = 6) {",
+			"    return { x: x, y: y };",
+			"  }",
 			"  public function run() {",
 			"    Sys.println(Std.string(optString().value == null));",
 			"    Sys.println(optString(\"hello\").value);",
@@ -1056,6 +1059,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(optNullableDefaults(null, null).y));",
 			"    Sys.println(Std.string(optNullableDefaults(7.4).x));",
 			"    Sys.println(Std.string(optNullableDefaults(7.4).y));",
+			"    Sys.println(Std.string(optNullableDefaultsSpaced(7.4).x));",
+			"    Sys.println(Std.string(optNullableDefaultsSpaced(7.4).y));",
 			"  }",
 			"  static function main() {",
 			"    new Main().run();",
@@ -4605,25 +4610,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	static function assertNativeProtocolDefaultArgSourceDecode():Void {
 		final source = [
 			"class Runner {",
-			"  public function addCase(test:Dynamic, setup = \"setup\", teardown = \"teardown\", prefix = \"test\", ?pattern:Dynamic, setupAsync = \"setupAsync\", teardownAsync = \"teardownAsync\") {}",
+			"  public function addCase(test:Dynamic, setup = \"setup\", teardown = \"teardown\", prefix = \"test\", ?pattern:Dynamic, setupAsync = \"setupAsync\", teardownAsync = \"teardownAsync\", ?nullableInt:Null<Int> = 5, ?nullableFloat:Null<Float> = 6) {}",
 			"}"
 		].join("\n");
 		final encoded = [
 			"hxhx_frontend_v=2",
 			protocolLine("class", "Runner"),
 			"ast static_main 0",
-			protocolLine("method", "addCase|public|0|test,setup,teardown,prefix,?pattern,setupAsync,teardownAsync|Void|||test:Dynamic,pattern:Dynamic|"),
+			protocolLine("method",
+				"addCase|public|0|test,setup,teardown,prefix,?pattern,setupAsync,teardownAsync,nullableInt,nullableFloat|Void|||test:Dynamic,pattern:Dynamic,nullableInt:Null,nullableFloat:Null|"),
 			"ok"
 		].join("\n");
 		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
 		final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl));
 		assertTrue(functions.length == 1, "native protocol should decode the source-backed addCase method");
 		final args = HxFunctionDecl.getArgs(functions[0]);
-		assertTrue(args.length == 7, "native protocol should preserve source-backed addCase arity");
+		assertTrue(args.length == 9, "native protocol should preserve source-backed addCase arity");
 		assertTrue(HxFunctionArg.getIsOptional(args[1]), "native protocol should recover defaulted args as omittable from source");
 		assertTrue(HxFunctionArg.getDefaultValueText(args[1]) == "\"setup\"", "native protocol should recover the setup default text");
 		assertTrue(HxFunctionArg.getIsOptional(args[4]), "native protocol should preserve explicit optional args from payload/source");
 		assertTrue(HxFunctionArg.getDefaultValueText(args[5]) == "\"setupAsync\"", "native protocol should recover later defaults after optional args");
+		assertTrue(HxFunctionArg.getTypeHint(args[7]) == "Null<Int>", "native protocol should recover source generic Null<Int> over erased payload Null");
+		assertTrue(HxFunctionArg.getTypeHint(args[8]) == "Null<Float>", "native protocol should recover source generic Null<Float> over erased payload Null");
 	}
 
 	static function assertPhpPlusSemantics():Void {
@@ -5488,7 +5496,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([optionalStringTmpRoot, "index.php"])]);
 			assertTrue(run.code == 0, "generated PHP optional String null support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\nhello\ntrue\nstr\n55\ntrue\n5\nhello\n5\n6\n5\n7.4\n",
+			assertTrue(run.stdout == "true\nhello\ntrue\nstr\n55\ntrue\n5\nhello\n5\n6\n5\n7.4\n5\n7.4\n",
 				"generated PHP optional String args should preserve null and align typed optional calls, got:\n" + run.stdout);
 		}
 		deleteRecursive(optionalStringTmpRoot);
