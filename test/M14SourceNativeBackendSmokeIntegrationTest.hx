@@ -5097,8 +5097,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpInt64LiteralExtensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "$a = haxe\\Int64::ofInt(32);", "PHP Int64 literal extension calls should lower to static calls");
-		assertContains(content, "$b = haxe\\Int64::ofInt((-4));", "PHP negative Int64 literal extension calls should lower to static calls");
+		assertContains(content, "$a = \\haxe\\Int64::ofInt(32);", "PHP Int64 literal extension calls should lower to qualified static calls");
+		assertContains(content, "$b = \\haxe\\Int64::ofInt((-4));", "PHP negative Int64 literal extension calls should lower to qualified static calls");
 		assertContains(content, "$c = __hxhx_add(__hxhx_int_literal(\"3000000000000\", \"i64\"), \"\");",
 			"PHP i64 decimal suffix literals should preserve raw text before runtime string conversion");
 		assertContains(content, "$d = __hxhx_add(__hxhx_int_literal(\"0xFFFFFFFFFFFFFFFF\", \"i64\"), \"\");",
@@ -5236,11 +5236,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "if (__hxhx_is_int64($value)) return __hxhx_int64_to_string($value);", "PHP string conversion should format Int64 as decimal");
 		assertContains(content, "$e = __hxhx_int64_literal(\"47244640255\", \"i64\");", "PHP typed Int64 decimal literals should construct Int64 values");
 		assertContains(content, "$f = __hxhx_int64_literal(\"0x7FFFFFFFFFFFFFFF\", \"i64\");", "PHP typed Int64 hex literals should construct Int64 values");
-		assertContains(content, "__hxhx_array_push($boxed, Int64::ofInt(1))", "PHP Array<Int64>.push should box Int literals");
+		assertContains(content, "$c = \\haxe\\Int64::make(2, 3);", "PHP imported Int64 calls should lower to qualified haxe.Int64 calls");
+		assertContains(content, "__hxhx_array_push($boxed, \\haxe\\Int64::ofInt(1))", "PHP Array<Int64>.push should box Int literals");
 		assertContains(content, "$inc = __hxhx_add($inc, 1);", "PHP Int64 postfix increment statements should route through Int64 addition");
 		assertContains(content, "$inc = __hxhx_sub($inc, 1);", "PHP Int64 postfix decrement statements should route through Int64 subtraction");
 		assertContains(content, "__hxhx_post_update_var($inc, 1)", "PHP Int64 postfix expressions should preserve old-value semantics through the helper");
-		assertContains(content, "$i = __hxhx_mul(haxe\\Int64::ofInt(7), 6);", "PHP Int64 multiplication should lower through the runtime helper");
+		assertContains(content, "$i = __hxhx_mul(\\haxe\\Int64::ofInt(7), 6);", "PHP Int64 multiplication should lower through the runtime helper");
 		assertContains(content, "$l = __hxhx_int64_neg($lmin);", "PHP typed Int64 locals should route unary minus through the runtime helper");
 		assertContains(content, "__hxhx_equals($lmin, $l)", "PHP typed Int64 equality should lower through high/low word comparison");
 		if (commandExists("php")) {
@@ -5249,6 +5250,42 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n0\n42\n0\n14\n-1\n-4\n0\n42\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
 				"generated PHP haxe.Int64 output mismatch, got:\n"
 				+ run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpInt64GlobalClassDoesNotCollide():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_int64_shadow_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var x:haxe.Int64 = 1;",
+			"    Sys.println(haxe.Int64.toStr(x));",
+			"    Sys.println(Int64.label());",
+			"  }",
+			"}",
+			"class Int64 {",
+			"  public static function label() {",
+			"    return \"shadow\";",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Int64 {", "PHP should preserve user top-level Int64 support classes");
+		assertContains(content, "$x = \\haxe\\Int64::ofInt(1);", "PHP haxe.Int64 assignments should not rely on the global Int64 alias");
+		assertNotContains(content, "class Int64 extends \\haxe\\Int64", "PHP should not emit the global Int64 alias when a user Int64 class exists");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP should not redeclare Int64, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "1\nshadow\n", "generated PHP Int64 shadow output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -8048,6 +8085,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpDollarString();
 		assertPhpInt64LiteralExtension();
 		assertPhpHaxeInt64RuntimeSupport();
+		assertPhpInt64GlobalClassDoesNotCollide();
 		assertPythonNumericLiteralFieldCallSyntax();
 		assertPhpArrayConstructor();
 		assertPhpArrayOperations();

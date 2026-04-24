@@ -1615,7 +1615,7 @@ class SourceTargetCommon {
 				if (field == "iterator" && args.length == 0)
 					return "__hxhx_iterator(" + renderExpr(Php, receiver) + ")";
 				if (field == "ofInt" && phpIntLiteralExtensionReceiver(receiver))
-					return phpStaticMethodCall(sanitizePhpTypePath("haxe.Int64"), field, [receiver]);
+					return phpStaticMethodCall(phpInt64TypePath(), field, [receiver]);
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
 					if (typePath == "UnitBuilder" && field == "generateSpec") {
@@ -1629,6 +1629,8 @@ class SourceTargetCommon {
 						// Same compile-time-only harness pattern as UnitBuilder.generateSpec:
 						// the real macro mutates the test class list during compilation.
 						"/* hxhx skipped TestIssues.addIssueClasses */ null";
+					} else if (isInt64TypeHint(typePath) && phpInt64StaticMethodName(field)) {
+						phpStaticMethodCall(phpInt64TypePath(), field, phpArgs);
 					} else if (phpKnownStaticCallableField(typePath, field)) {
 						"(" + phpStaticPropertyAccess(typePath, field) + ")(" + [for (arg in phpArgs) renderExpr(Php, arg)].join(", ") + ")";
 					} else {
@@ -4399,6 +4401,15 @@ class SourceTargetCommon {
 		};
 	}
 
+	static function phpInt64StaticMethodName(field:String):Bool {
+		return switch (sanitizeTypeName(field)) {
+			case "make", "ofInt", "parseString", "add", "sub", "mul", "divMod", "toStr":
+				true;
+			case _:
+				false;
+		};
+	}
+
 	static function phpInt64StaticMethodReturnsInt64(field:String):Bool {
 		return switch (sanitizeTypeName(field)) {
 			case "make", "ofInt", "parseString", "add", "sub", "mul":
@@ -5300,12 +5311,16 @@ class SourceTargetCommon {
 		return normalized == "Int64" || normalized == "haxe.Int64";
 	}
 
+	static function phpInt64TypePath():String {
+		return "\\haxe\\Int64";
+	}
+
 	static function phpInt64AssignedValueExpr(expr:HxExpr, rendered:String):String {
 		return switch (expr) {
 			case EInt(_):
-				"Int64::ofInt(" + rendered + ")";
+				phpInt64TypePath() + "::ofInt(" + rendered + ")";
 			case EUnop("-", EInt(_)):
-				"Int64::ofInt(" + rendered + ")";
+				phpInt64TypePath() + "::ofInt(" + rendered + ")";
 			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]) if (suffix == "i64" || suffix == "u64"):
 				"__hxhx_int64_literal("
 				+ quotePhpString(raw)
@@ -7846,6 +7861,17 @@ class SourceTargetCommon {
 		return out;
 	}
 
+	static function phpProgramDeclaresClass(program:GenIrProgram, className:String):Bool {
+		final cleanName = sanitizePhpTypeName(className);
+		for (typed in program.getTypedModules()) {
+			for (cls in HxModuleDecl.getClasses(typed.getParsed().getDecl())) {
+				if (sanitizePhpTypeName(HxClassDecl.getName(cls)) == cleanName)
+					return true;
+			}
+		}
+		return false;
+	}
+
 	static function phpMainClassNeedsRuntimeSupport(cls:HxClassDecl):Bool {
 		if (HxClassDecl.getExtendsPath(cls) != null && HxClassDecl.getExtendsPath(cls).length > 0)
 			return true;
@@ -8042,106 +8068,8 @@ class SourceTargetCommon {
 				postStaticInitializers.push(className + "::$" + fieldName + " = " + renderExpr(Php, init) + ";");
 			memberCount += 1;
 		}
-		if (className == "Int64") {
-			if (!emittedFields.exists("high")) {
-				emittedFields.set("high", true);
-				out.push("  public $high;");
-				memberCount += 1;
-			}
-			if (!emittedFields.exists("low")) {
-				emittedFields.set("low", true);
-				out.push("  public $low;");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("__construct")) {
-				emittedMethods.set("__construct", true);
-				out.push("  public function __construct($high = 0, $low = 0) {");
-				out.push("    $this->high = __hxhx_int32_value($high);");
-				out.push("    $this->low = __hxhx_int32_value($low);");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("make")) {
-				emittedMethods.set("make", true);
-				out.push("  public static function make($high, $low) {");
-				out.push("    return new Int64($high, $low);");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("ofInt")) {
-				emittedMethods.set("ofInt", true);
-				out.push("  public static function ofInt($value) {");
-				out.push("    $low = __hxhx_int32_value($value);");
-				out.push("    return new Int64($low < 0 ? -1 : 0, $low);");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("add")) {
-				emittedMethods.set("add", true);
-				out.push("  public static function add($left, $right) {");
-				out.push("    return __hxhx_int64_add($left, $right);");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("sub")) {
-				emittedMethods.set("sub", true);
-				out.push("  public static function sub($left, $right) {");
-				out.push("    return __hxhx_int64_sub($left, $right);");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("mul")) {
-				emittedMethods.set("mul", true);
-				out.push("  public static function mul($left, $right) {");
-				out.push("    return __hxhx_int64_mul($left, $right);");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("divMod")) {
-				emittedMethods.set("divMod", true);
-				out.push("  public static function divMod($dividend, $divisor) {");
-				out.push("    return __hxhx_int64_div_mod($dividend, $divisor);");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("parseString")) {
-				emittedMethods.set("parseString", true);
-				out.push("  public static function parseString($value) {");
-				out.push("    return __hxhx_int64_parse_string($value);");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("toStr")) {
-				emittedMethods.set("toStr", true);
-				out.push("  public static function toStr($value) {");
-				out.push("    return __hxhx_int64_to_string($value);");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("toInt")) {
-				emittedMethods.set("toInt", true);
-				out.push("  public function toInt() {");
-				out.push("    $expectedHigh = $this->low < 0 ? -1 : 0;");
-				out.push("    if ($this->high !== $expectedHigh) throw ValueException::thrown(\"Overflow\");");
-				out.push("    return $this->low;");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("toString")) {
-				emittedMethods.set("toString", true);
-				out.push("  public function toString() {");
-				out.push("    return __hxhx_int64_to_string($this);");
-				out.push("  }");
-				memberCount += 1;
-			}
-			if (!emittedMethods.exists("__toString")) {
-				emittedMethods.set("__toString", true);
-				out.push("  public function __toString() {");
-				out.push("    return $this->toString();");
-				out.push("  }");
-				memberCount += 1;
-			}
-		}
+		// haxe.Int64 runtime support is emitted in namespace haxe; a user/private
+		// top-level Int64 support class must remain user-owned.
 		var sawConstructor = false;
 		final instanceMethodNames = phpInstanceMethodNames(cls, classesByName, new Map<String, Bool>());
 		final instanceMethodArgs = phpInstanceMethodArgs(cls, classesByName, new Map<String, Bool>());
@@ -10477,10 +10405,12 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("namespace {");
 				appendPhpClassNameMap(lines, program, decl);
-				lines.push("if (!class_exists(\"Int64\", false)) {");
-				lines.push("  class Int64 extends \\haxe\\Int64 {");
-				lines.push("  }");
-				lines.push("}");
+				if (!phpProgramDeclaresClass(program, "Int64")) {
+					lines.push("if (!class_exists(\"Int64\", false)) {");
+					lines.push("  class Int64 extends \\haxe\\Int64 {");
+					lines.push("  }");
+					lines.push("}");
+				}
 				lines.push("class StringTools {");
 				lines.push("  public static function urlEncode($value) {");
 				lines.push("    return rawurlencode(strval($value));");
@@ -11059,13 +10989,13 @@ class SourceTargetCommon {
 				lines.push("  $clean = str_replace(\"_\", \"\", strtolower($text));");
 				lines.push("  if (strpos($clean, \"0x\") === 0) {");
 				lines.push("    $hex = ltrim(substr($clean, 2), \"0\");");
-				lines.push("    if ($hex === \"\") return Int64::make(0, 0);");
+				lines.push("    if ($hex === \"\") return \\haxe\\Int64::make(0, 0);");
 				lines.push("    if (strlen($hex) > 16) $hex = substr($hex, -16);");
 				lines.push("    $padded = str_pad($hex, 16, \"0\", STR_PAD_LEFT);");
-				lines.push("    return Int64::make(hexdec(substr($padded, 0, 8)), hexdec(substr($padded, 8, 8)));");
+				lines.push("    return \\haxe\\Int64::make(hexdec(substr($padded, 0, 8)), hexdec(substr($padded, 8, 8)));");
 				lines.push("  }");
 				lines.push("  $value = intval($clean);");
-				lines.push("  return Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
+				lines.push("  return \\haxe\\Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
 				lines.push("}");
 				lines.push("function __hxhx_int64_parse_string($text) {");
 				lines.push("  $clean = trim(strval($text));");
@@ -11073,13 +11003,13 @@ class SourceTargetCommon {
 				lines.push("  $negative = strlen($clean) > 0 && $clean[0] === \"-\";");
 				lines.push("  $digits = $negative ? substr($clean, 1) : $clean;");
 				lines.push("  $digits = ltrim($digits, \"0\");");
-				lines.push("  if ($digits === \"\") return Int64::make(0, 0);");
+				lines.push("  if ($digits === \"\") return \\haxe\\Int64::make(0, 0);");
 				lines.push("  $limit = $negative ? \"9223372036854775808\" : \"9223372036854775807\";");
 				lines.push("  if (strlen($digits) > 19 || (strlen($digits) === 19 && strcmp($digits, $limit) > 0)) throw new \\Exception(\"Int64 overflow\");");
-				lines.push("  if ($negative && $digits === \"9223372036854775808\") return Int64::make(0x80000000, 0);");
+				lines.push("  if ($negative && $digits === \"9223372036854775808\") return \\haxe\\Int64::make(0x80000000, 0);");
 				lines.push("  $value = intval($digits);");
 				lines.push("  if ($negative) $value = -$value;");
-				lines.push("  return Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
+				lines.push("  return \\haxe\\Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
 				lines.push("}");
 				lines.push("function __hxhx_is_int64($value) {");
 				lines.push("  return is_object($value) && property_exists($value, \"high\") && property_exists($value, \"low\");");
@@ -11087,10 +11017,10 @@ class SourceTargetCommon {
 				lines.push("function __hxhx_int64_value($value) {");
 				lines.push("  if (__hxhx_is_int64($value)) return $value;");
 				lines.push("  if (is_string($value)) return __hxhx_int64_parse_string($value);");
-				lines.push("  return Int64::ofInt(intval($value));");
+				lines.push("  return \\haxe\\Int64::ofInt(intval($value));");
 				lines.push("}");
 				lines.push("function __hxhx_int64_make_u($high, $low) {");
-				lines.push("  return Int64::make($high & 0xFFFFFFFF, $low & 0xFFFFFFFF);");
+				lines.push("  return \\haxe\\Int64::make($high & 0xFFFFFFFF, $low & 0xFFFFFFFF);");
 				lines.push("}");
 				lines.push("function __hxhx_int64_copy($value) {");
 				lines.push("  $value = __hxhx_int64_value($value);");
@@ -11175,15 +11105,15 @@ class SourceTargetCommon {
 				lines.push("  $divisor = __hxhx_int64_value($divisor);");
 				lines.push("  if ($divisor->high === 0 && $divisor->low === 0) throw new \\Exception(\"divide by zero\");");
 				lines.push("  if ($divisor->high === 0 && $divisor->low === 1) {");
-				lines.push("    return (object)[\"quotient\" => __hxhx_int64_copy($dividend), \"modulus\" => Int64::ofInt(0)];");
+				lines.push("    return (object)[\"quotient\" => __hxhx_int64_copy($dividend), \"modulus\" => \\haxe\\Int64::ofInt(0)];");
 				lines.push("  }");
 				lines.push("  $dividendNegative = $dividend->high < 0;");
 				lines.push("  $divisorNegative = $divisor->high < 0;");
 				lines.push("  $quotientNegative = $dividendNegative !== $divisorNegative;");
 				lines.push("  $modulus = $dividendNegative ? __hxhx_int64_neg($dividend) : __hxhx_int64_copy($dividend);");
 				lines.push("  $divisorAbs = $divisorNegative ? __hxhx_int64_neg($divisor) : __hxhx_int64_copy($divisor);");
-				lines.push("  $quotient = Int64::ofInt(0);");
-				lines.push("  $mask = Int64::ofInt(1);");
+				lines.push("  $quotient = \\haxe\\Int64::ofInt(0);");
+				lines.push("  $mask = \\haxe\\Int64::ofInt(1);");
 				lines.push("  while ($divisorAbs->high >= 0) {");
 				lines.push("    $cmp = __hxhx_int64_ucompare($divisorAbs, $modulus);");
 				lines.push("    $divisorAbs = __hxhx_int64_shl1($divisorAbs);");
