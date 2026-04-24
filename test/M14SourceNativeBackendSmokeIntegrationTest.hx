@@ -1011,6 +1011,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStringToolsUrlProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(StringTools.urlEncode(\"é\"));",
+			"    Sys.println(StringTools.urlDecode(\"%C3%A9\"));",
+			"    Sys.println(StringTools.urlEncode(\"a/b+c\"));",
+			"    Sys.println(StringTools.urlDecode(\"a%2Fb%2Bc\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpXmlRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5401,6 +5417,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "foo", "generated PHP BaseCode should decode base32-hex");
 		}
 		deleteRecursive(baseCodeTmpRoot);
+
+		final stringToolsUrlTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_stringtools_url_" + Std.string(Date.now().getTime()));
+		deleteRecursive(stringToolsUrlTmpRoot);
+		FileSystem.createDirectory(stringToolsUrlTmpRoot);
+		backend.emit(phpStringToolsUrlProgram(), new BackendContext(stringToolsUrlTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final stringToolsUrlContent = File.getContent(Path.join([stringToolsUrlTmpRoot, "index.php"]));
+		assertContains(stringToolsUrlContent, "class StringTools", "PHP StringTools should be emitted");
+		assertContains(stringToolsUrlContent, "public static function urlEncode($value)", "PHP StringTools should expose urlEncode");
+		assertContains(stringToolsUrlContent, "public static function urlDecode($value)", "PHP StringTools should expose urlDecode");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([stringToolsUrlTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP StringTools URL support should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "%C3%A9", "generated PHP StringTools.urlEncode should encode UTF-8 bytes");
+			assertContains(run.stdout, "é", "generated PHP StringTools.urlDecode should decode UTF-8 bytes");
+			assertContains(run.stdout, "a%2Fb%2Bc", "generated PHP StringTools.urlEncode should escape slash and plus");
+			assertContains(run.stdout, "a/b+c", "generated PHP StringTools.urlDecode should unescape slash and plus");
+		}
+		deleteRecursive(stringToolsUrlTmpRoot);
 
 		final xmlTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_xml_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(xmlTmpRoot);

@@ -9350,6 +9350,14 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("namespace {");
 				appendPhpClassNameMap(lines, program, decl);
+				lines.push("class StringTools {");
+				lines.push("  public static function urlEncode($value) {");
+				lines.push("    return rawurlencode(strval($value));");
+				lines.push("  }");
+				lines.push("  public static function urlDecode($value) {");
+				lines.push("    return rawurldecode(strval($value));");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("#[\\AllowDynamicProperties]");
 				lines.push("class __HxAnon {");
 				lines.push("  public function __construct($fields = []) {");

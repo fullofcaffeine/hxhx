@@ -19153,6 +19153,14 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "namespace {");
       ignore (appendPhpClassNameMap (Obj.magic lines) (Obj.magic program) (Obj.magic decl));
+      ignore (HxArray.push lines "class StringTools {");
+      ignore (HxArray.push lines "  public static function urlEncode($value) {");
+      ignore (HxArray.push lines "    return rawurlencode(strval($value));");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function urlDecode($value) {");
+      ignore (HxArray.push lines "    return rawurldecode(strval($value));");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "#[\\AllowDynamicProperties]");
       ignore (HxArray.push lines "class __HxAnon {");
       ignore (HxArray.push lines "  public function __construct($fields = []) {");
