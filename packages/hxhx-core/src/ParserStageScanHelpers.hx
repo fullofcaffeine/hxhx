@@ -1673,6 +1673,7 @@ class ParserStageScanHelpers {
 
 			// String literal ("..." or '...')
 			if (c == "\"".code || c == "'".code) {
+				final startString = i;
 				final quote = c;
 				i += 1;
 				while (i < len) {
@@ -1687,7 +1688,12 @@ class ParserStageScanHelpers {
 					if (cc == quote)
 						break;
 				}
-				continue;
+				return {
+					isIdent: false,
+					text: source.substr(startString, i - startString),
+					nextPos: i,
+					startPos: startString
+				};
 			}
 
 			// Regex literal: ~/.../

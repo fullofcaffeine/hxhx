@@ -2344,7 +2344,7 @@ class ParserStage {
 		return -1;
 	}
 
-	static function sourceSignatureArgHints(name:String, ?source:String, methodBodyStart:Int = -1):Array<{
+	static function sourceSignatureArgHints(name:String, ?source:String, methodBodyStart:Int = -1, ?argNames:Array<String>):Array<{
 		name:String,
 		isOptional:Bool,
 		typeHint:String,
@@ -2353,18 +2353,78 @@ class ParserStage {
 		if (source == null || source.length == 0 || name == null || name.length == 0)
 			return [];
 		final needle = "function " + name;
-		var fnIndex = methodBodyStart > 0 ? source.lastIndexOf(needle, methodBodyStart) : -1;
-		if (fnIndex < 0)
-			fnIndex = source.indexOf(needle);
-		if (fnIndex < 0)
-			return [];
-		final open = source.indexOf("(", fnIndex);
-		if (open < 0)
-			return [];
-		final close = findMatchingParen(source, open);
-		if (close < 0)
-			return [];
-		return parseSourceSignatureArgs(source.substr(open + 1, close - open - 1));
+		function hintsAt(fnIndex:Int):Array<{
+			name:String,
+			isOptional:Bool,
+			typeHint:String,
+			defaultText:String
+		}> {
+			if (fnIndex < 0)
+				return [];
+			final open = source.indexOf("(", fnIndex);
+			if (open < 0)
+				return [];
+			final close = findMatchingParen(source, open);
+			if (close < 0)
+				return [];
+			return parseSourceSignatureArgs(source.substr(open + 1, close - open - 1));
+		}
+		final anchoredIndex = methodBodyStart > 0 ? source.lastIndexOf(needle, methodBodyStart) : -1;
+		final anchoredHints = hintsAt(anchoredIndex);
+		if (anchoredHints.length > 0 && sourceArgHintsMatchNames(anchoredHints, argNames))
+			return anchoredHints;
+		var first = new Array<{
+			name:String,
+			isOptional:Bool,
+			typeHint:String,
+			defaultText:String
+		}>();
+		var searchFrom = 0;
+		while (searchFrom < source.length) {
+			final fnIndex = source.indexOf(needle, searchFrom);
+			if (fnIndex < 0)
+				break;
+			final hints = hintsAt(fnIndex);
+			if (first.length == 0)
+				first = hints;
+			if (hints.length > 0 && sourceArgHintsMatchNames(hints, argNames))
+				return hints;
+			searchFrom = fnIndex + needle.length;
+		}
+		return first;
+	}
+
+	static function sourceArgHintsMatchNames(hints:Array<{
+		name:String,
+		isOptional:Bool,
+		typeHint:String,
+		defaultText:String
+	}>, ?argNames:Array<String>):Bool {
+		if (argNames == null || argNames.length == 0)
+			return true;
+		if (hints.length != argNames.length)
+			return false;
+		for (i in 0...argNames.length)
+			if (hints[i].name != argNames[i])
+				return false;
+		return true;
+	}
+
+	static function protocolArgNames(argsPayload:String):Array<String> {
+		final out = new Array<String>();
+		if (argsPayload == null || argsPayload.length == 0)
+			return out;
+		for (arg in argsPayload.split(",")) {
+			var name = StringTools.trim(arg);
+			if (name.length == 0)
+				continue;
+			if (StringTools.startsWith(name, "..."))
+				name = name.substr(3);
+			if (StringTools.startsWith(name, "?"))
+				name = name.substr(1);
+			out.push(name);
+		}
+		return out;
 	}
 
 	static function parseSourceSignatureArgs(text:String):Array<{
@@ -2518,9 +2578,9 @@ class ParserStage {
 			}
 		}
 
-		final args = new Array<HxFunctionArg>();
-		final sourceHints = sourceSignatureArgHints(name, source, methodBodyStart);
 		final argsPayload = parts[3];
+		final args = new Array<HxFunctionArg>();
+		final sourceHints = sourceSignatureArgHints(name, source, methodBodyStart, protocolArgNames(argsPayload));
 		if (argsPayload.length > 0) {
 			for (a in argsPayload.split(",")) {
 				if (a.length == 0)

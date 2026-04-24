@@ -4677,6 +4677,46 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(HxFunctionArg.getTypeHint(args[8]) == "Null<Float>", "native protocol should recover source generic Null<Float> over erased payload Null");
 	}
 
+	static function assertNativeProtocolConstructorDefaultArgSourceDecode():Void {
+		final source = [
+			"class Earlier {",
+			"  public function new() {}",
+			"}",
+			"class BaseConstrOpt {",
+			"  public function new(s:String = \"test\", i:Int = -5, b:Bool = true) {}",
+			"}"
+		].join("\n");
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("class", "BaseConstrOpt"),
+			"ast static_main 0",
+			protocolLine("method", "new|public|0|s,i,b|Void|||s:String,i:Int,b:Bool|"),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
+		final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl));
+		assertTrue(functions.length == 1, "native protocol should decode the source-backed constructor");
+		final args = HxFunctionDecl.getArgs(functions[0]);
+		assertTrue(args.length == 3, "native protocol should preserve constructor arity");
+		assertTrue(HxFunctionArg.getDefaultValueText(args[0]) == "\"test\"",
+			"native protocol should recover the matching constructor string default instead of the first constructor in the source");
+		assertTrue(HxFunctionArg.getDefaultValueText(args[1]) == "-5", "native protocol should recover the matching constructor int default");
+		assertTrue(HxFunctionArg.getDefaultValueText(args[2]) == "true", "native protocol should recover the matching constructor bool default");
+		final scannedClasses = ParserStageScanHelpers.scanModuleLocalHelperClasses(source, "Earlier");
+		var sawScannedStringDefault = false;
+		for (cls in scannedClasses) {
+			if (HxClassDecl.getName(cls) != "BaseConstrOpt")
+				continue;
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				if (HxFunctionDecl.getName(fn) != "new")
+					continue;
+				final scannedArgs = HxFunctionDecl.getArgs(fn);
+				sawScannedStringDefault = scannedArgs.length == 3 && HxFunctionArg.getDefaultValueText(scannedArgs[0]) == "\"test\"";
+			}
+		}
+		assertTrue(sawScannedStringDefault, "source helper scanner should preserve string defaults on constructors");
+	}
+
 	static function assertPhpPlusSemantics():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_plus_semantics_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6734,6 +6774,60 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpConstructorDefaultArgs():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_constructor_default_args_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class BaseConstrOpt {",
+			"  public var s:String;",
+			"  public var i:Int;",
+			"  public var b:Bool;",
+			"  public function new(s:String = \"test\", i:Int = -5, b:Bool = true) {",
+			"    this.s = s;",
+			"    this.i = i;",
+			"    this.b = b;",
+			"  }",
+			"}",
+			"class SubConstrOpt extends BaseConstrOpt {",
+			"  public function new() { super(); }",
+			"}",
+			"class SubConstrOpt2 extends BaseConstrOpt {}",
+			"class SubConstrOpt3 extends BaseConstrOpt {",
+			"  public function new(s = \"test2\", i = -6) { super(s, i); }",
+			"}",
+			"class Main {",
+			"  static function dump(b:BaseConstrOpt) {",
+			"    Sys.println(b.s + \",\" + Std.string(b.i) + \",\" + Std.string(b.b));",
+			"  }",
+			"  static function main() {",
+			"    dump(new BaseConstrOpt());",
+			"    dump(new BaseConstrOpt(null, 99));",
+			"    dump(new SubConstrOpt());",
+			"    dump(new SubConstrOpt2());",
+			"    dump(new SubConstrOpt3());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public function __construct($s = \"test\", $i = (-5), $b = true)",
+			"PHP constructors should preserve parsed default arguments");
+		assertContains(content, "parent::__construct($s, $i)", "PHP super constructor calls should remain valid with parent defaults");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP constructor default args should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "test,-5,true\ntest,99,true\ntest,-5,true\ntest,-5,true\ntest2,-6,true\n",
+				"generated PHP constructor default args output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStringBufRuntimeSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_stringbuf_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7460,6 +7554,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpShadowedTestHelperClosure();
 		assertNativeProtocolOptionalArgDecode();
 		assertNativeProtocolDefaultArgSourceDecode();
+		assertNativeProtocolConstructorDefaultArgSourceDecode();
 		assertPhpPlusSemantics();
 		assertPhpAnonymousToStringField();
 		assertPhpEnumString();
@@ -7519,6 +7614,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStdStringMapClassReference();
 		assertPhpTypeNameHelpersForStaticInitializers();
 		assertPhpDefaultArgsOnOverrides();
+		assertPhpConstructorDefaultArgs();
 		assertPhpStringBufRuntimeSupport();
 		assertPhpInstanceMethodValueBind();
 		assertPhpClosureCapturesMutableLocalByReference();
