@@ -840,6 +840,8 @@ class SourceTargetCommon {
 			return "__hxhx_add(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "+=")
 			return phpAddAssignExpr(left, right);
+		if (target == Php && op == "-=" && phpExprIsInt64Value(left))
+			return phpSubtractAssignExpr(left, right);
 		if (target == Php && op == "*")
 			return "__hxhx_mul(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "*=")
@@ -1000,6 +1002,12 @@ class SourceTargetCommon {
 		}
 		final a = lvalueExpr(target, left);
 		return a + " = __hxhx_add(" + a + ", " + renderExpr(target, right) + ")";
+	}
+
+	static function phpSubtractAssignExpr(left:HxExpr, right:HxExpr):String {
+		final target = Php;
+		final a = lvalueExpr(target, left);
+		return a + " = __hxhx_sub(" + a + ", " + renderExpr(target, right) + ")";
 	}
 
 	static function phpMultiplyAssignExpr(left:HxExpr, right:HxExpr):String {
@@ -1202,12 +1210,41 @@ class SourceTargetCommon {
 				postIncrementExpr(target, inner, 1);
 			case "post--":
 				postIncrementExpr(target, inner, -1);
+			case "++", "pre++":
+				preIncrementExpr(target, inner, 1);
+			case "--", "pre--":
+				preIncrementExpr(target, inner, -1);
 			case "-" if (target == Php && phpExprIsInt64Value(inner)):
 				"__hxhx_int64_neg(" + rendered + ")";
 			case "-", "+", "~":
 				"(" + op + rendered + ")";
 			default:
 				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + op;
+		};
+	}
+
+	static function preIncrementExpr(target:SourceNativeTarget, expr:HxExpr, delta:Int):String {
+		return switch (target) {
+			case Php:
+				final targetExpr = switch (expr) {
+					case EIdent(name):
+						valueName(target, name);
+					case EField(receiver, field):
+						fieldAccessExpr(target, receiver, field);
+					case EArrayAccess(receiver, index):
+						"__hxhx_array_get("
+						+ renderExpr(target, receiver)
+						+ ", "
+						+ renderExpr(target, index)
+						+ ")";
+					case EThis:
+						phpThisValueExpr();
+					case _:
+						throw targetLabel(target) + " source backend MVP unsupported prefix target: " + exprKind(expr);
+				};
+				"(" + targetExpr + " = " + phpIncrementedValueExpr(targetExpr, delta) + ")";
+			case Python, Java, Cs, Lua:
+				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + (delta < 0 ? "pre--" : "pre++");
 		};
 	}
 
@@ -1274,6 +1311,14 @@ class SourceTargetCommon {
 			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + (delta < 0 ? "post--" : "post++");
 		};
+	}
+
+	static function phpIncrementedValueExpr(valueExpr:String, delta:Int):String {
+		return delta < 0 ? "__hxhx_sub(" + valueExpr + ", " + Std.string(-delta) + ")" : "__hxhx_add("
+			+ valueExpr
+			+ ", "
+			+ Std.string(delta)
+			+ ")";
 	}
 
 	static function binopToken(target:SourceNativeTarget, op:String):Null<String> {
@@ -3790,7 +3835,8 @@ class SourceTargetCommon {
 				throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 		};
 		final absDelta = Std.string(delta < 0 ? -delta : delta);
-		final rhs = if (delta < 0) "(" + targetExpr + " - " + absDelta + ")" else "(" + targetExpr + " + " + absDelta + ")";
+		final rhs = if (target == Php && phpExprIsInt64Value(expr)) phpIncrementedValueExpr(targetExpr,
+			delta) else if (delta < 0) "(" + targetExpr + " - " + absDelta + ")" else "(" + targetExpr + " + " + absDelta + ")";
 		return exprStmt(target, targetExpr + " = " + rhs);
 	}
 
@@ -10926,7 +10972,7 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("function __hxhx_post_update_var(&$value, $delta) {");
 				lines.push("  $old = $value;");
-				lines.push("  $value = $old + $delta;");
+				lines.push("  $value = __hxhx_is_int64($old) ? __hxhx_int64_add($old, $delta) : $old + $delta;");
 				lines.push("  return $old;");
 				lines.push("}");
 				lines.push("function __hxhx_copy_value($value) {");
@@ -11452,12 +11498,12 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
 				lines.push("  $old = $obj->$field;");
-				lines.push("  $obj->$field = $old + $delta;");
+				lines.push("  $obj->$field = __hxhx_is_int64($old) ? __hxhx_int64_add($old, $delta) : $old + $delta;");
 				lines.push("  return $old;");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_index(&$obj, $index, $delta) {");
 				lines.push("  $old = $obj[$index];");
-				lines.push("  $obj[$index] = $old + $delta;");
+				lines.push("  $obj[$index] = __hxhx_is_int64($old) ? __hxhx_int64_add($old, $delta) : $old + $delta;");
 				lines.push("  return $old;");
 				lines.push("}");
 				lines.push("class Math {");
