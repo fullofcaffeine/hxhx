@@ -7950,6 +7950,13 @@ class SourceTargetCommon {
 				out.push("  }");
 				memberCount += 1;
 			}
+			if (!emittedMethods.exists("parseString")) {
+				emittedMethods.set("parseString", true);
+				out.push("  public static function parseString($value) {");
+				out.push("    return __hxhx_int64_parse_string($value);");
+				out.push("  }");
+				memberCount += 1;
+			}
 			if (!emittedMethods.exists("toInt")) {
 				emittedMethods.set("toInt", true);
 				out.push("  public function toInt() {");
@@ -9879,6 +9886,9 @@ class SourceTargetCommon {
 				lines.push("      $low = \\__hxhx_int32_value($value);");
 				lines.push("      return new Int64($low < 0 ? -1 : 0, $low);");
 				lines.push("    }");
+				lines.push("    public static function parseString($value) {");
+				lines.push("      return \\__hxhx_int64_parse_string($value);");
+				lines.push("    }");
 				lines.push("    public function toInt() {");
 				lines.push("      $expectedHigh = $this->low < 0 ? -1 : 0;");
 				lines.push("      if ($this->high !== $expectedHigh) throw \\ValueException::thrown(\"Overflow\");");
@@ -10859,6 +10869,20 @@ class SourceTargetCommon {
 				lines.push("    return Int64::make(hexdec(substr($padded, 0, 8)), hexdec(substr($padded, 8, 8)));");
 				lines.push("  }");
 				lines.push("  $value = intval($clean);");
+				lines.push("  return Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
+				lines.push("}");
+				lines.push("function __hxhx_int64_parse_string($text) {");
+				lines.push("  $clean = trim(strval($text));");
+				lines.push("  if (!preg_match('/^-?[0-9]+$/', $clean)) throw new \\Exception(\"Invalid Int64 string\");");
+				lines.push("  $negative = strlen($clean) > 0 && $clean[0] === \"-\";");
+				lines.push("  $digits = $negative ? substr($clean, 1) : $clean;");
+				lines.push("  $digits = ltrim($digits, \"0\");");
+				lines.push("  if ($digits === \"\") return Int64::make(0, 0);");
+				lines.push("  $limit = $negative ? \"9223372036854775808\" : \"9223372036854775807\";");
+				lines.push("  if (strlen($digits) > 19 || (strlen($digits) === 19 && strcmp($digits, $limit) > 0)) throw new \\Exception(\"Int64 overflow\");");
+				lines.push("  if ($negative && $digits === \"9223372036854775808\") return Int64::make(0x80000000, 0);");
+				lines.push("  $value = intval($digits);");
+				lines.push("  if ($negative) $value = -$value;");
 				lines.push("  return Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
 				lines.push("}");
 				lines.push("function __hxhx_int_literal($text, $suffix) {");

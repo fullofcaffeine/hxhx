@@ -5141,6 +5141,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var f:haxe.Int64 = 0x7FFFFFFFFFFFFFFFi64;",
 			"    Sys.println(f.high);",
 			"    Sys.println(f.low);",
+			"    var g = haxe.Int64.parseString(\"  -23 \");",
+			"    Sys.println(g.high);",
+			"    Sys.println(g.low);",
+			"    var h = haxe.Int64.parseString(\"9223372036854775807\");",
+			"    Sys.println(h.high);",
+			"    Sys.println(h.low);",
+			"    try {",
+			"      haxe.Int64.parseString(\"9223372036854775808\");",
+			"      Sys.println(\"missing-parse-overflow\");",
+			"    } catch (_:Dynamic) {",
+			"      Sys.println(\"parse-overflow\");",
+			"    }",
 			"    try {",
 			"      haxe.Int64.make(0, 0x80000000).toInt();",
 			"      Sys.println(\"missing-overflow\");",
@@ -5160,13 +5172,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Int64 {", "PHP runtime should expose haxe.Int64");
 		assertContains(content, "public static function make($high, $low)", "PHP haxe.Int64 should expose make");
 		assertContains(content, "public static function ofInt($value)", "PHP haxe.Int64 should expose ofInt");
+		assertContains(content, "public static function parseString($value)", "PHP haxe.Int64 should expose parseString");
 		assertContains(content, "public function toInt()", "PHP haxe.Int64 should expose instance toInt");
 		assertContains(content, "$e = __hxhx_int64_literal(\"47244640255\", \"i64\");", "PHP typed Int64 decimal literals should construct Int64 values");
 		assertContains(content, "$f = __hxhx_int64_literal(\"0x7FFFFFFFFFFFFFFF\", \"i64\");", "PHP typed Int64 hex literals should construct Int64 values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Int64 runtime support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n10\n-1\n2147483647\n-1\noverflow\n",
+			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\nparse-overflow\noverflow\n",
 				"generated PHP haxe.Int64 output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
