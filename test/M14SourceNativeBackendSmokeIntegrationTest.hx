@@ -6809,6 +6809,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpOpaqueBlockExprCapturesOuterLocals():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_opaque_block_expr_capture_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var prefix = \"value\";",
+			"    var s = { var x:String = prefix + \":ok\"; x; };",
+			"    Sys.println(s);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function() use (&$prefix)", "PHP opaque block expressions should capture outer locals");
+		assertContains(content, "$x = __hxhx_to_string_value(__hxhx_add($prefix, \":ok\"));",
+			"PHP opaque block expressions should lower typed local statements");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP opaque block expression should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "value:ok\n", "generated PHP opaque block expression output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpConstructorDefaultArgs():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_constructor_default_args_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7650,6 +7681,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTypeNameHelpersForStaticInitializers();
 		assertPhpDefaultArgsOnOverrides();
 		assertPhpTryCatchRawRenamesScopedLocalFunctions();
+		assertPhpOpaqueBlockExprCapturesOuterLocals();
 		assertPhpConstructorDefaultArgs();
 		assertPhpStringBufRuntimeSupport();
 		assertPhpInstanceMethodValueBind();

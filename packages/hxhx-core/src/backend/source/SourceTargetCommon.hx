@@ -2572,7 +2572,10 @@ class SourceTargetCommon {
 	}
 
 	static function phpTryCatchRawExpr(raw:String):String {
-		if (raw == null || raw.length == 0 || StringTools.startsWith(raw, "opaque_block_expr:"))
+		final opaqueBlock = phpOpaqueBlockExpr(raw);
+		if (opaqueBlock != null)
+			return opaqueBlock;
+		if (raw == null || raw.length == 0)
 			throw "PHP source backend MVP unsupported expression: ETryCatchRaw";
 		final stmts = HxParser.parseFunctionBodyText(raw);
 		if (stmts.length != 1)
@@ -2583,6 +2586,19 @@ class SourceTargetCommon {
 			case _:
 				throw "PHP source backend MVP unsupported expression: ETryCatchRaw";
 		};
+	}
+
+	static function phpOpaqueBlockExpr(raw:String):Null<String> {
+		final marker = "opaque_block_expr:";
+		if (raw == null || !StringTools.startsWith(raw, marker))
+			return null;
+		var body = StringTools.trim(raw.substr(marker.length));
+		if (body.length == 0)
+			throw "PHP source backend MVP unsupported expression: ETryCatchRaw";
+		if (body.charCodeAt(0) == "{".code && body.charCodeAt(body.length - 1) == "}".code)
+			body = body.substr(1, body.length - 2);
+		final stmts = HxParser.parseFunctionBodyText(body);
+		return renderPhpBlockExpr(stmts);
 	}
 
 	static function pythonTryCatchRawExpr(raw:String):String {
@@ -2633,6 +2649,45 @@ class SourceTargetCommon {
 		renderPhpCatchChain(out, "  ", "\\Throwable", catches, function(c, bodyIndent) return renderReturningStmt(Php, c.body, bodyIndent));
 		out.push("})()");
 		return out.join("\n");
+	}
+
+	static function renderPhpBlockExpr(stmts:Array<HxStmt>):String {
+		final blockLocalTypes = copyStringMap(phpRenderLocalTypes);
+		final useClause = phpBlockExprUseClause(stmts);
+		final out = ["(function()" + useClause + " {"];
+		withPhpLocalTypes(Php, blockLocalTypes, function() {
+			if (stmts == null || stmts.length == 0) {
+				out.push("  return null;");
+			} else {
+				for (i in 0...stmts.length) {
+					final isTail = i == stmts.length - 1;
+					final rendered = isTail ? renderReturningStmt(Php, stmts[i], "  ") : renderStmtWithLocals(Php, stmts[i], "  ", blockLocalTypes);
+					for (line in rendered)
+						out.push(line);
+				}
+			}
+		});
+		out.push("})()");
+		return out.join("\n");
+	}
+
+	static function phpBlockExprUseClause(stmts:Array<HxStmt>):String {
+		if (phpRenderLocalTypes == null)
+			return "";
+		final declared = new Array<String>();
+		final used = new Array<String>();
+		if (stmts != null)
+			for (stmt in stmts) {
+				phpCollectDeclaredLocalsInStmt(stmt, declared);
+				phpCollectUsedIdentsInStmt(stmt, used);
+			}
+		final refNames = new Array<String>();
+		for (name in used) {
+			if (declared.indexOf(name) >= 0 || !phpRenderLocalTypes.exists(name) || refNames.indexOf(name) >= 0)
+				continue;
+			refNames.push(name);
+		}
+		return phpLambdaUseClause([], refNames);
 	}
 
 	static function phpTryExprUseClause(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>):String {
