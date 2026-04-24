@@ -852,6 +852,8 @@ class SourceTargetCommon {
 			return "__hxhx_div(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "/=")
 			return phpDivideAssignExpr(left, right);
+		if (target == Php && (op == "&" || op == "|" || op == "^") && (phpExprIsInt64Value(left) || phpExprIsInt64Value(right)))
+			return phpInt64BitwiseExpr(op, left, right);
 		if (target == Php && (op == "==" || op == "!=") && phpEqualityNeedsHelper(left, right)) {
 			final eq = "__hxhx_equals(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 			return op == "==" ? eq : "(!" + eq + ")";
@@ -984,6 +986,17 @@ class SourceTargetCommon {
 		final target = Php;
 		final a = lvalueExpr(target, left);
 		return a + " = __hxhx_mod(" + a + ", " + renderExpr(target, right) + ")";
+	}
+
+	static function phpInt64BitwiseExpr(op:String, left:HxExpr, right:HxExpr):String {
+		final helper = switch (op) {
+			case "&": "__hxhx_int64_and";
+			case "|": "__hxhx_int64_or";
+			case "^": "__hxhx_int64_xor";
+			case _:
+				throw "PHP source backend MVP unsupported Int64 bitwise operator: " + op;
+		};
+		return helper + "(" + renderExpr(Php, left) + ", " + renderExpr(Php, right) + ")";
 	}
 
 	static function phpAddAssignExpr(left:HxExpr, right:HxExpr):String {
@@ -4371,8 +4384,8 @@ class SourceTargetCommon {
 				true;
 			case ECall(callee, _):
 				phpInt64StaticCall(callee);
-			case EBinop("*", left, right), EBinop("+", left, right), EBinop("-", left, right), EBinop("/", left, right), EBinop("%", left, right):
-				phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
+			case EBinop("*", left, right), EBinop("+", left, right), EBinop("-", left, right), EBinop("/", left, right), EBinop("%", left, right),
+				EBinop("&", left, right), EBinop("|", left, right), EBinop("^", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
 			case EUnop("-", inner):
 				phpExprIsInt64Value(inner);
 			case EMacroExpr(inner, _) | EUntyped(inner):
@@ -11123,6 +11136,21 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("function __hxhx_int64_sub($left, $right) {");
 				lines.push("  return __hxhx_int64_add($left, __hxhx_int64_neg($right));");
+				lines.push("}");
+				lines.push("function __hxhx_int64_and($left, $right) {");
+				lines.push("  $left = __hxhx_int64_value($left);");
+				lines.push("  $right = __hxhx_int64_value($right);");
+				lines.push("  return __hxhx_int64_make_u($left->high & $right->high, $left->low & $right->low);");
+				lines.push("}");
+				lines.push("function __hxhx_int64_or($left, $right) {");
+				lines.push("  $left = __hxhx_int64_value($left);");
+				lines.push("  $right = __hxhx_int64_value($right);");
+				lines.push("  return __hxhx_int64_make_u($left->high | $right->high, $left->low | $right->low);");
+				lines.push("}");
+				lines.push("function __hxhx_int64_xor($left, $right) {");
+				lines.push("  $left = __hxhx_int64_value($left);");
+				lines.push("  $right = __hxhx_int64_value($right);");
+				lines.push("  return __hxhx_int64_make_u($left->high ^ $right->high, $left->low ^ $right->low);");
 				lines.push("}");
 				lines.push("function __hxhx_int64_to_string($value) {");
 				lines.push("  $value = __hxhx_int64_value($value);");
