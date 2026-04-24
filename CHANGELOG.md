@@ -1,3 +1,10 @@
+## [0.15.13](https://github.com/fullofcaffeine/hxhx/compare/v0.15.12...v0.15.13) (2026-04-24)
+
+
+### Bug Fixes
+
+* **php:** handle optional argument defaults ([818e03b](https://github.com/fullofcaffeine/hxhx/commit/818e03bc7326ec8b0627c50d02aab022489b3d85))
+
 ## [0.15.12](https://github.com/fullofcaffeine/hxhx/compare/v0.15.11...v0.15.12) (2026-04-24)
 
 
