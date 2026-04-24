@@ -339,6 +339,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStaticFunctionFieldCallProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static var add = function(x, y) return x + y;",
+			"  static function main() {",
+			"    Sys.println(Std.string(add(2, 3)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function unsignedRightShiftProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -4763,6 +4777,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStaticFunctionFieldCall():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_static_function_field_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStaticFunctionFieldCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static $add = null;", "PHP static function fields should use a legal class property default");
+		assertContains(content, "Main::$add = function($x, $y)", "PHP static function fields should initialize after class declaration");
+		assertContains(content, "(Main::$add)(2, 3)", "PHP static function field calls should dispatch through the property callable");
+		assertNotContains(content, "Main::add(2, 3)", "PHP static function field calls should not use static method syntax");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP static function field call should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "5\n", "generated PHP static function field output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpBitwiseEqualityPrecedence():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_bitwise_equality_precedence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7148,6 +7182,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpBitwisePrecedence();
 		assertPhpSameClassStaticHelperCall();
 		assertPhpSameClassStaticInlineCall();
+		assertPhpStaticFunctionFieldCall();
 		assertPhpBitwiseEqualityPrecedence();
 		assertPhpModuloMultiplicationPrecedence();
 		assertPhpFloatModulo();

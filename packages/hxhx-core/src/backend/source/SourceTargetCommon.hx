@@ -1552,6 +1552,8 @@ class SourceTargetCommon {
 						// Same compile-time-only harness pattern as UnitBuilder.generateSpec:
 						// the real macro mutates the test class list during compilation.
 						"/* hxhx skipped TestIssues.addIssueClasses */ null";
+					} else if (phpKnownStaticCallableField(typePath, field)) {
+						"(" + phpStaticPropertyAccess(typePath, field) + ")(" + [for (arg in phpArgs) renderExpr(Php, arg)].join(", ") + ")";
 					} else {
 						phpStaticMethodCall(typePath, field, phpArgs);
 					}
@@ -3728,6 +3730,7 @@ class SourceTargetCommon {
 	static var phpRenderInstanceMethodArgsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Array<HxFunctionArg>>>> = null;
 	static var phpRenderDynamicMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
+	static var phpRenderStaticCallableFieldsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderDynamicCallFieldsByLocal:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderRefCaptureLocals:Null<Array<String>> = null;
 
@@ -4049,6 +4052,29 @@ class SourceTargetCommon {
 				return phpRenderStaticMethodsByType.get(candidate);
 		}
 		return null;
+	}
+
+	static function phpStaticCallableFieldMapForType(typePath:String):Null<haxe.ds.StringMap<Bool>> {
+		final raw = StringTools.trim(typePath == null ? "" : typePath);
+		if (raw.length == 0 || phpRenderStaticCallableFieldsByType == null)
+			return null;
+		final candidates = [raw, sanitizePhpTypePath(raw)];
+		final dot = raw.lastIndexOf(".");
+		if (dot >= 0)
+			candidates.push(raw.substr(dot + 1));
+		final slash = raw.lastIndexOf("\\");
+		if (slash >= 0)
+			candidates.push(raw.substr(slash + 1));
+		for (candidate in candidates) {
+			if (phpRenderStaticCallableFieldsByType.exists(candidate))
+				return phpRenderStaticCallableFieldsByType.get(candidate);
+		}
+		return null;
+	}
+
+	static function phpKnownStaticCallableField(typePath:String, field:String):Bool {
+		final fields = phpStaticCallableFieldMapForType(typePath);
+		return fields != null && fields.exists(sanitizeTypeName(field));
 	}
 
 	static function inferLocalTypeHint(typeHint:Null<String>, init:Null<HxExpr>):String {
@@ -6932,6 +6958,34 @@ class SourceTargetCommon {
 		return out;
 	}
 
+	static function phpProgramStaticCallableFieldMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
+		final out = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
+		function addKey(key:String, fields:haxe.ds.StringMap<Bool>):Void {
+			if (key != null && key.length > 0 && !out.exists(key))
+				out.set(key, fields);
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final fields = new haxe.ds.StringMap<Bool>();
+				for (field in HxClassDecl.getFields(cls)) {
+					if (!HxFieldDecl.getIsStatic(field) || !phpStaticFieldIsCallable(field))
+						continue;
+					fields.set(sanitizeTypeName(HxFieldDecl.getName(field)), true);
+				}
+				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
+				addKey(shortName, fields);
+				addKey(fullName, fields);
+				addKey(sanitizePhpTypePath(fullName), fields);
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return out;
+	}
+
 	static function appendPhpXmlRuntime(lines:Array<String>):Void {
 		lines.push("class Xml implements \\IteratorAggregate {");
 		lines.push("  public static $Element = 0;");
@@ -7288,10 +7342,17 @@ class SourceTargetCommon {
 		appendDeclClasses(decl, mainFilePath);
 		for (typed in program.getTypedModules())
 			appendDeclClasses(typed.getParsed().getDecl(), typed.getParsed().getFilePath());
+		final postStaticInitializers = new Array<String>();
 		for (cls in pending) {
 			if (out.length > 0)
 				out.push("");
-			for (line in renderPhpHelperClass(cls, classesByName))
+			for (line in renderPhpHelperClass(cls, classesByName, postStaticInitializers))
+				out.push(line);
+		}
+		if (postStaticInitializers.length > 0) {
+			if (out.length > 0)
+				out.push("");
+			for (line in postStaticInitializers)
 				out.push(line);
 		}
 		return out;
@@ -7398,6 +7459,16 @@ class SourceTargetCommon {
 		return phpExprIsConstantDefault(init) ? renderExpr(Php, init) : defaultValue(Php);
 	}
 
+	static function phpStaticFieldIsCallable(field:HxFieldDecl):Bool {
+		switch (HxFieldDecl.getInit(field)) {
+			case ELambda(_, _):
+				return true;
+			case _:
+		}
+		final hint = StringTools.trim(HxFieldDecl.getTypeHint(field));
+		return hint == "Function" || hint.indexOf("->") >= 0;
+	}
+
 	static function phpExprIsConstantDefault(expr:HxExpr):Bool {
 		return switch (expr) {
 			case ENull | EBool(_) | EString(_) | EInt(_) | EFloat(_):
@@ -7431,7 +7502,7 @@ class SourceTargetCommon {
 		}
 	}
 
-	static function renderPhpHelperClass(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>):Array<String> {
+	static function renderPhpHelperClass(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>, postStaticInitializers:Array<String>):Array<String> {
 		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
 		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
 		final classHeader = baseName == null
@@ -7479,6 +7550,8 @@ class SourceTargetCommon {
 			final init = HxFieldDecl.getInit(field);
 			final rhs = phpStaticFieldDefault(init);
 			out.push("  public static $" + fieldName + " = " + rhs + ";");
+			if (init != null && !phpExprIsConstantDefault(init) && postStaticInitializers != null)
+				postStaticInitializers.push(className + "::$" + fieldName + " = " + renderExpr(Php, init) + ";");
 			memberCount += 1;
 		}
 		var sawConstructor = false;
@@ -8900,11 +8973,13 @@ class SourceTargetCommon {
 		final previousPhpInstanceMethodArgsByType = phpRenderInstanceMethodArgsByType;
 		final previousPhpDynamicMethodsByType = phpRenderDynamicMethodsByType;
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
+		final previousPhpStaticCallableFieldsByType = phpRenderStaticCallableFieldsByType;
 		if (target == Php) {
 			phpRenderInstanceMethodsByType = phpProgramInstanceMethodMap(program, decl);
 			phpRenderInstanceMethodArgsByType = phpProgramInstanceMethodArgsMap(program, decl);
 			phpRenderDynamicMethodsByType = phpProgramDynamicMethodMap(program, decl);
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
+			phpRenderStaticCallableFieldsByType = phpProgramStaticCallableFieldMap(program, decl);
 		}
 		switch (target) {
 			case Python:
@@ -10603,6 +10678,7 @@ class SourceTargetCommon {
 		phpRenderInstanceMethodArgsByType = previousPhpInstanceMethodArgsByType;
 		phpRenderDynamicMethodsByType = previousPhpDynamicMethodsByType;
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
+		phpRenderStaticCallableFieldsByType = previousPhpStaticCallableFieldsByType;
 		return lines.join("\n") + "\n";
 	}
 }
