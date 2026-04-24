@@ -1622,6 +1622,8 @@ class SourceTargetCommon {
 					return "__hxhx_int64_compare(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 				if (field == "ucompare" && args.length == 1 && phpExprIsInt64Value(receiver))
 					return "__hxhx_int64_ucompare(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
+				if (field == "divMod" && args.length == 1 && phpExprIsInt64Value(receiver))
+					return "__hxhx_int64_div_mod(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 				if (field == "ofInt" && phpIntLiteralExtensionReceiver(receiver))
 					return phpStaticMethodCall(phpInt64TypePath(), field, [receiver]);
 				final typePath = phpStaticTypePath(receiver);
