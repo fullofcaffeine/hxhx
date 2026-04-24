@@ -975,6 +975,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpBase64Program():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var bytes = haxe.io.Bytes.ofString(\"Héllow\");",
+			"    Sys.println(haxe.crypto.Base64.encode(bytes));",
+			"    Sys.println(haxe.crypto.Base64.encode(bytes, false));",
+			"    Sys.println(haxe.crypto.Base64.decode(\"SMOpbGxvdw==\").toString());",
+			"    Sys.println(haxe.crypto.Base64.decode(\"SMOpbGxvdw\", false).toString());",
+			"    try { haxe.crypto.Base64.decode(\"invalid string\"); Sys.println(\"bad\"); } catch (e:Dynamic) Sys.println(\"exc\");",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpXmlRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5329,6 +5347,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "35b5ea45c5e41f78b46a937cc74d41dfea920890", "generated PHP Sha1.make should return digest bytes");
 		}
 		deleteRecursive(sha1TmpRoot);
+
+		final base64TmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_base64_" + Std.string(Date.now().getTime()));
+		deleteRecursive(base64TmpRoot);
+		FileSystem.createDirectory(base64TmpRoot);
+		backend.emit(phpBase64Program(), new BackendContext(base64TmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final base64Content = File.getContent(Path.join([base64TmpRoot, "index.php"]));
+		assertContains(base64Content, "class Base64", "PHP haxe.crypto.Base64 should be emitted");
+		assertContains(base64Content, "public static function encode($bytes, $complement = true)", "PHP Base64 should expose encode");
+		assertContains(base64Content, "public static function decode($value, $complement = true)", "PHP Base64 should expose decode");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([base64TmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP Base64 support should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "SMOpbGxvdw==", "generated PHP Base64.encode should emit padded output by default");
+			assertContains(run.stdout, "SMOpbGxvdw", "generated PHP Base64.encode should support unpadded output");
+			assertContains(run.stdout, "Héllow", "generated PHP Base64.decode should return Bytes with original UTF-8 data");
+			assertContains(run.stdout, "exc", "generated PHP Base64.decode should reject invalid input");
+		}
+		deleteRecursive(base64TmpRoot);
 
 		final xmlTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_xml_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(xmlTmpRoot);
