@@ -6294,6 +6294,72 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStaticPropertyGetter():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_static_property_getter_" + Std.string(Date.now().getTime()));
+		final srcDir = Path.join([tmpRoot, "src"]);
+		final unitDir = Path.join([srcDir, "unit"]);
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(unitDir);
+		final src = [
+			"package unit;",
+			"import unit.MyClass;",
+			"class MyDynamicClass {",
+			"  var v:Int;",
+			"  public function new(v) {",
+			"    this.v = v;",
+			"  }",
+			"  static var Z = 10;",
+			"  public dynamic static function staticDynamic(x, y) {",
+			"    return Z + x + y;",
+			"  }",
+			"  @:isVar public static var W(get, set):Int = 55;",
+			"  static function get_W() return W + 2;",
+			"  static function set_W(v) { W = v; return v; }",
+			"}",
+			"class Test {",
+			"  function eq(left:Int, right:Int):Void {",
+			"    Sys.println(left + ':' + right);",
+			"  }",
+			"}",
+			"class TestMisc extends Test {",
+			"  public function new() {}",
+			"  public function testPropertyInit():Void {",
+			"    eq(MyDynamicClass.W, 57);",
+			"  }",
+			"  static function main() {",
+			"    Sys.println(MyDynamicClass.W);",
+			"    new TestMisc().testPropertyInit();",
+			"  }",
+			"}",
+		].join("\n");
+		File.saveContent(Path.join([unitDir, "MyClass.hx"]), ["package unit;", "class MyClass {}"].join("\n"));
+		File.saveContent(Path.join([unitDir, "TestMisc.hx"]), src);
+		final resolved = ResolverStage.parseProjectRoots([srcDir], ["unit.TestMisc"], new StringMap<String>());
+		final index = TyperIndex.build(resolved);
+		final loader = new ModuleLoader([srcDir], new StringMap<String>(), index, function(_typePath:String):Bool {
+			return false;
+		});
+		loader.markResolvedAlready(resolved);
+		final typed = new Array<TypedModule>();
+		for (module in resolved)
+			typed.push(TyperStage.typeResolvedModule(module, index, loader));
+		final program = MacroStage.expandProgram(typed, []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.TestMisc", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "echo MyDynamicClass::get_W() . PHP_EOL;", "PHP static property reads should call get_<field> accessors");
+		assertContains(content, "$this->eq(MyDynamicClass::get_W(), 57);",
+			"PHP static property reads should use get_<field> accessors inside instance helper calls");
+		assertContains(content, "return __hxhx_add(MyDynamicClass::$W, 2);", "PHP static getters should read the backing field without accessor recursion");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP static property getter support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "57\n57:57\n", "generated PHP static property getter support should use get_W, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSameNameLocalStaticField():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_name_local_static_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6730,6 +6796,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpClosureCapturesMutableLocalByReference();
 		assertPhpStringLengthInCharCodeAtArg();
 		assertPhpStdPackageRootShadowing();
+		assertPhpStaticPropertyGetter();
 		assertPhpSameNameLocalStaticField();
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();

@@ -1067,6 +1067,9 @@ class SourceTargetCommon {
 			case EThis:
 				phpThisValueExpr();
 			case EField(receiver, field):
+				final typePath = phpStaticTypePath(receiver);
+				if (typePath != null)
+					return typePath + "::$" + sanitizeTypeName(field);
 				fieldAccess(Php, renderExpr(Php, receiver), field);
 			case EArrayAccess(receiver, index):
 				renderExpr(Php, receiver) + "[" + renderExpr(Php, index) + "]";
@@ -3370,7 +3373,15 @@ class SourceTargetCommon {
 	}
 
 	static function phpStaticPropertyAccess(typePath:String, field:String):String {
-		return typePath + "::$" + sanitizeTypeName(field);
+		final cleanField = sanitizeTypeName(field);
+		final getter = "get_" + cleanField;
+		if (!phpInStaticPropertyAccessor(cleanField) && phpKnownStaticMethod(typePath, getter))
+			return typePath + "::" + getter + "()";
+		return typePath + "::$" + cleanField;
+	}
+
+	static function phpInStaticPropertyAccessor(field:String):Bool {
+		return phpRenderCurrentFunctionName == "get_" + field || phpRenderCurrentFunctionName == "set_" + field;
 	}
 
 	static function phpStaticMethodValueAccess(typePath:String, field:String):String {
@@ -3634,6 +3645,7 @@ class SourceTargetCommon {
 	}
 
 	static var phpRenderLocalTypes:Null<haxe.ds.StringMap<String>> = null;
+	static var phpRenderCurrentFunctionName:Null<String> = null;
 	static var phpRenderCurrentInstanceMethodNames:Null<Map<String, Bool>> = null;
 	static var phpRenderInstanceMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
@@ -3665,6 +3677,21 @@ class SourceTargetCommon {
 		if (phpRenderLocalTypes == null)
 			return false;
 		return phpRenderLocalTypes.exists(sanitizeTypeName(name));
+	}
+
+	static function withPhpCurrentFunctionName<T>(target:SourceNativeTarget, functionName:Null<String>, f:() -> T):T {
+		if (target != Php)
+			return f();
+		final previous = phpRenderCurrentFunctionName;
+		phpRenderCurrentFunctionName = functionName;
+		try {
+			final result = f();
+			phpRenderCurrentFunctionName = previous;
+			return result;
+		} catch (e) {
+			phpRenderCurrentFunctionName = previous;
+			throw e;
+		}
 	}
 
 	static function withPhpCurrentInstanceMethodNames<T>(target:SourceNativeTarget, methodNames:Null<Map<String, Bool>>, f:() -> T):T {
@@ -6978,9 +7005,11 @@ class SourceTargetCommon {
 				final rewriteFieldNames = !isStatic || isCtor ? instanceFieldNames : new Map<String, Bool>();
 				final body = phpRewriteSameClassMembersInStmts(HxFunctionDecl.getBody(fn), rewriteMethodNames, rewriteFieldNames, staticFieldNames, className,
 					[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]);
-				withPhpCurrentInstanceMethodNames(Php, !isStatic || isCtor ? instanceMethodNames : null, function() {
-					for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn)))
-						out.push(line);
+				withPhpCurrentFunctionName(Php, HxFunctionDecl.getName(fn), function() {
+					withPhpCurrentInstanceMethodNames(Php, !isStatic || isCtor ? instanceMethodNames : null, function() {
+						for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn)))
+							out.push(line);
+					});
 				});
 			}
 			out.push("  }");
