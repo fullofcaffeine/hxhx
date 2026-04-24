@@ -19337,6 +19337,9 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "    if (is_array($object) && array_key_exists($field, $object)) return $object[$field];");
       ignore (HxArray.push lines "    return null;");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function makeVarArgs($f) {");
+      ignore (HxArray.push lines "    return function(...$args) use ($f) { return $f($args); };");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "class __HxDispatcher {");
       ignore (HxArray.push lines "  public function add($listener) {");

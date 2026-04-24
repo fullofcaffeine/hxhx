@@ -1318,6 +1318,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpReflectMakeVarArgsProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var f = function(a:Array<Dynamic>) {",
+			"      return a.length + a[0] + a[1];",
+			"    };",
+			"    var g = Reflect.makeVarArgs(f);",
+			"    Sys.println(Std.string(g(1, 2)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpSamePackageQualifiedStaticProgram():GenIrProgram {
 		final src = [
 			"package unit;",
@@ -4370,6 +4387,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpReflectMakeVarArgs():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reflect_make_var_args_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpReflectMakeVarArgsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function makeVarArgs($f)", "PHP Reflect helper should support makeVarArgs");
+		assertContains(content, "return function(...$args) use ($f) { return $f($args); };",
+			"PHP Reflect.makeVarArgs should pass variadic arguments as one Haxe array argument");
+		assertContains(content, "$g = Reflect::makeVarArgs($f);", "PHP Reflect.makeVarArgs should lower as a static helper call");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Reflect.makeVarArgs support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "5\n", "generated PHP Reflect.makeVarArgs should preserve varargs semantics, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSamePackageQualifiedStaticPath():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_package_static_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6807,6 +6844,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStaticClassAccess();
 		assertPhpRuntimeShim();
 		assertPhpMapRuntimeShim();
+		assertPhpReflectMakeVarArgs();
 		assertPhpSamePackageQualifiedStaticPath();
 		assertPhpInstanceFieldMethodCall();
 		assertPhpInheritedTestHelperCall();

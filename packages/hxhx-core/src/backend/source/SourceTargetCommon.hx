@@ -9534,6 +9534,9 @@ class SourceTargetCommon {
 				lines.push("    if (is_array($object) && array_key_exists($field, $object)) return $object[$field];");
 				lines.push("    return null;");
 				lines.push("  }");
+				lines.push("  public static function makeVarArgs($f) {");
+				lines.push("    return function(...$args) use ($f) { return $f($args); };");
+				lines.push("  }");
 				lines.push("}");
 				lines.push("class __HxDispatcher {");
 				lines.push("  public function add($listener) {");
