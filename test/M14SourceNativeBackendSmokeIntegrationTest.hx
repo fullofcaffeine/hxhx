@@ -6360,6 +6360,78 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpInheritedFieldDynamicOverride():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_inherited_field_dynamic_override_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class MyDynamicClass {",
+			"  var v:Int;",
+			"  public function new(v) {",
+			"    this.v = v;",
+			"  }",
+			"  public function viaGet() {",
+			"    return v;",
+			"  }",
+			"  public dynamic function add(x, y) {",
+			"    return v + x + y;",
+			"  }",
+			"  static var Z = 10;",
+			"  public dynamic static function staticDynamic(x, y) {",
+			"    return Z + x + y;",
+			"  }",
+			"}",
+			"class MyDynamicSubClass extends MyDynamicClass {",
+			"  override function add(x, y) {",
+			"    return (v + x + y) * 2;",
+			"  }",
+			"}",
+			"class MyOtherDynamicClass extends MyDynamicClass {",
+			"  public function new(v) {",
+			"    add = function(x, y) return x + y + 10;",
+			"    super(v);",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var inst = new MyDynamicSubClass(100);",
+			"    var add = inst.add;",
+			"    Sys.println(inst.add(1, 2));",
+			"    Sys.println(add(1, 2));",
+			"    inst.add = function(x, y) return inst.viaGet() * 2 + x + y;",
+			"    add = inst.add;",
+			"    Sys.println(inst.add(1, 2));",
+			"    Sys.println(add(1, 2));",
+			"    var other = new MyOtherDynamicClass(0);",
+			"    var otherAdd = other.add;",
+			"    Sys.println(other.add(1, 2));",
+			"    Sys.println(otherAdd(1, 2));",
+			"    Sys.println(MyDynamicClass.staticDynamic(1, 2));",
+			"    MyDynamicClass.staticDynamic = function(x, y) return x + y + 100;",
+			"    Sys.println(MyDynamicClass.staticDynamic(1, 2));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "return __hxhx_mul(__hxhx_add(__hxhx_add($this->v, $x), $y), 2);",
+			"PHP overrides should rewrite inherited fields through this");
+		assertNotContains(content, "__hxhx_add(__hxhx_add($v, $x), $y)", "PHP overrides should not emit inherited fields as locals");
+		assertContains(content, "__hxhx_call_field($inst, \"add\", 1, 2)", "PHP dynamic method calls on typed locals should honor runtime field reassignment");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP inherited dynamic override support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "206\n206\n203\n203\n13\n13\n13\n103\n",
+				"generated PHP inherited dynamic override support should preserve receiver fields and dynamic reassignment, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSameNameLocalStaticField():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_name_local_static_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6797,6 +6869,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStringLengthInCharCodeAtArg();
 		assertPhpStdPackageRootShadowing();
 		assertPhpStaticPropertyGetter();
+		assertPhpInheritedFieldDynamicOverride();
 		assertPhpSameNameLocalStaticField();
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();

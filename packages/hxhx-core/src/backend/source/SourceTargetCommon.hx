@@ -1365,6 +1365,14 @@ class SourceTargetCommon {
 		return "__hxhx_field(" + receiver + ", " + quotePhpString(sanitizeTypeName(field)) + ")";
 	}
 
+	static function phpCallField(receiver:String, field:String, args:Array<HxExpr>):String {
+		final rendered = [receiver, quotePhpString(sanitizeTypeName(field))];
+		if (args != null)
+			for (arg in args)
+				rendered.push(renderExpr(Php, arg));
+		return "__hxhx_call_field(" + rendered.join(", ") + ")";
+	}
+
 	static function pythonFieldReceiverExpr(receiver:HxExpr):String {
 		return switch (receiver) {
 			case EInt(_) | EFloat(_):
@@ -1507,6 +1515,8 @@ class SourceTargetCommon {
 					switch (receiver) {
 						case ESuper:
 							callExpr(target, "(" + phpSuperGetterCall(field) + ")", args);
+						case EIdent(name) if (phpLocalHasDynamicCallField(name, field)):
+							phpCallField(renderExpr(Php, receiver), field, args);
 						case _:
 							callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), args);
 					}
@@ -3648,7 +3658,9 @@ class SourceTargetCommon {
 	static var phpRenderCurrentFunctionName:Null<String> = null;
 	static var phpRenderCurrentInstanceMethodNames:Null<Map<String, Bool>> = null;
 	static var phpRenderInstanceMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
+	static var phpRenderDynamicMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
+	static var phpRenderDynamicCallFieldsByLocal:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderRefCaptureLocals:Null<Array<String>> = null;
 
 	static function withPhpLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
@@ -3709,6 +3721,21 @@ class SourceTargetCommon {
 		}
 	}
 
+	static function withPhpDynamicCallFields<T>(target:SourceNativeTarget, fieldsByLocal:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>>, f:() -> T):T {
+		if (target != Php)
+			return f();
+		final previous = phpRenderDynamicCallFieldsByLocal;
+		phpRenderDynamicCallFieldsByLocal = fieldsByLocal;
+		try {
+			final result = f();
+			phpRenderDynamicCallFieldsByLocal = previous;
+			return result;
+		} catch (e) {
+			phpRenderDynamicCallFieldsByLocal = previous;
+			throw e;
+		}
+	}
+
 	static function phpCurrentInstanceMethodValue(field:String):Bool {
 		return phpRenderCurrentInstanceMethodNames != null && phpRenderCurrentInstanceMethodNames.exists(field);
 	}
@@ -3742,6 +3769,20 @@ class SourceTargetCommon {
 		return methods != null && methods.exists(sanitizeTypeName(field));
 	}
 
+	static function phpLocalHasDynamicCallField(name:String, field:String):Bool {
+		final cleanField = sanitizeTypeName(field);
+		if (phpRenderDynamicCallFieldsByLocal != null) {
+			final fields = phpRenderDynamicCallFieldsByLocal.get(sanitizeTypeName(name));
+			if (fields != null && fields.exists(cleanField))
+				return true;
+		}
+		final hint = phpLocalTypeHint(name);
+		if (hint.length == 0)
+			return false;
+		final methods = phpDynamicMethodMapForType(hint);
+		return methods != null && methods.exists(cleanField);
+	}
+
 	static function phpInstanceMethodMapForType(typeHint:String):Null<haxe.ds.StringMap<Bool>> {
 		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
 		if (raw.length == 0 || phpRenderInstanceMethodsByType == null)
@@ -3756,6 +3797,24 @@ class SourceTargetCommon {
 		for (candidate in candidates) {
 			if (phpRenderInstanceMethodsByType.exists(candidate))
 				return phpRenderInstanceMethodsByType.get(candidate);
+		}
+		return null;
+	}
+
+	static function phpDynamicMethodMapForType(typeHint:String):Null<haxe.ds.StringMap<Bool>> {
+		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (raw.length == 0 || phpRenderDynamicMethodsByType == null)
+			return null;
+		final candidates = [raw, sanitizePhpTypePath(raw)];
+		final dot = raw.lastIndexOf(".");
+		if (dot >= 0)
+			candidates.push(raw.substr(dot + 1));
+		final slash = raw.lastIndexOf("\\");
+		if (slash >= 0)
+			candidates.push(raw.substr(slash + 1));
+		for (candidate in candidates) {
+			if (phpRenderDynamicMethodsByType.exists(candidate))
+				return phpRenderDynamicMethodsByType.get(candidate);
 		}
 		return null;
 	}
@@ -3860,10 +3919,143 @@ class SourceTargetCommon {
 
 	static function renderFunctionStmts(target:SourceNativeTarget, body:Array<HxStmt>, indent:String, context:String):Array<String> {
 		return try {
-			renderStmts(target, target == Php ? phpRenameScopedLocalStmts(body) : body, indent);
+			final renderBody = target == Php ? phpRenameScopedLocalStmts(body) : body;
+			withPhpDynamicCallFields(target, target == Php ? phpDynamicCallFieldsForStmts(renderBody) : null, function() {
+				return renderStmts(target, renderBody, indent);
+			});
 		} catch (e:String) {
 			throw e + " while emitting " + context;
 		}
+	}
+
+	static function phpDynamicCallFieldsForStmts(stmts:Array<HxStmt>):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
+		final localTypes = new haxe.ds.StringMap<String>();
+		final fieldsByLocal = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
+		phpCollectDynamicCallFieldsFromStmts(stmts, localTypes, fieldsByLocal);
+		return fieldsByLocal;
+	}
+
+	static function phpCollectDynamicCallFieldsFromStmts(stmts:Array<HxStmt>, localTypes:haxe.ds.StringMap<String>,
+			fieldsByLocal:haxe.ds.StringMap<haxe.ds.StringMap<Bool>>):Void {
+		if (stmts == null)
+			return;
+		for (stmt in stmts)
+			phpCollectDynamicCallFieldsFromStmt(stmt, localTypes, fieldsByLocal);
+	}
+
+	static function phpCollectDynamicCallFieldsFromStmt(stmt:HxStmt, localTypes:haxe.ds.StringMap<String>,
+			fieldsByLocal:haxe.ds.StringMap<haxe.ds.StringMap<Bool>>):Void {
+		switch (stmt) {
+			case SVar(name, typeHint, init, _):
+				localTypes.set(sanitizeTypeName(name), inferLocalTypeHint(typeHint, init));
+				if (init != null)
+					phpCollectDynamicCallFieldsFromExpr(init, localTypes, fieldsByLocal);
+			case SBlock(stmts, _):
+				phpCollectDynamicCallFieldsFromStmts(stmts, copyStringMap(localTypes), fieldsByLocal);
+			case SIf(cond, thenBranch, elseBranch, _):
+				phpCollectDynamicCallFieldsFromExpr(cond, localTypes, fieldsByLocal);
+				phpCollectDynamicCallFieldsFromStmt(thenBranch, copyStringMap(localTypes), fieldsByLocal);
+				if (elseBranch != null)
+					phpCollectDynamicCallFieldsFromStmt(elseBranch, copyStringMap(localTypes), fieldsByLocal);
+			case SForIn(name, iterable, body, _):
+				phpCollectDynamicCallFieldsFromExpr(iterable, localTypes, fieldsByLocal);
+				final loopTypes = copyStringMap(localTypes);
+				loopTypes.set(sanitizeTypeName(name), "");
+				phpCollectDynamicCallFieldsFromStmt(body, loopTypes, fieldsByLocal);
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				phpCollectDynamicCallFieldsFromExpr(iterable, localTypes, fieldsByLocal);
+				final loopTypes = copyStringMap(localTypes);
+				loopTypes.set(sanitizeTypeName(keyName), "");
+				loopTypes.set(sanitizeTypeName(valueName), "");
+				phpCollectDynamicCallFieldsFromStmt(body, loopTypes, fieldsByLocal);
+			case SWhile(cond, body, _) | SDoWhile(body, cond, _):
+				phpCollectDynamicCallFieldsFromExpr(cond, localTypes, fieldsByLocal);
+				phpCollectDynamicCallFieldsFromStmt(body, copyStringMap(localTypes), fieldsByLocal);
+			case SSwitch(scrutinee, _, bodies, _):
+				phpCollectDynamicCallFieldsFromExpr(scrutinee, localTypes, fieldsByLocal);
+				for (body in bodies)
+					phpCollectDynamicCallFieldsFromStmt(body, copyStringMap(localTypes), fieldsByLocal);
+			case STry(tryBody, catches, _):
+				phpCollectDynamicCallFieldsFromStmt(tryBody, copyStringMap(localTypes), fieldsByLocal);
+				for (c in catches) {
+					final catchTypes = copyStringMap(localTypes);
+					catchTypes.set(sanitizeTypeName(c.name), normalizeTypeHint(c.typeHint));
+					phpCollectDynamicCallFieldsFromStmt(c.body, catchTypes, fieldsByLocal);
+				}
+			case SThrow(expr, _) | SReturn(expr, _) | SExpr(expr, _):
+				phpCollectDynamicCallFieldsFromExpr(expr, localTypes, fieldsByLocal);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function phpCollectDynamicCallFieldsFromExpr(expr:HxExpr, localTypes:haxe.ds.StringMap<String>,
+			fieldsByLocal:haxe.ds.StringMap<haxe.ds.StringMap<Bool>>):Void {
+		switch (expr) {
+			case EBinop("=", EField(EIdent(name), field), rhs):
+				final cleanName = sanitizeTypeName(name);
+				final cleanField = sanitizeTypeName(field);
+				if (phpLocalTypeHasInstanceMethod(localTypes, cleanName, cleanField)) {
+					var fields = fieldsByLocal.get(cleanName);
+					if (fields == null) {
+						fields = new haxe.ds.StringMap<Bool>();
+						fieldsByLocal.set(cleanName, fields);
+					}
+					fields.set(cleanField, true);
+				}
+				phpCollectDynamicCallFieldsFromExpr(rhs, localTypes, fieldsByLocal);
+			case EBinop(_, left, right):
+				phpCollectDynamicCallFieldsFromExpr(left, localTypes, fieldsByLocal);
+				phpCollectDynamicCallFieldsFromExpr(right, localTypes, fieldsByLocal);
+			case ECall(callee, args):
+				phpCollectDynamicCallFieldsFromExpr(callee, localTypes, fieldsByLocal);
+				phpCollectDynamicCallFieldsFromExprs(args, localTypes, fieldsByLocal);
+			case EField(receiver, _):
+				phpCollectDynamicCallFieldsFromExpr(receiver, localTypes, fieldsByLocal);
+			case EArrayAccess(receiver, index) | ERange(receiver, index):
+				phpCollectDynamicCallFieldsFromExpr(receiver, localTypes, fieldsByLocal);
+				phpCollectDynamicCallFieldsFromExpr(index, localTypes, fieldsByLocal);
+			case EArrayDecl(values) | EAnon(_, values):
+				phpCollectDynamicCallFieldsFromExprs(values, localTypes, fieldsByLocal);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				phpCollectDynamicCallFieldsFromExpr(iterable, localTypes, fieldsByLocal);
+				final itemTypes = copyStringMap(localTypes);
+				itemTypes.set(sanitizeTypeName(name), "");
+				if (guardExpr != null)
+					phpCollectDynamicCallFieldsFromExpr(guardExpr, itemTypes, fieldsByLocal);
+				phpCollectDynamicCallFieldsFromExpr(yieldExpr, itemTypes, fieldsByLocal);
+			case ELambda(args, body):
+				final lambdaTypes = copyStringMap(localTypes);
+				for (arg in args)
+					lambdaTypes.set(sanitizeTypeName(arg), "");
+				phpCollectDynamicCallFieldsFromExpr(body, lambdaTypes, fieldsByLocal);
+			case ESwitch(scrutinee, _, exprs):
+				phpCollectDynamicCallFieldsFromExpr(scrutinee, localTypes, fieldsByLocal);
+				phpCollectDynamicCallFieldsFromExprs(exprs, localTypes, fieldsByLocal);
+			case ETernary(cond, thenExpr, elseExpr):
+				phpCollectDynamicCallFieldsFromExpr(cond, localTypes, fieldsByLocal);
+				phpCollectDynamicCallFieldsFromExpr(thenExpr, localTypes, fieldsByLocal);
+				phpCollectDynamicCallFieldsFromExpr(elseExpr, localTypes, fieldsByLocal);
+			case ENew(_, args):
+				phpCollectDynamicCallFieldsFromExprs(args, localTypes, fieldsByLocal);
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				phpCollectDynamicCallFieldsFromExpr(inner, localTypes, fieldsByLocal);
+			case _:
+		}
+	}
+
+	static function phpCollectDynamicCallFieldsFromExprs(exprs:Array<HxExpr>, localTypes:haxe.ds.StringMap<String>,
+			fieldsByLocal:haxe.ds.StringMap<haxe.ds.StringMap<Bool>>):Void {
+		if (exprs == null)
+			return;
+		for (expr in exprs)
+			phpCollectDynamicCallFieldsFromExpr(expr, localTypes, fieldsByLocal);
+	}
+
+	static function phpLocalTypeHasInstanceMethod(localTypes:haxe.ds.StringMap<String>, name:String, field:String):Bool {
+		if (localTypes == null || !localTypes.exists(name))
+			return false;
+		final methods = phpInstanceMethodMapForType(localTypes.get(name));
+		return methods != null && methods.exists(field);
 	}
 
 	static function indentStep(target:SourceNativeTarget):String {
@@ -6415,6 +6607,59 @@ class SourceTargetCommon {
 		return out;
 	}
 
+	static function phpProgramDynamicMethodMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
+		final out = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
+		final classesByName = new Map<String, HxClassDecl>();
+		final packagesByClass = new Map<String, String>();
+
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				classesByName.set(shortName, cls);
+				packagesByClass.set(shortName, pkg == null ? "" : pkg);
+			}
+		}
+
+		function addKey(key:String, methods:haxe.ds.StringMap<Bool>):Void {
+			if (key != null && key.length > 0 && !out.exists(key))
+				out.set(key, methods);
+		}
+
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+
+		for (shortName in classesByName.keys()) {
+			final cls = classesByName.get(shortName);
+			final methods = phpDynamicMethodNames(cls, classesByName, new Map<String, Bool>());
+			final pkg = packagesByClass.exists(shortName) ? packagesByClass.get(shortName) : "";
+			final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
+			addKey(shortName, methods);
+			addKey(fullName, methods);
+			addKey(sanitizePhpTypePath(fullName), methods);
+		}
+		return out;
+	}
+
+	static function phpDynamicMethodNames(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>, visited:Map<String, Bool>):haxe.ds.StringMap<Bool> {
+		final names = new haxe.ds.StringMap<Bool>();
+		final base = phpBaseClassDecl(cls, classesByName);
+		if (base != null && !phpClassVisited(base, visited)) {
+			final baseNames = phpDynamicMethodNames(base, classesByName, phpMarkClassVisited(base, visited));
+			for (name in baseNames.keys())
+				names.set(name, true);
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final name = sanitizeTypeName(HxFunctionDecl.getName(fn));
+			if (HxFunctionDecl.getIsStatic(fn) || name == "new")
+				continue;
+			if (phpFunctionIsDynamic(fn))
+				names.set(name, true);
+		}
+		return names;
+	}
+
 	static function phpProgramStaticMethodMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
 		final out = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
 		function addKey(key:String, methods:haxe.ds.StringMap<Bool>):Void {
@@ -6778,6 +7023,7 @@ class SourceTargetCommon {
 				break;
 			}
 		}
+		final classesByName:Map<String, HxClassDecl> = [];
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			final modulePackage = phpSupportPackage(moduleDecl, filePath);
 			if (!phpShouldEmitSupportPackage(mainPackage, modulePackage))
@@ -6786,6 +7032,7 @@ class SourceTargetCommon {
 				return;
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				classesByName.set(className, cls);
 				if (isCompileTimeOnlySupportClass(cls))
 					continue;
 				if ((className == mainClassName && !phpMainClassNeedsRuntimeSupport(cls)) || seen.exists(className))
@@ -6800,7 +7047,7 @@ class SourceTargetCommon {
 		for (cls in pending) {
 			if (out.length > 0)
 				out.push("");
-			for (line in renderPhpHelperClass(cls))
+			for (line in renderPhpHelperClass(cls, classesByName))
 				out.push(line);
 		}
 		return out;
@@ -6882,6 +7129,10 @@ class SourceTargetCommon {
 		return HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0;
 	}
 
+	static function phpFunctionIsDynamic(fn:HxFunctionDecl):Bool {
+		return HxFunctionDecl.getMetadata(fn).indexOf("dynamic") >= 0;
+	}
+
 	static function isStdSourceFile(filePath:String):Bool {
 		if (filePath == null || filePath.length == 0)
 			return false;
@@ -6928,7 +7179,7 @@ class SourceTargetCommon {
 		}
 	}
 
-	static function renderPhpHelperClass(cls:HxClassDecl):Array<String> {
+	static function renderPhpHelperClass(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>):Array<String> {
 		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
 		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
 		final classHeader = baseName == null
@@ -6937,7 +7188,7 @@ class SourceTargetCommon {
 				+ " extends "
 				+ baseName
 				+ " {";
-		final out = [classHeader];
+		final out = ["#[\\AllowDynamicProperties]", classHeader];
 		var memberCount = 0;
 		final instanceFields = new Array<HxFieldDecl>();
 		final emittedFields = new Map<String, Bool>();
@@ -6950,6 +7201,16 @@ class SourceTargetCommon {
 		if (phpNeedsUnitTestLocalStaticSlot(className)) {
 			out.push("  public static $__basic_x = null;");
 			emittedFields.set("__basic_x", true);
+			memberCount += 1;
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new" || !phpFunctionIsDynamic(fn))
+				continue;
+			final fieldName = sanitizeTypeName(HxFunctionDecl.getName(fn));
+			if (emittedFields.exists(fieldName))
+				continue;
+			emittedFields.set(fieldName, true);
+			out.push("  public static $" + fieldName + " = null;");
 			memberCount += 1;
 		}
 		for (field in HxClassDecl.getFields(cls)) {
@@ -6969,8 +7230,8 @@ class SourceTargetCommon {
 			memberCount += 1;
 		}
 		var sawConstructor = false;
-		final instanceMethodNames = phpCurrentClassInstanceMethodNames(cls);
-		final instanceFieldNames = phpCurrentClassInstanceFieldNames(cls);
+		final instanceMethodNames = phpInstanceMethodNames(cls, classesByName, new Map<String, Bool>());
+		final instanceFieldNames = phpInstanceFieldNames(cls, classesByName, new Map<String, Bool>());
 		final staticFieldNames = phpCurrentClassStaticFieldNames(cls);
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (isCompileTimeOnlyFunction(fn))
@@ -7000,6 +7261,13 @@ class SourceTargetCommon {
 			}
 			for (line in phpFunctionArgConversionPrologue(HxFunctionDecl.getArgs(fn), "    "))
 				out.push(line);
+			if (isStatic && phpFunctionIsDynamic(fn)) {
+				final dispatchArgs = [
+					for (arg in HxFunctionDecl.getArgs(fn))
+						valueName(Php, HxFunctionArg.getName(arg))
+				].join(", ");
+				out.push("    if (self::$" + methodName + " !== null) return (self::$" + methodName + ")(" + dispatchArgs + ");");
+			}
 			if (!renderPhpSpecialHelperFunctionBody(out, className, HxFunctionDecl.getName(fn))) {
 				final rewriteMethodNames = !isStatic || isCtor ? instanceMethodNames : new Map<String, Bool>();
 				final rewriteFieldNames = !isStatic || isCtor ? instanceFieldNames : new Map<String, Bool>();
@@ -7917,6 +8185,58 @@ class SourceTargetCommon {
 		return names;
 	}
 
+	static function phpInstanceMethodNames(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>, visited:Map<String, Bool>):Map<String, Bool> {
+		final names:Map<String, Bool> = [];
+		final base = phpBaseClassDecl(cls, classesByName);
+		if (base != null && !phpClassVisited(base, visited)) {
+			final baseNames = phpInstanceMethodNames(base, classesByName, phpMarkClassVisited(base, visited));
+			for (name in baseNames.keys())
+				names.set(name, true);
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn))
+				names.set(HxFunctionDecl.getName(fn), true);
+		}
+		return names;
+	}
+
+	static function phpInstanceFieldNames(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>, visited:Map<String, Bool>):Map<String, Bool> {
+		final names:Map<String, Bool> = [];
+		final base = phpBaseClassDecl(cls, classesByName);
+		if (base != null && !phpClassVisited(base, visited)) {
+			final baseNames = phpInstanceFieldNames(base, classesByName, phpMarkClassVisited(base, visited));
+			for (name in baseNames.keys())
+				names.set(name, true);
+		}
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				names.set(HxFieldDecl.getName(field), true);
+		}
+		return names;
+	}
+
+	static function phpBaseClassDecl(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>):HxClassDecl {
+		if (classesByName == null)
+			return null;
+		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
+		if (baseName == null || baseName.length == 0)
+			return null;
+		return classesByName.get(baseName);
+	}
+
+	static function phpClassVisited(cls:HxClassDecl, visited:Map<String, Bool>):Bool {
+		return visited != null && visited.exists(sanitizePhpTypeName(HxClassDecl.getName(cls)));
+	}
+
+	static function phpMarkClassVisited(cls:HxClassDecl, visited:Map<String, Bool>):Map<String, Bool> {
+		final next:Map<String, Bool> = [];
+		if (visited != null)
+			for (name in visited.keys())
+				next.set(name, true);
+		next.set(sanitizePhpTypeName(HxClassDecl.getName(cls)), true);
+		return next;
+	}
+
 	static function phpCurrentClassInstanceFieldNames(cls:HxClassDecl):Map<String, Bool> {
 		final names:Map<String, Bool> = [];
 		for (field in HxClassDecl.getFields(cls)) {
@@ -8274,9 +8594,11 @@ class SourceTargetCommon {
 	static function renderProgram(target:SourceNativeTarget, program:GenIrProgram, decl:HxModuleDecl, className:String, body:Array<HxStmt>):String {
 		final lines = new Array<String>();
 		final previousPhpInstanceMethodsByType = phpRenderInstanceMethodsByType;
+		final previousPhpDynamicMethodsByType = phpRenderDynamicMethodsByType;
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
 		if (target == Php) {
 			phpRenderInstanceMethodsByType = phpProgramInstanceMethodMap(program, decl);
+			phpRenderDynamicMethodsByType = phpProgramDynamicMethodMap(program, decl);
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
 		}
 		switch (target) {
@@ -9687,6 +10009,11 @@ class SourceTargetCommon {
 				lines.push("  if (is_array($obj) && array_key_exists($name, $obj)) return $obj[$name];");
 				lines.push("  return null;");
 				lines.push("}");
+				lines.push("function __hxhx_call_field($obj, $field, ...$args) {");
+				lines.push("  $callable = __hxhx_field($obj, $field);");
+				lines.push("  if (!is_callable($callable)) throw new \\Exception(\"Cannot call non-callable field\");");
+				lines.push("  return $callable(...$args);");
+				lines.push("}");
 				lines.push("function __hxhx_bind($callable, ...$boundArgs) {");
 				lines.push("  if (!is_callable($callable)) throw new \\Exception(\"Cannot bind non-callable value\");");
 				lines.push("  return function(...$args) use ($callable, $boundArgs) {");
@@ -9855,6 +10182,7 @@ class SourceTargetCommon {
 				lines.push("main()");
 		}
 		phpRenderInstanceMethodsByType = previousPhpInstanceMethodsByType;
+		phpRenderDynamicMethodsByType = previousPhpDynamicMethodsByType;
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
 		return lines.join("\n") + "\n";
 	}

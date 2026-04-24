@@ -3925,6 +3925,10 @@ class HxParser {
 									metadata.push("macro");
 									bump();
 									keep = true;
+								case TIdent(name) if (name == "dynamic"):
+									metadata.push("dynamic");
+									bump();
+									keep = true;
 								case TIdent(name) if (name == "extern" || name == "override"):
 									// These context-sensitive modifiers are accepted at class-member scope but
 									// are not modeled in the current bring-up AST.

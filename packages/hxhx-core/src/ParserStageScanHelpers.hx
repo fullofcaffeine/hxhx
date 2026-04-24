@@ -757,6 +757,7 @@ class ParserStageScanHelpers {
 		var sawStatic = false;
 		var sawMacro = false;
 		var sawOverload = false;
+		var sawDynamic = false;
 		var pendingMetadata = new Array<String>();
 		var vis:HxVisibility = HxVisibility.Public;
 		var declarationStart = -1;
@@ -870,6 +871,7 @@ class ParserStageScanHelpers {
 							sawStatic = false;
 							sawMacro = false;
 							sawOverload = false;
+							sawDynamic = false;
 							pendingMetadata = [];
 							declarationStart = -1;
 							vis = HxVisibility.Public;
@@ -898,6 +900,9 @@ class ParserStageScanHelpers {
 				case "overload":
 					noteDeclarationStart(t.startPos);
 					sawOverload = true;
+				case "dynamic":
+					noteDeclarationStart(t.startPos);
+					sawDynamic = true;
 				case "inline" | "extern" | "override":
 					// Keep scanning; these can appear between `static` and the declaration keyword.
 					noteDeclarationStart(t.startPos);
@@ -999,6 +1004,7 @@ class ParserStageScanHelpers {
 					sawStatic = false;
 					sawMacro = false;
 					sawOverload = false;
+					sawDynamic = false;
 					pendingMetadata = [];
 					declarationStart = -1;
 					vis = HxVisibility.Public;
@@ -1118,7 +1124,7 @@ class ParserStageScanHelpers {
 					}
 
 					final bodyCapture = scanFunctionBody(source, i, true);
-					final keepBody = fnName == "new" || !wantStaticFn || scannedStaticBodyIsSafe(fnName, bodyCapture.body);
+					final keepBody = fnName == "new" || !wantStaticFn || sawDynamic || scannedStaticBodyIsSafe(fnName, bodyCapture.body);
 					final body = keepBody ? bodyCapture.body : [];
 					final bodyText = keepBody ? bodyCapture.bodyText : "";
 					if (bodyCapture.nextPos > i)
@@ -1130,6 +1136,8 @@ class ParserStageScanHelpers {
 							metadata.push("macro");
 						if (sawOverload)
 							metadata.push("overload");
+						if (sawDynamic)
+							metadata.push("dynamic");
 						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, returnType, body, "", metadata,
 							posFromIndex(source, declarationStart), posFromIndex(source, i), bodyText));
 					}
@@ -1137,6 +1145,7 @@ class ParserStageScanHelpers {
 					sawStatic = false;
 					sawMacro = false;
 					sawOverload = false;
+					sawDynamic = false;
 					pendingMetadata = [];
 					declarationStart = -1;
 					vis = HxVisibility.Public;
