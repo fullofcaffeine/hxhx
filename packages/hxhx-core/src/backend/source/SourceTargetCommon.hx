@@ -8987,6 +8987,14 @@ class SourceTargetCommon {
 				lines.push("      return \\haxe\\io\\Bytes::ofHex(md5($bytes->toString()));");
 				lines.push("    }");
 				lines.push("  }");
+				lines.push("  class Sha1 {");
+				lines.push("    public static function encode($value) {");
+				lines.push("      return sha1(strval($value));");
+				lines.push("    }");
+				lines.push("    public static function make($bytes) {");
+				lines.push("      return \\haxe\\io\\Bytes::ofHex(sha1($bytes->toString()));");
+				lines.push("    }");
+				lines.push("  }");
 				lines.push("}");
 				lines.push("namespace haxe\\xml {");
 				lines.push("  class Parser {");

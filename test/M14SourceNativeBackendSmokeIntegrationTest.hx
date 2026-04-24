@@ -960,6 +960,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpSha1Program():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var bytes = haxe.io.Bytes.ofString(\"héllo\");",
+			"    Sys.println(haxe.crypto.Sha1.encode(\"hello\"));",
+			"    Sys.println(haxe.crypto.Sha1.make(bytes).toHex());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpXmlRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5298,6 +5313,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "be50e8478cf24ff3595bc7307fb91b50", "generated PHP Md5.make should return digest bytes");
 		}
 		deleteRecursive(md5TmpRoot);
+
+		final sha1TmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_sha1_" + Std.string(Date.now().getTime()));
+		deleteRecursive(sha1TmpRoot);
+		FileSystem.createDirectory(sha1TmpRoot);
+		backend.emit(phpSha1Program(), new BackendContext(sha1TmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final sha1Content = File.getContent(Path.join([sha1TmpRoot, "index.php"]));
+		assertContains(sha1Content, "class Sha1", "PHP haxe.crypto.Sha1 should be emitted");
+		assertContains(sha1Content, "public static function encode($value)", "PHP haxe.crypto.Sha1 should expose encode");
+		assertContains(sha1Content, "public static function make($bytes)", "PHP haxe.crypto.Sha1 should expose make(Bytes)");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([sha1TmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP Sha1 support should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d", "generated PHP Sha1.encode should hash strings");
+			assertContains(run.stdout, "35b5ea45c5e41f78b46a937cc74d41dfea920890", "generated PHP Sha1.make should return digest bytes");
+		}
+		deleteRecursive(sha1TmpRoot);
 
 		final xmlTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_xml_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(xmlTmpRoot);

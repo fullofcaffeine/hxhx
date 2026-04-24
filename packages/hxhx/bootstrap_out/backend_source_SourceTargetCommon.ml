@@ -18790,6 +18790,14 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "      return \\haxe\\io\\Bytes::ofHex(md5($bytes->toString()));");
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  class Sha1 {");
+      ignore (HxArray.push lines "    public static function encode($value) {");
+      ignore (HxArray.push lines "      return sha1(strval($value));");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public static function make($bytes) {");
+      ignore (HxArray.push lines "      return \\haxe\\io\\Bytes::ofHex(sha1($bytes->toString()));");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "namespace haxe\\xml {");
       ignore (HxArray.push lines "  class Parser {");
