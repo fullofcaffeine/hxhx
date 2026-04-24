@@ -6613,6 +6613,52 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTypeNameHelpersForStaticInitializers():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_name_helpers_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				EBinop("+", EBinop("+", EArrayAccess(EField(EIdent("TestReflect"), "TNAMES"), EInt(0)), EString(",")),
+					EArrayAccess(EField(EIdent("TestReflect"), "TNAMES"), EInt(1)))
+			]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final typeNamesField = new HxFieldDecl("TNAMES", HxVisibility.Public, true, "Array<String>", EArrayDecl([
+			ECall(EIdent("u"), [EString("haxe.ds.StringMap")]),
+			ECall(EIdent("u2"), [EString("unit"), EString("MyEnum")])
+		]));
+		final uFn = new HxFunctionDecl("u", HxVisibility.Public, true, [new HxFunctionArg("s", "String", NoDefault)], "String", [SReturn(EIdent("s"), pos)],
+			"");
+		final u2Fn = new HxFunctionDecl("u2", HxVisibility.Public, true, [
+			new HxFunctionArg("s", "String", NoDefault),
+			new HxFunctionArg("s2", "String", NoDefault)
+		], "String", [
+			SReturn(EBinop("+", EBinop("+", ECall(EIdent("u"), [EIdent("s")]), EString(".")), ECall(EIdent("u"), [EIdent("s2")])), pos)
+		], "");
+		final reflectClass = new HxClassDecl("TestReflect", false, [uFn, u2Fn], [typeNamesField]);
+		final reflectDecl = new HxModuleDecl("", [], reflectClass, [reflectClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("TestReflect.hx", reflectDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "TestReflect::$TNAMES = [\"haxe.ds.StringMap\", __hxhx_add(__hxhx_add(\"unit\", \".\"), \"MyEnum\")];",
+			"PHP static initializers should lower type-name helper calls without local callables");
+		assertNotContains(content, "$u(\"haxe.ds.StringMap\")", "PHP type-name helper calls should not lower as undefined local callable variables");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP type-name helpers should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "haxe.ds.StringMap,unit.MyEnum\n", "generated PHP should evaluate type-name helper calls, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpInstanceMethodValueBind():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_method_value_bind_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7356,6 +7402,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStdDateToolsSupport();
 		assertPhpPackageQualifiedClassReference();
 		assertPhpStdStringMapClassReference();
+		assertPhpTypeNameHelpersForStaticInitializers();
 		assertPhpInstanceMethodValueBind();
 		assertPhpClosureCapturesMutableLocalByReference();
 		assertPhpStringLengthInCharCodeAtArg();

@@ -711,6 +711,14 @@ class SourceTargetCommon {
 				+ ", "
 				+ quotePhpString(phpTypeExprName(args[1]))
 				+ ")";
+			case ECall(EIdent("u"), args) if (target == Php && args.length == 1 && !phpLocalExists("u")):
+				renderExpr(Php, args[0]);
+			case ECall(EIdent("u2"), args) if (target == Php && args.length == 2 && !phpLocalExists("u2")):
+				"__hxhx_add(__hxhx_add("
+				+ renderExpr(Php, args[0])
+				+ ", \".\"), "
+				+ renderExpr(Php, args[1])
+				+ ")";
 			case EField(receiver, field):
 				fieldAccessExpr(target, receiver, field);
 			case EArrayAccess(receiver, index):
