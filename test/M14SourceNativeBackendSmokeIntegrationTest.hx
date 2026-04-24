@@ -6257,6 +6257,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStdPackageRootShadowing():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_package_shadow_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var haxe = 20;",
+			"    var Std = 50;",
+			"    var foo = function() return haxe;",
+			"    var bar = function() return Std;",
+			"    Sys.println(std.haxe.crypto.Md5.encode(\"\"));",
+			"    Sys.println(std.Std.int(45.3));",
+			"    Sys.println(foo());",
+			"    Sys.println(bar());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "haxe\\crypto\\Md5::encode(\"\")", "PHP std.haxe package root should lower to the haxe.crypto type path");
+		assertContains(content, "Std::int(45.3)", "PHP std.Std package root should lower to the Std type path");
+		assertNotContains(content, "$std->haxe", "PHP std package root should not lower as a local variable chain");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP std package-root shadowing support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "d41d8cd98f00b204e9800998ecf8427e\n45\n20\n50\n",
+				"generated PHP std package-root shadowing support should preserve type and local lookups, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSameNameLocalStaticField():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_name_local_static_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6692,6 +6729,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpInstanceMethodValueBind();
 		assertPhpClosureCapturesMutableLocalByReference();
 		assertPhpStringLengthInCharCodeAtArg();
+		assertPhpStdPackageRootShadowing();
 		assertPhpSameNameLocalStaticField();
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();

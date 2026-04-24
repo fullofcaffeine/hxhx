@@ -666,7 +666,7 @@ class SourceTargetCommon {
 			case EFloat(value):
 				Std.string(value);
 			case EEnumValue(name):
-				quoteString(name);
+				if (target == Php && phpLocalExists(name)) valueName(Php, name); else quoteString(name);
 			case EThis:
 				switch (target) {
 					case Python: "self";
@@ -1979,7 +1979,11 @@ class SourceTargetCommon {
 		switch (expr) {
 			case EIdent(name):
 				final clean = sanitizeTypeName(name);
-				if (clean.length > 0 && !isPhpImplicitIdentifier(clean) && names.indexOf(clean) < 0)
+				if (clean.length > 0 && (!isPhpImplicitIdentifier(clean) || phpLocalExists(clean)) && names.indexOf(clean) < 0)
+					names.push(clean);
+			case EEnumValue(name) if (phpLocalExists(name)):
+				final clean = sanitizeTypeName(name);
+				if (clean.length > 0 && (!isPhpImplicitIdentifier(clean) || phpLocalExists(clean)) && names.indexOf(clean) < 0)
 					names.push(clean);
 			case EField(receiver, _):
 				phpCollectUsedIdents(receiver, names);
@@ -2039,8 +2043,8 @@ class SourceTargetCommon {
 		if (StringTools.startsWith(name, "__hxhx_"))
 			return true;
 		return switch (name) {
-			case "haxe" | "php" | "Std" | "Sys" | "Math" | "Type" | "StringTools" | "Lambda" | "Reflect" | "Map" | "Array" | "Exception" | "ValueException" |
-				"PosException" | "ArgumentException" | "NotImplementedException" | "true" | "false" | "null" | "this":
+			case "haxe" | "php" | "std" | "Std" | "Sys" | "Math" | "Type" | "StringTools" | "Lambda" | "Reflect" | "Map" | "Array" | "Exception" |
+				"ValueException" | "PosException" | "ArgumentException" | "NotImplementedException" | "true" | "false" | "null" | "this":
 				true;
 			case _:
 				false;
@@ -3290,6 +3294,8 @@ class SourceTargetCommon {
 	static function sanitizePhpTypePath(path:String):String {
 		if (path == null || path.length == 0)
 			return "Unknown";
+		if (StringTools.startsWith(path, "std."))
+			return sanitizePhpTypePath(path.substr(4));
 		if (StringTools.startsWith(path, "php.") || StringTools.startsWith(path, "haxe."))
 			return [for (part in path.split(".")) sanitizePhpTypeName(part)].join("\\");
 		final parts = path.split(".");
@@ -3356,7 +3362,7 @@ class SourceTargetCommon {
 
 	static function looksLikePhpPackageRoot(name:String):Bool {
 		return switch (name == null ? "" : name) {
-			case "haxe" | "php" | "unit" | "utest":
+			case "haxe" | "php" | "std" | "unit" | "utest":
 				true;
 			case _:
 				false;
@@ -8621,6 +8627,13 @@ class SourceTargetCommon {
 				lines.push("    }");
 				lines.push("  }");
 				lines.push("}");
+				lines.push("namespace haxe\\crypto {");
+				lines.push("  class Md5 {");
+				lines.push("    public static function encode($value) {");
+				lines.push("      return md5(strval($value));");
+				lines.push("    }");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("namespace haxe\\xml {");
 				lines.push("  class Parser {");
 				lines.push("    public static function parse($source, $strict = true) {");
@@ -9775,6 +9788,11 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("  public static function fround($value) {");
 				lines.push("    return floor($value + 0.5);");
+				lines.push("  }");
+				lines.push("}");
+				lines.push("class Std {");
+				lines.push("  public static function int($value) {");
+				lines.push("    return intval($value);");
 				lines.push("  }");
 				lines.push("}");
 				lines.push("class Type {");
