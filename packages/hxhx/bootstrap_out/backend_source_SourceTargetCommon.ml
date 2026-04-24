@@ -10764,7 +10764,7 @@ let rec phpExprReturnsInt64 = fun expr -> try let __fallback_result_2175 = (
         | _ -> failwith "Unexpected enum parameter") in let _g2 = Obj.magic (let __enum_param_2167 = expr in if __enum_param_2167 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2167 with
         | HxExpr.EBinop (_, _, __enum_param_2166) -> __enum_param_2166
         | _ -> failwith "Unexpected enum parameter") in match _g with
-        | "*" | "+" | "-" | "/" -> let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_2169 = phpExprIsInt64Value (Obj.magic left) || phpExprIsInt64Value (Obj.magic right) in (
+        | "%" | "*" | "+" | "-" | "/" -> let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_2169 = phpExprIsInt64Value (Obj.magic left) || phpExprIsInt64Value (Obj.magic right) in (
           tempResult := __assign_2169;
           __assign_2169
         )
@@ -22455,6 +22455,10 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  return false;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_mod($left, $right) {");
+      ignore (HxArray.push lines "  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) {");
+      ignore (HxArray.push lines "    $result = __hxhx_int64_div_mod($left, $right);");
+      ignore (HxArray.push lines "    return $result->modulus;");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if ($right == 0) return NAN;");
       ignore (HxArray.push lines "  if (is_float($left) || is_float($right)) return fmod($left, $right);");
       ignore (HxArray.push lines "  return $left % $right;");
