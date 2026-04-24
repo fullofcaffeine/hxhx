@@ -5199,6 +5199,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var k = haxe.Int64.sub(haxe.Int64.ofInt(5), haxe.Int64.ofInt(9));",
 			"    Sys.println(k.high);",
 			"    Sys.println(k.low);",
+			"    var ks = haxe.Int64.ofInt(5) - haxe.Int64.ofInt(9);",
+			"    Sys.println(ks.high);",
+			"    Sys.println(ks.low);",
 			"    var m = haxe.Int64.mul(haxe.Int64.ofInt(7), 6);",
 			"    Sys.println(m.high);",
 			"    Sys.println(m.low);",
@@ -5265,6 +5268,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$inc = __hxhx_sub($inc, 1);", "PHP Int64 postfix decrement statements should route through Int64 subtraction");
 		assertContains(content, "__hxhx_post_update_var($inc, 1)", "PHP Int64 postfix expressions should preserve old-value semantics through the helper");
 		assertContains(content, "$i = __hxhx_mul(\\haxe\\Int64::ofInt(7), 6);", "PHP Int64 multiplication should lower through the runtime helper");
+		assertContains(content, "$ks = __hxhx_sub(\\haxe\\Int64::ofInt(5), \\haxe\\Int64::ofInt(9));",
+			"PHP typed Int64 binary subtraction should lower through the runtime helper");
 		assertContains(content, "$l = __hxhx_int64_neg($lmin);", "PHP typed Int64 locals should route unary minus through the runtime helper");
 		assertContains(content, "__hxhx_equals($lmin, $l)", "PHP typed Int64 equality should lower through high/low word comparison");
 		assertContains(content, "$v2 = __hxhx_int64_value($v2);", "PHP Int64 function parameters should coerce Int literals at the boundary");
@@ -5272,7 +5277,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Int64 runtime support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\ntrue\n0\n42\n0\n14\n-1\n-4\n0\n42\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
+			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\ntrue\n0\n42\n0\n14\n-1\n-4\n-1\n-4\n0\n42\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
 				"generated PHP haxe.Int64 output mismatch, got:\n"
 				+ run.stdout);
 		}

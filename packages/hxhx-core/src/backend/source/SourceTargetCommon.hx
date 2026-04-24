@@ -840,6 +840,8 @@ class SourceTargetCommon {
 			return "__hxhx_add(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "+=")
 			return phpAddAssignExpr(left, right);
+		if (target == Php && op == "-" && (phpExprIsInt64Value(left) || phpExprIsInt64Value(right)))
+			return "__hxhx_sub(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "-=" && phpExprIsInt64Value(left))
 			return phpSubtractAssignExpr(left, right);
 		if (target == Php && op == "*")
@@ -4367,7 +4369,7 @@ class SourceTargetCommon {
 				true;
 			case ECall(callee, _):
 				phpInt64StaticCall(callee);
-			case EBinop("*", left, right), EBinop("+", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
+			case EBinop("*", left, right), EBinop("+", left, right), EBinop("-", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
 			case EUnop("-", inner):
 				phpExprIsInt64Value(inner);
 			case EMacroExpr(inner, _) | EUntyped(inner):

@@ -10764,7 +10764,7 @@ let rec phpExprReturnsInt64 = fun expr -> try let __fallback_result_2175 = (
         | _ -> failwith "Unexpected enum parameter") in let _g2 = Obj.magic (let __enum_param_2167 = expr in if __enum_param_2167 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2167 with
         | HxExpr.EBinop (_, _, __enum_param_2166) -> __enum_param_2166
         | _ -> failwith "Unexpected enum parameter") in match _g with
-        | "*" | "+" -> let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_2169 = phpExprIsInt64Value (Obj.magic left) || phpExprIsInt64Value (Obj.magic right) in (
+        | "*" | "+" | "-" -> let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_2169 = phpExprIsInt64Value (Obj.magic left) || phpExprIsInt64Value (Obj.magic right) in (
           tempResult := __assign_2169;
           __assign_2169
         )
@@ -13757,6 +13757,7 @@ and binopExpr = fun target op left right -> try let __fallback_result_377 = (
   ignore (if target = Python && HxString.equals op "%" then raise (HxRuntime.Hx_return (Obj.repr (((("hxhx_mod(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic left))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic right))) ^ ")" : string))) else ());
   ignore (if target = Php && HxString.equals op "+" then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_add(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic left))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic right))) ^ ")" : string))) else ());
   ignore (if target = Php && HxString.equals op "+=" then raise (HxRuntime.Hx_return (Obj.repr (phpAddAssignExpr (Obj.magic left) (Obj.magic right) : string))) else ());
+  ignore (if target = Php && HxString.equals op "-" && (phpExprIsInt64Value (Obj.magic left) || phpExprIsInt64Value (Obj.magic right)) then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_sub(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic left))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic right))) ^ ")" : string))) else ());
   ignore (if target = Php && HxString.equals op "-=" && phpExprIsInt64Value (Obj.magic left) then raise (HxRuntime.Hx_return (Obj.repr (phpSubtractAssignExpr (Obj.magic left) (Obj.magic right) : string))) else ());
   ignore (if target = Php && HxString.equals op "*" then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_mul(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic left))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic right))) ^ ")" : string))) else ());
   ignore (if target = Php && HxString.equals op "*=" then raise (HxRuntime.Hx_return (Obj.repr (phpMultiplyAssignExpr (Obj.magic left) (Obj.magic right) : string))) else ());
