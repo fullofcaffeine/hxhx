@@ -501,6 +501,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(it.next()));",
 			"    var m = new Map();",
 			"    m.remove(\"a\");",
+			"    var x = 0;",
+			"    var records:Dynamic = [{ v: 3 }];",
+			"    Sys.println(Std.string(records[x++].v++));",
+			"    Sys.println(Std.string(x));",
+			"    Sys.println(Std.string(records[0].v));",
+			"    x = 0;",
+			"    Sys.println(Std.string(records[x++].v += 3));",
+			"    Sys.println(Std.string(x));",
+			"    Sys.println(Std.string(records[0].v));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5005,6 +5014,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_array_get($array, $index)", "PHP runtime should include a safe Haxe array read helper");
 		assertContains(content, "function __hxhx_array_set(&$array, $index, $value)", "PHP runtime should include an indexed set helper");
 		assertContains(content, "function __hxhx_array_add_assign(&$array, $index, $value)", "PHP runtime should include an indexed add-assign helper");
+		assertContains(content, "function __hxhx_field_add_assign($object, $field, $value)", "PHP runtime should include a field add-assign helper");
 		assertContains(content, "function __hxhx_map_literal($pairs)", "PHP runtime should include a map literal helper");
 		assertContains(content, "function __hxhx_map_literal_from_object($object)", "PHP runtime should include an object-shaped map literal helper");
 		assertContains(content, "function __hxhx_remove(&$collection, $value)", "PHP runtime should include a polymorphic remove helper");
@@ -5021,9 +5031,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_array_splice($a, 1, 1);", "PHP Array.splice should lower through the mutating helper");
 		assertContains(content, "$it = __hxhx_iterator($a);", "PHP Array.iterator should lower through the iterator helper");
 		assertContains(content, "__hxhx_remove($m, \"a\");", "PHP Map.remove should go through the polymorphic remove helper");
+		assertContains(content, "__hxhx_field_add_assign(__hxhx_array_get($records, __hxhx_post_update_var($x, 1)), \"v\", 3)",
+			"PHP field add-assign should evaluate side-effecting receivers once");
 		assertNotContains(content, "$a->remove(2)", "PHP arrays should not emit object-method remove calls on raw arrays");
 		assertNotContains(content, "$a->iterator()", "PHP arrays should not emit object-method iterator calls on raw arrays");
 		assertNotContains(content, "$a[3]", "PHP expression reads should not emit direct array access for missing-index semantics");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP array operations should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "1#2#3\nnull\n2\n3\n1\ntrue\n1\n3\n1\n4\n7\n1\n7\n",
+				"generated PHP array operations should preserve field add-assign receiver evaluation, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 

@@ -973,6 +973,9 @@ class SourceTargetCommon {
 	static function phpAddAssignExpr(left:HxExpr, right:HxExpr):String {
 		final target = Php;
 		switch (left) {
+			case EField(receiver, field):
+				return "__hxhx_field_add_assign(" + renderExpr(target, receiver) + ", " + quoteString(sanitizeTypeName(field)) + ", "
+					+ renderExpr(target, right) + ")";
 			case EArrayAccess(receiver, index):
 				return "__hxhx_array_add_assign("
 					+ renderExpr(target, receiver)
@@ -10346,6 +10349,11 @@ class SourceTargetCommon {
 				lines.push("function __hxhx_array_add_assign(&$array, $index, $value) {");
 				lines.push("  $next = __hxhx_add(__hxhx_array_get($array, $index), $value);");
 				lines.push("  __hxhx_array_set($array, $index, $next);");
+				lines.push("  return $next;");
+				lines.push("}");
+				lines.push("function __hxhx_field_add_assign($object, $field, $value) {");
+				lines.push("  $next = __hxhx_add($object->$field, $value);");
+				lines.push("  $object->$field = $next;");
 				lines.push("  return $next;");
 				lines.push("}");
 				lines.push("function __hxhx_map_literal($pairs) {");
