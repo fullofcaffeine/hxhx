@@ -8127,6 +8127,20 @@ class SourceTargetCommon {
 				out.push("  }");
 				memberCount += 1;
 			}
+			if (!emittedMethods.exists("toString")) {
+				emittedMethods.set("toString", true);
+				out.push("  public function toString() {");
+				out.push("    return __hxhx_int64_to_string($this);");
+				out.push("  }");
+				memberCount += 1;
+			}
+			if (!emittedMethods.exists("__toString")) {
+				emittedMethods.set("__toString", true);
+				out.push("  public function __toString() {");
+				out.push("    return $this->toString();");
+				out.push("  }");
+				memberCount += 1;
+			}
 		}
 		var sawConstructor = false;
 		final instanceMethodNames = phpInstanceMethodNames(cls, classesByName, new Map<String, Bool>());
@@ -10070,6 +10084,12 @@ class SourceTargetCommon {
 				lines.push("      if ($this->high !== $expectedHigh) throw \\ValueException::thrown(\"Overflow\");");
 				lines.push("      return $this->low;");
 				lines.push("    }");
+				lines.push("    public function toString() {");
+				lines.push("      return \\__hxhx_int64_to_string($this);");
+				lines.push("    }");
+				lines.push("    public function __toString() {");
+				lines.push("      return $this->toString();");
+				lines.push("    }");
 				lines.push("  }");
 				appendPhpResourceRuntime(lines, context.resources);
 				lines.push("}");
@@ -11251,6 +11271,7 @@ class SourceTargetCommon {
 				lines.push("  return false;");
 				lines.push("}");
 				lines.push("function __hxhx_add($left, $right) {");
+				lines.push("  if (is_string($left) || is_string($right)) return __hxhx_add_string($left) . __hxhx_add_string($right);");
 				lines.push("  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) return __hxhx_int64_add($left, $right);");
 				lines.push("  if (__hxhx_is_point3($left) && __hxhx_is_point3($right)) return __hxhx_point3($left->x + $right->x, $left->y + $right->y, $left->z + $right->z);");
 				lines.push("  if (is_int($left) || is_float($left)) {");
@@ -11299,6 +11320,7 @@ class SourceTargetCommon {
 				lines.push("    }");
 				lines.push("    return \"[\" . implode(\",\", $parts) . \"]\";");
 				lines.push("  }");
+				lines.push("  if (__hxhx_is_int64($value)) return __hxhx_int64_to_string($value);");
 				lines.push("  if (is_object($value) && get_class($value) === \"Meter\" && property_exists($value, \"__hx_value\")) return __hxhx_add_string($value->__hx_value) . \"m\";");
 				lines.push("  if (is_object($value) && get_class($value) === \"Kilometer\" && property_exists($value, \"__hx_value\")) return __hxhx_add_string($value->__hx_value) . \"km\";");
 				lines.push("  if (__hxhx_is_point3($value)) return \"(\" . __hxhx_add_string($value->x) . \",\" . __hxhx_add_string($value->y) . \",\" . __hxhx_add_string($value->z) . \")\";");

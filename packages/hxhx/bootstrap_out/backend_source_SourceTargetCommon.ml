@@ -19869,12 +19869,26 @@ let renderPhpHelperClass = fun cls classesByName postStaticInitializers -> let c
         ignore (HxArray.push out "  }");
         memberCount := HxInt.add (!memberCount) 1
       )) else ());
-      if not (HxMap.exists_string emittedMethods "toInt") then ignore ((
+      ignore (if not (HxMap.exists_string emittedMethods "toInt") then ignore ((
         ignore (HxMap.set_string emittedMethods "toInt" true);
         ignore (HxArray.push out "  public function toInt() {");
         ignore (HxArray.push out "    $expectedHigh = $this->low < 0 ? -1 : 0;");
         ignore (HxArray.push out "    if ($this->high !== $expectedHigh) throw ValueException::thrown(\"Overflow\");");
         ignore (HxArray.push out "    return $this->low;");
+        ignore (HxArray.push out "  }");
+        memberCount := HxInt.add (!memberCount) 1
+      )) else ());
+      ignore (if not (HxMap.exists_string emittedMethods "toString") then ignore ((
+        ignore (HxMap.set_string emittedMethods "toString" true);
+        ignore (HxArray.push out "  public function toString() {");
+        ignore (HxArray.push out "    return __hxhx_int64_to_string($this);");
+        ignore (HxArray.push out "  }");
+        memberCount := HxInt.add (!memberCount) 1
+      )) else ());
+      if not (HxMap.exists_string emittedMethods "__toString") then ignore ((
+        ignore (HxMap.set_string emittedMethods "__toString" true);
+        ignore (HxArray.push out "  public function __toString() {");
+        ignore (HxArray.push out "    return $this->toString();");
         ignore (HxArray.push out "  }");
         memberCount := HxInt.add (!memberCount) 1
       )) else ()
@@ -21169,6 +21183,12 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "      if ($this->high !== $expectedHigh) throw \\ValueException::thrown(\"Overflow\");");
       ignore (HxArray.push lines "      return $this->low;");
       ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public function toString() {");
+      ignore (HxArray.push lines "      return \\__hxhx_int64_to_string($this);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public function __toString() {");
+      ignore (HxArray.push lines "      return $this->toString();");
+      ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "  }");
       ignore (appendPhpResourceRuntime (Obj.magic lines) (Obj.magic ((Obj.magic context : Backend_BackendContext.t).resources)));
       ignore (HxArray.push lines "}");
@@ -22350,6 +22370,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  return false;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_add($left, $right) {");
+      ignore (HxArray.push lines "  if (is_string($left) || is_string($right)) return __hxhx_add_string($left) . __hxhx_add_string($right);");
       ignore (HxArray.push lines "  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) return __hxhx_int64_add($left, $right);");
       ignore (HxArray.push lines "  if (__hxhx_is_point3($left) && __hxhx_is_point3($right)) return __hxhx_point3($left->x + $right->x, $left->y + $right->y, $left->z + $right->z);");
       ignore (HxArray.push lines "  if (is_int($left) || is_float($left)) {");
@@ -22398,6 +22419,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    return \"[\" . implode(\",\", $parts) . \"]\";");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  if (__hxhx_is_int64($value)) return __hxhx_int64_to_string($value);");
       ignore (HxArray.push lines "  if (is_object($value) && get_class($value) === \"Meter\" && property_exists($value, \"__hx_value\")) return __hxhx_add_string($value->__hx_value) . \"m\";");
       ignore (HxArray.push lines "  if (is_object($value) && get_class($value) === \"Kilometer\" && property_exists($value, \"__hx_value\")) return __hxhx_add_string($value->__hx_value) . \"km\";");
       ignore (HxArray.push lines "  if (__hxhx_is_point3($value)) return \"(\" . __hxhx_add_string($value->x) . \",\" . __hxhx_add_string($value->y) . \",\" . __hxhx_add_string($value->z) . \")\";");
