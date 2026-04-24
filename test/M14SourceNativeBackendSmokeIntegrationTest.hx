@@ -1061,6 +1061,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(optNullableDefaults(7.4).y));",
 			"    Sys.println(Std.string(optNullableDefaultsSpaced(7.4).x));",
 			"    Sys.println(Std.string(optNullableDefaultsSpaced(7.4).y));",
+			"    var optClosure = function(a:Int, ?b = 2) return a + b;",
+			"    Sys.println(Std.string(optClosure(1)));",
+			"    Sys.println(Std.string(optClosure(1, 2)));",
+			"    Sys.println(Std.string(optClosure(1, null)));",
 			"  }",
 			"  static function main() {",
 			"    new Main().run();",
@@ -5493,10 +5497,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP optional String parameters should only coerce non-null values");
 		assertContains(optionalStringContent, "$this->optTyped(null, \"str\")", "PHP known typed optional calls should pad skipped arguments with null");
 		assertContains(optionalStringContent, "if ($x === null) $x = 5;", "PHP defaulted optional parameters should apply defaults to explicit null arguments");
+		assertContains(optionalStringContent, "function($a, $b = null)", "PHP closures should accept omitted optional/defaulted arguments");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([optionalStringTmpRoot, "index.php"])]);
 			assertTrue(run.code == 0, "generated PHP optional String null support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\nhello\ntrue\nstr\n55\ntrue\n5\nhello\n5\n6\n5\n7.4\n5\n7.4\n",
+			assertTrue(run.stdout == "true\nhello\ntrue\nstr\n55\ntrue\n5\nhello\n5\n6\n5\n7.4\n5\n7.4\n3\n3\n3\n",
 				"generated PHP optional String args should preserve null and align typed optional calls, got:\n" + run.stdout);
 		}
 		deleteRecursive(optionalStringTmpRoot);

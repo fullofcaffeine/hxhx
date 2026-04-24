@@ -723,6 +723,9 @@ class SourceTargetCommon {
 				"__hxhx_throw(" + (args.length > 0 ? renderExpr(Php, args[0]) : "null") + ")";
 			case ECall(EIdent("__hxhx_for_in"), args) if (target == Php && args.length >= 3):
 				phpForInExpr(args[0], args[1], args[2]);
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(lambdaArgs, lambdaBody), EArrayDecl(optionalArgExprs)]):
+				final optionalArgNames = optionalLambdaArgNames(optionalArgExprs);
+				if (target == Php) phpLambdaExpr(lambdaArgs, lambdaBody, [], [], optionalArgNames); else lambdaExpr(target, lambdaArgs, lambdaBody);
 			case ECall(ELambda(lambdaArgs, lambdaBody), args):
 				lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
 			case ECall(ESuper, args):
@@ -1716,7 +1719,7 @@ class SourceTargetCommon {
 		final rendered = [for (arg in callArgs) renderExpr(target, arg)].join(", ");
 		return switch (target) {
 			case Php:
-				final callee = phpLambdaExpr(lambdaArgs, lambdaBody, [], phpAssignedCapturesInList(callArgs, lambdaArgs));
+				final callee = phpLambdaExpr(lambdaArgs, lambdaBody, [], phpAssignedCapturesInList(callArgs, lambdaArgs), []);
 				"(" + callee + ")(" + rendered + ")";
 			case Python, Java, Cs, Lua:
 				final callee = lambdaExpr(target, lambdaArgs, lambdaBody);
@@ -1797,7 +1800,7 @@ class SourceTargetCommon {
 			case Cs:
 				"(" + renderedArgs + ") => " + renderExpr(target, body);
 			case Php:
-				phpLambdaExpr(args, body, [], []);
+				phpLambdaExpr(args, body, [], [], []);
 			case Lua:
 				"function(" + renderedArgs + ") return " + renderExpr(target, body) + " end";
 		};
@@ -1931,11 +1934,33 @@ class SourceTargetCommon {
 	}
 
 	static function lambdaExprWithPhpUse(args:Array<String>, body:HxExpr, useNames:Array<String>):String {
-		return phpLambdaExpr(args, body, useNames, []);
+		return phpLambdaExpr(args, body, useNames, [], []);
 	}
 
-	static function phpLambdaExpr(args:Array<String>, body:HxExpr, valueNames:Array<String>, extraRefNames:Array<String>):String {
-		final renderedArgs = [for (arg in args) valueName(Php, arg)].join(", ");
+	static function optionalLambdaArgNames(exprs:Array<HxExpr>):Array<String> {
+		final names = new Array<String>();
+		if (exprs != null) {
+			for (expr in exprs) {
+				switch (expr) {
+					case EString(name):
+						final clean = sanitizeTypeName(name);
+						if (clean.length > 0 && names.indexOf(clean) < 0)
+							names.push(clean);
+					case _:
+				}
+			}
+		}
+		return names;
+	}
+
+	static function phpLambdaExpr(args:Array<String>, body:HxExpr, valueNames:Array<String>, extraRefNames:Array<String>,
+			optionalArgNames:Array<String>):String {
+		final renderedArgs = [
+			for (arg in args) {
+				final clean = sanitizeTypeName(arg);
+				valueName(Php, clean) + (optionalArgNames != null && optionalArgNames.indexOf(clean) >= 0 ? " = null" : "");
+			}
+		].join(", ");
 		final renderedBody = renderExpr(Php, body);
 		final refNames = phpLambdaAssignedCaptures(body, args);
 		final valueCaptures = new Array<String>();
