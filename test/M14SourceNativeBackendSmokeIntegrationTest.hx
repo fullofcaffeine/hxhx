@@ -5230,6 +5230,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(haxe.Int64.toStr(shiftAssign));",
 			"    shiftAssign >>>= 1;",
 			"    Sys.println(haxe.Int64.toStr(shiftAssign));",
+			"    var compatA = haxe.Int64.ofInt(32);",
+			"    var compatB = haxe.Int64.ofInt(-4);",
+			"    Sys.println(Std.string(compatA.eq(compatB)));",
+			"    Sys.println(Std.string(compatA.neq(compatB)));",
+			"    Sys.println(haxe.Int64.toStr(compatA.add(compatB)));",
+			"    Sys.println(haxe.Int64.toStr(compatA.sub(compatB)));",
+			"    Sys.println(haxe.Int64.toStr(compatA.div(compatB)));",
+			"    Sys.println(haxe.Int64.toStr(compatA.mod(compatB)));",
+			"    Sys.println(haxe.Int64.toStr(compatB.shl(1)));",
+			"    Sys.println(haxe.Int64.toStr(compatB.shr(1)));",
+			"    Sys.println(haxe.Int64.toStr(compatB.ushr(1)));",
+			"    Sys.println(haxe.Int64.toStr(compatA.and(compatB)));",
+			"    Sys.println(haxe.Int64.toStr(compatA.or(compatB)));",
+			"    Sys.println(haxe.Int64.toStr(compatA.xor(compatB)));",
+			"    Sys.println(haxe.Int64.toStr(compatA.neg()));",
+			"    Sys.println(Std.string(compatA.isNeg()));",
+			"    Sys.println(Std.string(compatB.isNeg()));",
+			"    Sys.println(Std.string(compatA.isZero()));",
 			"    var q = haxe.Int64.divMod(haxe.Int64.ofInt(23), haxe.Int64.ofInt(5));",
 			"    Sys.println(haxe.Int64.toStr(q.quotient));",
 			"    Sys.println(haxe.Int64.toStr(q.modulus));",
@@ -5320,6 +5338,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP typed Int64 signed right-shift assignment should lower through the runtime helper");
 		assertContains(content, "$shiftAssign = __hxhx_int64_ushr($shiftAssign, 1);",
 			"PHP typed Int64 unsigned right-shift assignment should lower through the runtime helper");
+		assertContains(content, "__hxhx_equals($compatA, $compatB)", "PHP Int64 eq/neq methods should lower through equality helper calls");
+		assertContains(content, "__hxhx_int64_add($compatA, $compatB)", "PHP Int64 add method should lower through the runtime helper");
+		assertContains(content, "__hxhx_int64_div_mod($compatA, $compatB)->quotient", "PHP Int64 div method should return the divMod quotient");
+		assertContains(content, "__hxhx_int64_ushr($compatB, 1)", "PHP Int64 ushr method should lower through the runtime helper");
+		assertContains(content, "__hxhx_int64_is_zero($compatA)", "PHP Int64 isZero method should lower through the runtime helper");
 		assertContains(content, "$qi = __hxhx_int64_div_mod(\\haxe\\Int64::ofInt(23), \\haxe\\Int64::ofInt(5));",
 			"PHP Int64 instance divMod should bind the receiver as the first argument");
 		assertContains(content, "$result = __hxhx_int64_div_mod($left, $right);", "PHP runtime division should dispatch Int64 operands through divMod");
@@ -5331,7 +5354,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Int64 runtime support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\ntrue\n0\n42\n0\n14\n-1\n-4\n-1\n-4\n0\n42\n4\n3\n2\n7\n5\n-7\n8589934592\n-4\n9223372036854775804\n8589934592\n2\n1\n4\n3\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
+			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\ntrue\n0\n42\n0\n14\n-1\n-4\n-1\n-4\n0\n42\n4\n3\n2\n7\n5\n-7\n8589934592\n-4\n9223372036854775804\n8589934592\n2\n1\nfalse\ntrue\n28\n36\n-8\n0\n-8\n-2\n9223372036854775806\n32\n-4\n-36\n-32\nfalse\ntrue\nfalse\n4\n3\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
 				"generated PHP haxe.Int64 output mismatch, got:\n"
 				+ run.stdout);
 		}

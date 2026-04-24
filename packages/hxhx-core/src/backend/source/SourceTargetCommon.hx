@@ -1012,6 +1012,47 @@ class SourceTargetCommon {
 		return helper + "(" + renderExpr(Php, left) + ", " + renderExpr(Php, right) + ")";
 	}
 
+	static function phpInt64InstanceMethodCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		if (!phpExprIsInt64Value(receiver))
+			return null;
+		final self = renderExpr(Php, receiver);
+		final clean = sanitizeTypeName(field);
+		return switch (clean) {
+			case "eq" if (args.length == 1):
+				"__hxhx_equals(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "neq" if (args.length == 1):
+				"(!__hxhx_equals(" + self + ", " + renderExpr(Php, args[0]) + "))";
+			case "add" if (args.length == 1):
+				"__hxhx_int64_add(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "sub" if (args.length == 1):
+				"__hxhx_int64_sub(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "div" if (args.length == 1):
+				"__hxhx_int64_div_mod(" + self + ", " + renderExpr(Php, args[0]) + ")->quotient";
+			case "mod" if (args.length == 1):
+				"__hxhx_int64_div_mod(" + self + ", " + renderExpr(Php, args[0]) + ")->modulus";
+			case "shl" if (args.length == 1):
+				"__hxhx_int64_shl(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "shr" if (args.length == 1):
+				"__hxhx_int64_shr(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "ushr" if (args.length == 1):
+				"__hxhx_int64_ushr(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "and" if (args.length == 1):
+				"__hxhx_int64_and(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "or" if (args.length == 1):
+				"__hxhx_int64_or(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "xor" if (args.length == 1):
+				"__hxhx_int64_xor(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "neg" if (args.length == 0):
+				"__hxhx_int64_neg(" + self + ")";
+			case "isNeg" if (args.length == 0):
+				"(" + self + "->high < 0)";
+			case "isZero" if (args.length == 0):
+				"__hxhx_int64_is_zero(" + self + ")";
+			case _:
+				null;
+		};
+	}
+
 	static function phpInt64ShiftAssignExpr(op:String, left:HxExpr, right:HxExpr):String {
 		final helper = switch (op) {
 			case "<<": "__hxhx_int64_shl";
@@ -1658,6 +1699,9 @@ class SourceTargetCommon {
 					return "__hxhx_iterator(" + renderExpr(Php, receiver) + ")";
 				if (field == "toStr" && args.length == 0 && phpStaticTypePath(receiver) == null)
 					return "__hxhx_to_str(" + renderExpr(Php, receiver) + ")";
+				final int64InstanceCall = phpInt64InstanceMethodCall(receiver, field, args);
+				if (int64InstanceCall != null)
+					return int64InstanceCall;
 				if (field == "compare" && args.length == 1 && phpExprIsInt64Value(receiver))
 					return "__hxhx_int64_compare(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 				if (field == "ucompare" && args.length == 1 && phpExprIsInt64Value(receiver))
