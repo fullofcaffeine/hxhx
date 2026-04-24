@@ -6534,6 +6534,85 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpPackageQualifiedClassReference():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_package_class_ref_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EArrayAccess(EField(EIdent("DCEClass"), "c"), EInt(1))]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("unit", [], mainClass, [mainClass], false, false);
+		final usedClass = new HxClassDecl("UsedReferenced2", false, []);
+		final usedDecl = new HxModuleDecl("unit", [], usedClass, [usedClass], false, false);
+		final staticInit = new HxFieldDecl("c", HxVisibility.Public, true, "Array<Dynamic>", EArrayDecl([ENull, EField(EIdent("unit"), "UsedReferenced2")]));
+		final dceClass = new HxClassDecl("DCEClass", false, [], [staticInit]);
+		final dceDecl = new HxModuleDecl("unit", [], dceClass, [dceClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("unit/Main.hx", mainDecl),
+			typedSyntheticModule("unit/UsedReferenced2.hx", usedDecl),
+			typedSyntheticModule("unit/DCEClass.hx", dceDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "DCEClass::$c = [null, \"unit.UsedReferenced2\"];",
+			"PHP static initializers should preserve package-qualified class references as values");
+		assertNotContains(content, "$unit->UsedReferenced2", "PHP package-qualified class references should not lower as instance field reads");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP package-qualified class reference should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "unit.UsedReferenced2\n", "generated PHP should print the qualified class reference, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpStdStringMapClassReference():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_string_map_ref_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [
+				ECall(EField(EIdent("Std"), "string"), [EArrayAccess(EField(EIdent("TestReflect"), "TYPES"), EInt(0))])
+			]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final stringMapRef:HxExpr = EField(EField(EIdent("haxe"), "ds"), "StringMap");
+		final typesField = new HxFieldDecl("TYPES", HxVisibility.Public, true, "Array<Dynamic>", EArrayDecl([stringMapRef]));
+		final reflectClass = new HxClassDecl("TestReflect", false, [], [typesField]);
+		final reflectDecl = new HxModuleDecl("", [], reflectClass, [reflectClass], false, false);
+		final stdSetFn = new HxFunctionDecl("set", HxVisibility.Public, false, [
+			new HxFunctionArg("key", "String", NoDefault),
+			new HxFunctionArg("value", "Dynamic", NoDefault)
+		], "Void",
+			[SExpr(EUnsupported("std-string-map-source-should-not-render"), pos)], "");
+		final stringMapClass = new HxClassDecl("StringMap", false, [stdSetFn]);
+		final stringMapDecl = new HxModuleDecl("haxe.ds", [], stringMapClass, [stringMapClass], false, false);
+		final program = MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("TestReflect.hx", reflectDecl),
+			typedSyntheticModule("/repo/std/haxe/ds/StringMap.hx", stringMapDecl)
+		], []);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "TestReflect::$TYPES = [\"haxe.ds.StringMap\"];",
+			"PHP static initializers should preserve std package-qualified class references");
+		assertNotContains(content, "haxe\\ds::$StringMap", "PHP package prefixes should not lower as static class-property receivers");
+		assertNotContains(content, "std-string-map-source-should-not-render", "PHP StringMap class references should not dump the upstream std source body");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP std StringMap class reference should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "haxe.ds.StringMap\n", "generated PHP should print the std StringMap class reference, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpInstanceMethodValueBind():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_method_value_bind_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7275,6 +7354,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpDateRuntimeSupport();
 		assertPhpStdDateToolsSupport();
+		assertPhpPackageQualifiedClassReference();
+		assertPhpStdStringMapClassReference();
 		assertPhpInstanceMethodValueBind();
 		assertPhpClosureCapturesMutableLocalByReference();
 		assertPhpStringLengthInCharCodeAtArg();

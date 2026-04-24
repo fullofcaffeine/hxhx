@@ -1343,6 +1343,9 @@ class SourceTargetCommon {
 					final renderedReceiver = renderExpr(target, receiver);
 					return "(function() use (" + renderedReceiver + ") { return " + renderedReceiver + "->" + sanitizeTypeName(field) + "(); })";
 				}
+				final packageTypeRef = phpPackageQualifiedTypeReference(EField(receiver, field));
+				if (packageTypeRef != null)
+					return packageTypeRef;
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
 					if (typePath == "Reflect" && field == "compare")
@@ -3388,11 +3391,46 @@ class SourceTargetCommon {
 			case EIdent(name):
 				if (looksLikeTypePathRoot(name)) sanitizePhpTypePath(name) else null;
 			case EField(receiver, field):
+				if (!looksLikeTypePathRoot(field))
+					return null;
 				final prefix = phpStaticTypePathPrefix(receiver);
 				if (prefix == null) {
 					null;
 				} else {
 					sanitizePhpTypePath(prefix + "." + field);
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function phpPackageQualifiedTypeReference(expr:HxExpr):Null<String> {
+		final path = phpPackageQualifiedTypePath(expr);
+		return path == null ? null : quotePhpString(path);
+	}
+
+	static function phpPackageQualifiedTypePath(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EField(receiver, field):
+				if (!looksLikeTypePathRoot(field))
+					return null;
+				final prefix = phpPackagePathPrefix(receiver);
+				prefix == null ? null : prefix + "." + field;
+			case _:
+				null;
+		};
+	}
+
+	static function phpPackagePathPrefix(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EIdent(name):
+				looksLikePhpPackageRoot(name) ? name : null;
+			case EField(receiver, field):
+				final prefix = phpPackagePathPrefix(receiver);
+				if (prefix == null || !looksLikeTypePathSegment(field) || looksLikeTypePathRoot(field)) {
+					null;
+				} else {
+					prefix + "." + field;
 				}
 			case _:
 				null;
