@@ -4369,7 +4369,8 @@ class SourceTargetCommon {
 				true;
 			case ECall(callee, _):
 				phpInt64StaticCall(callee);
-			case EBinop("*", left, right), EBinop("+", left, right), EBinop("-", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
+			case EBinop("*", left, right), EBinop("+", left, right), EBinop("-", left, right),
+				EBinop("/", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
 			case EUnop("-", inner):
 				phpExprIsInt64Value(inner);
 			case EMacroExpr(inner, _) | EUntyped(inner):
@@ -11284,6 +11285,10 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("function __hxhx_div($left, $right) {");
 				lines.push("  if (is_string($left) && (is_int($right) || is_float($right))) return substr($left, 0, intval($right));");
+				lines.push("  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) {");
+				lines.push("    $result = __hxhx_int64_div_mod($left, $right);");
+				lines.push("    return $result->quotient;");
+				lines.push("  }");
 				lines.push("  return $left / $right;");
 				lines.push("}");
 				lines.push("function __hxhx_add_string($value) {");
