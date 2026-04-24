@@ -5156,6 +5156,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var i = haxe.Int64.ofInt(7) * 6;",
 			"    Sys.println(i.high);",
 			"    Sys.println(i.low);",
+			"    var j = haxe.Int64.add(haxe.Int64.ofInt(5), haxe.Int64.ofInt(9));",
+			"    Sys.println(j.high);",
+			"    Sys.println(j.low);",
+			"    var k = haxe.Int64.sub(haxe.Int64.ofInt(5), haxe.Int64.ofInt(9));",
+			"    Sys.println(k.high);",
+			"    Sys.println(k.low);",
+			"    var m = haxe.Int64.mul(haxe.Int64.ofInt(7), 6);",
+			"    Sys.println(m.high);",
+			"    Sys.println(m.low);",
 			"    var lmin = haxe.Int64.parseString(\"-9223372036854775808\");",
 			"    var l = -lmin;",
 			"    Sys.println(l.high);",
@@ -5183,6 +5192,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Int64 {", "PHP runtime should expose haxe.Int64");
 		assertContains(content, "public static function make($high, $low)", "PHP haxe.Int64 should expose make");
 		assertContains(content, "public static function ofInt($value)", "PHP haxe.Int64 should expose ofInt");
+		assertContains(content, "public static function add($left, $right)", "PHP haxe.Int64 should expose add");
+		assertContains(content, "public static function sub($left, $right)", "PHP haxe.Int64 should expose sub");
+		assertContains(content, "public static function mul($left, $right)", "PHP haxe.Int64 should expose mul");
 		assertContains(content, "public static function parseString($value)", "PHP haxe.Int64 should expose parseString");
 		assertContains(content, "public function toInt()", "PHP haxe.Int64 should expose instance toInt");
 		assertContains(content, "$e = __hxhx_int64_literal(\"47244640255\", \"i64\");", "PHP typed Int64 decimal literals should construct Int64 values");
@@ -5193,7 +5205,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Int64 runtime support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\nparse-overflow\n0\n42\n-2147483648\n0\ntrue\ntrue\ntrue\noverflow\n",
+			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\nparse-overflow\n0\n42\n0\n14\n-1\n-4\n0\n42\n-2147483648\n0\ntrue\ntrue\ntrue\noverflow\n",
 				"generated PHP haxe.Int64 output mismatch, got:\n"
 				+ run.stdout);
 		}

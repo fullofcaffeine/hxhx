@@ -8015,6 +8015,27 @@ class SourceTargetCommon {
 				out.push("  }");
 				memberCount += 1;
 			}
+			if (!emittedMethods.exists("add")) {
+				emittedMethods.set("add", true);
+				out.push("  public static function add($left, $right) {");
+				out.push("    return __hxhx_int64_add($left, $right);");
+				out.push("  }");
+				memberCount += 1;
+			}
+			if (!emittedMethods.exists("sub")) {
+				emittedMethods.set("sub", true);
+				out.push("  public static function sub($left, $right) {");
+				out.push("    return __hxhx_int64_sub($left, $right);");
+				out.push("  }");
+				memberCount += 1;
+			}
+			if (!emittedMethods.exists("mul")) {
+				emittedMethods.set("mul", true);
+				out.push("  public static function mul($left, $right) {");
+				out.push("    return __hxhx_int64_mul($left, $right);");
+				out.push("  }");
+				memberCount += 1;
+			}
 			if (!emittedMethods.exists("parseString")) {
 				emittedMethods.set("parseString", true);
 				out.push("  public static function parseString($value) {");
@@ -9950,6 +9971,15 @@ class SourceTargetCommon {
 				lines.push("    public static function ofInt($value) {");
 				lines.push("      $low = \\__hxhx_int32_value($value);");
 				lines.push("      return new Int64($low < 0 ? -1 : 0, $low);");
+				lines.push("    }");
+				lines.push("    public static function add($left, $right) {");
+				lines.push("      return \\__hxhx_int64_add($left, $right);");
+				lines.push("    }");
+				lines.push("    public static function sub($left, $right) {");
+				lines.push("      return \\__hxhx_int64_sub($left, $right);");
+				lines.push("    }");
+				lines.push("    public static function mul($left, $right) {");
+				lines.push("      return \\__hxhx_int64_mul($left, $right);");
 				lines.push("    }");
 				lines.push("    public static function parseString($value) {");
 				lines.push("      return \\__hxhx_int64_parse_string($value);");

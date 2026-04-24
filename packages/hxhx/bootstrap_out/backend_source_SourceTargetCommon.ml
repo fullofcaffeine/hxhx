@@ -19725,6 +19725,27 @@ let renderPhpHelperClass = fun cls classesByName postStaticInitializers -> let c
         ignore (HxArray.push out "  }");
         memberCount := HxInt.add (!memberCount) 1
       )) else ());
+      ignore (if not (HxMap.exists_string emittedMethods "add") then ignore ((
+        ignore (HxMap.set_string emittedMethods "add" true);
+        ignore (HxArray.push out "  public static function add($left, $right) {");
+        ignore (HxArray.push out "    return __hxhx_int64_add($left, $right);");
+        ignore (HxArray.push out "  }");
+        memberCount := HxInt.add (!memberCount) 1
+      )) else ());
+      ignore (if not (HxMap.exists_string emittedMethods "sub") then ignore ((
+        ignore (HxMap.set_string emittedMethods "sub" true);
+        ignore (HxArray.push out "  public static function sub($left, $right) {");
+        ignore (HxArray.push out "    return __hxhx_int64_sub($left, $right);");
+        ignore (HxArray.push out "  }");
+        memberCount := HxInt.add (!memberCount) 1
+      )) else ());
+      ignore (if not (HxMap.exists_string emittedMethods "mul") then ignore ((
+        ignore (HxMap.set_string emittedMethods "mul" true);
+        ignore (HxArray.push out "  public static function mul($left, $right) {");
+        ignore (HxArray.push out "    return __hxhx_int64_mul($left, $right);");
+        ignore (HxArray.push out "  }");
+        memberCount := HxInt.add (!memberCount) 1
+      )) else ());
       ignore (if not (HxMap.exists_string emittedMethods "parseString") then ignore ((
         ignore (HxMap.set_string emittedMethods "parseString" true);
         ignore (HxArray.push out "  public static function parseString($value) {");
@@ -21008,6 +21029,15 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    public static function ofInt($value) {");
       ignore (HxArray.push lines "      $low = \\__hxhx_int32_value($value);");
       ignore (HxArray.push lines "      return new Int64($low < 0 ? -1 : 0, $low);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public static function add($left, $right) {");
+      ignore (HxArray.push lines "      return \\__hxhx_int64_add($left, $right);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public static function sub($left, $right) {");
+      ignore (HxArray.push lines "      return \\__hxhx_int64_sub($left, $right);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public static function mul($left, $right) {");
+      ignore (HxArray.push lines "      return \\__hxhx_int64_mul($left, $right);");
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    public static function parseString($value) {");
       ignore (HxArray.push lines "      return \\__hxhx_int64_parse_string($value);");
