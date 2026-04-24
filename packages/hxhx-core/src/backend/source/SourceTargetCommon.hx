@@ -8983,6 +8983,9 @@ class SourceTargetCommon {
 				lines.push("    public static function encode($value) {");
 				lines.push("      return md5(strval($value));");
 				lines.push("    }");
+				lines.push("    public static function make($bytes) {");
+				lines.push("      return \\haxe\\io\\Bytes::ofHex(md5($bytes->toString()));");
+				lines.push("    }");
 				lines.push("  }");
 				lines.push("}");
 				lines.push("namespace haxe\\xml {");

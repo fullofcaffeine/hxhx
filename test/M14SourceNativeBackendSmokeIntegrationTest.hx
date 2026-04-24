@@ -945,6 +945,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpMd5MakeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var bytes = haxe.io.Bytes.ofString(\"héllo\");",
+			"    Sys.println(bytes.toHex());",
+			"    Sys.println(haxe.crypto.Md5.make(bytes).toHex());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpXmlRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5268,6 +5283,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "Z", "generated PHP BytesInput should read written strings");
 		}
 		deleteRecursive(bytesTmpRoot);
+
+		final md5TmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_md5_make_" + Std.string(Date.now().getTime()));
+		deleteRecursive(md5TmpRoot);
+		FileSystem.createDirectory(md5TmpRoot);
+		backend.emit(phpMd5MakeProgram(), new BackendContext(md5TmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final md5Content = File.getContent(Path.join([md5TmpRoot, "index.php"]));
+		assertContains(md5Content, "public static function make($bytes)", "PHP haxe.crypto.Md5 should expose make(Bytes)");
+		assertContains(md5Content, "\\haxe\\io\\Bytes::ofHex(md5($bytes->toString()))", "PHP Md5.make should return digest bytes");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([md5TmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP Md5.make support should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "68c3a96c6c6f", "generated PHP Bytes.ofString should preserve UTF-8 input for Md5.make");
+			assertContains(run.stdout, "be50e8478cf24ff3595bc7307fb91b50", "generated PHP Md5.make should return digest bytes");
+		}
+		deleteRecursive(md5TmpRoot);
 
 		final xmlTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_xml_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(xmlTmpRoot);
