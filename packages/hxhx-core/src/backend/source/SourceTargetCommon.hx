@@ -1444,6 +1444,8 @@ class SourceTargetCommon {
 		if (!StringTools.startsWith(callee, "$"))
 			return null;
 		final name = callee.substr(1);
+		if (phpLocalExists(name))
+			return null;
 		if (name == "f" && renderedArgs.length == 0)
 			return null;
 		if (name == "bar" || name == "getAbstractValue")
@@ -3644,6 +3646,12 @@ class SourceTargetCommon {
 			return "";
 		final clean = sanitizeTypeName(name);
 		return phpRenderLocalTypes.exists(clean) ? phpRenderLocalTypes.get(clean) : "";
+	}
+
+	static function phpLocalExists(name:String):Bool {
+		if (phpRenderLocalTypes == null)
+			return false;
+		return phpRenderLocalTypes.exists(sanitizeTypeName(name));
 	}
 
 	static function withPhpRefCaptureLocals<T>(target:SourceNativeTarget, refCaptures:Null<Array<String>>, f:() -> T):T {

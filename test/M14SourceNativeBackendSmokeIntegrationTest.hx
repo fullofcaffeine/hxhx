@@ -6183,6 +6183,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(o.f());",
 			"    var m = { cos: Math.cos };",
 			"    Sys.println(m.cos(0));",
+			"    var bar = null;",
+			"    if (true) {",
+			"      var y = 2;",
+			"      bar = function() return y;",
+			"    }",
+			"    Sys.println(bar());",
 			"  }",
 			"}",
 		].join("\n");
@@ -6195,10 +6201,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "use (&$x)", "PHP closures should capture mutable locals by reference");
 		assertContains(content, "return Math::cos(...$__hxhx_args);", "PHP static method values should lower to callable closures");
+		assertNotContains(content, "$this->bar();", "PHP local closures named like helper methods should not rewrite to same-class helper calls");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP mutable closure capture support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "4\n5\n5\n1\n", "generated PHP mutable closure capture should observe later local mutation, got:\n" + run.stdout);
+			assertTrue(run.stdout == "4\n5\n5\n1\n2\n", "generated PHP mutable closure capture should observe later local mutation, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
