@@ -8043,6 +8043,13 @@ class SourceTargetCommon {
 				out.push("  }");
 				memberCount += 1;
 			}
+			if (!emittedMethods.exists("toStr")) {
+				emittedMethods.set("toStr", true);
+				out.push("  public static function toStr($value) {");
+				out.push("    return __hxhx_int64_to_string($value);");
+				out.push("  }");
+				memberCount += 1;
+			}
 			if (!emittedMethods.exists("toInt")) {
 				emittedMethods.set("toInt", true);
 				out.push("  public function toInt() {");
@@ -9984,6 +9991,9 @@ class SourceTargetCommon {
 				lines.push("    public static function parseString($value) {");
 				lines.push("      return \\__hxhx_int64_parse_string($value);");
 				lines.push("    }");
+				lines.push("    public static function toStr($value) {");
+				lines.push("      return \\__hxhx_int64_to_string($value);");
+				lines.push("    }");
 				lines.push("    public function toInt() {");
 				lines.push("      $expectedHigh = $this->low < 0 ? -1 : 0;");
 				lines.push("      if ($this->high !== $expectedHigh) throw \\ValueException::thrown(\"Overflow\");");
@@ -11009,6 +11019,32 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("function __hxhx_int64_sub($left, $right) {");
 				lines.push("  return __hxhx_int64_add($left, __hxhx_int64_neg($right));");
+				lines.push("}");
+				lines.push("function __hxhx_int64_to_string($value) {");
+				lines.push("  $value = __hxhx_int64_value($value);");
+				lines.push("  if ($value->high === 0 && $value->low === 0) return \"0\";");
+				lines.push("  $negative = $value->high < 0;");
+				lines.push("  if ($negative) {");
+				lines.push("    if ($value->high === -2147483648 && $value->low === 0) return \"-9223372036854775808\";");
+				lines.push("    $value = __hxhx_int64_neg($value);");
+				lines.push("  }");
+				lines.push("  $parts = [");
+				lines.push("    (($value->high & 0xFFFFFFFF) >> 16) & 0xFFFF,");
+				lines.push("    $value->high & 0xFFFF,");
+				lines.push("    (($value->low & 0xFFFFFFFF) >> 16) & 0xFFFF,");
+				lines.push("    $value->low & 0xFFFF");
+				lines.push("  ];");
+				lines.push("  $digits = \"\";");
+				lines.push("  while ($parts[0] !== 0 || $parts[1] !== 0 || $parts[2] !== 0 || $parts[3] !== 0) {");
+				lines.push("    $carry = 0;");
+				lines.push("    for ($i = 0; $i < 4; $i++) {");
+				lines.push("      $part = $carry * 65536 + $parts[$i];");
+				lines.push("      $parts[$i] = intdiv($part, 10);");
+				lines.push("      $carry = $part % 10;");
+				lines.push("    }");
+				lines.push("    $digits = chr(48 + $carry) . $digits;");
+				lines.push("  }");
+				lines.push("  return $negative ? \"-\" . $digits : $digits;");
 				lines.push("}");
 				lines.push("function __hxhx_int64_mul($left, $right) {");
 				lines.push("  $left = __hxhx_int64_value($left);");

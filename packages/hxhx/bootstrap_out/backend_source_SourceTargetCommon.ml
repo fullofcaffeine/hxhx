@@ -19753,6 +19753,13 @@ let renderPhpHelperClass = fun cls classesByName postStaticInitializers -> let c
         ignore (HxArray.push out "  }");
         memberCount := HxInt.add (!memberCount) 1
       )) else ());
+      ignore (if not (HxMap.exists_string emittedMethods "toStr") then ignore ((
+        ignore (HxMap.set_string emittedMethods "toStr" true);
+        ignore (HxArray.push out "  public static function toStr($value) {");
+        ignore (HxArray.push out "    return __hxhx_int64_to_string($value);");
+        ignore (HxArray.push out "  }");
+        memberCount := HxInt.add (!memberCount) 1
+      )) else ());
       if not (HxMap.exists_string emittedMethods "toInt") then ignore ((
         ignore (HxMap.set_string emittedMethods "toInt" true);
         ignore (HxArray.push out "  public function toInt() {");
@@ -21042,6 +21049,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    public static function parseString($value) {");
       ignore (HxArray.push lines "      return \\__hxhx_int64_parse_string($value);");
       ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public static function toStr($value) {");
+      ignore (HxArray.push lines "      return \\__hxhx_int64_to_string($value);");
+      ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    public function toInt() {");
       ignore (HxArray.push lines "      $expectedHigh = $this->low < 0 ? -1 : 0;");
       ignore (HxArray.push lines "      if ($this->high !== $expectedHigh) throw \\ValueException::thrown(\"Overflow\");");
@@ -22067,6 +22077,32 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_int64_sub($left, $right) {");
       ignore (HxArray.push lines "  return __hxhx_int64_add($left, __hxhx_int64_neg($right));");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_int64_to_string($value) {");
+      ignore (HxArray.push lines "  $value = __hxhx_int64_value($value);");
+      ignore (HxArray.push lines "  if ($value->high === 0 && $value->low === 0) return \"0\";");
+      ignore (HxArray.push lines "  $negative = $value->high < 0;");
+      ignore (HxArray.push lines "  if ($negative) {");
+      ignore (HxArray.push lines "    if ($value->high === -2147483648 && $value->low === 0) return \"-9223372036854775808\";");
+      ignore (HxArray.push lines "    $value = __hxhx_int64_neg($value);");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  $parts = [");
+      ignore (HxArray.push lines "    (($value->high & 0xFFFFFFFF) >> 16) & 0xFFFF,");
+      ignore (HxArray.push lines "    $value->high & 0xFFFF,");
+      ignore (HxArray.push lines "    (($value->low & 0xFFFFFFFF) >> 16) & 0xFFFF,");
+      ignore (HxArray.push lines "    $value->low & 0xFFFF");
+      ignore (HxArray.push lines "  ];");
+      ignore (HxArray.push lines "  $digits = \"\";");
+      ignore (HxArray.push lines "  while ($parts[0] !== 0 || $parts[1] !== 0 || $parts[2] !== 0 || $parts[3] !== 0) {");
+      ignore (HxArray.push lines "    $carry = 0;");
+      ignore (HxArray.push lines "    for ($i = 0; $i < 4; $i++) {");
+      ignore (HxArray.push lines "      $part = $carry * 65536 + $parts[$i];");
+      ignore (HxArray.push lines "      $parts[$i] = intdiv($part, 10);");
+      ignore (HxArray.push lines "      $carry = $part % 10;");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    $digits = chr(48 + $carry) . $digits;");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  return $negative ? \"-\" . $digits : $digits;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_int64_mul($left, $right) {");
       ignore (HxArray.push lines "  $left = __hxhx_int64_value($left);");
