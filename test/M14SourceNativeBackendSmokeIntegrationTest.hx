@@ -323,6 +323,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpSameClassStaticInlineCallProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static inline function foo(x) return x + 5;",
+			"  static function main() {",
+			"    var x = 3;",
+			"    Sys.println(Std.string(2 * foo(x)));",
+			"    Sys.println(Std.string(-foo(x)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function unsignedRightShiftProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -4721,8 +4737,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function getA()", "PHP same-class static helper should be emitted as a static method");
-		assertContains(content, "return (__hxhx_add(self::getA()->a, 1) >> 1);", "PHP unqualified same-class static helper calls should lower through self::");
+		assertContains(content, "return (__hxhx_add(TestOps::getA()->a, 1) >> 1);",
+			"PHP unqualified same-class static helper calls should lower through a class-qualified static call");
 		assertNotContains(content, "$getA()", "PHP same-class static helper calls should not lower as local callable variables");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpSameClassStaticInlineCall():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_class_static_inline_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpSameClassStaticInlineCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function foo($x)", "PHP should emit the same-class static helper method");
+		assertContains(content, "__hxhx_mul(2, Main::foo($x))", "PHP same-class static helper calls should not lower as local variable calls");
+		assertContains(content, "(-Main::foo($x))", "PHP unary expressions should preserve same-class static helper calls");
+		assertNotContains(content, "$foo($x)", "PHP same-class static helper calls should not emit undefined local callable variables");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP same-class static inline helper should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "16\n-8\n", "generated PHP same-class static inline helper output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -7110,6 +7147,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpEnumString();
 		assertPhpBitwisePrecedence();
 		assertPhpSameClassStaticHelperCall();
+		assertPhpSameClassStaticInlineCall();
 		assertPhpBitwiseEqualityPrecedence();
 		assertPhpModuloMultiplicationPrecedence();
 		assertPhpFloatModulo();

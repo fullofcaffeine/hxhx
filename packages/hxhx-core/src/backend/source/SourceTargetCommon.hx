@@ -7331,6 +7331,14 @@ class SourceTargetCommon {
 		return new Map<String, Bool>();
 	}
 
+	static function phpMainClassStaticMemberNames(decl:HxModuleDecl, className:String):Map<String, Bool> {
+		for (cls in HxModuleDecl.getClasses(decl)) {
+			if (sanitizePhpTypeName(HxClassDecl.getName(cls)) == className)
+				return phpCurrentClassStaticMemberNames(cls);
+		}
+		return new Map<String, Bool>();
+	}
+
 	static function phpSupportPackage(decl:HxModuleDecl, filePath:String):String {
 		final parsed = HxModuleDecl.getPackagePath(decl);
 		if (parsed != null && parsed.length > 0)
@@ -7477,7 +7485,7 @@ class SourceTargetCommon {
 		final instanceMethodNames = phpInstanceMethodNames(cls, classesByName, new Map<String, Bool>());
 		final instanceMethodArgs = phpInstanceMethodArgs(cls, classesByName, new Map<String, Bool>());
 		final instanceFieldNames = phpInstanceFieldNames(cls, classesByName, new Map<String, Bool>());
-		final staticFieldNames = phpCurrentClassStaticFieldNames(cls);
+		final staticFieldNames = phpCurrentClassStaticMemberNames(cls);
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (isCompileTimeOnlyFunction(fn))
 				continue;
@@ -8537,6 +8545,16 @@ class SourceTargetCommon {
 			if (!HxFieldDecl.getIsStatic(field))
 				continue;
 			names.set(HxFieldDecl.getName(field), true);
+		}
+		return names;
+	}
+
+	static function phpCurrentClassStaticMemberNames(cls:HxClassDecl):Map<String, Bool> {
+		final names = phpCurrentClassStaticFieldNames(cls);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn))
+				continue;
+			names.set(HxFunctionDecl.getName(fn), true);
 		}
 		return names;
 	}
@@ -10565,7 +10583,7 @@ class SourceTargetCommon {
 				for (line in renderSupportClasses(target, program, decl, className))
 					lines.push(line);
 				final emptyPhpNames = new Map<String, Bool>();
-				final mainBody = phpRewriteSameClassMembersInStmts(body, emptyPhpNames, emptyPhpNames, phpMainClassStaticFieldNames(decl, className),
+				final mainBody = phpRewriteSameClassMembersInStmts(body, emptyPhpNames, emptyPhpNames, phpMainClassStaticMemberNames(decl, className),
 					className, []);
 				lines.push("function " + className + "_main() {");
 				for (line in renderFunctionStmts(target, mainBody, "  ", className + "_main"))
