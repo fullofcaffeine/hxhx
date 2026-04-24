@@ -5164,7 +5164,31 @@ class SourceTargetCommon {
 			return "__hxhx_to_my_abstract_counter(" + rhs + ")";
 		if (isStringTypeHint(typeHint))
 			return "__hxhx_to_string_value(" + rhs + ")";
+		if (isInt64TypeHint(typeHint))
+			return phpInt64AssignedValueExpr(expr, rhs);
 		return shouldCopyAssignedValue(expr) ? phpCopyValueExpr(rhs) : rhs;
+	}
+
+	static function isInt64TypeHint(typeHint:String):Bool {
+		final normalized = normalizeTypeHint(typeHint);
+		return normalized == "Int64" || normalized == "haxe.Int64";
+	}
+
+	static function phpInt64AssignedValueExpr(expr:HxExpr, rendered:String):String {
+		return switch (expr) {
+			case EInt(_):
+				"Int64::ofInt(" + rendered + ")";
+			case EUnop("-", EInt(_)):
+				"Int64::ofInt(" + rendered + ")";
+			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]) if (suffix == "i64" || suffix == "u64"):
+				"__hxhx_int64_literal("
+				+ quotePhpString(raw)
+				+ ", "
+				+ quotePhpString(suffix)
+				+ ")";
+			case _:
+				rendered;
+		};
 	}
 
 	static function phpTypedAnonExpr(fieldNames:Array<String>, fieldValues:Array<HxExpr>, typeHint:String):String {
@@ -7892,6 +7916,50 @@ class SourceTargetCommon {
 				postStaticInitializers.push(className + "::$" + fieldName + " = " + renderExpr(Php, init) + ";");
 			memberCount += 1;
 		}
+		if (className == "Int64") {
+			if (!emittedFields.exists("high")) {
+				emittedFields.set("high", true);
+				out.push("  public $high;");
+				memberCount += 1;
+			}
+			if (!emittedFields.exists("low")) {
+				emittedFields.set("low", true);
+				out.push("  public $low;");
+				memberCount += 1;
+			}
+			if (!emittedMethods.exists("__construct")) {
+				emittedMethods.set("__construct", true);
+				out.push("  public function __construct($high = 0, $low = 0) {");
+				out.push("    $this->high = __hxhx_int32_value($high);");
+				out.push("    $this->low = __hxhx_int32_value($low);");
+				out.push("  }");
+				memberCount += 1;
+			}
+			if (!emittedMethods.exists("make")) {
+				emittedMethods.set("make", true);
+				out.push("  public static function make($high, $low) {");
+				out.push("    return new Int64($high, $low);");
+				out.push("  }");
+				memberCount += 1;
+			}
+			if (!emittedMethods.exists("ofInt")) {
+				emittedMethods.set("ofInt", true);
+				out.push("  public static function ofInt($value) {");
+				out.push("    $low = __hxhx_int32_value($value);");
+				out.push("    return new Int64($low < 0 ? -1 : 0, $low);");
+				out.push("  }");
+				memberCount += 1;
+			}
+			if (!emittedMethods.exists("toInt")) {
+				emittedMethods.set("toInt", true);
+				out.push("  public function toInt() {");
+				out.push("    $expectedHigh = $this->low < 0 ? -1 : 0;");
+				out.push("    if ($this->high !== $expectedHigh) throw ValueException::thrown(\"Overflow\");");
+				out.push("    return $this->low;");
+				out.push("  }");
+				memberCount += 1;
+			}
+		}
 		var sawConstructor = false;
 		final instanceMethodNames = phpInstanceMethodNames(cls, classesByName, new Map<String, Bool>());
 		final instanceMethodArgs = phpInstanceMethodArgs(cls, classesByName, new Map<String, Bool>());
@@ -9797,6 +9865,26 @@ class SourceTargetCommon {
 				lines.push("      return json_encode(self::encodeValue($value, $replacer, \"\"), JSON_UNESCAPED_SLASHES);");
 				lines.push("    }");
 				lines.push("  }");
+				lines.push("  class Int64 {");
+				lines.push("    public $high;");
+				lines.push("    public $low;");
+				lines.push("    public function __construct($high, $low) {");
+				lines.push("      $this->high = \\__hxhx_int32_value($high);");
+				lines.push("      $this->low = \\__hxhx_int32_value($low);");
+				lines.push("    }");
+				lines.push("    public static function make($high, $low) {");
+				lines.push("      return new Int64($high, $low);");
+				lines.push("    }");
+				lines.push("    public static function ofInt($value) {");
+				lines.push("      $low = \\__hxhx_int32_value($value);");
+				lines.push("      return new Int64($low < 0 ? -1 : 0, $low);");
+				lines.push("    }");
+				lines.push("    public function toInt() {");
+				lines.push("      $expectedHigh = $this->low < 0 ? -1 : 0;");
+				lines.push("      if ($this->high !== $expectedHigh) throw \\ValueException::thrown(\"Overflow\");");
+				lines.push("      return $this->low;");
+				lines.push("    }");
+				lines.push("  }");
 				appendPhpResourceRuntime(lines, context.resources);
 				lines.push("}");
 				lines.push("namespace haxe\\format {");
@@ -10183,6 +10271,10 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("namespace {");
 				appendPhpClassNameMap(lines, program, decl);
+				lines.push("if (!class_exists(\"Int64\", false)) {");
+				lines.push("  class Int64 extends \\haxe\\Int64 {");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("class StringTools {");
 				lines.push("  public static function urlEncode($value) {");
 				lines.push("    return rawurlencode(strval($value));");
@@ -10756,6 +10848,18 @@ class SourceTargetCommon {
 				lines.push("function __hxhx_int32_value($value) {");
 				lines.push("  $value = intval($value) & 0xFFFFFFFF;");
 				lines.push("  return $value >= 0x80000000 ? $value - 0x100000000 : $value;");
+				lines.push("}");
+				lines.push("function __hxhx_int64_literal($text, $suffix) {");
+				lines.push("  $clean = str_replace(\"_\", \"\", strtolower($text));");
+				lines.push("  if (strpos($clean, \"0x\") === 0) {");
+				lines.push("    $hex = ltrim(substr($clean, 2), \"0\");");
+				lines.push("    if ($hex === \"\") return Int64::make(0, 0);");
+				lines.push("    if (strlen($hex) > 16) $hex = substr($hex, -16);");
+				lines.push("    $padded = str_pad($hex, 16, \"0\", STR_PAD_LEFT);");
+				lines.push("    return Int64::make(hexdec(substr($padded, 0, 8)), hexdec(substr($padded, 8, 8)));");
+				lines.push("  }");
+				lines.push("  $value = intval($clean);");
+				lines.push("  return Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
 				lines.push("}");
 				lines.push("function __hxhx_int_literal($text, $suffix) {");
 				lines.push("  $clean = str_replace(\"_\", \"\", strtolower($text));");

@@ -5110,7 +5110,65 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "if ($suffix === \"\" || $suffix === \"i32\")", "PHP runtime should normalize signed Int/i32 literals");
 		assertContains(content, "function __hxhx_int32_value($value)", "PHP runtime should normalize high-bit integer equality as Haxe Int");
 		assertContains(content, "function __hxhx_int_literal($text, $suffix)", "PHP runtime should include numeric suffix literal normalization support");
+		assertContains(content, "function __hxhx_int64_literal($text, $suffix)", "PHP runtime should include typed Int64 literal construction support");
 		assertNotContains(content, "32->ofInt()", "PHP should not emit instance calls on integer literals");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpHaxeInt64RuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_int64_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"import haxe.Int64.*;",
+			"class Main {",
+			"  static function main() {",
+			"    var a = haxe.Int64.make(10, 0xFFFFFFFF);",
+			"    Sys.println(a.high);",
+			"    Sys.println(a.low);",
+			"    var c = Int64.make(2, 3);",
+			"    Sys.println(c.high);",
+			"    Sys.println(c.low);",
+			"    var b = haxe.Int64.ofInt(-1);",
+			"    Sys.println(b.high);",
+			"    Sys.println(b.low);",
+			"    Sys.println(b.toInt());",
+			"    var d:haxe.Int64 = 1;",
+			"    Sys.println(d.toInt());",
+			"    var e:haxe.Int64 = 47244640255i64;",
+			"    Sys.println(e.high);",
+			"    Sys.println(e.low);",
+			"    var f:haxe.Int64 = 0x7FFFFFFFFFFFFFFFi64;",
+			"    Sys.println(f.high);",
+			"    Sys.println(f.low);",
+			"    try {",
+			"      haxe.Int64.make(0, 0x80000000).toInt();",
+			"      Sys.println(\"missing-overflow\");",
+			"    } catch (_:Dynamic) {",
+			"      Sys.println(\"overflow\");",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Int64 {", "PHP runtime should expose haxe.Int64");
+		assertContains(content, "public static function make($high, $low)", "PHP haxe.Int64 should expose make");
+		assertContains(content, "public static function ofInt($value)", "PHP haxe.Int64 should expose ofInt");
+		assertContains(content, "public function toInt()", "PHP haxe.Int64 should expose instance toInt");
+		assertContains(content, "$e = __hxhx_int64_literal(\"47244640255\", \"i64\");", "PHP typed Int64 decimal literals should construct Int64 values");
+		assertContains(content, "$f = __hxhx_int64_literal(\"0x7FFFFFFFFFFFFFFF\", \"i64\");", "PHP typed Int64 hex literals should construct Int64 values");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP haxe.Int64 runtime support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n10\n-1\n2147483647\n-1\noverflow\n",
+				"generated PHP haxe.Int64 output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -7908,6 +7966,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonMacroExpr();
 		assertPhpDollarString();
 		assertPhpInt64LiteralExtension();
+		assertPhpHaxeInt64RuntimeSupport();
 		assertPythonNumericLiteralFieldCallSyntax();
 		assertPhpArrayConstructor();
 		assertPhpArrayOperations();
