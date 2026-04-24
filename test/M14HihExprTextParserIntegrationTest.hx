@@ -505,6 +505,26 @@ class M14HihExprTextParserIntegrationTest {
 		assertTrue(scannedMacroFuncs.length == 1, "expected scanner to find macro helper function");
 		assertTrue(HxFunctionDecl.getMetadata(scannedMacroFuncs[0]).indexOf("macro") >= 0, "expected scanner macro modifier metadata");
 
+		final staticAccessorSource = [
+			"class MyDynamicClass {",
+			"  static var Z = 10;",
+			"  public dynamic static function staticDynamic(x, y) {",
+			"    return Z + x + y;",
+			"  }",
+			"  @:isVar public static var W(get, set):Int = 55;",
+			"  static function get_W() return W + 2;",
+			"  static function set_W(v) { W = v; return v; }",
+			"}",
+		].join("\n");
+		final staticAccessorClasses = ParserStageScanHelpers.scanModuleLocalHelperClasses(staticAccessorSource, null);
+		assertTrue(staticAccessorClasses.length == 1, "expected scanner to find static accessor helper class");
+		final staticAccessorFuncs = HxClassDecl.getFunctions(staticAccessorClasses[0]);
+		final bodyLengths = new Map<String, Int>();
+		for (fn in staticAccessorFuncs)
+			bodyLengths.set(HxFunctionDecl.getName(fn), HxFunctionDecl.getBody(fn).length);
+		assertTrue(bodyLengths.get("get_W") == 1, "scanner should preserve expression-bodied static getters");
+		assertTrue(bodyLengths.get("set_W") == 2, "scanner should preserve assignment-plus-return static setters");
+
 		final semicolonlessSwitchFieldSource = [
 			"class TestFileSystem {",
 			'  var tailingSlashes = switch (Sys.systemName()) {',

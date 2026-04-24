@@ -1581,7 +1581,7 @@ class ParserStage {
 					}
 
 					final bodyCapture = scanFunctionBody(source, i, true);
-					final keepBody = fnName == "new" || !wantStaticFn || scannedStaticBodyIsSafe(bodyCapture.body);
+					final keepBody = fnName == "new" || !wantStaticFn || scannedStaticBodyIsSafe(fnName, bodyCapture.body);
 					final body = keepBody ? bodyCapture.body : [];
 					final bodyText = keepBody ? bodyCapture.bodyText : "";
 					if (bodyCapture.nextPos > i)
@@ -1804,9 +1804,24 @@ class ParserStage {
 		return false;
 	}
 
-	static function scannedStaticBodyIsSafe(stmts:Array<HxStmt>):Bool {
-		if (stmts == null || stmts.length != 1)
+	static function scannedStaticBodyIsSafe(fnName:String, stmts:Array<HxStmt>):Bool {
+		if (stmts == null || stmts.length == 0)
 			return false;
+		if (StringTools.startsWith(fnName, "get_") && stmts.length == 1) {
+			return switch (stmts[0]) {
+				case SReturn(expr, _):
+					!hasUnsupportedExpr(expr);
+				case _:
+					false;
+			};
+		}
+		if (StringTools.startsWith(fnName, "set_") && stmts.length == 2) {
+			return switch [stmts[0], stmts[1]] {
+				case [SExpr(EBinop("=", EIdent(_), rhs), _), SReturn(ret, _)]: !hasUnsupportedExpr(rhs) && !hasUnsupportedExpr(ret);
+				case _:
+					false;
+			};
+		}
 		return switch (stmts[0]) {
 			case SReturn(ECall(EField(EIdent(_), _), callArgs), _): callArgs != null && callArgs.length <= 2;
 			case SReturn(ENew(_, _), _):
