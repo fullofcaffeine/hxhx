@@ -1231,6 +1231,8 @@ class SourceTargetCommon {
 				preIncrementExpr(target, inner, -1);
 			case "-" if (target == Php && phpExprIsInt64Value(inner)):
 				"__hxhx_int64_neg(" + rendered + ")";
+			case "~" if (target == Php && phpExprIsInt64Value(inner)):
+				"__hxhx_int64_not(" + rendered + ")";
 			case "-", "+", "~":
 				"(" + op + rendered + ")";
 			default:
@@ -4386,7 +4388,7 @@ class SourceTargetCommon {
 				phpInt64StaticCall(callee);
 			case EBinop("*", left, right), EBinop("+", left, right), EBinop("-", left, right), EBinop("/", left, right), EBinop("%", left, right),
 				EBinop("&", left, right), EBinop("|", left, right), EBinop("^", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
-			case EUnop("-", inner):
+			case EUnop("-", inner), EUnop("~", inner):
 				phpExprIsInt64Value(inner);
 			case EMacroExpr(inner, _) | EUntyped(inner):
 				phpExprReturnsInt64(inner);
@@ -11151,6 +11153,10 @@ class SourceTargetCommon {
 				lines.push("  $left = __hxhx_int64_value($left);");
 				lines.push("  $right = __hxhx_int64_value($right);");
 				lines.push("  return __hxhx_int64_make_u($left->high ^ $right->high, $left->low ^ $right->low);");
+				lines.push("}");
+				lines.push("function __hxhx_int64_not($value) {");
+				lines.push("  $value = __hxhx_int64_value($value);");
+				lines.push("  return __hxhx_int64_make_u(~$value->high, ~$value->low);");
 				lines.push("}");
 				lines.push("function __hxhx_int64_to_string($value) {");
 				lines.push("  $value = __hxhx_int64_value($value);");
