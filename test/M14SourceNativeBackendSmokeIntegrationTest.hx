@@ -1027,6 +1027,46 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpOptionalStringNullProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  public function new() {}",
+			"  public function optString(?value:String) {",
+			"    return { value: value };",
+			"  }",
+			"  public function optTyped(?x:Int, ?y:String) {",
+			"    return { x: x, y: y };",
+			"  }",
+			"  public function optDefaults(?x = 5, ?y = \"hello\") {",
+			"    return { x: x, y: y };",
+			"  }",
+			"  public function optNullableDefaults(?x:Null<Int> = 5, ?y:Null<Float> = 6) {",
+			"    return { x: x, y: y };",
+			"  }",
+			"  public function run() {",
+			"    Sys.println(Std.string(optString().value == null));",
+			"    Sys.println(optString(\"hello\").value);",
+			"    Sys.println(Std.string(optTyped(\"str\").x == null));",
+			"    Sys.println(optTyped(\"str\").y);",
+			"    Sys.println(Std.string(optTyped(55).x));",
+			"    Sys.println(Std.string(optTyped(55).y == null));",
+			"    Sys.println(Std.string(optDefaults(null, null).x));",
+			"    Sys.println(optDefaults(0, null).y);",
+			"    Sys.println(Std.string(optNullableDefaults(null, null).x));",
+			"    Sys.println(Std.string(optNullableDefaults(null, null).y));",
+			"    Sys.println(Std.string(optNullableDefaults(7.4).x));",
+			"    Sys.println(Std.string(optNullableDefaults(7.4).y));",
+			"  }",
+			"  static function main() {",
+			"    new Main().run();",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpXmlRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5435,6 +5475,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "a/b+c", "generated PHP StringTools.urlDecode should unescape slash and plus");
 		}
 		deleteRecursive(stringToolsUrlTmpRoot);
+
+		final optionalStringTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_optional_string_null_" + Std.string(Date.now().getTime()));
+		deleteRecursive(optionalStringTmpRoot);
+		FileSystem.createDirectory(optionalStringTmpRoot);
+		backend.emit(phpOptionalStringNullProgram(), new BackendContext(optionalStringTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final optionalStringContent = File.getContent(Path.join([optionalStringTmpRoot, "index.php"]));
+		assertContains(optionalStringContent, "if ($value !== null) $value = __hxhx_to_string_value($value);",
+			"PHP optional String parameters should only coerce non-null values");
+		assertContains(optionalStringContent, "$this->optTyped(null, \"str\")", "PHP known typed optional calls should pad skipped arguments with null");
+		assertContains(optionalStringContent, "if ($x === null) $x = 5;", "PHP defaulted optional parameters should apply defaults to explicit null arguments");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([optionalStringTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP optional String null support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\nhello\ntrue\nstr\n55\ntrue\n5\nhello\n5\n6\n5\n7.4\n",
+				"generated PHP optional String args should preserve null and align typed optional calls, got:\n" + run.stdout);
+		}
+		deleteRecursive(optionalStringTmpRoot);
 
 		final xmlTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_xml_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(xmlTmpRoot);
