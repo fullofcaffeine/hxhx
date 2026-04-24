@@ -333,7 +333,18 @@ let parse = fun source filePath -> let expectedMainClass = (expectedMainClassFro
             ) in (
               ignore (if not (usefulHint (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic nativeArgs) i)) : string)) && usefulHint (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic scannedArgs) i)) : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
               ignore (if allowShapeRepair && HxFunctionArg.getIsOptional (Obj.magic (HxArray.get (Obj.magic nativeArgs) i)) <> HxFunctionArg.getIsOptional (Obj.magic (HxArray.get (Obj.magic scannedArgs) i)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-              if allowShapeRepair && HxFunctionArg.getIsRest (Obj.magic (HxArray.get (Obj.magic nativeArgs) i)) <> HxFunctionArg.getIsRest (Obj.magic (HxArray.get (Obj.magic scannedArgs) i)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+              ignore (if allowShapeRepair && HxFunctionArg.getIsRest (Obj.magic (HxArray.get (Obj.magic nativeArgs) i)) <> HxFunctionArg.getIsRest (Obj.magic (HxArray.get (Obj.magic scannedArgs) i)) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+              let _g2 = Obj.magic (HxFunctionArg.getDefaultValue (Obj.magic (HxArray.get (Obj.magic nativeArgs) i))) in match _g2 with
+                | HxDefaultValue.NoDefault -> ignore (let _g3 = Obj.magic (HxFunctionArg.getDefaultValue (Obj.magic (HxArray.get (Obj.magic scannedArgs) i))) in match _g3 with
+                  | HxDefaultValue.NoDefault -> ignore ()
+                  | HxDefaultValue.Default _p0 -> ignore ((
+                    ignore _p0;
+                    raise (HxRuntime.Hx_return (Obj.repr true))
+                  )))
+                | HxDefaultValue.Default _p0 -> ignore ((
+                  ignore _p0;
+                  ()
+                ))
             )) done);
             false
           ) in Obj.magic __fallback_result_101 with

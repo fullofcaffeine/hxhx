@@ -6659,6 +6659,50 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpDefaultArgsOnOverrides():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_default_args_override_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"interface IDefArgs {",
+			"  public function get(x:Int = 5):Int;",
+			"}",
+			"class BaseDefArgs {",
+			"  public function new() {}",
+			"  public function get(x = 3) return x;",
+			"}",
+			"class ExtDefArgs extends BaseDefArgs implements IDefArgs {",
+			"  public function new() { super(); }",
+			"  override function get(x = 7) return x;",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var e = new ExtDefArgs();",
+			"    Sys.println(Std.string(e.get()));",
+			"    var b:BaseDefArgs = e;",
+			"    Sys.println(Std.string(b.get()));",
+			"    var i:IDefArgs = e;",
+			"    Sys.println(Std.string(i.get()));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public function get($x = 7)", "PHP override methods should preserve parsed default arguments");
+		assertContains(content, "$e->get()", "PHP zero-argument concrete calls should remain valid when callee has a default");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP default-arg override should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "7\n7\n7\n", "generated PHP default-arg override output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpInstanceMethodValueBind():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_method_value_bind_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7403,6 +7447,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpPackageQualifiedClassReference();
 		assertPhpStdStringMapClassReference();
 		assertPhpTypeNameHelpersForStaticInitializers();
+		assertPhpDefaultArgsOnOverrides();
 		assertPhpInstanceMethodValueBind();
 		assertPhpClosureCapturesMutableLocalByReference();
 		assertPhpStringLengthInCharCodeAtArg();

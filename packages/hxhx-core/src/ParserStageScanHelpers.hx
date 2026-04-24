@@ -844,6 +844,61 @@ class ParserStageScanHelpers {
 			return {hint: parts.join(""), nextPos: j};
 		}
 
+		function scanDefaultValueUntil(startPos:Int):{text:String, nextPos:Int} {
+			final parts = new Array<String>();
+			var j = startPos;
+			var parenDepth = 0;
+			var bracketDepth = 0;
+			var braceDepth = 0;
+			while (true) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: StringTools.trim(parts.join("")), nextPos: j};
+				final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0;
+				if (atTop && (tok.text == "," || tok.text == ")" || tok.text == "{" || tok.text == ";"))
+					return {text: StringTools.trim(parts.join("")), nextPos: j};
+				parts.push(tok.text);
+				j = tok.nextPos;
+				switch (tok.text) {
+					case "(":
+						parenDepth += 1;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth -= 1;
+					case "[":
+						bracketDepth += 1;
+					case "]":
+						if (bracketDepth > 0)
+							bracketDepth -= 1;
+					case "{":
+						braceDepth += 1;
+					case "}":
+						if (braceDepth > 0)
+							braceDepth -= 1;
+					case _:
+				}
+			}
+		}
+
+		function scannedDefaultValueFromText(text:String):HxDefaultValue {
+			final trimmed = StringTools.trim(text == null ? "" : text);
+			if (trimmed.length == 0)
+				return HxDefaultValue.NoDefault;
+			if (trimmed == "null")
+				return HxDefaultValue.Default(HxExpr.ENull);
+			if (trimmed == "true")
+				return HxDefaultValue.Default(HxExpr.EBool(true));
+			if (trimmed == "false")
+				return HxDefaultValue.Default(HxExpr.EBool(false));
+			if ((StringTools.startsWith(trimmed, "\"") && StringTools.endsWith(trimmed, "\""))
+				|| (StringTools.startsWith(trimmed, "'") && StringTools.endsWith(trimmed, "'")))
+				return HxDefaultValue.Default(HxExpr.EString(trimmed.substr(1, trimmed.length - 2)));
+			final intValue = Std.parseInt(trimmed);
+			if (intValue != null && Std.string(intValue) == trimmed)
+				return HxDefaultValue.Default(HxExpr.EInt(intValue));
+			return HxDefaultValue.Default(HxExpr.ENull);
+		}
+
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -1101,13 +1156,22 @@ class ParserStageScanHelpers {
 							final nm = at.text;
 							final argName = (nm == null || nm.length == 0) ? ("arg" + argIndex) : nm;
 							var argType = "";
+							var defaultValue:HxDefaultValue = HxDefaultValue.NoDefault;
+							var defaultValueText = "";
 							final colonTok = scanNextToken(source, i);
 							if (colonTok.text == ":") {
 								final scannedType = scanTypeHintUntil(colonTok.nextPos, true);
 								argType = scannedType.hint;
 								i = scannedType.nextPos;
 							}
-							args.push(new HxFunctionArg(argName, argType, HxDefaultValue.NoDefault, pendingOptional, pendingRest));
+							final defaultTok = scanNextToken(source, i);
+							if (defaultTok.text == "=") {
+								final scannedDefault = scanDefaultValueUntil(defaultTok.nextPos);
+								defaultValueText = scannedDefault.text;
+								defaultValue = scannedDefaultValueFromText(defaultValueText);
+								i = scannedDefault.nextPos;
+							}
+							args.push(new HxFunctionArg(argName, argType, defaultValue, pendingOptional, pendingRest, defaultValueText));
 							argIndex += 1;
 							expectArg = false;
 							pendingOptional = false;

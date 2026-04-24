@@ -268,6 +268,15 @@ class ParserStage {
 									return true;
 								if (allowShapeRepair && HxFunctionArg.getIsRest(nativeArgs[i]) != HxFunctionArg.getIsRest(scannedArgs[i]))
 									return true;
+								switch (HxFunctionArg.getDefaultValue(nativeArgs[i])) {
+									case NoDefault:
+										switch (HxFunctionArg.getDefaultValue(scannedArgs[i])) {
+											case Default(_):
+												return true;
+											case NoDefault:
+										}
+									case Default(_):
+								}
 							}
 							return false;
 						}
