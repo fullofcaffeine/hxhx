@@ -20983,6 +20983,10 @@ let renderProgram = fun target program decl className body -> let lines = Obj.ma
       ignore (HxArray.push lines "  if (is_object($value) && get_class($value) === \"Kilometer\" && property_exists($value, \"__hx_value\")) return __hxhx_add_string($value->__hx_value) . \"km\";");
       ignore (HxArray.push lines "  if (__hxhx_is_point3($value)) return \"(\" . __hxhx_add_string($value->x) . \",\" . __hxhx_add_string($value->y) . \",\" . __hxhx_add_string($value->z) . \")\";");
       ignore (HxArray.push lines "  if (is_object($value) && !method_exists($value, \"__toString\")) {");
+      ignore (HxArray.push lines "    if (property_exists($value, \"toString\")) {");
+      ignore (HxArray.push lines "      $toString = $value->toString;");
+      ignore (HxArray.push lines "      if (is_callable($toString)) return __hxhx_add_string($toString());");
+      ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    if (property_exists($value, \"__hx_ctor\") && property_exists($value, \"__hx_params\") && is_array($value->__hx_params)) {");
       ignore (HxArray.push lines "      $params = [];");
       ignore (HxArray.push lines "      foreach ($value->__hx_params as $param) {");

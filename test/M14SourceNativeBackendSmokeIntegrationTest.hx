@@ -4707,6 +4707,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpAnonymousToStringField():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_anon_to_string_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var x = { toString: function() return \"foo\" };",
+			"    Sys.println(Std.string(x));",
+			"    Sys.println(x.toString());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$toString = $value->toString;", "PHP Haxe stringification should inspect anonymous toString fields");
+		assertContains(content, "if (is_callable($toString)) return __hxhx_add_string($toString());",
+			"PHP Haxe stringification should call anonymous callable toString fields");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP anonymous toString field fixture should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "foo\nfoo\n", "generated PHP anonymous toString field output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpEnumString():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_enum_string_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7430,6 +7461,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNativeProtocolOptionalArgDecode();
 		assertNativeProtocolDefaultArgSourceDecode();
 		assertPhpPlusSemantics();
+		assertPhpAnonymousToStringField();
 		assertPhpEnumString();
 		assertPhpBitwisePrecedence();
 		assertPhpSameClassStaticHelperCall();
