@@ -6840,6 +6840,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpNullFieldAccessThrowsNpe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_null_field_access_npe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static var nf1:Base = null;",
+			"  static function main() {",
+			"    var got = try nf1.s catch (e:Any) \"NPE\";",
+			"    Sys.println(got);",
+			"  }",
+			"}",
+			"class Base {",
+			"  public var s:String;",
+			"  public function new(s:String) this.s = s;",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_field($obj, $field)", "PHP runtime should centralize field reads");
+		assertContains(content, "throw ValueException::thrown(\"NPE\");", "PHP null field reads should throw a catchable NPE value");
+		assertContains(content, "__hxhx_field(Main::$nf1, \"s\")", "PHP same-class static field reads should flow through null-safe field helper");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP null field access should execute through catch, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "NPE\n", "generated PHP null field access output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpConstructorDefaultArgs():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_constructor_default_args_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7682,6 +7717,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpDefaultArgsOnOverrides();
 		assertPhpTryCatchRawRenamesScopedLocalFunctions();
 		assertPhpOpaqueBlockExprCapturesOuterLocals();
+		assertPhpNullFieldAccessThrowsNpe();
 		assertPhpConstructorDefaultArgs();
 		assertPhpStringBufRuntimeSupport();
 		assertPhpInstanceMethodValueBind();

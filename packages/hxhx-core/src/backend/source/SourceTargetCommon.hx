@@ -1365,16 +1365,28 @@ class SourceTargetCommon {
 				} else if (field == "message") {
 					"__hxhx_message_field(" + renderExpr(target, receiver) + ")";
 				} else {
-					switch (receiver) {
-						case EIdent(name) if (phpLocalHasInstanceMethod(name, field)):
-							phpFieldReadAccess(renderExpr(target, receiver), field);
-						case _:
-							fieldAccess(target, renderExpr(target, receiver), field);
-					}
+					final renderedReceiver = renderExpr(target, receiver);
+					if (phpShouldUseFieldReadHelper(receiver, field))
+						phpFieldReadAccess(renderedReceiver, field);
+					else
+						fieldAccess(target, renderedReceiver, field);
 				}
 			case Python, Java, Cs, Lua:
 				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExpr(target, receiver);
 				fieldAccess(target, renderedReceiver, field);
+		};
+	}
+
+	static function phpShouldUseFieldReadHelper(receiver:HxExpr, field:String):Bool {
+		return switch (receiver) {
+			case EIdent(name) if (phpLocalHasInstanceMethod(name, field)):
+				true;
+			case ENull:
+				true;
+			case EField(staticReceiver, _) if (phpStaticTypePath(staticReceiver) != null):
+				true;
+			case _:
+				false;
 		};
 	}
 
@@ -2578,9 +2590,10 @@ class SourceTargetCommon {
 		if (raw == null || raw.length == 0)
 			throw "PHP source backend MVP unsupported expression: ETryCatchRaw";
 		final stmts = HxParser.parseFunctionBodyText(raw);
-		if (stmts.length != 1)
+		final rewritten = phpRewriteRawSameClassMemberStmts(stmts);
+		if (rewritten.length != 1)
 			throw "PHP source backend MVP unsupported expression: ETryCatchRaw";
-		return switch (stmts[0]) {
+		return switch (rewritten[0]) {
 			case STry(tryBody, catches, _):
 				renderPhpTryExpr(tryBody, catches);
 			case _:
@@ -2598,7 +2611,7 @@ class SourceTargetCommon {
 		if (body.charCodeAt(0) == "{".code && body.charCodeAt(body.length - 1) == "}".code)
 			body = body.substr(1, body.length - 2);
 		final stmts = HxParser.parseFunctionBodyText(body);
-		return renderPhpBlockExpr(stmts);
+		return renderPhpBlockExpr(phpRewriteRawSameClassMemberStmts(stmts));
 	}
 
 	static function pythonTryCatchRawExpr(raw:String):String {
@@ -3852,6 +3865,11 @@ class SourceTargetCommon {
 	static var phpRenderCurrentFunctionName:Null<String> = null;
 	static var phpRenderCurrentInstanceMethodNames:Null<Map<String, Bool>> = null;
 	static var phpRenderCurrentInstanceMethodArgs:Null<Map<String, Array<HxFunctionArg>>> = null;
+	static var phpRenderSameClassMethodNames:Null<Map<String, Bool>> = null;
+	static var phpRenderSameClassFieldNames:Null<Map<String, Bool>> = null;
+	static var phpRenderSameClassStaticFieldNames:Null<Map<String, Bool>> = null;
+	static var phpRenderSameClassName:Null<String> = null;
+	static var phpRenderSameClassLocals:Null<Array<String>> = null;
 	static var phpRenderInstanceMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderInstanceMethodArgsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Array<HxFunctionArg>>>> = null;
 	static var phpRenderDynamicMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
@@ -3929,6 +3947,38 @@ class SourceTargetCommon {
 			return result;
 		} catch (e) {
 			phpRenderCurrentInstanceMethodArgs = previous;
+			throw e;
+		}
+	}
+
+	static function withPhpSameClassMemberContext<T>(target:SourceNativeTarget, methodNames:Null<Map<String, Bool>>, fieldNames:Null<Map<String, Bool>>,
+			staticFieldNames:Null<Map<String, Bool>>, className:Null<String>, locals:Null<Array<String>>, f:() -> T):T {
+		if (target != Php)
+			return f();
+		final previousMethodNames = phpRenderSameClassMethodNames;
+		final previousFieldNames = phpRenderSameClassFieldNames;
+		final previousStaticFieldNames = phpRenderSameClassStaticFieldNames;
+		final previousClassName = phpRenderSameClassName;
+		final previousLocals = phpRenderSameClassLocals;
+		phpRenderSameClassMethodNames = methodNames;
+		phpRenderSameClassFieldNames = fieldNames;
+		phpRenderSameClassStaticFieldNames = staticFieldNames;
+		phpRenderSameClassName = className;
+		phpRenderSameClassLocals = locals == null ? [] : copyStringArray(locals);
+		try {
+			final result = f();
+			phpRenderSameClassMethodNames = previousMethodNames;
+			phpRenderSameClassFieldNames = previousFieldNames;
+			phpRenderSameClassStaticFieldNames = previousStaticFieldNames;
+			phpRenderSameClassName = previousClassName;
+			phpRenderSameClassLocals = previousLocals;
+			return result;
+		} catch (e) {
+			phpRenderSameClassMethodNames = previousMethodNames;
+			phpRenderSameClassFieldNames = previousFieldNames;
+			phpRenderSameClassStaticFieldNames = previousStaticFieldNames;
+			phpRenderSameClassName = previousClassName;
+			phpRenderSameClassLocals = previousLocals;
 			throw e;
 		}
 	}
@@ -7858,8 +7908,13 @@ class SourceTargetCommon {
 				withPhpCurrentFunctionName(Php, HxFunctionDecl.getName(fn), function() {
 					withPhpCurrentInstanceMethodNames(Php, !isStatic || isCtor ? instanceMethodNames : null, function() {
 						withPhpCurrentInstanceMethodArgs(Php, !isStatic || isCtor ? instanceMethodArgs : null, function() {
-							for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn)))
-								out.push(line);
+							withPhpSameClassMemberContext(Php, rewriteMethodNames, rewriteFieldNames, staticFieldNames, className, [
+								for (arg in HxFunctionDecl.getArgs(fn))
+									HxFunctionArg.getName(arg)
+							], function() {
+								for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn)))
+									out.push(line);
+							});
 						});
 					});
 				});
@@ -8939,6 +8994,16 @@ class SourceTargetCommon {
 			for (stmt in stmts)
 				phpRewriteSameClassMembersInStmt(stmt, methodNames, fieldNames, staticFieldNames, className, locals)
 		];
+	}
+
+	static function phpRewriteRawSameClassMemberStmts(stmts:Array<HxStmt>):Array<HxStmt> {
+		if (phpRenderSameClassName == null)
+			return stmts;
+		final methodNames = phpRenderSameClassMethodNames == null ? new Map<String, Bool>() : phpRenderSameClassMethodNames;
+		final fieldNames = phpRenderSameClassFieldNames == null ? new Map<String, Bool>() : phpRenderSameClassFieldNames;
+		final staticFieldNames = phpRenderSameClassStaticFieldNames == null ? new Map<String, Bool>() : phpRenderSameClassStaticFieldNames;
+		final locals = phpRenderSameClassLocals == null ? [] : copyStringArray(phpRenderSameClassLocals);
+		return phpRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, staticFieldNames, phpRenderSameClassName, locals);
 	}
 
 	static function phpRewriteSameClassMembersInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
@@ -10801,6 +10866,7 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("function __hxhx_field($obj, $field) {");
 				lines.push("  $name = strval($field);");
+				lines.push("  if ($obj === null) throw ValueException::thrown(\"NPE\");");
 				lines.push("  if (is_object($obj)) {");
 				lines.push("    if (property_exists($obj, $name)) return $obj->$name;");
 				lines.push("    if (method_exists($obj, $name)) return function(...$args) use ($obj, $name) { return $obj->$name(...$args); };");
@@ -10964,11 +11030,13 @@ class SourceTargetCommon {
 				for (line in renderSupportClasses(target, program, decl, className))
 					lines.push(line);
 				final emptyPhpNames = new Map<String, Bool>();
-				final mainBody = phpRewriteSameClassMembersInStmts(body, emptyPhpNames, emptyPhpNames, phpMainClassStaticMemberNames(decl, className),
-					className, []);
+				final mainStaticFieldNames = phpMainClassStaticMemberNames(decl, className);
+				final mainBody = phpRewriteSameClassMembersInStmts(body, emptyPhpNames, emptyPhpNames, mainStaticFieldNames, className, []);
 				lines.push("function " + className + "_main() {");
-				for (line in renderFunctionStmts(target, mainBody, "  ", className + "_main"))
-					lines.push(line);
+				withPhpSameClassMemberContext(Php, emptyPhpNames, emptyPhpNames, mainStaticFieldNames, className, [], function() {
+					for (line in renderFunctionStmts(target, mainBody, "  ", className + "_main"))
+						lines.push(line);
+				});
 				lines.push("}");
 				lines.push(className + "_main();");
 				lines.push("}");
