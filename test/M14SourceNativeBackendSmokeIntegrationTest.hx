@@ -6593,6 +6593,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpHaxeJsonStringifyReplacer():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_json_replacer_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var encoded = haxe.Json.stringify({keep: 1, drop: 2}, function(key:String, value:Dynamic) {",
+			"      if (key == \"drop\") return null;",
+			"      return value;",
+			"    });",
+			"    Sys.println(encoded);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$replacer(strval($key), $value)", "PHP haxe.Json should call replacers with key and value");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP haxe.Json replacer support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "{\"keep\":1,\"drop\":null}\n", "generated PHP haxe.Json replacer output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStdDateToolsSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_datetools_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6837,6 +6868,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP scoped try/catch local functions should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "never call me\nnever call me\n", "generated PHP scoped try/catch local function output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpLocalFunctionOptionalArgs():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_local_function_optional_args_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    function id(v:Dynamic, ?pos:Dynamic) return v;",
+			"    Sys.println(id(\"ok\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$id = function($v, $pos = null)", "PHP local function optional args should receive default null");
+		assertContains(content, "$id(\"ok\")", "PHP local functions with optional args should remain callable with required args only");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP local optional function should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "ok\n", "generated PHP local optional function output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -7743,12 +7803,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpCompileTimeOnlyMacroSupportSkipped();
 		assertPhpDateRuntimeSupport();
 		assertPhpHaxeJsonRuntimeSupport();
+		assertPhpHaxeJsonStringifyReplacer();
 		assertPhpStdDateToolsSupport();
 		assertPhpPackageQualifiedClassReference();
 		assertPhpStdStringMapClassReference();
 		assertPhpTypeNameHelpersForStaticInitializers();
 		assertPhpDefaultArgsOnOverrides();
 		assertPhpTryCatchRawRenamesScopedLocalFunctions();
+		assertPhpLocalFunctionOptionalArgs();
 		assertPhpOpaqueBlockExprCapturesOuterLocals();
 		assertPhpNullFieldAccessThrowsNpe();
 		assertPhpConstructorDefaultArgs();

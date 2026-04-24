@@ -1435,6 +1435,9 @@ class HxParser {
 		expect(TLParen, "'('");
 
 		final args = new Array<String>();
+		final optionalArgs = new Array<String>();
+		final defaultedArgs:Map<String, HxExpr> = [];
+		var defaultedArgCount = 0;
 		if (!cur.kind.match(TRParen)) {
 			while (true) {
 				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
@@ -1443,17 +1446,24 @@ class HxParser {
 					bump();
 					bump();
 				}
-				acceptOtherChar("?");
+				final isOptional = acceptOtherChar("?");
 				final argName = readIdent("argument name");
 				args.push(argName);
+				if (isOptional && optionalArgs.indexOf(argName) < 0)
+					optionalArgs.push(argName);
 
 				if (cur.kind.match(TColon)) {
 					bump();
 					readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
 				}
 
-				if (acceptOtherChar("="))
-					parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
+				if (acceptOtherChar("=")) {
+					if (optionalArgs.indexOf(argName) < 0)
+						optionalArgs.push(argName);
+					if (!defaultedArgs.exists(argName))
+						defaultedArgCount++;
+					defaultedArgs.set(argName, parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof)));
+				}
 
 				if (cur.kind.match(TComma)) {
 					bump();
@@ -1485,7 +1495,44 @@ class HxParser {
 
 		if (cur.kind.match(TSemicolon))
 			bump();
-		return SVar(name, "", ELambda(args, bodyExpr), pos);
+
+		function applyDefaultedArgs(expr:HxExpr):HxExpr {
+			return switch (expr) {
+				case EIdent(argName) if (defaultedArgs.exists(argName)):
+					ETernary(EBinop("==", EIdent(argName), ENull), defaultedArgs.get(argName), EIdent(argName));
+				case EUnop(op, inner):
+					EUnop(op, applyDefaultedArgs(inner));
+				case EBinop(op, left, right) if (op == "=" || StringTools.endsWith(op, "=")):
+					EBinop(op, left, applyDefaultedArgs(right));
+				case EBinop(op, left, right):
+					EBinop(op, applyDefaultedArgs(left), applyDefaultedArgs(right));
+				case ETernary(cond, thenExpr, elseExpr):
+					ETernary(applyDefaultedArgs(cond), applyDefaultedArgs(thenExpr), applyDefaultedArgs(elseExpr));
+				case ECall(callee, callArgs):
+					ECall(applyDefaultedArgs(callee), [for (arg in callArgs) applyDefaultedArgs(arg)]);
+				case EField(receiver, field):
+					EField(applyDefaultedArgs(receiver), field);
+				case EArrayAccess(receiver, index):
+					EArrayAccess(applyDefaultedArgs(receiver), applyDefaultedArgs(index));
+				case EArrayDecl(items):
+					EArrayDecl([for (item in items) applyDefaultedArgs(item)]);
+				case EAnon(fieldNames, fieldValues):
+					EAnon(fieldNames, [for (value in fieldValues) applyDefaultedArgs(value)]);
+				case ELambda(_, _):
+					expr;
+				case ECast(inner, typeHint):
+					ECast(applyDefaultedArgs(inner), typeHint);
+				case EUntyped(inner):
+					EUntyped(applyDefaultedArgs(inner));
+				case _:
+					expr;
+			};
+		}
+
+		final lambda:HxExpr = ELambda(args, defaultedArgCount == 0 ? bodyExpr : applyDefaultedArgs(bodyExpr));
+		final init:HxExpr = optionalArgs.length == 0 ? lambda : ECall(EIdent("__hxhx_optional_lambda"),
+			[lambda, EArrayDecl([for (arg in optionalArgs) EString(arg)])]);
+		return SVar(name, "", init, pos);
 	}
 
 	function lambdaBodyExprFromStmts(stmts:Array<HxStmt>):HxExpr {
