@@ -3692,7 +3692,7 @@ let phpFunctionArgCanBeSkipped = fun arg -> try let __fallback_result_2047 = (
 
 let phpInt64StaticMethodName = fun field -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
-    | "add" | "divMod" | "make" | "mul" | "ofInt" | "parseString" | "sub" | "toStr" -> let __assign_2187 = true in (
+    | "add" | "compare" | "divMod" | "make" | "mul" | "ofInt" | "parseString" | "sub" | "toStr" -> let __assign_2187 = true in (
       tempResult := __assign_2187;
       __assign_2187
     )
@@ -14589,6 +14589,7 @@ and fieldCallExpr = fun target receiver field args -> try let __fallback_result_
           ignore (if arrayCall != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (arrayCall : string))) else ());
           ignore (if HxString.equals field "iterator" && HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_iterator(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ")" : string))) else ());
           ignore (if HxString.equals field "toStr" && HxArray.length args = 0 && phpStaticTypePath (Obj.magic receiver) == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_to_str(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ")" : string))) else ());
+          ignore (if HxString.equals field "compare" && HxArray.length args = 1 && phpStaticTypePath (Obj.magic receiver) == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_int64_compare(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic (HxArray.get (Obj.magic args) 0)))) ^ ")" : string))) else ());
           ignore (if HxString.equals field "ofInt" && phpIntLiteralExtensionReceiver (Obj.magic receiver) then raise (HxRuntime.Hx_return (Obj.repr (phpStaticMethodCall (phpInt64TypePath () : string) (field : string) (Obj.magic (let __arr_577 = HxArray.create () in (
             ignore (HxArray.push __arr_577 receiver);
             __arr_577
@@ -21115,6 +21116,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    public static function toStr($value) {");
       ignore (HxArray.push lines "      return \\__hxhx_int64_to_string($value);");
       ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public static function compare($left, $right) {");
+      ignore (HxArray.push lines "      return \\__hxhx_int64_compare($left, $right);");
+      ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    public function toInt() {");
       ignore (HxArray.push lines "      $expectedHigh = $this->low < 0 ? -1 : 0;");
       ignore (HxArray.push lines "      if ($this->high !== $expectedHigh) throw \\ValueException::thrown(\"Overflow\");");
@@ -22150,6 +22154,17 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  $rightHigh = $right->high & 0xFFFFFFFF;");
       ignore (HxArray.push lines "  if ($leftHigh < $rightHigh) return -1;");
       ignore (HxArray.push lines "  if ($leftHigh > $rightHigh) return 1;");
+      ignore (HxArray.push lines "  $leftLow = $left->low & 0xFFFFFFFF;");
+      ignore (HxArray.push lines "  $rightLow = $right->low & 0xFFFFFFFF;");
+      ignore (HxArray.push lines "  if ($leftLow < $rightLow) return -1;");
+      ignore (HxArray.push lines "  if ($leftLow > $rightLow) return 1;");
+      ignore (HxArray.push lines "  return 0;");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_int64_compare($left, $right) {");
+      ignore (HxArray.push lines "  $left = __hxhx_int64_value($left);");
+      ignore (HxArray.push lines "  $right = __hxhx_int64_value($right);");
+      ignore (HxArray.push lines "  if ($left->high < $right->high) return -1;");
+      ignore (HxArray.push lines "  if ($left->high > $right->high) return 1;");
       ignore (HxArray.push lines "  $leftLow = $left->low & 0xFFFFFFFF;");
       ignore (HxArray.push lines "  $rightLow = $right->low & 0xFFFFFFFF;");
       ignore (HxArray.push lines "  if ($leftLow < $rightLow) return -1;");

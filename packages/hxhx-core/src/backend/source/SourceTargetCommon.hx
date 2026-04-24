@@ -1616,6 +1616,8 @@ class SourceTargetCommon {
 					return "__hxhx_iterator(" + renderExpr(Php, receiver) + ")";
 				if (field == "toStr" && args.length == 0 && phpStaticTypePath(receiver) == null)
 					return "__hxhx_to_str(" + renderExpr(Php, receiver) + ")";
+				if (field == "compare" && args.length == 1 && phpStaticTypePath(receiver) == null)
+					return "__hxhx_int64_compare(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 				if (field == "ofInt" && phpIntLiteralExtensionReceiver(receiver))
 					return phpStaticMethodCall(phpInt64TypePath(), field, [receiver]);
 				final typePath = phpStaticTypePath(receiver);
@@ -4405,7 +4407,7 @@ class SourceTargetCommon {
 
 	static function phpInt64StaticMethodName(field:String):Bool {
 		return switch (sanitizeTypeName(field)) {
-			case "make", "ofInt", "parseString", "add", "sub", "mul", "divMod", "toStr":
+			case "make", "ofInt", "parseString", "add", "sub", "mul", "divMod", "toStr", "compare":
 				true;
 			case _:
 				false;
@@ -10009,6 +10011,9 @@ class SourceTargetCommon {
 				lines.push("    public static function toStr($value) {");
 				lines.push("      return \\__hxhx_int64_to_string($value);");
 				lines.push("    }");
+				lines.push("    public static function compare($left, $right) {");
+				lines.push("      return \\__hxhx_int64_compare($left, $right);");
+				lines.push("    }");
 				lines.push("    public function toInt() {");
 				lines.push("      $expectedHigh = $this->low < 0 ? -1 : 0;");
 				lines.push("      if ($this->high !== $expectedHigh) throw \\ValueException::thrown(\"Overflow\");");
@@ -11044,6 +11049,17 @@ class SourceTargetCommon {
 				lines.push("  $rightHigh = $right->high & 0xFFFFFFFF;");
 				lines.push("  if ($leftHigh < $rightHigh) return -1;");
 				lines.push("  if ($leftHigh > $rightHigh) return 1;");
+				lines.push("  $leftLow = $left->low & 0xFFFFFFFF;");
+				lines.push("  $rightLow = $right->low & 0xFFFFFFFF;");
+				lines.push("  if ($leftLow < $rightLow) return -1;");
+				lines.push("  if ($leftLow > $rightLow) return 1;");
+				lines.push("  return 0;");
+				lines.push("}");
+				lines.push("function __hxhx_int64_compare($left, $right) {");
+				lines.push("  $left = __hxhx_int64_value($left);");
+				lines.push("  $right = __hxhx_int64_value($right);");
+				lines.push("  if ($left->high < $right->high) return -1;");
+				lines.push("  if ($left->high > $right->high) return 1;");
 				lines.push("  $leftLow = $left->low & 0xFFFFFFFF;");
 				lines.push("  $rightLow = $right->low & 0xFFFFFFFF;");
 				lines.push("  if ($leftLow < $rightLow) return -1;");
