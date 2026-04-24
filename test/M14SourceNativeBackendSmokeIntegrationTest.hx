@@ -976,6 +976,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(input.readByte());",
 			"    Sys.println(input.readInt16());",
 			"    Sys.println(input.readString(1));",
+			"    var cmpA = haxe.io.Bytes.ofString(\"ABCD\");",
+			"    var cmpB = haxe.io.Bytes.ofString(\"ABDC\");",
+			"    Sys.println(cmpA.compare(cmpB));",
+			"    Sys.println(cmpB.compare(cmpA));",
+			"    Sys.println(cmpA.compare(haxe.io.Bytes.ofString(\"ABCD\")));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5182,6 +5187,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(haxe.Int64.compare(haxe.Int64.ofInt(2), haxe.Int64.ofInt(1)));",
 			"    Sys.println(haxe.Int64.compare(haxe.Int64.ofInt(2), haxe.Int64.ofInt(2)));",
 			"    Sys.println(h.compare(haxe.Int64.ofInt(0)));",
+			"    Sys.println(haxe.Int64.ucompare(haxe.Int64.ofInt(-1), haxe.Int64.ofInt(0)));",
+			"    Sys.println(haxe.Int64.ofInt(-1).ucompare(haxe.Int64.ofInt(0)));",
 			"    var i = haxe.Int64.ofInt(7) * 6;",
 			"    Sys.println(i.high);",
 			"    Sys.println(i.low);",
@@ -5239,6 +5246,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static function parseString($value)", "PHP haxe.Int64 should expose parseString");
 		assertContains(content, "public static function toStr($value)", "PHP haxe.Int64 should expose toStr");
 		assertContains(content, "public static function compare($left, $right)", "PHP haxe.Int64 should expose compare");
+		assertContains(content, "public static function ucompare($left, $right)", "PHP haxe.Int64 should expose ucompare");
 		assertContains(content, "public function toInt()", "PHP haxe.Int64 should expose instance toInt");
 		assertContains(content, "public function toString()", "PHP haxe.Int64 should expose instance toString");
 		assertContains(content, "__hxhx_to_str($h)", "PHP Int64 instance toStr should lower through the runtime helper");
@@ -5258,7 +5266,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Int64 runtime support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n0\n42\n0\n14\n-1\n-4\n0\n42\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
+			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\n0\n42\n0\n14\n-1\n-4\n0\n42\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
 				"generated PHP haxe.Int64 output mismatch, got:\n"
 				+ run.stdout);
 		}
@@ -5747,6 +5755,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "65", "generated PHP BytesInput should read written bytes");
 			assertContains(run.stdout, "-2", "generated PHP BytesInput should read signed int16 values");
 			assertContains(run.stdout, "Z", "generated PHP BytesInput should read written strings");
+			assertContains(run.stdout, "-1", "generated PHP Bytes.compare should preserve lexicographic order");
+			assertContains(run.stdout, "1", "generated PHP Bytes.compare should preserve reverse lexicographic order");
 		}
 		deleteRecursive(bytesTmpRoot);
 

@@ -1616,8 +1616,10 @@ class SourceTargetCommon {
 					return "__hxhx_iterator(" + renderExpr(Php, receiver) + ")";
 				if (field == "toStr" && args.length == 0 && phpStaticTypePath(receiver) == null)
 					return "__hxhx_to_str(" + renderExpr(Php, receiver) + ")";
-				if (field == "compare" && args.length == 1 && phpStaticTypePath(receiver) == null)
+				if (field == "compare" && args.length == 1 && phpExprIsInt64Value(receiver))
 					return "__hxhx_int64_compare(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
+				if (field == "ucompare" && args.length == 1 && phpExprIsInt64Value(receiver))
+					return "__hxhx_int64_ucompare(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 				if (field == "ofInt" && phpIntLiteralExtensionReceiver(receiver))
 					return phpStaticMethodCall(phpInt64TypePath(), field, [receiver]);
 				final typePath = phpStaticTypePath(receiver);
@@ -4407,7 +4409,7 @@ class SourceTargetCommon {
 
 	static function phpInt64StaticMethodName(field:String):Bool {
 		return switch (sanitizeTypeName(field)) {
-			case "make", "ofInt", "parseString", "add", "sub", "mul", "divMod", "toStr", "compare":
+			case "make", "ofInt", "parseString", "add", "sub", "mul", "divMod", "toStr", "compare", "ucompare":
 				true;
 			case _:
 				false;
@@ -10013,6 +10015,9 @@ class SourceTargetCommon {
 				lines.push("    }");
 				lines.push("    public static function compare($left, $right) {");
 				lines.push("      return \\__hxhx_int64_compare($left, $right);");
+				lines.push("    }");
+				lines.push("    public static function ucompare($left, $right) {");
+				lines.push("      return \\__hxhx_int64_ucompare($left, $right);");
 				lines.push("    }");
 				lines.push("    public function toInt() {");
 				lines.push("      $expectedHigh = $this->low < 0 ? -1 : 0;");

@@ -3692,7 +3692,7 @@ let phpFunctionArgCanBeSkipped = fun arg -> try let __fallback_result_2047 = (
 
 let phpInt64StaticMethodName = fun field -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
-    | "add" | "compare" | "divMod" | "make" | "mul" | "ofInt" | "parseString" | "sub" | "toStr" -> let __assign_2187 = true in (
+    | "add" | "compare" | "divMod" | "make" | "mul" | "ofInt" | "parseString" | "sub" | "toStr" | "ucompare" -> let __assign_2187 = true in (
       tempResult := __assign_2187;
       __assign_2187
     )
@@ -14589,7 +14589,8 @@ and fieldCallExpr = fun target receiver field args -> try let __fallback_result_
           ignore (if arrayCall != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (arrayCall : string))) else ());
           ignore (if HxString.equals field "iterator" && HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_iterator(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ")" : string))) else ());
           ignore (if HxString.equals field "toStr" && HxArray.length args = 0 && phpStaticTypePath (Obj.magic receiver) == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_to_str(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ")" : string))) else ());
-          ignore (if HxString.equals field "compare" && HxArray.length args = 1 && phpStaticTypePath (Obj.magic receiver) == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_int64_compare(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic (HxArray.get (Obj.magic args) 0)))) ^ ")" : string))) else ());
+          ignore (if HxString.equals field "compare" && HxArray.length args = 1 && phpExprIsInt64Value (Obj.magic receiver) then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_int64_compare(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic (HxArray.get (Obj.magic args) 0)))) ^ ")" : string))) else ());
+          ignore (if HxString.equals field "ucompare" && HxArray.length args = 1 && phpExprIsInt64Value (Obj.magic receiver) then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_int64_ucompare(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic (HxArray.get (Obj.magic args) 0)))) ^ ")" : string))) else ());
           ignore (if HxString.equals field "ofInt" && phpIntLiteralExtensionReceiver (Obj.magic receiver) then raise (HxRuntime.Hx_return (Obj.repr (phpStaticMethodCall (phpInt64TypePath () : string) (field : string) (Obj.magic (let __arr_577 = HxArray.create () in (
             ignore (HxArray.push __arr_577 receiver);
             __arr_577
@@ -21118,6 +21119,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    public static function compare($left, $right) {");
       ignore (HxArray.push lines "      return \\__hxhx_int64_compare($left, $right);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public static function ucompare($left, $right) {");
+      ignore (HxArray.push lines "      return \\__hxhx_int64_ucompare($left, $right);");
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    public function toInt() {");
       ignore (HxArray.push lines "      $expectedHigh = $this->low < 0 ? -1 : 0;");
