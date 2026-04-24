@@ -1613,7 +1613,9 @@ class SourceTargetCommon {
 			return null;
 		return switch (field) {
 			case "push" if (args.length == 1):
-				"__hxhx_array_push(" + mutableReceiver + ", " + renderExpr(Php, args[0]) + ")";
+				final itemHint = phpReceiverArrayItemTypeHint(receiver);
+				final value = isInt64TypeHint(itemHint) ? phpAssignedValueExpr(args[0], itemHint) : renderExpr(Php, args[0]);
+				"__hxhx_array_push(" + mutableReceiver + ", " + value + ")";
 			case "remove" if (args.length == 1):
 				"__hxhx_remove(" + mutableReceiver + ", " + renderExpr(Php, args[0]) + ")";
 			case "splice" if (args.length == 2):
@@ -1628,6 +1630,19 @@ class SourceTargetCommon {
 				"__hxhx_array_sort(" + mutableReceiver + ", " + renderExpr(Php, args[0]) + ")";
 			case _:
 				null;
+		};
+	}
+
+	static function phpReceiverArrayItemTypeHint(receiver:HxExpr):String {
+		return switch (receiver) {
+			case EIdent(name):
+				phpArrayItemTypeHint(phpLocalTypeHint(name));
+			case ECast(_, castHint):
+				phpArrayItemTypeHint(castHint);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpReceiverArrayItemTypeHint(inner);
+			case _:
+				"";
 		};
 	}
 
