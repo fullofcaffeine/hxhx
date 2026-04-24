@@ -3930,9 +3930,9 @@ class SourceTargetCommon {
 		};
 	}
 
-	static function renderStmts(target:SourceNativeTarget, stmts:Array<HxStmt>, indent:String):Array<String> {
+	static function renderStmts(target:SourceNativeTarget, stmts:Array<HxStmt>, indent:String, ?initialLocalTypes:haxe.ds.StringMap<String>):Array<String> {
 		final out = new Array<String>();
-		final localTypes = new haxe.ds.StringMap<String>();
+		final localTypes = target == Php && initialLocalTypes != null ? copyStringMap(initialLocalTypes) : new haxe.ds.StringMap<String>();
 		final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
 		final baseRefCaptures = phpRenderRefCaptureLocals;
 		for (i in 0...stmts.length) {
@@ -4488,11 +4488,12 @@ class SourceTargetCommon {
 		return lhs + " " + mapped + " " + renderExpr(Python, right);
 	}
 
-	static function renderFunctionStmts(target:SourceNativeTarget, body:Array<HxStmt>, indent:String, context:String):Array<String> {
+	static function renderFunctionStmts(target:SourceNativeTarget, body:Array<HxStmt>, indent:String, context:String,
+			?initialLocalTypes:haxe.ds.StringMap<String>):Array<String> {
 		return try {
 			final renderBody = target == Php ? phpRenameScopedLocalStmts(body) : body;
 			withPhpDynamicCallFields(target, target == Php ? phpDynamicCallFieldsForStmts(renderBody) : null, function() {
-				return renderStmts(target, renderBody, indent);
+				return renderStmts(target, renderBody, indent, initialLocalTypes);
 			});
 		} catch (e:String) {
 			throw e + " while emitting " + context;
@@ -8137,7 +8138,8 @@ class SourceTargetCommon {
 								for (arg in HxFunctionDecl.getArgs(fn))
 									HxFunctionArg.getName(arg)
 							], function() {
-								for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn)))
+								final functionLocalTypes = phpFunctionLocalTypes(HxFunctionDecl.getArgs(fn));
+								for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn), functionLocalTypes))
 									out.push(line);
 							});
 						});
@@ -8188,7 +8190,22 @@ class SourceTargetCommon {
 					out.push(indent + "if (" + name + " !== null) " + name + " = __hxhx_to_string_value(" + name + ");");
 				else
 					out.push(indent + name + " = __hxhx_to_string_value(" + name + ");");
+			} else if (isInt64TypeHint(hint)) {
+				if (HxFunctionArg.getIsOptional(arg))
+					out.push(indent + "if (" + name + " !== null) " + name + " = __hxhx_int64_value(" + name + ");");
+				else
+					out.push(indent + name + " = __hxhx_int64_value(" + name + ");");
 			}
+		}
+		return out;
+	}
+
+	static function phpFunctionLocalTypes(args:Array<HxFunctionArg>):haxe.ds.StringMap<String> {
+		final out = new haxe.ds.StringMap<String>();
+		for (arg in args) {
+			final hint = normalizeTypeHint(HxFunctionArg.getTypeHint(arg));
+			if (hint.length > 0)
+				out.set(sanitizeTypeName(HxFunctionArg.getName(arg)), hint);
 		}
 		return out;
 	}
