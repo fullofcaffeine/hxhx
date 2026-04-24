@@ -5160,6 +5160,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var l = -lmin;",
 			"    Sys.println(l.high);",
 			"    Sys.println(l.low);",
+			"    Sys.println(Std.string(lmin == l));",
+			"    Sys.println(Std.string(lmin != haxe.Int64.ofInt(0)));",
+			"    var min = haxe.Int64.parseString(\"-9223372036854775808\");",
+			"    Sys.println(Std.string(min == (-min)));",
 			"    try {",
 			"      haxe.Int64.make(0, 0x80000000).toInt();",
 			"      Sys.println(\"missing-overflow\");",
@@ -5185,10 +5189,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$f = __hxhx_int64_literal(\"0x7FFFFFFFFFFFFFFF\", \"i64\");", "PHP typed Int64 hex literals should construct Int64 values");
 		assertContains(content, "$i = __hxhx_mul(haxe\\Int64::ofInt(7), 6);", "PHP Int64 multiplication should lower through the runtime helper");
 		assertContains(content, "$l = __hxhx_int64_neg($lmin);", "PHP typed Int64 locals should route unary minus through the runtime helper");
+		assertContains(content, "__hxhx_equals($lmin, $l)", "PHP typed Int64 equality should lower through high/low word comparison");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Int64 runtime support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\nparse-overflow\n0\n42\n-2147483648\n0\noverflow\n",
+			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\nparse-overflow\n0\n42\n-2147483648\n0\ntrue\ntrue\ntrue\noverflow\n",
 				"generated PHP haxe.Int64 output mismatch, got:\n"
 				+ run.stdout);
 		}

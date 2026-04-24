@@ -848,6 +848,10 @@ class SourceTargetCommon {
 			return "__hxhx_div(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 		if (target == Php && op == "/=")
 			return phpDivideAssignExpr(left, right);
+		if (target == Php && (op == "==" || op == "!=") && phpEqualityNeedsHelper(left, right)) {
+			final eq = "__hxhx_equals(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
+			return op == "==" ? eq : "(!" + eq + ")";
+		}
 		if (target == Java && op == "+" && !javaStringLikeOperand(left) && !javaStringLikeOperand(right))
 			return "Std.add_(" + renderExpr(Java, left) + ", " + renderExpr(Java, right) + ")";
 		if (target == Java && (op == "-" || op == "*" || op == "/" || op == "%"))
@@ -4313,6 +4317,10 @@ class SourceTargetCommon {
 			case _:
 				false;
 		};
+	}
+
+	static function phpEqualityNeedsHelper(left:HxExpr, right:HxExpr):Bool {
+		return phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
 	}
 
 	static function phpInt64StaticCall(callee:HxExpr):Bool {
@@ -10943,7 +10951,7 @@ class SourceTargetCommon {
 				lines.push("  return Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
 				lines.push("}");
 				lines.push("function __hxhx_is_int64($value) {");
-				lines.push("  return $value instanceof \\haxe\\Int64;");
+				lines.push("  return is_object($value) && property_exists($value, \"high\") && property_exists($value, \"low\");");
 				lines.push("}");
 				lines.push("function __hxhx_int64_value($value) {");
 				lines.push("  if (__hxhx_is_int64($value)) return $value;");
@@ -11024,6 +11032,11 @@ class SourceTargetCommon {
 				lines.push("  return (object)[\"x\" => $x, \"y\" => $y, \"z\" => $z];");
 				lines.push("}");
 				lines.push("function __hxhx_equals($left, $right) {");
+				lines.push("  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) {");
+				lines.push("    $leftValue = __hxhx_int64_value($left);");
+				lines.push("    $rightValue = __hxhx_int64_value($right);");
+				lines.push("    return $leftValue->high === $rightValue->high && $leftValue->low === $rightValue->low;");
+				lines.push("  }");
 				lines.push("  if ((is_object($left) && property_exists($left, \"__hx_value\")) || (is_object($right) && property_exists($right, \"__hx_value\"))) {");
 				lines.push("    $leftValue = __hxhx_numeric_value($left);");
 				lines.push("    $rightValue = __hxhx_numeric_value($right);");
