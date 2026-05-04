@@ -1510,6 +1510,50 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpReflectPropertyAccessProgram():GenIrProgram {
+		final src = [
+			"class PropBox {",
+			"  public var x(get, set):Int;",
+			"  var _x:Int;",
+			"  public static var STAT_X(default, set):Int = 3;",
+			"  public function new() {",
+			"    _x = 5;",
+			"  }",
+			"  function get_x() {",
+			"    return _x;",
+			"  }",
+			"  function set_x(v:Int) {",
+			"    _x = v;",
+			"    return v;",
+			"  }",
+			"  static function set_STAT_X(v:Int) {",
+			"    STAT_X = v * 2;",
+			"    return v;",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var box = new PropBox();",
+			"    Sys.println(Std.string(box.x));",
+			"    Sys.println(Std.string(Reflect.getProperty(box, \"x\")));",
+			"    box.x = 10;",
+			"    Sys.println(Std.string(box.x));",
+			"    Reflect.setProperty(box, \"x\", 12);",
+			"    Sys.println(Std.string(box.x));",
+			"    Sys.println(Std.string(PropBox.STAT_X));",
+			"    Sys.println(Std.string(Reflect.getProperty(PropBox, \"STAT_X\")));",
+			"    PropBox.STAT_X = 4;",
+			"    Sys.println(Std.string(PropBox.STAT_X));",
+			"    Reflect.setProperty(PropBox, \"STAT_X\", 9);",
+			"    Sys.println(Std.string(Reflect.getProperty(PropBox, \"STAT_X\")));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpSamePackageQualifiedStaticProgram():GenIrProgram {
 		final src = [
 			"package unit;",
@@ -4765,6 +4809,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Reflect.makeVarArgs support should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "5\n", "generated PHP Reflect.makeVarArgs should preserve varargs semantics, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpReflectPropertyAccess():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reflect_property_access_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpReflectPropertyAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function getProperty($object, $field)", "PHP Reflect helper should expose getProperty");
+		assertContains(content, "public static function setProperty($object, $field, $value)", "PHP Reflect helper should expose setProperty");
+		assertContains(content, "$box->get_x()", "PHP instance property reads should call generated getters");
+		assertContains(content, "$box->set_x(10);", "PHP instance property writes should call generated setters");
+		assertContains(content, "PropBox::set_STAT_X(4);", "PHP static property writes should call generated setters");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Reflect property support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "5\n5\n10\n12\n3\n3\n8\n18\n", "generated PHP Reflect property support output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -8539,6 +8604,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpRuntimeShim();
 		assertPhpMapRuntimeShim();
 		assertPhpReflectMakeVarArgs();
+		assertPhpReflectPropertyAccess();
 		assertPhpSamePackageQualifiedStaticPath();
 		assertPhpInstanceFieldMethodCall();
 		assertPhpInheritedTestHelperCall();

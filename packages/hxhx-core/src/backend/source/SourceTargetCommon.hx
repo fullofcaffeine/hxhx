@@ -923,6 +923,17 @@ class SourceTargetCommon {
 					return phpThisValueExpr() + " " + mapped + " " + b;
 				case EField(ESuper, field) if (op == "="):
 					return phpSuperSetterCall(field, [right]);
+				case EField(receiver, field) if (op == "="):
+					final staticTypePath = phpStaticTypePath(receiver);
+					if (staticTypePath != null) {
+						final cleanField = sanitizeTypeName(field);
+						final setter = "set_" + cleanField;
+						if (!phpInStaticPropertyAccessor(cleanField) && phpKnownStaticMethod(staticTypePath, setter))
+							return staticTypePath + "::" + setter + "(" + b + ")";
+					}
+					final propertySetter = phpInstancePropertySetterAccess(receiver, field, b);
+					if (propertySetter != null)
+						return propertySetter;
 				case EArrayAccess(receiver, index) if (op == "="):
 					return "__hxhx_array_set(" + renderExpr(target, receiver) + ", " + renderExpr(target, index) + ", " + b + ")";
 				case EArrayAccess(receiver, index) if (op == "+="):
@@ -1578,7 +1589,10 @@ class SourceTargetCommon {
 					"__hxhx_message_field(" + renderExpr(target, receiver) + ")";
 				} else {
 					final renderedReceiver = renderExpr(target, receiver);
-					if (phpShouldUseFieldReadHelper(receiver, field))
+					final propertyGetter = phpInstancePropertyGetterAccess(receiver, field);
+					if (propertyGetter != null)
+						propertyGetter;
+					else if (phpShouldUseFieldReadHelper(receiver, field))
 						phpFieldReadAccess(renderedReceiver, field);
 					else
 						fieldAccess(target, renderedReceiver, field);
@@ -3904,6 +3918,36 @@ class SourceTargetCommon {
 		return typePath + "::$" + cleanField;
 	}
 
+	static function phpInstancePropertyGetterAccess(receiver:HxExpr, field:String):Null<String> {
+		final cleanField = sanitizeTypeName(field);
+		final getter = "get_" + cleanField;
+		if (phpInInstancePropertyAccessor(cleanField))
+			return null;
+		return switch (receiver) {
+			case EThis if (phpCurrentInstanceMethodValue(getter)):
+				"$this->" + getter + "()";
+			case EIdent(name) if (phpLocalHasInstanceMethod(name, getter)):
+				renderExpr(Php, receiver) + "->" + getter + "()";
+			case _:
+				null;
+		};
+	}
+
+	static function phpInstancePropertySetterAccess(receiver:HxExpr, field:String, value:String):Null<String> {
+		final cleanField = sanitizeTypeName(field);
+		final setter = "set_" + cleanField;
+		if (phpInInstancePropertyAccessor(cleanField))
+			return null;
+		return switch (receiver) {
+			case EThis if (phpCurrentInstanceMethodValue(setter)):
+				"$this->" + setter + "(" + value + ")";
+			case EIdent(name) if (phpLocalHasInstanceMethod(name, setter)):
+				renderExpr(Php, receiver) + "->" + setter + "(" + value + ")";
+			case _:
+				null;
+		};
+	}
+
 	static function phpMathConstantAccess(field:String):Null<String> {
 		return switch (field) {
 			case "POSITIVE_INFINITY": "INF";
@@ -3914,6 +3958,10 @@ class SourceTargetCommon {
 	}
 
 	static function phpInStaticPropertyAccessor(field:String):Bool {
+		return phpRenderCurrentFunctionName == "get_" + field || phpRenderCurrentFunctionName == "set_" + field;
+	}
+
+	static function phpInInstancePropertyAccessor(field:String):Bool {
 		return phpRenderCurrentFunctionName == "get_" + field || phpRenderCurrentFunctionName == "set_" + field;
 	}
 
@@ -11237,7 +11285,38 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("  public static function field($object, $field) {");
 				lines.push("    if (is_object($object) && property_exists($object, $field)) return $object->$field;");
+				lines.push("    if (is_object($object) && method_exists($object, $field)) return function(...$__hxhx_args) use ($object, $field) { return $object->$field(...$__hxhx_args); };");
 				lines.push("    if (is_array($object) && array_key_exists($field, $object)) return $object[$field];");
+				lines.push("    $runtime = __hxhx_class_candidate($object);");
+				lines.push("    if ($runtime !== null) {");
+				lines.push("      if (property_exists($runtime, $field)) return $runtime::${$field};");
+				lines.push("      if (method_exists($runtime, $field)) return function(...$__hxhx_args) use ($runtime, $field) { return $runtime::$field(...$__hxhx_args); };");
+				lines.push("    }");
+				lines.push("    return null;");
+				lines.push("  }");
+				lines.push("  public static function getProperty($object, $field) {");
+				lines.push("    if ($object === null || $field === null) return null;");
+				lines.push("    $field = strval($field);");
+				lines.push("    $getter = \"get_\" . $field;");
+				lines.push("    $runtime = __hxhx_class_candidate($object);");
+				lines.push("    if ($runtime !== null && method_exists($runtime, $getter)) return $runtime::$getter();");
+				lines.push("    if (is_object($object) && !($object instanceof __HxClassValue) && method_exists($object, $getter)) return $object->$getter();");
+				lines.push("    return self::field($object, $field);");
+				lines.push("  }");
+				lines.push("  public static function setProperty($object, $field, $value) {");
+				lines.push("    if ($object === null || $field === null) return null;");
+				lines.push("    $field = strval($field);");
+				lines.push("    $setter = \"set_\" . $field;");
+				lines.push("    $runtime = __hxhx_class_candidate($object);");
+				lines.push("    if ($runtime !== null) {");
+				lines.push("      if (method_exists($runtime, $setter)) return $runtime::$setter($value);");
+				lines.push("      if (property_exists($runtime, $field)) { $runtime::${$field} = $value; return null; }");
+				lines.push("      return null;");
+				lines.push("    }");
+				lines.push("    if (is_object($object)) {");
+				lines.push("      if (method_exists($object, $setter)) return $object->$setter($value);");
+				lines.push("      $object->$field = $value;");
+				lines.push("    }");
 				lines.push("    return null;");
 				lines.push("  }");
 				lines.push("  public static function makeVarArgs($f) {");
