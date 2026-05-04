@@ -671,7 +671,9 @@ class SourceTargetCommon {
 				floatLiteralExpr(value);
 			case EEnumValue(name):
 				if (target == Php) {
-					if (phpLocalExists(name))
+					if (phpValueTypeCtorIndex(name) != null)
+						phpValueTypeExpr(name, []);
+					else if (phpLocalExists(name))
 						valueName(Php, name);
 					else if (phpKnownTypeName(name))
 						phpClassValueExpr(name);
@@ -714,6 +716,8 @@ class SourceTargetCommon {
 				macroTypeExpr(target, typeText);
 			case ETryCatchRaw(raw):
 				tryCatchRawExpr(target, raw);
+			case ECall(EEnumValue(name), args) if (target == Php && phpValueTypeCtorIndex(name) != null):
+				phpValueTypeExpr(name, args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stdStringCall(target, args[0]);
 			case ECall(EField(EIdent("Std"), "isOfType"), args) if (target == Php && args.length == 2):
@@ -3811,6 +3815,30 @@ class SourceTargetCommon {
 			case _:
 				"Dynamic";
 		};
+	}
+
+	static function phpValueTypeCtorIndex(name:String):Null<Int> {
+		return switch (name) {
+			case "TNull": 0;
+			case "TInt": 1;
+			case "TFloat": 2;
+			case "TBool": 3;
+			case "TObject": 4;
+			case "TFunction": 5;
+			case "TClass": 6;
+			case "TEnum": 7;
+			case "TUnknown": 8;
+			case _:
+				null;
+		};
+	}
+
+	static function phpValueTypeExpr(name:String, args:Array<HxExpr>):String {
+		final index = phpValueTypeCtorIndex(name);
+		if (index == null)
+			return quotePhpString(name);
+		final renderedArgs = [for (arg in args) renderExpr(Php, arg)];
+		return "__hxhx_value_type(" + quotePhpString(name) + ", " + Std.string(index) + ", [" + renderedArgs.join(", ") + "])";
 	}
 
 	static function phpStdIsOfTypeTypeArg(expr:HxExpr):String {
@@ -11816,6 +11844,9 @@ class SourceTargetCommon {
 				lines.push("  $candidate = __hxhx_class_candidate($value);");
 				lines.push("  return $candidate !== null && property_exists($candidate, \"__hx_is_enum\");");
 				lines.push("}");
+				lines.push("function __hxhx_value_type($ctor, $index, $params = []) {");
+				lines.push("  return new __HxAnon([\"__hx_enum\" => \"ValueType\", \"__hx_ctor\" => $ctor, \"__hx_index\" => $index, \"__hx_params\" => $params]);");
+				lines.push("}");
 				lines.push("function __hxhx_is_of_type($value, $type) {");
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) $value = $value->__hx_value;");
 				lines.push("  if ($type instanceof __HxClassValue) $type = $type->__hx_class_name;");
@@ -12128,6 +12159,21 @@ class SourceTargetCommon {
 				lines.push("  public static function resolveEnum($name) {");
 				lines.push("    if ($name === null) return null;");
 				lines.push("    return __hxhx_class_value($name);");
+				lines.push("  }");
+				lines.push("  public static function typeof($value) {");
+				lines.push("    if ($value === null) return __hxhx_value_type(\"TNull\", 0);");
+				lines.push("    if (is_int($value)) return __hxhx_value_type(\"TInt\", 1);");
+				lines.push("    if (is_float($value)) return __hxhx_value_type(\"TFloat\", 2);");
+				lines.push("    if (is_bool($value)) return __hxhx_value_type(\"TBool\", 3);");
+				lines.push("    if (is_callable($value)) return __hxhx_value_type(\"TFunction\", 5);");
+				lines.push("    if ($value instanceof __HxClassValue) return __hxhx_value_type(\"TObject\", 4);");
+				lines.push("    if (is_string($value)) return __hxhx_value_type(\"TClass\", 6, [__hxhx_class_value(\"String\")]);");
+				lines.push("    if (is_array($value) || $value instanceof __HxArray) return __hxhx_value_type(\"TClass\", 6, [__hxhx_class_value(\"Array\")]);");
+				lines.push("    if ($value instanceof Map) return __hxhx_value_type(\"TClass\", 6, [__hxhx_class_value($value->__hx_type)]);");
+				lines.push("    if ($value instanceof __HxAnon && property_exists($value, \"__hx_enum\")) return __hxhx_value_type(\"TEnum\", 7, [__hxhx_class_value($value->__hx_enum)]);");
+				lines.push("    if ($value instanceof __HxAnon) return __hxhx_value_type(\"TObject\", 4);");
+				lines.push("    if (is_object($value)) return __hxhx_value_type(\"TClass\", 6, [__hxhx_class_value(__hxhx_class_name(get_class($value)))]);");
+				lines.push("    return __hxhx_value_type(\"TUnknown\", 8);");
 				lines.push("  }");
 				lines.push("  public static function enumEq($left, $right) {");
 				lines.push("    return __hxhx_equals($left, $right);");

@@ -2408,7 +2408,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(stringMap is StringMap));",
 			"    Sys.println(Std.string(Std.isOfType(stringMap, StringMap)));",
 			"    Sys.println(Type.getClassName(Type.getClass(stringMap)));",
+			"    Sys.println(Std.string(checkType(null, TNull)));",
+			"    Sys.println(Std.string(checkType(0, TInt)));",
+			"    Sys.println(Std.string(checkType(1.2, TFloat)));",
+			"    Sys.println(Std.string(checkType(true, TBool)));",
+			"    Sys.println(Std.string(checkType('hello', TClass(String))));",
+			"    Sys.println(Std.string(checkType([], TClass(Array))));",
+			"    Sys.println(Std.string(checkType(values, TClass(List))));",
+			"    Sys.println(Std.string(checkType(stringMap, TClass(StringMap))));",
+			"    Sys.println(Std.string(checkType(new ReflectThing(), TClass(ReflectThing))));",
+			"    Sys.println(Std.string(checkType(MyReflectEnum.C, TEnum(MyReflectEnum))));",
+			"    Sys.println(Std.string(checkType({ x: 0 }, TObject)));",
+			"    Sys.println(Std.string(checkType(function() {}, TFunction)));",
+			"    Sys.println(Std.string(checkType(ReflectThing, TObject)));",
+			"    Sys.println(Std.string(checkType(MyReflectEnum, TObject)));",
 			"  }",
+			"  static function checkType(value:Dynamic, expected:ValueType):Bool return Type.enumEq(Type.typeof(value), expected);",
 			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(src, "Main.hx");
@@ -6985,10 +7000,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"[__hxhx_class_value(\"String\"), __hxhx_class_value(\"Array\"), __hxhx_class_value(\"List\"), __hxhx_class_value(\"ReflectThing\"), __hxhx_class_value(\"MyReflectEnum\")]",
 			"PHP class and enum literals in value position should lower to tagged reflection values");
 		assertContains(content, "Type::getClassName(__hxhx_array_get($types, 0))", "PHP Type.getClassName should accept dynamic class values from arrays");
+		assertContains(content, "public static function typeof($value)", "PHP Type runtime should expose typeof");
+		assertContains(content, "__hxhx_value_type(\"TClass\", 6", "PHP ValueType constructors should lower to enum-like runtime values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Type reflection support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "String\nArray\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\ntrue\ntrue\nhaxe.ds.StringMap\n",
+			assertTrue(run.stdout == "String\nArray\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\ntrue\ntrue\nhaxe.ds.StringMap\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\n",
 				"generated PHP Type reflection output mismatch, got:\n"
 				+ run.stdout);
 		}
