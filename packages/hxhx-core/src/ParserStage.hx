@@ -421,7 +421,21 @@ class ParserStage {
 					final enumDeclsAll = scanHelperEnums(source, null);
 					final typedefDeclsAll = scanHelperTypedefs(source, null);
 					final abstractDeclsAll = scanHelperAbstracts(source, null);
-					if ((mainName == null || mainName.length == 0 || mainName == "Unknown") && expectedMainClass != null) {
+					var scannedMainEnum:Null<HxClassDecl> = null;
+					if (expectedMainClass != null && expectedMainClass.length > 0) {
+						for (c in enumDeclsAll) {
+							final nm = HxClassDecl.getName(c);
+							if (nm != null && nm == expectedMainClass) {
+								scannedMainEnum = c;
+								break;
+							}
+						}
+					}
+					if (scannedMainEnum != null) {
+						main = scannedMainEnum;
+						mainName = HxClassDecl.getName(scannedMainEnum);
+						staticPatchApplied = true;
+					} else if ((mainName == null || mainName.length == 0 || mainName == "Unknown") && expectedMainClass != null) {
 						function tryPickMainFrom(candidates:Array<HxClassDecl>):Bool {
 							if (candidates == null)
 								return false;
@@ -599,10 +613,59 @@ class ParserStage {
 				#end
 			})());
 			#else
-			new HxParser(source).parseModule(expectedMainClass);
+			enrichPureParserDecl(source, expectedMainClass, new HxParser(source).parseModule(expectedMainClass));
 			#end
 		final path = filePath == null || filePath.length == 0 ? "<memory>" : filePath;
 		return new ParsedModule(source, decl, path);
+	}
+
+	static function enrichPureParserDecl(source:String, expectedMainClass:Null<String>, parsed:HxModuleDecl):HxModuleDecl {
+		final enumDecls = #if hxhx_stage0_no_parser_scan_extract scanModuleLocalHelperEnums(source,
+			null) #else ParserStageScanHelpers.scanModuleLocalHelperEnums(source, null) #end;
+		if (enumDecls == null || enumDecls.length == 0)
+			return parsed;
+
+		var main = HxModuleDecl.getMainClass(parsed);
+		var mainName = main == null ? "" : HxClassDecl.getName(main);
+		var changed = false;
+		if (expectedMainClass != null && expectedMainClass.length > 0) {
+			for (c in enumDecls) {
+				final nm = HxClassDecl.getName(c);
+				if (nm == expectedMainClass) {
+					main = c;
+					mainName = nm;
+					changed = true;
+					break;
+				}
+			}
+		}
+
+		final classes = new Array<HxClassDecl>();
+		final seen:Map<String, Bool> = new Map();
+		function pushUnique(c:HxClassDecl):Void {
+			if (c == null)
+				return;
+			final nm = HxClassDecl.getName(c);
+			if (nm != null && nm.length > 0 && seen.exists(nm))
+				return;
+			classes.push(c);
+			if (nm != null && nm.length > 0)
+				seen.set(nm, true);
+		}
+
+		pushUnique(main);
+		for (c in HxModuleDecl.getClasses(parsed))
+			pushUnique(c);
+		for (c in enumDecls) {
+			final nm = HxClassDecl.getName(c);
+			if (nm != null && nm.length > 0 && !seen.exists(nm)) {
+				changed = true;
+				pushUnique(c);
+			}
+		}
+
+		return changed ? new HxModuleDecl(HxModuleDecl.getPackagePath(parsed), HxModuleDecl.getImports(parsed), main, classes,
+			HxModuleDecl.getHeaderOnly(parsed), HxModuleDecl.getHasToplevelMain(parsed)) : parsed;
 	}
 
 	#if (hih_native_parser && !hxhx_stage0_no_native_parser)
@@ -812,7 +875,7 @@ class ParserStage {
 		  - then count constructor arity at brace depth 1.
 
 		Non-goals (bring-up)
-		- Correct enum runtime representation (tagging, reflection).
+		- Full enum reflection metadata beyond the enum type marker needed by runtime type checks.
 		- Enum abstracts (we treat `enum abstract` values as field/function stubs).
 	**/
 	static function scanModuleLocalHelperEnums(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
@@ -820,8 +883,8 @@ class ParserStage {
 		if (source == null || source.length == 0)
 			return out;
 
-		function enumRuntimeValue(ctorName:String, argExprs:Array<HxExpr>):HxExpr {
-			return EAnon(["__hx_ctor", "__hx_index", "__hx_params"], [EString(ctorName), EInt(0), EArrayDecl(argExprs)]);
+		function enumRuntimeValue(enumName:String, ctorName:String, argExprs:Array<HxExpr>):HxExpr {
+			return EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString(enumName), EString(ctorName), EInt(0), EArrayDecl(argExprs)]);
 		}
 
 		inline function isUpperStart(name:String):Bool {
@@ -904,7 +967,7 @@ class ParserStage {
 			if (headerTok.text != "{")
 				continue;
 
-			final fields = new Array<HxFieldDecl>();
+			final fields = [new HxFieldDecl("__hx_is_enum", HxVisibility.Public, true, "Bool", EBool(true))];
 			final functions = new Array<HxFunctionDecl>();
 			if (isEnumAbstract) {
 				final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos);
@@ -929,7 +992,7 @@ class ParserStage {
 						continue;
 					final argNames = ctor.args == null ? [] : ctor.args;
 					if (argNames.length == 0) {
-						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(ctorName, [])));
+						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, [])));
 					} else {
 						final args = new Array<HxFunctionArg>();
 						final values = new Array<HxExpr>();
@@ -940,7 +1003,7 @@ class ParserStage {
 						// Constructors conceptually return an enum value; during bring-up we keep the
 						// type wide to avoid OCaml type errors in heavily-`Obj.magic` codegen.
 						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic",
-							[SReturn(enumRuntimeValue(ctorName, values), HxPos.unknown())], ""));
+							[SReturn(enumRuntimeValue(enumName, ctorName, values), HxPos.unknown())], ""));
 					}
 				}
 			}

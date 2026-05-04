@@ -216,7 +216,7 @@ class ParserStageScanHelpers {
 		  - then count constructor arity at brace depth 1.
 
 		Non-goals (bring-up)
-		- Correct enum runtime representation (tagging, reflection).
+		- Full enum reflection metadata beyond the enum type marker needed by runtime type checks.
 		- Enum abstracts (we treat `enum abstract` values as field/function stubs).
 	**/
 	public static function scanModuleLocalHelperEnums(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
@@ -224,8 +224,8 @@ class ParserStageScanHelpers {
 		if (source == null || source.length == 0)
 			return out;
 
-		function enumRuntimeValue(ctorName:String, argExprs:Array<HxExpr>):HxExpr {
-			return EAnon(["__hx_ctor", "__hx_index", "__hx_params"], [EString(ctorName), EInt(0), EArrayDecl(argExprs)]);
+		function enumRuntimeValue(enumName:String, ctorName:String, argExprs:Array<HxExpr>):HxExpr {
+			return EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString(enumName), EString(ctorName), EInt(0), EArrayDecl(argExprs)]);
 		}
 
 		inline function isUpperStart(name:String):Bool {
@@ -308,7 +308,7 @@ class ParserStageScanHelpers {
 			if (headerTok.text != "{")
 				continue;
 
-			final fields = new Array<HxFieldDecl>();
+			final fields = [new HxFieldDecl("__hx_is_enum", HxVisibility.Public, true, "Bool", EBool(true))];
 			final functions = new Array<HxFunctionDecl>();
 			if (isEnumAbstract) {
 				final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos);
@@ -333,7 +333,7 @@ class ParserStageScanHelpers {
 						continue;
 					final argNames = ctor.args == null ? [] : ctor.args;
 					if (argNames.length == 0) {
-						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(ctorName, [])));
+						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, [])));
 					} else {
 						final args = new Array<HxFunctionArg>();
 						final values = new Array<HxExpr>();
@@ -344,7 +344,7 @@ class ParserStageScanHelpers {
 						// Constructors conceptually return an enum value; during bring-up we keep the
 						// type wide to avoid OCaml type errors in heavily-`Obj.magic` codegen.
 						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic",
-							[SReturn(enumRuntimeValue(ctorName, values), HxPos.unknown())], ""));
+							[SReturn(enumRuntimeValue(enumName, ctorName, values), HxPos.unknown())], ""));
 					}
 				}
 			}

@@ -2308,6 +2308,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var fn:Dynamic = function() {};",
 			"    Sys.println(Std.string(Std.isOfType(fn, c)));",
 			"    Sys.println(Std.string(reflectLoopCheck(value, MyClass)));",
+			"    Sys.println(Std.string(Std.isOfType(MyClass, Class)));",
 			"    Sys.println(Type.getClassName(Type.getClass(value)));",
 			"  }",
 			"  static function check(value:Dynamic, c:Dynamic):Bool return value is c;",
@@ -2325,6 +2326,48 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "unit/Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpEnumTypeCheckProgram():GenIrProgram {
+		final enumSrc = ["package unit;", "enum MyEnum {", "  A;", "  B(value:Int);", "}",].join("\n");
+		final mainSrc = [
+			"package unit;",
+			"class Main {",
+			"  static var types:Array<Dynamic> = [null, unit.MyEnum, Dynamic];",
+			"  static function main() {",
+			"    var value:Dynamic = MyEnum.A;",
+			"    var other:Dynamic = MyEnum.B(1);",
+			"    var c:Dynamic = MyEnum;",
+			"    Sys.println(Std.string(Std.isOfType(value, MyEnum)));",
+			"    Sys.println(Std.string(value is MyEnum));",
+			"    Sys.println(Std.string(Std.isOfType(other, c)));",
+			"    Sys.println(Std.string(check(other, c)));",
+			"    Sys.println(Std.string(reflectLoopCheck(value, MyEnum)));",
+			"    Sys.println(Std.string(Std.isOfType(value, Enum)));",
+			"    Sys.println(Std.string(Std.isOfType(MyEnum, Enum)));",
+			"    c = null;",
+			"    Sys.println(Std.string(Std.isOfType(value, c)));",
+			"    var anon:Dynamic = { x: 0 };",
+			"    Sys.println(Std.string(Std.isOfType(anon, c)));",
+			"    var fn:Dynamic = function() {};",
+			"    Sys.println(Std.string(Std.isOfType(fn, c)));",
+			"    Sys.println(Type.getEnumName(MyEnum));",
+			"  }",
+			"  static function check(value:Dynamic, c:Dynamic):Bool return value is c;",
+			"  static function reflectLoopCheck(value:Dynamic, t1:Dynamic):Bool {",
+			"    for (i in 0...types.length) {",
+			"      var c:Dynamic = types[i];",
+			"      var actual = Std.isOfType(value, c);",
+			"      var expected = c == t1 || c == Dynamic;",
+			"      if (actual != expected) return false;",
+			"    }",
+			"    return true;",
+			"  }",
+			"}",
+		].join("\n");
+		final typedEnum = TyperStage.typeModule(ParserStage.parse(enumSrc, "unit/MyEnum.hx"));
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSrc, "unit/Main.hx"));
+		return MacroStage.expandProgram([typedMain, typedEnum], []);
 	}
 
 	static function phpTypeReflectionProgram():GenIrProgram {
@@ -4893,7 +4936,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpEnumStringProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "return new __HxAnon([\"__hx_ctor\" => \"C\", \"__hx_index\" => 0, \"__hx_params\" => [$i, $s]]);",
+		assertContains(content,
+			"return new __HxAnon([\"__hx_enum\" => \"MyEnum\", \"__hx_ctor\" => \"C\", \"__hx_index\" => 0, \"__hx_params\" => [$i, $s]]);",
 			"PHP scanned enum constructors should return Haxe-like runtime enum objects");
 		assertContains(content, "return MyEnum::C(...$__hxhx_args);", "PHP enum constructor values should lower to callable closures");
 		assertContains(content, "Type::enumEq($e2, MyEnum::C(1, \"x\"))", "PHP Type.enumEq should remain a static runtime call");
@@ -6873,13 +6917,40 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_class_name(\"MyClass\")", "PHP unqualified class values should be canonicalized before equality checks");
 		assertContains(content, "$resolved = __hxhx_class_name($type)", "PHP runtime type helper should resolve class aliases before instanceof checks");
 		assertContains(content, "str_replace(\".\", \"\\\\\", $resolved)", "PHP runtime type helper should try package-qualified PHP class names");
-		assertContains(content, "if ($type === null) return is_callable($value) || $value instanceof __HxAnon;",
-			"PHP null pseudo-type checks should accept anonymous objects/functions without accepting all class instances");
+		assertContains(content, "case \"Class\": case \"Class<Dynamic>\": case \"Class_\": $candidate = __hxhx_class_candidate($value);",
+			"PHP runtime type helper should classify class values through canonical class candidates");
+		assertContains(content, "if ($type === null) return false;", "PHP null pseudo-type checks should match upstream Std.isOfType behavior");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP user class type checks should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nunit.MyClass\n",
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\nfalse\nfalse\ntrue\ntrue\nunit.MyClass\n",
 				"generated PHP user class type check output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpEnumTypeCheck():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_enum_type_check_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpEnumTypeCheckProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "\"__hx_enum\" => \"MyEnum\"", "PHP scanned enum values should carry their enum type marker");
+		assertContains(content, "public static $__hx_is_enum = true;", "PHP scanned enum helpers should mark enum class values");
+		assertContains(content, "$enumName = __hxhx_class_name($value->__hx_enum)", "PHP runtime type helper should canonicalize enum value type markers");
+		assertContains(content, "case \"Enum\": case \"Enum<Dynamic>\": case \"Enum_\": return __hxhx_is_enum_class_value($value);",
+			"PHP runtime type helper should classify enum class values without accepting enum records");
+		assertContains(content, "$enumShort === $short", "PHP runtime type helper should allow short enum markers to match package-qualified type values");
+		assertContains(content, "property_exists($candidate, $ctor) || method_exists($candidate, $ctor)",
+			"PHP runtime type helper should recognize enum records that only carry constructor metadata");
+		assertContains(content, "if ($type === null) return false;", "PHP null pseudo-type checks should match upstream Std.isOfType behavior");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP enum type checks should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\nfalse\nfalse\nunit.MyEnum\n",
+				"generated PHP enum type check output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -8458,6 +8529,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTypeCheck();
 		assertPhpTypeCheck();
 		assertPhpUserClassTypeCheck();
+		assertPhpEnumTypeCheck();
 		assertPhpTypeReflection();
 		assertPhpShiftAssignment();
 		assertPythonShiftAssignment();
