@@ -1276,6 +1276,8 @@ class SourceTargetCommon {
 				"is_bool(" + value + ")";
 			case "Array":
 				"is_array(" + value + ")";
+			case "StringMap" | "haxe.ds.StringMap":
+				"(" + value + " instanceof Map && " + value + "->__hx_type === \"haxe.ds.StringMap\")";
 			case "Dynamic" | "Any":
 				"true";
 			case _:
@@ -3652,8 +3654,8 @@ class SourceTargetCommon {
 			case Php:
 				if (typePath == "Array") "[]"; else if (typePath == "Exception" || typePath == "haxe.Exception") "new ValueException("
 					+ rendered
-					+ ")"; else if (phpRuntimeMapType(typePath)) "new Map(" + rendered + ")"; else if (phpRuntimeListType(typePath)) "new List_(" + rendered
-					+ ")"; else "new " + safeType + "(" + rendered + ")";
+					+ ")"; else if (phpRuntimeMapType(typePath)) phpRuntimeMapConstructorExpr(typePath,
+					rendered); else if (phpRuntimeListType(typePath)) "new List_(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
 			case Lua: safeType + ".new(" + rendered + ")";
 		};
 	}
@@ -3669,10 +3671,24 @@ class SourceTargetCommon {
 
 	static function phpRuntimeMapType(typePath:String):Bool {
 		return switch (typePath) {
-			case "Map" | "haxe.ds.StringMap" | "haxe.ds.IntMap" | "haxe.ds.ObjectMap":
+			case "Map" | "StringMap" | "haxe.ds.StringMap" | "IntMap" | "haxe.ds.IntMap" | "ObjectMap" | "haxe.ds.ObjectMap":
 				true;
 			case _:
 				false;
+		};
+	}
+
+	static function phpRuntimeMapConstructorExpr(typePath:String, rendered:String):String {
+		final args = rendered.length == 0 ? "null" : rendered;
+		return switch (typePath) {
+			case "StringMap" | "haxe.ds.StringMap":
+				"new Map(" + args + ", \"haxe.ds.StringMap\")";
+			case "IntMap" | "haxe.ds.IntMap":
+				"new Map(" + args + ", \"haxe.ds.IntMap\")";
+			case "ObjectMap" | "haxe.ds.ObjectMap":
+				"new Map(" + args + ", \"haxe.ds.ObjectMap\")";
+			case _:
+				"new Map(" + rendered + ")";
 		};
 	}
 
@@ -10943,9 +10959,11 @@ class SourceTargetCommon {
 				lines.push("class Map {");
 				lines.push("  private $items;");
 				lines.push("  private $keys;");
-				lines.push("  public function __construct() {");
+				lines.push("  public $__hx_type;");
+				lines.push("  public function __construct($initial = null, $__hx_type = \"Map\") {");
 				lines.push("    $this->items = [];");
 				lines.push("    $this->keys = [];");
+				lines.push("    $this->__hx_type = $__hx_type;");
 				lines.push("  }");
 				lines.push("  private static function keyId($key) {");
 				lines.push("    if (is_object($key)) return \"object:\" . spl_object_id($key);");
@@ -11700,6 +11718,8 @@ class SourceTargetCommon {
 				lines.push("    case \"String\": return is_string($value);");
 				lines.push("    case \"Bool\": return is_bool($value);");
 				lines.push("    case \"Array\": return is_array($value) || $value instanceof __HxArray;");
+				lines.push("    case \"StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
+				lines.push("    case \"haxe.ds.StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
 				lines.push("    case \"Exception\": return $value instanceof \\Throwable;");
 				lines.push("    case \"haxe.Exception\": return $value instanceof \\Throwable;");
 				lines.push("    case \"Dynamic\": return true;");
@@ -11959,6 +11979,7 @@ class SourceTargetCommon {
 				lines.push("    if ($value === null) return null;");
 				lines.push("    if (is_string($value)) return \"String\";");
 				lines.push("    if (is_array($value) || $value instanceof __HxArray) return \"Array\";");
+				lines.push("    if ($value instanceof Map) return $value->__hx_type;");
 				lines.push("    if (is_object($value)) return __hxhx_class_name(get_class($value));");
 				lines.push("    return null;");
 				lines.push("  }");
