@@ -1501,6 +1501,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpHaxeSerializerRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Box {",
+			"  public var count:Int = 0;",
+			"  public var label:String = \"\";",
+			"  public function new(count:Int, label:String) {",
+			"    this.count = count;",
+			"    this.label = label;",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(haxe.Serializer.run(0));",
+			"    Sys.println(haxe.Serializer.run(\"éé\"));",
+			"    var values = [1, 2, null, null, 4];",
+			"    var values2:Array<Dynamic> = haxe.Unserializer.run(haxe.Serializer.run(values));",
+			"    Sys.println(Std.string(values2.length));",
+			"    Sys.println(Std.string(values2[3] == null));",
+			"    var anon:Dynamic = haxe.Unserializer.run(haxe.Serializer.run({name: \"hxhx\", count: 3}));",
+			"    Sys.println(Std.string(Reflect.field(anon, \"name\")));",
+			"    var box:Box = haxe.Unserializer.run(haxe.Serializer.run(new Box(7, \"seven\")));",
+			"    Sys.println(box.label + \":\" + Std.string(box.count));",
+			"    var map = new haxe.ds.StringMap<Int>();",
+			"    map.set(\"kéy\", 42);",
+			"    var map2:haxe.ds.StringMap<Int> = haxe.Unserializer.run(haxe.Serializer.run(map));",
+			"    Sys.println(Std.string(map2.get(\"kéy\")));",
+			"    var bytes = haxe.io.Bytes.ofString(\"ABC\");",
+			"    Sys.println(haxe.Serializer.run(bytes));",
+			"    var bytes2:haxe.io.Bytes = haxe.Unserializer.run(haxe.Serializer.run(bytes));",
+			"    Sys.println(bytes2.toString());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpReflectMakeVarArgsProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -4826,6 +4864,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$keys = Lambda::array(new __HxAnon([\"iterator\" => (function() use ($sm) { return $sm->keys(); })]));",
 			"PHP Lambda.array should accept structural iterator method closures");
 		assertContains(content, "echo __hxhx_array_join($keys, \"#\") . PHP_EOL;", "PHP Array.join should lower for structural iterator results");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpHaxeSerializerRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_serializer_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpHaxeSerializerRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Serializer {", "PHP source backend should emit haxe.Serializer support");
+		assertContains(content, "class Unserializer {", "PHP source backend should emit haxe.Unserializer support");
+		assertContains(content, "haxe\\Serializer::run(0)", "PHP haxe.Serializer.run calls should lower to the haxe namespace shim");
+		assertContains(content, "haxe\\Unserializer::run(haxe\\Serializer::run($values))",
+			"PHP haxe.Unserializer.run should consume haxe.Serializer output through namespace shims");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP haxe.Serializer/Unserializer support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "z\ny12:%C3%A9%C3%A9\n5\ntrue\nhxhx\nseven:7\n42\ns4:QUJD\nABC\n",
+				"generated PHP haxe.Serializer/Unserializer output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -8651,6 +8711,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStaticClassAccess();
 		assertPhpRuntimeShim();
 		assertPhpMapRuntimeShim();
+		assertPhpHaxeSerializerRuntimeSupport();
 		assertPhpReflectMakeVarArgs();
 		assertPhpReflectPropertyAccess();
 		assertPhpSamePackageQualifiedStaticPath();
