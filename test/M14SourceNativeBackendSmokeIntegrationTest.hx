@@ -7884,10 +7884,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class Main {",
 			"  static function main() {",
 			"    var c = new MyClass(100);",
+			"    var d = new MyClass(100);",
 			"    var add = c.add;",
 			"    Sys.println(c.add(1, 2));",
 			"    Sys.println(c.add.bind(1)(2));",
 			"    Sys.println(add(1, 2));",
+			"    Sys.println(Std.string(Reflect.compareMethods(c.add, c.add)));",
+			"    Sys.println(Std.string(Reflect.compareMethods(c.add, d.add)));",
+			"    Sys.println(Std.string(Reflect.compareMethods(String.fromCharCode, String.fromCharCode)));",
+			"    Sys.println(Std.string(Reflect.compareMethods(c.add, null)));",
 			"    new SelfBind().run();",
 			"  }",
 			"}",
@@ -7900,12 +7905,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_field($c, \"add\")", "PHP instance method values should lower through the callable field helper");
+		assertContains(content, "public static function compareMethods($a, $b)", "PHP Reflect should expose compareMethods");
 		assertNotContains(content, "__hxhx_bind($this->id, 3)", "PHP same-instance method values should not bind missing properties");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP instance method-value bind support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "103\n103\n103\n3\n25\n", "generated PHP method-value bind support should preserve receiver binding, got:\n"
-				+ run.stdout);
+			assertTrue(run.stdout == "103\n103\n103\ntrue\nfalse\ntrue\nfalse\n3\n25\n",
+				"generated PHP method-value bind support should preserve receiver binding, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}

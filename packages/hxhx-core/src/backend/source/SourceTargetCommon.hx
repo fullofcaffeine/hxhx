@@ -3918,6 +3918,8 @@ class SourceTargetCommon {
 	}
 
 	static function phpStaticMethodValueAccess(typePath:String, field:String):String {
+		if (typePath == "String" && field == "fromCharCode")
+			return "function(...$__hxhx_args) { return __hxhx_string_from_char_code(...$__hxhx_args); }";
 		return "function(...$__hxhx_args) { return " + typePath + "::" + sanitizeTypeName(field) + "(...$__hxhx_args); }";
 	}
 
@@ -3938,6 +3940,8 @@ class SourceTargetCommon {
 					case _:
 						false;
 				}
+			case "String":
+				field == "fromCharCode";
 			case _:
 				false;
 		};
@@ -11216,6 +11220,20 @@ class SourceTargetCommon {
 				lines.push("  public static function compare($a, $b) {");
 				lines.push("    if ($a == $b) return 0;");
 				lines.push("    return $a < $b ? -1 : 1;");
+				lines.push("  }");
+				lines.push("  public static function compareMethods($a, $b) {");
+				lines.push("    if ($a === null || $b === null) return $a === $b;");
+				lines.push("    if ($a === $b) return true;");
+				lines.push("    if (is_array($a) && is_array($b) && count($a) >= 2 && count($b) >= 2) return $a[0] === $b[0] && $a[1] === $b[1];");
+				lines.push("    if (!($a instanceof \\Closure) || !($b instanceof \\Closure)) return false;");
+				lines.push("    $left = new \\ReflectionFunction($a);");
+				lines.push("    $right = new \\ReflectionFunction($b);");
+				lines.push("    if ($left->getFileName() !== $right->getFileName() || $left->getStartLine() !== $right->getStartLine() || $left->getEndLine() !== $right->getEndLine()) return false;");
+				lines.push("    $leftVars = $left->getStaticVariables();");
+				lines.push("    $rightVars = $right->getStaticVariables();");
+				lines.push("    if (count($leftVars) !== count($rightVars)) return false;");
+				lines.push("    foreach ($leftVars as $key => $value) if (!array_key_exists($key, $rightVars) || $rightVars[$key] !== $value) return false;");
+				lines.push("    return true;");
 				lines.push("  }");
 				lines.push("  public static function field($object, $field) {");
 				lines.push("    if (is_object($object) && property_exists($object, $field)) return $object->$field;");
