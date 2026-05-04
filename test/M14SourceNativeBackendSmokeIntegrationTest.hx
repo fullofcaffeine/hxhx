@@ -5054,6 +5054,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpReflectFields():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reflect_fields_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function sortedNames(value:Dynamic):String {",
+			"    var fields = Reflect.fields(value);",
+			"    fields.sort(Reflect.compare);",
+			"    return fields.join(\",\");",
+			"  }",
+			"  static function main() {",
+			"    Sys.println(sortedNames({name: \"hx\", count: 2}));",
+			"    var parsed = haxe.Json.parse(\"{\\\"z\\\":1,\\\"a\\\":2}\");",
+			"    Sys.println(sortedNames(parsed));",
+			"    Sys.println(Reflect.fields(null).length);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function fields($object)", "PHP Reflect helper should expose fields");
+		assertContains(content, "get_object_vars($object)", "PHP Reflect.fields should enumerate dynamic object fields");
+		assertContains(content, "Reflect::fields($value)", "PHP Reflect.fields should lower as a static helper call");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Reflect.fields support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "count,name\na,z\n0\n", "generated PHP Reflect.fields output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpReflectPropertyAccess():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reflect_property_access_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -8946,6 +8983,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpPoint3StringEqualityRuntimeSupport();
 		assertPhpLambdaListRuntimeSupport();
 		assertPhpReflectMakeVarArgs();
+		assertPhpReflectFields();
 		assertPhpReflectPropertyAccess();
 		assertPhpSamePackageQualifiedStaticPath();
 		assertPhpInstanceFieldMethodCall();
