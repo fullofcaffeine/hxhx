@@ -1019,10 +1019,21 @@ class SourceTargetCommon {
 	}
 
 	static function phpInt64InstanceMethodCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
-		if (!phpExprIsInt64Value(receiver))
-			return null;
-		final self = renderExpr(Php, receiver);
 		final clean = sanitizeTypeName(field);
+		final typedReceiver = phpExprIsInt64Value(receiver) || phpInt64InstanceMethodArgsSuggestInt64(clean, args);
+		final self = if (typedReceiver) {
+			renderExpr(Php, receiver);
+		} else {
+			switch (receiver) {
+				case ECall(_, _) | EBinop(_, _, _) | EUnop(_, _) | EMacroExpr(_, _) | EUntyped(_) | ECast(_, _):
+					final rendered = renderExpr(Php, receiver);
+					if (!phpRenderedInt64ReceiverExpr(rendered))
+						return null;
+					rendered;
+				case _:
+					return null;
+			}
+		};
 		return switch (clean) {
 			case "eq" if (args.length == 1):
 				"__hxhx_equals(" + self + ", " + renderExpr(Php, args[0]) + ")";
@@ -1032,6 +1043,8 @@ class SourceTargetCommon {
 				"__hxhx_int64_add(" + self + ", " + renderExpr(Php, args[0]) + ")";
 			case "sub" if (args.length == 1):
 				"__hxhx_int64_sub(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "mul" if (args.length == 1):
+				"__hxhx_int64_mul(" + self + ", " + renderExpr(Php, args[0]) + ")";
 			case "div" if (args.length == 1):
 				"__hxhx_int64_div_mod(" + self + ", " + renderExpr(Php, args[0]) + ")->quotient";
 			case "mod" if (args.length == 1):
@@ -1054,6 +1067,12 @@ class SourceTargetCommon {
 				"(" + self + "->high < 0)";
 			case "isZero" if (args.length == 0):
 				"__hxhx_int64_is_zero(" + self + ")";
+			case "compare" if (args.length == 1):
+				"__hxhx_int64_compare(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "ucompare" if (args.length == 1):
+				"__hxhx_int64_ucompare(" + self + ", " + renderExpr(Php, args[0]) + ")";
+			case "divMod" if (args.length == 1):
+				"__hxhx_int64_div_mod(" + self + ", " + renderExpr(Php, args[0]) + ")";
 			case _:
 				null;
 		};
@@ -4461,8 +4480,7 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case ECall(EIdent("__hxhx_int_literal"), [EString(_), EString(suffix)]) if (suffix == "i64" || suffix == "u64"):
 				true;
-			case ECall(callee, args):
-				phpInt64StaticCall(callee, args.length);
+			case ECall(callee, args): phpInt64StaticCall(callee, args.length) || phpInt64InstanceMethodReturnsInt64Call(callee, args);
 			case EBinop("*", left, right), EBinop("+", left, right), EBinop("-", left, right), EBinop("/", left, right), EBinop("%", left, right),
 				EBinop("&", left, right), EBinop("|", left, right), EBinop("^", left, right), EBinop("<<", left, right), EBinop(">>", left, right),
 				EBinop(">>>", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
@@ -4486,6 +4504,28 @@ class SourceTargetCommon {
 		};
 	}
 
+	static function phpRenderedInt64ReceiverExpr(rendered:String):Bool {
+		return StringTools.startsWith(rendered, "__hxhx_int64_add(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_sub(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_mul(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_neg(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_shl(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_shr(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_ushr(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_and(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_or(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_xor(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_literal(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_value(")
+			|| StringTools.startsWith(rendered, "__hxhx_int64_div_mod(")
+			|| StringTools.startsWith(rendered, "\\haxe\\Int64::make(")
+			|| StringTools.startsWith(rendered, "\\haxe\\Int64::ofInt(")
+			|| StringTools.startsWith(rendered, "\\haxe\\Int64::parseString(")
+			|| StringTools.startsWith(rendered, "\\haxe\\Int64::add(")
+			|| StringTools.startsWith(rendered, "\\haxe\\Int64::sub(")
+			|| StringTools.startsWith(rendered, "\\haxe\\Int64::mul(");
+	}
+
 	static function phpEqualityNeedsHelper(left:HxExpr, right:HxExpr):Bool {
 		return phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
 	}
@@ -4501,6 +4541,15 @@ class SourceTargetCommon {
 					isInt64TypeHint(typePath) && phpInt64StaticMethodReturnsInt64(field)
 					;
 				}
+			case _:
+				false;
+		};
+	}
+
+	static function phpInt64InstanceMethodReturnsInt64Call(callee:HxExpr, args:Array<HxExpr>):Bool {
+		return switch (callee) {
+			case EField(receiver, field): (phpExprIsInt64Value(receiver)
+					|| phpInt64InstanceMethodArgsSuggestInt64(field, args)) && phpInt64InstanceMethodReturnsInt64(field, args.length);
 			case _:
 				false;
 		};
@@ -4539,6 +4588,28 @@ class SourceTargetCommon {
 		return switch (sanitizeTypeName(field)) {
 			case "make", "ofInt", "parseString", "add", "sub", "mul":
 				true;
+			case _:
+				false;
+		};
+	}
+
+	static function phpInt64InstanceMethodReturnsInt64(field:String, argCount:Int):Bool {
+		return switch (sanitizeTypeName(field)) {
+			case "add" | "sub" | "mul" | "div" | "mod" | "shl" | "shr" | "ushr" | "and" | "or" | "xor" if (argCount == 1):
+				true;
+			case "neg" if (argCount == 0):
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function phpInt64InstanceMethodArgsSuggestInt64(field:String, args:Array<HxExpr>):Bool {
+		if (args == null || args.length != 1)
+			return false;
+		return switch (sanitizeTypeName(field)) {
+			case "eq" | "neq" | "add" | "sub" | "mul" | "div" | "mod" | "and" | "or" | "xor" | "compare" | "ucompare" | "divMod":
+				phpExprIsInt64Value(args[0]);
 			case _:
 				false;
 		};
