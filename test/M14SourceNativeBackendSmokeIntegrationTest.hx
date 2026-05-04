@@ -5134,6 +5134,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var c = Int64.make(2, 3);",
 			"    Sys.println(c.high);",
 			"    Sys.println(c.low);",
+			"    var capturedMake = Int64.make;",
+			"    var captured = capturedMake(3, 4);",
+			"    Sys.println(captured.high);",
+			"    Sys.println(captured.low);",
+			"    var imported = make(4, 5);",
+			"    Sys.println(imported.high);",
+			"    Sys.println(imported.low);",
+			"    var importedMake = make;",
+			"    var importedCapture = importedMake(5, 6);",
+			"    Sys.println(importedCapture.high);",
+			"    Sys.println(importedCapture.low);",
+			"    Sys.println(compare(captured, imported));",
+			"    var capturedOfInt = haxe.Int64.ofInt;",
+			"    Sys.println(haxe.Int64.toStr(capturedOfInt(-5)));",
 			"    var b = haxe.Int64.ofInt(-1);",
 			"    Sys.println(b.high);",
 			"    Sys.println(b.low);",
@@ -5309,6 +5323,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$e = __hxhx_int64_literal(\"47244640255\", \"i64\");", "PHP typed Int64 decimal literals should construct Int64 values");
 		assertContains(content, "$f = __hxhx_int64_literal(\"0x7FFFFFFFFFFFFFFF\", \"i64\");", "PHP typed Int64 hex literals should construct Int64 values");
 		assertContains(content, "$c = \\haxe\\Int64::make(2, 3);", "PHP imported Int64 calls should lower to qualified haxe.Int64 calls");
+		assertContains(content, "$capturedMake = function(...$__hxhx_args) { return \\haxe\\Int64::make(...$__hxhx_args); };",
+			"PHP captured Int64.make should lower to a qualified callable");
+		assertContains(content, "$imported = \\haxe\\Int64::make(4, 5);", "PHP imported haxe.Int64.* make calls should lower to qualified static calls");
+		assertContains(content, "$importedMake = __hxhx_copy_value(function(...$__hxhx_args) { return \\haxe\\Int64::make(...$__hxhx_args); });",
+			"PHP captured imported haxe.Int64.* make should lower to a qualified callable");
+		assertContains(content, "\\haxe\\Int64::compare($captured, $imported)",
+			"PHP imported haxe.Int64.* compare calls should lower to qualified static calls");
+		assertContains(content, "$capturedOfInt = function(...$__hxhx_args) { return \\haxe\\Int64::ofInt(...$__hxhx_args); };",
+			"PHP captured haxe.Int64.ofInt should lower to a qualified callable");
 		assertContains(content, "__hxhx_array_push($boxed, \\haxe\\Int64::ofInt(1))", "PHP Array<Int64>.push should box Int literals");
 		assertContains(content, "$inc = __hxhx_add($inc, 1);", "PHP Int64 postfix increment statements should route through Int64 addition");
 		assertContains(content, "$inc = __hxhx_sub($inc, 1);", "PHP Int64 postfix decrement statements should route through Int64 subtraction");
@@ -5354,7 +5377,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Int64 runtime support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "10\n-1\n2\n3\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\ntrue\n0\n42\n0\n14\n-1\n-4\n-1\n-4\n0\n42\n4\n3\n2\n7\n5\n-7\n8589934592\n-4\n9223372036854775804\n8589934592\n2\n1\nfalse\ntrue\n28\n36\n-8\n0\n-8\n-2\n9223372036854775806\n32\n-4\n-36\n-32\nfalse\ntrue\nfalse\n4\n3\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
+			assertTrue(run.stdout == "10\n-1\n2\n3\n3\n4\n4\n5\n5\n6\n-1\n-5\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\ntrue\n0\n42\n0\n14\n-1\n-4\n-1\n-4\n0\n42\n4\n3\n2\n7\n5\n-7\n8589934592\n-4\n9223372036854775804\n8589934592\n2\n1\nfalse\ntrue\n28\n36\n-8\n0\n-8\n-2\n9223372036854775806\n32\n-4\n-36\n-32\nfalse\ntrue\nfalse\n4\n3\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
 				"generated PHP haxe.Int64 output mismatch, got:\n"
 				+ run.stdout);
 		}

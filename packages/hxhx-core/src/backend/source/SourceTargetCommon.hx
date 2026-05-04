@@ -679,6 +679,8 @@ class SourceTargetCommon {
 				superExpr(target);
 			case EUnop(op, inner):
 				unopExpr(target, op, inner);
+			case EIdent(name) if (target == Php && phpInt64ImportedStaticMethodValueName(name) && !phpLocalExists(name)):
+				phpStaticMethodValueAccess(phpInt64TypePath(), name);
 			case EIdent(name):
 				valueName(target, name);
 			case EBinop(op, left, right):
@@ -719,6 +721,10 @@ class SourceTargetCommon {
 				+ ", \".\"), "
 				+ renderExpr(Php, args[1])
 				+ ")";
+			case ECall(EIdent(name), args) if (target == Php
+				&& phpInt64ImportedStaticCallArityMatches(name, args.length)
+				&& !phpLocalExists(name)):
+				phpStaticMethodCall(phpInt64TypePath(), name, args);
 			case EField(receiver, field):
 				fieldAccessExpr(target, receiver, field);
 			case EArrayAccess(receiver, index):
@@ -1495,6 +1501,8 @@ class SourceTargetCommon {
 						mathConstant;
 					else if (typePath == "Reflect" && field == "compare")
 						"[Reflect::class, \"compare\"]";
+					else if (isInt64TypeHint(typePath) && phpInt64StaticMethodName(field))
+						phpStaticMethodValueAccess(phpInt64TypePath(), field);
 					else if (phpKnownStaticMethod(typePath, field))
 						phpStaticMethodValueAccess(typePath, field);
 					else
@@ -4453,8 +4461,8 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case ECall(EIdent("__hxhx_int_literal"), [EString(_), EString(suffix)]) if (suffix == "i64" || suffix == "u64"):
 				true;
-			case ECall(callee, _):
-				phpInt64StaticCall(callee);
+			case ECall(callee, args):
+				phpInt64StaticCall(callee, args.length);
 			case EBinop("*", left, right), EBinop("+", left, right), EBinop("-", left, right), EBinop("/", left, right), EBinop("%", left, right),
 				EBinop("&", left, right), EBinop("|", left, right), EBinop("^", left, right), EBinop("<<", left, right), EBinop(">>", left, right),
 				EBinop(">>>", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
@@ -4482,8 +4490,9 @@ class SourceTargetCommon {
 		return phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
 	}
 
-	static function phpInt64StaticCall(callee:HxExpr):Bool {
+	static function phpInt64StaticCall(callee:HxExpr, argCount:Int):Bool {
 		return switch (callee) {
+			case EIdent(field): phpInt64ImportedStaticCallArityMatches(field, argCount) && phpInt64StaticMethodReturnsInt64(field);
 			case EField(receiver, field):
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath == null) {
@@ -4500,6 +4509,26 @@ class SourceTargetCommon {
 	static function phpInt64StaticMethodName(field:String):Bool {
 		return switch (sanitizeTypeName(field)) {
 			case "make", "ofInt", "parseString", "add", "sub", "mul", "divMod", "toStr", "compare", "ucompare":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function phpInt64ImportedStaticCallArityMatches(field:String, argCount:Int):Bool {
+		return switch (sanitizeTypeName(field)) {
+			case "ofInt" | "parseString" | "toStr":
+				argCount == 1;
+			case "make" | "add" | "sub" | "mul" | "divMod" | "compare" | "ucompare":
+				argCount == 2;
+			case _:
+				false;
+		};
+	}
+
+	static function phpInt64ImportedStaticMethodValueName(field:String):Bool {
+		return switch (sanitizeTypeName(field)) {
+			case "make" | "ofInt" | "parseString":
 				true;
 			case _:
 				false;
