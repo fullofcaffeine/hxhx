@@ -23130,6 +23130,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  public static function int($value) {");
       ignore (HxArray.push lines "    return intval($value);");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function parseFloat($value) {");
+      ignore (HxArray.push lines "    return floatval($value);");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "class Type {");
       ignore (HxArray.push lines "  public static function enumEq($left, $right) {");

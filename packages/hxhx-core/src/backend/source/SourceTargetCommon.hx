@@ -11819,6 +11819,9 @@ class SourceTargetCommon {
 				lines.push("  public static function int($value) {");
 				lines.push("    return intval($value);");
 				lines.push("  }");
+				lines.push("  public static function parseFloat($value) {");
+				lines.push("    return floatval($value);");
+				lines.push("  }");
 				lines.push("}");
 				lines.push("class Type {");
 				lines.push("  public static function enumEq($left, $right) {");
