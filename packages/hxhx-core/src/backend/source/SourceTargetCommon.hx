@@ -639,7 +639,7 @@ class SourceTargetCommon {
 	}
 
 	static function phpClassValueExpr(typePath:String):String {
-		return "__hxhx_class_name(" + quotePhpString(typePath) + ")";
+		return "__hxhx_class_value(" + quotePhpString(typePath) + ")";
 	}
 
 	static function renderExpr(target:SourceNativeTarget, expr:HxExpr):String {
@@ -670,8 +670,16 @@ class SourceTargetCommon {
 			case EFloat(value):
 				floatLiteralExpr(value);
 			case EEnumValue(name):
-				if (target == Php && phpLocalExists(name)) valueName(Php,
-					name); else if (target == Php && looksLikeTypePathRoot(name)) phpClassValueExpr(name); else quoteString(name);
+				if (target == Php) {
+					if (phpLocalExists(name))
+						valueName(Php, name);
+					else if (phpKnownTypeName(name))
+						phpClassValueExpr(name);
+					else
+						quotePhpString(name);
+				} else {
+					quoteString(name);
+				}
 			case EThis:
 				switch (target) {
 					case Python: "self";
@@ -4154,6 +4162,7 @@ class SourceTargetCommon {
 	static var phpRenderDynamicMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticCallableFieldsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
+	static var phpRenderKnownTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
 	static var phpRenderDynamicCallFieldsByLocal:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderRefCaptureLocals:Null<Array<String>> = null;
 
@@ -4183,6 +4192,12 @@ class SourceTargetCommon {
 		if (phpRenderLocalTypes == null)
 			return false;
 		return phpRenderLocalTypes.exists(sanitizeTypeName(name));
+	}
+
+	static function phpKnownTypeName(name:String):Bool {
+		if (phpRenderKnownTypeNames == null)
+			return false;
+		return phpRenderKnownTypeNames.exists(name) || phpRenderKnownTypeNames.exists(sanitizeTypeName(name));
 	}
 
 	static function withPhpCurrentFunctionName<T>(target:SourceNativeTarget, functionName:Null<String>, f:() -> T):T {
@@ -7441,7 +7456,13 @@ class SourceTargetCommon {
 		for (shortName in names.keys())
 			entries.push(quotePhpString(shortName) + " => " + quotePhpString(names.get(shortName)));
 		entries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		lines.push("class __HxClassValue {");
+		lines.push("  public $__hx_class_name;");
+		lines.push("  public function __construct($name) { $this->__hx_class_name = $name; }");
+		lines.push("  public function __toString() { return $this->__hx_class_name; }");
+		lines.push("}");
 		lines.push("function __hxhx_class_name($name) {");
+		lines.push("  if ($name instanceof __HxClassValue) return $name->__hx_class_name;");
 		lines.push("  static $map = [");
 		for (entry in entries)
 			lines.push("    " + entry + ",");
@@ -7453,6 +7474,59 @@ class SourceTargetCommon {
 		lines.push("  if (array_key_exists($short, $map)) return $map[$short];");
 		lines.push("  return $raw;");
 		lines.push("}");
+		lines.push("function __hxhx_class_value($name) {");
+		lines.push("  static $values = [];");
+		lines.push("  $resolved = __hxhx_class_name($name);");
+		lines.push("  if (!array_key_exists($resolved, $values)) $values[$resolved] = new __HxClassValue($resolved);");
+		lines.push("  return $values[$resolved];");
+		lines.push("}");
+	}
+
+	static function phpProgramKnownTypeNameMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<Bool> {
+		final names = new haxe.ds.StringMap<Bool>();
+		function addName(name:String):Void {
+			if (name == null || name.length == 0)
+				return;
+			names.set(name, true);
+			names.set(sanitizeTypeName(name), true);
+			final parts = name.split(".");
+			if (parts.length > 0) {
+				final short = parts[parts.length - 1];
+				names.set(short, true);
+				names.set(sanitizeTypeName(short), true);
+			}
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final shortName = HxClassDecl.getName(cls);
+				addName(shortName);
+				if (pkg != null && pkg.length > 0)
+					addName(pkg + "." + shortName);
+			}
+		}
+		for (name in [
+			"Int",
+			"String",
+			"Bool",
+			"Float",
+			"Array",
+			"Class",
+			"Enum",
+			"Dynamic",
+			"Date",
+			"Math",
+			"Xml"
+		]) {
+			addName(name);
+		}
+		addName("haxe.ds.StringMap");
+		addName("haxe.ds.List");
+		addName("List");
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return names;
 	}
 
 	static function phpProgramInstanceMethodMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
@@ -9859,12 +9933,14 @@ class SourceTargetCommon {
 		final previousPhpDynamicMethodsByType = phpRenderDynamicMethodsByType;
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
 		final previousPhpStaticCallableFieldsByType = phpRenderStaticCallableFieldsByType;
+		final previousPhpKnownTypeNames = phpRenderKnownTypeNames;
 		if (target == Php) {
 			phpRenderInstanceMethodsByType = phpProgramInstanceMethodMap(program, decl);
 			phpRenderInstanceMethodArgsByType = phpProgramInstanceMethodArgsMap(program, decl);
 			phpRenderDynamicMethodsByType = phpProgramDynamicMethodMap(program, decl);
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
 			phpRenderStaticCallableFieldsByType = phpProgramStaticCallableFieldMap(program, decl);
+			phpRenderKnownTypeNames = phpProgramKnownTypeNameMap(program, decl);
 		}
 		switch (target) {
 			case Python:
@@ -11726,6 +11802,7 @@ class SourceTargetCommon {
 				lines.push("  return __hxhx_to_string_value($value);");
 				lines.push("}");
 				lines.push("function __hxhx_class_candidate($type) {");
+				lines.push("  if ($type instanceof __HxClassValue) $type = $type->__hx_class_name;");
 				lines.push("  if (!is_string($type) || $type === \"\") return null;");
 				lines.push("  $resolved = __hxhx_class_name($type);");
 				lines.push("  $short = substr($resolved, strrpos($resolved, \".\") === false ? 0 : strrpos($resolved, \".\") + 1);");
@@ -11741,6 +11818,7 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("function __hxhx_is_of_type($value, $type) {");
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) $value = $value->__hx_value;");
+				lines.push("  if ($type instanceof __HxClassValue) $type = $type->__hx_class_name;");
 				lines.push("  switch ($type) {");
 				lines.push("    case \"Int\": return is_int($value) || (is_float($value) && is_finite($value) && floor($value) == $value && $value >= -2147483648 && $value <= 2147483647);");
 				lines.push("    case \"Float\": return is_int($value) || is_float($value);");
@@ -12026,6 +12104,7 @@ class SourceTargetCommon {
 				lines.push("class Type {");
 				lines.push("  public static function getClass($value) {");
 				lines.push("    if ($value === null) return null;");
+				lines.push("    if ($value instanceof __HxClassValue) return null;");
 				lines.push("    if (is_string($value)) return \"String\";");
 				lines.push("    if (is_array($value) || $value instanceof __HxArray) return \"Array\";");
 				lines.push("    if ($value instanceof Map) return $value->__hx_type;");
@@ -12034,21 +12113,21 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("  public static function getClassName($cls) {");
 				lines.push("    if ($cls === null) return null;");
+				lines.push("    if ($cls instanceof __HxClassValue) return $cls->__hx_class_name;");
 				lines.push("    if (is_string($cls)) return __hxhx_class_name($cls);");
 				lines.push("    if (is_object($cls)) return __hxhx_class_name(get_class($cls));");
 				lines.push("    return null;");
 				lines.push("  }");
 				lines.push("  public static function resolveClass($name) {");
 				lines.push("    if ($name === null) return null;");
-				lines.push("    $resolved = __hxhx_class_name($name);");
-				lines.push("    return $resolved;");
+				lines.push("    return __hxhx_class_value($name);");
 				lines.push("  }");
 				lines.push("  public static function getEnumName($enum) {");
 				lines.push("    return self::getClassName($enum);");
 				lines.push("  }");
 				lines.push("  public static function resolveEnum($name) {");
 				lines.push("    if ($name === null) return null;");
-				lines.push("    return __hxhx_class_name($name);");
+				lines.push("    return __hxhx_class_value($name);");
 				lines.push("  }");
 				lines.push("  public static function enumEq($left, $right) {");
 				lines.push("    return __hxhx_equals($left, $right);");
@@ -12086,6 +12165,7 @@ class SourceTargetCommon {
 		phpRenderDynamicMethodsByType = previousPhpDynamicMethodsByType;
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
 		phpRenderStaticCallableFieldsByType = previousPhpStaticCallableFieldsByType;
+		phpRenderKnownTypeNames = previousPhpKnownTypeNames;
 		return lines.join("\n") + "\n";
 	}
 }

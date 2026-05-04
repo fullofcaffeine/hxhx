@@ -2287,7 +2287,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class MyClass { public function new(value:Int) {} }",
 			"class MySubClass extends MyClass { public function new(value:Int) { super(value); } }",
 			"class Main {",
-			"  static var types:Array<Dynamic> = [null, unit.MyClass, Dynamic];",
+			"  static var types:Array<Dynamic> = [null, String, unit.MyClass, Class, Dynamic];",
 			"  static function main() {",
 			"    var value = new MyClass(0);",
 			"    var child = new MySubClass(1);",
@@ -2308,7 +2308,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var fn:Dynamic = function() {};",
 			"    Sys.println(Std.string(Std.isOfType(fn, c)));",
 			"    Sys.println(Std.string(reflectLoopCheck(value, MyClass)));",
+			"    Sys.println(Std.string(reflectLoopCheck(MyClass, Class)));",
 			"    Sys.println(Std.string(Std.isOfType(MyClass, Class)));",
+			"    Sys.println(Std.string(Std.isOfType(MyClass, String)));",
+			"    Sys.println(Std.string(Type.resolveClass(\"unit.MyClass\") == MyClass));",
+			"    Sys.println(Type.getClassName(Type.resolveClass(\"unit.MyClass\")));",
 			"    Sys.println(Type.getClassName(Type.getClass(value)));",
 			"  }",
 			"  static function check(value:Dynamic, c:Dynamic):Bool return value is c;",
@@ -6914,7 +6918,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_is_of_type($value, \"MyClass\")", "PHP direct user-class `is` checks should use the runtime type helper");
 		assertContains(content, "__hxhx_is_of_type($value, $c)", "PHP direct `is` checks should accept dynamic class values");
-		assertContains(content, "__hxhx_class_name(\"MyClass\")", "PHP unqualified class values should be canonicalized before equality checks");
+		assertContains(content, "__hxhx_class_value(\"MyClass\")", "PHP class values should be tagged separately from ordinary strings");
+		assertContains(content, "class __HxClassValue", "PHP runtime should tag class meta-values so they are not ordinary strings");
 		assertContains(content, "$resolved = __hxhx_class_name($type)", "PHP runtime type helper should resolve class aliases before instanceof checks");
 		assertContains(content, "str_replace(\".\", \"\\\\\", $resolved)", "PHP runtime type helper should try package-qualified PHP class names");
 		assertContains(content, "case \"Class\": case \"Class<Dynamic>\": case \"Class_\": $candidate = __hxhx_class_candidate($value);",
@@ -6923,8 +6928,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP user class type checks should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\nfalse\nfalse\ntrue\ntrue\nunit.MyClass\n",
-				"generated PHP user class type check output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nunit.MyClass\nunit.MyClass\n",
+				"generated PHP user class type check output mismatch, got:\n"
+				+ run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -6976,8 +6982,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP direct haxe.ds.StringMap checks should require the Map runtime tag");
 		assertContains(content, "__hxhx_is_of_type($stringMap, \"StringMap\")", "PHP Std.isOfType should check haxe.ds.StringMap through the runtime helper");
 		assertContains(content,
-			"[__hxhx_class_name(\"String\"), __hxhx_class_name(\"Array\"), __hxhx_class_name(\"List\"), __hxhx_class_name(\"ReflectThing\"), __hxhx_class_name(\"MyReflectEnum\")]",
-			"PHP class and enum literals in value position should lower to canonical reflection names");
+			"[__hxhx_class_value(\"String\"), __hxhx_class_value(\"Array\"), __hxhx_class_value(\"List\"), __hxhx_class_value(\"ReflectThing\"), __hxhx_class_value(\"MyReflectEnum\")]",
+			"PHP class and enum literals in value position should lower to tagged reflection values");
 		assertContains(content, "Type::getClassName(__hxhx_array_get($types, 0))", "PHP Type.getClassName should accept dynamic class values from arrays");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -7424,8 +7430,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "DCEClass::$c = [null, __hxhx_class_name(\"unit.UsedReferenced2\")];",
-			"PHP static initializers should preserve canonical package-qualified class references as values");
+		assertContains(content, "DCEClass::$c = [null, __hxhx_class_value(\"unit.UsedReferenced2\")];",
+			"PHP static initializers should preserve package-qualified class references as tagged values");
 		assertNotContains(content, "$unit->UsedReferenced2", "PHP package-qualified class references should not lower as instance field reads");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -7467,8 +7473,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "TestReflect::$TYPES = [__hxhx_class_name(\"haxe.ds.StringMap\")];",
-			"PHP static initializers should preserve canonical std package-qualified class references");
+		assertContains(content, "TestReflect::$TYPES = [__hxhx_class_value(\"haxe.ds.StringMap\")];",
+			"PHP static initializers should preserve std package-qualified class references as tagged values");
 		assertNotContains(content, "haxe\\ds::$StringMap", "PHP package prefixes should not lower as static class-property receivers");
 		assertNotContains(content, "std-string-map-source-should-not-render", "PHP StringMap class references should not dump the upstream std source body");
 		if (commandExists("php")) {
