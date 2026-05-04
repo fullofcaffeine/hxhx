@@ -7570,28 +7570,51 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function assertPhpHaxeJsonRuntimeSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_json_runtime_" + Std.string(Date.now().getTime()));
+		final srcDir = Path.join([tmpRoot, "src"]);
+		final haxeDir = Path.join([srcDir, "haxe"]);
+		final unitDir = Path.join([srcDir, "unit"]);
 		deleteRecursive(tmpRoot);
-		FileSystem.createDirectory(tmpRoot);
+		FileSystem.createDirectory(haxeDir);
+		FileSystem.createDirectory(unitDir);
 		final src = [
+			"package unit;",
+			"",
+			"import haxe.Json;",
+			"",
 			"class Main {",
 			"  static function main() {",
-			"    var parsed = haxe.Json.parse(\"{\\\"name\\\":\\\"hx\\\",\\\"nums\\\":[1,2],\\\"ok\\\":true}\");",
+			"    var parsed = Json.parse(\"{\\\"name\\\":\\\"hx\\\",\\\"nums\\\":[1,2],\\\"ok\\\":true}\");",
 			"    Sys.println(parsed.name + \":\" + parsed.nums[1] + \":\" + parsed.ok);",
-			"    var encoded = haxe.Json.stringify({name: \"hx\", nums: [1, 2], ok: true});",
-			"    Sys.println(haxe.Json.parse(encoded).name);",
+			"    var encoded = Json.stringify({name: \"hx\", nums: [1, 2], ok: true});",
+			"    Sys.println(Json.parse(encoded).name);",
 			"  }",
 			"}",
 		].join("\n");
-		final parsed = ParserStage.parse(src, "Main.hx");
-		final typed = TyperStage.typeModule(parsed);
-		final program = MacroStage.expandProgram([typed], []);
+		File.saveContent(Path.join([haxeDir, "Json.hx"]), [
+			"package haxe;",
+			"extern class Json {",
+			"  static function parse(text:String):Dynamic;",
+			"  static function stringify(value:Dynamic, ?replacer:Dynamic, ?space:String):String;",
+			"}",
+		].join("\n"));
+		File.saveContent(Path.join([unitDir, "Main.hx"]), src);
+		final resolved = ResolverStage.parseProjectRoots([srcDir], ["unit.Main"], new StringMap<String>());
+		final index = TyperIndex.build(resolved);
+		final loader = new ModuleLoader([srcDir], new StringMap<String>(), index, function(_typePath:String):Bool {
+			return false;
+		});
+		loader.markResolvedAlready(resolved);
+		final typed = new Array<TypedModule>();
+		for (module in resolved)
+			typed.push(TyperStage.typeResolvedModule(module, index, loader));
+		final program = MacroStage.expandProgram(typed, []);
 		final backend = BackendRegistry.requireForTarget("php-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Json {", "PHP haxe namespace support should provide haxe.Json");
-		assertContains(content, "haxe\\Json::parse", "PHP haxe.Json static calls should reference the namespaced runtime class");
-		assertContains(content, "haxe\\Json::stringify", "PHP haxe.Json stringify should reference the namespaced runtime class");
+		assertContains(content, "\\haxe\\Json::parse", "PHP imported haxe.Json calls should reference the namespaced runtime class");
+		assertContains(content, "\\haxe\\Json::stringify", "PHP imported haxe.Json stringify should reference the namespaced runtime class");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Json runtime support should execute, stderr:\n" + run.stderr);
