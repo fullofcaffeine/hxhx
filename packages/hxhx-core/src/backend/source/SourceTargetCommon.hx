@@ -740,6 +740,8 @@ class SourceTargetCommon {
 				+ ", \".\"), "
 				+ renderExpr(Php, args[1])
 				+ ")";
+			case ECall(EIdent("__unprotect__"), args) if (target == Php && args.length == 1):
+				renderExpr(Php, args[0]);
 			case ECall(EIdent(name), args) if (target == Php
 				&& phpInt64ImportedStaticCallArityMatches(name, args.length)
 				&& !phpLocalExists(name)):
@@ -2387,7 +2389,7 @@ class SourceTargetCommon {
 	static function isPhpImplicitIdentifier(name:String):Bool {
 		if (name == null || name.length == 0)
 			return true;
-		if (StringTools.startsWith(name, "__hxhx_"))
+		if (StringTools.startsWith(name, "__hxhx_") || name == "__unprotect__")
 			return true;
 		return switch (name) {
 			case "haxe" | "php" | "std" | "Std" | "Sys" | "Math" | "Type" | "StringTools" | "Lambda" | "Reflect" | "Map" | "Array" | "Exception" |

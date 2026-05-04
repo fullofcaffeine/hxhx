@@ -2369,14 +2369,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var fn:Dynamic = function() {};",
 			"    Sys.println(Std.string(Std.isOfType(fn, c)));",
 			"    Sys.println(Type.getEnumName(MyEnum));",
-			"    var madeA = Type.createEnum(MyEnum, \"A\");",
+			"    var madeA = Type.createEnum(MyEnum, untyped __unprotect__(\"A\"));",
 			"    Sys.println(Std.string(Type.enumEq(madeA, MyEnum.A)));",
 			"    var madeB:MyEnum = Type.createEnum(MyEnum, \"B\", [55]);",
 			"    switch (madeB) {",
 			"      case B(value): Sys.println(value);",
 			"      default: Sys.println(\"bad\");",
 			"    }",
-			"    try { Type.createEnum(MyEnum, \"A\", [0]); Sys.println(\"bad\"); } catch (e:Dynamic) Sys.println(\"exc\");",
+			"    try { Type.createEnum(MyEnum, untyped __unprotect__(\"A\"), [0]); Sys.println(\"bad\"); } catch (e:Dynamic) Sys.println(\"exc\");",
 			"    try { Type.createEnum(MyEnum, \"B\"); Sys.println(\"bad\"); } catch (e:Dynamic) Sys.println(\"exc\");",
 			"    try { Type.createEnum(MyEnum, \"Z\", []); Sys.println(\"bad\"); } catch (e:Dynamic) Sys.println(\"exc\");",
 			"  }",
@@ -7002,6 +7002,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static function createEnum($enum, $ctor, $args = null)", "PHP Type should expose createEnum");
 		assertContains(content, "return $runtime::${$name};", "PHP Type.createEnum should return no-arg enum constructor fields");
 		assertContains(content, "return $runtime::$name(...array_values($args));", "PHP Type.createEnum should invoke enum constructor methods");
+		assertNotContains(content, "$__unprotect__", "PHP upstream __unprotect__ test helper should lower to its wrapped expression");
 		assertContains(content, "if ($type === null) return false;", "PHP null pseudo-type checks should match upstream Std.isOfType behavior");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
