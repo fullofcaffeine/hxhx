@@ -1546,6 +1546,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpPoint3StringEqualityRuntimeProgram():GenIrProgram {
+		final src = [
+			"class MyPoint3 {",
+			"  public var x:Int;",
+			"  public var y:Int;",
+			"  public var z:Int;",
+			"  public function new(x:Int, y:Int, z:Int) {",
+			"    this.x = x;",
+			"    this.y = y;",
+			"    this.z = z;",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var point = new MyPoint3(2, 3, 4);",
+			"    var other = new MyPoint3(2, 3, 4);",
+			"    Sys.println(Std.string(\"(2,3,4)\" == point));",
+			"    Sys.println(Std.string(point == \"(2,3,4)\"));",
+			"    Sys.println(Std.string(point == other));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpLambdaListRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -4908,6 +4935,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertTrue(run.code == 0, "generated PHP haxe.Serializer/Unserializer support should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "z\ny12:%C3%A9%C3%A9\n5\ntrue\nhxhx\nfalse\nseven:7\n42\n2\n4\n5\ns4:QUJD\nABC\n",
 				"generated PHP haxe.Serializer/Unserializer output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpPoint3StringEqualityRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_point3_string_equality_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpPoint3StringEqualityRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_equals(\"(2,3,4)\", $point)", "PHP string-to-Point3 equality should lower through the equality helper");
+		assertContains(content, "__hxhx_equals($point, \"(2,3,4)\")", "PHP Point3-to-string equality should lower through the equality helper");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Point3/string equality support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\nfalse\n", "generated PHP Point3/string equality output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -8753,6 +8798,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpRuntimeShim();
 		assertPhpMapRuntimeShim();
 		assertPhpHaxeSerializerRuntimeSupport();
+		assertPhpPoint3StringEqualityRuntimeSupport();
 		assertPhpLambdaListRuntimeSupport();
 		assertPhpReflectMakeVarArgs();
 		assertPhpReflectPropertyAccess();

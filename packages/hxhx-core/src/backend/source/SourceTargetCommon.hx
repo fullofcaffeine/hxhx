@@ -12156,6 +12156,8 @@ class SourceTargetCommon {
 				lines.push("    return __hxhx_to_string_value($left) == __hxhx_to_string_value($right);");
 				lines.push("  }");
 				lines.push("  if (is_int($left) && is_int($right)) return $left == $right || __hxhx_int32_value($left) == __hxhx_int32_value($right);");
+				lines.push("  if (is_string($left) && __hxhx_is_point3($right)) return $left == __hxhx_to_string_value($right);");
+				lines.push("  if (__hxhx_is_point3($left) && is_string($right)) return __hxhx_to_string_value($left) == $right;");
 				lines.push("  if (is_object($left) || is_object($right)) {");
 				lines.push("    if ($left instanceof __HxClassValue && $right instanceof __HxClassValue) return $left->__hx_class_name === $right->__hx_class_name;");
 				lines.push("    if (is_object($left) && is_object($right) && property_exists($left, \"__hx_ctor\") && property_exists($right, \"__hx_ctor\")) {");
