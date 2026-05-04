@@ -2259,6 +2259,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var s = \"one\";",
 			"    Sys.println(Std.string(i is Int));",
 			"    Sys.println(Std.string(s is String));",
+			"    Sys.println(Std.string(i is Float));",
+			"    Sys.println(Std.string(1.5 is Float));",
+			"    Sys.println(Std.string(Std.isOfType(i, Float)));",
+			"    Sys.println(Std.string(Std.isOfType(1.5, Float)));",
+			"    var c:Dynamic = Float;",
+			"    Sys.println(Std.string(Std.isOfType(i, c)));",
+			"    c = String;",
+			"    Sys.println(Std.string(Std.isOfType(i, c)));",
+			"    Sys.println(Std.string(2.0 is Int));",
+			"    Sys.println(Std.string(1.2 is Int));",
+			"    Sys.println(Std.string(Std.isOfType(2.0, Int)));",
+			"    Sys.println(Std.string(Std.isOfType(1.2, Int)));",
+			"    Sys.println(Std.string(Std.isOfType(1e10, Int)));",
+			"    Sys.println(Std.string(Std.isOfType(1e10, Float)));",
 			"  }",
 			"}",
 		].join("\n");
@@ -4942,7 +4956,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_mod(101.5, 100)", "PHP float modulo expressions should lower through the helper");
 		assertContains(content, "__hxhx_mod((-101.5), 100)", "PHP negative float modulo expressions should lower through the helper");
 		assertContains(content, "$x = __hxhx_mod($x, 100);", "PHP local modulo assignment should lower through the helper");
-		assertContains(content, "__hxhx_mod(5, 0)", "PHP modulo-by-zero expressions should lower through the helper for NaN behavior");
+		assertContains(content, "__hxhx_mod(5.0, 0.0)", "PHP modulo-by-zero expressions should lower through the helper for NaN behavior");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -4964,7 +4978,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static function fceil($value)", "PHP Math shim should support fceil");
 		assertContains(content, "public static function fround($value)", "PHP Math shim should support Haxe fround");
 		assertContains(content, "return floor($value + 0.5);", "PHP Math.round should match Haxe half-up-toward-positive behavior");
-		assertContains(content, "Math::isNaN(__hxhx_mod(5, 0))", "PHP Math.isNaN should be callable with modulo-derived NaN");
+		assertContains(content, "Math::isNaN(__hxhx_mod(5.0, 0.0))", "PHP Math.isNaN should be callable with modulo-derived NaN");
 		assertContains(content, "Math::floor((-1.5))", "PHP Math.floor should lower to the runtime shim");
 		assertContains(content, "Math::ceil((-1.5))", "PHP Math.ceil should lower to the runtime shim");
 		assertContains(content, "Math::round((-1.5))", "PHP Math.round should lower to the runtime shim");
@@ -5380,7 +5394,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP captured imported haxe.Int64.* neg should lower to a qualified callable");
 		assertContains(content, "public static function parseFloat($value)", "PHP Std should expose parseFloat");
 		assertContains(content, "Std::parseFloat(\"12.5\")", "PHP Std.parseFloat calls should lower to the Std support class");
-		assertContains(content, "\\haxe\\Int64::fromFloat(12)", "PHP imported haxe.Int64.* fromFloat calls should lower to qualified static calls");
+		assertContains(content, "\\haxe\\Int64::fromFloat(12.0)", "PHP imported haxe.Int64.* fromFloat calls should lower to qualified static calls");
 		assertContains(content, "$capturedFromFloat = __hxhx_copy_value(function(...$__hxhx_args) { return \\haxe\\Int64::fromFloat(...$__hxhx_args); });",
 			"PHP captured imported haxe.Int64.* fromFloat should lower to a qualified callable");
 		assertContains(content, "public static function hex($value, $digits = null)", "PHP StringTools should expose hex");
@@ -6762,8 +6776,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpTypeCheckProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "__hxhx_add_string(is_int($i))", "PHP `is Int` checks should lower to is_int");
+		assertContains(content,
+			"__hxhx_add_string((is_int($i) || (is_float($i) && is_finite($i) && floor($i) == $i && $i >= -2147483648 && $i <= 2147483647)))",
+			"PHP `is Int` checks should accept in-range integral Float values like Haxe");
 		assertContains(content, "__hxhx_add_string(is_string($s))", "PHP `is String` checks should lower to is_string");
+		assertContains(content, "__hxhx_add_string((is_int($i) || is_float($i)))", "PHP direct `is Float` checks should accept Int values like Haxe");
+		assertContains(content, "__hxhx_is_of_type($i, \"Float\")", "PHP Std.isOfType Float checks should use the runtime helper");
+		assertContains(content, "__hxhx_is_of_type($i, $c)", "PHP Std.isOfType should accept dynamic class values");
+		assertContains(content, "__hxhx_is_of_type(10000000000.0, \"Int\")", "PHP whole-number Float literals should stay floats");
+		assertContains(content, "case \"Float\": return is_int($value) || is_float($value);", "PHP Std.isOfType Float should accept Int values like Haxe");
+		assertContains(content,
+			"case \"Int\": return is_int($value) || (is_float($value) && is_finite($value) && floor($value) == $value && $value >= -2147483648 && $value <= 2147483647);",
+			"PHP Std.isOfType Int should accept in-range integral Float values like Haxe");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP type checks should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\nfalse\ntrue\n",
+				"generated PHP type check output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 

@@ -664,7 +664,7 @@ class SourceTargetCommon {
 			case EInt(value):
 				Std.string(value);
 			case EFloat(value):
-				Std.string(value);
+				floatLiteralExpr(value);
 			case EEnumValue(name):
 				if (target == Php && phpLocalExists(name)) valueName(Php, name); else quoteString(name);
 			case EThis:
@@ -707,7 +707,7 @@ class SourceTargetCommon {
 				"__hxhx_is_of_type("
 				+ renderExpr(Php, args[0])
 				+ ", "
-				+ quotePhpString(phpTypeExprName(args[1]))
+				+ phpStdIsOfTypeTypeArg(args[1])
 				+ ")";
 			case ECall(EField(EIdent("Std"), "downcast"), args) if (target == Php && args.length == 2):
 				"__hxhx_downcast("
@@ -1252,9 +1252,24 @@ class SourceTargetCommon {
 	static function phpTypeCheckExpr(value:String, typeName:String):String {
 		return switch (typeName) {
 			case "Int":
-				"is_int(" + value + ")";
+				"(is_int("
+				+ value
+				+ ") || (is_float("
+				+ value
+				+ ") && is_finite("
+				+ value
+				+ ") && floor("
+				+ value
+				+ ") == "
+				+ value
+				+ " && "
+				+ value
+				+ " >= -2147483648 && "
+				+ value
+				+ " <= 2147483647"
+				+ "))";
 			case "Float":
-				"is_float(" + value + ")";
+				"(is_int(" + value + ") || is_float(" + value + "))";
 			case "String":
 				"is_string(" + value + ")";
 			case "Bool":
@@ -1617,6 +1632,11 @@ class SourceTargetCommon {
 			case Python, Java, Cs, Lua:
 				raw;
 		};
+	}
+
+	static function floatLiteralExpr(value:Float):String {
+		final rendered = Std.string(value);
+		return rendered.indexOf(".") >= 0 || rendered.indexOf("e") >= 0 || rendered.indexOf("E") >= 0 ? rendered : rendered + ".0";
 	}
 
 	static function castExpr(target:SourceNativeTarget, inner:HxExpr, typeHint:String):String {
@@ -3741,6 +3761,20 @@ class SourceTargetCommon {
 				if (prefix.length == 0) field else prefix + "." + field;
 			case _:
 				"Dynamic";
+		};
+	}
+
+	static function phpStdIsOfTypeTypeArg(expr:HxExpr):String {
+		return switch (expr) {
+			case EIdent(name) if (!phpLocalExists(name) && looksLikeTypePathRoot(name)):
+				quotePhpString(name);
+			case EEnumValue(name):
+				quotePhpString(name);
+			case EField(_, _):
+				final packageTypeRef = phpPackageQualifiedTypeReference(expr);
+				if (packageTypeRef != null) packageTypeRef; else renderExpr(Php, expr);
+			case _:
+				renderExpr(Php, expr);
 		};
 	}
 
@@ -11586,7 +11620,7 @@ class SourceTargetCommon {
 				lines.push("function __hxhx_is_of_type($value, $type) {");
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) $value = $value->__hx_value;");
 				lines.push("  switch ($type) {");
-				lines.push("    case \"Int\": return is_int($value);");
+				lines.push("    case \"Int\": return is_int($value) || (is_float($value) && is_finite($value) && floor($value) == $value && $value >= -2147483648 && $value <= 2147483647);");
 				lines.push("    case \"Float\": return is_int($value) || is_float($value);");
 				lines.push("    case \"String\": return is_string($value);");
 				lines.push("    case \"Bool\": return is_bool($value);");
