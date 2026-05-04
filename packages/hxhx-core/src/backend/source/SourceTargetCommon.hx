@@ -4630,8 +4630,14 @@ class SourceTargetCommon {
 	}
 
 	static function inferLocalTypeHint(typeHint:Null<String>, init:Null<HxExpr>):String {
-		if (typeHint != null && StringTools.trim(typeHint).length > 0)
-			return typeHint;
+		if (typeHint != null && StringTools.trim(typeHint).length > 0) {
+			return switch (init) {
+				case ENew(typePath, _):
+					typePath;
+				case _:
+					typeHint;
+			};
+		}
 		return switch (init) {
 			case EString(_):
 				"String";
@@ -7645,6 +7651,15 @@ class SourceTargetCommon {
 						continue;
 					methods.set(sanitizeTypeName(HxFunctionDecl.getName(fn)), true);
 				}
+				for (field in HxClassDecl.getFields(cls)) {
+					if (HxFieldDecl.getIsStatic(field))
+						continue;
+					final cleanField = sanitizeTypeName(HxFieldDecl.getName(field));
+					if (HxFieldDecl.getPropertyGet(field) == "get")
+						methods.set("get_" + cleanField, true);
+					if (HxFieldDecl.getPropertySet(field) == "set")
+						methods.set("set_" + cleanField, true);
+				}
 				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
 				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
 				addKey(shortName, methods);
@@ -8474,6 +8489,42 @@ class SourceTargetCommon {
 		}
 	}
 
+	static function phpStaticInitFallbackLines(fn:HxFunctionDecl, className:String, staticMemberNames:Map<String, Bool>, indent:String):Array<String> {
+		if (HxFunctionDecl.getName(fn) != "__init__")
+			return [];
+		final text = HxFunctionDecl.getBodyText(fn);
+		if (text == null || StringTools.trim(text).length == 0)
+			return [];
+		final out = new Array<String>();
+		for (rawStmt in text.split(";")) {
+			final stmt = StringTools.trim(rawStmt);
+			if (stmt.length == 0)
+				continue;
+			final eq = stmt.indexOf("=");
+			if (eq <= 0)
+				return [];
+			final fieldName = sanitizeTypeName(StringTools.trim(stmt.substr(0, eq)));
+			if (!staticMemberNames.exists(fieldName))
+				return [];
+			final rhsText = StringTools.trim(stmt.substr(eq + 1));
+			if (rhsText.length == 0)
+				return [];
+			final rhs = try {
+				renderExpr(Php, HxParser.parseExprText(rhsText));
+			} catch (_:HxParseError) {
+				return [];
+			} catch (_:String) {
+				return [];
+			}
+			final setter = "set_" + fieldName;
+			if (staticMemberNames.exists(setter))
+				out.push(indent + className + "::" + setter + "(" + rhs + ");");
+			else
+				out.push(indent + className + "::$" + fieldName + " = " + rhs + ";");
+		}
+		return out;
+	}
+
 	static function renderPhpHelperClass(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>, postStaticInitializers:Array<String>):Array<String> {
 		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
 		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
@@ -8520,10 +8571,15 @@ class SourceTargetCommon {
 				continue;
 			}
 			final init = HxFieldDecl.getInit(field);
-			final rhs = phpStaticFieldDefault(init);
+			final hasSetterInit = HxFieldDecl.getPropertySet(field) == "set" && init != null;
+			final rhs = hasSetterInit ? defaultValue(Php) : phpStaticFieldDefault(init);
 			out.push("  public static $" + fieldName + " = " + rhs + ";");
-			if (init != null && !phpExprIsConstantDefault(init) && postStaticInitializers != null)
-				postStaticInitializers.push(className + "::$" + fieldName + " = " + renderExpr(Php, init) + ";");
+			if (init != null && postStaticInitializers != null) {
+				if (hasSetterInit)
+					postStaticInitializers.push(className + "::set_" + fieldName + "(" + renderExpr(Php, init) + ");");
+				else if (!phpExprIsConstantDefault(init))
+					postStaticInitializers.push(className + "::$" + fieldName + " = " + renderExpr(Php, init) + ";");
+			}
 			memberCount += 1;
 		}
 		// haxe.Int64 runtime support is emitted in namespace haxe; a user/private
@@ -8542,6 +8598,8 @@ class SourceTargetCommon {
 			final isCtor = HxFunctionDecl.getName(fn) == "new";
 			if (isCtor)
 				sawConstructor = true;
+			if (isStatic && HxFunctionDecl.getName(fn) == "__init__" && postStaticInitializers != null)
+				postStaticInitializers.push(className + "::__init__();");
 			final methodName = isCtor ? "__construct" : sanitizeTypeName(HxFunctionDecl.getName(fn));
 			if (emittedMethods.exists(methodName))
 				continue;
@@ -8568,7 +8626,11 @@ class SourceTargetCommon {
 				].join(", ");
 				out.push("    if (self::$" + methodName + " !== null) return (self::$" + methodName + ")(" + dispatchArgs + ");");
 			}
-			if (!renderPhpSpecialHelperFunctionBody(out, className, HxFunctionDecl.getName(fn))) {
+			final staticInitFallback = isStatic ? phpStaticInitFallbackLines(fn, className, staticFieldNames, "    ") : [];
+			if (staticInitFallback.length > 0) {
+				for (line in staticInitFallback)
+					out.push(line);
+			} else if (!renderPhpSpecialHelperFunctionBody(out, className, HxFunctionDecl.getName(fn))) {
 				final rewriteMethodNames = !isStatic || isCtor ? instanceMethodNames : new Map<String, Bool>();
 				final rewriteFieldNames = !isStatic || isCtor ? instanceFieldNames : new Map<String, Bool>();
 				final previousRewriteMethodArgs = phpRenderCurrentInstanceMethodArgs;
@@ -10494,6 +10556,12 @@ class SourceTargetCommon {
 				lines.push("    }");
 				lines.push("    public static function ucompare($left, $right) {");
 				lines.push("      return \\__hxhx_int64_ucompare($left, $right);");
+				lines.push("    }");
+				lines.push("    public function get_high() {");
+				lines.push("      return $this->high;");
+				lines.push("    }");
+				lines.push("    public function get_low() {");
+				lines.push("      return $this->low;");
 				lines.push("    }");
 				lines.push("    public function toInt() {");
 				lines.push("      $expectedHigh = $this->low < 0 ? -1 : 0;");

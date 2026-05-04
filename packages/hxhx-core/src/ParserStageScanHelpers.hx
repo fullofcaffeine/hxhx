@@ -1190,7 +1190,7 @@ class ParserStageScanHelpers {
 					final bodyCapture = scanFunctionBody(source, i, true);
 					final keepBody = fnName == "new" || !wantStaticFn || sawDynamic || scannedStaticBodyIsSafe(fnName, bodyCapture.body);
 					final body = keepBody ? bodyCapture.body : [];
-					final bodyText = keepBody ? bodyCapture.bodyText : "";
+					final bodyText = (keepBody || fnName == "__init__") ? bodyCapture.bodyText : "";
 					if (bodyCapture.nextPos > i)
 						i = bodyCapture.nextPos;
 
@@ -1449,7 +1449,7 @@ class ParserStageScanHelpers {
 			} catch (_:String) {
 				body = [];
 			}
-			return {body: body, bodyText: body.length == 0 ? "" : bodyText, nextPos: tok.nextPos};
+			return {body: body, bodyText: bodyText, nextPos: tok.nextPos};
 		}
 		if (tok.text != "{")
 			return {body: [], bodyText: "", nextPos: tok.nextPos};
@@ -1472,7 +1472,7 @@ class ParserStageScanHelpers {
 				body = [];
 			}
 		}
-		return {body: body, bodyText: body.length == 0 ? "" : block.bodyText, nextPos: block.nextPos};
+		return {body: body, bodyText: block.bodyText, nextPos: block.nextPos};
 	}
 
 	static function leadingWhitespaceLength(text:String):Int {

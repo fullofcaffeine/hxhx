@@ -40,6 +40,7 @@ if [ -z "$TARGETS_RAW" ]; then
   echo "    Long-run observability: HXHX_GATE3_TARGET_HEARTBEAT_SEC=20 (set 0 to disable)." >&2
   echo "    Optional per-target timeout: HXHX_GATE3_TARGET_TIMEOUT_SEC=0 (disabled by default)." >&2
   echo "    Set HXHX_GATE3_RETRY_COUNT=0 to disable retries." >&2
+  echo "    Set HXHX_GATE3_KEEP_WORKTREE_ON_FAILURE=1 to retain the temporary upstream worktree for debugging failed generated output." >&2
   echo "    On macOS, Js server async timeouts are relaxed by default (HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000)." >&2
   echo "    Set HXHX_GATE3_FORCE_JS_SERVER=1 to run without timeout patches (debug mode)." >&2
   echo "    Python runs default to no-install mode (HXHX_GATE3_PYTHON_ALLOW_INSTALL=0); require both python3 and pypy3." >&2
@@ -52,11 +53,16 @@ UPSTREAM_WORKTREE_DIR=""
 WRAP_DIR=""
 
 cleanup() {
+  local status=$?
   if [ -n "$WRAP_DIR" ] && [ -d "$WRAP_DIR" ]; then
     rm -rf "$WRAP_DIR" >/dev/null 2>&1 || true
   fi
 
   if [ -n "$UPSTREAM_WORKTREE_DIR" ] && [ -d "$UPSTREAM_WORKTREE_DIR" ]; then
+    if [ "$status" -ne 0 ] && [ "${HXHX_GATE3_KEEP_WORKTREE_ON_FAILURE:-0}" = "1" ]; then
+      echo "Keeping failed upstream worktree for debugging: $UPSTREAM_WORKTREE_DIR" >&2
+      return
+    fi
     git -C "$UPSTREAM_DIR_ORIG" worktree remove --force "$UPSTREAM_WORKTREE_DIR" >/dev/null 2>&1 || true
     rm -rf "$UPSTREAM_WORKTREE_DIR" >/dev/null 2>&1 || true
   fi

@@ -1520,10 +1520,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function phpReflectPropertyAccessProgram():GenIrProgram {
 		final src = [
+			"package unit;",
+			"",
+			"interface IPropBox {",
+			"  public var x(get, set) : Int;",
+			"}",
 			"class PropBox {",
 			"  public var x(get, set):Int;",
 			"  var _x:Int;",
-			"  public static var STAT_X(default, set):Int = 3;",
+			"  public static var STAT_X(default, set):Int;",
 			"  public function new() {",
 			"    _x = 5;",
 			"  }",
@@ -1538,6 +1543,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    STAT_X = v * 2;",
 			"    return v;",
 			"  }",
+			"  static function __init__() {",
+			"    STAT_X = 3;",
+			"  }",
+			"}",
+			"class PropHarness {",
+			"  public function new() {}",
+			"  public function run() {",
+			"    var box = new PropBox();",
+			"    Sys.println(Std.string(box.x));",
+			"    Reflect.setProperty(box, \"x\", 16);",
+			"    Sys.println(Std.string(box.x));",
+			"  }",
 			"}",
 			"class Main {",
 			"  static function main() {",
@@ -1548,12 +1565,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(box.x));",
 			"    Reflect.setProperty(box, \"x\", 12);",
 			"    Sys.println(Std.string(box.x));",
+			"    var iface : IPropBox = new PropBox();",
+			"    Sys.println(Std.string(iface.x));",
+			"    iface.x = 13;",
+			"    Sys.println(Std.string(iface.x));",
+			"    Reflect.setProperty(iface, \"x\", 14);",
+			"    Sys.println(Std.string(iface.x));",
+			"    var dup = new PropBox();",
+			"    Sys.println(Std.string(dup.x));",
+			"    var dup : IPropBox = new PropBox();",
+			"    Sys.println(Std.string(dup.x));",
 			"    Sys.println(Std.string(PropBox.STAT_X));",
 			"    Sys.println(Std.string(Reflect.getProperty(PropBox, \"STAT_X\")));",
 			"    PropBox.STAT_X = 4;",
 			"    Sys.println(Std.string(PropBox.STAT_X));",
 			"    Reflect.setProperty(PropBox, \"STAT_X\", 9);",
 			"    Sys.println(Std.string(Reflect.getProperty(PropBox, \"STAT_X\")));",
+			"    new PropHarness().run();",
 			"  }",
 			"}",
 		].join("\n");
@@ -4826,18 +4854,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("php-native");
-		backend.emit(phpReflectPropertyAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpReflectPropertyAccessProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function getProperty($object, $field)", "PHP Reflect helper should expose getProperty");
 		assertContains(content, "public static function setProperty($object, $field, $value)", "PHP Reflect helper should expose setProperty");
 		assertContains(content, "$box->get_x()", "PHP instance property reads should call generated getters");
 		assertContains(content, "$box->set_x(10);", "PHP instance property writes should call generated setters");
+		assertContains(content, "$iface->get_x()", "PHP interface-typed property reads should call generated getters");
+		assertContains(content, "$iface->set_x(13);", "PHP interface-typed property writes should call generated setters");
+		assertContains(content, "$dup__hx_scope_1->get_x()", "PHP redeclared interface-typed property reads should keep getter lowering");
+		assertContains(content, "public function run()", "PHP support class method should be emitted for instance-property coverage");
+		assertContains(content, "PropBox::__init__();", "PHP static __init__ should run before generated main code");
+		assertContains(content, "PropBox::set_STAT_X(3);", "PHP static __init__ fallback should preserve setter assignments");
 		assertContains(content, "PropBox::set_STAT_X(4);", "PHP static property writes should call generated setters");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Reflect property support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "5\n5\n10\n12\n3\n3\n8\n18\n", "generated PHP Reflect property support output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "5\n5\n10\n12\n5\n13\n14\n5\n5\n6\n6\n8\n18\n5\n16\n",
+				"generated PHP Reflect property support output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -5594,6 +5629,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static function toStr($value)", "PHP haxe.Int64 should expose toStr");
 		assertContains(content, "public static function compare($left, $right)", "PHP haxe.Int64 should expose compare");
 		assertContains(content, "public static function ucompare($left, $right)", "PHP haxe.Int64 should expose ucompare");
+		assertContains(content, "public function get_high()", "PHP haxe.Int64 should expose typed high getter");
+		assertContains(content, "public function get_low()", "PHP haxe.Int64 should expose typed low getter");
 		assertContains(content, "public function toInt()", "PHP haxe.Int64 should expose instance toInt");
 		assertContains(content, "public function toString()", "PHP haxe.Int64 should expose instance toString");
 		assertContains(content, "__hxhx_to_str($h)", "PHP Int64 instance toStr should lower through the runtime helper");

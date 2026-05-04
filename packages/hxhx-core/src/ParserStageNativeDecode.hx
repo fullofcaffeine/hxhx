@@ -654,7 +654,7 @@ class ParserStageNativeDecode {
 		}
 		#end
 
-		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
+		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr, null, null, null, methodBodySrc == null ? "" : methodBodySrc);
 	}
 
 	static function findFunctionBodyStart(source:String, name:String):Int {
