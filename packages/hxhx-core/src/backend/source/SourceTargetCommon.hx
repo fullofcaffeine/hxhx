@@ -3652,7 +3652,8 @@ class SourceTargetCommon {
 			case Php:
 				if (typePath == "Array") "[]"; else if (typePath == "Exception" || typePath == "haxe.Exception") "new ValueException("
 					+ rendered
-					+ ")"; else if (phpRuntimeMapType(typePath)) "new Map(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
+					+ ")"; else if (phpRuntimeMapType(typePath)) "new Map(" + rendered + ")"; else if (phpRuntimeListType(typePath)) "new List_(" + rendered
+					+ ")"; else "new " + safeType + "(" + rendered + ")";
 			case Lua: safeType + ".new(" + rendered + ")";
 		};
 	}
@@ -3669,6 +3670,15 @@ class SourceTargetCommon {
 	static function phpRuntimeMapType(typePath:String):Bool {
 		return switch (typePath) {
 			case "Map" | "haxe.ds.StringMap" | "haxe.ds.IntMap" | "haxe.ds.ObjectMap":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function phpRuntimeListType(typePath:String):Bool {
+		return switch (typePath) {
+			case "List" | "haxe.ds.List":
 				true;
 			case _:
 				false;
@@ -7388,7 +7398,11 @@ class SourceTargetCommon {
 		addDecl(decl);
 		for (typed in program.getTypedModules())
 			addDecl(typed.getParsed().getDecl());
-		final stdAliases = ["StringMap" => "haxe.ds.StringMap", "List" => "haxe.ds.List"];
+		final stdAliases = [
+			"StringMap" => "haxe.ds.StringMap",
+			"List" => "haxe.ds.List",
+			"List_" => "haxe.ds.List"
+		];
 		for (shortName in stdAliases.keys())
 			if (!names.exists(shortName))
 				names.set(shortName, stdAliases.get(shortName));
@@ -10865,6 +10879,67 @@ class SourceTargetCommon {
 				lines.push("    return $this->items[$this->index++];");
 				lines.push("  }");
 				lines.push("}");
+				lines.push("class List_ implements \\IteratorAggregate {");
+				lines.push("  private $items;");
+				lines.push("  public $length;");
+				lines.push("  public function __construct() {");
+				lines.push("    $this->items = [];");
+				lines.push("    $this->length = 0;");
+				lines.push("  }");
+				lines.push("  private function syncLength() {");
+				lines.push("    $this->length = count($this->items);");
+				lines.push("  }");
+				lines.push("  public function add($value) {");
+				lines.push("    $this->items[] = $value;");
+				lines.push("    $this->syncLength();");
+				lines.push("  }");
+				lines.push("  public function push($value) {");
+				lines.push("    array_unshift($this->items, $value);");
+				lines.push("    $this->syncLength();");
+				lines.push("  }");
+				lines.push("  public function pop() {");
+				lines.push("    $value = array_shift($this->items);");
+				lines.push("    $this->syncLength();");
+				lines.push("    return $value;");
+				lines.push("  }");
+				lines.push("  public function first() {");
+				lines.push("    return $this->length === 0 ? null : $this->items[0];");
+				lines.push("  }");
+				lines.push("  public function last() {");
+				lines.push("    return $this->length === 0 ? null : $this->items[$this->length - 1];");
+				lines.push("  }");
+				lines.push("  public function clear() {");
+				lines.push("    $this->items = [];");
+				lines.push("    $this->length = 0;");
+				lines.push("  }");
+				lines.push("  public function isEmpty() {");
+				lines.push("    return $this->length === 0;");
+				lines.push("  }");
+				lines.push("  public function remove($value) {");
+				lines.push("    $index = array_search($value, $this->items, true);");
+				lines.push("    if ($index === false) return false;");
+				lines.push("    array_splice($this->items, $index, 1);");
+				lines.push("    $this->syncLength();");
+				lines.push("    return true;");
+				lines.push("  }");
+				lines.push("  public function iterator() {");
+				lines.push("    return new __HxArrayIterator($this->items);");
+				lines.push("  }");
+				lines.push("  public function getIterator(): \\Traversable {");
+				lines.push("    return new \\ArrayIterator($this->items);");
+				lines.push("  }");
+				lines.push("  public function join($separator) {");
+				lines.push("    $parts = [];");
+				lines.push("    foreach ($this->items as $item) $parts[] = __hxhx_add_string($item);");
+				lines.push("    return implode(strval($separator), $parts);");
+				lines.push("  }");
+				lines.push("  public function toString() {");
+				lines.push("    return \"{\" . $this->join(\", \") . \"}\";");
+				lines.push("  }");
+				lines.push("  public function __toString() {");
+				lines.push("    return $this->toString();");
+				lines.push("  }");
+				lines.push("}");
 				lines.push("class Map {");
 				lines.push("  private $items;");
 				lines.push("  private $keys;");
@@ -11630,7 +11705,8 @@ class SourceTargetCommon {
 				lines.push("    case \"Dynamic\": return true;");
 				lines.push("  }");
 				lines.push("  if (!is_object($value)) return false;");
-				lines.push("  $candidates = [$type, str_replace(\".\", \"\\\\\", $type), substr($type, strrpos($type, \".\") === false ? 0 : strrpos($type, \".\") + 1)];");
+				lines.push("  $short = substr($type, strrpos($type, \".\") === false ? 0 : strrpos($type, \".\") + 1);");
+				lines.push("  $candidates = [$type, str_replace(\".\", \"\\\\\", $type), $short, $short . \"_\"];");
 				lines.push("  foreach ($candidates as $candidate) {");
 				lines.push("    if (is_string($candidate) && $candidate !== \"\" && class_exists($candidate) && $value instanceof $candidate) return true;");
 				lines.push("  }");

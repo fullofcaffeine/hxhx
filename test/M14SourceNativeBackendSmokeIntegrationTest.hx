@@ -2291,6 +2291,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var types:Array<Dynamic> = [String, Array, List, ReflectThing, MyReflectEnum];",
 			"    var cls:Dynamic = types[3];",
 			"    var en:Dynamic = types[4];",
+			"    var values = new List();",
+			"    values.add('a');",
+			"    values.add('b');",
 			"    Sys.println(Type.getClassName(types[0]));",
 			"    Sys.println(Type.getClassName(types[1]));",
 			"    Sys.println(Type.getClassName(types[2]));",
@@ -2300,6 +2303,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Type.getEnumName(en));",
 			"    Sys.println(Std.string(Type.resolveEnum(\"MyReflectEnum\") == en));",
 			"    Sys.println(Type.getClassName(Type.getClass(\"hello\")));",
+			"    Sys.println(Std.string(values is List));",
+			"    Sys.println(Std.string(Std.isOfType(values, List)));",
+			"    Sys.println(Type.getClassName(Type.getClass(values)));",
+			"    Sys.println(Std.string(values.length));",
+			"    Sys.println(values.first());",
+			"    Sys.println(values.last());",
 			"  }",
 			"}",
 		].join("\n");
@@ -6809,13 +6818,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static function getClassName($cls)", "PHP Type runtime should expose getClassName");
 		assertContains(content, "public static function resolveClass($name)", "PHP Type runtime should expose resolveClass");
 		assertContains(content, "\"List\" => \"haxe.ds.List\"", "PHP class-name map should include imported haxe.ds.List alias");
+		assertContains(content, "\"List_\" => \"haxe.ds.List\"", "PHP class-name map should include sanitized haxe.ds.List runtime alias");
+		assertContains(content, "class List_ implements \\IteratorAggregate", "PHP runtime should emit a sanitized List support class");
+		assertContains(content, "$values = new List_()", "PHP haxe.ds.List construction should lower to the runtime shim");
+		assertContains(content, "__hxhx_is_of_type($values, \"List\")", "PHP Std.isOfType should check haxe.ds.List values through the runtime helper");
 		assertContains(content, "[\"String\", \"Array\", \"List\", \"ReflectThing\", \"MyReflectEnum\"]",
 			"PHP class and enum literals in value position should lower to reflection names");
 		assertContains(content, "Type::getClassName(__hxhx_array_get($types, 0))", "PHP Type.getClassName should accept dynamic class values from arrays");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Type reflection support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "String\nArray\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nMyReflectEnum\ntrue\nString\n",
+			assertTrue(run.stdout == "String\nArray\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\n",
 				"generated PHP Type reflection output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
