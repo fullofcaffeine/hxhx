@@ -7731,38 +7731,63 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function assertPhpHaxeResourceRuntimeSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_resource_" + Std.string(Date.now().getTime()));
+		final srcDir = Path.join([tmpRoot, "src"]);
+		final haxeDir = Path.join([srcDir, "haxe"]);
+		final unitDir = Path.join([srcDir, "unit"]);
 		deleteRecursive(tmpRoot);
-		FileSystem.createDirectory(tmpRoot);
+		FileSystem.createDirectory(haxeDir);
+		FileSystem.createDirectory(unitDir);
 		final textName = "re/s?!%[]))(\"'1.txt";
 		final src = [
+			"package unit;",
+			"",
+			"import haxe.Resource;",
+			"",
 			"class Main {",
 			"  static function main() {",
-			"    var names = haxe.Resource.listNames().filter(function(name) return name != \"serializedValues.txt\");",
+			"    var names = Resource.listNames().filter(function(name) return name != \"serializedValues.txt\");",
 			"    Sys.println(names.length);",
 			"    Sys.println(names[0] == \"re/s?!%[]))(\\\"'1.txt\");",
-			"    Sys.println(haxe.Resource.getString(\"re/s?!%[]))(\\\"'1.txt\"));",
-			"    Sys.println(haxe.Resource.getBytes(\"re/s?!%[]))(\\\"'1.bin\").sub(0, 5).toString());",
-			"    Sys.println(haxe.Resource.getBytes(\"re/s?!%[]))(\\\"'1.bin\").get(5));",
-			"    Sys.println(haxe.Resource.getString(\"nope\") == null);",
-			"    Sys.println(haxe.Resource.getBytes(\"nope\") == null);",
+			"    Sys.println(Resource.getString(\"re/s?!%[]))(\\\"'1.txt\"));",
+			"    Sys.println(Resource.getBytes(\"re/s?!%[]))(\\\"'1.bin\").sub(0, 5).toString());",
+			"    Sys.println(Resource.getBytes(\"re/s?!%[]))(\\\"'1.bin\").get(5));",
+			"    Sys.println(Resource.getString(\"nope\") == null);",
+			"    Sys.println(Resource.getBytes(\"nope\") == null);",
 			"  }",
 			"}",
 		].join("\n");
-		final parsed = ParserStage.parse(src, "Main.hx");
-		final typed = TyperStage.typeModule(parsed);
-		final program = MacroStage.expandProgram([typed], []);
+		File.saveContent(Path.join([haxeDir, "Resource.hx"]), [
+			"package haxe;",
+			"extern class Resource {",
+			"  static function listNames():Array<String>;",
+			"  static function getString(name:String):Null<String>;",
+			"  static function getBytes(name:String):Null<haxe.io.Bytes>;",
+			"}",
+		].join("\n"));
+		File.saveContent(Path.join([unitDir, "Main.hx"]), src);
+		final resolved = ResolverStage.parseProjectRoots([srcDir], ["unit.Main"], new StringMap<String>());
+		final index = TyperIndex.build(resolved);
+		final loader = new ModuleLoader([srcDir], new StringMap<String>(), index, function(_typePath:String):Bool {
+			return false;
+		});
+		loader.markResolvedAlready(resolved);
+		final typed = new Array<TypedModule>();
+		for (module in resolved)
+			typed.push(TyperStage.typeResolvedModule(module, index, loader));
+		final program = MacroStage.expandProgram(typed, []);
 		final backend = BackendRegistry.requireForTarget("php-native");
 		final resources = [
 			{name: textName, data: haxe.io.Bytes.ofString("Héllo World !")},
 			{name: "re/s?!%[]))(\"'1.bin", data: haxe.io.Bytes.ofHex("48656c6c6f0021576f726c64")},
 			{name: "serializedValues.txt", data: haxe.io.Bytes.ofString("skip")}
 		];
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>(), resources));
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>(), resources));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Resource {", "PHP runtime should expose haxe.Resource");
 		assertContains(content, "public static function listNames()", "PHP haxe.Resource should list embedded resource names");
 		assertContains(content, "public static function getBytes($name)", "PHP haxe.Resource should expose embedded bytes");
+		assertContains(content, "\\haxe\\Resource::getString", "PHP imported haxe.Resource calls should target the namespaced runtime class");
 		assertContains(content, "48656c6c6f0021576f726c64", "PHP haxe.Resource should embed binary payloads as hex");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);

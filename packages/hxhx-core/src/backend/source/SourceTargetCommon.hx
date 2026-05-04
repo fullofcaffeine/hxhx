@@ -1811,7 +1811,8 @@ class SourceTargetCommon {
 						// additional spec classes. PHP source bring-up cannot execute that macro
 						// result at runtime, so keep the harness moving with an empty spec list.
 						"[]";
-					} else if ((typePath == "Exception" || typePath == "haxe.Exception") && field == "thrown") {
+					} else if ((typePath == "Exception" || typePath == "haxe.Exception" || typePath == "haxe\\Exception")
+						&& field == "thrown") {
 						"ValueException::thrown(" + [for (arg in phpArgs) renderExpr(Php, arg)].join(", ") + ")";
 					} else if (typePath == "TestIssues" && field == "addIssueClasses") {
 						// Same compile-time-only harness pattern as UnitBuilder.generateSpec:
@@ -3768,7 +3769,12 @@ class SourceTargetCommon {
 	static function phpStaticTypePath(expr:HxExpr):Null<String> {
 		return switch (expr) {
 			case EIdent(name):
-				if (looksLikeTypePathRoot(name)) sanitizePhpTypePath(name) else null;
+				if (!looksLikeTypePathRoot(name)) {
+					null;
+				} else {
+					final alias = phpImportedTypeAlias(name);
+					alias != null ? alias : sanitizePhpTypePath(name);
+				}
 			case EField(receiver, field):
 				if (!looksLikeTypePathRoot(field))
 					return null;
@@ -4240,6 +4246,7 @@ class SourceTargetCommon {
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticCallableFieldsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderKnownTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
+	static var phpRenderTypeAliases:Null<haxe.ds.StringMap<String>> = null;
 	static var phpRenderDynamicCallFieldsByLocal:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderRefCaptureLocals:Null<Array<String>> = null;
 
@@ -4275,6 +4282,13 @@ class SourceTargetCommon {
 		if (phpRenderKnownTypeNames == null)
 			return false;
 		return phpRenderKnownTypeNames.exists(name) || phpRenderKnownTypeNames.exists(sanitizeTypeName(name));
+	}
+
+	static function phpImportedTypeAlias(name:String):Null<String> {
+		if (name == null || phpRenderTypeAliases == null)
+			return null;
+		final clean = sanitizePhpTypeName(name);
+		return phpRenderTypeAliases.exists(clean) ? phpRenderTypeAliases.get(clean) : null;
 	}
 
 	static function withPhpCurrentFunctionName<T>(target:SourceNativeTarget, functionName:Null<String>, f:() -> T):T {
@@ -7631,6 +7645,31 @@ class SourceTargetCommon {
 		return names;
 	}
 
+	static function phpProgramTypeAliasMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<String> {
+		final aliases = new haxe.ds.StringMap<String>();
+		function addImport(rawImport:String):Void {
+			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
+				return;
+			if (rawImport != "haxe.Resource")
+				return;
+			final parts = rawImport.split(".");
+			if (parts.length < 2)
+				return;
+			final shortName = sanitizePhpTypeName(parts[parts.length - 1]);
+			final qualified = sanitizePhpTypePath(rawImport);
+			if (qualified.indexOf("\\") >= 0)
+				aliases.set(shortName, "\\" + qualified);
+		}
+		function addImports(moduleDecl:HxModuleDecl):Void {
+			for (rawImport in HxModuleDecl.getImports(moduleDecl))
+				addImport(rawImport);
+		}
+		addImports(decl);
+		for (typed in program.getTypedModules())
+			addImports(typed.getParsed().getDecl());
+		return aliases;
+	}
+
 	static function phpProgramInstanceMethodMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
 		final out = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
 		function addKey(key:String, methods:haxe.ds.StringMap<Bool>):Void {
@@ -10097,6 +10136,7 @@ class SourceTargetCommon {
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
 		final previousPhpStaticCallableFieldsByType = phpRenderStaticCallableFieldsByType;
 		final previousPhpKnownTypeNames = phpRenderKnownTypeNames;
+		final previousPhpTypeAliases = phpRenderTypeAliases;
 		if (target == Php) {
 			phpRenderInstanceMethodsByType = phpProgramInstanceMethodMap(program, decl);
 			phpRenderInstanceMethodArgsByType = phpProgramInstanceMethodArgsMap(program, decl);
@@ -10104,6 +10144,7 @@ class SourceTargetCommon {
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
 			phpRenderStaticCallableFieldsByType = phpProgramStaticCallableFieldMap(program, decl);
 			phpRenderKnownTypeNames = phpProgramKnownTypeNameMap(program, decl);
+			phpRenderTypeAliases = phpProgramTypeAliasMap(program, decl);
 		}
 		switch (target) {
 			case Python:
@@ -12725,6 +12766,7 @@ class SourceTargetCommon {
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
 		phpRenderStaticCallableFieldsByType = previousPhpStaticCallableFieldsByType;
 		phpRenderKnownTypeNames = previousPhpKnownTypeNames;
+		phpRenderTypeAliases = previousPhpTypeAliases;
 		return lines.join("\n") + "\n";
 	}
 }
