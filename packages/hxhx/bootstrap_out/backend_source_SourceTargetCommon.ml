@@ -23238,6 +23238,12 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    return $out;");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function callMethod($object, $method, $args) {");
+      ignore (HxArray.push lines "    if ($args instanceof __HxArray) $args = $args->toArray();");
+      ignore (HxArray.push lines "    if (!is_array($args)) $args = [];");
+      ignore (HxArray.push lines "    if (!is_callable($method)) return null;");
+      ignore (HxArray.push lines "    return $method(...array_values($args));");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public static function getProperty($object, $field) {");
       ignore (HxArray.push lines "    if ($object === null || $field === null) return null;");
       ignore (HxArray.push lines "    $field = strval($field);");

@@ -11657,6 +11657,12 @@ class SourceTargetCommon {
 				lines.push("    }");
 				lines.push("    return $out;");
 				lines.push("  }");
+				lines.push("  public static function callMethod($object, $method, $args) {");
+				lines.push("    if ($args instanceof __HxArray) $args = $args->toArray();");
+				lines.push("    if (!is_array($args)) $args = [];");
+				lines.push("    if (!is_callable($method)) return null;");
+				lines.push("    return $method(...array_values($args));");
+				lines.push("  }");
 				lines.push("  public static function getProperty($object, $field) {");
 				lines.push("    if ($object === null || $field === null) return null;");
 				lines.push("    $field = strval($field);");

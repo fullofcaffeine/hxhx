@@ -5091,6 +5091,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpReflectCallMethod():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reflect_call_method_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Helper {",
+			"  final prefix:String;",
+			"  public function new(prefix:String) this.prefix = prefix;",
+			"  public function join(left:String, right:String):String return prefix + left + right;",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var helper = new Helper(\"h\");",
+			"    var method = Reflect.field(helper, \"join\");",
+			"    Sys.println(Reflect.callMethod(helper, method, [\"x\", \"y\"]));",
+			"    var add = function(a:Int, b:Int) return a + b;",
+			"    Sys.println(Reflect.callMethod(null, add, [4, 5]));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function callMethod($object, $method, $args)", "PHP Reflect helper should expose callMethod");
+		assertContains(content, "return $method(...array_values($args));", "PHP Reflect.callMethod should splat Haxe array arguments");
+		assertContains(content, "Reflect::callMethod($helper, $method, [\"x\", \"y\"])", "PHP Reflect.callMethod should lower as a static helper call");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Reflect.callMethod support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "hxy\n9\n", "generated PHP Reflect.callMethod output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpReflectPropertyAccess():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reflect_property_access_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -8984,6 +9022,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpLambdaListRuntimeSupport();
 		assertPhpReflectMakeVarArgs();
 		assertPhpReflectFields();
+		assertPhpReflectCallMethod();
 		assertPhpReflectPropertyAccess();
 		assertPhpSamePackageQualifiedStaticPath();
 		assertPhpInstanceFieldMethodCall();
