@@ -4708,7 +4708,7 @@ class SourceTargetCommon {
 	}
 
 	static function phpEqualityNeedsHelper(left:HxExpr, right:HxExpr):Bool {
-		return phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
+		return true;
 	}
 
 	static function phpInt64StaticCall(callee:HxExpr, argCount:Int):Bool {
@@ -12146,7 +12146,9 @@ class SourceTargetCommon {
 				lines.push("    $rightValue = __hxhx_int64_value($right);");
 				lines.push("    return $leftValue->high === $rightValue->high && $leftValue->low === $rightValue->low;");
 				lines.push("  }");
-				lines.push("  if ((is_object($left) && property_exists($left, \"__hx_value\")) || (is_object($right) && property_exists($right, \"__hx_value\"))) {");
+				lines.push("  $leftHasBoxedValue = is_object($left) && property_exists($left, \"__hx_value\") && $left->__hx_value !== null;");
+				lines.push("  $rightHasBoxedValue = is_object($right) && property_exists($right, \"__hx_value\") && $right->__hx_value !== null;");
+				lines.push("  if ($leftHasBoxedValue || $rightHasBoxedValue) {");
 				lines.push("    $leftValue = __hxhx_numeric_value($left);");
 				lines.push("    $rightValue = __hxhx_numeric_value($right);");
 				lines.push("    if (is_int($leftValue) && is_int($rightValue)) return $leftValue == $rightValue || __hxhx_int32_value($leftValue) == __hxhx_int32_value($rightValue);");
@@ -12154,6 +12156,19 @@ class SourceTargetCommon {
 				lines.push("    return __hxhx_to_string_value($left) == __hxhx_to_string_value($right);");
 				lines.push("  }");
 				lines.push("  if (is_int($left) && is_int($right)) return $left == $right || __hxhx_int32_value($left) == __hxhx_int32_value($right);");
+				lines.push("  if (is_object($left) || is_object($right)) {");
+				lines.push("    if ($left instanceof __HxClassValue && $right instanceof __HxClassValue) return $left->__hx_class_name === $right->__hx_class_name;");
+				lines.push("    if (is_object($left) && is_object($right) && property_exists($left, \"__hx_ctor\") && property_exists($right, \"__hx_ctor\")) {");
+				lines.push("      if ((property_exists($left, \"__hx_enum\") ? $left->__hx_enum : null) !== (property_exists($right, \"__hx_enum\") ? $right->__hx_enum : null)) return false;");
+				lines.push("      if ($left->__hx_ctor !== $right->__hx_ctor || $left->__hx_index !== $right->__hx_index) return false;");
+				lines.push("      $leftParams = property_exists($left, \"__hx_params\") && is_array($left->__hx_params) ? $left->__hx_params : [];");
+				lines.push("      $rightParams = property_exists($right, \"__hx_params\") && is_array($right->__hx_params) ? $right->__hx_params : [];");
+				lines.push("      if (count($leftParams) !== count($rightParams)) return false;");
+				lines.push("      for ($i = 0; $i < count($leftParams); $i++) if (!__hxhx_equals($leftParams[$i], $rightParams[$i])) return false;");
+				lines.push("      return true;");
+				lines.push("    }");
+				lines.push("    return $left === $right;");
+				lines.push("  }");
 				lines.push("  if ($left == $right) return true;");
 				lines.push("  return false;");
 				lines.push("}");

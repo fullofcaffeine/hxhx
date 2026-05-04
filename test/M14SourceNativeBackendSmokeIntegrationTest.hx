@@ -1521,7 +1521,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(values2[3] == null));",
 			"    var anon:Dynamic = haxe.Unserializer.run(haxe.Serializer.run({name: \"hxhx\", count: 3}));",
 			"    Sys.println(Std.string(Reflect.field(anon, \"name\")));",
-			"    var box:Box = haxe.Unserializer.run(haxe.Serializer.run(new Box(7, \"seven\")));",
+			"    var original = new Box(7, \"seven\");",
+			"    var box:Box = haxe.Unserializer.run(haxe.Serializer.run(original));",
+			"    Sys.println(Std.string(original == box));",
 			"    Sys.println(box.label + \":\" + Std.string(box.count));",
 			"    var map = new haxe.ds.StringMap<Int>();",
 			"    map.set(\"kéy\", 42);",
@@ -4904,7 +4906,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Serializer/Unserializer support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "z\ny12:%C3%A9%C3%A9\n5\ntrue\nhxhx\nseven:7\n42\n2\n4\n5\ns4:QUJD\nABC\n",
+			assertTrue(run.stdout == "z\ny12:%C3%A9%C3%A9\n5\ntrue\nhxhx\nfalse\nseven:7\n42\n2\n4\n5\ns4:QUJD\nABC\n",
 				"generated PHP haxe.Serializer/Unserializer output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
@@ -5276,8 +5278,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpBitwiseEqualityPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "__hxhx_add_string(((1 & 32768) != 0))", "PHP bitwise/equality lowering should preserve explicit left grouping");
-		assertContains(content, "__hxhx_add_string((0 != (1 & 32768)))", "PHP bitwise/equality lowering should preserve explicit right grouping");
+		assertContains(content, "__hxhx_add_string((!__hxhx_equals((1 & 32768), 0)))", "PHP bitwise/equality lowering should preserve explicit left grouping");
+		assertContains(content, "__hxhx_add_string((!__hxhx_equals(0, (1 & 32768))))", "PHP bitwise/equality lowering should preserve explicit right grouping");
 		assertNotContains(content, "(1 & (32768 != 0))", "PHP bitwise operators should bind tighter than equality on the left");
 		assertNotContains(content, "((0 != 1) & 32768)", "PHP bitwise operators should bind tighter than equality on the right");
 		deleteRecursive(tmpRoot);

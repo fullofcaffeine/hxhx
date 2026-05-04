@@ -3801,6 +3801,14 @@ let phpFunctionArgCanBeSkipped = fun arg -> try let __fallback_result_2190 = (
 
 let phpRenderedInt64ReceiverExpr = fun rendered -> StringTools.startsWith (rendered : string) ("__hxhx_int64_add(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_sub(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_mul(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_neg(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_shl(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_shr(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_ushr(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_and(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_or(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_xor(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_literal(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_value(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_div_mod(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::make(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::ofInt(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::parseString(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::fromFloat(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::add(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::sub(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::mul(" : string)
 
+let phpEqualityNeedsHelper = fun left right -> (
+  ignore left;
+  (
+    ignore right;
+    true
+  )
+)
+
 let phpInt64StaticMethodName = fun field -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
     | "add" | "compare" | "divMod" | "fromFloat" | "make" | "mul" | "neg" | "ofInt" | "parseString" | "sub" | "toStr" | "ucompare" -> let __assign_2341 = true in (
@@ -11313,8 +11321,6 @@ let rec inferLocalTypeHint = fun typeHint init -> try let __fallback_result_2283
   )
 ) in Obj.magic __fallback_result_2283 with
   | HxRuntime.Hx_return __ret_2282 -> Obj.obj __ret_2282
-
-let phpEqualityNeedsHelper = fun left right -> phpExprIsInt64Value (Obj.magic left) || phpExprIsInt64Value (Obj.magic right)
 
 let rec phpCollectUsedIdentsInStmt = fun stmt names -> ignore (match stmt with
   | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
@@ -23731,7 +23737,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    $rightValue = __hxhx_int64_value($right);");
       ignore (HxArray.push lines "    return $leftValue->high === $rightValue->high && $leftValue->low === $rightValue->low;");
       ignore (HxArray.push lines "  }");
-      ignore (HxArray.push lines "  if ((is_object($left) && property_exists($left, \"__hx_value\")) || (is_object($right) && property_exists($right, \"__hx_value\"))) {");
+      ignore (HxArray.push lines "  $leftHasBoxedValue = is_object($left) && property_exists($left, \"__hx_value\") && $left->__hx_value !== null;");
+      ignore (HxArray.push lines "  $rightHasBoxedValue = is_object($right) && property_exists($right, \"__hx_value\") && $right->__hx_value !== null;");
+      ignore (HxArray.push lines "  if ($leftHasBoxedValue || $rightHasBoxedValue) {");
       ignore (HxArray.push lines "    $leftValue = __hxhx_numeric_value($left);");
       ignore (HxArray.push lines "    $rightValue = __hxhx_numeric_value($right);");
       ignore (HxArray.push lines "    if (is_int($leftValue) && is_int($rightValue)) return $leftValue == $rightValue || __hxhx_int32_value($leftValue) == __hxhx_int32_value($rightValue);");
@@ -23739,6 +23747,19 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    return __hxhx_to_string_value($left) == __hxhx_to_string_value($right);");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if (is_int($left) && is_int($right)) return $left == $right || __hxhx_int32_value($left) == __hxhx_int32_value($right);");
+      ignore (HxArray.push lines "  if (is_object($left) || is_object($right)) {");
+      ignore (HxArray.push lines "    if ($left instanceof __HxClassValue && $right instanceof __HxClassValue) return $left->__hx_class_name === $right->__hx_class_name;");
+      ignore (HxArray.push lines "    if (is_object($left) && is_object($right) && property_exists($left, \"__hx_ctor\") && property_exists($right, \"__hx_ctor\")) {");
+      ignore (HxArray.push lines "      if ((property_exists($left, \"__hx_enum\") ? $left->__hx_enum : null) !== (property_exists($right, \"__hx_enum\") ? $right->__hx_enum : null)) return false;");
+      ignore (HxArray.push lines "      if ($left->__hx_ctor !== $right->__hx_ctor || $left->__hx_index !== $right->__hx_index) return false;");
+      ignore (HxArray.push lines "      $leftParams = property_exists($left, \"__hx_params\") && is_array($left->__hx_params) ? $left->__hx_params : [];");
+      ignore (HxArray.push lines "      $rightParams = property_exists($right, \"__hx_params\") && is_array($right->__hx_params) ? $right->__hx_params : [];");
+      ignore (HxArray.push lines "      if (count($leftParams) !== count($rightParams)) return false;");
+      ignore (HxArray.push lines "      for ($i = 0; $i < count($leftParams); $i++) if (!__hxhx_equals($leftParams[$i], $rightParams[$i])) return false;");
+      ignore (HxArray.push lines "      return true;");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    return $left === $right;");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if ($left == $right) return true;");
       ignore (HxArray.push lines "  return false;");
       ignore (HxArray.push lines "}");
