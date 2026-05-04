@@ -2013,11 +2013,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    haxe.Serializer.USE_ENUM_INDEX = true;",
 			"    var indexed:Dynamic = haxe.Unserializer.run(haxe.Serializer.run(MultiEnum.With(9)));",
 			"    var indexedA:Dynamic = haxe.Unserializer.run(haxe.Serializer.run(MultiEnum.A));",
+			"    var indexedSimple:Dynamic = haxe.Unserializer.run(haxe.Serializer.run(SimpleEnum.SE_A));",
 			"    haxe.Serializer.USE_ENUM_INDEX = false;",
 			"    Sys.println(Std.string(indexed));",
 			"    Sys.println(Type.enumEq(indexed, MultiEnum.With(9)));",
 			"    Sys.println(Std.string(indexedA));",
 			"    Sys.println(Type.enumEq(indexedA, MultiEnum.A));",
+			"    Sys.println(Std.string(indexedSimple));",
+			"    Sys.println(Type.enumEq(indexedSimple, SimpleEnum.SE_A));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5293,7 +5296,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum constructor values should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\n",
+			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\nSE_A\n1\n",
 				"generated PHP enum constructor values should stringify correctly, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);

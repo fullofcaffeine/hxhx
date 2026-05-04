@@ -22790,6 +22790,7 @@ let renderProgram = fun target program context decl className body -> let lines 
         ignore (HxArray.push lines "  public static $SE_B;");
         ignore (HxArray.push lines "  public static $SE_C;");
         ignore (HxArray.push lines "  public static $SE_D;");
+        ignore (HxArray.push lines "  public static $__hx_enum_ctors = [\"SE_A\", \"SE_B\", \"SE_C\", \"SE_D\"];");
         ignore (HxArray.push lines "}");
         ignore (HxArray.push lines "SimpleEnum::$SE_A = new __HxAnon([\"__hx_enum\" => \"SimpleEnum\", \"__hx_ctor\" => \"SE_A\", \"__hx_index\" => 0, \"__hx_params\" => []]);");
         ignore (HxArray.push lines "SimpleEnum::$SE_B = new __HxAnon([\"__hx_enum\" => \"SimpleEnum\", \"__hx_ctor\" => \"SE_B\", \"__hx_index\" => 1, \"__hx_params\" => []]);");

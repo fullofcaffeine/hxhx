@@ -11218,6 +11218,7 @@ class SourceTargetCommon {
 					lines.push("  public static $SE_B;");
 					lines.push("  public static $SE_C;");
 					lines.push("  public static $SE_D;");
+					lines.push("  public static $__hx_enum_ctors = [\"SE_A\", \"SE_B\", \"SE_C\", \"SE_D\"];");
 					lines.push("}");
 					lines.push("SimpleEnum::$SE_A = new __HxAnon([\"__hx_enum\" => \"SimpleEnum\", \"__hx_ctor\" => \"SE_A\", \"__hx_index\" => 0, \"__hx_params\" => []]);");
 					lines.push("SimpleEnum::$SE_B = new __HxAnon([\"__hx_enum\" => \"SimpleEnum\", \"__hx_ctor\" => \"SE_B\", \"__hx_index\" => 1, \"__hx_params\" => []]);");
