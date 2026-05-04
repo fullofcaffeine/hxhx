@@ -11417,7 +11417,7 @@ class SourceTargetCommon {
 				lines.push("    unset($this->items[$offset]);");
 				lines.push("  }");
 				lines.push("}");
-				lines.push("class __HxArrayIterator {");
+				lines.push("class __HxArrayIterator implements \\IteratorAggregate {");
 				lines.push("  private $items;");
 				lines.push("  private $index = 0;");
 				lines.push("  public function __construct($items) {");
@@ -11428,6 +11428,9 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("  public function next() {");
 				lines.push("    return $this->items[$this->index++];");
+				lines.push("  }");
+				lines.push("  public function getIterator(): \\Traversable {");
+				lines.push("    return new \\ArrayIterator($this->items);");
 				lines.push("  }");
 				lines.push("}");
 				lines.push("class List_ implements \\IteratorAggregate {");
@@ -11527,10 +11530,10 @@ class SourceTargetCommon {
 				lines.push("    return true;");
 				lines.push("  }");
 				lines.push("  public function keys() {");
-				lines.push("    return array_values($this->keys);");
+				lines.push("    return new __HxArrayIterator(array_values($this->keys));");
 				lines.push("  }");
 				lines.push("  public function iterator() {");
-				lines.push("    return array_values($this->items);");
+				lines.push("    return new __HxArrayIterator(array_values($this->items));");
 				lines.push("  }");
 				lines.push("  public function toString() {");
 				lines.push("    if (count($this->items) === 0) return \"[]\";");

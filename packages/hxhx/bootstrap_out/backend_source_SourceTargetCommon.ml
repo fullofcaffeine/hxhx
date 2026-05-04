@@ -22998,7 +22998,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    unset($this->items[$offset]);");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
-      ignore (HxArray.push lines "class __HxArrayIterator {");
+      ignore (HxArray.push lines "class __HxArrayIterator implements \\IteratorAggregate {");
       ignore (HxArray.push lines "  private $items;");
       ignore (HxArray.push lines "  private $index = 0;");
       ignore (HxArray.push lines "  public function __construct($items) {");
@@ -23009,6 +23009,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public function next() {");
       ignore (HxArray.push lines "    return $this->items[$this->index++];");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public function getIterator(): \\Traversable {");
+      ignore (HxArray.push lines "    return new \\ArrayIterator($this->items);");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "class List_ implements \\IteratorAggregate {");
@@ -23108,10 +23111,10 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    return true;");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public function keys() {");
-      ignore (HxArray.push lines "    return array_values($this->keys);");
+      ignore (HxArray.push lines "    return new __HxArrayIterator(array_values($this->keys));");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public function iterator() {");
-      ignore (HxArray.push lines "    return array_values($this->items);");
+      ignore (HxArray.push lines "    return new __HxArrayIterator(array_values($this->items));");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public function toString() {");
       ignore (HxArray.push lines "    if (count($this->items) === 0) return \"[]\";");

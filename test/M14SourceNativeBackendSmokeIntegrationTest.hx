@@ -5093,6 +5093,47 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpMapKeysIteratorRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_keys_iterator_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var sm = new haxe.ds.StringMap<Int>();",
+			"    sm.set(\"b\", 2);",
+			"    var keyIt = sm.keys();",
+			"    Sys.println(Std.string(keyIt.hasNext()));",
+			"    Sys.println(keyIt.next());",
+			"    Sys.println(Std.string(keyIt.hasNext()));",
+			"    sm.set(\"a\", 1);",
+			"    var keys = Lambda.array(sm.keys());",
+			"    keys.sort(Reflect.compare);",
+			"    Sys.println(keys.join(\"#\"));",
+			"    var values = Lambda.array(sm);",
+			"    values.sort(Reflect.compare);",
+			"    Sys.println(values.join(\"#\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class __HxArrayIterator implements \\IteratorAggregate", "PHP array iterator should also be foreach-compatible");
+		assertContains(content, "return new __HxArrayIterator(array_values($this->keys));", "PHP Map.keys should return an iterator-compatible wrapper");
+		assertContains(content, "$keyIt = $sm->keys();", "PHP Map.keys calls should keep the map iterator shape");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Map.keys iterator support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\nb\nfalse\na#b\n1#2\n", "generated PHP Map.keys iterator output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpReflectMakeVarArgs():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reflect_make_var_args_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9080,6 +9121,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpHaxeSerializerImportRuntimeSupport();
 		assertPhpPoint3StringEqualityRuntimeSupport();
 		assertPhpLambdaListRuntimeSupport();
+		assertPhpMapKeysIteratorRuntimeSupport();
 		assertPhpReflectMakeVarArgs();
 		assertPhpReflectFields();
 		assertPhpReflectCallMethod();
