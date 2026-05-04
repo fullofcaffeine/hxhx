@@ -2284,7 +2284,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	static function phpUserClassTypeCheckProgram():GenIrProgram {
 		final src = [
 			"package unit;",
-			"class MyClass { public function new(value:Int) {} }",
+			"class MyClass {",
+			"  public var intValue:Int = 55;",
+			"  var value:Int;",
+			"  public function new(value:Int) { this.value = value; }",
+			"  public function get():Int return value;",
+			"}",
 			"class MySubClass extends MyClass { public function new(value:Int) { super(value); } }",
 			"class Main {",
 			"  static var types:Array<Dynamic> = [null, String, unit.MyClass, Class, Dynamic];",
@@ -2314,6 +2319,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(Type.resolveClass(\"unit.MyClass\") == MyClass));",
 			"    Sys.println(Type.getClassName(Type.resolveClass(\"unit.MyClass\")));",
 			"    Sys.println(Type.getClassName(Type.getClass(value)));",
+			"    var made = Type.createInstance(MyClass, [33]);",
+			"    Sys.println(Std.string(made is MyClass));",
+			"    Sys.println(made.get());",
+			"    Sys.println(made.intValue);",
 			"  }",
 			"  static function check(value:Dynamic, c:Dynamic):Bool return value is c;",
 			"  static function reflectLoopCheck(value:Dynamic, t1:Dynamic):Bool {",
@@ -6913,10 +6922,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_is_of_type($i, \"Float\")", "PHP Std.isOfType Float checks should use the runtime helper");
 		assertContains(content, "__hxhx_is_of_type($i, $c)", "PHP Std.isOfType should accept dynamic class values");
 		assertContains(content, "__hxhx_is_of_type(10000000000.0, \"Int\")", "PHP whole-number Float literals should stay floats");
-		assertContains(content, "case \"Float\": return is_int($value) || is_float($value);", "PHP Std.isOfType Float should accept Int values like Haxe");
+		assertContains(content, "case \"Float\": return is_int($value) || is_float($value) || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));",
+			"PHP Std.isOfType Float should accept Int values like Haxe and boxed abstract values");
 		assertContains(content,
-			"case \"Int\": return is_int($value) || (is_float($value) && is_finite($value) && floor($value) == $value && $value >= -2147483648 && $value <= 2147483647);",
-			"PHP Std.isOfType Int should accept in-range integral Float values like Haxe");
+			"case \"Int\": return is_int($value) || (is_float($value) && is_finite($value) && floor($value) == $value && $value >= -2147483648 && $value <= 2147483647) || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));",
+			"PHP Std.isOfType Int should accept in-range integral Float values like Haxe and boxed abstract values");
 		assertContains(content, "case \"haxe.ds.List\": return $value instanceof List_;",
 			"PHP Std.isOfType List should recognize the sanitized List runtime class");
 		if (commandExists("php")) {
@@ -6940,6 +6950,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_is_of_type($value, $c)", "PHP direct `is` checks should accept dynamic class values");
 		assertContains(content, "__hxhx_class_value(\"MyClass\")", "PHP class values should be tagged separately from ordinary strings");
 		assertContains(content, "class __HxClassValue", "PHP runtime should tag class meta-values so they are not ordinary strings");
+		assertContains(content, "public static function createInstance($cls, $args)", "PHP Type should expose createInstance");
+		assertContains(content, "__hxhx_runtime_class_name($cls)", "PHP Type.createInstance should resolve Haxe class values to emitted PHP classes");
 		assertContains(content, "$resolved = __hxhx_class_name($type)", "PHP runtime type helper should resolve class aliases before instanceof checks");
 		assertContains(content, "str_replace(\".\", \"\\\\\", $resolved)", "PHP runtime type helper should try package-qualified PHP class names");
 		assertContains(content, "case \"Class\": case \"Class<Dynamic>\": case \"Class_\": $candidate = __hxhx_class_candidate($value);",
@@ -6948,7 +6960,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP user class type checks should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nunit.MyClass\nunit.MyClass\n",
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nunit.MyClass\nunit.MyClass\ntrue\n33\n55\n",
 				"generated PHP user class type check output mismatch, got:\n"
 				+ run.stdout);
 		}

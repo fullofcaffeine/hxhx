@@ -7459,6 +7459,7 @@ class SourceTargetCommon {
 
 	static function appendPhpClassNameMap(lines:Array<String>, program:GenIrProgram, decl:HxModuleDecl):Void {
 		final names = new Map<String, String>();
+		final runtimeNames = new Map<String, String>();
 		function addDecl(moduleDecl:HxModuleDecl):Void {
 			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
@@ -7467,6 +7468,8 @@ class SourceTargetCommon {
 					continue;
 				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
 				names.set(shortName, fullName);
+				runtimeNames.set(shortName, shortName);
+				runtimeNames.set(fullName, shortName);
 			}
 		}
 		addDecl(decl);
@@ -7484,6 +7487,10 @@ class SourceTargetCommon {
 		for (shortName in names.keys())
 			entries.push(quotePhpString(shortName) + " => " + quotePhpString(names.get(shortName)));
 		entries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		final runtimeEntries = new Array<String>();
+		for (logicalName in runtimeNames.keys())
+			runtimeEntries.push(quotePhpString(logicalName) + " => " + quotePhpString(runtimeNames.get(logicalName)));
+		runtimeEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
 		lines.push("class __HxClassValue {");
 		lines.push("  public $__hx_class_name;");
 		lines.push("  public function __construct($name) { $this->__hx_class_name = $name; }");
@@ -7507,6 +7514,18 @@ class SourceTargetCommon {
 		lines.push("  $resolved = __hxhx_class_name($name);");
 		lines.push("  if (!array_key_exists($resolved, $values)) $values[$resolved] = new __HxClassValue($resolved);");
 		lines.push("  return $values[$resolved];");
+		lines.push("}");
+		lines.push("function __hxhx_runtime_class_name($name) {");
+		lines.push("  $logical = __hxhx_class_name($name);");
+		lines.push("  static $map = [");
+		for (entry in runtimeEntries)
+			lines.push("    " + entry + ",");
+		lines.push("  ];");
+		lines.push("  if (array_key_exists($logical, $map)) return $map[$logical];");
+		lines.push("  $raw = str_replace(\"\\\\\", \".\", strval($name));");
+		lines.push("  if (array_key_exists($raw, $map)) return $map[$raw];");
+		lines.push("  $parts = explode(\".\", $logical);");
+		lines.push("  return end($parts);");
 		lines.push("}");
 	}
 
@@ -11848,14 +11867,15 @@ class SourceTargetCommon {
 				lines.push("  return new __HxAnon([\"__hx_enum\" => \"ValueType\", \"__hx_ctor\" => $ctor, \"__hx_index\" => $index, \"__hx_params\" => $params]);");
 				lines.push("}");
 				lines.push("function __hxhx_is_of_type($value, $type) {");
-				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) $value = $value->__hx_value;");
+				lines.push("  $hasBoxedValue = is_object($value) && property_exists($value, \"__hx_value\");");
+				lines.push("  $boxedValue = $hasBoxedValue ? $value->__hx_value : null;");
 				lines.push("  if ($type instanceof __HxClassValue) $type = $type->__hx_class_name;");
 				lines.push("  switch ($type) {");
-				lines.push("    case \"Int\": return is_int($value) || (is_float($value) && is_finite($value) && floor($value) == $value && $value >= -2147483648 && $value <= 2147483647);");
-				lines.push("    case \"Float\": return is_int($value) || is_float($value);");
-				lines.push("    case \"String\": return is_string($value);");
-				lines.push("    case \"Bool\": return is_bool($value);");
-				lines.push("    case \"Array\": return is_array($value) || $value instanceof __HxArray;");
+				lines.push("    case \"Int\": return is_int($value) || (is_float($value) && is_finite($value) && floor($value) == $value && $value >= -2147483648 && $value <= 2147483647) || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));");
+				lines.push("    case \"Float\": return is_int($value) || is_float($value) || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));");
+				lines.push("    case \"String\": return is_string($value) || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));");
+				lines.push("    case \"Bool\": return is_bool($value) || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));");
+				lines.push("    case \"Array\": return is_array($value) || $value instanceof __HxArray || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));");
 				lines.push("    case \"StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
 				lines.push("    case \"haxe.ds.StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
 				lines.push("    case \"List\": return $value instanceof List_;");
@@ -11888,6 +11908,7 @@ class SourceTargetCommon {
 				lines.push("  foreach ($candidates as $candidate) {");
 				lines.push("    if (is_string($candidate) && $candidate !== \"\" && class_exists($candidate) && $value instanceof $candidate) return true;");
 				lines.push("  }");
+				lines.push("  if ($hasBoxedValue) return __hxhx_is_of_type($boxedValue, $type);");
 				lines.push("  return false;");
 				lines.push("}");
 				lines.push("function __hxhx_mod($left, $right) {");
@@ -12169,6 +12190,13 @@ class SourceTargetCommon {
 				lines.push("  public static function resolveEnum($name) {");
 				lines.push("    if ($name === null) return null;");
 				lines.push("    return __hxhx_class_value($name);");
+				lines.push("  }");
+				lines.push("  public static function createInstance($cls, $args) {");
+				lines.push("    if ($args instanceof __HxArray) $args = $args->toArray();");
+				lines.push("    if (!is_array($args)) $args = [];");
+				lines.push("    $runtime = __hxhx_runtime_class_name($cls);");
+				lines.push("    if ($runtime === null || !class_exists($runtime)) throw new \\Exception(\"Class not found: \" . strval($cls));");
+				lines.push("    return new $runtime(...array_values($args));");
 				lines.push("  }");
 				lines.push("  public static function typeof($value) {");
 				lines.push("    if ($value === null) return __hxhx_value_type(\"TNull\", 0);");
