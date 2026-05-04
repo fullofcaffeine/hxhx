@@ -4998,6 +4998,65 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpHaxeSerializerImportRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_serializer_import_" + Std.string(Date.now().getTime()));
+		final srcDir = Path.join([tmpRoot, "src"]);
+		final haxeDir = Path.join([srcDir, "haxe"]);
+		final unitDir = Path.join([srcDir, "unit"]);
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(haxeDir);
+		FileSystem.createDirectory(unitDir);
+		final src = [
+			"package unit;",
+			"",
+			"import haxe.Serializer;",
+			"import haxe.Unserializer;",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var encoded = Serializer.run({name: \"hx\", count: 3});",
+			"    var decoded:Dynamic = Unserializer.run(encoded);",
+			"    Sys.println(decoded.name + \":\" + decoded.count);",
+			"  }",
+			"}",
+		].join("\n");
+		File.saveContent(Path.join([haxeDir, "Serializer.hx"]), [
+			"package haxe;",
+			"extern class Serializer {",
+			"  static function run(value:Dynamic):String;",
+			"}",
+		].join("\n"));
+		File.saveContent(Path.join([haxeDir, "Unserializer.hx"]), [
+			"package haxe;",
+			"extern class Unserializer {",
+			"  static function run(value:String):Dynamic;",
+			"}",
+		].join("\n"));
+		File.saveContent(Path.join([unitDir, "Main.hx"]), src);
+		final resolved = ResolverStage.parseProjectRoots([srcDir], ["unit.Main"], new StringMap<String>());
+		final index = TyperIndex.build(resolved);
+		final loader = new ModuleLoader([srcDir], new StringMap<String>(), index, function(_typePath:String):Bool {
+			return false;
+		});
+		loader.markResolvedAlready(resolved);
+		final typed = new Array<TypedModule>();
+		for (module in resolved)
+			typed.push(TyperStage.typeResolvedModule(module, index, loader));
+		final program = MacroStage.expandProgram(typed, []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "\\haxe\\Serializer::run", "PHP imported haxe.Serializer calls should target the namespaced runtime class");
+		assertContains(content, "\\haxe\\Unserializer::run", "PHP imported haxe.Unserializer calls should target the namespaced runtime class");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP imported haxe.Serializer/Unserializer support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "hx:3\n", "generated PHP imported haxe.Serializer/Unserializer output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpPoint3StringEqualityRuntimeSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_point3_string_equality_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9018,6 +9077,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpRuntimeShim();
 		assertPhpMapRuntimeShim();
 		assertPhpHaxeSerializerRuntimeSupport();
+		assertPhpHaxeSerializerImportRuntimeSupport();
 		assertPhpPoint3StringEqualityRuntimeSupport();
 		assertPhpLambdaListRuntimeSupport();
 		assertPhpReflectMakeVarArgs();

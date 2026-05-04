@@ -7650,7 +7650,7 @@ class SourceTargetCommon {
 		function addImport(rawImport:String):Void {
 			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
 				return;
-			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json")
+			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Unserializer")
 				return;
 			final parts = rawImport.split(".");
 			if (parts.length < 2)
