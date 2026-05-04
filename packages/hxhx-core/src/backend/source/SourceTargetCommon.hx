@@ -679,6 +679,8 @@ class SourceTargetCommon {
 				superExpr(target);
 			case EUnop(op, inner):
 				unopExpr(target, op, inner);
+			case EIdent(name) if (target == Php && looksLikeTypePathRoot(name) && !phpLocalExists(name)):
+				quotePhpString(name);
 			case EIdent(name) if (target == Php && phpInt64ImportedStaticMethodValueName(name) && !phpLocalExists(name)):
 				phpStaticMethodValueAccess(phpInt64TypePath(), name);
 			case EIdent(name):
@@ -7352,6 +7354,10 @@ class SourceTargetCommon {
 		addDecl(decl);
 		for (typed in program.getTypedModules())
 			addDecl(typed.getParsed().getDecl());
+		final stdAliases = ["StringMap" => "haxe.ds.StringMap", "List" => "haxe.ds.List"];
+		for (shortName in stdAliases.keys())
+			if (!names.exists(shortName))
+				names.set(shortName, stdAliases.get(shortName));
 		final entries = new Array<String>();
 		for (shortName in names.keys())
 			entries.push(quotePhpString(shortName) + " => " + quotePhpString(names.get(shortName)));
@@ -11839,6 +11845,32 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("}");
 				lines.push("class Type {");
+				lines.push("  public static function getClass($value) {");
+				lines.push("    if ($value === null) return null;");
+				lines.push("    if (is_string($value)) return \"String\";");
+				lines.push("    if (is_array($value) || $value instanceof __HxArray) return \"Array\";");
+				lines.push("    if (is_object($value)) return __hxhx_class_name(get_class($value));");
+				lines.push("    return null;");
+				lines.push("  }");
+				lines.push("  public static function getClassName($cls) {");
+				lines.push("    if ($cls === null) return null;");
+				lines.push("    if (is_string($cls)) return __hxhx_class_name($cls);");
+				lines.push("    if (is_object($cls)) return __hxhx_class_name(get_class($cls));");
+				lines.push("    return null;");
+				lines.push("  }");
+				lines.push("  public static function resolveClass($name) {");
+				lines.push("    if ($name === null) return null;");
+				lines.push("    $resolved = __hxhx_class_name($name);");
+				lines.push("    if ($resolved === \"haxe.ds.List\") return \"List\";");
+				lines.push("    return $resolved;");
+				lines.push("  }");
+				lines.push("  public static function getEnumName($enum) {");
+				lines.push("    return self::getClassName($enum);");
+				lines.push("  }");
+				lines.push("  public static function resolveEnum($name) {");
+				lines.push("    if ($name === null) return null;");
+				lines.push("    return __hxhx_class_name($name);");
+				lines.push("  }");
 				lines.push("  public static function enumEq($left, $right) {");
 				lines.push("    return __hxhx_equals($left, $right);");
 				lines.push("  }");

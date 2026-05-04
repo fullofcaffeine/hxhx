@@ -2267,6 +2267,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpTypeReflectionProgram():GenIrProgram {
+		final src = [
+			"import haxe.ds.List;",
+			"enum MyReflectEnum { C; }",
+			"class ReflectThing {}",
+			"class Main {",
+			"  static function main() {",
+			"    var types:Array<Dynamic> = [String, Array, List, ReflectThing, MyReflectEnum];",
+			"    var cls:Dynamic = types[3];",
+			"    var en:Dynamic = types[4];",
+			"    Sys.println(Type.getClassName(types[0]));",
+			"    Sys.println(Type.getClassName(types[1]));",
+			"    Sys.println(Type.getClassName(types[2]));",
+			"    Sys.println(Std.string(Type.resolveClass(\"haxe.ds.List\") == types[2]));",
+			"    Sys.println(Type.getClassName(cls));",
+			"    Sys.println(Std.string(Type.resolveClass(\"ReflectThing\") == cls));",
+			"    Sys.println(Type.getEnumName(en));",
+			"    Sys.println(Std.string(Type.resolveEnum(\"MyReflectEnum\") == en));",
+			"    Sys.println(Type.getClassName(Type.getClass(\"hello\")));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpShiftAssignmentProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -6740,6 +6767,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTypeReflection():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_reflection_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTypeReflectionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Type {", "PHP runtime should emit the Type support class");
+		assertContains(content, "public static function getClassName($cls)", "PHP Type runtime should expose getClassName");
+		assertContains(content, "public static function resolveClass($name)", "PHP Type runtime should expose resolveClass");
+		assertContains(content, "\"List\" => \"haxe.ds.List\"", "PHP class-name map should include imported haxe.ds.List alias");
+		assertContains(content, "[\"String\", \"Array\", \"List\", \"ReflectThing\", \"MyReflectEnum\"]",
+			"PHP class and enum literals in value position should lower to reflection names");
+		assertContains(content, "Type::getClassName(__hxhx_array_get($types, 0))", "PHP Type.getClassName should accept dynamic class values from arrays");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Type reflection support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "String\nArray\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nMyReflectEnum\ntrue\nString\n",
+				"generated PHP Type reflection output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpShiftAssignment():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_shift_assignment_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -8279,6 +8330,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTryCatchRawExpression();
 		assertPythonTypeCheck();
 		assertPhpTypeCheck();
+		assertPhpTypeReflection();
 		assertPhpShiftAssignment();
 		assertPythonShiftAssignment();
 		assertPythonModuloUsesHaxeRemainderSemantics();
