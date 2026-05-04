@@ -4521,6 +4521,7 @@ class SourceTargetCommon {
 			|| StringTools.startsWith(rendered, "\\haxe\\Int64::make(")
 			|| StringTools.startsWith(rendered, "\\haxe\\Int64::ofInt(")
 			|| StringTools.startsWith(rendered, "\\haxe\\Int64::parseString(")
+			|| StringTools.startsWith(rendered, "\\haxe\\Int64::fromFloat(")
 			|| StringTools.startsWith(rendered, "\\haxe\\Int64::add(")
 			|| StringTools.startsWith(rendered, "\\haxe\\Int64::sub(")
 			|| StringTools.startsWith(rendered, "\\haxe\\Int64::mul(");
@@ -4557,7 +4558,7 @@ class SourceTargetCommon {
 
 	static function phpInt64StaticMethodName(field:String):Bool {
 		return switch (sanitizeTypeName(field)) {
-			case "make", "ofInt", "parseString", "add", "sub", "mul", "neg", "divMod", "toStr", "compare", "ucompare":
+			case "make", "ofInt", "parseString", "fromFloat", "add", "sub", "mul", "neg", "divMod", "toStr", "compare", "ucompare":
 				true;
 			case _:
 				false;
@@ -4566,7 +4567,7 @@ class SourceTargetCommon {
 
 	static function phpInt64ImportedStaticCallArityMatches(field:String, argCount:Int):Bool {
 		return switch (sanitizeTypeName(field)) {
-			case "ofInt" | "parseString" | "toStr" | "neg":
+			case "ofInt" | "parseString" | "fromFloat" | "toStr" | "neg":
 				argCount == 1;
 			case "make" | "add" | "sub" | "mul" | "divMod" | "compare" | "ucompare":
 				argCount == 2;
@@ -4577,7 +4578,7 @@ class SourceTargetCommon {
 
 	static function phpInt64ImportedStaticMethodValueName(field:String):Bool {
 		return switch (sanitizeTypeName(field)) {
-			case "make" | "ofInt" | "parseString" | "neg":
+			case "make" | "ofInt" | "parseString" | "fromFloat" | "neg":
 				true;
 			case _:
 				false;
@@ -4586,7 +4587,7 @@ class SourceTargetCommon {
 
 	static function phpInt64StaticMethodReturnsInt64(field:String):Bool {
 		return switch (sanitizeTypeName(field)) {
-			case "make", "ofInt", "parseString", "add", "sub", "mul", "neg":
+			case "make", "ofInt", "parseString", "fromFloat", "add", "sub", "mul", "neg":
 				true;
 			case _:
 				false;
@@ -10220,6 +10221,9 @@ class SourceTargetCommon {
 				lines.push("    public static function parseString($value) {");
 				lines.push("      return \\__hxhx_int64_parse_string($value);");
 				lines.push("    }");
+				lines.push("    public static function fromFloat($value) {");
+				lines.push("      return \\__hxhx_int64_from_float($value);");
+				lines.push("    }");
 				lines.push("    public static function toStr($value) {");
 				lines.push("      return \\__hxhx_int64_to_string($value);");
 				lines.push("    }");
@@ -11237,6 +11241,12 @@ class SourceTargetCommon {
 				lines.push("  $value = intval($digits);");
 				lines.push("  if ($negative) $value = -$value;");
 				lines.push("  return \\haxe\\Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
+				lines.push("}");
+				lines.push("function __hxhx_int64_from_float($value) {");
+				lines.push("  $float = floatval($value);");
+				lines.push("  if (is_nan($float) || $float >= 9007199254740992.0 || $float <= -9007199254740992.0) throw new \\Exception(\"Int64 overflow\");");
+				lines.push("  $int = intval($float);");
+				lines.push("  return \\haxe\\Int64::make(($int >> 32) & 0xFFFFFFFF, $int & 0xFFFFFFFF);");
 				lines.push("}");
 				lines.push("function __hxhx_is_int64($value) {");
 				lines.push("  return is_object($value) && property_exists($value, \"high\") && property_exists($value, \"low\");");

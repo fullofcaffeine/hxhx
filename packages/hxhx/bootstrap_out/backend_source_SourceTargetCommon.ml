@@ -3690,11 +3690,11 @@ let phpFunctionArgCanBeSkipped = fun arg -> try let __fallback_result_2117 = (
 ) in Obj.magic __fallback_result_2117 with
   | HxRuntime.Hx_return __ret_2116 -> Obj.obj __ret_2116
 
-let phpRenderedInt64ReceiverExpr = fun rendered -> StringTools.startsWith (rendered : string) ("__hxhx_int64_add(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_sub(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_mul(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_neg(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_shl(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_shr(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_ushr(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_and(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_or(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_xor(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_literal(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_value(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_div_mod(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::make(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::ofInt(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::parseString(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::add(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::sub(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::mul(" : string)
+let phpRenderedInt64ReceiverExpr = fun rendered -> StringTools.startsWith (rendered : string) ("__hxhx_int64_add(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_sub(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_mul(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_neg(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_shl(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_shr(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_ushr(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_and(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_or(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_xor(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_literal(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_value(" : string) || StringTools.startsWith (rendered : string) ("__hxhx_int64_div_mod(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::make(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::ofInt(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::parseString(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::fromFloat(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::add(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::sub(" : string) || StringTools.startsWith (rendered : string) ("\\haxe\\Int64::mul(" : string)
 
 let phpInt64StaticMethodName = fun field -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
-    | "add" | "compare" | "divMod" | "make" | "mul" | "neg" | "ofInt" | "parseString" | "sub" | "toStr" | "ucompare" -> let __assign_2260 = true in (
+    | "add" | "compare" | "divMod" | "fromFloat" | "make" | "mul" | "neg" | "ofInt" | "parseString" | "sub" | "toStr" | "ucompare" -> let __assign_2260 = true in (
       tempResult := __assign_2260;
       __assign_2260
     )
@@ -3707,7 +3707,7 @@ let phpInt64StaticMethodName = fun field -> let tempResult = ref (false : bool) 
 
 let phpInt64ImportedStaticCallArityMatches = fun field argCount -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
-    | "neg" | "ofInt" | "parseString" | "toStr" -> let __assign_2262 = argCount = 1 in (
+    | "fromFloat" | "neg" | "ofInt" | "parseString" | "toStr" -> let __assign_2262 = argCount = 1 in (
       tempResult := __assign_2262;
       __assign_2262
     )
@@ -3724,7 +3724,7 @@ let phpInt64ImportedStaticCallArityMatches = fun field argCount -> let tempResul
 
 let phpInt64ImportedStaticMethodValueName = fun field -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
-    | "make" | "neg" | "ofInt" | "parseString" -> let __assign_2265 = true in (
+    | "fromFloat" | "make" | "neg" | "ofInt" | "parseString" -> let __assign_2265 = true in (
       tempResult := __assign_2265;
       __assign_2265
     )
@@ -3737,7 +3737,7 @@ let phpInt64ImportedStaticMethodValueName = fun field -> let tempResult = ref (f
 
 let phpInt64StaticMethodReturnsInt64 = fun field -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
-    | "add" | "make" | "mul" | "neg" | "ofInt" | "parseString" | "sub" -> let __assign_2267 = true in (
+    | "add" | "fromFloat" | "make" | "mul" | "neg" | "ofInt" | "parseString" | "sub" -> let __assign_2267 = true in (
       tempResult := __assign_2267;
       __assign_2267
     )
@@ -21531,6 +21531,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    public static function parseString($value) {");
       ignore (HxArray.push lines "      return \\__hxhx_int64_parse_string($value);");
       ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public static function fromFloat($value) {");
+      ignore (HxArray.push lines "      return \\__hxhx_int64_from_float($value);");
+      ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    public static function toStr($value) {");
       ignore (HxArray.push lines "      return \\__hxhx_int64_to_string($value);");
       ignore (HxArray.push lines "    }");
@@ -22548,6 +22551,12 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  $value = intval($digits);");
       ignore (HxArray.push lines "  if ($negative) $value = -$value;");
       ignore (HxArray.push lines "  return \\haxe\\Int64::make(($value >> 32) & 0xFFFFFFFF, $value & 0xFFFFFFFF);");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_int64_from_float($value) {");
+      ignore (HxArray.push lines "  $float = floatval($value);");
+      ignore (HxArray.push lines "  if (is_nan($float) || $float >= 9007199254740992.0 || $float <= -9007199254740992.0) throw new \\Exception(\"Int64 overflow\");");
+      ignore (HxArray.push lines "  $int = intval($float);");
+      ignore (HxArray.push lines "  return \\haxe\\Int64::make(($int >> 32) & 0xFFFFFFFF, $int & 0xFFFFFFFF);");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_is_int64($value) {");
       ignore (HxArray.push lines "  return is_object($value) && property_exists($value, \"high\") && property_exists($value, \"low\");");
