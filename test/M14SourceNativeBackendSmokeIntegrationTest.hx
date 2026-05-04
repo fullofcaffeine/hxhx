@@ -2285,10 +2285,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final src = [
 			"package unit;",
 			"class MyClass {",
-			"  public var intValue:Int = 55;",
-			"  var value:Int;",
+			"  public var intValue:Null<Int> = 55;",
+			"  var value:Null<Int>;",
 			"  public function new(value:Int) { this.value = value; }",
-			"  public function get():Int return value;",
+			"  public function get():Null<Int> return value;",
 			"}",
 			"class MySubClass extends MyClass { public function new(value:Int) { super(value); } }",
 			"class Main {",
@@ -2323,6 +2323,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(made is MyClass));",
 			"    Sys.println(made.get());",
 			"    Sys.println(made.intValue);",
+			"    var empty = Type.createEmptyInstance(MyClass);",
+			"    Sys.println(Std.string(empty is MyClass));",
+			"    Sys.println(Std.string(empty.get() == null));",
+			"    Sys.println(Std.string(empty.intValue == null));",
 			"  }",
 			"  static function check(value:Dynamic, c:Dynamic):Bool return value is c;",
 			"  static function reflectLoopCheck(value:Dynamic, t1:Dynamic):Bool {",
@@ -6952,6 +6956,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class __HxClassValue", "PHP runtime should tag class meta-values so they are not ordinary strings");
 		assertContains(content, "public static function createInstance($cls, $args)", "PHP Type should expose createInstance");
 		assertContains(content, "__hxhx_runtime_class_name($cls)", "PHP Type.createInstance should resolve Haxe class values to emitted PHP classes");
+		assertContains(content, "public static function createEmptyInstance($cls)", "PHP Type should expose createEmptyInstance");
+		assertContains(content, "newInstanceWithoutConstructor()", "PHP Type.createEmptyInstance should allocate without running the constructor");
 		assertContains(content, "$resolved = __hxhx_class_name($type)", "PHP runtime type helper should resolve class aliases before instanceof checks");
 		assertContains(content, "str_replace(\".\", \"\\\\\", $resolved)", "PHP runtime type helper should try package-qualified PHP class names");
 		assertContains(content, "case \"Class\": case \"Class<Dynamic>\": case \"Class_\": $candidate = __hxhx_class_candidate($value);",
@@ -6960,7 +6966,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP user class type checks should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nunit.MyClass\nunit.MyClass\ntrue\n33\n55\n",
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nunit.MyClass\nunit.MyClass\ntrue\n33\n55\ntrue\ntrue\ntrue\n",
 				"generated PHP user class type check output mismatch, got:\n"
 				+ run.stdout);
 		}

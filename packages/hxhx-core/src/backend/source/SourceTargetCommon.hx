@@ -12198,6 +12198,12 @@ class SourceTargetCommon {
 				lines.push("    if ($runtime === null || !class_exists($runtime)) throw new \\Exception(\"Class not found: \" . strval($cls));");
 				lines.push("    return new $runtime(...array_values($args));");
 				lines.push("  }");
+				lines.push("  public static function createEmptyInstance($cls) {");
+				lines.push("    $runtime = __hxhx_runtime_class_name($cls);");
+				lines.push("    if ($runtime === null || !class_exists($runtime)) throw new \\Exception(\"Class not found: \" . strval($cls));");
+				lines.push("    $reflection = new \\ReflectionClass($runtime);");
+				lines.push("    return $reflection->newInstanceWithoutConstructor();");
+				lines.push("  }");
 				lines.push("  public static function typeof($value) {");
 				lines.push("    if ($value === null) return __hxhx_value_type(\"TNull\", 0);");
 				lines.push("    if (is_int($value)) return __hxhx_value_type(\"TInt\", 1);");

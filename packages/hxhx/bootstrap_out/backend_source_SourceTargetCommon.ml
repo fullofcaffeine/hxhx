@@ -23632,6 +23632,12 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    if ($runtime === null || !class_exists($runtime)) throw new \\Exception(\"Class not found: \" . strval($cls));");
       ignore (HxArray.push lines "    return new $runtime(...array_values($args));");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function createEmptyInstance($cls) {");
+      ignore (HxArray.push lines "    $runtime = __hxhx_runtime_class_name($cls);");
+      ignore (HxArray.push lines "    if ($runtime === null || !class_exists($runtime)) throw new \\Exception(\"Class not found: \" . strval($cls));");
+      ignore (HxArray.push lines "    $reflection = new \\ReflectionClass($runtime);");
+      ignore (HxArray.push lines "    return $reflection->newInstanceWithoutConstructor();");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public static function typeof($value) {");
       ignore (HxArray.push lines "    if ($value === null) return __hxhx_value_type(\"TNull\", 0);");
       ignore (HxArray.push lines "    if (is_int($value)) return __hxhx_value_type(\"TInt\", 1);");
