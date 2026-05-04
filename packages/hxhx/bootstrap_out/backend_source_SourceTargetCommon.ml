@@ -23886,6 +23886,10 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    case \"Array\": return is_array($value) || $value instanceof __HxArray || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));");
       ignore (HxArray.push lines "    case \"StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
       ignore (HxArray.push lines "    case \"haxe.ds.StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
+      ignore (HxArray.push lines "    case \"IntMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.IntMap\";");
+      ignore (HxArray.push lines "    case \"haxe.ds.IntMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.IntMap\";");
+      ignore (HxArray.push lines "    case \"ObjectMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.ObjectMap\";");
+      ignore (HxArray.push lines "    case \"haxe.ds.ObjectMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.ObjectMap\";");
       ignore (HxArray.push lines "    case \"List\": return $value instanceof List_;");
       ignore (HxArray.push lines "    case \"haxe.ds.List\": return $value instanceof List_;");
       ignore (HxArray.push lines "    case \"Exception\": return $value instanceof \\Throwable;");

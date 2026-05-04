@@ -12314,6 +12314,10 @@ class SourceTargetCommon {
 				lines.push("    case \"Array\": return is_array($value) || $value instanceof __HxArray || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));");
 				lines.push("    case \"StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
 				lines.push("    case \"haxe.ds.StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
+				lines.push("    case \"IntMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.IntMap\";");
+				lines.push("    case \"haxe.ds.IntMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.IntMap\";");
+				lines.push("    case \"ObjectMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.ObjectMap\";");
+				lines.push("    case \"haxe.ds.ObjectMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.ObjectMap\";");
 				lines.push("    case \"List\": return $value instanceof List_;");
 				lines.push("    case \"haxe.ds.List\": return $value instanceof List_;");
 				lines.push("    case \"Exception\": return $value instanceof \\Throwable;");
