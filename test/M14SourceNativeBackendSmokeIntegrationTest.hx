@@ -5156,6 +5156,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(haxe.Int64.toStr(fromFloat(12.0)));",
 			"    var capturedFromFloat = fromFloat;",
 			"    Sys.println(haxe.Int64.toStr(capturedFromFloat(-13.0)));",
+			"    Sys.println(StringTools.hex(-8));",
+			"    Sys.println(StringTools.hex(0x21));",
+			"    Sys.println(StringTools.hex(0x54, 4));",
 			"    Sys.println((ofInt(3).add(ofInt(2))).compare(ofInt(5)));",
 			"    Sys.println(haxe.Int64.toStr((ofInt(3).add(ofInt(2))).sub(ofInt(1))));",
 			"    var dynInt64:Dynamic = ofInt(3);",
@@ -5353,6 +5356,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "\\haxe\\Int64::fromFloat(12)", "PHP imported haxe.Int64.* fromFloat calls should lower to qualified static calls");
 		assertContains(content, "$capturedFromFloat = __hxhx_copy_value(function(...$__hxhx_args) { return \\haxe\\Int64::fromFloat(...$__hxhx_args); });",
 			"PHP captured imported haxe.Int64.* fromFloat should lower to a qualified callable");
+		assertContains(content, "public static function hex($value, $digits = null)", "PHP StringTools should expose hex");
+		assertContains(content, "StringTools::hex((-8))", "PHP StringTools.hex calls should lower to the StringTools support class");
 		assertContains(content, "__hxhx_int64_compare(__hxhx_int64_add(\\haxe\\Int64::ofInt(3), \\haxe\\Int64::ofInt(2)), \\haxe\\Int64::ofInt(5))",
 			"PHP chained Int64 instance arithmetic result compare should lower through the runtime helper");
 		assertContains(content, "__hxhx_int64_sub(__hxhx_int64_add(\\haxe\\Int64::ofInt(3), \\haxe\\Int64::ofInt(2)), \\haxe\\Int64::ofInt(1))",
@@ -5406,7 +5411,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Int64 runtime support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "10\n-1\n2\n3\n3\n4\n4\n5\n5\n6\n-1\n-5\n-6\n-7\n12.5\n12\n-13\n0\n4\n0\n0\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\ntrue\n0\n42\n0\n14\n-1\n-4\n-1\n-4\n0\n42\n4\n3\n2\n7\n5\n-7\n8589934592\n-4\n9223372036854775804\n8589934592\n2\n1\nfalse\ntrue\n28\n36\n-8\n0\n-8\n-2\n9223372036854775806\n32\n-4\n-36\n-32\nfalse\ntrue\nfalse\n4\n3\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
+			assertTrue(run.stdout == "10\n-1\n2\n3\n3\n4\n4\n5\n5\n6\n-1\n-5\n-6\n-7\n12.5\n12\n-13\nFFFFFFF8\n21\n0054\n0\n4\n0\n0\n-1\n-1\n-1\n1\n0\n1\n1\n2\n2\n3\n2\n1\n1\n0\n10\n-1\n2147483647\n-1\n-1\n-23\n2147483647\n-1\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\n9223372036854775807\nparse-overflow\n-1\n1\n0\n1\n1\n1\ntrue\n0\n42\n0\n14\n-1\n-4\n-1\n-4\n0\n42\n4\n3\n2\n7\n5\n-7\n8589934592\n-4\n9223372036854775804\n8589934592\n2\n1\nfalse\ntrue\n28\n36\n-8\n0\n-8\n-2\n9223372036854775806\n32\n-4\n-36\n-32\nfalse\ntrue\nfalse\n4\n3\n4\n3\n-4\n-3\n-2147483648\n0\ntrue\ntrue\n-9223372036854775808\n-4\n-922337203685477580\n-8\ntrue\noverflow\n",
 				"generated PHP haxe.Int64 output mismatch, got:\n"
 				+ run.stdout);
 		}

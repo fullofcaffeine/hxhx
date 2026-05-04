@@ -21954,6 +21954,11 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  public static function urlDecode($value) {");
       ignore (HxArray.push lines "    return rawurldecode(strval($value));");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function hex($value, $digits = null) {");
+      ignore (HxArray.push lines "    $hex = strtoupper(dechex(intval($value) & 0xFFFFFFFF));");
+      ignore (HxArray.push lines "    if ($digits !== null) $hex = str_pad($hex, intval($digits), \"0\", STR_PAD_LEFT);");
+      ignore (HxArray.push lines "    return $hex;");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "#[\\AllowDynamicProperties]");
       ignore (HxArray.push lines "class __HxAnon {");
