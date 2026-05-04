@@ -23544,6 +23544,16 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  public static function int($value) {");
       ignore (HxArray.push lines "    return intval($value);");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function parseInt($value) {");
+      ignore (HxArray.push lines "    if ($value === null) return null;");
+      ignore (HxArray.push lines "    $text = strval($value);");
+      ignore (HxArray.push lines "    if (preg_match('/^([+-]?)0[xX]([0-9a-fA-F]+)/', $text, $matches)) {");
+      ignore (HxArray.push lines "      $parsed = intval($matches[2], 16);");
+      ignore (HxArray.push lines "      return $matches[1] === '-' ? -$parsed : $parsed;");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    if (preg_match('/^[+-]?[0-9]+/', $text, $matches)) return intval($matches[0], 10);");
+      ignore (HxArray.push lines "    return null;");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public static function parseFloat($value) {");
       ignore (HxArray.push lines "    return floatval($value);");
       ignore (HxArray.push lines "  }");

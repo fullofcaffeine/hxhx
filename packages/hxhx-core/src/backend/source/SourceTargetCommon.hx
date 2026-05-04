@@ -12128,6 +12128,16 @@ class SourceTargetCommon {
 				lines.push("  public static function int($value) {");
 				lines.push("    return intval($value);");
 				lines.push("  }");
+				lines.push("  public static function parseInt($value) {");
+				lines.push("    if ($value === null) return null;");
+				lines.push("    $text = strval($value);");
+				lines.push("    if (preg_match('/^([+-]?)0[xX]([0-9a-fA-F]+)/', $text, $matches)) {");
+				lines.push("      $parsed = intval($matches[2], 16);");
+				lines.push("      return $matches[1] === '-' ? -$parsed : $parsed;");
+				lines.push("    }");
+				lines.push("    if (preg_match('/^[+-]?[0-9]+/', $text, $matches)) return intval($matches[0], 10);");
+				lines.push("    return null;");
+				lines.push("  }");
 				lines.push("  public static function parseFloat($value) {");
 				lines.push("    return floatval($value);");
 				lines.push("  }");
