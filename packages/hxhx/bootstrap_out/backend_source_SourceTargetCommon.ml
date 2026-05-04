@@ -23095,6 +23095,11 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  public static function array($value) {");
       ignore (HxArray.push lines "    return self::toArray($value);");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function list($value) {");
+      ignore (HxArray.push lines "    $list = new List_();");
+      ignore (HxArray.push lines "    foreach (self::toArray($value) as $item) $list->add($item);");
+      ignore (HxArray.push lines "    return $list;");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public static function count($value, $predicate = null) {");
       ignore (HxArray.push lines "    $count = 0;");
       ignore (HxArray.push lines "    foreach (self::toArray($value) as $item) {");

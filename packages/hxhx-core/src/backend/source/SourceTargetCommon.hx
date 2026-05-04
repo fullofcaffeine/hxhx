@@ -11510,6 +11510,11 @@ class SourceTargetCommon {
 				lines.push("  public static function array($value) {");
 				lines.push("    return self::toArray($value);");
 				lines.push("  }");
+				lines.push("  public static function list($value) {");
+				lines.push("    $list = new List_();");
+				lines.push("    foreach (self::toArray($value) as $item) $list->add($item);");
+				lines.push("    return $list;");
+				lines.push("  }");
 				lines.push("  public static function count($value, $predicate = null) {");
 				lines.push("    $count = 0;");
 				lines.push("    foreach (self::toArray($value) as $item) {");

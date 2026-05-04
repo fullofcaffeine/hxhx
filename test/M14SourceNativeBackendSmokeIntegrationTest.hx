@@ -1539,6 +1539,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpLambdaListRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var list = Lambda.list([\"a\", \"b\", \"c\"]);",
+			"    Sys.println(Std.string(list.length));",
+			"    Sys.println(list.first());",
+			"    Sys.println(list.last());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpReflectMakeVarArgsProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -4885,6 +4901,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertTrue(run.code == 0, "generated PHP haxe.Serializer/Unserializer support should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "z\ny12:%C3%A9%C3%A9\n5\ntrue\nhxhx\nseven:7\n42\ns4:QUJD\nABC\n",
 				"generated PHP haxe.Serializer/Unserializer output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpLambdaListRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_lambda_list_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpLambdaListRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function list($value)", "PHP Lambda helper should expose list");
+		assertContains(content, "$list = Lambda::list([\"a\", \"b\", \"c\"]);", "PHP Lambda.list calls should lower as static helper calls");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Lambda.list support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "3\na\nc\n", "generated PHP Lambda.list should preserve list order and length, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -8712,6 +8746,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpRuntimeShim();
 		assertPhpMapRuntimeShim();
 		assertPhpHaxeSerializerRuntimeSupport();
+		assertPhpLambdaListRuntimeSupport();
 		assertPhpReflectMakeVarArgs();
 		assertPhpReflectPropertyAccess();
 		assertPhpSamePackageQualifiedStaticPath();
