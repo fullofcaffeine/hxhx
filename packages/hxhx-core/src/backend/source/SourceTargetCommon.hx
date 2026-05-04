@@ -4557,7 +4557,7 @@ class SourceTargetCommon {
 
 	static function phpInt64StaticMethodName(field:String):Bool {
 		return switch (sanitizeTypeName(field)) {
-			case "make", "ofInt", "parseString", "add", "sub", "mul", "divMod", "toStr", "compare", "ucompare":
+			case "make", "ofInt", "parseString", "add", "sub", "mul", "neg", "divMod", "toStr", "compare", "ucompare":
 				true;
 			case _:
 				false;
@@ -4566,7 +4566,7 @@ class SourceTargetCommon {
 
 	static function phpInt64ImportedStaticCallArityMatches(field:String, argCount:Int):Bool {
 		return switch (sanitizeTypeName(field)) {
-			case "ofInt" | "parseString" | "toStr":
+			case "ofInt" | "parseString" | "toStr" | "neg":
 				argCount == 1;
 			case "make" | "add" | "sub" | "mul" | "divMod" | "compare" | "ucompare":
 				argCount == 2;
@@ -4577,7 +4577,7 @@ class SourceTargetCommon {
 
 	static function phpInt64ImportedStaticMethodValueName(field:String):Bool {
 		return switch (sanitizeTypeName(field)) {
-			case "make" | "ofInt" | "parseString":
+			case "make" | "ofInt" | "parseString" | "neg":
 				true;
 			case _:
 				false;
@@ -4586,7 +4586,7 @@ class SourceTargetCommon {
 
 	static function phpInt64StaticMethodReturnsInt64(field:String):Bool {
 		return switch (sanitizeTypeName(field)) {
-			case "make", "ofInt", "parseString", "add", "sub", "mul":
+			case "make", "ofInt", "parseString", "add", "sub", "mul", "neg":
 				true;
 			case _:
 				false;
@@ -10210,6 +10210,9 @@ class SourceTargetCommon {
 				lines.push("    }");
 				lines.push("    public static function mul($left, $right) {");
 				lines.push("      return \\__hxhx_int64_mul($left, $right);");
+				lines.push("    }");
+				lines.push("    public static function neg($value) {");
+				lines.push("      return \\__hxhx_int64_neg($value);");
 				lines.push("    }");
 				lines.push("    public static function divMod($dividend, $divisor) {");
 				lines.push("      return \\__hxhx_int64_div_mod($dividend, $divisor);");

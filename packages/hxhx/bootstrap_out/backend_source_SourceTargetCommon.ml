@@ -3694,7 +3694,7 @@ let phpRenderedInt64ReceiverExpr = fun rendered -> StringTools.startsWith (rende
 
 let phpInt64StaticMethodName = fun field -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
-    | "add" | "compare" | "divMod" | "make" | "mul" | "ofInt" | "parseString" | "sub" | "toStr" | "ucompare" -> let __assign_2260 = true in (
+    | "add" | "compare" | "divMod" | "make" | "mul" | "neg" | "ofInt" | "parseString" | "sub" | "toStr" | "ucompare" -> let __assign_2260 = true in (
       tempResult := __assign_2260;
       __assign_2260
     )
@@ -3707,7 +3707,7 @@ let phpInt64StaticMethodName = fun field -> let tempResult = ref (false : bool) 
 
 let phpInt64ImportedStaticCallArityMatches = fun field argCount -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
-    | "ofInt" | "parseString" | "toStr" -> let __assign_2262 = argCount = 1 in (
+    | "neg" | "ofInt" | "parseString" | "toStr" -> let __assign_2262 = argCount = 1 in (
       tempResult := __assign_2262;
       __assign_2262
     )
@@ -3724,7 +3724,7 @@ let phpInt64ImportedStaticCallArityMatches = fun field argCount -> let tempResul
 
 let phpInt64ImportedStaticMethodValueName = fun field -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
-    | "make" | "ofInt" | "parseString" -> let __assign_2265 = true in (
+    | "make" | "neg" | "ofInt" | "parseString" -> let __assign_2265 = true in (
       tempResult := __assign_2265;
       __assign_2265
     )
@@ -3737,7 +3737,7 @@ let phpInt64ImportedStaticMethodValueName = fun field -> let tempResult = ref (f
 
 let phpInt64StaticMethodReturnsInt64 = fun field -> let tempResult = ref (false : bool) in (
   ignore (let _g = (sanitizeTypeName (field : string) : string) in match _g with
-    | "add" | "make" | "mul" | "ofInt" | "parseString" | "sub" -> let __assign_2267 = true in (
+    | "add" | "make" | "mul" | "neg" | "ofInt" | "parseString" | "sub" -> let __assign_2267 = true in (
       tempResult := __assign_2267;
       __assign_2267
     )
@@ -21521,6 +21521,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    public static function mul($left, $right) {");
       ignore (HxArray.push lines "      return \\__hxhx_int64_mul($left, $right);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "    public static function neg($value) {");
+      ignore (HxArray.push lines "      return \\__hxhx_int64_neg($value);");
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    public static function divMod($dividend, $divisor) {");
       ignore (HxArray.push lines "      return \\__hxhx_int64_div_mod($dividend, $divisor);");
