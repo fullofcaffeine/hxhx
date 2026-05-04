@@ -5231,7 +5231,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_add($left, $right)", "PHP source backend should emit a Haxe plus-semantics helper");
-		assertContains(content, "function __hxhx_add_string($value)", "PHP plus helper should include Haxe stringification support");
+		assertContains(content, "function __hxhx_add_string($value, $seen = null)", "PHP plus helper should include Haxe stringification support");
 		assertContains(content, "if ($value === null) return \"null\";", "PHP plus helper should stringify null like Haxe");
 		assertContains(content, "if ($value instanceof __HxArray) $value = $value->toArray();", "PHP plus helper should unwrap Haxe arrays");
 		assertContains(content, "return \"[\" . implode(\",\", $parts) . \"]\";", "PHP plus helper should recursively stringify arrays like Haxe");
@@ -5273,12 +5273,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$toString = $value->toString;", "PHP Haxe stringification should inspect anonymous toString fields");
-		assertContains(content, "if (is_callable($toString)) return __hxhx_add_string($toString());",
-			"PHP Haxe stringification should call anonymous callable toString fields");
+		assertContains(content, "$result = __hxhx_add_string($toString(), $seen);", "PHP Haxe stringification should call anonymous callable toString fields");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP anonymous toString field fixture should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "foo\nfoo\n", "generated PHP anonymous toString field output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpCyclicObjectStringification():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_cyclic_string_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = ["class Main {", "  static function main() {", "  }", "}",].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_add_string($value, $seen = null)", "PHP Haxe stringification should carry recursion state");
+		assertContains(content, "if ($seen->contains($value)) return \"{...}\";", "PHP Haxe stringification should stop cyclic object recursion");
+		assertContains(content, "__hxhx_add_string($fieldValue, $seen)", "PHP Haxe stringification should pass recursion state through object fields");
+		if (commandExists("php")) {
+			File.saveContent(outputPath, content + [
+				"",
+				"namespace {",
+				"  $node = new \\stdClass();",
+				"  $node->name = \"root\";",
+				"  $node->next = $node;",
+				"  echo \\__hxhx_add_string($node) . PHP_EOL;",
+				"}",
+				"",
+			].join("\n"));
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP cyclic object stringification fixture should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "{name: root, next: {...}}\n", "generated PHP cyclic object stringification output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -8876,6 +8908,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNativeProtocolConstructorDefaultArgSourceDecode();
 		assertPhpPlusSemantics();
 		assertPhpAnonymousToStringField();
+		assertPhpCyclicObjectStringification();
 		assertPhpEnumString();
 		assertPhpBitwisePrecedence();
 		assertPhpSameClassStaticHelperCall();
