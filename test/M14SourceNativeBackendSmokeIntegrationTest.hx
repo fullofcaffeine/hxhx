@@ -2003,6 +2003,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(lower));",
 			"    Sys.println(Type.enumEq(lower, LowerEnum.id(3)));",
 			"    Sys.println(holder.run());",
+			"    Sys.println(Std.string(SimpleEnum.SE_A));",
+			"    Sys.println(Type.enumEq(SimpleEnum.SE_A, SimpleEnum.SE_A));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5273,7 +5275,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum constructor values should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\n",
+			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\n",
 				"generated PHP enum constructor values should stringify correctly, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);

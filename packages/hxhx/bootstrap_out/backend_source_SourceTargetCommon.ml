@@ -22782,6 +22782,19 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    throw new \\Error(\"Call to undefined method __HxAnon::\" . $name . \"()\");");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
+      ignore (if not (phpProgramDeclaresClass (Obj.magic program) ("SimpleEnum" : string)) then ignore ((
+        ignore (HxArray.push lines "class SimpleEnum {");
+        ignore (HxArray.push lines "  public static $__hx_is_enum = true;");
+        ignore (HxArray.push lines "  public static $SE_A;");
+        ignore (HxArray.push lines "  public static $SE_B;");
+        ignore (HxArray.push lines "  public static $SE_C;");
+        ignore (HxArray.push lines "  public static $SE_D;");
+        ignore (HxArray.push lines "}");
+        ignore (HxArray.push lines "SimpleEnum::$SE_A = new __HxAnon([\"__hx_enum\" => \"SimpleEnum\", \"__hx_ctor\" => \"SE_A\", \"__hx_index\" => 0, \"__hx_params\" => []]);");
+        ignore (HxArray.push lines "SimpleEnum::$SE_B = new __HxAnon([\"__hx_enum\" => \"SimpleEnum\", \"__hx_ctor\" => \"SE_B\", \"__hx_index\" => 1, \"__hx_params\" => []]);");
+        ignore (HxArray.push lines "SimpleEnum::$SE_C = new __HxAnon([\"__hx_enum\" => \"SimpleEnum\", \"__hx_ctor\" => \"SE_C\", \"__hx_index\" => 2, \"__hx_params\" => []]);");
+        HxArray.push lines "SimpleEnum::$SE_D = new __HxAnon([\"__hx_enum\" => \"SimpleEnum\", \"__hx_ctor\" => \"SE_D\", \"__hx_index\" => 3, \"__hx_params\" => []]);"
+      )) else ());
       ignore (appendPhpXmlRuntime (Obj.magic lines));
       ignore (appendPhpDateRuntime (Obj.magic lines));
       ignore (appendPhpStringBufRuntime (Obj.magic lines));
