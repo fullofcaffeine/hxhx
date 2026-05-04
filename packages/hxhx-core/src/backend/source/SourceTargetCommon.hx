@@ -2614,12 +2614,7 @@ class SourceTargetCommon {
 	}
 
 	static function phpSwitchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
-		final useClause = switch (scrutinee) {
-			case EIdent(name):
-				" use (" + valueName(Php, sanitizeTypeName(name)) + ")";
-			case _:
-				"";
-		};
+		final useClause = phpLambdaUseClause(phpLambdaUsedCaptures(scrutinee, []), []);
 		final out = [
 			"(function()" + useClause + " {",
 			"  $__hxhx_switch = " + renderExpr(Php, scrutinee) + ";"
@@ -9879,6 +9874,11 @@ class SourceTargetCommon {
 				EArrayComprehension(name, phpRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, staticFieldNames, className, locals),
 					guardExpr == null ? null : phpRewriteSameClassMemberExpr(guardExpr, methodNames, fieldNames, staticFieldNames, className, bodyLocals),
 					phpRewriteSameClassMemberExpr(yieldExpr, methodNames, fieldNames, staticFieldNames, className, bodyLocals));
+			case ESwitch(scrutinee, patterns, exprs):
+				ESwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, [
+					for (expr in exprs)
+						phpRewriteSameClassMemberExpr(expr, methodNames, fieldNames, staticFieldNames, className, locals)
+				]);
 			case ELambda(args, body):
 				final bodyLocals = copyStringArray(locals);
 				for (arg in args)

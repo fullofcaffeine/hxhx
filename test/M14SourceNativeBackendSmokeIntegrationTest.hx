@@ -816,7 +816,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final baseDecl = parsed.getDecl();
 		final main = HxModuleDecl.getMainClass(baseDecl);
-		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
+		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main)))
+			.concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
 		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
 			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
 		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
@@ -1966,23 +1967,50 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"enum MyEnum {",
 			"  C(i:Int, s:String);",
 			"}",
+			"enum LowerEnum {",
+			"  id(i:Int);",
+			"}",
+			"",
+			"class EnumSwitchHolder {",
+			"  public function new() {}",
+			"  function id(e:MyEnum) return e;",
+			"  public function run():String {",
+			"    var c = MyEnum.C(4, \"z\");",
+			"    return switch (id(c)) {",
+			"      case C(i, s): Std.string(i) + s;",
+			"      default: \"bad\";",
+			"    }",
+			"  }",
+			"}",
 			"",
 			"class Main {",
 			"  static function main() {",
 			"    var e = MyEnum.C(0, \"h\");",
 			"    var c = MyEnum.C;",
 			"    var e2 = c(1, \"x\");",
+			"    var id = MyEnum.C;",
+			"    var later = function(i:Int, s:String) return id(i, s);",
+			"    var e3 = later(2, \"y\");",
+			"    var lowerId = LowerEnum.id;",
+			"    var lower = lowerId(3);",
+			"    var holder = new EnumSwitchHolder();",
 			"    Sys.println(Std.string(e));",
 			"    Sys.println(Std.string([e]));",
 			"    Sys.println(Std.string(e2));",
 			"    Sys.println(Type.enumEq(e2, MyEnum.C(1, \"x\")));",
+			"    Sys.println(Std.string(e3));",
+			"    Sys.println(Type.enumEq(e3, MyEnum.C(2, \"y\")));",
+			"    Sys.println(Std.string(lower));",
+			"    Sys.println(Type.enumEq(lower, LowerEnum.id(3)));",
+			"    Sys.println(holder.run());",
 			"  }",
 			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final baseDecl = parsed.getDecl();
 		final main = HxModuleDecl.getMainClass(baseDecl);
-		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
+		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main)))
+			.concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
 		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
 			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
 		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
@@ -5245,7 +5273,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum constructor values should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\n", "generated PHP enum constructor values should stringify correctly, got:\n" + run.stdout);
+			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\n",
+				"generated PHP enum constructor values should stringify correctly, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}

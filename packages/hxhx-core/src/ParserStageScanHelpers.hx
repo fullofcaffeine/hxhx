@@ -329,7 +329,7 @@ class ParserStageScanHelpers {
 					if (ctor == null)
 						continue;
 					final ctorName = ctor.name;
-					if (ctorName == null || ctorName.length == 0 || !isUpperStart(ctorName))
+					if (ctorName == null || ctorName.length == 0)
 						continue;
 					final argNames = ctor.args == null ? [] : ctor.args;
 					if (argNames.length == 0) {
@@ -556,13 +556,6 @@ class ParserStageScanHelpers {
 		var depth = 1; // we start just after `{`
 		var i = start;
 
-		inline function isUpperStart(name:String):Bool {
-			if (name == null || name.length == 0)
-				return false;
-			final c = name.charCodeAt(0);
-			return c >= "A".code && c <= "Z".code;
-		}
-
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -584,9 +577,6 @@ class ParserStageScanHelpers {
 
 			if (depth != 1)
 				continue;
-			if (!isUpperStart(t.text))
-				continue;
-
 			final ctorName = t.text;
 			final ctorArgs = new Array<String>();
 
