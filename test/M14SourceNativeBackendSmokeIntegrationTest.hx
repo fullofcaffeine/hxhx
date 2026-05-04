@@ -1970,6 +1970,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"enum LowerEnum {",
 			"  id(i:Int);",
 			"}",
+			"enum MultiEnum {",
+			"  A;",
+			"  B;",
+			"  With(i:Int);",
+			"}",
 			"",
 			"class EnumSwitchHolder {",
 			"  public function new() {}",
@@ -2005,6 +2010,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(holder.run());",
 			"    Sys.println(Std.string(SimpleEnum.SE_A));",
 			"    Sys.println(Type.enumEq(SimpleEnum.SE_A, SimpleEnum.SE_A));",
+			"    haxe.Serializer.USE_ENUM_INDEX = true;",
+			"    var indexed:Dynamic = haxe.Unserializer.run(haxe.Serializer.run(MultiEnum.With(9)));",
+			"    var indexedA:Dynamic = haxe.Unserializer.run(haxe.Serializer.run(MultiEnum.A));",
+			"    haxe.Serializer.USE_ENUM_INDEX = false;",
+			"    Sys.println(Std.string(indexed));",
+			"    Sys.println(Type.enumEq(indexed, MultiEnum.With(9)));",
+			"    Sys.println(Std.string(indexedA));",
+			"    Sys.println(Type.enumEq(indexedA, MultiEnum.A));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5268,6 +5281,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content,
 			"return new __HxAnon([\"__hx_enum\" => \"MyEnum\", \"__hx_ctor\" => \"C\", \"__hx_index\" => 0, \"__hx_params\" => [$i, $s]]);",
 			"PHP scanned enum constructors should return Haxe-like runtime enum objects");
+		assertContains(content, "public static $__hx_enum_ctors = [\"A\", \"B\", \"With\"];",
+			"PHP scanned enums should retain constructor order for indexed unserialization");
+		assertContains(content,
+			"return new __HxAnon([\"__hx_enum\" => \"MultiEnum\", \"__hx_ctor\" => \"With\", \"__hx_index\" => 2, \"__hx_params\" => [$i]]);",
+			"PHP scanned enum constructors should retain their constructor index");
 		assertContains(content, "return MyEnum::C(...$__hxhx_args);", "PHP enum constructor values should lower to callable closures");
 		assertContains(content, "Type::enumEq($e2, MyEnum::C(1, \"x\"))", "PHP Type.enumEq should remain a static runtime call");
 		assertContains(content, "echo __hxhx_add_string($e) . PHP_EOL;", "PHP Std.string on enum values should use Haxe stringification");
@@ -5275,7 +5293,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum constructor values should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\n",
+			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\n",
 				"generated PHP enum constructor values should stringify correctly, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);

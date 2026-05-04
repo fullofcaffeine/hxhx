@@ -224,8 +224,9 @@ class ParserStageScanHelpers {
 		if (source == null || source.length == 0)
 			return out;
 
-		function enumRuntimeValue(enumName:String, ctorName:String, argExprs:Array<HxExpr>):HxExpr {
-			return EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString(enumName), EString(ctorName), EInt(0), EArrayDecl(argExprs)]);
+		function enumRuntimeValue(enumName:String, ctorName:String, ctorIndex:Int, argExprs:Array<HxExpr>):HxExpr {
+			return EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"],
+				[EString(enumName), EString(ctorName), EInt(ctorIndex), EArrayDecl(argExprs)]);
 		}
 
 		inline function isUpperStart(name:String):Bool {
@@ -325,7 +326,10 @@ class ParserStageScanHelpers {
 			} else {
 				final scanned = scanEnumBodyForCtors(source, headerTok.nextPos);
 				i = scanned.nextPos;
-				for (ctor in scanned.ctors) {
+				fields.push(new HxFieldDecl("__hx_enum_ctors", HxVisibility.Public, true, "Dynamic",
+					EArrayDecl([for (ctor in scanned.ctors) EString(ctor.name)])));
+				for (ctorIndex in 0...scanned.ctors.length) {
+					final ctor = scanned.ctors[ctorIndex];
 					if (ctor == null)
 						continue;
 					final ctorName = ctor.name;
@@ -333,7 +337,7 @@ class ParserStageScanHelpers {
 						continue;
 					final argNames = ctor.args == null ? [] : ctor.args;
 					if (argNames.length == 0) {
-						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, [])));
+						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, ctorIndex, [])));
 					} else {
 						final args = new Array<HxFunctionArg>();
 						final values = new Array<HxExpr>();
@@ -343,8 +347,9 @@ class ParserStageScanHelpers {
 							values.push(EIdent(a));
 						// Constructors conceptually return an enum value; during bring-up we keep the
 						// type wide to avoid OCaml type errors in heavily-`Obj.magic` codegen.
-						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic",
-							[SReturn(enumRuntimeValue(enumName, ctorName, values), HxPos.unknown())], ""));
+						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic", [
+							SReturn(enumRuntimeValue(enumName, ctorName, ctorIndex, values), HxPos.unknown())
+						], ""));
 					}
 				}
 			}
