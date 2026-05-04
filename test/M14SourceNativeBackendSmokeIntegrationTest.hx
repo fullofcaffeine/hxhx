@@ -5134,6 +5134,61 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpMetaRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_meta_support_" + Std.string(Date.now().getTime()));
+		final srcDir = Path.join([tmpRoot, "src"]);
+		final haxeDir = Path.join([srcDir, "haxe"]);
+		final rttiDir = Path.join([haxeDir, "rtti"]);
+		final unitDir = Path.join([srcDir, "unit"]);
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(rttiDir);
+		FileSystem.createDirectory(unitDir);
+		File.saveContent(Path.join([rttiDir, "Meta.hx"]), [
+			"package haxe.rtti;",
+			"extern class Meta {",
+			"  static function getFields(cls:Dynamic):Dynamic;",
+			"  static function getStatics(cls:Dynamic):Dynamic;",
+			"  static function getType(cls:Dynamic):Dynamic;",
+			"}",
+		].join("\n"));
+		File.saveContent(Path.join([unitDir, "Main.hx"]), [
+			"package unit;",
+			"",
+			"import haxe.rtti.Meta;",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(Meta.getFields(null) != null));",
+			"    Sys.println(Std.string(Meta.getStatics(null) != null));",
+			"    Sys.println(Std.string(Meta.getType(null) != null));",
+			"  }",
+			"}",
+		].join("\n"));
+		final resolved = ResolverStage.parseProjectRoots([srcDir], ["unit.Main"], new StringMap<String>());
+		final index = TyperIndex.build(resolved);
+		final loader = new ModuleLoader([srcDir], new StringMap<String>(), index, function(_typePath:String):Bool {
+			return false;
+		});
+		loader.markResolvedAlready(resolved);
+		final typed = new Array<TypedModule>();
+		for (module in resolved)
+			typed.push(TyperStage.typeResolvedModule(module, index, loader));
+		final program = MacroStage.expandProgram(typed, []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "namespace haxe\\rtti", "PHP source backend should emit haxe.rtti namespace runtime support");
+		assertContains(content, "class Meta {", "PHP source backend should emit haxe.rtti.Meta runtime support");
+		assertContains(content, "\\haxe\\rtti\\Meta::getFields", "PHP imported haxe.rtti.Meta calls should target the namespaced runtime class");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP haxe.rtti.Meta support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\ntrue\n", "generated PHP haxe.rtti.Meta output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpReflectMakeVarArgs():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reflect_make_var_args_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9122,6 +9177,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpPoint3StringEqualityRuntimeSupport();
 		assertPhpLambdaListRuntimeSupport();
 		assertPhpMapKeysIteratorRuntimeSupport();
+		assertPhpMetaRuntimeSupport();
 		assertPhpReflectMakeVarArgs();
 		assertPhpReflectFields();
 		assertPhpReflectCallMethod();

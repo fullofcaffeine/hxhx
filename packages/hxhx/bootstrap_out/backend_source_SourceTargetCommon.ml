@@ -7181,7 +7181,7 @@ let phpProgramKnownTypeNameMap = fun program decl -> let names = Obj.magic (HxMa
 
 let phpProgramTypeAliasMap = fun program decl -> let aliases = Obj.magic (HxMap.create_string ()) in let addImport = fun rawImport -> ignore (try (
   ignore (if rawImport == Obj.magic (HxRuntime.hx_null) || HxString.length rawImport = 0 || HxString.indexOf rawImport "*" 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  ignore (if not (HxString.equals rawImport "haxe.Resource") && not (HxString.equals rawImport "haxe.Json") && not (HxString.equals rawImport "haxe.Serializer") && not (HxString.equals rawImport "haxe.Unserializer") then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  ignore (if not (HxString.equals rawImport "haxe.Resource") && not (HxString.equals rawImport "haxe.Json") && not (HxString.equals rawImport "haxe.Serializer") && not (HxString.equals rawImport "haxe.Unserializer") && not (HxString.equals rawImport "haxe.rtti.Meta") then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let parts = Obj.magic (HxString.split rawImport ".") in (
     ignore (if HxArray.length parts < 2 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     let shortName = (sanitizePhpTypeName (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string) : string) in let qualified = (sanitizePhpTypePath (rawImport : string) : string) in if HxString.indexOf qualified "\\" 0 >= 0 then ignore (HxMap.set_string aliases shortName ("\\" ^ HxString.toStdString qualified)) else ()
@@ -22411,6 +22411,13 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "  }");
       ignore (appendPhpResourceRuntime (Obj.magic lines) (Obj.magic ((Obj.magic context : Backend_BackendContext.t).resources)));
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "namespace haxe\\rtti {");
+      ignore (HxArray.push lines "  class Meta {");
+      ignore (HxArray.push lines "    public static function getType($cls) { return new \\stdClass(); }");
+      ignore (HxArray.push lines "    public static function getStatics($cls) { return new \\stdClass(); }");
+      ignore (HxArray.push lines "    public static function getFields($cls) { return new \\stdClass(); }");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "namespace haxe\\format {");
       ignore (HxArray.push lines "  class JsonParser {");

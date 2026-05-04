@@ -7650,7 +7650,8 @@ class SourceTargetCommon {
 		function addImport(rawImport:String):Void {
 			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
 				return;
-			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Unserializer")
+			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Unserializer"
+				&& rawImport != "haxe.rtti.Meta")
 				return;
 			final parts = rawImport.split(".");
 			if (parts.length < 2)
@@ -10830,6 +10831,13 @@ class SourceTargetCommon {
 				lines.push("    }");
 				lines.push("  }");
 				appendPhpResourceRuntime(lines, context.resources);
+				lines.push("}");
+				lines.push("namespace haxe\\rtti {");
+				lines.push("  class Meta {");
+				lines.push("    public static function getType($cls) { return new \\stdClass(); }");
+				lines.push("    public static function getStatics($cls) { return new \\stdClass(); }");
+				lines.push("    public static function getFields($cls) { return new \\stdClass(); }");
+				lines.push("  }");
 				lines.push("}");
 				lines.push("namespace haxe\\format {");
 				lines.push("  class JsonParser {");
