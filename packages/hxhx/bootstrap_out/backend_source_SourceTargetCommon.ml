@@ -23747,6 +23747,8 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    return __hxhx_to_string_value($left) == __hxhx_to_string_value($right);");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if (is_int($left) && is_int($right)) return $left == $right || __hxhx_int32_value($left) == __hxhx_int32_value($right);");
+      ignore (HxArray.push lines "  if ($left instanceof __HxClassValue && is_string($right)) return $left->__hx_class_name === __hxhx_class_name($right);");
+      ignore (HxArray.push lines "  if (is_string($left) && $right instanceof __HxClassValue) return __hxhx_class_name($left) === $right->__hx_class_name;");
       ignore (HxArray.push lines "  if (is_string($left) && __hxhx_is_point3($right)) return $left == __hxhx_to_string_value($right);");
       ignore (HxArray.push lines "  if (__hxhx_is_point3($left) && is_string($right)) return __hxhx_to_string_value($left) == $right;");
       ignore (HxArray.push lines "  if (is_object($left) || is_object($right)) {");

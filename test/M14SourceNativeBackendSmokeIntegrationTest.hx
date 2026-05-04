@@ -2583,6 +2583,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    stringMap.set('x', 1);",
 			"    Sys.println(Type.getClassName(types[0]));",
 			"    Sys.println(Type.getClassName(types[1]));",
+			"    Sys.println(Std.string(types[1] == \"Array\"));",
+			"    Sys.println(Std.string(\"Array\" == types[1]));",
+			"    Sys.println(Std.string(Type.resolveClass(\"Array\") == types[1]));",
 			"    Sys.println(Type.getClassName(types[2]));",
 			"    Sys.println(Std.string(Type.resolveClass(\"haxe.ds.List\") == types[2]));",
 			"    Sys.println(Type.getClassName(cls));",
@@ -7301,7 +7304,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Type reflection support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "String\nArray\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\ntrue\ntrue\nhaxe.ds.StringMap\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\n",
+			assertTrue(run.stdout == "String\nArray\ntrue\ntrue\ntrue\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\ntrue\ntrue\nhaxe.ds.StringMap\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\n",
 				"generated PHP Type reflection output mismatch, got:\n"
 				+ run.stdout);
 		}
