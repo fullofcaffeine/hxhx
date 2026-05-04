@@ -10588,7 +10588,7 @@ class SourceTargetCommon {
 				lines.push("      if ($value instanceof \\__HxArray) { $this->encodeArrayItems($value->toArray()); return; }");
 				lines.push("      if (is_array($value)) { $this->encodeArrayItems(array_values($value)); return; }");
 				lines.push("      if ($value instanceof \\Map) { $this->encodeMap($value); return; }");
-				lines.push("      if ($value instanceof \\List_) { $this->write(\"l\"); foreach ($value->iterator() as $item) $this->serializeValue($item); $this->write(\"h\"); return; }");
+				lines.push("      if ($value instanceof \\List_) { $this->write(\"l\"); foreach ($value->getIterator() as $item) $this->serializeValue($item); $this->write(\"h\"); return; }");
 				lines.push("      if ($value instanceof \\Date) { $this->write(\"v\" . $this->encodeFloat($value->getTime())); return; }");
 				lines.push("      if ($value instanceof \\haxe\\io\\Bytes) {");
 				lines.push("        $encoded = str_replace([\"+\", \"/\", \"=\"], [\"%\", \":\", \"\"], base64_encode($value->toString()));");

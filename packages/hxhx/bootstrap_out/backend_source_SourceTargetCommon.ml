@@ -22173,7 +22173,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "      if ($value instanceof \\__HxArray) { $this->encodeArrayItems($value->toArray()); return; }");
       ignore (HxArray.push lines "      if (is_array($value)) { $this->encodeArrayItems(array_values($value)); return; }");
       ignore (HxArray.push lines "      if ($value instanceof \\Map) { $this->encodeMap($value); return; }");
-      ignore (HxArray.push lines "      if ($value instanceof \\List_) { $this->write(\"l\"); foreach ($value->iterator() as $item) $this->serializeValue($item); $this->write(\"h\"); return; }");
+      ignore (HxArray.push lines "      if ($value instanceof \\List_) { $this->write(\"l\"); foreach ($value->getIterator() as $item) $this->serializeValue($item); $this->write(\"h\"); return; }");
       ignore (HxArray.push lines "      if ($value instanceof \\Date) { $this->write(\"v\" . $this->encodeFloat($value->getTime())); return; }");
       ignore (HxArray.push lines "      if ($value instanceof \\haxe\\io\\Bytes) {");
       ignore (HxArray.push lines "        $encoded = str_replace([\"+\", \"/\", \"=\"], [\"%\", \":\", \"\"], base64_encode($value->toString()));");

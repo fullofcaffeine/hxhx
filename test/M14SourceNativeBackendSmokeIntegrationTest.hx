@@ -1527,6 +1527,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    map.set(\"kéy\", 42);",
 			"    var map2:haxe.ds.StringMap<Int> = haxe.Unserializer.run(haxe.Serializer.run(map));",
 			"    Sys.println(Std.string(map2.get(\"kéy\")));",
+			"    var list = Lambda.list([4, 5]);",
+			"    var list2:haxe.ds.List<Int> = haxe.Unserializer.run(haxe.Serializer.run(list));",
+			"    Sys.println(Std.string(list2.length));",
+			"    Sys.println(Std.string(list2.first()));",
+			"    Sys.println(Std.string(list2.last()));",
 			"    var bytes = haxe.io.Bytes.ofString(\"ABC\");",
 			"    Sys.println(haxe.Serializer.run(bytes));",
 			"    var bytes2:haxe.io.Bytes = haxe.Unserializer.run(haxe.Serializer.run(bytes));",
@@ -4899,7 +4904,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Serializer/Unserializer support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "z\ny12:%C3%A9%C3%A9\n5\ntrue\nhxhx\nseven:7\n42\ns4:QUJD\nABC\n",
+			assertTrue(run.stdout == "z\ny12:%C3%A9%C3%A9\n5\ntrue\nhxhx\nseven:7\n42\n2\n4\n5\ns4:QUJD\nABC\n",
 				"generated PHP haxe.Serializer/Unserializer output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
