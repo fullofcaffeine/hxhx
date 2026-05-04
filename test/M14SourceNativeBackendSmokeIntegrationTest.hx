@@ -2281,6 +2281,52 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpUserClassTypeCheckProgram():GenIrProgram {
+		final src = [
+			"package unit;",
+			"class MyClass { public function new(value:Int) {} }",
+			"class MySubClass extends MyClass { public function new(value:Int) { super(value); } }",
+			"class Main {",
+			"  static var types:Array<Dynamic> = [null, unit.MyClass, Dynamic];",
+			"  static function main() {",
+			"    var value = new MyClass(0);",
+			"    var child = new MySubClass(1);",
+			"    var c:Dynamic = MyClass;",
+			"    Sys.println(Std.string(value is MyClass));",
+			"    Sys.println(Std.string(Std.isOfType(value, MyClass)));",
+			"    Sys.println(Std.string(child is MyClass));",
+			"    Sys.println(Std.string(Std.isOfType(child, MyClass)));",
+			"    Sys.println(Std.string(value is c));",
+			"    Sys.println(Std.string(check(value, c)));",
+			"    c = MySubClass;",
+			"    Sys.println(Std.string(value is c));",
+			"    Sys.println(Std.string(check(value, c)));",
+			"    c = null;",
+			"    Sys.println(Std.string(Std.isOfType(value, c)));",
+			"    var anon:Dynamic = { x: 0 };",
+			"    Sys.println(Std.string(Std.isOfType(anon, c)));",
+			"    var fn:Dynamic = function() {};",
+			"    Sys.println(Std.string(Std.isOfType(fn, c)));",
+			"    Sys.println(Std.string(reflectLoopCheck(value, MyClass)));",
+			"    Sys.println(Type.getClassName(Type.getClass(value)));",
+			"  }",
+			"  static function check(value:Dynamic, c:Dynamic):Bool return value is c;",
+			"  static function reflectLoopCheck(value:Dynamic, t1:Dynamic):Bool {",
+			"    for (i in 0...types.length) {",
+			"      var c:Dynamic = types[i];",
+			"      var actual = Std.isOfType(value, c);",
+			"      var expected = c != null && c == t1 || c == Dynamic;",
+			"      if (actual != expected) return false;",
+			"    }",
+			"    return true;",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "unit/Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeReflectionProgram():GenIrProgram {
 		final src = [
 			"import haxe.ds.List;",
@@ -6803,11 +6849,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content,
 			"case \"Int\": return is_int($value) || (is_float($value) && is_finite($value) && floor($value) == $value && $value >= -2147483648 && $value <= 2147483647);",
 			"PHP Std.isOfType Int should accept in-range integral Float values like Haxe");
+		assertContains(content, "case \"haxe.ds.List\": return $value instanceof List_;",
+			"PHP Std.isOfType List should recognize the sanitized List runtime class");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP type checks should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\nfalse\ntrue\n",
 				"generated PHP type check output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpUserClassTypeCheck():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_user_class_type_check_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpUserClassTypeCheckProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_is_of_type($value, \"MyClass\")", "PHP direct user-class `is` checks should use the runtime type helper");
+		assertContains(content, "__hxhx_is_of_type($value, $c)", "PHP direct `is` checks should accept dynamic class values");
+		assertContains(content, "__hxhx_class_name(\"MyClass\")", "PHP unqualified class values should be canonicalized before equality checks");
+		assertContains(content, "$resolved = __hxhx_class_name($type)", "PHP runtime type helper should resolve class aliases before instanceof checks");
+		assertContains(content, "str_replace(\".\", \"\\\\\", $resolved)", "PHP runtime type helper should try package-qualified PHP class names");
+		assertContains(content, "if ($type === null) return is_callable($value) || $value instanceof __HxAnon;",
+			"PHP null pseudo-type checks should accept anonymous objects/functions without accepting all class instances");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP user class type checks should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nunit.MyClass\n",
+				"generated PHP user class type check output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -6832,8 +6904,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$stringMap instanceof Map && $stringMap->__hx_type === \"haxe.ds.StringMap\"",
 			"PHP direct haxe.ds.StringMap checks should require the Map runtime tag");
 		assertContains(content, "__hxhx_is_of_type($stringMap, \"StringMap\")", "PHP Std.isOfType should check haxe.ds.StringMap through the runtime helper");
-		assertContains(content, "[\"String\", \"Array\", \"List\", \"ReflectThing\", \"MyReflectEnum\"]",
-			"PHP class and enum literals in value position should lower to reflection names");
+		assertContains(content,
+			"[__hxhx_class_name(\"String\"), __hxhx_class_name(\"Array\"), __hxhx_class_name(\"List\"), __hxhx_class_name(\"ReflectThing\"), __hxhx_class_name(\"MyReflectEnum\")]",
+			"PHP class and enum literals in value position should lower to canonical reflection names");
 		assertContains(content, "Type::getClassName(__hxhx_array_get($types, 0))", "PHP Type.getClassName should accept dynamic class values from arrays");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -7280,8 +7353,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "DCEClass::$c = [null, \"unit.UsedReferenced2\"];",
-			"PHP static initializers should preserve package-qualified class references as values");
+		assertContains(content, "DCEClass::$c = [null, __hxhx_class_name(\"unit.UsedReferenced2\")];",
+			"PHP static initializers should preserve canonical package-qualified class references as values");
 		assertNotContains(content, "$unit->UsedReferenced2", "PHP package-qualified class references should not lower as instance field reads");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -7323,8 +7396,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "TestReflect::$TYPES = [\"haxe.ds.StringMap\"];",
-			"PHP static initializers should preserve std package-qualified class references");
+		assertContains(content, "TestReflect::$TYPES = [__hxhx_class_name(\"haxe.ds.StringMap\")];",
+			"PHP static initializers should preserve canonical std package-qualified class references");
 		assertNotContains(content, "haxe\\ds::$StringMap", "PHP package prefixes should not lower as static class-property receivers");
 		assertNotContains(content, "std-string-map-source-should-not-render", "PHP StringMap class references should not dump the upstream std source body");
 		if (commandExists("php")) {
@@ -8384,6 +8457,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTryCatchRawExpression();
 		assertPythonTypeCheck();
 		assertPhpTypeCheck();
+		assertPhpUserClassTypeCheck();
 		assertPhpTypeReflection();
 		assertPhpShiftAssignment();
 		assertPythonShiftAssignment();

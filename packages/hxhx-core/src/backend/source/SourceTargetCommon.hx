@@ -638,6 +638,10 @@ class SourceTargetCommon {
 		return "\"" + s + "\"";
 	}
 
+	static function phpClassValueExpr(typePath:String):String {
+		return "__hxhx_class_name(" + quotePhpString(typePath) + ")";
+	}
+
 	static function renderExpr(target:SourceNativeTarget, expr:HxExpr):String {
 		return switch (expr) {
 			case ENull:
@@ -666,7 +670,8 @@ class SourceTargetCommon {
 			case EFloat(value):
 				floatLiteralExpr(value);
 			case EEnumValue(name):
-				if (target == Php && phpLocalExists(name)) valueName(Php, name); else quoteString(name);
+				if (target == Php && phpLocalExists(name)) valueName(Php,
+					name); else if (target == Php && looksLikeTypePathRoot(name)) phpClassValueExpr(name); else quoteString(name);
 			case EThis:
 				switch (target) {
 					case Python: "self";
@@ -680,7 +685,7 @@ class SourceTargetCommon {
 			case EUnop(op, inner):
 				unopExpr(target, op, inner);
 			case EIdent(name) if (target == Php && looksLikeTypePathRoot(name) && !phpLocalExists(name)):
-				quotePhpString(name);
+				phpClassValueExpr(name);
 			case EIdent(name) if (target == Php && phpInt64ImportedStaticMethodValueName(name) && !phpLocalExists(name)):
 				phpStaticMethodValueAccess(phpInt64TypePath(), name);
 			case EIdent(name):
@@ -1235,15 +1240,25 @@ class SourceTargetCommon {
 				}
 				"hxhx_is_of_type(" + renderedValue + ", " + quoteString(typeName) + ")";
 			case Php:
-				final typeName = switch (typeExpr) {
+				switch (typeExpr) {
+					case EIdent(name) | EEnumValue(name) if (phpLocalExists(name) || !looksLikeTypePathRoot(name)):
+						"__hxhx_is_of_type("
+						+ renderedValue
+						+ ", "
+						+ valueName(Php, name)
+						+ ")";
 					case EIdent(name) | EEnumValue(name):
-						name;
-					case EField(receiver, field):
-						sanitizeDottedPath(renderExpr(target, receiver) + "." + field);
+						phpTypeCheckExpr(renderedValue, name);
+					case EField(_, _):
+						final packageTypePath = phpPackageQualifiedTypePath(typeExpr);
+						if (packageTypePath != null) {
+							phpTypeCheckExpr(renderedValue, packageTypePath);
+						} else {
+							"__hxhx_is_of_type(" + renderedValue + ", " + renderExpr(Php, typeExpr) + ")";
+						}
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported type check RHS: " + exprKind(typeExpr);
 				}
-				phpTypeCheckExpr(renderedValue, typeName);
 			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported binary operator: is";
 		};
@@ -1281,7 +1296,7 @@ class SourceTargetCommon {
 			case "Dynamic" | "Any":
 				"true";
 			case _:
-				"(" + value + " instanceof " + sanitizePhpTypePath(typeName) + ")";
+				"__hxhx_is_of_type(" + value + ", " + quotePhpString(typeName) + ")";
 		};
 	}
 
@@ -1531,7 +1546,7 @@ class SourceTargetCommon {
 				}
 				final packageTypeRef = phpPackageQualifiedTypeReference(EField(receiver, field));
 				if (packageTypeRef != null)
-					return packageTypeRef;
+					return phpClassValueExpr(phpPackageQualifiedTypePath(EField(receiver, field)));
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
 					final mathConstant = typePath == "Math" ? phpMathConstantAccess(field) : null;
@@ -11720,13 +11735,17 @@ class SourceTargetCommon {
 				lines.push("    case \"Array\": return is_array($value) || $value instanceof __HxArray;");
 				lines.push("    case \"StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
 				lines.push("    case \"haxe.ds.StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
+				lines.push("    case \"List\": return $value instanceof List_;");
+				lines.push("    case \"haxe.ds.List\": return $value instanceof List_;");
 				lines.push("    case \"Exception\": return $value instanceof \\Throwable;");
 				lines.push("    case \"haxe.Exception\": return $value instanceof \\Throwable;");
 				lines.push("    case \"Dynamic\": return true;");
 				lines.push("  }");
+				lines.push("  if ($type === null) return is_callable($value) || $value instanceof __HxAnon;");
 				lines.push("  if (!is_object($value)) return false;");
-				lines.push("  $short = substr($type, strrpos($type, \".\") === false ? 0 : strrpos($type, \".\") + 1);");
-				lines.push("  $candidates = [$type, str_replace(\".\", \"\\\\\", $type), $short, $short . \"_\"];");
+				lines.push("  $resolved = __hxhx_class_name($type);");
+				lines.push("  $short = substr($resolved, strrpos($resolved, \".\") === false ? 0 : strrpos($resolved, \".\") + 1);");
+				lines.push("  $candidates = [$type, str_replace(\".\", \"\\\\\", $type), $resolved, str_replace(\".\", \"\\\\\", $resolved), $short, $short . \"_\"];");
 				lines.push("  foreach ($candidates as $candidate) {");
 				lines.push("    if (is_string($candidate) && $candidate !== \"\" && class_exists($candidate) && $value instanceof $candidate) return true;");
 				lines.push("  }");
@@ -11992,7 +12011,6 @@ class SourceTargetCommon {
 				lines.push("  public static function resolveClass($name) {");
 				lines.push("    if ($name === null) return null;");
 				lines.push("    $resolved = __hxhx_class_name($name);");
-				lines.push("    if ($resolved === \"haxe.ds.List\") return \"List\";");
 				lines.push("    return $resolved;");
 				lines.push("  }");
 				lines.push("  public static function getEnumName($enum) {");
