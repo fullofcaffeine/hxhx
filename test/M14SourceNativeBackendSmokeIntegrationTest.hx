@@ -973,6 +973,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var input = new haxe.io.BytesInput(out.getBytes());",
 			"    input.bigEndian = true;",
 			"    Sys.println(out.length);",
+			"    Sys.println(input.position);",
+			"    input.position = 1;",
+			"    Sys.println(input.position);",
+			"    input.position = -5;",
+			"    Sys.println(input.position);",
+			"    input.position = 999;",
+			"    Sys.println(input.position);",
+			"    input.position = 0;",
 			"    Sys.println(input.readByte());",
 			"    Sys.println(input.readInt16());",
 			"    Sys.println(input.readString(1));",
@@ -6144,6 +6152,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(bytesContent, "class Bytes {", "PHP runtime should expose haxe.io.Bytes");
 		assertContains(bytesContent, "class BytesInput {", "PHP runtime should expose haxe.io.BytesInput");
 		assertContains(bytesContent, "class BytesOutput {", "PHP runtime should expose haxe.io.BytesOutput");
+		assertContains(bytesContent, "public function get_position()", "PHP BytesInput should expose typed position getters");
+		assertContains(bytesContent, "public function set_position($value)", "PHP BytesInput should expose typed position setters");
 		assertContains(bytesContent, "use ($b)", "PHP lambdas should value-capture outer object locals that are not reassigned later");
 		assertContains(bytesContent, "\\haxe\\io\\Bytes::fastGet", "PHP imported haxe.io.Bytes.fastGet aliases should call the runtime static method");
 		if (commandExists("php")) {
@@ -6155,6 +6165,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "CB", "generated PHP Bytes.ofData should share backing data");
 			assertContains(run.stdout, "67", "generated PHP Bytes.fastGet should read shared byte data");
 			assertContains(run.stdout, "4", "generated PHP BytesOutput should track written length");
+			assertContains(run.stdout, "0\n1\n0\n4\n", "generated PHP BytesInput position accessors should clamp and report seek positions");
 			assertContains(run.stdout, "65", "generated PHP BytesInput should read written bytes");
 			assertContains(run.stdout, "-2", "generated PHP BytesInput should read signed int16 values");
 			assertContains(run.stdout, "Z", "generated PHP BytesInput should read written strings");
