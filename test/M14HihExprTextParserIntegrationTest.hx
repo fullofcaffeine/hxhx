@@ -1282,21 +1282,28 @@ class M14HihExprTextParserIntegrationTest {
 		final exprMetaCalls = HxParser.parseFunctionBodyText('eq(readMeta(@tag ("value")).name, "tag"); eq(readMeta(@tag("arg") "value").args.length, 1);');
 		assertTrue(exprMetaCalls.length == 2, "expected expression metadata calls to parse");
 		switch (exprMetaCalls[0]) {
-			case SExpr(ECall(EIdent("eq"), [EField(ECall(EIdent("readMeta"), [EString("value")]), "name"), EString("tag")]), _):
+			case SExpr(ECall(EIdent("eq"), [
+				EField(ECall(EIdent("readMeta"), [
+					ECall(EIdent("__hxhx_expr_meta"), [EString("tag"), EString(""), EString("value")])
+				]), "name"),
+				EString("tag")
+			]), _):
 			case SExpr(EUnsupported(raw), _):
 				fail("spaced expression metadata call parsed as unsupported: " + raw);
 			case _:
-				fail("expected spaced expression metadata to keep the parenthesized expression");
+				fail("expected spaced expression metadata to preserve metadata marker");
 		}
 		switch (exprMetaCalls[1]) {
 			case SExpr(ECall(EIdent("eq"), [
-				EField(EField(ECall(EIdent("readMeta"), [EString("value")]), "args"), "length"),
+				EField(EField(ECall(EIdent("readMeta"), [
+					ECall(EIdent("__hxhx_expr_meta"), [EString("tag"), EString('"arg"'), EString("value")])
+				]), "args"), "length"),
 				EInt(1)
 			]), _):
 			case SExpr(EUnsupported(raw), _):
 				fail("attached expression metadata args call parsed as unsupported: " + raw);
 			case _:
-				fail("expected attached expression metadata args to keep the following expression");
+				fail("expected attached expression metadata args to preserve metadata marker");
 		}
 
 		final macroTypeCalls = HxParser.parseFunctionBodyText('eq(p.printComplexType(macro :X -> Y), "X -> Y"); eq(p.printComplexType(TFunction([TOptional(TNamed("a", macro :Int))], macro :Int)), "(?a:Int) -> Int"); eq(p.printField({ name: "x", pos: null, kind: FVar(macro :Any, null), access: [AFinal, AStatic] }), "static final x : Any");');

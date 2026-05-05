@@ -970,6 +970,36 @@ class HxParser {
 		}
 	}
 
+	function readBalancedParenBodyText():String {
+		// Called when current token is '(' and the caller needs the raw body text.
+		if (!cur.kind.match(TLParen))
+			fail("Expected parenthesis group");
+		bump();
+		final bodyStart = currentIndex();
+		var bodyEnd = bodyStart;
+		var depth = 1;
+		while (depth > 0) {
+			switch (cur.kind) {
+				case TEof:
+					fail("Unterminated parenthesis group");
+				case TLParen:
+					depth++;
+					bump();
+				case TRParen:
+					depth--;
+					if (depth == 0) {
+						bodyEnd = currentIndex();
+						bump();
+					} else {
+						bump();
+					}
+				case _:
+					bump();
+			}
+		}
+		return StringTools.trim(sliceSource(bodyStart, bodyEnd));
+	}
+
 	function skipBalancedAngles():Void {
 		// Called when current token is '<' and the caller wants to skip a balanced generic group.
 		var depth = 0;
@@ -2205,20 +2235,32 @@ class HxParser {
 			case TOther("@".code):
 				// Expression-level metadata: `@:meta expr`.
 				//
-				// Bring-up semantics: ignore metadata and return the underlying expression.
+				// Bring-up semantics: retain a small marker so known helper macros such as
+				// `unit.HelperMacros.getMeta(@foo expr)` can observe the metadata. Normal
+				// runtime emission unwraps the marker and keeps the underlying expression.
+				final metaNames = new Array<String>();
+				final metaArgs = new Array<String>();
 				while (cur.kind.match(TOther("@".code))) {
 					bump();
 					if (cur.kind.match(TColon))
 						bump();
 					final meta = readMetadataHead();
+					var argsText = "";
 					if (hasAttachedMetadataArgs(meta.name, meta.endIndex)) {
-						bump();
-						try
-							skipBalancedParens()
-						catch (_:HxParseError) {}
+						argsText = readBalancedParenBodyText();
+					}
+					if (meta.name != "privateAccess") {
+						metaNames.push(meta.name);
+						metaArgs.push(argsText);
 					}
 				}
-				parseUnaryExpr(stop);
+				var inner = parseUnaryExpr(stop);
+				var i = metaNames.length - 1;
+				while (i >= 0) {
+					inner = ECall(EIdent("__hxhx_expr_meta"), [EString(metaNames[i]), EString(metaArgs[i]), inner]);
+					i--;
+				}
+				inner;
 			case TKeyword(k) if (k == KCast):
 				bump();
 				// `cast expr` or `cast(expr, Type)`

@@ -220,6 +220,7 @@ class ParserStage {
 
 						final scannedFnStaticByName:Map<String, Bool> = new Map();
 						final scannedFnsByName:Map<String, Array<HxFunctionDecl>> = new Map();
+						final scannedFieldsByName:Map<String, HxFieldDecl> = new Map();
 						for (fn in HxClassDecl.getFunctions(scanned)) {
 							final fnName = HxFunctionDecl.getName(fn);
 							if (fnName != null && fnName.length > 0) {
@@ -228,6 +229,11 @@ class ParserStage {
 								bucket.push(fn);
 								scannedFnsByName.set(fnName, bucket);
 							}
+						}
+						for (f in HxClassDecl.getFields(scanned)) {
+							final fieldName = HxFieldDecl.getName(f);
+							if (fieldName != null && fieldName.length > 0 && !scannedFieldsByName.exists(fieldName))
+								scannedFieldsByName.set(fieldName, f);
 						}
 
 						function hasMetadata(values:Array<String>, marker:String):Bool {
@@ -240,15 +246,47 @@ class ParserStage {
 							return false;
 						}
 
-						function mergeScannedMetadata(fn:HxFunctionDecl, scannedFn:Null<HxFunctionDecl>):Array<String> {
-							final out = HxFunctionDecl.getMetadata(fn).copy();
-							if (scannedFn != null) {
-								for (value in HxFunctionDecl.getMetadata(scannedFn)) {
-									if (!hasMetadata(out, value))
-										out.push(value);
+						function metadataKey(raw:String):String {
+							var text = raw == null ? "" : StringTools.trim(raw);
+							if (StringTools.startsWith(text, "@"))
+								text = text.substr(1);
+							if (StringTools.startsWith(text, ":"))
+								text = text.substr(1);
+							final paren = text.indexOf("(");
+							if (paren >= 0)
+								text = text.substr(0, paren);
+							return StringTools.trim(text);
+						}
+
+						function mergeMetadataPreferScanned(existing:Array<String>, scanned:Array<String>):Array<String> {
+							final out = existing == null ? [] : existing.copy();
+							if (scanned == null)
+								return out;
+							for (value in scanned) {
+								final key = metadataKey(value);
+								var replaced = false;
+								if (key.length > 0) {
+									for (i in 0...out.length) {
+										if (metadataKey(out[i]) == key) {
+											out[i] = value;
+											replaced = true;
+											break;
+										}
+									}
 								}
+								if (!replaced && !hasMetadata(out, value))
+									out.push(value);
 							}
 							return out;
+						}
+
+						function mergeScannedMetadata(fn:HxFunctionDecl, scannedFn:Null<HxFunctionDecl>):Array<String> {
+							return mergeMetadataPreferScanned(HxFunctionDecl.getMetadata(fn), scannedFn == null ? null : HxFunctionDecl.getMetadata(scannedFn));
+						}
+
+						function mergeScannedFieldMetadata(field:HxFieldDecl, scannedField:Null<HxFieldDecl>):Array<String> {
+							return mergeMetadataPreferScanned(HxFieldDecl.getMetadata(field),
+								scannedField == null ? null : HxFieldDecl.getMetadata(scannedField));
 						}
 
 						function usefulHint(value:String):Bool {
@@ -401,8 +439,16 @@ class ParserStage {
 						final patchedFields = new Array<HxFieldDecl>();
 						final existingFieldNames:Map<String, Bool> = new Map();
 						for (f in HxClassDecl.getFields(cls)) {
-							patchedFields.push(f);
 							final fieldName = HxFieldDecl.getName(f);
+							final scannedField = fieldName == null ? null : scannedFieldsByName.get(fieldName);
+							final metadata = mergeScannedFieldMetadata(f, scannedField);
+							final metadataChanged = !sameMetadata(metadata, HxFieldDecl.getMetadata(f));
+							if (metadataChanged)
+								changed = true;
+							patchedFields.push(metadataChanged ? new HxFieldDecl(HxFieldDecl.getName(f), HxFieldDecl.getVisibility(f),
+								HxFieldDecl.getIsStatic(f), HxFieldDecl.getTypeHint(f), HxFieldDecl.getInit(f), metadata, HxFieldDecl.getPos(f),
+								HxFieldDecl.getEndPos(f), HxFieldDecl.getIsFinal(f), HxFieldDecl.getPropertyGet(f), HxFieldDecl.getPropertySet(f),
+								HxFieldDecl.getInitText(f)) : f);
 							if (fieldName != null && fieldName.length > 0)
 								existingFieldNames.set(fieldName, true);
 						}
@@ -1568,7 +1614,39 @@ class ParserStage {
 
 		var sawStatic = false;
 		var sawMacro = false;
+		var pendingMetadata = new Array<String>();
 		var vis:HxVisibility = HxVisibility.Public;
+
+		function scanMetadataText(startPos:Int):{text:String, nextPos:Int} {
+			var j = startPos;
+			final colon = scanNextToken(source, j);
+			if (colon.text == ":")
+				j = colon.nextPos;
+			final head = scanNextToken(source, j);
+			if (head.text.length == 0 || (!head.isIdent && head.text != "new"))
+				return {text: "", nextPos: startPos};
+			final parts = [head.text];
+			j = head.nextPos;
+			final next = scanNextToken(source, j);
+			if (next.text != "(")
+				return {text: parts.join(""), nextPos: j};
+			parts.push("(");
+			j = next.nextPos;
+			var depth = 1;
+			while (depth > 0) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: parts.join(""), nextPos: j};
+				j = tok.nextPos;
+				parts.push(tok.text);
+				if (tok.text == "(") {
+					depth += 1;
+				} else if (tok.text == ")") {
+					depth -= 1;
+				}
+			}
+			return {text: parts.join(""), nextPos: j};
+		}
 
 		while (true) {
 			final t = scanNextToken(source, i);
@@ -1578,6 +1656,13 @@ class ParserStage {
 
 			if (!t.isIdent) {
 				switch (t.text) {
+					case "@":
+						if (depth == 1) {
+							final meta = scanMetadataText(i);
+							if (meta.text.length > 0)
+								pendingMetadata.push(meta.text);
+							i = meta.nextPos;
+						}
 					case "{":
 						depth += 1;
 					case "}":
@@ -1589,6 +1674,7 @@ class ParserStage {
 							// Declarations are terminated; reset modifiers.
 							sawStatic = false;
 							sawMacro = false;
+							pendingMetadata = [];
 							vis = HxVisibility.Public;
 						}
 					case _:
@@ -1699,12 +1785,13 @@ class ParserStage {
 							continue;
 						final typeHint = scanFieldTypeHint(source, ft.nextPos);
 						final initText = scanFieldInitializer(source, ft.nextPos);
-						fields.push(new HxFieldDecl(name, fieldVis, wantStatic, typeHint, parseSimpleInitExpr(initText), null, null, null, t.text == "final",
-							"", "", initText));
+						fields.push(new HxFieldDecl(name, fieldVis, wantStatic, typeHint, parseSimpleInitExpr(initText), pendingMetadata.copy(), null, null,
+							t.text == "final", "", "", initText));
 					}
 
 					sawStatic = false;
 					sawMacro = false;
+					pendingMetadata = [];
 					vis = HxVisibility.Public;
 					if (depth <= 0)
 						break;
@@ -1813,12 +1900,15 @@ class ParserStage {
 						i = bodyCapture.nextPos;
 
 					if (fnName.length > 0) {
-						final metadata = sawMacro ? ["macro"] : null;
+						final metadata = pendingMetadata.copy();
+						if (sawMacro)
+							metadata.push("macro");
 						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", body, "", metadata, null, null, bodyText));
 					}
 
 					sawStatic = false;
 					sawMacro = false;
+					pendingMetadata = [];
 					vis = HxVisibility.Public;
 				case _:
 			}

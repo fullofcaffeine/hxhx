@@ -2626,7 +2626,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"import haxe.ds.List;",
 			"import haxe.ds.StringMap;",
 			"enum MyReflectEnum { C; }",
-			"class ReflectThing {}",
+			"class ReflectThing {",
+			"  public var value:Int = 1;",
+			"  public function new() {}",
+			"  public function method():Void {}",
+			"  public static var stat:Int = 2;",
+			"  public static function helper():Void {}",
+			"}",
+			"class PropertyThing {",
+			"  public var x(get, set):Int;",
+			"  public var y(default, set):Int = 0;",
+			"  public function new() {}",
+			"  function get_x():Int return 1;",
+			"  function set_x(value:Int):Int return value;",
+			"  function set_y(value:Int):Int return value;",
+			"}",
 			"class Main {",
 			"  static function main() {",
 			"    var types:Array<Dynamic> = [String, Array, List, ReflectThing, MyReflectEnum];",
@@ -2646,6 +2660,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(Type.resolveClass(\"haxe.ds.List\") == types[2]));",
 			"    Sys.println(Type.getClassName(cls));",
 			"    Sys.println(Std.string(Type.resolveClass(\"ReflectThing\") == cls));",
+			"    var instanceFields = Type.getInstanceFields(cls);",
+			"    instanceFields.sort(Reflect.compare);",
+			"    Sys.println(instanceFields.join(\"#\"));",
+			"    var classFields = Type.getClassFields(cls);",
+			"    classFields.sort(Reflect.compare);",
+			"    Sys.println(classFields.join(\"#\"));",
+			"    var propertyFields = Type.getInstanceFields(PropertyThing);",
+			"    propertyFields.sort(Reflect.compare);",
+			"    Sys.println(propertyFields.join(\"#\"));",
 			"    Sys.println(Type.getEnumName(en));",
 			"    Sys.println(Std.string(Type.resolveEnum(\"MyReflectEnum\") == en));",
 			"    Sys.println(Type.getClassName(Type.getClass(\"hello\")));",
@@ -5166,8 +5189,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  @:instanceMeta(\"fieldArg\") public var value:Int;",
 			"  @:methodMeta public function method():Void {}",
 			"  @:staticMeta(7) public static var count:Int = 0;",
+			"  @:empty() @:_int(-45) @:complex([{ x: 0, y: \"hello\", z: -1.48, b: true, k: null }]) public static var foo:Int = 0;",
 			"  @:staticMethodMeta public static function helper():Void {}",
-			"  public function new() {}",
+			"  @:new public function new() {}",
 			"}",
 			"",
 			"class Main {",
@@ -5180,15 +5204,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(Meta.getFields(null) != null));",
 			"    Sys.println(Std.string(Meta.getStatics(null) != null));",
 			"    Sys.println(Std.string(Meta.getType(null) != null));",
+			"    var a = 1;",
+			"    var exprMetaA:Dynamic = getMeta(@foo a);",
+			"    Sys.println(exprMetaA.name);",
+			"    Sys.println(exprMetaA.args.length);",
+			"    var exprMetaB:Dynamic = getMeta(@bar(\"1\", \"foo\") null);",
+			"    Sys.println(exprMetaB.name);",
+			"    Sys.println(exprMetaB.args[0]);",
+			"    Sys.println(exprMetaB.args[1]);",
+			"    var exprMetaC:Dynamic = getMeta(@foo (\"1\"));",
+			"    Sys.println(exprMetaC.args.length);",
+			"    var exprMetaD:Dynamic = getMeta(@foo(\"1\") \"2\");",
+			"    Sys.println(exprMetaD.args.length);",
 			"    var cls = Type.resolveClass(\"unit.Tagged\");",
 			"    var typeMeta:Dynamic = Meta.getType(cls);",
 			"    Sys.println(typeMeta.typeMeta[0]);",
 			"    var statics:Dynamic = Meta.getStatics(cls);",
 			"    Sys.println(sortedNames(statics));",
 			"    Sys.println(statics.count.staticMeta[0]);",
+			"    Sys.println(sortedNames(statics.foo));",
+			"    Sys.println(Std.string(statics.foo.empty == null));",
+			"    Sys.println(Std.string(statics.foo._int));",
+			"    var complex:Dynamic = statics.foo.complex[0][0];",
+			"    Sys.println(sortedNames(complex));",
+			"    Sys.println(Std.string(complex.x));",
+			"    Sys.println(complex.y);",
+			"    Sys.println(Std.string(complex.z));",
+			"    Sys.println(Std.string(complex.b));",
+			"    Sys.println(Std.string(complex.k == null));",
 			"    var fields:Dynamic = Meta.getFields(cls);",
 			"    Sys.println(sortedNames(fields));",
 			"    Sys.println(fields.value.instanceMeta[0]);",
+			"    Sys.println(sortedNames(fields._));",
 			"    var enumCls = Type.resolveEnum(\"unit.E\");",
 			"    var enumTypeMeta:Dynamic = Meta.getType(enumCls);",
 			"    Sys.println(sortedNames(enumTypeMeta));",
@@ -5224,8 +5271,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.rtti.Meta support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\ntrue\ntrue\nclassArg\ncount#helper\n7\nmethod#value\nfieldArg\nenumMeta\ntrue\nA#B\na\ntrue\n0\n",
-				"generated PHP haxe.rtti.Meta output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "true\ntrue\ntrue\nfoo\n0\nbar\n1\nfoo\n0\n1\nclassArg\ncount#foo#helper\n7\n_int#complex#empty\ntrue\n[-45]\nb#k#x#y#z\n0\nhello\n-1.48\ntrue\ntrue\n_#method#value\nfieldArg\nnew\nenumMeta\ntrue\nA#B\na\ntrue\n0\n",
+				"generated PHP haxe.rtti.Meta output mismatch, got:\n"
+				+ run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -7664,12 +7712,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"[__hxhx_class_value(\"String\"), __hxhx_class_value(\"Array\"), __hxhx_class_value(\"List\"), __hxhx_class_value(\"ReflectThing\"), __hxhx_class_value(\"MyReflectEnum\")]",
 			"PHP class and enum literals in value position should lower to tagged reflection values");
 		assertContains(content, "Type::getClassName(__hxhx_array_get($types, 0))", "PHP Type.getClassName should accept dynamic class values from arrays");
+		assertContains(content, "public static function getInstanceFields($cls)", "PHP Type runtime should expose getInstanceFields");
+		assertContains(content, "public static function getClassFields($cls)", "PHP Type runtime should expose getClassFields");
 		assertContains(content, "public static function typeof($value)", "PHP Type runtime should expose typeof");
 		assertContains(content, "__hxhx_value_type(\"TClass\", 6", "PHP ValueType constructors should lower to enum-like runtime values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Type reflection support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "String\nArray\ntrue\ntrue\ntrue\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\ntrue\ntrue\nhaxe.ds.StringMap\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\n",
+			assertTrue(run.stdout == "String\nArray\ntrue\ntrue\ntrue\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nmethod#value\nhelper#stat\nget_x#set_x#set_y#x#y\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\ntrue\ntrue\nhaxe.ds.StringMap\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\n",
 				"generated PHP Type reflection output mismatch, got:\n"
 				+ run.stdout);
 		}

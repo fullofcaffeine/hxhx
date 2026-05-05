@@ -29,6 +29,24 @@ private typedef SourceSwitchPatternLowered = {
 	final bindings:Array<SourceSwitchPatternBinding>;
 };
 
+private class PhpMetadataObjectField {
+	public final name:String;
+	public final value:String;
+
+	public function new(name:String, value:String) {
+		this.name = name;
+		this.value = value;
+	}
+
+	public static function getName(field:PhpMetadataObjectField):String {
+		return field.name;
+	}
+
+	public static function getValue(field:PhpMetadataObjectField):String {
+		return field.value;
+	}
+}
+
 /**
 	Minimal native source-target backend rung for Stage3 source emitters.
 
@@ -752,6 +770,8 @@ class SourceTargetCommon {
 				arrayAccessExpr(target, receiver, index);
 			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
 				"(" + renderExpr(target, args[0]) + ")";
+			case ECall(EIdent("__hxhx_expr_meta"), [EString(_), EString(_), inner]):
+				renderExpr(target, inner);
 			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]):
 				intLiteralExpr(target, raw, suffix);
 			case ECall(EIdent("__hxhx_throw"), args) if (target == Php):
@@ -2713,6 +2733,8 @@ class SourceTargetCommon {
 				result == null ? null : renderExpr(target, EBool(result));
 			case "parseAndPrint":
 				defaultValue(target);
+			case "getMeta":
+				helperGetMetaExpr(target, args);
 			case "typeString":
 				final result = helperTypeStringResult(args);
 				renderExpr(target, EString(result == null ? "haxe.Exception" : result));
@@ -2733,9 +2755,11 @@ class SourceTargetCommon {
 				"typeError";
 			case EIdent("typeErrorText"):
 				"typeErrorText";
+			case EIdent("getMeta"):
+				"getMeta";
 			case EField(EIdent("HelperMacros"), field) | EField(EField(EIdent("unit"), "HelperMacros"), field):
 				switch (field) {
-					case "typeError" | "typeErrorText" | "parseAndPrint" | "typeString":
+					case "typeError" | "typeErrorText" | "parseAndPrint" | "typeString" | "getMeta":
 						field;
 					case _:
 						null;
@@ -2745,6 +2769,35 @@ class SourceTargetCommon {
 			case _:
 				null;
 		};
+	}
+
+	static function helperGetMetaExpr(target:SourceNativeTarget, args:Array<HxExpr>):Null<String> {
+		if (args == null || args.length != 1)
+			return null;
+		return switch (args[0]) {
+			case ECall(EIdent("__hxhx_expr_meta"), [EString(name), EString(rawArgs), _]):
+				anonExpr(target, ["name", "args"], [EString(name), EArrayDecl(helperMetadataArgExprs(rawArgs))]);
+			case _:
+				null;
+		};
+	}
+
+	static function helperMetadataArgExprs(rawArgs:String):Array<HxExpr> {
+		final out = new Array<HxExpr>();
+		final raw = rawArgs == null ? "" : StringTools.trim(rawArgs);
+		if (raw.length == 0)
+			return out;
+		for (part in splitPhpMetadataTopLevel(raw)) {
+			final trimmed = StringTools.trim(part);
+			if (trimmed.length == 0)
+				continue;
+			try {
+				out.push(HxParser.parseExprText(trimmed));
+			} catch (_:HxParseError) {
+				out.push(EString(trimmed));
+			}
+		}
+		return out;
 	}
 
 	static function helperTypeErrorText(args:Array<HxExpr>):Null<String> {
@@ -7627,19 +7680,140 @@ class SourceTargetCommon {
 		if (end <= start + 1)
 			return [];
 		final body = text.substring(start + 1, end);
+		return splitPhpMetadataTopLevel(body);
+	}
+
+	static function splitPhpMetadataTopLevel(text:String):Array<String> {
 		final args = new Array<String>();
-		for (part in body.split(",")) {
-			final trimmed = StringTools.trim(part);
-			if (trimmed.length > 0)
-				args.push(trimmed);
+		var start = 0;
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var braceDepth = 0;
+		var quote = 0;
+		var escaped = false;
+		for (i in 0...text.length) {
+			final code = text.charCodeAt(i);
+			if (quote != 0) {
+				if (escaped) {
+					escaped = false;
+				} else if (code == "\\".code) {
+					escaped = true;
+				} else if (code == quote) {
+					quote = 0;
+				}
+				continue;
+			}
+			if (code == "\"".code || code == "'".code) {
+				quote = code;
+				continue;
+			}
+			switch (code) {
+				case "(".code:
+					parenDepth += 1;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth -= 1;
+				case "[".code:
+					bracketDepth += 1;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth -= 1;
+				case "{".code:
+					braceDepth += 1;
+				case "}".code:
+					if (braceDepth > 0)
+						braceDepth -= 1;
+				case ",".code:
+					if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+						final part = StringTools.trim(text.substring(start, i));
+						if (part.length > 0)
+							args.push(part);
+						start = i + 1;
+					}
+				case _:
+			}
 		}
+		final tail = StringTools.trim(text.substr(start));
+		if (tail.length > 0)
+			args.push(tail);
 		return args;
+	}
+
+	static function phpMetadataObjectField(raw:String):PhpMetadataObjectField {
+		var quote = 0;
+		var escaped = false;
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var braceDepth = 0;
+		for (i in 0...raw.length) {
+			final code = raw.charCodeAt(i);
+			if (quote != 0) {
+				if (escaped) {
+					escaped = false;
+				} else if (code == "\\".code) {
+					escaped = true;
+				} else if (code == quote) {
+					quote = 0;
+				}
+				continue;
+			}
+			if (code == "\"".code || code == "'".code) {
+				quote = code;
+				continue;
+			}
+			switch (code) {
+				case "(".code:
+					parenDepth += 1;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth -= 1;
+				case "[".code:
+					bracketDepth += 1;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth -= 1;
+				case "{".code:
+					braceDepth += 1;
+				case "}".code:
+					if (braceDepth > 0)
+						braceDepth -= 1;
+				case ":".code:
+					if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0)
+						return new PhpMetadataObjectField(StringTools.trim(raw.substring(0, i)), StringTools.trim(raw.substr(i + 1)));
+				case _:
+			}
+		}
+		return new PhpMetadataObjectField(StringTools.trim(raw), "null");
+	}
+
+	static function phpMetadataObjectFieldName(raw:String):String {
+		final text = StringTools.trim(raw == null ? "" : raw);
+		if ((StringTools.startsWith(text, "\"") && StringTools.endsWith(text, "\""))
+			|| (StringTools.startsWith(text, "'") && StringTools.endsWith(text, "'")))
+			return text.substr(1, text.length - 2);
+		return text;
 	}
 
 	static function phpMetadataArgExpr(raw:String):String {
 		final text = raw == null ? "" : StringTools.trim(raw);
 		if (text.length == 0 || text == "null")
 			return "null";
+		if (StringTools.startsWith(text, "[") && StringTools.endsWith(text, "]")) {
+			final body = text.substring(1, text.length - 1);
+			final values = [for (item in splitPhpMetadataTopLevel(body)) phpMetadataArgExpr(item)];
+			return "[" + values.join(", ") + "]";
+		}
+		if (StringTools.startsWith(text, "{") && StringTools.endsWith(text, "}")) {
+			final body = text.substring(1, text.length - 1);
+			final fields = new Array<String>();
+			for (item in splitPhpMetadataTopLevel(body)) {
+				final field = phpMetadataObjectField(item);
+				final name = phpMetadataObjectFieldName(PhpMetadataObjectField.getName(field));
+				if (name.length > 0)
+					fields.push(quotePhpString(name) + " => " + phpMetadataArgExpr(PhpMetadataObjectField.getValue(field)));
+			}
+			return "new __HxAnon([" + fields.join(", ") + "])";
+		}
 		if (text == "true" || text == "false")
 			return text;
 		final intValue = Std.parseInt(text);
@@ -7684,6 +7858,9 @@ class SourceTargetCommon {
 			if (literal != "[]")
 				out.push(quotePhpString(name) + " => " + literal);
 		}
+		function phpMetadataMemberName(name:String):String {
+			return name == "new" ? "_" : name;
+		}
 		function addDecl(moduleDecl:HxModuleDecl):Void {
 			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
 			final main = HxModuleDecl.getMainClass(moduleDecl);
@@ -7716,10 +7893,11 @@ class SourceTargetCommon {
 						addMemberMeta(fields, HxFieldDecl.getName(f), HxFieldDecl.getMetadata(f));
 				}
 				for (fn in HxClassDecl.getFunctions(cls)) {
+					final memberName = phpMetadataMemberName(HxFunctionDecl.getName(fn));
 					if (HxFunctionDecl.getIsStatic(fn) && !isEnum)
-						addMemberMeta(statics, HxFunctionDecl.getName(fn), HxFunctionDecl.getMetadata(fn));
+						addMemberMeta(statics, memberName, HxFunctionDecl.getMetadata(fn));
 					else
-						addMemberMeta(fields, HxFunctionDecl.getName(fn), HxFunctionDecl.getMetadata(fn));
+						addMemberMeta(fields, memberName, HxFunctionDecl.getMetadata(fn));
 				}
 				if (statics.length > 0) {
 					statics.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
@@ -12878,6 +13056,47 @@ class SourceTargetCommon {
 				lines.push("  public static function resolveClass($name) {");
 				lines.push("    if ($name === null) return null;");
 				lines.push("    return __hxhx_class_value($name);");
+				lines.push("  }");
+				lines.push("  private static function reflectionClass($cls) {");
+				lines.push("    $runtime = __hxhx_runtime_class_name($cls);");
+				lines.push("    if ($runtime === null || !class_exists($runtime)) return null;");
+				lines.push("    return new \\ReflectionClass($runtime);");
+				lines.push("  }");
+				lines.push("  private static function exposeFieldName($name) {");
+				lines.push("    return $name !== null && $name !== \"\" && strpos($name, \"__hx_\") !== 0 && strpos($name, \"__\") !== 0;");
+				lines.push("  }");
+				lines.push("  private static function collectFieldNames($cls, $wantStatic) {");
+				lines.push("    $reflection = self::reflectionClass($cls);");
+				lines.push("    if ($reflection === null) return [];");
+				lines.push("    $fields = [];");
+				lines.push("    foreach ($reflection->getProperties() as $prop) {");
+				lines.push("      if ($prop->isStatic() !== $wantStatic) continue;");
+				lines.push("      $name = $prop->getName();");
+				lines.push("      if (self::exposeFieldName($name) && !in_array($name, $fields, true)) $fields[] = $name;");
+				lines.push("    }");
+				lines.push("    foreach ($reflection->getMethods() as $method) {");
+				lines.push("      if ($method->isConstructor() || $method->isStatic() !== $wantStatic) continue;");
+				lines.push("      $name = $method->getName();");
+				lines.push("      if (self::exposeFieldName($name) && !in_array($name, $fields, true)) $fields[] = $name;");
+				lines.push("    }");
+				lines.push("    $accessors = [];");
+				lines.push("    foreach ($fields as $name) {");
+				lines.push("      if (preg_match('/^(get|set)_(.+)$/', $name, $matches)) {");
+				lines.push("        $field = $matches[2];");
+				lines.push("        if (!array_key_exists($field, $accessors)) $accessors[$field] = [];");
+				lines.push("        $accessors[$field][$matches[1]] = true;");
+				lines.push("      }");
+				lines.push("    }");
+				lines.push("    foreach ($accessors as $field => $seen) {");
+				lines.push("      if (isset($seen[\"get\"]) && isset($seen[\"set\"]) && self::exposeFieldName($field) && !in_array($field, $fields, true)) $fields[] = $field;");
+				lines.push("    }");
+				lines.push("    return $fields;");
+				lines.push("  }");
+				lines.push("  public static function getInstanceFields($cls) {");
+				lines.push("    return self::collectFieldNames($cls, false);");
+				lines.push("  }");
+				lines.push("  public static function getClassFields($cls) {");
+				lines.push("    return self::collectFieldNames($cls, true);");
 				lines.push("  }");
 				lines.push("  public static function getEnumName($enum) {");
 				lines.push("    return self::getClassName($enum);");
