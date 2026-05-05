@@ -959,7 +959,7 @@ let expandResolvedModules = fun modules session allowlist -> try let __fallback_
               ignore (HxArray.push out m);
               raise (HxRuntime.Hx_continue)
             )) else ());
-            let newCls = Obj.magic (HxClassDecl.create (HxClassDecl.getName (Obj.magic cls) : string) (HxClassDecl.getHasStaticMain (Obj.magic cls)) (Obj.magic newFns) (Obj.magic newFields) (HxClassDecl.getExtendsPath (Obj.magic cls) : string)) in let newClasses = Obj.magic (HxArray.create ()) in (
+            let newCls = Obj.magic (HxClassDecl.create (HxClassDecl.getName (Obj.magic cls) : string) (HxClassDecl.getHasStaticMain (Obj.magic cls)) (Obj.magic newFns) (Obj.magic newFields) (HxClassDecl.getExtendsPath (Obj.magic cls) : string) (Obj.magic (HxClassDecl.getMetadata (Obj.magic cls)))) in let newClasses = Obj.magic (HxArray.create ()) in (
               ignore (let _g2 = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in while !_g2 < HxArray.length _g1 do ignore (let c = Obj.magic (HxArray.get (Obj.magic _g1) (!_g2)) in (
                 ignore (let __old_27 = !_g2 in let __new_28 = HxInt.add __old_27 1 in (
                   ignore (_g2 := __new_28);

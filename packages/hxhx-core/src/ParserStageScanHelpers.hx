@@ -55,6 +55,48 @@ class ParserStageScanHelpers {
 
 		var braceDepth = 0;
 		var i = 0;
+		var pendingTypeMetadata = new Array<String>();
+		function scanTopLevelMetadataText(startPos:Int):{text:String, nextPos:Int} {
+			var j = startPos;
+			final colon = scanNextToken(source, j);
+			if (colon.text == ":")
+				j = colon.nextPos;
+			final head = scanNextToken(source, j);
+			if (!head.isIdent || head.text.length == 0)
+				return {text: "", nextPos: startPos};
+			final parts = [head.text];
+			j = head.nextPos;
+			while (true) {
+				final dot = scanNextToken(source, j);
+				if (dot.text != ".")
+					break;
+				final segment = scanNextToken(source, dot.nextPos);
+				if (!segment.isIdent || segment.text.length == 0)
+					break;
+				parts.push(".");
+				parts.push(segment.text);
+				j = segment.nextPos;
+			}
+			final next = scanNextToken(source, j);
+			if (next.text != "(")
+				return {text: parts.join(""), nextPos: j};
+			parts.push("(");
+			j = next.nextPos;
+			var depth = 1;
+			while (depth > 0) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: parts.join(""), nextPos: j};
+				j = tok.nextPos;
+				parts.push(tok.text);
+				if (tok.text == "(") {
+					depth += 1;
+				} else if (tok.text == ")") {
+					depth -= 1;
+				}
+			}
+			return {text: parts.join(""), nextPos: j};
+		}
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -62,7 +104,12 @@ class ParserStageScanHelpers {
 				break;
 
 			if (!t.isIdent) {
-				if (t.text == "{")
+				if (braceDepth == 0 && t.text == "@") {
+					final meta = scanTopLevelMetadataText(i);
+					if (meta.text.length > 0)
+						pendingTypeMetadata.push(meta.text);
+					i = meta.nextPos;
+				} else if (t.text == "{")
 					braceDepth += 1;
 				else if (t.text == "}")
 					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
@@ -71,8 +118,14 @@ class ParserStageScanHelpers {
 
 			if (braceDepth != 0)
 				continue;
-			if (t.text != "class" && t.text != "interface")
+			if (t.text != "class" && t.text != "interface") {
+				if (t.text == "private" || t.text == "extern" || t.text == "final")
+					continue;
+				pendingTypeMetadata = [];
 				continue;
+			}
+			final classMetadata = pendingTypeMetadata.copy();
+			pendingTypeMetadata = [];
 
 			// class/interface <Name> ...
 			var nameTok = scanNextToken(source, i);
@@ -98,7 +151,7 @@ class ParserStageScanHelpers {
 			i = scanned.nextPos;
 
 			if (shouldRecord)
-				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath));
+				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, classMetadata));
 		}
 
 		return out;
@@ -236,12 +289,55 @@ class ParserStageScanHelpers {
 			return c >= "A".code && c <= "Z".code;
 		}
 
+		function scanTopLevelMetadataText(startPos:Int):{text:String, nextPos:Int} {
+			var j = startPos;
+			final colon = scanNextToken(source, j);
+			if (colon.text == ":")
+				j = colon.nextPos;
+			final head = scanNextToken(source, j);
+			if (!head.isIdent || head.text.length == 0)
+				return {text: "", nextPos: startPos};
+			final parts = [head.text];
+			j = head.nextPos;
+			while (true) {
+				final dot = scanNextToken(source, j);
+				if (dot.text != ".")
+					break;
+				final segment = scanNextToken(source, dot.nextPos);
+				if (!segment.isIdent || segment.text.length == 0)
+					break;
+				parts.push(".");
+				parts.push(segment.text);
+				j = segment.nextPos;
+			}
+			final next = scanNextToken(source, j);
+			if (next.text != "(")
+				return {text: parts.join(""), nextPos: j};
+			parts.push("(");
+			j = next.nextPos;
+			var depth = 1;
+			while (depth > 0) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: parts.join(""), nextPos: j};
+				j = tok.nextPos;
+				parts.push(tok.text);
+				if (tok.text == "(") {
+					depth += 1;
+				} else if (tok.text == ")") {
+					depth -= 1;
+				}
+			}
+			return {text: parts.join(""), nextPos: j};
+		}
+
 		final seen:Map<String, Bool> = new Map();
 		if (mainTypeName != null && mainTypeName.length > 0)
 			seen.set(mainTypeName, true);
 
 		var braceDepth = 0;
 		var i = 0;
+		var pendingTypeMetadata = new Array<String>();
 
 		while (true) {
 			final t = scanNextToken(source, i);
@@ -250,7 +346,12 @@ class ParserStageScanHelpers {
 				break;
 
 			if (!t.isIdent) {
-				if (t.text == "{")
+				if (braceDepth == 0 && t.text == "@") {
+					final meta = scanTopLevelMetadataText(i);
+					if (meta.text.length > 0)
+						pendingTypeMetadata.push(meta.text);
+					i = meta.nextPos;
+				} else if (t.text == "{")
 					braceDepth += 1;
 				else if (t.text == "}")
 					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
@@ -259,8 +360,14 @@ class ParserStageScanHelpers {
 
 			if (braceDepth != 0)
 				continue;
-			if (t.text != "enum")
+			if (t.text != "enum") {
+				if (t.text == "private" || t.text == "extern")
+					continue;
+				pendingTypeMetadata = [];
 				continue;
+			}
+			final enumMetadata = pendingTypeMetadata.copy();
+			pendingTypeMetadata = [];
 
 			// enum [abstract] <Name> ...
 			var isEnumAbstract = false;
@@ -337,7 +444,8 @@ class ParserStageScanHelpers {
 						continue;
 					final argNames = ctor.args == null ? [] : ctor.args;
 					if (argNames.length == 0) {
-						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, ctorIndex, [])));
+						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, ctorIndex, []),
+							ctor.metadata));
 					} else {
 						final args = new Array<HxFunctionArg>();
 						final values = new Array<HxExpr>();
@@ -349,12 +457,12 @@ class ParserStageScanHelpers {
 						// type wide to avoid OCaml type errors in heavily-`Obj.magic` codegen.
 						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic", [
 							SReturn(enumRuntimeValue(enumName, ctorName, ctorIndex, values), HxPos.unknown())
-						], ""));
+						], "", ctor.metadata));
 					}
 				}
 			}
 
-			out.push(new HxClassDecl(enumName, false, functions, fields));
+			out.push(new HxClassDecl(enumName, false, functions, fields, "", enumMetadata));
 		}
 
 		return out;
@@ -555,11 +663,44 @@ class ParserStageScanHelpers {
 		return out;
 	}
 
-	public static function scanEnumBodyForCtors(source:String, start:Int):{nextPos:Int, ctors:Array<{name:String, args:Array<String>}>} {
-		final ctors = new Array<{name:String, args:Array<String>}>();
+	public static function scanEnumBodyForCtors(source:String,
+			start:Int):{nextPos:Int, ctors:Array<{name:String, args:Array<String>, metadata:Array<String>}>} {
+		final ctors = new Array<{name:String, args:Array<String>, metadata:Array<String>}>();
 
 		var depth = 1; // we start just after `{`
 		var i = start;
+		var pendingMetadata = new Array<String>();
+
+		function scanMetadataText(startPos:Int):{text:String, nextPos:Int} {
+			var j = startPos;
+			final colon = scanNextToken(source, j);
+			if (colon.text == ":")
+				j = colon.nextPos;
+			final head = scanNextToken(source, j);
+			if (!head.isIdent || head.text.length == 0)
+				return {text: "", nextPos: startPos};
+			final parts = [head.text];
+			j = head.nextPos;
+			final next = scanNextToken(source, j);
+			if (next.text != "(")
+				return {text: parts.join(""), nextPos: j};
+			parts.push("(");
+			j = next.nextPos;
+			var parenDepth = 1;
+			while (parenDepth > 0) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: parts.join(""), nextPos: j};
+				j = tok.nextPos;
+				parts.push(tok.text);
+				if (tok.text == "(") {
+					parenDepth += 1;
+				} else if (tok.text == ")") {
+					parenDepth -= 1;
+				}
+			}
+			return {text: parts.join(""), nextPos: j};
+		}
 
 		while (true) {
 			final t = scanNextToken(source, i);
@@ -569,6 +710,13 @@ class ParserStageScanHelpers {
 
 			if (!t.isIdent) {
 				switch (t.text) {
+					case "@":
+						if (depth == 1) {
+							final meta = scanMetadataText(i);
+							if (meta.text.length > 0)
+								pendingMetadata.push(meta.text);
+							i = meta.nextPos;
+						}
 					case "{":
 						depth += 1;
 					case "}":
@@ -584,6 +732,8 @@ class ParserStageScanHelpers {
 				continue;
 			final ctorName = t.text;
 			final ctorArgs = new Array<String>();
+			final ctorMetadata = pendingMetadata.copy();
+			pendingMetadata = [];
 
 			// Optional `(a:T, b:U)` parameter list.
 			final nt = scanNextToken(source, i);
@@ -664,7 +814,7 @@ class ParserStageScanHelpers {
 				}
 			}
 
-			ctors.push({name: ctorName, args: ctorArgs});
+			ctors.push({name: ctorName, args: ctorArgs, metadata: ctorMetadata});
 
 			// Consume tokens until the terminating `;` so we don't interpret type names
 			// as additional constructors.

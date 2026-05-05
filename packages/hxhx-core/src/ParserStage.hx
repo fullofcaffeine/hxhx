@@ -324,6 +324,13 @@ class ParserStage {
 						}
 
 						var changed = false;
+						final classMetadata = HxClassDecl.getMetadata(cls).copy();
+						for (value in HxClassDecl.getMetadata(scanned)) {
+							if (!hasMetadata(classMetadata, value)) {
+								classMetadata.push(value);
+								changed = true;
+							}
+						}
 						final scannedExtendsPath = HxClassDecl.getExtendsPath(scanned);
 						final extendsPath = scannedExtendsPath != null
 							&& scannedExtendsPath.length > 0 ? scannedExtendsPath : HxClassDecl.getExtendsPath(cls);
@@ -411,7 +418,8 @@ class ParserStage {
 						if (!changed)
 							return cls;
 						staticPatchApplied = true;
-						return new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), patchedFns, patchedFields, extendsPath);
+						return new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), patchedFns, patchedFields, extendsPath,
+							classMetadata);
 					}
 
 					// Some upstream modules have a non-class main type (notably enums).
@@ -471,7 +479,8 @@ class ParserStage {
 						} else if (!mainHasMain) {
 							final functions = HxClassDecl.getFunctions(main).copy();
 							functions.push(topMain);
-							main = new HxClassDecl(HxClassDecl.getName(main), true, functions, HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main));
+							main = new HxClassDecl(HxClassDecl.getName(main), true, functions, HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main),
+								HxClassDecl.getMetadata(main));
 						}
 					}
 
@@ -480,7 +489,7 @@ class ParserStage {
 						if (mainName == null || mainName.length == 0 || mainName == "Unknown") {
 							final fallbackName = expectedMainClass != null && expectedMainClass.length > 0 ? expectedMainClass : "Unknown";
 							main = new HxClassDecl(fallbackName, HxClassDecl.getHasStaticMain(main), HxClassDecl.getFunctions(main),
-								HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main));
+								HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main), HxClassDecl.getMetadata(main));
 							mainName = fallbackName;
 						}
 						final existingFieldNames:Map<String, Bool> = new Map();
@@ -503,7 +512,7 @@ class ParserStage {
 							for (f in HxClassDecl.getFields(main))
 								mergedFields.push(f);
 							main = new HxClassDecl(HxClassDecl.getName(main), HxClassDecl.getHasStaticMain(main), HxClassDecl.getFunctions(main),
-								mergedFields, HxClassDecl.getExtendsPath(main));
+								mergedFields, HxClassDecl.getExtendsPath(main), HxClassDecl.getMetadata(main));
 							staticPatchApplied = true;
 						}
 					}
@@ -756,6 +765,48 @@ class ParserStage {
 
 		var braceDepth = 0;
 		var i = 0;
+		var pendingTypeMetadata = new Array<String>();
+		function scanTopLevelMetadataText(startPos:Int):{text:String, nextPos:Int} {
+			var j = startPos;
+			final colon = scanNextToken(source, j);
+			if (colon.text == ":")
+				j = colon.nextPos;
+			final head = scanNextToken(source, j);
+			if (!head.isIdent || head.text.length == 0)
+				return {text: "", nextPos: startPos};
+			final parts = [head.text];
+			j = head.nextPos;
+			while (true) {
+				final dot = scanNextToken(source, j);
+				if (dot.text != ".")
+					break;
+				final segment = scanNextToken(source, dot.nextPos);
+				if (!segment.isIdent || segment.text.length == 0)
+					break;
+				parts.push(".");
+				parts.push(segment.text);
+				j = segment.nextPos;
+			}
+			final next = scanNextToken(source, j);
+			if (next.text != "(")
+				return {text: parts.join(""), nextPos: j};
+			parts.push("(");
+			j = next.nextPos;
+			var depth = 1;
+			while (depth > 0) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: parts.join(""), nextPos: j};
+				j = tok.nextPos;
+				parts.push(tok.text);
+				if (tok.text == "(") {
+					depth += 1;
+				} else if (tok.text == ")") {
+					depth -= 1;
+				}
+			}
+			return {text: parts.join(""), nextPos: j};
+		}
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -763,7 +814,12 @@ class ParserStage {
 				break;
 
 			if (!t.isIdent) {
-				if (t.text == "{")
+				if (braceDepth == 0 && t.text == "@") {
+					final meta = scanTopLevelMetadataText(i);
+					if (meta.text.length > 0)
+						pendingTypeMetadata.push(meta.text);
+					i = meta.nextPos;
+				} else if (t.text == "{")
 					braceDepth += 1;
 				else if (t.text == "}")
 					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
@@ -772,8 +828,14 @@ class ParserStage {
 
 			if (braceDepth != 0)
 				continue;
-			if (t.text != "class" && t.text != "interface")
+			if (t.text != "class" && t.text != "interface") {
+				if (t.text == "private" || t.text == "extern" || t.text == "final")
+					continue;
+				pendingTypeMetadata = [];
 				continue;
+			}
+			final classMetadata = pendingTypeMetadata.copy();
+			pendingTypeMetadata = [];
 
 			// class/interface <Name> ...
 			var nameTok = scanNextToken(source, i);
@@ -799,7 +861,7 @@ class ParserStage {
 			i = scanned.nextPos;
 
 			if (shouldRecord)
-				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath));
+				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, classMetadata));
 		}
 
 		return out;
@@ -895,12 +957,55 @@ class ParserStage {
 			return c >= "A".code && c <= "Z".code;
 		}
 
+		function scanTopLevelMetadataText(startPos:Int):{text:String, nextPos:Int} {
+			var j = startPos;
+			final colon = scanNextToken(source, j);
+			if (colon.text == ":")
+				j = colon.nextPos;
+			final head = scanNextToken(source, j);
+			if (!head.isIdent || head.text.length == 0)
+				return {text: "", nextPos: startPos};
+			final parts = [head.text];
+			j = head.nextPos;
+			while (true) {
+				final dot = scanNextToken(source, j);
+				if (dot.text != ".")
+					break;
+				final segment = scanNextToken(source, dot.nextPos);
+				if (!segment.isIdent || segment.text.length == 0)
+					break;
+				parts.push(".");
+				parts.push(segment.text);
+				j = segment.nextPos;
+			}
+			final next = scanNextToken(source, j);
+			if (next.text != "(")
+				return {text: parts.join(""), nextPos: j};
+			parts.push("(");
+			j = next.nextPos;
+			var depth = 1;
+			while (depth > 0) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: parts.join(""), nextPos: j};
+				j = tok.nextPos;
+				parts.push(tok.text);
+				if (tok.text == "(") {
+					depth += 1;
+				} else if (tok.text == ")") {
+					depth -= 1;
+				}
+			}
+			return {text: parts.join(""), nextPos: j};
+		}
+
 		final seen:Map<String, Bool> = new Map();
 		if (mainTypeName != null && mainTypeName.length > 0)
 			seen.set(mainTypeName, true);
 
 		var braceDepth = 0;
 		var i = 0;
+		var pendingTypeMetadata = new Array<String>();
 
 		while (true) {
 			final t = scanNextToken(source, i);
@@ -909,7 +1014,12 @@ class ParserStage {
 				break;
 
 			if (!t.isIdent) {
-				if (t.text == "{")
+				if (braceDepth == 0 && t.text == "@") {
+					final meta = scanTopLevelMetadataText(i);
+					if (meta.text.length > 0)
+						pendingTypeMetadata.push(meta.text);
+					i = meta.nextPos;
+				} else if (t.text == "{")
 					braceDepth += 1;
 				else if (t.text == "}")
 					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
@@ -918,8 +1028,14 @@ class ParserStage {
 
 			if (braceDepth != 0)
 				continue;
-			if (t.text != "enum")
+			if (t.text != "enum") {
+				if (t.text == "private" || t.text == "extern")
+					continue;
+				pendingTypeMetadata = [];
 				continue;
+			}
+			final enumMetadata = pendingTypeMetadata.copy();
+			pendingTypeMetadata = [];
 
 			// enum [abstract] <Name> ...
 			var isEnumAbstract = false;
@@ -996,7 +1112,8 @@ class ParserStage {
 						continue;
 					final argNames = ctor.args == null ? [] : ctor.args;
 					if (argNames.length == 0) {
-						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, ctorIndex, [])));
+						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, ctorIndex, []),
+							ctor.metadata));
 					} else {
 						final args = new Array<HxFunctionArg>();
 						final values = new Array<HxExpr>();
@@ -1008,12 +1125,12 @@ class ParserStage {
 						// type wide to avoid OCaml type errors in heavily-`Obj.magic` codegen.
 						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic", [
 							SReturn(enumRuntimeValue(enumName, ctorName, ctorIndex, values), HxPos.unknown())
-						], ""));
+						], "", ctor.metadata));
 					}
 				}
 			}
 
-			out.push(new HxClassDecl(enumName, false, functions, fields));
+			out.push(new HxClassDecl(enumName, false, functions, fields, "", enumMetadata));
 		}
 
 		return out;
@@ -1214,11 +1331,43 @@ class ParserStage {
 		return out;
 	}
 
-	static function scanEnumBodyForCtors(source:String, start:Int):{nextPos:Int, ctors:Array<{name:String, args:Array<String>}>} {
-		final ctors = new Array<{name:String, args:Array<String>}>();
+	static function scanEnumBodyForCtors(source:String, start:Int):{nextPos:Int, ctors:Array<{name:String, args:Array<String>, metadata:Array<String>}>} {
+		final ctors = new Array<{name:String, args:Array<String>, metadata:Array<String>}>();
 
 		var depth = 1; // we start just after `{`
 		var i = start;
+		var pendingMetadata = new Array<String>();
+
+		function scanMetadataText(startPos:Int):{text:String, nextPos:Int} {
+			var j = startPos;
+			final colon = scanNextToken(source, j);
+			if (colon.text == ":")
+				j = colon.nextPos;
+			final head = scanNextToken(source, j);
+			if (!head.isIdent || head.text.length == 0)
+				return {text: "", nextPos: startPos};
+			final parts = [head.text];
+			j = head.nextPos;
+			final next = scanNextToken(source, j);
+			if (next.text != "(")
+				return {text: parts.join(""), nextPos: j};
+			parts.push("(");
+			j = next.nextPos;
+			var parenDepth = 1;
+			while (parenDepth > 0) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: parts.join(""), nextPos: j};
+				j = tok.nextPos;
+				parts.push(tok.text);
+				if (tok.text == "(") {
+					parenDepth += 1;
+				} else if (tok.text == ")") {
+					parenDepth -= 1;
+				}
+			}
+			return {text: parts.join(""), nextPos: j};
+		}
 
 		while (true) {
 			final t = scanNextToken(source, i);
@@ -1228,6 +1377,13 @@ class ParserStage {
 
 			if (!t.isIdent) {
 				switch (t.text) {
+					case "@":
+						if (depth == 1) {
+							final meta = scanMetadataText(i);
+							if (meta.text.length > 0)
+								pendingMetadata.push(meta.text);
+							i = meta.nextPos;
+						}
 					case "{":
 						depth += 1;
 					case "}":
@@ -1243,6 +1399,8 @@ class ParserStage {
 				continue;
 			final ctorName = t.text;
 			final ctorArgs = new Array<String>();
+			final ctorMetadata = pendingMetadata.copy();
+			pendingMetadata = [];
 
 			// Optional `(a:T, b:U)` parameter list.
 			final nt = scanNextToken(source, i);
@@ -1323,7 +1481,7 @@ class ParserStage {
 				}
 			}
 
-			ctors.push({name: ctorName, args: ctorArgs});
+			ctors.push({name: ctorName, args: ctorArgs, metadata: ctorMetadata});
 
 			// Consume tokens until the terminating `;` so we don't interpret type names
 			// as additional constructors.

@@ -4189,6 +4189,7 @@ class HxParser {
 		// - Non-class declarations (typedef/enum/abstract/etc.) are ignored for now.
 		final classes = new Array<HxClassDecl>();
 		final moduleFunctions = new Array<HxFunctionDecl>();
+		var pendingTypeMetadata = new Array<String>();
 		function parseModuleField(isFinal:Bool):Void {
 			final fieldStart = cur.getPos();
 			bump();
@@ -4212,17 +4213,25 @@ class HxParser {
 			moduleFields.push(new HxFieldDecl(name, Public, true, typeHint, init, [], fieldStart, cur.getPos(), isFinal, "", "", initText));
 		}
 		while (!cur.kind.match(TEof)) {
+			if (isOtherChar("@")) {
+				pendingTypeMetadata.push(parseMetadataText());
+				continue;
+			}
 			switch (cur.kind) {
 				case TKeyword(KFinal):
+					pendingTypeMetadata = [];
 					parseModuleField(true);
 					continue;
 				case TKeyword(KVar):
+					pendingTypeMetadata = [];
 					parseModuleField(false);
 					continue;
 				case _:
 			}
 			switch (cur.kind) {
 				case TKeyword(KClass) | TIdent("interface"):
+					final classMetadata = pendingTypeMetadata.copy();
+					pendingTypeMetadata = [];
 					bump(); // 'class' / 'interface'
 					final className = readIdent("class name");
 					var extendsPath = "";
@@ -4252,9 +4261,10 @@ class HxParser {
 						}
 					}
 
-					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath));
+					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata));
 				// `parseClassMembers` consumes the closing `}`.
 				case TKeyword(KFunction):
+					pendingTypeMetadata = [];
 					// Detect module-level `function main(...)` entrypoint.
 					final fnStart = cur.getPos();
 					bump();
@@ -4268,6 +4278,7 @@ class HxParser {
 						hasToplevelMain = true;
 					moduleFunctions.push(fn);
 				default:
+					pendingTypeMetadata = [];
 					bump();
 			}
 		}
@@ -4291,7 +4302,7 @@ class HxParser {
 			final mergedFunctions = moduleFunctions.concat(HxClassDecl.getFunctions(base));
 			final mergedFields = moduleFields.concat(HxClassDecl.getFields(base));
 			chosen = new HxClassDecl(HxClassDecl.getName(base), HxClassDecl.getHasStaticMain(base) || hasToplevelMain, mergedFunctions, mergedFields,
-				HxClassDecl.getExtendsPath(base));
+				HxClassDecl.getExtendsPath(base), HxClassDecl.getMetadata(base));
 			var replaced = false;
 			for (i in 0...classes.length) {
 				if (HxClassDecl.getName(classes[i]) == HxClassDecl.getName(chosen)) {

@@ -5156,11 +5156,48 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"",
 			"import haxe.rtti.Meta;",
 			"",
+			"@enumMeta private enum E {",
+			"  @:a A;",
+			"  @:b(0) B;",
+			"}",
+			"",
+			"@:typeMeta(\"classArg\")",
+			"class Tagged {",
+			"  @:instanceMeta(\"fieldArg\") public var value:Int;",
+			"  @:methodMeta public function method():Void {}",
+			"  @:staticMeta(7) public static var count:Int = 0;",
+			"  @:staticMethodMeta public static function helper():Void {}",
+			"  public function new() {}",
+			"}",
+			"",
 			"class Main {",
+			"  static function sortedNames(value:Dynamic):String {",
+			"    var fields = Reflect.fields(value);",
+			"    fields.sort(Reflect.compare);",
+			"    return fields.join(\"#\");",
+			"  }",
 			"  static function main() {",
 			"    Sys.println(Std.string(Meta.getFields(null) != null));",
 			"    Sys.println(Std.string(Meta.getStatics(null) != null));",
 			"    Sys.println(Std.string(Meta.getType(null) != null));",
+			"    var cls = Type.resolveClass(\"unit.Tagged\");",
+			"    var typeMeta:Dynamic = Meta.getType(cls);",
+			"    Sys.println(typeMeta.typeMeta[0]);",
+			"    var statics:Dynamic = Meta.getStatics(cls);",
+			"    Sys.println(sortedNames(statics));",
+			"    Sys.println(statics.count.staticMeta[0]);",
+			"    var fields:Dynamic = Meta.getFields(cls);",
+			"    Sys.println(sortedNames(fields));",
+			"    Sys.println(fields.value.instanceMeta[0]);",
+			"    var enumCls = Type.resolveEnum(\"unit.E\");",
+			"    var enumTypeMeta:Dynamic = Meta.getType(enumCls);",
+			"    Sys.println(sortedNames(enumTypeMeta));",
+			"    Sys.println(Std.string(enumTypeMeta.enumMeta == null));",
+			"    var enumFields:Dynamic = Meta.getFields(enumCls);",
+			"    Sys.println(sortedNames(enumFields));",
+			"    Sys.println(sortedNames(enumFields.A));",
+			"    Sys.println(Std.string(enumFields.A.a == null));",
+			"    Sys.println(enumFields.B.b[0]);",
 			"  }",
 			"}",
 		].join("\n"));
@@ -5180,11 +5217,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "namespace haxe\\rtti", "PHP source backend should emit haxe.rtti namespace runtime support");
 		assertContains(content, "class Meta {", "PHP source backend should emit haxe.rtti.Meta runtime support");
+		assertContains(content, "function __hxhx_meta_type($cls)", "PHP source backend should emit metadata payload tables");
+		assertContains(content, "\"unit.Tagged\" => [\"typeMeta\" => [\"classArg\"]]", "PHP metadata table should include class metadata");
+		assertContains(content, "\"unit.Main.E\" => [\"enumMeta\" => null]", "PHP metadata table should include module-private enum metadata aliases");
 		assertContains(content, "\\haxe\\rtti\\Meta::getFields", "PHP imported haxe.rtti.Meta calls should target the namespaced runtime class");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.rtti.Meta support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\ntrue\ntrue\n", "generated PHP haxe.rtti.Meta output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "true\ntrue\ntrue\nclassArg\ncount#helper\n7\nmethod#value\nfieldArg\nenumMeta\ntrue\nA#B\na\ntrue\n0\n",
+				"generated PHP haxe.rtti.Meta output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}

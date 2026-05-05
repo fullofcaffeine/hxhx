@@ -7531,14 +7531,20 @@ class SourceTargetCommon {
 		final runtimeNames = new Map<String, String>();
 		function addDecl(moduleDecl:HxModuleDecl):Void {
 			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			final main = HxModuleDecl.getMainClass(moduleDecl);
+			final mainName = main == null ? "" : HxClassDecl.getName(main);
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
 				if (names.exists(shortName))
 					continue;
 				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
 				names.set(shortName, fullName);
+				if (pkg != null && pkg.length > 0 && mainName != null && mainName.length > 0 && HxClassDecl.getName(cls) != mainName)
+					names.set(pkg + "." + mainName + "." + HxClassDecl.getName(cls), fullName);
 				runtimeNames.set(shortName, shortName);
 				runtimeNames.set(fullName, shortName);
+				if (pkg != null && pkg.length > 0 && mainName != null && mainName.length > 0 && HxClassDecl.getName(cls) != mainName)
+					runtimeNames.set(pkg + "." + mainName + "." + HxClassDecl.getName(cls), shortName);
 			}
 		}
 		addDecl(decl);
@@ -7595,6 +7601,171 @@ class SourceTargetCommon {
 		lines.push("  if (array_key_exists($raw, $map)) return $map[$raw];");
 		lines.push("  $parts = explode(\".\", $logical);");
 		lines.push("  return end($parts);");
+		lines.push("}");
+	}
+
+	static function phpMetadataName(raw:String):String {
+		var text = raw == null ? "" : StringTools.trim(raw);
+		if (StringTools.startsWith(text, "@"))
+			text = text.substr(1);
+		if (StringTools.startsWith(text, ":"))
+			text = text.substr(1);
+		final paren = text.indexOf("(");
+		if (paren >= 0)
+			text = text.substr(0, paren);
+		if (text == "_")
+			return "new";
+		return StringTools.trim(text);
+	}
+
+	static function phpMetadataArgs(raw:String):Array<String> {
+		final text = raw == null ? "" : StringTools.trim(raw);
+		final start = text.indexOf("(");
+		if (start < 0)
+			return [];
+		final end = text.lastIndexOf(")");
+		if (end <= start + 1)
+			return [];
+		final body = text.substring(start + 1, end);
+		final args = new Array<String>();
+		for (part in body.split(",")) {
+			final trimmed = StringTools.trim(part);
+			if (trimmed.length > 0)
+				args.push(trimmed);
+		}
+		return args;
+	}
+
+	static function phpMetadataArgExpr(raw:String):String {
+		final text = raw == null ? "" : StringTools.trim(raw);
+		if (text.length == 0 || text == "null")
+			return "null";
+		if (text == "true" || text == "false")
+			return text;
+		final intValue = Std.parseInt(text);
+		if (intValue != null && Std.string(intValue) == text)
+			return text;
+		final floatValue = Std.parseFloat(text);
+		if (!Math.isNaN(floatValue) && text.indexOf(".") >= 0)
+			return text;
+		if ((StringTools.startsWith(text, "\"") && StringTools.endsWith(text, "\""))
+			|| (StringTools.startsWith(text, "'") && StringTools.endsWith(text, "'")))
+			return quotePhpString(text.substr(1, text.length - 2));
+		return "__hxhx_class_value(" + quotePhpString(text) + ")";
+	}
+
+	static function phpMetadataLiteral(metadata:Array<String>):String {
+		final entries = new Array<String>();
+		if (metadata != null) {
+			for (raw in metadata) {
+				final name = phpMetadataName(raw);
+				if (name.length == 0 || name == "macro" || name == "dynamic" || name == "overload")
+					continue;
+				final args = [for (arg in phpMetadataArgs(raw)) phpMetadataArgExpr(arg)];
+				entries.push(quotePhpString(name) + " => " + (args.length == 0 ? "null" : "[" + args.join(", ") + "]"));
+			}
+		}
+		entries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		return "[" + entries.join(", ") + "]";
+	}
+
+	static function appendPhpMetaRuntime(lines:Array<String>, program:GenIrProgram, decl:HxModuleDecl):Void {
+		final typeEntries = new Array<String>();
+		final staticsEntries = new Array<String>();
+		final fieldsEntries = new Array<String>();
+		final seen = new Map<String, Bool>();
+		function fullName(moduleDecl:HxModuleDecl, cls:HxClassDecl):String {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			final name = HxClassDecl.getName(cls);
+			return pkg == null || pkg.length == 0 ? name : pkg + "." + name;
+		}
+		function addMemberMeta(out:Array<String>, name:String, metadata:Array<String>):Void {
+			final literal = phpMetadataLiteral(metadata);
+			if (literal != "[]")
+				out.push(quotePhpString(name) + " => " + literal);
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			final main = HxModuleDecl.getMainClass(moduleDecl);
+			final mainName = main == null ? "" : HxClassDecl.getName(main);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final name = fullName(moduleDecl, cls);
+				if (name == null || name.length == 0 || seen.exists(name))
+					continue;
+				seen.set(name, true);
+				final aliases = [name];
+				if (pkg != null && pkg.length > 0 && mainName != null && mainName.length > 0 && HxClassDecl.getName(cls) != mainName)
+					aliases.push(pkg + "." + mainName + "." + HxClassDecl.getName(cls));
+				final typeLiteral = phpMetadataLiteral(HxClassDecl.getMetadata(cls));
+				if (typeLiteral != "[]")
+					for (alias in aliases)
+						typeEntries.push(quotePhpString(alias) + " => " + typeLiteral);
+				final statics = new Array<String>();
+				final fields = new Array<String>();
+				var isEnum = false;
+				for (f in HxClassDecl.getFields(cls))
+					if (HxFieldDecl.getName(f) == "__hx_is_enum")
+						isEnum = true;
+				for (f in HxClassDecl.getFields(cls)) {
+					final memberName = HxFieldDecl.getName(f);
+					if (StringTools.startsWith(memberName, "__hx_"))
+						continue;
+					if (HxFieldDecl.getIsStatic(f) && !isEnum)
+						addMemberMeta(statics, HxFieldDecl.getName(f), HxFieldDecl.getMetadata(f));
+					else
+						addMemberMeta(fields, HxFieldDecl.getName(f), HxFieldDecl.getMetadata(f));
+				}
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					if (HxFunctionDecl.getIsStatic(fn) && !isEnum)
+						addMemberMeta(statics, HxFunctionDecl.getName(fn), HxFunctionDecl.getMetadata(fn));
+					else
+						addMemberMeta(fields, HxFunctionDecl.getName(fn), HxFunctionDecl.getMetadata(fn));
+				}
+				if (statics.length > 0) {
+					statics.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+					for (alias in aliases)
+						staticsEntries.push(quotePhpString(alias) + " => [" + statics.join(", ") + "]");
+				}
+				if (fields.length > 0) {
+					fields.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+					for (alias in aliases)
+						fieldsEntries.push(quotePhpString(alias) + " => [" + fields.join(", ") + "]");
+				}
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		typeEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		staticsEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		fieldsEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		lines.push("function __hxhx_meta_object($entries) {");
+		lines.push("  if (array_key_exists(\"_\", $entries)) {");
+		lines.push("    if (!array_key_exists(\"new\", $entries)) $entries[\"new\"] = $entries[\"_\"];");
+		lines.push("    unset($entries[\"_\"]);");
+		lines.push("  }");
+		lines.push("  return new __HxAnon($entries);");
+		lines.push("}");
+		lines.push("function __hxhx_meta_fields_object($entries) {");
+		lines.push("  $out = new __HxAnon();");
+		lines.push("  foreach ($entries as $field => $metadata) $out->$field = __hxhx_meta_object($metadata);");
+		lines.push("  return $out;");
+		lines.push("}");
+		lines.push("function __hxhx_meta_key($cls) { return __hxhx_class_name($cls); }");
+		lines.push("function __hxhx_meta_type($cls) {");
+		lines.push("  static $map = [" + typeEntries.join(", ") + "];");
+		lines.push("  $key = __hxhx_meta_key($cls);");
+		lines.push("  return array_key_exists($key, $map) ? __hxhx_meta_object($map[$key]) : new __HxAnon();");
+		lines.push("}");
+		lines.push("function __hxhx_meta_statics($cls) {");
+		lines.push("  static $map = [" + staticsEntries.join(", ") + "];");
+		lines.push("  $key = __hxhx_meta_key($cls);");
+		lines.push("  return array_key_exists($key, $map) ? __hxhx_meta_fields_object($map[$key]) : new __HxAnon();");
+		lines.push("}");
+		lines.push("function __hxhx_meta_fields($cls) {");
+		lines.push("  static $map = [" + fieldsEntries.join(", ") + "];");
+		lines.push("  $key = __hxhx_meta_key($cls);");
+		lines.push("  return array_key_exists($key, $map) ? __hxhx_meta_fields_object($map[$key]) : new __HxAnon();");
 		lines.push("}");
 	}
 
@@ -10834,9 +11005,9 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("namespace haxe\\rtti {");
 				lines.push("  class Meta {");
-				lines.push("    public static function getType($cls) { return new \\stdClass(); }");
-				lines.push("    public static function getStatics($cls) { return new \\stdClass(); }");
-				lines.push("    public static function getFields($cls) { return new \\stdClass(); }");
+				lines.push("    public static function getType($cls) { return \\__hxhx_meta_type($cls); }");
+				lines.push("    public static function getStatics($cls) { return \\__hxhx_meta_statics($cls); }");
+				lines.push("    public static function getFields($cls) { return \\__hxhx_meta_fields($cls); }");
 				lines.push("  }");
 				lines.push("}");
 				lines.push("namespace haxe\\format {");
@@ -11230,6 +11401,7 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("namespace {");
 				appendPhpClassNameMap(lines, program, decl);
+				appendPhpMetaRuntime(lines, program, decl);
 				if (!phpProgramDeclaresClass(program, "Int64")) {
 					lines.push("if (!class_exists(\"Int64\", false)) {");
 					lines.push("  class Int64 extends \\haxe\\Int64 {");

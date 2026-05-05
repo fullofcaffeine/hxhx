@@ -1321,7 +1321,7 @@ let decodeNativeProtocol = fun encoded source -> try let __fallback_result_34 = 
             ))
           ))
         )) done);
-        let cls = Obj.magic (HxClassDecl.create (!className : string) (!hasStaticMain) (Obj.magic functions) (Obj.magic fields) (Obj.magic (HxRuntime.hx_null))) in HxModuleDecl.create (!packagePath : string) (Obj.magic imports) (Obj.magic cls) (Obj.magic (let __arr_32 = HxArray.create () in (
+        let cls = Obj.magic (HxClassDecl.create (!className : string) (!hasStaticMain) (Obj.magic functions) (Obj.magic fields) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in HxModuleDecl.create (!packagePath : string) (Obj.magic imports) (Obj.magic cls) (Obj.magic (let __arr_32 = HxArray.create () in (
           ignore (HxArray.push __arr_32 cls);
           __arr_32
         ))) (!headerOnly) (!hasToplevelMain)

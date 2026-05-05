@@ -15,13 +15,16 @@ class HxClassDecl {
 	public final functions:Array<HxFunctionDecl>;
 	public final fields:Array<HxFieldDecl>;
 	public final extendsPath:String;
+	public final metadata:Array<String>;
 
-	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>, ?fields:Array<HxFieldDecl>, ?extendsPath:String) {
+	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>, ?fields:Array<HxFieldDecl>, ?extendsPath:String,
+			?metadata:Array<String>) {
 		this.name = name;
 		this.hasStaticMain = hasStaticMain;
 		this.functions = functions == null ? [] : functions;
 		this.fields = fields == null ? [] : fields;
 		this.extendsPath = extendsPath == null ? "" : extendsPath;
+		this.metadata = metadata == null ? [] : metadata;
 	}
 
 	/**
@@ -65,5 +68,9 @@ class HxClassDecl {
 	**/
 	public static function getExtendsPath(c:HxClassDecl):String {
 		return c.extendsPath;
+	}
+
+	public static function getMetadata(c:HxClassDecl):Array<String> {
+		return c.metadata;
 	}
 }

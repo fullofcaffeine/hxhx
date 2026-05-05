@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable name : string; mutable hasStaticMain : bool; mutable functions : HxFunctionDecl.t HxArray.t; mutable fields : HxFieldDecl.t HxArray.t; mutable extendsPath : string }
+type t = { __hx_type : Obj.t; mutable name : string; mutable hasStaticMain : bool; mutable functions : HxFunctionDecl.t HxArray.t; mutable fields : HxFieldDecl.t HxArray.t; mutable extendsPath : string; mutable metadata : string HxArray.t }
 
-let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = "" } : t) in (
+let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -48,9 +48,22 @@ let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 -> let sel
             tempRight2 := __assign_12;
             __assign_12
           ));
-          let __assign_13 = (!tempRight2 : string) in (
+          ignore (let __assign_13 = (!tempRight2 : string) in (
             (Obj.magic self : t).extendsPath <- __assign_13;
             __assign_13
+          ));
+          let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+            ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_14 = Obj.magic (let __arr_15 = HxArray.create () in __arr_15) in (
+              tempRight3 := __assign_14;
+              __assign_14
+            ) else let __assign_16 = Obj.magic metadata2 in (
+              tempRight3 := __assign_16;
+              __assign_16
+            ));
+            let __assign_17 = Obj.magic (!tempRight3) in (
+              (Obj.magic self : t).metadata <- __assign_17;
+              __assign_17
+            )
           )
         )
       )
@@ -59,7 +72,7 @@ let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 -> let sel
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getName = fun c -> (Obj.magic c : t).name
 
@@ -70,3 +83,5 @@ let getFunctions = fun c -> (Obj.magic c : t).functions
 let getFields = fun c -> (Obj.magic c : t).fields
 
 let getExtendsPath = fun c -> (Obj.magic c : t).extendsPath
+
+let getMetadata = fun c -> (Obj.magic c : t).metadata

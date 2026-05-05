@@ -580,7 +580,7 @@ class Stage3Compiler {
 				}
 				final mergedFields = keptFields.concat(gen.fields);
 				final newCls = new HxClassDecl(HxClassDecl.getName(oldCls), HxClassDecl.getHasStaticMain(oldCls), mergedFns, mergedFields,
-					HxClassDecl.getExtendsPath(oldCls));
+					HxClassDecl.getExtendsPath(oldCls), HxClassDecl.getMetadata(oldCls));
 				final newClasses = new Array<HxClassDecl>();
 				for (c in HxModuleDecl.getClasses(oldDecl)) {
 					if (HxClassDecl.getName(c) == HxClassDecl.getName(oldCls)) {
