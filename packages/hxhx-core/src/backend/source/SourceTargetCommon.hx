@@ -8892,6 +8892,7 @@ class SourceTargetCommon {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
 		final pending = new Array<HxClassDecl>();
+		final importedSupportTypeNames = phpProgramImportedSupportTypeNameMap(program, decl);
 		var sawStdDateTools = false;
 		var mainFilePath = "";
 		var mainPackage = HxModuleDecl.getPackagePath(decl);
@@ -8926,8 +8927,14 @@ class SourceTargetCommon {
 				}
 				return;
 			}
-			if (!phpShouldEmitSupportPackage(mainPackage, modulePackage))
+			final packageMatches = phpShouldEmitSupportPackage(mainPackage, modulePackage);
+			if (!packageMatches) {
+				final emitImportedModuleEnums = phpModuleHasImportedSupportClass(moduleDecl, importedSupportTypeNames);
+				for (cls in HxModuleDecl.getClasses(moduleDecl))
+					if (emitImportedModuleEnums && phpShouldEmitImportedSupportClass(cls))
+						queueClass(cls);
 				return;
+			}
 			for (cls in HxModuleDecl.getClasses(moduleDecl))
 				queueClass(cls);
 		}
@@ -8999,6 +9006,50 @@ class SourceTargetCommon {
 			}
 		}
 		return hasEnumMarker && !hasEnumCtorList && hasPublicValue && HxClassDecl.getFunctions(cls).length == 0;
+	}
+
+	static function phpShouldEmitImportedSupportClass(cls:HxClassDecl):Bool {
+		var hasEnumMarker = false;
+		var hasEnumCtorList = false;
+		for (field in HxClassDecl.getFields(cls)) {
+			final name = HxFieldDecl.getName(field);
+			if (name == "__hx_is_enum")
+				hasEnumMarker = true;
+			else if (name == "__hx_enum_ctors")
+				hasEnumCtorList = true;
+		}
+		return hasEnumMarker && hasEnumCtorList;
+	}
+
+	static function phpModuleHasImportedSupportClass(moduleDecl:HxModuleDecl, importedSupportTypeNames:haxe.ds.StringMap<Bool>):Bool {
+		for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+			final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
+			if (importedSupportTypeNames.exists(className) && phpShouldEmitImportedSupportClass(cls))
+				return true;
+		}
+		return false;
+	}
+
+	static function phpProgramImportedSupportTypeNameMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<Bool> {
+		final names = new haxe.ds.StringMap<Bool>();
+		function addImport(rawImport:String):Void {
+			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
+				return;
+			final parts = rawImport.split(".");
+			if (parts.length == 0)
+				return;
+			final shortName = sanitizePhpTypeName(parts[parts.length - 1]);
+			if (shortName.length > 0)
+				names.set(shortName, true);
+		}
+		function addDeclImports(moduleDecl:HxModuleDecl):Void {
+			for (rawImport in HxModuleDecl.getImports(moduleDecl))
+				addImport(rawImport);
+		}
+		addDeclImports(decl);
+		for (typed in program.getTypedModules())
+			addDeclImports(typed.getParsed().getDecl());
+		return names;
 	}
 
 	static function moduleHasClass(decl:HxModuleDecl, className:String):Bool {

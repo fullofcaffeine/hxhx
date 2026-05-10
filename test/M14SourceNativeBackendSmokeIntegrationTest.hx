@@ -659,6 +659,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return new MacroExpandedProgram([mainTyped, helperTyped, externalTyped], false, []);
 	}
 
+	static function phpImportedHaxelibEnumSupportProgram():GenIrProgram {
+		final mainSrc = [
+			"package unit;",
+			"import utest.ui.common.HeaderDisplayMode;",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(HeaderDisplayMode.AlwaysShowHeader));",
+			"    Sys.println(Std.string(SuccessResultsDisplayMode.NeverShowSuccessResults));",
+			"  }",
+			"}",
+		].join("\n");
+		final enumSrc = [
+			"package utest.ui.common;",
+			"enum HeaderDisplayMode {",
+			"  AlwaysShowHeader;",
+			"  NeverShowHeader;",
+			"}",
+			"enum SuccessResultsDisplayMode {",
+			"  AlwaysShowSuccessResults;",
+			"  NeverShowSuccessResults;",
+			"}",
+		].join("\n");
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSrc, "tests/unit/src/unit/Main.hx"));
+		final typedEnum = TyperStage.typeModule(ParserStage.parse(enumSrc, "tests/.haxelib/utest/git/src/utest/ui/common/HeaderDisplayMode.hx"));
+		return MacroStage.expandProgram([typedMain, typedEnum], []);
+	}
+
 	static function phpMacroTypeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -6551,6 +6578,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpImportedHaxelibEnumSupportClassEmission():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_imported_haxelib_enum_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpImportedHaxelibEnumSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class HeaderDisplayMode {",
+			"PHP support class emission should include imported haxelib enum carriers referenced by generated code");
+		assertContains(content, "class SuccessResultsDisplayMode {",
+			"PHP support class emission should include sibling enum carriers from imported haxelib modules");
+		assertContains(content, "HeaderDisplayMode::$AlwaysShowHeader", "PHP generated code should reference the imported enum carrier");
+		assertContains(content, "SuccessResultsDisplayMode::$NeverShowSuccessResults", "PHP generated code should reference the sibling enum carrier");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP imported haxelib enum support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "AlwaysShowHeader\nNeverShowSuccessResults\n", "generated PHP imported haxelib enum output mismatch, got:\n"
+				+ run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9375,6 +9425,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpNonConstantStaticFieldDefault();
 		assertPhpArrayPostfixStatement();
 		assertPhpCrossPackageSupportClassEmission();
+		assertPhpImportedHaxelibEnumSupportClassEmission();
 		assertPhpMacroType();
 		assertPythonMacroType();
 		assertPhpTryCatchExpression();
