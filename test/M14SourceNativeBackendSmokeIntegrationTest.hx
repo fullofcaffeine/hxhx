@@ -835,7 +835,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    try {",
 			"      throw EError;",
 			"    } catch (e:EnumError) {",
-			"      Sys.println(e);",
+			"      Sys.println(Std.string(e));",
+			"      Sys.println(Type.enumEq(e, EError));",
 			"    }",
 			"  }",
 			"}",
@@ -6746,13 +6747,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpEnumCatchProgram(), new BackendContext(enumTmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final enumContent = File.getContent(Path.join([enumTmpRoot, "index.php"]));
 		assertContains(enumContent, "__hxhx_catch_matches($__hxhx_caught, \"EnumError\")", "PHP enum catches should route through catch matching");
+		assertContains(enumContent, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);",
+			"PHP enum catches should bind the thrown enum value, not a stringified surrogate");
+		assertContains(enumContent, "Type::enumEq($e, EnumError::$EError)", "PHP caught enum values should remain compatible with Type.enumEq");
 		assertContains(enumContent,
 			"if (substr($short, 0, 4) === \"Enum\") return is_string($value) || (is_object($value) && property_exists($value, \"__hx_ctor\"));",
 			"PHP catch matching should follow the source backend enum value encodings");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([enumTmpRoot, "index.php"])]);
 			assertTrue(run.code == 0, "generated PHP enum catches should execute, stderr:\n" + run.stderr);
-			assertContains(run.stdout, "EError", "generated PHP enum catch should observe the thrown enum value");
+			assertTrue(run.stdout == "EError\n1\n", "generated PHP enum catch should preserve thrown enum equality, got:\n" + run.stdout);
 		}
 		deleteRecursive(enumTmpRoot);
 

@@ -24834,7 +24834,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_unwrap_thrown_value($value) {");
       ignore (HxArray.push lines "  $unwrapped = $value instanceof ValueException ? $value->value : $value;");
-      ignore (HxArray.push lines "  return is_object($unwrapped) && property_exists($unwrapped, \"__hx_enum\") ? __hxhx_add_string($unwrapped) : $unwrapped;");
+      ignore (HxArray.push lines "  return $unwrapped;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_message_field($value) {");
       ignore (HxArray.push lines "  if ($value instanceof \\Throwable) return $value->getMessage();");

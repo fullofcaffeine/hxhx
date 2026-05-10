@@ -12533,7 +12533,7 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("function __hxhx_unwrap_thrown_value($value) {");
 				lines.push("  $unwrapped = $value instanceof ValueException ? $value->value : $value;");
-				lines.push("  return is_object($unwrapped) && property_exists($unwrapped, \"__hx_enum\") ? __hxhx_add_string($unwrapped) : $unwrapped;");
+				lines.push("  return $unwrapped;");
 				lines.push("}");
 				lines.push("function __hxhx_message_field($value) {");
 				lines.push("  if ($value instanceof \\Throwable) return $value->getMessage();");
