@@ -29,6 +29,12 @@ private typedef SourceSwitchPatternLowered = {
 	final bindings:Array<SourceSwitchPatternBinding>;
 };
 
+private typedef PhpEnumCtorRef = {
+	final enumName:String;
+	final ctorName:String;
+	final hasArgs:Bool;
+};
+
 private class PhpMetadataObjectField {
 	public final name:String;
 	public final value:String;
@@ -693,10 +699,15 @@ class SourceTargetCommon {
 						phpValueTypeExpr(name, []);
 					else if (phpLocalExists(name))
 						valueName(Php, name);
-					else if (phpKnownTypeName(name))
-						phpClassValueExpr(name);
-					else
-						quotePhpString(name);
+					else {
+						final enumCtor = phpEnumCtorValueExpr(name);
+						if (enumCtor != null)
+							enumCtor;
+						else if (phpKnownTypeName(name))
+							phpClassValueExpr(name);
+						else
+							quotePhpString(name);
+					}
 				} else {
 					quoteString(name);
 				}
@@ -712,6 +723,8 @@ class SourceTargetCommon {
 				superExpr(target);
 			case EUnop(op, inner):
 				unopExpr(target, op, inner);
+			case EIdent(name) if (target == Php && !phpLocalExists(name) && phpEnumCtorValueExpr(name) != null):
+				phpEnumCtorValueExpr(name);
 			case EIdent(name) if (target == Php && looksLikeTypePathRoot(name) && !phpLocalExists(name)):
 				phpClassValueExpr(name);
 			case EIdent(name) if (target == Php && phpInt64ImportedStaticMethodValueName(name) && !phpLocalExists(name)):
@@ -736,6 +749,10 @@ class SourceTargetCommon {
 				tryCatchRawExpr(target, raw);
 			case ECall(EEnumValue(name), args) if (target == Php && phpValueTypeCtorIndex(name) != null):
 				phpValueTypeExpr(name, args);
+			case ECall(EEnumValue(name), args) if (target == Php && phpEnumCtorRef(name) != null):
+				phpEnumCtorCallExpr(phpEnumCtorRef(name), args);
+			case ECall(EIdent(name), args) if (target == Php && !phpLocalExists(name) && phpEnumCtorRef(name) != null):
+				phpEnumCtorCallExpr(phpEnumCtorRef(name), args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stdStringCall(target, args[0]);
 			case ECall(EField(EIdent("Std"), "isOfType"), args) if (target == Php && args.length == 2):
@@ -4299,6 +4316,10 @@ class SourceTargetCommon {
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticCallableFieldsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderKnownTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
+	static var phpRenderEnumConstructors:Null<haxe.ds.StringMap<PhpEnumCtorRef>> = null;
+	static var phpRenderAmbiguousEnumConstructors:Null<haxe.ds.StringMap<Bool>> = null;
+	static var phpRenderEnumConstructorsByEnum:Null<haxe.ds.StringMap<haxe.ds.StringMap<PhpEnumCtorRef>>> = null;
+	static var phpRenderPreferredEnumName:Null<String> = null;
 	static var phpRenderTypeAliases:Null<haxe.ds.StringMap<String>> = null;
 	static var phpRenderDynamicCallFieldsByLocal:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderRefCaptureLocals:Null<Array<String>> = null;
@@ -4335,6 +4356,55 @@ class SourceTargetCommon {
 		if (phpRenderKnownTypeNames == null)
 			return false;
 		return phpRenderKnownTypeNames.exists(name) || phpRenderKnownTypeNames.exists(sanitizeTypeName(name));
+	}
+
+	static function phpEnumCtorRef(name:String):Null<PhpEnumCtorRef> {
+		final clean = sanitizeTypeName(name);
+		if (phpRenderPreferredEnumName != null && phpRenderEnumConstructorsByEnum != null) {
+			final byCtor = phpRenderEnumConstructorsByEnum.get(phpRenderPreferredEnumName);
+			if (byCtor != null) {
+				if (byCtor.exists(name))
+					return byCtor.get(name);
+				if (byCtor.exists(clean))
+					return byCtor.get(clean);
+			}
+		}
+		if (phpRenderEnumConstructors == null)
+			return null;
+		if (phpRenderAmbiguousEnumConstructors != null
+			&& (phpRenderAmbiguousEnumConstructors.exists(name) || phpRenderAmbiguousEnumConstructors.exists(clean)))
+			return null;
+		return phpRenderEnumConstructors.exists(name) ? phpRenderEnumConstructors.get(name) : phpRenderEnumConstructors.get(clean);
+	}
+
+	static function withPhpPreferredEnum<T>(enumName:Null<String>, f:() -> T):T {
+		final previous = phpRenderPreferredEnumName;
+		phpRenderPreferredEnumName = enumName;
+		try {
+			final result = f();
+			phpRenderPreferredEnumName = previous;
+			return result;
+		} catch (e) {
+			phpRenderPreferredEnumName = previous;
+			throw e;
+		}
+	}
+
+	static function phpEnumCtorValueExpr(name:String):Null<String> {
+		final ref = phpEnumCtorRef(name);
+		if (ref == null)
+			return null;
+		if (ref.hasArgs)
+			return "function(...$__hxhx_args) { return " + ref.enumName + "::" + ref.ctorName + "(...$__hxhx_args); }";
+		return ref.enumName + "::$" + ref.ctorName;
+	}
+
+	static function phpEnumCtorCallExpr(ref:PhpEnumCtorRef, args:Array<HxExpr>):String {
+		if (ref.hasArgs)
+			return withPhpPreferredEnum(ref.enumName, function() {
+				return callExpr(Php, ref.enumName + "::" + ref.ctorName, args);
+			});
+		return ref.enumName + "::$" + ref.ctorName;
 	}
 
 	static function phpImportedTypeAlias(name:String):Null<String> {
@@ -8071,6 +8141,91 @@ class SourceTargetCommon {
 		return names;
 	}
 
+	static function phpProgramEnumConstructorMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<PhpEnumCtorRef> {
+		final out = new haxe.ds.StringMap<PhpEnumCtorRef>();
+		final seen = new Map<String, Bool>();
+		function addRef(ref:PhpEnumCtorRef):Void {
+			final cleanCtor = sanitizeTypeName(ref.ctorName);
+			if (!out.exists(cleanCtor)) {
+				out.set(cleanCtor, ref);
+				return;
+			}
+			final existing = out.get(cleanCtor);
+			if (existing.enumName == ref.enumName && existing.ctorName == ref.ctorName)
+				return;
+			if (phpRenderAmbiguousEnumConstructors != null)
+				phpRenderAmbiguousEnumConstructors.set(cleanCtor, true);
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final enumName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				if (enumName == null || enumName.length == 0 || seen.exists(enumName))
+					continue;
+				var isEnum = false;
+				for (field in HxClassDecl.getFields(cls))
+					if (HxFieldDecl.getName(field) == "__hx_is_enum")
+						isEnum = true;
+				if (!isEnum)
+					continue;
+				seen.set(enumName, true);
+				for (field in HxClassDecl.getFields(cls)) {
+					final name = HxFieldDecl.getName(field);
+					if (!HxFieldDecl.getIsStatic(field) || StringTools.startsWith(name, "__hx_"))
+						continue;
+					addRef({enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: false});
+				}
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					final name = HxFunctionDecl.getName(fn);
+					if (!HxFunctionDecl.getIsStatic(fn) || name == "new" || StringTools.startsWith(name, "__hx_"))
+						continue;
+					addRef({enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: true});
+				}
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return out;
+	}
+
+	static function phpProgramEnumConstructorsByEnumMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<PhpEnumCtorRef>> {
+		final out = new haxe.ds.StringMap<haxe.ds.StringMap<PhpEnumCtorRef>>();
+		function addRef(ref:PhpEnumCtorRef):Void {
+			if (!out.exists(ref.enumName))
+				out.set(ref.enumName, new haxe.ds.StringMap<PhpEnumCtorRef>());
+			out.get(ref.enumName).set(ref.ctorName, ref);
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final enumName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				if (enumName == null || enumName.length == 0)
+					continue;
+				var isEnum = false;
+				for (field in HxClassDecl.getFields(cls))
+					if (HxFieldDecl.getName(field) == "__hx_is_enum")
+						isEnum = true;
+				if (!isEnum)
+					continue;
+				for (field in HxClassDecl.getFields(cls)) {
+					final name = HxFieldDecl.getName(field);
+					if (!HxFieldDecl.getIsStatic(field) || StringTools.startsWith(name, "__hx_"))
+						continue;
+					addRef({enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: false});
+				}
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					final name = HxFunctionDecl.getName(fn);
+					if (!HxFunctionDecl.getIsStatic(fn) || name == "new" || StringTools.startsWith(name, "__hx_"))
+						continue;
+					addRef({enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: true});
+				}
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return out;
+	}
+
 	static function phpProgramTypeAliasMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<String> {
 		final aliases = new haxe.ds.StringMap<String>();
 		function addImport(rawImport:String):Void {
@@ -10563,6 +10718,10 @@ class SourceTargetCommon {
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
 		final previousPhpStaticCallableFieldsByType = phpRenderStaticCallableFieldsByType;
 		final previousPhpKnownTypeNames = phpRenderKnownTypeNames;
+		final previousPhpEnumConstructors = phpRenderEnumConstructors;
+		final previousPhpAmbiguousEnumConstructors = phpRenderAmbiguousEnumConstructors;
+		final previousPhpEnumConstructorsByEnum = phpRenderEnumConstructorsByEnum;
+		final previousPhpPreferredEnumName = phpRenderPreferredEnumName;
 		final previousPhpTypeAliases = phpRenderTypeAliases;
 		if (target == Php) {
 			phpRenderInstanceMethodsByType = phpProgramInstanceMethodMap(program, decl);
@@ -10571,6 +10730,10 @@ class SourceTargetCommon {
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
 			phpRenderStaticCallableFieldsByType = phpProgramStaticCallableFieldMap(program, decl);
 			phpRenderKnownTypeNames = phpProgramKnownTypeNameMap(program, decl);
+			phpRenderAmbiguousEnumConstructors = new haxe.ds.StringMap<Bool>();
+			phpRenderEnumConstructors = phpProgramEnumConstructorMap(program, decl);
+			phpRenderEnumConstructorsByEnum = phpProgramEnumConstructorsByEnumMap(program, decl);
+			phpRenderPreferredEnumName = null;
 			phpRenderTypeAliases = phpProgramTypeAliasMap(program, decl);
 		}
 		switch (target) {
@@ -12244,7 +12407,7 @@ class SourceTargetCommon {
 				lines.push("  public function __construct($value = null) {");
 				lines.push("    $this->value = $value;");
 				lines.push("    $this->stack = __hxhx_stack();");
-				lines.push("    parent::__construct(strval($value));");
+				lines.push("    parent::__construct(__hxhx_to_string_value($value));");
 				lines.push("  }");
 				lines.push("  public static function thrown($value) {");
 				lines.push("    if ($value instanceof ValueException) return $value;");
@@ -12296,7 +12459,8 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("}");
 				lines.push("function __hxhx_unwrap_thrown_value($value) {");
-				lines.push("  return $value instanceof ValueException ? $value->value : $value;");
+				lines.push("  $unwrapped = $value instanceof ValueException ? $value->value : $value;");
+				lines.push("  return is_object($unwrapped) && property_exists($unwrapped, \"__hx_enum\") ? __hxhx_add_string($unwrapped) : $unwrapped;");
 				lines.push("}");
 				lines.push("function __hxhx_message_field($value) {");
 				lines.push("  if ($value instanceof \\Throwable) return $value->getMessage();");
@@ -13269,6 +13433,10 @@ class SourceTargetCommon {
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
 		phpRenderStaticCallableFieldsByType = previousPhpStaticCallableFieldsByType;
 		phpRenderKnownTypeNames = previousPhpKnownTypeNames;
+		phpRenderEnumConstructors = previousPhpEnumConstructors;
+		phpRenderAmbiguousEnumConstructors = previousPhpAmbiguousEnumConstructors;
+		phpRenderEnumConstructorsByEnum = previousPhpEnumConstructorsByEnum;
+		phpRenderPreferredEnumName = previousPhpPreferredEnumName;
 		phpRenderTypeAliases = previousPhpTypeAliases;
 		return lines.join("\n") + "\n";
 	}

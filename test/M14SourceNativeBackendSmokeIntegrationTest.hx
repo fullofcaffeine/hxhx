@@ -1985,6 +1985,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  B;",
 			"  With(i:Int);",
 			"}",
+			"enum A {",
+			"  A;",
+			"  D(e:A);",
+			"}",
 			"",
 			"class EnumSwitchHolder {",
 			"  public function new() {}",
@@ -2031,6 +2035,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Type.enumEq(indexedA, MultiEnum.A));",
 			"    Sys.println(Std.string(indexedSimple));",
 			"    Sys.println(Type.enumEq(indexedSimple, SimpleEnum.SE_A));",
+			"    var unqualifiedNested = D(A);",
+			"    Sys.println(Std.string(unqualifiedNested));",
+			"    Sys.println(Type.enumEq(unqualifiedNested, D(A)));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5659,13 +5666,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"return new __HxAnon([\"__hx_enum\" => \"MultiEnum\", \"__hx_ctor\" => \"With\", \"__hx_index\" => 2, \"__hx_params\" => [$i]]);",
 			"PHP scanned enum constructors should retain their constructor index");
 		assertContains(content, "return MyEnum::C(...$__hxhx_args);", "PHP enum constructor values should lower to callable closures");
+		assertContains(content, "$unqualifiedNested = A::D(A::$A);", "PHP unqualified enum constructor calls should resolve through the owning enum helper");
 		assertContains(content, "Type::enumEq($e2, MyEnum::C(1, \"x\"))", "PHP Type.enumEq should remain a static runtime call");
 		assertContains(content, "echo __hxhx_add_string($e) . PHP_EOL;", "PHP Std.string on enum values should use Haxe stringification");
 		assertContains(content, "echo __hxhx_add_string([$e]) . PHP_EOL;", "PHP Std.string on enum arrays should recursively stringify enum values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum constructor values should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\nSE_A\n1\n",
+			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\nSE_A\n1\nD(A)\n1\n",
 				"generated PHP enum constructor values should stringify correctly, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
