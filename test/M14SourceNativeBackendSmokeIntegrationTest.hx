@@ -2790,6 +2790,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var fn:Dynamic = function() {};",
 			"    Sys.println(Std.string(Std.isOfType(fn, c)));",
 			"    Sys.println(Type.getEnumName(MyEnum));",
+			"    var constructors = Type.getEnumConstructs(MyEnum);",
+			"    Sys.println(constructors.join(\"|\"));",
+			"    var oldConstructor = constructors[0];",
+			"    constructors[0] = \"Modified\";",
+			"    Sys.println(Std.string(Type.getEnumConstructs(MyEnum).contains(oldConstructor)));",
 			"    var madeA = Type.createEnum(MyEnum, untyped __unprotect__(\"A\"));",
 			"    Sys.println(Std.string(Type.enumEq(madeA, MyEnum.A)));",
 			"    var madeB:MyEnum = Type.createEnum(MyEnum, \"B\", [55]);",
@@ -7983,6 +7988,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "property_exists($candidate, $ctor) || method_exists($candidate, $ctor)",
 			"PHP runtime type helper should recognize enum records that only carry constructor metadata");
 		assertContains(content, "public static function createEnum($enum, $ctor, $args = null)", "PHP Type should expose createEnum");
+		assertContains(content, "public static function getEnumConstructs($enum)", "PHP Type should expose getEnumConstructs");
 		assertContains(content, "return $runtime::${$name};", "PHP Type.createEnum should return no-arg enum constructor fields");
 		assertContains(content, "return $runtime::$name(...array_values($args));", "PHP Type.createEnum should invoke enum constructor methods");
 		assertNotContains(content, "$__unprotect__", "PHP upstream __unprotect__ test helper should lower to its wrapped expression");
@@ -7990,7 +7996,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum type checks should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\nfalse\nfalse\nunit.MyEnum\ntrue\n55\nexc\nexc\nexc\n",
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\nfalse\nfalse\nunit.MyEnum\nA|B\ntrue\ntrue\n55\nexc\nexc\nexc\n",
 				"generated PHP enum type check output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
