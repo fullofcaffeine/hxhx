@@ -1717,6 +1717,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpGenericStackRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var stack = new haxe.ds.GenericStack<Int>();",
+			"    Sys.println(Std.string(stack.isEmpty()));",
+			"    stack.add(1);",
+			"    stack.add(2);",
+			"    Sys.println(Std.string(stack.first()));",
+			"    Sys.println(stack.toString());",
+			"    Sys.println(Std.string(stack.pop()));",
+			"    Sys.println(Std.string(stack.first()));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpReflectMakeVarArgsProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5443,6 +5463,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Lambda.list support should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "3\na\nc\na#b#c\n3\n", "generated PHP Lambda.list should preserve list order and length, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpGenericStackRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_generic_stack_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpGenericStackRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class GenericStack", "PHP source backend should emit haxe.ds.GenericStack runtime support");
+		assertContains(content, "$stack = new haxe\\ds\\GenericStack();", "PHP haxe.ds.GenericStack construction should target the namespace shim");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP GenericStack support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n2\n{2,1}\n2\n1\n", "generated PHP GenericStack output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -9945,6 +9983,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpHaxeSerializerImportRuntimeSupport();
 		assertPhpPoint3StringEqualityRuntimeSupport();
 		assertPhpLambdaListRuntimeSupport();
+		assertPhpGenericStackRuntimeSupport();
 		assertPhpMapKeysIteratorRuntimeSupport();
 		assertPhpMetaRuntimeSupport();
 		assertPhpReflectMakeVarArgs();
