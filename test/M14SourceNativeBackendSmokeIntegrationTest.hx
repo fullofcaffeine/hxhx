@@ -1484,6 +1484,32 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpTypeErrorExpressionProbeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var accepts = function(label:String, ?point:{x:Float, y:Int}, ?size:{w:Float, h:Int}) { };",
+			"    var item:{v:Int};",
+			"    var badFloat = typeError(item = {v: 1.2});",
+			"    var okInt = typeError(item = {v: 1});",
+			"    var badString = typeError(item = {v: \"oops\"});",
+			"    var badExtra = typeError(item = {v: 1, w: \"extra\"});",
+			"    var okPointCall = typeError(accepts(\"shape\", {x: 1.2, y: 2}));",
+			"    var okSizeCall = typeError(accepts(\"shape\", {w: 1.2, h: 2}));",
+			"    Sys.println(Std.string(badFloat));",
+			"    Sys.println(Std.string(okInt));",
+			"    Sys.println(Std.string(badString));",
+			"    Sys.println(Std.string(badExtra));",
+			"    Sys.println(Std.string(okPointCall));",
+			"    Sys.println(Std.string(okSizeCall));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeErrorBlockProbeProgram():GenIrProgram {
 		final src = [
 			"class HelperMacros {",
@@ -7320,6 +7346,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTypeErrorExpressionProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_expression_probe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTypeErrorExpressionProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertNotContains(content, "$typeError(", "PHP source backend should fold unqualified typeError expression probes");
+		assertContains(content, "$badFloat = true;", "PHP source backend should flag Float assigned to {v:Int} expression probes");
+		assertContains(content, "$okInt = false;", "PHP source backend should accept Int assigned to {v:Int} expression probes");
+		assertContains(content, "$badString = true;", "PHP source backend should flag String assigned to {v:Int} expression probes");
+		assertContains(content, "$badExtra = true;", "PHP source backend should flag extra fields in constant anonymous expression probes");
+		assertContains(content, "$okPointCall = false;", "PHP source backend should accept well-formed anonymous argument expression probes");
+		assertContains(content, "$okSizeCall = false;", "PHP source backend should accept alternate anonymous argument expression probes");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP typeError expression probes should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\nfalse\ntrue\ntrue\nfalse\nfalse\n",
+				"generated PHP typeError expression probes should preserve expected results, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpTypeErrorBlockProbe():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_block_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9718,6 +9768,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTryCatchExpression();
 		assertPhpThrownValueCatch();
 		assertPhpTypeErrorProbe();
+		assertPhpTypeErrorExpressionProbe();
 		assertPhpTypeErrorBlockProbe();
 		assertPhpTypedAsHelperProbe();
 		assertPhpFollowWithAbstractsProbe();

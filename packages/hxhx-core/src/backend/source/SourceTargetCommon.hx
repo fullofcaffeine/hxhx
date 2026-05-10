@@ -2847,7 +2847,140 @@ class SourceTargetCommon {
 		final blockResult = helperTypeErrorBlockResult(args);
 		if (blockResult != null)
 			return blockResult;
+		if (args != null && args.length > 0) {
+			final exprResult = helperTypeErrorExpressionResult(args[0]);
+			if (exprResult != null)
+				return exprResult;
+		}
 		return null;
+	}
+
+	static function helperTypeErrorExpressionResult(expr:HxExpr):Null<Bool> {
+		return switch (expr) {
+			case EBinop("=", EIdent(name), value):
+				helperAssignmentTypeError(phpLocalTypeHint(name), value);
+			case ECall(_, callArgs):
+				helperFunctionCallAnonTypeError(callArgs);
+			case _:
+				null;
+		};
+	}
+
+	static function helperFunctionCallAnonTypeError(args:Array<HxExpr>):Null<Bool> {
+		var sawAnon = false;
+		for (arg in args) {
+			switch (arg) {
+				case EAnon(fieldNames, fieldValues):
+					if (helperAnonLiteralHasDuplicateFields(fieldNames))
+						return true;
+					sawAnon = true;
+					for (value in fieldValues)
+						if (!helperExprHasSimpleProbeValue(value))
+							return null;
+				case _:
+			}
+		}
+		return sawAnon ? false : null;
+	}
+
+	static function helperAssignmentTypeError(typeHint:String, value:HxExpr):Null<Bool> {
+		return switch (value) {
+			case EUntyped(_):
+				false;
+			case ECast(_, _):
+				false;
+			case EAnon(fieldNames, fieldValues):
+				helperAnonLiteralTypeError(typeHint, fieldNames, fieldValues);
+			case _:
+				null;
+		};
+	}
+
+	static function helperAnonLiteralTypeError(typeHint:String, fieldNames:Array<String>, fieldValues:Array<HxExpr>):Null<Bool> {
+		final expected = helperAnonTypeFields(typeHint);
+		if (expected == null)
+			return null;
+		final seen = new haxe.ds.StringMap<Bool>();
+		for (i in 0...fieldNames.length) {
+			final name = StringTools.trim(fieldNames[i]);
+			if (seen.exists(name))
+				return true;
+			seen.set(name, true);
+			if (!expected.exists(name))
+				return true;
+			if (!helperExprFitsType(fieldValues[i], expected.get(name)))
+				return true;
+		}
+		for (name in expected.keys())
+			if (!seen.exists(name))
+				return true;
+		return false;
+	}
+
+	static function helperAnonLiteralHasDuplicateFields(fieldNames:Array<String>):Bool {
+		final seen = new haxe.ds.StringMap<Bool>();
+		for (field in fieldNames) {
+			final name = StringTools.trim(field);
+			if (seen.exists(name))
+				return true;
+			seen.set(name, true);
+		}
+		return false;
+	}
+
+	static function helperAnonTypeFields(typeHint:String):Null<haxe.ds.StringMap<String>> {
+		final compact = removeTypeHintWhitespace(typeHint);
+		if (!StringTools.startsWith(compact, "{") || !StringTools.endsWith(compact, "}"))
+			return null;
+		final inner = compact.substr(1, compact.length - 2);
+		final out = new haxe.ds.StringMap<String>();
+		for (part in splitTopLevelComma(inner)) {
+			final trimmed = StringTools.trim(part);
+			if (trimmed.length == 0)
+				continue;
+			final colon = trimmed.indexOf(":");
+			if (colon <= 0)
+				return null;
+			out.set(StringTools.trim(trimmed.substr(0, colon)), StringTools.trim(trimmed.substr(colon + 1)));
+		}
+		return out;
+	}
+
+	static function helperExprHasSimpleProbeValue(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ENull | EBool(_) | EString(_) | EInt(_) | EFloat(_) | EIdent(_) | EUntyped(_) | ECast(_, _):
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function helperExprFitsType(expr:HxExpr, typeHint:String):Bool {
+		final compact = removeTypeHintWhitespace(typeHint);
+		if (compact.length == 0 || isDynamicTypeHint(compact))
+			return true;
+		if (isNullTypeHint(compact))
+			return switch (expr) {
+				case ENull:
+					true;
+				case _:
+					helperExprFitsType(expr, phpUnwrapNullTypeHint(compact));
+			};
+		return switch (expr) {
+			case EUntyped(_) | ECast(_, _):
+				true;
+			case ENull:
+				true;
+			case EInt(_): compact == "Int" || compact == "Float";
+			case EFloat(_):
+				compact == "Float";
+			case EString(_):
+				compact == "String";
+			case EBool(_):
+				compact == "Bool";
+			case _:
+				true;
+		};
 	}
 
 	static function helperTypeErrorBlockResult(args:Array<HxExpr>):Null<Bool> {
