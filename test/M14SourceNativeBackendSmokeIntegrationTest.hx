@@ -6919,6 +6919,36 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpMacroRestProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_rest_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var one = MyMacro.MyRestMacro.testRest1(1, 2, [3]);",
+			"    var two = MyMacro.MyRestMacro.testRest2(1, 2, 3, 4);",
+			"    Sys.println(Std.string(one.length) + ':' + Std.string(one[0]) + ':' + Std.string(one[2][0]));",
+			"    Sys.println(Std.string(two.length) + ':' + Std.string(two[2]) + ':' + Std.string(two[3]));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertNotContains(content, "MyRestMacro::testRest", "PHP macro-rest probes should fold before runtime emission");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP macro-rest probe should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "3:1:3\n4:3:4\n", "generated PHP macro-rest output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9965,6 +9995,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpCrossPackageSupportClassEmission();
 		assertPhpImportedHaxelibEnumSupportClassEmission();
 		assertPhpMacroType();
+		assertPhpMacroRestProbe();
 		assertPythonMacroType();
 		assertPhpTryCatchExpression();
 		assertPhpThrownValueCatch();

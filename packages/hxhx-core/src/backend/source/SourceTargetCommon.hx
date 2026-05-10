@@ -2865,6 +2865,8 @@ class SourceTargetCommon {
 			case "followWithAbstractsOnce":
 				final result = helperFollowWithAbstractsResult(args, true);
 				result == null ? null : renderExpr(target, EString(result));
+			case "macroRestArray":
+				arrayLiteral(target, args == null ? [] : args);
 			case _:
 				null;
 		};
@@ -2889,6 +2891,8 @@ class SourceTargetCommon {
 				}
 			case EField(EIdent("MyMacroHelper"), field) | EField(EField(EIdent("MyMacro"), "MyMacroHelper"), field) |
 				EField(EField(EField(EIdent("unit"), "MyMacro"), "MyMacroHelper"), field): field == "followWithAbstracts" || field == "followWithAbstractsOnce" ? field : null;
+			case EField(EIdent("MyRestMacro"), field) | EField(EField(EIdent("MyMacro"), "MyRestMacro"), field) |
+				EField(EField(EField(EIdent("unit"), "MyMacro"), "MyRestMacro"), field): field == "testRest1" || field == "testRest2" ? "macroRestArray" : null;
 			case _:
 				null;
 		};
