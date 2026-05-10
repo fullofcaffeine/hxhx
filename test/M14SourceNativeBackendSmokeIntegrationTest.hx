@@ -8929,6 +8929,51 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpClosureBindCallbacks():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_closure_bind_callbacks_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var join = function(a:String, b:String, c:String) return a + b + c;",
+			"    Sys.println(join.bind()(\"a\", \"b\", \"c\"));",
+			"    Sys.println(join.bind(\"a\")(\"b\", \"c\"));",
+			"    Sys.println(join.bind(\"a\", \"b\")(\"c\"));",
+			"    Sys.println(join.bind(\"a\", \"b\", \"c\")());",
+			"    Sys.println(join.bind(_, \"b\", \"c\")(\"a\"));",
+			"    Sys.println(join.bind(_, \"b\")(\"a\", \"c\"));",
+			"    Sys.println(join.bind(_)(\"a\", \"b\", \"c\"));",
+			"    Sys.println(join.bind(_, \"b\", _)(\"a\", \"c\"));",
+			"    Sys.println(join.bind().bind(_, \"b\", \"c\")(\"a\"));",
+			"    Sys.println(join.bind(\"a\").bind(\"b\", \"c\")());",
+			"    Sys.println(join.bind(\"a\", _).bind(\"b\")(\"c\"));",
+			"    Sys.println(join.bind(_, \"b\").bind(\"a\")(\"c\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_bind($join)", "PHP closure bind should support zero-argument bind calls");
+		assertContains(content, "__hxhx_bind_placeholder()", "PHP closure bind should encode underscore placeholders explicitly");
+		assertNotContains(content, "Closure::bind()", "PHP closure bind should not lower Haxe bind syntax to PHP Closure::bind");
+		assertNotContains(content, "__hxhx_bind($join, $_", "PHP closure bind placeholders should not emit an undefined underscore variable");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP closure bind callbacks should execute, stderr:\n" + run.stderr);
+			final expected = [
+				"abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc",
+			].join("\n") + "\n";
+			assertTrue(run.stdout == expected, "generated PHP closure bind callbacks should preserve argument order, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpInstanceMethodValueBind():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_method_value_bind_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9714,6 +9759,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpNullFieldAccessThrowsNpe();
 		assertPhpConstructorDefaultArgs();
 		assertPhpStringBufRuntimeSupport();
+		assertPhpClosureBindCallbacks();
 		assertPhpInstanceMethodValueBind();
 		assertPhpClosureCapturesMutableLocalByReference();
 		assertPhpStringLengthInCharCodeAtArg();

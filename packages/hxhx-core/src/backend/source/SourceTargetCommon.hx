@@ -1823,8 +1823,8 @@ class SourceTargetCommon {
 						return "__hxhx_map_literal_from_object(" + renderExpr(Php, receiver) + ")->toString()";
 					case _:
 				}
-				if (field == "bind" && args.length > 0)
-					return "__hxhx_bind(" + ([renderExpr(Php, receiver)].concat([for (arg in args) renderExpr(Php, arg)])).join(", ") + ")";
+				if (field == "bind")
+					return "__hxhx_bind(" + ([renderExpr(Php, receiver)].concat([for (arg in args) phpBindArgExpr(arg)])).join(", ") + ")";
 				final stringCall = phpStringFieldCall(receiver, field, args);
 				if (stringCall != null)
 					return stringCall;
@@ -1880,6 +1880,15 @@ class SourceTargetCommon {
 			case Python, Java, Cs, Lua:
 				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExpr(target, receiver);
 				callExpr(target, fieldAccess(target, renderedReceiver, field), args);
+		};
+	}
+
+	static function phpBindArgExpr(arg:HxExpr):String {
+		return switch (arg) {
+			case EIdent("_"):
+				"__hxhx_bind_placeholder()";
+			case _:
+				renderExpr(Php, arg);
 		};
 	}
 
@@ -13263,10 +13272,27 @@ class SourceTargetCommon {
 				lines.push("  if (!is_callable($callable)) throw new \\Exception(\"Cannot call non-callable field\");");
 				lines.push("  return $callable(...$args);");
 				lines.push("}");
+				lines.push("function __hxhx_bind_placeholder() {");
+				lines.push("  static $placeholder = null;");
+				lines.push("  if ($placeholder === null) $placeholder = new \\stdClass();");
+				lines.push("  return $placeholder;");
+				lines.push("}");
 				lines.push("function __hxhx_bind($callable, ...$boundArgs) {");
 				lines.push("  if (!is_callable($callable)) throw new \\Exception(\"Cannot bind non-callable value\");");
 				lines.push("  return function(...$args) use ($callable, $boundArgs) {");
-				lines.push("    return $callable(...array_merge($boundArgs, $args));");
+				lines.push("    $resolved = [];");
+				lines.push("    $index = 0;");
+				lines.push("    $placeholder = __hxhx_bind_placeholder();");
+				lines.push("    $count = count($args);");
+				lines.push("    foreach ($boundArgs as $bound) {");
+				lines.push("      if ($bound === $placeholder) {");
+				lines.push("        $resolved[] = $index < $count ? $args[$index++] : null;");
+				lines.push("      } else {");
+				lines.push("        $resolved[] = $bound;");
+				lines.push("      }");
+				lines.push("    }");
+				lines.push("    while ($index < $count) $resolved[] = $args[$index++];");
+				lines.push("    return $callable(...$resolved);");
 				lines.push("  };");
 				lines.push("}");
 				lines.push("function __hxhx_string_index_of($value, $needle, $start = 0) {");
