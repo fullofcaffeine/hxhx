@@ -1408,6 +1408,49 @@ class ParserStage {
 			return {text: parts.join(""), nextPos: j};
 		}
 
+		function scanFunctionParamListOpen(startPos:Int):{text:String, nextPos:Int, tokenPos:Int} {
+			var j = startPos;
+			var parenDepth = 0;
+			var bracketDepth = 0;
+			var braceDepth = 0;
+			var angleDepth = 0;
+			while (true) {
+				final tokenPos = j;
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: tok.text, nextPos: tok.nextPos, tokenPos: tokenPos};
+				final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0;
+				if (atTop && tok.text == "(")
+					return {text: tok.text, nextPos: tok.nextPos, tokenPos: tokenPos};
+				if (atTop && (tok.text == "{" || tok.text == ";" || tok.text == "="))
+					return {text: tok.text, nextPos: tok.nextPos, tokenPos: tokenPos};
+				j = tok.nextPos;
+				switch (tok.text) {
+					case "(":
+						parenDepth += 1;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth -= 1;
+					case "[":
+						bracketDepth += 1;
+					case "]":
+						if (bracketDepth > 0)
+							bracketDepth -= 1;
+					case "{":
+						braceDepth += 1;
+					case "}":
+						if (braceDepth > 0)
+							braceDepth -= 1;
+					case "<":
+						angleDepth += 1;
+					case ">":
+						if (angleDepth > 0)
+							angleDepth -= 1;
+					case _:
+				}
+			}
+		}
+
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -1855,12 +1898,9 @@ class ParserStage {
 					final fnName = (nameTok.isIdent && nameTok.text.length > 0) ? nameTok.text : "";
 					i = nameTok.nextPos;
 
-					// Seek `(` for the parameter list (skip generics / return types).
-					var sigTok = scanNextToken(source, i);
-					while (sigTok.text.length > 0 && sigTok.text != "(" && sigTok.text != "{" && sigTok.text != ";" && sigTok.text != "=") {
-						i = sigTok.nextPos;
-						sigTok = scanNextToken(source, i);
-					}
+					// Seek `(` for the parameter list while skipping generic type-parameter
+					// constraints such as `<A:{x:Int} & {y:Float}>`.
+					final sigTok = scanFunctionParamListOpen(i);
 
 					var args = new Array<HxFunctionArg>();
 					if (sigTok.text == "(") {
@@ -1933,6 +1973,8 @@ class ParserStage {
 							pendingOptional = false;
 							pendingRest = false;
 						}
+					} else {
+						i = sigTok.tokenPos;
 					}
 
 					final bodyCapture = scanFunctionBody(source, i, true);
@@ -2199,10 +2241,9 @@ class ParserStage {
 					false;
 			};
 		}
-		return switch (stmts[0]) {
-			case SReturn(ECall(EField(EIdent(_), _), callArgs), _): callArgs != null && callArgs.length <= 2;
-			case SReturn(ENew(_, _), _):
-				true;
+		return switch (stmts) {
+			case [SReturn(expr, _)]:
+				!hasUnsupportedExpr(expr);
 			case _:
 				false;
 		};

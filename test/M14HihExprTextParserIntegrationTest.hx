@@ -525,6 +525,54 @@ class M14HihExprTextParserIntegrationTest {
 		assertTrue(bodyLengths.get("get_W") == 1, "scanner should preserve expression-bodied static getters");
 		assertTrue(bodyLengths.get("set_W") == 2, "scanner should preserve assignment-plus-return static setters");
 
+		final constrainedHelperSource = [
+			"class Base {",
+			"  public function new() {}",
+			"}",
+			"class ConstraintHelper {",
+			"  static public function staticSingle<A:Base>(a:A):A {",
+			"    return a;",
+			"  }",
+			"  public function memberAnon<A:{ x : Int } & { y : Float }>(v:A) {",
+			"    return v.x + v.y;",
+			"  }",
+			"}",
+		].join("\n");
+		final constrainedHelperClasses = ParserStageScanHelpers.scanModuleLocalHelperClasses(constrainedHelperSource, null);
+		var staticSingle:Null<HxFunctionDecl> = null;
+		var memberAnon:Null<HxFunctionDecl> = null;
+		for (cls in constrainedHelperClasses) {
+			if (HxClassDecl.getName(cls) != "ConstraintHelper")
+				continue;
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				switch (HxFunctionDecl.getName(fn)) {
+					case "staticSingle":
+						staticSingle = fn;
+					case "memberAnon":
+						memberAnon = fn;
+					case _:
+				}
+			}
+		}
+		assertTrue(staticSingle != null, "scanner should find constrained static helper");
+		assertTrue(HxFunctionDecl.getArgs(staticSingle).length == 1, "scanner should preserve constrained static helper arg");
+		switch (HxFunctionDecl.getBody(staticSingle)) {
+			case [SReturn(EIdent(name), _)]:
+				assertTrue(name == "a", "scanner should preserve simple constrained static return body");
+			case _:
+				fail("scanner should keep constrained static return body");
+		}
+		assertTrue(memberAnon != null, "scanner should find structural constrained member helper");
+		final memberAnonArgs = HxFunctionDecl.getArgs(memberAnon);
+		assertTrue(memberAnonArgs.length == 1 && HxFunctionArg.getName(memberAnonArgs[0]) == "v",
+			"scanner should skip structural constraints before reading member args");
+		switch (HxFunctionDecl.getBody(memberAnon)) {
+			case [SReturn(EBinop("+", EField(EIdent(left), "x"), EField(EIdent(right), "y")), _)]:
+				assertTrue(left == "v" && right == "v", "scanner should parse structural constrained member body");
+			case _:
+				fail("scanner should preserve structural constrained member return body");
+		}
+
 		final semicolonlessSwitchFieldSource = [
 			"class TestFileSystem {",
 			'  var tailingSlashes = switch (Sys.systemName()) {',

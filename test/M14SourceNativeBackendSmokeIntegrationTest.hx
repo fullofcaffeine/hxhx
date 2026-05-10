@@ -2558,6 +2558,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpConstrainedParameterScannerFlowProgram():GenIrProgram {
+		final src = [
+			"class Base {",
+			"  public function new() {}",
+			"}",
+			"",
+			"class ConstraintHelper {",
+			"  static public function staticSingle<A:Base>(a:A):A {",
+			"    return a;",
+			"  }",
+			"  public function memberAnon<A:{ x : Int } & { y : Float }>(v:A) {",
+			"    return v.x + v.y;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var b = new Base();",
+			"    Sys.println(Std.string(ConstraintHelper.staticSingle(b) == b));",
+			"    Sys.println(Std.string(new ConstraintHelper().memberAnon({ x: 1, y: 3. }) == 4));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final baseDecl = parsed.getDecl();
+		final main = HxModuleDecl.getMainClass(baseDecl);
+		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main)));
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
+		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function pythonAbstractThisPostfixProgram():GenIrProgram {
 		final src = [
 			"class Counter {",
@@ -8999,6 +9032,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpConstrainedParameterScannerFlow():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_constrained_param_scanner_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpConstrainedParameterScannerFlowProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function staticSingle($a) {\n    return $a;\n  }",
+			"PHP scanner-backed constrained static helpers should preserve simple return bodies");
+		assertContains(content, "public function memberAnon($v) {", "PHP scanner-backed structural constrained helpers should preserve args");
+		assertNotContains(content, "public function memberAnon() {", "PHP scanner should not mistake structural constraints for the member body");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP constrained parameter scanner flow should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\n", "generated PHP constrained parameter scanner output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStringBufRuntimeSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_stringbuf_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9834,6 +9887,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();
 		assertPhpInlineCastSelfReturn();
+		assertPhpConstrainedParameterScannerFlow();
 		assertPythonAbstractThisPostfix();
 		assertPhpSuperConstructor();
 		assertPhpSuperProperty();
