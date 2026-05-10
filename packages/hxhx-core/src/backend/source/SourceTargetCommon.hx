@@ -4251,7 +4251,7 @@ class SourceTargetCommon {
 	}
 
 	static function phpThisValueExpr():String {
-		return "$this->__hx_value";
+		return phpRenderThisValueSlot ? "$this->__hx_value" : "$this";
 	}
 
 	static function pythonThisValueExpr():String {
@@ -4491,6 +4491,7 @@ class SourceTargetCommon {
 	static var phpRenderTypeAliases:Null<haxe.ds.StringMap<String>> = null;
 	static var phpRenderDynamicCallFieldsByLocal:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderRefCaptureLocals:Null<Array<String>> = null;
+	static var phpRenderThisValueSlot:Bool = false;
 
 	static function withPhpLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
 		if (target != Php)
@@ -4503,6 +4504,21 @@ class SourceTargetCommon {
 			return result;
 		} catch (e) {
 			phpRenderLocalTypes = previous;
+			throw e;
+		}
+	}
+
+	static function withPhpThisValueSlot<T>(target:SourceNativeTarget, enabled:Bool, f:() -> T):T {
+		if (target != Php)
+			return f();
+		final previous = phpRenderThisValueSlot;
+		phpRenderThisValueSlot = enabled;
+		try {
+			final result = f();
+			phpRenderThisValueSlot = previous;
+			return result;
+		} catch (e) {
+			phpRenderThisValueSlot = previous;
 			throw e;
 		}
 	}
@@ -9409,7 +9425,8 @@ class SourceTargetCommon {
 		final instanceFields = new Array<HxFieldDecl>();
 		final emittedFields = new Map<String, Bool>();
 		final emittedMethods = new Map<String, Bool>();
-		if (phpClassNeedsThisValueSlot(cls)) {
+		final needsThisValueSlot = phpClassNeedsThisValueSlot(cls);
+		if (needsThisValueSlot) {
 			out.push("  public $__hx_value;");
 			emittedFields.set("__hx_value", true);
 			memberCount += 1;
@@ -9522,8 +9539,10 @@ class SourceTargetCommon {
 									HxFunctionArg.getName(arg)
 							], function() {
 								final functionLocalTypes = phpFunctionLocalTypes(HxFunctionDecl.getArgs(fn));
-								for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn), functionLocalTypes))
-									out.push(line);
+								withPhpThisValueSlot(Php, needsThisValueSlot, function() {
+									for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn), functionLocalTypes))
+										out.push(line);
+								});
 							});
 						});
 					});
@@ -9702,7 +9721,91 @@ class SourceTargetCommon {
 
 	static function phpClassNeedsThisValueSlot(cls:HxClassDecl):Bool {
 		for (fn in HxClassDecl.getFunctions(cls))
-			if (phpStmtListTouchesThis(HxFunctionDecl.getBody(fn)))
+			if (phpStmtListNeedsThisValueSlot(HxFunctionDecl.getBody(fn)))
+				return true;
+		return false;
+	}
+
+	static function phpStmtListNeedsThisValueSlot(stmts:Array<HxStmt>):Bool {
+		if (stmts == null)
+			return false;
+		for (stmt in stmts)
+			if (phpStmtNeedsThisValueSlot(stmt))
+				return true;
+		return false;
+	}
+
+	static function phpStmtNeedsThisValueSlot(stmt:HxStmt):Bool {
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				phpStmtListNeedsThisValueSlot(stmts);
+			case SVar(_, _, init, _): init != null && phpExprNeedsThisValueSlot(init);
+			case SIf(cond, thenBranch, elseBranch, _): phpExprNeedsThisValueSlot(cond) || phpStmtNeedsThisValueSlot(thenBranch) || (elseBranch != null
+					&& phpStmtNeedsThisValueSlot(elseBranch));
+			case SForIn(_, iterable, body, _): phpExprNeedsThisValueSlot(iterable) || phpStmtNeedsThisValueSlot(body);
+			case SForKeyValue(_, _, iterable, body, _): phpExprNeedsThisValueSlot(iterable) || phpStmtNeedsThisValueSlot(body);
+			case SWhile(cond, body, _): phpExprNeedsThisValueSlot(cond) || phpStmtNeedsThisValueSlot(body);
+			case SDoWhile(body, cond, _): phpStmtNeedsThisValueSlot(body) || phpExprNeedsThisValueSlot(cond);
+			case SSwitch(scrutinee, _, bodies, _): phpExprNeedsThisValueSlot(scrutinee) || phpStmtListNeedsThisValueSlot(bodies);
+			case STry(tryBody, catches, _):
+				if (phpStmtNeedsThisValueSlot(tryBody)) {
+					true;
+				} else {
+					var found = false;
+					if (catches != null)
+						for (c in catches)
+							if (phpStmtNeedsThisValueSlot(c.body))
+								found = true;
+					found;
+				}
+			case SThrow(expr, _) | SReturn(expr, _) | SExpr(expr, _):
+				phpExprNeedsThisValueSlot(expr);
+			case SBreak(_) | SContinue(_) | SReturnVoid(_):
+				false;
+		};
+	}
+
+	static function phpExprNeedsThisValueSlot(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EUnop("++" | "pre++" | "post++" | "--" | "pre--" | "post--", EThis):
+				true;
+			case EBinop(op, EThis, _) if (isAssignmentOp(op) || op == "??=" || op == ">>>="):
+				true;
+			case EThis:
+				false;
+			case EField(receiver, _):
+				phpExprNeedsThisValueSlot(receiver);
+			case ECall(callee, args): phpExprNeedsThisValueSlot(callee) || phpExprListNeedsThisValueSlot(args);
+			case EMacroExpr(inner, _):
+				phpExprNeedsThisValueSlot(inner);
+			case ELambda(_, body):
+				phpExprNeedsThisValueSlot(body);
+			case ESwitch(scrutinee, _, exprs): phpExprNeedsThisValueSlot(scrutinee) || phpExprListNeedsThisValueSlot(exprs);
+			case ENew(_, args):
+				phpExprListNeedsThisValueSlot(args);
+			case EUnop(_, inner):
+				phpExprNeedsThisValueSlot(inner);
+			case EBinop(_, left, right): phpExprNeedsThisValueSlot(left) || phpExprNeedsThisValueSlot(right);
+			case ETernary(cond, thenExpr, elseExpr): phpExprNeedsThisValueSlot(cond) || phpExprNeedsThisValueSlot(thenExpr) || phpExprNeedsThisValueSlot(elseExpr);
+			case EAnon(_, fieldValues):
+				phpExprListNeedsThisValueSlot(fieldValues);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr): phpExprNeedsThisValueSlot(iterable) || (guardExpr != null
+					&& phpExprNeedsThisValueSlot(guardExpr)) || phpExprNeedsThisValueSlot(yieldExpr);
+			case EArrayDecl(values):
+				phpExprListNeedsThisValueSlot(values);
+			case EArrayAccess(receiver, index): phpExprNeedsThisValueSlot(receiver) || phpExprNeedsThisValueSlot(index);
+			case ECast(inner, _) | EUntyped(inner):
+				phpExprNeedsThisValueSlot(inner);
+			case _:
+				false;
+		};
+	}
+
+	static function phpExprListNeedsThisValueSlot(exprs:Array<HxExpr>):Bool {
+		if (exprs == null)
+			return false;
+		for (expr in exprs)
+			if (phpExprNeedsThisValueSlot(expr))
 				return true;
 		return false;
 	}

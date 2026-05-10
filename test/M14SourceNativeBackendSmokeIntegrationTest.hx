@@ -2521,6 +2521,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpInlineCastSelfReturnProgram():GenIrProgram {
+		final src = [
+			"class InlineBase {",
+			"  public function new() {}",
+			"  public function self():InlineBase {",
+			"    return this;",
+			"  }",
+			"}",
+			"",
+			"class InlineChild extends InlineBase {",
+			"  public function new() {",
+			"    super();",
+			"  }",
+			"  public inline function test():InlineChild {",
+			"    return cast self();",
+			"  }",
+			"  public function quote():String {",
+			"    return \"quoted\";",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(new InlineChild().test().quote());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function pythonAbstractThisPostfixProgram():GenIrProgram {
 		final src = [
 			"class Counter {",
@@ -8940,6 +8972,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpInlineCastSelfReturn():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_inline_cast_self_return_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpInlineCastSelfReturnProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class InlineBase {", "PHP inline-cast regression should emit the normal base class");
+		assertContains(content, "public function self() {\n    return $this;\n  }", "PHP normal return-this methods should preserve the receiver object");
+		assertNotContains(content, "class InlineBase {\n  public $__hx_value;",
+			"PHP normal classes should not get the abstract backing slot just because they return this");
+		assertContains(content, "return $this->self();", "PHP inline cast should keep the receiver-producing helper call reachable");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP inline-cast self-return support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "quoted\n", "generated PHP inline-cast self-return output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStringBufRuntimeSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_stringbuf_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9774,6 +9827,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpFollowWithAbstractsProbe();
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();
+		assertPhpInlineCastSelfReturn();
 		assertPythonAbstractThisPostfix();
 		assertPhpSuperConstructor();
 		assertPhpSuperProperty();
