@@ -2052,6 +2052,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStdEnumAbstractSupportProgram():GenIrProgram {
+		final mainSrc = [
+			"import haxe.display.KeywordKind;",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(KeywordKind.Implements));",
+			"  }",
+			"}",
+		].join("\n");
+		final stdSrc = [
+			"package haxe.display;",
+			"class Display {}",
+			"enum abstract KeywordKind(String) to String {",
+			"  var Implements = \"implements\";",
+			"  var Extends = \"extends\";",
+			"}",
+		].join("\n");
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSrc, "Main.hx"));
+		final parsedStd = ParserStage.parse(stdSrc, "std/haxe/display/Display.hx");
+		final stdBaseDecl = parsedStd.getDecl();
+		final stdMain = HxModuleDecl.getMainClass(stdBaseDecl);
+		final stdClasses = [stdMain].concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(stdSrc, HxClassDecl.getName(stdMain)));
+		final stdDecl = new HxModuleDecl(HxModuleDecl.getPackagePath(stdBaseDecl), HxModuleDecl.getImports(stdBaseDecl), stdMain, stdClasses,
+			HxModuleDecl.getHeaderOnly(stdBaseDecl), HxModuleDecl.getHasToplevelMain(stdBaseDecl));
+		final typedStd = typedSyntheticModule("std/haxe/display/Display.hx", stdDecl);
+		return MacroStage.expandProgram([typedMain, typedStd], []);
+	}
+
 	static function phpBitwisePrecedenceProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5679,6 +5707,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStdEnumAbstractSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_enum_abstract_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStdEnumAbstractSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class KeywordKind {", "PHP std enum abstract helpers referenced by generated code should be emitted");
+		assertContains(content, "public static $Implements = \"implements\";", "PHP std enum abstract helper fields should preserve their literal values");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP std enum abstract helper should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "implements\n", "generated PHP std enum abstract helper output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpBitwisePrecedence():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_bitwise_precedence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9300,6 +9346,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpAnonymousToStringField();
 		assertPhpCyclicObjectStringification();
 		assertPhpEnumString();
+		assertPhpStdEnumAbstractSupport();
 		assertPhpBitwisePrecedence();
 		assertPhpSameClassStaticHelperCall();
 		assertPhpSameClassStaticInlineCall();

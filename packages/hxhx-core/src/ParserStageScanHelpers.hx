@@ -421,15 +421,8 @@ class ParserStageScanHelpers {
 			if (isEnumAbstract) {
 				final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos);
 				i = scanned.nextPos;
-				// `enum abstract` values are declared as `var Name = <expr>;` inside the body.
-				//
-				// Bring-up: record only the value names, emit them as static fields with a placeholder
-				// initializer. This keeps Stage3 emission linking without committing to full semantics.
-				for (v in scanned.values) {
-					if (v == null || v.length == 0 || !isUpperStart(v))
-						continue;
-					fields.push(new HxFieldDecl(v, HxVisibility.Public, true, "Dynamic", EInt(0)));
-				}
+				for (field in scanned.fields)
+					fields.push(field);
 			} else {
 				final scanned = scanEnumBodyForCtors(source, headerTok.nextPos);
 				i = scanned.nextPos;
@@ -840,8 +833,8 @@ class ParserStageScanHelpers {
 		return {nextPos: i, ctors: ctors};
 	}
 
-	public static function scanEnumAbstractBodyForValues(source:String, start:Int):{nextPos:Int, values:Array<String>} {
-		final values = new Array<String>();
+	public static function scanEnumAbstractBodyForValues(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>} {
+		final fields = new Array<HxFieldDecl>();
 
 		var depth = 1; // we start just after `{`
 		var i = start;
@@ -885,11 +878,60 @@ class ParserStageScanHelpers {
 				continue;
 			final name = nameTok.text;
 			i = nameTok.nextPos;
-			if (isUpperStart(name))
-				values.push(name);
+			if (!isUpperStart(name))
+				continue;
+
+			var init:Null<HxExpr> = null;
+			var scanPos = i;
+			var initStart = -1;
+			var parenDepth = 0;
+			var bracketDepth = 0;
+			var braceDepthInInit = 0;
+			while (true) {
+				final valueTok = scanNextToken(source, scanPos);
+				if (valueTok.text.length == 0) {
+					i = scanPos;
+					break;
+				}
+				scanPos = valueTok.nextPos;
+				if (parenDepth == 0 && bracketDepth == 0 && braceDepthInInit == 0 && valueTok.text == "=" && initStart < 0) {
+					initStart = valueTok.nextPos;
+					continue;
+				}
+				if (parenDepth == 0 && bracketDepth == 0 && braceDepthInInit == 0 && (valueTok.text == ";" || valueTok.text == ",")) {
+					if (initStart >= 0)
+						init = parseSimpleInitExpr(source.substring(initStart, valueTok.startPos));
+					i = valueTok.nextPos;
+					break;
+				}
+				switch (valueTok.text) {
+					case "(":
+						parenDepth += 1;
+					case ")":
+						parenDepth = parenDepth > 0 ? parenDepth - 1 : 0;
+					case "[":
+						bracketDepth += 1;
+					case "]":
+						bracketDepth = bracketDepth > 0 ? bracketDepth - 1 : 0;
+					case "{":
+						braceDepthInInit += 1;
+					case "}":
+						if (braceDepthInInit > 0) {
+							braceDepthInInit -= 1;
+						} else {
+							if (initStart >= 0)
+								init = parseSimpleInitExpr(source.substring(initStart, valueTok.startPos));
+							i = valueTok.nextPos;
+							depth -= 1;
+							break;
+						}
+					case _:
+				}
+			}
+			fields.push(new HxFieldDecl(name, HxVisibility.Public, true, "Dynamic", init == null ? EInt(0) : init));
 		}
 
-		return {nextPos: i, values: values};
+		return {nextPos: i, fields: fields};
 	}
 
 	public static function scanClassBodyForStatics(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>, functions:Array<HxFunctionDecl>} {

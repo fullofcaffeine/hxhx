@@ -8905,26 +8905,31 @@ class SourceTargetCommon {
 			}
 		}
 		final classesByName:Map<String, HxClassDecl> = [];
+		function queueClass(cls:HxClassDecl):Void {
+			final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
+			classesByName.set(className, cls);
+			if (isCompileTimeOnlySupportClass(cls))
+				return;
+			if ((className == mainClassName && !phpMainClassNeedsRuntimeSupport(cls)) || seen.exists(className))
+				return;
+			seen.set(className, true);
+			pending.push(cls);
+		}
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			final modulePackage = phpSupportPackage(moduleDecl, filePath);
 			if (isStdSourceFile(filePath)) {
-				for (cls in HxModuleDecl.getClasses(moduleDecl))
+				for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 					if (sanitizePhpTypeName(HxClassDecl.getName(cls)) == "DateTools")
 						sawStdDateTools = true;
+					if (phpShouldEmitStdSupportClass(cls))
+						queueClass(cls);
+				}
 				return;
 			}
 			if (!phpShouldEmitSupportPackage(mainPackage, modulePackage))
 				return;
-			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
-				final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
-				classesByName.set(className, cls);
-				if (isCompileTimeOnlySupportClass(cls))
-					continue;
-				if ((className == mainClassName && !phpMainClassNeedsRuntimeSupport(cls)) || seen.exists(className))
-					continue;
-				seen.set(className, true);
-				pending.push(cls);
-			}
+			for (cls in HxModuleDecl.getClasses(moduleDecl))
+				queueClass(cls);
 		}
 		appendDeclClasses(decl, mainFilePath);
 		for (typed in program.getTypedModules())
@@ -8977,6 +8982,23 @@ class SourceTargetCommon {
 		if (mainPackage != null && mainPackage.length > 0)
 			return modulePackage == mainPackage;
 		return modulePackage == null || modulePackage.length == 0;
+	}
+
+	static function phpShouldEmitStdSupportClass(cls:HxClassDecl):Bool {
+		var hasEnumMarker = false;
+		var hasEnumCtorList = false;
+		var hasPublicValue = false;
+		for (field in HxClassDecl.getFields(cls)) {
+			final name = HxFieldDecl.getName(field);
+			if (name == "__hx_is_enum") {
+				hasEnumMarker = true;
+			} else if (name == "__hx_enum_ctors") {
+				hasEnumCtorList = true;
+			} else if (HxFieldDecl.getIsStatic(field)) {
+				hasPublicValue = true;
+			}
+		}
+		return hasEnumMarker && !hasEnumCtorList && hasPublicValue && HxClassDecl.getFunctions(cls).length == 0;
 	}
 
 	static function moduleHasClass(decl:HxModuleDecl, className:String):Bool {
