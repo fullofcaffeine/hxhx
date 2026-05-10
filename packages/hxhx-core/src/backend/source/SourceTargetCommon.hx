@@ -3066,10 +3066,16 @@ class SourceTargetCommon {
 				final c = catches[i];
 				final keyword = i == 0 ? "if" : "else if";
 				out.push(childIndent + keyword + " (" + phpCatchMatches("$" + caughtName, c.typeHint) + ") {");
-				for (line in phpCatchBindLines(c, "$" + caughtName, bodyIndent))
-					out.push(line);
-				for (line in renderBody(c, bodyIndent))
-					out.push(line);
+				final catchLocalTypes = copyStringMap(phpRenderLocalTypes);
+				final catchName = sanitizeTypeName(c.name);
+				if (catchName.length > 0)
+					catchLocalTypes.set(catchName, normalizeTypeHint(c.typeHint));
+				withPhpLocalTypes(Php, catchLocalTypes, function() {
+					for (line in phpCatchBindLines(c, "$" + caughtName, bodyIndent))
+						out.push(line);
+					for (line in renderBody(c, bodyIndent))
+						out.push(line);
+				});
 				out.push(childIndent + "}");
 			}
 			out.push(childIndent + "else {");
@@ -4217,7 +4223,7 @@ class SourceTargetCommon {
 	static function renderStmt(target:SourceNativeTarget, stmt:HxStmt, indent:String):Array<String> {
 		return switch (stmt) {
 			case SBlock(stmts, _):
-				renderStmts(target, stmts, indent);
+				renderStmts(target, stmts, indent, target == Php ? phpRenderLocalTypes : null);
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
 				[indent + printStmt(target, renderExpr(target, args[0]))];
 			case SExpr(ECall(EIdent("trace"), args), pos) if (args.length >= 1):
@@ -11783,7 +11789,7 @@ class SourceTargetCommon {
 				lines.push("      return $this->positionValue;");
 				lines.push("    }");
 				lines.push("    private function fail($name) {");
-				lines.push("      throw \\ValueException::thrown($name);");
+				lines.push("      throw \\ValueException::thrown(__hxhx_io_error($name));");
 				lines.push("    }");
 				lines.push("    private function ensure($len) {");
 				lines.push("      if ($this->positionValue + $len > $this->length) $this->fail(\"OutsideBounds\");");
@@ -11856,7 +11862,7 @@ class SourceTargetCommon {
 				lines.push("    public $bigEndian = false;");
 				lines.push("    public function prepare($nbytes) { return null; }");
 				lines.push("    private function fail($name) {");
-				lines.push("      throw \\ValueException::thrown($name);");
+				lines.push("      throw \\ValueException::thrown(__hxhx_io_error($name));");
 				lines.push("    }");
 				lines.push("    public function writeByte($c) {");
 				lines.push("      $this->items[] = intval($c) & 255;");
@@ -12550,6 +12556,13 @@ class SourceTargetCommon {
 				lines.push("function __hxhx_unwrap_thrown_value($value) {");
 				lines.push("  $unwrapped = $value instanceof ValueException ? $value->value : $value;");
 				lines.push("  return $unwrapped;");
+				lines.push("}");
+				lines.push("function __hxhx_io_error($name) {");
+				lines.push("  $name = strval($name);");
+				lines.push("  foreach ([\"Error_\", \"haxe\\\\io\\\\Error\"] as $candidate) {");
+				lines.push("    if (class_exists($candidate, false) && property_exists($candidate, $name)) return $candidate::${$name};");
+				lines.push("  }");
+				lines.push("  return $name;");
 				lines.push("}");
 				lines.push("function __hxhx_message_field($value) {");
 				lines.push("  if ($value instanceof \\Throwable) return $value->getMessage();");

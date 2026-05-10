@@ -852,6 +852,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpCatchLocalShadowsEnumConstructorProgram():GenIrProgram {
+		final src = [
+			"private enum Expr {",
+			"  e2;",
+			"}",
+			"private enum CatchError {",
+			"  OutsideBounds;",
+			"}",
+			"class Main {",
+			"  static function excv(f:Void->Void, e:Dynamic) {",
+			"    try {",
+			"      f();",
+			"    } catch (e2:Dynamic) {",
+			"      Sys.println(Std.string(e2));",
+			"      Sys.println(Type.enumEq(e2, e));",
+			"    }",
+			"  }",
+			"  static function main() {",
+			"    excv(function() throw OutsideBounds, OutsideBounds);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final baseDecl = parsed.getDecl();
+		final main = HxModuleDecl.getMainClass(baseDecl);
+		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main)))
+			.concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
+		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpInstanceMethodCallProgram():GenIrProgram {
 		final src = [
 			"class Worker {",
@@ -2119,6 +2152,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSrc, "Main.hx"));
+		return MacroStage.expandProgram([typedMain, phpStdIoErrorTypedModule()], []);
+	}
+
+	static function phpStdIoErrorRuntimeExceptionProgram():GenIrProgram {
+		final mainSrc = [
+			"import haxe.io.Error;",
+			"class Main {",
+			"  static function check(label:String, fn:Void->Void, expected:Error) {",
+			"    try {",
+			"      fn();",
+			"      Sys.println(label + \":bad\");",
+			"    } catch (caught:Dynamic) {",
+			"      Sys.println(label + \":\" + Std.string(caught));",
+			"      Sys.println(Type.enumEq(caught, expected));",
+			"    }",
+			"  }",
+			"  static function main() {",
+			"    var bytes = haxe.io.Bytes.ofString(\"abc\");",
+			"    var out = new haxe.io.BytesOutput();",
+			"    check(\"write-bounds\", function() out.writeBytes(bytes, -1, 1), Error.OutsideBounds);",
+			"    check(\"write-overflow\", function() out.writeInt8(128), Error.Overflow);",
+			"    var input = new haxe.io.BytesInput(bytes);",
+			"    var buf = haxe.io.Bytes.alloc(2);",
+			"    check(\"read-bounds\", function() input.readBytes(buf, 1, 2), Error.OutsideBounds);",
+			"  }",
+			"}",
+		].join("\n");
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSrc, "Main.hx"));
+		return MacroStage.expandProgram([typedMain, phpStdIoErrorTypedModule()], []);
+	}
+
+	static function phpStdIoErrorTypedModule():TypedModule {
 		final errorSrc = [
 			"package haxe.io;",
 			"enum Error {",
@@ -2128,9 +2194,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  Custom(e:Dynamic);",
 			"}",
 		].join("\n");
-		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSrc, "Main.hx"));
-		final typedError = TyperStage.typeModule(ParserStage.parse(errorSrc, "std/haxe/io/Error.hx"));
-		return MacroStage.expandProgram([typedMain, typedError], []);
+		return TyperStage.typeModule(ParserStage.parse(errorSrc, "std/haxe/io/Error.hx"));
 	}
 
 	static function phpBitwisePrecedenceProgram():GenIrProgram {
@@ -5799,6 +5863,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStdIoErrorRuntimeExceptions():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_io_error_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStdIoErrorRuntimeExceptionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_io_error($name)", "PHP runtime should expose haxe.io.Error resolution for IO failures");
+		assertContains(content, "\\ValueException::thrown(__hxhx_io_error($name))", "PHP IO runtime failures should route through haxe.io.Error values");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP haxe.io.Error runtime failures should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "write-bounds:OutsideBounds\n1\nwrite-overflow:Overflow\n1\nread-bounds:OutsideBounds\n1\n",
+				"generated PHP haxe.io.Error runtime failure output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpBitwisePrecedence():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_bitwise_precedence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6805,6 +6888,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertTrue(run.stdout == "EError\n1\n", "generated PHP enum catch should preserve thrown enum equality, got:\n" + run.stdout);
 		}
 		deleteRecursive(enumTmpRoot);
+
+		final catchShadowTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_catch_shadow_enum_" + Std.string(Date.now().getTime()));
+		deleteRecursive(catchShadowTmpRoot);
+		FileSystem.createDirectory(catchShadowTmpRoot);
+		backend.emit(phpCatchLocalShadowsEnumConstructorProgram(), new BackendContext(catchShadowTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final catchShadowContent = File.getContent(Path.join([catchShadowTmpRoot, "index.php"]));
+		assertContains(catchShadowContent, "$e2 = __hxhx_unwrap_thrown_value($__hxhx_caught);",
+			"PHP catches should bind the catch local before rendering the body");
+		assertNotContains(catchShadowContent, "echo __hxhx_add_string(Expr::$e2)", "PHP catch locals should shadow same-named enum constructors");
+		assertNotContains(catchShadowContent, "Type::enumEq(Expr::$e2", "PHP catch locals should shadow same-named enum constructors");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([catchShadowTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP catch local shadowing should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "OutsideBounds\n1\n", "generated PHP catch local shadowing output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(catchShadowTmpRoot);
 
 		final methodTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_method_call_" + Std.string(Date.now().getTime()));
 		deleteRecursive(methodTmpRoot);
@@ -9448,6 +9547,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpEnumString();
 		assertPhpStdEnumAbstractSupport();
 		assertPhpStdIoErrorEnumSupport();
+		assertPhpStdIoErrorRuntimeExceptions();
 		assertPhpBitwisePrecedence();
 		assertPhpSameClassStaticHelperCall();
 		assertPhpSameClassStaticInlineCall();
