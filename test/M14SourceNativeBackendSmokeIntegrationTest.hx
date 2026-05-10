@@ -973,6 +973,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpTypedAsHelperProbeProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SExpr(ECall(EIdent("typedAs"), [EString("actual"), EString("expected")]), pos),
+			SExpr(ECall(EField(EIdent("HelperMacros"), "typedAs"), [EInt(1), EInt(1)]), pos),
+			SExpr(ECall(EField(EField(EIdent("unit"), "HelperMacros"), "typedAs"), [EBool(true), EBool(true)]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("typedAs-ok")]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+	}
+
 	static function phpNotImplementedExceptionProgram():GenIrProgram {
 		final src = [
 			"import haxe.exceptions.NotImplementedException;",
@@ -7322,6 +7335,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTypedAsHelperProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_typed_as_helper_probe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTypedAsHelperProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertNotContains(content, "$typedAs(", "PHP source backend should fold unqualified HelperMacros.typedAs compile-time probes");
+		assertNotContains(content, "HelperMacros::typedAs", "PHP source backend should fold qualified HelperMacros.typedAs compile-time probes");
+		assertContains(content, "echo \"typedAs-ok\" . PHP_EOL;", "folded typedAs probes should keep following runtime statements reachable");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP typedAs helper probes should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "typedAs-ok\n", "generated PHP typedAs helper probe output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpFollowWithAbstractsProbe():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_follow_with_abstracts_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9642,6 +9674,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpThrownValueCatch();
 		assertPhpTypeErrorProbe();
 		assertPhpTypeErrorBlockProbe();
+		assertPhpTypedAsHelperProbe();
 		assertPhpFollowWithAbstractsProbe();
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();

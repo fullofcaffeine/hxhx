@@ -2755,6 +2755,8 @@ class SourceTargetCommon {
 				result == null ? null : renderExpr(target, EBool(result));
 			case "parseAndPrint":
 				defaultValue(target);
+			case "typedAs":
+				defaultValue(target);
 			case "getMeta":
 				helperGetMetaExpr(target, args);
 			case "typeString":
@@ -2779,9 +2781,11 @@ class SourceTargetCommon {
 				"typeErrorText";
 			case EIdent("getMeta"):
 				"getMeta";
+			case EIdent("typedAs"):
+				"typedAs";
 			case EField(EIdent("HelperMacros"), field) | EField(EField(EIdent("unit"), "HelperMacros"), field):
 				switch (field) {
-					case "typeError" | "typeErrorText" | "parseAndPrint" | "typeString" | "getMeta":
+					case "typeError" | "typeErrorText" | "parseAndPrint" | "typeString" | "getMeta" | "typedAs":
 						field;
 					case _:
 						null;
