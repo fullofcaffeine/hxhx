@@ -1783,10 +1783,11 @@ class ParserStage {
 						wantName = false;
 						if (name == null || name.length == 0)
 							continue;
+						final accessors = scanFieldPropertyAccessors(source, ft.nextPos);
 						final typeHint = scanFieldTypeHint(source, ft.nextPos);
 						final initText = scanFieldInitializer(source, ft.nextPos);
 						fields.push(new HxFieldDecl(name, fieldVis, wantStatic, typeHint, parseSimpleInitExpr(initText), pendingMetadata.copy(), null, null,
-							t.text == "final", "", "", initText));
+							t.text == "final", accessors.getter, accessors.setter, initText));
 					}
 
 					sawStatic = false;
@@ -1956,6 +1957,25 @@ class ParserStage {
 			i += 1;
 		}
 		return "";
+	}
+
+	static function scanFieldPropertyAccessors(source:String, start:Int):{getter:String, setter:String} {
+		final open = scanNextToken(source, start);
+		if (open.text != "(")
+			return {getter: "", setter: ""};
+		final getter = scanNextToken(source, open.nextPos);
+		if (getter.text.length == 0 || !getter.isIdent)
+			return {getter: "", setter: ""};
+		final comma = scanNextToken(source, getter.nextPos);
+		if (comma.text != ",")
+			return {getter: "", setter: ""};
+		final setter = scanNextToken(source, comma.nextPos);
+		if (setter.text.length == 0 || !setter.isIdent)
+			return {getter: "", setter: ""};
+		final close = scanNextToken(source, setter.nextPos);
+		if (close.text != ")")
+			return {getter: "", setter: ""};
+		return {getter: getter.text, setter: setter.text};
 	}
 
 	static function scanFieldInitializer(source:String, start:Int):String {

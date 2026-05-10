@@ -2636,10 +2636,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class PropertyThing {",
 			"  public var x(get, set):Int;",
 			"  public var y(default, set):Int = 0;",
+			"  public static var sx(get, set):Int;",
+			"  public static var sy(default, set):Int = 0;",
 			"  public function new() {}",
 			"  function get_x():Int return 1;",
 			"  function set_x(value:Int):Int return value;",
 			"  function set_y(value:Int):Int return value;",
+			"  static function get_sx():Int return 1;",
+			"  static function set_sx(value:Int):Int return value;",
+			"  static function set_sy(value:Int):Int return value;",
 			"}",
 			"class Main {",
 			"  static function main() {",
@@ -2669,6 +2674,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var propertyFields = Type.getInstanceFields(PropertyThing);",
 			"    propertyFields.sort(Reflect.compare);",
 			"    Sys.println(propertyFields.join(\"#\"));",
+			"    var staticPropertyFields = Type.getClassFields(PropertyThing);",
+			"    staticPropertyFields.sort(Reflect.compare);",
+			"    Sys.println(staticPropertyFields.join(\"#\"));",
 			"    Sys.println(Type.getEnumName(en));",
 			"    Sys.println(Std.string(Type.resolveEnum(\"MyReflectEnum\") == en));",
 			"    Sys.println(Type.getClassName(Type.getClass(\"hello\")));",
@@ -7719,7 +7727,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Type reflection support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "String\nArray\ntrue\ntrue\ntrue\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nmethod#value\nhelper#stat\nget_x#set_x#set_y#x#y\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\ntrue\ntrue\nhaxe.ds.StringMap\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\n",
+			assertTrue(run.stdout == "String\nArray\ntrue\ntrue\ntrue\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nmethod#value\nhelper#stat\nget_x#set_x#set_y#y\nget_sx#set_sx#set_sy#sy\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\ntrue\ntrue\nhaxe.ds.StringMap\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\n",
 				"generated PHP Type reflection output mismatch, got:\n"
 				+ run.stdout);
 		}

@@ -7657,6 +7657,83 @@ class SourceTargetCommon {
 		lines.push("}");
 	}
 
+	static function phpMetadataExists(metadata:Array<String>, name:String):Bool {
+		if (metadata == null)
+			return false;
+		for (raw in metadata)
+			if (phpMetadataName(raw) == name)
+				return true;
+		return false;
+	}
+
+	static function phpReflectionShouldHideField(field:HxFieldDecl):Bool {
+		final getter = HxFieldDecl.getPropertyGet(field);
+		final setter = HxFieldDecl.getPropertySet(field);
+		if ((getter == null || getter.length == 0) && (setter == null || setter.length == 0))
+			return false;
+		if (phpMetadataExists(HxFieldDecl.getMetadata(field), "isVar"))
+			return false;
+		if (getter == "default" || setter == "default" || getter == "null" || setter == "null")
+			return false;
+		return true;
+	}
+
+	static function appendPhpReflectionFieldPolicy(lines:Array<String>, program:GenIrProgram, decl:HxModuleDecl):Void {
+		final instanceEntries = new Array<String>();
+		final staticEntries = new Array<String>();
+		final seen = new Map<String, Bool>();
+		function mapLiteral(names:Array<String>):String {
+			final entries = new Array<String>();
+			for (name in names)
+				entries.push(quotePhpString(name) + " => true");
+			entries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+			return "[" + entries.join(", ") + "]";
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final rawClassName = HxClassDecl.getName(cls);
+				final fullName = pkg == null || pkg.length == 0 ? rawClassName : pkg + "." + rawClassName;
+				if (seen.exists(fullName))
+					continue;
+				seen.set(fullName, true);
+				final instanceHidden = new Array<String>();
+				final staticHidden = new Array<String>();
+				for (field in HxClassDecl.getFields(cls)) {
+					if (!phpReflectionShouldHideField(field))
+						continue;
+					final fieldName = sanitizeTypeName(HxFieldDecl.getName(field));
+					if (HxFieldDecl.getIsStatic(field))
+						staticHidden.push(fieldName);
+					else
+						instanceHidden.push(fieldName);
+				}
+				if (instanceHidden.length > 0)
+					instanceEntries.push(quotePhpString(fullName) + " => " + mapLiteral(instanceHidden));
+				if (staticHidden.length > 0)
+					staticEntries.push(quotePhpString(fullName) + " => " + mapLiteral(staticHidden));
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		instanceEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		staticEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		lines.push("function __hxhx_hidden_reflection_fields($cls, $wantStatic) {");
+		lines.push("  static $instance = [");
+		for (entry in instanceEntries)
+			lines.push("    " + entry + ",");
+		lines.push("  ];");
+		lines.push("  static $statics = [");
+		for (entry in staticEntries)
+			lines.push("    " + entry + ",");
+		lines.push("  ];");
+		lines.push("  $logical = __hxhx_class_name($cls);");
+		lines.push("  $map = $wantStatic ? $statics : $instance;");
+		lines.push("  return array_key_exists($logical, $map) ? $map[$logical] : [];");
+		lines.push("}");
+	}
+
 	static function phpMetadataName(raw:String):String {
 		var text = raw == null ? "" : StringTools.trim(raw);
 		if (StringTools.startsWith(text, "@"))
@@ -11579,6 +11656,7 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("namespace {");
 				appendPhpClassNameMap(lines, program, decl);
+				appendPhpReflectionFieldPolicy(lines, program, decl);
 				appendPhpMetaRuntime(lines, program, decl);
 				if (!phpProgramDeclaresClass(program, "Int64")) {
 					lines.push("if (!class_exists(\"Int64\", false)) {");
@@ -13068,10 +13146,12 @@ class SourceTargetCommon {
 				lines.push("  private static function collectFieldNames($cls, $wantStatic) {");
 				lines.push("    $reflection = self::reflectionClass($cls);");
 				lines.push("    if ($reflection === null) return [];");
+				lines.push("    $hidden = __hxhx_hidden_reflection_fields($cls, $wantStatic);");
 				lines.push("    $fields = [];");
 				lines.push("    foreach ($reflection->getProperties() as $prop) {");
 				lines.push("      if ($prop->isStatic() !== $wantStatic) continue;");
 				lines.push("      $name = $prop->getName();");
+				lines.push("      if (array_key_exists($name, $hidden)) continue;");
 				lines.push("      if (self::exposeFieldName($name) && !in_array($name, $fields, true)) $fields[] = $name;");
 				lines.push("    }");
 				lines.push("    foreach ($reflection->getMethods() as $method) {");
@@ -13088,7 +13168,7 @@ class SourceTargetCommon {
 				lines.push("      }");
 				lines.push("    }");
 				lines.push("    foreach ($accessors as $field => $seen) {");
-				lines.push("      if (isset($seen[\"get\"]) && isset($seen[\"set\"]) && self::exposeFieldName($field) && !in_array($field, $fields, true)) $fields[] = $field;");
+				lines.push("      if (!array_key_exists($field, $hidden) && isset($seen[\"get\"]) && isset($seen[\"set\"]) && self::exposeFieldName($field) && !in_array($field, $fields, true)) $fields[] = $field;");
 				lines.push("    }");
 				lines.push("    return $fields;");
 				lines.push("  }");
