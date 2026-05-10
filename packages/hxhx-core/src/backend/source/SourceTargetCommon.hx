@@ -631,10 +631,11 @@ class SourceTargetCommon {
 		return switch (name == null ? "" : name.toLowerCase()) {
 			case "abstract" | "and" | "array" | "as" | "break" | "callable" | "case" | "catch" | "class" | "clone" | "const" | "continue" | "declare" |
 				"default" | "die" | "do" | "echo" | "else" | "elseif" | "empty" | "enddeclare" | "endfor" | "endforeach" | "endif" | "endswitch" |
-				"endwhile" | "enum" | "eval" | "exit" | "extends" | "final" | "finally" | "fn" | "for" | "foreach" | "function" | "global" | "goto" | "if" |
-				"implements" | "include" | "include_once" | "instanceof" | "insteadof" | "interface" | "isset" | "list" | "match" | "namespace" | "new" |
-				"or" | "parent" | "print" | "private" | "protected" | "public" | "readonly" | "require" | "require_once" | "return" | "self" | "static" |
-				"switch" | "throw" | "trait" | "try" | "unset" | "use" | "var" | "while" | "xor" | "yield" | "from" | "true" | "false" | "null":
+				"endwhile" | "enum" | "error" | "eval" | "exit" | "extends" | "final" | "finally" | "fn" | "for" | "foreach" | "function" | "global" |
+				"goto" | "if" | "implements" | "include" | "include_once" | "instanceof" | "insteadof" | "interface" | "isset" | "list" | "match" |
+				"namespace" | "new" | "or" | "parent" | "print" | "private" | "protected" | "public" | "readonly" | "require" | "require_once" | "return" |
+				"self" | "static" | "switch" | "throw" | "trait" | "try" | "unset" | "use" | "var" | "while" | "xor" | "yield" | "from" | "true" | "false" |
+				"null":
 				true;
 			case _:
 				false;
@@ -3830,6 +3831,8 @@ class SourceTargetCommon {
 			return "Unknown";
 		if (StringTools.startsWith(path, "std."))
 			return sanitizePhpTypePath(path.substr(4));
+		if (path == "haxe.io.Error")
+			return sanitizePhpTypeName("Error");
 		if (StringTools.startsWith(path, "php.") || StringTools.startsWith(path, "haxe."))
 			return [for (part in path.split(".")) sanitizePhpTypeName(part)].join("\\");
 		final parts = path.split(".");
@@ -8922,7 +8925,7 @@ class SourceTargetCommon {
 				for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 					if (sanitizePhpTypeName(HxClassDecl.getName(cls)) == "DateTools")
 						sawStdDateTools = true;
-					if (phpShouldEmitStdSupportClass(cls))
+					if (phpShouldEmitStdSupportClass(cls, moduleDecl, filePath))
 						queueClass(cls);
 				}
 				return;
@@ -8991,7 +8994,7 @@ class SourceTargetCommon {
 		return modulePackage == null || modulePackage.length == 0;
 	}
 
-	static function phpShouldEmitStdSupportClass(cls:HxClassDecl):Bool {
+	static function phpShouldEmitStdSupportClass(cls:HxClassDecl, moduleDecl:HxModuleDecl, filePath:String):Bool {
 		var hasEnumMarker = false;
 		var hasEnumCtorList = false;
 		var hasPublicValue = false;
@@ -9005,7 +9008,20 @@ class SourceTargetCommon {
 				hasPublicValue = true;
 			}
 		}
+		if (hasEnumMarker && hasEnumCtorList && phpShouldEmitStdNormalEnumSupportClass(cls, moduleDecl, filePath))
+			return true;
 		return hasEnumMarker && !hasEnumCtorList && hasPublicValue && HxClassDecl.getFunctions(cls).length == 0;
+	}
+
+	static function phpShouldEmitStdNormalEnumSupportClass(cls:HxClassDecl, moduleDecl:HxModuleDecl, filePath:String):Bool {
+		if (sanitizeTypeName(HxClassDecl.getName(cls)) != "Error")
+			return false;
+		if (HxModuleDecl.getPackagePath(moduleDecl) == "haxe.io")
+			return true;
+		if (filePath == null || filePath.length == 0)
+			return false;
+		final normalized = StringTools.replace(filePath, "\\", "/");
+		return normalized == "std/haxe/io/Error.hx" || StringTools.endsWith(normalized, "/std/haxe/io/Error.hx");
 	}
 
 	static function phpShouldEmitImportedSupportClass(cls:HxClassDecl):Bool {

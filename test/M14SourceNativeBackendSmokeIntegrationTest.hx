@@ -2108,6 +2108,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedStd], []);
 	}
 
+	static function phpStdIoErrorEnumSupportProgram():GenIrProgram {
+		final mainSrc = [
+			"import haxe.io.Error;",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(Error.OutsideBounds));",
+			"    Sys.println(Type.enumEq(Error.OutsideBounds, Error.OutsideBounds));",
+			"    Sys.println(Std.string(Error.Custom(\"disk\")));",
+			"  }",
+			"}",
+		].join("\n");
+		final errorSrc = [
+			"package haxe.io;",
+			"enum Error {",
+			"  Blocked;",
+			"  Overflow;",
+			"  OutsideBounds;",
+			"  Custom(e:Dynamic);",
+			"}",
+		].join("\n");
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSrc, "Main.hx"));
+		final typedError = TyperStage.typeModule(ParserStage.parse(errorSrc, "std/haxe/io/Error.hx"));
+		return MacroStage.expandProgram([typedMain, typedError], []);
+	}
+
 	static function phpBitwisePrecedenceProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5749,6 +5774,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP std enum abstract helper should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "implements\n", "generated PHP std enum abstract helper output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpStdIoErrorEnumSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_io_error_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStdIoErrorEnumSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Error_ {", "PHP haxe.io.Error support should avoid the built-in PHP Error class");
+		assertContains(content, "public static $OutsideBounds = null;", "PHP haxe.io.Error should emit the OutsideBounds carrier slot");
+		assertContains(content, "Error_::$OutsideBounds = new __HxAnon", "PHP haxe.io.Error should initialize the OutsideBounds enum value");
+		assertContains(content, "Error_::$OutsideBounds", "PHP haxe.io.Error references should use the safe support carrier name");
+		assertNotContains(content, "Error::$OutsideBounds", "PHP haxe.io.Error references should not target PHP's built-in Error class");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP haxe.io.Error support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "OutsideBounds\n1\nCustom(disk)\n", "generated PHP haxe.io.Error output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -9401,6 +9447,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpCyclicObjectStringification();
 		assertPhpEnumString();
 		assertPhpStdEnumAbstractSupport();
+		assertPhpStdIoErrorEnumSupport();
 		assertPhpBitwisePrecedence();
 		assertPhpSameClassStaticHelperCall();
 		assertPhpSameClassStaticInlineCall();
