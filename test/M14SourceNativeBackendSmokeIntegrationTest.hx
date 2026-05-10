@@ -9158,6 +9158,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    return base + x + y;",
 			"  }",
 			"}",
+			"class ParamBind<T> {",
+			"  public function new() {}",
+			"  public function bind(value:T):T {",
+			"    return value;",
+			"  }",
+			"  public function label(prefix:String, value:T):String {",
+			"    return prefix + Std.string(value);",
+			"  }",
+			"}",
 			"class SelfBind {",
 			"  public function new() {}",
 			"  public function id(x:Int):Int {",
@@ -9185,6 +9194,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(Reflect.compareMethods(c.add, d.add)));",
 			"    Sys.println(Std.string(Reflect.compareMethods(String.fromCharCode, String.fromCharCode)));",
 			"    Sys.println(Std.string(Reflect.compareMethods(c.add, null)));",
+			"    var p = new ParamBind<String>();",
+			"    var label = p.label;",
+			"    Sys.println(p.bind(\"ok\"));",
+			"    Sys.println(label(\">\", \"ok\"));",
+			"    Sys.println(p.label.bind(\">\")(\"ok\"));",
 			"    new SelfBind().run();",
 			"  }",
 			"}",
@@ -9197,12 +9211,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_field($c, \"add\")", "PHP instance method values should lower through the callable field helper");
+		assertContains(content, "$p->bind(\"ok\")", "PHP instance methods named bind should not be mistaken for Haxe partial application");
 		assertContains(content, "public static function compareMethods($a, $b)", "PHP Reflect should expose compareMethods");
 		assertNotContains(content, "__hxhx_bind($this->id, 3)", "PHP same-instance method values should not bind missing properties");
+		assertNotContains(content, "__hxhx_bind($p, \"ok\")", "PHP real bind methods should remain method calls");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP instance method-value bind support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "103\n103\n103\ntrue\nfalse\ntrue\nfalse\n3\n25\n",
+			assertTrue(run.stdout == "103\n103\n103\ntrue\nfalse\ntrue\nfalse\nok\n>ok\n>ok\n3\n25\n",
 				"generated PHP method-value bind support should preserve receiver binding, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);

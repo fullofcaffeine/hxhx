@@ -1823,7 +1823,7 @@ class SourceTargetCommon {
 						return "__hxhx_map_literal_from_object(" + renderExpr(Php, receiver) + ")->toString()";
 					case _:
 				}
-				if (field == "bind")
+				if (phpShouldUseFunctionBindSyntax(receiver, field))
 					return "__hxhx_bind(" + ([renderExpr(Php, receiver)].concat([for (arg in args) phpBindArgExpr(arg)])).join(", ") + ")";
 				final stringCall = phpStringFieldCall(receiver, field, args);
 				if (stringCall != null)
@@ -1893,6 +1893,36 @@ class SourceTargetCommon {
 			case _:
 				renderExpr(Php, arg);
 		};
+	}
+
+	static function phpShouldUseFunctionBindSyntax(receiver:HxExpr, field:String):Bool {
+		if (field != "bind")
+			return false;
+		if (phpReceiverHasInstanceMethod(receiver, field))
+			return false;
+		final typePath = phpStaticTypePath(receiver);
+		return typePath == null || (!phpKnownStaticMethod(typePath, field) && !phpKnownStaticCallableField(typePath, field));
+	}
+
+	static function phpReceiverHasInstanceMethod(receiver:HxExpr, field:String):Bool {
+		return switch (receiver) {
+			case EThis:
+				phpCurrentInstanceMethodValue(field);
+			case EIdent(name):
+				phpLocalHasInstanceMethod(name, field);
+			case ENew(typePath, _):
+				phpTypeHasInstanceMethod(typePath, field);
+			case ECast(inner, castHint): phpTypeHasInstanceMethod(castHint, field) || phpReceiverHasInstanceMethod(inner, field);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpReceiverHasInstanceMethod(inner, field);
+			case _:
+				false;
+		};
+	}
+
+	static function phpTypeHasInstanceMethod(typeHint:String, field:String):Bool {
+		final methods = phpInstanceMethodMapForType(typeHint);
+		return methods != null && methods.exists(sanitizeTypeName(field));
 	}
 
 	static function phpListFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
