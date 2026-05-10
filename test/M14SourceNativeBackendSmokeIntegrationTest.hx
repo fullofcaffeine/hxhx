@@ -1496,12 +1496,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var badExtra = typeError(item = {v: 1, w: \"extra\"});",
 			"    var okPointCall = typeError(accepts(\"shape\", {x: 1.2, y: 2}));",
 			"    var okSizeCall = typeError(accepts(\"shape\", {w: 1.2, h: 2}));",
+			"    function choose(a:Choice, ?flag:Bool, ?tail:Choice) {",
+			"      return \"\";",
+			"    }",
+			"    var badOptionalSkip = typeError(choose(A, A, false));",
 			"    Sys.println(Std.string(badFloat));",
 			"    Sys.println(Std.string(okInt));",
 			"    Sys.println(Std.string(badString));",
 			"    Sys.println(Std.string(badExtra));",
 			"    Sys.println(Std.string(okPointCall));",
 			"    Sys.println(Std.string(okSizeCall));",
+			"    Sys.println(Std.string(badOptionalSkip));",
 			"  }",
 			"}",
 		].join("\n");
@@ -7393,10 +7398,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$badExtra = true;", "PHP source backend should flag extra fields in constant anonymous expression probes");
 		assertContains(content, "$okPointCall = false;", "PHP source backend should accept well-formed anonymous argument expression probes");
 		assertContains(content, "$okSizeCall = false;", "PHP source backend should accept alternate anonymous argument expression probes");
+		assertContains(content, "$badOptionalSkip = true;", "PHP source backend should fold optional-parameter skip typeError probes");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP typeError expression probes should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\nfalse\ntrue\ntrue\nfalse\nfalse\n",
+			assertTrue(run.stdout == "true\nfalse\ntrue\ntrue\nfalse\nfalse\ntrue\n",
 				"generated PHP typeError expression probes should preserve expected results, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);

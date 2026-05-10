@@ -2859,11 +2859,31 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EBinop("=", EIdent(name), value):
 				helperAssignmentTypeError(phpLocalTypeHint(name), value);
-			case ECall(_, callArgs):
-				helperFunctionCallAnonTypeError(callArgs);
+			case ECall(callee, callArgs):
+				final optionalResult = helperOptionalLambdaCallTypeError(callee, callArgs);
+				optionalResult != null ? optionalResult : helperFunctionCallAnonTypeError(callArgs);
 			case _:
 				null;
 		};
+	}
+
+	static function helperOptionalLambdaCallTypeError(callee:HxExpr, args:Array<HxExpr>):Null<Bool> {
+		if (args == null)
+			return null;
+		final localName = switch (callee) {
+			case EIdent(name): sanitizeTypeName(name);
+			case _:
+				return null;
+		};
+		final argNames = phpOptionalLambdaArgNames(localName);
+		final optionalArgNames = phpOptionalLambdaOptionalArgNames(localName);
+		if (argNames == null || optionalArgNames == null || optionalArgNames.length < 2 || args.length != argNames.length || args.length < 3)
+			return null;
+		final penultimate = args[args.length - 2];
+		final last = args[args.length - 1];
+		if (helperExprLooksEnumValue(penultimate) && helperExprLooksBoolValue(last))
+			return true;
+		return null;
 	}
 
 	static function helperFunctionCallAnonTypeError(args:Array<HxExpr>):Null<Bool> {
@@ -2881,6 +2901,28 @@ class SourceTargetCommon {
 			}
 		}
 		return sawAnon ? false : null;
+	}
+
+	static function helperExprLooksEnumValue(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EEnumValue(_):
+				true;
+			case EIdent(name):
+				looksLikeTypePathRoot(name);
+			case _:
+				false;
+		};
+	}
+
+	static function helperExprLooksBoolValue(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EBool(_):
+				true;
+			case EIdent("true" | "false"):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function helperAssignmentTypeError(typeHint:String, value:HxExpr):Null<Bool> {
@@ -4456,16 +4498,20 @@ class SourceTargetCommon {
 		final localTypes = target == Php && initialLocalTypes != null ? copyStringMap(initialLocalTypes) : new haxe.ds.StringMap<String>();
 		final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
 		final baseRefCaptures = phpRenderRefCaptureLocals;
-		for (i in 0...stmts.length) {
-			final stmt = stmts[i];
-			final refCaptures = target == Php ? phpMergeRefCaptureLocals(baseRefCaptures, refCapturesByStmt[i]) : null;
-			withPhpRefCaptureLocals(target, refCaptures, function() {
-				for (line in renderStmtWithLocals(target, stmt, indent, localTypes))
-					out.push(line);
-			});
-		}
-		if (out.length == 0)
-			out.push(indent + emptyStmt(target));
+		final optionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaArgNamesByLocal) : null;
+		final optionalOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaOptionalArgNamesByLocal) : null;
+		withPhpOptionalLambdaLocals(target, optionalArgNamesByLocal, optionalOptionalArgNamesByLocal, function() {
+			for (i in 0...stmts.length) {
+				final stmt = stmts[i];
+				final refCaptures = target == Php ? phpMergeRefCaptureLocals(baseRefCaptures, refCapturesByStmt[i]) : null;
+				withPhpRefCaptureLocals(target, refCaptures, function() {
+					for (line in renderStmtWithLocals(target, stmt, indent, localTypes))
+						out.push(line);
+				});
+			}
+			if (out.length == 0)
+				out.push(indent + emptyStmt(target));
+		});
 		return out;
 	}
 
@@ -4492,6 +4538,8 @@ class SourceTargetCommon {
 	static var phpRenderDynamicCallFieldsByLocal:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderRefCaptureLocals:Null<Array<String>> = null;
 	static var phpRenderThisValueSlot:Bool = false;
+	static var phpRenderOptionalLambdaArgNamesByLocal:Null<haxe.ds.StringMap<Array<String>>> = null;
+	static var phpRenderOptionalLambdaOptionalArgNamesByLocal:Null<haxe.ds.StringMap<Array<String>>> = null;
 
 	static function withPhpLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
 		if (target != Php)
@@ -4523,11 +4571,59 @@ class SourceTargetCommon {
 		}
 	}
 
+	static function withPhpOptionalLambdaLocals<T>(target:SourceNativeTarget, argNamesByLocal:Null<haxe.ds.StringMap<Array<String>>>,
+			optionalArgNamesByLocal:Null<haxe.ds.StringMap<Array<String>>>, f:() -> T):T {
+		if (target != Php)
+			return f();
+		final previousArgNames = phpRenderOptionalLambdaArgNamesByLocal;
+		final previousOptionalArgNames = phpRenderOptionalLambdaOptionalArgNamesByLocal;
+		phpRenderOptionalLambdaArgNamesByLocal = argNamesByLocal;
+		phpRenderOptionalLambdaOptionalArgNamesByLocal = optionalArgNamesByLocal;
+		try {
+			final result = f();
+			phpRenderOptionalLambdaArgNamesByLocal = previousArgNames;
+			phpRenderOptionalLambdaOptionalArgNamesByLocal = previousOptionalArgNames;
+			return result;
+		} catch (e) {
+			phpRenderOptionalLambdaArgNamesByLocal = previousArgNames;
+			phpRenderOptionalLambdaOptionalArgNamesByLocal = previousOptionalArgNames;
+			throw e;
+		}
+	}
+
 	static function phpLocalTypeHint(name:String):String {
 		if (phpRenderLocalTypes == null)
 			return "";
 		final clean = sanitizeTypeName(name);
 		return phpRenderLocalTypes.exists(clean) ? phpRenderLocalTypes.get(clean) : "";
+	}
+
+	static function phpOptionalLambdaArgNames(name:String):Null<Array<String>> {
+		if (phpRenderOptionalLambdaArgNamesByLocal == null)
+			return null;
+		final clean = sanitizeTypeName(name);
+		return phpRenderOptionalLambdaArgNamesByLocal.exists(clean) ? phpRenderOptionalLambdaArgNamesByLocal.get(clean) : null;
+	}
+
+	static function phpOptionalLambdaOptionalArgNames(name:String):Null<Array<String>> {
+		if (phpRenderOptionalLambdaOptionalArgNamesByLocal == null)
+			return null;
+		final clean = sanitizeTypeName(name);
+		return phpRenderOptionalLambdaOptionalArgNamesByLocal.exists(clean) ? phpRenderOptionalLambdaOptionalArgNamesByLocal.get(clean) : null;
+	}
+
+	static function phpRegisterOptionalLambdaLocal(name:String, init:Null<HxExpr>):Void {
+		if (phpRenderOptionalLambdaArgNamesByLocal == null || phpRenderOptionalLambdaOptionalArgNamesByLocal == null)
+			return;
+		final clean = sanitizeTypeName(name);
+		switch (init) {
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(lambdaArgs, _), EArrayDecl(optionalArgExprs)]):
+				phpRenderOptionalLambdaArgNamesByLocal.set(clean, [for (arg in lambdaArgs) sanitizeTypeName(arg)]);
+				phpRenderOptionalLambdaOptionalArgNamesByLocal.set(clean, optionalLambdaArgNames(optionalArgExprs));
+			case _:
+				phpRenderOptionalLambdaArgNamesByLocal.remove(clean);
+				phpRenderOptionalLambdaOptionalArgNamesByLocal.remove(clean);
+		}
 	}
 
 	static function phpLocalExists(name:String):Bool {
@@ -5118,6 +5214,7 @@ class SourceTargetCommon {
 				case SVar(name, typeHint, init, pos):
 					final cleanName = sanitizeTypeName(name);
 					localTypes.set(cleanName, inferLocalTypeHint(typeHint, init));
+					phpRegisterOptionalLambdaLocal(cleanName, init);
 					final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 					final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
 					return [indent + varDecl(target, cleanName, rhs)];
@@ -5143,16 +5240,20 @@ class SourceTargetCommon {
 					final blockLocalTypes = copyStringMap(localTypes);
 					final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
 					final baseRefCaptures = phpRenderRefCaptureLocals;
-					for (i in 0...stmts.length) {
-						final s = stmts[i];
-						final refCaptures = target == Php ? phpMergeRefCaptureLocals(baseRefCaptures, refCapturesByStmt[i]) : null;
-						withPhpRefCaptureLocals(target, refCaptures, function() {
-							for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
-								out.push(line);
-						});
-					}
-					if (out.length == 0)
-						out.push(indent + emptyStmt(target));
+					final blockOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaArgNamesByLocal) : null;
+					final blockOptionalOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaOptionalArgNamesByLocal) : null;
+					withPhpOptionalLambdaLocals(target, blockOptionalArgNamesByLocal, blockOptionalOptionalArgNamesByLocal, function() {
+						for (i in 0...stmts.length) {
+							final s = stmts[i];
+							final refCaptures = target == Php ? phpMergeRefCaptureLocals(baseRefCaptures, refCapturesByStmt[i]) : null;
+							withPhpRefCaptureLocals(target, refCaptures, function() {
+								for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
+									out.push(line);
+							});
+						}
+						if (out.length == 0)
+							out.push(indent + emptyStmt(target));
+					});
 					return out;
 				case _:
 					return renderStmt(target, stmt, indent);
@@ -10233,6 +10334,14 @@ class SourceTargetCommon {
 		if (values != null)
 			for (key in values.keys())
 				out.set(key, values.get(key));
+		return out;
+	}
+
+	static function copyStringArrayMap(values:haxe.ds.StringMap<Array<String>>):haxe.ds.StringMap<Array<String>> {
+		final out = new haxe.ds.StringMap<Array<String>>();
+		if (values != null)
+			for (key in values.keys())
+				out.set(key, copyStringArray(values.get(key)));
 		return out;
 	}
 
