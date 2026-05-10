@@ -946,7 +946,7 @@ class ParserStageScanHelpers {
 		var sawOverload = false;
 		var sawDynamic = false;
 		var pendingMetadata = new Array<String>();
-		var vis:HxVisibility = HxVisibility.Public;
+		var vis:HxVisibility = HxVisibility.Private;
 		var declarationStart = -1;
 
 		function noteDeclarationStart(index:Int):Void {
@@ -1163,7 +1163,7 @@ class ParserStageScanHelpers {
 							sawDynamic = false;
 							pendingMetadata = [];
 							declarationStart = -1;
-							vis = HxVisibility.Public;
+							vis = HxVisibility.Private;
 						}
 					case _:
 				}
@@ -1297,7 +1297,7 @@ class ParserStageScanHelpers {
 					sawDynamic = false;
 					pendingMetadata = [];
 					declarationStart = -1;
-					vis = HxVisibility.Public;
+					vis = HxVisibility.Private;
 					if (depth <= 0)
 						break;
 				case "function":
@@ -1446,7 +1446,7 @@ class ParserStageScanHelpers {
 					sawDynamic = false;
 					pendingMetadata = [];
 					declarationStart = -1;
-					vis = HxVisibility.Public;
+					vis = HxVisibility.Private;
 				case _:
 			}
 		}
@@ -1769,6 +1769,7 @@ class ParserStageScanHelpers {
 		return switch (stmts) {
 			case [SReturn(expr, _)]:
 				!hasUnsupportedExpr(expr);
+			case [SVar(_, _, init, _), SReturn(ret, _)]: !hasUnsupportedExpr(init) && !hasUnsupportedExpr(ret);
 			case _:
 				false;
 		};

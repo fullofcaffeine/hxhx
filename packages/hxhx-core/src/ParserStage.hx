@@ -1700,7 +1700,7 @@ class ParserStage {
 		var sawStatic = false;
 		var sawMacro = false;
 		var pendingMetadata = new Array<String>();
-		var vis:HxVisibility = HxVisibility.Public;
+		var vis:HxVisibility = HxVisibility.Private;
 
 		function scanMetadataText(startPos:Int):{text:String, nextPos:Int} {
 			var j = startPos;
@@ -1760,7 +1760,7 @@ class ParserStage {
 							sawStatic = false;
 							sawMacro = false;
 							pendingMetadata = [];
-							vis = HxVisibility.Public;
+							vis = HxVisibility.Private;
 						}
 					case _:
 				}
@@ -1878,7 +1878,7 @@ class ParserStage {
 					sawStatic = false;
 					sawMacro = false;
 					pendingMetadata = [];
-					vis = HxVisibility.Public;
+					vis = HxVisibility.Private;
 					if (depth <= 0)
 						break;
 				case "function":
@@ -1994,7 +1994,7 @@ class ParserStage {
 					sawStatic = false;
 					sawMacro = false;
 					pendingMetadata = [];
-					vis = HxVisibility.Public;
+					vis = HxVisibility.Private;
 				case _:
 			}
 		}
@@ -2244,6 +2244,7 @@ class ParserStage {
 		return switch (stmts) {
 			case [SReturn(expr, _)]:
 				!hasUnsupportedExpr(expr);
+			case [SVar(_, _, init, _), SReturn(ret, _)]: !hasUnsupportedExpr(init) && !hasUnsupportedExpr(ret);
 			case _:
 				false;
 		};

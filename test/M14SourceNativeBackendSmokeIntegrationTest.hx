@@ -9224,6 +9224,71 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStringUsingExtensionCalls():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_using_extension_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"using UsingBase;",
+			"using UsingChild1;",
+			"using UsingChild2;",
+			"",
+			"class UsingBase {",
+			"  static function privFunc(s:String) return s.toUpperCase();",
+			"  static public function pupFunc(s:String) return s.toUpperCase();",
+			"}",
+			"class UsingChild1 extends UsingBase {",
+			"  static public function test() {",
+			"    return \"foo\".pupFunc() + \"foo\".privFunc() + \"FOO\".siblingFunc();",
+			"  }",
+			"  static function siblingFunc(s:String) return s.toLowerCase();",
+			"}",
+			"class UsingChild2 extends UsingBase {",
+			"  static public function test() {",
+			"    return \"foo\".siblingFunc();",
+			"  }",
+			"  static public function siblingFunc(s:String) return s.toUpperCase();",
+			"}",
+			"class UsingUnrelated {",
+			"  static public function test() {",
+			"    var err = HelperMacros.typeError(\"foo\".privFunc());",
+			"    return err + \"foo\".pupFunc() + \"foo\".siblingFunc();",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(UsingChild1.test());",
+			"    Sys.println(UsingChild2.test());",
+			"    Sys.println(UsingUnrelated.test());",
+			"  }",
+			"}",
+		].join("\n");
+		final scannedHelpers = ParserStageScanHelpers.scanModuleLocalHelperClasses(src, "Main");
+		var scannedUsingUnrelatedBodyLength = -1;
+		for (helper in scannedHelpers)
+			if (helper.name == "UsingUnrelated")
+				for (fn in helper.functions)
+					if (fn.name == "test")
+						scannedUsingUnrelatedBodyLength = fn.body.length;
+		assertTrue(scannedUsingUnrelatedBodyLength == 2, "Stage3 helper scanner should retain simple local-var plus return static helper bodies");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "UsingChild2::pupFunc(\"foo\")", "PHP using extension calls should lower inherited helpers as static calls");
+		assertContains(content, "UsingChild2::siblingFunc(\"FOO\")", "PHP using extension resolution should prefer later using helpers");
+		assertNotContains(content, "\"foo\"->pupFunc()", "PHP using extension calls should not emit string member calls");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP using extension calls should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "FOOFOOFOO\nFOO\ntrueFOOFOO\n", "generated PHP using extension output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpClosureCapturesMutableLocalByReference():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_closure_mutable_capture_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -9950,6 +10015,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStringBufRuntimeSupport();
 		assertPhpClosureBindCallbacks();
 		assertPhpInstanceMethodValueBind();
+		assertPhpStringUsingExtensionCalls();
 		assertPhpClosureCapturesMutableLocalByReference();
 		assertPhpStringLengthInCharCodeAtArg();
 		assertPhpStdPackageRootShadowing();

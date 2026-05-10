@@ -4010,7 +4010,7 @@ class HxParser {
 					fail("Unexpected end of input in class body");
 				case _:
 					final memberStart = cur.getPos();
-					var visibility:HxVisibility = Public;
+					var visibility:HxVisibility = Private;
 					var isStatic = false;
 					var sawFinal = false;
 					final metadata = new Array<String>();

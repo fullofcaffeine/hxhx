@@ -1828,6 +1828,9 @@ class SourceTargetCommon {
 				final stringCall = phpStringFieldCall(receiver, field, args);
 				if (stringCall != null)
 					return stringCall;
+				final stringExtensionCall = phpStringExtensionFieldCall(receiver, field, args);
+				if (stringExtensionCall != null)
+					return stringExtensionCall;
 				final listCall = phpListFieldCall(receiver, field, phpArgs);
 				if (listCall != null)
 					return listCall;
@@ -2021,9 +2024,31 @@ class SourceTargetCommon {
 				"__hxhx_string_char_code_at(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "substr" if (args.length == 1 || args.length == 2):
 				"__hxhx_string_substr(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "toUpperCase" if (args.length == 0):
+				"strtoupper(__hxhx_string_value(" + renderedReceiver + "))";
+			case "toLowerCase" if (args.length == 0):
+				"strtolower(__hxhx_string_value(" + renderedReceiver + "))";
 			case _:
 				null;
 		};
+	}
+
+	static function phpStringExtensionFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		if (!phpStringLikeReceiver(receiver) && !phpVariableStringReceiver(receiver, field) && !phpKnownStringResultReceiver(receiver))
+			return null;
+		final ownerTypePath = phpStringExtensionOwner(field);
+		if (ownerTypePath == null)
+			return null;
+		return phpStaticMethodCall(ownerTypePath, field, [receiver].concat(args));
+	}
+
+	static function phpStringExtensionOwner(field:String):Null<String> {
+		if (phpRenderStringExtensionMethodsByField == null)
+			return null;
+		if (phpRenderStringExtensionMethodsByField.exists(field))
+			return phpRenderStringExtensionMethodsByField.get(field);
+		final clean = sanitizeTypeName(field);
+		return phpRenderStringExtensionMethodsByField.exists(clean) ? phpRenderStringExtensionMethodsByField.get(clean) : null;
 	}
 
 	static function phpKnownStringResultReceiver(receiver:HxExpr):Bool {
@@ -2920,11 +2945,31 @@ class SourceTargetCommon {
 
 	static function helperTypeErrorExpressionResult(expr:HxExpr):Null<Bool> {
 		return switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				helperTypeErrorExpressionResult(inner);
 			case EBinop("=", EIdent(name), value):
 				helperAssignmentTypeError(phpLocalTypeHint(name), value);
 			case ECall(callee, callArgs):
+				final stringFieldResult = helperStringFieldCallTypeError(callee, callArgs);
+				if (stringFieldResult != null)
+					return stringFieldResult;
 				final optionalResult = helperOptionalLambdaCallTypeError(callee, callArgs);
 				optionalResult != null ? optionalResult : helperFunctionCallAnonTypeError(callArgs);
+			case _:
+				null;
+		};
+	}
+
+	static function helperStringFieldCallTypeError(callee:HxExpr, args:Array<HxExpr>):Null<Bool> {
+		return switch (callee) {
+			case EField(receiver, field):
+				if (!phpStringLikeReceiver(receiver)
+					&& !phpVariableStringReceiver(receiver, field)
+					&& !phpKnownStringResultReceiver(receiver))
+					return null;
+				if (phpStringFieldCall(receiver, field, args) != null)
+					return false;
+				phpStringExtensionOwner(field) == null ? true : false;
 			case _:
 				null;
 		};
@@ -4592,6 +4637,8 @@ class SourceTargetCommon {
 	static var phpRenderDynamicMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticCallableFieldsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
+	static var phpRenderStringExtensionMethodsByClass:Null<haxe.ds.StringMap<haxe.ds.StringMap<String>>> = null;
+	static var phpRenderStringExtensionMethodsByField:Null<haxe.ds.StringMap<String>> = null;
 	static var phpRenderKnownTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
 	static var phpRenderEnumConstructors:Null<haxe.ds.StringMap<PhpEnumCtorRef>> = null;
 	static var phpRenderAmbiguousEnumConstructors:Null<haxe.ds.StringMap<Bool>> = null;
@@ -4847,6 +4894,41 @@ class SourceTargetCommon {
 			phpRenderDynamicCallFieldsByLocal = previous;
 			throw e;
 		}
+	}
+
+	static function withPhpStringExtensionMethods<T>(target:SourceNativeTarget, className:Null<String>, f:() -> T):T {
+		if (target != Php)
+			return f();
+		final previous = phpRenderStringExtensionMethodsByField;
+		phpRenderStringExtensionMethodsByField = phpStringExtensionMethodsForClass(className);
+		try {
+			final result = f();
+			phpRenderStringExtensionMethodsByField = previous;
+			return result;
+		} catch (e) {
+			phpRenderStringExtensionMethodsByField = previous;
+			throw e;
+		}
+	}
+
+	static function phpStringExtensionMethodsForClass(className:Null<String>):Null<haxe.ds.StringMap<String>> {
+		if (className == null || phpRenderStringExtensionMethodsByClass == null)
+			return null;
+		final raw = StringTools.trim(className);
+		if (raw.length == 0)
+			return null;
+		final candidates = [raw, sanitizePhpTypeName(raw), sanitizePhpTypePath(raw)];
+		final dot = raw.lastIndexOf(".");
+		if (dot >= 0)
+			candidates.push(raw.substr(dot + 1));
+		final slash = raw.lastIndexOf("\\");
+		if (slash >= 0)
+			candidates.push(raw.substr(slash + 1));
+		for (candidate in candidates) {
+			if (phpRenderStringExtensionMethodsByClass.exists(candidate))
+				return phpRenderStringExtensionMethodsByClass.get(candidate);
+		}
+		return null;
 	}
 
 	static function phpCurrentInstanceMethodValue(field:String):Bool {
@@ -8748,6 +8830,170 @@ class SourceTargetCommon {
 		return out;
 	}
 
+	static function phpProgramStringExtensionMethodMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<String>> {
+		final out = new haxe.ds.StringMap<haxe.ds.StringMap<String>>();
+		final classesByName:Map<String, HxClassDecl> = [];
+		final ownerByName:Map<String, String> = [];
+
+		function addClassAlias(alias:String, cls:HxClassDecl, ownerTypePath:String):Void {
+			if (alias == null || alias.length == 0)
+				return;
+			if (!classesByName.exists(alias)) {
+				classesByName.set(alias, cls);
+				ownerByName.set(alias, ownerTypePath);
+			}
+			final cleanAlias = sanitizePhpTypePath(alias);
+			if (!classesByName.exists(cleanAlias)) {
+				classesByName.set(cleanAlias, cls);
+				ownerByName.set(cleanAlias, ownerTypePath);
+			}
+		}
+
+		function addDeclClassAliases(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			final main = HxModuleDecl.getMainClass(moduleDecl);
+			final mainName = main == null ? "" : HxClassDecl.getName(main);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final rawName = HxClassDecl.getName(cls);
+				final ownerTypePath = sanitizePhpTypeName(rawName);
+				final fullName = pkg == null || pkg.length == 0 ? rawName : pkg + "." + rawName;
+				addClassAlias(rawName, cls, ownerTypePath);
+				addClassAlias(ownerTypePath, cls, ownerTypePath);
+				addClassAlias(fullName, cls, ownerTypePath);
+				if (mainName != null && mainName.length > 0 && rawName != mainName) {
+					addClassAlias(mainName + "." + rawName, cls, ownerTypePath);
+					if (pkg != null && pkg.length > 0)
+						addClassAlias(pkg + "." + mainName + "." + rawName, cls, ownerTypePath);
+				}
+			}
+		}
+
+		function addClassKey(key:String, methods:haxe.ds.StringMap<String>):Void {
+			if (key != null && key.length > 0 && !out.exists(key))
+				out.set(key, methods);
+		}
+
+		function addDeclExtensionContext(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final methods = phpStringExtensionMethodsForModuleClass(moduleDecl, cls, classesByName, ownerByName);
+				final rawName = HxClassDecl.getName(cls);
+				final shortName = sanitizePhpTypeName(rawName);
+				final fullName = pkg == null || pkg.length == 0 ? rawName : pkg + "." + rawName;
+				addClassKey(rawName, methods);
+				addClassKey(shortName, methods);
+				addClassKey(fullName, methods);
+				addClassKey(sanitizePhpTypePath(fullName), methods);
+			}
+		}
+
+		addDeclClassAliases(decl);
+		for (typed in program.getTypedModules())
+			addDeclClassAliases(typed.getParsed().getDecl());
+		addDeclExtensionContext(decl);
+		for (typed in program.getTypedModules())
+			addDeclExtensionContext(typed.getParsed().getDecl());
+		return out;
+	}
+
+	static function phpStringExtensionMethodsForModuleClass(moduleDecl:HxModuleDecl, currentClass:HxClassDecl, classesByName:Map<String, HxClassDecl>,
+			ownerByName:Map<String, String>):haxe.ds.StringMap<String> {
+		final methods = new haxe.ds.StringMap<String>();
+		for (rawImport in HxModuleDecl.getImports(moduleDecl)) {
+			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
+				continue;
+			final candidates = phpStringExtensionImportCandidates(rawImport);
+			var cls:HxClassDecl = null;
+			var ownerTypePath:Null<String> = null;
+			for (candidate in candidates) {
+				if (cls == null && classesByName.exists(candidate)) {
+					cls = classesByName.get(candidate);
+					ownerTypePath = ownerByName.exists(candidate) ? ownerByName.get(candidate) : null;
+				}
+			}
+			if (cls == null)
+				continue;
+			if (ownerTypePath == null || ownerTypePath.length == 0)
+				ownerTypePath = sanitizePhpTypeName(HxClassDecl.getName(cls));
+			final importedMethods = phpStringExtensionMethodsForUsingClass(cls, ownerTypePath, currentClass, classesByName, new Map<String, Bool>());
+			for (name in importedMethods.keys())
+				methods.set(name, importedMethods.get(name));
+		}
+		return methods;
+	}
+
+	static function phpStringExtensionImportCandidates(rawImport:String):Array<String> {
+		final candidates = new Array<String>();
+		function add(candidate:String):Void {
+			if (candidate != null && candidate.length > 0 && candidates.indexOf(candidate) < 0)
+				candidates.push(candidate);
+		}
+		add(rawImport);
+		add(sanitizePhpTypePath(rawImport));
+		final parts = rawImport.split(".");
+		if (parts.length > 0)
+			add(sanitizePhpTypeName(parts[parts.length - 1]));
+		return candidates;
+	}
+
+	static function phpStringExtensionMethodsForUsingClass(cls:HxClassDecl, ownerTypePath:String, currentClass:HxClassDecl,
+			classesByName:Map<String, HxClassDecl>, visited:Map<String, Bool>):haxe.ds.StringMap<String> {
+		final methods = new haxe.ds.StringMap<String>();
+		final base = phpBaseClassDecl(cls, classesByName);
+		if (base != null && !phpClassVisited(base, visited)) {
+			final baseMethods = phpStringExtensionMethodsForUsingClass(base, ownerTypePath, currentClass, classesByName, phpMarkClassVisited(base, visited));
+			for (name in baseMethods.keys())
+				methods.set(name, baseMethods.get(name));
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!phpFunctionIsStringExtension(fn))
+				continue;
+			if (!phpStringExtensionFunctionVisibleFrom(fn, cls, currentClass, classesByName))
+				continue;
+			final name = HxFunctionDecl.getName(fn);
+			methods.set(name, ownerTypePath);
+			methods.set(sanitizeTypeName(name), ownerTypePath);
+		}
+		return methods;
+	}
+
+	static function phpFunctionIsStringExtension(fn:HxFunctionDecl):Bool {
+		if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
+			return false;
+		final args = HxFunctionDecl.getArgs(fn);
+		if (args.length == 0)
+			return false;
+		return isStringTypeHint(phpUnwrapNullTypeHint(normalizeTypeHint(HxFunctionArg.getTypeHint(args[0]))));
+	}
+
+	static function phpStringExtensionFunctionVisibleFrom(fn:HxFunctionDecl, declaringClass:HxClassDecl, currentClass:HxClassDecl,
+			classesByName:Map<String, HxClassDecl>):Bool {
+		return switch (HxFunctionDecl.getVisibility(fn)) {
+			case Public:
+				true;
+			case Private:
+				phpClassIsOrExtends(currentClass, declaringClass, classesByName);
+		}
+	}
+
+	static function phpClassIsOrExtends(cls:HxClassDecl, ancestor:HxClassDecl, classesByName:Map<String, HxClassDecl>):Bool {
+		if (cls == null || ancestor == null)
+			return false;
+		final ancestorName = sanitizePhpTypeName(HxClassDecl.getName(ancestor));
+		final visited = new Map<String, Bool>();
+		var current:HxClassDecl = cls;
+		while (current != null) {
+			final currentName = sanitizePhpTypeName(HxClassDecl.getName(current));
+			if (currentName == ancestorName)
+				return true;
+			if (visited.exists(currentName))
+				return false;
+			visited.set(currentName, true);
+			current = phpBaseClassDecl(current, classesByName);
+		}
+		return false;
+	}
+
 	static function phpProgramStaticCallableFieldMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
 		final out = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
 		function addKey(key:String, fields:haxe.ds.StringMap<Bool>):Void {
@@ -9704,8 +9950,10 @@ class SourceTargetCommon {
 							], function() {
 								final functionLocalTypes = phpFunctionLocalTypes(HxFunctionDecl.getArgs(fn));
 								withPhpThisValueSlot(Php, needsThisValueSlot, function() {
-									for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn), functionLocalTypes))
-										out.push(line);
+									withPhpStringExtensionMethods(Php, className, function() {
+										for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn), functionLocalTypes))
+											out.push(line);
+									});
 								});
 							});
 						});
@@ -11246,6 +11494,8 @@ class SourceTargetCommon {
 		final previousPhpDynamicMethodsByType = phpRenderDynamicMethodsByType;
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
 		final previousPhpStaticCallableFieldsByType = phpRenderStaticCallableFieldsByType;
+		final previousPhpStringExtensionMethodsByClass = phpRenderStringExtensionMethodsByClass;
+		final previousPhpStringExtensionMethodsByField = phpRenderStringExtensionMethodsByField;
 		final previousPhpKnownTypeNames = phpRenderKnownTypeNames;
 		final previousPhpEnumConstructors = phpRenderEnumConstructors;
 		final previousPhpAmbiguousEnumConstructors = phpRenderAmbiguousEnumConstructors;
@@ -11258,6 +11508,8 @@ class SourceTargetCommon {
 			phpRenderDynamicMethodsByType = phpProgramDynamicMethodMap(program, decl);
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
 			phpRenderStaticCallableFieldsByType = phpProgramStaticCallableFieldMap(program, decl);
+			phpRenderStringExtensionMethodsByClass = phpProgramStringExtensionMethodMap(program, decl);
+			phpRenderStringExtensionMethodsByField = null;
 			phpRenderKnownTypeNames = phpProgramKnownTypeNameMap(program, decl);
 			phpRenderAmbiguousEnumConstructors = new haxe.ds.StringMap<Bool>();
 			phpRenderEnumConstructors = phpProgramEnumConstructorMap(program, decl);
@@ -14015,8 +14267,10 @@ class SourceTargetCommon {
 				final mainBody = phpRewriteSameClassMembersInStmts(body, emptyPhpNames, emptyPhpNames, mainStaticFieldNames, className, []);
 				lines.push("function " + className + "_main() {");
 				withPhpSameClassMemberContext(Php, emptyPhpNames, emptyPhpNames, mainStaticFieldNames, className, [], function() {
-					for (line in renderFunctionStmts(target, mainBody, "  ", className + "_main"))
-						lines.push(line);
+					withPhpStringExtensionMethods(Php, className, function() {
+						for (line in renderFunctionStmts(target, mainBody, "  ", className + "_main"))
+							lines.push(line);
+					});
 				});
 				lines.push("}");
 				lines.push(className + "_main();");
@@ -14034,6 +14288,8 @@ class SourceTargetCommon {
 		phpRenderDynamicMethodsByType = previousPhpDynamicMethodsByType;
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
 		phpRenderStaticCallableFieldsByType = previousPhpStaticCallableFieldsByType;
+		phpRenderStringExtensionMethodsByClass = previousPhpStringExtensionMethodsByClass;
+		phpRenderStringExtensionMethodsByField = previousPhpStringExtensionMethodsByField;
 		phpRenderKnownTypeNames = previousPhpKnownTypeNames;
 		phpRenderEnumConstructors = previousPhpEnumConstructors;
 		phpRenderAmbiguousEnumConstructors = previousPhpAmbiguousEnumConstructors;
