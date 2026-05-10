@@ -1828,6 +1828,9 @@ class SourceTargetCommon {
 				final stringCall = phpStringFieldCall(receiver, field, args);
 				if (stringCall != null)
 					return stringCall;
+				final listCall = phpListFieldCall(receiver, field, phpArgs);
+				if (listCall != null)
+					return listCall;
 				final arrayCall = phpArrayFieldCall(receiver, field, phpArgs);
 				if (arrayCall != null)
 					return arrayCall;
@@ -1889,6 +1892,36 @@ class SourceTargetCommon {
 				"__hxhx_bind_placeholder()";
 			case _:
 				renderExpr(Php, arg);
+		};
+	}
+
+	static function phpListFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		if (!phpListLikeReceiver(receiver))
+			return null;
+		return switch (field) {
+			case "add" | "push" | "remove" if (args.length == 1):
+				callExpr(Php, fieldAccess(Php, renderExpr(Php, receiver), field), args);
+			case "pop" | "first" | "last" | "clear" | "isEmpty" | "iterator" | "toString" if (args.length == 0):
+				callExpr(Php, fieldAccess(Php, renderExpr(Php, receiver), field), args);
+			case "join" if (args.length == 1):
+				callExpr(Php, fieldAccess(Php, renderExpr(Php, receiver), field), args);
+			case _:
+				null;
+		}
+	}
+
+	static function phpListLikeReceiver(receiver:HxExpr):Bool {
+		return switch (receiver) {
+			case EIdent(name):
+				phpRuntimeListType(phpLocalTypeHint(name));
+			case ENew(typePath, _):
+				phpRuntimeListType(typePath);
+			case ECast(_, castHint):
+				phpRuntimeListType(castHint);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpListLikeReceiver(inner);
+			case _:
+				false;
 		};
 	}
 

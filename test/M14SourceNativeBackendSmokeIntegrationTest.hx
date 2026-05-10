@@ -1703,6 +1703,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(list.length));",
 			"    Sys.println(list.first());",
 			"    Sys.println(list.last());",
+			"    var manual = new haxe.ds.List();",
+			"    manual.push(\"b\");",
+			"    manual.push(\"a\");",
+			"    manual.add(\"c\");",
+			"    Sys.println(manual.join(\"#\"));",
+			"    Sys.println(Std.string(manual.length));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5431,10 +5437,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function list($value)", "PHP Lambda helper should expose list");
 		assertContains(content, "$list = Lambda::list([\"a\", \"b\", \"c\"]);", "PHP Lambda.list calls should lower as static helper calls");
+		assertContains(content, "$manual->push(\"b\")", "PHP List.push should call the List runtime method");
+		assertNotContains(content, "__hxhx_array_push($manual", "PHP List.push should not route through the Array.push helper");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Lambda.list support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "3\na\nc\n", "generated PHP Lambda.list should preserve list order and length, got:\n" + run.stdout);
+			assertTrue(run.stdout == "3\na\nc\na#b#c\n3\n", "generated PHP Lambda.list should preserve list order and length, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
