@@ -2635,6 +2635,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function phpTypeCheckProgram():GenIrProgram {
 		final src = [
+			"enum KeywordKind { Dynamic; }",
+			"enum MyTypeEnum { A; }",
+			"interface MyTypeInterface {}",
+			"class MyTypeClass implements MyTypeInterface { public function new() {} }",
+			"class MyTypeSubClass extends MyTypeClass { public function new() { super(); } }",
 			"class Main {",
 			"  static function main() {",
 			"    var i = 1;",
@@ -2655,6 +2660,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(Std.isOfType(1.2, Int)));",
 			"    Sys.println(Std.string(Std.isOfType(1e10, Int)));",
 			"    Sys.println(Std.string(Std.isOfType(1e10, Float)));",
+			"    var dynamicTypes:Array<Dynamic> = [String, Bool, Int, Float, Class, Enum, Dynamic];",
+			"    for (t in dynamicTypes) Sys.println(Std.string(Std.isOfType(0, t)));",
+			"    Sys.println(Std.string(loopCheck(0, Int, Float)));",
+			"    Sys.println(Std.string(fullLoopCheck(0, Int, Float)));",
+			"  }",
+			"  static function loopCheck(value:Dynamic, t1:Dynamic, ?t2:Dynamic):Bool {",
+			"    var dynamicTypes:Array<Dynamic> = [String, Bool, Int, Float, Class, Enum, Dynamic];",
+			"    for (c in dynamicTypes) {",
+			"      var actual = Std.isOfType(value, c);",
+			"      var expected = c != null && (c == t1 || c == t2) || c == Dynamic;",
+			"      if (actual != expected) return false;",
+			"    }",
+			"    return true;",
+			"  }",
+			"  static function fullLoopCheck(value:Dynamic, t1:Dynamic, ?t2:Dynamic):Bool {",
+			"    var dynamicTypes:Array<Dynamic> = [null, String, Bool, Int, Float, Array, List, haxe.ds.StringMap, MyTypeEnum, MyTypeClass, MyTypeSubClass, Class, Enum, Dynamic, MyTypeInterface];",
+			"    for (c in dynamicTypes) {",
+			"      var actual = Std.isOfType(value, c);",
+			"      var expected = c != null && (c == t1 || c == t2) || c == Dynamic;",
+			"      if (actual != expected) return false;",
+			"    }",
+			"    return true;",
 			"  }",
 			"}",
 		].join("\n");
@@ -2666,7 +2693,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	static function phpUserClassTypeCheckProgram():GenIrProgram {
 		final src = [
 			"package unit;",
-			"class MyClass {",
+			"enum MyEnum { A; }",
+			"interface MyInterface {}",
+			"class MyClass implements MyInterface {",
 			"  public var intValue:Null<Int> = 55;",
 			"  var value:Null<Int>;",
 			"  public function new(value:Int) { this.value = value; }",
@@ -2709,6 +2738,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(empty is MyClass));",
 			"    Sys.println(Std.string(empty.get() == null));",
 			"    Sys.println(Std.string(empty.intValue == null));",
+			"    Sys.println(Std.string(fullLoopCheck(0, Int, Float)));",
 			"  }",
 			"  static function check(value:Dynamic, c:Dynamic):Bool return value is c;",
 			"  static function reflectLoopCheck(value:Dynamic, t1:Dynamic):Bool {",
@@ -2716,6 +2746,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"      var c:Dynamic = types[i];",
 			"      var actual = Std.isOfType(value, c);",
 			"      var expected = c != null && c == t1 || c == Dynamic;",
+			"      if (actual != expected) return false;",
+			"    }",
+			"    return true;",
+			"  }",
+			"  static function fullLoopCheck(value:Dynamic, t1:Dynamic, ?t2:Dynamic):Bool {",
+			"    var dynamicTypes:Array<Dynamic> = [null, String, Bool, Int, Float, Array, List, haxe.ds.StringMap, unit.MyEnum, unit.MyClass, unit.MySubClass, Class, Enum, Dynamic, unit.MyInterface];",
+			"    for (c in dynamicTypes) {",
+			"      var actual = Std.isOfType(value, c);",
+			"      var expected = c != null && (c == t1 || c == t2) || c == Dynamic;",
 			"      if (actual != expected) return false;",
 			"    }",
 			"    return true;",
@@ -7889,8 +7928,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP type checks should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\nfalse\ntrue\n",
-				"generated PHP type check output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\nfalse\ntrue\nfalse\nfalse\ntrue\ntrue\nfalse\nfalse\ntrue\ntrue\ntrue\n",
+				"generated PHP type check output mismatch, got:\n"
+				+ run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -7919,7 +7959,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP user class type checks should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nunit.MyClass\nunit.MyClass\ntrue\n33\n55\ntrue\ntrue\ntrue\n",
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nunit.MyClass\nunit.MyClass\ntrue\n33\n55\ntrue\ntrue\ntrue\ntrue\n",
 				"generated PHP user class type check output mismatch, got:\n"
 				+ run.stdout);
 		}

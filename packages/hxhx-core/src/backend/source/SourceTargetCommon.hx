@@ -694,6 +694,8 @@ class SourceTargetCommon {
 				Std.string(value);
 			case EFloat(value):
 				floatLiteralExpr(value);
+			case EEnumValue(name) if (target == Php && phpBuiltinTypeValueName(name)):
+				phpClassValueExpr(name);
 			case EEnumValue(name):
 				if (target == Php) {
 					if (phpValueTypeCtorIndex(name) != null)
@@ -724,6 +726,8 @@ class SourceTargetCommon {
 				superExpr(target);
 			case EUnop(op, inner):
 				unopExpr(target, op, inner);
+			case EIdent(name) if (target == Php && !phpLocalExists(name) && phpBuiltinTypeValueName(name)):
+				phpClassValueExpr(name);
 			case EIdent(name) if (target == Php && !phpLocalExists(name) && phpEnumCtorValueExpr(name) != null):
 				phpEnumCtorValueExpr(name);
 			case EIdent(name) if (target == Php && looksLikeTypePathRoot(name) && !phpLocalExists(name)):
@@ -3910,6 +3914,15 @@ class SourceTargetCommon {
 				if (prefix.length == 0) field else prefix + "." + field;
 			case _:
 				"Dynamic";
+		};
+	}
+
+	static function phpBuiltinTypeValueName(name:String):Bool {
+		return switch (name) {
+			case "Array" | "Bool" | "Class" | "Date" | "Dynamic" | "Enum" | "Float" | "Int" | "Math" | "String" | "Xml":
+				true;
+			case _:
+				false;
 		};
 	}
 
