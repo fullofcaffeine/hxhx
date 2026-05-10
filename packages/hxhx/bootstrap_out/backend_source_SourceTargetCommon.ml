@@ -24808,6 +24808,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    $this->stack = __hxhx_stack();");
       ignore (HxArray.push lines "    parent::__construct(__hxhx_to_string_value($value));");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public function get_stack() {");
+      ignore (HxArray.push lines "    return $this->stack;");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public static function thrown($value) {");
       ignore (HxArray.push lines "    if ($value instanceof ValueException) return $value;");
       ignore (HxArray.push lines "    return new ValueException($value);");

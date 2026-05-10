@@ -12504,6 +12504,9 @@ class SourceTargetCommon {
 				lines.push("    $this->stack = __hxhx_stack();");
 				lines.push("    parent::__construct(__hxhx_to_string_value($value));");
 				lines.push("  }");
+				lines.push("  public function get_stack() {");
+				lines.push("    return $this->stack;");
+				lines.push("  }");
 				lines.push("  public static function thrown($value) {");
 				lines.push("    if ($value instanceof ValueException) return $value;");
 				lines.push("    return new ValueException($value);");

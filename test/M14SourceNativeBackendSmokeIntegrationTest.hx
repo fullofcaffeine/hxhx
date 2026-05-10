@@ -933,8 +933,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(CallStack.callStack().length);",
 			"    Sys.println(new Exception(\"boom\").stack.length);",
 			"    Sys.println(new ValueException(\"boom\").stack.length);",
+			"    Sys.println(@:privateAccess new ValueException(\"boom\").get_stack().length);",
 			"    Sys.println(@:privateAccess (Exception.thrown(\"boom\"):Exception).stack.length);",
 			"    Sys.println(Std.downcast(new Exception(\"boom\"), Exception) != null);",
+			"    try {",
+			"      throw \"boom\";",
+			"    } catch (e:ValueException) {",
+			"      Sys.println(@:privateAccess e.get_stack().length);",
+			"    }",
 			"    try {",
 			"      throw new Exception(\"boom\");",
 			"    } catch (e) {",
@@ -6941,6 +6947,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(stackContent, "class CallStack", "PHP runtime should expose haxe.CallStack support");
 		assertContains(stackContent, "function __hxhx_stack()", "PHP runtime should expose synthetic stack items");
 		assertContains(stackContent, "new ValueException(\"boom\")", "PHP haxe.Exception construction should use the stack-carrying wrapper");
+		assertContains(stackContent, "->get_stack()", "PHP haxe.Exception stack accessor calls should preserve get_stack dispatch");
 		assertContains(stackContent, "ValueException::thrown(\"boom\")", "PHP haxe.Exception.thrown should route through the throwable wrapper");
 		assertContains(stackContent, "__hxhx_downcast(new ValueException(\"boom\"), \"Exception\")", "PHP Std.downcast should lower through type helper");
 		if (commandExists("php")) {
