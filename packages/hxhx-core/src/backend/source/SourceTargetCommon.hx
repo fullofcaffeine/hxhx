@@ -4424,7 +4424,8 @@ class SourceTargetCommon {
 		final rendered = [for (arg in args) renderExpr(Php, arg)].join(", ");
 		if (typePath == "String" && field == "fromCharCode" && args.length == 1)
 			return "__hxhx_string_from_char_code(" + rendered + ")";
-		return typePath + "::" + sanitizeTypeName(field) + "(" + rendered + ")";
+		final specialized = phpExplicitGenericStaticSpecializationName(typePath, field, args);
+		return typePath + "::" + (specialized == null ? sanitizeTypeName(field) : specialized) + "(" + rendered + ")";
 	}
 
 	static function phpSuperGetterCall(field:String):String {
@@ -4672,6 +4673,7 @@ class SourceTargetCommon {
 	static var phpRenderInstanceMethodArgsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Array<HxFunctionArg>>>> = null;
 	static var phpRenderDynamicMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
+	static var phpRenderGenericStaticFunctionsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<HxFunctionDecl>>> = null;
 	static var phpRenderStaticCallableFieldsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStringExtensionMethodsByClass:Null<haxe.ds.StringMap<haxe.ds.StringMap<String>>> = null;
 	static var phpRenderStringExtensionMethodsByField:Null<haxe.ds.StringMap<String>> = null;
@@ -5237,6 +5239,118 @@ class SourceTargetCommon {
 				return phpRenderStaticMethodsByType.get(candidate);
 		}
 		return null;
+	}
+
+	static function phpGenericStaticFunctionMapForType(typePath:String):Null<haxe.ds.StringMap<HxFunctionDecl>> {
+		final raw = StringTools.trim(typePath == null ? "" : typePath);
+		if (raw.length == 0 || phpRenderGenericStaticFunctionsByType == null)
+			return null;
+		final candidates = [raw, sanitizePhpTypePath(raw)];
+		final dot = raw.lastIndexOf(".");
+		if (dot >= 0)
+			candidates.push(raw.substr(dot + 1));
+		final slash = raw.lastIndexOf("\\");
+		if (slash >= 0)
+			candidates.push(raw.substr(slash + 1));
+		for (candidate in candidates) {
+			if (phpRenderGenericStaticFunctionsByType.exists(candidate))
+				return phpRenderGenericStaticFunctionsByType.get(candidate);
+		}
+		return null;
+	}
+
+	static function phpGenericStaticFunctionForType(typePath:String, field:String):Null<HxFunctionDecl> {
+		final methods = phpGenericStaticFunctionMapForType(typePath);
+		if (methods == null)
+			return null;
+		final clean = sanitizeTypeName(field);
+		return methods.exists(clean) ? methods.get(clean) : null;
+	}
+
+	/**
+		Chooses an explicitly declared `name_String`-style method for a generic
+		static call. Generated reflection wrappers are intentionally ignored here,
+		so ordinary generic calls keep the base body unless source declares a
+		specialized override.
+	**/
+	static function phpExplicitGenericStaticSpecializationExists(typePath:String, specialized:String, ?sameClassStaticFieldNames:Map<String, Bool>):Bool {
+		final methods = phpStaticMethodMapForType(typePath);
+		if (methods != null && methods.exists(specialized))
+			return true;
+		final sameClassName = phpRenderSameClassName == null && sameClassStaticFieldNames != null ? typePath : phpRenderSameClassName;
+		if (sameClassName == null)
+			return false;
+		if (sanitizePhpTypePath(typePath) != sanitizePhpTypePath(sameClassName))
+			return false;
+		final staticFieldNames = sameClassStaticFieldNames == null ? phpRenderSameClassStaticFieldNames : sameClassStaticFieldNames;
+		if (staticFieldNames == null)
+			return false;
+		return staticFieldNames.exists(specialized);
+	}
+
+	static function phpExplicitGenericStaticSpecializationName(typePath:String, field:String, args:Array<HxExpr>,
+			?sameClassStaticFieldNames:Map<String, Bool>):Null<String> {
+		final genericFn = phpGenericStaticFunctionForType(typePath, field);
+		if (genericFn == null || args == null || args.length == 0)
+			return null;
+		final cleanField = sanitizeTypeName(field);
+		final specialized = phpGenericSpecializedNameFromExprArgs(cleanField, genericFn, args, phpRenderLocalTypes);
+		if (specialized == null || specialized == cleanField)
+			return null;
+		return phpExplicitGenericStaticSpecializationExists(typePath, specialized, sameClassStaticFieldNames) ? specialized : null;
+	}
+
+	static function phpExplicitGenericStaticSpecializationNameFromRawArgs(typePath:String, field:String, rawArgs:String,
+			?sameClassStaticFieldNames:Map<String, Bool>):Null<String> {
+		final genericFn = phpGenericStaticFunctionForType(typePath, field);
+		if (genericFn == null || rawArgs == null)
+			return null;
+		final cleanField = sanitizeTypeName(field);
+		final specialized = phpGenericSpecializedNameFromRawArgs(cleanField, genericFn, rawArgs, phpRenderLocalTypes);
+		if (specialized == null || specialized == cleanField)
+			return null;
+		return phpExplicitGenericStaticSpecializationExists(typePath, specialized, sameClassStaticFieldNames) ? specialized : null;
+	}
+
+	/**
+		Rewrites already-rendered same-class PHP static calls to explicit generic
+		specializations. This catches raw/text fallback bodies that bypass the
+		structured `phpStaticMethodCall` renderer.
+	**/
+	static function phpRewriteRenderedExplicitGenericStaticCalls(line:String, className:String, staticFieldNames:Map<String, Bool>):String {
+		if (line == null || className == null || className.length == 0)
+			return line;
+		final genericFns = phpGenericStaticFunctionMapForType(className);
+		if (genericFns == null)
+			return line;
+		var rewritten = line;
+		for (fnName in genericFns.keys()) {
+			final cleanName = sanitizeTypeName(fnName);
+			final callable = className + "::" + cleanName;
+			final needle = callable + "(";
+			var search = 0;
+			while (search < rewritten.length) {
+				final idx = rewritten.indexOf(needle, search);
+				if (idx < 0)
+					break;
+				final open = idx + callable.length;
+				final close = phpFindRawCallClose(rewritten, open);
+				if (close < 0) {
+					search = idx + needle.length;
+					continue;
+				}
+				final specialized = phpExplicitGenericStaticSpecializationNameFromRawArgs(className, cleanName, rewritten.substring(open + 1, close),
+					staticFieldNames);
+				if (specialized == null) {
+					search = close + 1;
+					continue;
+				}
+				final replacement = className + "::" + specialized;
+				rewritten = rewritten.substring(0, idx) + replacement + rewritten.substring(open);
+				search = idx + replacement.length + 1;
+			}
+		}
+		return rewritten;
 	}
 
 	static function phpStaticCallableFieldMapForType(typePath:String):Null<haxe.ds.StringMap<Bool>> {
@@ -8938,8 +9052,15 @@ class SourceTargetCommon {
 	static function phpProgramStaticMethodMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
 		final out = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
 		function addKey(key:String, methods:haxe.ds.StringMap<Bool>):Void {
-			if (key != null && key.length > 0 && !out.exists(key))
+			if (key == null || key.length == 0)
+				return;
+			if (!out.exists(key)) {
 				out.set(key, methods);
+				return;
+			}
+			final existing = out.get(key);
+			for (name in methods.keys())
+				existing.set(name, methods.get(name));
 		}
 		function addDecl(moduleDecl:HxModuleDecl):Void {
 			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
@@ -8949,6 +9070,41 @@ class SourceTargetCommon {
 					if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 						continue;
 					methods.set(sanitizeTypeName(HxFunctionDecl.getName(fn)), true);
+				}
+				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
+				addKey(shortName, methods);
+				addKey(fullName, methods);
+				addKey(sanitizePhpTypePath(fullName), methods);
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return out;
+	}
+
+	static function phpProgramGenericStaticFunctionMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<HxFunctionDecl>> {
+		final out = new haxe.ds.StringMap<haxe.ds.StringMap<HxFunctionDecl>>();
+		function addKey(key:String, methods:haxe.ds.StringMap<HxFunctionDecl>):Void {
+			if (key == null || key.length == 0)
+				return;
+			if (!out.exists(key)) {
+				out.set(key, methods);
+				return;
+			}
+			final existing = out.get(key);
+			for (name in methods.keys())
+				existing.set(name, methods.get(name));
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final methods = new haxe.ds.StringMap<HxFunctionDecl>();
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new" || !phpFunctionIsGeneric(fn))
+						continue;
+					methods.set(sanitizeTypeName(HxFunctionDecl.getName(fn)), fn);
 				}
 				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
 				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
@@ -10917,7 +11073,7 @@ class SourceTargetCommon {
 										withPhpStringExtensionMethods(Php, className, function() {
 											for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
 												functionLocalTypes))
-												out.push(line);
+												out.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, staticFieldNames));
 										});
 									});
 								});
@@ -12217,6 +12373,13 @@ class SourceTargetCommon {
 						phpRewriteSameClassMemberExpr(arg, methodNames, fieldNames, staticFieldNames, className, locals)
 				];
 				ECall(EField(EThis, name), phpAlignTypedOptionalCallArgs(phpCurrentInstanceMethodArgs(name), rewrittenArgs));
+			case ECall(EIdent(name), args) if (staticFieldNames.exists(name) && locals.indexOf(name) < 0):
+				final rewrittenArgs = [
+					for (arg in args)
+						phpRewriteSameClassMemberExpr(arg, methodNames, fieldNames, staticFieldNames, className, locals)
+				];
+				final specialized = phpExplicitGenericStaticSpecializationName(className, name, rewrittenArgs, staticFieldNames);
+				ECall(EField(EIdent(className), specialized == null ? name : specialized), rewrittenArgs);
 			case ECall(callee, args):
 				ECall(phpRewriteSameClassMemberExpr(callee, methodNames, fieldNames, staticFieldNames, className, locals), [
 					for (arg in args)
@@ -12483,6 +12646,7 @@ class SourceTargetCommon {
 		final previousPhpInstanceMethodArgsByType = phpRenderInstanceMethodArgsByType;
 		final previousPhpDynamicMethodsByType = phpRenderDynamicMethodsByType;
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
+		final previousPhpGenericStaticFunctionsByType = phpRenderGenericStaticFunctionsByType;
 		final previousPhpStaticCallableFieldsByType = phpRenderStaticCallableFieldsByType;
 		final previousPhpStringExtensionMethodsByClass = phpRenderStringExtensionMethodsByClass;
 		final previousPhpStringExtensionMethodsByField = phpRenderStringExtensionMethodsByField;
@@ -12497,6 +12661,7 @@ class SourceTargetCommon {
 			phpRenderInstanceMethodArgsByType = phpProgramInstanceMethodArgsMap(program, decl);
 			phpRenderDynamicMethodsByType = phpProgramDynamicMethodMap(program, decl);
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
+			phpRenderGenericStaticFunctionsByType = phpProgramGenericStaticFunctionMap(program, decl);
 			phpRenderStaticCallableFieldsByType = phpProgramStaticCallableFieldMap(program, decl);
 			phpRenderStringExtensionMethodsByClass = phpProgramStringExtensionMethodMap(program, decl);
 			phpRenderStringExtensionMethodsByField = null;
@@ -15272,7 +15437,7 @@ class SourceTargetCommon {
 				withPhpSameClassMemberContext(Php, emptyPhpNames, emptyPhpNames, mainStaticFieldNames, className, [], function() {
 					withPhpStringExtensionMethods(Php, className, function() {
 						for (line in renderFunctionStmts(target, mainBody, "  ", className + "_main"))
-							lines.push(line);
+							lines.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, mainStaticFieldNames));
 					});
 				});
 				lines.push("}");
@@ -15290,6 +15455,7 @@ class SourceTargetCommon {
 		phpRenderInstanceMethodArgsByType = previousPhpInstanceMethodArgsByType;
 		phpRenderDynamicMethodsByType = previousPhpDynamicMethodsByType;
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
+		phpRenderGenericStaticFunctionsByType = previousPhpGenericStaticFunctionsByType;
 		phpRenderStaticCallableFieldsByType = previousPhpStaticCallableFieldsByType;
 		phpRenderStringExtensionMethodsByClass = previousPhpStringExtensionMethodsByClass;
 		phpRenderStringExtensionMethodsByField = previousPhpStringExtensionMethodsByField;
