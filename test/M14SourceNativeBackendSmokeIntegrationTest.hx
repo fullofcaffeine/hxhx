@@ -9744,6 +9744,61 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpSameClassFunctionFieldCall():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_class_function_field_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class HelperMacros {",
+			"  public static function typeError(e) return false;",
+			"}",
+			"class Holder {",
+			"  var callback:Void->Int;",
+			"  var unary:Int->Int;",
+			"  var optional:?Int->String;",
+			"  public function new() {}",
+			"  public function run():Void {",
+			"    callback = () -> 7;",
+			"    Sys.println(callback());",
+			"    callback = function() return 9;",
+			"    Sys.println(callback());",
+			"    unary = value -> value + 1;",
+			"    Sys.println(Std.string(HelperMacros.typeError(unary())));",
+			"    Sys.println(Std.string(HelperMacros.typeError(unary(4))));",
+			"    optional = (?value) -> Std.string(value);",
+			"    Sys.println(optional());",
+			"    Sys.println(optional(4));",
+			"    Sys.println(Std.string(HelperMacros.typeError(optional(4, 5))));",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    new Holder().run();",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_call_field($this, \"callback\")",
+			"PHP same-class function-typed fields should call the stored value, not a missing method");
+		assertNotContains(content, "$this->callback()", "PHP same-class function-typed fields should not emit method-call syntax");
+		assertNotContains(content, "__hxhx_call_field($this, \"unary\")",
+			"PHP typeError probes for function-typed fields should fold without evaluating invalid calls");
+		assertContains(content, "function($value = null)", "PHP optional function-typed field lambdas should emit nullable PHP parameters");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP same-class function field calls should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "7\n9\ntrue\nfalse\nnull\n4\ntrue\n", "generated PHP same-class function field call output mismatch, got:\n"
+				+ run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpOpaqueBlockExprCapturesOuterLocals():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_opaque_block_expr_capture_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -10924,6 +10979,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpDefaultArgsOnOverrides();
 		assertPhpTryCatchRawRenamesScopedLocalFunctions();
 		assertPhpLocalFunctionOptionalArgs();
+		assertPhpSameClassFunctionFieldCall();
 		assertPhpOpaqueBlockExprCapturesOuterLocals();
 		assertPhpNullFieldAccessThrowsNpe();
 		assertPhpConstructorDefaultArgs();

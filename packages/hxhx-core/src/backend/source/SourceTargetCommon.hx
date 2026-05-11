@@ -947,7 +947,7 @@ class SourceTargetCommon {
 		final mapped = binopToken(target, op);
 		if (mapped == null)
 			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
-		final b0 = renderExpr(target, right);
+		final b0 = target == Php && op == "=" ? phpAssignedValueForLvalue(left, right) : renderExpr(target, right);
 		final b = target == Php && op == "=" && shouldCopyAssignedValue(right) ? phpCopyValueExpr(b0) : b0;
 		if (target == Python && isAssignmentOp(op)) {
 			final assignmentExpr = pythonAssignmentExpr(op, left, b);
@@ -1997,6 +1997,8 @@ class SourceTargetCommon {
 
 	static function phpReceiverHasInstanceField(receiver:HxExpr, field:String):Bool {
 		return switch (receiver) {
+			case EThis:
+				phpCurrentInstanceFieldValue(field);
 			case EIdent(name):
 				phpLocalHasInstanceField(name, field);
 			case ENew(typePath, _):
@@ -3123,6 +3125,9 @@ class SourceTargetCommon {
 				final stringFieldResult = helperStringFieldCallTypeError(callee, callArgs);
 				if (stringFieldResult != null)
 					return stringFieldResult;
+				final functionArityResult = helperFunctionCallArityTypeError(callee, callArgs);
+				if (functionArityResult != null)
+					return functionArityResult;
 				final optionalResult = helperOptionalLambdaCallTypeError(callee, callArgs);
 				optionalResult != null ? optionalResult : helperFunctionCallAnonTypeError(callArgs);
 			case _:
@@ -3348,6 +3353,90 @@ class SourceTargetCommon {
 			case _:
 				null;
 		};
+	}
+
+	static function helperFunctionCallArityTypeError(callee:HxExpr, args:Array<HxExpr>):Null<Bool> {
+		final typeHint = switch (callee) {
+			case EIdent(name):
+				phpLocalTypeHint(name);
+			case EField(EThis, field):
+				phpCurrentInstanceFieldTypeHint(field);
+			case ECast(_, castHint):
+				castHint;
+			case _:
+				null;
+		};
+		final arity = phpFunctionTypeArityRange(typeHint);
+		if (arity == null)
+			return null;
+		final actualArity = args == null ? 0 : args.length;
+		return actualArity < arity.min || actualArity > arity.max;
+	}
+
+	static function phpFunctionTypeArityRange(typeHint:String):Null<{min:Int, max:Int}> {
+		final text = trimLeadingTypeColon(typeHint);
+		if (text.length == 0)
+			return null;
+		final arrowParts = splitTopLevelArrow(text);
+		if (arrowParts.length < 2)
+			return null;
+		var min = 0;
+		var max = 0;
+		for (i in 0...arrowParts.length - 1) {
+			final part = StringTools.trim(arrowParts[i]);
+			if (part == "Void")
+				continue;
+			final args = phpFunctionTypeArgTexts(part);
+			for (arg in args) {
+				max++;
+				if (!phpFunctionTypeArgIsOptional(arg))
+					min++;
+			}
+		}
+		return {min: min, max: max};
+	}
+
+	static function phpFunctionTypeArgTexts(raw:String):Array<String> {
+		final trimmed = StringTools.trim(raw);
+		final parenEnd = matchingOuterParen(trimmed);
+		if (parenEnd == trimmed.length - 1) {
+			final inner = StringTools.trim(trimmed.substring(1, trimmed.length - 1));
+			if (inner.length == 0 || inner == "Void")
+				return [];
+			return splitTopLevelComma(inner);
+		}
+		return trimmed.length == 0 ? [] : [trimmed];
+	}
+
+	static function phpFunctionTypeArgIsOptional(raw:String):Bool {
+		final trimmed = StringTools.trim(raw);
+		if (StringTools.startsWith(trimmed, "?"))
+			return true;
+		final namedColon = findTopLevelChar(trimmed, ":".code);
+		return namedColon > 0 && StringTools.startsWith(StringTools.trim(trimmed.substring(0, namedColon)), "?");
+	}
+
+	static function phpFunctionTypeOptionalArgNamesForLambda(typeHint:String, args:Array<String>):Array<String> {
+		final names = new Array<String>();
+		final text = trimLeadingTypeColon(typeHint);
+		if (text.length == 0 || args == null || args.length == 0)
+			return names;
+		final arrowParts = splitTopLevelArrow(text);
+		if (arrowParts.length < 2)
+			return names;
+		final argHints = new Array<String>();
+		for (i in 0...arrowParts.length - 1)
+			for (argHint in phpFunctionTypeArgTexts(arrowParts[i]))
+				argHints.push(argHint);
+		final limit = args.length < argHints.length ? args.length : argHints.length;
+		for (i in 0...limit) {
+			if (!phpFunctionTypeArgIsOptional(argHints[i]))
+				continue;
+			final clean = sanitizeTypeName(args[i]);
+			if (clean.length > 0 && names.indexOf(clean) < 0)
+				names.push(clean);
+		}
+		return names;
 	}
 
 	static function helperOptionalLambdaCallTypeError(callee:HxExpr, args:Array<HxExpr>):Null<Bool> {
@@ -5037,6 +5126,7 @@ class SourceTargetCommon {
 	static var phpRenderCurrentInstanceMethodArgs:Null<Map<String, Array<HxFunctionArg>>> = null;
 	static var phpRenderSameClassMethodNames:Null<Map<String, Bool>> = null;
 	static var phpRenderSameClassFieldNames:Null<Map<String, Bool>> = null;
+	static var phpRenderSameClassFieldTypeHints:Null<Map<String, String>> = null;
 	static var phpRenderSameClassStaticFieldNames:Null<Map<String, Bool>> = null;
 	static var phpRenderSameClassName:Null<String> = null;
 	static var phpRenderSameClassLocals:Null<Array<String>> = null;
@@ -5384,16 +5474,19 @@ class SourceTargetCommon {
 	}
 
 	static function withPhpSameClassMemberContext<T>(target:SourceNativeTarget, methodNames:Null<Map<String, Bool>>, fieldNames:Null<Map<String, Bool>>,
-			staticFieldNames:Null<Map<String, Bool>>, className:Null<String>, locals:Null<Array<String>>, f:() -> T):T {
+			fieldTypeHints:Null<Map<String, String>>, staticFieldNames:Null<Map<String, Bool>>, className:Null<String>, locals:Null<Array<String>>,
+			f:() -> T):T {
 		if (target != Php)
 			return f();
 		final previousMethodNames = phpRenderSameClassMethodNames;
 		final previousFieldNames = phpRenderSameClassFieldNames;
+		final previousFieldTypeHints = phpRenderSameClassFieldTypeHints;
 		final previousStaticFieldNames = phpRenderSameClassStaticFieldNames;
 		final previousClassName = phpRenderSameClassName;
 		final previousLocals = phpRenderSameClassLocals;
 		phpRenderSameClassMethodNames = methodNames;
 		phpRenderSameClassFieldNames = fieldNames;
+		phpRenderSameClassFieldTypeHints = fieldTypeHints;
 		phpRenderSameClassStaticFieldNames = staticFieldNames;
 		phpRenderSameClassName = className;
 		phpRenderSameClassLocals = locals == null ? [] : copyStringArray(locals);
@@ -5401,6 +5494,7 @@ class SourceTargetCommon {
 			final result = f();
 			phpRenderSameClassMethodNames = previousMethodNames;
 			phpRenderSameClassFieldNames = previousFieldNames;
+			phpRenderSameClassFieldTypeHints = previousFieldTypeHints;
 			phpRenderSameClassStaticFieldNames = previousStaticFieldNames;
 			phpRenderSameClassName = previousClassName;
 			phpRenderSameClassLocals = previousLocals;
@@ -5408,6 +5502,7 @@ class SourceTargetCommon {
 		} catch (e) {
 			phpRenderSameClassMethodNames = previousMethodNames;
 			phpRenderSameClassFieldNames = previousFieldNames;
+			phpRenderSameClassFieldTypeHints = previousFieldTypeHints;
 			phpRenderSameClassStaticFieldNames = previousStaticFieldNames;
 			phpRenderSameClassName = previousClassName;
 			phpRenderSameClassLocals = previousLocals;
@@ -5467,6 +5562,23 @@ class SourceTargetCommon {
 
 	static function phpCurrentInstanceMethodValue(field:String):Bool {
 		return phpRenderCurrentInstanceMethodNames != null && phpRenderCurrentInstanceMethodNames.exists(field);
+	}
+
+	static function phpCurrentInstanceFieldValue(field:String):Bool {
+		if (phpRenderSameClassFieldNames == null)
+			return false;
+		if (phpRenderSameClassFieldNames.exists(field))
+			return true;
+		return phpRenderSameClassFieldNames.exists(sanitizeTypeName(field));
+	}
+
+	static function phpCurrentInstanceFieldTypeHint(field:String):String {
+		if (phpRenderSameClassFieldTypeHints == null)
+			return "";
+		if (phpRenderSameClassFieldTypeHints.exists(field))
+			return phpRenderSameClassFieldTypeHints.get(field);
+		final clean = sanitizeTypeName(field);
+		return phpRenderSameClassFieldTypeHints.exists(clean) ? phpRenderSameClassFieldTypeHints.get(clean) : "";
 	}
 
 	static function phpCurrentInstanceMethodArgs(field:String):Null<Array<HxFunctionArg>> {
@@ -6927,8 +7039,23 @@ class SourceTargetCommon {
 		return target == Php && shouldCopyAssignedValue(expr) ? phpCopyValueExpr(rhs) : rhs;
 	}
 
+	static function phpAssignedValueForLvalue(left:HxExpr, right:HxExpr):String {
+		final typeHint = switch (left) {
+			case EField(EThis, field):
+				phpCurrentInstanceFieldTypeHint(field);
+			case _:
+				"";
+		};
+		final hint = normalizeTypeHint(typeHint);
+		return hint.length == 0 ? renderExpr(Php, right) : phpAssignedValueExpr(right, hint);
+	}
+
 	static function phpAssignedValueExpr(expr:HxExpr, typeHint:String):String {
 		switch (expr) {
+			case ELambda(args, body):
+				final optionalArgNames = phpFunctionTypeOptionalArgNamesForLambda(typeHint, args);
+				if (optionalArgNames.length > 0)
+					return phpLambdaExpr(args, body, [], [], optionalArgNames);
 			case EAnon(fieldNames, fieldValues):
 				return phpTypedAnonExpr(fieldNames, fieldValues, typeHint);
 			case EArrayDecl(items):
@@ -11691,6 +11818,7 @@ class SourceTargetCommon {
 		final instanceMethodNames = phpInstanceMethodNames(cls, classesByName, new Map<String, Bool>());
 		final instanceMethodArgs = phpInstanceMethodArgs(cls, classesByName, new Map<String, Bool>());
 		final instanceFieldNames = phpInstanceFieldNames(cls, classesByName, new Map<String, Bool>());
+		final instanceFieldTypeHints = phpInstanceFieldTypeHints(cls, classesByName, new Map<String, Bool>());
 		final staticFieldNames = phpCurrentClassStaticMemberNames(cls);
 		final genericStaticSpecializations = phpGenericStaticSpecializations(cls, scanClasses);
 		for (fn in HxClassDecl.getFunctions(cls)) {
@@ -11751,25 +11879,26 @@ class SourceTargetCommon {
 				withPhpCurrentFunctionName(Php, HxFunctionDecl.getName(fn), function() {
 					withPhpCurrentInstanceMethodNames(Php, !isStatic || isCtor ? instanceMethodNames : null, function() {
 						withPhpCurrentInstanceMethodArgs(Php, !isStatic || isCtor ? instanceMethodArgs : null, function() {
-							withPhpSameClassMemberContext(Php, rewriteMethodNames, rewriteFieldNames, staticFieldNames, className, [
-								for (arg in HxFunctionDecl.getArgs(fn))
-									HxFunctionArg.getName(arg)
-							], function() {
-								final functionLocalTypes = phpFunctionLocalTypes(HxFunctionDecl.getArgs(fn));
-								final constructorSamples = isStatic
-									&& phpFunctionIsGeneric(fn) ? phpGenericConstructorSamplesForArgs(HxFunctionDecl.getArgs(fn)) : null;
-								withPhpGenericConstructorSamples(Php, constructorSamples, function() {
-									withPhpThisValueSlot(Php, needsThisValueSlot, function() {
-										withPhpStringExtensionMethods(Php, className, function() {
-											withPhpLocalEnumConstructors(localEnumConstructors, function() {
-												for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
-													functionLocalTypes))
-													out.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, staticFieldNames));
+							withPhpSameClassMemberContext(Php, rewriteMethodNames, rewriteFieldNames, !isStatic || isCtor ? instanceFieldTypeHints : null,
+								staticFieldNames, className, [
+									for (arg in HxFunctionDecl.getArgs(fn))
+										HxFunctionArg.getName(arg)
+								], function() {
+									final functionLocalTypes = phpFunctionLocalTypes(HxFunctionDecl.getArgs(fn));
+									final constructorSamples = isStatic
+										&& phpFunctionIsGeneric(fn) ? phpGenericConstructorSamplesForArgs(HxFunctionDecl.getArgs(fn)) : null;
+									withPhpGenericConstructorSamples(Php, constructorSamples, function() {
+										withPhpThisValueSlot(Php, needsThisValueSlot, function() {
+											withPhpStringExtensionMethods(Php, className, function() {
+												withPhpLocalEnumConstructors(localEnumConstructors, function() {
+													for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
+														functionLocalTypes))
+														out.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, staticFieldNames));
+												});
 											});
 										});
 									});
 								});
-							});
 						});
 					});
 				});
@@ -12943,6 +13072,25 @@ class SourceTargetCommon {
 				names.set(HxFieldDecl.getName(field), true);
 		}
 		return names;
+	}
+
+	static function phpInstanceFieldTypeHints(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>, visited:Map<String, Bool>):Map<String, String> {
+		final hints:Map<String, String> = [];
+		final base = phpBaseClassDecl(cls, classesByName);
+		if (base != null && !phpClassVisited(base, visited)) {
+			final baseHints = phpInstanceFieldTypeHints(base, classesByName, phpMarkClassVisited(base, visited));
+			for (name in baseHints.keys())
+				hints.set(name, baseHints.get(name));
+		}
+		for (field in HxClassDecl.getFields(cls)) {
+			if (HxFieldDecl.getIsStatic(field))
+				continue;
+			final name = HxFieldDecl.getName(field);
+			final hint = HxFieldDecl.getTypeHint(field);
+			hints.set(name, hint);
+			hints.set(sanitizeTypeName(name), hint);
+		}
+		return hints;
 	}
 
 	static function phpBaseClassDecl(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>):HxClassDecl {
@@ -16254,7 +16402,7 @@ class SourceTargetCommon {
 				final mainStaticFieldNames = phpMainClassStaticMemberNames(decl, className);
 				final mainBody = phpRewriteSameClassMembersInStmts(body, emptyPhpNames, emptyPhpNames, mainStaticFieldNames, className, []);
 				lines.push("function " + className + "_main() {");
-				withPhpSameClassMemberContext(Php, emptyPhpNames, emptyPhpNames, mainStaticFieldNames, className, [], function() {
+				withPhpSameClassMemberContext(Php, emptyPhpNames, emptyPhpNames, null, mainStaticFieldNames, className, [], function() {
 					withPhpStringExtensionMethods(Php, className, function() {
 						for (line in renderFunctionStmts(target, mainBody, "  ", className + "_main"))
 							lines.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, mainStaticFieldNames));
