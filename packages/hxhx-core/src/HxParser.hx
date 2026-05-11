@@ -1900,6 +1900,43 @@ class HxParser {
 			return cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code));
 		}
 
+		function parenthesizedContainsTopLevelFatArrow():Bool {
+			final start = currentIndex();
+			if (start < 0 || start >= source.length || source.charCodeAt(start) != "(".code)
+				return false;
+			var i = start + 1;
+			var depth = 1;
+			while (i < source.length && depth > 0) {
+				final c = source.charCodeAt(i);
+				if (depth == 1 && c == "=".code && i + 1 < source.length && source.charCodeAt(i + 1) == ">".code)
+					return true;
+				switch (c) {
+					case "(".code:
+						depth++;
+					case ")".code:
+						depth--;
+					case _:
+				}
+				i++;
+			}
+			return false;
+		}
+
+		function tryReadParenthesizedMapEntry():Null<HxExpr> {
+			if (!cur.kind.match(TLParen) || !parenthesizedContainsTopLevelFatArrow())
+				return null;
+			bump(); // '('
+			final keyExpr = parseExpr(() -> isFatArrowStart() || cur.kind.match(TRParen) || cur.kind.match(TEof));
+			if (!isFatArrowStart())
+				return keyExpr;
+			bump(); // '='
+			bump(); // '>'
+			final valueExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+			if (cur.kind.match(TRParen))
+				bump();
+			return EBinop("=>", keyExpr, valueExpr);
+		}
+
 		// Array comprehension: `[for (name in iterable) expr]`
 		//
 		// This is required by upstream `tests/RunCi.hx` for computing the `tests` list.
@@ -1934,8 +1971,14 @@ class HxParser {
 				guardExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
 				expect(TRParen, "')'");
 			}
-			final yieldExpr = parseExpr(() -> isFatArrowStart() || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
-			var result:HxExpr = EArrayComprehension(name, iterable, guardExpr, yieldExpr);
+			final mapEntryExpr = tryReadParenthesizedMapEntry();
+			final yieldExpr = mapEntryExpr == null ? parseExpr(() -> isFatArrowStart() || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof)) : mapEntryExpr;
+			var result:HxExpr = switch (yieldExpr) {
+				case EBinop("=>", keyExpr, valueExpr):
+					ECall(EIdent("__hxhx_map_comprehension"), [iterable, ELambda([name], EArrayDecl([keyExpr, valueExpr]))]);
+				case _:
+					EArrayComprehension(name, iterable, guardExpr, yieldExpr);
+			};
 			if (isFatArrowStart()) {
 				bump(); // '='
 				bump(); // '>'

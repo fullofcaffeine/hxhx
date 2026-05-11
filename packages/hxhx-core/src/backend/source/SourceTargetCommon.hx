@@ -878,6 +878,17 @@ class SourceTargetCommon {
 		return trimmed.length > 80 ? trimmed.substr(0, 80) + "..." : trimmed;
 	}
 
+	static function unsupportedBinopMessage(target:SourceNativeTarget, op:String, left:HxExpr, right:HxExpr):String {
+		final parts = [
+			targetLabel(target) + " source backend MVP unsupported binary operator: " + op,
+			"left=" + exprKind(left),
+			"right=" + exprKind(right)
+		];
+		if (target == Php && phpRenderCurrentFunctionName != null)
+			parts.push("function=" + phpRenderCurrentFunctionName);
+		return parts.join(" ");
+	}
+
 	static function concatOp(target:SourceNativeTarget):String {
 		return switch (target) {
 			case Python: "+";
@@ -946,7 +957,7 @@ class SourceTargetCommon {
 			return "(Std.int_(" + renderExpr(Java, left) + ") " + op + " Std.int_(" + renderExpr(Java, right) + "))";
 		final mapped = binopToken(target, op);
 		if (mapped == null)
-			throw targetLabel(target) + " source backend MVP unsupported binary operator: " + op;
+			throw unsupportedBinopMessage(target, op, left, right);
 		final b0 = target == Php && op == "=" ? phpAssignedValueForLvalue(left, right) : renderExpr(target, right);
 		final b = target == Php && op == "=" && shouldCopyAssignedValue(right) ? phpCopyValueExpr(b0) : b0;
 		if (target == Python && isAssignmentOp(op)) {
@@ -3972,6 +3983,12 @@ class SourceTargetCommon {
 				pythonMacroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
 			case EBinop("in", left, right):
 				pythonMacroEnum("EBinop", [pythonMacroEnum("OpIn", []), pythonMacroExpr(left, []), pythonMacroExpr(right, [])]);
+			case EBinop("=>", left, right):
+				pythonMacroEnum("EBinop", [
+					pythonMacroEnum("OpArrow", []),
+					pythonMacroExpr(left, []),
+					pythonMacroExpr(right, [])
+				]);
 			case ECall(EIdent("__hxhx_macro_if"), args):
 				final cond = args.length > 0 ? args[0] : HxExpr.EBool(false);
 				final thenExpr = args.length > 1 ? args[1] : HxExpr.ENull;
@@ -4361,6 +4378,8 @@ class SourceTargetCommon {
 				phpMacroEnum("EArrayDecl", ["[" + items.join(", ") + "]"]);
 			case EBinop("in", left, right):
 				phpMacroEnum("EBinop", [phpMacroEnum("OpIn", []), phpMacroExpr(left, []), phpMacroExpr(right, [])]);
+			case EBinop("=>", left, right):
+				phpMacroEnum("EBinop", [phpMacroEnum("OpArrow", []), phpMacroExpr(left, []), phpMacroExpr(right, [])]);
 			case ECall(EIdent("__hxhx_macro_if"), args):
 				final cond = args.length > 0 ? args[0] : HxExpr.EBool(false);
 				final thenExpr = args.length > 1 ? args[1] : HxExpr.ENull;
@@ -7061,6 +7080,8 @@ class SourceTargetCommon {
 			case EArrayDecl(items):
 				if (isMyHashTypeHint(typeHint))
 					return "__hxhx_to_my_hash(" + renderExpr(Php, expr) + ", " + (isMyHashStringTypeHint(typeHint) ? "true" : "false") + ")";
+				if (phpMapLiteralPairs(items) != null)
+					return renderExpr(Php, expr);
 				final itemHint = phpArrayItemTypeHint(typeHint);
 				if (itemHint.length > 0)
 					return "[" + [for (item in items) phpAssignedValueExpr(item, itemHint)].join(", ") + "]";

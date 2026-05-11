@@ -445,7 +445,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class Main {",
 			"  static function main() {",
 			"    var expr = macro untyped (\"bar\");",
+			"    var mapExpr = macro [1 => \"one\"];",
 			"    Sys.println(Std.string(expr));",
+			"    Sys.println(Std.string(mapExpr));",
 			"  }",
 			"}",
 		].join("\n");
@@ -3626,6 +3628,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var m = [for (x in [\"a\", \"b\"]) x => x.toUpperCase()];",
 			"    Sys.println(Std.string(m.exists(\"a\")));",
 			"    Sys.println(m.get(\"b\"));",
+			"    var wrapped = [for (x in [1, 2]) (x => x + 10)];",
+			"    Sys.println(wrapped.get(2));",
 			"  }",
 			"}",
 		].join("\n");
@@ -4930,6 +4934,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    var callbacks = [1 => value -> value + 1, 2 => value -> value + 2];",
 			"    Sys.println(Std.string(callbacks));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpTypedMapLiteralWithLambdaFieldProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  var callbacks:Map<Int, Int->Int> = new Map();",
+			"  public function new() {}",
+			"  public function run() {",
+			"    callbacks = [1 => value -> value + 1, 2 => value -> value + 2];",
+			"    Sys.println(callbacks.get(2)(40));",
+			"  }",
+			"  static function main() {",
+			"    new Main().run();",
 			"  }",
 			"}",
 		].join("\n");
@@ -6915,6 +6938,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "\"__hx_ctor\" => \"EUntyped\"", "PHP macro expressions should preserve untyped wrappers");
 		assertContains(content, "\"__hx_ctor\" => \"EParenthesis\"", "PHP macro expressions should preserve parenthesis wrappers");
 		assertContains(content, "\"__hx_ctor\" => \"CString\"", "PHP macro string constants should lower to CString nodes");
+		assertContains(content, "\"__hx_ctor\" => \"OpArrow\"", "PHP macro map entries should lower to OpArrow nodes");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -6930,6 +6954,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hx_ctor=\"EUntyped\"", "Python macro expressions should preserve untyped wrappers");
 		assertContains(content, "__hx_ctor=\"EParenthesis\"", "Python macro expressions should preserve parenthesis wrappers");
 		assertContains(content, "__hx_ctor=\"CString\"", "Python macro string constants should lower to CString nodes");
+		assertContains(content, "__hx_ctor=\"OpArrow\"", "Python macro map entries should lower to OpArrow nodes");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -8523,6 +8548,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "callbacks = {1: lambda value: (value + 1), 2: lambda value: (value + 2)}",
 			"Python map literals with lambda values should render as dictionary entries");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpTypedMapLiteralWithLambdaField():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_typed_map_lambda_field_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTypedMapLiteralWithLambdaFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_map_literal([[1, function($value) {", "PHP typed map assignments should preserve map literal entries");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP typed map lambda field support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "42\n", "generated PHP typed map lambda field output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10567,7 +10609,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP map-comprehension helper support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\nB\n", "generated PHP map-comprehension helper output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "true\nB\n12\n", "generated PHP map-comprehension helper output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -11041,6 +11083,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonValueExceptionBaseSupport();
 		assertArrayLiteral();
 		assertPythonMapLiteralWithLambda();
+		assertPhpTypedMapLiteralWithLambdaField();
 		assertPythonMapRuntimeShim();
 		assertPythonSysEnvironmentRuntimeShim();
 		assertConstructorExpression();
