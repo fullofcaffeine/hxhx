@@ -482,6 +482,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var f = (0xFFFFFFFF : UInt);",
 			"    var g = 0xFFFFFFFFi32;",
 			"    var h = 0xA0FFEEDD;",
+			"    var i = cast(-1, UInt);",
 			"    Sys.println(Std.string(a));",
 			"    Sys.println(Std.string(b));",
 			"    Sys.println(c);",
@@ -490,6 +491,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(f));",
 			"    Sys.println(Std.string(g));",
 			"    Sys.println(Std.string(h));",
+			"    Sys.println(Std.string(i));",
 			"  }",
 			"}",
 		].join("\n");
@@ -7095,6 +7097,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$f = 4294967295;", "PHP UInt casts of signed hex literals should render as unsigned 32-bit values");
 		assertContains(content, "$g = __hxhx_int_literal(\"0xFFFFFFFF\", \"i32\");", "PHP i32 hex suffix literals should preserve raw text");
 		assertContains(content, "$h = -1593839907;", "PHP unsuffixed large hex literals should emit signed Haxe Int values");
+		assertNotContains(content, "__hxhx_cast(-1, \"UInt\")", "PHP UInt casts should not lower through nominal runtime casts");
 		assertContains(content, "if ($suffix === \"\" || $suffix === \"i32\")", "PHP runtime should normalize signed Int/i32 literals");
 		assertContains(content, "function __hxhx_int32_value($value)", "PHP runtime should normalize high-bit integer equality as Haxe Int");
 		assertContains(content, "function __hxhx_int_literal($text, $suffix)", "PHP runtime should include numeric suffix literal normalization support");

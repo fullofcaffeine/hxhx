@@ -1792,6 +1792,7 @@ class SourceTargetCommon {
 					return unsigned32IntText(value);
 				case _:
 			}
+			return renderExpr(target, inner);
 		}
 		if (target == Php && phpShouldRuntimeCast(typeHint))
 			return "__hxhx_cast(" + renderExpr(target, inner) + ", " + quotePhpString(phpRuntimeCastTypeName(typeHint)) + ")";

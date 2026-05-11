@@ -21705,38 +21705,41 @@ and callExpr = fun target callee args -> try let __fallback_result_685 = let tem
 ) in Obj.magic __fallback_result_685 with
   | HxRuntime.Hx_return __ret_684 -> Obj.obj __ret_684
 and castExpr = fun target inner typeHint -> try let __fallback_result_694 = (
-  ignore (if target = Php && isUIntTypeHint (typeHint : string) then ignore (if (match inner with
-    | HxExpr.ENull -> 0
-    | HxExpr.EBool _ -> 1
-    | HxExpr.EString _ -> 2
-    | HxExpr.EInt _ -> 3
-    | HxExpr.EFloat _ -> 4
-    | HxExpr.EEnumValue _ -> 5
-    | HxExpr.EThis -> 6
-    | HxExpr.ESuper -> 7
-    | HxExpr.EIdent _ -> 8
-    | HxExpr.EField (_, _) -> 9
-    | HxExpr.ECall (_, _) -> 10
-    | HxExpr.EMacroExpr (_, _) -> 11
-    | HxExpr.EMacroType _ -> 12
-    | HxExpr.ELambda (_, _) -> 13
-    | HxExpr.ETryCatchRaw _ -> 14
-    | HxExpr.ESwitchRaw _ -> 15
-    | HxExpr.ESwitch (_, _, _) -> 16
-    | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
-    | HxExpr.EBinop (_, _, _) -> 19
-    | HxExpr.ETernary (_, _, _) -> 20
-    | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-    | HxExpr.EArrayDecl _ -> 23
-    | HxExpr.EArrayAccess (_, _) -> 24
-    | HxExpr.ERange (_, _) -> 25
-    | HxExpr.ECast (_, _) -> 26
-    | HxExpr.EUntyped _ -> 27
-    | HxExpr.EUnsupported _ -> 28) = 3 then ignore (let _g = match inner with
-    | HxExpr.EInt __enum_param_692 -> __enum_param_692
-    | _ -> failwith "Unexpected enum parameter" in let value = _g in if value < 0 then raise (HxRuntime.Hx_return (Obj.repr (unsigned32IntText value : string))) else ignore ()) else ignore ()) else ());
+  ignore (if target = Php && isUIntTypeHint (typeHint : string) then ignore ((
+    ignore (if (match inner with
+      | HxExpr.ENull -> 0
+      | HxExpr.EBool _ -> 1
+      | HxExpr.EString _ -> 2
+      | HxExpr.EInt _ -> 3
+      | HxExpr.EFloat _ -> 4
+      | HxExpr.EEnumValue _ -> 5
+      | HxExpr.EThis -> 6
+      | HxExpr.ESuper -> 7
+      | HxExpr.EIdent _ -> 8
+      | HxExpr.EField (_, _) -> 9
+      | HxExpr.ECall (_, _) -> 10
+      | HxExpr.EMacroExpr (_, _) -> 11
+      | HxExpr.EMacroType _ -> 12
+      | HxExpr.ELambda (_, _) -> 13
+      | HxExpr.ETryCatchRaw _ -> 14
+      | HxExpr.ESwitchRaw _ -> 15
+      | HxExpr.ESwitch (_, _, _) -> 16
+      | HxExpr.ENew (_, _) -> 17
+      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EBinop (_, _, _) -> 19
+      | HxExpr.ETernary (_, _, _) -> 20
+      | HxExpr.EAnon (_, _) -> 21
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
+      | HxExpr.EArrayDecl _ -> 23
+      | HxExpr.EArrayAccess (_, _) -> 24
+      | HxExpr.ERange (_, _) -> 25
+      | HxExpr.ECast (_, _) -> 26
+      | HxExpr.EUntyped _ -> 27
+      | HxExpr.EUnsupported _ -> 28) = 3 then ignore (let _g = match inner with
+      | HxExpr.EInt __enum_param_692 -> __enum_param_692
+      | _ -> failwith "Unexpected enum parameter" in let value = _g in if value < 0 then raise (HxRuntime.Hx_return (Obj.repr (unsigned32IntText value : string))) else ignore ()) else ignore ());
+    raise (HxRuntime.Hx_return (Obj.repr (renderExpr (Obj.magic target) (Obj.magic inner))))
+  )) else ());
   ignore (if target = Php && phpShouldRuntimeCast (typeHint : string) then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_cast(" ^ HxString.toStdString (renderExpr (Obj.magic target) (Obj.magic inner))) ^ ", ") ^ HxString.toStdString (quotePhpString (phpRuntimeCastTypeName (typeHint : string) : string))) ^ ")" : string))) else ());
   renderExpr (Obj.magic target) (Obj.magic inner)
 ) in Obj.magic __fallback_result_694 with
