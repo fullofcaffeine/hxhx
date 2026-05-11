@@ -136,6 +136,7 @@ class ParserStageScanHelpers {
 				continue;
 
 			final className = nameTok.text;
+			final isInterface = t.text == "interface";
 			i = nameTok.nextPos;
 			final isMain = mainClassName != null && className == mainClassName;
 			final alreadySeen = seen.exists(className);
@@ -151,7 +152,8 @@ class ParserStageScanHelpers {
 			i = scanned.nextPos;
 
 			if (shouldRecord)
-				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, classMetadata));
+				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, classMetadata, isInterface,
+					header.implementsPaths));
 		}
 
 		return out;
@@ -199,25 +201,38 @@ class ParserStageScanHelpers {
 		return out;
 	}
 
-	static function scanClassHeader(source:String, start:Int):{bodyStart:Int, nextPos:Int, extendsPath:String} {
+	static function scanClassHeader(source:String, start:Int):{
+		bodyStart:Int,
+		nextPos:Int,
+		extendsPath:String,
+		implementsPaths:Array<String>
+	} {
 		var extendsPath = "";
-		var readingExtends = false;
+		var mode = "";
 		var genericDepth = 0;
-		final extendsParts = new Array<String>();
+		var parts = new Array<String>();
+		final implementsPaths = new Array<String>();
+		function flushPath():Void {
+			if (parts.length == 0 || mode.length == 0)
+				return;
+			final path = parts.join(".");
+			if (mode == "extends")
+				extendsPath = path;
+			else if (mode == "implements")
+				implementsPaths.push(path);
+			parts = [];
+		}
 
 		var tok = scanNextToken(source, start);
 		while (tok.text.length > 0 && tok.text != "{") {
 			if (tok.isIdent) {
-				if (readingExtends) {
-					if (tok.text == "implements") {
-						readingExtends = false;
-					} else if (genericDepth == 0) {
-						extendsParts.push(tok.text);
-					}
-				} else if (tok.text == "extends") {
-					readingExtends = true;
+				if (genericDepth == 0 && (tok.text == "extends" || tok.text == "implements")) {
+					flushPath();
+					mode = tok.text;
+				} else if (mode.length > 0 && genericDepth == 0) {
+					parts.push(tok.text);
 				}
-			} else if (readingExtends) {
+			} else if (mode.length > 0) {
 				switch (tok.text) {
 					case ".":
 					case "<":
@@ -226,22 +241,27 @@ class ParserStageScanHelpers {
 						if (genericDepth > 0)
 							genericDepth -= 1;
 					case ",":
-						if (genericDepth == 0)
-							readingExtends = false;
+						if (genericDepth == 0) {
+							flushPath();
+							if (mode == "extends")
+								mode = "";
+						}
 					case _:
-						if (genericDepth == 0)
-							readingExtends = false;
+						if (genericDepth == 0) {
+							flushPath();
+							mode = "";
+						}
 				}
 			}
 			tok = scanNextToken(source, tok.nextPos);
 		}
 
-		if (extendsParts.length > 0)
-			extendsPath = extendsParts.join(".");
+		flushPath();
 		return {
 			bodyStart: tok.text == "{" ? tok.nextPos : -1,
 			nextPos: tok.nextPos,
-			extendsPath: extendsPath
+			extendsPath: extendsPath,
+			implementsPaths: implementsPaths
 		};
 	}
 

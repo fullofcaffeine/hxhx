@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable name : string; mutable hasStaticMain : bool; mutable functions : HxFunctionDecl.t HxArray.t; mutable fields : HxFieldDecl.t HxArray.t; mutable extendsPath : string; mutable metadata : string HxArray.t }
+type t = { __hx_type : Obj.t; mutable name : string; mutable hasStaticMain : bool; mutable functions : HxFunctionDecl.t HxArray.t; mutable fields : HxFieldDecl.t HxArray.t; mutable extendsPath : string; mutable metadata : string HxArray.t; mutable isInterface : bool; mutable implementsPaths : string HxArray.t }
 
-let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 isInterface2 implementsPaths2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null); isInterface = false; implementsPaths = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -60,9 +60,35 @@ let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 
               tempRight3 := __assign_16;
               __assign_16
             ));
-            let __assign_17 = Obj.magic (!tempRight3) in (
+            ignore (let __assign_17 = Obj.magic (!tempRight3) in (
               (Obj.magic self : t).metadata <- __assign_17;
               __assign_17
+            ));
+            let tempRight4 = ref (false : bool) in (
+              ignore (if isInterface2 == HxRuntime.hx_null then let __assign_18 = false in (
+                tempRight4 := __assign_18;
+                __assign_18
+              ) else let __assign_19 = let __nullable_bool_20 = isInterface2 in if __nullable_bool_20 == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool_20 in (
+                tempRight4 := __assign_19;
+                __assign_19
+              ));
+              ignore (let __assign_21 = !tempRight4 in (
+                (Obj.magic self : t).isInterface <- __assign_21;
+                __assign_21
+              ));
+              let tempRight5 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+                ignore (if implementsPaths2 == Obj.magic (HxRuntime.hx_null) then let __assign_22 = Obj.magic (let __arr_23 = HxArray.create () in __arr_23) in (
+                  tempRight5 := __assign_22;
+                  __assign_22
+                ) else let __assign_24 = Obj.magic implementsPaths2 in (
+                  tempRight5 := __assign_24;
+                  __assign_24
+                ));
+                let __assign_25 = Obj.magic (!tempRight5) in (
+                  (Obj.magic self : t).implementsPaths <- __assign_25;
+                  __assign_25
+                )
+              )
             )
           )
         )
@@ -72,7 +98,7 @@ let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null); extendsPath = ""; metadata = Obj.magic (HxRuntime.hx_null); isInterface = false; implementsPaths = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getName = fun c -> (Obj.magic c : t).name
 
@@ -85,3 +111,7 @@ let getFields = fun c -> (Obj.magic c : t).fields
 let getExtendsPath = fun c -> (Obj.magic c : t).extendsPath
 
 let getMetadata = fun c -> (Obj.magic c : t).metadata
+
+let getIsInterface = fun c -> (Obj.magic c : t).isInterface
+
+let getImplementsPaths = fun c -> (Obj.magic c : t).implementsPaths

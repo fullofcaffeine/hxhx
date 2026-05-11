@@ -374,6 +374,14 @@ class ParserStage {
 							&& scannedExtendsPath.length > 0 ? scannedExtendsPath : HxClassDecl.getExtendsPath(cls);
 						if (extendsPath != HxClassDecl.getExtendsPath(cls))
 							changed = true;
+						final isInterface = HxClassDecl.getIsInterface(cls) || HxClassDecl.getIsInterface(scanned);
+						if (isInterface != HxClassDecl.getIsInterface(cls))
+							changed = true;
+						final scannedImplementsPaths = HxClassDecl.getImplementsPaths(scanned);
+						final implementsPaths = scannedImplementsPaths != null
+							&& scannedImplementsPaths.length > 0 ? scannedImplementsPaths : HxClassDecl.getImplementsPaths(cls);
+						if (!sameMetadata(implementsPaths, HxClassDecl.getImplementsPaths(cls)))
+							changed = true;
 						final patchedFns = new Array<HxFunctionDecl>();
 						final existingFnNames:Map<String, Bool> = new Map();
 						final scannedFnUseByName:Map<String, Int> = new Map();
@@ -465,7 +473,7 @@ class ParserStage {
 							return cls;
 						staticPatchApplied = true;
 						return new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), patchedFns, patchedFields, extendsPath,
-							classMetadata);
+							classMetadata, isInterface, implementsPaths);
 					}
 
 					// Some upstream modules have a non-class main type (notably enums).
@@ -526,7 +534,7 @@ class ParserStage {
 							final functions = HxClassDecl.getFunctions(main).copy();
 							functions.push(topMain);
 							main = new HxClassDecl(HxClassDecl.getName(main), true, functions, HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main),
-								HxClassDecl.getMetadata(main));
+								HxClassDecl.getMetadata(main), HxClassDecl.getIsInterface(main), HxClassDecl.getImplementsPaths(main));
 						}
 					}
 
@@ -535,7 +543,8 @@ class ParserStage {
 						if (mainName == null || mainName.length == 0 || mainName == "Unknown") {
 							final fallbackName = expectedMainClass != null && expectedMainClass.length > 0 ? expectedMainClass : "Unknown";
 							main = new HxClassDecl(fallbackName, HxClassDecl.getHasStaticMain(main), HxClassDecl.getFunctions(main),
-								HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main), HxClassDecl.getMetadata(main));
+								HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main), HxClassDecl.getMetadata(main),
+								HxClassDecl.getIsInterface(main), HxClassDecl.getImplementsPaths(main));
 							mainName = fallbackName;
 						}
 						final existingFieldNames:Map<String, Bool> = new Map();
@@ -558,7 +567,8 @@ class ParserStage {
 							for (f in HxClassDecl.getFields(main))
 								mergedFields.push(f);
 							main = new HxClassDecl(HxClassDecl.getName(main), HxClassDecl.getHasStaticMain(main), HxClassDecl.getFunctions(main),
-								mergedFields, HxClassDecl.getExtendsPath(main), HxClassDecl.getMetadata(main));
+								mergedFields, HxClassDecl.getExtendsPath(main), HxClassDecl.getMetadata(main), HxClassDecl.getIsInterface(main),
+								HxClassDecl.getImplementsPaths(main));
 							staticPatchApplied = true;
 						}
 					}
@@ -892,6 +902,7 @@ class ParserStage {
 				continue;
 
 			final className = nameTok.text;
+			final isInterface = t.text == "interface";
 			i = nameTok.nextPos;
 			final isMain = mainClassName != null && className == mainClassName;
 			final alreadySeen = seen.exists(className);
@@ -907,31 +918,45 @@ class ParserStage {
 			i = scanned.nextPos;
 
 			if (shouldRecord)
-				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, classMetadata));
+				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, classMetadata, isInterface,
+					header.implementsPaths));
 		}
 
 		return out;
 	}
 
-	static function scanClassHeader(source:String, start:Int):{bodyStart:Int, nextPos:Int, extendsPath:String} {
+	static function scanClassHeader(source:String, start:Int):{
+		bodyStart:Int,
+		nextPos:Int,
+		extendsPath:String,
+		implementsPaths:Array<String>
+	} {
 		var extendsPath = "";
-		var readingExtends = false;
+		var mode = "";
 		var genericDepth = 0;
-		final extendsParts = new Array<String>();
+		var parts = new Array<String>();
+		final implementsPaths = new Array<String>();
+		function flushPath():Void {
+			if (parts.length == 0 || mode.length == 0)
+				return;
+			final path = parts.join(".");
+			if (mode == "extends")
+				extendsPath = path;
+			else if (mode == "implements")
+				implementsPaths.push(path);
+			parts = [];
+		}
 
 		var tok = scanNextToken(source, start);
 		while (tok.text.length > 0 && tok.text != "{") {
 			if (tok.isIdent) {
-				if (readingExtends) {
-					if (tok.text == "implements") {
-						readingExtends = false;
-					} else if (genericDepth == 0) {
-						extendsParts.push(tok.text);
-					}
-				} else if (tok.text == "extends") {
-					readingExtends = true;
+				if (genericDepth == 0 && (tok.text == "extends" || tok.text == "implements")) {
+					flushPath();
+					mode = tok.text;
+				} else if (mode.length > 0 && genericDepth == 0) {
+					parts.push(tok.text);
 				}
-			} else if (readingExtends) {
+			} else if (mode.length > 0) {
 				switch (tok.text) {
 					case ".":
 					case "<":
@@ -940,22 +965,27 @@ class ParserStage {
 						if (genericDepth > 0)
 							genericDepth -= 1;
 					case ",":
-						if (genericDepth == 0)
-							readingExtends = false;
+						if (genericDepth == 0) {
+							flushPath();
+							if (mode == "extends")
+								mode = "";
+						}
 					case _:
-						if (genericDepth == 0)
-							readingExtends = false;
+						if (genericDepth == 0) {
+							flushPath();
+							mode = "";
+						}
 				}
 			}
 			tok = scanNextToken(source, tok.nextPos);
 		}
 
-		if (extendsParts.length > 0)
-			extendsPath = extendsParts.join(".");
+		flushPath();
 		return {
 			bodyStart: tok.text == "{" ? tok.nextPos : -1,
 			nextPos: tok.nextPos,
-			extendsPath: extendsPath
+			extendsPath: extendsPath,
+			implementsPaths: implementsPaths
 		};
 	}
 

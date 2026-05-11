@@ -16,15 +16,19 @@ class HxClassDecl {
 	public final fields:Array<HxFieldDecl>;
 	public final extendsPath:String;
 	public final metadata:Array<String>;
+	public final isInterface:Bool;
+	public final implementsPaths:Array<String>;
 
 	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>, ?fields:Array<HxFieldDecl>, ?extendsPath:String,
-			?metadata:Array<String>) {
+			?metadata:Array<String>, ?isInterface:Bool, ?implementsPaths:Array<String>) {
 		this.name = name;
 		this.hasStaticMain = hasStaticMain;
 		this.functions = functions == null ? [] : functions;
 		this.fields = fields == null ? [] : fields;
 		this.extendsPath = extendsPath == null ? "" : extendsPath;
 		this.metadata = metadata == null ? [] : metadata;
+		this.isInterface = isInterface == null ? false : isInterface;
+		this.implementsPaths = implementsPaths == null ? [] : implementsPaths;
 	}
 
 	/**
@@ -72,5 +76,13 @@ class HxClassDecl {
 
 	public static function getMetadata(c:HxClassDecl):Array<String> {
 		return c.metadata;
+	}
+
+	public static function getIsInterface(c:HxClassDecl):Bool {
+		return c.isInterface;
+	}
+
+	public static function getImplementsPaths(c:HxClassDecl):Array<String> {
+		return c.implementsPaths;
 	}
 }

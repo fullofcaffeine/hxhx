@@ -1793,7 +1793,22 @@ class SourceTargetCommon {
 				case _:
 			}
 		}
+		if (target == Php && phpShouldRuntimeCast(typeHint))
+			return "__hxhx_cast(" + renderExpr(target, inner) + ", " + quotePhpString(phpRuntimeCastTypeName(typeHint)) + ")";
 		return renderExpr(target, inner);
+	}
+
+	static function phpShouldRuntimeCast(typeHint:String):Bool {
+		final compact = phpRuntimeCastTypeName(typeHint);
+		if (compact.length == 0 || isDynamicTypeHint(compact) || compact == "Void")
+			return false;
+		if (compact.indexOf("->") >= 0 || StringTools.startsWith(compact, "{") || StringTools.startsWith(compact, "("))
+			return false;
+		return true;
+	}
+
+	static function phpRuntimeCastTypeName(typeHint:String):String {
+		return phpUnwrapNullTypeHint(removeTypeHintWhitespace(trimLeadingTypeColon(typeHint)));
 	}
 
 	static function isUIntTypeHint(typeHint:String):Bool {
@@ -10818,7 +10833,7 @@ class SourceTargetCommon {
 			if (out.length > 0)
 				out.push("");
 			final pendingClassName = sanitizePhpTypeName(HxClassDecl.getName(cls));
-			for (line in renderPhpHelperClass(cls, moduleByClassName.get(pendingClassName), classesByName, postStaticInitializers, scanClasses))
+			for (line in renderPhpHelperClass(cls, moduleByClassName.get(pendingClassName), classesByName, postStaticInitializers, scanClasses, pendingNames))
 				out.push(line);
 		}
 		if (postStaticInitializers.length > 0) {
@@ -10842,7 +10857,11 @@ class SourceTargetCommon {
 	}
 
 	static function phpMainClassNeedsRuntimeSupport(cls:HxClassDecl):Bool {
+		if (HxClassDecl.getIsInterface(cls))
+			return true;
 		if (HxClassDecl.getExtendsPath(cls) != null && HxClassDecl.getExtendsPath(cls).length > 0)
+			return true;
+		if (HxClassDecl.getImplementsPaths(cls).length > 0)
 			return true;
 		if (HxClassDecl.getFields(cls).length > 0)
 			return true;
@@ -11910,16 +11929,35 @@ class SourceTargetCommon {
 	}
 
 	static function renderPhpHelperClass(cls:HxClassDecl, moduleDecl:HxModuleDecl, classesByName:Map<String, HxClassDecl>,
-			postStaticInitializers:Array<String>, scanClasses:Array<HxClassDecl>):Array<String> {
+			postStaticInitializers:Array<String>, scanClasses:Array<HxClassDecl>, emittedClassNames:Map<String, Bool>):Array<String> {
 		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
 		final localEnumConstructors = phpModuleLocalEnumConstructorMap(moduleDecl);
 		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
-		final classHeader = baseName == null
-			|| baseName.length == 0 ? "class " + className + " {" : "class "
-				+ className
-				+ " extends "
-				+ baseName
-				+ " {";
+		final isInterface = HxClassDecl.getIsInterface(cls);
+		if (isInterface) {
+			final baseDecl = baseName == null || classesByName == null ? null : classesByName.get(baseName);
+			final canExtendBase = baseName != null
+				&& baseName.length > 0
+				&& (emittedClassNames == null || emittedClassNames.exists(baseName))
+				&& baseDecl != null
+				&& HxClassDecl.getIsInterface(baseDecl);
+			final interfaceHeader = !canExtendBase ? "interface " + className + " {" : "interface " + className + " extends " + baseName + " {";
+			return [interfaceHeader, "}"];
+		}
+		final implementsNames = new Array<String>();
+		for (path in HxClassDecl.getImplementsPaths(cls)) {
+			final name = phpBaseClassName(path);
+			final implementedDecl = name == null || classesByName == null ? null : classesByName.get(name);
+			if (name != null
+				&& name.length > 0
+				&& (emittedClassNames == null || emittedClassNames.exists(name))
+				&& implementedDecl != null
+				&& HxClassDecl.getIsInterface(implementedDecl))
+				implementsNames.push(name);
+		}
+		final extendsText = baseName == null || baseName.length == 0 ? "" : " extends " + baseName;
+		final implementsText = implementsNames.length == 0 ? "" : " implements " + implementsNames.join(", ");
+		final classHeader = "class " + className + extendsText + implementsText + " {";
 		final out = ["#[\\AllowDynamicProperties]", classHeader];
 		var memberCount = 0;
 		final instanceFields = new Array<HxFieldDecl>();
@@ -15482,6 +15520,10 @@ class SourceTargetCommon {
 				lines.push("function __hxhx_downcast($value, $type) {");
 				lines.push("  return __hxhx_is_of_type($value, $type) ? $value : null;");
 				lines.push("}");
+				lines.push("function __hxhx_cast($value, $type) {");
+				lines.push("  if ($value === null || __hxhx_is_of_type($value, $type)) return $value;");
+				lines.push("  throw ValueException::thrown(\"Class cast error\");");
+				lines.push("}");
 				lines.push("function __hxhx_post_update_var(&$value, $delta) {");
 				lines.push("  $old = $value;");
 				lines.push("  $value = __hxhx_is_int64($old) ? __hxhx_int64_add($old, $delta) : $old + $delta;");
@@ -16094,7 +16136,7 @@ class SourceTargetCommon {
 				lines.push("    return false;");
 				lines.push("  }");
 				lines.push("  foreach ($candidates as $candidate) {");
-				lines.push("    if (is_string($candidate) && $candidate !== \"\" && class_exists($candidate) && $value instanceof $candidate) return true;");
+				lines.push("    if (is_string($candidate) && $candidate !== \"\" && (class_exists($candidate) || interface_exists($candidate)) && $value instanceof $candidate) return true;");
 				lines.push("  }");
 				lines.push("  if ($hasBoxedValue) return __hxhx_is_of_type($boxedValue, $type);");
 				lines.push("  return false;");

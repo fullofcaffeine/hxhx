@@ -931,6 +931,27 @@ class HxParser {
 		return parts.join(".");
 	}
 
+	function skipHeaderTypeParameters():Void {
+		if (!isOtherChar("<"))
+			return;
+		var depth = 0;
+		while (!cur.kind.match(TEof)) {
+			if (isOtherChar("<")) {
+				bump();
+				depth += 1;
+				continue;
+			}
+			if (isOtherChar(">")) {
+				bump();
+				depth -= 1;
+				if (depth <= 0)
+					return;
+				continue;
+			}
+			bump();
+		}
+	}
+
 	function readImportPath():String {
 		// Like `readDottedPath`, but accepts a trailing `.*` wildcard.
 		final parts = new Array<String>();
@@ -4414,16 +4435,31 @@ class HxParser {
 				case TKeyword(KClass) | TIdent("interface"):
 					final classMetadata = pendingTypeMetadata.copy();
 					pendingTypeMetadata = [];
+					final isInterface = cur.kind.match(TIdent("interface"));
 					bump(); // 'class' / 'interface'
 					final className = readIdent("class name");
 					var extendsPath = "";
-					// Capture the simple superclass path while still ignoring generic
-					// parameters and implements clauses in this bootstrap parser.
+					final implementsPaths = new Array<String>();
+					var readingImplements = false;
 					while (!cur.kind.match(TLBrace) && !cur.kind.match(TEof)) {
 						switch (cur.kind) {
 							case TIdent(name) if (name == "extends"):
 								bump();
 								extendsPath = readDottedPath();
+								skipHeaderTypeParameters();
+								readingImplements = false;
+							case TIdent(name) if (name == "implements"):
+								bump();
+								readingImplements = true;
+							case TIdent(_) if (readingImplements):
+								implementsPaths.push(readDottedPath());
+								skipHeaderTypeParameters();
+								if (cur.kind.match(TComma)) {
+									bump();
+									readingImplements = true;
+								} else {
+									readingImplements = false;
+								}
 							case _:
 								bump();
 						}
@@ -4443,7 +4479,7 @@ class HxParser {
 						}
 					}
 
-					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata));
+					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata, isInterface, implementsPaths));
 				// `parseClassMembers` consumes the closing `}`.
 				case TKeyword(KFunction):
 					pendingTypeMetadata = [];
@@ -4484,7 +4520,7 @@ class HxParser {
 			final mergedFunctions = moduleFunctions.concat(HxClassDecl.getFunctions(base));
 			final mergedFields = moduleFields.concat(HxClassDecl.getFields(base));
 			chosen = new HxClassDecl(HxClassDecl.getName(base), HxClassDecl.getHasStaticMain(base) || hasToplevelMain, mergedFunctions, mergedFields,
-				HxClassDecl.getExtendsPath(base), HxClassDecl.getMetadata(base));
+				HxClassDecl.getExtendsPath(base), HxClassDecl.getMetadata(base), HxClassDecl.getIsInterface(base), HxClassDecl.getImplementsPaths(base));
 			var replaced = false;
 			for (i in 0...classes.length) {
 				if (HxClassDecl.getName(classes[i]) == HxClassDecl.getName(chosen)) {

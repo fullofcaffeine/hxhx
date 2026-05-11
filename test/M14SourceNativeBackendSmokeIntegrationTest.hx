@@ -3215,6 +3215,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpInterfaceCastProgram():GenIrProgram {
+		final src = [
+			"interface CapA {}",
+			"interface CapB extends CapA {}",
+			"class OnlyA implements CapA { public function new() {} }",
+			"class Both implements CapB { public function new() {} }",
+			"class Main {",
+			"  static function main() {",
+			"    var a = new OnlyA();",
+			"    Sys.println(Std.string(cast(a, CapA) == a));",
+			"    try {",
+			"      cast(a, CapB);",
+			"      Sys.println(\"missing\");",
+			"    } catch (e:Dynamic) {",
+			"      Sys.println(\"raised\");",
+			"    }",
+			"    var b = new Both();",
+			"    Sys.println(Std.string(cast(b, CapA) == b));",
+			"    Sys.println(Std.string(cast(b, CapB) == b));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpUserClassTypeCheckProgram():GenIrProgram {
 		final src = [
 			"package unit;",
@@ -9008,6 +9035,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpInterfaceCasts():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_interface_casts_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpInterfaceCastProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "interface CapA {", "PHP source backend should emit Haxe interfaces as PHP interfaces");
+		assertContains(content, "interface CapB extends CapA {", "PHP source backend should preserve interface inheritance");
+		assertContains(content, "class OnlyA implements CapA {", "PHP source backend should preserve class interface implementation");
+		assertContains(content, "class Both implements CapB {", "PHP source backend should preserve transitive interface implementation");
+		assertContains(content, "__hxhx_cast($a, \"CapA\")", "PHP nominal casts should use the runtime cast helper");
+		assertContains(content, "__hxhx_cast($a, \"CapB\")", "PHP failed interface casts should be checked at runtime");
+		assertContains(content, "interface_exists($candidate)", "PHP runtime type checks should include interface candidates");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP interface casts should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\nraised\ntrue\ntrue\n", "generated PHP interface cast output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpUserClassTypeCheck():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_user_class_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11116,6 +11166,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTryCatchRawExpression();
 		assertPythonTypeCheck();
 		assertPhpTypeCheck();
+		assertPhpInterfaceCasts();
 		assertPhpUserClassTypeCheck();
 		assertPhpEnumTypeCheck();
 		assertPhpTypeReflection();
