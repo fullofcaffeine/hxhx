@@ -16335,7 +16335,7 @@ let phpKnownStaticMethod = fun typePath field -> try let __fallback_result_2281 
   let tempResult = ref (false : bool) in (
     ignore (match typePath with
       | "Math" -> (match field with
-        | "abs" | "acos" | "asin" | "atan" | "atan2" | "ceil" | "cos" | "exp" | "fceil" | "ffloor" | "floor" | "fround" | "isFinite" | "isNaN" | "log" | "max" | "min" | "pow" | "round" | "sin" | "sqrt" | "tan" -> let __assign_2278 = true in (
+        | "abs" | "acos" | "asin" | "atan" | "atan2" | "ceil" | "cos" | "exp" | "fceil" | "ffloor" | "floor" | "fround" | "isFinite" | "isNaN" | "log" | "max" | "min" | "pow" | "random" | "round" | "sin" | "sqrt" | "tan" -> let __assign_2278 = true in (
           tempResult := __assign_2278;
           __assign_2278
         )
@@ -31584,6 +31584,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public static function pow($a, $b) {");
       ignore (HxArray.push lines "    return pow($a, $b);");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  public static function random() {");
+      ignore (HxArray.push lines "    return mt_rand() / (mt_getrandmax() + 1.0);");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public static function sin($value) {");
       ignore (HxArray.push lines "    return sin($value);");

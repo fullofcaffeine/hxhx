@@ -2656,6 +2656,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpMathRandomRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var value = Math.random();",
+			"    Sys.println(Std.string(value >= 0.0 && value < 1.0));",
+			"    Sys.println(Std.string(Math.isFinite(value)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTernaryAssignmentLogicalProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -6831,6 +6846,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static function ffloor($value)", "PHP Math shim should support ffloor");
 		assertContains(content, "public static function fceil($value)", "PHP Math shim should support fceil");
 		assertContains(content, "public static function fround($value)", "PHP Math shim should support Haxe fround");
+		assertContains(content, "public static function random()", "PHP Math shim should support random");
 		assertContains(content, "return floor($value + 0.5);", "PHP Math.round should match Haxe half-up-toward-positive behavior");
 		assertContains(content, "Math::isNaN(__hxhx_mod(5.0, 0.0))", "PHP Math.isNaN should be callable with modulo-derived NaN");
 		assertContains(content, "Math::floor((-1.5))", "PHP Math.floor should lower to the runtime shim");
@@ -6839,6 +6855,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "Math::ffloor((-10000000000.7))", "PHP Math.ffloor should lower to the runtime shim");
 		assertContains(content, "Math::fceil((-10000000000.7))", "PHP Math.fceil should lower to the runtime shim");
 		assertContains(content, "Math::fround((-10000000000.7))", "PHP Math.fround should lower to the runtime shim");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpMathRandomRuntime():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_math_random_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpMathRandomRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "Math::random()", "PHP Math.random should lower to the runtime shim");
+		assertContains(content, "return mt_rand() / (mt_getrandmax() + 1.0);", "PHP Math.random should return a Float in the half-open [0, 1) range");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Math.random should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\n", "generated PHP Math.random output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10985,6 +11019,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpModuloMultiplicationPrecedence();
 		assertPhpFloatModulo();
 		assertPhpMathRuntime();
+		assertPhpMathRandomRuntime();
 		assertPhpTernaryAssignmentLogical();
 		assertPhpStringIndexOf();
 		assertPhpStringFromCharCode();

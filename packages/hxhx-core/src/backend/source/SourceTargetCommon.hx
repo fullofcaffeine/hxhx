@@ -4936,7 +4936,7 @@ class SourceTargetCommon {
 			case "Math":
 				switch (field) {
 					case "abs" | "acos" | "asin" | "atan" | "atan2" | "ceil" | "cos" | "exp" | "fceil" | "ffloor" | "floor" | "fround" | "isFinite" |
-						"isNaN" | "log" | "max" | "min" | "pow" | "round" | "sin" | "sqrt" | "tan":
+						"isNaN" | "log" | "max" | "min" | "pow" | "random" | "round" | "sin" | "sqrt" | "tan":
 						true;
 					case _:
 						false;
@@ -16330,6 +16330,9 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("  public static function pow($a, $b) {");
 				lines.push("    return pow($a, $b);");
+				lines.push("  }");
+				lines.push("  public static function random() {");
+				lines.push("    return mt_rand() / (mt_getrandmax() + 1.0);");
 				lines.push("  }");
 				lines.push("  public static function sin($value) {");
 				lines.push("    return sin($value);");
