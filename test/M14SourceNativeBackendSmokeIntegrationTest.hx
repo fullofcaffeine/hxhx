@@ -1835,6 +1835,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpPoint3UnaryScaleRuntimeProgram():GenIrProgram {
+		final src = [
+			"class MyPoint3 {",
+			"  public var x:Int;",
+			"  public var y:Int;",
+			"  public var z:Int;",
+			"  public function new(x:Int, y:Int, z:Int) {",
+			"    this.x = x;",
+			"    this.y = y;",
+			"    this.z = z;",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var point = new MyPoint3(1, 2, 3);",
+			"    var neg = -point;",
+			"    Sys.println(Std.string(neg != point));",
+			"    Sys.println(Std.string(point));",
+			"    Sys.println(neg.toString());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpLambdaListRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5750,6 +5777,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpPoint3UnaryScaleRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_point3_unary_scale_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpPoint3UnaryScaleRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public function toString() {", "PHP Point3 payload classes should expose abstract-style toString");
+		assertContains(content, "$neg = __hxhx_neg($point);", "PHP Point3 unary minus should lower through the abstract-aware negation helper");
+		assertContains(content, "__hxhx_to_string_value($neg)",
+			"PHP Point3-style toString calls should lower through the abstract-aware string conversion helper");
+		assertContains(content, "if (__hxhx_is_point3($value)) return __hxhx_mul($value, -1);",
+			"PHP negation helper should dispatch Point3-style abstract payloads through scalar multiplication");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Point3 unary scale support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n(1,2,3)\n(-1,-2,-3)\n", "generated PHP Point3 unary scale output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpLambdaListRuntimeSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_lambda_list_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -6432,7 +6481,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function foo($x)", "PHP should emit the same-class static helper method");
 		assertContains(content, "__hxhx_mul(2, Main::foo($x))", "PHP same-class static helper calls should not lower as local variable calls");
-		assertContains(content, "(-Main::foo($x))", "PHP unary expressions should preserve same-class static helper calls");
+		assertContains(content, "__hxhx_neg(Main::foo($x))", "PHP unary expressions should preserve same-class static helper calls");
 		assertNotContains(content, "$foo($x)", "PHP same-class static helper calls should not emit undefined local callable variables");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -10428,6 +10477,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpHaxeSerializerRuntimeSupport();
 		assertPhpHaxeSerializerImportRuntimeSupport();
 		assertPhpPoint3StringEqualityRuntimeSupport();
+		assertPhpPoint3UnaryScaleRuntimeSupport();
 		assertPhpLambdaListRuntimeSupport();
 		assertPhpGenericStackRuntimeSupport();
 		assertPhpMapKeysIteratorRuntimeSupport();

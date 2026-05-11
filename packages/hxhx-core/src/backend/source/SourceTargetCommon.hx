@@ -1423,12 +1423,23 @@ class SourceTargetCommon {
 				preIncrementExpr(target, inner, -1);
 			case "-" if (target == Php && phpExprIsInt64Value(inner)):
 				"__hxhx_int64_neg(" + rendered + ")";
+			case "-" if (target == Php && phpUnaryMinusNeedsHelper(inner)):
+				"__hxhx_neg(" + rendered + ")";
 			case "~" if (target == Php && phpExprIsInt64Value(inner)):
 				"__hxhx_int64_not(" + rendered + ")";
 			case "-", "+", "~":
 				"(" + op + rendered + ")";
 			default:
 				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + op;
+		};
+	}
+
+	static function phpUnaryMinusNeedsHelper(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EInt(_) | EFloat(_) | ECall(EIdent("__hxhx_int_literal"), _):
+				false;
+			case _:
+				true;
 		};
 	}
 
@@ -1838,6 +1849,8 @@ class SourceTargetCommon {
 						return "__hxhx_map_literal_from_object(" + renderExpr(Php, receiver) + ")->toString()";
 					case _:
 				}
+				if (field == "toString" && args.length == 0 && phpPoint3LikeReceiver(receiver))
+					return "__hxhx_to_string_value(" + renderExpr(Php, receiver) + ")";
 				if (phpShouldUseFunctionBindSyntax(receiver, field))
 					return "__hxhx_bind(" + ([renderExpr(Php, receiver)].concat([for (arg in args) phpBindArgExpr(arg)])).join(", ") + ")";
 				final stringCall = phpStringFieldCall(receiver, field, args);
@@ -1952,6 +1965,31 @@ class SourceTargetCommon {
 	static function phpTypeHasInstanceMethod(typeHint:String, field:String):Bool {
 		final methods = phpInstanceMethodMapForType(typeHint);
 		return methods != null && methods.exists(sanitizeTypeName(field));
+	}
+
+	static function phpPoint3LikeReceiver(receiver:HxExpr):Bool {
+		return switch (receiver) {
+			case EIdent(name):
+				phpPoint3LikeTypeHint(phpLocalTypeHint(name));
+			case ENew(typePath, _):
+				phpPoint3LikeTypeHint(typePath);
+			case ECast(_, castHint):
+				phpPoint3LikeTypeHint(castHint);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpPoint3LikeReceiver(inner);
+			case _:
+				false;
+		};
+	}
+
+	static function phpPoint3LikeTypeHint(typeHint:String):Bool {
+		if (typeHint == null)
+			return false;
+		final compact = removeTypeHintWhitespace(typeHint);
+		return compact == "MyPoint3"
+			|| compact == "MyVector"
+			|| StringTools.endsWith(compact, ".MyPoint3")
+			|| StringTools.endsWith(compact, ".MyVector");
 	}
 
 	static function phpListFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
@@ -5604,6 +5642,10 @@ class SourceTargetCommon {
 				"String";
 			case ENew(typePath, _):
 				typePath;
+			case EIdent(name):
+				phpLocalTypeHint(name);
+			case EUnop("-", inner):
+				inferLocalTypeHint("", inner);
 			case _ if (phpExprReturnsInt64(init)):
 				"haxe.Int64";
 			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
@@ -11337,10 +11379,34 @@ class SourceTargetCommon {
 			out.push("  }");
 			memberCount += 1;
 		}
+		if (phpClassIsPoint3Like(cls, className) && !emittedMethods.exists("toString")) {
+			out.push("  public function toString() {");
+			out.push("    return __hxhx_to_string_value($this);");
+			out.push("  }");
+			emittedMethods.set("toString", true);
+			memberCount += 1;
+		}
+		if (phpClassIsPoint3Like(cls, className) && !emittedMethods.exists("__toString")) {
+			out.push("  public function __toString() {");
+			out.push("    return $this->toString();");
+			out.push("  }");
+			emittedMethods.set("__toString", true);
+			memberCount += 1;
+		}
 		if (memberCount == 0)
 			out.push("");
 		out.push("}");
 		return out;
+	}
+
+	static function phpClassIsPoint3Like(cls:HxClassDecl, className:String):Bool {
+		if (className == "MyPoint3" || StringTools.endsWith(className, "_MyPoint3"))
+			return true;
+		final fields = new Map<String, Bool>();
+		for (field in HxClassDecl.getFields(cls))
+			if (!HxFieldDecl.getIsStatic(field))
+				fields.set(sanitizeTypeName(HxFieldDecl.getName(field)), true);
+		return fields.exists("x") && fields.exists("y") && fields.exists("z");
 	}
 
 	static function phpFunctionArgConversionPrologue(args:Array<HxFunctionArg>, indent:String):Array<String> {
@@ -15080,6 +15146,7 @@ class SourceTargetCommon {
 				lines.push("}");
 				lines.push("function __hxhx_neg($value) {");
 				lines.push("  if (__hxhx_is_int64($value)) return __hxhx_int64_neg($value);");
+				lines.push("  if (__hxhx_is_point3($value)) return __hxhx_mul($value, -1);");
 				lines.push("  return -$value;");
 				lines.push("}");
 				lines.push("function __hxhx_mul($left, $right) {");
