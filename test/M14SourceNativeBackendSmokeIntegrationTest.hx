@@ -1496,6 +1496,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var badExtra = typeError(item = {v: 1, w: \"extra\"});",
 			"    var okPointCall = typeError(accepts(\"shape\", {x: 1.2, y: 2}));",
 			"    var okSizeCall = typeError(accepts(\"shape\", {w: 1.2, h: 2}));",
+			"    var duplicateMapKey = typeError([1 => 2, 1 => 3]);",
+			"    var mixedMapKey = typeError([1 => 2, \"1\" => 2]);",
+			"    var mixedMapValue = typeError([1 => 2, 3 => \"2\"]);",
+			"    var okMapLiteral = typeError([1 => 2, 3 => 4]);",
 			"    function choose(a:Choice, ?flag:Bool, ?tail:Choice) {",
 			"      return \"\";",
 			"    }",
@@ -1506,6 +1510,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(badExtra));",
 			"    Sys.println(Std.string(okPointCall));",
 			"    Sys.println(Std.string(okSizeCall));",
+			"    Sys.println(Std.string(duplicateMapKey));",
+			"    Sys.println(Std.string(mixedMapKey));",
+			"    Sys.println(Std.string(mixedMapValue));",
+			"    Sys.println(Std.string(okMapLiteral));",
 			"    Sys.println(Std.string(badOptionalSkip));",
 			"  }",
 			"}",
@@ -1669,6 +1677,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(values.join(\"#\"));",
 			"    var keys = Lambda.array({ iterator: sm.keys });",
 			"    Sys.println(keys.join(\"#\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpMapLiteralTypeTagProgram():GenIrProgram {
+		final src = [
+			"class Box {",
+			"  public var id:Int;",
+			"  public function new(id:Int) {",
+			"    this.id = id;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var intMap = [1 => 2, 3 => 4];",
+			"    Sys.println(Std.string(Std.isOfType(intMap, haxe.ds.IntMap)));",
+			"    Sys.println(Std.string(intMap.get(1)));",
+			"    var stringMap = [\"1\" => 2, \"3\" => 4];",
+			"    Sys.println(Std.string(Std.isOfType(stringMap, haxe.ds.StringMap)));",
+			"    Sys.println(Std.string(stringMap.get(\"3\")));",
+			"    var box = new Box(1);",
+			"    var objectMap = [box => 5];",
+			"    Sys.println(Std.string(Std.isOfType(objectMap, haxe.ds.ObjectMap)));",
+			"    Sys.println(Std.string(objectMap.get(box)));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5525,6 +5562,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpMapLiteralTypeTags():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_literal_type_tags_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpMapLiteralTypeTagProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_map_literal([[1, 2], [3, 4]])", "PHP int-key map literals should lower through the map literal helper");
+		assertContains(content, "__hxhx_map_literal([[\"1\", 2], [\"3\", 4]])", "PHP string-key map literals should lower through the map literal helper");
+		assertContains(content, "__hxhx_is_of_type($intMap, \"haxe.ds.IntMap\")", "PHP map literal type tags should support IntMap type checks");
+		assertContains(content, "__hxhx_is_of_type($stringMap, \"haxe.ds.StringMap\")", "PHP map literal type tags should support StringMap type checks");
+		assertContains(content, "__hxhx_is_of_type($objectMap, \"haxe.ds.ObjectMap\")", "PHP map literal type tags should support ObjectMap type checks");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP map literal type tags should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n2\ntrue\n4\ntrue\n5\n", "generated PHP map literal type tag output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpHaxeSerializerRuntimeSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_serializer_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -7684,11 +7742,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$badExtra = true;", "PHP source backend should flag extra fields in constant anonymous expression probes");
 		assertContains(content, "$okPointCall = false;", "PHP source backend should accept well-formed anonymous argument expression probes");
 		assertContains(content, "$okSizeCall = false;", "PHP source backend should accept alternate anonymous argument expression probes");
+		assertContains(content, "$duplicateMapKey = true;", "PHP source backend should flag duplicate map literal keys in typeError probes");
+		assertContains(content, "$mixedMapKey = true;", "PHP source backend should flag mixed map literal key kinds in typeError probes");
+		assertContains(content, "$mixedMapValue = true;", "PHP source backend should flag mixed map literal value kinds in typeError probes");
+		assertContains(content, "$okMapLiteral = false;", "PHP source backend should accept consistent map literal typeError probes");
 		assertContains(content, "$badOptionalSkip = true;", "PHP source backend should fold optional-parameter skip typeError probes");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP typeError expression probes should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\nfalse\ntrue\ntrue\nfalse\nfalse\ntrue\n",
+			assertTrue(run.stdout == "true\nfalse\ntrue\ntrue\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\n",
 				"generated PHP typeError expression probes should preserve expected results, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
@@ -10291,6 +10353,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStaticClassAccess();
 		assertPhpRuntimeShim();
 		assertPhpMapRuntimeShim();
+		assertPhpMapLiteralTypeTags();
 		assertPhpHaxeSerializerRuntimeSupport();
 		assertPhpHaxeSerializerImportRuntimeSupport();
 		assertPhpPoint3StringEqualityRuntimeSupport();

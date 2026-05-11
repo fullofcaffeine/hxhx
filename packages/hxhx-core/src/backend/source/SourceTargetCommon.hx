@@ -2977,6 +2977,9 @@ class SourceTargetCommon {
 		final loweredBlockResult = helperTypeErrorLoweredBlockResult(expr);
 		if (loweredBlockResult != null)
 			return loweredBlockResult;
+		final mapLiteralResult = helperMapLiteralTypeError(expr);
+		if (mapLiteralResult != null)
+			return mapLiteralResult;
 		return switch (expr) {
 			case EMacroExpr(inner, _) | EUntyped(inner):
 				helperTypeErrorExpressionResult(inner);
@@ -2991,6 +2994,80 @@ class SourceTargetCommon {
 					return stringFieldResult;
 				final optionalResult = helperOptionalLambdaCallTypeError(callee, callArgs);
 				optionalResult != null ? optionalResult : helperFunctionCallAnonTypeError(callArgs);
+			case _:
+				null;
+		};
+	}
+
+	static function helperMapLiteralTypeError(expr:HxExpr):Null<Bool> {
+		return switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				helperMapLiteralTypeError(inner);
+			case EArrayDecl(items):
+				if (items.length == 0)
+					return null;
+				final seenKeys = new haxe.ds.StringMap<Bool>();
+				var keyKind:Null<String> = null;
+				var valueKind:Null<String> = null;
+				for (item in items) {
+					switch (item) {
+						case EBinop("=>", key, value):
+							final keySignature = helperMapLiteralKeySignature(key);
+							final nextKeyKind = helperMapLiteralProbeKind(key, true);
+							final nextValueKind = helperMapLiteralProbeKind(value, false);
+							if (keySignature == null || nextKeyKind == null || nextValueKind == null)
+								return null;
+							if (seenKeys.exists(keySignature))
+								return true;
+							seenKeys.set(keySignature, true);
+							if (keyKind == null)
+								keyKind = nextKeyKind;
+							else if (keyKind != nextKeyKind)
+								return true;
+							if (valueKind == null) valueKind = nextValueKind; else if (valueKind != nextValueKind) return true;
+						case _:
+							return null;
+					}
+				}
+				false;
+			case _:
+				null;
+		};
+	}
+
+	static function helperMapLiteralKeySignature(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				helperMapLiteralKeySignature(inner);
+			case EInt(value):
+				"i:" + Std.string(value);
+			case EString(value):
+				"s:" + value;
+			case EBool(value):
+				"b:" + Std.string(value);
+			case EIdent(name):
+				"id:" + sanitizeTypeName(name);
+			case _:
+				null;
+		};
+	}
+
+	static function helperMapLiteralProbeKind(expr:HxExpr, isKey:Bool):Null<String> {
+		return switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				helperMapLiteralProbeKind(inner, isKey);
+			case EInt(_):
+				"number";
+			case EFloat(_):
+				isKey ? null : "number";
+			case EString(_):
+				"string";
+			case EBool(_):
+				"bool";
+			case EIdent(_):
+				"object";
+			case ENew(_, _):
+				"object";
 			case _:
 				null;
 		};
@@ -15148,7 +15225,14 @@ class SourceTargetCommon {
 				lines.push("  return $next;");
 				lines.push("}");
 				lines.push("function __hxhx_map_literal($pairs) {");
-				lines.push("  $map = new Map();");
+				lines.push("  $__hx_type = \"Map\";");
+				lines.push("  foreach ($pairs as $pair) {");
+				lines.push("    $key = $pair[0];");
+				lines.push("    if (is_int($key)) { $__hx_type = \"haxe.ds.IntMap\"; break; }");
+				lines.push("    if (is_string($key)) { $__hx_type = \"haxe.ds.StringMap\"; break; }");
+				lines.push("    if (is_object($key)) { $__hx_type = \"haxe.ds.ObjectMap\"; break; }");
+				lines.push("  }");
+				lines.push("  $map = new Map(null, $__hx_type);");
 				lines.push("  foreach ($pairs as $pair) $map->set($pair[0], $pair[1]);");
 				lines.push("  return $map;");
 				lines.push("}");
