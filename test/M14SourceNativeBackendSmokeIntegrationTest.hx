@@ -531,6 +531,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var it = a.iterator();",
 			"    Sys.println(Std.string(it.hasNext()));",
 			"    Sys.println(Std.string(it.next()));",
+			"    var base:Array<Int> = [1, 2, 3];",
+			"    var mapped = base.map(v -> v * 2);",
+			"    Sys.println(mapped.join(\",\"));",
 			"    var m = new Map();",
 			"    m.remove(\"a\");",
 			"    var x = 0;",
@@ -542,6 +545,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(records[x++].v += 3));",
 			"    Sys.println(Std.string(x));",
 			"    Sys.println(Std.string(records[0].v));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpSameClassArrayFieldMapProgram():GenIrProgram {
+		final src = [
+			"class Holder {",
+			"  var callbacks:Array<Int->Int> = [];",
+			"  public function new() {}",
+			"  public function run() {",
+			"    callbacks = [a -> a + a, b -> b * 3];",
+			"    var values = callbacks.map(f -> f(2));",
+			"    Sys.println(values.join(\",\"));",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    new Holder().run();",
 			"  }",
 			"}",
 		].join("\n");
@@ -7441,6 +7466,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_array_splice(&$array, $pos, $len)", "PHP runtime should include an Array.splice helper");
 		assertContains(content, "function __hxhx_array_sort(&$array, $compare)", "PHP runtime should include an Array.sort helper");
 		assertContains(content, "function __hxhx_array_join($array, $separator)", "PHP runtime should include an Array.join helper");
+		assertContains(content, "function __hxhx_array_map($array, $callback)", "PHP runtime should include an Array.map helper");
 		assertContains(content, "class __HxArrayIterator", "PHP runtime should include a Haxe array iterator wrapper");
 		assertContains(content, "function __hxhx_iterator($value)", "PHP runtime should include an iterator helper");
 		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get($a, 3)) . PHP_EOL;",
@@ -7449,18 +7475,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "echo __hxhx_array_join($a, \"#\") . PHP_EOL;", "PHP Array.join should lower through the join helper");
 		assertContains(content, "__hxhx_remove($a, 2);", "PHP Array.remove should lower through the mutating helper");
 		assertContains(content, "__hxhx_array_splice($a, 1, 1);", "PHP Array.splice should lower through the mutating helper");
+		assertContains(content, "$mapped = __hxhx_array_map($base,", "PHP Array.map should lower through the array map helper");
 		assertContains(content, "$it = __hxhx_iterator($a);", "PHP Array.iterator should lower through the iterator helper");
 		assertContains(content, "__hxhx_remove($m, \"a\");", "PHP Map.remove should go through the polymorphic remove helper");
 		assertContains(content, "__hxhx_field_add_assign(__hxhx_array_get($records, __hxhx_post_update_var($x, 1)), \"v\", 3)",
 			"PHP field add-assign should evaluate side-effecting receivers once");
 		assertNotContains(content, "$a->remove(2)", "PHP arrays should not emit object-method remove calls on raw arrays");
+		assertNotContains(content, "$base->map", "PHP arrays should not emit object-method map calls on raw arrays");
 		assertNotContains(content, "$a->iterator()", "PHP arrays should not emit object-method iterator calls on raw arrays");
 		assertNotContains(content, "$a[3]", "PHP expression reads should not emit direct array access for missing-index semantics");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP array operations should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "1#2#3\nnull\n2\n3\n1\ntrue\n1\n3\n1\n4\n7\n1\n7\n",
+			assertTrue(run.stdout == "1#2#3\nnull\n2\n3\n1\ntrue\n1\n2,4,6\n3\n1\n4\n7\n1\n7\n",
 				"generated PHP array operations should preserve field add-assign receiver evaluation, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpSameClassArrayFieldMap():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_class_array_field_map_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpSameClassArrayFieldMapProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$values = __hxhx_array_map($this->callbacks,",
+			"PHP same-class Array.map field calls should lower through the array map helper");
+		assertNotContains(content, "$this->callbacks->map", "PHP same-class array fields should not emit object-method map calls on raw arrays");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP same-class Array.map field call should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "4,6\n", "generated PHP same-class Array.map field call output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -11033,6 +11080,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonNumericLiteralFieldCallSyntax();
 		assertPhpArrayConstructor();
 		assertPhpArrayOperations();
+		assertPhpSameClassArrayFieldMap();
 		assertPhpObjectArrayAccess();
 		assertPhpReservedTypeName();
 		assertPhpDuplicateStaticFieldEmission();

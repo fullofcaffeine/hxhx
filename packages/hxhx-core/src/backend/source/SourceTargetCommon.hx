@@ -2085,6 +2085,8 @@ class SourceTargetCommon {
 	static function phpArrayFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
 		if (field == "join" && args.length == 1)
 			return "__hxhx_array_join(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
+		if (field == "map" && args.length == 1 && phpArrayBackedReceiver(receiver))
+			return "__hxhx_array_map(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 		final mutableReceiver = phpMutableReceiverExpr(receiver);
 		if (mutableReceiver == null)
 			return null;
@@ -2116,6 +2118,10 @@ class SourceTargetCommon {
 		return switch (receiver) {
 			case EIdent(name):
 				phpArrayItemTypeHint(phpLocalTypeHint(name));
+			case EField(EThis, field):
+				phpArrayItemTypeHint(phpCurrentInstanceFieldTypeHint(field));
+			case EField(EIdent(name), field):
+				phpArrayItemTypeHint(phpInstanceFieldTypeHintForType(phpLocalTypeHint(name), field));
 			case ECast(_, castHint):
 				phpArrayItemTypeHint(castHint);
 			case EMacroExpr(inner, _) | EUntyped(inner):
@@ -2128,6 +2134,9 @@ class SourceTargetCommon {
 	static function phpArrayBackedReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
 			case EIdent(name): final hint = phpLocalTypeHint(name); phpArrayItemTypeHint(hint).length > 0 || phpArrayBackedAbstractTypeHint(hint);
+			case EField(EThis, field): final hint = phpCurrentInstanceFieldTypeHint(field); phpArrayItemTypeHint(hint).length > 0 || phpArrayBackedAbstractTypeHint(hint);
+			case EField(EIdent(name), field): final hint = phpInstanceFieldTypeHintForType(phpLocalTypeHint(name),
+					field); phpArrayItemTypeHint(hint).length > 0 || phpArrayBackedAbstractTypeHint(hint);
 			case ENew(typePath, _):
 				phpArrayBackedAbstractTypeHint(typePath);
 			case ECast(_, castHint): phpArrayItemTypeHint(castHint).length > 0 || phpArrayBackedAbstractTypeHint(castHint);
@@ -2538,8 +2547,13 @@ class SourceTargetCommon {
 			}
 		].join(", ");
 		final thisCaptureName = phpRenderThisValueSlot && phpExprTouchesThis(body) ? "__hxhx_this_value" : null;
-		final renderedBody = thisCaptureName == null ? renderExpr(Php, body) : withPhpThisValueCapture(thisCaptureName, function() {
-			return renderExpr(Php, body);
+		final lambdaLocalTypes = copyStringMap(phpRenderLocalTypes);
+		for (arg in args)
+			lambdaLocalTypes.set(sanitizeTypeName(arg), "");
+		final renderedBody = withPhpLocalTypes(Php, lambdaLocalTypes, function() {
+			return thisCaptureName == null ? renderExpr(Php, body) : withPhpThisValueCapture(thisCaptureName, function() {
+				return renderExpr(Php, body);
+			});
 		});
 		final refNames = phpLambdaAssignedCaptures(body, args);
 		final valueCaptures = new Array<String>();
@@ -16187,6 +16201,13 @@ class SourceTargetCommon {
 				lines.push("  $parts = [];");
 				lines.push("  foreach ($array as $item) $parts[] = __hxhx_add_string($item);");
 				lines.push("  return implode(strval($separator), $parts);");
+				lines.push("}");
+				lines.push("function __hxhx_array_map($array, $callback) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) return [];");
+				lines.push("  $out = [];");
+				lines.push("  foreach ($array as $item) $out[] = $callback($item);");
+				lines.push("  return $out;");
 				lines.push("}");
 				lines.push("function __hxhx_iterator($value) {");
 				lines.push("  if ($value instanceof __HxArray) return new __HxArrayIterator($value->toArray());");
