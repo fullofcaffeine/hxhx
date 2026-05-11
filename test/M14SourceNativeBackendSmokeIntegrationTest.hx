@@ -2802,6 +2802,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpAbstractThisClosureCaptureProgram():GenIrProgram {
+		final src = [
+			"class ClosureBox {",
+			"  public function new(value:String) {",
+			"    this = value;",
+			"  }",
+			"  public function make() {",
+			"    var fn = function() {",
+			"      return this;",
+			"    };",
+			"    return fn;",
+			"  }",
+			"  public inline function setVal(value:String) {",
+			"    this = value;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var box = new ClosureBox(\"foo\");",
+			"    var first = box.make();",
+			"    Sys.println(first());",
+			"    box.setVal(\"bar\");",
+			"    Sys.println(first());",
+			"    Sys.println(box.make()());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpInlineCastSelfReturnProgram():GenIrProgram {
 		final src = [
 			"class InlineBase {",
@@ -8168,6 +8201,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpAbstractThisClosureCapture():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_this_closure_capture_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpAbstractThisClosureCaptureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "(function($__hxhx_this_value) { return function() use ($__hxhx_this_value)",
+			"PHP abstract-style lambdas should capture this backing value at closure creation time");
+		assertContains(content, "})(__hxhx_copy_value($this->__hx_value))",
+			"PHP abstract-style lambda captures should snapshot the backing slot instead of late-binding $this");
+		assertNotContains(content, "return $this; };", "PHP abstract-style lambdas should not return the mutable wrapper object");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP abstract closure capture should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "foo\nfoo\nbar\n", "generated PHP abstract closure capture output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonAbstractThisPostfix():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_abstract_this_postfix_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -10696,6 +10750,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpFollowWithAbstractsProbe();
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();
+		assertPhpAbstractThisClosureCapture();
 		assertPhpInlineCastSelfReturn();
 		assertPhpConstrainedParameterScannerFlow();
 		assertPythonAbstractThisPostfix();

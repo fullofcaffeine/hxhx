@@ -719,7 +719,7 @@ class SourceTargetCommon {
 					case Python: "self";
 					case Java: "this";
 					case Cs: "this";
-					case Php: "$this";
+					case Php: phpThisValueCaptureName != null ? valueName(Php, phpThisValueCaptureName) : "$this";
 					case Lua: "self";
 				}
 			case ESuper:
@@ -2474,7 +2474,10 @@ class SourceTargetCommon {
 				valueName(Php, clean) + (optionalArgNames != null && optionalArgNames.indexOf(clean) >= 0 ? " = null" : "");
 			}
 		].join(", ");
-		final renderedBody = renderExpr(Php, body);
+		final thisCaptureName = phpRenderThisValueSlot && phpExprTouchesThis(body) ? "__hxhx_this_value" : null;
+		final renderedBody = thisCaptureName == null ? renderExpr(Php, body) : withPhpThisValueCapture(thisCaptureName, function() {
+			return renderExpr(Php, body);
+		});
 		final refNames = phpLambdaAssignedCaptures(body, args);
 		final valueCaptures = new Array<String>();
 		if (valueNames != null) {
@@ -2484,6 +2487,8 @@ class SourceTargetCommon {
 					valueCaptures.push(clean);
 			}
 		}
+		if (thisCaptureName != null)
+			valueCaptures.push(thisCaptureName);
 		if (extraRefNames != null) {
 			for (name in extraRefNames) {
 				final clean = sanitizeTypeName(name);
@@ -2501,7 +2506,9 @@ class SourceTargetCommon {
 		}
 		final useClause = phpLambdaUseClause(valueCaptures, refNames);
 		final prologue = phpLambdaArgPrologue(args, renderedBody);
-		return "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
+		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
+		return thisCaptureName == null ? lambda : "(function(" + valueName(Php, thisCaptureName) + ") { return " + lambda
+			+ "; })(__hxhx_copy_value($this->__hx_value))";
 	}
 
 	static function phpForInExpr(iterable:HxExpr, bodyExpr:HxExpr, continuation:HxExpr):String {
@@ -4989,6 +4996,7 @@ class SourceTargetCommon {
 	static var phpRenderDynamicCallFieldsByLocal:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderRefCaptureLocals:Null<Array<String>> = null;
 	static var phpRenderThisValueSlot:Bool = false;
+	static var phpThisValueCaptureName:Null<String> = null;
 	static var phpRenderOptionalLambdaArgNamesByLocal:Null<haxe.ds.StringMap<Array<String>>> = null;
 	static var phpRenderOptionalLambdaOptionalArgNamesByLocal:Null<haxe.ds.StringMap<Array<String>>> = null;
 	static var phpRenderGenericConstructorSamples:Null<haxe.ds.StringMap<String>> = null;
@@ -5019,6 +5027,19 @@ class SourceTargetCommon {
 			return result;
 		} catch (e) {
 			phpRenderThisValueSlot = previous;
+			throw e;
+		}
+	}
+
+	static function withPhpThisValueCapture<T>(name:String, f:() -> T):T {
+		final previous = phpThisValueCaptureName;
+		phpThisValueCaptureName = name;
+		try {
+			final result = f();
+			phpThisValueCaptureName = previous;
+			return result;
+		} catch (e) {
+			phpThisValueCaptureName = previous;
 			throw e;
 		}
 	}
