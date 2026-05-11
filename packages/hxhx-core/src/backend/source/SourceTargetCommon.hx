@@ -15435,6 +15435,10 @@ class SourceTargetCommon {
 				lines.push("function __hxhx_array_get($array, $index) {");
 				lines.push("  if ($array instanceof Map) return $array->get($index);");
 				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (is_object($array)) {");
+				lines.push("    $field = strval($index);");
+				lines.push("    return property_exists($array, $field) ? $array->$field : null;");
+				lines.push("  }");
 				lines.push("  if (!is_array($array)) return null;");
 				lines.push("  return array_key_exists($index, $array) ? $array[$index] : null;");
 				lines.push("}");
@@ -15445,6 +15449,11 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("  if ($array instanceof __HxArray) {");
 				lines.push("    $array[$index] = $value;");
+				lines.push("    return $value;");
+				lines.push("  }");
+				lines.push("  if (is_object($array)) {");
+				lines.push("    $field = strval($index);");
+				lines.push("    $array->$field = $value;");
 				lines.push("    return $value;");
 				lines.push("  }");
 				lines.push("  if (!is_array($array)) $array = [];");

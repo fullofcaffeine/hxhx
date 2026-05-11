@@ -548,6 +548,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpObjectArrayAccessProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var record:Dynamic = { foo: 12, bar: \"test\" };",
+			"    Sys.println(Std.string(record[\"foo\"]));",
+			"    record[\"foo\"] = 11;",
+			"    record[\"foo\"] += 99;",
+			"    Sys.println(Std.string(record[\"foo\"]));",
+			"    record[\"baz\"] = record[\"bar\"] += record[\"foo\"];",
+			"    Sys.println(record[\"baz\"]);",
+			"    Sys.println(record[\"bar\"]);",
+			"    var key = \"hh\";",
+			"    record[key] = 1;",
+			"    record[key += \"h\"] = 2;",
+			"    Sys.println(Std.string(record[\"hhh\"]));",
+			"    Sys.println(key);",
+			"    record[\"101\"] = function(x) return 9 + x;",
+			"    Sys.println(Std.string(record[\"101\"](1)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpReservedTypeNameProgram():GenIrProgram {
 		final src = [
 			"class Abstract {",
@@ -7247,6 +7274,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpObjectArrayAccess():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_object_array_access_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpObjectArrayAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_array_get($array, $index)", "PHP runtime should include object-aware custom array-access reads");
+		assertContains(content, "if (is_object($array)) {", "PHP custom array-access helpers should handle object-backed abstracts");
+		assertContains(content, "__hxhx_array_set($record, \"foo\", 11)", "PHP object array-access writes should lower through the shared indexed setter");
+		assertContains(content, "__hxhx_array_add_assign($record, \"foo\", 99)",
+			"PHP object array-access add-assign should lower through the shared indexed update helper");
+		assertContains(content, "__hxhx_array_get($record, \"101\")(1)",
+			"PHP object array-access reads should remain callable when the stored field is a function");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP object array-access support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "12\n110\ntest110\ntest110\n2\nhhh\n10\n", "generated PHP object array-access output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpReservedTypeName():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reserved_type_name_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -10623,6 +10673,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonNumericLiteralFieldCallSyntax();
 		assertPhpArrayConstructor();
 		assertPhpArrayOperations();
+		assertPhpObjectArrayAccess();
 		assertPhpReservedTypeName();
 		assertPhpDuplicateStaticFieldEmission();
 		assertPhpDuplicateMethodEmission();

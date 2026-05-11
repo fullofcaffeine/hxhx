@@ -30135,6 +30135,10 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "function __hxhx_array_get($array, $index) {");
       ignore (HxArray.push lines "  if ($array instanceof Map) return $array->get($index);");
       ignore (HxArray.push lines "  if ($array instanceof __HxArray) $array = $array->toArray();");
+      ignore (HxArray.push lines "  if (is_object($array)) {");
+      ignore (HxArray.push lines "    $field = strval($index);");
+      ignore (HxArray.push lines "    return property_exists($array, $field) ? $array->$field : null;");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if (!is_array($array)) return null;");
       ignore (HxArray.push lines "  return array_key_exists($index, $array) ? $array[$index] : null;");
       ignore (HxArray.push lines "}");
@@ -30145,6 +30149,11 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if ($array instanceof __HxArray) {");
       ignore (HxArray.push lines "    $array[$index] = $value;");
+      ignore (HxArray.push lines "    return $value;");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  if (is_object($array)) {");
+      ignore (HxArray.push lines "    $field = strval($index);");
+      ignore (HxArray.push lines "    $array->$field = $value;");
       ignore (HxArray.push lines "    return $value;");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if (!is_array($array)) $array = [];");
