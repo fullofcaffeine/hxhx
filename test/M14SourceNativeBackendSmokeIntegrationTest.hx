@@ -1486,6 +1486,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function phpTypeErrorExpressionProbeProgram():GenIrProgram {
 		final src = [
+			"class MyInt2 {",
+			"  public function new(v:Int) {",
+			"    this = v;",
+			"  }",
+			"  public function get():Int {",
+			"    return this;",
+			"  }",
+			"  public function invert():MyInt2 {",
+			"    return new MyInt2(-this);",
+			"  }",
+			"  public function incr():Int {",
+			"    return ++this;",
+			"  }",
+			"}",
+			"",
 			"class Main {",
 			"  static function main() {",
 			"    var accepts = function(label:String, ?point:{x:Float, y:Int}, ?size:{w:Float, h:Int}) { };",
@@ -1504,6 +1519,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var ms2:MyString = cast \"bar\";",
 			"    var badAbstractAdd = typeError(ms1 + true);",
 			"    var badAbstractSub = typeError(ms1 - ms2);",
+			"    var my = new MyInt2(12);",
+			"    var badAbstractNot = typeError(!my);",
+			"    var badAbstractPostfix = typeError(my++);",
 			"    function choose(a:Choice, ?flag:Bool, ?tail:Choice) {",
 			"      return \"\";",
 			"    }",
@@ -1520,6 +1538,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(okMapLiteral));",
 			"    Sys.println(Std.string(badAbstractAdd));",
 			"    Sys.println(Std.string(badAbstractSub));",
+			"    Sys.println(Std.string(badAbstractNot));",
+			"    Sys.println(Std.string(badAbstractPostfix));",
 			"    Sys.println(Std.string(badOptionalSkip));",
 			"  }",
 			"}",
@@ -7905,11 +7925,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$okMapLiteral = false;", "PHP source backend should accept consistent map literal typeError probes");
 		assertContains(content, "$badAbstractAdd = true;", "PHP source backend should fold incompatible abstract overload addition probes");
 		assertContains(content, "$badAbstractSub = true;", "PHP source backend should fold missing abstract overload subtraction probes");
+		assertContains(content, "$badAbstractNot = true;", "PHP source backend should fold unsupported abstract logical-not probes");
+		assertContains(content, "$badAbstractPostfix = true;", "PHP source backend should fold unsupported abstract postfix probes");
 		assertContains(content, "$badOptionalSkip = true;", "PHP source backend should fold optional-parameter skip typeError probes");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP typeError expression probes should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\nfalse\ntrue\ntrue\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\n",
+			assertTrue(run.stdout == "true\nfalse\ntrue\ntrue\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\ntrue\n",
 				"generated PHP typeError expression probes should preserve expected results, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);

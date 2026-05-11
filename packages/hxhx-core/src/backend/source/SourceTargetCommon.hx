@@ -3045,6 +3045,8 @@ class SourceTargetCommon {
 				helperAssignmentTypeError(phpLocalTypeHint(name), value);
 			case EBinop(op, left, right):
 				helperAbstractOverloadTypeError(op, left, right);
+			case EUnop(op, inner):
+				helperAbstractUnaryTypeError(op, inner);
 			case ECall(callee, callArgs):
 				final genericNullResult = helperGenericNullTypeError(callee, callArgs);
 				if (genericNullResult != null)
@@ -3059,6 +3061,17 @@ class SourceTargetCommon {
 		};
 	}
 
+	static function helperAbstractUnaryTypeError(op:String, inner:HxExpr):Null<Bool> {
+		if (!helperExprHasNumericAbstractWrapper(inner))
+			return null;
+		return switch (op) {
+			case "!" | "post++" | "post--" | "++" | "pre++" | "--" | "pre--":
+				true;
+			case _:
+				null;
+		};
+	}
+
 	static function helperAbstractOverloadTypeError(op:String, left:HxExpr, right:HxExpr):Null<Bool> {
 		if (op != "+" && op != "-")
 			return null;
@@ -3067,6 +3080,22 @@ class SourceTargetCommon {
 		if (op == "-")
 			return true;
 		return helperExprLooksBoolValue(left) || helperExprLooksBoolValue(right) ? true : null;
+	}
+
+	static function helperExprHasNumericAbstractWrapper(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				helperExprHasNumericAbstractWrapper(inner);
+			case EIdent(name): phpLocalHasInstanceMethod(name, "get") && (phpLocalHasInstanceMethod(name, "invert")
+					|| phpLocalHasInstanceMethod(name, "incr"));
+			case ENew(typePath, _): phpTypeHasInstanceMethod(typePath,
+					"get") && (phpTypeHasInstanceMethod(typePath, "invert") || phpTypeHasInstanceMethod(typePath, "incr"));
+			case ECast(inner, typeHint): (phpTypeHasInstanceMethod(typeHint, "get")
+					&& (phpTypeHasInstanceMethod(typeHint, "invert")
+						|| phpTypeHasInstanceMethod(typeHint, "incr"))) || helperExprHasNumericAbstractWrapper(inner);
+			case _:
+				false;
+		};
 	}
 
 	static function helperExprHasMyStringType(expr:HxExpr):Bool {
