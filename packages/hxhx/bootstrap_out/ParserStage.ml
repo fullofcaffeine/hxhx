@@ -211,8 +211,8 @@ let scanToplevelMainFunction = fun source -> try let __fallback_result_74 = (
 ) in Obj.magic __fallback_result_74 with
   | HxRuntime.Hx_return __ret_73 -> Obj.obj __ret_73
 
-let enrichPureParserDecl = fun source expectedMainClass parsed -> try let __fallback_result_302 = let enumDecls = Obj.magic (ParserStageScanHelpers.scanModuleLocalHelperEnums (source : string) (Obj.magic (HxRuntime.hx_null))) in (
-  ignore (if enumDecls == Obj.magic (HxRuntime.hx_null) || HxArray.length enumDecls = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic parsed))) else ());
+let enrichPureParserDecl = fun source expectedMainClass parsed -> try let __fallback_result_305 = let enumDecls = Obj.magic (ParserStageScanHelpers.scanModuleLocalHelperEnums (source : string) (Obj.magic (HxRuntime.hx_null))) in let abstractDecls = Obj.magic (ParserStageScanHelpers.scanModuleLocalHelperAbstracts (source : string) (Obj.magic (HxRuntime.hx_null))) in (
+  ignore (if (enumDecls == Obj.magic (HxRuntime.hx_null) || HxArray.length enumDecls = 0) && (abstractDecls == Obj.magic (HxRuntime.hx_null) || HxArray.length abstractDecls = 0) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic parsed))) else ());
   let main = ref (Obj.magic (HxModuleDecl.getMainClass (Obj.magic parsed))) in let tempString = ref ("" : string) in (
     ignore (if !main == Obj.magic (HxRuntime.hx_null) then let __assign_286 = ("" : string) in (
       tempString := __assign_286;
@@ -275,29 +275,42 @@ let enrichPureParserDecl = fun source expectedMainClass parsed -> try let __fall
             pushUnique (Obj.magic c)
           )) else ()
         )) done);
+        ignore (let _g = ref 0 in while !_g < HxArray.length abstractDecls do ignore (let c = Obj.magic (HxArray.get (Obj.magic abstractDecls) (!_g)) in (
+          ignore (let __old_299 = !_g in let __new_300 = HxInt.add __old_299 1 in (
+            ignore (_g := __new_300);
+            __new_300
+          ));
+          let nm = (HxClassDecl.getName (Obj.magic c) : string) in if nm != Obj.magic (HxRuntime.hx_null) && HxString.length nm > 0 && not (HxMap.exists_string seen nm) then ignore ((
+            ignore (let __assign_301 = true in (
+              changed := __assign_301;
+              __assign_301
+            ));
+            pushUnique (Obj.magic c)
+          )) else ()
+        )) done);
         let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxModuleDecl.t) in (
-          ignore (if !changed then let __assign_299 = Obj.magic (HxModuleDecl.create (HxModuleDecl.getPackagePath (Obj.magic parsed) : string) (Obj.magic (HxModuleDecl.getImports (Obj.magic parsed))) (Obj.magic (!main)) (Obj.magic classes) (HxModuleDecl.getHeaderOnly (Obj.magic parsed)) (HxModuleDecl.getHasToplevelMain (Obj.magic parsed))) in (
-            tempResult := __assign_299;
-            __assign_299
-          ) else let __assign_300 = Obj.magic parsed in (
-            tempResult := __assign_300;
-            __assign_300
+          ignore (if !changed then let __assign_302 = Obj.magic (HxModuleDecl.create (HxModuleDecl.getPackagePath (Obj.magic parsed) : string) (Obj.magic (HxModuleDecl.getImports (Obj.magic parsed))) (Obj.magic (!main)) (Obj.magic classes) (HxModuleDecl.getHeaderOnly (Obj.magic parsed)) (HxModuleDecl.getHasToplevelMain (Obj.magic parsed))) in (
+            tempResult := __assign_302;
+            __assign_302
+          ) else let __assign_303 = Obj.magic parsed in (
+            tempResult := __assign_303;
+            __assign_303
           ));
           !tempResult
         )
       )
     )
   )
-) in Obj.magic __fallback_result_302 with
-  | HxRuntime.Hx_return __ret_301 -> Obj.obj __ret_301
+) in Obj.magic __fallback_result_305 with
+  | HxRuntime.Hx_return __ret_304 -> Obj.obj __ret_304
 
 let parseViaNativeHooks = fun source expectedMainClass -> let tempString = ref ("" : string) in (
-  ignore (if expectedMainClass != Obj.magic (HxRuntime.hx_null) && HxString.length expectedMainClass > 0 then let __assign_303 = (HxHxNativeParser.parse_module_decl_with_expected (source : string) (expectedMainClass : string) : string) in (
-    tempString := __assign_303;
-    __assign_303
-  ) else let __assign_304 = (HxHxNativeParser.parse_module_decl (source : string) : string) in (
-    tempString := __assign_304;
-    __assign_304
+  ignore (if expectedMainClass != Obj.magic (HxRuntime.hx_null) && HxString.length expectedMainClass > 0 then let __assign_306 = (HxHxNativeParser.parse_module_decl_with_expected (source : string) (expectedMainClass : string) : string) in (
+    tempString := __assign_306;
+    __assign_306
+  ) else let __assign_307 = (HxHxNativeParser.parse_module_decl (source : string) : string) in (
+    tempString := __assign_307;
+    __assign_307
   ));
   ParserStageNativeDecode.decodeNativeProtocol (!tempString : string) (source : string)
 )

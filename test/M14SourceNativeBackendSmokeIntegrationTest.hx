@@ -3259,6 +3259,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpAbstractValueCastProgram():GenIrProgram {
+		final src = [
+			"abstract Wrap(Int) from Int {}",
+			"class Main {",
+			"  static function main() {",
+			"    var value = cast(1, Wrap);",
+			"    Sys.println(Std.string(value));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpUserClassTypeCheckProgram():GenIrProgram {
 		final src = [
 			"package unit;",
@@ -9094,6 +9109,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpAbstractValueCasts():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_value_casts_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpAbstractValueCastProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertNotContains(content, "__hxhx_cast(1, \"Wrap\")", "PHP abstract value casts should not lower through nominal runtime casts");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP abstract value casts should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "1\n", "generated PHP abstract value cast output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpUserClassTypeCheck():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_user_class_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11204,6 +11236,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTypeCheck();
 		assertPhpInterfaceCasts();
 		assertPhpArrayDynamicCasts();
+		assertPhpAbstractValueCasts();
 		assertPhpUserClassTypeCheck();
 		assertPhpEnumTypeCheck();
 		assertPhpTypeReflection();

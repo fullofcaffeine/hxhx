@@ -687,7 +687,9 @@ class ParserStage {
 	static function enrichPureParserDecl(source:String, expectedMainClass:Null<String>, parsed:HxModuleDecl):HxModuleDecl {
 		final enumDecls = #if hxhx_stage0_no_parser_scan_extract scanModuleLocalHelperEnums(source,
 			null) #else ParserStageScanHelpers.scanModuleLocalHelperEnums(source, null) #end;
-		if (enumDecls == null || enumDecls.length == 0)
+		final abstractDecls = #if hxhx_stage0_no_parser_scan_extract scanModuleLocalHelperAbstracts(source,
+			null) #else ParserStageScanHelpers.scanModuleLocalHelperAbstracts(source, null) #end;
+		if ((enumDecls == null || enumDecls.length == 0) && (abstractDecls == null || abstractDecls.length == 0))
 			return parsed;
 
 		var main = HxModuleDecl.getMainClass(parsed);
@@ -722,6 +724,13 @@ class ParserStage {
 		for (c in HxModuleDecl.getClasses(parsed))
 			pushUnique(c);
 		for (c in enumDecls) {
+			final nm = HxClassDecl.getName(c);
+			if (nm != null && nm.length > 0 && !seen.exists(nm)) {
+				changed = true;
+				pushUnique(c);
+			}
+		}
+		for (c in abstractDecls) {
 			final nm = HxClassDecl.getName(c);
 			if (nm != null && nm.length > 0 && !seen.exists(nm)) {
 				changed = true;
@@ -1394,7 +1403,7 @@ class ParserStage {
 			}
 
 			if (shouldRecord)
-				out.push(new HxClassDecl(abstractName, false, functions, fields));
+				out.push(new HxClassDecl(abstractName, false, functions, fields, "", ["__hxhx_abstract"]));
 		}
 
 		return out;

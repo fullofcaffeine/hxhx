@@ -1805,6 +1805,8 @@ class SourceTargetCommon {
 			return false;
 		if (compact.indexOf("->") >= 0 || StringTools.startsWith(compact, "{") || StringTools.startsWith(compact, "("))
 			return false;
+		if (phpKnownAbstractTypeName(compact))
+			return false;
 		return true;
 	}
 
@@ -5243,6 +5245,7 @@ class SourceTargetCommon {
 	static var phpRenderStringExtensionMethodsByClass:Null<haxe.ds.StringMap<haxe.ds.StringMap<String>>> = null;
 	static var phpRenderStringExtensionMethodsByField:Null<haxe.ds.StringMap<String>> = null;
 	static var phpRenderKnownTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
+	static var phpRenderAbstractTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
 	static var phpRenderEnumConstructors:Null<haxe.ds.StringMap<PhpEnumCtorRef>> = null;
 	static var phpRenderAmbiguousEnumConstructors:Null<haxe.ds.StringMap<Bool>> = null;
 	static var phpRenderEnumConstructorsByEnum:Null<haxe.ds.StringMap<haxe.ds.StringMap<PhpEnumCtorRef>>> = null;
@@ -5404,6 +5407,17 @@ class SourceTargetCommon {
 		if (phpRenderKnownTypeNames == null)
 			return false;
 		return phpRenderKnownTypeNames.exists(name) || phpRenderKnownTypeNames.exists(sanitizeTypeName(name));
+	}
+
+	static function phpKnownAbstractTypeName(name:String):Bool {
+		if (phpRenderAbstractTypeNames == null)
+			return false;
+		final clean = sanitizeTypeName(name);
+		final unwrapped = stripGenericTypeParams(name);
+		return phpRenderAbstractTypeNames.exists(name)
+			|| phpRenderAbstractTypeNames.exists(clean)
+			|| phpRenderAbstractTypeNames.exists(unwrapped)
+			|| phpRenderAbstractTypeNames.exists(sanitizeTypeName(unwrapped));
 	}
 
 	static function phpEnumCtorRef(name:String):Null<PhpEnumCtorRef> {
@@ -9643,6 +9657,43 @@ class SourceTargetCommon {
 		return names;
 	}
 
+	static function phpProgramAbstractTypeNameMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<Bool> {
+		final names = new haxe.ds.StringMap<Bool>();
+		function hasAbstractMarker(cls:HxClassDecl):Bool {
+			for (meta in HxClassDecl.getMetadata(cls))
+				if (meta == "__hxhx_abstract")
+					return true;
+			return false;
+		}
+		function addName(name:String):Void {
+			if (name == null || name.length == 0)
+				return;
+			names.set(name, true);
+			names.set(sanitizeTypeName(name), true);
+			final parts = name.split(".");
+			if (parts.length > 0) {
+				final short = parts[parts.length - 1];
+				names.set(short, true);
+				names.set(sanitizeTypeName(short), true);
+			}
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				if (!hasAbstractMarker(cls))
+					continue;
+				final shortName = HxClassDecl.getName(cls);
+				addName(shortName);
+				if (pkg != null && pkg.length > 0)
+					addName(pkg + "." + shortName);
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return names;
+	}
+
 	static function phpProgramEnumConstructorMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<PhpEnumCtorRef> {
 		final out = new haxe.ds.StringMap<PhpEnumCtorRef>();
 		final seen = new Map<String, Bool>();
@@ -13727,6 +13778,7 @@ class SourceTargetCommon {
 		final previousPhpStringExtensionMethodsByClass = phpRenderStringExtensionMethodsByClass;
 		final previousPhpStringExtensionMethodsByField = phpRenderStringExtensionMethodsByField;
 		final previousPhpKnownTypeNames = phpRenderKnownTypeNames;
+		final previousPhpAbstractTypeNames = phpRenderAbstractTypeNames;
 		final previousPhpEnumConstructors = phpRenderEnumConstructors;
 		final previousPhpAmbiguousEnumConstructors = phpRenderAmbiguousEnumConstructors;
 		final previousPhpEnumConstructorsByEnum = phpRenderEnumConstructorsByEnum;
@@ -13744,6 +13796,7 @@ class SourceTargetCommon {
 			phpRenderStringExtensionMethodsByClass = phpProgramStringExtensionMethodMap(program, decl);
 			phpRenderStringExtensionMethodsByField = null;
 			phpRenderKnownTypeNames = phpProgramKnownTypeNameMap(program, decl);
+			phpRenderAbstractTypeNames = phpProgramAbstractTypeNameMap(program, decl);
 			phpRenderAmbiguousEnumConstructors = new haxe.ds.StringMap<Bool>();
 			phpRenderEnumConstructors = phpProgramEnumConstructorMap(program, decl);
 			phpRenderEnumConstructorsByEnum = phpProgramEnumConstructorsByEnumMap(program, decl);
@@ -16657,6 +16710,7 @@ class SourceTargetCommon {
 		phpRenderStringExtensionMethodsByClass = previousPhpStringExtensionMethodsByClass;
 		phpRenderStringExtensionMethodsByField = previousPhpStringExtensionMethodsByField;
 		phpRenderKnownTypeNames = previousPhpKnownTypeNames;
+		phpRenderAbstractTypeNames = previousPhpAbstractTypeNames;
 		phpRenderEnumConstructors = previousPhpEnumConstructors;
 		phpRenderAmbiguousEnumConstructors = previousPhpAmbiguousEnumConstructors;
 		phpRenderEnumConstructorsByEnum = previousPhpEnumConstructorsByEnum;

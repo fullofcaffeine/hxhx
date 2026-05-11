@@ -670,7 +670,7 @@ class ParserStageScanHelpers {
 			}
 
 			if (shouldRecord)
-				out.push(new HxClassDecl(abstractName, false, functions, fields));
+				out.push(new HxClassDecl(abstractName, false, functions, fields, "", ["__hxhx_abstract"]));
 		}
 
 		return out;
