@@ -1,3 +1,16 @@
+## [0.15.15](https://github.com/fullofcaffeine/hxhx/compare/v0.15.14...v0.15.15) (2026-05-11)
+
+
+### Bug Fixes
+
+* **php:** add map comprehension helper ([19cc325](https://github.com/fullofcaffeine/hxhx/commit/19cc325cfe66de6278bdf2553d7676d10b71af10))
+* **php:** dispatch abstract unary operators ([2352252](https://github.com/fullofcaffeine/hxhx/commit/235225241543f16a84dc38e00bed81463a659fd2))
+* **php:** expose vector reflection toString ([367aec4](https://github.com/fullofcaffeine/hxhx/commit/367aec4b77e08e34b6d5c37d3dbcbf240a7d5375))
+* **php:** fold abstract unary typeError probes ([473a6c9](https://github.com/fullofcaffeine/hxhx/commit/473a6c96dc521fb00aab260dcc4984a2fd27653a))
+* **php:** snapshot abstract this in closures ([664716a](https://github.com/fullofcaffeine/hxhx/commit/664716a2e405ae50f4e34032b8a45257e5cd098d))
+* **php:** support array-backed abstract push pop ([33796c3](https://github.com/fullofcaffeine/hxhx/commit/33796c32a5d4ea709038cd80238f096338b88723))
+* **php:** support object array access helpers ([3f52480](https://github.com/fullofcaffeine/hxhx/commit/3f524801b8b3a31f3899850e62a2d2af48a83355))
+
 ## [0.15.14](https://github.com/fullofcaffeine/hxhx/compare/v0.15.13...v0.15.14) (2026-05-11)
 
 
