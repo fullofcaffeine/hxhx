@@ -11928,6 +11928,26 @@ class SourceTargetCommon {
 		return out;
 	}
 
+	static function phpEmittedNameIsKnownInterface(name:String, scanClasses:Array<HxClassDecl>, emittedClassNames:Map<String, Bool>):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		if (emittedClassNames != null && !emittedClassNames.exists(name))
+			return false;
+		var sawInterface = false;
+		if (scanClasses == null)
+			return false;
+		for (cls in scanClasses) {
+			if (cls == null)
+				continue;
+			if (sanitizePhpTypeName(HxClassDecl.getName(cls)) != name)
+				continue;
+			if (!HxClassDecl.getIsInterface(cls))
+				return false;
+			sawInterface = true;
+		}
+		return sawInterface;
+	}
+
 	static function renderPhpHelperClass(cls:HxClassDecl, moduleDecl:HxModuleDecl, classesByName:Map<String, HxClassDecl>,
 			postStaticInitializers:Array<String>, scanClasses:Array<HxClassDecl>, emittedClassNames:Map<String, Bool>):Array<String> {
 		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
@@ -11935,24 +11955,16 @@ class SourceTargetCommon {
 		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
 		final isInterface = HxClassDecl.getIsInterface(cls);
 		if (isInterface) {
-			final baseDecl = baseName == null || classesByName == null ? null : classesByName.get(baseName);
 			final canExtendBase = baseName != null
 				&& baseName.length > 0
-				&& (emittedClassNames == null || emittedClassNames.exists(baseName))
-				&& baseDecl != null
-				&& HxClassDecl.getIsInterface(baseDecl);
+				&& phpEmittedNameIsKnownInterface(baseName, scanClasses, emittedClassNames);
 			final interfaceHeader = !canExtendBase ? "interface " + className + " {" : "interface " + className + " extends " + baseName + " {";
 			return [interfaceHeader, "}"];
 		}
 		final implementsNames = new Array<String>();
 		for (path in HxClassDecl.getImplementsPaths(cls)) {
 			final name = phpBaseClassName(path);
-			final implementedDecl = name == null || classesByName == null ? null : classesByName.get(name);
-			if (name != null
-				&& name.length > 0
-				&& (emittedClassNames == null || emittedClassNames.exists(name))
-				&& implementedDecl != null
-				&& HxClassDecl.getIsInterface(implementedDecl))
+			if (name != null && name.length > 0 && phpEmittedNameIsKnownInterface(name, scanClasses, emittedClassNames))
 				implementsNames.push(name);
 		}
 		final extendsText = baseName == null || baseName.length == 0 ? "" : " extends " + baseName;
