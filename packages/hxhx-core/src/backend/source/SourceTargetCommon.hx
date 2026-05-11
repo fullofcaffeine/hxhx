@@ -1410,6 +1410,11 @@ class SourceTargetCommon {
 
 	static function unopExpr(target:SourceNativeTarget, op:String, inner:HxExpr):String {
 		final rendered = renderExpr(target, inner);
+		if (target == Php && op == "-" && !phpExprIsInt64Value(inner)) {
+			final operatorCall = phpUnaryMinusOperatorCall(inner);
+			if (operatorCall != null)
+				return operatorCall;
+		}
 		return switch (op) {
 			case "!":
 				if (target == Python || target == Lua) "(not " + rendered + ")"; else "(!" + rendered + ")";
@@ -1431,6 +1436,21 @@ class SourceTargetCommon {
 				"(" + op + rendered + ")";
 			default:
 				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + op;
+		};
+	}
+
+	static function phpUnaryMinusOperatorCall(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EIdent(name) if (phpLocalHasInstanceMethod(name, "invert")):
+				fieldCallExpr(Php, expr, "invert", []);
+			case ENew(typePath, _) if (phpTypeHasInstanceMethod(typePath, "invert")):
+				fieldCallExpr(Php, expr, "invert", []);
+			case ECast(inner, castHint) if (phpTypeHasInstanceMethod(castHint, "invert") || phpReceiverHasInstanceMethod(inner, "invert")):
+				fieldCallExpr(Php, expr, "invert", []);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpUnaryMinusOperatorCall(inner);
+			case _:
+				null;
 		};
 	}
 
@@ -15162,6 +15182,18 @@ class SourceTargetCommon {
 				lines.push("  if (is_string($left) || is_string($right)) return __hxhx_add_string($left) . __hxhx_add_string($right);");
 				lines.push("  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) return __hxhx_int64_add($left, $right);");
 				lines.push("  if (__hxhx_is_point3($left) && __hxhx_is_point3($right)) return __hxhx_point3($left->x + $right->x, $left->y + $right->y, $left->z + $right->z);");
+				lines.push("  $leftAbstract = is_object($left) && property_exists($left, \"__hx_value\");");
+				lines.push("  $rightAbstract = is_object($right) && property_exists($right, \"__hx_value\");");
+				lines.push("  if ($leftAbstract || $rightAbstract) {");
+				lines.push("    $leftValue = __hxhx_numeric_value($left);");
+				lines.push("    $rightValue = __hxhx_numeric_value($right);");
+				lines.push("    if ((is_int($leftValue) || is_float($leftValue)) && (is_int($rightValue) || is_float($rightValue))) {");
+				lines.push("      $sum = $leftValue + $rightValue;");
+				lines.push("      if ($leftAbstract) return __hxhx_construct_like($left, $sum);");
+				lines.push("      if ($rightAbstract) return __hxhx_construct_like($right, $sum);");
+				lines.push("      return $sum;");
+				lines.push("    }");
+				lines.push("  }");
 				lines.push("  if (is_int($left) || is_float($left)) {");
 				lines.push("    if (is_int($right) || is_float($right)) return $left + $right;");
 				lines.push("  }");

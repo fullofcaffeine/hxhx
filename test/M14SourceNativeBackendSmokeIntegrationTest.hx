@@ -2686,6 +2686,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 			"",
+			"class MyInt2 {",
+			"  public function new(v:Int) {",
+			"    this = v;",
+			"  }",
+			"  public function get():Int {",
+			"    return this;",
+			"  }",
+			"  public function invert():MyInt2 {",
+			"    return new MyInt2(-this);",
+			"  }",
+			"}",
+			"",
 			"class DistanceBox {",
 			"  public var km:Kilometer;",
 			"  public function new(km:Kilometer) {",
@@ -2725,6 +2737,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var box = new DistanceBox(meters);",
 			"    Sys.println(Std.string(km));",
 			"    Sys.println(Std.string(box.km));",
+			"    var my = new MyInt2(12);",
+			"    Sys.println(Std.string((-my).get()));",
+			"    my = my + 1;",
+			"    Sys.println(Std.string(my.get()));",
 			"    var hash:MyHash<String> = [\"k\", \"v\"];",
 			"    Sys.println(hash.get(\"k\"));",
 			"    var ihash:MyHash<Int> = [1, 2];",
@@ -8059,6 +8075,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP runtime should include MyAbstractCounter @:from-style conversion support");
 		assertContains(content, "__hxhx_is_of_type($counter, \"Int\")", "PHP Std.isOfType should lower abstract-backed values through the type helper");
 		assertContains(content, "__hxhx_is_of_type(3, \"Int\")", "PHP Std.isOfType should lower scalar type checks without runtime type variables");
+		assertContains(content, "$my->invert()->get()", "PHP abstract-style unary minus should dispatch the known operator method before member access");
+		assertContains(content, "return __hxhx_construct_like($left, $sum);",
+			"PHP abstract-style numeric addition should preserve the left boxed abstract shape");
 		deleteRecursive(tmpRoot);
 	}
 
