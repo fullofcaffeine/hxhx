@@ -1,3 +1,10 @@
+## [0.15.17](https://github.com/fullofcaffeine/hxhx/compare/v0.15.16...v0.15.17) (2026-05-11)
+
+
+### Bug Fixes
+
+* **php:** call same-class function fields ([2072f7c](https://github.com/fullofcaffeine/hxhx/commit/2072f7c2c3cd0b9ce65733a48c39109350c6d604))
+
 ## [0.15.16](https://github.com/fullofcaffeine/hxhx/compare/v0.15.15...v0.15.16) (2026-05-11)
 
 
