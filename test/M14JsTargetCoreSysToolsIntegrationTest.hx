@@ -1527,6 +1527,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_sys_io_File.saveContent = function", "sys.io.File saveContent shim should emit");
 			assertContains(js, "__hx_cls_sys_io_File.copy = function", "sys.io.File copy shim should emit");
 			assertContains(js, "__hx_cls_haxe_Template.prototype.execute = function", "haxe.Template execute shim should emit");
+			assertNotContains(js, "__hxhx_optional_lambda", "JS target should lower optional-argument lambdas without an unresolved helper");
 			assertContains(js, "__hx_cls_sys_io_File.copyBuf = (typeof Buffer !== \"undefined\" ? Buffer : require(\"buffer\").Buffer).alloc(65536)",
 				"sys.io.File copy buffer should use Node Buffer global without unresolved js.node path");
 			assertContains(js, "__hx_cls_sys_io_FileInput.prototype.seek = function", "unused sys.io.FileInput seek should emit a neutral JS body");
