@@ -9907,6 +9907,154 @@ class SourceTargetCommon {
 		};
 	}
 
+	static function phpGenericLooksTypeParam(compact:String):Bool {
+		if (compact == null || compact.length != 1)
+			return false;
+		final c = compact.charCodeAt(0);
+		return c >= "A".code && c <= "Z".code;
+	}
+
+	static function phpCollectGenericTypeParams(typeHint:String, out:Array<String>):Void {
+		final compact = removeTypeHintWhitespace(typeHint);
+		if (compact.length == 0)
+			return;
+		if (phpGenericLooksTypeParam(compact)) {
+			if (out.indexOf(compact) < 0)
+				out.push(compact);
+			return;
+		}
+		final arrowParts = splitTopLevelArrow(compact);
+		if (arrowParts.length > 1) {
+			for (part in arrowParts)
+				phpCollectGenericTypeParams(part, out);
+			return;
+		}
+		final genericAt = findTopLevelChar(compact, "<".code);
+		if (genericAt >= 0 && StringTools.endsWith(compact, ">")) {
+			final inner = compact.substring(genericAt + 1, compact.length - 1);
+			for (part in splitTopLevelComma(inner))
+				phpCollectGenericTypeParams(part, out);
+		}
+	}
+
+	static function phpGenericParamOrder(fn:HxFunctionDecl):Array<String> {
+		final out = new Array<String>();
+		for (arg in HxFunctionDecl.getArgs(fn))
+			phpCollectGenericTypeParams(HxFunctionArg.getTypeHint(arg), out);
+		return out;
+	}
+
+	static function phpBindGenericTypeHint(formal:String, actual:String, bindings:haxe.ds.StringMap<String>):Void {
+		final cleanFormal = removeTypeHintWhitespace(formal);
+		final cleanActual = removeTypeHintWhitespace(actual);
+		if (cleanFormal.length == 0 || cleanActual.length == 0)
+			return;
+		if (phpGenericLooksTypeParam(cleanFormal)) {
+			if (!bindings.exists(cleanFormal))
+				bindings.set(cleanFormal, cleanActual);
+			return;
+		}
+		final formalArrow = splitTopLevelArrow(cleanFormal);
+		final actualArrow = splitTopLevelArrow(cleanActual);
+		if (formalArrow.length > 1 && formalArrow.length == actualArrow.length) {
+			for (i in 0...formalArrow.length)
+				phpBindGenericTypeHint(formalArrow[i], actualArrow[i], bindings);
+			return;
+		}
+		final formalGenericAt = findTopLevelChar(cleanFormal, "<".code);
+		final actualGenericAt = findTopLevelChar(cleanActual, "<".code);
+		if (formalGenericAt < 0
+			|| actualGenericAt < 0
+			|| !StringTools.endsWith(cleanFormal, ">")
+			|| !StringTools.endsWith(cleanActual, ">"))
+			return;
+		final formalBase = phpGenericBaseSuffix(cleanFormal.substring(0, formalGenericAt));
+		final actualBase = phpGenericBaseSuffix(cleanActual.substring(0, actualGenericAt));
+		if (formalBase != actualBase)
+			return;
+		final formalParts = splitTopLevelComma(cleanFormal.substring(formalGenericAt + 1, cleanFormal.length - 1));
+		final actualParts = splitTopLevelComma(cleanActual.substring(actualGenericAt + 1, cleanActual.length - 1));
+		final count = formalParts.length < actualParts.length ? formalParts.length : actualParts.length;
+		for (i in 0...count)
+			phpBindGenericTypeHint(formalParts[i], actualParts[i], bindings);
+	}
+
+	static function phpGenericSpecializedNameFromExprArgs(fnName:String, fn:HxFunctionDecl, args:Array<HxExpr>,
+			localTypes:haxe.ds.StringMap<String>):Null<String> {
+		final cleanName = sanitizeTypeName(fnName);
+		final paramOrder = phpGenericParamOrder(fn);
+		if (paramOrder.length == 0) {
+			final parts = new Array<String>();
+			for (arg in args) {
+				final suffix = phpGenericSpecializationSuffixFromExpr(arg, localTypes);
+				if (suffix == null || suffix.length == 0)
+					return null;
+				parts.push(suffix);
+			}
+			return parts.length == 0 ? null : cleanName + "_" + parts.join("_");
+		}
+		final bindings = new haxe.ds.StringMap<String>();
+		final fnArgs = HxFunctionDecl.getArgs(fn);
+		final count = args.length < fnArgs.length ? args.length : fnArgs.length;
+		for (i in 0...count) {
+			final formalHint = HxFunctionArg.getTypeHint(fnArgs[i]);
+			final actualHint = phpGenericTypeHintFromExpr(args[i], localTypes);
+			if (actualHint.length > 0) {
+				phpBindGenericTypeHint(formalHint, actualHint, bindings);
+			} else {
+				final cleanFormal = removeTypeHintWhitespace(formalHint);
+				final suffix = phpGenericLooksTypeParam(cleanFormal) ? phpGenericSpecializationSuffixFromExpr(args[i], localTypes) : null;
+				if (suffix != null && suffix.length > 0 && !bindings.exists(cleanFormal))
+					bindings.set(cleanFormal, suffix);
+			}
+		}
+		final parts = new Array<String>();
+		for (param in paramOrder) {
+			if (!bindings.exists(param))
+				return null;
+			parts.push(phpGenericTypeSuffix(bindings.get(param)));
+		}
+		return parts.length == 0 ? null : cleanName + "_" + parts.join("_");
+	}
+
+	static function phpGenericSpecializedNameFromRawArgs(fnName:String, fn:HxFunctionDecl, rawArgs:String, localTypes:haxe.ds.StringMap<String>):Null<String> {
+		final cleanName = sanitizeTypeName(fnName);
+		final rawParts = splitTopLevelComma(rawArgs);
+		final paramOrder = phpGenericParamOrder(fn);
+		if (paramOrder.length == 0) {
+			final parts = new Array<String>();
+			for (rawArg in rawParts) {
+				final suffix = phpGenericSpecializationSuffixFromRawArg(rawArg);
+				if (suffix == null || suffix.length == 0)
+					return null;
+				parts.push(suffix);
+			}
+			return parts.length == 0 ? null : cleanName + "_" + parts.join("_");
+		}
+		final bindings = new haxe.ds.StringMap<String>();
+		final fnArgs = HxFunctionDecl.getArgs(fn);
+		final count = rawParts.length < fnArgs.length ? rawParts.length : fnArgs.length;
+		for (i in 0...count) {
+			final formalHint = HxFunctionArg.getTypeHint(fnArgs[i]);
+			final actualHint = phpGenericTypeHintFromRawArg(rawParts[i], localTypes);
+			if (actualHint.length > 0) {
+				phpBindGenericTypeHint(formalHint, actualHint, bindings);
+			} else {
+				final cleanFormal = removeTypeHintWhitespace(formalHint);
+				final suffix = phpGenericLooksTypeParam(cleanFormal) ? phpGenericSpecializationSuffixFromRawArg(rawParts[i]) : null;
+				if (suffix != null && suffix.length > 0 && !bindings.exists(cleanFormal))
+					bindings.set(cleanFormal, suffix);
+			}
+		}
+		final parts = new Array<String>();
+		for (param in paramOrder) {
+			if (!bindings.exists(param))
+				return null;
+			parts.push(phpGenericTypeSuffix(bindings.get(param)));
+		}
+		return parts.length == 0 ? null : cleanName + "_" + parts.join("_");
+	}
+
 	static function phpGenericSpecializationSuffixFromExpr(expr:HxExpr, localTypes:haxe.ds.StringMap<String>):Null<String> {
 		return switch (expr) {
 			case EInt(_):
@@ -10056,6 +10204,103 @@ class SourceTargetCommon {
 		return parts.join("_");
 	}
 
+	static function phpGenericArraySuffixFromRawArg(raw:String):Null<String> {
+		final trimmed = StringTools.trim(raw);
+		if (!StringTools.startsWith(trimmed, "[") || !StringTools.endsWith(trimmed, "]"))
+			return null;
+		final inner = StringTools.trim(trimmed.substring(1, trimmed.length - 1));
+		var itemSuffix = "Dynamic";
+		if (inner.length > 0) {
+			for (itemText in splitTopLevelComma(inner)) {
+				final suffix = phpGenericSpecializationSuffixFromRawArg(itemText);
+				if (suffix != null && suffix.length > 0) {
+					itemSuffix = suffix;
+					break;
+				}
+			}
+		}
+		return "Array_" + itemSuffix;
+	}
+
+	static function phpGenericArrayTypeHintFromRawArg(raw:String, localTypes:haxe.ds.StringMap<String>):String {
+		final trimmed = StringTools.trim(raw);
+		if (!StringTools.startsWith(trimmed, "[") || !StringTools.endsWith(trimmed, "]"))
+			return "";
+		final inner = StringTools.trim(trimmed.substring(1, trimmed.length - 1));
+		var itemHint = "Dynamic";
+		if (inner.length > 0) {
+			for (itemText in splitTopLevelComma(inner)) {
+				final hint = phpGenericTypeHintFromRawArg(itemText, localTypes);
+				if (hint.length > 0) {
+					itemHint = hint;
+					break;
+				}
+			}
+		}
+		return "Array<" + itemHint + ">";
+	}
+
+	static function phpGenericAnonSuffixFromRawArg(raw:String):Null<String> {
+		final trimmed = StringTools.trim(raw);
+		if (!StringTools.startsWith(trimmed, "{") || !StringTools.endsWith(trimmed, "}"))
+			return null;
+		final inner = StringTools.trim(trimmed.substring(1, trimmed.length - 1));
+		if (inner.length == 0)
+			return null;
+		final parts = ["anon"];
+		for (fieldText in splitTopLevelComma(inner)) {
+			final colonAt = findTopLevelChar(fieldText, ":".code);
+			if (colonAt <= 0)
+				return null;
+			var fieldName = StringTools.trim(fieldText.substring(0, colonAt));
+			if ((StringTools.startsWith(fieldName, "\"") && StringTools.endsWith(fieldName, "\""))
+				|| (StringTools.startsWith(fieldName, "'") && StringTools.endsWith(fieldName, "'")))
+				fieldName = fieldName.substring(1, fieldName.length - 1);
+			final suffix = phpGenericSpecializationSuffixFromRawArg(fieldText.substr(colonAt + 1));
+			if (suffix == null || suffix.length == 0)
+				return null;
+			parts.push(sanitizeTypeName(fieldName));
+			parts.push(suffix);
+		}
+		return parts.join("_");
+	}
+
+	static function phpGenericTypeHintFromRawArg(raw:String, localTypes:haxe.ds.StringMap<String>):String {
+		final trimmed = StringTools.trim(raw);
+		if (trimmed.length == 0)
+			return "";
+		final newType = phpGenericNewTypeText(trimmed);
+		if (newType.length > 0)
+			return newType;
+		final arrayHint = phpGenericArrayTypeHintFromRawArg(trimmed, localTypes);
+		if (arrayHint.length > 0)
+			return arrayHint;
+		if (trimmed == "true" || trimmed == "false")
+			return "Bool";
+		if ((StringTools.startsWith(trimmed, "\"") && StringTools.endsWith(trimmed, "\""))
+			|| (StringTools.startsWith(trimmed, "'") && StringTools.endsWith(trimmed, "'")))
+			return "String";
+		if (localTypes != null && localTypes.exists(sanitizeTypeName(trimmed)))
+			return localTypes.get(sanitizeTypeName(trimmed));
+		var sawDigit = false;
+		var sawDot = false;
+		for (i in 0...trimmed.length) {
+			final c = trimmed.charCodeAt(i);
+			if (i == 0 && (c == "-".code || c == "+".code))
+				continue;
+			if (c == ".".code) {
+				if (sawDot)
+					return "";
+				sawDot = true;
+				continue;
+			}
+			if (c < "0".code || c > "9".code)
+				return "";
+			sawDigit = true;
+		}
+		return sawDigit ? (sawDot ? "Float" : "Int") : "";
+	}
+
 	static function phpGenericSpecializationSuffixFromRawArg(raw:String):Null<String> {
 		final trimmed = StringTools.trim(raw);
 		if (trimmed.length == 0)
@@ -10066,6 +10311,12 @@ class SourceTargetCommon {
 		final functionSuffix = phpGenericFunctionSuffixFromRawArg(trimmed);
 		if (functionSuffix != null)
 			return functionSuffix;
+		final arraySuffix = phpGenericArraySuffixFromRawArg(trimmed);
+		if (arraySuffix != null)
+			return arraySuffix;
+		final anonSuffix = phpGenericAnonSuffixFromRawArg(trimmed);
+		if (anonSuffix != null)
+			return anonSuffix;
 		if (trimmed == "true" || trimmed == "false")
 			return "Bool";
 		if ((StringTools.startsWith(trimmed, "\"") && StringTools.endsWith(trimmed, "\""))
@@ -10133,23 +10384,16 @@ class SourceTargetCommon {
 	}
 
 	static function phpCollectGenericStaticSpecializationsFromText(text:String, className:String, genericFns:haxe.ds.StringMap<HxFunctionDecl>,
-			specializations:haxe.ds.StringMap<Array<String>>, allowDirectCalls:Bool):Void {
+			localTypes:haxe.ds.StringMap<String>, specializations:haxe.ds.StringMap<Array<String>>, allowDirectCalls:Bool):Void {
 		if (text == null || text.length == 0)
 			return;
 		function addSpecialization(fnName:String, rawArgs:String):Void {
 			final cleanName = sanitizeTypeName(fnName);
 			if (!genericFns.exists(cleanName))
 				return;
-			final parts = new Array<String>();
-			for (rawArg in splitTopLevelComma(rawArgs)) {
-				final suffix = phpGenericSpecializationSuffixFromRawArg(rawArg);
-				if (suffix == null || suffix.length == 0)
-					return;
-				parts.push(suffix);
-			}
-			if (parts.length == 0)
+			final specializedName = phpGenericSpecializedNameFromRawArgs(cleanName, genericFns.get(cleanName), rawArgs, localTypes);
+			if (specializedName == null)
 				return;
-			final specializedName = cleanName + "_" + parts.join("_");
 			final existing = specializations.exists(cleanName) ? specializations.get(cleanName) : [];
 			if (existing.indexOf(specializedName) < 0)
 				existing.push(specializedName);
@@ -10194,14 +10438,9 @@ class SourceTargetCommon {
 			final cleanName = sanitizeTypeName(fnName);
 			if (!genericFns.exists(cleanName) || args == null || args.length == 0)
 				return;
-			final parts = new Array<String>();
-			for (arg in args) {
-				final suffix = phpGenericSpecializationSuffixFromExpr(arg, localTypes);
-				if (suffix == null || suffix.length == 0)
-					return;
-				parts.push(suffix);
-			}
-			final specializedName = cleanName + "_" + parts.join("_");
+			final specializedName = phpGenericSpecializedNameFromExprArgs(cleanName, genericFns.get(cleanName), args, localTypes);
+			if (specializedName == null)
+				return;
 			final existing = specializations.exists(cleanName) ? specializations.get(cleanName) : [];
 			if (existing.indexOf(specializedName) < 0)
 				existing.push(specializedName);
@@ -10335,7 +10574,8 @@ class SourceTargetCommon {
 				final localTypes = phpFunctionLocalTypes(HxFunctionDecl.getArgs(fn));
 				phpCollectGenericStaticSpecializationsFromStmts(HxFunctionDecl.getBody(fn), className, genericFns, localTypes, specializations,
 					allowDirectCalls);
-				phpCollectGenericStaticSpecializationsFromText(HxFunctionDecl.getBodyText(fn), className, genericFns, specializations, allowDirectCalls);
+				phpCollectGenericStaticSpecializationsFromText(HxFunctionDecl.getBodyText(fn), className, genericFns, localTypes, specializations,
+					allowDirectCalls);
 			}
 		}
 		for (name in specializations.keys())

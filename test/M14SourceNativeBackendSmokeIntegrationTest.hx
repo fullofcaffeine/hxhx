@@ -3057,6 +3057,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final src = [
 			"class GenericReflect {",
 			"  @:generic public static function gf1<T>(value:T):T return value;",
+			"  @:generic public static function gf2<A, B>(label:A, values:Array<B>):String return Std.string(label) + Std.string(values);",
 			"}",
 			"class Main {",
 			"  static function main() {",
@@ -3066,6 +3067,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    GenericReflect.gf1(new haxe.ds.GenericStack<Int>());",
 			"    GenericReflect.gf1({foo: 1});",
 			"    GenericReflect.gf1(function(i:Int):String return Std.string(i));",
+			"    GenericReflect.gf2(\"foo\", [1, 2]);",
+			"    GenericReflect.gf2(\"foo\", [[1, 2]]);",
 			"    var fields = Type.getClassFields(GenericReflect);",
 			"    fields.sort(Reflect.compare);",
 			"    Sys.println(fields.join(\"#\"));",
@@ -3075,12 +3078,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(Lambda.has(fields, \"gf1_haxe_ds_GenericStack_Int\")));",
 			"    Sys.println(Std.string(Lambda.has(fields, \"gf1_anon_foo_Int\")));",
 			"    Sys.println(Std.string(Lambda.has(fields, \"gf1_func_Int_String\")));",
+			"    Sys.println(Std.string(Lambda.has(fields, \"gf2_String_Int\")));",
+			"    Sys.println(Std.string(Lambda.has(fields, \"gf2_String_Array_Int\")));",
 			"  }",
 			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpGenericStaticReflectionTextFallbackProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		final gf2 = new HxFunctionDecl("gf2", HxVisibility.Public, true, [
+			new HxFunctionArg("label", "A", HxDefaultValue.NoDefault),
+			new HxFunctionArg("values", "Array<B>", HxDefaultValue.NoDefault)
+		], "String", [SReturn(EString("ok"), pos)], "", ["generic"], pos, pos);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [], "", [], pos, pos,
+			'GenericReflect.gf2("foo", [1, 2]);\nGenericReflect.gf2("foo", [[1, 2]]);');
+		final mainClass = new HxClassDecl("Main", true, [mainFn], []);
+		final genericClass = new HxClassDecl("GenericReflect", false, [gf2], []);
+		final decl = new HxModuleDecl("", [], mainClass, [mainClass, genericClass], false, false);
+		return new MacroExpandedProgram([typedSyntheticModule("Main.hx", decl)], false, []);
 	}
 
 	static function phpTypeErrorGenericNullProgram():GenIrProgram {
@@ -8332,15 +8351,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP @:generic static reflection should preserve constructed generic type suffixes");
 		assertContains(content, "public static function gf1_func_Int_String($value)",
 			"PHP @:generic static reflection should preserve typed function literal suffixes");
+		assertContains(content, "public static function gf2_String_Int($label, $values)",
+			"PHP @:generic static reflection should bind Array<T> arguments to their generic item type");
+		assertContains(content, "public static function gf2_String_Array_Int($label, $values)",
+			"PHP @:generic static reflection should bind nested Array<T> arguments to nested generic item types");
 		assertContains(content, "return self::gf1($value);", "PHP @:generic specialization wrappers should delegate to the generic implementation");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP generic static reflection support should execute, stderr:\n" + run.stderr);
 			final lines = run.stdout.split("\n");
-			assertTrue(lines.length >= 7, "generated PHP generic static reflection output too short, got:\n" + run.stdout);
-			for (i in 1...7)
+			assertTrue(lines.length >= 9, "generated PHP generic static reflection output too short, got:\n" + run.stdout);
+			for (i in 1...9)
 				assertTrue(lines[i] == "true", "generated PHP generic static reflection field check failed, got:\n" + run.stdout);
 		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpGenericStaticReflectionTextFallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_generic_static_text_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpGenericStaticReflectionTextFallbackProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final content = File.getContent(Path.join([tmpRoot, "index.php"]));
+		assertContains(content, "public static function gf2_String_Int($label, $values)",
+			"PHP raw-body @:generic reflection should bind Array<T> arguments to item type");
+		assertContains(content, "public static function gf2_String_Array_Int($label, $values)",
+			"PHP raw-body @:generic reflection should bind nested Array<T> arguments to nested item type");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10146,6 +10183,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpEnumTypeCheck();
 		assertPhpTypeReflection();
 		assertPhpGenericStaticReflection();
+		assertPhpGenericStaticReflectionTextFallback();
 		assertPhpTypeErrorGenericNull();
 		assertPhpShiftAssignment();
 		assertPythonShiftAssignment();
