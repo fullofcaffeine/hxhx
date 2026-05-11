@@ -4309,6 +4309,32 @@ class SourceTargetCommon {
 		};
 	}
 
+	static function phpRuntimeMapTagForTypeHint(typeHint:String):String {
+		final compact = removeTypeHintWhitespace(typeHint);
+		if (compact == "StringMap" || compact == "haxe.ds.StringMap")
+			return "haxe.ds.StringMap";
+		if (compact == "IntMap" || compact == "haxe.ds.IntMap")
+			return "haxe.ds.IntMap";
+		if (compact == "ObjectMap" || compact == "haxe.ds.ObjectMap")
+			return "haxe.ds.ObjectMap";
+		if (!StringTools.startsWith(compact, "Map<") || !StringTools.endsWith(compact, ">"))
+			return "";
+		final inner = compact.substr(4, compact.length - 5);
+		final parts = splitTopLevelComma(inner);
+		if (parts.length == 0)
+			return "";
+		return switch (StringTools.trim(parts[0])) {
+			case "Int":
+				"haxe.ds.IntMap";
+			case "String":
+				"haxe.ds.StringMap";
+			case "":
+				"";
+			case _:
+				"haxe.ds.ObjectMap";
+		};
+	}
+
 	static function phpRuntimeListType(typePath:String):Bool {
 		return switch (typePath) {
 			case "List" | "haxe.ds.List":
@@ -11314,6 +11340,8 @@ class SourceTargetCommon {
 				out.push(indent + name + " = __hxhx_to_my_hash(" + name + ", " + (isMyHashStringTypeHint(hint) ? "true" : "false") + ");");
 			else if (isMyAbstractCounterTypeHint(hint))
 				out.push(indent + name + " = __hxhx_to_my_abstract_counter(" + name + ");");
+			else if (phpRuntimeMapTagForTypeHint(hint).length > 0)
+				out.push(indent + name + " = __hxhx_tag_map(" + name + ", " + quotePhpString(phpRuntimeMapTagForTypeHint(hint)) + ");");
 			else if (isStringTypeHint(hint)) {
 				if (HxFunctionArg.getIsOptional(arg))
 					out.push(indent + "if (" + name + " !== null) " + name + " = __hxhx_to_string_value(" + name + ");");
@@ -14226,6 +14254,11 @@ class SourceTargetCommon {
 				lines.push("    return gettype($key) . \":\" . strval($key);");
 				lines.push("  }");
 				lines.push("  public function set($key, $value) {");
+				lines.push("    if ($this->__hx_type === \"Map\") {");
+				lines.push("      if (is_int($key)) $this->__hx_type = \"haxe.ds.IntMap\";");
+				lines.push("      else if (is_string($key)) $this->__hx_type = \"haxe.ds.StringMap\";");
+				lines.push("      else if (is_object($key)) $this->__hx_type = \"haxe.ds.ObjectMap\";");
+				lines.push("    }");
 				lines.push("    $id = self::keyId($key);");
 				lines.push("    $this->items[$id] = $value;");
 				lines.push("    $this->keys[$id] = $key;");
@@ -15140,12 +15173,12 @@ class SourceTargetCommon {
 				lines.push("    case \"String\": return is_string($value) || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));");
 				lines.push("    case \"Bool\": return is_bool($value) || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));");
 				lines.push("    case \"Array\": return is_array($value) || $value instanceof __HxArray || ($hasBoxedValue && __hxhx_is_of_type($boxedValue, $type));");
-				lines.push("    case \"StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
-				lines.push("    case \"haxe.ds.StringMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.StringMap\";");
-				lines.push("    case \"IntMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.IntMap\";");
-				lines.push("    case \"haxe.ds.IntMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.IntMap\";");
-				lines.push("    case \"ObjectMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.ObjectMap\";");
-				lines.push("    case \"haxe.ds.ObjectMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.ObjectMap\";");
+				lines.push("    case \"StringMap\": return $value instanceof Map && ($value->__hx_type === \"haxe.ds.StringMap\" || $value->__hx_type === \"Map\");");
+				lines.push("    case \"haxe.ds.StringMap\": return $value instanceof Map && ($value->__hx_type === \"haxe.ds.StringMap\" || $value->__hx_type === \"Map\");");
+				lines.push("    case \"IntMap\": return $value instanceof Map && ($value->__hx_type === \"haxe.ds.IntMap\" || $value->__hx_type === \"Map\");");
+				lines.push("    case \"haxe.ds.IntMap\": return $value instanceof Map && ($value->__hx_type === \"haxe.ds.IntMap\" || $value->__hx_type === \"Map\");");
+				lines.push("    case \"ObjectMap\": return $value instanceof Map && ($value->__hx_type === \"haxe.ds.ObjectMap\" || $value->__hx_type === \"Map\");");
+				lines.push("    case \"haxe.ds.ObjectMap\": return $value instanceof Map && ($value->__hx_type === \"haxe.ds.ObjectMap\" || $value->__hx_type === \"Map\");");
 				lines.push("    case \"List\": return $value instanceof List_;");
 				lines.push("    case \"haxe.ds.List\": return $value instanceof List_;");
 				lines.push("    case \"Exception\": return $value instanceof \\Throwable;");
@@ -15223,6 +15256,10 @@ class SourceTargetCommon {
 				lines.push("  $next = __hxhx_add($object->$field, $value);");
 				lines.push("  $object->$field = $next;");
 				lines.push("  return $next;");
+				lines.push("}");
+				lines.push("function __hxhx_tag_map($value, $__hx_type) {");
+				lines.push("  if ($value instanceof Map && $value->__hx_type === \"Map\") $value->__hx_type = $__hx_type;");
+				lines.push("  return $value;");
 				lines.push("}");
 				lines.push("function __hxhx_map_literal($pairs) {");
 				lines.push("  $__hx_type = \"Map\";");

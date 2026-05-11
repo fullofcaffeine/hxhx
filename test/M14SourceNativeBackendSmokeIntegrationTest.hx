@@ -1714,6 +1714,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpMapSetTypeTagProgram():GenIrProgram {
+		final src = [
+			"class Box {",
+			"  public function new() {}",
+			"}",
+			"",
+			"class Main {",
+			"  static function mapMe(map:Map<Int,String>) {",
+			"  }",
+			"  static function main() {",
+			"    var stringMap = new Map<String,Int>();",
+			"    stringMap.set(\"foo\", 1);",
+			"    Sys.println(Std.string(Std.isOfType(stringMap, haxe.ds.StringMap)));",
+			"    var intMap = new Map<Int,Int>();",
+			"    intMap.set(7, 1);",
+			"    Sys.println(Std.string(Std.isOfType(intMap, haxe.ds.IntMap)));",
+			"    var box = new Box();",
+			"    var objectMap = new Map<Box,Int>();",
+			"    objectMap.set(box, 1);",
+			"    Sys.println(Std.string(Std.isOfType(objectMap, haxe.ds.ObjectMap)));",
+			"    var inferred = new Map();",
+			"    mapMe(inferred);",
+			"    Sys.println(Std.string(Std.isOfType(inferred, haxe.ds.IntMap)));",
+			"    var neutral = new Map();",
+			"    Sys.println(Std.string(Std.isOfType(neutral, haxe.ds.IntMap)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpHaxeSerializerRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Box {",
@@ -5579,6 +5612,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP map literal type tags should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "true\n2\ntrue\n4\ntrue\n5\n", "generated PHP map literal type tag output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpMapSetTypeTags():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_set_type_tags_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpMapSetTypeTagProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "if ($this->__hx_type === \"Map\")", "PHP Map.set should infer a concrete runtime map tag for generic Map values");
+		assertContains(content, "$stringMap = new Map();", "PHP generic Map<String,Int> construction should start with the neutral Map runtime shim");
+		assertContains(content, "__hxhx_is_of_type($stringMap, \"haxe.ds.StringMap\")",
+			"PHP generic Map<String,Int> values should be checkable as haxe.ds.StringMap after set");
+		assertContains(content, "__hxhx_is_of_type($intMap, \"haxe.ds.IntMap\")",
+			"PHP generic Map<Int,Int> values should be checkable as haxe.ds.IntMap after set");
+		assertContains(content, "__hxhx_is_of_type($objectMap, \"haxe.ds.ObjectMap\")",
+			"PHP generic Map<object,Int> values should be checkable as haxe.ds.ObjectMap after set");
+		assertContains(content, "__hxhx_tag_map($map, \"haxe.ds.IntMap\")", "PHP typed Map<Int,V> function arguments should tag neutral Map values");
+		assertContains(content, "__hxhx_is_of_type($inferred, \"haxe.ds.IntMap\")",
+			"PHP function-call inferred Map<Int,V> values should be checkable as haxe.ds.IntMap");
+		assertContains(content, "$value->__hx_type === \"haxe.ds.IntMap\" || $value->__hx_type === \"Map\"",
+			"PHP neutral Map values should remain compatible with inferred concrete map checks");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Map.set type tags should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\ntrue\ntrue\ntrue\n", "generated PHP Map.set type tag output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -10354,6 +10416,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpRuntimeShim();
 		assertPhpMapRuntimeShim();
 		assertPhpMapLiteralTypeTags();
+		assertPhpMapSetTypeTags();
 		assertPhpHaxeSerializerRuntimeSupport();
 		assertPhpHaxeSerializerImportRuntimeSupport();
 		assertPhpPoint3StringEqualityRuntimeSupport();
