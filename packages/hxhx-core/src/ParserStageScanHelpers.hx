@@ -695,6 +695,49 @@ class ParserStageScanHelpers {
 			return {text: parts.join(""), nextPos: j};
 		}
 
+		function scanFunctionParamListOpen(startPos:Int):{text:String, nextPos:Int, tokenPos:Int} {
+			var j = startPos;
+			var parenDepth = 0;
+			var bracketDepth = 0;
+			var braceDepth = 0;
+			var angleDepth = 0;
+			while (true) {
+				final tokenPos = j;
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {text: tok.text, nextPos: tok.nextPos, tokenPos: tokenPos};
+				final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0;
+				if (atTop && tok.text == "(")
+					return {text: tok.text, nextPos: tok.nextPos, tokenPos: tokenPos};
+				if (atTop && (tok.text == "{" || tok.text == ";" || tok.text == "="))
+					return {text: tok.text, nextPos: tok.nextPos, tokenPos: tokenPos};
+				j = tok.nextPos;
+				switch (tok.text) {
+					case "(":
+						parenDepth += 1;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth -= 1;
+					case "[":
+						bracketDepth += 1;
+					case "]":
+						if (bracketDepth > 0)
+							bracketDepth -= 1;
+					case "{":
+						braceDepth += 1;
+					case "}":
+						if (braceDepth > 0)
+							braceDepth -= 1;
+					case "<":
+						angleDepth += 1;
+					case ">":
+						if (angleDepth > 0)
+							angleDepth -= 1;
+					case _:
+				}
+			}
+		}
+
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -729,7 +772,7 @@ class ParserStageScanHelpers {
 			pendingMetadata = [];
 
 			// Optional `(a:T, b:U)` parameter list.
-			final nt = scanNextToken(source, i);
+			final nt = scanFunctionParamListOpen(i);
 			if (nt.text == "(") {
 				i = nt.nextPos;
 				var parenDepth = 1;
@@ -811,20 +854,41 @@ class ParserStageScanHelpers {
 
 			// Consume tokens until the terminating `;` so we don't interpret type names
 			// as additional constructors.
+			var tailParenDepth = 0;
+			var tailBracketDepth = 0;
+			var tailAngleDepth = 0;
 			while (true) {
 				final tt = scanNextToken(source, i);
 				i = tt.nextPos;
 				if (tt.text.length == 0)
 					break;
 				if (!tt.isIdent) {
-					if (tt.text == "{")
-						depth += 1;
-					else if (tt.text == "}") {
-						depth -= 1;
-						if (depth <= 0)
-							break;
-					} else if (depth == 1 && (tt.text == ";" || tt.text == ",")) {
-						break;
+					switch (tt.text) {
+						case "(":
+							tailParenDepth += 1;
+						case ")":
+							if (tailParenDepth > 0)
+								tailParenDepth -= 1;
+						case "[":
+							tailBracketDepth += 1;
+						case "]":
+							if (tailBracketDepth > 0)
+								tailBracketDepth -= 1;
+						case "<":
+							tailAngleDepth += 1;
+						case ">":
+							if (tailAngleDepth > 0)
+								tailAngleDepth -= 1;
+						case "{":
+							depth += 1;
+						case "}":
+							depth -= 1;
+							if (depth <= 0)
+								break;
+						case ";" | ",":
+							if (depth == 1 && tailParenDepth == 0 && tailBracketDepth == 0 && tailAngleDepth == 0)
+								break;
+						case _:
 					}
 				}
 			}

@@ -2609,6 +2609,7 @@ class SourceTargetCommon {
 				final clean = sanitizeTypeName(name);
 				if (clean.length > 0 && (!isPhpImplicitIdentifier(clean) || phpLocalExists(clean)) && names.indexOf(clean) < 0)
 					names.push(clean);
+			case EField(receiver, _) if (phpStaticTypePath(receiver) != null):
 			case EField(receiver, _):
 				phpCollectUsedIdents(receiver, names);
 			case ECall(callee, args):
@@ -2875,14 +2876,24 @@ class SourceTargetCommon {
 	}
 
 	static function phpSwitchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
-		final useClause = phpLambdaUseClause(phpLambdaUsedCaptures(scrutinee, []), []);
+		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+		final loweredCases = new Array<SourceSwitchPatternLowered>();
+		final captures = phpLambdaUsedCaptures(scrutinee, []);
+		for (i in 0...count) {
+			final lowered = lowerSourceSwitchPattern(Php, patterns[i], "$__hxhx_switch");
+			loweredCases.push(lowered);
+			final bound = [for (binding in lowered.bindings) sanitizeTypeName(binding.name)];
+			for (name in phpLambdaUsedCaptures(exprs[i], bound))
+				if (captures.indexOf(name) < 0)
+					captures.push(name);
+		}
+		final useClause = phpLambdaUseClause(captures, []);
 		final out = [
 			"(function()" + useClause + " {",
 			"  $__hxhx_switch = " + renderExpr(Php, scrutinee) + ";"
 		];
-		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
 		for (i in 0...count) {
-			final lowered = lowerSourceSwitchPattern(Php, patterns[i], "$__hxhx_switch");
+			final lowered = loweredCases[i];
 			final keyword = i == 0 ? "if" : "} elseif";
 			out.push("  " + keyword + " (" + lowered.cond + ") {");
 			for (binding in lowered.bindings)
@@ -6436,7 +6447,7 @@ class SourceTargetCommon {
 			case PInt(value):
 				{cond: equalityCond(target, scrutinee, Std.string(value)), bindings: []};
 			case PEnumValue(name):
-				{cond: equalityCond(target, scrutinee, quoteString(name)), bindings: []};
+				{cond: sourceEnumValueCond(target, scrutinee, name), bindings: []};
 			case PEnumExtract(name, args):
 				lowerSourceEnumExtract(target, name, args, scrutinee);
 			case PObject(fieldNames, fieldPatterns):
@@ -6502,6 +6513,39 @@ class SourceTargetCommon {
 
 	static function sourceAndOp(target:SourceNativeTarget):String {
 		return target == Python || target == Lua ? "and" : "&&";
+	}
+
+	static function sourceEnumValueCond(target:SourceNativeTarget, scrutinee:String, name:String):String {
+		return switch (target) {
+			case Php:
+				"("
+				+ scrutinee
+				+ " !== null && is_object("
+				+ scrutinee
+				+ ") && property_exists("
+				+ scrutinee
+				+ ", "
+				+ quoteString("__hx_ctor")
+				+ ") && "
+				+ scrutinee
+				+ "->__hx_ctor === "
+				+ quoteString(name)
+				+ ")";
+			case Python:
+				"("
+				+ scrutinee
+				+ " is not None and hasattr("
+				+ scrutinee
+				+ ", "
+				+ quoteString("__hx_ctor")
+				+ ") and "
+				+ scrutinee
+				+ ".__hx_ctor == "
+				+ quoteString(name)
+				+ ")";
+			case Java, Cs, Lua:
+				equalityCond(target, scrutinee, quoteString(name));
+		};
 	}
 
 	static function lowerSourceExtractorPattern(target:SourceNativeTarget, extractorText:String, resultPattern:HxSwitchPattern,

@@ -1485,7 +1485,7 @@ class ParserStage {
 			pendingMetadata = [];
 
 			// Optional `(a:T, b:U)` parameter list.
-			final nt = scanNextToken(source, i);
+			final nt = scanFunctionParamListOpen(i);
 			if (nt.text == "(") {
 				i = nt.nextPos;
 				var parenDepth = 1;
@@ -1567,20 +1567,41 @@ class ParserStage {
 
 			// Consume tokens until the terminating `;` so we don't interpret type names
 			// as additional constructors.
+			var tailParenDepth = 0;
+			var tailBracketDepth = 0;
+			var tailAngleDepth = 0;
 			while (true) {
 				final tt = scanNextToken(source, i);
 				i = tt.nextPos;
 				if (tt.text.length == 0)
 					break;
 				if (!tt.isIdent) {
-					if (tt.text == "{")
-						depth += 1;
-					else if (tt.text == "}") {
-						depth -= 1;
-						if (depth <= 0)
-							break;
-					} else if (depth == 1 && (tt.text == ";" || tt.text == ",")) {
-						break;
+					switch (tt.text) {
+						case "(":
+							tailParenDepth += 1;
+						case ")":
+							if (tailParenDepth > 0)
+								tailParenDepth -= 1;
+						case "[":
+							tailBracketDepth += 1;
+						case "]":
+							if (tailBracketDepth > 0)
+								tailBracketDepth -= 1;
+						case "<":
+							tailAngleDepth += 1;
+						case ">":
+							if (tailAngleDepth > 0)
+								tailAngleDepth -= 1;
+						case "{":
+							depth += 1;
+						case "}":
+							depth -= 1;
+							if (depth <= 0)
+								break;
+						case ";" | ",":
+							if (depth == 1 && tailParenDepth == 0 && tailBracketDepth == 0 && tailAngleDepth == 0)
+								break;
+						case _:
 					}
 				}
 			}

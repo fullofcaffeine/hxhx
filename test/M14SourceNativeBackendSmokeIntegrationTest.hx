@@ -2366,14 +2366,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"enum ELatest {",
 			"  Same;",
 			"}",
-			"enum ConstantBox {",
-			"  CFloatBox(s:String);",
+			"enum ConstantBox<T> {",
+			"  CFloatBox(s:String):ConstantBox<Float>;",
+			"}",
+			"enum BinopBox<S, T> {",
+			"  OpAddBox:BinopBox<Float, Float>;",
 			"}",
 			"enum OlderExprBox {",
 			"  EConst;",
 			"}",
-			"enum ExprBox {",
-			"  EConst(c:ConstantBox);",
+			"enum ExprBox<T> {",
+			"  EConst(c:ConstantBox<T>):ExprBox<T>;",
+			"  EBinop<C>(op:BinopBox<C, T>, left:ExprBox<C>, right:ExprBox<C>):ExprBox<T>;",
 			"}",
 			"",
 			"class EnumSwitchHolder {",
@@ -2384,6 +2388,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    return switch (id(c)) {",
 			"      case C(i, s): Std.string(i) + s;",
 			"      default: \"bad\";",
+			"    }",
+			"  }",
+			"}",
+			"",
+			"class BoxEval {",
+			"  public static function eval(e:ExprBox<Float>):Float {",
+			"    return switch (e) {",
+			"      case EConst(CFloatBox(s)): Std.parseFloat(s);",
+			"      case EBinop(op, left, right): evalBinop(op, left, right);",
+			"    }",
+			"  }",
+			"  public static function evalBinop(op:BinopBox<Float, Float>, left:ExprBox<Float>, right:ExprBox<Float>):Float {",
+			"    return switch (op) {",
+			"      case OpAddBox: eval(left) + eval(right);",
 			"    }",
 			"  }",
 			"}",
@@ -2429,6 +2447,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Type.enumEq(latest, Same));",
 			"    var box = EConst(CFloatBox(\"12\"));",
 			"    Sys.println(Std.string(box));",
+			"    Sys.println(Std.string(BoxEval.eval(EBinop(OpAddBox, box, EConst(CFloatBox(\"8\"))))));",
 			"  }",
 			"}",
 		].join("\n");
@@ -6554,13 +6573,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP duplicate unqualified enum constructors should use peer enum type context when available");
 		assertContains(content, "$box = ExprBox::EConst(ConstantBox::CFloatBox(\"12\"));",
 			"PHP bare enum constructor calls should prefer current-module constructors over imported ambiguous names");
+		assertContains(content, "public static function EBinop($op, $left, $right)",
+			"PHP scanned generic enum constructors should remain payload constructors");
+		assertContains(content, "property_exists($__hxhx_switch->__hx_params[0], \"__hx_ctor\")",
+			"PHP no-arg enum patterns should inspect Haxe enum objects instead of comparing against raw strings");
+		assertContains(content, "function() use ($op, $left, $right)",
+			"PHP switch-expression closures should capture branch-only values referenced outside the scrutinee");
 		assertContains(content, "Type::enumEq($e2, MyEnum::C(1, \"x\"))", "PHP Type.enumEq should remain a static runtime call");
 		assertContains(content, "echo __hxhx_add_string($e) . PHP_EOL;", "PHP Std.string on enum values should use Haxe stringification");
 		assertContains(content, "echo __hxhx_add_string([$e]) . PHP_EOL;", "PHP Std.string on enum arrays should recursively stringify enum values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum constructor values should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\nSE_A\n1\nD(A)\n1\nSame\n1\nEConst(CFloatBox(12))\n",
+			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\nSE_A\n1\nD(A)\n1\nSame\n1\nEConst(CFloatBox(12))\n20\n",
 				"generated PHP enum constructor values should stringify correctly, got:\n"
 				+ run.stdout);
 		}
