@@ -3473,6 +3473,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  public function new(value:String) this.value = value;",
 			"  public function toString():String return value;",
 			"}",
+			"class MyGeneric<T> {",
+			"  public var t:T;",
+			"  public function new(t:T) this.t = t;",
+			"}",
 			"class GenericConstruct {",
 			"  @:generic public static function append<A>(seed:A, values:Array<A>):Array<A> {",
 			"    var clone = new A(\"tail\");",
@@ -3488,6 +3492,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var boxes = GenericConstruct.append(box, []);",
 			"    Sys.println(Std.string(boxes[0] == box));",
 			"    Sys.println(boxes[0].value);",
+			"    var fnBox = new MyGeneric<Int->Int>(function(i:Int):Int return i * i);",
+			"    Sys.println(fnBox.t(2));",
 			"  }",
 			"}",
 		].join("\n");
@@ -9019,10 +9025,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_construct_like($seed, \"tail\")",
 			"PHP constructible generic constructor should lower through runtime sample construction");
+		assertContains(content, "new MyGeneric(function($i)", "PHP constructor parser should preserve arguments after function-type constructor parameters");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP constructible generic support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "tail\nfalse\ntail\n", "generated PHP constructible generic output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "tail\nfalse\ntail\n4\n", "generated PHP constructible generic output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}

@@ -1194,18 +1194,28 @@ class HxParser {
 					// generic constructor type arguments in this bootstrap parser.
 					if (isOtherChar("<")) {
 						var angleDepth = 0;
+						var previousWasMinus = false;
 						while (true) {
 							switch (cur.kind) {
 								case TOther(c) if (c == "<".code):
 									angleDepth += 1;
+									previousWasMinus = false;
+									bump();
+								case TOther(c) if (c == "-".code):
+									previousWasMinus = true;
+									bump();
+								case TOther(c) if (c == ">".code && previousWasMinus):
+									previousWasMinus = false;
 									bump();
 								case TOther(c) if (c == ">".code):
 									angleDepth -= 1;
+									previousWasMinus = false;
 									bump();
 									if (angleDepth <= 0) break;
 								case TEof:
 									break;
 								case _:
+									previousWasMinus = false;
 									bump();
 							}
 						}

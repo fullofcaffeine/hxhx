@@ -1943,6 +1943,8 @@ class SourceTargetCommon {
 								final renderedArgs = phpRenderedCallArgsWithEnumPeerContext(field, phpArgs);
 								if (renderedArgs != null)
 									fieldAccess(target, renderExpr(target, receiver), field) + "(" + renderedArgs.join(", ") + ")";
+								else if (phpReceiverHasInstanceField(receiver, field))
+									phpCallField(renderExpr(Php, receiver), field, phpArgs);
 								else
 									callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), phpArgs);
 							}
@@ -1991,6 +1993,25 @@ class SourceTargetCommon {
 	static function phpTypeHasInstanceMethod(typeHint:String, field:String):Bool {
 		final methods = phpInstanceMethodMapForType(typeHint);
 		return methods != null && methods.exists(sanitizeTypeName(field));
+	}
+
+	static function phpReceiverHasInstanceField(receiver:HxExpr, field:String):Bool {
+		return switch (receiver) {
+			case EIdent(name):
+				phpLocalHasInstanceField(name, field);
+			case ENew(typePath, _):
+				phpTypeHasInstanceField(typePath, field);
+			case ECast(inner, castHint): phpTypeHasInstanceField(castHint, field) || phpReceiverHasInstanceField(inner, field);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpReceiverHasInstanceField(inner, field);
+			case _:
+				false;
+		};
+	}
+
+	static function phpTypeHasInstanceField(typeHint:String, field:String):Bool {
+		final fields = phpInstanceFieldMapForType(typeHint);
+		return fields != null && fields.exists(sanitizeTypeName(field));
 	}
 
 	static function phpPoint3LikeReceiver(receiver:HxExpr):Bool {
@@ -5021,6 +5042,7 @@ class SourceTargetCommon {
 	static var phpRenderSameClassLocals:Null<Array<String>> = null;
 	static var phpRenderInstanceMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderInstanceMethodArgsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Array<HxFunctionArg>>>> = null;
+	static var phpRenderInstanceFieldsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderDynamicMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderGenericStaticFunctionsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<HxFunctionDecl>>> = null;
@@ -5485,6 +5507,14 @@ class SourceTargetCommon {
 		return methods != null && methods.exists(sanitizeTypeName(field));
 	}
 
+	static function phpLocalHasInstanceField(name:String, field:String):Bool {
+		final hint = phpLocalTypeHint(name);
+		if (hint.length == 0 || phpRenderInstanceFieldsByType == null)
+			return false;
+		final fields = phpInstanceFieldMapForType(hint);
+		return fields != null && fields.exists(sanitizeTypeName(field));
+	}
+
 	static function phpAlignKnownMethodCallArgs(receiver:HxExpr, field:String, args:Array<HxExpr>):Array<HxExpr> {
 		final params = switch (receiver) {
 			case EThis:
@@ -5637,6 +5667,24 @@ class SourceTargetCommon {
 			return methods.get(field);
 		final clean = sanitizeTypeName(field);
 		return methods.exists(clean) ? methods.get(clean) : null;
+	}
+
+	static function phpInstanceFieldMapForType(typeHint:String):Null<haxe.ds.StringMap<Bool>> {
+		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (raw.length == 0 || phpRenderInstanceFieldsByType == null)
+			return null;
+		final candidates = [raw, sanitizePhpTypePath(raw)];
+		final dot = raw.lastIndexOf(".");
+		if (dot >= 0)
+			candidates.push(raw.substr(dot + 1));
+		final slash = raw.lastIndexOf("\\");
+		if (slash >= 0)
+			candidates.push(raw.substr(slash + 1));
+		for (candidate in candidates) {
+			if (phpRenderInstanceFieldsByType.exists(candidate))
+				return phpRenderInstanceFieldsByType.get(candidate);
+		}
+		return null;
 	}
 
 	static function phpDynamicMethodMapForType(typeHint:String):Null<haxe.ds.StringMap<Bool>> {
@@ -9535,6 +9583,34 @@ class SourceTargetCommon {
 		return out;
 	}
 
+	static function phpProgramInstanceFieldMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
+		final out = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
+		function addKey(key:String, fields:haxe.ds.StringMap<Bool>):Void {
+			if (key != null && key.length > 0 && !out.exists(key))
+				out.set(key, fields);
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final fields = new haxe.ds.StringMap<Bool>();
+				for (field in HxClassDecl.getFields(cls)) {
+					if (HxFieldDecl.getIsStatic(field))
+						continue;
+					fields.set(sanitizeTypeName(HxFieldDecl.getName(field)), true);
+				}
+				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
+				addKey(shortName, fields);
+				addKey(fullName, fields);
+				addKey(sanitizePhpTypePath(fullName), fields);
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return out;
+	}
+
 	static function phpProgramDynamicMethodMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
 		final out = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
 		final classesByName = new Map<String, HxClassDecl>();
@@ -13283,6 +13359,7 @@ class SourceTargetCommon {
 		final lines = new Array<String>();
 		final previousPhpInstanceMethodsByType = phpRenderInstanceMethodsByType;
 		final previousPhpInstanceMethodArgsByType = phpRenderInstanceMethodArgsByType;
+		final previousPhpInstanceFieldsByType = phpRenderInstanceFieldsByType;
 		final previousPhpDynamicMethodsByType = phpRenderDynamicMethodsByType;
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
 		final previousPhpGenericStaticFunctionsByType = phpRenderGenericStaticFunctionsByType;
@@ -13298,6 +13375,7 @@ class SourceTargetCommon {
 		if (target == Php) {
 			phpRenderInstanceMethodsByType = phpProgramInstanceMethodMap(program, decl);
 			phpRenderInstanceMethodArgsByType = phpProgramInstanceMethodArgsMap(program, decl);
+			phpRenderInstanceFieldsByType = phpProgramInstanceFieldMap(program, decl);
 			phpRenderDynamicMethodsByType = phpProgramDynamicMethodMap(program, decl);
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
 			phpRenderGenericStaticFunctionsByType = phpProgramGenericStaticFunctionMap(program, decl);
@@ -16195,6 +16273,7 @@ class SourceTargetCommon {
 		}
 		phpRenderInstanceMethodsByType = previousPhpInstanceMethodsByType;
 		phpRenderInstanceMethodArgsByType = previousPhpInstanceMethodArgsByType;
+		phpRenderInstanceFieldsByType = previousPhpInstanceFieldsByType;
 		phpRenderDynamicMethodsByType = previousPhpDynamicMethodsByType;
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
 		phpRenderGenericStaticFunctionsByType = previousPhpGenericStaticFunctionsByType;
