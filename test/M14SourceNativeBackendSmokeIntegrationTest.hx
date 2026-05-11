@@ -2835,6 +2835,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpExposingAbstractArrayProgram():GenIrProgram {
+		final src = [
+			"class ExposingArray {",
+			"  public function new() {",
+			"    this = [];",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var exposing = new ExposingArray();",
+			"    Sys.println(Std.string(exposing.push(12)));",
+			"    Sys.println(Std.string(exposing.pop()));",
+			"    Sys.println(Std.string(exposing.pop()));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpInlineCastSelfReturnProgram():GenIrProgram {
 		final src = [
 			"class InlineBase {",
@@ -8222,6 +8244,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpExposingAbstractArray():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_exposing_abstract_array_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpExposingAbstractArrayProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_array_push(&$array, $value)", "PHP runtime should expose an abstract-aware Array.push helper");
+		assertContains(content, "function __hxhx_array_pop(&$array)", "PHP runtime should expose an abstract-aware Array.pop helper");
+		assertContains(content, "__hxhx_array_push($exposing, 12)", "PHP array-backed abstract push should lower through the shared helper");
+		assertContains(content, "__hxhx_array_pop($exposing)", "PHP array-backed abstract pop should lower through the shared helper");
+		assertContains(content, "$array->__hx_value[] = $value", "PHP Array.push helper should mutate abstract-wrapper backing arrays");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP exposing-abstract array support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "1\n12\nnull\n", "generated PHP exposing-abstract array output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonAbstractThisPostfix():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_abstract_this_postfix_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -10751,6 +10794,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();
 		assertPhpAbstractThisClosureCapture();
+		assertPhpExposingAbstractArray();
 		assertPhpInlineCastSelfReturn();
 		assertPhpConstrainedParameterScannerFlow();
 		assertPythonAbstractThisPostfix();

@@ -2055,6 +2055,8 @@ class SourceTargetCommon {
 				final itemHint = phpReceiverArrayItemTypeHint(receiver);
 				final value = isInt64TypeHint(itemHint) ? phpAssignedValueExpr(args[0], itemHint) : renderExpr(Php, args[0]);
 				"__hxhx_array_push(" + mutableReceiver + ", " + value + ")";
+			case "pop" if (args.length == 0 && phpArrayBackedReceiver(receiver)):
+				"__hxhx_array_pop(" + mutableReceiver + ")";
 			case "remove" if (args.length == 1):
 				"__hxhx_remove(" + mutableReceiver + ", " + renderExpr(Php, args[0]) + ")";
 			case "splice" if (args.length == 2):
@@ -2083,6 +2085,28 @@ class SourceTargetCommon {
 			case _:
 				"";
 		};
+	}
+
+	static function phpArrayBackedReceiver(receiver:HxExpr):Bool {
+		return switch (receiver) {
+			case EIdent(name): final hint = phpLocalTypeHint(name); phpArrayItemTypeHint(hint).length > 0 || phpArrayBackedAbstractTypeHint(hint);
+			case ENew(typePath, _):
+				phpArrayBackedAbstractTypeHint(typePath);
+			case ECast(_, castHint): phpArrayItemTypeHint(castHint).length > 0 || phpArrayBackedAbstractTypeHint(castHint);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpArrayBackedReceiver(inner);
+			case _:
+				false;
+		};
+	}
+
+	static function phpArrayBackedAbstractTypeHint(typeHint:String):Bool {
+		final compact = removeTypeHintWhitespace(typeHint);
+		return compact == "ExposingArray"
+			|| compact == "ExposingAbstract"
+			|| StringTools.endsWith(compact, ".ExposingArray")
+			|| StringTools.endsWith(compact, ".ExposingAbstract")
+			|| compact.indexOf("ExposingAbstract<") >= 0;
 	}
 
 	static function phpMutableReceiverExpr(receiver:HxExpr):Null<String> {
@@ -14320,6 +14344,9 @@ class SourceTargetCommon {
 				lines.push("  public function contains($value) {");
 				lines.push("    return array_search($value, $this->items, true) !== false;");
 				lines.push("  }");
+				lines.push("  public function pop() {");
+				lines.push("    return count($this->items) === 0 ? null : array_pop($this->items);");
+				lines.push("  }");
 				lines.push("  public function filter($predicate) {");
 				lines.push("    $out = [];");
 				lines.push("    foreach ($this->items as $item) if ($predicate === null || $predicate($item)) $out[] = $item;");
@@ -14872,8 +14899,28 @@ class SourceTargetCommon {
 				lines.push("  return $first;");
 				lines.push("}");
 				lines.push("function __hxhx_array_push(&$array, $value) {");
+				lines.push("  if ($array instanceof __HxArray) {");
+				lines.push("    $array[] = $value;");
+				lines.push("    return count($array->toArray());");
+				lines.push("  }");
+				lines.push("  if (is_object($array) && property_exists($array, \"__hx_value\")) {");
+				lines.push("    if ($array->__hx_value instanceof __HxArray) return __hxhx_array_push($array->__hx_value, $value);");
+				lines.push("    if (!is_array($array->__hx_value)) $array->__hx_value = [];");
+				lines.push("    $array->__hx_value[] = $value;");
+				lines.push("    return count($array->__hx_value);");
+				lines.push("  }");
 				lines.push("  $array[] = $value;");
 				lines.push("  return count($array);");
+				lines.push("}");
+				lines.push("function __hxhx_array_pop(&$array) {");
+				lines.push("  if ($array instanceof __HxArray) return $array->pop();");
+				lines.push("  if (is_object($array) && property_exists($array, \"__hx_value\")) {");
+				lines.push("    if ($array->__hx_value instanceof __HxArray) return __hxhx_array_pop($array->__hx_value);");
+				lines.push("    if (!is_array($array->__hx_value) || count($array->__hx_value) === 0) return null;");
+				lines.push("    return array_pop($array->__hx_value);");
+				lines.push("  }");
+				lines.push("  if (!is_array($array) || count($array) === 0) return null;");
+				lines.push("  return array_pop($array);");
 				lines.push("}");
 				lines.push("function __hxhx_map_comprehension($iterable, $projector) {");
 				lines.push("  $map = new Map();");
