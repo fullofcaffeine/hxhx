@@ -3053,6 +3053,36 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpGenericStaticReflectionProgram():GenIrProgram {
+		final src = [
+			"class GenericReflect {",
+			"  @:generic public static function gf1<T>(value:T):T return value;",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    GenericReflect.gf1(1);",
+			"    GenericReflect.gf1(\"foo\");",
+			"    GenericReflect.gf1(true);",
+			"    GenericReflect.gf1(new haxe.ds.GenericStack<Int>());",
+			"    GenericReflect.gf1({foo: 1});",
+			"    GenericReflect.gf1(function(i:Int):String return Std.string(i));",
+			"    var fields = Type.getClassFields(GenericReflect);",
+			"    fields.sort(Reflect.compare);",
+			"    Sys.println(fields.join(\"#\"));",
+			"    Sys.println(Std.string(Lambda.has(fields, \"gf1_Int\")));",
+			"    Sys.println(Std.string(Lambda.has(fields, \"gf1_String\")));",
+			"    Sys.println(Std.string(Lambda.has(fields, \"gf1_Bool\")));",
+			"    Sys.println(Std.string(Lambda.has(fields, \"gf1_haxe_ds_GenericStack_Int\")));",
+			"    Sys.println(Std.string(Lambda.has(fields, \"gf1_anon_foo_Int\")));",
+			"    Sys.println(Std.string(Lambda.has(fields, \"gf1_func_Int_String\")));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpShiftAssignmentProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -8275,6 +8305,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpGenericStaticReflection():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_generic_static_reflection_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpGenericStaticReflectionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function gf1_Int($value)", "PHP @:generic static calls should emit reflected specialization wrappers");
+		assertContains(content, "public static function gf1_haxe_ds_GenericStack_Int($value)",
+			"PHP @:generic static reflection should preserve constructed generic type suffixes");
+		assertContains(content, "public static function gf1_func_Int_String($value)",
+			"PHP @:generic static reflection should preserve typed function literal suffixes");
+		assertContains(content, "return self::gf1($value);", "PHP @:generic specialization wrappers should delegate to the generic implementation");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP generic static reflection support should execute, stderr:\n" + run.stderr);
+			final lines = run.stdout.split("\n");
+			assertTrue(lines.length >= 7, "generated PHP generic static reflection output too short, got:\n" + run.stdout);
+			for (i in 1...7)
+				assertTrue(lines[i] == "true", "generated PHP generic static reflection field check failed, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpShiftAssignment():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_shift_assignment_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -10058,6 +10113,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpUserClassTypeCheck();
 		assertPhpEnumTypeCheck();
 		assertPhpTypeReflection();
+		assertPhpGenericStaticReflection();
 		assertPhpShiftAssignment();
 		assertPythonShiftAssignment();
 		assertPythonModuloUsesHaxeRemainderSemantics();
