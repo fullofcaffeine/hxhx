@@ -3102,6 +3102,36 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return new MacroExpandedProgram([typedSyntheticModule("Main.hx", decl)], false, []);
 	}
 
+	static function phpGenericConstructibleProgram():GenIrProgram {
+		final src = [
+			"class A {",
+			"  public var value:String;",
+			"  public function new(value:String) this.value = value;",
+			"  public function toString():String return value;",
+			"}",
+			"class GenericConstruct {",
+			"  @:generic public static function append<A>(seed:A, values:Array<A>):Array<A> {",
+			"    var clone = new A(\"tail\");",
+			"    values.push(clone);",
+			"    return values;",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var strings = GenericConstruct.append(\"seed\", [\"head\"]);",
+			"    Sys.println(strings[1]);",
+			"    var box = new A(\"first\");",
+			"    var boxes = GenericConstruct.append(box, []);",
+			"    Sys.println(Std.string(boxes[0] == box));",
+			"    Sys.println(boxes[0].value);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeErrorGenericNullProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -8381,6 +8411,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpGenericConstructible():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_generic_constructible_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpGenericConstructibleProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_construct_like($seed, \"tail\")",
+			"PHP constructible generic constructor should lower through runtime sample construction");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP constructible generic support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "tail\nfalse\ntail\n", "generated PHP constructible generic output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpTypeErrorGenericNull():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_generic_null_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -10184,6 +10232,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTypeReflection();
 		assertPhpGenericStaticReflection();
 		assertPhpGenericStaticReflectionTextFallback();
+		assertPhpGenericConstructible();
 		assertPhpTypeErrorGenericNull();
 		assertPhpShiftAssignment();
 		assertPythonShiftAssignment();

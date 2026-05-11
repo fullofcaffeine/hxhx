@@ -4101,7 +4101,10 @@ class SourceTargetCommon {
 			case Java: "new " + safeType + "(" + rendered + ")";
 			case Cs: "new " + safeType + "(" + rendered + ")";
 			case Php:
-				if (typePath == "Array") "[]"; else if (typePath == "Exception" || typePath == "haxe.Exception") "new ValueException("
+				final genericSample = phpGenericConstructorSample(typePath);
+				if (genericSample != null) "__hxhx_construct_like(" + genericSample + (rendered.length == 0 ? "" : ", " + rendered) + ")"; else
+					if (typePath == "Array") "[]"; else if (typePath == "Exception"
+					|| typePath == "haxe.Exception") "new ValueException("
 					+ rendered
 					+ ")"; else if (phpRuntimeMapType(typePath)) phpRuntimeMapConstructorExpr(typePath,
 					rendered); else if (phpRuntimeListType(typePath)) "new List_(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
@@ -4683,6 +4686,7 @@ class SourceTargetCommon {
 	static var phpRenderThisValueSlot:Bool = false;
 	static var phpRenderOptionalLambdaArgNamesByLocal:Null<haxe.ds.StringMap<Array<String>>> = null;
 	static var phpRenderOptionalLambdaOptionalArgNamesByLocal:Null<haxe.ds.StringMap<Array<String>>> = null;
+	static var phpRenderGenericConstructorSamples:Null<haxe.ds.StringMap<String>> = null;
 
 	static function withPhpLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
 		if (target != Php)
@@ -4732,6 +4736,45 @@ class SourceTargetCommon {
 			phpRenderOptionalLambdaOptionalArgNamesByLocal = previousOptionalArgNames;
 			throw e;
 		}
+	}
+
+	static function withPhpGenericConstructorSamples<T>(target:SourceNativeTarget, samples:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
+		if (target != Php)
+			return f();
+		final previous = phpRenderGenericConstructorSamples;
+		phpRenderGenericConstructorSamples = samples;
+		try {
+			final result = f();
+			phpRenderGenericConstructorSamples = previous;
+			return result;
+		} catch (e) {
+			phpRenderGenericConstructorSamples = previous;
+			throw e;
+		}
+	}
+
+	static function phpGenericConstructorSamplesForArgs(args:Array<HxFunctionArg>):Null<haxe.ds.StringMap<String>> {
+		if (args == null)
+			return null;
+		final out = new haxe.ds.StringMap<String>();
+		var count = 0;
+		for (arg in args) {
+			final typeParam = removeTypeHintWhitespace(HxFunctionArg.getTypeHint(arg));
+			if (!phpGenericLooksTypeParam(typeParam))
+				continue;
+			out.set(typeParam, valueName(Php, HxFunctionArg.getName(arg)));
+			count++;
+		}
+		return count == 0 ? null : out;
+	}
+
+	static function phpGenericConstructorSample(typePath:String):Null<String> {
+		if (phpRenderGenericConstructorSamples == null)
+			return null;
+		final typeParam = removeTypeHintWhitespace(typePath);
+		if (!phpGenericLooksTypeParam(typeParam) || !phpRenderGenericConstructorSamples.exists(typeParam))
+			return null;
+		return phpRenderGenericConstructorSamples.get(typeParam);
 	}
 
 	static function phpLocalTypeHint(name:String):String {
@@ -10805,10 +10848,15 @@ class SourceTargetCommon {
 									HxFunctionArg.getName(arg)
 							], function() {
 								final functionLocalTypes = phpFunctionLocalTypes(HxFunctionDecl.getArgs(fn));
-								withPhpThisValueSlot(Php, needsThisValueSlot, function() {
-									withPhpStringExtensionMethods(Php, className, function() {
-										for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn), functionLocalTypes))
-											out.push(line);
+								final constructorSamples = isStatic
+									&& phpFunctionIsGeneric(fn) ? phpGenericConstructorSamplesForArgs(HxFunctionDecl.getArgs(fn)) : null;
+								withPhpGenericConstructorSamples(Php, constructorSamples, function() {
+									withPhpThisValueSlot(Php, needsThisValueSlot, function() {
+										withPhpStringExtensionMethods(Php, className, function() {
+											for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
+												functionLocalTypes))
+												out.push(line);
+										});
 									});
 								});
 							});
@@ -14184,6 +14232,18 @@ class SourceTargetCommon {
 				lines.push("  if (__hxhx_is_point3($value)) return $value;");
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return clone $value;");
 				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_construct_like($sample, ...$args) {");
+				lines.push("  $first = count($args) > 0 ? $args[0] : null;");
+				lines.push("  if (is_string($sample)) return $first === null ? \"\" : strval($first);");
+				lines.push("  if (is_int($sample)) return $first === null ? 0 : intval($first);");
+				lines.push("  if (is_float($sample)) return $first === null ? 0.0 : floatval($first);");
+				lines.push("  if (is_bool($sample)) return $first === null ? false : boolval($first);");
+				lines.push("  if (is_object($sample)) {");
+				lines.push("    $class = get_class($sample);");
+				lines.push("    if (class_exists($class)) return new $class(...$args);");
+				lines.push("  }");
+				lines.push("  return $first;");
 				lines.push("}");
 				lines.push("function __hxhx_array_push(&$array, $value) {");
 				lines.push("  $array[] = $value;");
