@@ -16578,6 +16578,10 @@ class SourceTargetCommon {
 				lines.push("  public static function int($value) {");
 				lines.push("    return intval($value);");
 				lines.push("  }");
+				lines.push("  public static function random($x) {");
+				lines.push("    $limit = intval($x);");
+				lines.push("    return $limit <= 0 ? 0 : mt_rand(0, $limit - 1);");
+				lines.push("  }");
 				lines.push("  public static function parseInt($value) {");
 				lines.push("    if ($value === null) return null;");
 				lines.push("    $text = strval($value);");

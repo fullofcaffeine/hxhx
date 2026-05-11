@@ -2704,6 +2704,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStdRandomRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.random(0));",
+			"    var value = Std.random(3);",
+			"    Sys.println(Std.string(value >= 0 && value < 3));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTernaryAssignmentLogicalProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7016,6 +7031,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStdRandomRuntime():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_random_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStdRandomRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function random($x)", "PHP Std shim should support random");
+		assertContains(content, "return $limit <= 0 ? 0 : mt_rand(0, $limit - 1);", "PHP Std.random should preserve zero and positive bounds");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Std.random should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "0\ntrue\n", "generated PHP Std.random output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpTernaryAssignmentLogical():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_ternary_assignment_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11294,6 +11327,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpFloatModulo();
 		assertPhpMathRuntime();
 		assertPhpMathRandomRuntime();
+		assertPhpStdRandomRuntime();
 		assertPhpTernaryAssignmentLogical();
 		assertPhpStringIndexOf();
 		assertPhpStringFromCharCode();
