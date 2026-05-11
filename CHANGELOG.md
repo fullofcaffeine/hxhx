@@ -1,3 +1,14 @@
+## [0.15.16](https://github.com/fullofcaffeine/hxhx/compare/v0.15.15...v0.15.16) (2026-05-11)
+
+
+### Bug Fixes
+
+* **php:** preserve generic callable constructor field ([c41c9c4](https://github.com/fullofcaffeine/hxhx/commit/c41c9c4111747eb837c1a27887ada4619a5035e5))
+* **php:** resolve enum constructor peer context ([244e738](https://github.com/fullofcaffeine/hxhx/commit/244e738dcf4d315849953367e4e17cae4ff29e31))
+* **php:** resolve local enum constructor calls ([22dee07](https://github.com/fullofcaffeine/hxhx/commit/22dee075459429ffb73b468f6b62ae969225ab1b))
+* **php:** resolve string using module aliases ([3ebe290](https://github.com/fullofcaffeine/hxhx/commit/3ebe290f2e7262ab07b866ad3dea4eef9439821c))
+* **php:** support gadt enum switch lowering ([0ed6228](https://github.com/fullofcaffeine/hxhx/commit/0ed622804977072d38faf687792cc5f9bade736d))
+
 ## [0.15.15](https://github.com/fullofcaffeine/hxhx/compare/v0.15.14...v0.15.15) (2026-05-11)
 
 
