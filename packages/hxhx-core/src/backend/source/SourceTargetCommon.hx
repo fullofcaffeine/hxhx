@@ -1936,7 +1936,10 @@ class SourceTargetCommon {
 					return phpStaticMethodCall(phpInt64TypePath(), field, [receiver]);
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
-					if (typePath == "UnitBuilder" && field == "generateSpec") {
+					final syntaxIntrinsic = phpSyntaxIntrinsicCall(typePath, field, phpArgs);
+					if (syntaxIntrinsic != null) {
+						syntaxIntrinsic;
+					} else if (typePath == "UnitBuilder" && field == "generateSpec") {
 						// Upstream's unit harness expects this compile-time macro to define
 						// additional spec classes. PHP source bring-up cannot execute that macro
 						// result at runtime, so keep the harness moving with an empty spec list.
@@ -1985,6 +1988,76 @@ class SourceTargetCommon {
 			case Python, Java, Cs, Lua:
 				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExpr(target, receiver);
 				callExpr(target, fieldAccess(target, renderedReceiver, field), args);
+		};
+	}
+
+	static function phpSyntaxIntrinsicCall(typePath:String, field:String, args:Array<HxExpr>):Null<String> {
+		if (!phpIsSyntaxIntrinsicTypePath(typePath))
+			return null;
+		return switch (field) {
+			case "code" | "codeDeref":
+				phpSyntaxCodeExpr(args);
+			case "field" | "getField" if (args.length == 2):
+				"__hxhx_field("
+				+ renderExpr(Php, args[0])
+				+ ", "
+				+ renderExpr(Php, args[1])
+				+ ")";
+			case "instanceof" if (args.length == 2):
+				"__hxhx_is_of_type("
+				+ renderExpr(Php, args[0])
+				+ ", "
+				+ renderExpr(Php, args[1])
+				+ ")";
+			case "nativeClassName" if (args.length == 1):
+				"__hxhx_native_class_name(" + renderExpr(Php, args[0]) + ")";
+			case "arrayDecl":
+				"[" + [for (arg in args) renderExpr(Php, arg)].join(", ") + "]";
+			case "customArrayDecl" if (args.length == 1):
+				phpSyntaxCustomArrayDecl(args[0]);
+			case _:
+				null;
+		}
+	}
+
+	static function phpIsSyntaxIntrinsicTypePath(typePath:String):Bool {
+		return switch (typePath) {
+			case "\\php\\Syntax" | "php\\Syntax":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function phpSyntaxCodeExpr(args:Array<HxExpr>):Null<String> {
+		if (args.length == 0)
+			return null;
+		return switch (args[0]) {
+			case EString(template):
+				var rendered = template;
+				for (i in 1...args.length)
+					rendered = StringTools.replace(rendered, "{" + Std.string(i - 1) + "}", renderExpr(Php, args[i]));
+				rendered;
+			case _:
+				null;
+		}
+	}
+
+	static function phpSyntaxCustomArrayDecl(arg:HxExpr):Null<String> {
+		return switch (arg) {
+			case EArrayDecl(items):
+				final pairs = new Array<String>();
+				for (item in items) {
+					switch (item) {
+						case EBinop("=>", key, value):
+							pairs.push(renderExpr(Php, key) + " => " + renderExpr(Php, value));
+						case _:
+							return null;
+					}
+				}
+				"[" + pairs.join(", ") + "]";
+			case _:
+				null;
 		};
 	}
 
@@ -9159,6 +9232,11 @@ class SourceTargetCommon {
 		lines.push("  $parts = explode(\".\", $logical);");
 		lines.push("  return end($parts);");
 		lines.push("}");
+		lines.push("function __hxhx_native_class_name($name) {");
+		lines.push("  $logical = __hxhx_class_name($name);");
+		lines.push("  if ($logical === \"Array\") return \"Array_hx\";");
+		lines.push("  return str_replace(\".\", \"\\\\\", $logical);");
+		lines.push("}");
 	}
 
 	/**
@@ -9819,7 +9897,7 @@ class SourceTargetCommon {
 			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
 				return;
 			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Unserializer"
-				&& rawImport != "haxe.rtti.Meta")
+				&& rawImport != "haxe.rtti.Meta" && rawImport != "php.Syntax")
 				return;
 			final parts = rawImport.split(".");
 			if (parts.length < 2)

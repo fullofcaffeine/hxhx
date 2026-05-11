@@ -3274,6 +3274,40 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpSyntaxIntrinsicProgram():GenIrProgram {
+		final src = [
+			"import php.Syntax;",
+			"class Main {",
+			"  static function main() {",
+			"    var one = 1;",
+			"    var two = 2;",
+			"    Sys.println(Std.string(Syntax.code(\"{0} + {1}\", one, two)));",
+			"    var anon = {field: \"ok\"};",
+			"    Sys.println(Std.string(Syntax.field(anon, \"field\")));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpUserSyntaxClassProgram():GenIrProgram {
+		final src = [
+			"class Syntax {",
+			"  public static function code(value:String):String { return \"user:\" + value; }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Syntax.code(\"ok\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpUserClassTypeCheckProgram():GenIrProgram {
 		final src = [
 			"package unit;",
@@ -9126,6 +9160,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpSyntaxIntrinsics():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_syntax_intrinsics_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpSyntaxIntrinsicProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$one + $two", "PHP Syntax.code should inline literal PHP with rendered arguments");
+		assertContains(content, "__hxhx_field($anon, \"field\")", "PHP Syntax.field should lower through the field helper");
+		assertNotContains(content, "Syntax::code", "imported php.Syntax.code should not emit a runtime class call");
+		assertNotContains(content, "Syntax::field", "imported php.Syntax.field should not emit a runtime class call");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Syntax intrinsic support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "3\nok\n", "generated PHP Syntax intrinsic output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+
+		final userTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_user_syntax_class_" + Std.string(Date.now().getTime()));
+		deleteRecursive(userTmpRoot);
+		FileSystem.createDirectory(userTmpRoot);
+		backend.emit(phpUserSyntaxClassProgram(), new BackendContext(userTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final userOutputPath = Path.join([userTmpRoot, "index.php"]);
+		final userContent = File.getContent(userOutputPath);
+		assertContains(userContent, "class Syntax {", "PHP user classes named Syntax should still be emitted normally");
+		assertContains(userContent, "Syntax::code(\"ok\")", "PHP user Syntax classes should keep normal static calls");
+		if (commandExists("php")) {
+			final userRun = commandOutput("php", [userOutputPath]);
+			assertTrue(userRun.code == 0, "generated PHP user Syntax class should execute, stderr:\n" + userRun.stderr);
+			assertTrue(userRun.stdout == "user:ok\n", "generated PHP user Syntax class output mismatch, got:\n" + userRun.stdout);
+		}
+		deleteRecursive(userTmpRoot);
+	}
+
 	static function assertPhpUserClassTypeCheck():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_user_class_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11237,6 +11306,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpInterfaceCasts();
 		assertPhpArrayDynamicCasts();
 		assertPhpAbstractValueCasts();
+		assertPhpSyntaxIntrinsics();
 		assertPhpUserClassTypeCheck();
 		assertPhpEnumTypeCheck();
 		assertPhpTypeReflection();
