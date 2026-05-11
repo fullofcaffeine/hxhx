@@ -1940,7 +1940,11 @@ class SourceTargetCommon {
 							} else if (dynamicCall) {
 								phpCallField(renderExpr(Php, receiver), field, phpArgs);
 							} else {
-								callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), phpArgs);
+								final renderedArgs = phpRenderedCallArgsWithEnumPeerContext(field, phpArgs);
+								if (renderedArgs != null)
+									fieldAccess(target, renderExpr(target, receiver), field) + "(" + renderedArgs.join(", ") + ")";
+								else
+									callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), phpArgs);
 							}
 					}
 				}
@@ -4755,7 +4759,8 @@ class SourceTargetCommon {
 	}
 
 	static function phpStaticMethodCall(typePath:String, field:String, args:Array<HxExpr>):String {
-		final rendered = [for (arg in args) renderExpr(Php, arg)].join(", ");
+		final renderedArgs = phpRenderedCallArgsWithEnumPeerContext(field, args);
+		final rendered = (renderedArgs == null ? [for (arg in args) renderExpr(Php, arg)] : renderedArgs).join(", ");
 		if (typePath == "String" && field == "fromCharCode" && args.length == 1)
 			return "__hxhx_string_from_char_code(" + rendered + ")";
 		final specialized = phpExplicitGenericStaticSpecializationName(typePath, field, args);
@@ -5221,6 +5226,56 @@ class SourceTargetCommon {
 				return callExpr(Php, ref.enumName + "::" + ref.ctorName, args);
 			});
 		return ref.enumName + "::$" + ref.ctorName;
+	}
+
+	static function phpEnumNameFromTypeHint(typeHint:String):Null<String> {
+		if (phpRenderEnumConstructorsByEnum == null)
+			return null;
+		final raw = phpUnwrapNullTypeHint(normalizeTypeHint(typeHint));
+		if (raw.length == 0)
+			return null;
+		final candidates = [raw, sanitizePhpTypeName(raw), sanitizePhpTypePath(raw)];
+		final dot = raw.lastIndexOf(".");
+		if (dot >= 0)
+			candidates.push(sanitizePhpTypeName(raw.substr(dot + 1)));
+		final slash = raw.lastIndexOf("\\");
+		if (slash >= 0)
+			candidates.push(sanitizePhpTypeName(raw.substr(slash + 1)));
+		for (candidate in candidates) {
+			if (candidate != null && phpRenderEnumConstructorsByEnum.exists(candidate))
+				return candidate;
+		}
+		return null;
+	}
+
+	static function phpPreferredEnumFromExpr(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EIdent(name):
+				phpEnumNameFromTypeHint(phpLocalTypeHint(name));
+			case ECast(_, typeHint):
+				phpEnumNameFromTypeHint(typeHint);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpPreferredEnumFromExpr(inner);
+			case _:
+				null;
+		};
+	}
+
+	static function phpRenderedCallArgsWithEnumPeerContext(field:String, args:Array<HxExpr>):Null<Array<String>> {
+		if (args == null || args.length < 2)
+			return null;
+		final cleanField = sanitizeTypeName(field);
+		if (cleanField != "eq" && cleanField != "equals" && cleanField != "enumEq")
+			return null;
+		final enumName = phpPreferredEnumFromExpr(args[0]);
+		if (enumName == null)
+			return null;
+		final rendered = new Array<String>();
+		rendered.push(renderExpr(Php, args[0]));
+		rendered.push(withPhpPreferredEnum(enumName, function() return renderExpr(Php, args[1])));
+		for (i in 2...args.length)
+			rendered.push(renderExpr(Php, args[i]));
+		return rendered;
 	}
 
 	static function phpImportedTypeAlias(name:String):Null<String> {
