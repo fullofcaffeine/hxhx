@@ -31523,6 +31523,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    $rightValue = __hxhx_int64_value($right);");
       ignore (HxArray.push lines "    return $leftValue->high === $rightValue->high && $leftValue->low === $rightValue->low;");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  if ($left === null || $right === null) return $left === $right;");
       ignore (HxArray.push lines "  $leftHasBoxedValue = is_object($left) && property_exists($left, \"__hx_value\") && $left->__hx_value !== null;");
       ignore (HxArray.push lines "  $rightHasBoxedValue = is_object($right) && property_exists($right, \"__hx_value\") && $right->__hx_value !== null;");
       ignore (HxArray.push lines "  if ($leftHasBoxedValue || $rightHasBoxedValue) {");

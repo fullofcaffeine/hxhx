@@ -3292,6 +3292,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpNullEqualityProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var value:Null<Int> = null;",
+			"    Sys.println(Std.string(value == 0));",
+			"    Sys.println(Std.string(0 == value));",
+			"    Sys.println(Std.string(value == null));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpUserSyntaxClassProgram():GenIrProgram {
 		final src = [
 			"class Syntax {",
@@ -9195,6 +9211,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(userTmpRoot);
 	}
 
+	static function assertPhpNullEquality():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_null_equality_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpNullEqualityProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "if ($left === null || $right === null) return $left === $right;",
+			"PHP equality helper should preserve Haxe null equality before PHP loose equality");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP null equality support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "false\nfalse\ntrue\n", "generated PHP null equality output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpUserClassTypeCheck():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_user_class_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11307,6 +11341,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpArrayDynamicCasts();
 		assertPhpAbstractValueCasts();
 		assertPhpSyntaxIntrinsics();
+		assertPhpNullEquality();
 		assertPhpUserClassTypeCheck();
 		assertPhpEnumTypeCheck();
 		assertPhpTypeReflection();

@@ -16075,6 +16075,7 @@ class SourceTargetCommon {
 				lines.push("    $rightValue = __hxhx_int64_value($right);");
 				lines.push("    return $leftValue->high === $rightValue->high && $leftValue->low === $rightValue->low;");
 				lines.push("  }");
+				lines.push("  if ($left === null || $right === null) return $left === $right;");
 				lines.push("  $leftHasBoxedValue = is_object($left) && property_exists($left, \"__hx_value\") && $left->__hx_value !== null;");
 				lines.push("  $rightHasBoxedValue = is_object($right) && property_exists($right, \"__hx_value\") && $right->__hx_value !== null;");
 				lines.push("  if ($leftHasBoxedValue || $rightHasBoxedValue) {");
