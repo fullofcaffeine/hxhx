@@ -3083,6 +3083,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpTypeErrorGenericNullProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  @:generic static function gf1<T>(value:T):T return value;",
+			"  static function main() {",
+			"    Sys.println(Std.string(typeError(gf1(null))));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpShiftAssignmentProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -8330,6 +8344,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTypeErrorGenericNull():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_generic_null_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTypeErrorGenericNullProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "echo __hxhx_add_string(true)", "PHP typeError(generic(null)) should fold to the helper macro result");
+		assertNotContains(content, "$typeError", "PHP typeError(generic(null)) should not lower as a runtime variable call");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP typeError generic-null support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n", "generated PHP typeError generic-null output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpShiftAssignment():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_shift_assignment_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -10114,6 +10146,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpEnumTypeCheck();
 		assertPhpTypeReflection();
 		assertPhpGenericStaticReflection();
+		assertPhpTypeErrorGenericNull();
 		assertPhpShiftAssignment();
 		assertPythonShiftAssignment();
 		assertPythonModuloUsesHaxeRemainderSemantics();

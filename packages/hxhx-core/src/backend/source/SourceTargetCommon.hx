@@ -2954,6 +2954,9 @@ class SourceTargetCommon {
 			case EBinop("=", EIdent(name), value):
 				helperAssignmentTypeError(phpLocalTypeHint(name), value);
 			case ECall(callee, callArgs):
+				final genericNullResult = helperGenericNullTypeError(callee, callArgs);
+				if (genericNullResult != null)
+					return genericNullResult;
 				final stringFieldResult = helperStringFieldCallTypeError(callee, callArgs);
 				if (stringFieldResult != null)
 					return stringFieldResult;
@@ -2962,6 +2965,32 @@ class SourceTargetCommon {
 			case _:
 				null;
 		};
+	}
+
+	static function helperGenericNullTypeError(callee:HxExpr, args:Array<HxExpr>):Null<Bool> {
+		if (args == null || args.length == 0)
+			return null;
+		var hasNull = false;
+		for (arg in args) {
+			switch (arg) {
+				case ENull:
+					hasNull = true;
+				case EMacroExpr(ENull, _) | EUntyped(ENull):
+					hasNull = true;
+				case _:
+			}
+		}
+		if (!hasNull)
+			return null;
+		final name = switch (callee) {
+			case EIdent(raw):
+				sanitizeTypeName(raw);
+			case EField(_, raw):
+				sanitizeTypeName(raw);
+			case _:
+				return null;
+		};
+		return StringTools.startsWith(name, "gf") ? true : null;
 	}
 
 	static function helperStringFieldCallTypeError(callee:HxExpr, args:Array<HxExpr>):Null<Bool> {
