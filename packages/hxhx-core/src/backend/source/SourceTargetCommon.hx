@@ -1809,7 +1809,10 @@ class SourceTargetCommon {
 	}
 
 	static function phpRuntimeCastTypeName(typeHint:String):String {
-		return phpUnwrapNullTypeHint(removeTypeHintWhitespace(trimLeadingTypeColon(typeHint)));
+		final compact = phpUnwrapNullTypeHint(removeTypeHintWhitespace(trimLeadingTypeColon(typeHint)));
+		if (StringTools.startsWith(compact, "Array<"))
+			return "Array";
+		return compact;
 	}
 
 	static function isUIntTypeHint(typeHint:String):Bool {

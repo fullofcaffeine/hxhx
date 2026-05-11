@@ -3244,6 +3244,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpArrayDynamicCastProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values:Dynamic = [1, 2, 3];",
+			"    var casted = cast(values, Array<Dynamic>);",
+			"    Sys.println(Std.string(casted.length));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpUserClassTypeCheckProgram():GenIrProgram {
 		final src = [
 			"package unit;",
@@ -9061,6 +9076,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpArrayDynamicCasts():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_dynamic_casts_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpArrayDynamicCastProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_cast($values, \"Array\")", "PHP Array<Dynamic> casts should normalize to the Array runtime type");
+		assertNotContains(content, "__hxhx_cast($values, \"Array<Dynamic>\")", "PHP Array<Dynamic> casts should not use generic type text at runtime");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Array<Dynamic> casts should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "3\n", "generated PHP Array<Dynamic> cast output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpUserClassTypeCheck():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_user_class_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11170,6 +11203,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTypeCheck();
 		assertPhpTypeCheck();
 		assertPhpInterfaceCasts();
+		assertPhpArrayDynamicCasts();
 		assertPhpUserClassTypeCheck();
 		assertPhpEnumTypeCheck();
 		assertPhpTypeReflection();
