@@ -2366,6 +2366,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"enum ELatest {",
 			"  Same;",
 			"}",
+			"enum ConstantBox {",
+			"  CFloatBox(s:String);",
+			"}",
+			"enum OlderExprBox {",
+			"  EConst;",
+			"}",
+			"enum ExprBox {",
+			"  EConst(c:ConstantBox);",
+			"}",
 			"",
 			"class EnumSwitchHolder {",
 			"  public function new() {}",
@@ -2418,6 +2427,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var latest:ELatest = ELatest.Same;",
 			"    Sys.println(Std.string(latest));",
 			"    Sys.println(Type.enumEq(latest, Same));",
+			"    var box = EConst(CFloatBox(\"12\"));",
+			"    Sys.println(Std.string(box));",
 			"  }",
 			"}",
 		].join("\n");
@@ -6541,14 +6552,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$unqualifiedNested = A::D(A::$A);", "PHP unqualified enum constructor calls should resolve through the owning enum helper");
 		assertContains(content, "Type::enumEq($latest, ELatest::$Same)",
 			"PHP duplicate unqualified enum constructors should use peer enum type context when available");
+		assertContains(content, "$box = ExprBox::EConst(ConstantBox::CFloatBox(\"12\"));",
+			"PHP bare enum constructor calls should prefer current-module constructors over imported ambiguous names");
 		assertContains(content, "Type::enumEq($e2, MyEnum::C(1, \"x\"))", "PHP Type.enumEq should remain a static runtime call");
 		assertContains(content, "echo __hxhx_add_string($e) . PHP_EOL;", "PHP Std.string on enum values should use Haxe stringification");
 		assertContains(content, "echo __hxhx_add_string([$e]) . PHP_EOL;", "PHP Std.string on enum arrays should recursively stringify enum values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum constructor values should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\nSE_A\n1\nD(A)\n1\nSame\n1\n",
-				"generated PHP enum constructor values should stringify correctly, got:\n" + run.stdout);
+			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\nSE_A\n1\nD(A)\n1\nSame\n1\nEConst(CFloatBox(12))\n",
+				"generated PHP enum constructor values should stringify correctly, got:\n"
+				+ run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}

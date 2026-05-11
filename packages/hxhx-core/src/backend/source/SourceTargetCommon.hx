@@ -5020,6 +5020,7 @@ class SourceTargetCommon {
 	static var phpRenderEnumConstructors:Null<haxe.ds.StringMap<PhpEnumCtorRef>> = null;
 	static var phpRenderAmbiguousEnumConstructors:Null<haxe.ds.StringMap<Bool>> = null;
 	static var phpRenderEnumConstructorsByEnum:Null<haxe.ds.StringMap<haxe.ds.StringMap<PhpEnumCtorRef>>> = null;
+	static var phpRenderLocalEnumConstructors:Null<haxe.ds.StringMap<PhpEnumCtorRef>> = null;
 	static var phpRenderPreferredEnumName:Null<String> = null;
 	static var phpRenderTypeAliases:Null<haxe.ds.StringMap<String>> = null;
 	static var phpRenderDynamicCallFieldsByLocal:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
@@ -5190,6 +5191,12 @@ class SourceTargetCommon {
 					return byCtor.get(clean);
 			}
 		}
+		if (phpRenderLocalEnumConstructors != null) {
+			if (phpRenderLocalEnumConstructors.exists(name))
+				return phpRenderLocalEnumConstructors.get(name);
+			if (phpRenderLocalEnumConstructors.exists(clean))
+				return phpRenderLocalEnumConstructors.get(clean);
+		}
 		if (phpRenderEnumConstructors == null)
 			return null;
 		if (phpRenderAmbiguousEnumConstructors != null
@@ -5207,6 +5214,19 @@ class SourceTargetCommon {
 			return result;
 		} catch (e) {
 			phpRenderPreferredEnumName = previous;
+			throw e;
+		}
+	}
+
+	static function withPhpLocalEnumConstructors<T>(localConstructors:Null<haxe.ds.StringMap<PhpEnumCtorRef>>, f:() -> T):T {
+		final previous = phpRenderLocalEnumConstructors;
+		phpRenderLocalEnumConstructors = localConstructors;
+		try {
+			final result = f();
+			phpRenderLocalEnumConstructors = previous;
+			return result;
+		} catch (e) {
+			phpRenderLocalEnumConstructors = previous;
 			throw e;
 		}
 	}
@@ -9262,7 +9282,7 @@ class SourceTargetCommon {
 	static function phpProgramEnumConstructorMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<PhpEnumCtorRef> {
 		final out = new haxe.ds.StringMap<PhpEnumCtorRef>();
 		final seen = new Map<String, Bool>();
-		function addRef(ref:PhpEnumCtorRef):Void {
+		function addRef(ref:PhpEnumCtorRef, preferLocal:Bool):Void {
 			final cleanCtor = sanitizeTypeName(ref.ctorName);
 			if (!out.exists(cleanCtor)) {
 				out.set(cleanCtor, ref);
@@ -9271,10 +9291,14 @@ class SourceTargetCommon {
 			final existing = out.get(cleanCtor);
 			if (existing.enumName == ref.enumName && existing.ctorName == ref.ctorName)
 				return;
+			if (preferLocal) {
+				out.set(cleanCtor, ref);
+				return;
+			}
 			if (phpRenderAmbiguousEnumConstructors != null)
 				phpRenderAmbiguousEnumConstructors.set(cleanCtor, true);
 		}
-		function addDecl(moduleDecl:HxModuleDecl):Void {
+		function addDecl(moduleDecl:HxModuleDecl, preferLocal:Bool):Void {
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final enumName = sanitizePhpTypeName(HxClassDecl.getName(cls));
 				if (enumName == null || enumName.length == 0 || seen.exists(enumName))
@@ -9290,19 +9314,49 @@ class SourceTargetCommon {
 					final name = HxFieldDecl.getName(field);
 					if (!HxFieldDecl.getIsStatic(field) || StringTools.startsWith(name, "__hx_"))
 						continue;
-					addRef({enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: false});
+					addRef({enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: false}, preferLocal);
 				}
 				for (fn in HxClassDecl.getFunctions(cls)) {
 					final name = HxFunctionDecl.getName(fn);
 					if (!HxFunctionDecl.getIsStatic(fn) || name == "new" || StringTools.startsWith(name, "__hx_"))
 						continue;
-					addRef({enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: true});
+					addRef({enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: true}, preferLocal);
 				}
 			}
 		}
-		addDecl(decl);
+		addDecl(decl, true);
 		for (typed in program.getTypedModules())
-			addDecl(typed.getParsed().getDecl());
+			addDecl(typed.getParsed().getDecl(), false);
+		return out;
+	}
+
+	static function phpModuleLocalEnumConstructorMap(moduleDecl:HxModuleDecl):haxe.ds.StringMap<PhpEnumCtorRef> {
+		final out = new haxe.ds.StringMap<PhpEnumCtorRef>();
+		if (moduleDecl == null)
+			return out;
+		for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+			final enumName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+			if (enumName == null || enumName.length == 0)
+				continue;
+			var isEnum = false;
+			for (field in HxClassDecl.getFields(cls))
+				if (HxFieldDecl.getName(field) == "__hx_is_enum")
+					isEnum = true;
+			if (!isEnum)
+				continue;
+			for (field in HxClassDecl.getFields(cls)) {
+				final name = HxFieldDecl.getName(field);
+				if (!HxFieldDecl.getIsStatic(field) || StringTools.startsWith(name, "__hx_"))
+					continue;
+				out.set(sanitizeTypeName(name), {enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: false});
+			}
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				final name = HxFunctionDecl.getName(fn);
+				if (!HxFunctionDecl.getIsStatic(fn) || name == "new" || StringTools.startsWith(name, "__hx_"))
+					continue;
+				out.set(sanitizeTypeName(name), {enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: true});
+			}
+		}
 		return out;
 	}
 
@@ -10300,6 +10354,7 @@ class SourceTargetCommon {
 			}
 		}
 		final classesByName:Map<String, HxClassDecl> = [];
+		final moduleByClassName:Map<String, HxModuleDecl> = [];
 		final scanClasses = new Array<HxClassDecl>();
 		final scanClassNames = new Map<String, Bool>();
 		function trackScanClass(cls:HxClassDecl):Void {
@@ -10321,8 +10376,10 @@ class SourceTargetCommon {
 			pending.push(cls);
 		}
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
-			for (cls in HxModuleDecl.getClasses(moduleDecl))
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				moduleByClassName.set(sanitizePhpTypeName(HxClassDecl.getName(cls)), moduleDecl);
 				trackScanClass(cls);
+			}
 			final modulePackage = phpSupportPackage(moduleDecl, filePath);
 			if (isStdSourceFile(filePath)) {
 				for (cls in HxModuleDecl.getClasses(moduleDecl)) {
@@ -10356,7 +10413,8 @@ class SourceTargetCommon {
 		for (cls in pending) {
 			if (out.length > 0)
 				out.push("");
-			for (line in renderPhpHelperClass(cls, classesByName, postStaticInitializers, scanClasses))
+			final pendingClassName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+			for (line in renderPhpHelperClass(cls, moduleByClassName.get(pendingClassName), classesByName, postStaticInitializers, scanClasses))
 				out.push(line);
 		}
 		if (postStaticInitializers.length > 0) {
@@ -11447,9 +11505,10 @@ class SourceTargetCommon {
 		return out;
 	}
 
-	static function renderPhpHelperClass(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>, postStaticInitializers:Array<String>,
-			scanClasses:Array<HxClassDecl>):Array<String> {
+	static function renderPhpHelperClass(cls:HxClassDecl, moduleDecl:HxModuleDecl, classesByName:Map<String, HxClassDecl>,
+			postStaticInitializers:Array<String>, scanClasses:Array<HxClassDecl>):Array<String> {
 		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
+		final localEnumConstructors = phpModuleLocalEnumConstructorMap(moduleDecl);
 		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
 		final classHeader = baseName == null
 			|| baseName.length == 0 ? "class " + className + " {" : "class "
@@ -11582,9 +11641,11 @@ class SourceTargetCommon {
 								withPhpGenericConstructorSamples(Php, constructorSamples, function() {
 									withPhpThisValueSlot(Php, needsThisValueSlot, function() {
 										withPhpStringExtensionMethods(Php, className, function() {
-											for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
-												functionLocalTypes))
-												out.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, staticFieldNames));
+											withPhpLocalEnumConstructors(localEnumConstructors, function() {
+												for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
+													functionLocalTypes))
+													out.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, staticFieldNames));
+											});
 										});
 									});
 								});
