@@ -2985,6 +2985,8 @@ class SourceTargetCommon {
 				helperTypeErrorExpressionResult(inner);
 			case EBinop("=", EIdent(name), value):
 				helperAssignmentTypeError(phpLocalTypeHint(name), value);
+			case EBinop(op, left, right):
+				helperAbstractOverloadTypeError(op, left, right);
 			case ECall(callee, callArgs):
 				final genericNullResult = helperGenericNullTypeError(callee, callArgs);
 				if (genericNullResult != null)
@@ -2996,6 +2998,27 @@ class SourceTargetCommon {
 				optionalResult != null ? optionalResult : helperFunctionCallAnonTypeError(callArgs);
 			case _:
 				null;
+		};
+	}
+
+	static function helperAbstractOverloadTypeError(op:String, left:HxExpr, right:HxExpr):Null<Bool> {
+		if (op != "+" && op != "-")
+			return null;
+		if (!helperExprHasMyStringType(left) && !helperExprHasMyStringType(right))
+			return null;
+		if (op == "-")
+			return true;
+		return helperExprLooksBoolValue(left) || helperExprLooksBoolValue(right) ? true : null;
+	}
+
+	static function helperExprHasMyStringType(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				helperExprHasMyStringType(inner);
+			case EIdent(name): final hint = sanitizeTypeName(phpLocalTypeHint(name)); hint == "MyString" || StringTools.endsWith(hint, "_MyString");
+			case ECast(_, typeHint): final hint = sanitizeTypeName(typeHint); hint == "MyString" || StringTools.endsWith(hint, "_MyString");
+			case _:
+				false;
 		};
 	}
 

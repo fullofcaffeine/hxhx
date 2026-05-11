@@ -1500,6 +1500,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var mixedMapKey = typeError([1 => 2, \"1\" => 2]);",
 			"    var mixedMapValue = typeError([1 => 2, 3 => \"2\"]);",
 			"    var okMapLiteral = typeError([1 => 2, 3 => 4]);",
+			"    var ms1:MyString = cast \"foo\";",
+			"    var ms2:MyString = cast \"bar\";",
+			"    var badAbstractAdd = typeError(ms1 + true);",
+			"    var badAbstractSub = typeError(ms1 - ms2);",
 			"    function choose(a:Choice, ?flag:Bool, ?tail:Choice) {",
 			"      return \"\";",
 			"    }",
@@ -1514,6 +1518,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(mixedMapKey));",
 			"    Sys.println(Std.string(mixedMapValue));",
 			"    Sys.println(Std.string(okMapLiteral));",
+			"    Sys.println(Std.string(badAbstractAdd));",
+			"    Sys.println(Std.string(badAbstractSub));",
 			"    Sys.println(Std.string(badOptionalSkip));",
 			"  }",
 			"}",
@@ -7808,11 +7814,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$mixedMapKey = true;", "PHP source backend should flag mixed map literal key kinds in typeError probes");
 		assertContains(content, "$mixedMapValue = true;", "PHP source backend should flag mixed map literal value kinds in typeError probes");
 		assertContains(content, "$okMapLiteral = false;", "PHP source backend should accept consistent map literal typeError probes");
+		assertContains(content, "$badAbstractAdd = true;", "PHP source backend should fold incompatible abstract overload addition probes");
+		assertContains(content, "$badAbstractSub = true;", "PHP source backend should fold missing abstract overload subtraction probes");
 		assertContains(content, "$badOptionalSkip = true;", "PHP source backend should fold optional-parameter skip typeError probes");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP typeError expression probes should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\nfalse\ntrue\ntrue\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\n",
+			assertTrue(run.stdout == "true\nfalse\ntrue\ntrue\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\n",
 				"generated PHP typeError expression probes should preserve expected results, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
