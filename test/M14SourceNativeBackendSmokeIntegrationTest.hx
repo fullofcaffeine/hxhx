@@ -10075,6 +10075,40 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertTrue(run.stdout == "FOOFOOFOO\nFOO\ntrueFOOFOO\n", "generated PHP using extension output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
+
+		final moduleTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_using_module_extension_" + Std.string(Date.now().getTime()));
+		deleteRecursive(moduleTmpRoot);
+		FileSystem.createDirectory(moduleTmpRoot);
+		final mainSrc = [
+			"using UsingModule;",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(\"foo\".usingTest());",
+			"  }",
+			"}",
+		].join("\n");
+		final usingSrc = [
+			"class EarlierUsing {",
+			"  static public function usingTest(s:String) return \"1\";",
+			"}",
+			"class LaterUsing {",
+			"  static public function usingTest(s:String) return \"3\";",
+			"}",
+		].join("\n");
+		final mainTyped = TyperStage.typeModule(ParserStage.parse(mainSrc, "Main.hx"));
+		final usingTyped = TyperStage.typeModule(ParserStage.parse(usingSrc, "UsingModule.hx"));
+		final moduleProgram = MacroStage.expandProgram([mainTyped, usingTyped], []);
+		backend.emit(moduleProgram, new BackendContext(moduleTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final moduleOutputPath = Path.join([moduleTmpRoot, "index.php"]);
+		final moduleContent = File.getContent(moduleOutputPath);
+		assertContains(moduleContent, "LaterUsing::usingTest(\"foo\")", "PHP using module aliases should resolve later module-local string extension helpers");
+		assertNotContains(moduleContent, "\"foo\"->usingTest()", "PHP using module aliases should not emit string member calls");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [moduleOutputPath]);
+			assertTrue(run.code == 0, "generated PHP using module extension call should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "3\n", "generated PHP using module extension output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(moduleTmpRoot);
 	}
 
 	static function assertPhpClosureCapturesMutableLocalByReference():Void {

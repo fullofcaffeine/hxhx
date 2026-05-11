@@ -9524,6 +9524,16 @@ class SourceTargetCommon {
 			}
 		}
 
+		function setClassAlias(alias:String, cls:HxClassDecl, ownerTypePath:String):Void {
+			if (alias == null || alias.length == 0)
+				return;
+			classesByName.set(alias, cls);
+			ownerByName.set(alias, ownerTypePath);
+			final cleanAlias = sanitizePhpTypePath(alias);
+			classesByName.set(cleanAlias, cls);
+			ownerByName.set(cleanAlias, ownerTypePath);
+		}
+
 		function addDeclClassAliases(moduleDecl:HxModuleDecl):Void {
 			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
 			final main = HxModuleDecl.getMainClass(moduleDecl);
@@ -9540,6 +9550,64 @@ class SourceTargetCommon {
 					if (pkg != null && pkg.length > 0)
 						addClassAlias(pkg + "." + mainName + "." + rawName, cls, ownerTypePath);
 				}
+			}
+		}
+
+		function phpClassSourceIndex(source:String, className:String):Int {
+			if (source == null || className == null || className.length == 0)
+				return -1;
+			var best = -1;
+			for (prefix in ["class ", "interface ", "enum ", "abstract "]) {
+				final index = source.indexOf(prefix + className);
+				if (index >= 0 && (best < 0 || index < best))
+					best = index;
+			}
+			return best;
+		}
+
+		function comparePhpClassSourceOrder(source:String, left:HxClassDecl, right:HxClassDecl):Int {
+			final leftIndex = phpClassSourceIndex(source, HxClassDecl.getName(left));
+			final rightIndex = phpClassSourceIndex(source, HxClassDecl.getName(right));
+			if (leftIndex == rightIndex)
+				return 0;
+			if (leftIndex < 0)
+				return 1;
+			if (rightIndex < 0)
+				return -1;
+			return leftIndex < rightIndex ? -1 : 1;
+		}
+
+		function phpSourceOrderedClasses(parsed:ParsedModule, moduleDecl:HxModuleDecl):Array<HxClassDecl> {
+			final classes = HxModuleDecl.getClasses(moduleDecl).copy();
+			if (parsed == null)
+				return classes;
+			var source = "";
+			try {
+				source = sys.io.File.getContent(parsed.getFilePath());
+			} catch (_:haxe.io.Error) {
+				source = "";
+			} catch (_:String) {
+				source = "";
+			}
+			if (source.length == 0)
+				return classes;
+			classes.sort(function(left, right) return comparePhpClassSourceOrder(source, left, right));
+			return classes;
+		}
+
+		function addParsedModuleAlias(parsed:ParsedModule):Void {
+			if (parsed == null)
+				return;
+			final moduleBase = Path.withoutExtension(Path.withoutDirectory(parsed.getFilePath()));
+			if (moduleBase == null || moduleBase.length == 0)
+				return;
+			final moduleDecl = parsed.getDecl();
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			final modulePath = pkg == null || pkg.length == 0 ? moduleBase : pkg + "." + moduleBase;
+			for (cls in phpSourceOrderedClasses(parsed, moduleDecl)) {
+				final ownerTypePath = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				setClassAlias(moduleBase, cls, ownerTypePath);
+				setClassAlias(modulePath, cls, ownerTypePath);
 			}
 		}
 
@@ -9563,8 +9631,10 @@ class SourceTargetCommon {
 		}
 
 		addDeclClassAliases(decl);
-		for (typed in program.getTypedModules())
+		for (typed in program.getTypedModules()) {
 			addDeclClassAliases(typed.getParsed().getDecl());
+			addParsedModuleAlias(typed.getParsed());
+		}
 		addDeclExtensionContext(decl);
 		for (typed in program.getTypedModules())
 			addDeclExtensionContext(typed.getParsed().getDecl());
