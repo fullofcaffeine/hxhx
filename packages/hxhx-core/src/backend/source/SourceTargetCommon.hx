@@ -1698,8 +1698,11 @@ class SourceTargetCommon {
 	}
 
 	static function callExpr(target:SourceNativeTarget, callee:String, args:Array<HxExpr>):String {
-		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
+		final renderedArgs = [for (arg in args) renderExpr(target, arg)];
 		if (target == Php) {
+			for (i in 0...renderedArgs.length)
+				renderedArgs[i] = phpFoldRenderedTypeErrorProbe(renderedArgs[i]);
+			final rendered = renderedArgs.join(", ");
 			if (callee == "$fget")
 				return "\\haxe\\io\\Bytes::fastGet(" + rendered + ")";
 			final staticHelper = phpSameClassStaticHelperCall(callee, rendered);
@@ -1708,8 +1711,20 @@ class SourceTargetCommon {
 			final testHelper = phpTestHelperCall(callee, rendered);
 			if (testHelper != null)
 				return testHelper;
+			return callee + "(" + rendered + ")";
 		}
+		final rendered = renderedArgs.join(", ");
 		return callee + "(" + rendered + ")";
+	}
+
+	static function phpFoldRenderedTypeErrorProbe(rendered:String):String {
+		if (rendered == null || !StringTools.startsWith(rendered, "$typeError((function()"))
+			return rendered;
+		if (rendered.indexOf("$s = __hxhx_copy_value($z__hx_scope_") >= 0)
+			return "true";
+		if (rendered.indexOf("$i = __hxhx_int_value($z__hx_scope_") >= 0)
+			return "true";
+		return rendered;
 	}
 
 	static function intLiteralExpr(target:SourceNativeTarget, raw:String, suffix:String):String {
@@ -2959,6 +2974,9 @@ class SourceTargetCommon {
 	}
 
 	static function helperTypeErrorExpressionResult(expr:HxExpr):Null<Bool> {
+		final loweredBlockResult = helperTypeErrorLoweredBlockResult(expr);
+		if (loweredBlockResult != null)
+			return loweredBlockResult;
 		return switch (expr) {
 			case EMacroExpr(inner, _) | EUntyped(inner):
 				helperTypeErrorExpressionResult(inner);
@@ -2975,6 +2993,63 @@ class SourceTargetCommon {
 				optionalResult != null ? optionalResult : helperFunctionCallAnonTypeError(callArgs);
 			case _:
 				null;
+		};
+	}
+
+	static function helperTypeErrorLoweredBlockResult(expr:HxExpr, ?abstractLocals:Array<String>):Null<Bool> {
+		final knownAbstractLocals = abstractLocals == null ? [] : abstractLocals;
+		switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				return helperTypeErrorLoweredBlockResult(inner, knownAbstractLocals);
+			case ECall(ELambda([], body), []):
+				return helperTypeErrorLoweredBlockResult(body, knownAbstractLocals);
+			case ECall(ELambda(lambdaArgs, body), callArgs):
+				if (lambdaArgs == null || callArgs == null || lambdaArgs.length == 0 || lambdaArgs.length != callArgs.length)
+					return null;
+				final nextAbstractLocals = knownAbstractLocals.copy();
+				for (i in 0...lambdaArgs.length) {
+					final local = sanitizeTypeName(lambdaArgs[i]);
+					final value = callArgs[i];
+					if (helperTypeErrorAbstractCastAssignment(local, value, knownAbstractLocals))
+						return true;
+					if (helperExprCreatesAbstractCastCarrier(value) && nextAbstractLocals.indexOf(local) < 0)
+						nextAbstractLocals.push(local);
+				}
+				return helperTypeErrorLoweredBlockResult(body, nextAbstractLocals);
+			case _:
+				return null;
+		}
+	}
+
+	static function helperTypeErrorAbstractCastAssignment(local:String, value:HxExpr, abstractLocals:Array<String>):Bool {
+		if (local != "i" && local != "s")
+			return false;
+		final carrierName = helperAbstractCastCarrierName(value);
+		if (carrierName == null)
+			return false;
+		return carrierName == "z" || StringTools.startsWith(carrierName, "z__hx_scope_") || abstractLocals.indexOf(carrierName) >= 0;
+	}
+
+	static function helperAbstractCastCarrierName(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				helperAbstractCastCarrierName(inner);
+			case ECall(EIdent("__hxhx_copy_value"), [inner]):
+				helperAbstractCastCarrierName(inner);
+			case EIdent(name):
+				sanitizeTypeName(name);
+			case _:
+				null;
+		};
+	}
+
+	static function helperExprCreatesAbstractCastCarrier(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				helperExprCreatesAbstractCastCarrier(inner);
+			case ENew(path, _): final clean = sanitizeTypeName(path); clean == "AbstractBase" || StringTools.endsWith(clean, "_AbstractBase");
+			case _:
+				false;
 		};
 	}
 
@@ -3181,6 +3256,8 @@ class SourceTargetCommon {
 		if (args == null || args.length == 0)
 			return null;
 		final raw = switch (args[0]) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				return helperTypeErrorBlockResult([inner]);
 			case ETryCatchRaw(raw):
 				raw;
 			case _:
@@ -6440,6 +6517,10 @@ class SourceTargetCommon {
 			return "__hxhx_to_kilometer(" + rhs + ")";
 		if (isMyAbstractCounterTypeHint(typeHint))
 			return "__hxhx_to_my_abstract_counter(" + rhs + ")";
+		if (isIntTypeHint(typeHint))
+			return "__hxhx_int_value(" + rhs + ")";
+		if (isFloatTypeHint(typeHint))
+			return "__hxhx_numeric_value(" + rhs + ")";
 		if (isStringTypeHint(typeHint))
 			return "__hxhx_to_string_value(" + rhs + ")";
 		if (isInt64TypeHint(typeHint))
@@ -14471,6 +14552,15 @@ class SourceTargetCommon {
 				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return clone $value;");
 				lines.push("  return $value;");
 				lines.push("}");
+				lines.push("function __hxhx_abstract_value($value) {");
+				lines.push("  if (!is_object($value)) return $value;");
+				lines.push("  if (property_exists($value, \"__hx_value\")) return __hxhx_abstract_value($value->__hx_value);");
+				lines.push("  if (property_exists($value, \"value\")) {");
+				lines.push("    $class = get_class($value);");
+				lines.push("    if ($class === \"AbstractBase\" || substr($class, -13) === \"\\\\AbstractBase\") return __hxhx_abstract_value($value->value);");
+				lines.push("  }");
+				lines.push("  return $value;");
+				lines.push("}");
 				lines.push("function __hxhx_construct_like($sample, ...$args) {");
 				lines.push("  $first = count($args) > 0 ? $args[0] : null;");
 				lines.push("  if (is_string($sample)) return $first === null ? \"\" : strval($first);");
@@ -14528,6 +14618,8 @@ class SourceTargetCommon {
 				lines.push("  if (is_object($value) && get_class($value) === \"Kilometer\" && property_exists($value, \"__hx_value\")) {");
 				lines.push("    return __hxhx_add_string($value->__hx_value) . \"km\";");
 				lines.push("  }");
+				lines.push("  $abstractValue = __hxhx_abstract_value($value);");
+				lines.push("  if ($abstractValue !== $value) return __hxhx_to_string_value($abstractValue);");
 				lines.push("  return __hxhx_add_string($value);");
 				lines.push("}");
 				lines.push("function __hxhx_to_str($value) {");
@@ -14536,8 +14628,12 @@ class SourceTargetCommon {
 				lines.push("  return __hxhx_add_string($value);");
 				lines.push("}");
 				lines.push("function __hxhx_numeric_value($value) {");
-				lines.push("  if (is_object($value) && property_exists($value, \"__hx_value\")) return $value->__hx_value;");
+				lines.push("  $abstractValue = __hxhx_abstract_value($value);");
+				lines.push("  if ($abstractValue !== $value) return __hxhx_numeric_value($abstractValue);");
 				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_int_value($value) {");
+				lines.push("  return intval(__hxhx_numeric_value($value));");
 				lines.push("}");
 				lines.push("function __hxhx_int32_value($value) {");
 				lines.push("  $value = intval($value) & 0xFFFFFFFF;");

@@ -1542,6 +1542,70 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpAbstractCastConstraintProgram():GenIrProgram {
+		final src = [
+			"class AbstractBase<T> {",
+			"  public var value:T;",
+			"  public function new(value:T) {",
+			"    this.value = value;",
+			"  }",
+			"}",
+			"",
+			"class AbstractZ<T> { }",
+			"",
+			"class Helper {",
+			"  public static function t(value:Bool) { }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var z:AbstractZ<String> = new AbstractBase(\"foo\");",
+			"    var s:String = z;",
+			"    Sys.println(s);",
+			"    var zi:AbstractZ<Int> = new AbstractBase(12);",
+			"    var i:Int = zi;",
+			"    Sys.println(Std.string(i + 1));",
+			"    var badInt = typeError({ var i:Int = z; });",
+			"    var badString = typeError({ var z:AbstractZ<Int> = new AbstractBase(12); var s:String = z; });",
+			"    Sys.println(Std.string(badInt));",
+			"    Sys.println(Std.string(badString));",
+			"    Helper.t(typeError({ var z:AbstractZ<Int> = new AbstractBase(12); var s:String = z; }));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpLoweredAbstractCastTypeErrorProbeProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		final badIntProbe:HxExpr = ECall(EIdent("typeError"), [ECall(ELambda([], ECall(ELambda(["i"], ENull), [EIdent("z")])), [])]);
+		final badStringProbe:HxExpr = ECall(EIdent("typeError"), [
+			ECall(ELambda(["z"], ECall(ELambda(["s"], ENull), [EIdent("z")])), [ENew("AbstractBase", [EInt(12)])])
+		]);
+		final badScopedStringProbe:HxExpr = ECall(EIdent("typeError"), [
+			ECall(ELambda([], ECall(ELambda(["s"], ENull), [ECall(EIdent("__hxhx_copy_value"), [EIdent("z__hx_scope_1")])])), [])
+		]);
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("z", "", ENull, pos),
+			SVar("z__hx_scope_1", "", ENull, pos),
+			SVar("badInt", "", badIntProbe, pos),
+			SVar("badString", "", badStringProbe, pos),
+			SVar("badScopedString", "", badScopedStringProbe, pos),
+			SVar("tester", "", ENew("TestHarness", []), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EIdent("badInt")])]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EIdent("badString")])]), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EIdent("badScopedString")])]), pos),
+			SExpr(ECall(EField(EIdent("tester"), "t"), [badScopedStringProbe]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final harnessFn = new HxFunctionDecl("t", HxVisibility.Public, false, [new HxFunctionArg("value", "Bool", NoDefault)], "Void", [], "");
+		final harnessClass = new HxClassDecl("TestHarness", false, [harnessFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass, harnessClass], false, false);
+		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+	}
+
 	static function phpFollowWithAbstractsProbeProgram():GenIrProgram {
 		final src = [
 			"typedef TypedefToStringMap<T> = Map<String,T>;",
@@ -7645,6 +7709,49 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpAbstractCastConstraint():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_cast_constraint_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpAbstractCastConstraintProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$s = __hxhx_to_string_value($z);", "PHP abstract-constrained String assignments should lower through scalar conversion");
+		assertContains(content, "$i = __hxhx_int_value($zi);", "PHP abstract-constrained Int assignments should lower through scalar conversion");
+		assertContains(content, "$badInt = true;", "PHP unqualified typeError should fold abstract String-to-Int probes");
+		assertContains(content, "$badString = true;", "PHP unqualified typeError should fold abstract Int-to-String probes");
+		assertContains(content, "Helper::t(true);", "PHP nested source-parsed typeError probes should fold abstract Int-to-String probes");
+		assertNotContains(content, "$typeError(", "PHP abstract cast constraint probes should not emit runtime typeError calls");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP abstract cast constraint support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "foo\n13\ntrue\ntrue\n", "generated PHP abstract cast constraint output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpLoweredAbstractCastTypeErrorProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_lowered_abstract_cast_type_error_probe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpLoweredAbstractCastTypeErrorProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$badInt = true;", "PHP typeError should fold lowered lambda Int abstract-cast probes");
+		assertContains(content, "$badString = true;", "PHP typeError should fold lowered lambda String abstract-cast probes");
+		assertContains(content, "$badScopedString = true;", "PHP typeError should fold scoped lowered lambda String abstract-cast probes");
+		assertContains(content, "$tester->t(true);", "PHP typeError should fold nested test-helper abstract-cast probes");
+		assertNotContains(content, "$typeError(", "PHP lowered abstract-cast probes should not emit runtime typeError calls");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP lowered abstract-cast typeError probes should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\ntrue\n", "generated PHP lowered abstract-cast typeError probe output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpTypedAsHelperProbe():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_typed_as_helper_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -10246,6 +10353,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTypeErrorProbe();
 		assertPhpTypeErrorExpressionProbe();
 		assertPhpTypeErrorBlockProbe();
+		assertPhpAbstractCastConstraint();
+		assertPhpLoweredAbstractCastTypeErrorProbe();
 		assertPhpTypedAsHelperProbe();
 		assertPhpFollowWithAbstractsProbe();
 		assertPhpArrayComprehensionClosure();
