@@ -1736,6 +1736,8 @@ class SourceTargetCommon {
 			final rendered = renderedArgs.join(", ");
 			if (callee == "$fget")
 				return "\\haxe\\io\\Bytes::fastGet(" + rendered + ")";
+			if (callee == "$__hxhx_map_comprehension")
+				return "__hxhx_map_comprehension(" + rendered + ")";
 			final staticHelper = phpSameClassStaticHelperCall(callee, rendered);
 			if (staticHelper != null)
 				return staticHelper;
@@ -14851,6 +14853,30 @@ class SourceTargetCommon {
 				lines.push("function __hxhx_array_push(&$array, $value) {");
 				lines.push("  $array[] = $value;");
 				lines.push("  return count($array);");
+				lines.push("}");
+				lines.push("function __hxhx_map_comprehension($iterable, $projector) {");
+				lines.push("  $map = new Map();");
+				lines.push("  if ($iterable instanceof __HxArray) $iterable = $iterable->toArray();");
+				lines.push("  if (!is_array($iterable) && !($iterable instanceof \\Traversable)) return $map;");
+				lines.push("  foreach ($iterable as $item) {");
+				lines.push("    $projectItem = is_string($item) ? new class($item) {");
+				lines.push("      public $__hx_string_value;");
+				lines.push("      public function __construct($value) { $this->__hx_string_value = strval($value); }");
+				lines.push("      public function toUpperCase() { return strtoupper($this->__hx_string_value); }");
+				lines.push("      public function toLowerCase() { return strtolower($this->__hx_string_value); }");
+				lines.push("      public function __toString() { return $this->__hx_string_value; }");
+				lines.push("    } : $item;");
+				lines.push("    $pair = $projector($projectItem);");
+				lines.push("    if ($pair instanceof __HxArray) $pair = $pair->toArray();");
+				lines.push("    if (!is_array($pair)) continue;");
+				lines.push("    $values = array_values($pair);");
+				lines.push("    if (count($values) >= 2) {");
+				lines.push("      $key = is_object($values[0]) && property_exists($values[0], \"__hx_string_value\") ? $values[0]->__hx_string_value : $values[0];");
+				lines.push("      $value = is_object($values[1]) && property_exists($values[1], \"__hx_string_value\") ? $values[1]->__hx_string_value : $values[1];");
+				lines.push("      $map->set($key, $value);");
+				lines.push("    }");
+				lines.push("  }");
+				lines.push("  return $map;");
 				lines.push("}");
 				lines.push("function __hxhx_to_template_wrap($value) {");
 				lines.push("  if (is_object($value) && get_class($value) === \"TemplateWrap\") return __hxhx_copy_value($value);");

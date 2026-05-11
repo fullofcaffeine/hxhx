@@ -20652,6 +20652,7 @@ and callExpr = fun target callee args -> try let __fallback_result_681 = let tem
     ) in let __assign_679 = (phpFoldRenderedTypeErrorProbe (HxArray.get (Obj.magic (!tempArray)) i : string) : string) in HxArray.set (Obj.magic (!tempArray)) i __assign_679) done);
     let rendered = (HxArray.join (!tempArray) ", " (fun x -> x) : string) in (
       ignore (if HxString.equals callee "$fget" then raise (HxRuntime.Hx_return (Obj.repr (("\\haxe\\io\\Bytes::fastGet(" ^ HxString.toStdString rendered) ^ ")" : string))) else ());
+      ignore (if HxString.equals callee "$__hxhx_map_comprehension" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_map_comprehension(" ^ HxString.toStdString rendered) ^ ")" : string))) else ());
       let staticHelper = (phpSameClassStaticHelperCall (callee : string) (rendered : string) : string) in (
         ignore (if staticHelper != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (staticHelper : string))) else ());
         let testHelper = (phpTestHelperCall (callee : string) (rendered : string) : string) in (
@@ -29554,6 +29555,30 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "function __hxhx_array_push(&$array, $value) {");
       ignore (HxArray.push lines "  $array[] = $value;");
       ignore (HxArray.push lines "  return count($array);");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_map_comprehension($iterable, $projector) {");
+      ignore (HxArray.push lines "  $map = new Map();");
+      ignore (HxArray.push lines "  if ($iterable instanceof __HxArray) $iterable = $iterable->toArray();");
+      ignore (HxArray.push lines "  if (!is_array($iterable) && !($iterable instanceof \\Traversable)) return $map;");
+      ignore (HxArray.push lines "  foreach ($iterable as $item) {");
+      ignore (HxArray.push lines "    $projectItem = is_string($item) ? new class($item) {");
+      ignore (HxArray.push lines "      public $__hx_string_value;");
+      ignore (HxArray.push lines "      public function __construct($value) { $this->__hx_string_value = strval($value); }");
+      ignore (HxArray.push lines "      public function toUpperCase() { return strtoupper($this->__hx_string_value); }");
+      ignore (HxArray.push lines "      public function toLowerCase() { return strtolower($this->__hx_string_value); }");
+      ignore (HxArray.push lines "      public function __toString() { return $this->__hx_string_value; }");
+      ignore (HxArray.push lines "    } : $item;");
+      ignore (HxArray.push lines "    $pair = $projector($projectItem);");
+      ignore (HxArray.push lines "    if ($pair instanceof __HxArray) $pair = $pair->toArray();");
+      ignore (HxArray.push lines "    if (!is_array($pair)) continue;");
+      ignore (HxArray.push lines "    $values = array_values($pair);");
+      ignore (HxArray.push lines "    if (count($values) >= 2) {");
+      ignore (HxArray.push lines "      $key = is_object($values[0]) && property_exists($values[0], \"__hx_string_value\") ? $values[0]->__hx_string_value : $values[0];");
+      ignore (HxArray.push lines "      $value = is_object($values[1]) && property_exists($values[1], \"__hx_string_value\") ? $values[1]->__hx_string_value : $values[1];");
+      ignore (HxArray.push lines "      $map->set($key, $value);");
+      ignore (HxArray.push lines "    }");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  return $map;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_to_template_wrap($value) {");
       ignore (HxArray.push lines "  if (is_object($value) && get_class($value) === \"TemplateWrap\") return __hxhx_copy_value($value);");

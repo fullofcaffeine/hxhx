@@ -3492,6 +3492,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpMapComprehensionRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var m = [for (x in [\"a\", \"b\"]) x => x.toUpperCase()];",
+			"    Sys.println(Std.string(m.exists(\"a\")));",
+			"    Sys.println(m.get(\"b\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function pythonDoWhileExpressionProgram():GenIrProgram {
 		final src = [
 			"class TestPython {",
@@ -10242,6 +10257,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpMapComprehensionRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_comprehension_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpMapComprehensionRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function __hxhx_map_comprehension($iterable, $projector)",
+			"PHP runtime should include the map-comprehension helper used by upstream-shaped lowering");
+		assertContains(content, "__hxhx_map_comprehension([\"a\", \"b\"]",
+			"PHP map comprehensions should lower through the runtime helper with the source iterable");
+		assertNotContains(content, "$__hxhx_map_comprehension",
+			"PHP map-comprehension helper calls should emit as direct function calls, not variable callables");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP map-comprehension helper support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\nB\n", "generated PHP map-comprehension helper output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonUnitMapComprehensionFallback():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_unit_map_comprehension_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -10662,6 +10699,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpUnitLocalStaticFallback();
 		assertPythonUnitLocalStaticFallback();
 		assertPhpUnitMapComprehensionFallback();
+		assertPhpMapComprehensionRuntimeSupport();
 		assertPythonUnitMapComprehensionFallback();
 		assertPythonDoWhileExpressionFallback();
 		assertPythonPlainTextReportSetHandlerFallback();
