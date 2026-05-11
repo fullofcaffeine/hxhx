@@ -9484,6 +9484,7 @@ let appendPhpXmlRuntime = fun lines -> ignore ((
   ignore (HxArray.push lines "      if ($source[$i] === \">\") {");
   ignore (HxArray.push lines "        $i++;");
   ignore (HxArray.push lines "        $children = self::parseNodes($source, $i, $name);");
+  ignore (HxArray.push lines "        if (count($children) === 0) $children[] = self::createPCData(\"\");");
   ignore (HxArray.push lines "        return new Xml(self::$Element, $name, null, $attrs, $children, false);");
   ignore (HxArray.push lines "      }");
   ignore (HxArray.push lines "      $attrName = self::readName($source, $i);");

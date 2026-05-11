@@ -10530,6 +10530,7 @@ class SourceTargetCommon {
 		lines.push("      if ($source[$i] === \">\") {");
 		lines.push("        $i++;");
 		lines.push("        $children = self::parseNodes($source, $i, $name);");
+		lines.push("        if (count($children) === 0) $children[] = self::createPCData(\"\");");
 		lines.push("        return new Xml(self::$Element, $name, null, $attrs, $children, false);");
 		lines.push("      }");
 		lines.push("      $attrName = self::readName($source, $i);");
