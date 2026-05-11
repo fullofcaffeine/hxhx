@@ -1955,7 +1955,7 @@ class SourceTargetCommon {
 								if (renderedArgs != null)
 									fieldAccess(target, renderExpr(target, receiver), field) + "(" + renderedArgs.join(", ") + ")";
 								else if (phpReceiverHasInstanceField(receiver, field))
-									phpCallField(renderExpr(Php, receiver), field, phpArgs);
+									phpCallField(renderExpr(Php, receiver), field, phpAlignCallableFieldCallArgs(receiver, field, phpArgs));
 								else
 									callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), phpArgs);
 							}
@@ -2531,9 +2531,10 @@ class SourceTargetCommon {
 	static function phpLambdaExpr(args:Array<String>, body:HxExpr, valueNames:Array<String>, extraRefNames:Array<String>,
 			optionalArgNames:Array<String>):String {
 		final renderedArgs = [
-			for (arg in args) {
+			for (i in 0...args.length) {
+				final arg = args[i];
 				final clean = sanitizeTypeName(arg);
-				valueName(Php, clean) + (optionalArgNames != null && optionalArgNames.indexOf(clean) >= 0 ? " = null" : "");
+				valueName(Php, clean) + (phpLambdaArgCanUsePhpDefault(args, optionalArgNames, i) ? " = null" : "");
 			}
 		].join(", ");
 		final thisCaptureName = phpRenderThisValueSlot && phpExprTouchesThis(body) ? "__hxhx_this_value" : null;
@@ -2571,6 +2572,20 @@ class SourceTargetCommon {
 		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
 		return thisCaptureName == null ? lambda : "(function(" + valueName(Php, thisCaptureName) + ") { return " + lambda
 			+ "; })(__hxhx_copy_value($this->__hx_value))";
+	}
+
+	static function phpLambdaArgCanUsePhpDefault(args:Array<String>, optionalArgNames:Array<String>, index:Int):Bool {
+		if (args == null || optionalArgNames == null || index < 0 || index >= args.length)
+			return false;
+		final clean = sanitizeTypeName(args[index]);
+		if (optionalArgNames.indexOf(clean) < 0)
+			return false;
+		for (i in index + 1...args.length) {
+			final later = sanitizeTypeName(args[i]);
+			if (optionalArgNames.indexOf(later) < 0)
+				return false;
+		}
+		return true;
 	}
 
 	static function phpForInExpr(iterable:HxExpr, bodyExpr:HxExpr, continuation:HxExpr):String {
@@ -3407,6 +3422,26 @@ class SourceTargetCommon {
 		return {min: min, max: max};
 	}
 
+	static function phpFunctionTypeParams(typeHint:String):Null<Array<HxFunctionArg>> {
+		final text = trimLeadingTypeColon(typeHint);
+		if (text.length == 0)
+			return null;
+		final arrowParts = splitTopLevelArrow(text);
+		if (arrowParts.length < 2)
+			return null;
+		final params = new Array<HxFunctionArg>();
+		for (i in 0...arrowParts.length - 1) {
+			final part = StringTools.trim(arrowParts[i]);
+			if (part == "Void")
+				continue;
+			for (argText in phpFunctionTypeArgTexts(part)) {
+				params.push(new HxFunctionArg("arg" + params.length, phpFunctionTypeArgTypeHint(argText), HxDefaultValue.NoDefault,
+					phpFunctionTypeArgIsOptional(argText), false));
+			}
+		}
+		return params;
+	}
+
 	static function phpFunctionTypeArgTexts(raw:String):Array<String> {
 		final trimmed = StringTools.trim(raw);
 		final parenEnd = matchingOuterParen(trimmed);
@@ -3425,6 +3460,21 @@ class SourceTargetCommon {
 			return true;
 		final namedColon = findTopLevelChar(trimmed, ":".code);
 		return namedColon > 0 && StringTools.startsWith(StringTools.trim(trimmed.substring(0, namedColon)), "?");
+	}
+
+	static function phpFunctionTypeArgTypeHint(raw:String):String {
+		var trimmed = StringTools.trim(raw);
+		if (StringTools.startsWith(trimmed, "?"))
+			trimmed = StringTools.trim(trimmed.substr(1));
+		final namedColon = findTopLevelChar(trimmed, ":".code);
+		if (namedColon >= 0)
+			trimmed = StringTools.trim(trimmed.substr(namedColon + 1));
+		if (StringTools.startsWith(trimmed, "?"))
+			trimmed = StringTools.trim(trimmed.substr(1));
+		final defaultEq = findTopLevelChar(trimmed, "=".code);
+		if (defaultEq >= 0)
+			trimmed = StringTools.trim(trimmed.substr(0, defaultEq));
+		return trimmed;
 	}
 
 	static function phpFunctionTypeOptionalArgNamesForLambda(typeHint:String, args:Array<String>):Array<String> {
@@ -5152,6 +5202,7 @@ class SourceTargetCommon {
 	static var phpRenderInstanceMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderInstanceMethodArgsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Array<HxFunctionArg>>>> = null;
 	static var phpRenderInstanceFieldsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
+	static var phpRenderInstanceFieldTypeHintsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<String>>> = null;
 	static var phpRenderDynamicMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderGenericStaticFunctionsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<HxFunctionDecl>>> = null;
@@ -5658,6 +5709,18 @@ class SourceTargetCommon {
 		return phpAlignTypedOptionalCallArgs(params, args);
 	}
 
+	static function phpAlignCallableFieldCallArgs(receiver:HxExpr, field:String, args:Array<HxExpr>):Array<HxExpr> {
+		final typeHint = switch (receiver) {
+			case EThis:
+				phpCurrentInstanceFieldTypeHint(field);
+			case EIdent(name):
+				phpInstanceFieldTypeHintForType(phpLocalTypeHint(name), field);
+			case _:
+				"";
+		};
+		return phpAlignTypedOptionalCallArgs(phpFunctionTypeParams(typeHint), args);
+	}
+
 	static function phpAlignTypedOptionalCallArgs(params:Null<Array<HxFunctionArg>>, args:Array<HxExpr>):Array<HxExpr> {
 		if (params == null || args.length == 0 || args.length >= params.length)
 			return args;
@@ -5690,7 +5753,7 @@ class SourceTargetCommon {
 	static function phpLaterOptionalParamFits(params:Array<HxFunctionArg>, start:Int, arg:HxExpr):Bool {
 		for (i in start...params.length) {
 			final param = params[i];
-			if (phpFunctionArgCanBeSkipped(param) && phpCallArgFitsParam(arg, param))
+			if (phpCallArgFitsParam(arg, param))
 				return true;
 		}
 		return false;
@@ -5814,6 +5877,34 @@ class SourceTargetCommon {
 		for (candidate in candidates) {
 			if (phpRenderInstanceFieldsByType.exists(candidate))
 				return phpRenderInstanceFieldsByType.get(candidate);
+		}
+		return null;
+	}
+
+	static function phpInstanceFieldTypeHintForType(typeHint:String, field:String):String {
+		final fields = phpInstanceFieldTypeHintMapForType(typeHint);
+		if (fields == null)
+			return "";
+		if (fields.exists(field))
+			return fields.get(field);
+		final clean = sanitizeTypeName(field);
+		return fields.exists(clean) ? fields.get(clean) : "";
+	}
+
+	static function phpInstanceFieldTypeHintMapForType(typeHint:String):Null<haxe.ds.StringMap<String>> {
+		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (raw.length == 0 || phpRenderInstanceFieldTypeHintsByType == null)
+			return null;
+		final candidates = [raw, sanitizePhpTypePath(raw)];
+		final dot = raw.lastIndexOf(".");
+		if (dot >= 0)
+			candidates.push(raw.substr(dot + 1));
+		final slash = raw.lastIndexOf("\\");
+		if (slash >= 0)
+			candidates.push(raw.substr(slash + 1));
+		for (candidate in candidates) {
+			if (phpRenderInstanceFieldTypeHintsByType.exists(candidate))
+				return phpRenderInstanceFieldTypeHintsByType.get(candidate);
 		}
 		return null;
 	}
@@ -9759,6 +9850,37 @@ class SourceTargetCommon {
 		return out;
 	}
 
+	static function phpProgramInstanceFieldTypeHintMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<String>> {
+		final out = new haxe.ds.StringMap<haxe.ds.StringMap<String>>();
+		function addKey(key:String, fields:haxe.ds.StringMap<String>):Void {
+			if (key != null && key.length > 0 && !out.exists(key))
+				out.set(key, fields);
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final fields = new haxe.ds.StringMap<String>();
+				for (field in HxClassDecl.getFields(cls)) {
+					if (HxFieldDecl.getIsStatic(field))
+						continue;
+					final name = HxFieldDecl.getName(field);
+					final hint = HxFieldDecl.getTypeHint(field);
+					fields.set(name, hint);
+					fields.set(sanitizeTypeName(name), hint);
+				}
+				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
+				addKey(shortName, fields);
+				addKey(fullName, fields);
+				addKey(sanitizePhpTypePath(fullName), fields);
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return out;
+	}
+
 	static function phpProgramDynamicMethodMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
 		final out = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
 		final classesByName = new Map<String, HxClassDecl>();
@@ -13529,6 +13651,7 @@ class SourceTargetCommon {
 		final previousPhpInstanceMethodsByType = phpRenderInstanceMethodsByType;
 		final previousPhpInstanceMethodArgsByType = phpRenderInstanceMethodArgsByType;
 		final previousPhpInstanceFieldsByType = phpRenderInstanceFieldsByType;
+		final previousPhpInstanceFieldTypeHintsByType = phpRenderInstanceFieldTypeHintsByType;
 		final previousPhpDynamicMethodsByType = phpRenderDynamicMethodsByType;
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
 		final previousPhpGenericStaticFunctionsByType = phpRenderGenericStaticFunctionsByType;
@@ -13545,6 +13668,7 @@ class SourceTargetCommon {
 			phpRenderInstanceMethodsByType = phpProgramInstanceMethodMap(program, decl);
 			phpRenderInstanceMethodArgsByType = phpProgramInstanceMethodArgsMap(program, decl);
 			phpRenderInstanceFieldsByType = phpProgramInstanceFieldMap(program, decl);
+			phpRenderInstanceFieldTypeHintsByType = phpProgramInstanceFieldTypeHintMap(program, decl);
 			phpRenderDynamicMethodsByType = phpProgramDynamicMethodMap(program, decl);
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
 			phpRenderGenericStaticFunctionsByType = phpProgramGenericStaticFunctionMap(program, decl);
@@ -16443,6 +16567,7 @@ class SourceTargetCommon {
 		phpRenderInstanceMethodsByType = previousPhpInstanceMethodsByType;
 		phpRenderInstanceMethodArgsByType = previousPhpInstanceMethodArgsByType;
 		phpRenderInstanceFieldsByType = previousPhpInstanceFieldsByType;
+		phpRenderInstanceFieldTypeHintsByType = previousPhpInstanceFieldTypeHintsByType;
 		phpRenderDynamicMethodsByType = previousPhpDynamicMethodsByType;
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
 		phpRenderGenericStaticFunctionsByType = previousPhpGenericStaticFunctionsByType;

@@ -2709,7 +2709,11 @@ class HxParser {
 					consumeUntilIndex(parenLambda.endIndex);
 					final bodyLine = cur.getPos().getLine();
 					final body = parseExpr(stop);
-					return ELambda(parenLambda.args, markTraceExpressionLine(body, bodyLine));
+					final markedBody = markTraceExpressionLine(body, bodyLine);
+					final lambdaBody = parenLambda.defaultedArgCount == 0 ? markedBody : applyDefaultedLambdaArgs(markedBody, parenLambda.defaultedArgs);
+					final lambda:HxExpr = ELambda(parenLambda.args, lambdaBody);
+					return parenLambda.optionalArgs.length == 0 ? lambda : ECall(EIdent("__hxhx_optional_lambda"),
+						[lambda, EArrayDecl([for (arg in parenLambda.optionalArgs) EString(arg)])]);
 				}
 			case TIdent(name):
 				if (peekKind().match(TOther("-".code)) && peekKind2().match(TOther(">".code))) {
@@ -2735,7 +2739,13 @@ class HxParser {
 		};
 	}
 
-	function tryReadParenthesizedLambdaArgs():Null<{args:Array<String>, endIndex:Int}> {
+	function tryReadParenthesizedLambdaArgs():Null<{
+		args:Array<String>,
+		optionalArgs:Array<String>,
+		defaultedArgs:Map<String, HxExpr>,
+		defaultedArgCount:Int,
+		endIndex:Int
+	}> {
 		if (!cur.kind.match(TLParen))
 			return null;
 		final start = currentIndex();
@@ -2774,15 +2784,58 @@ class HxParser {
 
 		final rawArgs = StringTools.trim(source.substring(start + 1, closeIndex));
 		final args = new Array<String>();
+		final optionalArgs = new Array<String>();
+		final defaultedArgs:Map<String, HxExpr> = [];
+		var defaultedArgCount = 0;
 		if (rawArgs.length > 0) {
 			for (part in rawArgs.split(",")) {
-				final arg = parseLambdaArgName(part);
+				final arg = parseLambdaArgInfo(part);
 				if (arg == null)
 					return null;
-				args.push(arg);
+				args.push(arg.name);
+				if (arg.isOptional && optionalArgs.indexOf(arg.name) < 0)
+					optionalArgs.push(arg.name);
+				if (arg.defaultExpr != null) {
+					if (optionalArgs.indexOf(arg.name) < 0)
+						optionalArgs.push(arg.name);
+					if (!defaultedArgs.exists(arg.name))
+						defaultedArgCount++;
+					defaultedArgs.set(arg.name, arg.defaultExpr);
+				}
 			}
 		}
-		return {args: args, endIndex: j + 2};
+		return {
+			args: args,
+			optionalArgs: optionalArgs,
+			defaultedArgs: defaultedArgs,
+			defaultedArgCount: defaultedArgCount,
+			endIndex: j + 2
+		};
+	}
+
+	function parseLambdaArgInfo(raw:String):Null<{name:String, isOptional:Bool, defaultExpr:Null<HxExpr>}> {
+		var arg = StringTools.trim(raw == null ? "" : raw);
+		if (arg.length == 0)
+			return null;
+		var isOptional = false;
+		if (StringTools.startsWith(arg, "?")) {
+			isOptional = true;
+			arg = StringTools.trim(arg.substr(1));
+		}
+		final end = lambdaArgNameEnd(arg);
+		if (end <= 0)
+			return null;
+		final name = StringTools.trim(arg.substr(0, end));
+		if (!isValidLambdaArgName(name))
+			return null;
+		final eq = arg.indexOf("=");
+		final defaultExpr = if (eq >= 0) {
+			final defaultText = StringTools.trim(arg.substr(eq + 1));
+			defaultText.length == 0 ? null : HxParser.parseExprText(defaultText);
+		} else {
+			null;
+		};
+		return {name: name, isOptional: isOptional, defaultExpr: defaultExpr};
 	}
 
 	function parseLambdaArgName(raw:String):Null<String> {
@@ -2807,6 +2860,40 @@ class HxParser {
 			}
 		}
 		return arg.length;
+	}
+
+	function applyDefaultedLambdaArgs(expr:HxExpr, defaultedArgs:Map<String, HxExpr>):HxExpr {
+		return switch (expr) {
+			case EIdent(name) if (defaultedArgs.exists(name)):
+				ETernary(EBinop("==", EIdent(name), ENull), defaultedArgs.get(name), EIdent(name));
+			case EUnop(op, inner):
+				EUnop(op, applyDefaultedLambdaArgs(inner, defaultedArgs));
+			case EBinop(op, left, right) if (op == "=" || StringTools.endsWith(op, "=")):
+				EBinop(op, left, applyDefaultedLambdaArgs(right, defaultedArgs));
+			case EBinop(op, left, right):
+				EBinop(op, applyDefaultedLambdaArgs(left, defaultedArgs), applyDefaultedLambdaArgs(right, defaultedArgs));
+			case ETernary(cond, thenExpr, elseExpr):
+				ETernary(applyDefaultedLambdaArgs(cond, defaultedArgs), applyDefaultedLambdaArgs(thenExpr, defaultedArgs),
+					applyDefaultedLambdaArgs(elseExpr, defaultedArgs));
+			case ECall(callee, callArgs):
+				ECall(applyDefaultedLambdaArgs(callee, defaultedArgs), [for (arg in callArgs) applyDefaultedLambdaArgs(arg, defaultedArgs)]);
+			case EField(receiver, field):
+				EField(applyDefaultedLambdaArgs(receiver, defaultedArgs), field);
+			case EArrayAccess(receiver, index):
+				EArrayAccess(applyDefaultedLambdaArgs(receiver, defaultedArgs), applyDefaultedLambdaArgs(index, defaultedArgs));
+			case EArrayDecl(items):
+				EArrayDecl([for (item in items) applyDefaultedLambdaArgs(item, defaultedArgs)]);
+			case EAnon(fieldNames, fieldValues):
+				EAnon(fieldNames, [for (value in fieldValues) applyDefaultedLambdaArgs(value, defaultedArgs)]);
+			case ELambda(_, _):
+				expr;
+			case ECast(inner, typeHint):
+				ECast(applyDefaultedLambdaArgs(inner, defaultedArgs), typeHint);
+			case EUntyped(inner):
+				EUntyped(applyDefaultedLambdaArgs(inner, defaultedArgs));
+			case _:
+				expr;
+		};
 	}
 
 	function isValidLambdaArgName(name:String):Bool {

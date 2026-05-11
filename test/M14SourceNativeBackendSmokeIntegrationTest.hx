@@ -4961,6 +4961,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpOptionalBeforeRequiredFunctionFieldProgram():GenIrProgram {
+		final src = [
+			"class Holder {",
+			"  var combine:?Int->String->Int;",
+			"  public function new() {}",
+			"  public function run() {",
+			"    combine = (a:Int = 1, b:String) -> a + b.length;",
+			"    Sys.println(combine(\"--\"));",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    new Holder().run();",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function constructorProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -9841,6 +9862,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpOptionalBeforeRequiredFunctionFieldCall():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_optional_before_required_field_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpOptionalBeforeRequiredFunctionFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertNotContains(content, "function($a = null, $b)", "PHP lambdas should not rely on deprecated optional-before-required parameter signatures");
+		assertContains(content, "__hxhx_call_field($this, \"combine\", null, \"--\")",
+			"PHP function-typed field calls should pass null for skipped optional parameters before required parameters");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP optional-before-required field call should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "3\n", "generated PHP optional-before-required field call output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpOpaqueBlockExprCapturesOuterLocals():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_opaque_block_expr_capture_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11022,6 +11062,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTryCatchRawRenamesScopedLocalFunctions();
 		assertPhpLocalFunctionOptionalArgs();
 		assertPhpSameClassFunctionFieldCall();
+		assertPhpOptionalBeforeRequiredFunctionFieldCall();
 		assertPhpOpaqueBlockExprCapturesOuterLocals();
 		assertPhpNullFieldAccessThrowsNpe();
 		assertPhpConstructorDefaultArgs();
