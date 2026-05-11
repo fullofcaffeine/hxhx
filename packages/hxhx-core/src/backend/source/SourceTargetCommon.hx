@@ -10022,6 +10022,54 @@ class SourceTargetCommon {
 			phpBindGenericTypeHint(formalParts[i], actualParts[i], bindings);
 	}
 
+	static function phpGenericExprIsEmptyArray(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EArrayDecl(values):
+				values.length == 0;
+			case ECast(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
+				phpGenericExprIsEmptyArray(inner);
+			case _:
+				false;
+		};
+	}
+
+	static function phpGenericRawArgIsEmptyArray(raw:String):Bool {
+		final trimmed = StringTools.trim(raw);
+		return StringTools.startsWith(trimmed, "[")
+			&& StringTools.endsWith(trimmed, "]")
+			&& StringTools.trim(trimmed.substring(1, trimmed.length - 1)).length == 0;
+	}
+
+	static function phpFirstPriorGenericBinding(paramOrder:Array<String>, param:String, bindings:haxe.ds.StringMap<String>):String {
+		final index = paramOrder.indexOf(param);
+		if (index <= 0)
+			return "";
+		var i = index - 1;
+		while (i >= 0) {
+			final prior = paramOrder[i];
+			if (bindings.exists(prior))
+				return bindings.get(prior);
+			i--;
+		}
+		return "";
+	}
+
+	/**
+		Infers a direct generic parameter from an empty array only after earlier
+		parameters have bound. This preserves `Array<T>` formal behavior while
+		covering Haxe's `gf3(seed:T, values:U)` reflection shape where `[]`
+		otherwise collapses to an unknown array element type.
+	**/
+	static function phpBindDeferredEmptyArrayParams(paramOrder:Array<String>, deferred:Array<String>, bindings:haxe.ds.StringMap<String>):Void {
+		for (param in deferred) {
+			if (bindings.exists(param))
+				continue;
+			final source = phpFirstPriorGenericBinding(paramOrder, param, bindings);
+			if (source.length > 0)
+				bindings.set(param, "Array<" + source + ">");
+		}
+	}
+
 	static function phpGenericSpecializedNameFromExprArgs(fnName:String, fn:HxFunctionDecl, args:Array<HxExpr>,
 			localTypes:haxe.ds.StringMap<String>):Null<String> {
 		final cleanName = sanitizeTypeName(fnName);
@@ -10037,20 +10085,27 @@ class SourceTargetCommon {
 			return parts.length == 0 ? null : cleanName + "_" + parts.join("_");
 		}
 		final bindings = new haxe.ds.StringMap<String>();
+		final deferredEmptyArrays = new Array<String>();
 		final fnArgs = HxFunctionDecl.getArgs(fn);
 		final count = args.length < fnArgs.length ? args.length : fnArgs.length;
 		for (i in 0...count) {
 			final formalHint = HxFunctionArg.getTypeHint(fnArgs[i]);
+			final cleanFormal = removeTypeHintWhitespace(formalHint);
+			if (phpGenericLooksTypeParam(cleanFormal) && phpGenericExprIsEmptyArray(args[i])) {
+				if (deferredEmptyArrays.indexOf(cleanFormal) < 0)
+					deferredEmptyArrays.push(cleanFormal);
+				continue;
+			}
 			final actualHint = phpGenericTypeHintFromExpr(args[i], localTypes);
 			if (actualHint.length > 0) {
 				phpBindGenericTypeHint(formalHint, actualHint, bindings);
 			} else {
-				final cleanFormal = removeTypeHintWhitespace(formalHint);
 				final suffix = phpGenericLooksTypeParam(cleanFormal) ? phpGenericSpecializationSuffixFromExpr(args[i], localTypes) : null;
 				if (suffix != null && suffix.length > 0 && !bindings.exists(cleanFormal))
 					bindings.set(cleanFormal, suffix);
 			}
 		}
+		phpBindDeferredEmptyArrayParams(paramOrder, deferredEmptyArrays, bindings);
 		final parts = new Array<String>();
 		for (param in paramOrder) {
 			if (!bindings.exists(param))
@@ -10075,20 +10130,27 @@ class SourceTargetCommon {
 			return parts.length == 0 ? null : cleanName + "_" + parts.join("_");
 		}
 		final bindings = new haxe.ds.StringMap<String>();
+		final deferredEmptyArrays = new Array<String>();
 		final fnArgs = HxFunctionDecl.getArgs(fn);
 		final count = rawParts.length < fnArgs.length ? rawParts.length : fnArgs.length;
 		for (i in 0...count) {
 			final formalHint = HxFunctionArg.getTypeHint(fnArgs[i]);
+			final cleanFormal = removeTypeHintWhitespace(formalHint);
+			if (phpGenericLooksTypeParam(cleanFormal) && phpGenericRawArgIsEmptyArray(rawParts[i])) {
+				if (deferredEmptyArrays.indexOf(cleanFormal) < 0)
+					deferredEmptyArrays.push(cleanFormal);
+				continue;
+			}
 			final actualHint = phpGenericTypeHintFromRawArg(rawParts[i], localTypes);
 			if (actualHint.length > 0) {
 				phpBindGenericTypeHint(formalHint, actualHint, bindings);
 			} else {
-				final cleanFormal = removeTypeHintWhitespace(formalHint);
 				final suffix = phpGenericLooksTypeParam(cleanFormal) ? phpGenericSpecializationSuffixFromRawArg(rawParts[i]) : null;
 				if (suffix != null && suffix.length > 0 && !bindings.exists(cleanFormal))
 					bindings.set(cleanFormal, suffix);
 			}
 		}
+		phpBindDeferredEmptyArrayParams(paramOrder, deferredEmptyArrays, bindings);
 		final parts = new Array<String>();
 		for (param in paramOrder) {
 			if (!bindings.exists(param))

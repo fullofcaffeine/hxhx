@@ -3055,9 +3055,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function phpGenericStaticReflectionProgram():GenIrProgram {
 		final src = [
+			"class GenericBox {",
+			"  public var value:String;",
+			"  public function new(value:String) this.value = value;",
+			"}",
 			"class GenericReflect {",
 			"  @:generic public static function gf1<T>(value:T):T return value;",
 			"  @:generic public static function gf2<A, B>(label:A, values:Array<B>):String return Std.string(label) + Std.string(values);",
+			"  @:generic public static function gf3<A, B>(seed:A, values:B):B return values;",
 			"}",
 			"class Main {",
 			"  static function main() {",
@@ -3069,6 +3074,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    GenericReflect.gf1(function(i:Int):String return Std.string(i));",
 			"    GenericReflect.gf2(\"foo\", [1, 2]);",
 			"    GenericReflect.gf2(\"foo\", [[1, 2]]);",
+			"    var box = new GenericBox(\"box\");",
+			"    GenericReflect.gf3(box, []);",
 			"    var fields = Type.getClassFields(GenericReflect);",
 			"    fields.sort(Reflect.compare);",
 			"    Sys.println(fields.join(\"#\"));",
@@ -3080,6 +3087,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(Lambda.has(fields, \"gf1_func_Int_String\")));",
 			"    Sys.println(Std.string(Lambda.has(fields, \"gf2_String_Int\")));",
 			"    Sys.println(Std.string(Lambda.has(fields, \"gf2_String_Array_Int\")));",
+			"    Sys.println(Std.string(Lambda.has(fields, \"gf3_GenericBox_Array_GenericBox\")));",
 			"  }",
 			"}",
 		].join("\n");
@@ -8385,13 +8393,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP @:generic static reflection should bind Array<T> arguments to their generic item type");
 		assertContains(content, "public static function gf2_String_Array_Int($label, $values)",
 			"PHP @:generic static reflection should bind nested Array<T> arguments to nested generic item types");
+		assertContains(content, "public static function gf3_GenericBox_Array_GenericBox($seed, $values)",
+			"PHP @:generic static reflection should bind empty-array direct generic parameters from prior object bindings");
 		assertContains(content, "return self::gf1($value);", "PHP @:generic specialization wrappers should delegate to the generic implementation");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP generic static reflection support should execute, stderr:\n" + run.stderr);
 			final lines = run.stdout.split("\n");
-			assertTrue(lines.length >= 9, "generated PHP generic static reflection output too short, got:\n" + run.stdout);
-			for (i in 1...9)
+			assertTrue(lines.length >= 10, "generated PHP generic static reflection output too short, got:\n" + run.stdout);
+			for (i in 1...10)
 				assertTrue(lines[i] == "true", "generated PHP generic static reflection field check failed, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
