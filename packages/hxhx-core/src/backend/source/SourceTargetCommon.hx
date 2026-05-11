@@ -1877,10 +1877,21 @@ class SourceTargetCommon {
 					switch (receiver) {
 						case ESuper:
 							callExpr(target, "(" + phpSuperGetterCall(field) + ")", phpArgs);
-						case EIdent(name) if (phpLocalHasDynamicCallField(name, field)):
-							phpCallField(renderExpr(Php, receiver), field, phpArgs);
 						case _:
-							callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), phpArgs);
+							final propertyGetter = phpInstancePropertyGetterAccess(receiver, field);
+							final dynamicCall = switch (receiver) {
+								case EIdent(name):
+									phpLocalHasDynamicCallField(name, field);
+								case _:
+									false;
+							};
+							if (propertyGetter != null) {
+								callExpr(target, "(" + propertyGetter + ")", phpArgs);
+							} else if (dynamicCall) {
+								phpCallField(renderExpr(Php, receiver), field, phpArgs);
+							} else {
+								callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), phpArgs);
+							}
 					}
 				}
 			case Python, Java, Cs, Lua:

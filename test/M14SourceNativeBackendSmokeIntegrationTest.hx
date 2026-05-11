@@ -2688,12 +2688,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var s = super.fProp(0);",
 			"    return function(i:Int) return s + i;",
 			"  }",
+			"  public function test() return super.fProp(2);",
 			"}",
 			"",
 			"class Main {",
 			"  static function main() {",
 			"    var child = new Child();",
 			"    Sys.println(Std.string(child.prop));",
+			"    Sys.println(Std.string(child.prop = 4));",
+			"    Sys.println(child.test());",
+			"    Sys.println(child.fProp(9));",
 			"  }",
 			"}",
 		].join("\n");
@@ -7788,6 +7792,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "return __hxhx_add((parent::set_prop($v)), 1);", "PHP super property writes should lower through parent setters");
 		assertContains(content, "$s = (parent::get_fProp())(0);",
 			"PHP calls through super property getter results should lower through parent getters before invocation");
+		assertNotContains(content, "Child::fProp(", "PHP function-valued property calls should not lower as undefined class methods");
+		assertNotContains(content, "->fProp(", "PHP function-valued property calls should not lower as undefined instance methods");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP super property support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "2\n5\ntest2\ntest09\n", "generated PHP super property output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
