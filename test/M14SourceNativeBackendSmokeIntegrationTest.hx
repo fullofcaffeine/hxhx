@@ -1847,6 +1847,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    this.z = z;",
 			"  }",
 			"}",
+			"class MyVector {",
+			"  public var x(get, set):Int;",
+			"  public var y:Int;",
+			"  public var z:Int;",
+			"  public function new() {",
+			"    y = 0;",
+			"    z = 0;",
+			"  }",
+			"  public function get_x():Int return 0;",
+			"  public function get_y():Int return y;",
+			"  public function set_x(value:Int):Int return value;",
+			"  public function set_y(value:Int):Int return y = value;",
+			"  public function set_z(value:Int):Int return z = value;",
+			"}",
 			"class Main {",
 			"  static function main() {",
 			"    var point = new MyPoint3(1, 2, 3);",
@@ -1854,6 +1868,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(neg != point));",
 			"    Sys.println(Std.string(point));",
 			"    Sys.println(neg.toString());",
+			"    var fields = Type.getInstanceFields(MyPoint3);",
+			"    fields.sort(Reflect.compare);",
+			"    Sys.println(fields.join(\"|\"));",
+			"    var vectorFields = Type.getInstanceFields(MyVector);",
+			"    vectorFields.sort(Reflect.compare);",
+			"    Sys.println(vectorFields.join(\"|\"));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5791,10 +5811,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP Point3-style toString calls should lower through the abstract-aware string conversion helper");
 		assertContains(content, "if (__hxhx_is_point3($value)) return __hxhx_mul($value, -1);",
 			"PHP negation helper should dispatch Point3-style abstract payloads through scalar multiplication");
+		assertContains(content, "return -__hxhx_numeric_value($value);", "PHP negation fallback should unwrap non-Point3 abstract payloads");
+		assertContains(content, "\"MyPoint3\" => [\"toString\" => true]", "PHP reflection policy should expose synthesized Point3-style toString fields");
+		assertContains(content, "\"MyVector\" => [\"toString\" => true]", "PHP reflection policy should expose abstract-view MyVector toString fields");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Point3 unary scale support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\n(1,2,3)\n(-1,-2,-3)\n", "generated PHP Point3 unary scale output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "true\n(1,2,3)\n(-1,-2,-3)\ntoString|x|y|z\nget_x|get_y|set_x|set_y|set_z|toString|y|z\n",
+				"generated PHP Point3 unary scale output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}

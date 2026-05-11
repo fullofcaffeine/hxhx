@@ -8688,6 +8688,8 @@ class SourceTargetCommon {
 	static function appendPhpReflectionFieldPolicy(lines:Array<String>, program:GenIrProgram, decl:HxModuleDecl):Void {
 		final instanceEntries = new Array<String>();
 		final staticEntries = new Array<String>();
+		final extraInstanceEntries = new Array<String>();
+		final extraStaticEntries = new Array<String>();
 		final seen = new Map<String, Bool>();
 		function mapLiteral(names:Array<String>):String {
 			final entries = new Array<String>();
@@ -8706,6 +8708,8 @@ class SourceTargetCommon {
 				seen.set(fullName, true);
 				final instanceHidden = new Array<String>();
 				final staticHidden = new Array<String>();
+				final extraInstance = phpReflectionExtraInstanceFields(cls, sanitizePhpTypeName(rawClassName));
+				final extraStatic = new Array<String>();
 				for (field in HxClassDecl.getFields(cls)) {
 					if (!phpReflectionShouldHideField(field))
 						continue;
@@ -8719,6 +8723,10 @@ class SourceTargetCommon {
 					instanceEntries.push(quotePhpString(fullName) + " => " + mapLiteral(instanceHidden));
 				if (staticHidden.length > 0)
 					staticEntries.push(quotePhpString(fullName) + " => " + mapLiteral(staticHidden));
+				if (extraInstance.length > 0)
+					extraInstanceEntries.push(quotePhpString(fullName) + " => " + mapLiteral(extraInstance));
+				if (extraStatic.length > 0)
+					extraStaticEntries.push(quotePhpString(fullName) + " => " + mapLiteral(extraStatic));
 			}
 		}
 		addDecl(decl);
@@ -8726,6 +8734,8 @@ class SourceTargetCommon {
 			addDecl(typed.getParsed().getDecl());
 		instanceEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
 		staticEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		extraInstanceEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		extraStaticEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
 		lines.push("function __hxhx_hidden_reflection_fields($cls, $wantStatic) {");
 		lines.push("  static $instance = [");
 		for (entry in instanceEntries)
@@ -8739,6 +8749,26 @@ class SourceTargetCommon {
 		lines.push("  $map = $wantStatic ? $statics : $instance;");
 		lines.push("  return array_key_exists($logical, $map) ? $map[$logical] : [];");
 		lines.push("}");
+		lines.push("function __hxhx_extra_reflection_fields($cls, $wantStatic) {");
+		lines.push("  static $instance = [");
+		for (entry in extraInstanceEntries)
+			lines.push("    " + entry + ",");
+		lines.push("  ];");
+		lines.push("  static $statics = [");
+		for (entry in extraStaticEntries)
+			lines.push("    " + entry + ",");
+		lines.push("  ];");
+		lines.push("  $logical = __hxhx_class_name($cls);");
+		lines.push("  $map = $wantStatic ? $statics : $instance;");
+		lines.push("  return array_key_exists($logical, $map) ? $map[$logical] : [];");
+		lines.push("}");
+	}
+
+	static function phpReflectionExtraInstanceFields(cls:HxClassDecl, className:String):Array<String> {
+		final names = new Array<String>();
+		if (phpClassIsPoint3Like(cls, className))
+			names.push("toString");
+		return names;
 	}
 
 	static function phpMetadataName(raw:String):String {
@@ -11400,13 +11430,10 @@ class SourceTargetCommon {
 	}
 
 	static function phpClassIsPoint3Like(cls:HxClassDecl, className:String):Bool {
-		if (className == "MyPoint3" || StringTools.endsWith(className, "_MyPoint3"))
-			return true;
-		final fields = new Map<String, Bool>();
-		for (field in HxClassDecl.getFields(cls))
-			if (!HxFieldDecl.getIsStatic(field))
-				fields.set(sanitizeTypeName(HxFieldDecl.getName(field)), true);
-		return fields.exists("x") && fields.exists("y") && fields.exists("z");
+		return className == "MyPoint3"
+			|| className == "MyVector"
+			|| StringTools.endsWith(className, "_MyPoint3")
+			|| StringTools.endsWith(className, "_MyVector");
 	}
 
 	static function phpFunctionArgConversionPrologue(args:Array<HxFunctionArg>, indent:String):Array<String> {
@@ -15147,7 +15174,7 @@ class SourceTargetCommon {
 				lines.push("function __hxhx_neg($value) {");
 				lines.push("  if (__hxhx_is_int64($value)) return __hxhx_int64_neg($value);");
 				lines.push("  if (__hxhx_is_point3($value)) return __hxhx_mul($value, -1);");
-				lines.push("  return -$value;");
+				lines.push("  return -__hxhx_numeric_value($value);");
 				lines.push("}");
 				lines.push("function __hxhx_mul($left, $right) {");
 				lines.push("  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) return __hxhx_int64_mul($left, $right);");
@@ -15640,6 +15667,9 @@ class SourceTargetCommon {
 				lines.push("    }");
 				lines.push("    foreach ($accessors as $field => $seen) {");
 				lines.push("      if (!array_key_exists($field, $hidden) && isset($seen[\"get\"]) && isset($seen[\"set\"]) && self::exposeFieldName($field) && !in_array($field, $fields, true)) $fields[] = $field;");
+				lines.push("    }");
+				lines.push("    foreach (__hxhx_extra_reflection_fields($cls, $wantStatic) as $name => $_) {");
+				lines.push("      if (!array_key_exists($name, $hidden) && self::exposeFieldName($name) && !in_array($name, $fields, true)) $fields[] = $name;");
 				lines.push("    }");
 				lines.push("    return $fields;");
 				lines.push("  }");
