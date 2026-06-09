@@ -1,3 +1,24 @@
+## [0.15.18](https://github.com/fullofcaffeine/hxhx/compare/v0.15.17...v0.15.18) (2026-06-09)
+
+
+### Bug Fixes
+
+* **hxhx:** preserve parser default arg string maps ([2e62fa3](https://github.com/fullofcaffeine/hxhx/commit/2e62fa3ae27e69306a2217abe92abbee7321cf81))
+* **php:** add Std random runtime ([c246bbd](https://github.com/fullofcaffeine/hxhx/commit/c246bbdf0c2d06cb1145e29548cb627c103b3919))
+* **php:** enforce interface casts ([e326224](https://github.com/fullofcaffeine/hxhx/commit/e326224ebbf5a642a08c476cf1b91c5e364b4900))
+* **php:** fold helper nullability probes ([4ecaef4](https://github.com/fullofcaffeine/hxhx/commit/4ecaef4ce16a136ead0fe5d4c2df24190d290ba1))
+* **php:** keep UInt casts numeric ([d308663](https://github.com/fullofcaffeine/hxhx/commit/d3086631727630beae5a2820f3f6e357b4e068df))
+* **php:** lower array map calls ([9baf23b](https://github.com/fullofcaffeine/hxhx/commit/9baf23bed263570366ffa6315d6efe493b511dcc))
+* **php:** lower map-arrow entries in typed paths ([7888dc4](https://github.com/fullofcaffeine/hxhx/commit/7888dc493eada4bc7201e1a85fc6918e8fa715d3))
+* **php:** lower Syntax extern intrinsics ([7881301](https://github.com/fullofcaffeine/hxhx/commit/78813014d13c7a2ac938e2f64ad945bc17109d6b))
+* **php:** normalize array dynamic casts ([405f17e](https://github.com/fullofcaffeine/hxhx/commit/405f17ec99cbb4cc219012d4d790312cbbfe048b))
+* **php:** preserve explicit empty XML children ([2720e01](https://github.com/fullofcaffeine/hxhx/commit/2720e01227543a9159a658ffb3e5136818463e34))
+* **php:** preserve null equality semantics ([d9dc0e1](https://github.com/fullofcaffeine/hxhx/commit/d9dc0e11ffb97003aceec56de6e03a889f24794a))
+* **php:** preserve skipped optional lambda fields ([747e9c6](https://github.com/fullofcaffeine/hxhx/commit/747e9c65a90e8eb3bbb59cd8029452eb0b8b0e37))
+* **php:** provide Math.random runtime shim ([8775224](https://github.com/fullofcaffeine/hxhx/commit/8775224ffbaee800eec337a4bf697941a5ddf341))
+* **php:** skip nominal casts for abstracts ([cb5e512](https://github.com/fullofcaffeine/hxhx/commit/cb5e5128a363ea5cbe51cb25cdac51a580dbf554))
+* **php:** skip unsafe interface name collisions ([01f8ca1](https://github.com/fullofcaffeine/hxhx/commit/01f8ca17c9ee6a5f16d288352c412b1a847b1664))
+
 ## [0.15.17](https://github.com/fullofcaffeine/hxhx/compare/v0.15.16...v0.15.17) (2026-05-11)
 
 
