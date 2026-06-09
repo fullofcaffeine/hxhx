@@ -15,6 +15,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   full1_gate3_extended:
     name: Full1 Gate3 extended targets

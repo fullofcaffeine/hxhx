@@ -17,6 +17,7 @@ permissions:
   contents: read
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NODE_VERSION: "20"
   HAXE_VERSION: "4.3.7"
   FULL1_SUITE_ARTIFACTS_DIR: ".artifacts/full1/suites"

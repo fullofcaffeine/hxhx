@@ -36,6 +36,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NODE_VERSION: "20"
   HAXE_VERSION: "4.3.7"
 
