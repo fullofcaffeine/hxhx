@@ -1012,7 +1012,10 @@ class ParserStageScanHelpers {
 					case _:
 				}
 			}
-			fields.push(new HxFieldDecl(name, HxVisibility.Public, true, "Dynamic", init == null ? EInt(0) : init));
+			var fieldInit:HxExpr = EInt(0);
+			if (init != null)
+				fieldInit = init;
+			fields.push(new HxFieldDecl(name, HxVisibility.Public, true, "Dynamic", fieldInit));
 		}
 
 		return {nextPos: i, fields: fields};

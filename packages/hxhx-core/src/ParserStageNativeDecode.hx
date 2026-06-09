@@ -841,15 +841,17 @@ class ParserStageNativeDecode {
 		return EUnsupported(exprText);
 		#else
 		// Fallback: try to parse a small field/call chain (e.g. `Util.ping()`).
-		return try {
-			HxParser.parseExprText(exprText);
+		var parsed:HxExpr = EUnsupported(exprText);
+		try {
+			parsed = HxParser.parseExprText(exprText);
 		} catch (_:HxParseError) {
 			// Last resort: treat as unsupported so emitters don't attempt to print raw Haxe text as OCaml.
-			EUnsupported(exprText);
+			parsed = EUnsupported(exprText);
 		} catch (_:String) {
 			// Last resort: treat as unsupported so emitters don't attempt to print raw Haxe text as OCaml.
-			EUnsupported(exprText);
+			parsed = EUnsupported(exprText);
 		}
+		return parsed;
 		#end
 	}
 

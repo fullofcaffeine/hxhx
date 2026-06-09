@@ -360,8 +360,10 @@ class HxParser {
 			case SVar(name, typeHint, init, pos):
 				SVar(name, typeHint, rebaseFunctionBodyExpr(init, base), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SIf(cond, thenBranch, elseBranch, pos):
-				SIf(cond, rebaseFunctionBodyStmt(thenBranch, base, bodyStartIndex),
-					elseBranch == null ? null : rebaseFunctionBodyStmt(elseBranch, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				var shiftedElse:Null<HxStmt> = null;
+				if (elseBranch != null)
+					shiftedElse = rebaseFunctionBodyStmt(elseBranch, base, bodyStartIndex);
+				SIf(cond, rebaseFunctionBodyStmt(thenBranch, base, bodyStartIndex), shiftedElse, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SForIn(name, iterable, body, pos):
 				SForIn(name, iterable, rebaseFunctionBodyStmt(body, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SForKeyValue(keyName, valueName, iterable, body, pos):
@@ -399,29 +401,33 @@ class HxParser {
 	static function rebaseFunctionBodyExpr(expr:Null<HxExpr>, base:HxPos):Null<HxExpr> {
 		if (expr == null)
 			return null;
+		return rebaseFunctionBodyExprValue(expr, base);
+	}
+
+	static function rebaseFunctionBodyExprValue(expr:HxExpr, base:HxPos):HxExpr {
 		return switch (expr) {
 			case ECall(EIdent(name), args) if (StringTools.startsWith(name, "__hxhx_trace_at_")):
 				final line = Std.parseInt(name.substr("__hxhx_trace_at_".length));
 				final rebased = line == null ? 0 : base.getLine() + line - 2;
-				ECall(EIdent("__hxhx_trace_at_" + Std.string(rebased)), [for (arg in args) rebaseFunctionBodyExpr(arg, base)]);
+				ECall(EIdent("__hxhx_trace_at_" + Std.string(rebased)), [for (arg in args) rebaseFunctionBodyExprValue(arg, base)]);
 			case ECall(callee, args):
-				ECall(rebaseFunctionBodyExpr(callee, base), [for (arg in args) rebaseFunctionBodyExpr(arg, base)]);
+				ECall(rebaseFunctionBodyExprValue(callee, base), [for (arg in args) rebaseFunctionBodyExprValue(arg, base)]);
 			case EField(obj, field):
-				EField(rebaseFunctionBodyExpr(obj, base), field);
+				EField(rebaseFunctionBodyExprValue(obj, base), field);
 			case EBinop(op, left, right):
-				EBinop(op, rebaseFunctionBodyExpr(left, base), rebaseFunctionBodyExpr(right, base));
+				EBinop(op, rebaseFunctionBodyExprValue(left, base), rebaseFunctionBodyExprValue(right, base));
 			case EUnop(op, value):
-				EUnop(op, rebaseFunctionBodyExpr(value, base));
+				EUnop(op, rebaseFunctionBodyExprValue(value, base));
 			case ELambda(args, body):
-				ELambda(args, rebaseFunctionBodyExpr(body, base));
+				ELambda(args, rebaseFunctionBodyExprValue(body, base));
 			case EArrayDecl(values):
-				EArrayDecl([for (value in values) rebaseFunctionBodyExpr(value, base)]);
+				EArrayDecl([for (value in values) rebaseFunctionBodyExprValue(value, base)]);
 			case EArrayAccess(left, right):
-				EArrayAccess(rebaseFunctionBodyExpr(left, base), rebaseFunctionBodyExpr(right, base));
+				EArrayAccess(rebaseFunctionBodyExprValue(left, base), rebaseFunctionBodyExprValue(right, base));
 			case ECast(inner, hint):
-				ECast(rebaseFunctionBodyExpr(inner, base), hint);
+				ECast(rebaseFunctionBodyExprValue(inner, base), hint);
 			case EUntyped(inner):
-				EUntyped(rebaseFunctionBodyExpr(inner, base));
+				EUntyped(rebaseFunctionBodyExprValue(inner, base));
 			case _:
 				expr;
 		};
@@ -452,8 +458,10 @@ class HxParser {
 			case SVar(name, typeHint, init, pos):
 				SVar(name, typeHint, init, offsetFunctionBodyPosColumn(pos, delta));
 			case SIf(cond, thenBranch, elseBranch, pos):
-				SIf(cond, offsetFunctionBodyStmtColumns(thenBranch, delta), elseBranch == null ? null : offsetFunctionBodyStmtColumns(elseBranch, delta),
-					offsetFunctionBodyPosColumn(pos, delta));
+				var shiftedElse:Null<HxStmt> = null;
+				if (elseBranch != null)
+					shiftedElse = offsetFunctionBodyStmtColumns(elseBranch, delta);
+				SIf(cond, offsetFunctionBodyStmtColumns(thenBranch, delta), shiftedElse, offsetFunctionBodyPosColumn(pos, delta));
 			case SForIn(name, iterable, body, pos):
 				SForIn(name, iterable, offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyPosColumn(pos, delta));
 			case SForKeyValue(keyName, valueName, iterable, body, pos):

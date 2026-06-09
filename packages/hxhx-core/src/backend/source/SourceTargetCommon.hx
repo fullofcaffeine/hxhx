@@ -3275,12 +3275,12 @@ class SourceTargetCommon {
 	static function helperAbstractUnaryTypeError(op:String, inner:HxExpr):Null<Bool> {
 		if (!helperExprHasNumericAbstractWrapper(inner))
 			return null;
-		return switch (op) {
+		switch (op) {
 			case "!" | "post++" | "post--" | "++" | "pre++" | "--" | "pre--":
-				true;
+				return true;
 			case _:
-				null;
-		};
+				return null;
+		}
 	}
 
 	static function helperAbstractOverloadTypeError(op:String, left:HxExpr, right:HxExpr):Null<Bool> {
@@ -3321,9 +3321,9 @@ class SourceTargetCommon {
 	}
 
 	static function helperMapLiteralTypeError(expr:HxExpr):Null<Bool> {
-		return switch (expr) {
+		switch (expr) {
 			case EMacroExpr(inner, _) | EUntyped(inner):
-				helperMapLiteralTypeError(inner);
+				return helperMapLiteralTypeError(inner);
 			case EArrayDecl(items):
 				if (items.length == 0)
 					return null;
@@ -3350,10 +3350,10 @@ class SourceTargetCommon {
 							return null;
 					}
 				}
-				false;
+				return false;
 			case _:
-				null;
-		};
+				return null;
+		}
 	}
 
 	static function helperMapLiteralKeySignature(expr:HxExpr):Null<String> {
@@ -3670,16 +3670,16 @@ class SourceTargetCommon {
 	}
 
 	static function helperAssignmentTypeError(typeHint:String, value:HxExpr):Null<Bool> {
-		return switch (value) {
+		switch (value) {
 			case EUntyped(_):
-				false;
+				return false;
 			case ECast(_, _):
-				false;
+				return false;
 			case EAnon(fieldNames, fieldValues):
-				helperAnonLiteralTypeError(typeHint, fieldNames, fieldValues);
+				return helperAnonLiteralTypeError(typeHint, fieldNames, fieldValues);
 			case _:
-				null;
-		};
+				return null;
+		}
 	}
 
 	static function helperAnonLiteralTypeError(typeHint:String, fieldNames:Array<String>, fieldValues:Array<HxExpr>):Null<Bool> {
@@ -3823,20 +3823,28 @@ class SourceTargetCommon {
 		final hint = phpExprTypeHint(expr);
 		if (StringTools.trim(hint).length > 0)
 			return isNullTypeHint(hint);
-		return switch (expr) {
+		switch (expr) {
 			case EMacroExpr(inner, _) | EUntyped(inner):
-				helperExprNullableResult(inner);
+				return helperExprNullableResult(inner);
 			case ENull:
-				true;
-			case EBool(_) | EIdent("true" | "false") | EInt(_) | EFloat(_) | EString(_) | ENew(_, _) | EArrayDecl(_) | EAnon(_, _) | ELambda(_, _):
-				false;
+				return true;
+			case EBool(_) | EInt(_) | EFloat(_) | EString(_) | ENew(_, _) | EArrayDecl(_) | EAnon(_, _) | ELambda(_, _):
+				return false;
+			case EIdent("true") | EIdent("false"):
+				return false;
+			case EIdent(_):
+				return null;
 			case EBinop("??", left, right):
 				final leftNullable = helperExprNullableResult(left);
 				final rightNullable = helperExprNullableResult(right);
-				if (leftNullable == false || rightNullable == false) false; else if (leftNullable == true && rightNullable == true) true; else null;
+				if (leftNullable == false || rightNullable == false)
+					return false;
+				if (leftNullable == true && rightNullable == true)
+					return true;
+				return null;
 			case _:
-				null;
-		};
+				return null;
+		}
 	}
 
 	static function helperFollowWithAbstractsResult(args:Array<HxExpr>, once:Bool):Null<String> {
@@ -4924,19 +4932,28 @@ class SourceTargetCommon {
 	}
 
 	static function phpValueTypeCtorIndex(name:String):Null<Int> {
-		return switch (name) {
-			case "TNull": 0;
-			case "TInt": 1;
-			case "TFloat": 2;
-			case "TBool": 3;
-			case "TObject": 4;
-			case "TFunction": 5;
-			case "TClass": 6;
-			case "TEnum": 7;
-			case "TUnknown": 8;
+		switch (name) {
+			case "TNull":
+				return 0;
+			case "TInt":
+				return 1;
+			case "TFloat":
+				return 2;
+			case "TBool":
+				return 3;
+			case "TObject":
+				return 4;
+			case "TFunction":
+				return 5;
+			case "TClass":
+				return 6;
+			case "TEnum":
+				return 7;
+			case "TUnknown":
+				return 8;
 			case _:
-				null;
-		};
+				return null;
+		}
 	}
 
 	static function phpValueTypeExpr(name:String, args:Array<HxExpr>):String {
@@ -5179,8 +5196,10 @@ class SourceTargetCommon {
 			case EAnon(fieldNames, fieldValues):
 				EAnon(fieldNames, [for (value in fieldValues) javaExprWithStmtTraceLine(value, pos)]);
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
-				EArrayComprehension(name, javaExprWithStmtTraceLine(iterable, pos), guardExpr == null ? null : javaExprWithStmtTraceLine(guardExpr, pos),
-					javaExprWithStmtTraceLine(yieldExpr, pos));
+				var shiftedGuard:Null<HxExpr> = null;
+				if (guardExpr != null)
+					shiftedGuard = javaExprWithStmtTraceLine(guardExpr, pos);
+				EArrayComprehension(name, javaExprWithStmtTraceLine(iterable, pos), shiftedGuard, javaExprWithStmtTraceLine(yieldExpr, pos));
 			case EArrayDecl(values):
 				EArrayDecl([for (value in values) javaExprWithStmtTraceLine(value, pos)]);
 			case EArrayAccess(array, index):
@@ -5216,7 +5235,8 @@ class SourceTargetCommon {
 			case _:
 				throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 		};
-		final absDelta = Std.string(delta < 0 ? -delta : delta);
+		final absDeltaValue = delta < 0 ? -delta : delta;
+		final absDelta = Std.string(absDeltaValue);
 		final rhs = if (target == Php && phpExprIsInt64Value(expr)) phpIncrementedValueExpr(targetExpr,
 			delta) else if (delta < 0) "(" + targetExpr + " - " + absDelta + ")" else "(" + targetExpr + " + " + absDelta + ")";
 		return exprStmt(target, targetExpr + " = " + rhs);
@@ -5330,10 +5350,10 @@ class SourceTargetCommon {
 	static var phpRenderCurrentFunctionName:Null<String> = null;
 	static var phpRenderCurrentInstanceMethodNames:Null<Map<String, Bool>> = null;
 	static var phpRenderCurrentInstanceMethodArgs:Null<Map<String, Array<HxFunctionArg>>> = null;
-	static var phpRenderSameClassMethodNames:Null<Map<String, Bool>> = null;
-	static var phpRenderSameClassFieldNames:Null<Map<String, Bool>> = null;
+	static var phpRenderSameClassMethodNames:Map<String, Bool> = new Map<String, Bool>();
+	static var phpRenderSameClassFieldNames:Map<String, Bool> = new Map<String, Bool>();
 	static var phpRenderSameClassFieldTypeHints:Null<Map<String, String>> = null;
-	static var phpRenderSameClassStaticFieldNames:Null<Map<String, Bool>> = null;
+	static var phpRenderSameClassStaticFieldNames:Map<String, Bool> = new Map<String, Bool>();
 	static var phpRenderSameClassName:Null<String> = null;
 	static var phpRenderSameClassLocals:Null<Array<String>> = null;
 	static var phpRenderInstanceMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
@@ -5692,9 +5712,8 @@ class SourceTargetCommon {
 		}
 	}
 
-	static function withPhpSameClassMemberContext<T>(target:SourceNativeTarget, methodNames:Null<Map<String, Bool>>, fieldNames:Null<Map<String, Bool>>,
-			fieldTypeHints:Null<Map<String, String>>, staticFieldNames:Null<Map<String, Bool>>, className:Null<String>, locals:Null<Array<String>>,
-			f:() -> T):T {
+	static function withPhpSameClassMemberContext<T>(target:SourceNativeTarget, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
+			fieldTypeHints:Null<Map<String, String>>, staticFieldNames:Map<String, Bool>, className:Null<String>, locals:Null<Array<String>>, f:() -> T):T {
 		if (target != Php)
 			return f();
 		final previousMethodNames = phpRenderSameClassMethodNames;
@@ -6135,7 +6154,9 @@ class SourceTargetCommon {
 			return false;
 		if (sanitizePhpTypePath(typePath) != sanitizePhpTypePath(sameClassName))
 			return false;
-		final staticFieldNames = sameClassStaticFieldNames == null ? phpRenderSameClassStaticFieldNames : sameClassStaticFieldNames;
+		var staticFieldNames:Null<Map<String, Bool>> = phpRenderSameClassStaticFieldNames;
+		if (sameClassStaticFieldNames != null)
+			staticFieldNames = sameClassStaticFieldNames;
 		if (staticFieldNames == null)
 			return false;
 		return staticFieldNames.exists(specialized);
@@ -12334,26 +12355,28 @@ class SourceTargetCommon {
 				withPhpCurrentFunctionName(Php, HxFunctionDecl.getName(fn), function() {
 					withPhpCurrentInstanceMethodNames(Php, !isStatic || isCtor ? instanceMethodNames : null, function() {
 						withPhpCurrentInstanceMethodArgs(Php, !isStatic || isCtor ? instanceMethodArgs : null, function() {
-							withPhpSameClassMemberContext(Php, rewriteMethodNames, rewriteFieldNames, !isStatic || isCtor ? instanceFieldTypeHints : null,
-								staticFieldNames, className, [
-									for (arg in HxFunctionDecl.getArgs(fn))
-										HxFunctionArg.getName(arg)
-								], function() {
-									final functionLocalTypes = phpFunctionLocalTypes(HxFunctionDecl.getArgs(fn));
-									final constructorSamples = isStatic
-										&& phpFunctionIsGeneric(fn) ? phpGenericConstructorSamplesForArgs(HxFunctionDecl.getArgs(fn)) : null;
-									withPhpGenericConstructorSamples(Php, constructorSamples, function() {
-										withPhpThisValueSlot(Php, needsThisValueSlot, function() {
-											withPhpStringExtensionMethods(Php, className, function() {
-												withPhpLocalEnumConstructors(localEnumConstructors, function() {
-													for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
-														functionLocalTypes))
-														out.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, staticFieldNames));
-												});
+							var contextFieldTypeHints:Null<Map<String, String>> = null;
+							if (!isStatic || isCtor)
+								contextFieldTypeHints = instanceFieldTypeHints;
+							withPhpSameClassMemberContext(Php, rewriteMethodNames, rewriteFieldNames, contextFieldTypeHints, staticFieldNames, className, [
+								for (arg in HxFunctionDecl.getArgs(fn))
+									HxFunctionArg.getName(arg)
+							], function() {
+								final functionLocalTypes = phpFunctionLocalTypes(HxFunctionDecl.getArgs(fn));
+								final constructorSamples = isStatic
+									&& phpFunctionIsGeneric(fn) ? phpGenericConstructorSamplesForArgs(HxFunctionDecl.getArgs(fn)) : null;
+								withPhpGenericConstructorSamples(Php, constructorSamples, function() {
+									withPhpThisValueSlot(Php, needsThisValueSlot, function() {
+										withPhpStringExtensionMethods(Php, className, function() {
+											withPhpLocalEnumConstructors(localEnumConstructors, function() {
+												for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
+													functionLocalTypes))
+													out.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, staticFieldNames));
 											});
 										});
 									});
 								});
+							});
 						});
 					});
 				});
@@ -13093,6 +13116,14 @@ class SourceTargetCommon {
 		return out;
 	}
 
+	static function copyBoolMap(values:Map<String, Bool>):Map<String, Bool> {
+		final out:Map<String, Bool> = [];
+		if (values != null)
+			for (key in values.keys())
+				out.set(key, values.get(key));
+		return out;
+	}
+
 	static function copyStringArrayMap(values:haxe.ds.StringMap<Array<String>>):haxe.ds.StringMap<Array<String>> {
 		final out = new haxe.ds.StringMap<Array<String>>();
 		if (values != null)
@@ -13141,12 +13172,16 @@ class SourceTargetCommon {
 			case SBlock(stmts, pos):
 				SBlock(phpRenameScopedLocalStmtList(stmts, copyStringMap(env), counters), pos);
 			case SVar(name, typeHint, init, pos):
-				final rewrittenInit = init == null ? null : phpRenameScopedLocalExpr(init, env, counters);
+				var rewrittenInit:Null<HxExpr> = null;
+				if (init != null)
+					rewrittenInit = phpRenameScopedLocalExpr(init, env, counters);
 				final renamed = phpDeclareScopedLocal(name, env, counters);
 				SVar(renamed, typeHint, rewrittenInit, pos);
 			case SIf(cond, thenBranch, elseBranch, pos):
-				SIf(phpRenameScopedLocalExpr(cond, env, counters), phpRenameScopedLocalStmt(thenBranch, copyStringMap(env), counters),
-					elseBranch == null ? null : phpRenameScopedLocalStmt(elseBranch, copyStringMap(env), counters), pos);
+				var rewrittenElse:Null<HxStmt> = null;
+				if (elseBranch != null)
+					rewrittenElse = phpRenameScopedLocalStmt(elseBranch, copyStringMap(env), counters);
+				SIf(phpRenameScopedLocalExpr(cond, env, counters), phpRenameScopedLocalStmt(thenBranch, copyStringMap(env), counters), rewrittenElse, pos);
 			case SForIn(name, iterable, body, pos):
 				final bodyEnv = copyStringMap(env);
 				final renamed = phpBindScopedLocal(name, bodyEnv, counters);
@@ -13231,8 +13266,11 @@ class SourceTargetCommon {
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				final bodyEnv = copyStringMap(env);
 				final renamed = phpBindScopedLocal(name, bodyEnv, counters);
-				EArrayComprehension(renamed, phpRenameScopedLocalExpr(iterable, env, counters),
-					guardExpr == null ? null : phpRenameScopedLocalExpr(guardExpr, bodyEnv, counters), phpRenameScopedLocalExpr(yieldExpr, bodyEnv, counters));
+				var renamedGuard:Null<HxExpr> = null;
+				if (guardExpr != null)
+					renamedGuard = phpRenameScopedLocalExpr(guardExpr, bodyEnv, counters);
+				EArrayComprehension(renamed, phpRenameScopedLocalExpr(iterable, env, counters), renamedGuard,
+					phpRenameScopedLocalExpr(yieldExpr, bodyEnv, counters));
 			case EArrayDecl(values):
 				EArrayDecl([for (value in values) phpRenameScopedLocalExpr(value, env, counters)]);
 			case EArrayAccess(array, index):
@@ -13348,14 +13386,18 @@ class SourceTargetCommon {
 			case SBlock(stmts, pos):
 				SBlock(pythonRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, copyStringArray(locals)), pos);
 			case SVar(name, typeHint, init, pos):
-				final rewrittenInit = init == null ? null : pythonRewriteSameClassMemberExpr(init, methodNames, fieldNames, locals);
+				var rewrittenInit:Null<HxExpr> = null;
+				if (init != null)
+					rewrittenInit = pythonRewriteSameClassMemberExpr(init, methodNames, fieldNames, locals);
 				if (locals.indexOf(name) < 0)
 					locals.push(name);
 				SVar(name, typeHint, rewrittenInit, pos);
 			case SIf(cond, thenBranch, elseBranch, pos):
+				var rewrittenElse:Null<HxStmt> = null;
+				if (elseBranch != null)
+					rewrittenElse = pythonRewriteSameClassMembersInStmt(elseBranch, methodNames, fieldNames, copyStringArray(locals));
 				SIf(pythonRewriteSameClassMemberExpr(cond, methodNames, fieldNames, locals),
-					pythonRewriteSameClassMembersInStmt(thenBranch, methodNames, fieldNames, copyStringArray(locals)),
-					elseBranch == null ? null : pythonRewriteSameClassMembersInStmt(elseBranch, methodNames, fieldNames, copyStringArray(locals)), pos);
+					pythonRewriteSameClassMembersInStmt(thenBranch, methodNames, fieldNames, copyStringArray(locals)), rewrittenElse, pos);
 			case SForIn(name, iterable, body, pos):
 				final bodyLocals = copyStringArray(locals);
 				if (bodyLocals.indexOf(name) < 0)
@@ -13447,8 +13489,10 @@ class SourceTargetCommon {
 				final bodyLocals = copyStringArray(locals);
 				if (bodyLocals.indexOf(name) < 0)
 					bodyLocals.push(name);
-				EArrayComprehension(name, pythonRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, locals),
-					guardExpr == null ? null : pythonRewriteSameClassMemberExpr(guardExpr, methodNames, fieldNames, bodyLocals),
+				var rewrittenGuard:Null<HxExpr> = null;
+				if (guardExpr != null)
+					rewrittenGuard = pythonRewriteSameClassMemberExpr(guardExpr, methodNames, fieldNames, bodyLocals);
+				EArrayComprehension(name, pythonRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, locals), rewrittenGuard,
 					pythonRewriteSameClassMemberExpr(yieldExpr, methodNames, fieldNames, bodyLocals));
 			case ELambda(args, body):
 				final bodyLocals = copyStringArray(locals);
@@ -13611,10 +13655,18 @@ class SourceTargetCommon {
 	static function phpRewriteRawSameClassMemberStmts(stmts:Array<HxStmt>):Array<HxStmt> {
 		if (phpRenderSameClassName == null)
 			return stmts;
-		final methodNames = phpRenderSameClassMethodNames == null ? new Map<String, Bool>() : phpRenderSameClassMethodNames;
-		final fieldNames = phpRenderSameClassFieldNames == null ? new Map<String, Bool>() : phpRenderSameClassFieldNames;
-		final staticFieldNames = phpRenderSameClassStaticFieldNames == null ? new Map<String, Bool>() : phpRenderSameClassStaticFieldNames;
-		final locals = phpRenderSameClassLocals == null ? [] : copyStringArray(phpRenderSameClassLocals);
+		var methodNames:Map<String, Bool> = new Map<String, Bool>();
+		if (phpRenderSameClassMethodNames != null)
+			methodNames = copyBoolMap(cast phpRenderSameClassMethodNames);
+		var fieldNames:Map<String, Bool> = new Map<String, Bool>();
+		if (phpRenderSameClassFieldNames != null)
+			fieldNames = copyBoolMap(cast phpRenderSameClassFieldNames);
+		var staticFieldNames:Map<String, Bool> = new Map<String, Bool>();
+		if (phpRenderSameClassStaticFieldNames != null)
+			staticFieldNames = copyBoolMap(cast phpRenderSameClassStaticFieldNames);
+		var locals:Array<String> = [];
+		if (phpRenderSameClassLocals != null)
+			locals = copyStringArray(phpRenderSameClassLocals);
 		return phpRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, staticFieldNames, phpRenderSameClassName, locals);
 	}
 
@@ -13624,16 +13676,19 @@ class SourceTargetCommon {
 			case SBlock(stmts, pos):
 				SBlock(phpRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)), pos);
 			case SVar(name, typeHint, init, pos):
-				final rewrittenInit = init == null ? null : phpRewriteSameClassMemberExpr(init, methodNames, fieldNames, staticFieldNames, className, locals);
+				var rewrittenInit:Null<HxExpr> = null;
+				if (init != null)
+					rewrittenInit = phpRewriteSameClassMemberExpr(init, methodNames, fieldNames, staticFieldNames, className, locals);
 				if (locals.indexOf(name) < 0)
 					locals.push(name);
 				SVar(name, typeHint, rewrittenInit, pos);
 			case SIf(cond, thenBranch, elseBranch, pos):
+				var rewrittenElse:Null<HxStmt> = null;
+				if (elseBranch != null)
+					rewrittenElse = phpRewriteSameClassMembersInStmt(elseBranch, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals));
 				SIf(phpRewriteSameClassMemberExpr(cond, methodNames, fieldNames, staticFieldNames, className, locals),
 					phpRewriteSameClassMembersInStmt(thenBranch, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)),
-					elseBranch == null ? null : phpRewriteSameClassMembersInStmt(elseBranch, methodNames, fieldNames, staticFieldNames, className,
-						copyStringArray(locals)),
-					pos);
+					rewrittenElse, pos);
 			case SForIn(name, iterable, body, pos):
 				final bodyLocals = copyStringArray(locals);
 				if (bodyLocals.indexOf(name) < 0)
@@ -13740,9 +13795,11 @@ class SourceTargetCommon {
 				final bodyLocals = copyStringArray(locals);
 				if (bodyLocals.indexOf(name) < 0)
 					bodyLocals.push(name);
+				var rewrittenGuard:Null<HxExpr> = null;
+				if (guardExpr != null)
+					rewrittenGuard = phpRewriteSameClassMemberExpr(guardExpr, methodNames, fieldNames, staticFieldNames, className, bodyLocals);
 				EArrayComprehension(name, phpRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, staticFieldNames, className, locals),
-					guardExpr == null ? null : phpRewriteSameClassMemberExpr(guardExpr, methodNames, fieldNames, staticFieldNames, className, bodyLocals),
-					phpRewriteSameClassMemberExpr(yieldExpr, methodNames, fieldNames, staticFieldNames, className, bodyLocals));
+					rewrittenGuard, phpRewriteSameClassMemberExpr(yieldExpr, methodNames, fieldNames, staticFieldNames, className, bodyLocals));
 			case ESwitch(scrutinee, patterns, exprs):
 				ESwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, [
 					for (expr in exprs)

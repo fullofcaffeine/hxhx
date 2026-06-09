@@ -352,7 +352,12 @@ class ParserStage {
 							final bucket = scannedFnsByName.get(name);
 							if (bucket == null || bucket.length == 0)
 								return null;
-							final index = used.exists(name) ? used.get(name) : 0;
+							var index = 0;
+							if (used.exists(name)) {
+								final usedIndex = used.get(name);
+								if (usedIndex != null)
+									index = usedIndex;
+							}
 							used.set(name, index + 1);
 							return index < bucket.length ? bucket[index] : bucket[bucket.length - 1];
 						}
