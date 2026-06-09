@@ -65,6 +65,7 @@ Options:
 Outputs:
   <out-dir>/regen_report.json
   <out-dir>/reflaxe_ocaml_progress.log
+  <out-dir>/stage0_heartbeat_trace.jsonl
   <out-dir>/summary.txt
 USAGE
 }
@@ -244,6 +245,7 @@ fi
 mkdir -p "$OUT_DIR"
 REPORT_JSON="$OUT_DIR/regen_report.json"
 PROGRESS_LOG="$OUT_DIR/reflaxe_ocaml_progress.log"
+HEARTBEAT_TRACE="$OUT_DIR/stage0_heartbeat_trace.jsonl"
 SUMMARY_FILE="$OUT_DIR/summary.txt"
 PROGRESS_SUMMARY_JSON="$OUT_DIR/progress_summary.json"
 RUN_STDOUT="$OUT_DIR/run.stdout.log"
@@ -255,6 +257,7 @@ echo "out_dir=$OUT_DIR"
 
 set +e
 REFLAXE_OCAML_PROGRESS_FILE="$PROGRESS_LOG" \
+HXHX_STAGE0_HEARTBEAT_TRACE_FILE="$HEARTBEAT_TRACE" \
 HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY="$POLICY" \
 HXHX_STAGE0_FAILFAST_SECS="$FAILFAST_SECS" \
 HXHX_STAGE0_HEARTBEAT="$HEARTBEAT_SECS" \
@@ -308,13 +311,37 @@ const extractPeakFromStdout = (stdoutPath) => {
     return null;
   }
 };
+const extractTreePeakFromStdout = (stdoutPath) => {
+  try {
+    const text = fs.readFileSync(stdoutPath, "utf8");
+    const matches = [...text.matchAll(/tree_rss=(\d+)MB/g)];
+    if (matches.length === 0) {
+      return null;
+    }
+    let max = 0;
+    for (const m of matches) {
+      const value = Number(m[1]);
+      if (Number.isFinite(value) && value > max) {
+        max = value;
+      }
+    }
+    return max > 0 ? max : null;
+  } catch (_) {
+    return null;
+  }
+};
 const phase = data.phase_seconds || {};
 const obs = data.stage0_observability || {};
 const fallbackPeak = extractPeakFromStdout(runStdoutPath);
+const fallbackTreePeak = extractTreePeakFromStdout(runStdoutPath);
 const reportPeak = obs.heartbeat_peak_rss_mb;
+const reportTreePeak = obs.heartbeat_peak_tree_rss_mb;
 const peak = (reportPeak === undefined || reportPeak === null || Number(reportPeak) === 0) && fallbackPeak !== null
   ? fallbackPeak
   : reportPeak;
+const treePeak = (reportTreePeak === undefined || reportTreePeak === null || Number(reportTreePeak) === 0) && fallbackTreePeak !== null
+  ? fallbackTreePeak
+  : reportTreePeak;
 const peakSource = (reportPeak === undefined || reportPeak === null || Number(reportPeak) === 0) && fallbackPeak !== null
   ? "stdout_fallback"
   : "report";
@@ -326,10 +353,12 @@ const line = [
   `haxe_mode=${data.haxe_bin_mode ?? "na"}`,
   `haxe_policy=${data.haxe_bin_policy ?? "na"}`,
   `peak_rss_mb=${peak ?? "na"}`,
+  `peak_tree_rss_mb=${treePeak ?? "na"}`,
   `peak_rss_source=${peakSource}`,
   `samples=${obs.heartbeat_samples ?? "na"}`,
   `emit_sec=${phase.emit ?? "na"}`,
-  `total_sec=${phase.total ?? "na"}`
+  `total_sec=${phase.total ?? "na"}`,
+  `heartbeat_trace_file=${obs.heartbeat_trace_file || "na"}`
 ].join(" ");
 console.log(line);
 ' "$REPORT_JSON" "$RUN_STDOUT" | tee "$SUMMARY_FILE"

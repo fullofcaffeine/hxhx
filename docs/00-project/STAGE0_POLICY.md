@@ -77,6 +77,8 @@ Machine-readable reports (`--report-json`) include:
 - `stage0_observability.heartbeat_seconds`
 - `stage0_observability.heartbeat_samples`
 - `stage0_observability.heartbeat_peak_rss_mb`
+- `stage0_observability.heartbeat_peak_tree_rss_mb`
+- `stage0_observability.heartbeat_trace_file`
 
 Repro command pair (wrapper baseline vs native-preferred):
 
@@ -152,8 +154,9 @@ Artifacts are written to `.hxhx/profile/stage0-regen/<timestamp>/`:
 
 - `regen_report.json` (policy/mode/peak RSS)
 - `reflaxe_ocaml_progress.log` (telemetry stream)
+- `stage0_heartbeat_trace.jsonl` (compact driver-side samples: elapsed time, focus-process RSS, process-tree RSS, CPU/state, log bytes)
 - `progress_summary.json` (machine-readable class/checkpoint aggregate)
-- `summary.txt` (report line + top class contributors + checkpoint lines; includes `peak_rss_source=report|stdout_fallback`)
+- `summary.txt` (report line + top class contributors + checkpoint lines; includes `peak_rss_source=report|stdout_fallback`, `peak_tree_rss_mb`, and the heartbeat trace path)
 
 You can summarize any existing progress log directly:
 

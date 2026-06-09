@@ -248,7 +248,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
   - Regen report JSON (`--report-json`) includes deterministic selection fields:
     - `haxe_bin_requested`, `haxe_bin_resolved`, `haxe_bin_mode`, `haxe_bin_policy`, `haxe_bin_switched`
     - `stage0_disable_prepasses`, `stage0_no_opt`, `stage0_no_inline`, `stage0_no_native_parser`, `stage0_no_hx_parser`, `stage0_no_expr_macros`, `stage0_no_external_macro_host`, `stage0_no_stage3`, `stage0_no_internal_tools`, `stage0_no_display`, `stage0_ocaml_only`, `stage0_no_line_directives`, `stage0_no_source_normalize_extract`, `stage0_no_native_decode_extract`, `stage0_no_parser_scan_extract`, `stage0_ocamlrunparam`
-    - `stage0_observability.heartbeat_peak_rss_mb` (plus heartbeat samples/interval)
+    - `stage0_observability.heartbeat_peak_rss_mb`, `stage0_observability.heartbeat_peak_tree_rss_mb`, and `stage0_observability.heartbeat_trace_file` (plus heartbeat samples/interval)
   - Selection-only probe (no emit/copy/verify): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-selection-only`
   - Wrapper-vs-native benchmark utility (policy compare + RSS summary):
     - `HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4 HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen`
@@ -285,7 +285,8 @@ Use this when you want the repo to function as a compiler-bootstrap example:
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses" --parity-mode status-exit --require-status-parity`
     - enforce a reduction threshold in CI/local scripts (exit code 3 on miss):
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses" --min-reduction-pct 20 --reduction-metric median`
-    - emits `.hxhx/profile/stage0-regen/<timestamp>/summary.txt` with top class contributors (`peak_rss_source=report|stdout_fallback`).
+    - emits `.hxhx/profile/stage0-regen/<timestamp>/summary.txt` with top class contributors (`peak_rss_source=report|stdout_fallback`, `peak_tree_rss_mb`, and heartbeat trace path).
+    - emits `.hxhx/profile/stage0-regen/<timestamp>/stage0_heartbeat_trace.jsonl` with compact driver-side samples for runs that do not reach Reflaxe progress hooks.
     - emits `.hxhx/profile/stage0-regen/<timestamp>/progress_summary.json` for deterministic class/checkpoint aggregation.
     - summarize any existing progress log: `node scripts/hxhx/summarize-stage0-progress.js --input <reflaxe_ocaml_progress.log> --top 15 --json-out <out.json>`
     - compare multiple run summaries: `npm run hxhx:profile:stage0-compare -- --summary-dir <run1> --summary-dir <run2> --summary-dir <run3> --min-presence 2 --sort median --json-out <compare.json>`

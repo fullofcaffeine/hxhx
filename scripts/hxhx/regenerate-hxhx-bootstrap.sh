@@ -120,6 +120,8 @@ Environment knobs (all optional):
   HXHX_STAGE0_OCAML_ONLY=1          Add `-D hxhx_stage0_ocaml_only` for stage0 emit.
   HXHX_STAGE0_NO_LINE_DIRECTIVES=1  Add `-D ocaml_no_line_directives` for stage0 emit.
   HXHX_STAGE0_OCAMLRUNPARAM=s=4M    Set OCAMLRUNPARAM for stage0 haxe process only.
+  HXHX_STAGE0_HEARTBEAT_TRACE_FILE=/path/to/trace.jsonl
+                                    Write compact JSONL heartbeat samples for stage0 emit.
   HXHX_BOOTSTRAP_REPORT_JSON=<path> Same as --report-json.
   HXHX_STAGE0_DIAG_EVERY=30         Diagnostics cadence when heartbeat is disabled.
   HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native
@@ -208,6 +210,7 @@ HXHX_STAGE0_OCAML_ONLY="${HXHX_STAGE0_OCAML_ONLY:-0}"
 HXHX_STAGE0_NO_LINE_DIRECTIVES="${HXHX_STAGE0_NO_LINE_DIRECTIVES:-0}"
 HXHX_STAGE0_OCAMLRUNPARAM="${HXHX_STAGE0_OCAMLRUNPARAM:-}"
 HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-20}"
+HXHX_STAGE0_HEARTBEAT_TRACE_FILE="${HXHX_STAGE0_HEARTBEAT_TRACE_FILE:-}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
 HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-900}"
 HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
@@ -461,6 +464,12 @@ assert_bool_01 "HXHX_STAGE0_NO_LINE_DIRECTIVES" "$HXHX_STAGE0_NO_LINE_DIRECTIVES
 	assert_dune_jobs "$HXHX_DUNE_JOBS"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
+	case "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" in
+		/*) ;;
+		*) HXHX_STAGE0_HEARTBEAT_TRACE_FILE="$ROOT/$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ;;
+	esac
+fi
 PKG_DIR="$ROOT/packages/hxhx"
 OUT_DIR="$PKG_DIR/out"
 BOOTSTRAP_DIR="$PKG_DIR/bootstrap_out"
@@ -479,6 +488,7 @@ total_start=0
 skipped_emit=0
 stage0_heartbeat_samples=0
 stage0_heartbeat_peak_rss_mb=0
+stage0_heartbeat_peak_tree_rss_mb=0
 script_status="ok"
 script_exit_code=0
 script_report_written=0
@@ -520,6 +530,38 @@ cleanup_stage0_log_file() {
 	else
 		rm -f "$path"
 	fi
+}
+
+collect_process_tree_pids() {
+	local root_pid="$1"
+	local frontier="$root_pid"
+	local seen=" $root_pid "
+	local collected="$root_pid"
+	local parent_pid=""
+	local child_pids=""
+	local child_pid=""
+	local next_frontier=""
+
+	while [ -n "$frontier" ]; do
+		next_frontier=""
+		for parent_pid in $frontier; do
+			child_pids="$(pgrep -P "$parent_pid" 2>/dev/null || true)"
+			if [ -z "$child_pids" ]; then
+				continue
+			fi
+			for child_pid in $child_pids; do
+				if [[ "$seen" == *" $child_pid "* ]]; then
+					continue
+				fi
+				seen="${seen}${child_pid} "
+				collected="${collected} ${child_pid}"
+				next_frontier="${next_frontier} ${child_pid}"
+			done
+		done
+		frontier="$(printf '%s\n' "$next_frontier" | xargs 2>/dev/null || true)"
+	done
+
+	printf '%s\n' "$collected"
 }
 
 list_haxe_server_pids() {
@@ -903,7 +945,9 @@ write_report_json() {
   "stage0_observability": {
     "heartbeat_seconds": $HXHX_STAGE0_HEARTBEAT,
     "heartbeat_samples": $stage0_heartbeat_samples,
-    "heartbeat_peak_rss_mb": $stage0_heartbeat_peak_rss_mb
+    "heartbeat_peak_rss_mb": $stage0_heartbeat_peak_rss_mb,
+    "heartbeat_peak_tree_rss_mb": $stage0_heartbeat_peak_tree_rss_mb,
+    "heartbeat_trace_file": "$(json_escape "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE")"
   },
   "phase_seconds": {
     "preflight": $phase_preflight_sec,
@@ -946,9 +990,14 @@ run_stage0_emit() {
 	local emit_code
 	log_file="$(create_stage0_log_file hxhx-stage0-emit)"
 	metrics_file="$(create_stage0_log_file hxhx-stage0-metrics)"
-	printf '0\t0\n' >"$metrics_file"
+	printf '0\t0\t0\n' >"$metrics_file"
 	echo "== Stage0 emit command: $HAXE_BIN ${stage0_args[*]}"
 	echo "== Stage0 emit log: $log_file"
+	if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
+		mkdir -p "$(dirname "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE")"
+		: >"$HXHX_STAGE0_HEARTBEAT_TRACE_FILE"
+		echo "== Stage0 emit heartbeat trace: $HXHX_STAGE0_HEARTBEAT_TRACE_FILE"
+	fi
 
 	set +e
 	(
@@ -956,6 +1005,7 @@ run_stage0_emit() {
 		local pid=""
 		local heartbeat_samples_local=0
 		local heartbeat_peak_rss_mb_local=0
+		local heartbeat_peak_tree_rss_mb_local=0
 		if [ -n "$HXHX_STAGE0_OCAMLRUNPARAM" ]; then
 			OCAMLRUNPARAM="$HXHX_STAGE0_OCAMLRUNPARAM" "$HAXE_BIN" "${stage0_args[@]}" >"$log_file" 2>&1 &
 		else
@@ -977,38 +1027,54 @@ run_stage0_emit() {
 			echo "== To inspect progress manually: tail -f \"$log_file\""
 		fi
 
-			local elapsed_hb=0
-			local status_elapsed=0
-			while kill -0 "$pid" >/dev/null 2>&1; do
-				sleep 1 || true
-				elapsed_hb="$((elapsed_hb + 1))"
-				status_elapsed="$((status_elapsed + 1))"
-				if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
-					if [ "$elapsed_hb" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
-						echo "Stage0 emit exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
-						kill -9 "$pid" >/dev/null 2>&1 || true
-						echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
+		local elapsed_hb=0
+		local status_elapsed=0
+		while kill -0 "$pid" >/dev/null 2>&1; do
+			sleep 1 || true
+			elapsed_hb="$((elapsed_hb + 1))"
+			status_elapsed="$((status_elapsed + 1))"
+			if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
+				if [ "$elapsed_hb" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
+					echo "Stage0 emit exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
+					kill -9 "$pid" >/dev/null 2>&1 || true
+					echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
 					tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-					printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
+					printf '%s\t%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" >"$metrics_file"
 					exit 1
 				fi
 			fi
-				if [ "$interval" = "0" ]; then
-					continue
-				fi
-				if [ "$status_elapsed" -lt "$interval" ]; then
-					continue
-				fi
-				status_elapsed=0
-
-				local child_pid
-			child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
-			local rss_probe_pid="$pid"
-			if [ -n "$child_pid" ]; then
-				rss_probe_pid="$child_pid"
+			if [ "$interval" = "0" ]; then
+				continue
 			fi
-			local rss_kb
-			rss_kb="$(ps -o rss= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+			if [ "$status_elapsed" -lt "$interval" ]; then
+				continue
+			fi
+			status_elapsed=0
+
+			local child_pid
+			child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
+			local tree_pids
+			tree_pids="$(collect_process_tree_pids "$pid")"
+			local rss_probe_pid="$pid"
+			local rss_kb=""
+			local tree_rss_kb=0
+			local tree_rss_mb=0
+			local tree_pid
+			local pid_rss_kb
+			for tree_pid in $tree_pids; do
+				pid_rss_kb="$(ps -o rss= -p "$tree_pid" 2>/dev/null | tr -d ' ' || true)"
+				if [ -z "$pid_rss_kb" ]; then
+					continue
+				fi
+				tree_rss_kb="$((tree_rss_kb + pid_rss_kb))"
+				if [ -z "$rss_kb" ] || [ "$pid_rss_kb" -gt "$rss_kb" ]; then
+					rss_kb="$pid_rss_kb"
+					rss_probe_pid="$tree_pid"
+				fi
+			done
+			if [ "$tree_rss_kb" -gt 0 ]; then
+				tree_rss_mb="$((tree_rss_kb / 1024))"
+			fi
 			local cpu_pct
 			cpu_pct="$(ps -o %cpu= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
 			local proc_state
@@ -1022,6 +1088,9 @@ run_stage0_emit() {
 			if [ -n "$proc_state" ]; then
 				heartbeat_suffix="$heartbeat_suffix state=${proc_state}"
 			fi
+			if [ "$tree_rss_mb" != "0" ]; then
+				heartbeat_suffix="$heartbeat_suffix tree_rss=${tree_rss_mb}MB"
+			fi
 			if [ -n "$log_bytes" ]; then
 				heartbeat_suffix="$heartbeat_suffix log=${log_bytes}B"
 			fi
@@ -1032,19 +1101,33 @@ run_stage0_emit() {
 				if [ "$rss_mb" -gt "$heartbeat_peak_rss_mb_local" ]; then
 					heartbeat_peak_rss_mb_local="$rss_mb"
 				fi
-					printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
-					if [ -n "$child_pid" ]; then
-						echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s rss=${rss_mb}MB pid=$pid child=$child_pid$heartbeat_suffix"
-					else
-						echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s rss=${rss_mb}MB pid=$pid$heartbeat_suffix"
-					fi
-				else
-					if [ -n "$child_pid" ]; then
-						echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s pid=$pid child=$child_pid$heartbeat_suffix"
-					else
-						echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s pid=$pid$heartbeat_suffix"
-					fi
+				if [ "$tree_rss_mb" -gt "$heartbeat_peak_tree_rss_mb_local" ]; then
+					heartbeat_peak_tree_rss_mb_local="$tree_rss_mb"
 				fi
+				printf '%s\t%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" >"$metrics_file"
+				if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
+					printf '{"elapsed_sec":%s,"rss_mb":%s,"tree_rss_mb":%s,"pid":%s,"focus_pid":%s,"child_pid":"%s","cpu_pct":"%s","state":"%s","log_bytes":%s}\n' \
+						"$elapsed_hb" "$rss_mb" "$tree_rss_mb" "$pid" "$rss_probe_pid" \
+						"$(json_escape "$child_pid")" "$(json_escape "$cpu_pct")" "$(json_escape "$proc_state")" "${log_bytes:-0}" \
+						>>"$HXHX_STAGE0_HEARTBEAT_TRACE_FILE"
+				fi
+				if [ -n "$child_pid" ]; then
+					echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s rss=${rss_mb}MB pid=$pid focus=$rss_probe_pid child=$child_pid$heartbeat_suffix"
+				else
+					echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s rss=${rss_mb}MB pid=$pid focus=$rss_probe_pid$heartbeat_suffix"
+				fi
+			else
+				if [ -n "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE" ]; then
+					printf '{"elapsed_sec":%s,"pid":%s,"child_pid":"%s","cpu_pct":"%s","state":"%s","log_bytes":%s}\n' \
+						"$elapsed_hb" "$pid" "$(json_escape "$child_pid")" "$(json_escape "$cpu_pct")" "$(json_escape "$proc_state")" "${log_bytes:-0}" \
+						>>"$HXHX_STAGE0_HEARTBEAT_TRACE_FILE"
+				fi
+				if [ -n "$child_pid" ]; then
+					echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s pid=$pid child=$child_pid$heartbeat_suffix"
+				else
+					echo "== Stage0 emit ${status_mode}: elapsed=${elapsed_hb}s pid=$pid$heartbeat_suffix"
+				fi
+			fi
 			if [ -n "${HXHX_STAGE0_HEARTBEAT_TAIL_LINES}" ] && [ "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" != "0" ]; then
 				if [ -s "$log_file" ]; then
 					echo "== Stage0 emit log tail (last $HXHX_STAGE0_HEARTBEAT_TAIL_LINES lines):"
@@ -1062,10 +1145,10 @@ run_stage0_emit() {
 		if [ "$code" != "0" ]; then
 			echo "Stage0 emit failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
 			tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-			printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
+			printf '%s\t%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" >"$metrics_file"
 			exit "$code"
 		fi
-		printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
+		printf '%s\t%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" "$heartbeat_peak_tree_rss_mb_local" >"$metrics_file"
 	)
 	emit_code="$?"
 	set -e
@@ -1073,12 +1156,16 @@ run_stage0_emit() {
 	if [ -f "$metrics_file" ]; then
 		local observed_samples=""
 		local observed_peak=""
-		IFS=$'\t' read -r observed_samples observed_peak <"$metrics_file" || true
+		local observed_tree_peak=""
+		IFS=$'\t' read -r observed_samples observed_peak observed_tree_peak <"$metrics_file" || true
 		if [ -n "$observed_samples" ] && [ "$observed_samples" -gt "$stage0_heartbeat_samples" ]; then
 			stage0_heartbeat_samples="$observed_samples"
 		fi
 		if [ -n "$observed_peak" ] && [ "$observed_peak" -gt "$stage0_heartbeat_peak_rss_mb" ]; then
 			stage0_heartbeat_peak_rss_mb="$observed_peak"
+		fi
+		if [ -n "$observed_tree_peak" ] && [ "$observed_tree_peak" -gt "$stage0_heartbeat_peak_tree_rss_mb" ]; then
+			stage0_heartbeat_peak_tree_rss_mb="$observed_tree_peak"
 		fi
 	fi
 	cleanup_stage0_log_file "$metrics_file"
