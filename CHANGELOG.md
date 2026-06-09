@@ -1,3 +1,10 @@
+## [0.15.19](https://github.com/fullofcaffeine/hxhx/compare/v0.15.18...v0.15.19) (2026-06-09)
+
+
+### Bug Fixes
+
+* **stage0:** keep source smoke enum values typed ([d1354af](https://github.com/fullofcaffeine/hxhx/commit/d1354af16a971f444e27fff20cf034ab8435012e))
+
 ## [0.15.18](https://github.com/fullofcaffeine/hxhx/compare/v0.15.17...v0.15.18) (2026-06-09)
 
 
