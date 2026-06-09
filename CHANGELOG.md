@@ -1,3 +1,10 @@
+## [0.15.20](https://github.com/fullofcaffeine/hxhx/compare/v0.15.19...v0.15.20) (2026-06-09)
+
+
+### Bug Fixes
+
+* **hxhx:** preserve semicolon after conditional #end ([22adfee](https://github.com/fullofcaffeine/hxhx/commit/22adfeeb83ffc343db0b1f490a8b91bd0b990579)), closes [#end](https://github.com/fullofcaffeine/hxhx/issues/end)
+
 ## [0.15.19](https://github.com/fullofcaffeine/hxhx/compare/v0.15.18...v0.15.19) (2026-06-09)
 
 
