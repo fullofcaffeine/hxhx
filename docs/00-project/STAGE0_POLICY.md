@@ -155,8 +155,9 @@ Artifacts are written to `.hxhx/profile/stage0-regen/<timestamp>/`:
 - `regen_report.json` (policy/mode/peak RSS)
 - `reflaxe_ocaml_progress.log` (telemetry stream)
 - `stage0_heartbeat_trace.jsonl` (compact driver-side samples: elapsed time, focus-process RSS, process-tree RSS, CPU/state, log bytes)
+- `heartbeat_summary.json` (machine-readable heartbeat aggregate: sample count, invalid lines, elapsed/log growth, peak focus RSS, peak process-tree RSS, top samples)
 - `progress_summary.json` (machine-readable class/checkpoint aggregate)
-- `summary.txt` (report line + top class contributors + checkpoint lines; includes `peak_rss_source=report|stdout_fallback`, `peak_tree_rss_mb`, and the heartbeat trace path)
+- `summary.txt` (report line + top class contributors + checkpoint lines + heartbeat summary; includes `peak_rss_source=report|stdout_fallback`, `peak_tree_rss_mb`, and the heartbeat trace path)
 
 You can summarize any existing progress log directly:
 
@@ -165,6 +166,15 @@ node scripts/hxhx/summarize-stage0-progress.js \
   --input /tmp/stage0-profile/reflaxe_ocaml_progress.log \
   --top 15 \
   --json-out /tmp/stage0-profile/progress_summary.json
+```
+
+You can summarize any existing heartbeat trace directly:
+
+```bash
+node scripts/hxhx/summarize-stage0-heartbeat-trace.js \
+  --input /tmp/stage0-profile/stage0_heartbeat_trace.jsonl \
+  --top 10 \
+  --json-out /tmp/stage0-profile/heartbeat_summary.json
 ```
 
 You can compare multiple runs and rank stable hotspots (median by default):

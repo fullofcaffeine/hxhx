@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REGEN_SCRIPT="$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh"
 PROGRESS_SUMMARY_SCRIPT="$ROOT/scripts/hxhx/summarize-stage0-progress.js"
+HEARTBEAT_SUMMARY_SCRIPT="$ROOT/scripts/hxhx/summarize-stage0-heartbeat-trace.js"
 
 POLICY="${HXHX_STAGE0_PROFILE_POLICY:-prefer-native}"
 FAILFAST_SECS="${HXHX_STAGE0_PROFILE_FAILFAST_SECS:-120}"
@@ -66,6 +67,7 @@ Outputs:
   <out-dir>/regen_report.json
   <out-dir>/reflaxe_ocaml_progress.log
   <out-dir>/stage0_heartbeat_trace.jsonl
+  <out-dir>/heartbeat_summary.json
   <out-dir>/summary.txt
 USAGE
 }
@@ -248,6 +250,7 @@ PROGRESS_LOG="$OUT_DIR/reflaxe_ocaml_progress.log"
 HEARTBEAT_TRACE="$OUT_DIR/stage0_heartbeat_trace.jsonl"
 SUMMARY_FILE="$OUT_DIR/summary.txt"
 PROGRESS_SUMMARY_JSON="$OUT_DIR/progress_summary.json"
+HEARTBEAT_SUMMARY_JSON="$OUT_DIR/heartbeat_summary.json"
 RUN_STDOUT="$OUT_DIR/run.stdout.log"
 RUN_STDERR="$OUT_DIR/run.stderr.log"
 
@@ -373,11 +376,21 @@ else
 	echo "output_checkpoints: none" | tee -a "$SUMMARY_FILE"
 fi
 
+if [ -f "$HEARTBEAT_SUMMARY_SCRIPT" ]; then
+	node "$HEARTBEAT_SUMMARY_SCRIPT" \
+		--input "$HEARTBEAT_TRACE" \
+		--top 5 \
+		--json-out "$HEARTBEAT_SUMMARY_JSON" | tee -a "$SUMMARY_FILE"
+else
+	echo "heartbeat_trace_summary: summary-script-missing" | tee -a "$SUMMARY_FILE"
+fi
+
 echo "stdout_log=$RUN_STDOUT" | tee -a "$SUMMARY_FILE"
 echo "stderr_log=$RUN_STDERR" | tee -a "$SUMMARY_FILE"
 echo "report_json=$REPORT_JSON" | tee -a "$SUMMARY_FILE"
 echo "progress_log=$PROGRESS_LOG" | tee -a "$SUMMARY_FILE"
 echo "progress_summary_json=$PROGRESS_SUMMARY_JSON" | tee -a "$SUMMARY_FILE"
+echo "heartbeat_summary_json=$HEARTBEAT_SUMMARY_JSON" | tee -a "$SUMMARY_FILE"
 
 if [ "$run_code" != "0" ]; then
 	echo "Profile run exited non-zero (code=$run_code). Summary artifacts are still available." | tee -a "$SUMMARY_FILE"

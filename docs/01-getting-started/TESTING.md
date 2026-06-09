@@ -287,8 +287,10 @@ Use this when you want the repo to function as a compiler-bootstrap example:
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses" --min-reduction-pct 20 --reduction-metric median`
     - emits `.hxhx/profile/stage0-regen/<timestamp>/summary.txt` with top class contributors (`peak_rss_source=report|stdout_fallback`, `peak_tree_rss_mb`, and heartbeat trace path).
     - emits `.hxhx/profile/stage0-regen/<timestamp>/stage0_heartbeat_trace.jsonl` with compact driver-side samples for runs that do not reach Reflaxe progress hooks.
+    - emits `.hxhx/profile/stage0-regen/<timestamp>/heartbeat_summary.json` with sample count, invalid lines, elapsed/log growth, peak focus RSS, peak process-tree RSS, and top samples from the heartbeat trace.
     - emits `.hxhx/profile/stage0-regen/<timestamp>/progress_summary.json` for deterministic class/checkpoint aggregation.
     - summarize any existing progress log: `node scripts/hxhx/summarize-stage0-progress.js --input <reflaxe_ocaml_progress.log> --top 15 --json-out <out.json>`
+    - summarize any existing heartbeat trace: `npm run hxhx:profile:stage0-heartbeat-summary -- --input <stage0_heartbeat_trace.jsonl> --top 10 --json-out <out.json>`
     - compare multiple run summaries: `npm run hxhx:profile:stage0-compare -- --summary-dir <run1> --summary-dir <run2> --summary-dir <run3> --min-presence 2 --sort median --json-out <compare.json>`
     - print baseline-vs-latest regression table from latest N summaries: `npm run hxhx:profile:stage0-hotspot-baseline -- --root .hxhx/profile/stage0-regen --samples 5 --min-presence 2 --sort median --json-out .hxhx/profile/stage0-regen/compare.latest.json`
   - Script preflight checks for stale `haxe --wait` / `--server-connect` processes before emit.
