@@ -80,7 +80,7 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		final optionalArrowJs = JsExprEmitter.emit(optionalArrow, exprScope);
 		assertContains(optionalArrowJs, "f = function(a, b)", "optional/typed/default arrow args keep runtime arg names");
 		assertContains(optionalArrowJs, "__hx_op_add", "optional/typed/default arrow body uses abstract-aware addition");
-		assertContains(optionalArrowJs, "a, b.length", "optional/typed/default arrow body keeps operands");
+		assertContains(optionalArrowJs, "((a == null) ? 1 : a), b.length", "optional/typed/default arrow body applies defaulted arg");
 
 		final ascribedArrow = HxParser.parseExprText("f0 = (() -> 1:()->Int)");
 		final ascribedArrowJs = JsExprEmitter.emit(ascribedArrow, exprScope);
