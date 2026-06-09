@@ -1026,6 +1026,15 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		}
 	}
 
+	static function assertNativeSourceNullableHintPreference():Void {
+		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Bool", "Null<Bool>"),
+			"native protocol decode should prefer source Null<Bool> over erased Bool");
+		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("StdTypes.Null", "StdTypes.Null<Bool>"),
+			"native protocol decode should preserve explicit StdTypes.Null<T> hints");
+		assertTrue(! @:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Bool", "String"),
+			"native protocol decode should not treat unrelated source hints as more specific");
+	}
+
 	static function assertScannedHelperClassInheritance():Void {
 		final source = [
 			"class Base {}",
@@ -1200,6 +1209,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	static function main():Void {
 		assertNativeStaticFinalDecode();
 		assertNativeSwitchFieldInitializerDecode();
+		assertNativeSourceNullableHintPreference();
 		assertScannedHelperClassInheritance();
 		assertScannedHelperOperationFields();
 		assertScannedHelperAbstractExpressionBody();

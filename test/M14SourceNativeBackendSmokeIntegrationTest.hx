@@ -1029,6 +1029,48 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpHelperMacroNullableProbeProgram():GenIrProgram {
+		final src = [
+			"class HelperMacros {",
+			"  public static function isNullable(e) { return false; }",
+			"}",
+			"class Main {",
+			"  var memberNull:Null<Bool> = null;",
+			"  static function main() {",
+			"    new Main().run();",
+			"  }",
+			"  function run() {",
+			"    final nullable:Null<Bool> = null;",
+			"    final maybe:Null<Bool> = false;",
+			"    final fallback = true;",
+			"    final testBool = nullable ?? true;",
+			"    final testNullBool = nullable ?? maybe;",
+			"    final fieldNullBool = this.memberNull ?? maybe;",
+			"    final bareFieldNullBool = memberNull ?? maybe;",
+			"    final directNullable = HelperMacros.isNullable(nullable);",
+			"    final nonNullable = HelperMacros.isNullable(nullable ?? fallback);",
+			"    final stillNullable = HelperMacros.isNullable(nullable ?? maybe);",
+			"    final localNonNullable = HelperMacros.isNullable(testBool);",
+			"    final localStillNullable = HelperMacros.isNullable(testNullBool);",
+			"    final fieldStillNullable = HelperMacros.isNullable(fieldNullBool);",
+			"    final bareFieldStillNullable = HelperMacros.isNullable(bareFieldNullBool);",
+			"    final directNonNullable = HelperMacros.isNullable(fallback);",
+			"    Sys.println(Std.string(directNullable));",
+			"    Sys.println(Std.string(nonNullable));",
+			"    Sys.println(Std.string(stillNullable));",
+			"    Sys.println(Std.string(localNonNullable));",
+			"    Sys.println(Std.string(localStillNullable));",
+			"    Sys.println(Std.string(fieldStillNullable));",
+			"    Sys.println(Std.string(bareFieldStillNullable));",
+			"    Sys.println(Std.string(directNonNullable));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypedAsHelperProbeProgram():GenIrProgram {
 		final pos = HxPos.unknown();
 		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
@@ -8466,6 +8508,32 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpHelperMacroNullableProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_helper_macro_nullable_probe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpHelperMacroNullableProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertNotContains(content, "HelperMacros::isNullable", "PHP source backend should fold HelperMacros.isNullable compile-time probes");
+		assertContains(content, "$directNullable = true;", "PHP isNullable should report explicit Null<T> locals as nullable");
+		assertContains(content, "$nonNullable = false;", "PHP isNullable should report nullable ?? non-null fallback as non-null");
+		assertContains(content, "$stillNullable = true;", "PHP isNullable should preserve nullable ?? nullable as nullable");
+		assertContains(content, "$localNonNullable = false;", "PHP isNullable should report locals assigned nullable ?? non-null as non-null");
+		assertContains(content, "$localStillNullable = true;", "PHP isNullable should preserve locals assigned nullable ?? nullable as nullable");
+		assertContains(content, "$fieldStillNullable = true;", "PHP isNullable should preserve instance-field nullable ?? nullable as nullable");
+		assertContains(content, "$bareFieldStillNullable = true;", "PHP isNullable should preserve bare same-class field nullable ?? nullable as nullable");
+		assertContains(content, "$directNonNullable = false;", "PHP isNullable should report non-null locals as non-null");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP nullable helper probes should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\nfalse\ntrue\nfalse\ntrue\ntrue\ntrue\nfalse\n",
+				"generated PHP nullable helper probe output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpFollowWithAbstractsProbe():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_follow_with_abstracts_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11362,6 +11430,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpAbstractCastConstraint();
 		assertPhpLoweredAbstractCastTypeErrorProbe();
 		assertPhpTypedAsHelperProbe();
+		assertPhpHelperMacroNullableProbe();
 		assertPhpFollowWithAbstractsProbe();
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();

@@ -41,6 +41,33 @@ class ParserStage {
 		return beforeOk && afterOk;
 	}
 
+	static function compactSourceTypeHint(typeHint:String):String {
+		var compact = StringTools.trim(typeHint == null ? "" : typeHint);
+		compact = StringTools.replace(compact, " ", "");
+		compact = StringTools.replace(compact, "\t", "");
+		compact = StringTools.replace(compact, "\r", "");
+		compact = StringTools.replace(compact, "\n", "");
+		return compact;
+	}
+
+	static function sourceNullTypeHintIsMoreSpecific(nativeTypeHint:String, sourceTypeHint:String):Bool {
+		final source = compactSourceTypeHint(sourceTypeHint);
+		if (source.length == 0)
+			return false;
+		final native = compactSourceTypeHint(nativeTypeHint);
+		if (native.length == 0)
+			return true;
+		final sourceIsNull = StringTools.startsWith(source, "Null<") || StringTools.startsWith(source, "StdTypes.Null<");
+		if ((native == "Null" || native == "StdTypes.Null") && sourceIsNull)
+			return true;
+		if (!sourceIsNull)
+			return false;
+		final inner = StringTools.startsWith(source,
+			"Null<") ? source.substr("Null<".length,
+				source.length - "Null<".length - 1) : source.substr("StdTypes.Null<".length, source.length - "StdTypes.Null<".length - 1);
+		return native == inner || StringTools.endsWith(native, "." + inner);
+	}
+
 	static function skipSpaces(source:String, index:Int):Int {
 		var i = index;
 		while (i < source.length) {
@@ -451,12 +478,18 @@ class ParserStage {
 							final scannedField = fieldName == null ? null : scannedFieldsByName.get(fieldName);
 							final metadata = mergeScannedFieldMetadata(f, scannedField);
 							final metadataChanged = !sameMetadata(metadata, HxFieldDecl.getMetadata(f));
+							final typeHint = scannedField != null
+								&& sourceNullTypeHintIsMoreSpecific(HxFieldDecl.getTypeHint(f),
+									HxFieldDecl.getTypeHint(scannedField)) ? HxFieldDecl.getTypeHint(scannedField) : HxFieldDecl.getTypeHint(f);
+							final typeHintChanged = typeHint != HxFieldDecl.getTypeHint(f);
 							if (metadataChanged)
 								changed = true;
-							patchedFields.push(metadataChanged ? new HxFieldDecl(HxFieldDecl.getName(f), HxFieldDecl.getVisibility(f),
-								HxFieldDecl.getIsStatic(f), HxFieldDecl.getTypeHint(f), HxFieldDecl.getInit(f), metadata, HxFieldDecl.getPos(f),
-								HxFieldDecl.getEndPos(f), HxFieldDecl.getIsFinal(f), HxFieldDecl.getPropertyGet(f), HxFieldDecl.getPropertySet(f),
-								HxFieldDecl.getInitText(f)) : f);
+							if (typeHintChanged)
+								changed = true;
+							patchedFields.push(metadataChanged
+								|| typeHintChanged ? new HxFieldDecl(HxFieldDecl.getName(f), HxFieldDecl.getVisibility(f), HxFieldDecl.getIsStatic(f),
+									typeHint, HxFieldDecl.getInit(f), metadata, HxFieldDecl.getPos(f), HxFieldDecl.getEndPos(f), HxFieldDecl.getIsFinal(f),
+									HxFieldDecl.getPropertyGet(f), HxFieldDecl.getPropertySet(f), HxFieldDecl.getInitText(f)) : f);
 							if (fieldName != null && fieldName.length > 0)
 								existingFieldNames.set(fieldName, true);
 						}
@@ -2972,8 +3005,15 @@ class ParserStage {
 		final native = compactTypeHint(nativeTypeHint);
 		if (native.length == 0)
 			return true;
-		return (native == "Null" || native == "StdTypes.Null")
-			&& (StringTools.startsWith(source, "Null<") || StringTools.startsWith(source, "StdTypes.Null<"));
+		final sourceIsNull = StringTools.startsWith(source, "Null<") || StringTools.startsWith(source, "StdTypes.Null<");
+		if ((native == "Null" || native == "StdTypes.Null") && sourceIsNull)
+			return true;
+		if (!sourceIsNull)
+			return false;
+		final inner = StringTools.startsWith(source,
+			"Null<") ? source.substr("Null<".length,
+				source.length - "Null<".length - 1) : source.substr("StdTypes.Null<".length, source.length - "StdTypes.Null<".length - 1);
+		return native == inner || StringTools.endsWith(native, "." + inner);
 	}
 
 	static function defaultValueFromText(text:String):HxDefaultValue {

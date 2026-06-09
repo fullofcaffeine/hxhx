@@ -469,8 +469,15 @@ class ParserStageNativeDecode {
 		final native = compactTypeHint(nativeTypeHint);
 		if (native.length == 0)
 			return true;
-		return (native == "Null" || native == "StdTypes.Null")
-			&& (StringTools.startsWith(source, "Null<") || StringTools.startsWith(source, "StdTypes.Null<"));
+		final sourceIsNull = StringTools.startsWith(source, "Null<") || StringTools.startsWith(source, "StdTypes.Null<");
+		if ((native == "Null" || native == "StdTypes.Null") && sourceIsNull)
+			return true;
+		if (!sourceIsNull)
+			return false;
+		final inner = StringTools.startsWith(source,
+			"Null<") ? source.substr("Null<".length,
+				source.length - "Null<".length - 1) : source.substr("StdTypes.Null<".length, source.length - "StdTypes.Null<".length - 1);
+		return native == inner || StringTools.endsWith(native, "." + inner);
 	}
 
 	static function defaultValueFromText(text:String):HxDefaultValue {

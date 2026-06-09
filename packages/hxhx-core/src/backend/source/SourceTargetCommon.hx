@@ -3148,6 +3148,9 @@ class SourceTargetCommon {
 			case "typeString":
 				final result = helperTypeStringResult(args);
 				renderExpr(target, EString(result == null ? "haxe.Exception" : result));
+			case "isNullable":
+				final result = helperIsNullableResult(args);
+				result == null ? null : renderExpr(target, EBool(result));
 			case "followWithAbstracts":
 				final result = helperFollowWithAbstractsResult(args, false);
 				result == null ? null : renderExpr(target, EString(result));
@@ -3173,7 +3176,7 @@ class SourceTargetCommon {
 				"typedAs";
 			case EField(EIdent("HelperMacros"), field) | EField(EField(EIdent("unit"), "HelperMacros"), field):
 				switch (field) {
-					case "typeError" | "typeErrorText" | "parseAndPrint" | "typeString" | "getMeta" | "typedAs":
+					case "typeError" | "typeErrorText" | "parseAndPrint" | "typeString" | "getMeta" | "typedAs" | "isNullable":
 						field;
 					case _:
 						null;
@@ -3808,6 +3811,32 @@ class SourceTargetCommon {
 			case _:
 				null;
 		}
+	}
+
+	static function helperIsNullableResult(args:Array<HxExpr>):Null<Bool> {
+		if (args == null || args.length != 1)
+			return null;
+		return helperExprNullableResult(args[0]);
+	}
+
+	static function helperExprNullableResult(expr:HxExpr):Null<Bool> {
+		final hint = phpExprTypeHint(expr);
+		if (StringTools.trim(hint).length > 0)
+			return isNullTypeHint(hint);
+		return switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				helperExprNullableResult(inner);
+			case ENull:
+				true;
+			case EBool(_) | EIdent("true" | "false") | EInt(_) | EFloat(_) | EString(_) | ENew(_, _) | EArrayDecl(_) | EAnon(_, _) | ELambda(_, _):
+				false;
+			case EBinop("??", left, right):
+				final leftNullable = helperExprNullableResult(left);
+				final rightNullable = helperExprNullableResult(right);
+				if (leftNullable == false || rightNullable == false) false; else if (leftNullable == true && rightNullable == true) true; else null;
+			case _:
+				null;
+		};
 	}
 
 	static function helperFollowWithAbstractsResult(args:Array<HxExpr>, once:Bool):Null<String> {
@@ -6210,14 +6239,24 @@ class SourceTargetCommon {
 			};
 		}
 		return switch (init) {
+			case EInt(_):
+				"Int";
 			case EString(_):
 				"String";
+			case EBool(_):
+				"Bool";
+			case EIdent("true" | "false"):
+				"Bool";
+			case EFloat(_):
+				"Float";
 			case ENew(typePath, _):
 				typePath;
 			case EIdent(name):
 				phpLocalTypeHint(name);
 			case EUnop("-", inner):
 				inferLocalTypeHint("", inner);
+			case EBinop("??", left, right):
+				phpNullCoalesceTypeHint(left, right);
 			case _ if (phpExprReturnsInt64(init)):
 				"haxe.Int64";
 			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
@@ -6227,6 +6266,51 @@ class SourceTargetCommon {
 			case _:
 				"";
 		};
+	}
+
+	static function phpExprTypeHint(expr:Null<HxExpr>):String {
+		if (expr == null)
+			return "";
+		return switch (expr) {
+			case EInt(_):
+				"Int";
+			case EString(_):
+				"String";
+			case EBool(_):
+				"Bool";
+			case EIdent("true" | "false"):
+				"Bool";
+			case EFloat(_):
+				"Float";
+			case ENew(typePath, _):
+				typePath;
+			case EArrayDecl(_):
+				"Array";
+			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
+				castHint;
+			case EField(EThis, field):
+				phpCurrentInstanceFieldTypeHint(field);
+			case EIdent(name):
+				phpLocalTypeHint(name);
+			case EBinop("??", left, right):
+				phpNullCoalesceTypeHint(left, right);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpExprTypeHint(inner);
+			case _:
+				"";
+		};
+	}
+
+	static function phpNullCoalesceTypeHint(left:HxExpr, right:HxExpr):String {
+		final leftHint = phpExprTypeHint(left);
+		final rightHint = phpExprTypeHint(right);
+		if (StringTools.trim(leftHint).length > 0 && !isNullTypeHint(leftHint))
+			return leftHint;
+		if (StringTools.trim(rightHint).length > 0 && !isNullTypeHint(rightHint))
+			return rightHint;
+		if (StringTools.trim(rightHint).length > 0)
+			return rightHint;
+		return leftHint;
 	}
 
 	static function phpExprReturnsInt64(expr:Null<HxExpr>):Bool {
@@ -10015,7 +10099,11 @@ class SourceTargetCommon {
 	static function phpProgramInstanceFieldTypeHintMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<String>> {
 		final out = new haxe.ds.StringMap<haxe.ds.StringMap<String>>();
 		function addKey(key:String, fields:haxe.ds.StringMap<String>):Void {
-			if (key != null && key.length > 0 && !out.exists(key))
+			if (key == null || key.length == 0)
+				return;
+			if (out.exists(key))
+				phpMergeStringFieldTypeHints(out.get(key), fields);
+			else
 				out.set(key, fields);
 		}
 		function addDecl(moduleDecl:HxModuleDecl):Void {
@@ -10041,6 +10129,31 @@ class SourceTargetCommon {
 		for (typed in program.getTypedModules())
 			addDecl(typed.getParsed().getDecl());
 		return out;
+	}
+
+	static function phpPreferFieldTypeHint(existing:String, incoming:String):String {
+		final oldHint = StringTools.trim(existing == null ? "" : existing);
+		final newHint = StringTools.trim(incoming == null ? "" : incoming);
+		if (newHint.length == 0)
+			return existing;
+		if (oldHint.length == 0)
+			return incoming;
+		return isNullTypeHint(newHint) && !isNullTypeHint(oldHint) ? incoming : existing;
+	}
+
+	static function phpMergeStringFieldTypeHints(base:haxe.ds.StringMap<String>, incoming:haxe.ds.StringMap<String>):Void {
+		if (base == null || incoming == null)
+			return;
+		for (name in incoming.keys())
+			base.set(name, phpPreferFieldTypeHint(base.exists(name) ? base.get(name) : "", incoming.get(name)));
+	}
+
+	static function phpMergeInstanceFieldTypeHints(base:Map<String, String>, incoming:Null<haxe.ds.StringMap<String>>):Map<String, String> {
+		if (incoming == null)
+			return base;
+		for (name in incoming.keys())
+			base.set(name, phpPreferFieldTypeHint(base.exists(name) ? base.get(name) : "", incoming.get(name)));
+		return base;
 	}
 
 	static function phpProgramDynamicMethodMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<haxe.ds.StringMap<Bool>> {
@@ -12159,7 +12272,8 @@ class SourceTargetCommon {
 		final instanceMethodNames = phpInstanceMethodNames(cls, classesByName, new Map<String, Bool>());
 		final instanceMethodArgs = phpInstanceMethodArgs(cls, classesByName, new Map<String, Bool>());
 		final instanceFieldNames = phpInstanceFieldNames(cls, classesByName, new Map<String, Bool>());
-		final instanceFieldTypeHints = phpInstanceFieldTypeHints(cls, classesByName, new Map<String, Bool>());
+		final instanceFieldTypeHints = phpMergeInstanceFieldTypeHints(phpInstanceFieldTypeHints(cls, classesByName, new Map<String, Bool>()),
+			phpInstanceFieldTypeHintMapForType(className));
 		final staticFieldNames = phpCurrentClassStaticMemberNames(cls);
 		final genericStaticSpecializations = phpGenericStaticSpecializations(cls, scanClasses);
 		for (fn in HxClassDecl.getFunctions(cls)) {
