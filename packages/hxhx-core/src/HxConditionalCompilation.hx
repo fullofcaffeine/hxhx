@@ -42,13 +42,19 @@ class HxConditionalCompilation {
 		return c == 9 || c == 10 || c == 13 || c == 32; // \t \n \r space
 	}
 
-	private static function makeBlankLineLike(line:String):String {
+	private static function makeBlankLineLike(line:String, keepFirstSemicolon:Bool = false):String {
 		if (line == null || line.length == 0)
 			return line;
 		final b = new StringBuf();
+		var keptSemicolon = false;
 		for (i in 0...line.length) {
 			final c = line.charCodeAt(i);
-			b.addChar(c == "\n".code ? "\n".code : (c == "\r".code ? "\r".code : " ".code));
+			if (keepFirstSemicolon && !keptSemicolon && c == ";".code) {
+				b.addChar(c);
+				keptSemicolon = true;
+			} else {
+				b.addChar(c == "\n".code ? "\n".code : (c == "\r".code ? "\r".code : " ".code));
+			}
 		}
 		return b.toString();
 	}
@@ -105,7 +111,8 @@ class HxConditionalCompilation {
 			}
 
 			// Always blank directive lines so the parser doesn't see `#`.
-			out.add(makeBlankLineLike(line));
+			// Preserve the semicolon in `#end;` expression initializers.
+			out.add(makeBlankLineLike(line, directive.kind == "end" && directive.expr == ";"));
 
 			final outerActive = stack.length == 0 ? true : stack[stack.length - 1].parentActive && stack[stack.length - 1].branchActive;
 
@@ -582,6 +589,11 @@ class HxConditionalCompilation {
 			return {kind: "elseif", expr: StringTools.trim(trimmed.substr(7))};
 		if (trimmed == "else")
 			return {kind: "else", expr: ""};
+		// Expression initializers can terminate a block conditional as `#end;`.
+		// The semicolon belongs to the surrounding expression, so preserve it
+		// after blanking the directive token itself.
+		if (trimmed == "end;")
+			return {kind: "end", expr: ";"};
 		if (trimmed == "end")
 			return {kind: "end", expr: ""};
 		return null;

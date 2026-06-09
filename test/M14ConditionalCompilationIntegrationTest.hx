@@ -252,6 +252,45 @@ class M14ConditionalCompilationIntegrationTest {
 		ParserStage.parse(luaFiltered, "LuaFilteredCallback.hx");
 	}
 
+	static function testBlockConditionalEndWithSemicolonAfterInlineGuard():Void {
+		final source = [
+			"class ConditionalAsyncProbe {",
+			"  static final ENABLED =",
+			"    #if !github false && #end // local-only opt-in guard",
+			"    #if (github && (java || flash || (cs && Windows)))",
+			"      false",
+			"    #elseif (js && !nodejs)",
+			"      js.Browser.supported",
+			"    #else",
+			"      true",
+			"    #end;",
+			"",
+			"  function run(done:()->Void, work:()->Void):Void {",
+			"    if (ENABLED) {",
+			"      work();",
+			"      return;",
+			"    }",
+			"    done();",
+			"  }",
+			"",
+			"  public function ping(done:()->Void):Void run(done, () -> {",
+			"    final payload = 'ok';",
+			"    if (payload != 'ok') throw payload;",
+			"    done();",
+			"  });",
+			"}",
+		].join("\n");
+		final filtered = HxConditionalCompilation.filterSource(source, defines(["github", "js", "nodejs", "Linux"]));
+		assertContains(filtered, "static final ENABLED", "static final initializer should remain after filtering");
+		assertContains(filtered, "true", "nodejs/js branch should select the fallback payload");
+		assertNotContains(filtered, "false &&", "inactive same-line guard payload should be blanked");
+		assertNotContains(filtered, "js.Browser", "inactive target-specific branch should be blanked");
+		assertNotContains(filtered, "#if", "block and inline conditionals should be blanked before parsing");
+		assertNotContains(filtered, "#elseif", "elseif directives should be blanked before parsing");
+		assertNotContains(filtered, "#end", "terminator directives with semicolon suffix should be blanked before parsing");
+		ParserStage.parse(filtered, "ConditionalAsyncProbe.hx");
+	}
+
 	static function main():Void {
 		final inlineElseIf = 'if (#if flash Flash.path() #elseif php php.Global.method_exists(v, "hxSerialize") #else v.hxSerialize != null #end) keep();';
 		final jsFiltered = HxConditionalCompilation.filterSource(inlineElseIf, defines(["js"]));
@@ -268,5 +307,6 @@ class M14ConditionalCompilationIntegrationTest {
 		testActiveTargetNativeExternImports();
 		testActiveNativeLibraryExternImports();
 		testInlineInactiveModifierKeepsSuffix();
+		testBlockConditionalEndWithSemicolonAfterInlineGuard();
 	}
 }
