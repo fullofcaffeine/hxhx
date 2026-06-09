@@ -250,6 +250,28 @@ class JsNativeIncDecMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeReceiverPostIncMain.hx" <<'HX'
+class JsNativeReceiverPostIncMain {
+  public var length:Int = 0;
+  public var items:Array<String> = [];
+
+  public function new() {}
+
+  public function addFixture(label:String):Int {
+    items[length++] = label;
+    return length;
+  }
+
+  static function main() {
+    var runner = new JsNativeReceiverPostIncMain();
+    if (runner.addFixture("alpha") != 1) throw "bad first";
+    if (runner.addFixture("beta") != 2) throw "bad second";
+    if (runner.items[0] != "alpha") throw "bad alpha";
+    if (runner.items[1] != "beta") throw "bad beta";
+  }
+}
+HX
+
 cat >"$tmpdir/src/JsNativeLoopControlMain.hx" <<'HX'
 class JsNativeLoopControlMain {
   static function main() {
@@ -574,6 +596,18 @@ if [ "$has_js_native_target" -eq 1 ]; then
   echo "$out" | grep -q "^run=ok$"
   echo "$out" | grep -q "^js-native-incdec:4:1:1$"
   test -f "$tmpdir/out_js_native_incdec/main.js"
+
+  echo "== Builtin fast-path target: js-native receiver-bound postfix increment"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN"  --js "$tmpdir/out_js_native_receiver_postinc/main.js" -cp "$tmpdir/src" -main JsNativeReceiverPostIncMain --hxhx-out "$tmpdir/out_js_native_receiver_postinc")"
+  echo "$out" | grep -q "^stage3=ok$"
+  echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_receiver_postinc/main.js$"
+  echo "$out" | grep -q "^run=ok$"
+  if grep -q "var __hx_old = this.length" "$tmpdir/out_js_native_receiver_postinc/main.js"; then
+    echo "receiver-bound postfix increment must not dereference this inside an unbound IIFE." >&2
+    exit 1
+  fi
+  grep -q "__hx_obj.length" "$tmpdir/out_js_native_receiver_postinc/main.js"
+  test -f "$tmpdir/out_js_native_receiver_postinc/main.js"
 
   echo "== Builtin fast-path target: js-native break/continue loop control"
   out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN"  --js "$tmpdir/out_js_native_loop_control/main.js" -cp "$tmpdir/src" -main JsNativeLoopControlMain --hxhx-out "$tmpdir/out_js_native_loop_control")"

@@ -1495,8 +1495,19 @@ class JsExprEmitter {
 			case EThis:
 				"(function(__hx_self){ var __hx_old = __hx_self.__hx_value; __hx_self.__hx_value = (__hx_old + " + delta + "); return __hx_old; })(this)";
 			case EIdent(_):
-				final ref = emit(target, scope);
-				"(function(){ var __hx_old = " + ref + "; " + ref + " = (__hx_old + " + delta + "); return __hx_old; })()";
+				final targetRef = emit(target, scope);
+				final thisProp = if (StringTools.startsWith(targetRef, "this.")
+					|| StringTools.startsWith(targetRef, "this[")) targetRef.substr(4) else null;
+				if (thisProp != null) {"(function(__hx_obj){ var __hx_old = __hx_obj"
+					+ thisProp
+					+ "; __hx_obj"
+					+ thisProp
+					+ " = (__hx_old + "
+					+ delta
+					+ "); return __hx_old; })(this)";
+				} else {
+					"(function(){ var __hx_old = " + targetRef + "; " + targetRef + " = (__hx_old + " + delta + "); return __hx_old; })()";
+				}
 			case EField(obj, field):
 				final objJs = emit(obj, scope);
 				final prop = JsNameMangler.propertySuffix(field);

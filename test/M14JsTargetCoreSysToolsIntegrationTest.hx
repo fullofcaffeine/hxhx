@@ -1206,6 +1206,17 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		assertNotContains(js, "), , this.__hx_value)", "empty anonymous object assignment to abstract this should not emit an empty sequence slot");
 	}
 
+	static function assertPostfixResolvedThisFieldBindsReceiver():Void {
+		final instanceFields = new haxe.ds.StringMap<String>();
+		instanceFields.set("length", "this.length");
+		final exprScope = new JsFunctionScope(new haxe.ds.StringMap<String>(), instanceFields).exprScope();
+		final js = JsExprEmitter.emit(HxExpr.EUnop("post++", HxExpr.EIdent("length")), exprScope);
+		assertContains(js, "function(__hx_obj)", "postfix update on resolved instance fields should bind the receiver");
+		assertContains(js, "__hx_obj.length", "postfix update should read/write through the bound receiver");
+		assertContains(js, "})(this)", "postfix update on resolved instance fields should pass the lexical receiver explicitly");
+		assertNotContains(js, "var __hx_old = this.length", "postfix update should not dereference this inside an unbound IIFE");
+	}
+
 	static function main():Void {
 		assertNativeStaticFinalDecode();
 		assertNativeSwitchFieldInitializerDecode();
@@ -1215,6 +1226,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		assertScannedHelperAbstractExpressionBody();
 		assertScannedModuleStaticFields();
 		assertEmptyAnonThisAssignmentJs();
+		assertPostfixResolvedThisFieldBindsReceiver();
 
 		final tmpRoot = Path.normalize(".tmp/m14_js_target_core_systools_" + Std.string(Date.now().getTime()));
 		final outDir = Path.join([tmpRoot, "out"]);
