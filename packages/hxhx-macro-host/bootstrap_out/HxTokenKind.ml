@@ -5,7 +5,7 @@
 type hxtokenkind =
 | TEof
 | TIdent of string
-| TString of string
+| TString of string * bool
 | TInt of int
 | TFloat of float
 | TRegex of string * string

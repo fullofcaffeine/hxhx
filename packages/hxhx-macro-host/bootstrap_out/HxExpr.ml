@@ -25,7 +25,7 @@ type hxexpr =
 | EBinop of string * hxexpr * hxexpr
 | ETernary of hxexpr * hxexpr * hxexpr
 | EAnon of string HxArray.t * hxexpr HxArray.t
-| EArrayComprehension of string * hxexpr * hxexpr
+| EArrayComprehension of string * hxexpr * Obj.t * hxexpr
 | EArrayDecl of hxexpr HxArray.t
 | EArrayAccess of hxexpr * hxexpr
 | ERange of hxexpr * hxexpr

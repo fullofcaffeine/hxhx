@@ -349,6 +349,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
     let type_angle = ref 0 in
     let type_bracket = ref 0 in
     let type_brace = ref 0 in
+    let optional_next = ref false in
     let rest_next = ref false in
 
     let type_hint_top_level () =
@@ -363,7 +364,8 @@ let parse_module_from_tokens (src : string) (toks : token array)
           reading_type := false;
           type_angle := 0;
           type_bracket := 0;
-          type_brace := 0
+          type_brace := 0;
+          optional_next := false
       | Some name ->
           let ty_raw = Stdlib.String.concat "" !cur_type_parts |> Stdlib.String.trim in
           let ty =
@@ -377,15 +379,17 @@ let parse_module_from_tokens (src : string) (toks : token array)
           reading_type := false;
           type_angle := 0;
           type_bracket := 0;
-          type_brace := 0
+          type_brace := 0;
+          optional_next := false
     in
 
     while !paren > 0 do
       match cur () with
       | Eof p -> raise (Parse_error (p, "unexpected eof in parameter list"))
       | Sym ('?', _) when !paren = 1 && !cur_name = None && not !reading_type ->
-          (* Optional argument marker: `?arg:T`. We ignore the marker in the v1 payload,
-             but we must consume it so the parameter name is read correctly. *)
+          (* Preserve optional parameters by prefixing the protocol arg name with `?`.
+             The Haxe-side decoder strips the marker and sets HxFunctionArg.isOptional. *)
+          optional_next := true;
           bump ()
       | Sym ('.', _)
         when !paren = 1 && !cur_name = None && not !reading_type
@@ -447,7 +451,10 @@ let parse_module_from_tokens (src : string) (toks : token array)
           bump ()
       | Ident (name, _) when !paren = 1 && !cur_name = None && not !reading_type
         ->
-          let final_name = if !rest_next then "..." ^ name else name in
+          let final_name =
+            if !rest_next then "..." ^ name else if !optional_next then "?" ^ name else name
+          in
+          optional_next := false;
           rest_next := false;
           cur_name := Some final_name;
           cur_default_hint := None;
@@ -463,6 +470,13 @@ let parse_module_from_tokens (src : string) (toks : token array)
           | Kw ("true", _) | Kw ("false", _) -> cur_default_hint := Some "Bool"
           | Kw ("null", _) -> cur_default_hint := Some "Dynamic"
           | _ -> ());
+          bump ()
+      | Sym ('=', _) when !paren = 1 && !cur_name <> None && !reading_type
+                            && type_hint_top_level () ->
+          (* A typed parameter default starts after the type hint. Stop collecting type
+             text here so `?x:Null<Int> = 5` remains `Null<Int>`, not
+             `Null<Int>=5`. *)
+          reading_type := false;
           bump ()
       | tok ->
           if !reading_type then cur_type_parts := !cur_type_parts @ [ tok_to_text tok ];

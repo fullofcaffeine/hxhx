@@ -1391,7 +1391,7 @@ class HxParser {
 
 		final args = new Array<String>();
 		final optionalArgs = new Array<String>();
-		final defaultedArgs:Map<String, HxExpr> = [];
+		final defaultedArgs = new haxe.ds.StringMap<HxExpr>();
 		var defaultedArgCount = 0;
 		if (!cur.kind.match(TRParen)) {
 			while (true) {
@@ -1497,7 +1497,7 @@ class HxParser {
 
 		final args = new Array<String>();
 		final optionalArgs = new Array<String>();
-		final defaultedArgs:Map<String, HxExpr> = [];
+		final defaultedArgs = new haxe.ds.StringMap<HxExpr>();
 		var defaultedArgCount = 0;
 		if (!cur.kind.match(TRParen)) {
 			while (true) {
@@ -2763,7 +2763,7 @@ class HxParser {
 	function tryReadParenthesizedLambdaArgs():Null<{
 		args:Array<String>,
 		optionalArgs:Array<String>,
-		defaultedArgs:Map<String, HxExpr>,
+		defaultedArgs:haxe.ds.StringMap<HxExpr>,
 		defaultedArgCount:Int,
 		endIndex:Int
 	}> {
@@ -2806,7 +2806,7 @@ class HxParser {
 		final rawArgs = StringTools.trim(source.substring(start + 1, closeIndex));
 		final args = new Array<String>();
 		final optionalArgs = new Array<String>();
-		final defaultedArgs:Map<String, HxExpr> = [];
+		final defaultedArgs = new haxe.ds.StringMap<HxExpr>();
 		var defaultedArgCount = 0;
 		if (rawArgs.length > 0) {
 			for (part in rawArgs.split(",")) {
@@ -2883,7 +2883,7 @@ class HxParser {
 		return arg.length;
 	}
 
-	function applyDefaultedLambdaArgs(expr:HxExpr, defaultedArgs:Map<String, HxExpr>):HxExpr {
+	function applyDefaultedLambdaArgs(expr:HxExpr, defaultedArgs:haxe.ds.StringMap<HxExpr>):HxExpr {
 		return switch (expr) {
 			case EIdent(name) if (defaultedArgs.exists(name)):
 				ETernary(EBinop("==", EIdent(name), ENull), defaultedArgs.get(name), EIdent(name));

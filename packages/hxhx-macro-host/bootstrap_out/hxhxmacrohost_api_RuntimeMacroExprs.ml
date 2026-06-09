@@ -916,10 +916,11 @@ and convertDef = fun expr pos -> let tempResult = ref (Obj.magic (HxRuntime.hx_n
         )
       )
     )
-    | HxExpr.EArrayComprehension (_p0, _p1, _p2) -> (
+    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> (
       ignore _p0;
       ignore _p1;
       ignore _p2;
+      ignore _p3;
       HxType.hx_throw_typed_rtti (Obj.repr "runtime macro parse: unsupported parsed expression shape") ["Dynamic"; "String"]
     )
     | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (

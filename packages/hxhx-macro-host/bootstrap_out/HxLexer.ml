@@ -470,147 +470,147 @@ let readIdent = fun self (startPos : HxPos.t) -> let start = (Obj.magic self : t
     | HxRuntime.Hx_break -> ());
   let text = (HxString.substring ((Obj.magic self : t).src) start ((Obj.magic self : t).index) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxToken.t) in (
     ignore (match text with
-      | "as" -> let __assign_176 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KAs)))) (Obj.magic startPos)) in (
+      | "as" -> let __assign_176 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KAs)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_176;
         __assign_176
       )
-      | "break" -> let __assign_177 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KBreak)))) (Obj.magic startPos)) in (
+      | "break" -> let __assign_177 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KBreak)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_177;
         __assign_177
       )
-      | "case" -> let __assign_178 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KCase)))) (Obj.magic startPos)) in (
+      | "case" -> let __assign_178 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KCase)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_178;
         __assign_178
       )
-      | "cast" -> let __assign_179 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KCast)))) (Obj.magic startPos)) in (
+      | "cast" -> let __assign_179 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KCast)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_179;
         __assign_179
       )
-      | "catch" -> let __assign_180 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KCatch)))) (Obj.magic startPos)) in (
+      | "catch" -> let __assign_180 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KCatch)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_180;
         __assign_180
       )
-      | "class" -> let __assign_181 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KClass)))) (Obj.magic startPos)) in (
+      | "class" -> let __assign_181 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KClass)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_181;
         __assign_181
       )
-      | "continue" -> let __assign_182 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KContinue)))) (Obj.magic startPos)) in (
+      | "continue" -> let __assign_182 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KContinue)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_182;
         __assign_182
       )
-      | "default" -> let __assign_183 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KDefault)))) (Obj.magic startPos)) in (
+      | "default" -> let __assign_183 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KDefault)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_183;
         __assign_183
       )
-      | "do" -> let __assign_184 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KDo)))) (Obj.magic startPos)) in (
+      | "do" -> let __assign_184 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KDo)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_184;
         __assign_184
       )
-      | "else" -> let __assign_185 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KElse)))) (Obj.magic startPos)) in (
+      | "else" -> let __assign_185 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KElse)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_185;
         __assign_185
       )
-      | "false" -> let __assign_186 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KFalse)))) (Obj.magic startPos)) in (
+      | "false" -> let __assign_186 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KFalse)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_186;
         __assign_186
       )
-      | "final" -> let __assign_187 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KFinal)))) (Obj.magic startPos)) in (
+      | "final" -> let __assign_187 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KFinal)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_187;
         __assign_187
       )
-      | "for" -> let __assign_188 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KFor)))) (Obj.magic startPos)) in (
+      | "for" -> let __assign_188 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KFor)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_188;
         __assign_188
       )
-      | "function" -> let __assign_189 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KFunction)))) (Obj.magic startPos)) in (
+      | "function" -> let __assign_189 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KFunction)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_189;
         __assign_189
       )
-      | "if" -> let __assign_190 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KIf)))) (Obj.magic startPos)) in (
+      | "if" -> let __assign_190 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KIf)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_190;
         __assign_190
       )
-      | "import" -> let __assign_191 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KImport)))) (Obj.magic startPos)) in (
+      | "import" -> let __assign_191 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KImport)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_191;
         __assign_191
       )
-      | "in" -> let __assign_192 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KIn)))) (Obj.magic startPos)) in (
+      | "in" -> let __assign_192 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KIn)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_192;
         __assign_192
       )
-      | "inline" -> let __assign_193 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KInline)))) (Obj.magic startPos)) in (
+      | "inline" -> let __assign_193 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KInline)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_193;
         __assign_193
       )
-      | "new" -> let __assign_194 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KNew)))) (Obj.magic startPos)) in (
+      | "new" -> let __assign_194 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KNew)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_194;
         __assign_194
       )
-      | "null" -> let __assign_195 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KNull)))) (Obj.magic startPos)) in (
+      | "null" -> let __assign_195 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KNull)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_195;
         __assign_195
       )
-      | "package" -> let __assign_196 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KPackage)))) (Obj.magic startPos)) in (
+      | "package" -> let __assign_196 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KPackage)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_196;
         __assign_196
       )
-      | "private" -> let __assign_197 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KPrivate)))) (Obj.magic startPos)) in (
+      | "private" -> let __assign_197 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KPrivate)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_197;
         __assign_197
       )
-      | "public" -> let __assign_198 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KPublic)))) (Obj.magic startPos)) in (
+      | "public" -> let __assign_198 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KPublic)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_198;
         __assign_198
       )
-      | "return" -> let __assign_199 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KReturn)))) (Obj.magic startPos)) in (
+      | "return" -> let __assign_199 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KReturn)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_199;
         __assign_199
       )
-      | "static" -> let __assign_200 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KStatic)))) (Obj.magic startPos)) in (
+      | "static" -> let __assign_200 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KStatic)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_200;
         __assign_200
       )
-      | "super" -> let __assign_201 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KSuper)))) (Obj.magic startPos)) in (
+      | "super" -> let __assign_201 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KSuper)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_201;
         __assign_201
       )
-      | "switch" -> let __assign_202 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KSwitch)))) (Obj.magic startPos)) in (
+      | "switch" -> let __assign_202 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KSwitch)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_202;
         __assign_202
       )
-      | "this" -> let __assign_203 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KThis)))) (Obj.magic startPos)) in (
+      | "this" -> let __assign_203 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KThis)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_203;
         __assign_203
       )
-      | "throw" -> let __assign_204 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KThrow)))) (Obj.magic startPos)) in (
+      | "throw" -> let __assign_204 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KThrow)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_204;
         __assign_204
       )
-      | "true" -> let __assign_205 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KTrue)))) (Obj.magic startPos)) in (
+      | "true" -> let __assign_205 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KTrue)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_205;
         __assign_205
       )
-      | "try" -> let __assign_206 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KTry)))) (Obj.magic startPos)) in (
+      | "try" -> let __assign_206 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KTry)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_206;
         __assign_206
       )
-      | "untyped" -> let __assign_207 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KUntyped)))) (Obj.magic startPos)) in (
+      | "untyped" -> let __assign_207 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KUntyped)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_207;
         __assign_207
       )
-      | "using" -> let __assign_208 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KUsing)))) (Obj.magic startPos)) in (
+      | "using" -> let __assign_208 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KUsing)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_208;
         __assign_208
       )
-      | "var" -> let __assign_209 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KVar)))) (Obj.magic startPos)) in (
+      | "var" -> let __assign_209 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KVar)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_209;
         __assign_209
       )
-      | "while" -> let __assign_210 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KWhile)))) (Obj.magic startPos)) in (
+      | "while" -> let __assign_210 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TKeyword (Obj.magic (HxKeyword.KWhile)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_210;
         __assign_210
       )
-      | _ -> let __assign_175 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TIdent (text : string))) (Obj.magic startPos)) in (
+      | _ -> let __assign_175 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TIdent (text : string))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_175;
         __assign_175
       ));
@@ -1049,7 +1049,7 @@ let readString = fun self (startPos : HxPos.t) -> try let __fallback_result_671 
             raise (HxRuntime.Hx_continue)
           )
         )) else ());
-        ignore (if c = 34 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TString (StringBuf.toString (Obj.magic buf) () : string))) (Obj.magic startPos))))) else ());
+        ignore (if c = 34 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TString ((StringBuf.toString (Obj.magic buf) () : string), false))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)))))) else ());
         ignore (if c = 92 then ignore ((
           ignore (if (Obj.magic self : t).index >= HxString.length ((Obj.magic self : t).src) then raise (HxRuntime.Hx_break) else ());
           let tempNumber7 = ref (0 : int) in (
@@ -1293,7 +1293,7 @@ let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let __fallback
             raise (HxRuntime.Hx_continue)
           )
         )) else ());
-        ignore (if c = 39 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TString (StringBuf.toString (Obj.magic buf) () : string))) (Obj.magic startPos))))) else ());
+        ignore (if c = 39 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TString ((StringBuf.toString (Obj.magic buf) () : string), true))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)))))) else ());
         ignore (if c = 92 then ignore ((
           ignore (if (Obj.magic self : t).index >= HxString.length ((Obj.magic self : t).src) then raise (HxRuntime.Hx_break) else ());
           let tempNumber7 = ref (0 : int) in (
@@ -1507,7 +1507,7 @@ let readRegexLiteral = fun self (startPos : HxPos.t) -> try let __fallback_resul
           )) with
             | HxRuntime.Hx_continue -> () done with
             | HxRuntime.Hx_break -> ());
-          raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (Obj.magic (HxTokenKind.TRegex ((StringBuf.toString (Obj.magic pattern) () : string), (StringBuf.toString (Obj.magic flags) () : string)))) (Obj.magic startPos))))
+          raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (Obj.magic (HxTokenKind.TRegex ((StringBuf.toString (Obj.magic pattern) () : string), (StringBuf.toString (Obj.magic flags) () : string)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)))))
         )) else ());
         StringBuf.addChar (Obj.magic pattern) c
       )
@@ -1696,18 +1696,15 @@ let readNumber = fun self (startPos : HxPos.t) -> try let __fallback_result_392 
         )) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
-        let numericEnd = (Obj.magic self : t).index in (
-          ignore (consumeNumericSuffix (Obj.magic self) ());
-          let text = (normalizeNumberText (HxString.substring ((Obj.magic self : t).src) start numericEnd : string) : string) in let value = Std.parseInt (text : string) in let tempNumber6 = ref (0 : int) in (
-            ignore (if value == HxRuntime.hx_null then let __assign_268 = 0 in (
-              tempNumber6 := __assign_268;
-              __assign_268
-            ) else let __assign_269 = let __nullable_int_270 = value in if __nullable_int_270 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_270 in (
-              tempNumber6 := __assign_269;
-              __assign_269
-            ));
-            raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (Obj.magic (HxTokenKind.TInt (!tempNumber6))) (Obj.magic startPos))))
-          )
+        let numericEnd = (Obj.magic self : t).index in let suffix = (consumeNumericSuffix (Obj.magic self) () : string) in let text = (normalizeNumberText (HxString.substring ((Obj.magic self : t).src) start numericEnd : string) : string) in let value = Std.parseInt (text : string) in let tempNumber6 = ref (0 : int) in (
+          ignore (if value == HxRuntime.hx_null then let __assign_268 = 0 in (
+            tempNumber6 := __assign_268;
+            __assign_268
+          ) else let __assign_269 = let __nullable_int_270 = value in if __nullable_int_270 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_270 in (
+            tempNumber6 := __assign_269;
+            __assign_269
+          ));
+          raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (Obj.magic (HxTokenKind.TInt (!tempNumber6))) (Obj.magic startPos) (text : string) (suffix : string))))
         )
       )) else ());
       let isFloat = ref false in let tempLeft3 = ref (0 : int) in (
@@ -2042,7 +2039,7 @@ let readNumber = fun self (startPos : HxPos.t) -> try let __fallback_result_392 
                     )
                   )) else ());
                   let numericEnd = (Obj.magic self : t).index in let suffix = (consumeNumericSuffix (Obj.magic self) () : string) in let text = (normalizeNumberText (HxString.substring ((Obj.magic self : t).src) start numericEnd : string) : string) in (
-                    ignore (if !isFloat || StringTools.startsWith (HxString.toLowerCase suffix () : string) ("f" : string) then ignore (let value = Std.parseFloat (text : string) in raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (Obj.magic (HxTokenKind.TFloat value)) (Obj.magic startPos))))) else ());
+                    ignore (if !isFloat || StringTools.startsWith (HxString.toLowerCase suffix () : string) ("f" : string) then ignore (let value = Std.parseFloat (text : string) in raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (Obj.magic (HxTokenKind.TFloat value)) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)))))) else ());
                     let value = Std.parseInt (text : string) in let tempNumber20 = ref (0 : int) in (
                       ignore (if value == HxRuntime.hx_null then let __assign_388 = 0 in (
                         tempNumber20 := __assign_388;
@@ -2051,7 +2048,7 @@ let readNumber = fun self (startPos : HxPos.t) -> try let __fallback_result_392 
                         tempNumber20 := __assign_389;
                         __assign_389
                       ));
-                      HxToken.create (Obj.magic (HxTokenKind.TInt (!tempNumber20))) (Obj.magic startPos)
+                      HxToken.create (Obj.magic (HxTokenKind.TInt (!tempNumber20))) (Obj.magic startPos) (text : string) (suffix : string)
                     )
                   )
                 )
@@ -2345,7 +2342,7 @@ let readLeadingDotNumber = fun self (startPos : HxPos.t) -> let start = (Obj.mag
       )) else ());
       let numericEnd = (Obj.magic self : t).index in (
         ignore (consumeNumericSuffix (Obj.magic self) ());
-        let text = (normalizeNumberText (HxString.substring ((Obj.magic self : t).src) start numericEnd : string) : string) in HxToken.create (Obj.magic (HxTokenKind.TFloat (Std.parseFloat (text : string)))) (Obj.magic startPos)
+        let text = (normalizeNumberText (HxString.substring ((Obj.magic self : t).src) start numericEnd : string) : string) in HxToken.create (Obj.magic (HxTokenKind.TFloat (Std.parseFloat (text : string)))) (Obj.magic startPos) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
       )
     )
   )
@@ -2354,7 +2351,7 @@ let readLeadingDotNumber = fun self (startPos : HxPos.t) -> let start = (Obj.mag
 let next = fun self () -> try let __fallback_result_977 = (
   ignore (skipWhitespaceAndComments (Obj.magic self) ());
   let p = Obj.magic (HxPos.create ((Obj.magic self : t).index) ((Obj.magic self : t).line) ((Obj.magic self : t).column)) in (
-    ignore (if (Obj.magic self : t).index >= HxString.length ((Obj.magic self : t).src) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TEof)) (Obj.magic p))))) else ());
+    ignore (if (Obj.magic self : t).index >= HxString.length ((Obj.magic self : t).src) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TEof)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)))))) else ());
     let tempNumber = ref (0 : int) in (
       ignore (let i = (Obj.magic self : t).index in if i >= HxString.length ((Obj.magic self : t).src) then let __assign_817 = -1 in (
         tempNumber := __assign_817;
@@ -2403,7 +2400,7 @@ let next = fun self () -> try let __fallback_result_977 = (
                 c2
               )
             ));
-            let __assign_851 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TLParen)) (Obj.magic p)) in (
+            let __assign_851 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TLParen)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
               tempResult := __assign_851;
               __assign_851
             )
@@ -2438,7 +2435,7 @@ let next = fun self () -> try let __fallback_result_977 = (
                 c2
               )
             ));
-            let __assign_865 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TRParen)) (Obj.magic p)) in (
+            let __assign_865 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TRParen)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
               tempResult := __assign_865;
               __assign_865
             )
@@ -2473,7 +2470,7 @@ let next = fun self () -> try let __fallback_result_977 = (
                 c2
               )
             ));
-            let __assign_879 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TComma)) (Obj.magic p)) in (
+            let __assign_879 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TComma)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
               tempResult := __assign_879;
               __assign_879
             )
@@ -2525,7 +2522,7 @@ let next = fun self () -> try let __fallback_result_977 = (
                   c2
                 )
               ));
-              let __assign_899 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TDot)) (Obj.magic p)) in (
+              let __assign_899 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TDot)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
                 tempResult := __assign_899;
                 __assign_899
               )
@@ -2561,7 +2558,7 @@ let next = fun self () -> try let __fallback_result_977 = (
                 c2
               )
             ));
-            let __assign_913 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TColon)) (Obj.magic p)) in (
+            let __assign_913 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TColon)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
               tempResult := __assign_913;
               __assign_913
             )
@@ -2596,7 +2593,7 @@ let next = fun self () -> try let __fallback_result_977 = (
                 c2
               )
             ));
-            let __assign_927 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TSemicolon)) (Obj.magic p)) in (
+            let __assign_927 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TSemicolon)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
               tempResult := __assign_927;
               __assign_927
             )
@@ -2631,7 +2628,7 @@ let next = fun self () -> try let __fallback_result_977 = (
                 c2
               )
             ));
-            let __assign_941 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TLBrace)) (Obj.magic p)) in (
+            let __assign_941 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TLBrace)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
               tempResult := __assign_941;
               __assign_941
             )
@@ -2666,7 +2663,7 @@ let next = fun self () -> try let __fallback_result_977 = (
                 c2
               )
             ));
-            let __assign_955 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TRBrace)) (Obj.magic p)) in (
+            let __assign_955 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TRBrace)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
               tempResult := __assign_955;
               __assign_955
             )
@@ -2718,7 +2715,7 @@ let next = fun self () -> try let __fallback_result_977 = (
                   c1
                 )
               ));
-              let __assign_975 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TOther c)) (Obj.magic p)) in (
+              let __assign_975 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TOther c)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
                 tempResult := __assign_975;
                 __assign_975
               )
@@ -2760,7 +2757,7 @@ let next = fun self () -> try let __fallback_result_977 = (
                 c1
               )
             ));
-            let __assign_835 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TOther c)) (Obj.magic p)) in (
+            let __assign_835 = Obj.magic (HxToken.create (Obj.magic (HxTokenKind.TOther c)) (Obj.magic p) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in (
               tempResult := __assign_835;
               __assign_835
             )
