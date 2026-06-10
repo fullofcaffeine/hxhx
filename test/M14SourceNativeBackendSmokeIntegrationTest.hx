@@ -5988,7 +5988,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final mainTypeContent = File.getContent(mainTypeSourcePath);
 			final reflectContent = File.getContent(reflectSourcePath);
 			assertContains(entryContent, "new Main()", "C# Issue4598 wrapper should construct the user Main type, not the entrypoint method");
-			assertContains(mainTypeContent, "public object a = 10;", "C# Issue4598 support type should preserve the field initializer");
+			assertContains(mainTypeContent, "public int a = 10;", "C# Issue4598 support type should preserve the typed field initializer");
 			assertContains(mainTypeContent, "case \"a\": return true;", "C# Issue4598 support type should expose read-only field metadata");
 			assertContains(reflectContent, "public static object setProperty", "C# Issue4598 Reflect shim should expose setProperty");
 			assertContains(reflectContent, "System.MemberAccessException", "C# Issue4598 Reflect shim should reject read-only field writes");

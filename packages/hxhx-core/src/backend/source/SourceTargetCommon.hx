@@ -8638,7 +8638,11 @@ class SourceTargetCommon {
 			if (emittedFields.exists(fieldName))
 				continue;
 			emittedFields.set(fieldName, true);
-			final prefix = HxFieldDecl.getIsStatic(field) ? bodyIndent + "  public static object " : bodyIndent + "  public object ";
+			final fieldType = csFieldType(field);
+			final prefix = HxFieldDecl.getIsStatic(field) ? bodyIndent + "  public static " + fieldType + " " : bodyIndent
+				+ "  public "
+				+ fieldType
+				+ " ";
 			out.push(prefix + fieldName + " = " + csFieldInitExpr(field) + ";");
 			if (metadataHasName(HxFieldDecl.getMetadata(field), "readOnly"))
 				readOnlyFields.push(fieldName);
@@ -8725,6 +8729,39 @@ class SourceTargetCommon {
 				renderExpr(Cs, init);
 			case _:
 				"null";
+		};
+	}
+
+	static function csFieldType(field:HxFieldDecl):String {
+		final hint = normalizeTypeHint(HxFieldDecl.getTypeHint(field));
+		final init = HxFieldDecl.getInit(field);
+		return switch (hint) {
+			case "Int" | "StdTypes.Int":
+				switch (init) {
+					case EInt(_): "int";
+					case _: "object";
+				}
+			case "Float" | "StdTypes.Float":
+				switch (init) {
+					case EInt(_) | EFloat(_): "double";
+					case _: "object";
+				}
+			case "Bool" | "StdTypes.Bool":
+				switch (init) {
+					case EBool(_): "bool";
+					case _: "object";
+				}
+			case "String" | "StdTypes.String":
+				switch (init) {
+					case EString(_) | ENull: "string";
+					case _: "object";
+				}
+			case "Array" | "StdTypes.Array":
+				csArrayRuntimeType();
+			case _ if (StringTools.startsWith(hint, "Array<") || StringTools.startsWith(hint, "StdTypes.Array<")):
+				csArrayRuntimeType();
+			case _:
+				"object";
 		};
 	}
 
