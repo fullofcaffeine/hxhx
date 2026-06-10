@@ -538,7 +538,10 @@ class SourceTargetCommon {
 	}
 
 	static function emitCsStandardStubs(sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
-		final stubs = [{packagePath: "cs", className: "Lib"}];
+		final stubs = [
+			{packagePath: "cs", className: "Lib"},
+			{packagePath: "haxe", className: "Serializer"}
+		];
 		for (stub in stubs) {
 			final key = csQualifiedClassName(stub.packagePath, stub.className);
 			if (seen.exists(key))
@@ -5163,7 +5166,10 @@ class SourceTargetCommon {
 			case Python:
 				if (pythonRuntimeMapType(typePath)) "Map(" + rendered + ")"; else safeType + "(" + rendered + ")";
 			case Java: "new " + safeType + "(" + rendered + ")";
-			case Cs: "new " + safeType + "(" + rendered + ")";
+			case Cs:
+				if (typePath == "Array" || typePath == "Array<T>") "new __HxArray(new object[] { "
+					+ rendered
+					+ " })"; else "new " + safeType + "(" + rendered + ")";
 			case Php:
 				final genericSample = phpGenericConstructorSample(typePath);
 				if (genericSample != null) "__hxhx_construct_like(" + genericSample + (rendered.length == 0 ? "" : ", " + rendered) + ")"; else
@@ -8687,6 +8693,15 @@ class SourceTargetCommon {
 			out.push(indent + "public static object AlwaysShowSuccessResults = \"AlwaysShowSuccessResults\";");
 			out.push(indent + "public static object NeverShowSuccessResults = \"NeverShowSuccessResults\";");
 		}
+		if (qualified == "haxe.Serializer") {
+			out.push(indent + "public static object USE_ENUM_INDEX = false;");
+			out.push(indent + "public static string run(object value) {");
+			out.push(indent + "  return System.Convert.ToString(value);");
+			out.push(indent + "}");
+			out.push(indent + "public string toString() {");
+			out.push(indent + "  return \"\";");
+			out.push(indent + "}");
+		}
 	}
 
 	static function csNestedImportStubNames(program:GenIrProgram, decl:HxModuleDecl, cls:HxClassDecl, className:String):Array<String> {
@@ -8770,6 +8785,35 @@ class SourceTargetCommon {
 		out.push("  }");
 		appendCsNamespaceClose(out, "unit");
 		return out.join("\n");
+	}
+
+	static function appendCsMainSupportMembers(out:Array<String>, decl:HxModuleDecl, indent:String, className:String):Void {
+		final emitted = new Map<String, Bool>();
+		for (fn in HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl))) {
+			final fnName = HxFunctionDecl.getName(fn);
+			if (fnName == "main"
+				|| fnName == "new"
+				|| !HxFunctionDecl.getIsStatic(fn)
+				|| HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0)
+				continue;
+			final methodName = sanitizeCsIdentifier(fnName);
+			final args = HxFunctionDecl.getArgs(fn);
+			final key = methodName + "#" + Std.string(args.length);
+			if (emitted.exists(key))
+				continue;
+			emitted.set(key, true);
+			out.push(indent + "public static object " + methodName + "(" + csFunctionArgs(args) + ") {");
+			final body = renderFunctionStmts(Cs, HxFunctionDecl.getBody(fn), indent + "  ", className + "." + methodName);
+			var hasReturn = false;
+			for (line in body) {
+				if (StringTools.startsWith(StringTools.trim(line), "return "))
+					hasReturn = true;
+				out.push(line);
+			}
+			if (!hasReturn)
+				out.push(indent + "  return null;");
+			out.push(indent + "}");
+		}
 	}
 
 	static function appendCsUtestRunnerAddCasesStubOnce(out:Array<String>, indent:String, emittedMethods:Map<String, Bool>):Void {
@@ -15362,6 +15406,7 @@ class SourceTargetCommon {
 				final entryClassName = csEntryClassName(className);
 				appendCsNamespaceOpen(lines, packagePath);
 				lines.push(bodyIndent + "public class " + entryClassName + " {");
+				appendCsMainSupportMembers(lines, decl, bodyIndent + "  ", className);
 				lines.push(bodyIndent + "  public static void Main(string[] __hxhx_cli_args) {");
 				if (className == "UtilityProcess") {
 					appendCsUtilityProcessRuntime(lines, bodyIndent, entryClassName);

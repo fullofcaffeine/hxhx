@@ -509,6 +509,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csEntrySupportMembersProgram():GenIrProgram {
+		final src = [
+			"class HelperApi {",
+			"  public static function accept(value:Dynamic) {",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    accept(new Array<String>());",
+			"    accept(new haxe.Serializer());",
+			"    HelperApi.accept(new haxe.Serializer());",
+			"  }",
+			"",
+			"  static function accept(value:Dynamic) {",
+			"    HelperApi.accept(value);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csUtilityProcessCallableRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5994,6 +6018,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "var out_ = \"ok\";", "C# locals named reserved keywords should be sanitized at declaration sites");
 		assertContains(content, "System.Console.WriteLine(out_);", "C# locals named reserved keywords should be sanitized at use sites");
 		assertNotContains(content, "var out = \"ok\";", "C# source should not declare reserved keyword locals");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsEntrySupportMembersAndSerializer():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_entry_support_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		try {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csEntrySupportMembersProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final mainPath = Path.join([outputDir, "src", "Main.cs"]);
+			final serializerPath = Path.join([outputDir, "src", "haxe", "Serializer.cs"]);
+			assertTrue(FileSystem.exists(mainPath), "C# source backend should emit the entry class source");
+			assertTrue(FileSystem.exists(serializerPath), "C# source backend should emit haxe.Serializer support");
+			final mainContent = File.getContent(mainPath);
+			final serializerContent = File.getContent(serializerPath);
+			assertContains(mainContent, "public static object accept(object value) {", "C# entry class should emit static helper methods declared beside main");
+			assertContains(mainContent, "HelperApi.accept(value);", "C# entry helper methods should preserve their source body");
+			assertContains(mainContent, "accept(new __HxArray(new object[] {  }));", "C# empty Array constructors should lower to the runtime array wrapper");
+			assertContains(mainContent, "accept(new haxe.Serializer());", "C# entry main should keep haxe.Serializer construction callable");
+			assertContains(serializerContent, "namespace haxe", "C# haxe.Serializer support should use the haxe namespace");
+			assertContains(serializerContent, "public class Serializer", "C# haxe.Serializer support should declare the Serializer class");
+			assertContains(serializerContent, "public static string run(object value)", "C# haxe.Serializer support should expose run");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 		deleteRecursive(tmpRoot);
 	}
 
@@ -11960,6 +12019,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsRuntimeShapeStubs();
 		assertCsImportedUtestShape();
 		assertCsSysExitShape();
+		assertCsEntrySupportMembersAndSerializer();
 		assertJavaLambdaSequenceCallback();
 		assertCsLambdaSequenceCallback();
 		assertJavaSupportClassJarPackaging();
