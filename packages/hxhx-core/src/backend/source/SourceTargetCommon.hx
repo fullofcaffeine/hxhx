@@ -8530,6 +8530,7 @@ class SourceTargetCommon {
 			out.push(prefix + fieldName + " = null;");
 		}
 		final isUtestReport = csIsUtestReport(packagePath, className);
+		final isUtestRunner = csIsUtestRunner(packagePath, className);
 		if (isUtestReport) {
 			if (!emittedFields.exists("displayHeader"))
 				out.push(bodyIndent + "  public object displayHeader = null;");
@@ -8540,8 +8541,13 @@ class SourceTargetCommon {
 		final emittedMethods = new Map<String, Bool>();
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			final fnName = HxFunctionDecl.getName(fn);
-			if (fnName == "main" || HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0)
+			if (fnName == "main")
 				continue;
+			if (HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0) {
+				if (isUtestRunner && fnName == "addCases")
+					appendCsUtestRunnerAddCasesStubOnce(out, bodyIndent + "  ", emittedMethods);
+				continue;
+			}
 			final args = HxFunctionDecl.getArgs(fn);
 			if (fnName == "new") {
 				sawConstructor = true;
@@ -8585,6 +8591,8 @@ class SourceTargetCommon {
 			out.push(bodyIndent + "  public " + className + "() {");
 			out.push(bodyIndent + "  }");
 		}
+		if (isUtestRunner)
+			appendCsUtestRunnerAddCasesStubOnce(out, bodyIndent + "  ", emittedMethods);
 		for (nested in csNestedImportStubNames(program, decl, cls, rawClassName))
 			appendCsNestedImportStub(out, bodyIndent + "  ", nested);
 		out.push(bodyIndent + "}");
@@ -8594,6 +8602,10 @@ class SourceTargetCommon {
 
 	static function csIsUtestReport(packagePath:String, className:String):Bool {
 		return csQualifiedClassName(packagePath, className) == "utest.ui.Report";
+	}
+
+	static function csIsUtestRunner(packagePath:String, className:String):Bool {
+		return csQualifiedClassName(packagePath, className) == "utest.Runner";
 	}
 
 	static function renderCsImportStub(packagePath:String, className:String, ?nestedNames:Array<String>):String {
@@ -8655,6 +8667,7 @@ class SourceTargetCommon {
 			out.push(indent + "public object addCase(params object[] args) {");
 			out.push(indent + "  return null;");
 			out.push(indent + "}");
+			appendCsUtestRunnerAddCasesStub(out, indent);
 			out.push(indent + "public object run(params object[] args) {");
 			out.push(indent + "  return null;");
 			out.push(indent + "}");
@@ -8733,6 +8746,7 @@ class SourceTargetCommon {
 			out.push("    public object addCase(params object[] args) {");
 			out.push("      return null;");
 			out.push("    }");
+			appendCsUtestRunnerAddCasesStub(out, "    ");
 			out.push("    public object run(params object[] args) {");
 			out.push("      return null;");
 			out.push("    }");
@@ -8756,6 +8770,20 @@ class SourceTargetCommon {
 		out.push("  }");
 		appendCsNamespaceClose(out, "unit");
 		return out.join("\n");
+	}
+
+	static function appendCsUtestRunnerAddCasesStubOnce(out:Array<String>, indent:String, emittedMethods:Map<String, Bool>):Void {
+		final key = "addCases#varargs";
+		if (emittedMethods.exists(key))
+			return;
+		emittedMethods.set(key, true);
+		appendCsUtestRunnerAddCasesStub(out, indent);
+	}
+
+	static function appendCsUtestRunnerAddCasesStub(out:Array<String>, indent:String):Void {
+		out.push(indent + "public object addCases(params object[] args) {");
+		out.push(indent + "  return null;");
+		out.push(indent + "}");
 	}
 
 	static function appendCsNamespaceOpen(out:Array<String>, packagePath:String):Void {

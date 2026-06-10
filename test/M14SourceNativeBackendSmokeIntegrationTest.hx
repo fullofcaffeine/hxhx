@@ -438,6 +438,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var report = Report.create(runner);",
 			"    report.displayHeader = HeaderDisplayMode.AlwaysShowHeader;",
 			"    report.displaySuccessResults = SuccessResultsDisplayMode.NeverShowSuccessResults;",
+			"    runner.addCases(\"tests/threads\");",
 			"    runner.run();",
 			"  }",
 			"}",
@@ -446,6 +447,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"package utest;",
 			"class Runner {",
 			"  public function new() {}",
+			"  public macro function addCases(path:String, ?recursive:Bool = true) {",
+			"    body_parse_error;",
+			"  }",
 			"  public function run() {}",
 			"}",
 		].join("\n");
@@ -5935,10 +5939,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				"C# imported utest display-mode types should be brought into scope for unqualified enum carriers");
 			assertContains(mainContent, "new Runner()", "C# sys-style utest import shape should keep unqualified Runner construction");
 			assertContains(mainContent, "Report.create(runner)", "C# sys-style utest import shape should keep unqualified Report factory calls");
+			assertContains(mainContent, "runner.addCases(\"tests/threads\");",
+				"C# threads-style utest Runner.addCases calls should remain callable at runtime");
 			assertContains(mainContent, "report.displayHeader = HeaderDisplayMode.AlwaysShowHeader;",
 				"C# imported HeaderDisplayMode assignment should keep the source-level enum carrier shape");
 			assertContains(mainContent, "report.displaySuccessResults = SuccessResultsDisplayMode.NeverShowSuccessResults;",
 				"C# imported SuccessResultsDisplayMode assignment should keep the source-level enum carrier shape");
+			final runnerContent = File.getContent(runnerPath);
+			assertContains(runnerContent, "public object addCases(params object[] args)",
+				"C# utest Runner support should expose addCases as a neutral runtime stub for threads suite macro calls");
+			assertContains(runnerContent, "return null;", "C# neutral utest Runner.addCases stub should not execute macro source");
+			assertNotContains(runnerContent, "body_parse_error", "C# utest Runner.addCases should not leak macro-only source body");
 			assertContains(reportContent, "public object displayHeader", "C# utest Report support should expose displayHeader for sys report configuration");
 			assertContains(reportContent, "public object displaySuccessResults",
 				"C# utest Report support should expose displaySuccessResults for sys report configuration");
