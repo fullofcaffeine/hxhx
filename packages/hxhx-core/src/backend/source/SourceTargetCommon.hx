@@ -2306,7 +2306,7 @@ class SourceTargetCommon {
 				if (target == Cs) {
 					switch (receiver) {
 						case EIdent("Sys") if (field == "args" && args.length == 0):
-							return "args";
+							return "__hxhx_cli_args";
 						case EIdent("Sys") if (field == "exit" && args.length == 1):
 							return "System.Environment.Exit(" + renderExpr(Cs, args[0]) + ")";
 						case _:
@@ -7322,24 +7322,31 @@ class SourceTargetCommon {
 				}
 				out.push(indent + "}");
 			case Java:
-				if (count == 0)
-					return out;
-				for (i in 0...count) {
-					final lowered = lowerSourceSwitchPattern(target, patterns[i], scrutineeExpr);
-					final keyword = i == 0 ? "if" : "} else if";
-					out.push(indent + keyword + " (" + lowered.cond + ") {");
-					for (binding in lowered.bindings) {
-						final bindName = sanitizeTypeName(binding.name);
-						out.push(childIndent + varDecl(target, bindName, binding.expr));
-					}
-					for (line in renderStmt(target, bodies[i], childIndent))
-						out.push(line);
-				}
-				out.push(indent + "}");
-			case Cs | Lua:
+				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out);
+			case Cs:
+				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out);
+			case Lua:
 				throw targetLabel(target) + " source backend MVP unsupported statement: SSwitch";
 		}
 		return out;
+	}
+
+	static function renderCStyleSwitchStmtInto(target:SourceNativeTarget, scrutineeExpr:String, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
+			count:Int, indent:String, childIndent:String, out:Array<String>):Void {
+		if (count == 0)
+			return;
+		for (i in 0...count) {
+			final lowered = lowerSourceSwitchPattern(target, patterns[i], scrutineeExpr);
+			final keyword = i == 0 ? "if" : "} else if";
+			out.push(indent + keyword + " (" + lowered.cond + ") {");
+			for (binding in lowered.bindings) {
+				final bindName = sanitizeTypeName(binding.name);
+				out.push(childIndent + varDecl(target, bindName, binding.expr));
+			}
+			for (line in renderStmt(target, bodies[i], childIndent))
+				out.push(line);
+		}
+		out.push(indent + "}");
 	}
 
 	static function lowerSourceSwitchPattern(target:SourceNativeTarget, pattern:HxSwitchPattern, scrutinee:String):SourceSwitchPatternLowered {
@@ -7463,11 +7470,13 @@ class SourceTargetCommon {
 				switch (target) {
 					case Java:
 						"Std.parseInt(" + scrutinee + ")";
+					case Cs:
+						"int.Parse(" + scrutinee + ")";
 					case Python:
 						"int(" + scrutinee + ")";
 					case Php:
 						"intval(" + scrutinee + ")";
-					case Cs | Lua:
+					case Lua:
 						null;
 				}
 			case "_.slice(0, 1)" | "_.slice(0,1)":
@@ -7573,7 +7582,9 @@ class SourceTargetCommon {
 				];
 			case Java:
 				[scrutinee + " != null", scrutinee + ".length == " + Std.string(count)];
-			case Cs, Lua:
+			case Cs:
+				[scrutinee + " != null", scrutinee + ".Length == " + Std.string(count)];
+			case Lua:
 				throw targetLabel(target) + " source backend MVP unsupported switch pattern: PArray";
 		};
 		final bindings = new Array<SourceSwitchPatternBinding>();
@@ -15128,7 +15139,7 @@ class SourceTargetCommon {
 				final entryClassName = csEntryClassName(className);
 				appendCsNamespaceOpen(lines, packagePath);
 				lines.push(bodyIndent + "public class " + entryClassName + " {");
-				lines.push(bodyIndent + "  public static void Main(string[] args) {");
+				lines.push(bodyIndent + "  public static void Main(string[] __hxhx_cli_args) {");
 				for (line in renderFunctionStmts(target, body, "    ", entryClassName + ".Main"))
 					lines.push(bodyIndent + line);
 				lines.push(bodyIndent + "  }");

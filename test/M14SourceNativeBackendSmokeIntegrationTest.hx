@@ -5909,7 +5909,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(csSysExitProgram(), new BackendContext(tmpRoot, null, "ExitCode", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "ExitCode.cs"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "System.Environment.Exit(int.Parse(args[0]));", "C# sys exit-code helper should lower to native args + parseInt APIs");
+		assertContains(content, "System.Environment.Exit(int.Parse(__hxhx_cli_args[0]));",
+			"C# sys exit-code helper should lower to native entrypoint args + parseInt APIs");
 		assertNotContains(content, "Sys.", "C# sys exit-code helper should not leak unresolved Sys class references");
 		assertNotContains(content, "Std.parseInt", "C# Std.parseInt should not leak an unresolved Haxe runtime reference");
 		deleteRecursive(tmpRoot);
@@ -9584,6 +9585,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertCsUtilityProcessSwitchStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_utility_process_switch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(javaUtilityProcessRuntimeProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "UtilityProcess.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "Main(string[] __hxhx_cli_args)", "C# entrypoint args should use an internal name so Haxe locals named args still compile");
+		assertContains(content, "var args = __hxhx_cli_args;", "C# Sys.args should lower to the internal entrypoint args value");
+		assertNotContains(content, "var args = args;", "C# UtilityProcess should not redeclare the entrypoint args parameter");
+		assertContains(content, "if (args != null && args.Length == 1", "C# array switch statements should lower array length guards");
+		assertContains(content, "var code = int.Parse(args[0]);", "C# switch extractor patterns should bind Std.parseInt results");
+		assertContains(content, "System.Environment.Exit(code);", "C# UtilityProcess switch branch should keep Sys.exit lowering");
+		assertContains(content, "} else if (true) {", "C# wildcard switch branches should lower as an else-if catch-all");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertJavaUtilityProcessRuntime():Void {
 		if (!commandExists("javac") || !commandExists("jar") || !commandExists("java"))
 			return;
@@ -12032,6 +12051,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertUnsupportedSwitchGuardExpression();
 		assertSwitchStatement();
 		assertJavaArraySwitchStatement();
+		assertCsUtilityProcessSwitchStatement();
 		assertJavaUtilityProcessRuntime();
 		assertJavaFileSystemFullPathResolvesSymlink();
 		assertPhpSwitchStatement();
