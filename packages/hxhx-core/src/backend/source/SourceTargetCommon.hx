@@ -283,22 +283,28 @@ class SourceTargetCommon {
 
 	static function emitCsExecutable(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
 		final sourceDir = Path.join([context.outputDir, "src"]);
-		final sourcePath = Path.join([sourceDir, className + ".cs"]);
+		final mainPackage = HxModuleDecl.getPackagePath(decl);
+		final sourcePath = csSourcePath(sourceDir, mainPackage, className);
 		final exePath = csExePath(context.outputDir, className, context.outputFileHint, context.hasDefine("debug"));
-		ensureParentDirectory(sourcePath);
+		ensureDirectory(sourceDir);
 		ensureParentDirectory(exePath);
-		sys.io.File.saveContent(sourcePath, renderProgram(Cs, program, context, decl, className, body));
+		final sourcePaths = emitCsSourceSet(program, context, sourceDir, decl, className, body);
 		final compiler = csCompilerCommand();
 		if (compiler == null)
 			throw "C# source backend MVP executable packaging requires `mcs` or `csc` on PATH";
-		final args = compiler == "csc" ? ["-nologo", "-out:" + exePath, sourcePath] : ["-out:" + exePath, sourcePath];
+		final args = compiler == "csc" ? ["-nologo", "-out:" + exePath].concat(sourcePaths) : ["-out:" + exePath].concat(sourcePaths);
 		final code = Sys.command(compiler, args);
 		if (code != 0)
 			throw "C# source backend MVP executable packaging failed with exit code " + code;
-		return new EmitResult(exePath, [
+		final artifacts = [
 			new EmitArtifact("entry_cs_source", sourcePath),
 			new EmitArtifact("entry_cs_exe", exePath)
-		], false);
+		];
+		for (path in sourcePaths) {
+			if (path != sourcePath)
+				artifacts.push(new EmitArtifact("support_cs_source", path));
+		}
+		return new EmitResult(exePath, artifacts, false);
 	}
 
 	static function emitJavaJar(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
@@ -392,6 +398,87 @@ class SourceTargetCommon {
 				return candidate;
 		}
 		return null;
+	}
+
+	static function emitCsSourceSet(program:GenIrProgram, context:BackendContext, sourceDir:String, mainDecl:HxModuleDecl, mainClassName:String,
+			mainBody:Array<HxStmt>):Array<String> {
+		final sourcePaths = new Array<String>();
+		final seen = new Map<String, Bool>();
+		final mainPackage = HxModuleDecl.getPackagePath(mainDecl);
+		final mainPath = csSourcePath(sourceDir, mainPackage, mainClassName);
+		ensureParentDirectory(mainPath);
+		sys.io.File.saveContent(mainPath, renderProgram(Cs, program, context, mainDecl, mainClassName, mainBody));
+		sourcePaths.push(mainPath);
+		seen.set(csQualifiedClassName(mainPackage, mainClassName), true);
+		for (typed in program.getTypedModules()) {
+			final moduleDecl = typed.getParsed().getDecl();
+			if (isStdSourceFile(typed.getParsed().getFilePath()))
+				continue;
+			final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final className = sanitizeCsIdentifier(HxClassDecl.getName(cls));
+				final key = csQualifiedClassName(packagePath, className);
+				if (seen.exists(key) || isCompileTimeOnlySupportClass(cls))
+					continue;
+				seen.set(key, true);
+				final path = csSourcePath(sourceDir, packagePath, className);
+				ensureParentDirectory(path);
+				sys.io.File.saveContent(path, renderCsSupportClass(moduleDecl, cls));
+				sourcePaths.push(path);
+			}
+		}
+		emitCsImportStubs(program, sourceDir, sourcePaths, seen);
+		emitCsRunciHelperStubs(sourceDir, sourcePaths, seen);
+		return sourcePaths;
+	}
+
+	static function emitCsImportStubs(program:GenIrProgram, sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
+		for (typed in program.getTypedModules()) {
+			for (rawImport in HxModuleDecl.getImports(typed.getParsed().getDecl())) {
+				final clean = csTypePath(rawImport);
+				if (!csImportStubIsEligible(clean) || seen.exists(clean))
+					continue;
+				final lastDot = clean.lastIndexOf(".");
+				final packagePath = clean.substr(0, lastDot);
+				final className = clean.substr(lastDot + 1);
+				final stubClassName = className == "*" ? "HxWildcardStub" : className;
+				final path = csSourcePath(sourceDir, packagePath, stubClassName);
+				seen.set(clean, true);
+				if (sys.FileSystem.exists(path)) {
+					sourcePaths.push(path);
+					continue;
+				}
+				ensureParentDirectory(path);
+				sys.io.File.saveContent(path, renderCsImportStub(packagePath, className));
+				sourcePaths.push(path);
+			}
+		}
+	}
+
+	static function emitCsRunciHelperStubs(sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
+		final helpers = [
+			"TestBytes",
+			"TestIO",
+			"TestMisc",
+			"TestResource",
+			"TestSerialize",
+			"UnitBuilder",
+			"TestIssues"
+		];
+		for (className in helpers) {
+			final key = csQualifiedClassName("unit", className);
+			if (seen.exists(key))
+				continue;
+			seen.set(key, true);
+			final path = csSourcePath(sourceDir, "unit", className);
+			if (sys.FileSystem.exists(path)) {
+				sourcePaths.push(path);
+				continue;
+			}
+			ensureParentDirectory(path);
+			sys.io.File.saveContent(path, renderCsRunciHelperStub(className));
+			sourcePaths.push(path);
+		}
 	}
 
 	static function emitJavaLibrarySourceSet(program:GenIrProgram, sourceDir:String):Array<String> {
@@ -599,6 +686,49 @@ class SourceTargetCommon {
 		].concat([cleanClass]).join(".");
 	}
 
+	static function csSourcePath(sourceDir:String, packagePath:String, className:String):String {
+		final cleanClass = sanitizeCsIdentifier(className);
+		if (packagePath == null || packagePath.length == 0)
+			return Path.join([sourceDir, cleanClass + ".cs"]);
+		final parts = [
+			for (part in packagePath.split("."))
+				sanitizeCsIdentifier(part)
+		];
+		return Path.join([sourceDir].concat(parts).concat([cleanClass + ".cs"]));
+	}
+
+	static function csQualifiedClassName(packagePath:String, className:String):String {
+		final cleanClass = sanitizeCsIdentifier(className);
+		if (packagePath == null || packagePath.length == 0)
+			return cleanClass;
+		return [
+			for (part in packagePath.split("."))
+				sanitizeCsIdentifier(part)
+		].concat([cleanClass]).join(".");
+	}
+
+	static function csTypePath(path:String):String {
+		if (path == null || path.length == 0)
+			return "";
+		return [
+			for (part in path.split("."))
+				part == "*" ? "*" : sanitizeCsIdentifier(part)
+		].join(".");
+	}
+
+	static function csImportStubIsEligible(path:String):Bool {
+		if (path == null || path.length == 0 || path.indexOf(".") <= 0 || path.indexOf("*") >= 0)
+			return false;
+		return !csImportPathIsBcl(path);
+	}
+
+	static function csImportPathIsBcl(path:String):Bool {
+		return path == "System"
+			|| StringTools.startsWith(path, "System.")
+			|| path == "Microsoft"
+			|| StringTools.startsWith(path, "Microsoft.");
+	}
+
 	static function sanitizeTypeName(name:String):String {
 		final s = name == null || name.length == 0 ? "Main" : name;
 		final out = new StringBuf();
@@ -613,6 +743,11 @@ class SourceTargetCommon {
 	static function sanitizeJavaIdentifier(name:String):String {
 		final clean = sanitizeTypeName(name);
 		return isJavaReservedIdentifier(clean) ? clean + "_" : clean;
+	}
+
+	static function sanitizeCsIdentifier(name:String):String {
+		final clean = sanitizeTypeName(name);
+		return isCsReservedIdentifier(clean) ? clean + "_" : clean;
 	}
 
 	static function sanitizePythonIdentifier(name:String):String {
@@ -644,6 +779,20 @@ class SourceTargetCommon {
 		}
 	}
 
+	static function isCsReservedIdentifier(name:String):Bool {
+		return switch (name == null ? "" : name) {
+			case "abstract" | "as" | "base" | "bool" | "break" | "byte" | "case" | "catch" | "char" | "checked" | "class" | "const" | "continue" | "decimal" |
+				"default" | "delegate" | "do" | "double" | "else" | "enum" | "event" | "explicit" | "extern" | "false" | "finally" | "fixed" | "float" |
+				"for" | "foreach" | "goto" | "if" | "implicit" | "in" | "int" | "interface" | "internal" | "is" | "lock" | "long" | "namespace" | "new" |
+				"null" | "object" | "operator" | "out" | "override" | "params" | "private" | "protected" | "public" | "readonly" | "ref" | "return" |
+				"sbyte" | "sealed" | "short" | "sizeof" | "stackalloc" | "static" | "string" | "struct" | "switch" | "this" | "throw" | "true" | "try" |
+				"typeof" | "uint" | "ulong" | "unchecked" | "unsafe" | "ushort" | "using" | "virtual" | "void" | "volatile" | "while":
+				true;
+			case _:
+				false;
+		}
+	}
+
 	static function sanitizeTypeNameForTarget(target:SourceNativeTarget, name:String):String {
 		return switch (target) {
 			case Php:
@@ -652,7 +801,9 @@ class SourceTargetCommon {
 				sanitizeJavaIdentifier(name);
 			case Python:
 				sanitizePythonIdentifier(name);
-			case Cs, Lua:
+			case Cs:
+				sanitizeCsIdentifier(name);
+			case Lua:
 				sanitizeTypeName(name);
 		};
 	}
@@ -1645,7 +1796,7 @@ class SourceTargetCommon {
 			case Php: "$" + sanitizePhpValueName(name);
 			case Python: sanitizePythonIdentifier(name);
 			case Java: sanitizeJavaIdentifier(name);
-			case Cs: clean;
+			case Cs: sanitizeCsIdentifier(name);
 			case Lua: clean;
 		};
 	}
@@ -1673,7 +1824,8 @@ class SourceTargetCommon {
 		final safeField = switch (target) {
 			case Java: sanitizeJavaIdentifier(field);
 			case Python: sanitizePythonIdentifier(field);
-			case Php, Cs, Lua: sanitizeTypeName(field);
+			case Cs: sanitizeCsIdentifier(field);
+			case Php, Lua: sanitizeTypeName(field);
 		};
 		return switch (target) {
 			case Php: receiver + "->" + safeField;
@@ -4879,7 +5031,9 @@ class SourceTargetCommon {
 		return switch (target) {
 			case Php:
 				sanitizePhpTypePath(path);
-			case Python, Java, Cs, Lua:
+			case Cs:
+				csTypePath(path);
+			case Python, Java, Lua:
 				sanitizeDottedPath(path);
 		};
 	}
@@ -8072,6 +8226,141 @@ class SourceTargetCommon {
 		}
 		out.push("}");
 		return out.join("\n");
+	}
+
+	static function renderCsSupportClass(decl:HxModuleDecl, cls:HxClassDecl):String {
+		final out = ["// Generated by hxhx Stage3 C# source backend MVP"];
+		final packagePath = HxModuleDecl.getPackagePath(decl);
+		final className = sanitizeCsIdentifier(HxClassDecl.getName(cls));
+		final bodyIndent = packagePath == null || packagePath.length == 0 ? "" : "  ";
+		appendCsNamespaceOpen(out, packagePath);
+		out.push(bodyIndent + "public class " + className + " {");
+		final emittedFields = new Map<String, Bool>();
+		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = sanitizeCsIdentifier(HxFieldDecl.getName(field));
+			if (emittedFields.exists(fieldName))
+				continue;
+			emittedFields.set(fieldName, true);
+			final prefix = HxFieldDecl.getIsStatic(field) ? bodyIndent + "  public static object " : bodyIndent + "  public object ";
+			out.push(prefix + fieldName + " = null;");
+		}
+		var sawConstructor = false;
+		final emittedMethods = new Map<String, Bool>();
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final fnName = HxFunctionDecl.getName(fn);
+			if (fnName == "main" || HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0)
+				continue;
+			final args = HxFunctionDecl.getArgs(fn);
+			if (fnName == "new") {
+				sawConstructor = true;
+				for (count in javaStubArityRange(args)) {
+					final key = "new#" + Std.string(count);
+					if (emittedMethods.exists(key))
+						continue;
+					emittedMethods.set(key, true);
+					out.push(bodyIndent + "  public " + className + "(" + csFunctionArgs(args, count) + ") {");
+					out.push(bodyIndent + "  }");
+				}
+				continue;
+			}
+			final methodName = sanitizeCsIdentifier(fnName);
+			for (count in javaStubArityRange(args)) {
+				final key = methodName + "#" + Std.string(count);
+				if (emittedMethods.exists(key))
+					continue;
+				emittedMethods.set(key, true);
+				final prefix = HxFunctionDecl.getIsStatic(fn) ? bodyIndent + "  public static object " : bodyIndent + "  public object ";
+				out.push(prefix + methodName + "(" + csFunctionArgs(args, count) + ") {");
+				if (HxFunctionDecl.getIsStatic(fn) && csCreateReturnsNewOwner(fn, className))
+					out.push(bodyIndent + "    return new " + className + "();");
+				else
+					out.push(bodyIndent + "    return null;");
+				out.push(bodyIndent + "  }");
+			}
+			final varargsKey = methodName + "#varargs";
+			if (!emittedMethods.exists(varargsKey)) {
+				emittedMethods.set(varargsKey, true);
+				final prefix = HxFunctionDecl.getIsStatic(fn) ? bodyIndent + "  public static object " : bodyIndent + "  public object ";
+				out.push(prefix + methodName + "(params object[] args) {");
+				out.push(bodyIndent + "    return null;");
+				out.push(bodyIndent + "  }");
+			}
+		}
+		if (!sawConstructor) {
+			out.push(bodyIndent + "  public " + className + "() {");
+			out.push(bodyIndent + "  }");
+		}
+		out.push(bodyIndent + "}");
+		appendCsNamespaceClose(out, packagePath);
+		return out.join("\n");
+	}
+
+	static function renderCsImportStub(packagePath:String, className:String):String {
+		final safeClass = className == "*" ? "HxWildcardStub" : sanitizeCsIdentifier(className);
+		final out = ["// Generated by hxhx Stage3 C# source backend MVP"];
+		appendCsNamespaceOpen(out, packagePath);
+		final bodyIndent = packagePath == null || packagePath.length == 0 ? "" : "  ";
+		out.push(bodyIndent + "public class " + safeClass + " {");
+		out.push(bodyIndent + "  public " + safeClass + "() {");
+		out.push(bodyIndent + "  }");
+		out.push(bodyIndent + "}");
+		appendCsNamespaceClose(out, packagePath);
+		return out.join("\n");
+	}
+
+	static function renderCsRunciHelperStub(className:String):String {
+		final safeClass = sanitizeCsIdentifier(className);
+		final out = ["// Generated by hxhx Stage3 C# source backend MVP"];
+		appendCsNamespaceOpen(out, "unit");
+		out.push("  public class " + safeClass + " {");
+		out.push("    public " + safeClass + "() {");
+		out.push("    }");
+		if (safeClass == "UnitBuilder") {
+			out.push("    public static object[] generateSpec(params object[] args) {");
+			out.push("      return new object[0];");
+			out.push("    }");
+		}
+		if (safeClass == "TestIssues") {
+			out.push("    public static void addIssueClasses(params object[] args) {");
+			out.push("    }");
+		}
+		out.push("  }");
+		appendCsNamespaceClose(out, "unit");
+		return out.join("\n");
+	}
+
+	static function appendCsNamespaceOpen(out:Array<String>, packagePath:String):Void {
+		if (packagePath == null || packagePath.length == 0)
+			return;
+		out.push("namespace " + csTypePath(packagePath) + " {");
+	}
+
+	static function appendCsNamespaceClose(out:Array<String>, packagePath:String):Void {
+		if (packagePath == null || packagePath.length == 0)
+			return;
+		out.push("}");
+	}
+
+	static function csFunctionArgs(args:Array<HxFunctionArg>, ?count:Int):String {
+		final limit = count == null ? (args == null ? 0 : args.length) : count;
+		return [
+			for (i in 0...limit)
+				"object " + sanitizeCsIdentifier(HxFunctionArg.getName(args[i]))
+		].join(", ");
+	}
+
+	static function csCreateReturnsNewOwner(fn:HxFunctionDecl, className:String):Bool {
+		if (HxFunctionDecl.getName(fn) != "create" || HxFunctionDecl.getArgs(fn).length != 0)
+			return false;
+		final body = HxFunctionDecl.getBody(fn);
+		if (body.length != 1)
+			return false;
+		return switch (body[0]) {
+			case SReturn(ENew(typePath, _), _):
+				sanitizeCsIdentifier(typePath) == className;
+			case _:
+				false;
+		};
 	}
 
 	static function javaImportStubShouldBeInterface(className:String):Bool {
@@ -14445,12 +14734,16 @@ class SourceTargetCommon {
 				appendJavaStdSupport(lines);
 			case Cs:
 				lines.push("// Generated by hxhx Stage3 C# source backend MVP");
-				lines.push("public class " + className + " {");
-				lines.push("  public static void Main(string[] args) {");
+				final packagePath = HxModuleDecl.getPackagePath(decl);
+				final bodyIndent = packagePath == null || packagePath.length == 0 ? "" : "  ";
+				appendCsNamespaceOpen(lines, packagePath);
+				lines.push(bodyIndent + "public class " + className + " {");
+				lines.push(bodyIndent + "  public static void Main(string[] args) {");
 				for (line in renderFunctionStmts(target, body, "    ", className + ".Main"))
-					lines.push(line);
-				lines.push("  }");
-				lines.push("}");
+					lines.push(bodyIndent + line);
+				lines.push(bodyIndent + "  }");
+				lines.push(bodyIndent + "}");
+				appendCsNamespaceClose(lines, packagePath);
 			case Php:
 				lines.push("<?php");
 				lines.push("// Generated by hxhx Stage3 PHP source backend MVP");

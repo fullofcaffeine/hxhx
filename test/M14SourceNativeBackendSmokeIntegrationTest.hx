@@ -5555,6 +5555,47 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertCsBuildExecutableEmitsSupportSourceSet():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_support_set_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final argsLog = Path.join([tmpRoot, "mcs.args"]);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		File.saveContent(fakeMcs, ["#!/bin/sh", "printf '%s\\n' \"$@\" > \"" + argsLog + "\"", "exit 0"].join("\n"));
+		Sys.command("chmod", ["+x", fakeMcs]);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		var emitted = false;
+		try {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			final result = backend.emit(helperClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final mainSourcePath = Path.join([outputDir, "src", "Main.cs"]);
+			final helperSourcePath = Path.join([outputDir, "src", "Helper.cs"]);
+			final testBytesStubPath = Path.join([outputDir, "src", "unit", "TestBytes.cs"]);
+			assertTrue(result.entryPath == Path.join([outputDir, "bin", "Main.exe"]), "C# source backend should report the packaged exe path");
+			assertTrue(FileSystem.exists(mainSourcePath), "C# source backend should emit the main source file");
+			assertTrue(FileSystem.exists(helperSourcePath), "C# source backend should emit sibling support classes before compilation");
+			assertTrue(FileSystem.exists(testBytesStubPath), "C# source backend should synthesize runci helper support classes");
+			final helperContent = File.getContent(helperSourcePath);
+			assertContains(helperContent, "public class Helper", "C# support source should declare the sibling class");
+			assertContains(helperContent, "public static object message()", "C# support source should expose static helper methods");
+			final args = File.getContent(argsLog);
+			assertContains(args, "Main.cs", "C# compiler invocation should include main source");
+			assertContains(args, "Helper.cs", "C# compiler invocation should include support source");
+			assertContains(args, "TestBytes.cs", "C# compiler invocation should include synthesized runci helper source");
+			emitted = true;
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		assertTrue(emitted, "C# support source-set emit should complete with fake compiler");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertJavaLambdaSequenceCallback():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_lambda_sequence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11421,6 +11462,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonOutputHint();
 		assertJavaJarPackaging();
 		assertCsExePackaging();
+		assertCsBuildExecutableEmitsSupportSourceSet();
 		assertJavaLambdaSequenceCallback();
 		assertJavaSupportClassJarPackaging();
 		assertJavaLibraryEnumJarPackaging();
