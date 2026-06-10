@@ -8984,7 +8984,7 @@ class SourceTargetCommon {
 			emitted.set(key, true);
 			if (className == "UtilityProcess" && (methodName == "runUtility" || methodName == "runUtilityAsCommand")) {
 				final firstArg = args.length == 0 ? "null" : sanitizeCsIdentifier(HxFunctionArg.getName(args[0]));
-				out.push(indent + "public static object " + methodName + "(" + csFunctionArgs(args) + ") {");
+				out.push(indent + "public static object " + methodName + "(" + csFunctionArgs(args, null, true) + ") {");
 				if (methodName == "runUtility") {
 					out.push(indent + "  __hxhx_runUtility(__hxhx_toStringArray(" + firstArg + "));");
 					out.push(indent + "  return null;");
@@ -9036,31 +9036,49 @@ class SourceTargetCommon {
 	}
 
 	static function appendCsArraySupport(out:Array<String>, indent:String):Void {
-		out.push(indent + "public class __HxArray : System.Collections.Generic.List<object> {");
-		out.push(indent + "  public __HxArray(object[] values) : base(values) {");
+		out.push(indent + "public class __HxArray : System.Collections.Generic.IEnumerable<object> {");
+		out.push(indent + "  public object[] __a;");
+		out.push(indent + "  public __HxArray(object[] values) {");
+		out.push(indent + "    __a = values == null ? new object[] { } : values;");
+		out.push(indent + "  }");
+		out.push(indent + "  public object this[int index] {");
+		out.push(indent + "    get { return __a[index]; }");
+		out.push(indent + "    set { __a[index] = value; }");
+		out.push(indent + "  }");
+		out.push(indent + "  public int Count {");
+		out.push(indent + "    get { return __a.Length; }");
 		out.push(indent + "  }");
 		out.push(indent + "  public int push(object value) {");
-		out.push(indent + "    Add(value);");
-		out.push(indent + "    return Count;");
+		out.push(indent + "    object[] next = new object[__a.Length + 1];");
+		out.push(indent + "    System.Array.Copy(__a, next, __a.Length);");
+		out.push(indent + "    next[next.Length - 1] = value;");
+		out.push(indent + "    __a = next;");
+		out.push(indent + "    return __a.Length;");
 		out.push(indent + "  }");
 		out.push(indent + "  public int length {");
-		out.push(indent + "    get { return Count; }");
+		out.push(indent + "    get { return __a.Length; }");
 		out.push(indent + "  }");
 		out.push(indent + "  public int Length {");
-		out.push(indent + "    get { return Count; }");
+		out.push(indent + "    get { return __a.Length; }");
 		out.push(indent + "  }");
 		out.push(indent + "  public __HxArray slice(object pos, object end = null) {");
 		out.push(indent + "    int start = System.Convert.ToInt32(pos);");
-		out.push(indent + "    int stop = end == null ? Count : System.Convert.ToInt32(end);");
-		out.push(indent + "    if (start < 0) start = Count + start;");
-		out.push(indent + "    if (stop < 0) stop = Count + stop;");
+		out.push(indent + "    int stop = end == null ? __a.Length : System.Convert.ToInt32(end);");
+		out.push(indent + "    if (start < 0) start = __a.Length + start;");
+		out.push(indent + "    if (stop < 0) stop = __a.Length + stop;");
 		out.push(indent + "    if (start < 0) start = 0;");
 		out.push(indent + "    if (stop < start) stop = start;");
-		out.push(indent + "    if (stop > Count) stop = Count;");
+		out.push(indent + "    if (stop > __a.Length) stop = __a.Length;");
 		out.push(indent + "    int len = stop - start;");
 		out.push(indent + "    object[] values = new object[len];");
-		out.push(indent + "    CopyTo(start, values, 0, len);");
+		out.push(indent + "    System.Array.Copy(__a, start, values, 0, len);");
 		out.push(indent + "    return new __HxArray(values);");
+		out.push(indent + "  }");
+		out.push(indent + "  public System.Collections.Generic.IEnumerator<object> GetEnumerator() {");
+		out.push(indent + "    return ((System.Collections.Generic.IEnumerable<object>)__a).GetEnumerator();");
+		out.push(indent + "  }");
+		out.push(indent + "  System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {");
+		out.push(indent + "    return __a.GetEnumerator();");
 		out.push(indent + "  }");
 		out.push(indent + "}");
 		out.push(indent + "public class __HxSignal {");
@@ -9076,12 +9094,21 @@ class SourceTargetCommon {
 		out.push(indent + "}");
 	}
 
-	static function csFunctionArgs(args:Array<HxFunctionArg>, ?count:Int):String {
+	static function csFunctionArgs(args:Array<HxFunctionArg>, ?count:Int, forceObjectTypes:Bool = false):String {
 		final limit = count == null ? (args == null ? 0 : args.length) : count;
 		return [
 			for (i in 0...limit)
-				"object " + sanitizeCsIdentifier(HxFunctionArg.getName(args[i]))
+				(forceObjectTypes ? "object" : csArgTypeFromHint(HxFunctionArg.getTypeHint(args[i]))) + " " +
+				sanitizeCsIdentifier(HxFunctionArg.getName(args[i]))
 		].join(", ");
+	}
+
+	static function csArgTypeFromHint(typeHint:String):String {
+		final compact = removeTypeHintWhitespace(trimLeadingTypeColon(typeHint));
+		return compact == "Array"
+			|| compact == "StdTypes.Array"
+			|| StringTools.startsWith(compact, "Array<")
+			|| StringTools.startsWith(compact, "StdTypes.Array<") ? "__HxArray" : "object";
 	}
 
 	static function csCreateReturnsNewOwner(fn:HxFunctionDecl, className:String):Bool {

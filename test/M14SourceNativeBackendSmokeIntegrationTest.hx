@@ -5632,6 +5632,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csArrayBackingAccessProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  public static function main() {",
+			"    var words = [\"z\", \"a\"];",
+			"    sortBacking(words);",
+			"    sortBackingInline(words);",
+			"  }",
+			"  public static function sortBacking<T>(items:Array<T>):Void {",
+			"    cs.system.Array.Sort(@:privateAccess items.__a, 0, items.length);",
+			"  }",
+			"  public static inline function sortBackingInline<T>(items:Array<T>):Void {",
+			"    cs.system.Array.Sort(@:privateAccess items.__a, 0, items.length);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function switchExpressionProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -6283,6 +6304,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final result = backend.emit(csFunctionTypeReturnLambdaProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
 			assertTrue(FileSystem.exists(result.entryPath), "C# function-type return lambda should compile into an executable");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsArrayBackingAccess():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_array_backing_access_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(csArrayBackingAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public object[] __a;", "C# Haxe array wrapper should expose the target backing array for private-access interop");
+		assertContains(content, "public static object sortBacking(__HxArray items)",
+			"C# Array<T> support-method parameters should use the Haxe array wrapper instead of object");
+		assertContains(content, "public static object sortBackingInline(__HxArray items)",
+			"C# inline Array<T> support-method parameters should use the Haxe array wrapper instead of object");
+		assertContains(content, "System.Array.Sort(items.__a, 0, items.length);",
+			"C# array private backing access should compile against __HxArray backing and length members");
+		assertNotContains(content, "public static object sortBacking(object items)",
+			"C# array backing helpers should not leave Array<T> formals behind object field access");
+		if (commandExists("mcs") || commandExists("csc")) {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final result = backend.emit(csArrayBackingAccessProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			assertTrue(FileSystem.exists(result.entryPath), "C# array backing access should compile into an executable");
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -12178,6 +12224,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaLambdaSequenceCallback();
 		assertCsLambdaSequenceCallback();
 		assertCsFunctionTypeReturnLambda();
+		assertCsArrayBackingAccess();
 		assertJavaSupportClassJarPackaging();
 		assertJavaLibraryEnumJarPackaging();
 		assertJavaOperationInterfaceRuntime();
