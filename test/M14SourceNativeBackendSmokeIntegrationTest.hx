@@ -438,6 +438,57 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csRootOwnerImportProgram():GenIrProgram {
+		final unicodeSrc = [
+			"class UnicodeString {",
+			"}",
+			"",
+			"class UnicodeSequences {",
+			"  public static function codepointsToString(ref:Array<Int>) {",
+			"    return \"\";",
+			"  }",
+			"  public static function showUnicodeString(str:String) {",
+			"    return str;",
+			"  }",
+			"}",
+		].join("\n");
+		final utilitySrc = [
+			"class UtilityProcess {",
+			"  public static function runUtility(args:Array<String>) {",
+			"    return null;",
+			"  }",
+			"}",
+		].join("\n");
+		final testSrc = [
+			"import UnicodeSequences.UnicodeString;",
+			"import UnicodeSequences.codepointsToString;",
+			"import UnicodeSequences.showUnicodeString;",
+			"import UtilityProcess.runUtility;",
+			"",
+			"class TestUnicode {",
+			"  public static function touch() {",
+			"    codepointsToString([]);",
+			"    showUnicodeString(\"\");",
+			"    runUtility([]);",
+			"    return new UnicodeString();",
+			"  }",
+			"}",
+		].join("\n");
+		final mainSrc = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(\"ok\");",
+			"  }",
+			"}",
+		].join("\n");
+		return MacroStage.expandProgram([
+			TyperStage.typeModule(ParserStage.parse(unicodeSrc, "UnicodeSequences.hx")),
+			TyperStage.typeModule(ParserStage.parse(utilitySrc, "UtilityProcess.hx")),
+			TyperStage.typeModule(ParserStage.parse(testSrc, "TestUnicode.hx")),
+			TyperStage.typeModule(ParserStage.parse(mainSrc, "Main.hx")),
+		], []);
+	}
+
 	static function phpStaticClassAccessProgram():GenIrProgram {
 		final src = [
 			"class Helper {",
@@ -5629,6 +5680,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertTrue(FileSystem.exists(helperSourcePath), "C# source backend should emit sibling support classes before compilation");
 			assertTrue(FileSystem.exists(testBytesStubPath), "C# source backend should synthesize runci helper support classes");
 			final helperContent = File.getContent(helperSourcePath);
+			final mainContent = File.getContent(mainSourcePath);
+			assertContains(mainContent, "public class __HxMain", "C# executable entry class should avoid the illegal Main.Main member/type collision");
+			assertNotContains(mainContent, "public class Main {\n  public static void Main",
+				"C# executable entry class should not render a Main.Main member/type collision");
 			assertContains(helperContent, "public class Helper", "C# support source should declare the sibling class");
 			assertContains(helperContent, "public static object message()", "C# support source should expose static helper methods");
 			assertTrue(hasArtifactPath(result.artifacts, mainSourcePath), "C# emit result should include main source artifact");
@@ -5642,6 +5697,52 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		}
 		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 		assertTrue(emitted, "C# support source-set emit should complete with fake compiler");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsRootOwnerImportLayout():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_owner_import_layout_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		try {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csRootOwnerImportProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final unicodeOwnerPath = Path.join([outputDir, "src", "UnicodeSequences.cs"]);
+			final utilityOwnerPath = Path.join([outputDir, "src", "UtilityProcess.cs"]);
+			assertTrue(FileSystem.exists(unicodeOwnerPath), "C# source backend should emit the root UnicodeSequences owner source");
+			assertTrue(FileSystem.exists(utilityOwnerPath), "C# source backend should emit the root UtilityProcess owner source");
+			assertTrue(!FileSystem.exists(Path.join([outputDir, "src", "UnicodeSequences", "UnicodeString.cs"])),
+				"C# module-owner imports should not synthesize a UnicodeSequences namespace that collides with the root type");
+			assertTrue(!FileSystem.exists(Path.join([outputDir, "src", "UnicodeSequences", "codepointsToString.cs"])),
+				"C# static member imports should not synthesize a UnicodeSequences namespace that collides with the root type");
+			assertTrue(!FileSystem.exists(Path.join([outputDir, "src", "UnicodeSequences", "showUnicodeString.cs"])),
+				"C# static member imports should not synthesize a UnicodeSequences namespace that collides with the root type");
+			assertTrue(!FileSystem.exists(Path.join([outputDir, "src", "UtilityProcess", "runUtility.cs"])),
+				"C# static member imports should not synthesize a UtilityProcess namespace that collides with the root type");
+			final unicodeContent = File.getContent(unicodeOwnerPath);
+			final utilityContent = File.getContent(utilityOwnerPath);
+			assertContains(unicodeContent, "public class UnicodeString",
+				"C# root owner support should expose imported module-local types as nested owner stubs");
+			assertContains(unicodeContent, "public static object codepointsToString",
+				"C# root owner support should keep real static functions on the owner instead of replacing them with namespace stubs");
+			assertContains(utilityContent, "public static object runUtility",
+				"C# root owner support should keep real static functions on the owner instead of replacing them with namespace stubs");
+			assertNotContains(unicodeContent, "namespace UnicodeSequences",
+				"C# source backend should avoid a namespace with the same name as a root generated type");
+			assertNotContains(utilityContent, "namespace UtilityProcess",
+				"C# source backend should avoid a namespace with the same name as a root generated type");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 		deleteRecursive(tmpRoot);
 	}
 
@@ -11591,6 +11692,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaJarPackaging();
 		assertCsExePackaging();
 		assertCsBuildExecutableEmitsSupportSourceSet();
+		assertCsRootOwnerImportLayout();
 		assertCsRuntimeShapeStubs();
 		assertCsSysExitShape();
 		assertJavaLambdaSequenceCallback();
