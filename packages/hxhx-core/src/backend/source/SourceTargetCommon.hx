@@ -7855,6 +7855,37 @@ class SourceTargetCommon {
 		return csFuncType(lambdaArity);
 	}
 
+	static function csReturnTypeFromHint(typeHint:String):String {
+		final delegateType = csDelegateTypeFromFunctionHint(typeHint);
+		return delegateType == null ? "object" : delegateType;
+	}
+
+	static function csDelegateTypeFromFunctionHint(typeHint:String):Null<String> {
+		final compact = removeTypeHintWhitespace(typeHint);
+		if (compact.length == 0)
+			return null;
+		final arrowParts = splitTopLevelArrow(compact);
+		if (arrowParts.length < 2)
+			return null;
+		var argCount = 0;
+		for (i in 0...arrowParts.length - 1)
+			argCount += csFunctionHintArgCount(arrowParts[i]);
+		return csFuncType(argCount);
+	}
+
+	static function csFunctionHintArgCount(part:String):Int {
+		final trimmed = StringTools.trim(part == null ? "" : part);
+		if (trimmed.length == 0)
+			return 1;
+		if (StringTools.startsWith(trimmed, "(") && StringTools.endsWith(trimmed, ")")) {
+			final inner = trimmed.substring(1, trimmed.length - 1);
+			if (StringTools.trim(inner).length == 0)
+				return 0;
+			return splitTopLevelComma(inner).length;
+		}
+		return 1;
+	}
+
 	static function csFuncType(argCount:Int):String {
 		final parts = new Array<String>();
 		for (_ in 0...argCount)
@@ -8585,7 +8616,8 @@ class SourceTargetCommon {
 				emittedMethods.set(key, true);
 				final returnsNewOwner = HxFunctionDecl.getIsStatic(fn) && csCreateReturnsNewOwner(fn, className);
 				final returnsUtestReportFactory = isUtestReport && HxFunctionDecl.getIsStatic(fn) && methodName == "create";
-				final returnType = returnsNewOwner || returnsUtestReportFactory ? className : "object";
+				final returnType = returnsNewOwner
+					|| returnsUtestReportFactory ? className : csReturnTypeFromHint(HxFunctionDecl.getReturnTypeHint(fn));
 				final prefix = HxFunctionDecl.getIsStatic(fn) ? bodyIndent + "  public static " + returnType + " " : bodyIndent + "  public object ";
 				out.push(prefix + methodName + "(" + csFunctionArgs(args, count) + ") {");
 				if (returnsNewOwner || returnsUtestReportFactory)
@@ -8962,7 +8994,8 @@ class SourceTargetCommon {
 				out.push(indent + "}");
 				continue;
 			}
-			out.push(indent + "public static object " + methodName + "(" + csFunctionArgs(args) + ") {");
+			final returnType = csReturnTypeFromHint(HxFunctionDecl.getReturnTypeHint(fn));
+			out.push(indent + "public static " + returnType + " " + methodName + "(" + csFunctionArgs(args) + ") {");
 			final body = renderFunctionStmts(Cs, HxFunctionDecl.getBody(fn), indent + "  ", className + "." + methodName);
 			var hasReturn = false;
 			for (line in body) {

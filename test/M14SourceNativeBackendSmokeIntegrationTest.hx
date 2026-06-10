@@ -5616,6 +5616,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csFunctionTypeReturnLambdaProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  public static function main() {}",
+			"  public static function forComparable<T : Comparable<T>>():T->T->Void",
+			"    return (a:T, b:T) -> {};",
+			"}",
+			"typedef Comparable<T> = {",
+			"  public function compareTo(that:T):Int;",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function switchExpressionProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -6247,6 +6263,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "System.Console.WriteLine(\"done\");", "C# lambda-body continuations should render after lowered for-in statements");
 		assertNotContains(content, "__hxhx_for_in", "C# callback lambdas should not leak for-in helper calls into generated source");
 		assertNotContains(content, "__hxhx_lambda_seq_", "C# callback lambdas should not leak lambda-sequence temporaries into generated source");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsFunctionTypeReturnLambda():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_function_type_return_lambda_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(csFunctionTypeReturnLambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static System.Func<dynamic, dynamic, object> forComparable()",
+			"C# function-type return hints should give returned lambdas a concrete delegate target type");
+		assertContains(content, "return (a, b) => {", "C# returned lambdas should keep their callable source shape");
+		assertNotContains(content, "public static object forComparable()",
+			"C# returned lambdas should not be emitted behind object return types that Mono rejects");
+		if (commandExists("mcs") || commandExists("csc")) {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final result = backend.emit(csFunctionTypeReturnLambdaProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			assertTrue(FileSystem.exists(result.entryPath), "C# function-type return lambda should compile into an executable");
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -12140,6 +12177,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsEntrySupportMembersAndSerializer();
 		assertJavaLambdaSequenceCallback();
 		assertCsLambdaSequenceCallback();
+		assertCsFunctionTypeReturnLambda();
 		assertJavaSupportClassJarPackaging();
 		assertJavaLibraryEnumJarPackaging();
 		assertJavaOperationInterfaceRuntime();
