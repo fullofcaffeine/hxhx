@@ -7783,7 +7783,7 @@ class SourceTargetCommon {
 			case Python: valueName(Python, name) + " = " + rhs;
 			case Lua: "local " + name + " = " + rhs;
 			case Java: "var " + sanitizeJavaIdentifier(name) + " = " + rhs + ";";
-			case Cs: "var " + name + " = " + rhs + ";";
+			case Cs: "var " + sanitizeCsIdentifier(name) + " = " + rhs + ";";
 			case Php: "$" + sanitizePhpValueName(name) + " = " + rhs + ";";
 		};
 	}

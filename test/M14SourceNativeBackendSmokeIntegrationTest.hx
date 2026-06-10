@@ -491,6 +491,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csReservedLocalProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var out = \"ok\";",
+			"    Sys.println(out);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csRootOwnerImportProgram():GenIrProgram {
 		final unicodeSrc = [
 			"class UnicodeString {",
@@ -5913,6 +5927,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"C# sys exit-code helper should lower to native entrypoint args + parseInt APIs");
 		assertNotContains(content, "Sys.", "C# sys exit-code helper should not leak unresolved Sys class references");
 		assertNotContains(content, "Std.parseInt", "C# Std.parseInt should not leak an unresolved Haxe runtime reference");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsReservedLocalIdentifier():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_reserved_local_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(csReservedLocalProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "var out_ = \"ok\";", "C# locals named reserved keywords should be sanitized at declaration sites");
+		assertContains(content, "System.Console.WriteLine(out_);", "C# locals named reserved keywords should be sanitized at use sites");
+		assertNotContains(content, "var out = \"ok\";", "C# source should not declare reserved keyword locals");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -12051,6 +12079,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertUnsupportedSwitchGuardExpression();
 		assertSwitchStatement();
 		assertJavaArraySwitchStatement();
+		assertCsReservedLocalIdentifier();
 		assertCsUtilityProcessSwitchStatement();
 		assertJavaUtilityProcessRuntime();
 		assertJavaFileSystemFullPathResolvesSymlink();

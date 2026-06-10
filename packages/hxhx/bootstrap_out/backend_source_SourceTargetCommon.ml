@@ -5319,7 +5319,7 @@ let varDecl = fun target name rhs -> let tempResult = ref ("" : string) in (
       tempResult := __assign_3632;
       __assign_3632
     )
-    | Cs -> let __assign_3633 = (((("var " ^ HxString.toStdString name) ^ " = ") ^ HxString.toStdString rhs) ^ ";" : string) in (
+    | Cs -> let __assign_3633 = (((("var " ^ HxString.toStdString (sanitizeCsIdentifier (name : string))) ^ " = ") ^ HxString.toStdString rhs) ^ ";" : string) in (
       tempResult := __assign_3633;
       __assign_3633
     )
