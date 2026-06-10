@@ -412,6 +412,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var values = [];",
 			"    values.push(\"ok\");",
 			"    var thread = new cs.system.threading.Thread();",
+			"    var culture = cs.system.globalization.CultureInfo.CurrentCulture;",
+			"    cs.Lib.applyCultureChanges();",
+			"    var runner = new unit.Runner();",
+			"    runner.onProgress.add(function(progress) return progress);",
 			"    Sys.println(Std.string(values.length));",
 			"  }",
 			"}",
@@ -5656,7 +5660,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(mainContent, "values.push(\"ok\")", "C# array push calls should target the runtime array wrapper");
 			assertNotContains(mainContent, "var values = new object[]", "C# array literals should not bind push-capable values to bare object arrays");
 			assertContains(mainContent, "new System.Threading.Thread()", "C# cs.system.* extern paths should map to .NET System.* namespaces");
+			assertContains(mainContent, "System.Globalization.CultureInfo.CurrentCulture",
+				"C# cs.system.* field chains should map to .NET System.* namespaces");
+			assertContains(mainContent, "cs.Lib.applyCultureChanges()", "C# cs.Lib culture hook calls should remain callable");
+			assertContains(mainContent, "runner.onProgress.add((progress) => progress)",
+				"C# signal callback lambdas should retain lambda syntax for delegate overloads");
 			assertContains(csLibContent, "namespace cs", "C# cs.Lib stub should remain under the cs namespace");
+			assertContains(csLibContent, "public static object applyCultureChanges", "C# cs.Lib stub should expose the culture hook used by unit TestMain");
 			assertContains(runnerContent, "public __HxSignal onProgress", "C# Runner stub should expose utest signal fields");
 			assertContains(reportContent, "public static Report create", "C# Report stub should expose the factory used by unit TestMain");
 		} catch (e:Dynamic) {

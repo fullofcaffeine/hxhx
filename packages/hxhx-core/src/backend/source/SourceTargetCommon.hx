@@ -1925,9 +1925,27 @@ class SourceTargetCommon {
 					else
 						fieldAccess(target, renderedReceiver, field);
 				}
-			case Python, Java, Cs, Lua:
+			case Cs:
+				final packagePath = csPackageQualifiedPathExpr(EField(receiver, field));
+				if (packagePath != null && StringTools.startsWith(packagePath, "cs.system"))
+					return csTypePath(packagePath);
+				final renderedReceiver = renderExpr(target, receiver);
+				fieldAccess(target, renderedReceiver, field);
+			case Python, Java, Lua:
 				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExpr(target, receiver);
 				fieldAccess(target, renderedReceiver, field);
+		};
+	}
+
+	static function csPackageQualifiedPathExpr(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EIdent(name):
+				name == "cs" ? "cs" : null;
+			case EField(receiver, field):
+				final parent = csPackageQualifiedPathExpr(receiver);
+				parent == null ? null : parent + "." + field;
+			case _:
+				null;
 		};
 	}
 
@@ -8348,6 +8366,11 @@ class SourceTargetCommon {
 		out.push(bodyIndent + "  }");
 		if (csQualifiedClassName(packagePath, safeClass) == "cs.Lib")
 			out.push(bodyIndent + "  public static object nativeThis = null;");
+		if (csQualifiedClassName(packagePath, safeClass) == "cs.Lib") {
+			out.push(bodyIndent + "  public static object applyCultureChanges(params object[] args) {");
+			out.push(bodyIndent + "    return null;");
+			out.push(bodyIndent + "  }");
+		}
 		out.push(bodyIndent + "}");
 		appendCsNamespaceClose(out, packagePath);
 		return out.join("\n");
@@ -8416,7 +8439,19 @@ class SourceTargetCommon {
 		out.push(indent + "    get { return Count; }");
 		out.push(indent + "  }");
 		out.push(indent + "}");
+		out.push(indent + "public delegate object __HxSignalCallback0();");
+		out.push(indent + "public delegate object __HxSignalCallback1(object value);");
+		out.push(indent + "public delegate object __HxSignalCallback2(object left, object right);");
 		out.push(indent + "public class __HxSignal {");
+		out.push(indent + "  public object add(__HxSignalCallback0 callback) {");
+		out.push(indent + "    return null;");
+		out.push(indent + "  }");
+		out.push(indent + "  public object add(__HxSignalCallback1 callback) {");
+		out.push(indent + "    return null;");
+		out.push(indent + "  }");
+		out.push(indent + "  public object add(__HxSignalCallback2 callback) {");
+		out.push(indent + "    return null;");
+		out.push(indent + "  }");
 		out.push(indent + "  public object add(object callback) {");
 		out.push(indent + "    return null;");
 		out.push(indent + "  }");
