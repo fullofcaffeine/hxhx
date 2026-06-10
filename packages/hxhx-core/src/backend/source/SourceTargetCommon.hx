@@ -289,7 +289,7 @@ class SourceTargetCommon {
 	static function emitCsExecutable(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
 		final sourceDir = Path.join([context.outputDir, "src"]);
 		final mainPackage = HxModuleDecl.getPackagePath(decl);
-		final sourcePath = csSourcePath(sourceDir, mainPackage, className);
+		final sourcePath = csEntrySourcePath(sourceDir, mainPackage, className);
 		final exePath = csExePath(context.outputDir, className, context.outputFileHint, context.hasDefine("debug"));
 		ensureDirectory(sourceDir);
 		ensureParentDirectory(exePath);
@@ -315,7 +315,7 @@ class SourceTargetCommon {
 	static function emitCsSourceSetOnly(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
 		final sourceDir = Path.join([context.outputDir, "src"]);
 		final mainPackage = HxModuleDecl.getPackagePath(decl);
-		final sourcePath = csSourcePath(sourceDir, mainPackage, className);
+		final sourcePath = csEntrySourcePath(sourceDir, mainPackage, className);
 		ensureDirectory(sourceDir);
 		final sourcePaths = emitCsSourceSet(program, context, sourceDir, decl, className, body);
 		final artifacts = [new EmitArtifact("entry_cs_source", sourcePath)];
@@ -441,11 +441,11 @@ class SourceTargetCommon {
 		final sourcePaths = new Array<String>();
 		final seen = new Map<String, Bool>();
 		final mainPackage = HxModuleDecl.getPackagePath(mainDecl);
-		final mainPath = csSourcePath(sourceDir, mainPackage, mainClassName);
+		final mainPath = csEntrySourcePath(sourceDir, mainPackage, mainClassName);
 		ensureParentDirectory(mainPath);
 		sys.io.File.saveContent(mainPath, renderProgram(Cs, program, context, mainDecl, mainClassName, mainBody));
 		sourcePaths.push(mainPath);
-		seen.set(csQualifiedClassName(mainPackage, mainClassName), true);
+		seen.set(csQualifiedClassName(mainPackage, csEntryClassName(mainClassName)), true);
 		for (typed in program.getTypedModules()) {
 			final moduleDecl = typed.getParsed().getDecl();
 			if (isStdSourceFile(typed.getParsed().getFilePath()))
@@ -597,6 +597,7 @@ class SourceTargetCommon {
 	static function emitCsStandardStubs(sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
 		final stubs = [
 			{packagePath: "", className: "Sys"},
+			{packagePath: "", className: "Reflect"},
 			{packagePath: "cs", className: "Lib"},
 			{packagePath: "haxe", className: "Serializer"},
 			{packagePath: "haxe.io", className: "Path"},
@@ -833,6 +834,10 @@ class SourceTargetCommon {
 				sanitizeCsIdentifier(part)
 		];
 		return Path.join([sourceDir].concat(parts).concat([cleanClass + ".cs"]));
+	}
+
+	static function csEntrySourcePath(sourceDir:String, packagePath:String, className:String):String {
+		return csSourcePath(sourceDir, packagePath, csEntryClassName(className));
 	}
 
 	static function csQualifiedClassName(packagePath:String, className:String):String {
@@ -8627,13 +8632,16 @@ class SourceTargetCommon {
 		appendCsNamespaceOpen(out, packagePath);
 		out.push(bodyIndent + "public class " + className + " {");
 		final emittedFields = new Map<String, Bool>();
+		final readOnlyFields = new Array<String>();
 		for (field in HxClassDecl.getFields(cls)) {
 			final fieldName = sanitizeCsIdentifier(HxFieldDecl.getName(field));
 			if (emittedFields.exists(fieldName))
 				continue;
 			emittedFields.set(fieldName, true);
 			final prefix = HxFieldDecl.getIsStatic(field) ? bodyIndent + "  public static object " : bodyIndent + "  public object ";
-			out.push(prefix + fieldName + " = null;");
+			out.push(prefix + fieldName + " = " + csFieldInitExpr(field) + ";");
+			if (metadataHasName(HxFieldDecl.getMetadata(field), "readOnly"))
+				readOnlyFields.push(fieldName);
 		}
 		final isUtestReport = csIsUtestReport(packagePath, className);
 		final isUtestRunner = csIsUtestRunner(packagePath, className);
@@ -8698,6 +8706,7 @@ class SourceTargetCommon {
 			out.push(bodyIndent + "  public " + className + "() {");
 			out.push(bodyIndent + "  }");
 		}
+		appendCsReadOnlyFieldMetadata(out, bodyIndent + "  ", readOnlyFields);
 		if (isUtestRunner)
 			appendCsUtestRunnerAddCasesStubOnce(out, bodyIndent + "  ", emittedMethods);
 		for (nested in csNestedImportStubNames(program, decl, cls, rawClassName))
@@ -8705,6 +8714,42 @@ class SourceTargetCommon {
 		out.push(bodyIndent + "}");
 		appendCsNamespaceClose(out, packagePath);
 		return out.join("\n");
+	}
+
+	static function csFieldInitExpr(field:HxFieldDecl):String {
+		final init = HxFieldDecl.getInit(field);
+		if (init == null)
+			return "null";
+		return switch (init) {
+			case ENull | EBool(_) | EString(_) | EInt(_) | EFloat(_):
+				renderExpr(Cs, init);
+			case _:
+				"null";
+		};
+	}
+
+	static function metadataHasName(metadata:Array<String>, name:String):Bool {
+		if (metadata == null)
+			return false;
+		final wanted = name.charAt(0) == ":" ? name.substr(1) : name;
+		for (raw in metadata) {
+			final trimmed = StringTools.trim(raw);
+			final normalized = if (StringTools.startsWith(trimmed,
+				"@:")) trimmed.substr(2) else if (StringTools.startsWith(trimmed, ":")) trimmed.substr(1) else trimmed;
+			if (normalized == wanted || StringTools.startsWith(normalized, wanted + "("))
+				return true;
+		}
+		return false;
+	}
+
+	static function appendCsReadOnlyFieldMetadata(out:Array<String>, indent:String, readOnlyFields:Array<String>):Void {
+		out.push(indent + "public static bool __hxhx_isReadOnlyField(string name) {");
+		out.push(indent + "  switch (name) {");
+		for (field in readOnlyFields)
+			out.push(indent + "    case " + quoteString(field) + ": return true;");
+		out.push(indent + "    default: return false;");
+		out.push(indent + "  }");
+		out.push(indent + "}");
 	}
 
 	static function csIsUtestReport(packagePath:String, className:String):Bool {
@@ -8825,6 +8870,28 @@ class SourceTargetCommon {
 			out.push(indent + "  if (value == null) return \"\\\"\\\"\";");
 			out.push(indent + "  if (value.IndexOfAny(new char[] { ' ', '\\t', '\\n', '\\r', '\\\"' }) < 0) return value;");
 			out.push(indent + "  return \"\\\"\" + value.Replace(\"\\\\\", \"\\\\\\\\\").Replace(\"\\\"\", \"\\\\\\\"\") + \"\\\"\";");
+			out.push(indent + "}");
+		}
+		if (qualified == "Reflect") {
+			out.push(indent + "public static object setProperty(object obj, object field, object value) {");
+			out.push(indent + "  if (obj == null) return value;");
+			out.push(indent + "  string name = System.Convert.ToString(field);");
+			out.push(indent
+				+ "  var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;");
+			out.push(indent + "  var type = obj as System.Type;");
+			out.push(indent + "  object receiver = type == null ? obj : null;");
+			out.push(indent + "  if (type == null) type = obj.GetType();");
+			out.push(indent
+				+
+				"  var readOnly = type.GetMethod(\"__hxhx_isReadOnlyField\", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);");
+			out.push(indent + "  if (readOnly != null && System.Convert.ToBoolean(readOnly.Invoke(null, new object[] { name }))) {");
+			out.push(indent + "    throw new System.MemberAccessException();");
+			out.push(indent + "  }");
+			out.push(indent + "  var property = type.GetProperty(name, flags);");
+			out.push(indent + "  if (property != null) { property.SetValue(receiver, value, null); return value; }");
+			out.push(indent + "  var fieldInfo = type.GetField(name, flags);");
+			out.push(indent + "  if (fieldInfo != null) { fieldInfo.SetValue(receiver, value); return value; }");
+			out.push(indent + "  return value;");
 			out.push(indent + "}");
 		}
 		if (qualified == "haxe.io.Path") {

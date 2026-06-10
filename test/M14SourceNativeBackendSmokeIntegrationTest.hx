@@ -5880,7 +5880,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		debugDefines.set("debug", "1");
 		final backend = BackendRegistry.requireForTarget("cs-native");
 		final result = backend.emit(program("cs-runci"), new BackendContext(outputDir, null, "Main", true, true, debugDefines));
-		final sourcePath = Path.join([outputDir, "src", "Main.cs"]);
+		final sourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 		final exePath = Path.join([outputDir, "bin", "Main-Debug.exe"]);
 		assertTrue(result.entryPath == exePath, "C# source backend should report the packaged exe as primary artifact");
 		assertTrue(FileSystem.exists(sourcePath), "C# source backend should emit source under the target output directory");
@@ -5914,21 +5914,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
 			final result = backend.emit(helperClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
-			final mainSourcePath = Path.join([outputDir, "src", "Main.cs"]);
+			final mainSourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			final mainTypeSourcePath = Path.join([outputDir, "src", "Main.cs"]);
 			final helperSourcePath = Path.join([outputDir, "src", "Helper.cs"]);
 			final testBytesStubPath = Path.join([outputDir, "src", "unit", "TestBytes.cs"]);
 			assertTrue(result.entryPath == Path.join([outputDir, "bin", "Main.exe"]), "C# source backend should report the packaged exe path");
 			assertTrue(FileSystem.exists(mainSourcePath), "C# source backend should emit the main source file");
+			assertTrue(FileSystem.exists(mainTypeSourcePath), "C# source backend should keep the Haxe Main type constructible");
 			assertTrue(FileSystem.exists(helperSourcePath), "C# source backend should emit sibling support classes before compilation");
 			assertTrue(FileSystem.exists(testBytesStubPath), "C# source backend should synthesize runci helper support classes");
 			final helperContent = File.getContent(helperSourcePath);
 			final mainContent = File.getContent(mainSourcePath);
+			final mainTypeContent = File.getContent(mainTypeSourcePath);
 			assertContains(mainContent, "public class __HxMain", "C# executable entry class should avoid the illegal Main.Main member/type collision");
 			assertNotContains(mainContent, "public class Main {\n  public static void Main",
 				"C# executable entry class should not render a Main.Main member/type collision");
+			assertContains(mainTypeContent, "public class Main", "C# support source should declare the user Main type separately from the entrypoint");
 			assertContains(helperContent, "public class Helper", "C# support source should declare the sibling class");
 			assertContains(helperContent, "public static object message()", "C# support source should expose static helper methods");
 			assertTrue(hasArtifactPath(result.artifacts, mainSourcePath), "C# emit result should include main source artifact");
+			assertTrue(hasArtifactPath(result.artifacts, mainTypeSourcePath), "C# emit result should include the Haxe Main type source artifact");
 			assertTrue(hasArtifactPath(result.artifacts, helperSourcePath), "C# emit result should include support source artifact");
 			assertTrue(hasArtifactPath(result.artifacts, testBytesStubPath), "C# emit result should include synthesized runci helper artifact");
 			emitted = true;
@@ -5939,6 +5944,60 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		}
 		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 		assertTrue(emitted, "C# support source-set emit should complete with fake compiler");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsIssue4598ReadOnlyReflectShape():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_issue4598_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final src = [
+				"class Main {",
+				"  @:readOnly",
+				"  public var a:Int = 10;",
+				"  static function main() {",
+				"    var m = new Main();",
+				"    try Reflect.setProperty(m, \"a\", 999) catch(e:cs.system.MemberAccessException) {}",
+				"    if (m.a != 10) {",
+				"      throw \"Main.a should not be writable via reflection\";",
+				"    }",
+				"  }",
+				"  public function new() {}",
+				"}"
+			].join("\n");
+			final parsed = ParserStage.parse(src, "Main.hx");
+			final typed = TyperStage.typeModule(parsed);
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			final result = backend.emit(MacroStage.expandProgram([typed], []),
+				new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			final mainTypeSourcePath = Path.join([outputDir, "src", "Main.cs"]);
+			final reflectSourcePath = Path.join([outputDir, "src", "Reflect.cs"]);
+			assertTrue(result.entryPath == Path.join([outputDir, "bin", "Main.exe"]), "C# Issue4598 regression should package a Main executable");
+			assertTrue(FileSystem.exists(entrySourcePath), "C# Issue4598 regression should emit an entry wrapper");
+			assertTrue(FileSystem.exists(mainTypeSourcePath), "C# Issue4598 regression should emit the user Main type");
+			assertTrue(FileSystem.exists(reflectSourcePath), "C# Issue4598 regression should emit the Reflect support shim");
+			final entryContent = File.getContent(entrySourcePath);
+			final mainTypeContent = File.getContent(mainTypeSourcePath);
+			final reflectContent = File.getContent(reflectSourcePath);
+			assertContains(entryContent, "new Main()", "C# Issue4598 wrapper should construct the user Main type, not the entrypoint method");
+			assertContains(mainTypeContent, "public object a = 10;", "C# Issue4598 support type should preserve the field initializer");
+			assertContains(mainTypeContent, "case \"a\": return true;", "C# Issue4598 support type should expose read-only field metadata");
+			assertContains(reflectContent, "public static object setProperty", "C# Issue4598 Reflect shim should expose setProperty");
+			assertContains(reflectContent, "System.MemberAccessException", "C# Issue4598 Reflect shim should reject read-only field writes");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 		deleteRecursive(tmpRoot);
 	}
 
@@ -6037,7 +6096,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
 			backend.emit(csRuntimeShapeProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
-			final mainSourcePath = Path.join([outputDir, "src", "Main.cs"]);
+			final mainSourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final csLibPath = Path.join([outputDir, "src", "cs", "Lib.cs"]);
 			final runnerPath = Path.join([outputDir, "src", "unit", "Runner.cs"]);
 			final reportPath = Path.join([outputDir, "src", "unit", "Report.cs"]);
@@ -6085,7 +6144,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
 			backend.emit(csImportedUtestProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
-			final mainSourcePath = Path.join([outputDir, "src", "Main.cs"]);
+			final mainSourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final runnerPath = Path.join([outputDir, "src", "utest", "Runner.cs"]);
 			final reportPath = Path.join([outputDir, "src", "utest", "ui", "Report.cs"]);
 			final headerModePath = Path.join([outputDir, "src", "utest", "ui", "common", "HeaderDisplayMode.cs"]);
@@ -6232,7 +6291,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
 			backend.emit(csEntrySupportMembersProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
-			final mainPath = Path.join([outputDir, "src", "Main.cs"]);
+			final mainPath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final serializerPath = Path.join([outputDir, "src", "haxe", "Serializer.cs"]);
 			assertTrue(FileSystem.exists(mainPath), "C# source backend should emit the entry class source");
 			assertTrue(FileSystem.exists(serializerPath), "C# source backend should emit haxe.Serializer support");
@@ -12295,6 +12354,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaJarPackaging();
 		assertCsExePackaging();
 		assertCsBuildExecutableEmitsSupportSourceSet();
+		assertCsIssue4598ReadOnlyReflectShape();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();
