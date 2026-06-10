@@ -8459,6 +8459,13 @@ class SourceTargetCommon {
 			final prefix = HxFieldDecl.getIsStatic(field) ? bodyIndent + "  public static object " : bodyIndent + "  public object ";
 			out.push(prefix + fieldName + " = null;");
 		}
+		final isUtestReport = csIsUtestReport(packagePath, className);
+		if (isUtestReport) {
+			if (!emittedFields.exists("displayHeader"))
+				out.push(bodyIndent + "  public object displayHeader = null;");
+			if (!emittedFields.exists("displaySuccessResults"))
+				out.push(bodyIndent + "  public object displaySuccessResults = null;");
+		}
 		var sawConstructor = false;
 		final emittedMethods = new Map<String, Bool>();
 		for (fn in HxClassDecl.getFunctions(cls)) {
@@ -8485,10 +8492,11 @@ class SourceTargetCommon {
 					continue;
 				emittedMethods.set(key, true);
 				final returnsNewOwner = HxFunctionDecl.getIsStatic(fn) && csCreateReturnsNewOwner(fn, className);
-				final returnType = returnsNewOwner ? className : "object";
+				final returnsUtestReportFactory = isUtestReport && HxFunctionDecl.getIsStatic(fn) && methodName == "create";
+				final returnType = returnsNewOwner || returnsUtestReportFactory ? className : "object";
 				final prefix = HxFunctionDecl.getIsStatic(fn) ? bodyIndent + "  public static " + returnType + " " : bodyIndent + "  public object ";
 				out.push(prefix + methodName + "(" + csFunctionArgs(args, count) + ") {");
-				if (returnsNewOwner)
+				if (returnsNewOwner || returnsUtestReportFactory)
 					out.push(bodyIndent + "    return new " + className + "();");
 				else
 					out.push(bodyIndent + "    return null;");
@@ -8512,6 +8520,10 @@ class SourceTargetCommon {
 		out.push(bodyIndent + "}");
 		appendCsNamespaceClose(out, packagePath);
 		return out.join("\n");
+	}
+
+	static function csIsUtestReport(packagePath:String, className:String):Bool {
+		return csQualifiedClassName(packagePath, className) == "utest.ui.Report";
 	}
 
 	static function renderCsImportStub(packagePath:String, className:String, ?nestedNames:Array<String>):String {

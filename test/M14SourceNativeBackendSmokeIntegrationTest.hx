@@ -452,11 +452,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final reportSrc = [
 			"package utest.ui;",
 			"class Report {",
-			"  public var displayHeader:Dynamic;",
-			"  public var displaySuccessResults:Dynamic;",
 			"  public function new() {}",
-			"  public static function create(runner:Dynamic) {",
-			"    return new Report();",
+			"  public static function create(runner:Dynamic, ?displaySuccessResults:Dynamic, ?headerDisplayMode:Dynamic) {",
+			"    var report:Dynamic = null;",
+			"    return report;",
 			"  }",
 			"}",
 		].join("\n");

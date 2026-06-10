@@ -6491,6 +6491,8 @@ let emitJavaRunciHelperStubs = fun sourceDir sourcePaths seen -> ignore (let hel
   | HxRuntime.Hx_continue -> () done with
   | HxRuntime.Hx_break -> ())
 
+let csIsUtestReport = fun packagePath className -> HxString.equals (csQualifiedClassName (packagePath : string) (className : string)) "utest.ui.Report"
+
 let csImportUsingNamespace = fun path -> try let __fallback_result_3861 = (
   ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 || HxString.indexOf path "." 0 <= 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   ignore (if not (StringTools.startsWith (path : string) ("utest." : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -7187,109 +7189,115 @@ let renderCsSupportClass = fun program decl cls -> let out = Obj.magic (let __ar
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      let sawConstructor = ref false in let emittedMethods = HxMap.create_string () in (
-        ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-          ignore (let __old_3836 = !_g in let __new_3837 = HxInt.add __old_3836 1 in (
-            ignore (_g := __new_3837);
-            __new_3837
-          ));
-          let fnName = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
-            ignore (if HxString.equals fnName "main" || HxArray.indexOf (HxFunctionDecl.getMetadata (Obj.magic fn)) "macro" 0 >= 0 then raise (HxRuntime.Hx_continue) else ());
-            let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in (
-              ignore (if HxString.equals fnName "new" then ignore ((
-                ignore (let __assign_3838 = true in (
-                  sawConstructor := __assign_3838;
-                  __assign_3838
-                ));
-                ignore (let _g2 = ref 0 in let _g3 = Obj.magic (javaStubArityRange (Obj.magic args)) in try while !_g2 < HxArray.length _g3 do try ignore (let count = HxArray.get (Obj.magic _g3) (!_g2) in (
-                  ignore (let __old_3839 = !_g2 in let __new_3840 = HxInt.add __old_3839 1 in (
-                    ignore (_g2 := __new_3840);
-                    __new_3840
+      let isUtestReport = csIsUtestReport (packagePath : string) (className : string) in (
+        ignore (if isUtestReport then ignore ((
+          ignore (if not (HxMap.exists_string emittedFields "displayHeader") then ignore (HxArray.push out (HxString.toStdString (!tempString) ^ "  public object displayHeader = null;")) else ());
+          if not (HxMap.exists_string emittedFields "displaySuccessResults") then ignore (HxArray.push out (HxString.toStdString (!tempString) ^ "  public object displaySuccessResults = null;")) else ()
+        )) else ());
+        let sawConstructor = ref false in let emittedMethods = HxMap.create_string () in (
+          ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+            ignore (let __old_3836 = !_g in let __new_3837 = HxInt.add __old_3836 1 in (
+              ignore (_g := __new_3837);
+              __new_3837
+            ));
+            let fnName = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
+              ignore (if HxString.equals fnName "main" || HxArray.indexOf (HxFunctionDecl.getMetadata (Obj.magic fn)) "macro" 0 >= 0 then raise (HxRuntime.Hx_continue) else ());
+              let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in (
+                ignore (if HxString.equals fnName "new" then ignore ((
+                  ignore (let __assign_3838 = true in (
+                    sawConstructor := __assign_3838;
+                    __assign_3838
                   ));
-                  let key = ("new#" ^ HxString.toStdString (string_of_int count) : string) in (
-                    ignore (if HxMap.exists_string emittedMethods key then raise (HxRuntime.Hx_continue) else ());
-                    ignore (HxMap.set_string emittedMethods key true);
-                    ignore (HxArray.push out (((((HxString.toStdString (!tempString) ^ "  public ") ^ HxString.toStdString className) ^ "(") ^ HxString.toStdString (csFunctionArgs (Obj.magic args) (Obj.repr count))) ^ ") {"));
-                    HxArray.push out (HxString.toStdString (!tempString) ^ "  }")
-                  )
-                )) with
-                  | HxRuntime.Hx_continue -> () done with
-                  | HxRuntime.Hx_break -> ());
-                raise (HxRuntime.Hx_continue)
-              )) else ());
-              let methodName = (sanitizeCsIdentifier (fnName : string) : string) in (
-                ignore (let _g2 = ref 0 in let _g3 = Obj.magic (javaStubArityRange (Obj.magic args)) in try while !_g2 < HxArray.length _g3 do try ignore (let count = HxArray.get (Obj.magic _g3) (!_g2) in (
-                  ignore (let __old_3841 = !_g2 in let __new_3842 = HxInt.add __old_3841 1 in (
-                    ignore (_g2 := __new_3842);
-                    __new_3842
-                  ));
-                  let key = ((HxString.toStdString methodName ^ "#") ^ HxString.toStdString (string_of_int count) : string) in (
-                    ignore (if HxMap.exists_string emittedMethods key then raise (HxRuntime.Hx_continue) else ());
-                    ignore (HxMap.set_string emittedMethods key true);
-                    let returnsNewOwner = HxFunctionDecl.getIsStatic (Obj.magic fn) && csCreateReturnsNewOwner (Obj.magic fn) (className : string) in let tempString2 = ref ("" : string) in (
-                      ignore (if returnsNewOwner then let __assign_3843 = (className : string) in (
-                        tempString2 := __assign_3843;
-                        __assign_3843
-                      ) else let __assign_3844 = ("object" : string) in (
-                        tempString2 := __assign_3844;
-                        __assign_3844
-                      ));
-                      let returnType = (!tempString2 : string) in let tempString3 = ref ("" : string) in (
-                        ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) then let __assign_3845 = (((HxString.toStdString (!tempString) ^ "  public static ") ^ HxString.toStdString returnType) ^ " " : string) in (
-                          tempString3 := __assign_3845;
-                          __assign_3845
-                        ) else let __assign_3846 = (HxString.toStdString (!tempString) ^ "  public object " : string) in (
-                          tempString3 := __assign_3846;
-                          __assign_3846
+                  ignore (let _g2 = ref 0 in let _g3 = Obj.magic (javaStubArityRange (Obj.magic args)) in try while !_g2 < HxArray.length _g3 do try ignore (let count = HxArray.get (Obj.magic _g3) (!_g2) in (
+                    ignore (let __old_3839 = !_g2 in let __new_3840 = HxInt.add __old_3839 1 in (
+                      ignore (_g2 := __new_3840);
+                      __new_3840
+                    ));
+                    let key = ("new#" ^ HxString.toStdString (string_of_int count) : string) in (
+                      ignore (if HxMap.exists_string emittedMethods key then raise (HxRuntime.Hx_continue) else ());
+                      ignore (HxMap.set_string emittedMethods key true);
+                      ignore (HxArray.push out (((((HxString.toStdString (!tempString) ^ "  public ") ^ HxString.toStdString className) ^ "(") ^ HxString.toStdString (csFunctionArgs (Obj.magic args) (Obj.repr count))) ^ ") {"));
+                      HxArray.push out (HxString.toStdString (!tempString) ^ "  }")
+                    )
+                  )) with
+                    | HxRuntime.Hx_continue -> () done with
+                    | HxRuntime.Hx_break -> ());
+                  raise (HxRuntime.Hx_continue)
+                )) else ());
+                let methodName = (sanitizeCsIdentifier (fnName : string) : string) in (
+                  ignore (let _g2 = ref 0 in let _g3 = Obj.magic (javaStubArityRange (Obj.magic args)) in try while !_g2 < HxArray.length _g3 do try ignore (let count = HxArray.get (Obj.magic _g3) (!_g2) in (
+                    ignore (let __old_3841 = !_g2 in let __new_3842 = HxInt.add __old_3841 1 in (
+                      ignore (_g2 := __new_3842);
+                      __new_3842
+                    ));
+                    let key = ((HxString.toStdString methodName ^ "#") ^ HxString.toStdString (string_of_int count) : string) in (
+                      ignore (if HxMap.exists_string emittedMethods key then raise (HxRuntime.Hx_continue) else ());
+                      ignore (HxMap.set_string emittedMethods key true);
+                      let returnsNewOwner = HxFunctionDecl.getIsStatic (Obj.magic fn) && csCreateReturnsNewOwner (Obj.magic fn) (className : string) in let returnsUtestReportFactory = isUtestReport && HxFunctionDecl.getIsStatic (Obj.magic fn) && HxString.equals methodName "create" in let tempString2 = ref ("" : string) in (
+                        ignore (if returnsNewOwner || returnsUtestReportFactory then let __assign_3843 = (className : string) in (
+                          tempString2 := __assign_3843;
+                          __assign_3843
+                        ) else let __assign_3844 = ("object" : string) in (
+                          tempString2 := __assign_3844;
+                          __assign_3844
                         ));
-                        let prefix = (!tempString3 : string) in (
-                          ignore (HxArray.push out ((((HxString.toStdString prefix ^ HxString.toStdString methodName) ^ "(") ^ HxString.toStdString (csFunctionArgs (Obj.magic args) (Obj.repr count))) ^ ") {"));
-                          ignore (if returnsNewOwner then ignore (HxArray.push out (((HxString.toStdString (!tempString) ^ "    return new ") ^ HxString.toStdString className) ^ "();")) else ignore (HxArray.push out (HxString.toStdString (!tempString) ^ "    return null;")));
-                          HxArray.push out (HxString.toStdString (!tempString) ^ "  }")
+                        let returnType = (!tempString2 : string) in let tempString3 = ref ("" : string) in (
+                          ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) then let __assign_3845 = (((HxString.toStdString (!tempString) ^ "  public static ") ^ HxString.toStdString returnType) ^ " " : string) in (
+                            tempString3 := __assign_3845;
+                            __assign_3845
+                          ) else let __assign_3846 = (HxString.toStdString (!tempString) ^ "  public object " : string) in (
+                            tempString3 := __assign_3846;
+                            __assign_3846
+                          ));
+                          let prefix = (!tempString3 : string) in (
+                            ignore (HxArray.push out ((((HxString.toStdString prefix ^ HxString.toStdString methodName) ^ "(") ^ HxString.toStdString (csFunctionArgs (Obj.magic args) (Obj.repr count))) ^ ") {"));
+                            ignore (if returnsNewOwner || returnsUtestReportFactory then ignore (HxArray.push out (((HxString.toStdString (!tempString) ^ "    return new ") ^ HxString.toStdString className) ^ "();")) else ignore (HxArray.push out (HxString.toStdString (!tempString) ^ "    return null;")));
+                            HxArray.push out (HxString.toStdString (!tempString) ^ "  }")
+                          )
                         )
                       )
                     )
-                  )
-                )) with
-                  | HxRuntime.Hx_continue -> () done with
-                  | HxRuntime.Hx_break -> ());
-                let varargsKey = (HxString.toStdString methodName ^ "#varargs" : string) in if not (HxMap.exists_string emittedMethods varargsKey) then ignore ((
-                  ignore (HxMap.set_string emittedMethods varargsKey true);
-                  let tempString4 = ref ("" : string) in (
-                    ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) then let __assign_3847 = (HxString.toStdString (!tempString) ^ "  public static object " : string) in (
-                      tempString4 := __assign_3847;
-                      __assign_3847
-                    ) else let __assign_3848 = (HxString.toStdString (!tempString) ^ "  public object " : string) in (
-                      tempString4 := __assign_3848;
-                      __assign_3848
-                    ));
-                    let prefix = (!tempString4 : string) in (
-                      ignore (HxArray.push out ((HxString.toStdString prefix ^ HxString.toStdString methodName) ^ "(params object[] args) {"));
-                      ignore (HxArray.push out (HxString.toStdString (!tempString) ^ "    return null;"));
-                      HxArray.push out (HxString.toStdString (!tempString) ^ "  }")
+                  )) with
+                    | HxRuntime.Hx_continue -> () done with
+                    | HxRuntime.Hx_break -> ());
+                  let varargsKey = (HxString.toStdString methodName ^ "#varargs" : string) in if not (HxMap.exists_string emittedMethods varargsKey) then ignore ((
+                    ignore (HxMap.set_string emittedMethods varargsKey true);
+                    let tempString4 = ref ("" : string) in (
+                      ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) then let __assign_3847 = (HxString.toStdString (!tempString) ^ "  public static object " : string) in (
+                        tempString4 := __assign_3847;
+                        __assign_3847
+                      ) else let __assign_3848 = (HxString.toStdString (!tempString) ^ "  public object " : string) in (
+                        tempString4 := __assign_3848;
+                        __assign_3848
+                      ));
+                      let prefix = (!tempString4 : string) in (
+                        ignore (HxArray.push out ((HxString.toStdString prefix ^ HxString.toStdString methodName) ^ "(params object[] args) {"));
+                        ignore (HxArray.push out (HxString.toStdString (!tempString) ^ "    return null;"));
+                        HxArray.push out (HxString.toStdString (!tempString) ^ "  }")
+                      )
                     )
-                  )
-                )) else ()
+                  )) else ()
+                )
               )
             )
-          )
-        )) with
-          | HxRuntime.Hx_continue -> () done with
-          | HxRuntime.Hx_break -> ());
-        ignore (if not (!sawConstructor) then ignore ((
-          ignore (HxArray.push out (((HxString.toStdString (!tempString) ^ "  public ") ^ HxString.toStdString className) ^ "() {"));
-          HxArray.push out (HxString.toStdString (!tempString) ^ "  }")
-        )) else ());
-        ignore (let _g = ref 0 in let _g1 = Obj.magic (csNestedImportStubNames (Obj.magic program) (Obj.magic decl) (Obj.magic cls) (rawClassName : string)) in while !_g < HxArray.length _g1 do ignore (let nested = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-          ignore (let __old_3849 = !_g in let __new_3850 = HxInt.add __old_3849 1 in (
-            ignore (_g := __new_3850);
-            __new_3850
-          ));
-          appendCsNestedImportStub (Obj.magic out) (HxString.toStdString (!tempString) ^ "  " : string) (nested : string)
-        )) done);
-        ignore (HxArray.push out (HxString.toStdString (!tempString) ^ "}"));
-        ignore (appendCsNamespaceClose (Obj.magic out) (packagePath : string));
-        HxArray.join out "\n" (fun x -> x)
+          )) with
+            | HxRuntime.Hx_continue -> () done with
+            | HxRuntime.Hx_break -> ());
+          ignore (if not (!sawConstructor) then ignore ((
+            ignore (HxArray.push out (((HxString.toStdString (!tempString) ^ "  public ") ^ HxString.toStdString className) ^ "() {"));
+            HxArray.push out (HxString.toStdString (!tempString) ^ "  }")
+          )) else ());
+          ignore (let _g = ref 0 in let _g1 = Obj.magic (csNestedImportStubNames (Obj.magic program) (Obj.magic decl) (Obj.magic cls) (rawClassName : string)) in while !_g < HxArray.length _g1 do ignore (let nested = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+            ignore (let __old_3849 = !_g in let __new_3850 = HxInt.add __old_3849 1 in (
+              ignore (_g := __new_3850);
+              __new_3850
+            ));
+            appendCsNestedImportStub (Obj.magic out) (HxString.toStdString (!tempString) ^ "  " : string) (nested : string)
+          )) done);
+          ignore (HxArray.push out (HxString.toStdString (!tempString) ^ "}"));
+          ignore (appendCsNamespaceClose (Obj.magic out) (packagePath : string));
+          HxArray.join out "\n" (fun x -> x)
+        )
       )
     )
   )
