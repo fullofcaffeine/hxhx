@@ -534,6 +534,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csScopedLocalBlockProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		final body:Array<HxStmt> = [
+			SBlock([
+				SVar("expected", "", EString("first"), pos),
+				SVar("result", "", EString("first"), pos)
+			], pos),
+			SBlock([
+				SVar("expected", "", EString("second"), pos),
+				SVar("result", "", EString("second"), pos)
+			], pos),
+			SBlock([SVar("n", "", EInt(1), pos)], pos),
+			SBlock([SVar("n", "", EInt(2), pos)], pos)
+		];
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", body, "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+	}
+
 	static function csEntrySupportMembersProgram():GenIrProgram {
 		final src = [
 			"class HelperApi {",
@@ -5992,6 +6012,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(mainTypeContent, "case \"a\": return true;", "C# Issue4598 support type should expose read-only field metadata");
 			assertContains(reflectContent, "public static object setProperty", "C# Issue4598 Reflect shim should expose setProperty");
 			assertContains(reflectContent, "System.MemberAccessException", "C# Issue4598 Reflect shim should reject read-only field writes");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsScopedLocalBlockShape():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_scoped_locals_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csScopedLocalBlockProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			assertTrue(FileSystem.exists(entrySourcePath), "C# scoped-local regression should emit an entry wrapper");
+			final entryContent = File.getContent(entrySourcePath);
+			assertContains(entryContent, "    {\n        var expected = \"first\";",
+				"C# scoped-local regression should wrap the first Haxe block in a C# block");
+			assertContains(entryContent, "    {\n        var expected = \"second\";",
+				"C# scoped-local regression should wrap the second Haxe block in a C# block");
+			assertContains(entryContent, "    {\n        var n = 1;", "C# scoped-local regression should wrap the first repeated numeric local in a C# block");
+			assertContains(entryContent, "    {\n        var n = 2;", "C# scoped-local regression should wrap the second repeated numeric local in a C# block");
+			assertNotContains(entryContent, "    var expected = \"first\";\n    var result = \"first\";\n    var expected = \"second\";",
+				"C# scoped-local regression should not flatten sibling Haxe blocks into one C# local scope");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -12355,6 +12408,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsExePackaging();
 		assertCsBuildExecutableEmitsSupportSourceSet();
 		assertCsIssue4598ReadOnlyReflectShape();
+		assertCsScopedLocalBlockShape();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();

@@ -5753,6 +5753,8 @@ class SourceTargetCommon {
 
 	static function renderStmt(target:SourceNativeTarget, stmt:HxStmt, indent:String):Array<String> {
 		return switch (stmt) {
+			case SBlock(stmts, _) if (target == Cs):
+				renderCStyleScopedBlock(target, stmts, indent);
 			case SBlock(stmts, _):
 				renderStmts(target, stmts, indent, target == Php ? phpRenderLocalTypes : null);
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
@@ -7002,6 +7004,8 @@ class SourceTargetCommon {
 					phpLocals.set(sanitizeTypeName(keyName), "");
 					phpLocals.set(sanitizeTypeName(valueName), "");
 					return renderForKeyValue(target, keyName, valueName, iterable, body, indent, phpLocals);
+				case SBlock(stmts, _) if (target == Cs):
+					return renderCStyleScopedBlock(target, stmts, indent);
 				case SBlock(stmts, _):
 					final out = new Array<String>();
 					final blockLocalTypes = copyStringMap(localTypes);
@@ -7026,6 +7030,23 @@ class SourceTargetCommon {
 					return renderStmt(target, stmt, indent);
 			}
 		});
+	}
+
+	/**
+		Render a statement-position Haxe block as a lexical block for C-style targets.
+
+		Why
+		- Haxe permits the same local name to be declared in separate sibling blocks.
+		- C# rejects duplicate local declarations when those blocks are flattened into one method body.
+		- Keeping explicit braces preserves the Haxe block boundary without renaming locals or changing
+		  expression lowering.
+	**/
+	static function renderCStyleScopedBlock(target:SourceNativeTarget, stmts:Array<HxStmt>, indent:String):Array<String> {
+		final out = [indent + "{"];
+		for (line in renderStmts(target, stmts, indent + indentStep(target)))
+			out.push(line);
+		out.push(indent + "}");
+		return out;
 	}
 
 	static function pythonAssignmentStmt(op:String, left:HxExpr, right:HxExpr):String {
