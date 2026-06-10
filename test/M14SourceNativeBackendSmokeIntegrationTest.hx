@@ -425,6 +425,60 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csImportedUtestProgram():GenIrProgram {
+		final mainSrc = [
+			"import utest.Runner;",
+			"import utest.ui.Report;",
+			"import utest.ui.common.HeaderDisplayMode;",
+			"import utest.ui.common.SuccessResultsDisplayMode;",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var runner = new Runner();",
+			"    var report = Report.create(runner);",
+			"    report.displayHeader = HeaderDisplayMode.AlwaysShowHeader;",
+			"    report.displaySuccessResults = SuccessResultsDisplayMode.NeverShowSuccessResults;",
+			"    runner.run();",
+			"  }",
+			"}",
+		].join("\n");
+		final runnerSrc = [
+			"package utest;",
+			"class Runner {",
+			"  public function new() {}",
+			"  public function run() {}",
+			"}",
+		].join("\n");
+		final reportSrc = [
+			"package utest.ui;",
+			"class Report {",
+			"  public var displayHeader:Dynamic;",
+			"  public var displaySuccessResults:Dynamic;",
+			"  public function new() {}",
+			"  public static function create(runner:Dynamic) {",
+			"    return new Report();",
+			"  }",
+			"}",
+		].join("\n");
+		final modesSrc = [
+			"package utest.ui.common;",
+			"enum HeaderDisplayMode {",
+			"  AlwaysShowHeader;",
+			"  NeverShowHeader;",
+			"}",
+			"enum SuccessResultsDisplayMode {",
+			"  AlwaysShowSuccessResults;",
+			"  NeverShowSuccessResults;",
+			"}",
+		].join("\n");
+		return MacroStage.expandProgram([
+			TyperStage.typeModule(ParserStage.parse(mainSrc, "tests/sys/Main.hx")),
+			TyperStage.typeModule(ParserStage.parse(runnerSrc, "tests/.haxelib/utest/git/src/utest/Runner.hx")),
+			TyperStage.typeModule(ParserStage.parse(reportSrc, "tests/.haxelib/utest/git/src/utest/ui/Report.hx")),
+			TyperStage.typeModule(ParserStage.parse(modesSrc, "tests/.haxelib/utest/git/src/utest/ui/common/HeaderDisplayMode.hx")),
+		], []);
+	}
+
 	static function csSysExitProgram():GenIrProgram {
 		final src = [
 			"class ExitCode {",
@@ -5785,6 +5839,58 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(mainContent, "public object add(System.Func<dynamic, object> callback)",
 				"C# signal support should expose a one-argument delegate overload for callback lambdas");
 			assertContains(reportContent, "public static Report create", "C# Report stub should expose the factory used by unit TestMain");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsImportedUtestShape():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_imported_utest_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		try {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csImportedUtestProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final mainSourcePath = Path.join([outputDir, "src", "Main.cs"]);
+			final runnerPath = Path.join([outputDir, "src", "utest", "Runner.cs"]);
+			final reportPath = Path.join([outputDir, "src", "utest", "ui", "Report.cs"]);
+			final headerModePath = Path.join([outputDir, "src", "utest", "ui", "common", "HeaderDisplayMode.cs"]);
+			final successModePath = Path.join([outputDir, "src", "utest", "ui", "common", "SuccessResultsDisplayMode.cs"]);
+			assertTrue(FileSystem.exists(mainSourcePath), "C# source backend should emit the imported utest main source");
+			assertTrue(FileSystem.exists(runnerPath), "C# source backend should emit or synthesize utest.Runner support");
+			assertTrue(FileSystem.exists(reportPath), "C# source backend should emit or synthesize utest.ui.Report support");
+			assertTrue(FileSystem.exists(headerModePath), "C# source backend should synthesize HeaderDisplayMode support for imported enum values");
+			assertTrue(FileSystem.exists(successModePath), "C# source backend should synthesize SuccessResultsDisplayMode support for imported enum values");
+			final mainContent = File.getContent(mainSourcePath);
+			final reportContent = File.getContent(reportPath);
+			final headerContent = File.getContent(headerModePath);
+			final successContent = File.getContent(successModePath);
+			assertContains(mainContent, "using utest;", "C# imported utest types should be brought into scope for unqualified Runner");
+			assertContains(mainContent, "using utest.ui;", "C# imported utest.ui types should be brought into scope for unqualified Report");
+			assertContains(mainContent, "using utest.ui.common;",
+				"C# imported utest display-mode types should be brought into scope for unqualified enum carriers");
+			assertContains(mainContent, "new Runner()", "C# sys-style utest import shape should keep unqualified Runner construction");
+			assertContains(mainContent, "Report.create(runner)", "C# sys-style utest import shape should keep unqualified Report factory calls");
+			assertContains(mainContent, "report.displayHeader = HeaderDisplayMode.AlwaysShowHeader;",
+				"C# imported HeaderDisplayMode assignment should keep the source-level enum carrier shape");
+			assertContains(mainContent, "report.displaySuccessResults = SuccessResultsDisplayMode.NeverShowSuccessResults;",
+				"C# imported SuccessResultsDisplayMode assignment should keep the source-level enum carrier shape");
+			assertContains(reportContent, "public object displayHeader", "C# utest Report support should expose displayHeader for sys report configuration");
+			assertContains(reportContent, "public object displaySuccessResults",
+				"C# utest Report support should expose displaySuccessResults for sys report configuration");
+			assertContains(headerContent, "public static object AlwaysShowHeader", "C# HeaderDisplayMode support should expose AlwaysShowHeader");
+			assertContains(successContent, "public static object NeverShowSuccessResults",
+				"C# SuccessResultsDisplayMode support should expose NeverShowSuccessResults");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -11694,6 +11800,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsBuildExecutableEmitsSupportSourceSet();
 		assertCsRootOwnerImportLayout();
 		assertCsRuntimeShapeStubs();
+		assertCsImportedUtestShape();
 		assertCsSysExitShape();
 		assertJavaLambdaSequenceCallback();
 		assertCsLambdaSequenceCallback();
