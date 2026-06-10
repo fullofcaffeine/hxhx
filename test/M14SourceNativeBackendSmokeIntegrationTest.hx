@@ -5697,6 +5697,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertCsLambdaSequenceCallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_lambda_sequence_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(javaLambdaSequenceCallbackProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "runner.onProgress.add((e) => {", "C# callback lambdas with statement bodies should render as block lambdas");
+		assertContains(content, "foreach (var item in", "C# lambda-body for-in continuations should lower to statements");
+		assertContains(content, "if ((item == \"Success\")) {", "C# lambda-body switch expressions should lower to if statements");
+		assertContains(content, "System.Console.WriteLine(\"done\");", "C# lambda-body continuations should render after lowered for-in statements");
+		assertNotContains(content, "__hxhx_for_in", "C# callback lambdas should not leak for-in helper calls into generated source");
+		assertNotContains(content, "__hxhx_lambda_seq_", "C# callback lambdas should not leak lambda-sequence temporaries into generated source");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertJavaSupportClassJarPackaging():Void {
 		if (!commandExists("javac") || !commandExists("jar"))
 			return;
@@ -11549,6 +11566,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsBuildExecutableEmitsSupportSourceSet();
 		assertCsRuntimeShapeStubs();
 		assertJavaLambdaSequenceCallback();
+		assertCsLambdaSequenceCallback();
 		assertJavaSupportClassJarPackaging();
 		assertJavaLibraryEnumJarPackaging();
 		assertJavaOperationInterfaceRuntime();

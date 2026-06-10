@@ -2773,9 +2773,49 @@ class SourceTargetCommon {
 				out;
 			case ECall(EIdent("__hxhx_for_in"), args) if (args.length >= 3):
 				csForInExprStatements(args[0], args[1], args[2], indent, appendReturn);
+			case ESwitch(scrutinee, patterns, exprs):
+				csSwitchExprStatements(scrutinee, patterns, exprs, indent, appendReturn);
+			case ECall(EField(EIdent("Sys"), "println"), args) if (args.length == 1):
+				final out = [indent + printStmt(Cs, renderExpr(Cs, args[0]))];
+				if (appendReturn)
+					out.push(indent + "return null;");
+				out;
+			case ECall(EIdent("trace"), args) if (args.length >= 1):
+				final out = [indent + printStmt(Cs, renderExpr(Cs, args[0]))];
+				if (appendReturn)
+					out.push(indent + "return null;");
+				out;
 			case _:
 				if (appendReturn) [indent + "return " + renderExpr(Cs, expr) + ";"]; else [indent + exprStmt(Cs, renderExpr(Cs, expr))];
 		};
+	}
+
+	static function csSwitchExprStatements(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>, indent:String,
+			appendReturn:Bool):Array<String> {
+		final out = new Array<String>();
+		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+		if (count == 0) {
+			if (appendReturn)
+				out.push(indent + "return null;");
+			return out;
+		}
+		final scrutineeExpr = renderExpr(Cs, scrutinee);
+		final childIndent = indent + indentStep(Cs);
+		for (i in 0...count) {
+			final pattern = patterns[i];
+			final cond = switchPatternCond(Cs, scrutineeExpr, pattern);
+			if (i == 0) {
+				out.push(indent + "if (" + cond + ") {");
+			} else if (pattern.match(PWildcard)) {
+				out.push(indent + "} else {");
+			} else {
+				out.push(indent + "} else if (" + cond + ") {");
+			}
+			for (line in csExprAsStatements(exprs[i], childIndent, appendReturn))
+				out.push(line);
+		}
+		out.push(indent + "}");
+		return out;
 	}
 
 	static function csForInExprStatements(iterable:HxExpr, bodyExpr:HxExpr, continuation:HxExpr, indent:String, appendReturn:Bool):Array<String> {
