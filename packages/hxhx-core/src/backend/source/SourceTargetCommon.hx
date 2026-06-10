@@ -8804,6 +8804,9 @@ class SourceTargetCommon {
 			out.push(indent + "public static void saveContent(object path, object content) {");
 			out.push(indent + "  System.IO.File.WriteAllText(System.Convert.ToString(path), System.Convert.ToString(content));");
 			out.push(indent + "}");
+			out.push(indent + "public static void copy(object src, object dst) {");
+			out.push(indent + "  System.IO.File.Copy(System.Convert.ToString(src), System.Convert.ToString(dst), true);");
+			out.push(indent + "}");
 		}
 		if (qualified == "utest.Runner") {
 			out.push(indent + "public __HxSignal onProgress = new __HxSignal();");

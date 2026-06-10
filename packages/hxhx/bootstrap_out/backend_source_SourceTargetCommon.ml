@@ -6935,6 +6935,9 @@ let appendCsImportStubMembers = fun out indent packagePath className -> ignore (
     ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
     ignore (HxArray.push out (HxString.toStdString indent ^ "public static void saveContent(object path, object content) {"));
     ignore (HxArray.push out (HxString.toStdString indent ^ "  System.IO.File.WriteAllText(System.Convert.ToString(path), System.Convert.ToString(content));"));
+    ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
+    ignore (HxArray.push out (HxString.toStdString indent ^ "public static void copy(object src, object dst) {"));
+    ignore (HxArray.push out (HxString.toStdString indent ^ "  System.IO.File.Copy(System.Convert.ToString(src), System.Convert.ToString(dst), true);"));
     HxArray.push out (HxString.toStdString indent ^ "}")
   )) else ());
   ignore (if HxString.equals qualified "utest.Runner" then ignore ((

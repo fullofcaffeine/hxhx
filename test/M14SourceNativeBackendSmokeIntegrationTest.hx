@@ -505,9 +505,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var file = Path.join([Sys.getCwd(), \"hxhx-cs-sys.txt\"]);",
 			"    if (FileSystem.exists(file)) FileSystem.deleteFile(file);",
 			"    File.saveContent(file, \"ok\");",
+			"    var copy = Path.join([Sys.getCwd(), \"hxhx-cs-sys-copy.txt\"]);",
+			"    if (FileSystem.exists(copy)) FileSystem.deleteFile(copy);",
+			"    File.copy(file, copy);",
 			"    var text = File.getContent(file);",
 			"    var code = Sys.command(Sys.programPath(), [\"exitCode\", \"0\"]);",
-			"    if (platform != \"\" && text == \"ok\" && code == 0) Sys.exit(0);",
+			"    if (platform != \"\" && text == \"ok\" && File.getContent(copy) == \"ok\" && code == 0) Sys.exit(0);",
 			"    Sys.exit(1);",
 			"  }",
 			"}",
@@ -6075,6 +6078,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(fileSystemContent, "public static bool exists(object path)", "C# FileSystem support should expose exists");
 			assertContains(fileContent, "namespace sys.io", "C# File support should use the sys.io namespace");
 			assertContains(fileContent, "public static void saveContent(object path, object content)", "C# File support should expose saveContent");
+			assertContains(fileContent, "public static void copy(object src, object dst)", "C# File support should expose copy");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
