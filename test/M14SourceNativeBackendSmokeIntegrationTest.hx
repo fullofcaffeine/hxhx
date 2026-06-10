@@ -670,6 +670,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csPostIncrementExpressionProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var v = 12.0;",
+			"    var old = v++;",
+			"    if (old != 12.0 || v != 13.0) throw \"bad-post-inc\";",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csEntrySupportMembersProgram():GenIrProgram {
 		final src = [
 			"class HelperApi {",
@@ -6311,6 +6326,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(content, "object.Equals(box.b, \"bad\")", "C# boxed support-field equality should use object.Equals");
 			assertNotContains(content, "box.a != 20", "C# boxed support-field inequality should not use the native operator");
 			assertNotContains(content, "box.b == \"bad\"", "C# boxed support-field equality should not use the native operator");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsPostIncrementExpressionUsesHelper():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_post_inc_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csPostIncrementExpressionProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			assertTrue(FileSystem.exists(entrySourcePath), "C# post-increment expression regression should emit an entry wrapper");
+			final content = File.getContent(entrySourcePath);
+			assertContains(content, "public static double __hxhx_postUpdateVar(ref double value, int delta)",
+				"C# entry wrapper should include a typed post-update helper");
+			assertContains(content, "var old = __hxhx_postUpdateVar(ref v, 1);", "C# expression-position post++ should return the old value via helper");
+			assertNotContains(content, "var old = v++;", "C# expression-position post++ should not rely on raw operator emission");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -12680,6 +12724,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsSupportConstructorWithSuper();
 		assertCsSupportConstructorAssignThisSkipped();
 		assertCsSupportFieldEqualityUsesObjectEquals();
+		assertCsPostIncrementExpressionUsesHelper();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();

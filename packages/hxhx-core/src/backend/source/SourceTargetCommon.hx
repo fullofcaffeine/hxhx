@@ -1940,7 +1940,14 @@ class SourceTargetCommon {
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 				}
-			case Java, Cs, Lua:
+			case Cs:
+				switch (expr) {
+					case EIdent(name):
+						"__hxhx_postUpdateVar(ref " + valueName(Cs, name) + ", " + Std.string(delta) + ")";
+					case _:
+						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
+				}
+			case Java, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + (delta < 0 ? "post--" : "post++");
 		};
 	}
@@ -8708,6 +8715,7 @@ class SourceTargetCommon {
 		final bodyIndent = packagePath == null || packagePath.length == 0 ? "" : "  ";
 		appendCsNamespaceOpen(out, packagePath);
 		out.push(bodyIndent + "public class " + className + " {");
+		appendCsPostUpdateVarSupport(out, bodyIndent + "  ");
 		final emittedFields = new Map<String, Bool>();
 		final readOnlyFields = new Array<String>();
 		for (field in HxClassDecl.getFields(cls)) {
@@ -9260,6 +9268,28 @@ class SourceTargetCommon {
 				out.push(indent + "  return null;");
 			out.push(indent + "}");
 		}
+	}
+
+	static function appendCsPostUpdateVarSupport(out:Array<String>, indent:String):Void {
+		out.push(indent + "public static object __hxhx_postUpdateVar(ref object value, int delta) {");
+		out.push(indent + "  object old = value;");
+		out.push(indent + "  if (value is float || value is double || value is decimal) {");
+		out.push(indent + "    value = System.Convert.ToDouble(value) + delta;");
+		out.push(indent + "  } else {");
+		out.push(indent + "    value = System.Convert.ToInt32(value) + delta;");
+		out.push(indent + "  }");
+		out.push(indent + "  return old;");
+		out.push(indent + "}");
+		out.push(indent + "public static int __hxhx_postUpdateVar(ref int value, int delta) {");
+		out.push(indent + "  int old = value;");
+		out.push(indent + "  value += delta;");
+		out.push(indent + "  return old;");
+		out.push(indent + "}");
+		out.push(indent + "public static double __hxhx_postUpdateVar(ref double value, int delta) {");
+		out.push(indent + "  double old = value;");
+		out.push(indent + "  value += delta;");
+		out.push(indent + "  return old;");
+		out.push(indent + "}");
 	}
 
 	static function appendCsUtestRunnerAddCasesStubOnce(out:Array<String>, indent:String, emittedMethods:Map<String, Bool>):Void {
@@ -16171,6 +16201,7 @@ class SourceTargetCommon {
 				appendCsNamespaceOpen(lines, packagePath);
 				lines.push(bodyIndent + "public class " + entryClassName + " {");
 				appendCsMainSupportMembers(lines, decl, bodyIndent + "  ", className, classRef);
+				appendCsPostUpdateVarSupport(lines, bodyIndent + "  ");
 				lines.push(bodyIndent + "  public static void Main(string[] __hxhx_cli_args) {");
 				if (className == "UtilityProcess") {
 					appendCsUtilityProcessRuntime(lines, bodyIndent, entryClassName);
