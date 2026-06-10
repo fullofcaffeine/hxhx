@@ -495,6 +495,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csSysFileSurfaceProgram():GenIrProgram {
+		final src = [
+			"import haxe.io.Path;",
+			"import sys.FileSystem;",
+			"import sys.io.File;",
+			"",
+			"class ExitCode {",
+			"  static function main() {",
+			"    var file = Path.join([Sys.getCwd(), \"hxhx-cs-sys.txt\"]);",
+			"    if (FileSystem.exists(file)) FileSystem.deleteFile(file);",
+			"    File.saveContent(file, \"ok\");",
+			"    var text = File.getContent(file);",
+			"    var code = Sys.command(Sys.programPath(), [\"exitCode\", \"0\"]);",
+			"    if (text == \"ok\" && code == 0) Sys.exit(0);",
+			"    Sys.exit(1);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "tests/sys/ExitCode.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csReservedLocalProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -6004,6 +6027,58 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"C# sys exit-code helper should lower to native entrypoint args + parseInt APIs");
 		assertNotContains(content, "Sys.", "C# sys exit-code helper should not leak unresolved Sys class references");
 		assertNotContains(content, "Std.parseInt", "C# Std.parseInt should not leak an unresolved Haxe runtime reference");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsSysFileSurfaceShape():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_sys_file_surface_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		try {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csSysFileSurfaceProgram(), new BackendContext(outputDir, null, "ExitCode", true, true, new StringMap<String>()));
+			final mainPath = Path.join([outputDir, "src", "ExitCode.cs"]);
+			final sysPath = Path.join([outputDir, "src", "Sys.cs"]);
+			final pathPath = Path.join([outputDir, "src", "haxe", "io", "Path.cs"]);
+			final fileSystemPath = Path.join([outputDir, "src", "sys", "FileSystem.cs"]);
+			final filePath = Path.join([outputDir, "src", "sys", "io", "File.cs"]);
+			assertTrue(FileSystem.exists(mainPath), "C# source backend should emit the sys ExitCode entry source");
+			assertTrue(FileSystem.exists(sysPath), "C# source backend should synthesize root Sys support");
+			assertTrue(FileSystem.exists(pathPath), "C# source backend should synthesize haxe.io.Path support");
+			assertTrue(FileSystem.exists(fileSystemPath), "C# source backend should synthesize sys.FileSystem support");
+			assertTrue(FileSystem.exists(filePath), "C# source backend should synthesize sys.io.File support");
+			final mainContent = File.getContent(mainPath);
+			final sysContent = File.getContent(sysPath);
+			final pathContent = File.getContent(pathPath);
+			final fileSystemContent = File.getContent(fileSystemPath);
+			final fileContent = File.getContent(filePath);
+			assertContains(mainContent, "using haxe.io;", "C# haxe.io imports should bring Path into scope");
+			assertContains(mainContent, "using sys;", "C# sys imports should bring FileSystem into scope");
+			assertContains(mainContent, "using sys.io;", "C# sys.io imports should bring File into scope");
+			assertContains(mainContent, "var file = Path.join", "C# imported Path calls should remain unqualified and compile via using");
+			assertContains(mainContent, "FileSystem.exists(file)", "C# imported FileSystem calls should remain unqualified and compile via using");
+			assertContains(mainContent, "File.saveContent(file, \"ok\")", "C# imported File calls should remain unqualified and compile via using");
+			assertContains(mainContent, "Sys.command(Sys.programPath()", "C# root Sys calls should remain callable through the synthesized support class");
+			assertContains(sysContent, "public static int command(object command, object args = null)", "C# Sys support should expose command");
+			assertContains(sysContent, "public static string programPath()", "C# Sys support should expose programPath");
+			assertContains(pathContent, "namespace haxe.io", "C# Path support should use the haxe.io namespace");
+			assertContains(pathContent, "public static string join(object paths)", "C# Path support should expose join");
+			assertContains(fileSystemContent, "namespace sys", "C# FileSystem support should use the sys namespace");
+			assertContains(fileSystemContent, "public static bool exists(object path)", "C# FileSystem support should expose exists");
+			assertContains(fileContent, "namespace sys.io", "C# File support should use the sys.io namespace");
+			assertContains(fileContent, "public static void saveContent(object path, object content)", "C# File support should expose saveContent");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 		deleteRecursive(tmpRoot);
 	}
 
@@ -12019,6 +12094,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsRuntimeShapeStubs();
 		assertCsImportedUtestShape();
 		assertCsSysExitShape();
+		assertCsSysFileSurfaceShape();
 		assertCsEntrySupportMembersAndSerializer();
 		assertJavaLambdaSequenceCallback();
 		assertCsLambdaSequenceCallback();

@@ -539,8 +539,12 @@ class SourceTargetCommon {
 
 	static function emitCsStandardStubs(sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
 		final stubs = [
+			{packagePath: "", className: "Sys"},
 			{packagePath: "cs", className: "Lib"},
-			{packagePath: "haxe", className: "Serializer"}
+			{packagePath: "haxe", className: "Serializer"},
+			{packagePath: "haxe.io", className: "Path"},
+			{packagePath: "sys", className: "FileSystem"},
+			{packagePath: "sys.io", className: "File"}
 		];
 		for (stub in stubs) {
 			final key = csQualifiedClassName(stub.packagePath, stub.className);
@@ -8656,7 +8660,7 @@ class SourceTargetCommon {
 	static function csImportUsingNamespace(path:String):Null<String> {
 		if (path == null || path.length == 0 || path.indexOf(".") <= 0)
 			return null;
-		if (!StringTools.startsWith(path, "utest."))
+		if (!StringTools.startsWith(path, "utest.") && !StringTools.startsWith(path, "sys.") && !StringTools.startsWith(path, "haxe."))
 			return null;
 		final lastDot = path.lastIndexOf(".");
 		if (lastDot <= 0)
@@ -8666,6 +8670,122 @@ class SourceTargetCommon {
 
 	static function appendCsImportStubMembers(out:Array<String>, indent:String, packagePath:String, className:String):Void {
 		final qualified = csQualifiedClassName(packagePath, className);
+		if (qualified == "Sys") {
+			out.push(indent + "public static int command(object command, object args = null) {");
+			out.push(indent + "  var process = new System.Diagnostics.Process();");
+			out.push(indent + "  process.StartInfo.FileName = System.Convert.ToString(command);");
+			out.push(indent + "  process.StartInfo.Arguments = __hxhx_joinArgs(args);");
+			out.push(indent + "  process.StartInfo.UseShellExecute = false;");
+			out.push(indent + "  process.Start();");
+			out.push(indent + "  process.WaitForExit();");
+			out.push(indent + "  return process.ExitCode;");
+			out.push(indent + "}");
+			out.push(indent + "public static string programPath() {");
+			out.push(indent + "  return System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;");
+			out.push(indent + "}");
+			out.push(indent + "public static string getCwd() {");
+			out.push(indent + "  return System.IO.Directory.GetCurrentDirectory();");
+			out.push(indent + "}");
+			out.push(indent + "public static void exit(object code) {");
+			out.push(indent + "  System.Environment.Exit(System.Convert.ToInt32(code));");
+			out.push(indent + "}");
+			out.push(indent + "private static string __hxhx_joinArgs(object values) {");
+			out.push(indent + "  var parts = __hxhx_toStringArray(values);");
+			out.push(indent + "  for (int i = 0; i < parts.Length; i++) parts[i] = __hxhx_quoteArg(parts[i]);");
+			out.push(indent + "  return string.Join(\" \", parts);");
+			out.push(indent + "}");
+			out.push(indent + "private static string[] __hxhx_toStringArray(object values) {");
+			out.push(indent + "  if (values == null) return new string[0];");
+			out.push(indent + "  if (values is string) return new string[] { System.Convert.ToString(values) };");
+			out.push(indent + "  var list = new System.Collections.Generic.List<string>();");
+			out.push(indent + "  var enumerable = values as System.Collections.IEnumerable;");
+			out.push(indent + "  if (enumerable != null) {");
+			out.push(indent + "    foreach (object item in enumerable) list.Add(System.Convert.ToString(item));");
+			out.push(indent + "    return list.ToArray();");
+			out.push(indent + "  }");
+			out.push(indent + "  return new string[] { System.Convert.ToString(values) };");
+			out.push(indent + "}");
+			out.push(indent + "private static string __hxhx_quoteArg(string value) {");
+			out.push(indent + "  if (value == null) return \"\\\"\\\"\";");
+			out.push(indent + "  if (value.IndexOfAny(new char[] { ' ', '\\t', '\\n', '\\r', '\\\"' }) < 0) return value;");
+			out.push(indent + "  return \"\\\"\" + value.Replace(\"\\\\\", \"\\\\\\\\\").Replace(\"\\\"\", \"\\\\\\\"\") + \"\\\"\";");
+			out.push(indent + "}");
+		}
+		if (qualified == "haxe.io.Path") {
+			out.push(indent + "public static string join(object paths) {");
+			out.push(indent + "  var parts = __hxhx_toStringArray(paths);");
+			out.push(indent + "  return parts.Length == 0 ? \"\" : System.IO.Path.Combine(parts);");
+			out.push(indent + "}");
+			out.push(indent + "public static string normalize(object path) {");
+			out.push(indent + "  return System.IO.Path.GetFullPath(System.Convert.ToString(path));");
+			out.push(indent + "}");
+			out.push(indent + "public static string directory(object path) {");
+			out.push(indent + "  return System.IO.Path.GetDirectoryName(System.Convert.ToString(path));");
+			out.push(indent + "}");
+			out.push(indent + "public static string withoutDirectory(object path) {");
+			out.push(indent + "  return System.IO.Path.GetFileName(System.Convert.ToString(path));");
+			out.push(indent + "}");
+			out.push(indent + "public static string withoutExtension(object path) {");
+			out.push(indent + "  var value = System.Convert.ToString(path);");
+			out.push(indent + "  var dir = System.IO.Path.GetDirectoryName(value);");
+			out.push(indent + "  var file = System.IO.Path.GetFileNameWithoutExtension(value);");
+			out.push(indent + "  return string.IsNullOrEmpty(dir) ? file : System.IO.Path.Combine(dir, file);");
+			out.push(indent + "}");
+			out.push(indent + "private static string[] __hxhx_toStringArray(object values) {");
+			out.push(indent + "  if (values == null) return new string[0];");
+			out.push(indent + "  if (values is string) return new string[] { System.Convert.ToString(values) };");
+			out.push(indent + "  var list = new System.Collections.Generic.List<string>();");
+			out.push(indent + "  var enumerable = values as System.Collections.IEnumerable;");
+			out.push(indent + "  if (enumerable != null) {");
+			out.push(indent + "    foreach (object item in enumerable) list.Add(System.Convert.ToString(item));");
+			out.push(indent + "    return list.ToArray();");
+			out.push(indent + "  }");
+			out.push(indent + "  return new string[] { System.Convert.ToString(values) };");
+			out.push(indent + "}");
+		}
+		if (qualified == "sys.FileSystem") {
+			out.push(indent + "public static bool exists(object path) {");
+			out.push(indent + "  return System.IO.File.Exists(System.Convert.ToString(path)) || System.IO.Directory.Exists(System.Convert.ToString(path));");
+			out.push(indent + "}");
+			out.push(indent + "public static bool isDirectory(object path) {");
+			out.push(indent + "  return System.IO.Directory.Exists(System.Convert.ToString(path));");
+			out.push(indent + "}");
+			out.push(indent + "public static void createDirectory(object path) {");
+			out.push(indent + "  System.IO.Directory.CreateDirectory(System.Convert.ToString(path));");
+			out.push(indent + "}");
+			out.push(indent + "public static void deleteFile(object path) {");
+			out.push(indent + "  if (System.IO.File.Exists(System.Convert.ToString(path))) System.IO.File.Delete(System.Convert.ToString(path));");
+			out.push(indent + "}");
+			out.push(indent + "public static void deleteDirectory(object path) {");
+			out.push(indent
+				+ "  if (System.IO.Directory.Exists(System.Convert.ToString(path))) System.IO.Directory.Delete(System.Convert.ToString(path), true);");
+			out.push(indent + "}");
+			out.push(indent + "public static void rename(object from, object to) {");
+			out.push(indent + "  var src = System.Convert.ToString(from);");
+			out.push(indent + "  var dst = System.Convert.ToString(to);");
+			out.push(indent
+				+
+				"  if (System.IO.Directory.Exists(src)) { if (System.IO.Directory.Exists(dst)) System.IO.Directory.Delete(dst, true); System.IO.Directory.Move(src, dst); }");
+			out.push(indent + "  else { if (System.IO.File.Exists(dst)) System.IO.File.Delete(dst); System.IO.File.Move(src, dst); }");
+			out.push(indent + "}");
+			out.push(indent + "public static object stat(object path) {");
+			out.push(indent + "  return exists(path) ? new object() : null;");
+			out.push(indent + "}");
+			out.push(indent + "public static string absolutePath(object path) {");
+			out.push(indent + "  return System.IO.Path.GetFullPath(System.Convert.ToString(path));");
+			out.push(indent + "}");
+			out.push(indent + "public static string fullPath(object path) {");
+			out.push(indent + "  return absolutePath(path);");
+			out.push(indent + "}");
+		}
+		if (qualified == "sys.io.File") {
+			out.push(indent + "public static string getContent(object path) {");
+			out.push(indent + "  return System.IO.File.ReadAllText(System.Convert.ToString(path));");
+			out.push(indent + "}");
+			out.push(indent + "public static void saveContent(object path, object content) {");
+			out.push(indent + "  System.IO.File.WriteAllText(System.Convert.ToString(path), System.Convert.ToString(content));");
+			out.push(indent + "}");
+		}
 		if (qualified == "utest.Runner") {
 			out.push(indent + "public __HxSignal onProgress = new __HxSignal();");
 			out.push(indent + "public __HxSignal onTestStart = new __HxSignal();");
