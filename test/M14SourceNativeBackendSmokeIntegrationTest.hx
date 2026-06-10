@@ -26,6 +26,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return Sys.command("sh", ["-c", "command -v " + name + " >/dev/null 2>&1"]) == 0;
 	}
 
+	static function installTrueExecutable(path:String):Void {
+		final candidates = ["/usr/bin/true", "/bin/true"];
+		for (candidate in candidates) {
+			if (FileSystem.exists(candidate) && Sys.command("ln", ["-s", candidate, path]) == 0)
+				return;
+		}
+		throw "could not install fake true executable at " + path;
+	}
+
+	static function hasArtifactPath(artifacts:Array<backend.EmitArtifact>, path:String):Bool {
+		for (artifact in artifacts) {
+			if (artifact.path == path)
+				return true;
+		}
+		return false;
+	}
+
 	static function commandOutput(command:String, args:Array<String>):{code:Int, stdout:String, stderr:String} {
 		final process = new sys.io.Process(command, args);
 		final stdout = process.stdout.readAll().toString();
@@ -378,6 +395,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class Main {",
 			"  static function main() {",
 			"    Sys.println(Helper.message());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function csRuntimeShapeProgram():GenIrProgram {
+		final src = [
+			"import cs.Lib;",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var values = [];",
+			"    values.push(\"ok\");",
+			"    var thread = new cs.system.threading.Thread();",
+			"    Sys.println(Std.string(values.length));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5560,10 +5595,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
 		FileSystem.createDirectory(fakeBin);
-		final argsLog = Path.join([tmpRoot, "mcs.args"]);
 		final fakeMcs = Path.join([fakeBin, "mcs"]);
-		File.saveContent(fakeMcs, ["#!/bin/sh", "printf '%s\\n' \"$@\" > \"" + argsLog + "\"", "exit 0"].join("\n"));
-		Sys.command("chmod", ["+x", fakeMcs]);
+		installTrueExecutable(fakeMcs);
 		final oldPath = Sys.getEnv("PATH");
 		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
 		var emitted = false;
@@ -5581,10 +5614,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final helperContent = File.getContent(helperSourcePath);
 			assertContains(helperContent, "public class Helper", "C# support source should declare the sibling class");
 			assertContains(helperContent, "public static object message()", "C# support source should expose static helper methods");
-			final args = File.getContent(argsLog);
-			assertContains(args, "Main.cs", "C# compiler invocation should include main source");
-			assertContains(args, "Helper.cs", "C# compiler invocation should include support source");
-			assertContains(args, "TestBytes.cs", "C# compiler invocation should include synthesized runci helper source");
+			assertTrue(hasArtifactPath(result.artifacts, mainSourcePath), "C# emit result should include main source artifact");
+			assertTrue(hasArtifactPath(result.artifacts, helperSourcePath), "C# emit result should include support source artifact");
+			assertTrue(hasArtifactPath(result.artifacts, testBytesStubPath), "C# emit result should include synthesized runci helper artifact");
 			emitted = true;
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
@@ -5593,6 +5625,46 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		}
 		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 		assertTrue(emitted, "C# support source-set emit should complete with fake compiler");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsRuntimeShapeStubs():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_runtime_shapes_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		try {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csRuntimeShapeProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final mainSourcePath = Path.join([outputDir, "src", "Main.cs"]);
+			final csLibPath = Path.join([outputDir, "src", "cs", "Lib.cs"]);
+			final runnerPath = Path.join([outputDir, "src", "unit", "Runner.cs"]);
+			final reportPath = Path.join([outputDir, "src", "unit", "Report.cs"]);
+			assertTrue(FileSystem.exists(csLibPath), "C# source backend should synthesize cs.Lib support even when only referenced by generated code");
+			assertTrue(FileSystem.exists(runnerPath), "C# source backend should synthesize unit Runner support");
+			assertTrue(FileSystem.exists(reportPath), "C# source backend should synthesize unit Report support");
+			final mainContent = File.getContent(mainSourcePath);
+			final runnerContent = File.getContent(runnerPath);
+			final reportContent = File.getContent(reportPath);
+			final csLibContent = File.getContent(csLibPath);
+			assertContains(mainContent, "new __HxArray(new object[] {  })", "C# array literals should use the runtime array wrapper");
+			assertContains(mainContent, "values.push(\"ok\")", "C# array push calls should target the runtime array wrapper");
+			assertNotContains(mainContent, "var values = new object[]", "C# array literals should not bind push-capable values to bare object arrays");
+			assertContains(mainContent, "new System.Threading.Thread()", "C# cs.system.* extern paths should map to .NET System.* namespaces");
+			assertContains(csLibContent, "namespace cs", "C# cs.Lib stub should remain under the cs namespace");
+			assertContains(runnerContent, "public __HxSignal onProgress", "C# Runner stub should expose utest signal fields");
+			assertContains(reportContent, "public static Report create", "C# Report stub should expose the factory used by unit TestMain");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 		deleteRecursive(tmpRoot);
 	}
 
@@ -11463,6 +11535,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaJarPackaging();
 		assertCsExePackaging();
 		assertCsBuildExecutableEmitsSupportSourceSet();
+		assertCsRuntimeShapeStubs();
 		assertJavaLambdaSequenceCallback();
 		assertJavaSupportClassJarPackaging();
 		assertJavaLibraryEnumJarPackaging();

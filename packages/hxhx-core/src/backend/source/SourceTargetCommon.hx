@@ -429,6 +429,7 @@ class SourceTargetCommon {
 		}
 		emitCsImportStubs(program, sourceDir, sourcePaths, seen);
 		emitCsRunciHelperStubs(sourceDir, sourcePaths, seen);
+		emitCsStandardStubs(sourceDir, sourcePaths, seen);
 		return sourcePaths;
 	}
 
@@ -457,6 +458,8 @@ class SourceTargetCommon {
 
 	static function emitCsRunciHelperStubs(sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
 		final helpers = [
+			"Runner",
+			"Report",
 			"TestBytes",
 			"TestIO",
 			"TestMisc",
@@ -477,6 +480,24 @@ class SourceTargetCommon {
 			}
 			ensureParentDirectory(path);
 			sys.io.File.saveContent(path, renderCsRunciHelperStub(className));
+			sourcePaths.push(path);
+		}
+	}
+
+	static function emitCsStandardStubs(sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
+		final stubs = [{packagePath: "cs", className: "Lib"}];
+		for (stub in stubs) {
+			final key = csQualifiedClassName(stub.packagePath, stub.className);
+			if (seen.exists(key))
+				continue;
+			seen.set(key, true);
+			final path = csSourcePath(sourceDir, stub.packagePath, stub.className);
+			if (sys.FileSystem.exists(path)) {
+				sourcePaths.push(path);
+				continue;
+			}
+			ensureParentDirectory(path);
+			sys.io.File.saveContent(path, renderCsImportStub(stub.packagePath, stub.className));
 			sourcePaths.push(path);
 		}
 	}
@@ -710,10 +731,32 @@ class SourceTargetCommon {
 	static function csTypePath(path:String):String {
 		if (path == null || path.length == 0)
 			return "";
+		if (path == "cs.system")
+			return "System";
+		if (StringTools.startsWith(path, "cs.system."))
+			return "System." + [
+				for (part in path.substr("cs.system.".length).split("."))
+					csSystemNamespaceSegment(part)
+			].join(".");
 		return [
 			for (part in path.split("."))
 				part == "*" ? "*" : sanitizeCsIdentifier(part)
 		].join(".");
+	}
+
+	static function csSystemNamespaceSegment(part:String):String {
+		return switch (part) {
+			case "collections": "Collections";
+			case "diagnostics": "Diagnostics";
+			case "globalization": "Globalization";
+			case "io": "IO";
+			case "net": "Net";
+			case "reflection": "Reflection";
+			case "text": "Text";
+			case "threading": "Threading";
+			case _:
+				sanitizeCsIdentifier(part);
+		}
 	}
 
 	static function csImportStubIsEligible(path:String):Bool {
@@ -4898,7 +4941,7 @@ class SourceTargetCommon {
 	static function arrayLiteral(target:SourceNativeTarget, items:Array<HxExpr>):String {
 		return switch (target) {
 			case Java: "new __HxArray(new Object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " })";
-			case Cs: "new object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " }";
+			case Cs: "new __HxArray(new object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " })";
 			case Python:
 				final mapPairs = pythonMapLiteralPairs(items);
 				if (mapPairs != null) "{" + mapPairs.join(", ") + "}" else "Array([" + [for (item in items) renderExpr(target, item)].join(", ") + "])";
@@ -8303,6 +8346,8 @@ class SourceTargetCommon {
 		out.push(bodyIndent + "public class " + safeClass + " {");
 		out.push(bodyIndent + "  public " + safeClass + "() {");
 		out.push(bodyIndent + "  }");
+		if (csQualifiedClassName(packagePath, safeClass) == "cs.Lib")
+			out.push(bodyIndent + "  public static object nativeThis = null;");
 		out.push(bodyIndent + "}");
 		appendCsNamespaceClose(out, packagePath);
 		return out.join("\n");
@@ -8315,6 +8360,24 @@ class SourceTargetCommon {
 		out.push("  public class " + safeClass + " {");
 		out.push("    public " + safeClass + "() {");
 		out.push("    }");
+		if (safeClass == "Runner") {
+			out.push("    public __HxSignal onProgress = new __HxSignal();");
+			out.push("    public __HxSignal onTestStart = new __HxSignal();");
+			out.push("    public object report = null;");
+			out.push("    public object addCase(params object[] args) {");
+			out.push("      return null;");
+			out.push("    }");
+			out.push("    public object run(params object[] args) {");
+			out.push("      return null;");
+			out.push("    }");
+		}
+		if (safeClass == "Report") {
+			out.push("    public object displayHeader = null;");
+			out.push("    public object displaySuccessResults = null;");
+			out.push("    public static Report create(params object[] args) {");
+			out.push("      return new Report();");
+			out.push("    }");
+		}
 		if (safeClass == "UnitBuilder") {
 			out.push("    public static object[] generateSpec(params object[] args) {");
 			out.push("      return new object[0];");
@@ -8339,6 +8402,25 @@ class SourceTargetCommon {
 		if (packagePath == null || packagePath.length == 0)
 			return;
 		out.push("}");
+	}
+
+	static function appendCsArraySupport(out:Array<String>, indent:String):Void {
+		out.push(indent + "public class __HxArray : System.Collections.Generic.List<object> {");
+		out.push(indent + "  public __HxArray(object[] values) : base(values) {");
+		out.push(indent + "  }");
+		out.push(indent + "  public int push(object value) {");
+		out.push(indent + "    Add(value);");
+		out.push(indent + "    return Count;");
+		out.push(indent + "  }");
+		out.push(indent + "  public int length {");
+		out.push(indent + "    get { return Count; }");
+		out.push(indent + "  }");
+		out.push(indent + "}");
+		out.push(indent + "public class __HxSignal {");
+		out.push(indent + "  public object add(object callback) {");
+		out.push(indent + "    return null;");
+		out.push(indent + "  }");
+		out.push(indent + "}");
 	}
 
 	static function csFunctionArgs(args:Array<HxFunctionArg>, ?count:Int):String {
@@ -14743,6 +14825,7 @@ class SourceTargetCommon {
 					lines.push(bodyIndent + line);
 				lines.push(bodyIndent + "  }");
 				lines.push(bodyIndent + "}");
+				appendCsArraySupport(lines, bodyIndent);
 				appendCsNamespaceClose(lines, packagePath);
 			case Php:
 				lines.push("<?php");
