@@ -5968,13 +5968,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "IncompatibleCombinations.hx");
 		final diagnostic = CSharpNoEmitDiagnostics.incompatibleConstraintDiagnosticForParsed(parsed);
 		assertTrue(diagnostic != null, "C# incompatible constraint diagnostics should be detected");
-		assertContains(diagnostic, "IncompatibleCombinations.hx:1: characters 1-68 : The new() constraint cannot be combined with the struct constraint.",
+		assertContains(diagnostic, "IncompatibleCombinations.hx:1: characters 1-70 : The new() constraint cannot be combined with the struct constraint.",
 			"C# diagnostics should report new()/struct incompatibility at the class declaration");
-		assertContains(diagnostic, "IncompatibleCombinations.hx:2: characters 1-44 : The class constraint cannot be combined with the struct constraint.",
+		assertContains(diagnostic, "IncompatibleCombinations.hx:2: characters 1-46 : The class constraint cannot be combined with the struct constraint.",
 			"C# diagnostics should report class/struct incompatibility at the class declaration");
-		assertContains(diagnostic, "IncompatibleCombinations.hx:3: characters 1-52 : The unmanaged constraint cannot be combined with the struct constraint.",
+		assertContains(diagnostic, "IncompatibleCombinations.hx:3: characters 1-54 : The unmanaged constraint cannot be combined with the struct constraint.",
 			"C# diagnostics should report unmanaged/struct incompatibility at the class declaration");
-		assertContains(diagnostic, "IncompatibleCombinations.hx:4: characters 1-74 : The unmanaged constraint cannot be combined with the new() constraint.",
+		assertContains(diagnostic, "IncompatibleCombinations.hx:4: characters 1-76 : The unmanaged constraint cannot be combined with the new() constraint.",
 			"C# diagnostics should report unmanaged/new incompatibility at the class declaration");
 	}
 

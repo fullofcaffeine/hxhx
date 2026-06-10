@@ -13,13 +13,13 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CSharpNoEmitDiag
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CSharpNoEmitDiagnostics" } : t)
 
-let diagnosticFileName = fun filePath -> try let __fallback_result_21 = (
+let diagnosticFileName = fun filePath -> try let __fallback_result_19 = (
   ignore (if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ("<unknown>" : string))) else ());
   Haxe_io_Path.withoutDirectory (filePath : string)
-) in Obj.magic __fallback_result_21 with
-  | HxRuntime.Hx_return __ret_20 -> Obj.obj __ret_20
+) in Obj.magic __fallback_result_19 with
+  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
 
-let incompatibleConstraintDiagnosticForLine = fun filePath line lineNumber -> try let __fallback_result_19 = (
+let incompatibleConstraintDiagnosticForLine = fun filePath line lineNumber -> try let __fallback_result_17 = (
   ignore (if line == Obj.magic (HxRuntime.hx_null) || HxString.indexOf line "class " 0 < 0 || HxString.indexOf line "<" 0 < 0 || HxString.indexOf line ">" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let hasStruct = HxString.indexOf line "CsStruct" 0 >= 0 in let hasClass = HxString.indexOf line "CsClass" 0 >= 0 in let hasUnmanaged = HxString.indexOf line "CsUnmanaged" 0 >= 0 in let hasConstructible = HxString.indexOf line "Constructible" 0 >= 0 in (
     ignore (if not (hasStruct) && not (hasClass) && not (hasUnmanaged) && not (hasConstructible) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -37,20 +37,11 @@ let incompatibleConstraintDiagnosticForLine = fun filePath line lineNumber -> tr
         tempString := __assign_15;
         __assign_15
       ) else raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))));
-      let startColumn = HxInt.add (HxString.indexOf line "class " 0) 1 in let tempNumber = ref (0 : int) in (
-        ignore (if HxString.indexOf line "{" 0 >= 0 then let __assign_16 = HxString.indexOf line "{" 0 in (
-          tempNumber := __assign_16;
-          __assign_16
-        ) else let __assign_17 = HxString.length line in (
-          tempNumber := __assign_17;
-          __assign_17
-        ));
-        let declarationEnd = !tempNumber in let endColumn = HxInt.add declarationEnd 1 in (((((((HxString.toStdString (diagnosticFileName (filePath : string)) ^ ":") ^ HxString.toStdString (string_of_int lineNumber)) ^ ": characters ") ^ HxString.toStdString (string_of_int startColumn)) ^ "-") ^ HxString.toStdString (string_of_int endColumn)) ^ " : ") ^ HxString.toStdString (!tempString)
-      )
+      let startColumn = HxInt.add (HxString.indexOf line "class " 0) 1 in let endColumn = HxInt.add (HxString.length line) 1 in (((((((HxString.toStdString (diagnosticFileName (filePath : string)) ^ ":") ^ HxString.toStdString (string_of_int lineNumber)) ^ ": characters ") ^ HxString.toStdString (string_of_int startColumn)) ^ "-") ^ HxString.toStdString (string_of_int endColumn)) ^ " : ") ^ HxString.toStdString (!tempString)
     )
   )
-) in Obj.magic __fallback_result_19 with
-  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
+) in Obj.magic __fallback_result_17 with
+  | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16
 
 let appendIncompatibleConstraintDiagnostics = fun parsed diagnostics -> ignore (try (
   ignore (if parsed == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());

@@ -73,8 +73,7 @@ class CSharpNoEmitDiagnostics {
 			return null;
 		}
 		final startColumn = line.indexOf("class ") + 1;
-		final declarationEnd = line.indexOf("{") >= 0 ? line.indexOf("{") : line.length;
-		final endColumn = declarationEnd + 1;
+		final endColumn = line.length + 1;
 		return diagnosticFileName(filePath) + ":" + Std.string(lineNumber) + ": characters " + Std.string(startColumn) + "-" + Std.string(endColumn) + " : "
 			+ message;
 	}
