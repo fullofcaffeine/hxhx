@@ -6158,8 +6158,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final content = File.getContent(entrySourcePath);
 			assertContains(content, "global::Main.setRaw(\"ok\");", "C# __cs__ should inline raw void snippets with placeholder substitution");
 			assertContains(content, "var result = global::Main.getRaw();", "C# __cs__ should inline raw value snippets in expression position");
-			assertContains(content, "if ((Main.rawResult != \"ok\"))",
+			assertContains(content, "if ((global::Main.rawResult != \"ok\"))",
 				"C# entry wrapper should qualify same-class static field reads through the original main class");
+			assertNotContains(content, "if ((Main.rawResult != \"ok\"))", "C# entry wrapper should not emit ambiguous Main static references");
 			assertNotContains(content, "__cs__(", "C# raw intrinsic calls should not leak into generated source");
 			assertNotContains(content, "if ((rawResult != \"ok\"))", "C# entry wrapper should not read same-class static fields as bare locals");
 		} catch (e:Dynamic) {
