@@ -9141,6 +9141,26 @@ let appendCsUtilityProcessRuntime = fun out bodyIndent className -> ignore (let 
   ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"stdout.writeString\") { System.Console.Write(__hxhx_sequenceArg(args, 1)); return; }"));
   ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"programPath\") { System.Console.WriteLine(__hxhx_programPath()); return; }"));
   ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static string[] __hxhx_toStringArray(object value) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (value == null) return new string[0];"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  string[] strings = value as string[];"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (strings != null) return strings;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  object[] objects = value as object[];"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (objects != null) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    string[] result = new string[objects.Length];"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    for (int i = 0; i < objects.Length; i++) result[i] = System.Convert.ToString(objects[i]);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    return result;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  string single = value as string;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (single != null) return new string[] { single };"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  System.Collections.IEnumerable items = value as System.Collections.IEnumerable;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (items != null) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    var result = new System.Collections.Generic.List<string>();"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    foreach (object item in items) result.Add(System.Convert.ToString(item));"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    return result.ToArray();"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  return new string[] { System.Convert.ToString(value) };"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
   ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static string __hxhx_sequenceArg(string[] args, int index) {"));
   ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (args.Length <= index) return \"\";"));
   ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  string token = args[index];"));
@@ -29934,6 +29954,13 @@ let appendCsMainSupportMembers = fun out decl indent className -> ignore (let em
     let methodName = (sanitizeCsIdentifier (fnName : string) : string) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let key = ((HxString.toStdString methodName ^ "#") ^ HxString.toStdString (string_of_int (HxArray.length args)) : string) in (
       ignore (if HxMap.exists_string emitted key then raise (HxRuntime.Hx_continue) else ());
       ignore (HxMap.set_string emitted key true);
+      ignore (if HxString.equals className "UtilityProcess" && HxString.equals methodName "runUtility" then ignore ((
+        ignore (HxArray.push out (((HxString.toStdString indent ^ "public static object runUtility(") ^ HxString.toStdString (csFunctionArgs (Obj.magic args) (HxRuntime.hx_null))) ^ ") {"));
+        ignore (HxArray.push out (HxString.toStdString indent ^ "  __hxhx_runUtility(__hxhx_toStringArray(args));"));
+        ignore (HxArray.push out (HxString.toStdString indent ^ "  return null;"));
+        ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
+        raise (HxRuntime.Hx_continue)
+      )) else ());
       ignore (HxArray.push out (((((HxString.toStdString indent ^ "public static object ") ^ HxString.toStdString methodName) ^ "(") ^ HxString.toStdString (csFunctionArgs (Obj.magic args) (HxRuntime.hx_null))) ^ ") {"));
       let body = Obj.magic (renderFunctionStmts (Obj.magic Cs) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) (HxString.toStdString indent ^ "  " : string) ((HxString.toStdString className ^ ".") ^ HxString.toStdString methodName : string) (Obj.magic (HxRuntime.hx_null))) in let hasReturn = ref false in let _g2 = ref 0 in (
         ignore (while !_g2 < HxArray.length body do ignore (let line = (HxArray.get (Obj.magic body) (!_g2) : string) in (

@@ -8950,6 +8950,13 @@ class SourceTargetCommon {
 			if (emitted.exists(key))
 				continue;
 			emitted.set(key, true);
+			if (className == "UtilityProcess" && methodName == "runUtility") {
+				out.push(indent + "public static object runUtility(" + csFunctionArgs(args) + ") {");
+				out.push(indent + "  __hxhx_runUtility(__hxhx_toStringArray(args));");
+				out.push(indent + "  return null;");
+				out.push(indent + "}");
+				continue;
+			}
 			out.push(indent + "public static object " + methodName + "(" + csFunctionArgs(args) + ") {");
 			final body = renderFunctionStmts(Cs, HxFunctionDecl.getBody(fn), indent + "  ", className + "." + methodName);
 			var hasReturn = false;
@@ -9831,6 +9838,26 @@ class SourceTargetCommon {
 		out.push(memberIndent + "  if (command == \"stderr.writeString\") { System.Console.Error.Write(__hxhx_sequenceArg(args, 1)); return; }");
 		out.push(memberIndent + "  if (command == \"stdout.writeString\") { System.Console.Write(__hxhx_sequenceArg(args, 1)); return; }");
 		out.push(memberIndent + "  if (command == \"programPath\") { System.Console.WriteLine(__hxhx_programPath()); return; }");
+		out.push(memberIndent + "}");
+		out.push(memberIndent + "private static string[] __hxhx_toStringArray(object value) {");
+		out.push(memberIndent + "  if (value == null) return new string[0];");
+		out.push(memberIndent + "  string[] strings = value as string[];");
+		out.push(memberIndent + "  if (strings != null) return strings;");
+		out.push(memberIndent + "  object[] objects = value as object[];");
+		out.push(memberIndent + "  if (objects != null) {");
+		out.push(memberIndent + "    string[] result = new string[objects.Length];");
+		out.push(memberIndent + "    for (int i = 0; i < objects.Length; i++) result[i] = System.Convert.ToString(objects[i]);");
+		out.push(memberIndent + "    return result;");
+		out.push(memberIndent + "  }");
+		out.push(memberIndent + "  string single = value as string;");
+		out.push(memberIndent + "  if (single != null) return new string[] { single };");
+		out.push(memberIndent + "  System.Collections.IEnumerable items = value as System.Collections.IEnumerable;");
+		out.push(memberIndent + "  if (items != null) {");
+		out.push(memberIndent + "    var result = new System.Collections.Generic.List<string>();");
+		out.push(memberIndent + "    foreach (object item in items) result.Add(System.Convert.ToString(item));");
+		out.push(memberIndent + "    return result.ToArray();");
+		out.push(memberIndent + "  }");
+		out.push(memberIndent + "  return new string[] { System.Convert.ToString(value) };");
 		out.push(memberIndent + "}");
 		out.push(memberIndent + "private static string __hxhx_sequenceArg(string[] args, int index) {");
 		out.push(memberIndent + "  if (args.Length <= index) return \"\";");
