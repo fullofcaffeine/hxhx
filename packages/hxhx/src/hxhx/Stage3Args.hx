@@ -132,6 +132,8 @@ class Stage3Args {
 		return switch (backendId) {
 			case "java-native":
 				["-java", "--java"];
+			case "cs-native":
+				["-cs", "--cs"];
 			case "php-native":
 				["-php", "--php"];
 			case _:

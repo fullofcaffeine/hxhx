@@ -54,6 +54,14 @@ class SourceNativeBackend {
 		};
 	}
 
+	static function csCapabilities():BackendCapabilities {
+		return {
+			supportsNoEmit: true,
+			supportsBuildExecutable: true,
+			supportsCustomOutputFile: true
+		};
+	}
+
 	static function descriptor(targetId:String, implId:String, description:String, hostCap:String):TargetDescriptor {
 		return {
 			id: targetId,
@@ -93,7 +101,7 @@ class SourceNativeBackend {
 	}
 
 	public static function csDescriptor():TargetDescriptor {
-		return descriptor(CS_TARGET_ID, "builtin/cs-native-source-mvp", "Native C# source backend (MVP)", "dotnet");
+		return descriptorWithCapabilities(CS_TARGET_ID, "builtin/cs-native-source-mvp", "Native C# source backend (MVP)", "dotnet", csCapabilities());
 	}
 
 	public static function phpDescriptor():TargetDescriptor {

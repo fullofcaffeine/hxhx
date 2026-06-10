@@ -27,42 +27,49 @@ let javaCapabilities = fun () -> let __anon_2 = HxAnon.create () in (
   __anon_2
 )
 
-let descriptor = fun targetId implId description hostCap -> let __anon_3 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_3 "id" (Obj.repr targetId));
-  ignore (HxAnon.set __anon_3 "implId" (Obj.repr implId));
-  ignore (HxAnon.set __anon_3 "abiVersion" (Obj.repr 1));
-  ignore (HxAnon.set __anon_3 "priority" (Obj.repr 120));
-  ignore (HxAnon.set __anon_3 "description" (Obj.repr description));
-  ignore (HxAnon.set __anon_3 "capabilities" (capabilitiesStatic ()));
-  ignore (HxAnon.set __anon_3 "requires" (let __anon_4 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_4 "genIrVersion" (Obj.repr 1));
-    ignore (HxAnon.set __anon_4 "macroApiVersion" (Obj.repr 1));
-    ignore (HxAnon.set __anon_4 "hostCaps" (Obj.repr (let __arr_5 = HxArray.create () in (
-      ignore (HxArray.push __arr_5 "filesystem");
-      ignore (HxArray.push __arr_5 hostCap);
-      __arr_5
-    ))));
-    __anon_4
-  )));
+let csCapabilities = fun () -> let __anon_3 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_3 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_3 "supportsBuildExecutable" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_3 "supportsCustomOutputFile" (HxRuntime.box_bool true));
   __anon_3
 )
 
-let descriptorWithCapabilities = fun targetId implId description hostCap capabilities -> let d = descriptor (targetId : string) (implId : string) (description : string) (hostCap : string) in let __anon_6 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_6 "id" (Obj.repr (Obj.obj (HxAnon.get d "id"))));
-  ignore (HxAnon.set __anon_6 "implId" (Obj.repr (Obj.obj (HxAnon.get d "implId"))));
-  ignore (HxAnon.set __anon_6 "abiVersion" (Obj.repr (Obj.obj (HxAnon.get d "abiVersion"))));
-  ignore (HxAnon.set __anon_6 "priority" (Obj.repr (Obj.obj (HxAnon.get d "priority"))));
-  ignore (HxAnon.set __anon_6 "description" (Obj.repr (Obj.obj (HxAnon.get d "description"))));
-  ignore (HxAnon.set __anon_6 "capabilities" capabilities);
-  ignore (HxAnon.set __anon_6 "requires" (Obj.obj (HxAnon.get d "requires")));
-  __anon_6
+let descriptor = fun targetId implId description hostCap -> let __anon_4 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_4 "id" (Obj.repr targetId));
+  ignore (HxAnon.set __anon_4 "implId" (Obj.repr implId));
+  ignore (HxAnon.set __anon_4 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_4 "priority" (Obj.repr 120));
+  ignore (HxAnon.set __anon_4 "description" (Obj.repr description));
+  ignore (HxAnon.set __anon_4 "capabilities" (capabilitiesStatic ()));
+  ignore (HxAnon.set __anon_4 "requires" (let __anon_5 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_5 "genIrVersion" (Obj.repr 1));
+    ignore (HxAnon.set __anon_5 "macroApiVersion" (Obj.repr 1));
+    ignore (HxAnon.set __anon_5 "hostCaps" (Obj.repr (let __arr_6 = HxArray.create () in (
+      ignore (HxArray.push __arr_6 "filesystem");
+      ignore (HxArray.push __arr_6 hostCap);
+      __arr_6
+    ))));
+    __anon_5
+  )));
+  __anon_4
+)
+
+let descriptorWithCapabilities = fun targetId implId description hostCap capabilities -> let d = descriptor (targetId : string) (implId : string) (description : string) (hostCap : string) in let __anon_7 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_7 "id" (Obj.repr (Obj.obj (HxAnon.get d "id"))));
+  ignore (HxAnon.set __anon_7 "implId" (Obj.repr (Obj.obj (HxAnon.get d "implId"))));
+  ignore (HxAnon.set __anon_7 "abiVersion" (Obj.repr (Obj.obj (HxAnon.get d "abiVersion"))));
+  ignore (HxAnon.set __anon_7 "priority" (Obj.repr (Obj.obj (HxAnon.get d "priority"))));
+  ignore (HxAnon.set __anon_7 "description" (Obj.repr (Obj.obj (HxAnon.get d "description"))));
+  ignore (HxAnon.set __anon_7 "capabilities" capabilities);
+  ignore (HxAnon.set __anon_7 "requires" (Obj.obj (HxAnon.get d "requires")));
+  __anon_7
 )
 
 let pythonDescriptor = fun () -> descriptor ("python-native" : string) ("builtin/python-native-source-mvp" : string) ("Native Python source backend (MVP)" : string) ("python" : string)
 
 let javaDescriptor = fun () -> descriptorWithCapabilities ("java-native" : string) ("builtin/java-native-source-mvp" : string) ("Native Java source backend (MVP)" : string) ("java" : string) (javaCapabilities ())
 
-let csDescriptor = fun () -> descriptor ("cs-native" : string) ("builtin/cs-native-source-mvp" : string) ("Native C# source backend (MVP)" : string) ("dotnet" : string)
+let csDescriptor = fun () -> descriptorWithCapabilities ("cs-native" : string) ("builtin/cs-native-source-mvp" : string) ("Native C# source backend (MVP)" : string) ("dotnet" : string) (csCapabilities ())
 
 let phpDescriptor = fun () -> descriptor ("php-native" : string) ("builtin/php-native-source-mvp" : string) ("Native PHP source backend (MVP)" : string) ("php" : string)
 
@@ -70,25 +77,25 @@ let luaDescriptor = fun () -> descriptor ("lua-native" : string) ("builtin/lua-n
 
 let emitTarget = fun target program context -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Backend_EmitResult.t) in (
   ignore (match target with
-    | Backend_source_SourceTargetCommon.Java -> let __assign_8 = Obj.magic (Backend_source_JavaSourceTargetCore.emit (Obj.magic program) (Obj.magic context)) in (
-      tempResult := __assign_8;
-      __assign_8
-    )
-    | Backend_source_SourceTargetCommon.Php -> let __assign_9 = Obj.magic (Backend_source_PhpSourceTargetCore.emit (Obj.magic program) (Obj.magic context)) in (
+    | Backend_source_SourceTargetCommon.Java -> let __assign_9 = Obj.magic (Backend_source_JavaSourceTargetCore.emit (Obj.magic program) (Obj.magic context)) in (
       tempResult := __assign_9;
       __assign_9
     )
-    | _ -> let __assign_10 = Obj.magic (Backend_source_SourceMvpTargetCore.emit (Obj.magic target) (Obj.magic program) (Obj.magic context)) in (
+    | Backend_source_SourceTargetCommon.Php -> let __assign_10 = Obj.magic (Backend_source_PhpSourceTargetCore.emit (Obj.magic program) (Obj.magic context)) in (
       tempResult := __assign_10;
       __assign_10
+    )
+    | _ -> let __assign_11 = Obj.magic (Backend_source_SourceMvpTargetCore.emit (Obj.magic target) (Obj.magic program) (Obj.magic context)) in (
+      tempResult := __assign_11;
+      __assign_11
     ));
   !tempResult
 )
 
-let registration = fun d target -> let __anon_7 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_7 "descriptor" d);
-  ignore (HxAnon.set __anon_7 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> emitTarget (Obj.magic target) (Obj.magic program) (Obj.magic context)))));
-  __anon_7
+let registration = fun d target -> let __anon_8 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_8 "descriptor" d);
+  ignore (HxAnon.set __anon_8 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> emitTarget (Obj.magic target) (Obj.magic program) (Obj.magic context)))));
+  __anon_8
 )
 
 let pythonRegistration = fun () -> registration (pythonDescriptor ()) (Obj.magic (Backend_source_SourceTargetCommon.Python))

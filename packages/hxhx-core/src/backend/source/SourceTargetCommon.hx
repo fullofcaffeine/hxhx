@@ -99,6 +99,14 @@ class SourceTargetCommon {
 		};
 	}
 
+	static function csCapabilities():BackendCapabilities {
+		return {
+			supportsNoEmit: true,
+			supportsBuildExecutable: true,
+			supportsCustomOutputFile: true
+		};
+	}
+
 	static function descriptor(targetId:String, implId:String, description:String, hostCap:String):TargetDescriptor {
 		return {
 			id: targetId,
@@ -138,7 +146,7 @@ class SourceTargetCommon {
 	}
 
 	public static function csDescriptor():TargetDescriptor {
-		return descriptor(CS_TARGET_ID, "builtin/cs-native-source-mvp", "Native C# source backend (MVP)", "dotnet");
+		return descriptorWithCapabilities(CS_TARGET_ID, "builtin/cs-native-source-mvp", "Native C# source backend (MVP)", "dotnet", csCapabilities());
 	}
 
 	public static function phpDescriptor():TargetDescriptor {
@@ -264,11 +272,33 @@ class SourceTargetCommon {
 		final className = sanitizeTypeNameForTarget(target, HxClassDecl.getName(main.cls));
 		if (target == Java && context.buildExecutable)
 			return emitJavaJar(program, context, main.decl, className, HxFunctionDecl.getBody(main.fn));
+		if (target == Cs && context.buildExecutable)
+			return emitCsExecutable(program, context, main.decl, className, HxFunctionDecl.getBody(main.fn));
 		final outputPath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([context.outputDir, defaultFileName(target, className)]);
 		ensureParentDirectory(outputPath);
 		sys.io.File.saveContent(outputPath, renderProgram(target, program, context, main.decl, className, HxFunctionDecl.getBody(main.fn)));
 		return new EmitResult(outputPath, [new EmitArtifact(artifactKind(target), outputPath)], false);
+	}
+
+	static function emitCsExecutable(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
+		final sourceDir = Path.join([context.outputDir, "src"]);
+		final sourcePath = Path.join([sourceDir, className + ".cs"]);
+		final exePath = csExePath(context.outputDir, className, context.outputFileHint, context.hasDefine("debug"));
+		ensureParentDirectory(sourcePath);
+		ensureParentDirectory(exePath);
+		sys.io.File.saveContent(sourcePath, renderProgram(Cs, program, context, decl, className, body));
+		final compiler = csCompilerCommand();
+		if (compiler == null)
+			throw "C# source backend MVP executable packaging requires `mcs` or `csc` on PATH";
+		final args = compiler == "csc" ? ["-nologo", "-out:" + exePath, sourcePath] : ["-out:" + exePath, sourcePath];
+		final code = Sys.command(compiler, args);
+		if (code != 0)
+			throw "C# source backend MVP executable packaging failed with exit code " + code;
+		return new EmitResult(exePath, [
+			new EmitArtifact("entry_cs_source", sourcePath),
+			new EmitArtifact("entry_cs_exe", exePath)
+		], false);
 	}
 
 	static function emitJavaJar(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
@@ -343,6 +373,25 @@ class SourceTargetCommon {
 		if (base == "java")
 			return Path.join([normalized, sanitizeJavaIdentifier(className) + (debug ? "-Debug" : "") + ".jar"]);
 		return normalized + ".jar";
+	}
+
+	static function csExePath(outputDir:String, className:String, ?outputFileHint:String, debug:Bool = false):String {
+		if (outputFileHint != null && outputFileHint.length > 0)
+			return Path.normalize(outputFileHint);
+		final normalized = Path.normalize(outputDir == null || outputDir.length == 0 ? "." : outputDir);
+		return Path.join([
+			normalized,
+			"bin",
+			sanitizeTypeName(className) + (debug ? "-Debug" : "") + ".exe"
+		]);
+	}
+
+	static function csCompilerCommand():Null<String> {
+		for (candidate in ["mcs", "csc"]) {
+			if (Sys.command("sh", ["-c", "command -v " + candidate + " >/dev/null 2>&1"]) == 0)
+				return candidate;
+		}
+		return null;
 	}
 
 	static function emitJavaLibrarySourceSet(program:GenIrProgram, sourceDir:String):Array<String> {

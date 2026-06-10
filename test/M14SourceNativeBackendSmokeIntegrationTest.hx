@@ -5525,6 +5525,36 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertCsExePackaging():Void {
+		if (!commandExists("mcs") && !commandExists("csc"))
+			return;
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_exe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		final debugDefines = new StringMap<String>();
+		debugDefines.set("debug", "1");
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		final result = backend.emit(program("cs-runci"), new BackendContext(outputDir, null, "Main", true, true, debugDefines));
+		final sourcePath = Path.join([outputDir, "src", "Main.cs"]);
+		final exePath = Path.join([outputDir, "bin", "Main-Debug.exe"]);
+		assertTrue(result.entryPath == exePath, "C# source backend should report the packaged exe as primary artifact");
+		assertTrue(FileSystem.exists(sourcePath), "C# source backend should emit source under the target output directory");
+		assertTrue(FileSystem.exists(exePath), "C# source backend should package the exe path expected by upstream runci");
+		assertContains(File.getContent(sourcePath), "System.Console.WriteLine((\"source-native:\" + \"cs-runci\"));",
+			"C# source backend should preserve the generated main body");
+		if (commandExists("mono")) {
+			final run = commandOutput("mono", [exePath]);
+			assertTrue(run.code == 0, "C# source backend exe should run under mono: " + run.stderr);
+			assertContains(run.stdout, "source-native:cs-runci", "C# source backend exe should execute generated main");
+		}
+		final nonDebugDir = Path.join([tmpRoot, "threads", "cs"]);
+		final nonDebugResult = backend.emit(program("cs-runci"), new BackendContext(nonDebugDir, null, "Main", true, true, new StringMap<String>()));
+		final nonDebugExePath = Path.join([nonDebugDir, "bin", "Main.exe"]);
+		assertTrue(nonDebugResult.entryPath == nonDebugExePath, "C# source backend should omit -Debug from non-debug runci paths");
+		assertTrue(FileSystem.exists(nonDebugExePath), "C# source backend should package the non-debug exe expected by upstream threads");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertJavaLambdaSequenceCallback():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_java_lambda_sequence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11390,6 +11420,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("lua-native", "lua", "Main.lua", "print((\"source-native:\" .. \"lua\"))");
 		assertPythonOutputHint();
 		assertJavaJarPackaging();
+		assertCsExePackaging();
 		assertJavaLambdaSequenceCallback();
 		assertJavaSupportClassJarPackaging();
 		assertJavaLibraryEnumJarPackaging();

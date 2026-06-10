@@ -1,4 +1,5 @@
 import hxhx.CliRouting;
+import hxhx.Stage3Args;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -140,6 +141,7 @@ class M14DirectFlagCliContractTest {
 		assertEquals(nativeCs.lane, "native-cs", "native cs lane");
 		assertEquals(nativeCs.backendId, "cs-native", "native cs backend");
 		assertTrue(hasDefine(nativeCs.forwarded, "cs"), "native cs define");
+		assertEquals(Stage3Args.findTargetOutputDirectoryHint(["--cs", "cs_out", "-main", "Main"], "cs-native"), "cs_out", "native cs output directory hint");
 
 		final nativePhp = plan(["--php", "php_out", "-main", "Main"]);
 		assertEquals(nativePhp.lane, "native-php", "native php lane");
@@ -214,6 +216,15 @@ class M14DirectFlagCliContractTest {
 		assertEquals(sysJava.lane, "native-java", "sys-style mixed helper java hxml lane");
 		assertEquals(sysJava.backendId, "java-native", "sys-style mixed helper java hxml backend");
 		assertTrue(hasDefine(sysJava.forwarded, "java"), "sys-style mixed helper java hxml define");
+
+		final sysCsHxmlPath = tmpDir + "/compile-cs.hxml";
+		File.saveContent(sysCsHxmlPath, "compile-each.hxml\n--main Main\n-cs bin/cs\n\n--next\ncompile-each.hxml\n--main UtilityProcess\n-cs bin/cs\n");
+		final sysCs = plan([sysCsHxmlPath]);
+		assertEquals(sysCs.lane, "native-cs", "sys-style mixed helper cs hxml lane");
+		assertEquals(sysCs.backendId, "cs-native", "sys-style mixed helper cs hxml backend");
+		assertTrue(hasDefine(sysCs.forwarded, "cs"), "sys-style mixed helper cs hxml define");
+		assertEquals(Stage3Args.findTargetOutputDirectoryHint(["--main", "Main", "-cs", "bin/cs"], "cs-native"), "bin/cs",
+			"sys-style cs hxml output directory hint");
 
 		final cwdHxmlDir = tmpDir + "/cwd-java";
 		if (!FileSystem.exists(cwdHxmlDir))
