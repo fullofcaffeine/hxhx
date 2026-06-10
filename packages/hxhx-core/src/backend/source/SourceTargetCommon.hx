@@ -1163,6 +1163,9 @@ class SourceTargetCommon {
 				renderExpr(target, inner);
 			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]):
 				intLiteralExpr(target, raw, suffix);
+			case ECall(EIdent("__cs__"), args) if (target == Cs):
+				final raw = csSyntaxCodeExpr(args);
+				raw == null ? callExpr(target, "__cs__", args) : raw;
 			case ECall(EIdent("__hxhx_throw"), args) if (target == Php):
 				"__hxhx_throw(" + (args.length > 0 ? renderExpr(Php, args[0]) : "null") + ")";
 			case ECall(EIdent("__hxhx_for_in"), args) if (target == Php && args.length >= 3):
@@ -2436,6 +2439,27 @@ class SourceTargetCommon {
 			case _:
 				null;
 		}
+	}
+
+	static function csSyntaxCodeExpr(args:Array<HxExpr>):Null<String> {
+		if (args.length == 0)
+			return null;
+		return switch (args[0]) {
+			case EString(template):
+				var rendered = template;
+				for (i in 1...args.length)
+					rendered = StringTools.replace(rendered, "{" + Std.string(i - 1) + "}", renderExpr(Cs, args[i]));
+				csTrimRawSnippet(rendered);
+			case _:
+				null;
+		}
+	}
+
+	static function csTrimRawSnippet(value:String):String {
+		final trimmed = StringTools.trim(value);
+		if (StringTools.endsWith(trimmed, ";"))
+			return StringTools.rtrim(trimmed.substr(0, trimmed.length - 1));
+		return trimmed;
 	}
 
 	static function phpSyntaxCustomArrayDecl(arg:HxExpr):Null<String> {
@@ -15103,6 +15127,169 @@ class SourceTargetCommon {
 		return names;
 	}
 
+	static function csCurrentClassStaticMemberNames(cls:HxClassDecl):Map<String, Bool> {
+		final names:Map<String, Bool> = [];
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				continue;
+			final name = HxFieldDecl.getName(field);
+			names.set(name, true);
+			names.set(sanitizeCsIdentifier(name), true);
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn))
+				continue;
+			final name = HxFunctionDecl.getName(fn);
+			names.set(name, true);
+			names.set(sanitizeCsIdentifier(name), true);
+		}
+		return names;
+	}
+
+	static function csRewriteSameClassStaticMembersInStmts(stmts:Array<HxStmt>, staticMemberNames:Map<String, Bool>, className:String,
+			locals:Array<String>):Array<HxStmt> {
+		return [
+			for (stmt in stmts)
+				csRewriteSameClassStaticMembersInStmt(stmt, staticMemberNames, className, locals)
+		];
+	}
+
+	static function csRewriteSameClassStaticMembersInStmt(stmt:HxStmt, staticMemberNames:Map<String, Bool>, className:String, locals:Array<String>):HxStmt {
+		return switch (stmt) {
+			case SBlock(stmts, pos):
+				SBlock(csRewriteSameClassStaticMembersInStmts(stmts, staticMemberNames, className, copyStringArray(locals)), pos);
+			case SVar(name, typeHint, init, pos):
+				var rewrittenInit:Null<HxExpr> = null;
+				if (init != null)
+					rewrittenInit = csRewriteSameClassStaticMemberExpr(init, staticMemberNames, className, locals);
+				if (locals.indexOf(name) < 0)
+					locals.push(name);
+				SVar(name, typeHint, rewrittenInit, pos);
+			case SIf(cond, thenBranch, elseBranch, pos):
+				var rewrittenElse:Null<HxStmt> = null;
+				if (elseBranch != null)
+					rewrittenElse = csRewriteSameClassStaticMembersInStmt(elseBranch, staticMemberNames, className, copyStringArray(locals));
+				SIf(csRewriteSameClassStaticMemberExpr(cond, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMembersInStmt(thenBranch, staticMemberNames, className, copyStringArray(locals)), rewrittenElse, pos);
+			case SForIn(name, iterable, body, pos):
+				final bodyLocals = copyStringArray(locals);
+				if (bodyLocals.indexOf(name) < 0)
+					bodyLocals.push(name);
+				SForIn(name, csRewriteSameClassStaticMemberExpr(iterable, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, bodyLocals), pos);
+			case SForKeyValue(keyName, valueName, iterable, body, pos):
+				final bodyLocals = copyStringArray(locals);
+				if (bodyLocals.indexOf(keyName) < 0)
+					bodyLocals.push(keyName);
+				if (bodyLocals.indexOf(valueName) < 0)
+					bodyLocals.push(valueName);
+				SForKeyValue(keyName, valueName, csRewriteSameClassStaticMemberExpr(iterable, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, bodyLocals), pos);
+			case SWhile(cond, body, pos):
+				SWhile(csRewriteSameClassStaticMemberExpr(cond, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, copyStringArray(locals)), pos);
+			case SDoWhile(body, cond, pos):
+				SDoWhile(csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, copyStringArray(locals)),
+					csRewriteSameClassStaticMemberExpr(cond, staticMemberNames, className, locals), pos);
+			case SSwitch(scrutinee, patterns, bodies, pos):
+				SSwitch(csRewriteSameClassStaticMemberExpr(scrutinee, staticMemberNames, className, locals), patterns, [
+					for (body in bodies)
+						csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, copyStringArray(locals))
+				], pos);
+			case STry(tryBody, catches, pos):
+				STry(csRewriteSameClassStaticMembersInStmt(tryBody, staticMemberNames, className, copyStringArray(locals)), [
+					for (c in catches) {
+						final catchLocals = copyStringArray(locals);
+						if (catchLocals.indexOf(c.name) < 0) catchLocals.push(c.name);
+						{name: c.name, typeHint: c.typeHint, body: csRewriteSameClassStaticMembersInStmt(c.body, staticMemberNames, className, catchLocals)};
+					}
+				], pos);
+			case SThrow(expr, pos):
+				SThrow(csRewriteSameClassStaticMemberExpr(expr, staticMemberNames, className, locals), pos);
+			case SReturn(expr, pos):
+				SReturn(csRewriteSameClassStaticMemberExpr(expr, staticMemberNames, className, locals), pos);
+			case SExpr(expr, pos):
+				SExpr(csRewriteSameClassStaticMemberExpr(expr, staticMemberNames, className, locals), pos);
+			case SBreak(_) | SContinue(_) | SReturnVoid(_):
+				stmt;
+		}
+	}
+
+	static function csRewriteSameClassStaticMemberExpr(expr:HxExpr, staticMemberNames:Map<String, Bool>, className:String, locals:Array<String>):HxExpr {
+		return switch (expr) {
+			case ECall(EIdent(name), args) if (staticMemberNames.exists(name) && locals.indexOf(name) < 0):
+				ECall(EField(EIdent(className), name), [
+					for (arg in args)
+						csRewriteSameClassStaticMemberExpr(arg, staticMemberNames, className, locals)
+				]);
+			case ECall(callee, args):
+				ECall(csRewriteSameClassStaticMemberExpr(callee, staticMemberNames, className, locals), [
+					for (arg in args)
+						csRewriteSameClassStaticMemberExpr(arg, staticMemberNames, className, locals)
+				]);
+			case EIdent(name) if (staticMemberNames.exists(name) && locals.indexOf(name) < 0):
+				EField(EIdent(className), name);
+			case EUnop(op, inner):
+				EUnop(op, csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals));
+			case EBinop(op, left, right):
+				EBinop(op, csRewriteSameClassStaticMemberExpr(left, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMemberExpr(right, staticMemberNames, className, locals));
+			case ETernary(cond, thenExpr, elseExpr):
+				ETernary(csRewriteSameClassStaticMemberExpr(cond, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMemberExpr(thenExpr, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMemberExpr(elseExpr, staticMemberNames, className, locals));
+			case EField(obj, field):
+				EField(csRewriteSameClassStaticMemberExpr(obj, staticMemberNames, className, locals), field);
+			case EArrayAccess(array, index):
+				EArrayAccess(csRewriteSameClassStaticMemberExpr(array, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMemberExpr(index, staticMemberNames, className, locals));
+			case ERange(start, end):
+				ERange(csRewriteSameClassStaticMemberExpr(start, staticMemberNames, className, locals),
+					csRewriteSameClassStaticMemberExpr(end, staticMemberNames, className, locals));
+			case EArrayDecl(values):
+				EArrayDecl([
+					for (value in values)
+						csRewriteSameClassStaticMemberExpr(value, staticMemberNames, className, locals)
+				]);
+			case EAnon(anonFieldNames, fieldValues):
+				EAnon(anonFieldNames, [
+					for (value in fieldValues)
+						csRewriteSameClassStaticMemberExpr(value, staticMemberNames, className, locals)
+				]);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				final bodyLocals = copyStringArray(locals);
+				if (bodyLocals.indexOf(name) < 0)
+					bodyLocals.push(name);
+				var rewrittenGuard:Null<HxExpr> = null;
+				if (guardExpr != null)
+					rewrittenGuard = csRewriteSameClassStaticMemberExpr(guardExpr, staticMemberNames, className, bodyLocals);
+				EArrayComprehension(name, csRewriteSameClassStaticMemberExpr(iterable, staticMemberNames, className, locals), rewrittenGuard,
+					csRewriteSameClassStaticMemberExpr(yieldExpr, staticMemberNames, className, bodyLocals));
+			case ESwitch(scrutinee, patterns, exprs):
+				ESwitch(csRewriteSameClassStaticMemberExpr(scrutinee, staticMemberNames, className, locals), patterns, [
+					for (expr in exprs)
+						csRewriteSameClassStaticMemberExpr(expr, staticMemberNames, className, locals)
+				]);
+			case ELambda(args, body):
+				final bodyLocals = copyStringArray(locals);
+				for (arg in args)
+					if (bodyLocals.indexOf(arg) < 0)
+						bodyLocals.push(arg);
+				ELambda(args, csRewriteSameClassStaticMemberExpr(body, staticMemberNames, className, bodyLocals));
+			case ENew(typePath, args):
+				ENew(typePath, [
+					for (arg in args)
+						csRewriteSameClassStaticMemberExpr(arg, staticMemberNames, className, locals)
+				]);
+			case ECast(inner, typeHint):
+				ECast(csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals), typeHint);
+			case EUntyped(inner):
+				EUntyped(csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals));
+			case _:
+				expr;
+		}
+	}
+
 	static function phpRewriteSameClassMembersInStmts(stmts:Array<HxStmt>, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
 			staticFieldNames:Map<String, Bool>, className:String, locals:Array<String>):Array<HxStmt> {
 		return [
@@ -15869,7 +16056,9 @@ class SourceTargetCommon {
 				if (className == "UtilityProcess") {
 					appendCsUtilityProcessRuntime(lines, bodyIndent, entryClassName);
 				} else {
-					for (line in renderFunctionStmts(target, body, "    ", entryClassName + ".Main"))
+					final entryBody = csRewriteSameClassStaticMembersInStmts(body, csCurrentClassStaticMemberNames(HxModuleDecl.getMainClass(decl)),
+						className, []);
+					for (line in renderFunctionStmts(target, entryBody, "    ", entryClassName + ".Main"))
 						lines.push(bodyIndent + line);
 					lines.push(bodyIndent + "  }");
 				}

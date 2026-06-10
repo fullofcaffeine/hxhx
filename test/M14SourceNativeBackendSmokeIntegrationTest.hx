@@ -579,6 +579,32 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
 	}
 
+	static function csRawIntrinsicAndSameClassStaticProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static var rawResult:String = \"unset\";",
+			"",
+			"  static function main() {",
+			"    untyped __cs__(\"global::Main.setRaw({0})\", \"ok\");",
+			"    if (rawResult != \"ok\") throw \"bad-raw-void\";",
+			"    var result = untyped __cs__(\"global::Main.getRaw()\");",
+			"    if (result != \"ok\") throw \"bad-raw-value\";",
+			"  }",
+			"",
+			"  static function setRaw(value:String):Void {",
+			"    rawResult = value;",
+			"  }",
+			"",
+			"  static function getRaw():String {",
+			"    return rawResult;",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csEntrySupportMembersProgram():GenIrProgram {
 		final src = [
 			"class HelperApi {",
@@ -6105,6 +6131,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(content, "var n__hx_scope_1 = 2;", "C# duplicate-local regression should suffix repeated numeric declarations");
 			assertNotContains(content, "var expected = \"first\";\n    System.Console.WriteLine(expected);\n    var expected = \"second\";",
 				"C# duplicate-local regression should not emit duplicate declarations in one C# scope");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsRawIntrinsicAndSameClassStatic():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_raw_intrinsic_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csRawIntrinsicAndSameClassStaticProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			assertTrue(FileSystem.exists(entrySourcePath), "C# raw intrinsic regression should emit an entry wrapper");
+			final content = File.getContent(entrySourcePath);
+			assertContains(content, "global::Main.setRaw(\"ok\");", "C# __cs__ should inline raw void snippets with placeholder substitution");
+			assertContains(content, "var result = global::Main.getRaw();", "C# __cs__ should inline raw value snippets in expression position");
+			assertContains(content, "if ((Main.rawResult != \"ok\"))",
+				"C# entry wrapper should qualify same-class static field reads through the original main class");
+			assertNotContains(content, "__cs__(", "C# raw intrinsic calls should not leak into generated source");
+			assertNotContains(content, "if ((rawResult != \"ok\"))", "C# entry wrapper should not read same-class static fields as bare locals");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -12470,6 +12527,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsIssue4598ReadOnlyReflectShape();
 		assertCsScopedLocalBlockShape();
 		assertCsDuplicateLocalShadowNames();
+		assertCsRawIntrinsicAndSameClassStatic();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();
