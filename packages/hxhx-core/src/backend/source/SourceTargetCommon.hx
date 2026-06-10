@@ -263,17 +263,22 @@ class SourceTargetCommon {
 
 	public static function emitTarget(target:SourceNativeTarget, program:GenIrProgram, context:BackendContext):EmitResult {
 		final maybeMain = findMainModule(program, context);
+		final buildTargetExecutable = context.buildExecutable && !context.hasDefine("no-compilation");
 		if (maybeMain == null) {
-			if (target == Java && context.buildExecutable)
+			if (target == Java && buildTargetExecutable)
 				return emitJavaLibraryJar(program, context);
+			if (target == Cs)
+				return emitCsLibrarySourceSet(program, context);
 			throw "source target MVP requires a static main entrypoint";
 		}
 		final main = maybeMain;
 		final className = sanitizeTypeNameForTarget(target, HxClassDecl.getName(main.cls));
-		if (target == Java && context.buildExecutable)
+		if (target == Java && buildTargetExecutable)
 			return emitJavaJar(program, context, main.decl, className, HxFunctionDecl.getBody(main.fn));
-		if (target == Cs && context.buildExecutable)
+		if (target == Cs && buildTargetExecutable)
 			return emitCsExecutable(program, context, main.decl, className, HxFunctionDecl.getBody(main.fn));
+		if (target == Cs && context.buildExecutable && context.hasDefine("no-compilation"))
+			return emitCsSourceSetOnly(program, context, main.decl, className, HxFunctionDecl.getBody(main.fn));
 		final outputPath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([context.outputDir, defaultFileName(target, className)]);
 		ensureParentDirectory(outputPath);
@@ -305,6 +310,32 @@ class SourceTargetCommon {
 				artifacts.push(new EmitArtifact("support_cs_source", path));
 		}
 		return new EmitResult(exePath, artifacts, false);
+	}
+
+	static function emitCsSourceSetOnly(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
+		final sourceDir = Path.join([context.outputDir, "src"]);
+		final mainPackage = HxModuleDecl.getPackagePath(decl);
+		final sourcePath = csSourcePath(sourceDir, mainPackage, className);
+		ensureDirectory(sourceDir);
+		final sourcePaths = emitCsSourceSet(program, context, sourceDir, decl, className, body);
+		final artifacts = [new EmitArtifact("entry_cs_source", sourcePath)];
+		for (path in sourcePaths) {
+			if (path != sourcePath)
+				artifacts.push(new EmitArtifact("support_cs_source", path));
+		}
+		return new EmitResult(sourcePath, artifacts, false);
+	}
+
+	static function emitCsLibrarySourceSet(program:GenIrProgram, context:BackendContext):EmitResult {
+		final sourceDir = Path.join([context.outputDir, "src"]);
+		ensureDirectory(sourceDir);
+		final sourcePaths = emitCsLibrarySources(program, context, sourceDir);
+		if (sourcePaths.length == 0)
+			throw "C# source backend MVP library emission found no source modules";
+		final artifacts = new Array<EmitArtifact>();
+		for (path in sourcePaths)
+			artifacts.push(new EmitArtifact("support_cs_source", path));
+		return new EmitResult(sourcePaths[0], artifacts, false);
 	}
 
 	static function emitJavaJar(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
@@ -415,6 +446,32 @@ class SourceTargetCommon {
 		sys.io.File.saveContent(mainPath, renderProgram(Cs, program, context, mainDecl, mainClassName, mainBody));
 		sourcePaths.push(mainPath);
 		seen.set(csQualifiedClassName(mainPackage, mainClassName), true);
+		for (typed in program.getTypedModules()) {
+			final moduleDecl = typed.getParsed().getDecl();
+			if (isStdSourceFile(typed.getParsed().getFilePath()))
+				continue;
+			final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final className = sanitizeCsIdentifier(HxClassDecl.getName(cls));
+				final key = csQualifiedClassName(packagePath, className);
+				if (seen.exists(key) || isCompileTimeOnlySupportClass(cls))
+					continue;
+				seen.set(key, true);
+				final path = csSourcePath(sourceDir, packagePath, className);
+				ensureParentDirectory(path);
+				sys.io.File.saveContent(path, renderCsSupportClass(program, moduleDecl, cls));
+				sourcePaths.push(path);
+			}
+		}
+		emitCsImportStubs(program, sourceDir, sourcePaths, seen);
+		emitCsRunciHelperStubs(sourceDir, sourcePaths, seen);
+		emitCsStandardStubs(sourceDir, sourcePaths, seen);
+		return sourcePaths;
+	}
+
+	static function emitCsLibrarySources(program:GenIrProgram, context:BackendContext, sourceDir:String):Array<String> {
+		final sourcePaths = new Array<String>();
+		final seen = new Map<String, Bool>();
 		for (typed in program.getTypedModules()) {
 			final moduleDecl = typed.getParsed().getDecl();
 			if (isStdSourceFile(typed.getParsed().getFilePath()))

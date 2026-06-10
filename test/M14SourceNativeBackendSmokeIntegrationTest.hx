@@ -5675,6 +5675,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([main, helper], []);
 	}
 
+	static function csNoMainLibraryProgram():GenIrProgram {
+		final src = [
+			"package checks;",
+			"class LibraryOnly {",
+			"  public static function value() return 1;",
+			"}"
+		].join("\n");
+		return MacroStage.expandProgram([TyperStage.typeModule(ParserStage.parse(src, "checks/LibraryOnly.hx"))], []);
+	}
+
 	static function switchExpressionProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5930,6 +5940,42 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 		assertTrue(emitted, "C# support source-set emit should complete with fake compiler");
 		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsNoCompilationNoMainSourceSet():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_no_main_library_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final defines = new StringMap<String>();
+		defines.set("no-compilation", "1");
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		final result = backend.emit(csNoMainLibraryProgram(), new BackendContext(outputDir, null, "checks.LibraryOnly", true, true, defines));
+		final sourcePath = Path.join([outputDir, "src", "checks", "LibraryOnly.cs"]);
+		assertTrue(result.entryPath == sourcePath, "C# no-main library emission should report the first source artifact");
+		assertTrue(FileSystem.exists(sourcePath), "C# no-main library emission should write source instead of requiring a static main");
+		assertTrue(!FileSystem.exists(Path.join([outputDir, "bin"])), "C# no-compilation source emission should not create an executable package directory");
+		assertContains(File.getContent(sourcePath), "public class LibraryOnly", "C# no-main library source should render the declared class");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCSharpConstraintDiagnostics():Void {
+		final src = [
+			"class StructAndConstructible<T:CsStruct & Constructible<()->Void>> {}",
+			"class StructAndClass<T:CsStruct & CsClass> {}",
+			"class UnmanagedAndStruct<T:CsUnmanaged & CsStruct> {}",
+			"class UnmanagedAndConstructible<T:CsUnmanaged & Constructible<()->Void>> {}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "IncompatibleCombinations.hx");
+		final diagnostic = CSharpNoEmitDiagnostics.incompatibleConstraintDiagnosticForParsed(parsed);
+		assertTrue(diagnostic != null, "C# incompatible constraint diagnostics should be detected");
+		assertContains(diagnostic, "IncompatibleCombinations.hx:1: characters 1-68 : The new() constraint cannot be combined with the struct constraint.",
+			"C# diagnostics should report new()/struct incompatibility at the class declaration");
+		assertContains(diagnostic, "IncompatibleCombinations.hx:2: characters 1-44 : The class constraint cannot be combined with the struct constraint.",
+			"C# diagnostics should report class/struct incompatibility at the class declaration");
+		assertContains(diagnostic, "IncompatibleCombinations.hx:3: characters 1-52 : The unmanaged constraint cannot be combined with the struct constraint.",
+			"C# diagnostics should report unmanaged/struct incompatibility at the class declaration");
+		assertContains(diagnostic, "IncompatibleCombinations.hx:4: characters 1-74 : The unmanaged constraint cannot be combined with the new() constraint.",
+			"C# diagnostics should report unmanaged/new incompatibility at the class declaration");
 	}
 
 	static function assertCsRootOwnerImportLayout():Void {
@@ -12249,6 +12295,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaJarPackaging();
 		assertCsExePackaging();
 		assertCsBuildExecutableEmitsSupportSourceSet();
+		assertCsNoCompilationNoMainSourceSet();
+		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();
 		assertCsRuntimeShapeStubs();
 		assertCsImportedUtestShape();

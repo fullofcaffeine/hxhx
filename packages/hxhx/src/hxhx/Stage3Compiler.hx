@@ -449,6 +449,13 @@ class Stage3Compiler {
 				return haxeDiagnosticError(overloadDiagnostic);
 			}
 		}
+		if (backendId == "cs-native") {
+			final constraintDiagnostic = CSharpNoEmitDiagnostics.incompatibleConstraintDiagnosticForResolved(resolved);
+			if (constraintDiagnostic != null) {
+				closeMacroSession();
+				return haxeDiagnosticError(constraintDiagnostic);
+			}
+		}
 
 		// Stage4 bring-up: apply `@:build(...)` macros by asking the macro host to emit raw
 		// member snippets (reverse RPC) that we merge into the parsed module surface before typing.
