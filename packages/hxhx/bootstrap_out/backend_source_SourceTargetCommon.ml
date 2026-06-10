@@ -6862,6 +6862,90 @@ let appendCsUtestRunnerAddCasesStub = fun out indent -> ignore ((
   HxArray.push out (HxString.toStdString indent ^ "}")
 ))
 
+let appendCsUtestRunnerAddCasesStubOnce = fun out indent emittedMethods -> ignore (try let key = ("addCases#varargs" : string) in (
+  ignore (if HxMap.exists_string emittedMethods key then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  ignore (HxMap.set_string emittedMethods key true);
+  appendCsUtestRunnerAddCasesStub (Obj.magic out) (indent : string)
+) with
+  | HxRuntime.Hx_return __ret_3950 -> Obj.obj __ret_3950)
+
+let appendCsNamespaceOpen = fun out packagePath -> ignore (try (
+  ignore (if packagePath == Obj.magic (HxRuntime.hx_null) || HxString.length packagePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  HxArray.push out (("namespace " ^ HxString.toStdString (csTypePath (packagePath : string))) ^ " {")
+) with
+  | HxRuntime.Hx_return __ret_3951 -> Obj.obj __ret_3951)
+
+let appendCsNamespaceClose = fun out packagePath -> ignore (try (
+  ignore (if packagePath == Obj.magic (HxRuntime.hx_null) || HxString.length packagePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  HxArray.push out "}"
+) with
+  | HxRuntime.Hx_return __ret_3952 -> Obj.obj __ret_3952)
+
+let appendCsArraySupport = fun out indent -> ignore ((
+  ignore (HxArray.push out (HxString.toStdString indent ^ "namespace hxhx {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "public class __HxArray : System.Collections.Generic.IEnumerable<object> {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public object[] __a;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public __HxArray(object[] values) {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    __a = values == null ? new object[] { } : values;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public object this[int index] {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    get { return __a[index]; }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    set { __a[index] = value; }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public int Count {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    get { return __a.Length; }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public int push(object value) {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    object[] next = new object[__a.Length + 1];"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    System.Array.Copy(__a, next, __a.Length);"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    next[next.Length - 1] = value;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    __a = next;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    return __a.Length;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public int length {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    get { return __a.Length; }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public int Length {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    get { return __a.Length; }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public __HxArray slice(object pos, object end = null) {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    int start = System.Convert.ToInt32(pos);"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    int stop = end == null ? __a.Length : System.Convert.ToInt32(end);"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    if (start < 0) start = __a.Length + start;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    if (stop < 0) stop = __a.Length + stop;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    if (start < 0) start = 0;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    if (stop < start) stop = start;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    if (stop > __a.Length) stop = __a.Length;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    int len = stop - start;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    object[] values = new object[len];"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    System.Array.Copy(__a, start, values, 0, len);"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    return new __HxArray(values);"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public System.Collections.Generic.IEnumerator<object> GetEnumerator() {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    return ((System.Collections.Generic.IEnumerable<object>)__a).GetEnumerator();"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    return __a.GetEnumerator();"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "public class __HxSignal {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public object add(System.Func<dynamic, object> callback) {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    return null;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public object add(System.Action<dynamic> callback) {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    return null;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  public object add(object callback) {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "    return null;"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
+  HxArray.push out (HxString.toStdString indent ^ "}")
+))
+
+let csArrayRuntimeType = fun () -> "global::hxhx.__HxArray"
+
+let csSignalRuntimeType = fun () -> "global::hxhx.__HxSignal"
+
 let appendCsImportStubMembers = fun out indent packagePath className -> ignore (let qualified = (csQualifiedClassName (packagePath : string) (className : string) : string) in (
   ignore (if HxString.equals qualified "Sys" then ignore ((
     ignore (HxArray.push out (HxString.toStdString indent ^ "public static string systemName() {"));
@@ -6986,8 +7070,8 @@ let appendCsImportStubMembers = fun out indent packagePath className -> ignore (
     HxArray.push out (HxString.toStdString indent ^ "}")
   )) else ());
   ignore (if HxString.equals qualified "utest.Runner" then ignore ((
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public __HxSignal onProgress = new __HxSignal();"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public __HxSignal onTestStart = new __HxSignal();"));
+    ignore (HxArray.push out (((((HxString.toStdString indent ^ "public ") ^ HxString.toStdString (csSignalRuntimeType ())) ^ " onProgress = new ") ^ HxString.toStdString (csSignalRuntimeType ())) ^ "();"));
+    ignore (HxArray.push out (((((HxString.toStdString indent ^ "public ") ^ HxString.toStdString (csSignalRuntimeType ())) ^ " onTestStart = new ") ^ HxString.toStdString (csSignalRuntimeType ())) ^ "();"));
     ignore (HxArray.push out (HxString.toStdString indent ^ "public object report = null;"));
     ignore (HxArray.push out (HxString.toStdString indent ^ "public object addCase(params object[] args) {"));
     ignore (HxArray.push out (HxString.toStdString indent ^ "  return null;"));
@@ -7022,25 +7106,6 @@ let appendCsImportStubMembers = fun out indent packagePath className -> ignore (
     HxArray.push out (HxString.toStdString indent ^ "}")
   )) else ()
 ))
-
-let appendCsUtestRunnerAddCasesStubOnce = fun out indent emittedMethods -> ignore (try let key = ("addCases#varargs" : string) in (
-  ignore (if HxMap.exists_string emittedMethods key then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  ignore (HxMap.set_string emittedMethods key true);
-  appendCsUtestRunnerAddCasesStub (Obj.magic out) (indent : string)
-) with
-  | HxRuntime.Hx_return __ret_3950 -> Obj.obj __ret_3950)
-
-let appendCsNamespaceOpen = fun out packagePath -> ignore (try (
-  ignore (if packagePath == Obj.magic (HxRuntime.hx_null) || HxString.length packagePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  HxArray.push out (("namespace " ^ HxString.toStdString (csTypePath (packagePath : string))) ^ " {")
-) with
-  | HxRuntime.Hx_return __ret_3951 -> Obj.obj __ret_3951)
-
-let appendCsNamespaceClose = fun out packagePath -> ignore (try (
-  ignore (if packagePath == Obj.magic (HxRuntime.hx_null) || HxString.length packagePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  HxArray.push out "}"
-) with
-  | HxRuntime.Hx_return __ret_3952 -> Obj.obj __ret_3952)
 
 let renderCsImportStub = fun packagePath className nestedNames -> let tempString = ref ("" : string) in (
   ignore (if HxString.equals className "*" then let __assign_3920 = ("HxWildcardStub" : string) in (
@@ -7237,8 +7302,8 @@ let renderCsRunciHelperStub = fun className -> let safeClass = (sanitizeCsIdenti
   ignore (HxArray.push out (("    public " ^ HxString.toStdString safeClass) ^ "() {"));
   ignore (HxArray.push out "    }");
   ignore (if HxString.equals safeClass "Runner" then ignore ((
-    ignore (HxArray.push out "    public __HxSignal onProgress = new __HxSignal();");
-    ignore (HxArray.push out "    public __HxSignal onTestStart = new __HxSignal();");
+    ignore (HxArray.push out (((("    public " ^ HxString.toStdString (csSignalRuntimeType ())) ^ " onProgress = new ") ^ HxString.toStdString (csSignalRuntimeType ())) ^ "();"));
+    ignore (HxArray.push out (((("    public " ^ HxString.toStdString (csSignalRuntimeType ())) ^ " onTestStart = new ") ^ HxString.toStdString (csSignalRuntimeType ())) ^ "();"));
     ignore (HxArray.push out "    public object report = null;");
     ignore (HxArray.push out "    public object addCase(params object[] args) {");
     ignore (HxArray.push out "      return null;");
@@ -7304,67 +7369,8 @@ let emitCsRunciHelperStubs = fun sourceDir sourcePaths seen -> ignore (let helpe
   | HxRuntime.Hx_continue -> () done with
   | HxRuntime.Hx_break -> ())
 
-let appendCsArraySupport = fun out indent -> ignore ((
-  ignore (HxArray.push out (HxString.toStdString indent ^ "public class __HxArray : System.Collections.Generic.IEnumerable<object> {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public object[] __a;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public __HxArray(object[] values) {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    __a = values == null ? new object[] { } : values;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public object this[int index] {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    get { return __a[index]; }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    set { __a[index] = value; }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public int Count {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    get { return __a.Length; }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public int push(object value) {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    object[] next = new object[__a.Length + 1];"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    System.Array.Copy(__a, next, __a.Length);"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    next[next.Length - 1] = value;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    __a = next;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    return __a.Length;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public int length {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    get { return __a.Length; }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public int Length {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    get { return __a.Length; }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public __HxArray slice(object pos, object end = null) {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    int start = System.Convert.ToInt32(pos);"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    int stop = end == null ? __a.Length : System.Convert.ToInt32(end);"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    if (start < 0) start = __a.Length + start;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    if (stop < 0) stop = __a.Length + stop;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    if (start < 0) start = 0;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    if (stop < start) stop = start;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    if (stop > __a.Length) stop = __a.Length;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    int len = stop - start;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    object[] values = new object[len];"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    System.Array.Copy(__a, start, values, 0, len);"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    return new __HxArray(values);"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public System.Collections.Generic.IEnumerator<object> GetEnumerator() {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    return ((System.Collections.Generic.IEnumerable<object>)__a).GetEnumerator();"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    return __a.GetEnumerator();"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "public class __HxSignal {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public object add(System.Func<dynamic, object> callback) {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    return null;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public object add(System.Action<dynamic> callback) {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    return null;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public object add(object callback) {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    return null;"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  HxArray.push out (HxString.toStdString indent ^ "}")
-))
-
 let csArgTypeFromHint = fun typeHint -> let compact = (removeTypeHintWhitespace (trimLeadingTypeColon (typeHint : string) : string) : string) in let tempResult = ref ("" : string) in (
-  ignore (if HxString.equals compact "Array" || HxString.equals compact "StdTypes.Array" || StringTools.startsWith (compact : string) ("Array<" : string) || StringTools.startsWith (compact : string) ("StdTypes.Array<" : string) then let __assign_3963 = ("__HxArray" : string) in (
+  ignore (if HxString.equals compact "Array" || HxString.equals compact "StdTypes.Array" || StringTools.startsWith (compact : string) ("Array<" : string) || StringTools.startsWith (compact : string) ("StdTypes.Array<" : string) then let __assign_3963 = (csArrayRuntimeType () : string) in (
     tempResult := __assign_3963;
     __assign_3963
   ) else let __assign_3964 = ("object" : string) in (
@@ -23974,7 +23980,7 @@ and fieldCallExpr = fun target receiver field args -> try let __fallback_result_
         | HxExpr.EUntyped _ -> 27
         | HxExpr.EUnsupported _ -> 28) = 8 then ignore (let _g = (match receiver with
         | HxExpr.EIdent __enum_param_871 -> __enum_param_871
-        | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g "Sys" then ignore (if HxString.equals field "args" && HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr ("new __HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)" : string))) else ignore (if HxString.equals field "exit" && HxArray.length args = 1 then raise (HxRuntime.Hx_return (Obj.repr (("System.Environment.Exit(" ^ HxString.toStdString (renderExpr (Obj.magic Cs) (Obj.magic (HxArray.get (Obj.magic args) 0)))) ^ ")" : string))) else ignore ())) else ignore ()) else ignore ()) else ());
+        | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g "Sys" then ignore (if HxString.equals field "args" && HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr (("new " ^ HxString.toStdString (csArrayRuntimeType ())) ^ "(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)" : string))) else ignore (if HxString.equals field "exit" && HxArray.length args = 1 then raise (HxRuntime.Hx_return (Obj.repr (("System.Environment.Exit(" ^ HxString.toStdString (renderExpr (Obj.magic Cs) (Obj.magic (HxArray.get (Obj.magic args) 0)))) ^ ")" : string))) else ignore ())) else ignore ()) else ignore ()) else ());
       let tempString = ref ("" : string) in (
         ignore (if target = Python then let __assign_872 = (pythonFieldReceiverExpr (Obj.magic receiver) : string) in (
           tempString := __assign_872;
@@ -27678,7 +27684,7 @@ and arrayLiteral = fun target items -> let tempResult = ref ("" : string) in (
           __assign_2378
         )
       ));
-      let __assign_2379 = (("new __HxArray(new object[] { " ^ HxString.toStdString (HxArray.join (!tempArray2) ", " (fun x -> x))) ^ " })" : string) in (
+      let __assign_2379 = (((("new " ^ HxString.toStdString (csArrayRuntimeType ())) ^ "(new object[] { ") ^ HxString.toStdString (HxArray.join (!tempArray2) ", " (fun x -> x))) ^ " })" : string) in (
         tempResult := __assign_2379;
         __assign_2379
       )
@@ -27845,7 +27851,7 @@ and constructorExpr = fun target typePath args -> let _g = Obj.magic (let __arr_
         tempResult := __assign_2410;
         __assign_2410
       )
-      | Cs -> if HxString.equals typePath "Array" || HxString.equals typePath "Array<T>" then let __assign_2411 = (("new __HxArray(new object[] { " ^ HxString.toStdString rendered) ^ " })" : string) in (
+      | Cs -> if HxString.equals typePath "Array" || HxString.equals typePath "Array<T>" then let __assign_2411 = (((("new " ^ HxString.toStdString (csArrayRuntimeType ())) ^ "(new object[] { ") ^ HxString.toStdString rendered) ^ " })" : string) in (
         tempResult := __assign_2411;
         __assign_2411
       ) else let __assign_2412 = (((("new " ^ HxString.toStdString safeType) ^ "(") ^ HxString.toStdString rendered) ^ ")" : string) in (
@@ -32132,8 +32138,8 @@ let renderProgram = fun target program context decl className body -> let lines 
             HxArray.push lines (HxString.toStdString bodyIndent ^ "  }")
           )));
           ignore (HxArray.push lines (HxString.toStdString bodyIndent ^ "}"));
-          ignore (appendCsArraySupport (Obj.magic lines) (bodyIndent : string));
-          appendCsNamespaceClose (Obj.magic lines) (packagePath : string)
+          ignore (appendCsNamespaceClose (Obj.magic lines) (packagePath : string));
+          appendCsArraySupport (Obj.magic lines) ("" : string)
         )
       )
     ))

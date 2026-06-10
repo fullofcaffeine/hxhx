@@ -2313,7 +2313,7 @@ class SourceTargetCommon {
 				if (target == Cs) {
 					switch (receiver) {
 						case EIdent("Sys") if (field == "args" && args.length == 0):
-							return "new __HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)";
+							return "new " + csArrayRuntimeType() + "(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)";
 						case EIdent("Sys") if (field == "exit" && args.length == 1):
 							return "System.Environment.Exit(" + renderExpr(Cs, args[0]) + ")";
 						case _:
@@ -5127,7 +5127,10 @@ class SourceTargetCommon {
 	static function arrayLiteral(target:SourceNativeTarget, items:Array<HxExpr>):String {
 		return switch (target) {
 			case Java: "new __HxArray(new Object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " })";
-			case Cs: "new __HxArray(new object[] { " + [for (item in items) renderExpr(target, item)].join(", ") + " })";
+			case Cs: "new "
+				+ csArrayRuntimeType()
+				+ "(new object[] { "
+				+ [for (item in items) renderExpr(target, item)].join(", ") + " })";
 			case Python:
 				final mapPairs = pythonMapLiteralPairs(items);
 				if (mapPairs != null) "{" + mapPairs.join(", ") + "}" else "Array([" + [for (item in items) renderExpr(target, item)].join(", ") + "])";
@@ -5177,9 +5180,8 @@ class SourceTargetCommon {
 				if (pythonRuntimeMapType(typePath)) "Map(" + rendered + ")"; else safeType + "(" + rendered + ")";
 			case Java: "new " + safeType + "(" + rendered + ")";
 			case Cs:
-				if (typePath == "Array" || typePath == "Array<T>") "new __HxArray(new object[] { "
-					+ rendered
-					+ " })"; else "new " + safeType + "(" + rendered + ")";
+				if (typePath == "Array" || typePath == "Array<T>") "new " + csArrayRuntimeType() + "(new object[] { " + rendered + " })"; else "new "
+					+ safeType + "(" + rendered + ")";
 			case Php:
 				final genericSample = phpGenericConstructorSample(typePath);
 				if (genericSample != null) "__hxhx_construct_like(" + genericSample + (rendered.length == 0 ? "" : ", " + rendered) + ")"; else
@@ -8847,8 +8849,8 @@ class SourceTargetCommon {
 			out.push(indent + "}");
 		}
 		if (qualified == "utest.Runner") {
-			out.push(indent + "public __HxSignal onProgress = new __HxSignal();");
-			out.push(indent + "public __HxSignal onTestStart = new __HxSignal();");
+			out.push(indent + "public " + csSignalRuntimeType() + " onProgress = new " + csSignalRuntimeType() + "();");
+			out.push(indent + "public " + csSignalRuntimeType() + " onTestStart = new " + csSignalRuntimeType() + "();");
 			out.push(indent + "public object report = null;");
 			out.push(indent + "public object addCase(params object[] args) {");
 			out.push(indent + "  return null;");
@@ -8935,8 +8937,8 @@ class SourceTargetCommon {
 		out.push("    public " + safeClass + "() {");
 		out.push("    }");
 		if (safeClass == "Runner") {
-			out.push("    public __HxSignal onProgress = new __HxSignal();");
-			out.push("    public __HxSignal onTestStart = new __HxSignal();");
+			out.push("    public " + csSignalRuntimeType() + " onProgress = new " + csSignalRuntimeType() + "();");
+			out.push("    public " + csSignalRuntimeType() + " onTestStart = new " + csSignalRuntimeType() + "();");
 			out.push("    public object report = null;");
 			out.push("    public object addCase(params object[] args) {");
 			out.push("      return null;");
@@ -9036,6 +9038,7 @@ class SourceTargetCommon {
 	}
 
 	static function appendCsArraySupport(out:Array<String>, indent:String):Void {
+		out.push(indent + "namespace hxhx {");
 		out.push(indent + "public class __HxArray : System.Collections.Generic.IEnumerable<object> {");
 		out.push(indent + "  public object[] __a;");
 		out.push(indent + "  public __HxArray(object[] values) {");
@@ -9092,6 +9095,15 @@ class SourceTargetCommon {
 		out.push(indent + "    return null;");
 		out.push(indent + "  }");
 		out.push(indent + "}");
+		out.push(indent + "}");
+	}
+
+	static function csArrayRuntimeType():String {
+		return "global::hxhx.__HxArray";
+	}
+
+	static function csSignalRuntimeType():String {
+		return "global::hxhx.__HxSignal";
 	}
 
 	static function csFunctionArgs(args:Array<HxFunctionArg>, ?count:Int, forceObjectTypes:Bool = false):String {
@@ -9108,7 +9120,7 @@ class SourceTargetCommon {
 		return compact == "Array"
 			|| compact == "StdTypes.Array"
 			|| StringTools.startsWith(compact, "Array<")
-			|| StringTools.startsWith(compact, "StdTypes.Array<") ? "__HxArray" : "object";
+			|| StringTools.startsWith(compact, "StdTypes.Array<") ? csArrayRuntimeType() : "object";
 	}
 
 	static function csCreateReturnsNewOwner(fn:HxFunctionDecl, className:String):Bool {
@@ -15656,8 +15668,8 @@ class SourceTargetCommon {
 					lines.push(bodyIndent + "  }");
 				}
 				lines.push(bodyIndent + "}");
-				appendCsArraySupport(lines, bodyIndent);
 				appendCsNamespaceClose(lines, packagePath);
+				appendCsArraySupport(lines, "");
 			case Php:
 				lines.push("<?php");
 				lines.push("// Generated by hxhx Stage3 PHP source backend MVP");

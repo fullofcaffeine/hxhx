@@ -5653,6 +5653,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csNamespacedArrayFormalProgram():GenIrProgram {
+		final mainSrc = [
+			"package unit;",
+			"import checks.ArrayTools;",
+			"class Main {",
+			"  public static function main() {",
+			"    ArrayTools.touch([\"ok\"]);",
+			"  }",
+			"}",
+		].join("\n");
+		final helperSrc = [
+			"package checks;",
+			"class ArrayTools {",
+			"  public static function touch<T>(items:Array<T>):Void {",
+			"  }",
+			"}",
+		].join("\n");
+		final main = TyperStage.typeModule(ParserStage.parse(mainSrc, "unit/Main.hx"));
+		final helper = TyperStage.typeModule(ParserStage.parse(helperSrc, "checks/ArrayTools.hx"));
+		return MacroStage.expandProgram([main, helper], []);
+	}
+
 	static function switchExpressionProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5980,7 +6002,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final runnerContent = File.getContent(runnerPath);
 			final reportContent = File.getContent(reportPath);
 			final csLibContent = File.getContent(csLibPath);
-			assertContains(mainContent, "new __HxArray(new object[] {  })", "C# array literals should use the runtime array wrapper");
+			assertContains(mainContent, "new global::hxhx.__HxArray(new object[] {  })", "C# array literals should use the runtime array wrapper");
 			assertContains(mainContent, "values.push(\"ok\")", "C# array push calls should target the runtime array wrapper");
 			assertNotContains(mainContent, "var values = new object[]", "C# array literals should not bind push-capable values to bare object arrays");
 			assertContains(mainContent, "new System.Threading.Thread()", "C# cs.system.* extern paths should map to .NET System.* namespaces");
@@ -5991,7 +6013,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				"C# signal callback lambdas should use statement-bodied syntax for delegate overloads");
 			assertContains(csLibContent, "namespace cs", "C# cs.Lib stub should remain under the cs namespace");
 			assertContains(csLibContent, "public static object applyCultureChanges", "C# cs.Lib stub should expose the culture hook used by unit TestMain");
-			assertContains(runnerContent, "public __HxSignal onProgress", "C# Runner stub should expose utest signal fields");
+			assertContains(runnerContent, "public global::hxhx.__HxSignal onProgress", "C# Runner stub should expose utest signal fields");
 			assertContains(mainContent, "public object add(System.Func<dynamic, object> callback)",
 				"C# signal support should expose a one-argument delegate overload for callback lambdas");
 			assertContains(reportContent, "public static Report create", "C# Report stub should expose the factory used by unit TestMain");
@@ -6074,7 +6096,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "ExitCode.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content,
-			"System.Environment.Exit(int.Parse(System.Convert.ToString(new __HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)[0])));",
+			"System.Environment.Exit(int.Parse(System.Convert.ToString(new global::hxhx.__HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)[0])));",
 			"C# sys exit-code helper should lower to native entrypoint args + parseInt APIs");
 		assertNotContains(content, "Sys.", "C# sys exit-code helper should not leak unresolved Sys class references");
 		assertNotContains(content, "Std.parseInt", "C# Std.parseInt should not leak an unresolved Haxe runtime reference");
@@ -6172,7 +6194,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final serializerContent = File.getContent(serializerPath);
 			assertContains(mainContent, "public static object accept(object value) {", "C# entry class should emit static helper methods declared beside main");
 			assertContains(mainContent, "HelperApi.accept(value);", "C# entry helper methods should preserve their source body");
-			assertContains(mainContent, "accept(new __HxArray(new object[] {  }));", "C# empty Array constructors should lower to the runtime array wrapper");
+			assertContains(mainContent, "accept(new global::hxhx.__HxArray(new object[] {  }));",
+				"C# empty Array constructors should lower to the runtime array wrapper");
 			assertContains(mainContent, "accept(new haxe.Serializer());", "C# entry main should keep haxe.Serializer construction callable");
 			assertContains(serializerContent, "namespace haxe", "C# haxe.Serializer support should use the haxe namespace");
 			assertContains(serializerContent, "public class Serializer", "C# haxe.Serializer support should declare the Serializer class");
@@ -6196,7 +6219,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "System.Func<dynamic, object> runUtility = (args) => {",
 			"C# callable locals should use an explicit delegate type instead of Mono-rejected var lambda inference");
-		assertContains(content, "new __HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)",
+		assertContains(content, "new global::hxhx.__HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)",
 			"C# Sys.args should lower to the Haxe array wrapper so array helpers stay available");
 		assertContains(content, "runUtility(args.slice(0, 1));", "C# UtilityProcess calls should preserve slice-capable args forwarding");
 		assertContains(content, "public __HxArray slice(object pos, object end = null)",
@@ -6317,18 +6340,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public object[] __a;", "C# Haxe array wrapper should expose the target backing array for private-access interop");
-		assertContains(content, "public static object sortBacking(__HxArray items)",
+		assertContains(content, "public static object sortBacking(global::hxhx.__HxArray items)",
 			"C# Array<T> support-method parameters should use the Haxe array wrapper instead of object");
-		assertContains(content, "public static object sortBackingInline(__HxArray items)",
+		assertContains(content, "public static object sortBackingInline(global::hxhx.__HxArray items)",
 			"C# inline Array<T> support-method parameters should use the Haxe array wrapper instead of object");
 		assertContains(content, "System.Array.Sort(items.__a, 0, items.length);",
 			"C# array private backing access should compile against __HxArray backing and length members");
 		assertNotContains(content, "public static object sortBacking(object items)",
 			"C# array backing helpers should not leave Array<T> formals behind object field access");
+		final namespacedRoot = Path.join([tmpRoot, "namespaced"]);
+		backend.emit(csNamespacedArrayFormalProgram(), new BackendContext(namespacedRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final namespacedMain = File.getContent(Path.join([namespacedRoot, "Main.cs"]));
+		assertContains(namespacedMain, "namespace hxhx {", "C# runtime array support should live in a stable namespace outside the entry package");
 		if (commandExists("mcs") || commandExists("csc")) {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final result = backend.emit(csArrayBackingAccessProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
 			assertTrue(FileSystem.exists(result.entryPath), "C# array backing access should compile into an executable");
+			final namespacedOutputDir = Path.join([tmpRoot, "bin", "cs-namespaced"]);
+			final namespaced = backend.emit(csNamespacedArrayFormalProgram(),
+				new BackendContext(namespacedOutputDir, null, "unit.Main", true, true, new StringMap<String>()));
+			final helperContent = File.getContent(Path.join([namespacedOutputDir, "src", "checks", "ArrayTools.cs"]));
+			assertContains(helperContent, "public static object touch(global::hxhx.__HxArray items)",
+				"C# namespaced Array<T> support methods should reference the stable runtime array type");
+			assertTrue(FileSystem.exists(namespaced.entryPath), "C# namespaced Array<T> formals should compile into an executable");
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -9990,7 +10024,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "Main(string[] __hxhx_cli_args)", "C# entrypoint args should use an internal name so Haxe locals named args still compile");
-		assertContains(content, "var args = new __HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args);",
+		assertContains(content, "var args = new global::hxhx.__HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args);",
 			"C# Sys.args should lower to the Haxe array wrapper backed by the internal entrypoint args value");
 		assertNotContains(content, "var args = args;", "C# switch lowering should not redeclare the entrypoint args parameter");
 		assertContains(content, "if (args != null && args.Length == 1", "C# array switch statements should lower array length guards");
