@@ -5888,6 +5888,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(reportContent, "public object displayHeader", "C# utest Report support should expose displayHeader for sys report configuration");
 			assertContains(reportContent, "public object displaySuccessResults",
 				"C# utest Report support should expose displaySuccessResults for sys report configuration");
+			assertContains(reportContent, "public static Report create(object runner)",
+				"C# utest Report.create should return Report so follow-on display field assignments do not infer object");
 			assertContains(headerContent, "public static object AlwaysShowHeader", "C# HeaderDisplayMode support should expose AlwaysShowHeader");
 			assertContains(successContent, "public static object NeverShowSuccessResults",
 				"C# SuccessResultsDisplayMode support should expose NeverShowSuccessResults");

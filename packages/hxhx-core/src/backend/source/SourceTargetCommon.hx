@@ -8484,9 +8484,11 @@ class SourceTargetCommon {
 				if (emittedMethods.exists(key))
 					continue;
 				emittedMethods.set(key, true);
-				final prefix = HxFunctionDecl.getIsStatic(fn) ? bodyIndent + "  public static object " : bodyIndent + "  public object ";
+				final returnsNewOwner = HxFunctionDecl.getIsStatic(fn) && csCreateReturnsNewOwner(fn, className);
+				final returnType = returnsNewOwner ? className : "object";
+				final prefix = HxFunctionDecl.getIsStatic(fn) ? bodyIndent + "  public static " + returnType + " " : bodyIndent + "  public object ";
 				out.push(prefix + methodName + "(" + csFunctionArgs(args, count) + ") {");
-				if (HxFunctionDecl.getIsStatic(fn) && csCreateReturnsNewOwner(fn, className))
+				if (returnsNewOwner)
 					out.push(bodyIndent + "    return new " + className + "();");
 				else
 					out.push(bodyIndent + "    return null;");
@@ -8720,14 +8722,15 @@ class SourceTargetCommon {
 	}
 
 	static function csCreateReturnsNewOwner(fn:HxFunctionDecl, className:String):Bool {
-		if (HxFunctionDecl.getName(fn) != "create" || HxFunctionDecl.getArgs(fn).length != 0)
+		if (HxFunctionDecl.getName(fn) != "create")
 			return false;
 		final body = HxFunctionDecl.getBody(fn);
 		if (body.length != 1)
 			return false;
 		return switch (body[0]) {
 			case SReturn(ENew(typePath, _), _):
-				sanitizeCsIdentifier(typePath) == className;
+				final parts = typePath.split(".");
+				sanitizeCsIdentifier(parts[parts.length - 1]) == className;
 			case _:
 				false;
 		};
