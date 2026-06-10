@@ -2738,7 +2738,7 @@ class SourceTargetCommon {
 			case Java:
 				javaLambdaExpr(renderedArgs, body);
 			case Cs:
-				"(" + renderedArgs + ") => " + renderExpr(target, body);
+				csLambdaExpr(renderedArgs, body);
 			case Php:
 				phpLambdaExpr(args, body, [], [], []);
 			case Lua:
@@ -2752,6 +2752,51 @@ class SourceTargetCommon {
 			lines.push(line);
 		lines.push("}");
 		return lines.join("\n");
+	}
+
+	static function csLambdaExpr(renderedArgs:String, body:HxExpr):String {
+		final lines = ["(" + renderedArgs + ") => {"];
+		for (line in csExprAsStatements(body, "  ", true))
+			lines.push(line);
+		lines.push("}");
+		return lines.join("\n");
+	}
+
+	static function csExprAsStatements(expr:HxExpr, indent:String, appendReturn:Bool):Array<String> {
+		return switch (expr) {
+			case ENull:
+				appendReturn ? [indent + "return null;"] : [];
+			case ECall(ELambda(args, continuation), callArgs) if (args.length == 1 && isLambdaSeqTemp(args[0]) && callArgs.length == 1):
+				final out = csExprAsStatements(callArgs[0], indent, false);
+				for (line in csExprAsStatements(continuation, indent, appendReturn))
+					out.push(line);
+				out;
+			case ECall(EIdent("__hxhx_for_in"), args) if (args.length >= 3):
+				csForInExprStatements(args[0], args[1], args[2], indent, appendReturn);
+			case _:
+				if (appendReturn) [indent + "return " + renderExpr(Cs, expr) + ";"]; else [indent + exprStmt(Cs, renderExpr(Cs, expr))];
+		};
+	}
+
+	static function csForInExprStatements(iterable:HxExpr, bodyExpr:HxExpr, continuation:HxExpr, indent:String, appendReturn:Bool):Array<String> {
+		return switch (bodyExpr) {
+			case ELambda(args, body) if (args.length == 1):
+				final cleanName = sanitizeCsIdentifier(args[0]);
+				final out = [indent + "foreach (var " + cleanName + " in " + renderExpr(Cs, iterable) + ") {"];
+				for (line in csExprAsStatements(body, indent + indentStep(Cs), false))
+					out.push(line);
+				out.push(indent + "}");
+				for (line in csExprAsStatements(continuation, indent, appendReturn))
+					out.push(line);
+				out;
+			case _:
+				final out = [
+					indent + exprStmt(Cs, callExpr(Cs, "__hxhx_for_in", [iterable, bodyExpr, continuation]))
+				];
+				if (appendReturn)
+					out.push(indent + "return null;");
+				out;
+		};
 	}
 
 	static function isLambdaSeqTemp(name:String):Bool {
@@ -8440,10 +8485,10 @@ class SourceTargetCommon {
 		out.push(indent + "  }");
 		out.push(indent + "}");
 		out.push(indent + "public class __HxSignal {");
-		out.push(indent + "  public object add(System.Func<object, object> callback) {");
+		out.push(indent + "  public object add(System.Func<dynamic, object> callback) {");
 		out.push(indent + "    return null;");
 		out.push(indent + "  }");
-		out.push(indent + "  public object add(System.Action<object> callback) {");
+		out.push(indent + "  public object add(System.Action<dynamic> callback) {");
 		out.push(indent + "    return null;");
 		out.push(indent + "  }");
 		out.push(indent + "  public object add(object callback) {");

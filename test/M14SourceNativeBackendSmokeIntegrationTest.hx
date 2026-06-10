@@ -5663,12 +5663,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(mainContent, "System.Globalization.CultureInfo.CurrentCulture",
 				"C# cs.system.* field chains should map to .NET System.* namespaces");
 			assertContains(mainContent, "cs.Lib.applyCultureChanges()", "C# cs.Lib culture hook calls should remain callable");
-			assertContains(mainContent, "runner.onProgress.add((progress) => progress)",
-				"C# signal callback lambdas should retain lambda syntax for delegate overloads");
+			assertContains(mainContent, "runner.onProgress.add((progress) => {",
+				"C# signal callback lambdas should use statement-bodied syntax for delegate overloads");
 			assertContains(csLibContent, "namespace cs", "C# cs.Lib stub should remain under the cs namespace");
 			assertContains(csLibContent, "public static object applyCultureChanges", "C# cs.Lib stub should expose the culture hook used by unit TestMain");
 			assertContains(runnerContent, "public __HxSignal onProgress", "C# Runner stub should expose utest signal fields");
-			assertContains(mainContent, "public object add(System.Func<object, object> callback)",
+			assertContains(mainContent, "public object add(System.Func<dynamic, object> callback)",
 				"C# signal support should expose a one-argument delegate overload for callback lambdas");
 			assertContains(reportContent, "public static Report create", "C# Report stub should expose the factory used by unit TestMain");
 		} catch (e:Dynamic) {
