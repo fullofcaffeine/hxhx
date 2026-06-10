@@ -498,6 +498,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	static function csSysFileSurfaceProgram():GenIrProgram {
 		final src = [
 			"import haxe.io.Path;",
+			"import haxe.test.Base.helper;",
 			"import sys.FileSystem;",
 			"import sys.io.File;",
 			"",
@@ -6059,6 +6060,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final fileSystemContent = File.getContent(fileSystemPath);
 			final fileContent = File.getContent(filePath);
 			assertContains(mainContent, "using haxe.io;", "C# haxe.io imports should bring Path into scope");
+			assertNotContains(mainContent, "using haxe.test.Base;", "C# static/member imports below haxe.* types should not be emitted as namespace imports");
 			assertContains(mainContent, "using sys;", "C# sys imports should bring FileSystem into scope");
 			assertContains(mainContent, "using sys.io;", "C# sys.io imports should bring File into scope");
 			assertContains(mainContent, "var file = Path.join", "C# imported Path calls should remain unqualified and compile via using");

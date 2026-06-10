@@ -6718,7 +6718,10 @@ let csIsUtestRunner = fun packagePath className -> HxString.equals (csQualifiedC
 
 let csImportUsingNamespace = fun path -> try let __fallback_result_3915 = (
   ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 || HxString.indexOf path "." 0 <= 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  ignore (if not (StringTools.startsWith (path : string) ("utest." : string)) && not (StringTools.startsWith (path : string) ("sys." : string)) && not (StringTools.startsWith (path : string) ("haxe." : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if HxString.equals path "haxe.io.Path" then raise (HxRuntime.Hx_return (Obj.repr ("haxe.io" : string))) else ());
+  ignore (if HxString.equals path "sys.FileSystem" then raise (HxRuntime.Hx_return (Obj.repr ("sys" : string))) else ());
+  ignore (if HxString.equals path "sys.io.File" then raise (HxRuntime.Hx_return (Obj.repr ("sys.io" : string))) else ());
+  ignore (if not (StringTools.startsWith (path : string) ("utest." : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let lastDot = HxString.lastIndexOf path "." (HxString.length path) in (
     ignore (if lastDot <= 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     HxString.substr path 0 lastDot

@@ -8660,7 +8660,13 @@ class SourceTargetCommon {
 	static function csImportUsingNamespace(path:String):Null<String> {
 		if (path == null || path.length == 0 || path.indexOf(".") <= 0)
 			return null;
-		if (!StringTools.startsWith(path, "utest.") && !StringTools.startsWith(path, "sys.") && !StringTools.startsWith(path, "haxe."))
+		if (path == "haxe.io.Path")
+			return "haxe.io";
+		if (path == "sys.FileSystem")
+			return "sys";
+		if (path == "sys.io.File")
+			return "sys.io";
+		if (!StringTools.startsWith(path, "utest."))
 			return null;
 		final lastDot = path.lastIndexOf(".");
 		if (lastDot <= 0)
