@@ -6647,6 +6647,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertCsAnonymousObjectExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_anon_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "var info = new { label = \"ok\", count = 1 };", "C# anonymous object literals should lower to native anonymous types");
+		assertContains(content, "System.Console.WriteLine(info.label);", "C# anonymous object field access should keep using property syntax");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertLoopControlStatements():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_loop_control_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -12125,6 +12138,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonAnonymousObjectReservedFieldSyntax();
 		assertPythonClassBodyHelperNamesAvoidMangling();
 		assertPhpAnonymousObjectExpression();
+		assertCsAnonymousObjectExpression();
 		assertLoopControlStatements();
 		assertPostfixExpressions();
 		assertPhpPostfixExpressions();

@@ -3517,7 +3517,13 @@ class SourceTargetCommon {
 				for (i in 0...count)
 					pairs.push(quoteString(sanitizeTypeName(fieldNames[i])) + " => " + renderExpr(target, fieldValues[i]));
 				"new __HxAnon([" + pairs.join(", ") + "])";
-			case Java, Cs, Lua:
+			case Cs:
+				final pairs = new Array<String>();
+				final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
+				for (i in 0...count)
+					pairs.push(sanitizeCsIdentifier(fieldNames[i]) + " = " + renderExpr(target, fieldValues[i]));
+				"new { " + pairs.join(", ") + " }";
+			case Java, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: EAnon";
 		};
 	}
