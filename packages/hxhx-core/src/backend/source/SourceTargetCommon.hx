@@ -2867,7 +2867,8 @@ class SourceTargetCommon {
 		final childIndent = indent + indentStep(Cs);
 		for (i in 0...count) {
 			final pattern = patterns[i];
-			final lowered = lowerSourceSwitchPattern(Cs, pattern, scrutineeExpr);
+			final lowered = csPatternNeedsSourceLowering(pattern) ? lowerSourceSwitchPattern(Cs, pattern,
+				scrutineeExpr) : sourceSwitchCondOnly(Cs, scrutineeExpr, pattern);
 			final cond = lowered.cond;
 			if (i == 0) {
 				out.push(indent + "if (" + cond + ") {");
@@ -7341,7 +7342,9 @@ class SourceTargetCommon {
 		if (count == 0)
 			return;
 		for (i in 0...count) {
-			final lowered = lowerSourceSwitchPattern(target, patterns[i], scrutineeExpr);
+			final lowered = target == Cs
+				&& !csPatternNeedsSourceLowering(patterns[i]) ? sourceSwitchCondOnly(target, scrutineeExpr,
+					patterns[i]) : lowerSourceSwitchPattern(target, patterns[i], scrutineeExpr);
 			final keyword = i == 0 ? "if" : "} else if";
 			out.push(indent + keyword + " (" + lowered.cond + ") {");
 			for (binding in lowered.bindings) {
@@ -7352,6 +7355,31 @@ class SourceTargetCommon {
 				out.push(line);
 		}
 		out.push(indent + "}");
+	}
+
+	static function csPatternNeedsSourceLowering(pattern:HxSwitchPattern):Bool {
+		return switch (pattern) {
+			case PArray(_) | PExtractor(_, _):
+				true;
+			case PCapture(_, inner) | PUnsupportedGuard(inner):
+				csPatternNeedsSourceLowering(inner);
+			case POr(patterns):
+				if (patterns == null) {
+					false;
+				} else {
+					var needs = false;
+					for (p in patterns)
+						if (csPatternNeedsSourceLowering(p))
+							needs = true;
+					needs;
+				}
+			case _:
+				false;
+		};
+	}
+
+	static function sourceSwitchCondOnly(target:SourceNativeTarget, scrutinee:String, pattern:HxSwitchPattern):SourceSwitchPatternLowered {
+		return {cond: switchPatternCond(target, scrutinee, pattern), bindings: new Array<SourceSwitchPatternBinding>()};
 	}
 
 	static function lowerSourceSwitchPattern(target:SourceNativeTarget, pattern:HxSwitchPattern, scrutinee:String):SourceSwitchPatternLowered {
