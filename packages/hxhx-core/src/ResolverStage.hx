@@ -85,8 +85,6 @@ class ResolverStage {
 
 	static function implicitSamePackageDeps(source:String, modulePath:String, decl:HxModuleDecl):Array<String> {
 		final pkg = HxModuleDecl.getPackagePath(decl);
-		if (pkg == null || pkg.length == 0)
-			return [];
 		final moduleName = modulePath == null ? "" : modulePath.split(".").pop();
 
 		final candidates = new Map<String, Bool>();
@@ -100,11 +98,28 @@ class ResolverStage {
 				pos = mp.pos + mp.len;
 			}
 		}
+		function addTypeListMatches(re:EReg):Void {
+			var pos = 0;
+			while (re.matchSub(source, pos, -1)) {
+				final list = re.matched(1);
+				if (list != null) {
+					for (raw in list.split(",")) {
+						final name = StringTools.trim(raw);
+						if (~/^[A-Z][A-Za-z0-9_]*$/.match(name))
+							candidates.set(name, true);
+					}
+				}
+				final mp = re.matchedPos();
+				pos = mp.pos + mp.len;
+			}
+		}
 
 		// Note: this is intentionally heuristic. It exists as a bootstrap bridge toward
 		// "real typing drives module loading" semantics.
 		addMatches(~/\bnew\s+([A-Z][A-Za-z0-9_]*)\b/g);
 		addMatches(~/\b([A-Z][A-Za-z0-9_]*)\s*\./g);
+		addMatches(~/\bextends\s+([A-Z][A-Za-z0-9_]*)\b/g);
+		addTypeListMatches(~/\bimplements\s+([A-Z][A-Za-z0-9_]*(?:\s*,\s*[A-Z][A-Za-z0-9_]*)*)/g);
 
 		final names = new Array<String>();
 		for (name in candidates.keys())
@@ -120,7 +135,7 @@ class ResolverStage {
 			// `a.Util`, and compiler-owned package code can still reference root helpers).
 			//
 			// Emit every candidate path here; parseProjectRoots filters by actual file existence.
-			var cur = pkg;
+			var cur = pkg == null ? "" : pkg;
 			while (cur.length > 0) {
 				outSet.set(cur + "." + name, true);
 				final lastDot = cur.lastIndexOf(".");

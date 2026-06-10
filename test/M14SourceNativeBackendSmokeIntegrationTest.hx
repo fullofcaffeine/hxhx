@@ -4123,6 +4123,68 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPythonRootPackageBaseClassResolvedBeforeSubclass():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_root_base_" + Std.string(Date.now().getTime()));
+		final srcDir = Path.join([tmpRoot, "src"]);
+		final ioDir = Path.join([srcDir, "io"]);
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(ioDir);
+		File.saveContent(Path.join([srcDir, "TestCommandBase.hx"]), [
+			"class TestCommandBase {",
+			"  public function new() {}",
+			"  public function label() {",
+			"    return \"base\";",
+			"  }",
+			"}",
+		].join("\n"));
+		File.saveContent(Path.join([ioDir, "TestProcess.hx"]), [
+			"package io;",
+			"class TestProcess extends TestCommandBase {",
+			"  public function new() {",
+			"    super();",
+			"  }",
+			"  public function run() {",
+			"    return label();",
+			"  }",
+			"}",
+		].join("\n"));
+		File.saveContent(Path.join([srcDir, "Main.hx"]), [
+			"class Main {",
+			"  static function main() {",
+			"    var process = new io.TestProcess();",
+			"    Sys.println(process.run());",
+			"  }",
+			"}",
+		].join("\n"));
+		final resolved = ResolverStage.parseProjectRoots([srcDir], ["Main"], new StringMap<String>());
+		final resolvedPaths = [for (module in resolved) ResolvedModule.getModulePath(module)];
+		assertTrue(resolvedPaths.indexOf("io.TestProcess") >= 0, "resolver should include package-qualified subclasses");
+		assertTrue(resolvedPaths.indexOf("TestCommandBase") >= 0, "resolver should include root-package base classes referenced by packaged subclasses");
+		final index = TyperIndex.build(resolved);
+		final loader = new ModuleLoader([srcDir], new StringMap<String>(), index, function(_typePath:String):Bool {
+			return false;
+		});
+		loader.markResolvedAlready(resolved);
+		final typed = new Array<TypedModule>();
+		for (module in resolved)
+			typed.push(TyperStage.typeResolvedModule(module, index, loader));
+		final backend = BackendRegistry.requireForTarget("python-native");
+		backend.emit(MacroStage.expandProgram(typed, []), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.py"]);
+		final content = File.getContent(outputPath);
+		final basePos = content.indexOf("class TestCommandBase:");
+		final subclassPos = content.indexOf("class TestProcess(TestCommandBase):");
+		assertTrue(basePos >= 0, "Python output should emit the root-package base class");
+		assertTrue(subclassPos >= 0, "Python output should emit the subclass with its root-package base");
+		assertTrue(basePos < subclassPos, "Python output should define the base before the subclass");
+		if (commandExists("python3")) {
+			final result = commandOutput("python3", [outputPath]);
+			assertTrue(result.code == 0, "Python output should run without NameError, stderr=" + result.stderr);
+			assertTrue(StringTools.trim(result.stdout) == "base", "Python output should preserve inherited method lookup");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonSkipsStdSupportClasses():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_skip_std_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11516,6 +11578,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonSuperMethodReference();
 		assertPythonInheritedFieldReference();
 		assertCrossModuleClassEmission();
+		assertPythonRootPackageBaseClassResolvedBeforeSubclass();
 		assertPythonSkipsStdSupportClasses();
 		assertPythonSkipsMacroSupportMethods();
 		assertPythonUtestRunnerAddCasesMacroStub();
