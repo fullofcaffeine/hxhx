@@ -8729,16 +8729,19 @@ class SourceTargetCommon {
 			final args = HxFunctionDecl.getArgs(fn);
 			if (fnName == "new") {
 				sawConstructor = true;
+				final canRenderBody = csSupportConstructorBodySupported(HxFunctionDecl.getBodyText(fn));
 				for (count in csStubArityRange(args)) {
 					final key = "new#" + Std.string(count);
 					if (emittedMethods.exists(key))
 						continue;
 					emittedMethods.set(key, true);
 					out.push(bodyIndent + "  public " + className + "(" + csFunctionArgs(args, count) + ") {");
-					for (line in csMissingDefaultArgDecls(args, count, bodyIndent + "    "))
-						out.push(line);
-					for (line in renderFunctionStmts(Cs, HxFunctionDecl.getBody(fn), bodyIndent + "    ", className + ".new"))
-						out.push(line);
+					if (canRenderBody) {
+						for (line in csMissingDefaultArgDecls(args, count, bodyIndent + "    "))
+							out.push(line);
+						for (line in renderFunctionStmts(Cs, HxFunctionDecl.getBody(fn), bodyIndent + "    ", className + ".new"))
+							out.push(line);
+					}
 					out.push(bodyIndent + "  }");
 				}
 				continue;
@@ -9437,6 +9440,12 @@ class SourceTargetCommon {
 			case Default(_): true;
 			case NoDefault: false;
 		};
+	}
+
+	static function csSupportConstructorBodySupported(bodyText:String):Bool {
+		if (bodyText == null)
+			return false;
+		return bodyText.indexOf("super") < 0;
 	}
 
 	static function javaFunctionArgs(args:Array<HxFunctionArg>, ?count:Int):String {
