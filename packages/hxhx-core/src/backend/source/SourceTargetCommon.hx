@@ -35,6 +35,12 @@ private typedef PhpEnumCtorRef = {
 	final hasArgs:Bool;
 };
 
+private typedef CsEnumCtorRef = {
+	final enumName:String;
+	final ctorName:String;
+	final hasArgs:Bool;
+};
+
 private class PhpMetadataObjectField {
 	public final name:String;
 	public final value:String;
@@ -1130,6 +1136,10 @@ class SourceTargetCommon {
 				phpEnumCtorCallExpr(phpEnumCtorRef(name), args);
 			case ECall(EIdent(name), args) if (target == Php && !phpLocalExists(name) && phpEnumCtorRef(name) != null):
 				phpEnumCtorCallExpr(phpEnumCtorRef(name), args);
+			case ECall(EEnumValue(name), args) if (target == Cs && csEnumCtorRef(name) != null):
+				csEnumCtorCallExpr(csEnumCtorRef(name), args);
+			case ECall(EIdent(name), args) if (target == Cs && csEnumCtorRef(name) != null):
+				csEnumCtorCallExpr(csEnumCtorRef(name), args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stdStringCall(target, args[0]);
 			case ECall(EField(EIdent("Std"), "parseInt"), args) if (target == Cs && args.length == 1):
@@ -3536,6 +3546,8 @@ class SourceTargetCommon {
 	static function switchExpr(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
 		if (target == Php)
 			return phpSwitchExpr(scrutinee, patterns, exprs);
+		if (target == Cs && csSwitchExprNeedsStatementLowering(patterns))
+			return csSwitchExprLambda(scrutinee, patterns, exprs);
 		final scrutineeExpr = renderExpr(target, scrutinee);
 		var chain = defaultValue(target);
 		if (patterns != null && exprs != null) {
@@ -3549,6 +3561,41 @@ class SourceTargetCommon {
 			}
 		}
 		return chain;
+	}
+
+	static function csSwitchExprNeedsStatementLowering(patterns:Array<HxSwitchPattern>):Bool {
+		if (patterns == null)
+			return false;
+		for (pattern in patterns)
+			if (csPatternNeedsSourceLowering(pattern))
+				return true;
+		return false;
+	}
+
+	static function csSwitchExprLambda(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
+		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+		final out = ["new System.Func<object>(() => {"];
+		out.push("  var __hxhx_switch = " + renderExpr(Cs, scrutinee) + ";");
+		for (i in 0...count) {
+			final pattern = patterns[i];
+			final lowered = csPatternNeedsSourceLowering(pattern) ? lowerSourceSwitchPattern(Cs, pattern,
+				"__hxhx_switch") : sourceSwitchCondOnly(Cs, "__hxhx_switch", pattern);
+			if (i == 0)
+				out.push("  if (" + lowered.cond + ") {");
+			else if (pattern.match(PWildcard))
+				out.push("  } else {");
+			else
+				out.push("  } else if (" + lowered.cond + ") {");
+			for (binding in lowered.bindings)
+				out.push("    " + varDecl(Cs, sanitizeTypeName(binding.name), binding.expr));
+			for (line in csExprAsStatements(exprs[i], "    ", true))
+				out.push(line);
+		}
+		if (count > 0)
+			out.push("  }");
+		out.push("  return null;");
+		out.push("})()");
+		return out.join("\n");
 	}
 
 	static function renderExprWithSourceSwitchBindings(target:SourceNativeTarget, expr:HxExpr, bindings:Array<SourceSwitchPatternBinding>):String {
@@ -5924,6 +5971,8 @@ class SourceTargetCommon {
 	static var phpRenderOptionalLambdaArgNamesByLocal:Null<haxe.ds.StringMap<Array<String>>> = null;
 	static var phpRenderOptionalLambdaOptionalArgNamesByLocal:Null<haxe.ds.StringMap<Array<String>>> = null;
 	static var phpRenderGenericConstructorSamples:Null<haxe.ds.StringMap<String>> = null;
+	static var csRenderEnumConstructors:Null<haxe.ds.StringMap<CsEnumCtorRef>> = null;
+	static var csRenderAmbiguousEnumConstructors:Null<haxe.ds.StringMap<Bool>> = null;
 
 	static function withPhpLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
 		if (target != Php)
@@ -6151,6 +6200,33 @@ class SourceTargetCommon {
 				return callExpr(Php, ref.enumName + "::" + ref.ctorName, args);
 			});
 		return ref.enumName + "::$" + ref.ctorName;
+	}
+
+	static function csEnumCtorRef(name:String):Null<CsEnumCtorRef> {
+		if (csRenderEnumConstructors == null)
+			return null;
+		final clean = sanitizeCsIdentifier(name);
+		if (csRenderAmbiguousEnumConstructors != null
+			&& (csRenderAmbiguousEnumConstructors.exists(name) || csRenderAmbiguousEnumConstructors.exists(clean)))
+			return null;
+		return csRenderEnumConstructors.exists(name) ? csRenderEnumConstructors.get(name) : csRenderEnumConstructors.get(clean);
+	}
+
+	static function csEnumCtorCallExpr(ref:CsEnumCtorRef, args:Array<HxExpr>):String {
+		return callExpr(Cs, ref.enumName + "." + ref.ctorName, args);
+	}
+
+	static function csEnumValueExpr(enumName:String, ctorName:String, args:Array<HxFunctionArg>, ?count:Int, ?argsArrayExpr:String):String {
+		if (argsArrayExpr != null)
+			return "new global::hxhx.__HxEnumValue(" + quoteString(enumName) + ", " + quoteString(ctorName) + ", 0, " + argsArrayExpr + ")";
+		final safeArgs = args == null ? [] : args;
+		final limit = count == null ? safeArgs.length : count;
+		final values = [
+			for (i in 0...limit)
+				sanitizeCsIdentifier(HxFunctionArg.getName(safeArgs[i]))
+		];
+		final payload = values.length == 0 ? "new object[] { }" : "new object[] { " + values.join(", ") + " }";
+		return "new global::hxhx.__HxEnumValue(" + quoteString(enumName) + ", " + quoteString(ctorName) + ", 0, " + payload + ")";
 	}
 
 	static function phpEnumNameFromTypeHint(typeHint:String):Null<String> {
@@ -7519,7 +7595,7 @@ class SourceTargetCommon {
 
 	static function csPatternNeedsSourceLowering(pattern:HxSwitchPattern):Bool {
 		return switch (pattern) {
-			case PArray(_) | PExtractor(_, _):
+			case PArray(_) | PExtractor(_, _) | PEnumExtract(_, _):
 				true;
 			case PCapture(_, inner) | PUnsupportedGuard(inner):
 				csPatternNeedsSourceLowering(inner);
@@ -7651,7 +7727,15 @@ class SourceTargetCommon {
 				+ ".__hx_ctor == "
 				+ quoteString(name)
 				+ ")";
-			case Java, Cs, Lua:
+			case Cs:
+				"("
+				+ scrutinee
+				+ " is global::hxhx.__HxEnumValue && ((global::hxhx.__HxEnumValue)"
+				+ scrutinee
+				+ ").__hx_ctor == "
+				+ quoteString(name)
+				+ ")";
+			case Java, Lua:
 				equalityCond(target, scrutinee, quoteString(name));
 		};
 	}
@@ -7712,7 +7796,13 @@ class SourceTargetCommon {
 					scrutinee + ".__hx_ctor == " + quoteString(name),
 					"hasattr(" + scrutinee + ", " + quoteString("__hx_params") + ")"
 				];
-			case Java, Cs, Lua:
+			case Cs:
+				[scrutinee + " is global::hxhx.__HxEnumValue",
+					"((global::hxhx.__HxEnumValue)"
+					+ scrutinee
+					+ ").__hx_ctor == "
+					+ quoteString(name)];
+			case Java, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported switch pattern: PEnumExtract";
 		};
 		final bindings = new Array<SourceSwitchPatternBinding>();
@@ -7802,7 +7892,9 @@ class SourceTargetCommon {
 				scrutinee + "->__hx_params[" + index + "]";
 			case Python:
 				scrutinee + ".__hx_params[" + index + "]";
-			case Java, Cs, Lua:
+			case Cs:
+				"((global::hxhx.__HxEnumValue)" + scrutinee + ").__hx_params[" + index + "]";
+			case Java, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported switch pattern parameter access";
 		};
 	}
@@ -8713,6 +8805,10 @@ class SourceTargetCommon {
 			&& className == sanitizeCsIdentifier(mainClassName)
 			&& (packagePath == null ? "" : packagePath) == (mainPackagePath == null ? "" : mainPackagePath);
 		final bodyIndent = packagePath == null || packagePath.length == 0 ? "" : "  ";
+		var isEnum = false;
+		for (field in HxClassDecl.getFields(cls))
+			if (HxFieldDecl.getName(field) == "__hx_is_enum")
+				isEnum = true;
 		appendCsNamespaceOpen(out, packagePath);
 		out.push(bodyIndent + "public class " + className + " {");
 		appendCsPostUpdateVarSupport(out, bodyIndent + "  ");
@@ -8777,14 +8873,17 @@ class SourceTargetCommon {
 				if (emittedMethods.exists(key))
 					continue;
 				emittedMethods.set(key, true);
+				final isEnumCtor = isEnum && HxFunctionDecl.getIsStatic(fn) && !StringTools.startsWith(fnName, "__hx_");
 				final returnsNewOwner = HxFunctionDecl.getIsStatic(fn) && csCreateReturnsNewOwner(fn, className);
 				final returnsUtestReportFactory = isUtestReport && HxFunctionDecl.getIsStatic(fn) && methodName == "create";
-				final returnType = returnsNewOwner
+				final returnType = isEnumCtor ? "object" : returnsNewOwner
 					|| returnsUtestReportFactory ? className : csReturnTypeFromHint(HxFunctionDecl.getReturnTypeHint(fn));
 				final prefix = HxFunctionDecl.getIsStatic(fn) ? bodyIndent + "  public static " + returnType + " " : bodyIndent + "  public object ";
 				out.push(prefix + methodName + "(" + csFunctionArgs(args, count) + ") {");
 				if (isMainSupportClass && HxFunctionDecl.getIsStatic(fn)) {
 					out.push(bodyIndent + "    return " + mainEntryClassRef + "." + methodName + "(" + csCallArgsWithDefaults(args, count) + ");");
+				} else if (isEnumCtor) {
+					out.push(bodyIndent + "    return " + csEnumValueExpr(className, methodName, args, count) + ";");
 				} else if (returnsNewOwner || returnsUtestReportFactory)
 					out.push(bodyIndent + "    return new " + className + "();");
 				else
@@ -8796,7 +8895,10 @@ class SourceTargetCommon {
 				emittedMethods.set(varargsKey, true);
 				final prefix = HxFunctionDecl.getIsStatic(fn) ? bodyIndent + "  public static object " : bodyIndent + "  public object ";
 				out.push(prefix + methodName + "(params object[] args) {");
-				out.push(bodyIndent + "    return null;");
+				if (isEnum && HxFunctionDecl.getIsStatic(fn) && !StringTools.startsWith(fnName, "__hx_"))
+					out.push(bodyIndent + "    return " + csEnumValueExpr(className, methodName, args, null, "args") + ";");
+				else
+					out.push(bodyIndent + "    return null;");
 				out.push(bodyIndent + "  }");
 			}
 		}
@@ -9374,6 +9476,21 @@ class SourceTargetCommon {
 		out.push(indent + "  }");
 		out.push(indent + "  public object add(object callback) {");
 		out.push(indent + "    return null;");
+		out.push(indent + "  }");
+		out.push(indent + "}");
+		out.push(indent + "public class __HxEnumValue {");
+		out.push(indent + "  public readonly string __hx_enum;");
+		out.push(indent + "  public readonly string __hx_ctor;");
+		out.push(indent + "  public readonly int __hx_index;");
+		out.push(indent + "  public readonly object[] __hx_params;");
+		out.push(indent + "  public __HxEnumValue(string enumName, string ctorName, int index, object[] args) {");
+		out.push(indent + "    __hx_enum = enumName;");
+		out.push(indent + "    __hx_ctor = ctorName;");
+		out.push(indent + "    __hx_index = index;");
+		out.push(indent + "    __hx_params = args == null ? new object[] { } : args;");
+		out.push(indent + "  }");
+		out.push(indent + "  public override string ToString() {");
+		out.push(indent + "    return __hx_params.Length == 0 ? __hx_ctor : __hx_ctor + \"(\" + string.Join(\",\", __hx_params) + \")\";");
 		out.push(indent + "  }");
 		out.push(indent + "}");
 		out.push(indent + "}");
@@ -11530,6 +11647,60 @@ class SourceTargetCommon {
 					if (!HxFunctionDecl.getIsStatic(fn) || name == "new" || StringTools.startsWith(name, "__hx_"))
 						continue;
 					addRef({enumName: enumName, ctorName: sanitizeTypeName(name), hasArgs: true}, preferLocal);
+				}
+			}
+		}
+		addDecl(decl, true);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl(), false);
+		return out;
+	}
+
+	static function csProgramEnumConstructorMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<CsEnumCtorRef> {
+		final out = new haxe.ds.StringMap<CsEnumCtorRef>();
+		final seen = new Map<String, Bool>();
+		function addRef(ref:CsEnumCtorRef, preferLocal:Bool):Void {
+			final cleanCtor = sanitizeCsIdentifier(ref.ctorName);
+			if (!out.exists(cleanCtor)) {
+				out.set(cleanCtor, ref);
+				return;
+			}
+			final existing = out.get(cleanCtor);
+			if (existing.enumName == ref.enumName && existing.ctorName == ref.ctorName)
+				return;
+			if (preferLocal) {
+				out.set(cleanCtor, ref);
+				if (csRenderAmbiguousEnumConstructors != null)
+					csRenderAmbiguousEnumConstructors.remove(cleanCtor);
+				return;
+			}
+			if (csRenderAmbiguousEnumConstructors != null)
+				csRenderAmbiguousEnumConstructors.set(cleanCtor, true);
+		}
+		function addDecl(moduleDecl:HxModuleDecl, preferLocal:Bool):Void {
+			final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final enumName = csGlobalClassRef(packagePath, HxClassDecl.getName(cls));
+				if (enumName == null || enumName.length == 0 || seen.exists(enumName))
+					continue;
+				var isEnum = false;
+				for (field in HxClassDecl.getFields(cls))
+					if (HxFieldDecl.getName(field) == "__hx_is_enum")
+						isEnum = true;
+				if (!isEnum)
+					continue;
+				seen.set(enumName, true);
+				for (field in HxClassDecl.getFields(cls)) {
+					final name = HxFieldDecl.getName(field);
+					if (!HxFieldDecl.getIsStatic(field) || StringTools.startsWith(name, "__hx_"))
+						continue;
+					addRef({enumName: enumName, ctorName: sanitizeCsIdentifier(name), hasArgs: false}, preferLocal);
+				}
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					final name = HxFunctionDecl.getName(fn);
+					if (!HxFunctionDecl.getIsStatic(fn) || name == "new" || StringTools.startsWith(name, "__hx_"))
+						continue;
+					addRef({enumName: enumName, ctorName: sanitizeCsIdentifier(name), hasArgs: true}, preferLocal);
 				}
 			}
 		}
@@ -15828,6 +15999,8 @@ class SourceTargetCommon {
 		final previousPhpEnumConstructorsByEnum = phpRenderEnumConstructorsByEnum;
 		final previousPhpPreferredEnumName = phpRenderPreferredEnumName;
 		final previousPhpTypeAliases = phpRenderTypeAliases;
+		final previousCsEnumConstructors = csRenderEnumConstructors;
+		final previousCsAmbiguousEnumConstructors = csRenderAmbiguousEnumConstructors;
 		if (target == Php) {
 			phpRenderInstanceMethodsByType = phpProgramInstanceMethodMap(program, decl);
 			phpRenderInstanceMethodArgsByType = phpProgramInstanceMethodArgsMap(program, decl);
@@ -15846,6 +16019,10 @@ class SourceTargetCommon {
 			phpRenderEnumConstructorsByEnum = phpProgramEnumConstructorsByEnumMap(program, decl);
 			phpRenderPreferredEnumName = null;
 			phpRenderTypeAliases = phpProgramTypeAliasMap(program, decl);
+		}
+		if (target == Cs) {
+			csRenderAmbiguousEnumConstructors = new haxe.ds.StringMap<Bool>();
+			csRenderEnumConstructors = csProgramEnumConstructorMap(program, decl);
 		}
 		switch (target) {
 			case Python:
@@ -18784,6 +18961,8 @@ class SourceTargetCommon {
 		phpRenderEnumConstructorsByEnum = previousPhpEnumConstructorsByEnum;
 		phpRenderPreferredEnumName = previousPhpPreferredEnumName;
 		phpRenderTypeAliases = previousPhpTypeAliases;
+		csRenderEnumConstructors = previousCsEnumConstructors;
+		csRenderAmbiguousEnumConstructors = previousCsAmbiguousEnumConstructors;
 		return lines.join("\n") + "\n";
 	}
 }

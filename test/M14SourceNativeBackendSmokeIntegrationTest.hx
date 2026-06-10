@@ -685,6 +685,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csEnumExtractSwitchExpressionProgram():GenIrProgram {
+		final src = [
+			"enum A {",
+			"  A1(v:String);",
+			"  A2(v:B);",
+			"}",
+			"",
+			"enum B {",
+			"  BB(v:Float);",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var v1 = A2(BB(12));",
+			"    v1 = switch (v1) {",
+			"      case A2(v):",
+			"        switch (v) {",
+			"          case BB(v): A2(BB(v++));",
+			"        }",
+			"      default: A1(\"\");",
+			"    };",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csEntrySupportMembersProgram():GenIrProgram {
 		final src = [
 			"class HelperApi {",
@@ -6355,6 +6384,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				"C# entry wrapper should include a typed post-update helper");
 			assertContains(content, "var old = __hxhx_postUpdateVar(ref v, 1);", "C# expression-position post++ should return the old value via helper");
 			assertNotContains(content, "var old = v++;", "C# expression-position post++ should not rely on raw operator emission");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsEnumExtractSwitchExpressionUsesRuntimeShape():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_enum_extract_switch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csEnumExtractSwitchExpressionProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			final aSourcePath = Path.join([outputDir, "src", "A.cs"]);
+			assertTrue(FileSystem.exists(entrySourcePath), "C# enum-extract switch regression should emit an entry wrapper");
+			assertTrue(FileSystem.exists(aSourcePath), "C# enum-extract switch regression should emit enum support class");
+			final entryContent = File.getContent(entrySourcePath);
+			final enumContent = File.getContent(aSourcePath);
+			assertContains(enumContent, "new global::hxhx.__HxEnumValue(\"A\", \"A2\"", "C# enum constructor support should return a runtime enum value");
+			assertContains(entryContent, "global::A.A2(global::B.BB(12))", "C# entry wrapper should qualify enum constructor calls");
+			assertContains(entryContent, "new System.Func<object>(() => {", "C# binding switch expressions should lower to an expression lambda");
+			assertContains(entryContent, "var v = ((global::hxhx.__HxEnumValue)__hxhx_switch).__hx_params[0];",
+				"C# enum-extract switch expressions should declare extracted bindings before rendering the branch");
+			assertContains(entryContent, "global::A.A2(global::B.BB(__hxhx_postUpdateVar(ref v__hx_scope_1",
+				"C# nested enum switch branch should keep postfix old-value semantics");
+			assertNotContains(entryContent, "v1 == \"A2\"", "C# enum-extract switch expressions should not compare enum values to raw strings");
+			assertNotContains(entryContent, "var v1 = A2(BB(12));", "C# enum constructor calls should not remain unqualified");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -12725,6 +12791,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsSupportConstructorAssignThisSkipped();
 		assertCsSupportFieldEqualityUsesObjectEquals();
 		assertCsPostIncrementExpressionUsesHelper();
+		assertCsEnumExtractSwitchExpressionUsesRuntimeShape();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();
