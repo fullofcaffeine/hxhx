@@ -589,10 +589,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	static function csUtilityProcessRuntimeShimProgram():GenIrProgram {
 		final src = [
 			"class UtilityProcess {",
-			"  public static function runUtility(args:Array<String>) {",
+			"  public static function runUtility(args:Array<String>, ?options:{?stdin:String, ?execPath:String, ?execName:String}) {",
 			"    var config = { execPath: \"ignored\", execName: \"ignored\" };",
 			"    Sys.println(config.execPath + config.execName);",
 			"    return null;",
+			"  }",
+			"",
+			"  public static function runUtilityAsCommand(args:Array<String>, ?options:{?stdin:String, ?execPath:String, ?execName:String}) {",
+			"    if (options == null) options = {};",
+			"    if (options.execPath == null) options.execPath = BIN_PATH;",
+			"    return 1;",
 			"  }",
 			"",
 			"  static function main() {",
@@ -6179,15 +6185,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "UtilityProcess.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "hxhx C# sys runtime shim", "C# UtilityProcess should use the focused sys-test runtime shim");
-		assertContains(content, "public static object runUtility(object args)",
+		assertContains(content, "public static object runUtility(object args, object options)",
 			"C# UtilityProcess should keep a callable runUtility wrapper for imported helper calls");
 		assertContains(content, "__hxhx_runUtility(__hxhx_toStringArray(args));", "C# UtilityProcess runUtility wrapper should delegate to the focused shim");
+		assertContains(content, "public static object runUtilityAsCommand(object args, object options)",
+			"C# UtilityProcess should keep a compile-safe runUtilityAsCommand wrapper for adjacent sys helper imports");
+		assertContains(content, "return 0;", "C# UtilityProcess runUtilityAsCommand wrapper should compile without rendering the process helper body");
 		assertContains(content, "private static string[] __hxhx_toStringArray(object value)",
 			"C# UtilityProcess wrapper should normalize Haxe array arguments before dispatch");
 		assertContains(content, "__hxhx_runUtility(__hxhx_cli_args", "C# UtilityProcess shim should dispatch CLI args directly");
 		assertContains(content, "command == \"stdout.writeString\"", "C# UtilityProcess shim should cover stdout.writeString sys case");
 		assertNotContains(content, "execPath = \"ignored\"",
 			"C# UtilityProcess should not compile the brittle source helper body when the shim owns that behavior");
+		assertNotContains(content, "BIN_PATH", "C# UtilityProcess should not compile the adjacent runUtilityAsCommand source helper body");
 		assertNotContains(content, "Sys.", "C# UtilityProcess shim should not leak unresolved Haxe Sys references");
 		if (commandExists("mcs") || commandExists("csc")) {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);

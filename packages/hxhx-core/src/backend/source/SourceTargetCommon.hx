@@ -8950,10 +8950,15 @@ class SourceTargetCommon {
 			if (emitted.exists(key))
 				continue;
 			emitted.set(key, true);
-			if (className == "UtilityProcess" && methodName == "runUtility") {
-				out.push(indent + "public static object runUtility(" + csFunctionArgs(args) + ") {");
-				out.push(indent + "  __hxhx_runUtility(__hxhx_toStringArray(args));");
-				out.push(indent + "  return null;");
+			if (className == "UtilityProcess" && (methodName == "runUtility" || methodName == "runUtilityAsCommand")) {
+				final firstArg = args.length == 0 ? "null" : sanitizeCsIdentifier(HxFunctionArg.getName(args[0]));
+				out.push(indent + "public static object " + methodName + "(" + csFunctionArgs(args) + ") {");
+				if (methodName == "runUtility") {
+					out.push(indent + "  __hxhx_runUtility(__hxhx_toStringArray(" + firstArg + "));");
+					out.push(indent + "  return null;");
+				} else {
+					out.push(indent + "  return 0;");
+				}
 				out.push(indent + "}");
 				continue;
 			}
