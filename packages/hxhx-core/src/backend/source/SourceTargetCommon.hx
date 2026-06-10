@@ -8646,15 +8646,22 @@ class SourceTargetCommon {
 	static function renderCsHeader(program:GenIrProgram, decl:HxModuleDecl, ?currentClassName:String):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
+		appendCsUsing(out, seen, "haxe.io");
+		appendCsUsing(out, seen, "sys");
+		appendCsUsing(out, seen, "sys.io");
 		for (rawImport in HxModuleDecl.getImports(decl)) {
 			final clean = csTypePath(rawImport);
 			final namespacePath = csImportUsingNamespace(clean);
-			if (namespacePath == null || seen.exists(namespacePath))
-				continue;
-			seen.set(namespacePath, true);
-			out.push("using " + namespacePath + ";");
+			appendCsUsing(out, seen, namespacePath);
 		}
 		return out;
+	}
+
+	static function appendCsUsing(out:Array<String>, seen:Map<String, Bool>, namespacePath:String):Void {
+		if (namespacePath == null || namespacePath.length == 0 || seen.exists(namespacePath))
+			return;
+		seen.set(namespacePath, true);
+		out.push("using " + namespacePath + ";");
 	}
 
 	static function csImportUsingNamespace(path:String):Null<String> {
@@ -8677,6 +8684,12 @@ class SourceTargetCommon {
 	static function appendCsImportStubMembers(out:Array<String>, indent:String, packagePath:String, className:String):Void {
 		final qualified = csQualifiedClassName(packagePath, className);
 		if (qualified == "Sys") {
+			out.push(indent + "public static string systemName() {");
+			out.push(indent + "  var platform = (int)System.Environment.OSVersion.Platform;");
+			out.push(indent + "  if (platform == 2) return \"Windows\";");
+			out.push(indent + "  if (System.IO.Directory.Exists(\"/Applications\") && System.IO.Directory.Exists(\"/System\")) return \"Mac\";");
+			out.push(indent + "  return \"Linux\";");
+			out.push(indent + "}");
 			out.push(indent + "public static int command(object command, object args = null) {");
 			out.push(indent + "  var process = new System.Diagnostics.Process();");
 			out.push(indent + "  process.StartInfo.FileName = System.Convert.ToString(command);");

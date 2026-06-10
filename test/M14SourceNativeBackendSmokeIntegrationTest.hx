@@ -497,19 +497,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function csSysFileSurfaceProgram():GenIrProgram {
 		final src = [
-			"import haxe.io.Path;",
 			"import haxe.test.Base.helper;",
-			"import sys.FileSystem;",
-			"import sys.io.File;",
 			"",
 			"class ExitCode {",
 			"  static function main() {",
+			"    var platform = Sys.systemName();",
 			"    var file = Path.join([Sys.getCwd(), \"hxhx-cs-sys.txt\"]);",
 			"    if (FileSystem.exists(file)) FileSystem.deleteFile(file);",
 			"    File.saveContent(file, \"ok\");",
 			"    var text = File.getContent(file);",
 			"    var code = Sys.command(Sys.programPath(), [\"exitCode\", \"0\"]);",
-			"    if (text == \"ok\" && code == 0) Sys.exit(0);",
+			"    if (platform != \"\" && text == \"ok\" && code == 0) Sys.exit(0);",
 			"    Sys.exit(1);",
 			"  }",
 			"}",
@@ -6059,13 +6057,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final pathContent = File.getContent(pathPath);
 			final fileSystemContent = File.getContent(fileSystemPath);
 			final fileContent = File.getContent(filePath);
-			assertContains(mainContent, "using haxe.io;", "C# haxe.io imports should bring Path into scope");
+			assertContains(mainContent, "using haxe.io;", "C# standard haxe.io using should bring Path into importless sys fixtures");
 			assertNotContains(mainContent, "using haxe.test.Base;", "C# static/member imports below haxe.* types should not be emitted as namespace imports");
-			assertContains(mainContent, "using sys;", "C# sys imports should bring FileSystem into scope");
-			assertContains(mainContent, "using sys.io;", "C# sys.io imports should bring File into scope");
+			assertContains(mainContent, "using sys;", "C# standard sys using should bring FileSystem into importless sys fixtures");
+			assertContains(mainContent, "using sys.io;", "C# standard sys.io using should bring File into importless sys fixtures");
 			assertContains(mainContent, "var file = Path.join", "C# imported Path calls should remain unqualified and compile via using");
 			assertContains(mainContent, "FileSystem.exists(file)", "C# imported FileSystem calls should remain unqualified and compile via using");
 			assertContains(mainContent, "File.saveContent(file, \"ok\")", "C# imported File calls should remain unqualified and compile via using");
+			assertContains(mainContent, "var platform = Sys.systemName()", "C# sys fixtures should keep Sys.systemName calls callable through root Sys");
+			assertContains(sysContent, "public static string systemName()", "C# Sys support should expose systemName");
 			assertContains(mainContent, "Sys.command(Sys.programPath()", "C# root Sys calls should remain callable through the synthesized support class");
 			assertContains(sysContent, "public static int command(object command, object args = null)", "C# Sys support should expose command");
 			assertContains(sysContent, "public static string programPath()", "C# Sys support should expose programPath");
