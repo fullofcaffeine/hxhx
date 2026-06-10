@@ -1003,6 +1003,8 @@ class SourceTargetCommon {
 				phpEnumCtorCallExpr(phpEnumCtorRef(name), args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stdStringCall(target, args[0]);
+			case ECall(EField(EIdent("Std"), "parseInt"), args) if (target == Cs && args.length == 1):
+				"int.Parse(" + renderExpr(Cs, args[0]) + ")";
 			case ECall(EField(EIdent("Std"), "isOfType"), args) if (target == Php && args.length == 2):
 				"__hxhx_is_of_type("
 				+ renderExpr(Php, args[0])
@@ -2250,6 +2252,8 @@ class SourceTargetCommon {
 			case Python, Java, Cs, Lua:
 				if (target == Cs) {
 					switch (receiver) {
+						case EIdent("Sys") if (field == "args" && args.length == 0):
+							return "args";
 						case EIdent("Sys") if (field == "exit" && args.length == 1):
 							return "System.Environment.Exit(" + renderExpr(Cs, args[0]) + ")";
 						case _:

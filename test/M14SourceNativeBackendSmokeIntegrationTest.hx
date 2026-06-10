@@ -429,7 +429,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final src = [
 			"class ExitCode {",
 			"  static function main() {",
-			"    Sys.exit(1);",
+			"    Sys.exit(Std.parseInt(Sys.args()[0]));",
 			"  }",
 			"}",
 		].join("\n");
@@ -5701,8 +5701,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(csSysExitProgram(), new BackendContext(tmpRoot, null, "ExitCode", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "ExitCode.cs"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "System.Environment.Exit(1);", "C# Sys.exit should lower to the runtime environment exit call");
-		assertNotContains(content, "Sys.exit", "C# Sys.exit should not leak an unresolved Sys class reference");
+		assertContains(content, "System.Environment.Exit(int.Parse(args[0]));", "C# sys exit-code helper should lower to native args + parseInt APIs");
+		assertNotContains(content, "Sys.", "C# sys exit-code helper should not leak unresolved Sys class references");
+		assertNotContains(content, "Std.parseInt", "C# Std.parseInt should not leak an unresolved Haxe runtime reference");
 		deleteRecursive(tmpRoot);
 	}
 
