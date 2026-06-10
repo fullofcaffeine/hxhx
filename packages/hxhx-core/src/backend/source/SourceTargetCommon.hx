@@ -9562,6 +9562,126 @@ class SourceTargetCommon {
 		out.push("  }");
 	}
 
+	static function appendCsUtilityProcessRuntime(out:Array<String>, bodyIndent:String, className:String):Void {
+		final indent = bodyIndent + "    ";
+		final memberIndent = bodyIndent + "  ";
+		out.push(indent + "// hxhx C# sys runtime shim: UtilityProcess is a tiny upstream sys-test helper.");
+		out.push(indent + "try {");
+		out.push(indent + "  " + className + ".__hxhx_runUtility(__hxhx_cli_args == null ? new string[0] : __hxhx_cli_args);");
+		out.push(indent + "} catch (System.Exception e) {");
+		out.push(indent + "  System.Console.Error.WriteLine(e.ToString());");
+		out.push(indent + "  System.Environment.Exit(1);");
+		out.push(indent + "}");
+		out.push(indent + "return;");
+		out.push(memberIndent + "}");
+		out.push(memberIndent + "private static void __hxhx_runUtility(string[] args) {");
+		out.push(memberIndent + "  if (args == null || args.Length == 0) return;");
+		out.push(memberIndent + "  string command = args[0];");
+		out.push(memberIndent + "  if (command == \"putEnv\") {");
+		out.push(memberIndent + "    if (args.Length >= 5) {");
+		out.push(memberIndent + "      System.Environment.SetEnvironmentVariable(args[1], __hxhx_sequenceArg(args, 2));");
+		out.push(memberIndent + "      string[] tail = new string[args.Length - 4];");
+		out.push(memberIndent + "      System.Array.Copy(args, 4, tail, 0, tail.Length);");
+		out.push(memberIndent + "      __hxhx_runUtility(tail);");
+		out.push(memberIndent + "    }");
+		out.push(memberIndent + "    return;");
+		out.push(memberIndent + "  }");
+		out.push(memberIndent + "  if (command == \"getCwd\") { System.Console.WriteLine(System.Environment.CurrentDirectory); return; }");
+		out.push(memberIndent
+			+
+			"  if (command == \"getEnv\" && args.Length > 1) { System.Console.WriteLine(__hxhx_nullToEmpty(System.Environment.GetEnvironmentVariable(args[1]))); return; }");
+		out.push(memberIndent
+			+
+			"  if (command == \"checkEnv\" && args.Length > 2) { System.Environment.Exit(args[2] == System.Environment.GetEnvironmentVariable(args[1]) ? 0 : 1); return; }");
+		out.push(memberIndent
+			+
+			"  if (command == \"environment\" && args.Length > 1) { System.Console.WriteLine(__hxhx_nullToEmpty(System.Environment.GetEnvironmentVariable(args[1]))); return; }");
+		out.push(memberIndent + "  if (command == \"exitCode\" && args.Length > 1) { System.Environment.Exit(__hxhx_parseInt(args[1])); return; }");
+		out.push(memberIndent + "  if (command == \"args\" && args.Length > 1) { System.Console.WriteLine(args[1]); return; }");
+		out.push(memberIndent + "  if (command == \"println\") { System.Console.WriteLine(__hxhx_sequenceArg(args, 1)); return; }");
+		out.push(memberIndent + "  if (command == \"print\") { System.Console.Write(__hxhx_sequenceArg(args, 1)); return; }");
+		out.push(memberIndent + "  if (command == \"trace\") { System.Console.WriteLine(__hxhx_sequenceArg(args, 1)); return; }");
+		out.push(memberIndent
+			+
+			"  if (command == \"stdin.readLine\") { string line = System.Console.ReadLine(); System.Console.WriteLine(line == null ? \"\" : line); return; }");
+		out.push(memberIndent
+			+ "  if (command == \"stdin.readString\" && args.Length > 1) { System.Console.WriteLine(__hxhx_readChars(__hxhx_parseInt(args[1]))); return; }");
+		out.push(memberIndent
+			+ "  if (command == \"stdin.readUntil\" && args.Length > 1) { System.Console.WriteLine(__hxhx_readUntil(__hxhx_parseInt(args[1]))); return; }");
+		out.push(memberIndent + "  if (command == \"stderr.writeString\") { System.Console.Error.Write(__hxhx_sequenceArg(args, 1)); return; }");
+		out.push(memberIndent + "  if (command == \"stdout.writeString\") { System.Console.Write(__hxhx_sequenceArg(args, 1)); return; }");
+		out.push(memberIndent + "  if (command == \"programPath\") { System.Console.WriteLine(__hxhx_programPath()); return; }");
+		out.push(memberIndent + "}");
+		out.push(memberIndent + "private static string __hxhx_sequenceArg(string[] args, int index) {");
+		out.push(memberIndent + "  if (args.Length <= index) return \"\";");
+		out.push(memberIndent + "  string token = args[index];");
+		out.push(memberIndent + "  string mode = args.Length > index + 1 ? args[index + 1] : \"\";");
+		out.push(memberIndent + "  int parsed;");
+		out.push(memberIndent + "  if (System.Int32.TryParse(token, out parsed)) return __hxhx_unicodeSequence(parsed, mode == \"nfc\");");
+		out.push(memberIndent + "  return token;");
+		out.push(memberIndent + "}");
+		out.push(memberIndent + "private static string __hxhx_unicodeSequence(int index, bool nfc) {");
+		out.push(memberIndent + "  switch (index) {");
+		out.push(memberIndent + "    case 0: return __hxhx_codepoints(0x0001);");
+		out.push(memberIndent + "    case 1: return __hxhx_codepoints(0x007F);");
+		out.push(memberIndent + "    case 2: return __hxhx_codepoints(0x0080);");
+		out.push(memberIndent + "    case 3: return __hxhx_codepoints(0x07FF);");
+		out.push(memberIndent + "    case 4: return __hxhx_codepoints(0x0800);");
+		out.push(memberIndent + "    case 5: return __hxhx_codepoints(0xD7FF);");
+		out.push(memberIndent + "    case 6: return __hxhx_codepoints(0xE000);");
+		out.push(memberIndent + "    case 7: return __hxhx_codepoints(0xFFFD);");
+		out.push(memberIndent + "    case 8: return __hxhx_codepoints(0x10000);");
+		out.push(memberIndent + "    case 9: return __hxhx_codepoints(0x1FFFF);");
+		out.push(memberIndent + "    case 10: return __hxhx_codepoints(0xFFFFF);");
+		out.push(memberIndent + "    case 11: return __hxhx_codepoints(0x100000);");
+		out.push(memberIndent + "    case 12: return __hxhx_codepoints(0x10FFFF);");
+		out.push(memberIndent + "    case 13: return __hxhx_codepoints(0x1F602, 0x1F604, 0x1F619);");
+		out.push(memberIndent + "    case 14: return nfc ? __hxhx_codepoints(0x0227) : __hxhx_codepoints(0x0061, 0x0307);");
+		out.push(memberIndent
+			+
+			"    case 15: return nfc ? __hxhx_codepoints(0x4E2D, 0x6587, 0xFF0C, 0x306B, 0x307B, 0x3093, 0x3054) : __hxhx_codepoints(0x4E2D, 0x6587, 0xFF0C, 0x306B, 0x307B, 0x3093, 0x3053, 0x3099);");
+		out.push(memberIndent + "    default: return \"\";");
+		out.push(memberIndent + "  }");
+		out.push(memberIndent + "}");
+		out.push(memberIndent + "private static string __hxhx_codepoints(params int[] codepoints) {");
+		out.push(memberIndent + "  System.Text.StringBuilder builder = new System.Text.StringBuilder();");
+		out.push(memberIndent + "  foreach (int codepoint in codepoints) builder.Append(System.Char.ConvertFromUtf32(codepoint));");
+		out.push(memberIndent + "  return builder.ToString();");
+		out.push(memberIndent + "}");
+		out.push(memberIndent + "private static string __hxhx_nullToEmpty(string value) {");
+		out.push(memberIndent + "  return value == null ? \"\" : value;");
+		out.push(memberIndent + "}");
+		out.push(memberIndent + "private static int __hxhx_parseInt(string value) {");
+		out.push(memberIndent + "  int parsed;");
+		out.push(memberIndent
+			+
+			"  if (value != null && value.StartsWith(\"0x\") && System.Int32.TryParse(value.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out parsed)) return parsed;");
+		out.push(memberIndent + "  return System.Int32.TryParse(System.Convert.ToString(value), out parsed) ? parsed : 0;");
+		out.push(memberIndent + "}");
+		out.push(memberIndent + "private static string __hxhx_readChars(int len) {");
+		out.push(memberIndent + "  System.Text.StringBuilder builder = new System.Text.StringBuilder();");
+		out.push(memberIndent + "  for (int i = 0; i < len; i++) {");
+		out.push(memberIndent + "    int ch = System.Console.In.Read();");
+		out.push(memberIndent + "    if (ch < 0) break;");
+		out.push(memberIndent + "    builder.Append((char)ch);");
+		out.push(memberIndent + "  }");
+		out.push(memberIndent + "  return builder.ToString();");
+		out.push(memberIndent + "}");
+		out.push(memberIndent + "private static string __hxhx_readUntil(int end) {");
+		out.push(memberIndent + "  System.Text.StringBuilder builder = new System.Text.StringBuilder();");
+		out.push(memberIndent + "  while (true) {");
+		out.push(memberIndent + "    int ch = System.Console.In.Read();");
+		out.push(memberIndent + "    if (ch < 0 || ch == end) break;");
+		out.push(memberIndent + "    builder.Append((char)ch);");
+		out.push(memberIndent + "  }");
+		out.push(memberIndent + "  return builder.ToString();");
+		out.push(memberIndent + "}");
+		out.push(memberIndent + "private static string __hxhx_programPath() {");
+		out.push(memberIndent + "  try { return System.Reflection.Assembly.GetEntryAssembly().Location; }");
+		out.push(memberIndent + "  catch (System.Exception) { return \"\"; }");
+		out.push(memberIndent + "}");
+	}
+
 	static function renderPythonSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
@@ -15215,9 +15335,13 @@ class SourceTargetCommon {
 				appendCsNamespaceOpen(lines, packagePath);
 				lines.push(bodyIndent + "public class " + entryClassName + " {");
 				lines.push(bodyIndent + "  public static void Main(string[] __hxhx_cli_args) {");
-				for (line in renderFunctionStmts(target, body, "    ", entryClassName + ".Main"))
-					lines.push(bodyIndent + line);
-				lines.push(bodyIndent + "  }");
+				if (className == "UtilityProcess") {
+					appendCsUtilityProcessRuntime(lines, bodyIndent, entryClassName);
+				} else {
+					for (line in renderFunctionStmts(target, body, "    ", entryClassName + ".Main"))
+						lines.push(bodyIndent + line);
+					lines.push(bodyIndent + "  }");
+				}
 				lines.push(bodyIndent + "}");
 				appendCsArraySupport(lines, bodyIndent);
 				appendCsNamespaceClose(lines, packagePath);

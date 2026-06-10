@@ -507,7 +507,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function csUtilityProcessCallableRuntimeProgram():GenIrProgram {
 		final src = [
-			"class UtilityProcess {",
+			"class Main {",
 			"  static function main() {",
 			"    var runUtility = function(args:Array<String>) {",
 			"      switch (args) {",
@@ -525,6 +525,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"        runUtility(args.slice(0, 1));",
 			"      case _:",
 			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function csUtilityProcessRuntimeShimProgram():GenIrProgram {
+		final src = [
+			"class UtilityProcess {",
+			"  static function main() {",
+			"    Sys.println(\"fallback\");",
 			"  }",
 			"}",
 		].join("\n");
@@ -5978,8 +5991,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(csUtilityProcessCallableRuntimeProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
-		final outputPath = Path.join([tmpRoot, "UtilityProcess.cs"]);
+		backend.emit(csUtilityProcessCallableRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "System.Func<dynamic, object> runUtility = (args) => {",
 			"C# callable locals should use an explicit delegate type instead of Mono-rejected var lambda inference");
@@ -5994,8 +6007,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("mcs") || commandExists("csc")) {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final result = backend.emit(csUtilityProcessCallableRuntimeProgram(),
-				new BackendContext(outputDir, null, "UtilityProcess", true, true, new StringMap<String>()));
+				new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
 			assertTrue(FileSystem.exists(result.entryPath), "C# UtilityProcess callable runtime shape should compile into an executable");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsUtilityProcessRuntimeShim():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_utility_shim_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(csUtilityProcessRuntimeShimProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "UtilityProcess.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "hxhx C# sys runtime shim", "C# UtilityProcess should use the focused sys-test runtime shim");
+		assertContains(content, "__hxhx_runUtility(__hxhx_cli_args", "C# UtilityProcess shim should dispatch CLI args directly");
+		assertContains(content, "command == \"stdout.writeString\"", "C# UtilityProcess shim should cover stdout.writeString sys case");
+		assertNotContains(content, "Sys.", "C# UtilityProcess shim should not leak unresolved Haxe Sys references");
+		if (commandExists("mcs") || commandExists("csc")) {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final result = backend.emit(csUtilityProcessRuntimeShimProgram(),
+				new BackendContext(outputDir, null, "UtilityProcess", true, true, new StringMap<String>()));
+			assertTrue(FileSystem.exists(result.entryPath), "C# UtilityProcess runtime shim should compile into an executable");
+			if (commandExists("mono")) {
+				final run = commandOutput("mono", [result.entryPath, "println", "hello"]);
+				assertTrue(run.code == 0, "C# UtilityProcess println shim should exit cleanly: " + run.stderr);
+				assertContains(run.stdout, "hello", "C# UtilityProcess println shim should print the provided argument");
+				final stdinRun = commandOutputWithInput("mono", [result.entryPath, "stdin.readLine"], "line-one\n");
+				assertTrue(stdinRun.code == 0, "C# UtilityProcess stdin.readLine shim should exit cleanly: " + stdinRun.stderr);
+				assertContains(stdinRun.stdout, "line-one", "C# UtilityProcess stdin.readLine shim should echo one input line");
+			}
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -9674,13 +9716,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(javaUtilityProcessRuntimeProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
-		final outputPath = Path.join([tmpRoot, "UtilityProcess.cs"]);
+		backend.emit(csUtilityProcessCallableRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "Main(string[] __hxhx_cli_args)", "C# entrypoint args should use an internal name so Haxe locals named args still compile");
 		assertContains(content, "var args = new __HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args);",
 			"C# Sys.args should lower to the Haxe array wrapper backed by the internal entrypoint args value");
-		assertNotContains(content, "var args = args;", "C# UtilityProcess should not redeclare the entrypoint args parameter");
+		assertNotContains(content, "var args = args;", "C# switch lowering should not redeclare the entrypoint args parameter");
 		assertContains(content, "if (args != null && args.Length == 1", "C# array switch statements should lower array length guards");
 		assertContains(content, "var code = int.Parse(System.Convert.ToString(args[0]));", "C# switch extractor patterns should bind Std.parseInt results");
 		assertContains(content, "System.Environment.Exit(code);", "C# UtilityProcess switch branch should keep Sys.exit lowering");
@@ -12138,6 +12180,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaArraySwitchStatement();
 		assertCsReservedLocalIdentifier();
 		assertCsUtilityProcessCallableRuntimeShape();
+		assertCsUtilityProcessRuntimeShim();
 		assertCsUtilityProcessSwitchStatement();
 		assertJavaUtilityProcessRuntime();
 		assertJavaFileSystemFullPathResolvesSymlink();

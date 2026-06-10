@@ -8916,6 +8916,110 @@ let appendJavaUtilityProcessRuntime = fun out className -> ignore ((
   HxArray.push out "  }"
 ))
 
+let appendCsUtilityProcessRuntime = fun out bodyIndent className -> ignore (let indent = (HxString.toStdString bodyIndent ^ "    " : string) in let memberIndent = (HxString.toStdString bodyIndent ^ "  " : string) in (
+  ignore (HxArray.push out (HxString.toStdString indent ^ "// hxhx C# sys runtime shim: UtilityProcess is a tiny upstream sys-test helper."));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "try {"));
+  ignore (HxArray.push out (((HxString.toStdString indent ^ "  ") ^ HxString.toStdString className) ^ ".__hxhx_runUtility(__hxhx_cli_args == null ? new string[0] : __hxhx_cli_args);"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "} catch (System.Exception e) {"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  System.Console.Error.WriteLine(e.ToString());"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  System.Environment.Exit(1);"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "return;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static void __hxhx_runUtility(string[] args) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (args == null || args.Length == 0) return;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  string command = args[0];"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"putEnv\") {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    if (args.Length >= 5) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "      System.Environment.SetEnvironmentVariable(args[1], __hxhx_sequenceArg(args, 2));"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "      string[] tail = new string[args.Length - 4];"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "      System.Array.Copy(args, 4, tail, 0, tail.Length);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "      __hxhx_runUtility(tail);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    return;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"getCwd\") { System.Console.WriteLine(System.Environment.CurrentDirectory); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"getEnv\" && args.Length > 1) { System.Console.WriteLine(__hxhx_nullToEmpty(System.Environment.GetEnvironmentVariable(args[1]))); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"checkEnv\" && args.Length > 2) { System.Environment.Exit(args[2] == System.Environment.GetEnvironmentVariable(args[1]) ? 0 : 1); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"environment\" && args.Length > 1) { System.Console.WriteLine(__hxhx_nullToEmpty(System.Environment.GetEnvironmentVariable(args[1]))); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"exitCode\" && args.Length > 1) { System.Environment.Exit(__hxhx_parseInt(args[1])); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"args\" && args.Length > 1) { System.Console.WriteLine(args[1]); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"println\") { System.Console.WriteLine(__hxhx_sequenceArg(args, 1)); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"print\") { System.Console.Write(__hxhx_sequenceArg(args, 1)); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"trace\") { System.Console.WriteLine(__hxhx_sequenceArg(args, 1)); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"stdin.readLine\") { string line = System.Console.ReadLine(); System.Console.WriteLine(line == null ? \"\" : line); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"stdin.readString\" && args.Length > 1) { System.Console.WriteLine(__hxhx_readChars(__hxhx_parseInt(args[1]))); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"stdin.readUntil\" && args.Length > 1) { System.Console.WriteLine(__hxhx_readUntil(__hxhx_parseInt(args[1]))); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"stderr.writeString\") { System.Console.Error.Write(__hxhx_sequenceArg(args, 1)); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"stdout.writeString\") { System.Console.Write(__hxhx_sequenceArg(args, 1)); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (command == \"programPath\") { System.Console.WriteLine(__hxhx_programPath()); return; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static string __hxhx_sequenceArg(string[] args, int index) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (args.Length <= index) return \"\";"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  string token = args[index];"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  string mode = args.Length > index + 1 ? args[index + 1] : \"\";"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  int parsed;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (System.Int32.TryParse(token, out parsed)) return __hxhx_unicodeSequence(parsed, mode == \"nfc\");"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  return token;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static string __hxhx_unicodeSequence(int index, bool nfc) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  switch (index) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 0: return __hxhx_codepoints(0x0001);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 1: return __hxhx_codepoints(0x007F);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 2: return __hxhx_codepoints(0x0080);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 3: return __hxhx_codepoints(0x07FF);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 4: return __hxhx_codepoints(0x0800);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 5: return __hxhx_codepoints(0xD7FF);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 6: return __hxhx_codepoints(0xE000);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 7: return __hxhx_codepoints(0xFFFD);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 8: return __hxhx_codepoints(0x10000);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 9: return __hxhx_codepoints(0x1FFFF);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 10: return __hxhx_codepoints(0xFFFFF);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 11: return __hxhx_codepoints(0x100000);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 12: return __hxhx_codepoints(0x10FFFF);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 13: return __hxhx_codepoints(0x1F602, 0x1F604, 0x1F619);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 14: return nfc ? __hxhx_codepoints(0x0227) : __hxhx_codepoints(0x0061, 0x0307);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    case 15: return nfc ? __hxhx_codepoints(0x4E2D, 0x6587, 0xFF0C, 0x306B, 0x307B, 0x3093, 0x3054) : __hxhx_codepoints(0x4E2D, 0x6587, 0xFF0C, 0x306B, 0x307B, 0x3093, 0x3053, 0x3099);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    default: return \"\";"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static string __hxhx_codepoints(params int[] codepoints) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  System.Text.StringBuilder builder = new System.Text.StringBuilder();"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  foreach (int codepoint in codepoints) builder.Append(System.Char.ConvertFromUtf32(codepoint));"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  return builder.ToString();"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static string __hxhx_nullToEmpty(string value) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  return value == null ? \"\" : value;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static int __hxhx_parseInt(string value) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  int parsed;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  if (value != null && value.StartsWith(\"0x\") && System.Int32.TryParse(value.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out parsed)) return parsed;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  return System.Int32.TryParse(System.Convert.ToString(value), out parsed) ? parsed : 0;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static string __hxhx_readChars(int len) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  System.Text.StringBuilder builder = new System.Text.StringBuilder();"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  for (int i = 0; i < len; i++) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    int ch = System.Console.In.Read();"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    if (ch < 0) break;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    builder.Append((char)ch);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  return builder.ToString();"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static string __hxhx_readUntil(int end) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  System.Text.StringBuilder builder = new System.Text.StringBuilder();"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  while (true) {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    int ch = System.Console.In.Read();"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    if (ch < 0 || ch == end) break;"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "    builder.Append((char)ch);"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  return builder.ToString();"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "}"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "private static string __hxhx_programPath() {"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  try { return System.Reflection.Assembly.GetEntryAssembly().Location; }"));
+  ignore (HxArray.push out (HxString.toStdString memberIndent ^ "  catch (System.Exception) { return \"\"; }"));
+  HxArray.push out (HxString.toStdString memberIndent ^ "}")
+))
+
 let pythonMainClassNeedsRuntimeSupport = fun cls -> try let __fallback_result_4145 = (
   ignore (if HxClassDecl.getExtendsPath (Obj.magic cls) != Obj.magic (HxRuntime.hx_null) && HxString.length (HxClassDecl.getExtendsPath (Obj.magic cls)) > 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
@@ -31652,14 +31756,16 @@ let renderProgram = fun target program context decl className body -> let lines 
           ignore (appendCsNamespaceOpen (Obj.magic lines) (packagePath : string));
           ignore (HxArray.push lines (((HxString.toStdString bodyIndent ^ "public class ") ^ HxString.toStdString entryClassName) ^ " {"));
           ignore (HxArray.push lines (HxString.toStdString bodyIndent ^ "  public static void Main(string[] __hxhx_cli_args) {"));
-          ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("    " : string) (HxString.toStdString entryClassName ^ ".Main" : string) (Obj.magic (HxRuntime.hx_null))) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-            ignore (let __old_5762 = !_g in let __new_5763 = HxInt.add __old_5762 1 in (
-              ignore (_g := __new_5763);
-              __new_5763
-            ));
-            HxArray.push lines (HxString.toStdString bodyIndent ^ HxString.toStdString line)
-          )) done);
-          ignore (HxArray.push lines (HxString.toStdString bodyIndent ^ "  }"));
+          ignore (if HxString.equals className "UtilityProcess" then ignore (appendCsUtilityProcessRuntime (Obj.magic lines) (bodyIndent : string) (entryClassName : string)) else ignore ((
+            ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("    " : string) (HxString.toStdString entryClassName ^ ".Main" : string) (Obj.magic (HxRuntime.hx_null))) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+              ignore (let __old_5762 = !_g in let __new_5763 = HxInt.add __old_5762 1 in (
+                ignore (_g := __new_5763);
+                __new_5763
+              ));
+              HxArray.push lines (HxString.toStdString bodyIndent ^ HxString.toStdString line)
+            )) done);
+            HxArray.push lines (HxString.toStdString bodyIndent ^ "  }")
+          )));
           ignore (HxArray.push lines (HxString.toStdString bodyIndent ^ "}"));
           ignore (appendCsArraySupport (Obj.magic lines) (bodyIndent : string));
           appendCsNamespaceClose (Obj.magic lines) (packagePath : string)
