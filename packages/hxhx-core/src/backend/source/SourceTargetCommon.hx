@@ -9442,10 +9442,28 @@ class SourceTargetCommon {
 		};
 	}
 
+	/**
+		Only render constructor bodies for the narrow support-class case C# can
+		compile today: direct instance-field initialization. Abstract payload
+		assignments (`this = value`), inherited `super()` calls, and richer runtime
+		shapes belong behind the future typed C# core/extern layer.
+	**/
 	static function csSupportConstructorBodySupported(bodyText:String):Bool {
 		if (bodyText == null)
 			return false;
-		return bodyText.indexOf("super") < 0;
+		final compact = StringTools.trim(bodyText);
+		if (compact.length == 0)
+			return true;
+		if (compact.indexOf("super") >= 0 || compact.indexOf("this =") >= 0 || compact.indexOf("this=") >= 0)
+			return false;
+		for (rawStmt in compact.split(";")) {
+			final stmt = StringTools.trim(rawStmt);
+			if (stmt.length == 0)
+				continue;
+			if (!StringTools.startsWith(stmt, "this.") || stmt.indexOf("=") < 0)
+				return false;
+		}
+		return true;
 	}
 
 	static function javaFunctionArgs(args:Array<HxFunctionArg>, ?count:Int):String {

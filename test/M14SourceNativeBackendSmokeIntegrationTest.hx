@@ -628,6 +628,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csSupportConstructorAssignThisProgram():GenIrProgram {
+		final src = [
+			"class AssignThis {",
+			"  public function new(value:Int) {",
+			"    this = value;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csEntrySupportMembersProgram():GenIrProgram {
 		final src = [
 			"class HelperApi {",
@@ -6213,6 +6231,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final content = File.getContent(childSourcePath);
 			assertContains(content, "public Child() {", "C# support class should keep a constructor stub");
 			assertNotContains(content, "super", "C# support class constructor stubs should not leak unsupported super expressions");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsSupportConstructorAssignThisSkipped():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_assign_this_ctor_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csSupportConstructorAssignThisProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final sourcePath = Path.join([outputDir, "src", "AssignThis.cs"]);
+			assertTrue(FileSystem.exists(sourcePath), "C# support constructor this-assignment regression should emit AssignThis.cs");
+			final content = File.getContent(sourcePath);
+			assertContains(content, "public AssignThis(object value) {", "C# support class should keep the constructor stub");
+			assertNotContains(content, "this = value", "C# support constructor stubs should not leak abstract-style this assignment");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -12580,6 +12625,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsDuplicateLocalShadowNames();
 		assertCsRawIntrinsicAndSameClassStatic();
 		assertCsSupportConstructorWithSuper();
+		assertCsSupportConstructorAssignThisSkipped();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();
