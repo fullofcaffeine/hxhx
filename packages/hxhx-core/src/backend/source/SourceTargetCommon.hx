@@ -1328,6 +1328,10 @@ class SourceTargetCommon {
 			final eq = "__hxhx_equals(" + renderExpr(target, left) + ", " + renderExpr(target, right) + ")";
 			return op == "==" ? eq : "(!" + eq + ")";
 		}
+		if (target == Cs && (op == "==" || op == "!=") && csEqualityNeedsObjectEquals(left, right)) {
+			final eq = "object.Equals(" + renderExpr(Cs, left) + ", " + renderExpr(Cs, right) + ")";
+			return op == "==" ? eq : "(!" + eq + ")";
+		}
 		if (target == Java && op == "+" && !javaStringLikeOperand(left) && !javaStringLikeOperand(right))
 			return "Std.add_(" + renderExpr(Java, left) + ", " + renderExpr(Java, right) + ")";
 		if (target == Java && (op == "-" || op == "*" || op == "/" || op == "%"))
@@ -6921,6 +6925,19 @@ class SourceTargetCommon {
 
 	static function phpEqualityNeedsHelper(left:HxExpr, right:HxExpr):Bool {
 		return true;
+	}
+
+	static function csEqualityNeedsObjectEquals(left:HxExpr, right:HxExpr):Bool {
+		return csExprIsBoxedFieldAccess(left) || csExprIsBoxedFieldAccess(right);
+	}
+
+	static function csExprIsBoxedFieldAccess(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EField(_, _): true;
+			case ECast(inner, _): csExprIsBoxedFieldAccess(inner);
+			case EUntyped(inner): csExprIsBoxedFieldAccess(inner);
+			case _: false;
+		};
 	}
 
 	static function phpInt64StaticCall(callee:HxExpr, argCount:Int):Bool {

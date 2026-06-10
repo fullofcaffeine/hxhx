@@ -646,6 +646,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csSupportFieldEqualityProgram():GenIrProgram {
+		final src = [
+			"class Box {",
+			"  public var a:Int;",
+			"  public var b:String;",
+			"",
+			"  public function new(a:Int, b:String) {",
+			"    this.a = a;",
+			"    this.b = b;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var box = new Box(20, \"hello\");",
+			"    if (box.a != 20 || box.b == \"bad\") throw \"bad-box\";",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csEntrySupportMembersProgram():GenIrProgram {
 		final src = [
 			"class HelperApi {",
@@ -6199,7 +6223,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final content = File.getContent(entrySourcePath);
 			assertContains(content, "global::Main.setRaw(\"ok\");", "C# __cs__ should inline raw void snippets with placeholder substitution");
 			assertContains(content, "var result = global::Main.getRaw();", "C# __cs__ should inline raw value snippets in expression position");
-			assertContains(content, "if ((global::Main.rawResult != \"ok\"))",
+			assertContains(content, "object.Equals(global::Main.rawResult, \"ok\")",
 				"C# entry wrapper should qualify same-class static field reads through the original main class");
 			assertNotContains(content, "if ((Main.rawResult != \"ok\"))", "C# entry wrapper should not emit ambiguous Main static references");
 			assertNotContains(content, "__cs__(", "C# raw intrinsic calls should not leak into generated source");
@@ -6258,6 +6282,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final content = File.getContent(sourcePath);
 			assertContains(content, "public AssignThis(object value) {", "C# support class should keep the constructor stub");
 			assertNotContains(content, "this = value", "C# support constructor stubs should not leak abstract-style this assignment");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsSupportFieldEqualityUsesObjectEquals():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_field_equality_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csSupportFieldEqualityProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			assertTrue(FileSystem.exists(entrySourcePath), "C# field equality regression should emit an entry wrapper");
+			final content = File.getContent(entrySourcePath);
+			assertContains(content, "(!object.Equals(box.a, 20))", "C# boxed support-field inequality should use object.Equals");
+			assertContains(content, "object.Equals(box.b, \"bad\")", "C# boxed support-field equality should use object.Equals");
+			assertNotContains(content, "box.a != 20", "C# boxed support-field inequality should not use the native operator");
+			assertNotContains(content, "box.b == \"bad\"", "C# boxed support-field equality should not use the native operator");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -12626,6 +12679,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsRawIntrinsicAndSameClassStatic();
 		assertCsSupportConstructorWithSuper();
 		assertCsSupportConstructorAssignThisSkipped();
+		assertCsSupportFieldEqualityUsesObjectEquals();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();
