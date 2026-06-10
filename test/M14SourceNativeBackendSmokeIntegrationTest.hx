@@ -554,6 +554,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
 	}
 
+	static function csDuplicateLocalShadowProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		function println(expr:HxExpr):HxStmt {
+			return SExpr(ECall(EField(EIdent("Sys"), "println"), [expr]), pos);
+		}
+		final body:Array<HxStmt> = [
+			SVar("expected", "", EString("first"), pos),
+			println(EIdent("expected")),
+			SVar("expected", "", EString("second"), pos),
+			println(EIdent("expected")),
+			SVar("result", "", EIdent("expected"), pos),
+			println(EIdent("result")),
+			SVar("result", "", EString("third"), pos),
+			println(EIdent("result")),
+			SVar("n", "", EInt(1), pos),
+			println(EIdent("n")),
+			SVar("n", "", EInt(2), pos),
+			println(EIdent("n"))
+		];
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", body, "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		return MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
+	}
+
 	static function csEntrySupportMembersProgram():GenIrProgram {
 		final src = [
 			"class HelperApi {",
@@ -6045,6 +6070,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(entryContent, "    {\n        var n = 2;", "C# scoped-local regression should wrap the second repeated numeric local in a C# block");
 			assertNotContains(entryContent, "    var expected = \"first\";\n    var result = \"first\";\n    var expected = \"second\";",
 				"C# scoped-local regression should not flatten sibling Haxe blocks into one C# local scope");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsDuplicateLocalShadowNames():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_duplicate_locals_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csDuplicateLocalShadowProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			assertTrue(FileSystem.exists(entrySourcePath), "C# duplicate-local regression should emit an entry wrapper");
+			final content = File.getContent(entrySourcePath);
+			assertContains(content, "var expected = \"first\";", "C# duplicate-local regression should keep the first declaration unsuffixed");
+			assertContains(content, "System.Console.WriteLine(expected);", "C# duplicate-local regression should read the first local before shadowing");
+			assertContains(content, "var expected__hx_scope_1 = \"second\";", "C# duplicate-local regression should suffix the second declaration");
+			assertContains(content, "System.Console.WriteLine(expected__hx_scope_1);", "C# duplicate-local regression should read the suffixed shadow local");
+			assertContains(content, "var result = expected__hx_scope_1;", "C# duplicate-local regression should bind later initializers to the latest shadow");
+			assertContains(content, "var result__hx_scope_1 = \"third\";", "C# duplicate-local regression should suffix repeated result declarations");
+			assertContains(content, "var n = 1;", "C# duplicate-local regression should keep the first numeric declaration unsuffixed");
+			assertContains(content, "var n__hx_scope_1 = 2;", "C# duplicate-local regression should suffix repeated numeric declarations");
+			assertNotContains(content, "var expected = \"first\";\n    System.Console.WriteLine(expected);\n    var expected = \"second\";",
+				"C# duplicate-local regression should not emit duplicate declarations in one C# scope");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -12409,6 +12469,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsBuildExecutableEmitsSupportSourceSet();
 		assertCsIssue4598ReadOnlyReflectShape();
 		assertCsScopedLocalBlockShape();
+		assertCsDuplicateLocalShadowNames();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();
