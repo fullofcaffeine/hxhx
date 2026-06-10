@@ -505,6 +505,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csUtilityProcessCallableRuntimeProgram():GenIrProgram {
+		final src = [
+			"class UtilityProcess {",
+			"  static function main() {",
+			"    var runUtility = function(args:Array<String>) {",
+			"      switch (args) {",
+			"        case [\"echo\", out]:",
+			"          Sys.println(out);",
+			"        case [Std.parseInt(_) => code]:",
+			"          Sys.exit(code);",
+			"        case _:",
+			"      }",
+			"      return null;",
+			"    };",
+			"    var args = Sys.args();",
+			"    switch (args) {",
+			"      case [\"run\"]:",
+			"        runUtility(args.slice(0, 1));",
+			"      case _:",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "UtilityProcess.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csRootOwnerImportProgram():GenIrProgram {
 		final unicodeSrc = [
 			"class UnicodeString {",
@@ -5923,7 +5951,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(csSysExitProgram(), new BackendContext(tmpRoot, null, "ExitCode", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "ExitCode.cs"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "System.Environment.Exit(int.Parse(__hxhx_cli_args[0]));",
+		assertContains(content,
+			"System.Environment.Exit(int.Parse(System.Convert.ToString(new __HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)[0])));",
 			"C# sys exit-code helper should lower to native entrypoint args + parseInt APIs");
 		assertNotContains(content, "Sys.", "C# sys exit-code helper should not leak unresolved Sys class references");
 		assertNotContains(content, "Std.parseInt", "C# Std.parseInt should not leak an unresolved Haxe runtime reference");
@@ -5941,6 +5970,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "var out_ = \"ok\";", "C# locals named reserved keywords should be sanitized at declaration sites");
 		assertContains(content, "System.Console.WriteLine(out_);", "C# locals named reserved keywords should be sanitized at use sites");
 		assertNotContains(content, "var out = \"ok\";", "C# source should not declare reserved keyword locals");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsUtilityProcessCallableRuntimeShape():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_utility_callable_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(csUtilityProcessCallableRuntimeProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "UtilityProcess.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "System.Func<dynamic, object> runUtility = (args) => {",
+			"C# callable locals should use an explicit delegate type instead of Mono-rejected var lambda inference");
+		assertContains(content, "new __HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)",
+			"C# Sys.args should lower to the Haxe array wrapper so array helpers stay available");
+		assertContains(content, "runUtility(args.slice(0, 1));", "C# UtilityProcess calls should preserve slice-capable args forwarding");
+		assertContains(content, "public __HxArray slice(object pos, object end = null)",
+			"C# array runtime wrapper should expose Haxe Array.slice for UtilityProcess forwarding");
+		assertContains(content, "public int Length", "C# array runtime wrapper should keep Length for lowered array pattern guards");
+		assertNotContains(content, "var runUtility = (args) =>", "C# callable locals should not rely on var lambda inference");
+		assertNotContains(content, "Sys.", "C# UtilityProcess runtime shape should not leak unresolved Sys references");
+		if (commandExists("mcs") || commandExists("csc")) {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final result = backend.emit(csUtilityProcessCallableRuntimeProgram(),
+				new BackendContext(outputDir, null, "UtilityProcess", true, true, new StringMap<String>()));
+			assertTrue(FileSystem.exists(result.entryPath), "C# UtilityProcess callable runtime shape should compile into an executable");
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -9622,10 +9678,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "UtilityProcess.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "Main(string[] __hxhx_cli_args)", "C# entrypoint args should use an internal name so Haxe locals named args still compile");
-		assertContains(content, "var args = __hxhx_cli_args;", "C# Sys.args should lower to the internal entrypoint args value");
+		assertContains(content, "var args = new __HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args);",
+			"C# Sys.args should lower to the Haxe array wrapper backed by the internal entrypoint args value");
 		assertNotContains(content, "var args = args;", "C# UtilityProcess should not redeclare the entrypoint args parameter");
 		assertContains(content, "if (args != null && args.Length == 1", "C# array switch statements should lower array length guards");
-		assertContains(content, "var code = int.Parse(args[0]);", "C# switch extractor patterns should bind Std.parseInt results");
+		assertContains(content, "var code = int.Parse(System.Convert.ToString(args[0]));", "C# switch extractor patterns should bind Std.parseInt results");
 		assertContains(content, "System.Environment.Exit(code);", "C# UtilityProcess switch branch should keep Sys.exit lowering");
 		assertContains(content, "} else if (true) {", "C# wildcard switch branches should lower as an else-if catch-all");
 		deleteRecursive(tmpRoot);
@@ -12080,6 +12137,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertSwitchStatement();
 		assertJavaArraySwitchStatement();
 		assertCsReservedLocalIdentifier();
+		assertCsUtilityProcessCallableRuntimeShape();
 		assertCsUtilityProcessSwitchStatement();
 		assertJavaUtilityProcessRuntime();
 		assertJavaFileSystemFullPathResolvesSymlink();

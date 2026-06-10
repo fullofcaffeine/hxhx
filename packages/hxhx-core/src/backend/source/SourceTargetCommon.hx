@@ -1057,7 +1057,7 @@ class SourceTargetCommon {
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stdStringCall(target, args[0]);
 			case ECall(EField(EIdent("Std"), "parseInt"), args) if (target == Cs && args.length == 1):
-				"int.Parse(" + renderExpr(Cs, args[0]) + ")";
+				"int.Parse(System.Convert.ToString(" + renderExpr(Cs, args[0]) + "))";
 			case ECall(EField(EIdent("Std"), "isOfType"), args) if (target == Php && args.length == 2):
 				"__hxhx_is_of_type("
 				+ renderExpr(Php, args[0])
@@ -2306,7 +2306,7 @@ class SourceTargetCommon {
 				if (target == Cs) {
 					switch (receiver) {
 						case EIdent("Sys") if (field == "args" && args.length == 0):
-							return "__hxhx_cli_args";
+							return "new __HxArray(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)";
 						case EIdent("Sys") if (field == "exit" && args.length == 1):
 							return "System.Environment.Exit(" + renderExpr(Cs, args[0]) + ")";
 						case _:
@@ -2867,13 +2867,18 @@ class SourceTargetCommon {
 		final childIndent = indent + indentStep(Cs);
 		for (i in 0...count) {
 			final pattern = patterns[i];
-			final cond = switchPatternCond(Cs, scrutineeExpr, pattern);
+			final lowered = lowerSourceSwitchPattern(Cs, pattern, scrutineeExpr);
+			final cond = lowered.cond;
 			if (i == 0) {
 				out.push(indent + "if (" + cond + ") {");
 			} else if (pattern.match(PWildcard)) {
 				out.push(indent + "} else {");
 			} else {
 				out.push(indent + "} else if (" + cond + ") {");
+			}
+			for (binding in lowered.bindings) {
+				final bindName = sanitizeTypeName(binding.name);
+				out.push(childIndent + varDecl(Cs, bindName, binding.expr));
 			}
 			for (line in csExprAsStatements(exprs[i], childIndent, appendReturn))
 				out.push(line);
@@ -5683,7 +5688,7 @@ class SourceTargetCommon {
 			case SVar(name, _typeHint, init, pos):
 				final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 				final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value);
-					[indent + varDecl(target, sanitizeTypeName(name), rhs)];
+					[indent + varDecl(target, sanitizeTypeName(name), rhs, _typeHint, value)];
 			case SIf(cond, thenBranch, elseBranch, _):
 				renderIf(target, cond, thenBranch, elseBranch, indent);
 			case SForIn(name, iterable, body, _):
@@ -6898,7 +6903,7 @@ class SourceTargetCommon {
 					phpRegisterOptionalLambdaLocal(cleanName, init);
 					final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 					final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
-					return [indent + varDecl(target, cleanName, rhs)];
+					return [indent + varDecl(target, cleanName, rhs, typeHint, value)];
 				case SExpr(EBinop("??=", left, right), _) if (target == Python):
 					return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
 				case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
@@ -7471,7 +7476,7 @@ class SourceTargetCommon {
 					case Java:
 						"Std.parseInt(" + scrutinee + ")";
 					case Cs:
-						"int.Parse(" + scrutinee + ")";
+						"int.Parse(System.Convert.ToString(" + scrutinee + "))";
 					case Python:
 						"int(" + scrutinee + ")";
 					case Php:
@@ -7487,7 +7492,9 @@ class SourceTargetCommon {
 						scrutinee + "[0:1]";
 					case Php:
 						"array_slice(" + scrutinee + ", 0, 1)";
-					case Cs | Lua:
+					case Cs:
+						scrutinee + ".slice(0, 1)";
+					case Lua:
 						null;
 				}
 			case _:
@@ -7778,14 +7785,38 @@ class SourceTargetCommon {
 		};
 	}
 
-	static function varDecl(target:SourceNativeTarget, name:String, rhs:String):String {
+	static function varDecl(target:SourceNativeTarget, name:String, rhs:String, ?typeHint:String, ?init:HxExpr):String {
 		return switch (target) {
 			case Python: valueName(Python, name) + " = " + rhs;
 			case Lua: "local " + name + " = " + rhs;
 			case Java: "var " + sanitizeJavaIdentifier(name) + " = " + rhs + ";";
-			case Cs: "var " + sanitizeCsIdentifier(name) + " = " + rhs + ";";
+			case Cs:
+				final localType = csLocalDeclType(typeHint, init);
+				localType + " " + sanitizeCsIdentifier(name) + " = " + rhs + ";";
 			case Php: "$" + sanitizePhpValueName(name) + " = " + rhs + ";";
 		};
+	}
+
+	static function csLocalDeclType(?typeHint:String, ?init:HxExpr):String {
+		final lambdaArity = switch (init) {
+			case ELambda(args, _):
+				args == null ? 0 : args.length;
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, _), _]):
+				args == null ? 0 : args.length;
+			case _:
+				-1;
+		};
+		if (lambdaArity < 0)
+			return "var";
+		return csFuncType(lambdaArity);
+	}
+
+	static function csFuncType(argCount:Int):String {
+		final parts = new Array<String>();
+		for (_ in 0...argCount)
+			parts.push("dynamic");
+		parts.push("object");
+		return "System.Func<" + parts.join(", ") + ">";
 	}
 
 	static function assignedValueExpr(target:SourceNativeTarget, expr:HxExpr, ?typeHint:String):String {
@@ -8721,6 +8752,22 @@ class SourceTargetCommon {
 		out.push(indent + "  }");
 		out.push(indent + "  public int length {");
 		out.push(indent + "    get { return Count; }");
+		out.push(indent + "  }");
+		out.push(indent + "  public int Length {");
+		out.push(indent + "    get { return Count; }");
+		out.push(indent + "  }");
+		out.push(indent + "  public __HxArray slice(object pos, object end = null) {");
+		out.push(indent + "    int start = System.Convert.ToInt32(pos);");
+		out.push(indent + "    int stop = end == null ? Count : System.Convert.ToInt32(end);");
+		out.push(indent + "    if (start < 0) start = Count + start;");
+		out.push(indent + "    if (stop < 0) stop = Count + stop;");
+		out.push(indent + "    if (start < 0) start = 0;");
+		out.push(indent + "    if (stop < start) stop = start;");
+		out.push(indent + "    if (stop > Count) stop = Count;");
+		out.push(indent + "    int len = stop - start;");
+		out.push(indent + "    object[] values = new object[len];");
+		out.push(indent + "    CopyTo(start, values, 0, len);");
+		out.push(indent + "    return new __HxArray(values);");
 		out.push(indent + "  }");
 		out.push(indent + "}");
 		out.push(indent + "public class __HxSignal {");
