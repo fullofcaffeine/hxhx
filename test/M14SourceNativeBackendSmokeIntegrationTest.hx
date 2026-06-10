@@ -425,6 +425,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csSysExitProgram():GenIrProgram {
+		final src = [
+			"class ExitCode {",
+			"  static function main() {",
+			"    Sys.exit(1);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "ExitCode.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpStaticClassAccessProgram():GenIrProgram {
 		final src = [
 			"class Helper {",
@@ -5677,6 +5690,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			throw e;
 		}
 		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsSysExitShape():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_sys_exit_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(csSysExitProgram(), new BackendContext(tmpRoot, null, "ExitCode", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "ExitCode.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "System.Environment.Exit(1);", "C# Sys.exit should lower to the runtime environment exit call");
+		assertNotContains(content, "Sys.exit", "C# Sys.exit should not leak an unresolved Sys class reference");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -11565,6 +11591,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsExePackaging();
 		assertCsBuildExecutableEmitsSupportSourceSet();
 		assertCsRuntimeShapeStubs();
+		assertCsSysExitShape();
 		assertJavaLambdaSequenceCallback();
 		assertCsLambdaSequenceCallback();
 		assertJavaSupportClassJarPackaging();

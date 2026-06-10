@@ -2248,6 +2248,13 @@ class SourceTargetCommon {
 					}
 				}
 			case Python, Java, Cs, Lua:
+				if (target == Cs) {
+					switch (receiver) {
+						case EIdent("Sys") if (field == "exit" && args.length == 1):
+							return "System.Environment.Exit(" + renderExpr(Cs, args[0]) + ")";
+						case _:
+					}
+				}
 				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExpr(target, receiver);
 				callExpr(target, fieldAccess(target, renderedReceiver, field), args);
 		};
