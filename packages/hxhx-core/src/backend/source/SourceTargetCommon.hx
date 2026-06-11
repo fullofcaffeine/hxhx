@@ -9610,6 +9610,9 @@ class SourceTargetCommon {
 
 	static function csArgTypeFromHint(typeHint:String):String {
 		final compact = removeTypeHintWhitespace(trimLeadingTypeColon(typeHint));
+		final delegateType = csDelegateTypeFromFunctionHint(compact);
+		if (delegateType != null)
+			return delegateType;
 		return compact == "Array"
 			|| compact == "StdTypes.Array"
 			|| StringTools.startsWith(compact, "Array<")

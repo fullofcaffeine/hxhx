@@ -5885,6 +5885,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csFunctionTypeArgumentLambdaProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  public static function main() {",
+			"    consume(function(value) return Std.parseInt(value));",
+			"  }",
+			"  public static function consume(f:String->Int) {",
+			"    return f(\"1\");",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csArrayBackingAccessProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7021,6 +7037,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final result = backend.emit(csFunctionTypeReturnLambdaProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
 			assertTrue(FileSystem.exists(result.entryPath), "C# function-type return lambda should compile into an executable");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsFunctionTypeArgumentLambda():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_function_type_argument_lambda_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(csFunctionTypeArgumentLambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static object consume(System.Func<dynamic, object> f)",
+			"C# function-type arguments should render as concrete delegate parameters instead of object");
+		assertContains(content, "consume((value) => {", "C# lambda arguments should have a delegate target type at the call site");
+		assertNotContains(content, "public static object consume(object f)", "C# function-type arguments should not force lambdas into object parameters");
+		if (commandExists("mcs") || commandExists("csc")) {
+			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+			final result = backend.emit(csFunctionTypeArgumentLambdaProgram(),
+				new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			assertTrue(FileSystem.exists(result.entryPath), "C# function-type argument lambda should compile into an executable");
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -12966,6 +13003,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaLambdaSequenceCallback();
 		assertCsLambdaSequenceCallback();
 		assertCsFunctionTypeReturnLambda();
+		assertCsFunctionTypeArgumentLambda();
 		assertCsArrayBackingAccess();
 		assertJavaSupportClassJarPackaging();
 		assertJavaLibraryEnumJarPackaging();
