@@ -6697,12 +6697,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final backend = BackendRegistry.requireForTarget("cs-native");
 		final result = backend.emit(csNoMainLibraryProgram(), new BackendContext(outputDir, null, "checks.LibraryOnly", true, true, defines));
 		final sourcePath = Path.join([outputDir, "src", "checks", "LibraryOnly.cs"]);
+		final runtimeSourcePath = Path.join([outputDir, "src", "hxhx", "__HxRuntime.cs"]);
 		assertTrue(result.entryPath == sourcePath, "C# no-main library emission should report the first source artifact");
 		assertTrue(FileSystem.exists(sourcePath), "C# no-main library emission should write source instead of requiring a static main");
+		assertTrue(FileSystem.exists(runtimeSourcePath), "C# no-main library emission should include the shared hxhx runtime source");
 		assertTrue(!FileSystem.exists(Path.join([outputDir, "bin"])), "C# no-compilation source emission should not create an executable package directory");
 		assertContains(File.getContent(sourcePath), "public class LibraryOnly", "C# no-main library source should render the declared class");
 		assertContains(File.getContent(sourcePath), "return new { longInexistentName = true, otherName = true };",
 			"C# no-main library source should render simple support method bodies needed by library source sets");
+		assertContains(File.getContent(runtimeSourcePath), "namespace hxhx", "C# no-main library runtime source should define the hxhx namespace");
+		assertTrue(hasArtifactPath(result.artifacts, runtimeSourcePath), "C# no-main library source-set should include the runtime source artifact");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -6719,16 +6723,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final outputDir = Path.join([tmpRoot, "bin", "lib1"]);
 			final dllPath = Path.join([outputDir, "bin", "lib1.dll"]);
 			final sourcePath = Path.join([outputDir, "src", "checks", "LibraryOnly.cs"]);
+			final runtimeSourcePath = Path.join([outputDir, "src", "hxhx", "__HxRuntime.cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
 			final result = backend.emit(csNoMainLibraryProgram(),
 				new BackendContext(outputDir, null, "checks.LibraryOnly", true, true, new StringMap<String>()));
 			assertTrue(result.entryPath == dllPath, "C# no-main library packaging should report the DLL as the primary artifact");
 			assertTrue(FileSystem.exists(dllPath), "C# no-main library packaging should produce a DLL at the runci-compatible path");
 			assertTrue(FileSystem.exists(sourcePath), "C# no-main library packaging should still emit the library source");
+			assertTrue(FileSystem.exists(runtimeSourcePath), "C# no-main library packaging should emit the shared hxhx runtime source");
 			assertContains(File.getContent(fakeMcs + ".args"), "-target:library", "C# no-main library packaging should invoke mcs in library mode");
 			assertContains(File.getContent(fakeMcs + ".args"), "-out:" + dllPath, "C# no-main library packaging should pass the expected DLL path");
+			assertContains(File.getContent(fakeMcs + ".args"), runtimeSourcePath,
+				"C# no-main library packaging should compile the shared hxhx runtime source into the DLL");
 			assertTrue(hasArtifactPath(result.artifacts, dllPath), "C# no-main library packaging should include the DLL artifact");
 			assertTrue(hasArtifactPath(result.artifacts, sourcePath), "C# no-main library packaging should include the source artifact");
+			assertTrue(hasArtifactPath(result.artifacts, runtimeSourcePath), "C# no-main library packaging should include the runtime source artifact");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
