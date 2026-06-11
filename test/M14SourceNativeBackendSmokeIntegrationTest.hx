@@ -714,6 +714,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csAbstractToMapProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var map = foo(null);",
+			"    trace(map);",
+			"  }",
+			"",
+			"  static function foo(m:NativeStringMap<String>)",
+			"    return m.toMap();",
+			"}",
+			"",
+			"abstract NativeStringMap<V>(Impl<V>) {",
+			"  @:to public function toMap():Map<String, V> {",
+			"    return new Map();",
+			"  }",
+			"}",
+			"",
+			"typedef Impl<V> = cs.system.collections.generic.IDictionary_2<String, V>;",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csEntrySupportMembersProgram():GenIrProgram {
 		final src = [
 			"class HelperApi {",
@@ -6421,6 +6446,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				"C# nested enum switch branch should keep postfix old-value semantics");
 			assertNotContains(entryContent, "v1 == \"A2\"", "C# enum-extract switch expressions should not compare enum values to raw strings");
 			assertNotContains(entryContent, "var v1 = A2(BB(12));", "C# enum constructor calls should not remain unqualified");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsAbstractToMapUsesGeneratedMapStub():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_abstract_to_map_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csAbstractToMapProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			assertTrue(FileSystem.exists(entrySourcePath), "C# abstract toMap regression should emit an entry wrapper");
+			final entryContent = File.getContent(entrySourcePath);
+			assertContains(entryContent, "return new global::haxe.ds.StringMap();", "C# abstract toMap conversion should lower to the generated map stub");
+			assertNotContains(entryContent, "return m.toMap();", "C# abstract toMap conversion should not call toMap on an object receiver");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -12792,6 +12844,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsSupportFieldEqualityUsesObjectEquals();
 		assertCsPostIncrementExpressionUsesHelper();
 		assertCsEnumExtractSwitchExpressionUsesRuntimeShape();
+		assertCsAbstractToMapUsesGeneratedMapStub();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();

@@ -2409,6 +2409,8 @@ class SourceTargetCommon {
 							return "new " + csArrayRuntimeType() + "(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)";
 						case EIdent("Sys") if (field == "exit" && args.length == 1):
 							return "System.Environment.Exit(" + renderExpr(Cs, args[0]) + ")";
+						case _ if (field == "toMap" && args.length == 0):
+							return "new global::haxe.ds.StringMap()";
 						case _:
 					}
 				}
