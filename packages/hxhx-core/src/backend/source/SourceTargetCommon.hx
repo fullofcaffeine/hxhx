@@ -297,7 +297,7 @@ class SourceTargetCommon {
 	static function emitCsExecutable(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
 		final sourceDir = Path.join([context.outputDir, "src"]);
 		final mainPackage = HxModuleDecl.getPackagePath(decl);
-		final sourcePath = csEntrySourcePath(sourceDir, mainPackage, className);
+		final sourcePath = csEntrySourcePath(sourceDir, mainPackage, className, context.hasDefine("no_root"));
 		final exePath = csExePath(context.outputDir, className, context.outputFileHint, context.hasDefine("debug"));
 		ensureDirectory(sourceDir);
 		ensureParentDirectory(exePath);
@@ -323,7 +323,7 @@ class SourceTargetCommon {
 	static function emitCsSourceSetOnly(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
 		final sourceDir = Path.join([context.outputDir, "src"]);
 		final mainPackage = HxModuleDecl.getPackagePath(decl);
-		final sourcePath = csEntrySourcePath(sourceDir, mainPackage, className);
+		final sourcePath = csEntrySourcePath(sourceDir, mainPackage, className, context.hasDefine("no_root"));
 		ensureDirectory(sourceDir);
 		final sourcePaths = emitCsSourceSet(program, context, sourceDir, decl, className, body);
 		final artifacts = [new EmitArtifact("entry_cs_source", sourcePath)];
@@ -478,12 +478,13 @@ class SourceTargetCommon {
 			mainBody:Array<HxStmt>):Array<String> {
 		final sourcePaths = new Array<String>();
 		final seen = new Map<String, Bool>();
+		final noRoot = context.hasDefine("no_root");
 		final mainPackage = HxModuleDecl.getPackagePath(mainDecl);
-		final mainPath = csEntrySourcePath(sourceDir, mainPackage, mainClassName);
+		final mainPath = csEntrySourcePath(sourceDir, mainPackage, mainClassName, noRoot);
 		ensureParentDirectory(mainPath);
 		sys.io.File.saveContent(mainPath, renderProgram(Cs, program, context, mainDecl, mainClassName, mainBody));
 		sourcePaths.push(mainPath);
-		seen.set(csQualifiedClassName(mainPackage, csEntryClassName(mainClassName)), true);
+		seen.set(csQualifiedClassName(mainPackage, csEntryClassName(mainClassName), noRoot), true);
 		for (typed in program.getTypedModules()) {
 			final moduleDecl = typed.getParsed().getDecl();
 			if (isStdSourceFile(typed.getParsed().getFilePath()))
@@ -491,20 +492,21 @@ class SourceTargetCommon {
 			final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final className = sanitizeCsIdentifier(HxClassDecl.getName(cls));
-				final key = csQualifiedClassName(packagePath, className);
+				final key = csQualifiedClassName(packagePath, className, noRoot);
 				if (seen.exists(key) || isCompileTimeOnlySupportClass(cls))
 					continue;
 				seen.set(key, true);
-				final path = csSourcePath(sourceDir, packagePath, className);
+				final path = csSourcePath(sourceDir, packagePath, className, noRoot);
 				ensureParentDirectory(path);
 				sys.io.File.saveContent(path,
-					renderCsSupportClass(program, moduleDecl, cls, mainPackage, mainClassName, csGlobalClassRef(mainPackage, csEntryClassName(mainClassName))));
+					renderCsSupportClass(program, moduleDecl, cls, mainPackage, mainClassName,
+						csGlobalClassRef(mainPackage, csEntryClassName(mainClassName), noRoot), false, noRoot));
 				sourcePaths.push(path);
 			}
 		}
-		emitCsImportStubs(program, sourceDir, sourcePaths, seen);
+		emitCsImportStubs(program, sourceDir, sourcePaths, seen, noRoot);
 		emitCsRunciHelperStubs(sourceDir, sourcePaths, seen);
-		emitCsStandardStubs(sourceDir, sourcePaths, seen);
+		emitCsStandardStubs(sourceDir, sourcePaths, seen, noRoot);
 		return sourcePaths;
 	}
 
@@ -529,6 +531,7 @@ class SourceTargetCommon {
 	static function emitCsLibrarySources(program:GenIrProgram, context:BackendContext, sourceDir:String):Array<String> {
 		final sourcePaths = new Array<String>();
 		final seen = new Map<String, Bool>();
+		final noRoot = context.hasDefine("no_root");
 		for (typed in program.getTypedModules()) {
 			final moduleDecl = typed.getParsed().getDecl();
 			if (isStdSourceFile(typed.getParsed().getFilePath()))
@@ -536,24 +539,24 @@ class SourceTargetCommon {
 			final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 				final className = sanitizeCsIdentifier(HxClassDecl.getName(cls));
-				final key = csQualifiedClassName(packagePath, className);
+				final key = csQualifiedClassName(packagePath, className, noRoot);
 				if (seen.exists(key) || isCompileTimeOnlySupportClass(cls))
 					continue;
 				seen.set(key, true);
-				final path = csSourcePath(sourceDir, packagePath, className);
+				final path = csSourcePath(sourceDir, packagePath, className, noRoot);
 				ensureParentDirectory(path);
-				sys.io.File.saveContent(path, renderCsSupportClass(program, moduleDecl, cls, null, null, null, true));
+				sys.io.File.saveContent(path, renderCsSupportClass(program, moduleDecl, cls, null, null, null, true, noRoot));
 				sourcePaths.push(path);
 			}
 		}
-		emitCsImportStubs(program, sourceDir, sourcePaths, seen);
+		emitCsImportStubs(program, sourceDir, sourcePaths, seen, noRoot);
 		emitCsRunciHelperStubs(sourceDir, sourcePaths, seen);
-		emitCsStandardStubs(sourceDir, sourcePaths, seen);
+		emitCsStandardStubs(sourceDir, sourcePaths, seen, noRoot);
 		emitCsRuntimeSupportSource(sourceDir, sourcePaths, seen);
 		return sourcePaths;
 	}
 
-	static function emitCsImportStubs(program:GenIrProgram, sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
+	static function emitCsImportStubs(program:GenIrProgram, sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>, noRoot:Bool = false):Void {
 		final imports = new Array<String>();
 		final nestedByOwner = new Map<String, Array<String>>();
 		final nestedImport = new Map<String, Bool>();
@@ -580,14 +583,14 @@ class SourceTargetCommon {
 			final lastDot = owner.lastIndexOf(".");
 			final packagePath = lastDot < 0 ? "" : owner.substr(0, lastDot);
 			final className = lastDot < 0 ? owner : owner.substr(lastDot + 1);
-			final path = csSourcePath(sourceDir, packagePath, className);
+			final path = csSourcePath(sourceDir, packagePath, className, noRoot);
 			seen.set(owner, true);
 			if (sys.FileSystem.exists(path)) {
 				sourcePaths.push(path);
 				continue;
 			}
 			ensureParentDirectory(path);
-			sys.io.File.saveContent(path, renderCsImportStub(packagePath, className, nestedByOwner.get(owner)));
+			sys.io.File.saveContent(path, renderCsImportStub(packagePath, className, nestedByOwner.get(owner), noRoot));
 			sourcePaths.push(path);
 		}
 		for (clean in imports) {
@@ -599,14 +602,14 @@ class SourceTargetCommon {
 			final packagePath = clean.substr(0, lastDot);
 			final className = clean.substr(lastDot + 1);
 			final stubClassName = className == "*" ? "HxWildcardStub" : className;
-			final path = csSourcePath(sourceDir, packagePath, stubClassName);
+			final path = csSourcePath(sourceDir, packagePath, stubClassName, noRoot);
 			seen.set(clean, true);
 			if (sys.FileSystem.exists(path)) {
 				sourcePaths.push(path);
 				continue;
 			}
 			ensureParentDirectory(path);
-			sys.io.File.saveContent(path, renderCsImportStub(packagePath, className));
+			sys.io.File.saveContent(path, renderCsImportStub(packagePath, className, null, noRoot));
 			sourcePaths.push(path);
 		}
 	}
@@ -652,7 +655,7 @@ class SourceTargetCommon {
 		}
 	}
 
-	static function emitCsStandardStubs(sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>):Void {
+	static function emitCsStandardStubs(sourceDir:String, sourcePaths:Array<String>, seen:Map<String, Bool>, noRoot:Bool = false):Void {
 		final stubs = [
 			{packagePath: "", className: "Sys"},
 			{packagePath: "", className: "Reflect"},
@@ -663,17 +666,17 @@ class SourceTargetCommon {
 			{packagePath: "sys.io", className: "File"}
 		];
 		for (stub in stubs) {
-			final key = csQualifiedClassName(stub.packagePath, stub.className);
+			final key = csQualifiedClassName(stub.packagePath, stub.className, noRoot);
 			if (seen.exists(key))
 				continue;
 			seen.set(key, true);
-			final path = csSourcePath(sourceDir, stub.packagePath, stub.className);
+			final path = csSourcePath(sourceDir, stub.packagePath, stub.className, noRoot);
 			if (sys.FileSystem.exists(path)) {
 				sourcePaths.push(path);
 				continue;
 			}
 			ensureParentDirectory(path);
-			sys.io.File.saveContent(path, renderCsImportStub(stub.packagePath, stub.className));
+			sys.io.File.saveContent(path, renderCsImportStub(stub.packagePath, stub.className, null, noRoot));
 			sourcePaths.push(path);
 		}
 	}
@@ -883,33 +886,40 @@ class SourceTargetCommon {
 		].concat([cleanClass]).join(".");
 	}
 
-	static function csSourcePath(sourceDir:String, packagePath:String, className:String):String {
+	static function csOutputPackagePath(packagePath:String, noRoot:Bool = false):String {
+		final raw = packagePath == null ? "" : packagePath;
+		return noRoot && raw.length == 0 ? "haxe.root" : raw;
+	}
+
+	static function csSourcePath(sourceDir:String, packagePath:String, className:String, noRoot:Bool = false):String {
 		final cleanClass = sanitizeCsIdentifier(className);
-		if (packagePath == null || packagePath.length == 0)
+		final outputPackage = csOutputPackagePath(packagePath, noRoot);
+		if (outputPackage.length == 0)
 			return Path.join([sourceDir, cleanClass + ".cs"]);
 		final parts = [
-			for (part in packagePath.split("."))
+			for (part in outputPackage.split("."))
 				sanitizeCsIdentifier(part)
 		];
 		return Path.join([sourceDir].concat(parts).concat([cleanClass + ".cs"]));
 	}
 
-	static function csEntrySourcePath(sourceDir:String, packagePath:String, className:String):String {
-		return csSourcePath(sourceDir, packagePath, csEntryClassName(className));
+	static function csEntrySourcePath(sourceDir:String, packagePath:String, className:String, noRoot:Bool = false):String {
+		return csSourcePath(sourceDir, packagePath, csEntryClassName(className), noRoot);
 	}
 
-	static function csQualifiedClassName(packagePath:String, className:String):String {
+	static function csQualifiedClassName(packagePath:String, className:String, noRoot:Bool = false):String {
 		final cleanClass = sanitizeCsIdentifier(className);
-		if (packagePath == null || packagePath.length == 0)
+		final outputPackage = csOutputPackagePath(packagePath, noRoot);
+		if (outputPackage.length == 0)
 			return cleanClass;
 		return [
-			for (part in packagePath.split("."))
+			for (part in outputPackage.split("."))
 				sanitizeCsIdentifier(part)
 		].concat([cleanClass]).join(".");
 	}
 
-	static function csGlobalClassRef(packagePath:String, className:String):String {
-		return "global::" + csQualifiedClassName(packagePath, className);
+	static function csGlobalClassRef(packagePath:String, className:String, noRoot:Bool = false):String {
+		return "global::" + csQualifiedClassName(packagePath, className, noRoot);
 	}
 
 	static function csTypePath(path:String):String {
@@ -8956,9 +8966,10 @@ class SourceTargetCommon {
 	}
 
 	static function renderCsSupportClass(program:GenIrProgram, decl:HxModuleDecl, cls:HxClassDecl, ?mainPackagePath:String, ?mainClassName:String,
-			?mainEntryClassRef:String, renderMethodBodies:Bool = false):String {
+			?mainEntryClassRef:String, renderMethodBodies:Bool = false, noRoot:Bool = false):String {
 		final out = ["// Generated by hxhx Stage3 C# source backend MVP"];
 		final packagePath = HxModuleDecl.getPackagePath(decl);
+		final outputPackagePath = csOutputPackagePath(packagePath, noRoot);
 		final rawClassName = HxClassDecl.getName(cls);
 		for (line in renderCsHeader(program, decl, rawClassName))
 			out.push(line);
@@ -8968,12 +8979,12 @@ class SourceTargetCommon {
 		final isMainSupportClass = mainEntryClassRef != null
 			&& className == sanitizeCsIdentifier(mainClassName)
 			&& (packagePath == null ? "" : packagePath) == (mainPackagePath == null ? "" : mainPackagePath);
-		final bodyIndent = packagePath == null || packagePath.length == 0 ? "" : "  ";
+		final bodyIndent = outputPackagePath.length == 0 ? "" : "  ";
 		var isEnum = false;
 		for (field in HxClassDecl.getFields(cls))
 			if (HxFieldDecl.getName(field) == "__hx_is_enum")
 				isEnum = true;
-		appendCsNamespaceOpen(out, packagePath);
+		appendCsNamespaceOpen(out, outputPackagePath);
 		out.push(bodyIndent + "public class " + className + " {");
 		appendCsPostUpdateVarSupport(out, bodyIndent + "  ");
 		final emittedFields = new Map<String, Bool>();
@@ -9089,7 +9100,7 @@ class SourceTargetCommon {
 		for (nested in csNestedImportStubNames(program, decl, cls, rawClassName))
 			appendCsNestedImportStub(out, bodyIndent + "  ", nested);
 		out.push(bodyIndent + "}");
-		appendCsNamespaceClose(out, packagePath);
+		appendCsNamespaceClose(out, outputPackagePath);
 		return out.join("\n");
 	}
 
@@ -9184,17 +9195,18 @@ class SourceTargetCommon {
 		return csQualifiedClassName(packagePath, className) == "utest.Runner";
 	}
 
-	static function renderCsImportStub(packagePath:String, className:String, ?nestedNames:Array<String>):String {
+	static function renderCsImportStub(packagePath:String, className:String, ?nestedNames:Array<String>, noRoot:Bool = false):String {
 		final safeClass = className == "*" ? "HxWildcardStub" : sanitizeCsIdentifier(className);
+		final outputPackagePath = csOutputPackagePath(packagePath, noRoot);
 		final out = ["// Generated by hxhx Stage3 C# source backend MVP"];
-		appendCsNamespaceOpen(out, packagePath);
-		final bodyIndent = packagePath == null || packagePath.length == 0 ? "" : "  ";
+		appendCsNamespaceOpen(out, outputPackagePath);
+		final bodyIndent = outputPackagePath.length == 0 ? "" : "  ";
 		out.push(bodyIndent + "public class " + safeClass + " {");
 		out.push(bodyIndent + "  public " + safeClass + "() {");
 		out.push(bodyIndent + "  }");
-		if (csQualifiedClassName(packagePath, safeClass) == "cs.Lib")
+		if (csQualifiedClassName(packagePath, safeClass, noRoot) == "cs.Lib")
 			out.push(bodyIndent + "  public static object nativeThis = null;");
-		if (csQualifiedClassName(packagePath, safeClass) == "cs.Lib") {
+		if (csQualifiedClassName(packagePath, safeClass, noRoot) == "cs.Lib") {
 			out.push(bodyIndent + "  public static object applyCultureChanges(params object[] args) {");
 			out.push(bodyIndent + "    return null;");
 			out.push(bodyIndent + "  }");
@@ -9205,7 +9217,7 @@ class SourceTargetCommon {
 				appendCsNestedImportStub(out, bodyIndent + "  ", nested);
 		}
 		out.push(bodyIndent + "}");
-		appendCsNamespaceClose(out, packagePath);
+		appendCsNamespaceClose(out, outputPackagePath);
 		return out.join("\n");
 	}
 
@@ -16656,10 +16668,12 @@ class SourceTargetCommon {
 				if (lines.length > 1)
 					lines.push("");
 				final packagePath = HxModuleDecl.getPackagePath(decl);
-				final bodyIndent = packagePath == null || packagePath.length == 0 ? "" : "  ";
+				final noRoot = context.hasDefine("no_root");
+				final outputPackagePath = csOutputPackagePath(packagePath, noRoot);
+				final bodyIndent = outputPackagePath.length == 0 ? "" : "  ";
 				final entryClassName = csEntryClassName(className);
-				final classRef = csGlobalClassRef(packagePath, className);
-				appendCsNamespaceOpen(lines, packagePath);
+				final classRef = csGlobalClassRef(packagePath, className, noRoot);
+				appendCsNamespaceOpen(lines, outputPackagePath);
 				lines.push(bodyIndent + "public class " + entryClassName + " {");
 				appendCsMainSupportMembers(lines, decl, bodyIndent + "  ", className, classRef);
 				appendCsPostUpdateVarSupport(lines, bodyIndent + "  ");
@@ -16674,7 +16688,7 @@ class SourceTargetCommon {
 					lines.push(bodyIndent + "  }");
 				}
 				lines.push(bodyIndent + "}");
-				appendCsNamespaceClose(lines, packagePath);
+				appendCsNamespaceClose(lines, outputPackagePath);
 				appendCsArraySupport(lines, "");
 			case Php:
 				lines.push("<?php");

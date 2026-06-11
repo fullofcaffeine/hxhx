@@ -6798,6 +6798,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertCsNoRootLibraryNamespace():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_no_root_library_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final defines = new StringMap<String>();
+		defines.set("no-compilation", "1");
+		defines.set("no_root", "1");
+		final src = [
+			"@:keep class Lib1 {",
+			"  public static function test() {",
+			"    return { longInexistentName:true, otherName:true };",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Lib1.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final outputDir = Path.join([tmpRoot, "bin", "lib1"]);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		final result = backend.emit(program, new BackendContext(outputDir, null, "Lib1", true, true, defines));
+		final rootLibPath = Path.join([outputDir, "src", "Lib1.cs"]);
+		final noRootLibPath = Path.join([outputDir, "src", "haxe", "root", "Lib1.cs"]);
+		final noRootReflectPath = Path.join([outputDir, "src", "haxe", "root", "Reflect.cs"]);
+		assertTrue(result.entryPath == noRootLibPath, "C# no_root library emission should report the haxe.root class source");
+		assertTrue(FileSystem.exists(noRootLibPath), "C# no_root root-package library classes should emit under haxe.root");
+		assertTrue(!FileSystem.exists(rootLibPath), "C# no_root library emission should not leave root-package classes in the global namespace");
+		assertTrue(FileSystem.exists(noRootReflectPath), "C# no_root root stubs should emit beside root-package classes");
+		final libContent = File.getContent(noRootLibPath);
+		final reflectContent = File.getContent(noRootReflectPath);
+		assertContains(libContent, "namespace haxe.root", "C# no_root library class should declare the haxe.root namespace");
+		assertContains(libContent, "public class Lib1", "C# no_root library class should preserve the reflected class name");
+		assertContains(libContent, "public static object test()", "C# no_root library class should keep static reflected methods callable");
+		assertContains(reflectContent, "namespace haxe.root", "C# no_root Reflect stub should live in the haxe.root namespace");
+		assertContains(reflectContent, "public static global::hxhx.__HxArray fields(object obj)",
+			"C# no_root Reflect stub should still expose root Reflect runtime helpers");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertCSharpConstraintDiagnostics():Void {
 		final src = [
 			"class StructAndConstructible<T:CsStruct & Constructible<()->Void>> {}",
@@ -13236,6 +13273,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsImmediateBlockLambdaCallUsesDelegateInvoke();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCsNoMainLibraryDllPackaging();
+		assertCsNoRootLibraryNamespace();
 		assertCSharpConstraintDiagnostics();
 		assertCSharpAssemblyMetadataDiagnostics();
 		assertCSharpUsingMetadataDiagnostics();
