@@ -2470,12 +2470,33 @@ class SourceTargetCommon {
 							if (intrinsic != null) return intrinsic;
 						case _ if (field == "toMap" && args.length == 0):
 							return "new global::haxe.ds.StringMap()";
+						case _ if (csShouldUseDynamicFieldCall(receiver)):
+							return csDynamicFieldCallExpr(receiver, field, args);
 						case _:
 					}
 				}
 				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExpr(target, receiver);
 				callExpr(target, fieldAccess(target, renderedReceiver, field), args);
 		};
+	}
+
+	static function csShouldUseDynamicFieldCall(receiver:HxExpr):Bool {
+		return switch (receiver) {
+			case EIdent(name):
+				isDynamicTypeHint(csLocalTypeHint(name));
+			case ECast(inner, typeHint): isDynamicTypeHint(typeHint) || csShouldUseDynamicFieldCall(inner);
+			case EUntyped(inner) | EMacroExpr(inner, _):
+				csShouldUseDynamicFieldCall(inner);
+			case _:
+				false;
+		};
+	}
+
+	static function csDynamicFieldCallExpr(receiver:HxExpr, field:String, args:Array<HxExpr>):String {
+		final rendered = ["(object)" + renderExpr(Cs, receiver), quoteString(field)];
+		for (arg in args)
+			rendered.push(renderExpr(Cs, arg));
+		return "global::hxhx.__HxRuntime.callField(" + rendered.join(", ") + ")";
 	}
 
 	static function csReflectIntrinsicCall(field:String, args:Array<HxExpr>):Null<String> {
@@ -6028,7 +6049,8 @@ class SourceTargetCommon {
 
 	static function renderStmts(target:SourceNativeTarget, stmts:Array<HxStmt>, indent:String, ?initialLocalTypes:haxe.ds.StringMap<String>):Array<String> {
 		final out = new Array<String>();
-		final localTypes = target == Php && initialLocalTypes != null ? copyStringMap(initialLocalTypes) : new haxe.ds.StringMap<String>();
+		final localTypes = (target == Php || target == Cs)
+			&& initialLocalTypes != null ? copyStringMap(initialLocalTypes) : new haxe.ds.StringMap<String>();
 		final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
 		final baseRefCaptures = phpRenderRefCaptureLocals;
 		final optionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaArgNamesByLocal) : null;
@@ -6085,6 +6107,7 @@ class SourceTargetCommon {
 	static var phpRenderGenericConstructorSamples:Null<haxe.ds.StringMap<String>> = null;
 	static var csRenderEnumConstructors:Null<haxe.ds.StringMap<CsEnumCtorRef>> = null;
 	static var csRenderAmbiguousEnumConstructors:Null<haxe.ds.StringMap<Bool>> = null;
+	static var csRenderLocalTypes:Null<haxe.ds.StringMap<String>> = null;
 
 	static function withPhpLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
 		if (target != Php)
@@ -6097,6 +6120,21 @@ class SourceTargetCommon {
 			return result;
 		} catch (e) {
 			phpRenderLocalTypes = previous;
+			throw e;
+		}
+	}
+
+	static function withCsLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
+		if (target != Cs)
+			return f();
+		final previous = csRenderLocalTypes;
+		csRenderLocalTypes = localTypes;
+		try {
+			final result = f();
+			csRenderLocalTypes = previous;
+			return result;
+		} catch (e) {
+			csRenderLocalTypes = previous;
 			throw e;
 		}
 	}
@@ -6193,6 +6231,13 @@ class SourceTargetCommon {
 			return "";
 		final clean = sanitizeTypeName(name);
 		return phpRenderLocalTypes.exists(clean) ? phpRenderLocalTypes.get(clean) : "";
+	}
+
+	static function csLocalTypeHint(name:String):String {
+		if (csRenderLocalTypes == null)
+			return "";
+		final clean = sanitizeCsIdentifier(name);
+		return csRenderLocalTypes.exists(clean) ? csRenderLocalTypes.get(clean) : "";
 	}
 
 	static function phpOptionalLambdaArgNames(name:String):Null<Array<String>> {
@@ -7222,56 +7267,58 @@ class SourceTargetCommon {
 
 	static function renderStmtWithLocals(target:SourceNativeTarget, stmt:HxStmt, indent:String, localTypes:haxe.ds.StringMap<String>):Array<String> {
 		return withPhpLocalTypes(target, localTypes, function() {
-			switch (stmt) {
-				case SVar(name, typeHint, init, pos):
-					final cleanName = sanitizeTypeName(name);
-					localTypes.set(cleanName, inferLocalTypeHint(typeHint, init));
-					phpRegisterOptionalLambdaLocal(cleanName, init);
-					final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
-					final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
-					return [indent + varDecl(target, cleanName, rhs, typeHint, value)];
-				case SExpr(EBinop("??=", left, right), _) if (target == Python):
-					return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
-				case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
-					return [indent + exprStmt(target, pythonAssignmentStmt(op, left, right))];
-				case SExpr(EBinop("=", EIdent(name), rhsExpr), _) if (target == Php && localTypes.exists(sanitizeTypeName(name))):
-					final cleanName = sanitizeTypeName(name);
-					final rhs = assignedValueExpr(target, rhsExpr, localTypes.get(cleanName));
-					return [indent + exprStmt(target, valueName(target, cleanName) + " = " + rhs)];
-				case SForIn(name, iterable, body, _) if (target == Php):
-					final phpLocals = copyStringMap(localTypes);
-					phpLocals.set(sanitizeTypeName(name), "");
-					return renderForIn(target, name, iterable, body, indent, phpLocals);
-				case SForKeyValue(keyName, valueName, iterable, body, _) if (target == Php):
-					final phpLocals = copyStringMap(localTypes);
-					phpLocals.set(sanitizeTypeName(keyName), "");
-					phpLocals.set(sanitizeTypeName(valueName), "");
-					return renderForKeyValue(target, keyName, valueName, iterable, body, indent, phpLocals);
-				case SBlock(stmts, _) if (target == Cs):
-					return renderCStyleScopedBlock(target, stmts, indent);
-				case SBlock(stmts, _):
-					final out = new Array<String>();
-					final blockLocalTypes = copyStringMap(localTypes);
-					final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
-					final baseRefCaptures = phpRenderRefCaptureLocals;
-					final blockOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaArgNamesByLocal) : null;
-					final blockOptionalOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaOptionalArgNamesByLocal) : null;
-					withPhpOptionalLambdaLocals(target, blockOptionalArgNamesByLocal, blockOptionalOptionalArgNamesByLocal, function() {
-						for (i in 0...stmts.length) {
-							final s = stmts[i];
-							final refCaptures = target == Php ? phpMergeRefCaptureLocals(baseRefCaptures, refCapturesByStmt[i]) : null;
-							withPhpRefCaptureLocals(target, refCaptures, function() {
-								for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
-									out.push(line);
-							});
-						}
-						if (out.length == 0)
-							out.push(indent + emptyStmt(target));
-					});
-					return out;
-				case _:
-					return renderStmt(target, stmt, indent);
-			}
+			return withCsLocalTypes(target, localTypes, function() {
+				return switch (stmt) {
+					case SVar(name, typeHint, init, pos):
+						final cleanName = target == Cs ? sanitizeCsIdentifier(name) : sanitizeTypeName(name);
+						localTypes.set(cleanName, inferLocalTypeHint(typeHint, init));
+						phpRegisterOptionalLambdaLocal(cleanName, init);
+						final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
+						final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
+						return [indent + varDecl(target, cleanName, rhs, typeHint, value)];
+					case SExpr(EBinop("??=", left, right), _) if (target == Python):
+						return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
+					case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
+						return [indent + exprStmt(target, pythonAssignmentStmt(op, left, right))];
+					case SExpr(EBinop("=", EIdent(name), rhsExpr), _) if (target == Php && localTypes.exists(sanitizeTypeName(name))):
+						final cleanName = sanitizeTypeName(name);
+						final rhs = assignedValueExpr(target, rhsExpr, localTypes.get(cleanName));
+						return [indent + exprStmt(target, valueName(target, cleanName) + " = " + rhs)];
+					case SForIn(name, iterable, body, _) if (target == Php):
+						final phpLocals = copyStringMap(localTypes);
+						phpLocals.set(sanitizeTypeName(name), "");
+						return renderForIn(target, name, iterable, body, indent, phpLocals);
+					case SForKeyValue(keyName, valueName, iterable, body, _) if (target == Php):
+						final phpLocals = copyStringMap(localTypes);
+						phpLocals.set(sanitizeTypeName(keyName), "");
+						phpLocals.set(sanitizeTypeName(valueName), "");
+						return renderForKeyValue(target, keyName, valueName, iterable, body, indent, phpLocals);
+					case SBlock(stmts, _) if (target == Cs):
+						return renderCStyleScopedBlock(target, stmts, indent, localTypes);
+					case SBlock(stmts, _):
+						final out = new Array<String>();
+						final blockLocalTypes = copyStringMap(localTypes);
+						final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
+						final baseRefCaptures = phpRenderRefCaptureLocals;
+						final blockOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaArgNamesByLocal) : null;
+						final blockOptionalOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaOptionalArgNamesByLocal) : null;
+						withPhpOptionalLambdaLocals(target, blockOptionalArgNamesByLocal, blockOptionalOptionalArgNamesByLocal, function() {
+							for (i in 0...stmts.length) {
+								final s = stmts[i];
+								final refCaptures = target == Php ? phpMergeRefCaptureLocals(baseRefCaptures, refCapturesByStmt[i]) : null;
+								withPhpRefCaptureLocals(target, refCaptures, function() {
+									for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
+										out.push(line);
+								});
+							}
+							if (out.length == 0)
+								out.push(indent + emptyStmt(target));
+						});
+						return out;
+					case _:
+						return renderStmt(target, stmt, indent);
+				};
+			});
 		});
 	}
 
@@ -7284,9 +7331,10 @@ class SourceTargetCommon {
 		- Keeping explicit braces preserves the Haxe block boundary without renaming locals or changing
 		  expression lowering.
 	**/
-	static function renderCStyleScopedBlock(target:SourceNativeTarget, stmts:Array<HxStmt>, indent:String):Array<String> {
+	static function renderCStyleScopedBlock(target:SourceNativeTarget, stmts:Array<HxStmt>, indent:String,
+			?initialLocalTypes:haxe.ds.StringMap<String>):Array<String> {
 		final out = [indent + "{"];
-		for (line in renderStmts(target, stmts, indent + indentStep(target)))
+		for (line in renderStmts(target, stmts, indent + indentStep(target), initialLocalTypes))
 			out.push(line);
 		out.push(indent + "}");
 		return out;
@@ -7316,7 +7364,9 @@ class SourceTargetCommon {
 				case _: body;
 			};
 			withPhpDynamicCallFields(target, target == Php ? phpDynamicCallFieldsForStmts(renderBody) : null, function() {
-				return renderStmts(target, renderBody, indent, initialLocalTypes);
+				return withCsLocalTypes(target, target == Cs ? initialLocalTypes : null, function() {
+					return renderStmts(target, renderBody, indent, initialLocalTypes);
+				});
 			});
 		} catch (e:String) {
 			throw e + " while emitting " + context;
@@ -9602,6 +9652,37 @@ class SourceTargetCommon {
 
 	static function appendCsArraySupport(out:Array<String>, indent:String):Void {
 		out.push(indent + "namespace hxhx {");
+		out.push(indent + "public static class __HxRuntime {");
+		out.push(indent + "  public static object callField(object obj, string name, params object[] args) {");
+		out.push(indent + "    if (obj == null) return null;");
+		out.push(indent
+			+ "    var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;");
+		out.push(indent + "    var type = obj as System.Type;");
+		out.push(indent + "    object receiver = type == null ? obj : null;");
+		out.push(indent + "    if (type == null && obj is System.Reflection.MemberInfo) {");
+		out.push(indent + "      var asType = obj.GetType().GetMethod(\"AsType\", flags, null, System.Type.EmptyTypes, null);");
+		out.push(indent + "      if (asType != null) {");
+		out.push(indent + "        var reflected = asType.Invoke(obj, new object[] { });");
+		out.push(indent + "        type = reflected as System.Type;");
+		out.push(indent + "        if (type != null) receiver = null;");
+		out.push(indent + "      }");
+		out.push(indent + "    }");
+		out.push(indent + "    if (type == null) type = obj.GetType();");
+		out.push(indent + "    foreach (var method in type.GetMethods(flags)) {");
+		out.push(indent + "      if (method.Name == name && method.GetParameters().Length == args.Length)");
+		out.push(indent + "        return method.Invoke(receiver, args);");
+		out.push(indent + "    }");
+		out.push(indent + "    var property = type.GetProperty(name, flags);");
+		out.push(indent + "    var value = property != null ? property.GetValue(receiver, null) : null;");
+		out.push(indent + "    if (value == null) {");
+		out.push(indent + "      var fieldInfo = type.GetField(name, flags);");
+		out.push(indent + "      if (fieldInfo != null) value = fieldInfo.GetValue(receiver);");
+		out.push(indent + "    }");
+		out.push(indent + "    var callback = value as System.Delegate;");
+		out.push(indent + "    if (callback != null) return callback.DynamicInvoke(args);");
+		out.push(indent + "    throw new System.MissingMethodException(type.FullName, name);");
+		out.push(indent + "  }");
+		out.push(indent + "}");
 		out.push(indent + "public class __HxArray : System.Collections.Generic.IEnumerable<object> {");
 		out.push(indent + "  public object[] __a;");
 		out.push(indent + "  public __HxArray(object[] values) {");

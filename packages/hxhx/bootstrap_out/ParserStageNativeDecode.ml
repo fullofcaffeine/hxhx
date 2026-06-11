@@ -574,9 +574,9 @@ let parseReturnExprText = fun raw -> try let __fallback_result_236 = let exprTex
           | HxRuntime.Hx_break -> ());
         ignore (if !saw && !i = HxString.length exprText then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EInt (HxInt.mul (!sign) (!value)))))) else ());
         ignore (if HxString.indexOf exprText "." 0 <> -1 then ignore (let f = Std.parseFloat (exprText : string) in if not (Math.isNaN f) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EFloat f)))) else ()) else ());
-        let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
+        let parsed = ref (Obj.magic (HxExpr.EUnsupported (exprText : string))) in (
           ignore (try let __assign_226 = Obj.magic (HxParser.parseExprText (exprText : string)) in (
-            tempResult := __assign_226;
+            parsed := __assign_226;
             __assign_226
           ) with
             | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
@@ -585,30 +585,30 @@ let parseReturnExprText = fun raw -> try let __fallback_result_236 = let exprTex
             | HxRuntime.Hx_exception (__exn_v_228, __exn_tags_229) -> if HxRuntime.tags_has __exn_tags_229 "HxParseError" then let _hx = (Obj.obj __exn_v_228 : HxParseError.t) in (
               ignore _hx;
               let __assign_231 = Obj.magic (HxExpr.EUnsupported (exprText : string)) in (
-                tempResult := __assign_231;
+                parsed := __assign_231;
                 __assign_231
               )
             ) else if HxRuntime.tags_has __exn_tags_229 "String" then let _hx = (Obj.obj __exn_v_228 : string) in (
               ignore _hx;
               let __assign_230 = Obj.magic (HxExpr.EUnsupported (exprText : string)) in (
-                tempResult := __assign_230;
+                parsed := __assign_230;
                 __assign_230
               )
             ) else HxRuntime.hx_throw_typed __exn_v_228 __exn_tags_229
             | __exn_232 -> if HxRuntime.tags_has ["OcamlExn"] "HxParseError" then let _hx = (Obj.obj (Obj.repr __exn_232) : HxParseError.t) in (
               ignore _hx;
               let __assign_234 = Obj.magic (HxExpr.EUnsupported (exprText : string)) in (
-                tempResult := __assign_234;
+                parsed := __assign_234;
                 __assign_234
               )
             ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_232) : string) in (
               ignore _hx;
               let __assign_233 = Obj.magic (HxExpr.EUnsupported (exprText : string)) in (
-                tempResult := __assign_233;
+                parsed := __assign_233;
                 __assign_233
               )
             ) else raise (__exn_232));
-          !tempResult
+          !parsed
         )
       )
     )

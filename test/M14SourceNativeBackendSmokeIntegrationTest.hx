@@ -465,6 +465,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csDynamicReflectedTypeCallProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var tp:Dynamic = getType();",
+			"    var value = tp.test();",
+			"    Sys.println(Std.string(value));",
+			"  }",
+			"  static function getType():Dynamic {",
+			"    return null;",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csImportedUtestProgram():GenIrProgram {
 		final mainSrc = [
 			"import utest.Runner;",
@@ -6348,6 +6366,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(reflectContent, "public static global::hxhx.__HxArray fields(object obj)", "C# Reflect shim should expose Reflect.fields");
 			assertContains(reflectContent, "public static object field(object obj, object field)", "C# Reflect shim should expose Reflect.field");
 			assertContains(reflectContent, "public static int compare(object a, object b)", "C# Reflect shim should expose Reflect.compare");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsDynamicReflectedTypeCallShape():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_dynamic_reflected_type_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csDynamicReflectedTypeCallProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			assertTrue(FileSystem.exists(entrySourcePath), "C# reflected Type Dynamic call regression should emit an entry wrapper");
+			final entryContent = File.getContent(entrySourcePath);
+			assertContains(entryContent, "dynamic tp = global::Main.getType();",
+				"C# explicit Dynamic locals should stay dynamic for reflected Type call compatibility");
+			assertContains(entryContent, "var value = global::hxhx.__HxRuntime.callField((object)tp, \"test\");",
+				"C# field calls on explicit Dynamic locals should route through hxhx reflection dispatch");
+			assertContains(entryContent, "public static object callField(object obj, string name, params object[] args)",
+				"C# runtime support should expose a shared Dynamic field-call dispatcher");
+			assertContains(entryContent, "obj is System.Reflection.MemberInfo",
+				"C# Dynamic field-call dispatcher should recognize reflected TypeInfo-style receivers without binding to a fake stub");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -13171,6 +13222,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsBuildExecutableEmitsSupportSourceSet();
 		assertCsIssue4598ReadOnlyReflectShape();
 		assertCsDynamicReflectArrayShape();
+		assertCsDynamicReflectedTypeCallShape();
 		assertCsScopedLocalBlockShape();
 		assertCsDuplicateLocalShadowNames();
 		assertCsRawIntrinsicAndSameClassStatic();

@@ -8717,13 +8717,13 @@ let rebaseFunctionBodyPos = fun pos base bodyStartIndex -> try let __fallback_re
 ) in Obj.magic __fallback_result_4739 with
   | HxRuntime.Hx_return __ret_4738 -> Obj.obj __ret_4738
 
-let rec rebaseFunctionBodyExpr = fun expr base -> try let __fallback_result_4833 = (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (HxRuntime.hx_null)))))) else ());
-  let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-    ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_4764 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" expr)) in (
-      tempResult := __assign_4764;
-      __assign_4764
-    ) else match let __enum_idx_4831 = expr in if __enum_idx_4831 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_4831 with
+let rec rebaseFunctionBodyExprValue = fun expr base -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
+  ignore (match expr with
+    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_4766 = Obj.magic (HxExpr.EField (Obj.magic (rebaseFunctionBodyExprValue (Obj.magic obj) (Obj.magic base)), (field : string))) in (
+      tempResult := __assign_4766;
+      __assign_4766
+    )
+    | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in if (match _g with
       | HxExpr.ENull -> 0
       | HxExpr.EBool _ -> 1
       | HxExpr.EString _ -> 2
@@ -8752,191 +8752,127 @@ let rec rebaseFunctionBodyExpr = fun expr base -> try let __fallback_result_4833
       | HxExpr.ERange (_, _) -> 25
       | HxExpr.ECast (_, _) -> 26
       | HxExpr.EUntyped _ -> 27
-      | HxExpr.EUnsupported _ -> 28 with
-      | 9 -> let _g = Obj.magic (let __enum_param_4767 = expr in if __enum_param_4767 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4767 with
-        | HxExpr.EField (__enum_param_4766, _) -> __enum_param_4766
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = (let __enum_param_4769 = expr in if __enum_param_4769 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4769 with
-        | HxExpr.EField (_, __enum_param_4768) -> __enum_param_4768
-        | _ -> failwith "Unexpected enum parameter" : string) in let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_4770 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.EField (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr obj)) (Obj.magic base))), (field : string))))) in (
-        tempResult := __assign_4770;
-        __assign_4770
-      )
-      | 10 -> let _g = Obj.magic (let __enum_param_4772 = expr in if __enum_param_4772 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4772 with
-        | HxExpr.ECall (__enum_param_4771, _) -> __enum_param_4771
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_4774 = expr in if __enum_param_4774 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4774 with
-        | HxExpr.ECall (_, __enum_param_4773) -> __enum_param_4773
-        | _ -> failwith "Unexpected enum parameter") in if (match _g with
-        | HxExpr.ENull -> 0
-        | HxExpr.EBool _ -> 1
-        | HxExpr.EString _ -> 2
-        | HxExpr.EInt _ -> 3
-        | HxExpr.EFloat _ -> 4
-        | HxExpr.EEnumValue _ -> 5
-        | HxExpr.EThis -> 6
-        | HxExpr.ESuper -> 7
-        | HxExpr.EIdent _ -> 8
-        | HxExpr.EField (_, _) -> 9
-        | HxExpr.ECall (_, _) -> 10
-        | HxExpr.EMacroExpr (_, _) -> 11
-        | HxExpr.EMacroType _ -> 12
-        | HxExpr.ELambda (_, _) -> 13
-        | HxExpr.ETryCatchRaw _ -> 14
-        | HxExpr.ESwitchRaw _ -> 15
-        | HxExpr.ESwitch (_, _, _) -> 16
-        | HxExpr.ENew (_, _) -> 17
-        | HxExpr.EUnop (_, _) -> 18
-        | HxExpr.EBinop (_, _, _) -> 19
-        | HxExpr.ETernary (_, _, _) -> 20
-        | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-        | HxExpr.EArrayDecl _ -> 23
-        | HxExpr.EArrayAccess (_, _) -> 24
-        | HxExpr.ERange (_, _) -> 25
-        | HxExpr.ECast (_, _) -> 26
-        | HxExpr.EUntyped _ -> 27
-        | HxExpr.EUnsupported _ -> 28) = 8 then let _g2 = (match _g with
-        | HxExpr.EIdent __enum_param_4775 -> __enum_param_4775
-        | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let args = Obj.magic _g1 in if StringTools.startsWith (name : string) ("__hxhx_trace_at_" : string) then let line = Std.parseInt (HxString.substr name (HxString.length "__hxhx_trace_at_") (-1) : string) in let tempNumber = ref (0 : int) in (
-        ignore (if line == HxRuntime.hx_null then let __assign_4776 = 0 in (
-          tempNumber := __assign_4776;
-          __assign_4776
-        ) else let __assign_4777 = HxInt.sub (HxInt.add (HxPos.getLine (Obj.magic base) ()) (let __nullable_int_4778 = line in if __nullable_int_4778 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_4778)) 2 in (
-          tempNumber := __assign_4777;
-          __assign_4777
-        ));
-        let rebased = !tempNumber in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-          ignore (let _g3 = Obj.magic (let __arr_4779 = HxArray.create () in __arr_4779) in (
-            ignore (let _g4 = ref 0 in while !_g4 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g4)) in (
-              ignore (let __old_4780 = !_g4 in let __new_4781 = HxInt.add __old_4780 1 in (
-                ignore (_g4 := __new_4781);
-                __new_4781
-              ));
-              HxArray.push _g3 (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr arg)) (Obj.magic base))
-            )) done);
-            let __assign_4782 = Obj.magic _g3 in (
-              tempArray := __assign_4782;
-              __assign_4782
-            )
-          ));
-          let __assign_4783 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.ECall (Obj.magic (HxExpr.EIdent ("__hxhx_trace_at_" ^ HxString.toStdString (string_of_int rebased) : string)), Obj.magic (!tempArray))))) in (
-            tempResult := __assign_4783;
-            __assign_4783
-          )
-        )
-      ) else let callee = Obj.magic _g in let args2 = Obj.magic _g1 in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-        ignore (let _g3 = Obj.magic (let __arr_4784 = HxArray.create () in __arr_4784) in (
-          ignore (let _g4 = ref 0 in while !_g4 < HxArray.length args2 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args2) (!_g4)) in (
-            ignore (let __old_4785 = !_g4 in let __new_4786 = HxInt.add __old_4785 1 in (
-              ignore (_g4 := __new_4786);
-              __new_4786
-            ));
-            HxArray.push _g3 (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr arg)) (Obj.magic base))
-          )) done);
-          let __assign_4787 = Obj.magic _g3 in (
-            tempArray1 := __assign_4787;
-            __assign_4787
-          )
-        ));
-        let __assign_4788 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.ECall (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr callee)) (Obj.magic base))), Obj.magic (!tempArray1))))) in (
-          tempResult := __assign_4788;
-          __assign_4788
-        )
-      ) else let callee = Obj.magic _g in let args = Obj.magic _g1 in let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-        ignore (let _g2 = Obj.magic (let __arr_4789 = HxArray.create () in __arr_4789) in (
-          ignore (let _g3 = ref 0 in while !_g3 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g3)) in (
-            ignore (let __old_4790 = !_g3 in let __new_4791 = HxInt.add __old_4790 1 in (
-              ignore (_g3 := __new_4791);
-              __new_4791
-            ));
-            HxArray.push _g2 (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr arg)) (Obj.magic base))
-          )) done);
-          let __assign_4792 = Obj.magic _g2 in (
-            tempArray2 := __assign_4792;
-            __assign_4792
-          )
-        ));
-        let __assign_4793 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.ECall (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr callee)) (Obj.magic base))), Obj.magic (!tempArray2))))) in (
-          tempResult := __assign_4793;
-          __assign_4793
-        )
-      )
-      | 13 -> let _g = Obj.magic (let __enum_param_4795 = expr in if __enum_param_4795 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4795 with
-        | HxExpr.ELambda (__enum_param_4794, _) -> __enum_param_4794
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_4797 = expr in if __enum_param_4797 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4797 with
-        | HxExpr.ELambda (_, __enum_param_4796) -> __enum_param_4796
-        | _ -> failwith "Unexpected enum parameter") in let args = Obj.magic _g in let body = Obj.magic _g1 in let __assign_4798 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.ELambda (Obj.magic args, Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr body)) (Obj.magic base))))))) in (
-        tempResult := __assign_4798;
-        __assign_4798
-      )
-      | 18 -> let _g = (let __enum_param_4800 = expr in if __enum_param_4800 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4800 with
-        | HxExpr.EUnop (__enum_param_4799, _) -> __enum_param_4799
-        | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (let __enum_param_4802 = expr in if __enum_param_4802 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4802 with
-        | HxExpr.EUnop (_, __enum_param_4801) -> __enum_param_4801
-        | _ -> failwith "Unexpected enum parameter") in let op = (_g : string) in let value = Obj.magic _g1 in let __assign_4803 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.EUnop ((op : string), Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr value)) (Obj.magic base))))))) in (
-        tempResult := __assign_4803;
-        __assign_4803
-      )
-      | 19 -> let _g = (let __enum_param_4805 = expr in if __enum_param_4805 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4805 with
-        | HxExpr.EBinop (__enum_param_4804, _, _) -> __enum_param_4804
-        | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (let __enum_param_4807 = expr in if __enum_param_4807 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4807 with
-        | HxExpr.EBinop (_, __enum_param_4806, _) -> __enum_param_4806
-        | _ -> failwith "Unexpected enum parameter") in let _g2 = Obj.magic (let __enum_param_4809 = expr in if __enum_param_4809 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4809 with
-        | HxExpr.EBinop (_, _, __enum_param_4808) -> __enum_param_4808
-        | _ -> failwith "Unexpected enum parameter") in let op = (_g : string) in let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_4810 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.EBinop ((op : string), Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr left)) (Obj.magic base))), Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) (Obj.magic base))))))) in (
-        tempResult := __assign_4810;
-        __assign_4810
-      )
-      | 23 -> let _g = Obj.magic (let __enum_param_4812 = expr in if __enum_param_4812 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4812 with
-        | HxExpr.EArrayDecl __enum_param_4811 -> __enum_param_4811
-        | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g in let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-        ignore (let _g2 = Obj.magic (let __arr_4813 = HxArray.create () in __arr_4813) in (
-          ignore (let _g1 = ref 0 in while !_g1 < HxArray.length values do ignore (let value = Obj.magic (HxArray.get (Obj.magic values) (!_g1)) in (
-            ignore (let __old_4814 = !_g1 in let __new_4815 = HxInt.add __old_4814 1 in (
-              ignore (_g1 := __new_4815);
-              __new_4815
-            ));
-            HxArray.push _g2 (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr value)) (Obj.magic base))
-          )) done);
-          let __assign_4816 = Obj.magic _g2 in (
-            tempArray3 := __assign_4816;
-            __assign_4816
-          )
-        ));
-        let __assign_4817 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.EArrayDecl (Obj.magic (!tempArray3))))) in (
-          tempResult := __assign_4817;
-          __assign_4817
-        )
-      )
-      | 24 -> let _g = Obj.magic (let __enum_param_4819 = expr in if __enum_param_4819 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4819 with
-        | HxExpr.EArrayAccess (__enum_param_4818, _) -> __enum_param_4818
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_4821 = expr in if __enum_param_4821 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4821 with
-        | HxExpr.EArrayAccess (_, __enum_param_4820) -> __enum_param_4820
-        | _ -> failwith "Unexpected enum parameter") in let left = Obj.magic _g in let right = Obj.magic _g1 in let __assign_4822 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.EArrayAccess (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr left)) (Obj.magic base))), Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) (Obj.magic base))))))) in (
-        tempResult := __assign_4822;
-        __assign_4822
-      )
-      | 26 -> let _g = Obj.magic (let __enum_param_4824 = expr in if __enum_param_4824 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4824 with
-        | HxExpr.ECast (__enum_param_4823, _) -> __enum_param_4823
-        | _ -> failwith "Unexpected enum parameter") in let _g1 = (let __enum_param_4826 = expr in if __enum_param_4826 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4826 with
-        | HxExpr.ECast (_, __enum_param_4825) -> __enum_param_4825
-        | _ -> failwith "Unexpected enum parameter" : string) in let inner = Obj.magic _g in let hint = (_g1 : string) in let __assign_4827 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.ECast (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr inner)) (Obj.magic base))), (hint : string))))) in (
-        tempResult := __assign_4827;
-        __assign_4827
-      )
-      | 27 -> let _g = Obj.magic (let __enum_param_4829 = expr in if __enum_param_4829 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4829 with
-        | HxExpr.EUntyped __enum_param_4828 -> __enum_param_4828
-        | _ -> failwith "Unexpected enum parameter") in let inner = Obj.magic _g in let __assign_4830 = Obj.magic (HxEnum.box_if_needed "HxExpr" (Obj.repr (HxExpr.EUntyped (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr inner)) (Obj.magic base))))))) in (
-        tempResult := __assign_4830;
-        __assign_4830
-      )
-      | _ -> let __assign_4765 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" expr)) in (
-        tempResult := __assign_4765;
-        __assign_4765
+      | HxExpr.EUnsupported _ -> 28) = 8 then let _g2 = (match _g with
+      | HxExpr.EIdent __enum_param_4767 -> __enum_param_4767
+      | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let args = Obj.magic _g1 in if StringTools.startsWith (name : string) ("__hxhx_trace_at_" : string) then let line = Std.parseInt (HxString.substr name (HxString.length "__hxhx_trace_at_") (-1) : string) in let tempNumber = ref (0 : int) in (
+      ignore (if line == HxRuntime.hx_null then let __assign_4768 = 0 in (
+        tempNumber := __assign_4768;
+        __assign_4768
+      ) else let __assign_4769 = HxInt.sub (HxInt.add (HxPos.getLine (Obj.magic base) ()) (let __nullable_int_4770 = line in if __nullable_int_4770 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_4770)) 2 in (
+        tempNumber := __assign_4769;
+        __assign_4769
       ));
-    Obj.magic (!tempResult)
-  )
-) in Obj.magic __fallback_result_4833 with
-  | HxRuntime.Hx_return __ret_4832 -> Obj.magic __ret_4832
+      let rebased = !tempNumber in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
+        ignore (let _g3 = Obj.magic (let __arr_4771 = HxArray.create () in __arr_4771) in (
+          ignore (let _g4 = ref 0 in while !_g4 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g4)) in (
+            ignore (let __old_4772 = !_g4 in let __new_4773 = HxInt.add __old_4772 1 in (
+              ignore (_g4 := __new_4773);
+              __new_4773
+            ));
+            HxArray.push _g3 (rebaseFunctionBodyExprValue (Obj.magic arg) (Obj.magic base))
+          )) done);
+          let __assign_4774 = Obj.magic _g3 in (
+            tempArray := __assign_4774;
+            __assign_4774
+          )
+        ));
+        let __assign_4775 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EIdent ("__hxhx_trace_at_" ^ HxString.toStdString (string_of_int rebased) : string)), Obj.magic (!tempArray))) in (
+          tempResult := __assign_4775;
+          __assign_4775
+        )
+      )
+    ) else let callee = Obj.magic _g in let args2 = Obj.magic _g1 in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
+      ignore (let _g3 = Obj.magic (let __arr_4776 = HxArray.create () in __arr_4776) in (
+        ignore (let _g4 = ref 0 in while !_g4 < HxArray.length args2 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args2) (!_g4)) in (
+          ignore (let __old_4777 = !_g4 in let __new_4778 = HxInt.add __old_4777 1 in (
+            ignore (_g4 := __new_4778);
+            __new_4778
+          ));
+          HxArray.push _g3 (rebaseFunctionBodyExprValue (Obj.magic arg) (Obj.magic base))
+        )) done);
+        let __assign_4779 = Obj.magic _g3 in (
+          tempArray1 := __assign_4779;
+          __assign_4779
+        )
+      ));
+      let __assign_4780 = Obj.magic (HxExpr.ECall (Obj.magic (rebaseFunctionBodyExprValue (Obj.magic callee) (Obj.magic base)), Obj.magic (!tempArray1))) in (
+        tempResult := __assign_4780;
+        __assign_4780
+      )
+    ) else let callee = Obj.magic _g in let args = Obj.magic _g1 in let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
+      ignore (let _g2 = Obj.magic (let __arr_4781 = HxArray.create () in __arr_4781) in (
+        ignore (let _g3 = ref 0 in while !_g3 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g3)) in (
+          ignore (let __old_4782 = !_g3 in let __new_4783 = HxInt.add __old_4782 1 in (
+            ignore (_g3 := __new_4783);
+            __new_4783
+          ));
+          HxArray.push _g2 (rebaseFunctionBodyExprValue (Obj.magic arg) (Obj.magic base))
+        )) done);
+        let __assign_4784 = Obj.magic _g2 in (
+          tempArray2 := __assign_4784;
+          __assign_4784
+        )
+      ));
+      let __assign_4785 = Obj.magic (HxExpr.ECall (Obj.magic (rebaseFunctionBodyExprValue (Obj.magic callee) (Obj.magic base)), Obj.magic (!tempArray2))) in (
+        tempResult := __assign_4785;
+        __assign_4785
+      )
+    )
+    | HxExpr.ELambda (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let args = Obj.magic _g in let body = Obj.magic _g1 in let __assign_4786 = Obj.magic (HxExpr.ELambda (Obj.magic args, Obj.magic (rebaseFunctionBodyExprValue (Obj.magic body) (Obj.magic base)))) in (
+      tempResult := __assign_4786;
+      __assign_4786
+    )
+    | HxExpr.EUnop (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let op = (_g : string) in let value = Obj.magic _g1 in let __assign_4787 = Obj.magic (HxExpr.EUnop ((op : string), Obj.magic (rebaseFunctionBodyExprValue (Obj.magic value) (Obj.magic base)))) in (
+      tempResult := __assign_4787;
+      __assign_4787
+    )
+    | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = (_g : string) in let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_4788 = Obj.magic (HxExpr.EBinop ((op : string), Obj.magic (rebaseFunctionBodyExprValue (Obj.magic left) (Obj.magic base)), Obj.magic (rebaseFunctionBodyExprValue (Obj.magic right) (Obj.magic base)))) in (
+      tempResult := __assign_4788;
+      __assign_4788
+    )
+    | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
+      ignore (let _g2 = Obj.magic (let __arr_4789 = HxArray.create () in __arr_4789) in (
+        ignore (let _g1 = ref 0 in while !_g1 < HxArray.length values do ignore (let value = Obj.magic (HxArray.get (Obj.magic values) (!_g1)) in (
+          ignore (let __old_4790 = !_g1 in let __new_4791 = HxInt.add __old_4790 1 in (
+            ignore (_g1 := __new_4791);
+            __new_4791
+          ));
+          HxArray.push _g2 (rebaseFunctionBodyExprValue (Obj.magic value) (Obj.magic base))
+        )) done);
+        let __assign_4792 = Obj.magic _g2 in (
+          tempArray3 := __assign_4792;
+          __assign_4792
+        )
+      ));
+      let __assign_4793 = Obj.magic (HxExpr.EArrayDecl (Obj.magic (!tempArray3))) in (
+        tempResult := __assign_4793;
+        __assign_4793
+      )
+    )
+    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let left = Obj.magic _g in let right = Obj.magic _g1 in let __assign_4794 = Obj.magic (HxExpr.EArrayAccess (Obj.magic (rebaseFunctionBodyExprValue (Obj.magic left) (Obj.magic base)), Obj.magic (rebaseFunctionBodyExprValue (Obj.magic right) (Obj.magic base)))) in (
+      tempResult := __assign_4794;
+      __assign_4794
+    )
+    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let inner = Obj.magic _g in let hint = (_g1 : string) in let __assign_4795 = Obj.magic (HxExpr.ECast (Obj.magic (rebaseFunctionBodyExprValue (Obj.magic inner) (Obj.magic base)), (hint : string))) in (
+      tempResult := __assign_4795;
+      __assign_4795
+    )
+    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_4796 = Obj.magic (HxExpr.EUntyped (Obj.magic (rebaseFunctionBodyExprValue (Obj.magic inner) (Obj.magic base)))) in (
+      tempResult := __assign_4796;
+      __assign_4796
+    )
+    | _ -> let __assign_4765 = Obj.magic expr in (
+      tempResult := __assign_4765;
+      __assign_4765
+    ));
+  !tempResult
+)
+
+let rebaseFunctionBodyExpr = fun expr base -> try let __fallback_result_4764 = (
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (HxRuntime.hx_null)))))) else ());
+  rebaseFunctionBodyExprValue (Obj.obj (HxEnum.unbox_or_obj "HxExpr" expr)) (Obj.magic base)
+) in Obj.magic __fallback_result_4764 with
+  | HxRuntime.Hx_return __ret_4763 -> Obj.magic __ret_4763
 
 let rec rebaseFunctionBodyStmt = fun stmt base bodyStartIndex -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt) in (
   ignore (match stmt with
@@ -8957,221 +8893,215 @@ let rec rebaseFunctionBodyStmt = fun stmt base bodyStartIndex -> let tempResult 
       tempResult := __assign_4743;
       __assign_4743
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let pos = Obj.magic _g3 in let tempMaybeHxStmt = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-      ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_4744 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (HxRuntime.hx_null)))) in (
-        tempMaybeHxStmt := __assign_4744;
+    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let pos = Obj.magic _g3 in let shiftedElse = ref (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (HxRuntime.hx_null))) : Obj.t) in (
+      ignore (if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (let __assign_4744 = Obj.magic (HxEnum.box_if_needed "HxStmt" (Obj.repr (rebaseFunctionBodyStmt (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (Obj.magic base) bodyStartIndex))) in (
+        shiftedElse := __assign_4744;
         __assign_4744
-      ) else let __assign_4745 = Obj.magic (HxEnum.box_if_needed "HxStmt" (Obj.repr (rebaseFunctionBodyStmt (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (Obj.magic base) bodyStartIndex))) in (
-        tempMaybeHxStmt := __assign_4745;
+      )) else ());
+      let __assign_4745 = Obj.magic (HxStmt.SIf (Obj.magic cond, Obj.magic (rebaseFunctionBodyStmt (Obj.magic thenBranch) (Obj.magic base) bodyStartIndex), Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (!shiftedElse))), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+        tempResult := __assign_4745;
         __assign_4745
-      ));
-      let __assign_4746 = Obj.magic (HxStmt.SIf (Obj.magic cond, Obj.magic (rebaseFunctionBodyStmt (Obj.magic thenBranch) (Obj.magic base) bodyStartIndex), Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (!tempMaybeHxStmt))), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
-        tempResult := __assign_4746;
-        __assign_4746
       )
     )
-    | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let body = Obj.magic _g2 in let pos = Obj.magic _g3 in let __assign_4747 = Obj.magic (HxStmt.SForIn ((name : string), Obj.magic iterable, Obj.magic (rebaseFunctionBodyStmt (Obj.magic body) (Obj.magic base) bodyStartIndex), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+    | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let body = Obj.magic _g2 in let pos = Obj.magic _g3 in let __assign_4746 = Obj.magic (HxStmt.SForIn ((name : string), Obj.magic iterable, Obj.magic (rebaseFunctionBodyStmt (Obj.magic body) (Obj.magic base) bodyStartIndex), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+      tempResult := __assign_4746;
+      __assign_4746
+    )
+    | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let keyName = (_g : string) in let valueName = (_g1 : string) in let iterable = Obj.magic _g2 in let body = Obj.magic _g3 in let pos = Obj.magic _g4 in let __assign_4747 = Obj.magic (HxStmt.SForKeyValue ((keyName : string), (valueName : string), Obj.magic iterable, Obj.magic (rebaseFunctionBodyStmt (Obj.magic body) (Obj.magic base) bodyStartIndex), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
       tempResult := __assign_4747;
       __assign_4747
     )
-    | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let keyName = (_g : string) in let valueName = (_g1 : string) in let iterable = Obj.magic _g2 in let body = Obj.magic _g3 in let pos = Obj.magic _g4 in let __assign_4748 = Obj.magic (HxStmt.SForKeyValue ((keyName : string), (valueName : string), Obj.magic iterable, Obj.magic (rebaseFunctionBodyStmt (Obj.magic body) (Obj.magic base) bodyStartIndex), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+    | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let body = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_4748 = Obj.magic (HxStmt.SWhile (Obj.magic cond, Obj.magic (rebaseFunctionBodyStmt (Obj.magic body) (Obj.magic base) bodyStartIndex), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
       tempResult := __assign_4748;
       __assign_4748
     )
-    | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let body = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_4749 = Obj.magic (HxStmt.SWhile (Obj.magic cond, Obj.magic (rebaseFunctionBodyStmt (Obj.magic body) (Obj.magic base) bodyStartIndex), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+    | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let body = Obj.magic _g in let cond = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_4749 = Obj.magic (HxStmt.SDoWhile (Obj.magic (rebaseFunctionBodyStmt (Obj.magic body) (Obj.magic base) bodyStartIndex), Obj.magic cond, Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
       tempResult := __assign_4749;
       __assign_4749
     )
-    | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let body = Obj.magic _g in let cond = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_4750 = Obj.magic (HxStmt.SDoWhile (Obj.magic (rebaseFunctionBodyStmt (Obj.magic body) (Obj.magic base) bodyStartIndex), Obj.magic cond, Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
-      tempResult := __assign_4750;
-      __assign_4750
-    )
     | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let scrutinee = Obj.magic _g in let patterns = Obj.magic _g1 in let bodies = Obj.magic _g2 in let pos = Obj.magic _g3 in let shiftedBodies = Obj.magic (HxArray.create ()) in (
       ignore (let _g4 = ref 0 in while !_g4 < HxArray.length bodies do ignore (let body = Obj.magic (HxArray.get (Obj.magic bodies) (!_g4)) in (
-        ignore (let __old_4751 = !_g4 in let __new_4752 = HxInt.add __old_4751 1 in (
-          ignore (_g4 := __new_4752);
-          __new_4752
+        ignore (let __old_4750 = !_g4 in let __new_4751 = HxInt.add __old_4750 1 in (
+          ignore (_g4 := __new_4751);
+          __new_4751
         ));
         HxArray.push shiftedBodies (rebaseFunctionBodyStmt (Obj.magic body) (Obj.magic base) bodyStartIndex)
       )) done);
-      let __assign_4753 = Obj.magic (HxStmt.SSwitch (Obj.magic scrutinee, Obj.magic patterns, Obj.magic shiftedBodies, Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
-        tempResult := __assign_4753;
-        __assign_4753
+      let __assign_4752 = Obj.magic (HxStmt.SSwitch (Obj.magic scrutinee, Obj.magic patterns, Obj.magic shiftedBodies, Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+        tempResult := __assign_4752;
+        __assign_4752
       )
     )
     | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in let pos = Obj.magic _g2 in let shiftedCatches = Obj.magic (HxArray.create ()) in (
       ignore (let _g3 = ref 0 in while !_g3 < HxArray.length catches do ignore (let c = HxArray.get (Obj.magic catches) (!_g3) in (
-        ignore (let __old_4754 = !_g3 in let __new_4755 = HxInt.add __old_4754 1 in (
-          ignore (_g3 := __new_4755);
-          __new_4755
+        ignore (let __old_4753 = !_g3 in let __new_4754 = HxInt.add __old_4753 1 in (
+          ignore (_g3 := __new_4754);
+          __new_4754
         ));
-        HxArray.push shiftedCatches (let __anon_4756 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_4756 "name" (Obj.repr (Obj.obj (HxAnon.get c "name"))));
-          ignore (HxAnon.set __anon_4756 "typeHint" (Obj.repr (Obj.obj (HxAnon.get c "typeHint"))));
-          ignore (HxAnon.set __anon_4756 "body" (HxEnum.box_if_needed "HxStmt" (Obj.repr (rebaseFunctionBodyStmt (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) (Obj.magic base) bodyStartIndex))));
-          __anon_4756
+        HxArray.push shiftedCatches (let __anon_4755 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_4755 "name" (Obj.repr (Obj.obj (HxAnon.get c "name"))));
+          ignore (HxAnon.set __anon_4755 "typeHint" (Obj.repr (Obj.obj (HxAnon.get c "typeHint"))));
+          ignore (HxAnon.set __anon_4755 "body" (HxEnum.box_if_needed "HxStmt" (Obj.repr (rebaseFunctionBodyStmt (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) (Obj.magic base) bodyStartIndex))));
+          __anon_4755
         ))
       )) done);
-      let __assign_4757 = Obj.magic (HxStmt.STry (Obj.magic (rebaseFunctionBodyStmt (Obj.magic tryBody) (Obj.magic base) bodyStartIndex), Obj.magic shiftedCatches, Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
-        tempResult := __assign_4757;
-        __assign_4757
+      let __assign_4756 = Obj.magic (HxStmt.STry (Obj.magic (rebaseFunctionBodyStmt (Obj.magic tryBody) (Obj.magic base) bodyStartIndex), Obj.magic shiftedCatches, Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+        tempResult := __assign_4756;
+        __assign_4756
       )
     )
-    | HxStmt.SBreak _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4758 = Obj.magic (HxStmt.SBreak (Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+    | HxStmt.SBreak _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4757 = Obj.magic (HxStmt.SBreak (Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+      tempResult := __assign_4757;
+      __assign_4757
+    )
+    | HxStmt.SContinue _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4758 = Obj.magic (HxStmt.SContinue (Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
       tempResult := __assign_4758;
       __assign_4758
     )
-    | HxStmt.SContinue _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4759 = Obj.magic (HxStmt.SContinue (Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+    | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4759 = Obj.magic (HxStmt.SThrow (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) (Obj.magic base))), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
       tempResult := __assign_4759;
       __assign_4759
     )
-    | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4760 = Obj.magic (HxStmt.SThrow (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) (Obj.magic base))), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+    | HxStmt.SReturnVoid _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4760 = Obj.magic (HxStmt.SReturnVoid (Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
       tempResult := __assign_4760;
       __assign_4760
     )
-    | HxStmt.SReturnVoid _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4761 = Obj.magic (HxStmt.SReturnVoid (Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+    | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4761 = Obj.magic (HxStmt.SReturn (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) (Obj.magic base))), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
       tempResult := __assign_4761;
       __assign_4761
     )
-    | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4762 = Obj.magic (HxStmt.SReturn (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) (Obj.magic base))), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
+    | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4762 = Obj.magic (HxStmt.SExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) (Obj.magic base))), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
       tempResult := __assign_4762;
       __assign_4762
-    )
-    | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4763 = Obj.magic (HxStmt.SExpr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (rebaseFunctionBodyExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) (Obj.magic base))), Obj.magic (rebaseFunctionBodyPos (Obj.magic pos) (Obj.magic base) bodyStartIndex))) in (
-      tempResult := __assign_4763;
-      __assign_4763
     ));
   !tempResult
 )
 
-let offsetFunctionBodyPosColumn = fun pos delta -> try let __fallback_result_4839 = (
+let offsetFunctionBodyPosColumn = fun pos delta -> try let __fallback_result_4802 = (
   ignore (if pos == Obj.magic (HxRuntime.hx_null) || HxPos.getLine (Obj.magic pos) () <= 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxPos.unknown ())))) else ());
   HxPos.create (HxPos.getIndex (Obj.magic pos) ()) (HxPos.getLine (Obj.magic pos) ()) (HxInt.add (HxPos.getColumn (Obj.magic pos) ()) delta)
-) in Obj.magic __fallback_result_4839 with
-  | HxRuntime.Hx_return __ret_4838 -> Obj.obj __ret_4838
+) in Obj.magic __fallback_result_4802 with
+  | HxRuntime.Hx_return __ret_4801 -> Obj.obj __ret_4801
 
 let rec offsetFunctionBodyStmtColumns = fun stmt delta -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt) in (
   ignore (match stmt with
     | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let stmts = Obj.magic _g in let pos = Obj.magic _g1 in let shifted = Obj.magic (HxArray.create ()) in (
       ignore (let _g2 = ref 0 in while !_g2 < HxArray.length stmts do ignore (let s = Obj.magic (HxArray.get (Obj.magic stmts) (!_g2)) in (
-        ignore (let __old_4840 = !_g2 in let __new_4841 = HxInt.add __old_4840 1 in (
-          ignore (_g2 := __new_4841);
-          __new_4841
+        ignore (let __old_4803 = !_g2 in let __new_4804 = HxInt.add __old_4803 1 in (
+          ignore (_g2 := __new_4804);
+          __new_4804
         ));
         HxArray.push shifted (offsetFunctionBodyStmtColumns (Obj.magic s) delta)
       )) done);
-      let __assign_4842 = Obj.magic (HxStmt.SBlock (Obj.magic shifted, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-        tempResult := __assign_4842;
-        __assign_4842
+      let __assign_4805 = Obj.magic (HxStmt.SBlock (Obj.magic shifted, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+        tempResult := __assign_4805;
+        __assign_4805
       )
     )
-    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let pos = Obj.magic _g3 in let __assign_4843 = Obj.magic (HxStmt.SVar ((name : string), (typeHint : string), Obj.obj (HxEnum.unbox_or_obj "HxExpr" init), Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4843;
-      __assign_4843
+    | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let pos = Obj.magic _g3 in let __assign_4806 = Obj.magic (HxStmt.SVar ((name : string), (typeHint : string), Obj.obj (HxEnum.unbox_or_obj "HxExpr" init), Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4806;
+      __assign_4806
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let pos = Obj.magic _g3 in let tempMaybeHxStmt = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-      ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_4844 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (HxRuntime.hx_null)))) in (
-        tempMaybeHxStmt := __assign_4844;
-        __assign_4844
-      ) else let __assign_4845 = Obj.magic (HxEnum.box_if_needed "HxStmt" (Obj.repr (offsetFunctionBodyStmtColumns (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) delta))) in (
-        tempMaybeHxStmt := __assign_4845;
-        __assign_4845
-      ));
-      let __assign_4846 = Obj.magic (HxStmt.SIf (Obj.magic cond, Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic thenBranch) delta), Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (!tempMaybeHxStmt))), Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-        tempResult := __assign_4846;
-        __assign_4846
+    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let pos = Obj.magic _g3 in let shiftedElse = ref (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (HxRuntime.hx_null))) : Obj.t) in (
+      ignore (if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (let __assign_4807 = Obj.magic (HxEnum.box_if_needed "HxStmt" (Obj.repr (offsetFunctionBodyStmtColumns (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) delta))) in (
+        shiftedElse := __assign_4807;
+        __assign_4807
+      )) else ());
+      let __assign_4808 = Obj.magic (HxStmt.SIf (Obj.magic cond, Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic thenBranch) delta), Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (!shiftedElse))), Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+        tempResult := __assign_4808;
+        __assign_4808
       )
     )
-    | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let body = Obj.magic _g2 in let pos = Obj.magic _g3 in let __assign_4847 = Obj.magic (HxStmt.SForIn ((name : string), Obj.magic iterable, Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic body) delta), Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4847;
-      __assign_4847
+    | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let body = Obj.magic _g2 in let pos = Obj.magic _g3 in let __assign_4809 = Obj.magic (HxStmt.SForIn ((name : string), Obj.magic iterable, Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic body) delta), Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4809;
+      __assign_4809
     )
-    | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let keyName = (_g : string) in let valueName = (_g1 : string) in let iterable = Obj.magic _g2 in let body = Obj.magic _g3 in let pos = Obj.magic _g4 in let __assign_4848 = Obj.magic (HxStmt.SForKeyValue ((keyName : string), (valueName : string), Obj.magic iterable, Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic body) delta), Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4848;
-      __assign_4848
+    | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let keyName = (_g : string) in let valueName = (_g1 : string) in let iterable = Obj.magic _g2 in let body = Obj.magic _g3 in let pos = Obj.magic _g4 in let __assign_4810 = Obj.magic (HxStmt.SForKeyValue ((keyName : string), (valueName : string), Obj.magic iterable, Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic body) delta), Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4810;
+      __assign_4810
     )
-    | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let body = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_4849 = Obj.magic (HxStmt.SWhile (Obj.magic cond, Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic body) delta), Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4849;
-      __assign_4849
+    | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let body = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_4811 = Obj.magic (HxStmt.SWhile (Obj.magic cond, Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic body) delta), Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4811;
+      __assign_4811
     )
-    | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let body = Obj.magic _g in let cond = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_4850 = Obj.magic (HxStmt.SDoWhile (Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic body) delta), Obj.magic cond, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4850;
-      __assign_4850
+    | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let body = Obj.magic _g in let cond = Obj.magic _g1 in let pos = Obj.magic _g2 in let __assign_4812 = Obj.magic (HxStmt.SDoWhile (Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic body) delta), Obj.magic cond, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4812;
+      __assign_4812
     )
     | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let scrutinee = Obj.magic _g in let patterns = Obj.magic _g1 in let bodies = Obj.magic _g2 in let pos = Obj.magic _g3 in let shiftedBodies = Obj.magic (HxArray.create ()) in (
       ignore (let _g4 = ref 0 in while !_g4 < HxArray.length bodies do ignore (let body = Obj.magic (HxArray.get (Obj.magic bodies) (!_g4)) in (
-        ignore (let __old_4851 = !_g4 in let __new_4852 = HxInt.add __old_4851 1 in (
-          ignore (_g4 := __new_4852);
-          __new_4852
+        ignore (let __old_4813 = !_g4 in let __new_4814 = HxInt.add __old_4813 1 in (
+          ignore (_g4 := __new_4814);
+          __new_4814
         ));
         HxArray.push shiftedBodies (offsetFunctionBodyStmtColumns (Obj.magic body) delta)
       )) done);
-      let __assign_4853 = Obj.magic (HxStmt.SSwitch (Obj.magic scrutinee, Obj.magic patterns, Obj.magic shiftedBodies, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-        tempResult := __assign_4853;
-        __assign_4853
+      let __assign_4815 = Obj.magic (HxStmt.SSwitch (Obj.magic scrutinee, Obj.magic patterns, Obj.magic shiftedBodies, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+        tempResult := __assign_4815;
+        __assign_4815
       )
     )
     | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in let pos = Obj.magic _g2 in let shiftedCatches = Obj.magic (HxArray.create ()) in (
       ignore (let _g3 = ref 0 in while !_g3 < HxArray.length catches do ignore (let c = HxArray.get (Obj.magic catches) (!_g3) in (
-        ignore (let __old_4854 = !_g3 in let __new_4855 = HxInt.add __old_4854 1 in (
-          ignore (_g3 := __new_4855);
-          __new_4855
+        ignore (let __old_4816 = !_g3 in let __new_4817 = HxInt.add __old_4816 1 in (
+          ignore (_g3 := __new_4817);
+          __new_4817
         ));
-        HxArray.push shiftedCatches (let __anon_4856 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_4856 "name" (Obj.repr (Obj.obj (HxAnon.get c "name"))));
-          ignore (HxAnon.set __anon_4856 "typeHint" (Obj.repr (Obj.obj (HxAnon.get c "typeHint"))));
-          ignore (HxAnon.set __anon_4856 "body" (HxEnum.box_if_needed "HxStmt" (Obj.repr (offsetFunctionBodyStmtColumns (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) delta))));
-          __anon_4856
+        HxArray.push shiftedCatches (let __anon_4818 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_4818 "name" (Obj.repr (Obj.obj (HxAnon.get c "name"))));
+          ignore (HxAnon.set __anon_4818 "typeHint" (Obj.repr (Obj.obj (HxAnon.get c "typeHint"))));
+          ignore (HxAnon.set __anon_4818 "body" (HxEnum.box_if_needed "HxStmt" (Obj.repr (offsetFunctionBodyStmtColumns (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) delta))));
+          __anon_4818
         ))
       )) done);
-      let __assign_4857 = Obj.magic (HxStmt.STry (Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic tryBody) delta), Obj.magic shiftedCatches, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-        tempResult := __assign_4857;
-        __assign_4857
+      let __assign_4819 = Obj.magic (HxStmt.STry (Obj.magic (offsetFunctionBodyStmtColumns (Obj.magic tryBody) delta), Obj.magic shiftedCatches, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+        tempResult := __assign_4819;
+        __assign_4819
       )
     )
-    | HxStmt.SBreak _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4858 = Obj.magic (HxStmt.SBreak (Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4858;
-      __assign_4858
+    | HxStmt.SBreak _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4820 = Obj.magic (HxStmt.SBreak (Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4820;
+      __assign_4820
     )
-    | HxStmt.SContinue _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4859 = Obj.magic (HxStmt.SContinue (Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4859;
-      __assign_4859
+    | HxStmt.SContinue _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4821 = Obj.magic (HxStmt.SContinue (Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4821;
+      __assign_4821
     )
-    | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4860 = Obj.magic (HxStmt.SThrow (Obj.magic expr, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4860;
-      __assign_4860
+    | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4822 = Obj.magic (HxStmt.SThrow (Obj.magic expr, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4822;
+      __assign_4822
     )
-    | HxStmt.SReturnVoid _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4861 = Obj.magic (HxStmt.SReturnVoid (Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4861;
-      __assign_4861
+    | HxStmt.SReturnVoid _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_4823 = Obj.magic (HxStmt.SReturnVoid (Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4823;
+      __assign_4823
     )
-    | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4862 = Obj.magic (HxStmt.SReturn (Obj.magic expr, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4862;
-      __assign_4862
+    | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4824 = Obj.magic (HxStmt.SReturn (Obj.magic expr, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4824;
+      __assign_4824
     )
-    | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4863 = Obj.magic (HxStmt.SExpr (Obj.magic expr, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
-      tempResult := __assign_4863;
-      __assign_4863
+    | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_4825 = Obj.magic (HxStmt.SExpr (Obj.magic expr, Obj.magic (offsetFunctionBodyPosColumn (Obj.magic pos) delta))) in (
+      tempResult := __assign_4825;
+      __assign_4825
     ));
   !tempResult
 )
 
-let offsetFunctionBodyColumns = fun stmts delta -> try let __fallback_result_4837 = (
+let offsetFunctionBodyColumns = fun stmts delta -> try let __fallback_result_4800 = (
   ignore (if stmts == Obj.magic (HxRuntime.hx_null) || delta = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic stmts))) else ());
   let shifted = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
     ignore (while !_g < HxArray.length stmts do ignore (let stmt = Obj.magic (HxArray.get (Obj.magic stmts) (!_g)) in (
-      ignore (let __old_4834 = !_g in let __new_4835 = HxInt.add __old_4834 1 in (
-        ignore (_g := __new_4835);
-        __new_4835
+      ignore (let __old_4797 = !_g in let __new_4798 = HxInt.add __old_4797 1 in (
+        ignore (_g := __new_4798);
+        __new_4798
       ));
       HxArray.push shifted (offsetFunctionBodyStmtColumns (Obj.magic stmt) delta)
     )) done);
     shifted
   )
-) in Obj.magic __fallback_result_4837 with
-  | HxRuntime.Hx_return __ret_4836 -> Obj.obj __ret_4836
+) in Obj.magic __fallback_result_4800 with
+  | HxRuntime.Hx_return __ret_4799 -> Obj.obj __ret_4799
 
-let normalizeInlineNekoElseConditionalMarkers = fun source2 -> let source2 = ref source2 in try let __fallback_result_4871 = (
+let normalizeInlineNekoElseConditionalMarkers = fun source2 -> let source2 = ref source2 in try let __fallback_result_4833 = (
   ignore (if !source2 == Obj.magic (HxRuntime.hx_null) || HxString.indexOf (!source2) "#if neko" 0 < 0 || HxString.indexOf (!source2) "#else" 0 < 0 || HxString.indexOf (!source2) "#end" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (!source2 : string))) else ());
   let search = ref 0 in (
     ignore (try while !search < HxString.length (!source2) do try ignore (let idxIf = HxString.indexOf (!source2) "#if neko" (!search) in (
@@ -9181,13 +9111,13 @@ let normalizeInlineNekoElseConditionalMarkers = fun source2 -> let source2 = ref
         let lineEnd = HxString.indexOf (!source2) "\n" idxIf in (
           ignore (if lineEnd >= 0 && idxEnd > lineEnd then raise (HxRuntime.Hx_break) else ());
           let prefix = (HxString.substr (!source2) 0 idxIf : string) in let elsePayload = (HxString.substr (!source2) (HxInt.add idxElse 5) (HxInt.sub idxEnd (HxInt.add idxElse 5)) : string) in let suffix = (HxString.substr (!source2) (HxInt.add idxEnd 4) (-1) : string) in (
-            ignore (let __assign_4868 = ((HxString.toStdString prefix ^ HxString.toStdString elsePayload) ^ HxString.toStdString suffix : string) in (
-              source2 := __assign_4868;
-              __assign_4868
+            ignore (let __assign_4830 = ((HxString.toStdString prefix ^ HxString.toStdString elsePayload) ^ HxString.toStdString suffix : string) in (
+              source2 := __assign_4830;
+              __assign_4830
             ));
-            let __assign_4869 = HxInt.add (HxString.length prefix) (HxString.length elsePayload) in (
-              search := __assign_4869;
-              __assign_4869
+            let __assign_4831 = HxInt.add (HxString.length prefix) (HxString.length elsePayload) in (
+              search := __assign_4831;
+              __assign_4831
             )
           )
         )
@@ -9197,90 +9127,90 @@ let normalizeInlineNekoElseConditionalMarkers = fun source2 -> let source2 = ref
       | HxRuntime.Hx_break -> ());
     !source2
   )
-) in Obj.magic __fallback_result_4871 with
-  | HxRuntime.Hx_return __ret_4870 -> Obj.obj __ret_4870
+) in Obj.magic __fallback_result_4833 with
+  | HxRuntime.Hx_return __ret_4832 -> Obj.obj __ret_4832
 
-let normalizeInlineJsConditionalMarkers = fun bodySource -> try let __fallback_result_4867 = (
+let normalizeInlineJsConditionalMarkers = fun bodySource -> try let __fallback_result_4829 = (
   ignore (if bodySource == Obj.magic (HxRuntime.hx_null) || HxString.indexOf bodySource "#" 0 < 0 then ignore (let tempResult = ref ("" : string) in (
-    ignore (if bodySource == Obj.magic (HxRuntime.hx_null) then let __assign_4864 = ("" : string) in (
-      tempResult := __assign_4864;
-      __assign_4864
-    ) else let __assign_4865 = (bodySource : string) in (
-      tempResult := __assign_4865;
-      __assign_4865
+    ignore (if bodySource == Obj.magic (HxRuntime.hx_null) then let __assign_4826 = ("" : string) in (
+      tempResult := __assign_4826;
+      __assign_4826
+    ) else let __assign_4827 = (bodySource : string) in (
+      tempResult := __assign_4827;
+      __assign_4827
     ));
     raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
   )) else ());
   let normalized = (normalizeInlineNekoElseConditionalMarkers (bodySource : string) : string) in let normalized = (StringTools.replace (normalized : string) ("#if js" : string) (" " : string) : string) in let normalized = (StringTools.replace (normalized : string) ("#end" : string) (" " : string) : string) in normalized
-) in Obj.magic __fallback_result_4867 with
-  | HxRuntime.Hx_return __ret_4866 -> Obj.obj __ret_4866
+) in Obj.magic __fallback_result_4829 with
+  | HxRuntime.Hx_return __ret_4828 -> Obj.obj __ret_4828
 
 let binopPrec = fun op -> let tempResult = ref (0 : int) in (
   ignore (match op with
-    | "%" -> let __assign_4873 = 8 in (
-      tempResult := __assign_4873;
-      __assign_4873
+    | "%" -> let __assign_4835 = 8 in (
+      tempResult := __assign_4835;
+      __assign_4835
     )
-    | "&&" -> let __assign_4874 = 3 in (
-      tempResult := __assign_4874;
-      __assign_4874
+    | "&&" -> let __assign_4836 = 3 in (
+      tempResult := __assign_4836;
+      __assign_4836
     )
-    | "+" | "-" -> let __assign_4875 = 6 in (
-      tempResult := __assign_4875;
-      __assign_4875
+    | "+" | "-" -> let __assign_4837 = 6 in (
+      tempResult := __assign_4837;
+      __assign_4837
     )
-    | "*" | "/" -> let __assign_4876 = 7 in (
-      tempResult := __assign_4876;
-      __assign_4876
+    | "*" | "/" -> let __assign_4838 = 7 in (
+      tempResult := __assign_4838;
+      __assign_4838
     )
-    | "<" | "<=" | ">" | ">=" -> let __assign_4877 = 5 in (
-      tempResult := __assign_4877;
-      __assign_4877
+    | "<" | "<=" | ">" | ">=" -> let __assign_4839 = 5 in (
+      tempResult := __assign_4839;
+      __assign_4839
     )
-    | "<<" | ">>" | ">>>" -> let __assign_4878 = 5 in (
-      tempResult := __assign_4878;
-      __assign_4878
+    | "<<" | ">>" | ">>>" -> let __assign_4840 = 5 in (
+      tempResult := __assign_4840;
+      __assign_4840
     )
-    | "?" -> let __assign_4879 = 2 in (
-      tempResult := __assign_4879;
-      __assign_4879
+    | "?" -> let __assign_4841 = 2 in (
+      tempResult := __assign_4841;
+      __assign_4841
     )
-    | "??" -> let __assign_4880 = 2 in (
-      tempResult := __assign_4880;
-      __assign_4880
+    | "??" -> let __assign_4842 = 2 in (
+      tempResult := __assign_4842;
+      __assign_4842
     )
-    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_4881 = 1 in (
-      tempResult := __assign_4881;
-      __assign_4881
+    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_4843 = 1 in (
+      tempResult := __assign_4843;
+      __assign_4843
     )
-    | "&" | "^" | "|" -> let __assign_4882 = 5 in (
-      tempResult := __assign_4882;
-      __assign_4882
+    | "&" | "^" | "|" -> let __assign_4844 = 5 in (
+      tempResult := __assign_4844;
+      __assign_4844
     )
-    | "!=" | "==" | "is" -> let __assign_4883 = 4 in (
-      tempResult := __assign_4883;
-      __assign_4883
+    | "!=" | "==" | "is" -> let __assign_4845 = 4 in (
+      tempResult := __assign_4845;
+      __assign_4845
     )
-    | "||" -> let __assign_4884 = 2 in (
-      tempResult := __assign_4884;
-      __assign_4884
+    | "||" -> let __assign_4846 = 2 in (
+      tempResult := __assign_4846;
+      __assign_4846
     )
-    | _ -> let __assign_4872 = 0 in (
-      tempResult := __assign_4872;
-      __assign_4872
+    | _ -> let __assign_4834 = 0 in (
+      tempResult := __assign_4834;
+      __assign_4834
     ));
   !tempResult
 )
 
 let isAssignmentBinop = fun op -> let tempResult = ref (false : bool) in (
   ignore (match op with
-    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_4886 = true in (
-      tempResult := __assign_4886;
-      __assign_4886
+    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_4848 = true in (
+      tempResult := __assign_4848;
+      __assign_4848
     )
-    | _ -> let __assign_4885 = false in (
-      tempResult := __assign_4885;
-      __assign_4885
+    | _ -> let __assign_4847 = false in (
+      tempResult := __assign_4847;
+      __assign_4847
     ));
   !tempResult
 )
@@ -9318,9 +9248,9 @@ let markTraceExpressionLine = fun expr line -> let tempResult = ref (Obj.magic (
     | HxExpr.ECast (_, _) -> 26
     | HxExpr.EUntyped _ -> 27
     | HxExpr.EUnsupported _ -> 28) = 10 then let _g = Obj.magic (match expr with
-    | HxExpr.ECall (__enum_param_4887, _) -> __enum_param_4887
+    | HxExpr.ECall (__enum_param_4849, _) -> __enum_param_4849
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
-    | HxExpr.ECall (_, __enum_param_4888) -> __enum_param_4888
+    | HxExpr.ECall (_, __enum_param_4850) -> __enum_param_4850
     | _ -> failwith "Unexpected enum parameter") in if (match _g with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -9351,27 +9281,27 @@ let markTraceExpressionLine = fun expr line -> let tempResult = ref (Obj.magic (
     | HxExpr.ECast (_, _) -> 26
     | HxExpr.EUntyped _ -> 27
     | HxExpr.EUnsupported _ -> 28) = 8 then let _g2 = (match _g with
-    | HxExpr.EIdent __enum_param_4889 -> __enum_param_4889
-    | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "trace" then let args = Obj.magic _g1 in if line > 0 then let __assign_4890 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EIdent ("__hxhx_trace_at_" ^ HxString.toStdString (string_of_int line) : string)), Obj.magic args)) in (
-    tempResult := __assign_4890;
-    __assign_4890
-  ) else let __assign_4891 = Obj.magic expr in (
-    tempResult := __assign_4891;
-    __assign_4891
-  ) else let __assign_4892 = Obj.magic expr in (
-    tempResult := __assign_4892;
-    __assign_4892
-  ) else let __assign_4893 = Obj.magic expr in (
-    tempResult := __assign_4893;
-    __assign_4893
-  ) else let __assign_4894 = Obj.magic expr in (
-    tempResult := __assign_4894;
-    __assign_4894
+    | HxExpr.EIdent __enum_param_4851 -> __enum_param_4851
+    | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "trace" then let args = Obj.magic _g1 in if line > 0 then let __assign_4852 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EIdent ("__hxhx_trace_at_" ^ HxString.toStdString (string_of_int line) : string)), Obj.magic args)) in (
+    tempResult := __assign_4852;
+    __assign_4852
+  ) else let __assign_4853 = Obj.magic expr in (
+    tempResult := __assign_4853;
+    __assign_4853
+  ) else let __assign_4854 = Obj.magic expr in (
+    tempResult := __assign_4854;
+    __assign_4854
+  ) else let __assign_4855 = Obj.magic expr in (
+    tempResult := __assign_4855;
+    __assign_4855
+  ) else let __assign_4856 = Obj.magic expr in (
+    tempResult := __assign_4856;
+    __assign_4856
   ));
   !tempResult
 )
 
-let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_4909 = (
+let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_4871 = (
   ignore (if decls == Obj.magic (HxRuntime.hx_null) || HxArray.length decls = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let last = Obj.magic (HxArray.get (Obj.magic decls) (HxInt.sub (HxArray.length decls) 1)) in let tempResult = ref (false : bool) in (
     ignore (if (match last with
@@ -9391,21 +9321,21 @@ let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_4909 = 
       | HxStmt.SReturn (_, _) -> 13
       | HxStmt.SExpr (_, _) -> 14) = 1 then (
       ignore (match last with
-        | HxStmt.SVar (__enum_param_4895, _, _, _) -> __enum_param_4895
+        | HxStmt.SVar (__enum_param_4857, _, _, _) -> __enum_param_4857
         | _ -> failwith "Unexpected enum parameter");
       ignore (match last with
-        | HxStmt.SVar (_, __enum_param_4896, _, _) -> __enum_param_4896
+        | HxStmt.SVar (_, __enum_param_4858, _, _) -> __enum_param_4858
         | _ -> failwith "Unexpected enum parameter");
       let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (match last with
-        | HxStmt.SVar (_, _, __enum_param_4897, _) -> __enum_param_4897
+        | HxStmt.SVar (_, _, __enum_param_4859, _) -> __enum_param_4859
         | _ -> failwith "Unexpected enum parameter")) in (
         ignore (match last with
-          | HxStmt.SVar (_, _, _, __enum_param_4898) -> __enum_param_4898
+          | HxStmt.SVar (_, _, _, __enum_param_4860) -> __enum_param_4860
           | _ -> failwith "Unexpected enum parameter");
-        if _g3 == Obj.magic (HxRuntime.hx_null) then let __assign_4899 = false in (
-          tempResult := __assign_4899;
-          __assign_4899
-        ) else if (let __enum_idx_4900 = _g3 in if __enum_idx_4900 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_4900 with
+        if _g3 == Obj.magic (HxRuntime.hx_null) then let __assign_4861 = false in (
+          tempResult := __assign_4861;
+          __assign_4861
+        ) else if (let __enum_idx_4862 = _g3 in if __enum_idx_4862 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_4862 with
           | HxExpr.ENull -> 0
           | HxExpr.EBool _ -> 1
           | HxExpr.EString _ -> 2
@@ -9435,29 +9365,29 @@ let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_4909 = 
           | HxExpr.ECast (_, _) -> 26
           | HxExpr.EUntyped _ -> 27
           | HxExpr.EUnsupported _ -> 28) = 21 then (
-          ignore (let __enum_param_4902 = _g3 in if __enum_param_4902 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4902 with
-            | HxExpr.EAnon (__enum_param_4901, _) -> __enum_param_4901
+          ignore (let __enum_param_4864 = _g3 in if __enum_param_4864 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4864 with
+            | HxExpr.EAnon (__enum_param_4863, _) -> __enum_param_4863
             | _ -> failwith "Unexpected enum parameter");
-          ignore (let __enum_param_4904 = _g3 in if __enum_param_4904 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4904 with
-            | HxExpr.EAnon (_, __enum_param_4903) -> __enum_param_4903
+          ignore (let __enum_param_4866 = _g3 in if __enum_param_4866 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4866 with
+            | HxExpr.EAnon (_, __enum_param_4865) -> __enum_param_4865
             | _ -> failwith "Unexpected enum parameter");
-          let __assign_4905 = true in (
-            tempResult := __assign_4905;
-            __assign_4905
+          let __assign_4867 = true in (
+            tempResult := __assign_4867;
+            __assign_4867
           )
-        ) else let __assign_4906 = false in (
-          tempResult := __assign_4906;
-          __assign_4906
+        ) else let __assign_4868 = false in (
+          tempResult := __assign_4868;
+          __assign_4868
         )
       )
-    ) else let __assign_4907 = false in (
-      tempResult := __assign_4907;
-      __assign_4907
+    ) else let __assign_4869 = false in (
+      tempResult := __assign_4869;
+      __assign_4869
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_4909 with
-  | HxRuntime.Hx_return __ret_4908 -> Obj.obj __ret_4908
+) in Obj.magic __fallback_result_4871 with
+  | HxRuntime.Hx_return __ret_4870 -> Obj.obj __ret_4870
 
 let debugBodyLabel = ref (("" : string) : string)
 
