@@ -41,9 +41,15 @@ class Stage3RunSupport {
 		var ran = false;
 		for (command in commands) {
 			final javaJar = parseSafeJavaJarCommand(command);
-			if (javaJar == null)
+			final lua = parseSafeLuaCommand(command);
+			var code:Null<Int> = null;
+			if (javaJar != null) {
+				code = runCommandInCwd("java", ["-jar", javaJar], cwd);
+			} else if (lua != null) {
+				code = runCommandInCwd(lua.command, lua.args, cwd);
+			} else {
 				return null;
-			final code = runCommandInCwd("java", ["-jar", javaJar], cwd);
+			}
 			if (code != 0)
 				return code;
 			ran = true;
@@ -58,7 +64,6 @@ class Stage3RunSupport {
 		if (cmdCode != null) {
 			if (cmdCode != 0)
 				return "command hook failed with exit code " + Std.string(cmdCode);
-			Sys.println("stage3=cmd_ok");
 			return null;
 		}
 		Sys.println("stage3=skipped_cmd_only");
@@ -105,8 +110,24 @@ class Stage3RunSupport {
 		return runCommandInCwd(matched.command, [matched.script], cwd);
 	}
 
-	public static function runEmittedArtifact(backendId:String, parsedHadCmd:Bool, parsedCmdCommands:Array<String>, cwd:String, emitted:EmitResult,
-			noRun:Bool):Null<String> {
+	public static function runSafeLuaCommands(commands:Array<String>, cwd:String):Null<Int> {
+		if (commands == null || commands.length == 0)
+			return null;
+		var ran = false;
+		for (command in commands) {
+			final lua = parseSafeLuaCommand(command);
+			if (lua == null)
+				return null;
+			final code = runCommandInCwd(lua.command, lua.args, cwd);
+			if (code != 0)
+				return code;
+			ran = true;
+		}
+		return ran ? 0 : null;
+	}
+
+	public static function runEmittedArtifact(backendId:String, parsedHadCmd:Bool, parsedCmdCommands:Array<String>, parsedHadRun:Bool,
+			parsedRunArgs:Array<String>, cwd:String, emitted:EmitResult, noRun:Bool):Null<String> {
 		if (noRun) {
 			Sys.println("run=skipped");
 			return null;
@@ -128,6 +149,22 @@ class Stage3RunSupport {
 					if (cmdCode != 0)
 						return "command hook failed with exit code " + Std.string(cmdCode);
 					Sys.println("stage3=cmd_ok");
+					return null;
+				}
+			}
+			if (backendId == "lua-native") {
+				if (parsedHadCmd) {
+					final cmdCode = runSafeLuaCommands(parsedCmdCommands, cwd);
+					if (cmdCode != null) {
+						if (cmdCode != 0)
+							return "command hook failed with exit code " + Std.string(cmdCode);
+						return null;
+					}
+				}
+				if (parsedHadRun) {
+					final luaCode = runCommandInCwd("lua", [emitted.entryPath].concat(parsedRunArgs == null ? [] : parsedRunArgs), cwd);
+					if (luaCode != 0)
+						return "lua run failed with exit code " + luaCode;
 					return null;
 				}
 			}
@@ -176,6 +213,25 @@ class Stage3RunSupport {
 		if (script.length == 0 || script.indexOf(";") >= 0 || script.indexOf("&&") >= 0 || script.indexOf("|") >= 0)
 			return null;
 		return {command: runner, script: script};
+	}
+
+	static function parseSafeLuaCommand(command:String):Null<{command:String, args:Array<String>}> {
+		final words = splitCommandWords(command);
+		if (words.length < 2)
+			return null;
+		final runner = words[0];
+		if (runner != "lua" && runner != "luajit")
+			return null;
+		for (word in words) {
+			if (!isSafeCommandWord(word))
+				return null;
+		}
+		return {command: runner, args: words.slice(1)};
+	}
+
+	static function isSafeCommandWord(word:String):Bool {
+		return word != null && word.length > 0 && word.indexOf(";") < 0 && word.indexOf("&&") < 0 && word.indexOf("|") < 0 && word.indexOf("`") < 0
+			&& word.indexOf("$(") < 0;
 	}
 
 	static function splitCommandWords(command:String):Array<String> {

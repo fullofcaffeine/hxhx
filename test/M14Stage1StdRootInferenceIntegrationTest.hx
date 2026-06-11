@@ -119,6 +119,8 @@ class M14Stage1StdRootInferenceIntegrationTest {
 			assertTrue(noHaxercParsed != null, "expected relative no-.haxerc cwd parse to terminate");
 			assertTrue(Stage1Args.getMain(noHaxercParsed) == "Main", "expected --run to set the main module");
 			assertTrue(Stage1Args.getRoots(noHaxercParsed).length == 0, "runtime args after --run should not become roots");
+			assertTrue(Stage1Args.getHadRun(noHaxercParsed), "expected --run to be recorded for target runners");
+			assertTrue(Stage1Args.getRunArgs(noHaxercParsed).join(",") == "arg1", "expected runtime args after --run to be preserved");
 
 			var found = false;
 			for (cp in classPaths) {

@@ -118,6 +118,7 @@
     "test:m14:stage3-or-pattern-binding": "haxe test/m14_stage3_or_pattern_binding_integration_test.hxml",
     "test:m14:stage3-reflect-compare-methods": "haxe test/m14_stage3_reflect_compare_methods_shim_integration_test.hxml",
     "test:m14:stage3-switch-case-if-else": "haxe test/m14_stage3_switch_case_if_else_integration_test.hxml",
+    "test:m14:stage3-lua-run-support": "haxe test/m14_stage3_lua_run_support_integration_test.hxml",
     "test:m14:stage3-grouped-var-declaration": "haxe test/m14_stage3_grouped_var_declaration_integration_test.hxml",
     "test:m14:hih-compound-assign": "haxe test/m14_hih_compound_assign_integration_test.hxml",
     "test:m14:hih-try-throw-stmt": "haxe test/m14_hih_try_throw_stmt_integration_test.hxml",

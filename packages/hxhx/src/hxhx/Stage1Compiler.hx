@@ -239,9 +239,11 @@ class Stage1Args {
 	public final cwd:String;
 	public final hadCmd:Bool;
 	public final cmdCommands:Array<String>;
+	public final hadRun:Bool;
+	public final runArgs:Array<String>;
 
 	function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>,
-			resourceSpecs:Array<String>, displayRequest:Null<String>, cwd:String, hadCmd:Bool, cmdCommands:Array<String>) {
+			resourceSpecs:Array<String>, displayRequest:Null<String>, cwd:String, hadCmd:Bool, cmdCommands:Array<String>, hadRun:Bool, runArgs:Array<String>) {
 		this.classPaths = classPaths;
 		this.main = main;
 		this.noOutput = noOutput;
@@ -254,6 +256,8 @@ class Stage1Args {
 		this.cwd = cwd;
 		this.hadCmd = hadCmd;
 		this.cmdCommands = cmdCommands == null ? [] : cmdCommands;
+		this.hadRun = hadRun;
+		this.runArgs = runArgs == null ? [] : runArgs;
 	}
 
 	public static function parse(args:Array<String>, permissive:Bool = false):Null<Stage1Args> {
@@ -270,10 +274,12 @@ class Stage1Args {
 		final macros = new Array<String>();
 		final resourceSpecs = new Array<String>();
 		final cmdCommands = new Array<String>();
+		final runArgs = new Array<String>();
 		var displayRequest:Null<String> = null;
 		var cwd = ".";
 		var stdRoot = "";
 		var hadCmd = false;
+		var hadRun = false;
 
 		var i = 0;
 		while (i < expanded.length) {
@@ -381,16 +387,19 @@ class Stage1Args {
 					i += 2;
 				case "--run", "-x" if (permissive):
 					// Upstream allows macro/compile-time suites to be driven via `--run`/`-x` instead
-					// of `-main` in some fixtures. For Stage3 diagnostic runs, treat this as setting
-					// the main module and ignore any additional runtime args.
+					// of `-main` in some fixtures. For Stage3 runs, treat this as setting the main
+					// module and preserve trailing runtime args for target runners.
 					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after " + a);
 						return null;
 					}
+					hadRun = true;
 					main = expanded[i + 1];
 					i += 2;
-					while (i < expanded.length && !StringTools.startsWith(expanded[i], "-"))
+					while (i < expanded.length && !StringTools.startsWith(expanded[i], "-")) {
+						runArgs.push(expanded[i]);
 						i++;
+					}
 				case "-cp", "-p", "--class-path":
 					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after " + a);
@@ -483,7 +492,8 @@ class Stage1Args {
 			stdRoot = inferStdRoot(cwd);
 		if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1)
 			classPaths.push(stdRoot);
-		return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, resourceSpecs, displayRequest, cwd, hadCmd, cmdCommands);
+		return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, resourceSpecs, displayRequest, cwd, hadCmd, cmdCommands, hadRun,
+			runArgs);
 	}
 
 	static function inferStdRoot(cwd:String):String {
@@ -652,6 +662,12 @@ class Stage1Args {
 
 	public static function getCmdCommands(a:Stage1Args):Array<String>
 		return a.cmdCommands;
+
+	public static function getHadRun(a:Stage1Args):Bool
+		return a.hadRun;
+
+	public static function getRunArgs(a:Stage1Args):Array<String>
+		return a.runArgs;
 }
 
 /**

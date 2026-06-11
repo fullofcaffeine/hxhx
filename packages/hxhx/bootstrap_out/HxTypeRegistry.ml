@@ -1386,7 +1386,9 @@ let init () : unit =
     let a9 = if len > 9 then Obj.obj ((HxArray.get args 9)) else failwith "Type.createInstance: missing ctor arg 'cwd' for hxhx.Stage1Args" in
     let a10 = if len > 10 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 10)) else failwith "Type.createInstance: missing ctor arg 'hadCmd' for hxhx.Stage1Args" in
     let a11 = if len > 11 then Obj.magic ((HxArray.get args 11)) else failwith "Type.createInstance: missing ctor arg 'cmdCommands' for hxhx.Stage1Args" in
-    Obj.repr (Hxhx_Stage1Compiler.stage1args_create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
+    let a12 = if len > 12 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 12)) else failwith "Type.createInstance: missing ctor arg 'hadRun' for hxhx.Stage1Args" in
+    let a13 = if len > 13 then Obj.magic ((HxArray.get args 13)) else failwith "Type.createInstance: missing ctor arg 'runArgs' for hxhx.Stage1Args" in
+    Obj.repr (Hxhx_Stage1Compiler.stage1args_create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13)
   );
   HxType.register_class_ctor "hxhx.Stage1Compiler" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage1Compiler.create ())
@@ -1954,8 +1956,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.NativeBackendPluginHostAbi" [ "assertNoDescriptorConflicts"; "beginCapture"; "captureProviderTypesForPlugin"; "decodeRow"; "decodeSnapshot"; "fail"; "normalizeSourceLabel"; "providerTypesForPlugin"; "providerTypesForPluginAllowEmpty"; "providerTypesForPluginInternal"; "requireToken"; "trim"; "trimTrailingCr" ];
   HxType.register_class_instance_fields "hxhx.NativeBackendPluginLoader" [];
   HxType.register_class_static_fields "hxhx.NativeBackendPluginLoader" [ "fail"; "providerTypeNamesForNativeManifest"; "resolvedSpecsForProviders"; "trim" ];
-  HxType.register_class_instance_fields "hxhx.Stage1Args" [ "classPaths"; "cmdCommands"; "cwd"; "defines"; "displayRequest"; "hadCmd"; "libs"; "macros"; "main"; "noOutput"; "resourceSpecs"; "roots" ];
-  HxType.register_class_static_fields "hxhx.Stage1Args" [ "expandHxmlArgs"; "getClassPaths"; "getCmdCommands"; "getCwd"; "getDefines"; "getDisplayRequest"; "getHadCmd"; "getLibs"; "getMacros"; "getMain"; "getNoOutput"; "getResourceSpecs"; "getRoots"; "inferStdRoot"; "inferStdRootForCwd"; "inferStdRootFromHaxerc"; "parse"; "readHaxercVersion"; "resolveHomeDir" ];
+  HxType.register_class_instance_fields "hxhx.Stage1Args" [ "classPaths"; "cmdCommands"; "cwd"; "defines"; "displayRequest"; "hadCmd"; "hadRun"; "libs"; "macros"; "main"; "noOutput"; "resourceSpecs"; "roots"; "runArgs" ];
+  HxType.register_class_static_fields "hxhx.Stage1Args" [ "expandHxmlArgs"; "getClassPaths"; "getCmdCommands"; "getCwd"; "getDefines"; "getDisplayRequest"; "getHadCmd"; "getHadRun"; "getLibs"; "getMacros"; "getMain"; "getNoOutput"; "getResourceSpecs"; "getRoots"; "getRunArgs"; "inferStdRoot"; "inferStdRootForCwd"; "inferStdRootFromHaxerc"; "parse"; "readHaxercVersion"; "resolveHomeDir" ];
   HxType.register_class_instance_fields "hxhx.Stage1Compiler" [];
   HxType.register_class_static_fields "hxhx.Stage1Compiler" [ "error"; "formatParseError"; "resolveLibraryPaths"; "run" ];
   HxType.register_class_instance_fields "hxhx.Stage1Resolver" [];
@@ -1979,7 +1981,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.Stage3PathSupport" [];
   HxType.register_class_static_fields "hxhx.Stage3PathSupport" [ "absFromCwd"; "inferMainFromDisplayRequest"; "inferMainFromMacroExpr"; "inferRepoRootForScripts" ];
   HxType.register_class_instance_fields "hxhx.Stage3RunSupport" [];
-  HxType.register_class_static_fields "hxhx.Stage3RunSupport" [ "absFromCwd"; "canRunNode"; "parseSafeJavaJarCommand"; "parseSafePythonScriptCommand"; "runCommandInCwd"; "runCommandOnlyUnit"; "runEmittedArtifact"; "runSafeCommandOnlyHooks"; "runSafeJavaJarHookForArtifact"; "runSafePythonHookForArtifact"; "splitCommandWords" ];
+  HxType.register_class_static_fields "hxhx.Stage3RunSupport" [ "absFromCwd"; "canRunNode"; "isSafeCommandWord"; "parseSafeJavaJarCommand"; "parseSafeLuaCommand"; "parseSafePythonScriptCommand"; "runCommandInCwd"; "runCommandOnlyUnit"; "runEmittedArtifact"; "runSafeCommandOnlyHooks"; "runSafeJavaJarHookForArtifact"; "runSafeLuaCommands"; "runSafePythonHookForArtifact"; "splitCommandWords" ];
   HxType.register_class_instance_fields "hxhx.Stage3SetupSupport" [];
   HxType.register_class_static_fields "hxhx.Stage3SetupSupport" [ "buildDefinesMap"; "collectLibraryDefines"; "collectLibraryMacros"; "collectMacroStdPaths"; "macroHostClassPaths"; "projectClassPaths"; "resolveLibraries"; "trim" ];
   HxType.register_class_instance_fields "hxhx.Stage3WaitServer" [];

@@ -292,6 +292,8 @@ class Stage3Compiler {
 		final parsedLibs = Stage1Args.getLibs(parsed);
 		final parsedHadCmd = Stage1Args.getHadCmd(parsed);
 		final parsedCmdCommands = Stage1Args.getCmdCommands(parsed);
+		final parsedHadRun = Stage1Args.getHadRun(parsed);
+		final parsedRunArgs = Stage1Args.getRunArgs(parsed);
 		// Upstream often uses `--interp` as “compile + run now”. In Stage3 (native OCaml),
 		// we emulate this by enabling the full-body emission rung.
 		final sawInterp = parsedDefines != null && parsedDefines.indexOf("interp=1") != -1;
@@ -880,7 +882,7 @@ class Stage3Compiler {
 
 		closeMacroSession();
 
-		final runError = Stage3RunSupport.runEmittedArtifact(backendId, parsedHadCmd, parsedCmdCommands, cwd, emitted, noRun);
+		final runError = Stage3RunSupport.runEmittedArtifact(backendId, parsedHadCmd, parsedCmdCommands, parsedHadRun, parsedRunArgs, cwd, emitted, noRun);
 		if (runError != null)
 			return error(runError);
 		return 0;
