@@ -6314,9 +6314,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final reflectContent = File.getContent(reflectSourcePath);
 			assertContains(entryContent, "dynamic dyn = \"seed\";",
 				"C# explicit Dynamic locals should remain dynamically dispatched instead of being inferred as string/System.Type");
-			assertContains(entryContent, "var names = Reflect.fields(dyn);", "C# Reflect.fields calls should remain source-compatible");
+			assertContains(entryContent, "var names = Reflect.fields((object)dyn);",
+				"C# Reflect.fields calls with Dynamic values should stay statically bound");
 			assertContains(entryContent, "names.sort(Reflect.compare);", "C# Array.sort should accept Reflect.compare method groups");
-			assertContains(entryContent, "var value = Reflect.field(dyn, \"length\");", "C# Reflect.field calls should remain source-compatible");
+			assertContains(entryContent, "var value = Reflect.field((object)dyn, (object)\"length\");",
+				"C# Reflect.field calls with Dynamic values should stay statically bound");
 			assertContains(entryContent, "names.toString()", "C# Array.toString should remain callable from generated source");
 			assertContains(entryContent, "public object sort(System.Func<object, object, int> compare)",
 				"C# array support shim should expose Array.sort with a Reflect.compare-compatible delegate");

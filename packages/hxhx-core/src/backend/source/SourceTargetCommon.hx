@@ -2414,6 +2414,9 @@ class SourceTargetCommon {
 							return "new " + csArrayRuntimeType() + "(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)";
 						case EIdent("Sys") if (field == "exit" && args.length == 1):
 							return "System.Environment.Exit(" + renderExpr(Cs, args[0]) + ")";
+						case EIdent("Reflect"):
+							final intrinsic = csReflectIntrinsicCall(field, args);
+							if (intrinsic != null) return intrinsic;
 						case _ if (field == "toMap" && args.length == 0):
 							return "new global::haxe.ds.StringMap()";
 						case _:
@@ -2422,6 +2425,27 @@ class SourceTargetCommon {
 				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExpr(target, receiver);
 				callExpr(target, fieldAccess(target, renderedReceiver, field), args);
 		};
+	}
+
+	static function csReflectIntrinsicCall(field:String, args:Array<HxExpr>):Null<String> {
+		return switch (field) {
+			case "fields" if (args.length == 1):
+				"Reflect.fields((object)" + renderExpr(Cs, args[0]) + ")";
+			case "field" if (args.length == 2):
+				"Reflect.field((object)"
+				+ renderExpr(Cs, args[0])
+				+ ", (object)"
+				+ renderExpr(Cs, args[1])
+				+ ")";
+			case "compare" if (args.length == 2):
+				"Reflect.compare((object)"
+				+ renderExpr(Cs, args[0])
+				+ ", (object)"
+				+ renderExpr(Cs, args[1])
+				+ ")";
+			case _:
+				null;
+		}
 	}
 
 	static function csLibIntrinsicCall(field:String, args:Array<HxExpr>):Null<String> {
