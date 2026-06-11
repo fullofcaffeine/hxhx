@@ -6055,6 +6055,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  return actual == \"ok\";",
 			"}",
 			"",
+			"function unusedRunUtility() {",
+			"  var command = {name: \"skip\"};",
+			"  return command;",
+			"}",
+			"",
 			"function main() {",
 			"  var hasExpectedMessage = matchesExpectedMessage(\"ok\");",
 			"  Sys.println(Std.string(hasExpectedMessage));",
@@ -7605,6 +7610,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "return (actual == \"ok\")", "Lua static helper body should preserve its return expression");
 		assertContains(content, "local hasExpectedMessage = matchesExpectedMessage(\"ok\")",
 			"Lua main should call same-module static helpers through the emitted local function");
+		assertNotContains(content, "unusedRunUtility = function", "Lua output should not force emission of unused static helpers with unsupported bodies");
 		if (commandExists("lua")) {
 			final run = commandOutput("lua", [outputPath]);
 			assertTrue(run.code == 0, "generated Lua static helper call should execute, stderr:\n" + run.stderr);

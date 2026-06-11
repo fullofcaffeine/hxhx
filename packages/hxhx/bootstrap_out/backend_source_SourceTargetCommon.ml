@@ -17723,6 +17723,23 @@ let luaFunctionArgs = fun args -> let _g = Obj.magic (let __arr_6284 = HxArray.c
   HxArray.join _g ", " (fun x -> x)
 )
 
+let luaCollectDirectCallNames = fun stmts out -> ignore (let calls = Obj.magic (HxArray.create ()) in (
+  ignore (let _g = ref 0 in while !_g < HxArray.length stmts do ignore (let stmt = Obj.magic (HxArray.get (Obj.magic stmts) (!_g)) in (
+    ignore (let __old_6287 = !_g in let __new_6288 = HxInt.add __old_6287 1 in (
+      ignore (_g := __new_6288);
+      __new_6288
+    ));
+    collectJavaEntryBodyDirectCalls (Obj.magic stmt) (Obj.magic calls)
+  )) done);
+  let _g = ref 0 in while !_g < HxArray.length calls do ignore (let call = HxArray.get (Obj.magic calls) (!_g) in (
+    ignore (let __old_6289 = !_g in let __new_6290 = HxInt.add __old_6289 1 in (
+      ignore (_g := __new_6290);
+      __new_6290
+    ));
+    let key = (valueName (Obj.magic Lua) (Obj.obj (HxAnon.get call "name") : string) : string) in HxMap.set_string out key true
+  )) done
+))
+
 let phpRenderLocalTypes = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : string HxMap.string_map)
 
 let withPhpLocalTypes = fun target localTypes f -> try let __fallback_result_2972 = (
@@ -34591,138 +34608,162 @@ let renderSupportClasses = fun target program decl mainClassName -> let tempResu
   !tempResult
 )
 
-let appendLuaMainStaticHelpers = fun out decl className -> ignore (try let helpers = Obj.magic (HxArray.create ()) in (
+let appendLuaMainStaticHelpers = fun out decl className entryBody -> ignore (try let helperNames = Obj.magic (HxArray.create ()) in let helpersByName = HxMap.create_string () in (
   ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)))) in try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_6287 = !_g in let __new_6288 = HxInt.add __old_6287 1 in (
-      ignore (_g := __new_6288);
-      __new_6288
+    ignore (let __old_6291 = !_g in let __new_6292 = HxInt.add __old_6291 1 in (
+      ignore (_g := __new_6292);
+      __new_6292
     ));
     let fnName = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
       ignore (if HxString.equals fnName "main" || HxString.equals fnName "new" || not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || HxArray.indexOf (HxFunctionDecl.getMetadata (Obj.magic fn)) "macro" 0 >= 0 then raise (HxRuntime.Hx_continue) else ());
-      HxArray.push helpers fn
+      let methodName = (valueName (Obj.magic Lua) (fnName : string) : string) in (
+        ignore (if HxMap.exists_string helpersByName methodName then raise (HxRuntime.Hx_continue) else ());
+        ignore (HxArray.push helperNames methodName);
+        HxMap.set_string helpersByName methodName fn
+      )
     )
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  ignore (if HxArray.length helpers = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let emitted = HxMap.create_string () in (
-    ignore (let _g = ref 0 in try while !_g < HxArray.length helpers do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic helpers) (!_g)) in (
-      ignore (let __old_6289 = !_g in let __new_6290 = HxInt.add __old_6289 1 in (
-        ignore (_g := __new_6290);
-        __new_6290
-      ));
-      let methodName = (valueName (Obj.magic Lua) (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in let key = ((HxString.toStdString methodName ^ "#") ^ HxString.toStdString (string_of_int (HxArray.length (HxFunctionDecl.getArgs (Obj.magic fn)))) : string) in (
-        ignore (if HxMap.exists_string emitted key then raise (HxRuntime.Hx_continue) else ());
-        ignore (HxMap.set_string emitted key true);
-        HxArray.push out ("local " ^ HxString.toStdString methodName)
-      )
-    )) with
-      | HxRuntime.Hx_continue -> () done with
-      | HxRuntime.Hx_break -> ());
-    let _g = ref 0 in try while !_g < HxArray.length helpers do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic helpers) (!_g)) in (
-      ignore (let __old_6291 = !_g in let __new_6292 = HxInt.add __old_6291 1 in (
-        ignore (_g := __new_6292);
-        __new_6292
-      ));
-      let methodName = (valueName (Obj.magic Lua) (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let key = ((HxString.toStdString methodName ^ "#") ^ HxString.toStdString (string_of_int (HxArray.length args)) : string) in (
-        ignore (if not (HxMap.exists_string emitted key) then raise (HxRuntime.Hx_continue) else ());
-        ignore (HxArray.push out (((HxString.toStdString methodName ^ " = function(") ^ HxString.toStdString (luaFunctionArgs (Obj.magic args))) ^ ")"));
-        ignore (let _g2 = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic Lua) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) ("  " : string) ((HxString.toStdString className ^ ".") ^ HxString.toStdString methodName : string) (Obj.magic (HxRuntime.hx_null))) in while !_g2 < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g2) : string) in (
-          ignore (let __old_6293 = !_g2 in let __new_6294 = HxInt.add __old_6293 1 in (
-            ignore (_g2 := __new_6294);
-            __new_6294
+  ignore (if HxArray.length helperNames = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  let entryCalls = HxMap.create_string () in (
+    ignore (luaCollectDirectCallNames (Obj.magic entryBody) entryCalls);
+    let queue = Obj.magic (HxArray.create ()) in (
+      ignore (let _g = ref 0 in while !_g < HxArray.length helperNames do ignore (let methodName = (HxArray.get (Obj.magic helperNames) (!_g) : string) in (
+        ignore (let __old_6293 = !_g in let __new_6294 = HxInt.add __old_6293 1 in (
+          ignore (_g := __new_6294);
+          __new_6294
+        ));
+        if HxMap.exists_string entryCalls methodName then ignore (HxArray.push queue methodName) else ()
+      )) done);
+      ignore (if HxArray.length queue = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+      let selected = HxMap.create_string () in let emitOrder = Obj.magic (HxArray.create ()) in (
+        ignore (try while HxArray.length queue > 0 do try ignore (let methodName = (HxArray.shift queue () : string) in (
+          ignore (if HxMap.exists_string selected methodName || not (HxMap.exists_string helpersByName methodName) then raise (HxRuntime.Hx_continue) else ());
+          ignore (HxMap.set_string selected methodName true);
+          ignore (HxArray.push emitOrder methodName);
+          let nestedCalls = HxMap.create_string () in (
+            ignore (luaCollectDirectCallNames (Obj.magic (HxFunctionDecl.getBody (Obj.magic (HxMap.get_string helpersByName methodName)))) nestedCalls);
+            let _g = ref 0 in while !_g < HxArray.length helperNames do ignore (let nestedName = (HxArray.get (Obj.magic helperNames) (!_g) : string) in (
+              ignore (let __old_6295 = !_g in let __new_6296 = HxInt.add __old_6295 1 in (
+                ignore (_g := __new_6296);
+                __new_6296
+              ));
+              if HxMap.exists_string nestedCalls nestedName && not (HxMap.exists_string selected nestedName) then ignore (HxArray.push queue nestedName) else ()
+            )) done
+          )
+        )) with
+          | HxRuntime.Hx_continue -> () done with
+          | HxRuntime.Hx_break -> ());
+        ignore (let _g = ref 0 in while !_g < HxArray.length emitOrder do ignore (let methodName = (HxArray.get (Obj.magic emitOrder) (!_g) : string) in (
+          ignore (let __old_6297 = !_g in let __new_6298 = HxInt.add __old_6297 1 in (
+            ignore (_g := __new_6298);
+            __new_6298
           ));
-          HxArray.push out line
+          HxArray.push out ("local " ^ HxString.toStdString methodName)
         )) done);
-        ignore (HxArray.push out "end");
-        HxMap.remove_string emitted key
+        let _g = ref 0 in while !_g < HxArray.length emitOrder do ignore (let methodName = (HxArray.get (Obj.magic emitOrder) (!_g) : string) in (
+          ignore (let __old_6299 = !_g in let __new_6300 = HxInt.add __old_6299 1 in (
+            ignore (_g := __new_6300);
+            __new_6300
+          ));
+          let fn = Obj.magic (HxMap.get_string helpersByName methodName) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in (
+            ignore (HxArray.push out (((HxString.toStdString methodName ^ " = function(") ^ HxString.toStdString (luaFunctionArgs (Obj.magic args))) ^ ")"));
+            ignore (let _g2 = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic Lua) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) ("  " : string) ((HxString.toStdString className ^ ".") ^ HxString.toStdString methodName : string) (Obj.magic (HxRuntime.hx_null))) in while !_g2 < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g2) : string) in (
+              ignore (let __old_6301 = !_g2 in let __new_6302 = HxInt.add __old_6301 1 in (
+                ignore (_g2 := __new_6302);
+                __new_6302
+              ));
+              HxArray.push out line
+            )) done);
+            HxArray.push out "end"
+          )
+        )) done
       )
-    )) with
-      | HxRuntime.Hx_continue -> () done with
-      | HxRuntime.Hx_break -> ()
+    )
   )
 ) with
-  | HxRuntime.Hx_return __ret_6295 -> Obj.obj __ret_6295)
+  | HxRuntime.Hx_return __ret_6303 -> Obj.obj __ret_6303)
 
 let renderProgram = fun target program context decl className body -> let lines = Obj.magic (HxArray.create ()) in let previousPhpInstanceMethodsByType = Obj.magic (!phpRenderInstanceMethodsByType) in let previousPhpInstanceMethodArgsByType = Obj.magic (!phpRenderInstanceMethodArgsByType) in let previousPhpInstanceFieldsByType = Obj.magic (!phpRenderInstanceFieldsByType) in let previousPhpInstanceFieldTypeHintsByType = Obj.magic (!phpRenderInstanceFieldTypeHintsByType) in let previousPhpDynamicMethodsByType = Obj.magic (!phpRenderDynamicMethodsByType) in let previousPhpStaticMethodsByType = Obj.magic (!phpRenderStaticMethodsByType) in let previousPhpGenericStaticFunctionsByType = Obj.magic (!phpRenderGenericStaticFunctionsByType) in let previousPhpStaticCallableFieldsByType = Obj.magic (!phpRenderStaticCallableFieldsByType) in let previousPhpStringExtensionMethodsByClass = Obj.magic (!phpRenderStringExtensionMethodsByClass) in let previousPhpStringExtensionMethodsByField = Obj.magic (!phpRenderStringExtensionMethodsByField) in let previousPhpKnownTypeNames = Obj.magic (!phpRenderKnownTypeNames) in let previousPhpAbstractTypeNames = Obj.magic (!phpRenderAbstractTypeNames) in let previousPhpEnumConstructors = Obj.magic (!phpRenderEnumConstructors) in let previousPhpAmbiguousEnumConstructors = Obj.magic (!phpRenderAmbiguousEnumConstructors) in let previousPhpEnumConstructorsByEnum = Obj.magic (!phpRenderEnumConstructorsByEnum) in let previousPhpPreferredEnumName = (!phpRenderPreferredEnumName : string) in let previousPhpTypeAliases = Obj.magic (!phpRenderTypeAliases) in let previousCsEnumConstructors = Obj.magic (!csRenderEnumConstructors) in let previousCsAmbiguousEnumConstructors = Obj.magic (!csRenderAmbiguousEnumConstructors) in (
   ignore (if target = Php then ignore ((
-    ignore (let __assign_6296 = Obj.magic (phpProgramInstanceMethodMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderInstanceMethodsByType := __assign_6296;
-      __assign_6296
-    ));
-    ignore (let __assign_6297 = Obj.magic (phpProgramInstanceMethodArgsMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderInstanceMethodArgsByType := __assign_6297;
-      __assign_6297
-    ));
-    ignore (let __assign_6298 = Obj.magic (phpProgramInstanceFieldMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderInstanceFieldsByType := __assign_6298;
-      __assign_6298
-    ));
-    ignore (let __assign_6299 = Obj.magic (phpProgramInstanceFieldTypeHintMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderInstanceFieldTypeHintsByType := __assign_6299;
-      __assign_6299
-    ));
-    ignore (let __assign_6300 = Obj.magic (phpProgramDynamicMethodMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderDynamicMethodsByType := __assign_6300;
-      __assign_6300
-    ));
-    ignore (let __assign_6301 = Obj.magic (phpProgramStaticMethodMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderStaticMethodsByType := __assign_6301;
-      __assign_6301
-    ));
-    ignore (let __assign_6302 = Obj.magic (phpProgramGenericStaticFunctionMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderGenericStaticFunctionsByType := __assign_6302;
-      __assign_6302
-    ));
-    ignore (let __assign_6303 = Obj.magic (phpProgramStaticCallableFieldMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderStaticCallableFieldsByType := __assign_6303;
-      __assign_6303
-    ));
-    ignore (let __assign_6304 = Obj.magic (phpProgramStringExtensionMethodMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderStringExtensionMethodsByClass := __assign_6304;
+    ignore (let __assign_6304 = Obj.magic (phpProgramInstanceMethodMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderInstanceMethodsByType := __assign_6304;
       __assign_6304
     ));
-    ignore (let __assign_6305 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      phpRenderStringExtensionMethodsByField := __assign_6305;
+    ignore (let __assign_6305 = Obj.magic (phpProgramInstanceMethodArgsMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderInstanceMethodArgsByType := __assign_6305;
       __assign_6305
     ));
-    ignore (let __assign_6306 = Obj.magic (phpProgramKnownTypeNameMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderKnownTypeNames := __assign_6306;
+    ignore (let __assign_6306 = Obj.magic (phpProgramInstanceFieldMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderInstanceFieldsByType := __assign_6306;
       __assign_6306
     ));
-    ignore (let __assign_6307 = Obj.magic (phpProgramAbstractTypeNameMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderAbstractTypeNames := __assign_6307;
+    ignore (let __assign_6307 = Obj.magic (phpProgramInstanceFieldTypeHintMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderInstanceFieldTypeHintsByType := __assign_6307;
       __assign_6307
     ));
-    ignore (let __assign_6308 = Obj.magic (HxMap.create_string ()) in (
-      phpRenderAmbiguousEnumConstructors := __assign_6308;
+    ignore (let __assign_6308 = Obj.magic (phpProgramDynamicMethodMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderDynamicMethodsByType := __assign_6308;
       __assign_6308
     ));
-    ignore (let __assign_6309 = Obj.magic (phpProgramEnumConstructorMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderEnumConstructors := __assign_6309;
+    ignore (let __assign_6309 = Obj.magic (phpProgramStaticMethodMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderStaticMethodsByType := __assign_6309;
       __assign_6309
     ));
-    ignore (let __assign_6310 = Obj.magic (phpProgramEnumConstructorsByEnumMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderEnumConstructorsByEnum := __assign_6310;
+    ignore (let __assign_6310 = Obj.magic (phpProgramGenericStaticFunctionMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderGenericStaticFunctionsByType := __assign_6310;
       __assign_6310
     ));
-    ignore (let __assign_6311 = Obj.magic (HxRuntime.hx_null) in (
-      phpRenderPreferredEnumName := __assign_6311;
+    ignore (let __assign_6311 = Obj.magic (phpProgramStaticCallableFieldMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderStaticCallableFieldsByType := __assign_6311;
       __assign_6311
     ));
-    let __assign_6312 = Obj.magic (phpProgramTypeAliasMap (Obj.magic program) (Obj.magic decl)) in (
-      phpRenderTypeAliases := __assign_6312;
+    ignore (let __assign_6312 = Obj.magic (phpProgramStringExtensionMethodMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderStringExtensionMethodsByClass := __assign_6312;
       __assign_6312
+    ));
+    ignore (let __assign_6313 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      phpRenderStringExtensionMethodsByField := __assign_6313;
+      __assign_6313
+    ));
+    ignore (let __assign_6314 = Obj.magic (phpProgramKnownTypeNameMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderKnownTypeNames := __assign_6314;
+      __assign_6314
+    ));
+    ignore (let __assign_6315 = Obj.magic (phpProgramAbstractTypeNameMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderAbstractTypeNames := __assign_6315;
+      __assign_6315
+    ));
+    ignore (let __assign_6316 = Obj.magic (HxMap.create_string ()) in (
+      phpRenderAmbiguousEnumConstructors := __assign_6316;
+      __assign_6316
+    ));
+    ignore (let __assign_6317 = Obj.magic (phpProgramEnumConstructorMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderEnumConstructors := __assign_6317;
+      __assign_6317
+    ));
+    ignore (let __assign_6318 = Obj.magic (phpProgramEnumConstructorsByEnumMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderEnumConstructorsByEnum := __assign_6318;
+      __assign_6318
+    ));
+    ignore (let __assign_6319 = Obj.magic (HxRuntime.hx_null) in (
+      phpRenderPreferredEnumName := __assign_6319;
+      __assign_6319
+    ));
+    let __assign_6320 = Obj.magic (phpProgramTypeAliasMap (Obj.magic program) (Obj.magic decl)) in (
+      phpRenderTypeAliases := __assign_6320;
+      __assign_6320
     )
   )) else ());
   ignore (if target = Cs then ignore ((
-    ignore (let __assign_6313 = Obj.magic (HxMap.create_string ()) in (
-      csRenderAmbiguousEnumConstructors := __assign_6313;
-      __assign_6313
+    ignore (let __assign_6321 = Obj.magic (HxMap.create_string ()) in (
+      csRenderAmbiguousEnumConstructors := __assign_6321;
+      __assign_6321
     ));
-    let __assign_6314 = Obj.magic (csProgramEnumConstructorMap (Obj.magic program) (Obj.magic decl)) in (
-      csRenderEnumConstructors := __assign_6314;
-      __assign_6314
+    let __assign_6322 = Obj.magic (csProgramEnumConstructorMap (Obj.magic program) (Obj.magic decl)) in (
+      csRenderEnumConstructors := __assign_6322;
+      __assign_6322
     )
   )) else ());
   ignore (match target with
@@ -35037,18 +35078,18 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    return ((value & 0xffffffff) >> (bits & 31))");
       ignore (HxArray.push lines "");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderSupportClasses (Obj.magic target) (Obj.magic program) (Obj.magic decl) (className : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_6315 = !_g in let __new_6316 = HxInt.add __old_6315 1 in (
-          ignore (_g := __new_6316);
-          __new_6316
+        ignore (let __old_6323 = !_g in let __new_6324 = HxInt.add __old_6323 1 in (
+          ignore (_g := __new_6324);
+          __new_6324
         ));
         HxArray.push lines line
       )) done);
       ignore (if not (HxString.equals (HxArray.get (Obj.magic lines) (HxInt.sub (HxArray.length lines) 1)) "# Generated by hxhx Stage3 Python source backend MVP") then ignore (HxArray.push lines "") else ());
       ignore (HxArray.push lines "def main():");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("    " : string) (HxString.toStdString className ^ ".main" : string) (Obj.magic (HxRuntime.hx_null))) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_6317 = !_g in let __new_6318 = HxInt.add __old_6317 1 in (
-          ignore (_g := __new_6318);
-          __new_6318
+        ignore (let __old_6325 = !_g in let __new_6326 = HxInt.add __old_6325 1 in (
+          ignore (_g := __new_6326);
+          __new_6326
         ));
         HxArray.push lines line
       )) done);
@@ -35059,9 +35100,9 @@ let renderProgram = fun target program context decl className body -> let lines 
     | Java -> ignore ((
       ignore (HxArray.push lines "// Generated by hxhx Stage3 Java source backend MVP");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderJavaHeader (Obj.magic program) (Obj.magic decl) (className : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_6319 = !_g in let __new_6320 = HxInt.add __old_6319 1 in (
-          ignore (_g := __new_6320);
-          __new_6320
+        ignore (let __old_6327 = !_g in let __new_6328 = HxInt.add __old_6327 1 in (
+          ignore (_g := __new_6328);
+          __new_6328
         ));
         HxArray.push lines line
       )) done);
@@ -35072,9 +35113,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    Sys.__hxhx_args = __hxhx_cli_args == null ? new String[0] : __hxhx_cli_args;");
       ignore (if HxString.equals className "UtilityProcess" then ignore (appendJavaUtilityProcessRuntime (Obj.magic lines) (className : string)) else ignore ((
         ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("    " : string) (HxString.toStdString className ^ ".main" : string) (Obj.magic (HxRuntime.hx_null))) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-          ignore (let __old_6321 = !_g in let __new_6322 = HxInt.add __old_6321 1 in (
-            ignore (_g := __new_6322);
-            __new_6322
+          ignore (let __old_6329 = !_g in let __new_6330 = HxInt.add __old_6329 1 in (
+            ignore (_g := __new_6330);
+            __new_6330
           ));
           HxArray.push lines line
         )) done);
@@ -35087,20 +35128,20 @@ let renderProgram = fun target program context decl className body -> let lines 
     | Cs -> ignore ((
       ignore (HxArray.push lines "// Generated by hxhx Stage3 C# source backend MVP");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderCsHeader (Obj.magic program) (Obj.magic decl) (className : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_6323 = !_g in let __new_6324 = HxInt.add __old_6323 1 in (
-          ignore (_g := __new_6324);
-          __new_6324
+        ignore (let __old_6331 = !_g in let __new_6332 = HxInt.add __old_6331 1 in (
+          ignore (_g := __new_6332);
+          __new_6332
         ));
         HxArray.push lines line
       )) done);
       ignore (if HxArray.length lines > 1 then ignore (HxArray.push lines "") else ());
       let packagePath = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let noRoot = Backend_BackendContext.hasDefine (Obj.magic context) ("no_root" : string) in let outputPackagePath = (csOutputPackagePath (packagePath : string) noRoot : string) in let tempString = ref ("" : string) in (
-        ignore (if HxString.length outputPackagePath = 0 then let __assign_6325 = ("" : string) in (
-          tempString := __assign_6325;
-          __assign_6325
-        ) else let __assign_6326 = ("  " : string) in (
-          tempString := __assign_6326;
-          __assign_6326
+        ignore (if HxString.length outputPackagePath = 0 then let __assign_6333 = ("" : string) in (
+          tempString := __assign_6333;
+          __assign_6333
+        ) else let __assign_6334 = ("  " : string) in (
+          tempString := __assign_6334;
+          __assign_6334
         ));
         let bodyIndent = (!tempString : string) in let entryClassName = (csEntryClassName (className : string) : string) in let classRef = (csGlobalClassRef (packagePath : string) (className : string) noRoot : string) in (
           ignore (appendCsNamespaceOpen (Obj.magic lines) (outputPackagePath : string));
@@ -35108,11 +35149,11 @@ let renderProgram = fun target program context decl className body -> let lines 
           ignore (appendCsMainSupportMembers (Obj.magic lines) (Obj.magic decl) (HxString.toStdString bodyIndent ^ "  " : string) (className : string) (classRef : string));
           ignore (appendCsPostUpdateVarSupport (Obj.magic lines) (HxString.toStdString bodyIndent ^ "  " : string));
           ignore (HxArray.push lines (HxString.toStdString bodyIndent ^ "  public static void Main(string[] __hxhx_cli_args) {"));
-          ignore (if HxString.equals className "UtilityProcess" then ignore (appendCsUtilityProcessRuntime (Obj.magic lines) (bodyIndent : string) (entryClassName : string)) else ignore (let entryBody = Obj.magic (csRewriteSameClassStaticMembersInStmts (Obj.magic body) (csCurrentClassStaticMemberNames (Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)))) (classRef : string) (Obj.magic (let __arr_6327 = HxArray.create () in __arr_6327))) in (
+          ignore (if HxString.equals className "UtilityProcess" then ignore (appendCsUtilityProcessRuntime (Obj.magic lines) (bodyIndent : string) (entryClassName : string)) else ignore (let entryBody = Obj.magic (csRewriteSameClassStaticMembersInStmts (Obj.magic body) (csCurrentClassStaticMemberNames (Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)))) (classRef : string) (Obj.magic (let __arr_6335 = HxArray.create () in __arr_6335))) in (
             ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic entryBody) ("    " : string) (HxString.toStdString entryClassName ^ ".Main" : string) (Obj.magic (HxRuntime.hx_null))) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-              ignore (let __old_6328 = !_g in let __new_6329 = HxInt.add __old_6328 1 in (
-                ignore (_g := __new_6329);
-                __new_6329
+              ignore (let __old_6336 = !_g in let __new_6337 = HxInt.add __old_6336 1 in (
+                ignore (_g := __new_6337);
+                __new_6337
               ));
               HxArray.push lines (HxString.toStdString bodyIndent ^ HxString.toStdString line)
             )) done);
@@ -37652,18 +37693,18 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "}");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderSupportClasses (Obj.magic target) (Obj.magic program) (Obj.magic decl) (className : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_6330 = !_g in let __new_6331 = HxInt.add __old_6330 1 in (
-          ignore (_g := __new_6331);
-          __new_6331
+        ignore (let __old_6338 = !_g in let __new_6339 = HxInt.add __old_6338 1 in (
+          ignore (_g := __new_6339);
+          __new_6339
         ));
         HxArray.push lines line
       )) done);
-      let emptyPhpNames = HxMap.create_string () in let mainStaticFieldNames = phpMainClassStaticMemberNames (Obj.magic decl) (className : string) in let mainBody = Obj.magic (phpRewriteSameClassMembersInStmts (Obj.magic body) emptyPhpNames emptyPhpNames mainStaticFieldNames (className : string) (Obj.magic (let __arr_6332 = HxArray.create () in __arr_6332))) in (
+      let emptyPhpNames = HxMap.create_string () in let mainStaticFieldNames = phpMainClassStaticMemberNames (Obj.magic decl) (className : string) in let mainBody = Obj.magic (phpRewriteSameClassMembersInStmts (Obj.magic body) emptyPhpNames emptyPhpNames mainStaticFieldNames (className : string) (Obj.magic (let __arr_6340 = HxArray.create () in __arr_6340))) in (
         ignore (HxArray.push lines (("function " ^ HxString.toStdString className) ^ "_main() {"));
-        ignore (withPhpSameClassMemberContext (Obj.magic Php) emptyPhpNames emptyPhpNames (HxRuntime.hx_null) mainStaticFieldNames (className : string) (Obj.magic (let __arr_6333 = HxArray.create () in __arr_6333)) (fun () -> ignore (withPhpStringExtensionMethods (Obj.magic Php) (className : string) (fun () -> ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic mainBody) ("  " : string) (HxString.toStdString className ^ "_main" : string) (Obj.magic (HxRuntime.hx_null))) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-          ignore (let __old_6334 = !_g in let __new_6335 = HxInt.add __old_6334 1 in (
-            ignore (_g := __new_6335);
-            __new_6335
+        ignore (withPhpSameClassMemberContext (Obj.magic Php) emptyPhpNames emptyPhpNames (HxRuntime.hx_null) mainStaticFieldNames (className : string) (Obj.magic (let __arr_6341 = HxArray.create () in __arr_6341)) (fun () -> ignore (withPhpStringExtensionMethods (Obj.magic Php) (className : string) (fun () -> ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic mainBody) ("  " : string) (HxString.toStdString className ^ "_main" : string) (Obj.magic (HxRuntime.hx_null))) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+          ignore (let __old_6342 = !_g in let __new_6343 = HxInt.add __old_6342 1 in (
+            ignore (_g := __new_6343);
+            __new_6343
           ));
           HxArray.push lines (phpRewriteRenderedExplicitGenericStaticCalls (line : string) (className : string) mainStaticFieldNames)
         )) done)))));
@@ -37675,99 +37716,99 @@ let renderProgram = fun target program context decl className body -> let lines 
     | Lua -> ignore ((
       ignore (HxArray.push lines "-- Generated by hxhx Stage3 Lua source backend MVP");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderLuaSupportPrelude (Obj.magic program) (Obj.magic decl) (className : string)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_6336 = !_g in let __new_6337 = HxInt.add __old_6336 1 in (
-          ignore (_g := __new_6337);
-          __new_6337
+        ignore (let __old_6344 = !_g in let __new_6345 = HxInt.add __old_6344 1 in (
+          ignore (_g := __new_6345);
+          __new_6345
         ));
         HxArray.push lines line
       )) done);
-      ignore (appendLuaMainStaticHelpers (Obj.magic lines) (Obj.magic decl) (className : string));
+      ignore (appendLuaMainStaticHelpers (Obj.magic lines) (Obj.magic decl) (className : string) (Obj.magic body));
       ignore (HxArray.push lines "local function main()");
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderFunctionStmts (Obj.magic target) (Obj.magic body) ("  " : string) (HxString.toStdString className ^ ".main" : string) (Obj.magic (HxRuntime.hx_null))) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-        ignore (let __old_6338 = !_g in let __new_6339 = HxInt.add __old_6338 1 in (
-          ignore (_g := __new_6339);
-          __new_6339
+        ignore (let __old_6346 = !_g in let __new_6347 = HxInt.add __old_6346 1 in (
+          ignore (_g := __new_6347);
+          __new_6347
         ));
         HxArray.push lines line
       )) done);
       ignore (HxArray.push lines "end");
       HxArray.push lines "main()"
     )));
-  ignore (let __assign_6340 = Obj.magic previousPhpInstanceMethodsByType in (
-    phpRenderInstanceMethodsByType := __assign_6340;
-    __assign_6340
-  ));
-  ignore (let __assign_6341 = Obj.magic previousPhpInstanceMethodArgsByType in (
-    phpRenderInstanceMethodArgsByType := __assign_6341;
-    __assign_6341
-  ));
-  ignore (let __assign_6342 = Obj.magic previousPhpInstanceFieldsByType in (
-    phpRenderInstanceFieldsByType := __assign_6342;
-    __assign_6342
-  ));
-  ignore (let __assign_6343 = Obj.magic previousPhpInstanceFieldTypeHintsByType in (
-    phpRenderInstanceFieldTypeHintsByType := __assign_6343;
-    __assign_6343
-  ));
-  ignore (let __assign_6344 = Obj.magic previousPhpDynamicMethodsByType in (
-    phpRenderDynamicMethodsByType := __assign_6344;
-    __assign_6344
-  ));
-  ignore (let __assign_6345 = Obj.magic previousPhpStaticMethodsByType in (
-    phpRenderStaticMethodsByType := __assign_6345;
-    __assign_6345
-  ));
-  ignore (let __assign_6346 = Obj.magic previousPhpGenericStaticFunctionsByType in (
-    phpRenderGenericStaticFunctionsByType := __assign_6346;
-    __assign_6346
-  ));
-  ignore (let __assign_6347 = Obj.magic previousPhpStaticCallableFieldsByType in (
-    phpRenderStaticCallableFieldsByType := __assign_6347;
-    __assign_6347
-  ));
-  ignore (let __assign_6348 = Obj.magic previousPhpStringExtensionMethodsByClass in (
-    phpRenderStringExtensionMethodsByClass := __assign_6348;
+  ignore (let __assign_6348 = Obj.magic previousPhpInstanceMethodsByType in (
+    phpRenderInstanceMethodsByType := __assign_6348;
     __assign_6348
   ));
-  ignore (let __assign_6349 = Obj.magic previousPhpStringExtensionMethodsByField in (
-    phpRenderStringExtensionMethodsByField := __assign_6349;
+  ignore (let __assign_6349 = Obj.magic previousPhpInstanceMethodArgsByType in (
+    phpRenderInstanceMethodArgsByType := __assign_6349;
     __assign_6349
   ));
-  ignore (let __assign_6350 = Obj.magic previousPhpKnownTypeNames in (
-    phpRenderKnownTypeNames := __assign_6350;
+  ignore (let __assign_6350 = Obj.magic previousPhpInstanceFieldsByType in (
+    phpRenderInstanceFieldsByType := __assign_6350;
     __assign_6350
   ));
-  ignore (let __assign_6351 = Obj.magic previousPhpAbstractTypeNames in (
-    phpRenderAbstractTypeNames := __assign_6351;
+  ignore (let __assign_6351 = Obj.magic previousPhpInstanceFieldTypeHintsByType in (
+    phpRenderInstanceFieldTypeHintsByType := __assign_6351;
     __assign_6351
   ));
-  ignore (let __assign_6352 = Obj.magic previousPhpEnumConstructors in (
-    phpRenderEnumConstructors := __assign_6352;
+  ignore (let __assign_6352 = Obj.magic previousPhpDynamicMethodsByType in (
+    phpRenderDynamicMethodsByType := __assign_6352;
     __assign_6352
   ));
-  ignore (let __assign_6353 = Obj.magic previousPhpAmbiguousEnumConstructors in (
-    phpRenderAmbiguousEnumConstructors := __assign_6353;
+  ignore (let __assign_6353 = Obj.magic previousPhpStaticMethodsByType in (
+    phpRenderStaticMethodsByType := __assign_6353;
     __assign_6353
   ));
-  ignore (let __assign_6354 = Obj.magic previousPhpEnumConstructorsByEnum in (
-    phpRenderEnumConstructorsByEnum := __assign_6354;
+  ignore (let __assign_6354 = Obj.magic previousPhpGenericStaticFunctionsByType in (
+    phpRenderGenericStaticFunctionsByType := __assign_6354;
     __assign_6354
   ));
-  ignore (let __assign_6355 = (previousPhpPreferredEnumName : string) in (
-    phpRenderPreferredEnumName := __assign_6355;
+  ignore (let __assign_6355 = Obj.magic previousPhpStaticCallableFieldsByType in (
+    phpRenderStaticCallableFieldsByType := __assign_6355;
     __assign_6355
   ));
-  ignore (let __assign_6356 = Obj.magic previousPhpTypeAliases in (
-    phpRenderTypeAliases := __assign_6356;
+  ignore (let __assign_6356 = Obj.magic previousPhpStringExtensionMethodsByClass in (
+    phpRenderStringExtensionMethodsByClass := __assign_6356;
     __assign_6356
   ));
-  ignore (let __assign_6357 = Obj.magic previousCsEnumConstructors in (
-    csRenderEnumConstructors := __assign_6357;
+  ignore (let __assign_6357 = Obj.magic previousPhpStringExtensionMethodsByField in (
+    phpRenderStringExtensionMethodsByField := __assign_6357;
     __assign_6357
   ));
-  ignore (let __assign_6358 = Obj.magic previousCsAmbiguousEnumConstructors in (
-    csRenderAmbiguousEnumConstructors := __assign_6358;
+  ignore (let __assign_6358 = Obj.magic previousPhpKnownTypeNames in (
+    phpRenderKnownTypeNames := __assign_6358;
     __assign_6358
+  ));
+  ignore (let __assign_6359 = Obj.magic previousPhpAbstractTypeNames in (
+    phpRenderAbstractTypeNames := __assign_6359;
+    __assign_6359
+  ));
+  ignore (let __assign_6360 = Obj.magic previousPhpEnumConstructors in (
+    phpRenderEnumConstructors := __assign_6360;
+    __assign_6360
+  ));
+  ignore (let __assign_6361 = Obj.magic previousPhpAmbiguousEnumConstructors in (
+    phpRenderAmbiguousEnumConstructors := __assign_6361;
+    __assign_6361
+  ));
+  ignore (let __assign_6362 = Obj.magic previousPhpEnumConstructorsByEnum in (
+    phpRenderEnumConstructorsByEnum := __assign_6362;
+    __assign_6362
+  ));
+  ignore (let __assign_6363 = (previousPhpPreferredEnumName : string) in (
+    phpRenderPreferredEnumName := __assign_6363;
+    __assign_6363
+  ));
+  ignore (let __assign_6364 = Obj.magic previousPhpTypeAliases in (
+    phpRenderTypeAliases := __assign_6364;
+    __assign_6364
+  ));
+  ignore (let __assign_6365 = Obj.magic previousCsEnumConstructors in (
+    csRenderEnumConstructors := __assign_6365;
+    __assign_6365
+  ));
+  ignore (let __assign_6366 = Obj.magic previousCsAmbiguousEnumConstructors in (
+    csRenderAmbiguousEnumConstructors := __assign_6366;
+    __assign_6366
   ));
   HxString.toStdString (HxArray.join lines "\n" (fun x -> x)) ^ "\n"
 )
