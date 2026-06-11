@@ -5996,6 +5996,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaReflectStringMethodProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var text = \"hello\";",
+			"    var method = Reflect.field(text, \"indexOf\");",
+			"    Sys.println(Std.string(Reflect.callMethod(text, method, [\"l\"])));",
+			"    Sys.println(Std.string(Reflect.compareMethods(Reflect.field(text, \"indexOf\"), Reflect.field(text, \"indexOf\"))));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csFunctionTypeReturnLambdaProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7435,6 +7451,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"Lua output should provide explicit unit helper globals skipped by compile-time-only filtering");
 		assertContains(content, "local classes = hxhx_array({Support.new()})", "Lua array literals should be wrapped with push-capable tables");
 		assertContains(content, "classes.push(Support.new())", "Lua generated push call should remain source-shaped");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaReflectStringMethodSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_reflect_string_method_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaReflectStringMethodProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "local __hxhx_reflect_method_keys = setmetatable({}, { __mode = \"k\" })",
+			"Lua Reflect string methods should record comparable wrapper identities");
+		assertContains(content, "local function __hxhx_reflect_string_method(name)", "Lua output should expose a narrow string Reflect.field helper");
+		assertContains(content, "if name == \"indexOf\" then", "Lua string Reflect.field should support indexOf for stringReflection workloads");
+		assertContains(content, "Reflect = Reflect or {}", "Lua output should define the Reflect table before user code");
+		assertContains(content, "Reflect.field = Reflect.field or function(obj, field)", "Lua output should define Reflect.field");
+		assertContains(content, "Reflect.callMethod = Reflect.callMethod or function(obj, method, args)", "Lua output should define Reflect.callMethod");
+		assertContains(content, "if __hxhx_reflect_method_keys[method] ~= nil then",
+			"Lua Reflect.callMethod should inject the receiver only for owned method wrappers");
+		assertContains(content, "Reflect.compareMethods = Reflect.compareMethods or function(a, b)", "Lua output should define Reflect.compareMethods");
+		assertContains(content, "local method = Reflect.field(text, \"indexOf\")", "Lua user code should keep static Reflect.field calls source-shaped");
+		assertContains(content, "print(tostring(Reflect.callMethod(text, method, hxhx_array({\"l\"})))",
+			"Lua user code should call Reflect.callMethod with wrapped array arguments");
+		assertContains(content, "print(tostring(Reflect.compareMethods(Reflect.field(text, \"indexOf\"), Reflect.field(text, \"indexOf\"))))",
+			"Lua user code should call Reflect.compareMethods for repeated reflected string methods");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "generated Lua Reflect string method support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "2\ntrue\n", "generated Lua Reflect string method output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -13478,6 +13525,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLuaLambdaSequenceCallback();
 		assertLuaEnumExtractLambdaPattern();
 		assertLuaSupportPreludeAndArrayShape();
+		assertLuaReflectStringMethodSupport();
 		assertCsFunctionTypeReturnLambda();
 		assertCsFunctionTypeArgumentLambda();
 		assertCsArrayBackingAccess();

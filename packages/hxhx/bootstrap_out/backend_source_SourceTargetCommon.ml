@@ -13419,6 +13419,43 @@ let renderLuaSupportPrelude = fun program decl mainClassName -> (
     ignore (HxArray.push __arr_4077 "    addIssueClasses = function(...) return nil end");
     ignore (HxArray.push __arr_4077 "  }");
     ignore (HxArray.push __arr_4077 "end");
+    ignore (HxArray.push __arr_4077 "");
+    ignore (HxArray.push __arr_4077 "local __hxhx_reflect_method_keys = setmetatable({}, { __mode = \"k\" })");
+    ignore (HxArray.push __arr_4077 "local function __hxhx_reflect_string_method(name)");
+    ignore (HxArray.push __arr_4077 "  if name == \"indexOf\" then");
+    ignore (HxArray.push __arr_4077 "    local fn = function(self, needle, start)");
+    ignore (HxArray.push __arr_4077 "      local init = ((start or 0) + 1)");
+    ignore (HxArray.push __arr_4077 "      local found = string.find(tostring(self), tostring(needle), init, true)");
+    ignore (HxArray.push __arr_4077 "      if found == nil then return -1 end");
+    ignore (HxArray.push __arr_4077 "      return found - 1");
+    ignore (HxArray.push __arr_4077 "    end");
+    ignore (HxArray.push __arr_4077 "    __hxhx_reflect_method_keys[fn] = \"String.indexOf\"");
+    ignore (HxArray.push __arr_4077 "    return fn");
+    ignore (HxArray.push __arr_4077 "  end");
+    ignore (HxArray.push __arr_4077 "  return nil");
+    ignore (HxArray.push __arr_4077 "end");
+    ignore (HxArray.push __arr_4077 "Reflect = Reflect or {}");
+    ignore (HxArray.push __arr_4077 "Reflect.field = Reflect.field or function(obj, field)");
+    ignore (HxArray.push __arr_4077 "  if obj == nil or field == nil then return nil end");
+    ignore (HxArray.push __arr_4077 "  if type(obj) == \"string\" then return __hxhx_reflect_string_method(tostring(field)) end");
+    ignore (HxArray.push __arr_4077 "  if type(obj) == \"table\" then return obj[field] end");
+    ignore (HxArray.push __arr_4077 "  return nil");
+    ignore (HxArray.push __arr_4077 "end");
+    ignore (HxArray.push __arr_4077 "Reflect.callMethod = Reflect.callMethod or function(obj, method, args)");
+    ignore (HxArray.push __arr_4077 "  if type(method) ~= \"function\" then return nil end");
+    ignore (HxArray.push __arr_4077 "  args = args or {}");
+    ignore (HxArray.push __arr_4077 "  local unpack_fn = table.unpack or unpack");
+    ignore (HxArray.push __arr_4077 "  if __hxhx_reflect_method_keys[method] ~= nil then");
+    ignore (HxArray.push __arr_4077 "    return method(obj, unpack_fn(args))");
+    ignore (HxArray.push __arr_4077 "  end");
+    ignore (HxArray.push __arr_4077 "  return method(unpack_fn(args))");
+    ignore (HxArray.push __arr_4077 "end");
+    ignore (HxArray.push __arr_4077 "Reflect.compareMethods = Reflect.compareMethods or function(a, b)");
+    ignore (HxArray.push __arr_4077 "  if a == b then return true end");
+    ignore (HxArray.push __arr_4077 "  local ka = __hxhx_reflect_method_keys[a]");
+    ignore (HxArray.push __arr_4077 "  local kb = __hxhx_reflect_method_keys[b]");
+    ignore (HxArray.push __arr_4077 "  return ka ~= nil and ka == kb");
+    ignore (HxArray.push __arr_4077 "end");
     __arr_4077
   )) in let seenPaths = HxMap.create_string () in let seenGlobals = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic program) ()) in (
     ignore (try while !_g < HxArray.length _g1 do try ignore (let typed = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
