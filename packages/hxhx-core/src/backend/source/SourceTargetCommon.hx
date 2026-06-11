@@ -2966,17 +2966,20 @@ class SourceTargetCommon {
 
 	static function lambdaCallExpr(target:SourceNativeTarget, lambdaArgs:Array<String>, lambdaBody:HxExpr, callArgs:Array<HxExpr>):String {
 		final rendered = [for (arg in callArgs) renderExpr(target, arg)].join(", ");
-		return switch (target) {
-			case Php:
-				final callee = phpLambdaExpr(lambdaArgs, lambdaBody, [], phpAssignedCapturesInList(callArgs, lambdaArgs), []);
-				"(" + callee + ")(" + rendered + ")";
-			case Cs:
-				final callee = lambdaExpr(Cs, lambdaArgs, lambdaBody);
-				"((" + csLambdaCallDelegateType(lambdaArgs.length) + ")(" + callee + "))(" + rendered + ")";
-			case Python, Java, Lua:
-				final callee = lambdaExpr(target, lambdaArgs, lambdaBody);
-				callee + "(" + rendered + ")";
-		};
+		if (target == Php) {
+			final callee = phpLambdaExpr(lambdaArgs, lambdaBody, [], phpAssignedCapturesInList(callArgs, lambdaArgs), []);
+			return "(" + callee + ")(" + rendered + ")";
+		}
+		if (target == Cs) {
+			final callee = lambdaExpr(Cs, lambdaArgs, lambdaBody);
+			return "((" + csLambdaCallDelegateType(lambdaArgs.length) + ")(" + callee + "))(" + rendered + ")";
+		}
+		if (target == Lua) {
+			final callee = lambdaExpr(Lua, lambdaArgs, lambdaBody);
+			return "(" + callee + ")(" + rendered + ")";
+		}
+		final callee = lambdaExpr(target, lambdaArgs, lambdaBody);
+		return callee + "(" + rendered + ")";
 	}
 
 	static function csLambdaCallDelegateType(arity:Int):String {
@@ -3062,8 +3065,109 @@ class SourceTargetCommon {
 			case Php:
 				phpLambdaExpr(args, body, [], [], []);
 			case Lua:
-				"function(" + renderedArgs + ") return " + renderExpr(target, body) + " end";
+				luaLambdaExpr(renderedArgs, body);
 		};
+	}
+
+	static function luaLambdaExpr(renderedArgs:String, body:HxExpr):String {
+		final lines = ["function(" + renderedArgs + ")"];
+		for (line in luaExprAsStatements(body, "  ", true))
+			lines.push(line);
+		lines.push("end");
+		return lines.join("\n");
+	}
+
+	static function luaExprAsStatements(expr:HxExpr, indent:String, appendReturn:Bool):Array<String> {
+		return switch (expr) {
+			case ENull:
+				appendReturn ? [indent + "return nil"] : [];
+			case ECall(ELambda(args, continuation), callArgs) if (args.length == 1 && isLambdaSeqTemp(args[0]) && callArgs.length == 1):
+				final out = luaExprAsStatements(callArgs[0], indent, false);
+				for (line in luaExprAsStatements(continuation, indent, appendReturn))
+					out.push(line);
+				out;
+			case ECall(EIdent("__hxhx_for_in"), args) if (args.length >= 3):
+				luaForInExprStatements(args[0], args[1], args[2], indent, appendReturn);
+			case ESwitch(scrutinee, patterns, exprs):
+				luaSwitchExprStatements(scrutinee, patterns, exprs, indent, appendReturn);
+			case ECall(EField(EIdent("Sys"), "println"), args) if (args.length == 1):
+				final out = [indent + printStmt(Lua, renderExpr(Lua, args[0]))];
+				if (appendReturn)
+					out.push(indent + "return nil");
+				out;
+			case ECall(EIdent("trace"), args) if (args.length >= 1):
+				final out = [indent + printStmt(Lua, renderExpr(Lua, args[0]))];
+				if (appendReturn)
+					out.push(indent + "return nil");
+				out;
+			case EBinop(op, left, right) if (isAssignmentOp(op)):
+				final out = [indent + luaAssignmentStmt(op, left, right)];
+				if (appendReturn)
+					out.push(indent + "return nil");
+				out;
+			case _:
+				if (appendReturn) [indent + "return " + renderExpr(Lua, expr)]; else [indent + exprStmt(Lua, renderExpr(Lua, expr))];
+		};
+	}
+
+	static function luaForInExprStatements(iterable:HxExpr, bodyExpr:HxExpr, continuation:HxExpr, indent:String, appendReturn:Bool):Array<String> {
+		return switch (bodyExpr) {
+			case ELambda(args, body) if (args.length == 1):
+				final cleanName = sanitizeTypeName(args[0]);
+				final out = [
+					indent + "for _, " + cleanName + " in ipairs(" + renderExpr(Lua, iterable) + ") do"
+				];
+				for (line in luaExprAsStatements(body, indent + indentStep(Lua), false))
+					out.push(line);
+				out.push(indent + "end");
+				for (line in luaExprAsStatements(continuation, indent, appendReturn))
+					out.push(line);
+				out;
+			case _:
+				final out = [
+					indent + exprStmt(Lua, callExpr(Lua, "__hxhx_for_in", [iterable, bodyExpr, continuation]))
+				];
+				if (appendReturn)
+					out.push(indent + "return nil");
+				out;
+		};
+	}
+
+	static function luaSwitchExprStatements(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>, indent:String,
+			appendReturn:Bool):Array<String> {
+		final out = new Array<String>();
+		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+		if (count == 0) {
+			if (appendReturn)
+				out.push(indent + "return nil");
+			return out;
+		}
+		final scrutineeExpr = renderExpr(Lua, scrutinee);
+		final childIndent = indent + indentStep(Lua);
+		for (i in 0...count) {
+			final lowered = lowerSourceSwitchPattern(Lua, patterns[i], scrutineeExpr);
+			final keyword = i == 0 ? "if" : "elseif";
+			out.push(indent + keyword + " " + lowered.cond + " then");
+			for (binding in lowered.bindings) {
+				final bindName = sanitizeTypeName(binding.name);
+				out.push(childIndent + varDecl(Lua, bindName, binding.expr));
+			}
+			for (line in luaExprAsStatements(exprs[i], childIndent, appendReturn))
+				out.push(line);
+		}
+		out.push(indent + "end");
+		return out;
+	}
+
+	static function luaAssignmentStmt(op:String, left:HxExpr, right:HxExpr):String {
+		final target = lvalueExpr(Lua, left);
+		if (op == "=")
+			return target + " = " + renderExpr(Lua, right);
+		final rhsOp = op.substr(0, op.length - 1);
+		final mapped = binopToken(Lua, rhsOp);
+		if (mapped == null)
+			throw unsupportedBinopMessage(Lua, op, left, right);
+		return target + " = (" + target + " " + mapped + " " + renderExpr(Lua, right) + ")";
 	}
 
 	static function javaLambdaExpr(renderedArgs:String, body:HxExpr):String {
@@ -7907,7 +8011,19 @@ class SourceTargetCommon {
 				+ ").__hx_ctor == "
 				+ quoteString(name)
 				+ ")";
-			case Java, Lua:
+			case Lua:
+				"(("
+				+ scrutinee
+				+ " == "
+				+ quoteString(name)
+				+ ") or (type("
+				+ scrutinee
+				+ ") == \"table\" and "
+				+ scrutinee
+				+ ".__hx_ctor == "
+				+ quoteString(name)
+				+ "))";
+			case Java:
 				equalityCond(target, scrutinee, quoteString(name));
 		};
 	}
@@ -7974,7 +8090,13 @@ class SourceTargetCommon {
 					+ scrutinee
 					+ ").__hx_ctor == "
 					+ quoteString(name)];
-			case Java, Lua:
+			case Lua:
+				[
+					"type(" + scrutinee + ") == \"table\"",
+					scrutinee + ".__hx_ctor == " + quoteString(name),
+					"type(" + scrutinee + ".__hx_params) == \"table\""
+				];
+			case Java:
 				throw targetLabel(target) + " source backend MVP unsupported switch pattern: PEnumExtract";
 		};
 		final bindings = new Array<SourceSwitchPatternBinding>();
@@ -8066,7 +8188,9 @@ class SourceTargetCommon {
 				scrutinee + ".__hx_params[" + index + "]";
 			case Cs:
 				"((global::hxhx.__HxEnumValue)" + scrutinee + ").__hx_params[" + index + "]";
-			case Java, Lua:
+			case Lua:
+				scrutinee + ".__hx_params[" + Std.string(index + 1) + "]";
+			case Java:
 				throw targetLabel(target) + " source backend MVP unsupported switch pattern parameter access";
 		};
 	}

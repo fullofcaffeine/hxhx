@@ -5927,6 +5927,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaEnumExtractLambdaProgram():GenIrProgram {
+		final src = [
+			"enum MaybeText {",
+			"  Some(value:String);",
+			"  None;",
+			"}",
+			"",
+			"class Dispatcher {",
+			"  public function new() {}",
+			"  public function add(listener) { }",
+			"}",
+			"",
+			"class RunnerLike {",
+			"  public var onProgress = new Dispatcher();",
+			"  public function new() {}",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var runner = new RunnerLike();",
+			"    var kind = Some(\"ok\");",
+			"    runner.onProgress.add(function(e) {",
+			"      switch (kind) {",
+			"        case Some(value):",
+			"          Sys.println(value);",
+			"        case None:",
+			"          Sys.println(\"none\");",
+			"      }",
+			"    });",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csFunctionTypeReturnLambdaProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7294,6 +7331,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "System.Console.WriteLine(\"done\");", "C# lambda-body continuations should render after lowered for-in statements");
 		assertNotContains(content, "__hxhx_for_in", "C# callback lambdas should not leak for-in helper calls into generated source");
 		assertNotContains(content, "__hxhx_lambda_seq_", "C# callback lambdas should not leak lambda-sequence temporaries into generated source");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaLambdaSequenceCallback():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_lambda_sequence_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(javaLambdaSequenceCallbackProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "runner.onProgress.add(function(e)", "Lua callback lambdas with statement bodies should render as block lambdas");
+		assertContains(content, "for _, item in ipairs", "Lua lambda-body for-in continuations should lower to statements");
+		assertContains(content, "if (item == \"Success\") then", "Lua lambda-body switch expressions should lower to if statements");
+		assertContains(content, "success = false", "Lua lambda-body assignment continuations should render as statements");
+		assertContains(content, "print(\"done\")", "Lua lambda-body continuations should render after lowered for-in statements");
+		assertNotContains(content, "__hxhx_for_in", "Lua callback lambdas should not leak for-in helper calls into generated source");
+		assertNotContains(content, "__hxhx_lambda_seq_", "Lua callback lambdas should not leak lambda-sequence temporaries into generated source");
+		assertNotContains(content, "end(success = false)", "Lua callback lambdas should not render assignment syntax as call arguments");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaEnumExtractLambdaPattern():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_enum_extract_lambda_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaEnumExtractLambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "type(kind) == \"table\"", "Lua enum-extract patterns should guard table-shaped enum values");
+		assertContains(content, "kind.__hx_ctor == \"Some\"", "Lua enum-extract patterns should test constructor names through __hx_ctor");
+		assertContains(content, "type(kind.__hx_params) == \"table\"", "Lua enum-extract patterns should guard enum parameter storage");
+		assertContains(content, "local value = kind.__hx_params[1]", "Lua enum-extract bindings should use 1-based parameter indexing");
+		assertContains(content, "print(value)", "Lua enum-extract branch bodies should render after binding extraction");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -13285,6 +13357,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsEntrySupportMembersAndSerializer();
 		assertJavaLambdaSequenceCallback();
 		assertCsLambdaSequenceCallback();
+		assertLuaLambdaSequenceCallback();
+		assertLuaEnumExtractLambdaPattern();
 		assertCsFunctionTypeReturnLambda();
 		assertCsFunctionTypeArgumentLambda();
 		assertCsArrayBackingAccess();
