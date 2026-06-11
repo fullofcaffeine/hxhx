@@ -6002,6 +6002,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    var text = \"hello\";",
 			"    var method = Reflect.field(text, \"indexOf\");",
+			"    Sys.println(lua.Lua.type(method));",
 			"    Sys.println(Std.string(Reflect.callMethod(text, method, [\"l\"])));",
 			"    Sys.println(Std.string(Reflect.compareMethods(Reflect.field(text, \"indexOf\"), Reflect.field(text, \"indexOf\"))));",
 			"  }",
@@ -7472,7 +7473,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "if __hxhx_reflect_method_keys[method] ~= nil then",
 			"Lua Reflect.callMethod should inject the receiver only for owned method wrappers");
 		assertContains(content, "Reflect.compareMethods = Reflect.compareMethods or function(a, b)", "Lua output should define Reflect.compareMethods");
+		assertContains(content, "lua = lua or {}", "Lua output should define the lua namespace table before user code");
+		assertContains(content, "lua.Lua = lua.Lua or {}", "Lua output should define the lua.Lua extern namespace before user code");
+		assertContains(content, "lua.Lua.type = lua.Lua.type or type", "Lua output should expose lua.Lua.type through the native type function");
 		assertContains(content, "local method = Reflect.field(text, \"indexOf\")", "Lua user code should keep static Reflect.field calls source-shaped");
+		assertContains(content, "print(lua.Lua.type(method))", "Lua user code should keep lua.Lua.type calls source-shaped");
 		assertContains(content, "print(tostring(Reflect.callMethod(text, method, hxhx_array({\"l\"})))",
 			"Lua user code should call Reflect.callMethod with wrapped array arguments");
 		assertContains(content, "print(tostring(Reflect.compareMethods(Reflect.field(text, \"indexOf\"), Reflect.field(text, \"indexOf\"))))",
@@ -7480,7 +7485,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("lua")) {
 			final run = commandOutput("lua", [outputPath]);
 			assertTrue(run.code == 0, "generated Lua Reflect string method support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "2\ntrue\n", "generated Lua Reflect string method output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "function\n2\ntrue\n", "generated Lua Reflect string method output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}

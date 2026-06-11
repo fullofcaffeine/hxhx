@@ -8830,7 +8830,10 @@ class SourceTargetCommon {
 			"  local ka = __hxhx_reflect_method_keys[a]",
 			"  local kb = __hxhx_reflect_method_keys[b]",
 			"  return ka ~= nil and ka == kb",
-			"end"
+			"end",
+			"lua = lua or {}",
+			"lua.Lua = lua.Lua or {}",
+			"lua.Lua.type = lua.Lua.type or type"
 		];
 		final seenPaths = new Map<String, Bool>();
 		final seenGlobals = new Map<String, Bool>();

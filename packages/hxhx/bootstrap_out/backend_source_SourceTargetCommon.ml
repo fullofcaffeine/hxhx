@@ -13456,6 +13456,9 @@ let renderLuaSupportPrelude = fun program decl mainClassName -> (
     ignore (HxArray.push __arr_4077 "  local kb = __hxhx_reflect_method_keys[b]");
     ignore (HxArray.push __arr_4077 "  return ka ~= nil and ka == kb");
     ignore (HxArray.push __arr_4077 "end");
+    ignore (HxArray.push __arr_4077 "lua = lua or {}");
+    ignore (HxArray.push __arr_4077 "lua.Lua = lua.Lua or {}");
+    ignore (HxArray.push __arr_4077 "lua.Lua.type = lua.Lua.type or type");
     __arr_4077
   )) in let seenPaths = HxMap.create_string () in let seenGlobals = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic program) ()) in (
     ignore (try while !_g < HxArray.length _g1 do try ignore (let typed = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
