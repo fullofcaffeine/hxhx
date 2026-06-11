@@ -425,6 +425,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csDynamicReflectArrayProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var dyn:Dynamic = \"seed\";",
+			"    var names = Reflect.fields(dyn);",
+			"    names.sort(Reflect.compare);",
+			"    var value = Reflect.field(dyn, \"length\");",
+			"    Sys.println(names.toString());",
+			"    Sys.println(Std.string(value));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csImportedUtestProgram():GenIrProgram {
 		final mainSrc = [
 			"import utest.Runner;",
@@ -6201,6 +6219,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(mainTypeContent, "public class Main", "C# support source should declare the user Main type separately from the entrypoint");
 			assertContains(helperContent, "public class Helper", "C# support source should declare the sibling class");
 			assertContains(helperContent, "public static object message()", "C# support source should expose static helper methods");
+			assertContains(helperContent, "return \"helper\";", "C# support source should render supported static helper method bodies");
 			assertTrue(hasArtifactPath(result.artifacts, mainSourcePath), "C# emit result should include main source artifact");
 			assertTrue(hasArtifactPath(result.artifacts, mainTypeSourcePath), "C# emit result should include the Haxe Main type source artifact");
 			assertTrue(hasArtifactPath(result.artifacts, helperSourcePath), "C# emit result should include support source artifact");
@@ -6261,6 +6280,46 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(mainTypeContent, "case \"a\": return true;", "C# Issue4598 support type should expose read-only field metadata");
 			assertContains(reflectContent, "public static object setProperty", "C# Issue4598 Reflect shim should expose setProperty");
 			assertContains(reflectContent, "System.MemberAccessException", "C# Issue4598 Reflect shim should reject read-only field writes");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsDynamicReflectArrayShape():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_dynamic_reflect_array_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csDynamicReflectArrayProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			final reflectSourcePath = Path.join([outputDir, "src", "Reflect.cs"]);
+			assertTrue(FileSystem.exists(entrySourcePath), "C# Dynamic/Reflect regression should emit an entry wrapper");
+			assertTrue(FileSystem.exists(reflectSourcePath), "C# Dynamic/Reflect regression should emit the Reflect support shim");
+			final entryContent = File.getContent(entrySourcePath);
+			final reflectContent = File.getContent(reflectSourcePath);
+			assertContains(entryContent, "dynamic dyn = \"seed\";",
+				"C# explicit Dynamic locals should remain dynamically dispatched instead of being inferred as string/System.Type");
+			assertContains(entryContent, "var names = Reflect.fields(dyn);", "C# Reflect.fields calls should remain source-compatible");
+			assertContains(entryContent, "names.sort(Reflect.compare);", "C# Array.sort should accept Reflect.compare method groups");
+			assertContains(entryContent, "var value = Reflect.field(dyn, \"length\");", "C# Reflect.field calls should remain source-compatible");
+			assertContains(entryContent, "names.toString()", "C# Array.toString should remain callable from generated source");
+			assertContains(entryContent, "public object sort(System.Func<object, object, int> compare)",
+				"C# array support shim should expose Array.sort with a Reflect.compare-compatible delegate");
+			assertContains(entryContent, "public string toString()", "C# array support shim should expose Haxe-style Array.toString");
+			assertContains(reflectContent, "public static global::hxhx.__HxArray fields(object obj)", "C# Reflect shim should expose Reflect.fields");
+			assertContains(reflectContent, "public static object field(object obj, object field)", "C# Reflect shim should expose Reflect.field");
+			assertContains(reflectContent, "public static int compare(object a, object b)", "C# Reflect shim should expose Reflect.compare");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -13040,6 +13099,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsExePackaging();
 		assertCsBuildExecutableEmitsSupportSourceSet();
 		assertCsIssue4598ReadOnlyReflectShape();
+		assertCsDynamicReflectArrayShape();
 		assertCsScopedLocalBlockShape();
 		assertCsDuplicateLocalShadowNames();
 		assertCsRawIntrinsicAndSameClassStatic();

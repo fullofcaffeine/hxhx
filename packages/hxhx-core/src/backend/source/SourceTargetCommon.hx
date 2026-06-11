@@ -8115,6 +8115,8 @@ class SourceTargetCommon {
 	}
 
 	static function csLocalDeclType(?typeHint:String, ?init:HxExpr):String {
+		if (isDynamicTypeHint(typeHint))
+			return "dynamic";
 		final lambdaArity = switch (init) {
 			case ELambda(args, _):
 				args == null ? 0 : args.length;
@@ -8923,8 +8925,14 @@ class SourceTargetCommon {
 					out.push(bodyIndent + "    return " + csEnumValueExpr(className, methodName, args, count) + ";");
 				} else if (returnsNewOwner || returnsUtestReportFactory)
 					out.push(bodyIndent + "    return new " + className + "();");
-				else
-					out.push(bodyIndent + "    return null;");
+				else {
+					final bodyLines = csSupportMethodBodyLines(fn, count, bodyIndent + "    ", className + "." + methodName);
+					if (bodyLines == null)
+						out.push(bodyIndent + "    return null;");
+					else
+						for (line in bodyLines)
+							out.push(line);
+				}
 				out.push(bodyIndent + "  }");
 			}
 			final varargsKey = methodName + "#varargs";
@@ -9163,6 +9171,35 @@ class SourceTargetCommon {
 			out.push(indent + "}");
 		}
 		if (qualified == "Reflect") {
+			out.push(indent + "public static global::hxhx.__HxArray fields(object obj) {");
+			out.push(indent + "  if (obj == null) return new global::hxhx.__HxArray(new object[] { });");
+			out.push(indent + "  var type = obj as System.Type;");
+			out.push(indent + "  object receiver = type == null ? obj : null;");
+			out.push(indent + "  if (type == null) type = obj.GetType();");
+			out.push(indent
+				+ "  var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;");
+			out.push(indent + "  var names = new System.Collections.Generic.List<object>();");
+			out.push(indent + "  foreach (var fieldInfo in type.GetFields(flags)) names.Add(fieldInfo.Name);");
+			out.push(indent + "  foreach (var property in type.GetProperties(flags)) names.Add(property.Name);");
+			out.push(indent + "  return new global::hxhx.__HxArray(names.ToArray());");
+			out.push(indent + "}");
+			out.push(indent + "public static object field(object obj, object field) {");
+			out.push(indent + "  if (obj == null) return null;");
+			out.push(indent + "  string name = System.Convert.ToString(field);");
+			out.push(indent
+				+ "  var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;");
+			out.push(indent + "  var type = obj as System.Type;");
+			out.push(indent + "  object receiver = type == null ? obj : null;");
+			out.push(indent + "  if (type == null) type = obj.GetType();");
+			out.push(indent + "  var property = type.GetProperty(name, flags);");
+			out.push(indent + "  if (property != null) return property.GetValue(receiver, null);");
+			out.push(indent + "  var fieldInfo = type.GetField(name, flags);");
+			out.push(indent + "  if (fieldInfo != null) return fieldInfo.GetValue(receiver);");
+			out.push(indent + "  return null;");
+			out.push(indent + "}");
+			out.push(indent + "public static int compare(object a, object b) {");
+			out.push(indent + "  return string.Compare(System.Convert.ToString(a), System.Convert.ToString(b), System.StringComparison.Ordinal);");
+			out.push(indent + "}");
 			out.push(indent + "public static object setProperty(object obj, object field, object value) {");
 			out.push(indent + "  if (obj == null) return value;");
 			out.push(indent + "  string name = System.Convert.ToString(field);");
@@ -9521,6 +9558,13 @@ class SourceTargetCommon {
 		out.push(indent + "    System.Array.Copy(__a, start, values, 0, len);");
 		out.push(indent + "    return new __HxArray(values);");
 		out.push(indent + "  }");
+		out.push(indent + "  public object sort(System.Func<object, object, int> compare) {");
+		out.push(indent + "    System.Array.Sort(__a, (a, b) => compare(a, b));");
+		out.push(indent + "    return null;");
+		out.push(indent + "  }");
+		out.push(indent + "  public string toString() {");
+		out.push(indent + "    return \"[\" + string.Join(\",\", System.Array.ConvertAll(__a, value => System.Convert.ToString(value))) + \"]\";");
+		out.push(indent + "  }");
 		out.push(indent + "  public System.Collections.Generic.IEnumerator<object> GetEnumerator() {");
 		out.push(indent + "    return ((System.Collections.Generic.IEnumerable<object>)__a).GetEnumerator();");
 		out.push(indent + "  }");
@@ -9692,6 +9736,19 @@ class SourceTargetCommon {
 				return false;
 		}
 		return true;
+	}
+
+	static function csSupportMethodBodyLines(fn:HxFunctionDecl, count:Int, indent:String, context:String):Null<Array<String>> {
+		if (count != HxFunctionDecl.getArgs(fn).length)
+			return null;
+		final body = HxFunctionDecl.getBody(fn);
+		if (body == null || body.length == 0)
+			return null;
+		return try {
+			renderFunctionStmts(Cs, body, indent, context);
+		} catch (e:String) {
+			null;
+		}
 	}
 
 	static function javaFunctionArgs(args:Array<HxFunctionArg>, ?count:Int):String {
