@@ -1183,6 +1183,8 @@ class SourceTargetCommon {
 			case ECall(EIdent("__cs__"), args) if (target == Cs):
 				final raw = csSyntaxCodeExpr(args);
 				raw == null ? callExpr(target, "__cs__", args) : raw;
+			case ECall(EIdent("trace"), args) if (target == Cs && args.length >= 1):
+				"__hxhx_trace(" + renderExpr(Cs, args[0]) + ")";
 			case ECall(EIdent("__hxhx_throw"), args) if (target == Php):
 				"__hxhx_throw(" + (args.length > 0 ? renderExpr(Php, args[0]) : "null") + ")";
 			case ECall(EIdent("__hxhx_for_in"), args) if (target == Php && args.length >= 3):
@@ -2405,6 +2407,9 @@ class SourceTargetCommon {
 			case Python, Java, Cs, Lua:
 				if (target == Cs) {
 					switch (receiver) {
+						case EField(EIdent("cs"), "Lib"):
+							final intrinsic = csLibIntrinsicCall(field, args);
+							if (intrinsic != null) return intrinsic;
 						case EIdent("Sys") if (field == "args" && args.length == 0):
 							return "new " + csArrayRuntimeType() + "(__hxhx_cli_args == null ? new object[] { } : __hxhx_cli_args)";
 						case EIdent("Sys") if (field == "exit" && args.length == 1):
@@ -2417,6 +2422,17 @@ class SourceTargetCommon {
 				final renderedReceiver = target == Python ? pythonFieldReceiverExpr(receiver) : renderExpr(target, receiver);
 				callExpr(target, fieldAccess(target, renderedReceiver, field), args);
 		};
+	}
+
+	static function csLibIntrinsicCall(field:String, args:Array<HxExpr>):Null<String> {
+		if (args == null || args.length != 1)
+			return null;
+		return switch (field) {
+			case "unsafe" | "unsafe_" | "fixed" | "fixed_" | "pointerOfArray" | "valueOf":
+				renderExpr(Cs, args[0]);
+			case _:
+				null;
+		}
 	}
 
 	static function phpSyntaxIntrinsicCall(typePath:String, field:String, args:Array<HxExpr>):Null<String> {
@@ -5344,8 +5360,11 @@ class SourceTargetCommon {
 				if (pythonRuntimeMapType(typePath)) "Map(" + rendered + ")"; else safeType + "(" + rendered + ")";
 			case Java: "new " + safeType + "(" + rendered + ")";
 			case Cs:
-				if (typePath == "Array" || typePath == "Array<T>") "new " + csArrayRuntimeType() + "(new object[] { " + rendered + " })"; else "new "
-					+ safeType + "(" + rendered + ")";
+				if (typePath == "Array" || typePath == "Array<T>") "new " + csArrayRuntimeType() + "(new object[] { " + rendered + " })"; else
+					if (csNativeArrayTypePath(typePath)
+					&& args.length == 1) "new object[System.Convert.ToInt32("
+					+ renderExpr(Cs, args[0])
+					+ ")]"; else "new " + safeType + "(" + rendered + ")";
 			case Php:
 				final genericSample = phpGenericConstructorSample(typePath);
 				if (genericSample != null) "__hxhx_construct_like(" + genericSample + (rendered.length == 0 ? "" : ", " + rendered) + ")"; else
@@ -5356,6 +5375,11 @@ class SourceTargetCommon {
 					rendered); else if (phpRuntimeListType(typePath)) "new List_(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
 			case Lua: safeType + ".new(" + rendered + ")";
 		};
+	}
+
+	static function csNativeArrayTypePath(typePath:String):Bool {
+		final clean = stripGenericTypeParams(removeTypeHintWhitespace(csTypePath(typePath)));
+		return clean == "NativeArray" || clean == "cs.NativeArray";
 	}
 
 	static function pythonRuntimeMapType(typePath:String):Bool {
@@ -9406,6 +9430,10 @@ class SourceTargetCommon {
 	}
 
 	static function appendCsPostUpdateVarSupport(out:Array<String>, indent:String):Void {
+		out.push(indent + "public static object __hxhx_trace(object value) {");
+		out.push(indent + "  System.Console.WriteLine(value);");
+		out.push(indent + "  return null;");
+		out.push(indent + "}");
 		out.push(indent + "public static object __hxhx_postUpdateVar(ref object value, int delta) {");
 		out.push(indent + "  object old = value;");
 		out.push(indent + "  if (value is float || value is double || value is decimal) {");

@@ -771,13 +771,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final src = [
 			"class Main {",
 			"  static function main() {",
-			"    var values = [0];",
+			"    var values = new cs.NativeArray(1);",
 			"    var result = (function(addr) {",
-			"      trace(addr[0]);",
+			"      trace(cs.Lib.valueOf(addr));",
 			"      addr[0] = 42;",
 			"      return null;",
-			"    })(values);",
-			"    trace(result);",
+			"    })(cs.Lib.pointerOfArray(values));",
+			"    cs.Lib.unsafe_(cs.Lib.fixed_(result));",
+			"    cs.Lib.unsafe_(trace(42));",
 			"  }",
 			"}",
 		].join("\n");
@@ -6570,7 +6571,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "((System.Func<dynamic, object>)((addr) => {",
 			"C# immediately invoked block lambdas should cast to a delegate before invocation");
-		assertContains(content, "))(values)", "C# immediately invoked block lambdas should invoke the delegate with the call args");
+		assertContains(content, "var values = new object[System.Convert.ToInt32(1)];",
+			"C# cs.NativeArray construction should lower to a native C# array surface instead of a generated fake class");
+		assertContains(content, "))(values)", "C# pointerOfArray intrinsic should lower to the underlying array argument");
+		assertContains(content, "System.Console.WriteLine(addr);", "C# valueOf intrinsic should lower inside statement-position trace");
+		assertContains(content, "result;", "C# unsafe/fixed intrinsics should lower to their block expression");
+		assertContains(content, "__hxhx_trace(42)", "C# expression-position trace should lower to a value-returning helper");
+		assertNotContains(content, "cs.Lib.pointerOfArray", "C# pointerOfArray should not require a generated runtime method");
+		assertNotContains(content, "cs.Lib.unsafe_", "C# unsafe should not require a generated runtime method");
+		assertNotContains(content, "cs.Lib.fixed_", "C# fixed should not require a generated runtime method");
+		assertNotContains(content, "cs.Lib.valueOf", "C# valueOf should not require a generated runtime method");
 		assertNotContains(content, "}(values)", "C# immediately invoked block lambdas should not use invalid raw block-lambda invocation syntax");
 		deleteRecursive(tmpRoot);
 	}
@@ -6692,6 +6702,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				"C# signal callback lambdas should use statement-bodied syntax for delegate overloads");
 			assertContains(csLibContent, "namespace cs", "C# cs.Lib stub should remain under the cs namespace");
 			assertContains(csLibContent, "public static object applyCultureChanges", "C# cs.Lib stub should expose the culture hook used by unit TestMain");
+			assertNotContains(csLibContent, "public static object unsafe_", "C# unsafe is a generator intrinsic, not a generated runtime method");
+			assertNotContains(csLibContent, "public static object fixed_", "C# fixed is a generator intrinsic, not a generated runtime method");
+			assertNotContains(csLibContent, "public static object pointerOfArray",
+				"C# pointerOfArray is a generator intrinsic, not a generated runtime method");
+			assertNotContains(csLibContent, "public static object valueOf", "C# valueOf is a generator intrinsic, not a generated runtime method");
 			assertContains(runnerContent, "public global::hxhx.__HxSignal onProgress", "C# Runner stub should expose utest signal fields");
 			assertContains(mainContent, "public object add(System.Func<dynamic, object> callback)",
 				"C# signal support should expose a one-argument delegate overload for callback lambdas");
