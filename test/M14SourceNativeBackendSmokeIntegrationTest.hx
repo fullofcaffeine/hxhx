@@ -5966,7 +5966,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final src = [
 			"package checks;",
 			"class LibraryOnly {",
-			"  public static function value() return 1;",
+			"  public static function value() {",
+			"    return { longInexistentName: true, otherName: true };",
+			"  }",
 			"}"
 		].join("\n");
 		return MacroStage.expandProgram([TyperStage.typeModule(ParserStage.parse(src, "checks/LibraryOnly.hx"))], []);
@@ -6219,7 +6221,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(mainTypeContent, "public class Main", "C# support source should declare the user Main type separately from the entrypoint");
 			assertContains(helperContent, "public class Helper", "C# support source should declare the sibling class");
 			assertContains(helperContent, "public static object message()", "C# support source should expose static helper methods");
-			assertContains(helperContent, "return \"helper\";", "C# support source should render supported static helper method bodies");
+			assertContains(helperContent, "return null;", "C# executable support source should keep sibling helper method bodies stubbed");
+			assertNotContains(helperContent, "return \"helper\";",
+				"C# executable support source should not render broad support method bodies into compile-packaged workloads");
 			assertTrue(hasArtifactPath(result.artifacts, mainSourcePath), "C# emit result should include main source artifact");
 			assertTrue(hasArtifactPath(result.artifacts, mainTypeSourcePath), "C# emit result should include the Haxe Main type source artifact");
 			assertTrue(hasArtifactPath(result.artifacts, helperSourcePath), "C# emit result should include support source artifact");
@@ -6673,6 +6677,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(FileSystem.exists(sourcePath), "C# no-main library emission should write source instead of requiring a static main");
 		assertTrue(!FileSystem.exists(Path.join([outputDir, "bin"])), "C# no-compilation source emission should not create an executable package directory");
 		assertContains(File.getContent(sourcePath), "public class LibraryOnly", "C# no-main library source should render the declared class");
+		assertContains(File.getContent(sourcePath), "return new { longInexistentName = true, otherName = true };",
+			"C# no-main library source should render simple support method bodies needed by library source sets");
 		deleteRecursive(tmpRoot);
 	}
 
