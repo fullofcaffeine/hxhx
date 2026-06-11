@@ -52,6 +52,15 @@ Agent policy:
   - Keep shell responsible for orchestration, environment, and process control.
   - If structural multiline rewrites or regex-heavy file surgery are necessary, move them into a dedicated helper script with a stable CLI and call that helper from shell.
   - If a shell script starts accumulating heredoc Python for generated-source patching, stop and extract it before adding more.
+- For target runtime, extern, and stdlib surfaces, do not grow backend emitters with large inline string stubs.
+  - If the surface is a target extern/core API (for example `cs.NativeArray`, `cs.Lib`, `php.Syntax`, or platform stdlib externs), prefer one of these boundaries:
+    - a real extern/core declaration,
+    - a repo-owned target runtime support module,
+    - a small template file,
+    - or direct intrinsic lowering when the construct is compile-time syntax rather than runtime API.
+  - Do not add fake generated classes to `SourceTargetCommon` just to satisfy one gate failure when the correct model is extern/intrinsic behavior.
+  - If a short inline helper is unavoidable during Full1 burn-down, keep it tiny, document why in the bead, add focused coverage, and file/link a follow-up architecture bead before expanding it.
+  - When an inline `out.push` block starts looking like a real library/runtime implementation, stop and extract or redesign before continuing.
 - For long-running attached sessions, do not wait indefinitely on silence alone.
   - Set a bounded silent-check window up front.
   - After that window, perform an active checkpoint: verify the exact child process, whether the expected artifact changed recently, and whether the session is still the right gate to wait on.
