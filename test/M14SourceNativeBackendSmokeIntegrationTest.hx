@@ -35,6 +35,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		throw "could not install fake true executable at " + path;
 	}
 
+	static function installFakeMcsCompiler(path:String):Void {
+		File.saveContent(path, [
+			"#!/bin/sh",
+			"set -eu",
+			"out=\"\"",
+			"printf '%s\\n' \"$@\" > \"$0.args\"",
+			"for arg in \"$@\"; do",
+			"  case \"$arg\" in",
+			"    -out:*) out=${arg#-out:} ;;",
+			"  esac",
+			"done",
+			"if [ -n \"$out\" ]; then",
+			"  mkdir -p \"$(dirname \"$out\")\"",
+			"  printf 'fake assembly\\n' > \"$out\"",
+			"fi",
+			"exit 0",
+			""
+		].join("\n"));
+		if (Sys.command("chmod", ["+x", path]) != 0)
+			throw "could not install fake mcs compiler at " + path;
+	}
+
 	static function hasArtifactPath(artifacts:Array<backend.EmitArtifact>, path:String):Bool {
 		for (artifact in artifacts) {
 			if (artifact.path == path)
@@ -6684,6 +6706,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertCsNoMainLibraryDllPackaging():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_no_main_dll_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installFakeMcsCompiler(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		try {
+			final outputDir = Path.join([tmpRoot, "bin", "lib1"]);
+			final dllPath = Path.join([outputDir, "bin", "lib1.dll"]);
+			final sourcePath = Path.join([outputDir, "src", "checks", "LibraryOnly.cs"]);
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			final result = backend.emit(csNoMainLibraryProgram(),
+				new BackendContext(outputDir, null, "checks.LibraryOnly", true, true, new StringMap<String>()));
+			assertTrue(result.entryPath == dllPath, "C# no-main library packaging should report the DLL as the primary artifact");
+			assertTrue(FileSystem.exists(dllPath), "C# no-main library packaging should produce a DLL at the runci-compatible path");
+			assertTrue(FileSystem.exists(sourcePath), "C# no-main library packaging should still emit the library source");
+			assertContains(File.getContent(fakeMcs + ".args"), "-target:library", "C# no-main library packaging should invoke mcs in library mode");
+			assertContains(File.getContent(fakeMcs + ".args"), "-out:" + dllPath, "C# no-main library packaging should pass the expected DLL path");
+			assertTrue(hasArtifactPath(result.artifacts, dllPath), "C# no-main library packaging should include the DLL artifact");
+			assertTrue(hasArtifactPath(result.artifacts, sourcePath), "C# no-main library packaging should include the source artifact");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertCSharpConstraintDiagnostics():Void {
 		final src = [
 			"class StructAndConstructible<T:CsStruct & Constructible<()->Void>> {}",
@@ -13120,6 +13174,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsMapSetSurfaceForBalancedTreeImpl();
 		assertCsImmediateBlockLambdaCallUsesDelegateInvoke();
 		assertCsNoCompilationNoMainSourceSet();
+		assertCsNoMainLibraryDllPackaging();
 		assertCSharpConstraintDiagnostics();
 		assertCSharpAssemblyMetadataDiagnostics();
 		assertCSharpUsingMetadataDiagnostics();

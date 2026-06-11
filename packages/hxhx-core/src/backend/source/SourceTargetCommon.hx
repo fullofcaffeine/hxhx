@@ -273,6 +273,8 @@ class SourceTargetCommon {
 		if (maybeMain == null) {
 			if (target == Java && buildTargetExecutable)
 				return emitJavaLibraryJar(program, context);
+			if (target == Cs && buildTargetExecutable)
+				return emitCsLibraryDll(program, context);
 			if (target == Cs)
 				return emitCsLibrarySourceSet(program, context);
 			throw "source target MVP requires a static main entrypoint";
@@ -342,6 +344,27 @@ class SourceTargetCommon {
 		for (path in sourcePaths)
 			artifacts.push(new EmitArtifact("support_cs_source", path));
 		return new EmitResult(sourcePaths[0], artifacts, false);
+	}
+
+	static function emitCsLibraryDll(program:GenIrProgram, context:BackendContext):EmitResult {
+		final sourceDir = Path.join([context.outputDir, "src"]);
+		final dllPath = csDllPath(context.outputDir, context.outputFileHint, context.hasDefine("debug"));
+		ensureDirectory(sourceDir);
+		ensureParentDirectory(dllPath);
+		final sourcePaths = emitCsLibrarySources(program, context, sourceDir);
+		if (sourcePaths.length == 0)
+			throw "C# source backend MVP library emission found no source modules";
+		final compiler = csCompilerCommand();
+		if (compiler == null)
+			throw "C# source backend MVP library packaging requires `mcs` or `csc` on PATH";
+		final args = compiler == "csc" ? ["-nologo", "-target:library", "-out:" + dllPath].concat(sourcePaths) : ["-target:library", "-out:" + dllPath].concat(sourcePaths);
+		final code = Sys.command(compiler, args);
+		if (code != 0)
+			throw "C# source backend MVP library packaging failed with exit code " + code;
+		final artifacts = [new EmitArtifact("entry_cs_dll", dllPath)];
+		for (path in sourcePaths)
+			artifacts.push(new EmitArtifact("support_cs_source", path));
+		return new EmitResult(dllPath, artifacts, false);
 	}
 
 	static function emitJavaJar(program:GenIrProgram, context:BackendContext, decl:HxModuleDecl, className:String, body:Array<HxStmt>):EmitResult {
@@ -427,6 +450,15 @@ class SourceTargetCommon {
 			"bin",
 			sanitizeTypeName(className) + (debug ? "-Debug" : "") + ".exe"
 		]);
+	}
+
+	static function csDllPath(outputDir:String, ?outputFileHint:String, debug:Bool = false):String {
+		if (outputFileHint != null && outputFileHint.length > 0)
+			return Path.normalize(outputFileHint);
+		final normalized = Path.normalize(outputDir == null || outputDir.length == 0 ? "." : outputDir);
+		final base = Path.withoutDirectory(normalized);
+		final name = base == null || base.length == 0 ? "Library" : sanitizeTypeName(base);
+		return Path.join([normalized, "bin", name + (debug ? "-Debug" : "") + ".dll"]);
 	}
 
 	static function csEntryClassName(className:String):String {
