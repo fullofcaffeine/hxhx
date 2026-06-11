@@ -6070,6 +6070,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaUtilityProcessRuntimeProgram():GenIrProgram {
+		final src = [
+			"class UtilityProcess {",
+			"  public static function runUtility(args:Array<String>, ?options:{?stdin:String, ?execPath:String, ?execName:String}) {",
+			"    var config = { execPath: \"ignored\", execName: \"ignored\" };",
+			"    Sys.println(config.execPath + config.execName);",
+			"    return null;",
+			"  }",
+			"",
+			"  public static function runUtilityAsCommand(args:Array<String>, ?options:{?stdin:String, ?execPath:String, ?execName:String}) {",
+			"    if (options == null) options = {};",
+			"    if (options.execPath == null) options.execPath = BIN_PATH;",
+			"    return 1;",
+			"  }",
+			"",
+			"  static function main() {",
+			"    Sys.println(\"fallback\");",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "UtilityProcess.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csFunctionTypeReturnLambdaProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7615,6 +7640,35 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("lua", [outputPath]);
 			assertTrue(run.code == 0, "generated Lua static helper call should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "true\n", "generated Lua static helper call output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaUtilityProcessRuntime():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_utility_process_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaUtilityProcessRuntimeProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "UtilityProcess.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "hxhx Lua sys runtime shim", "Lua UtilityProcess entrypoint should use the focused runtime shim");
+		assertContains(content, "local function __hxhx_runUtility(args)", "Lua UtilityProcess shim should expose the sys-test command dispatcher");
+		assertNotContains(content, "config.execPath", "Lua UtilityProcess should not render the source helper body with anonymous-object options");
+		assertNotContains(content, "BIN_PATH", "Lua UtilityProcess should not render adjacent helper source bodies");
+		if (commandExists("lua")) {
+			final argsRun = commandOutput("lua", [outputPath, "args", "hello"]);
+			assertTrue(argsRun.code == 0, "Lua UtilityProcess args case should exit cleanly: " + argsRun.stderr);
+			assertContains(argsRun.stdout, "hello", "Lua UtilityProcess args case should print the provided argument");
+			final stdoutRun = commandOutput("lua", [outputPath, "stdout.writeString", "out-text", "nfc"]);
+			assertTrue(stdoutRun.code == 0, "Lua UtilityProcess stdout.writeString case should exit cleanly: " + stdoutRun.stderr);
+			assertTrue(stdoutRun.stdout == "out-text", "Lua UtilityProcess stdout.writeString should not append a newline");
+			final unicodeRun = commandOutput("lua", [outputPath, "stdout.writeString", "14", "nfd"]);
+			final unicodeExpected = String.fromCharCode(0x0061) + String.fromCharCode(0x0307);
+			assertTrue(unicodeRun.code == 0, "Lua UtilityProcess indexed Unicode case should exit cleanly: " + unicodeRun.stderr);
+			assertTrue(unicodeRun.stdout == unicodeExpected, "Lua UtilityProcess indexed Unicode case should decode sequence arguments");
+			final exitRun = commandOutput("lua", [outputPath, "exitCode", "7"]);
+			assertTrue(exitRun.code == 7, "Lua UtilityProcess exitCode case should propagate exit status");
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -13900,6 +13954,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsUtilityProcessRuntimeShim();
 		assertCsUtilityProcessSwitchStatement();
 		assertJavaUtilityProcessRuntime();
+		assertLuaUtilityProcessRuntime();
 		assertJavaFileSystemFullPathResolvesSymlink();
 		assertPhpSwitchStatement();
 		assertLuaSwitchStatement();
