@@ -6143,6 +6143,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaArraySwitchStatementProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var args = [\"code\", \"7\"];",
+			"    switch (args) {",
+			"      case [\"code\", Std.parseInt(_) => code]:",
+			"        Sys.println(code);",
+			"      case _:",
+			"        Sys.println(\"other\");",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function javaUtilityProcessRuntimeProgram():GenIrProgram {
 		final src = [
 			"class UtilityProcess {",
@@ -13371,6 +13390,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertLuaArraySwitchStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_array_switch_stmt_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaArraySwitchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "local args = hxhx_array({\"code\", \"7\"})", "Lua array switch test should use the Lua array runtime shape");
+		assertContains(content, "type(__hxhx_switch) == \"table\" and #__hxhx_switch == 2",
+			"Lua array switch statements should lower table shape and length guards");
+		assertContains(content, "(__hxhx_switch[1] == \"code\")", "Lua array switch statements should use one-based item access");
+		assertContains(content, "local code = tonumber(__hxhx_switch[2])", "Lua array switch bindings should use the lowered extractor expression");
+		assertContains(content, "print(code)", "Lua array switch branch bodies should see the pattern binding");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function main():Void {
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
@@ -13651,5 +13687,6 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaFileSystemFullPathResolvesSymlink();
 		assertPhpSwitchStatement();
 		assertLuaSwitchStatement();
+		assertLuaArraySwitchStatement();
 	}
 }

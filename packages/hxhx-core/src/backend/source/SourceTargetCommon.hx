@@ -8057,7 +8057,7 @@ class SourceTargetCommon {
 					case Php:
 						"intval(" + scrutinee + ")";
 					case Lua:
-						null;
+						"tonumber(" + scrutinee + ")";
 				}
 			case "_.slice(0, 1)" | "_.slice(0,1)":
 				switch (target) {
@@ -8179,7 +8179,10 @@ class SourceTargetCommon {
 			case Cs:
 				[scrutinee + " != null", scrutinee + ".Length == " + Std.string(count)];
 			case Lua:
-				throw targetLabel(target) + " source backend MVP unsupported switch pattern: PArray";
+				[
+					"type(" + scrutinee + ") == \"table\"",
+					"#" + scrutinee + " == " + Std.string(count)
+				];
 		};
 		final bindings = new Array<SourceSwitchPatternBinding>();
 		if (items != null) {
@@ -8222,7 +8225,7 @@ class SourceTargetCommon {
 	}
 
 	static function sourceSwitchArrayItemExpr(target:SourceNativeTarget, scrutinee:String, index:Int):String {
-		return scrutinee + "[" + index + "]";
+		return scrutinee + "[" + (target == Lua ? Std.string(index + 1) : Std.string(index)) + "]";
 	}
 
 	static function sourceLengthExpr(target:SourceNativeTarget, value:String):String {
@@ -8231,8 +8234,10 @@ class SourceTargetCommon {
 			case Python: "len(" + value + ")";
 			case Java:
 				value + ".length";
-			case Cs, Lua:
+			case Cs:
 				throw targetLabel(target) + " source backend MVP unsupported switch length guard";
+			case Lua:
+				"#" + value;
 		};
 	}
 
