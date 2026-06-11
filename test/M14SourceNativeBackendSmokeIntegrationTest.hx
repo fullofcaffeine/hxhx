@@ -6013,6 +6013,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaSysProcessProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var proc = new sys.io.Process(\"lua\", [\"-v\"]);",
+			"    var firstLine = proc.stderr.readLine();",
+			"    proc.close();",
+			"    Sys.println(firstLine);",
+			"    Sys.println(Std.string(proc.exitCode()));",
+			"    Sys.stderr().writeString(\"err\");",
+			"    Sys.stderr().flush();",
+			"    var args = Sys.args();",
+			"    Sys.println(args[0]);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csFunctionTypeReturnLambdaProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7487,6 +7508,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertTrue(run.code == 0, "generated Lua Reflect string method support should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "function\n2\ntrue\n", "generated Lua Reflect string method output mismatch, got:\n" + run.stdout);
 		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaSysProcessSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_sys_process_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaSysProcessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "local function __hxhx_sys_args()", "Lua output should expose focused Sys.args support");
+		assertContains(content, "local function __hxhx_sys_stderr()", "Lua output should expose focused Sys.stderr support");
+		assertContains(content, "local function __hxhx_process_new(command, args)", "Lua output should expose focused sys.io.Process support");
+		assertContains(content, "Sys.args = Sys.args or __hxhx_sys_args", "Lua output should wire Sys.args through the focused helper");
+		assertContains(content, "Sys.stderr = Sys.stderr or __hxhx_sys_stderr", "Lua output should wire Sys.stderr through the focused helper");
+		assertContains(content, "sys.io.Process.new = sys.io.Process.new or __hxhx_process_new",
+			"Lua output should wire sys.io.Process.new through the focused helper");
+		assertContains(content, "local proc = sys.io.Process.new(\"lua\", hxhx_array({\"-v\"}))",
+			"Lua sys.io.Process constructors should keep source shape against the runtime namespace");
+		assertContains(content, "local firstLine = proc.stderr.readLine()", "Lua process stderr streams should keep readLine calls source-shaped");
+		assertContains(content, "proc.close()", "Lua process close calls should keep source shape against the helper object");
+		assertContains(content, "print(firstLine)", "Lua Sys.println should still lower to print for process output");
+		assertContains(content, "print(tostring(proc.exitCode()))", "Lua process exitCode calls should remain source-shaped against the helper object");
+		assertContains(content, "Sys.stderr().writeString(\"err\")", "Lua Sys.stderr().writeString should keep source shape against the runtime namespace");
+		assertContains(content, "Sys.stderr().flush()", "Lua Sys.stderr().flush should keep source shape against the runtime namespace");
+		assertContains(content, "local args = Sys.args()", "Lua Sys.args should keep source shape against the runtime namespace");
+		assertContains(content, "print(args[0])", "Lua Sys.args values should stay zero-indexed for Haxe array access");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -13531,6 +13580,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLuaEnumExtractLambdaPattern();
 		assertLuaSupportPreludeAndArrayShape();
 		assertLuaReflectStringMethodSupport();
+		assertLuaSysProcessSupport();
 		assertCsFunctionTypeReturnLambda();
 		assertCsFunctionTypeArgumentLambda();
 		assertCsArrayBackingAccess();
