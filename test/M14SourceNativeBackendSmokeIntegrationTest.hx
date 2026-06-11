@@ -739,6 +739,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csMapSetSurfaceProgram():GenIrProgram {
+		final src = [
+			"class SortedStringMapImpl<V> extends haxe.ds.BalancedTree<String, V> implements haxe.Constraints.IMap<String, V> {",
+			"  var cmp:String -> String -> Int;",
+			"",
+			"  public function new(?comparator:String -> String -> Int) {",
+			"    super();",
+			"    this.cmp = comparator == null ? haxe.Utf8.compare : comparator;",
+			"  }",
+			"",
+			"  override function compare(s1:String, s2:String):Int {",
+			"    return cmp(s1, s2);",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var m = new SortedStringMapImpl<String>();",
+			"    m.set(\"foo\", \"bar\");",
+			"    trace(m);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csEntrySupportMembersProgram():GenIrProgram {
 		final src = [
 			"class HelperApi {",
@@ -6473,6 +6501,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final entryContent = File.getContent(entrySourcePath);
 			assertContains(entryContent, "return new global::haxe.ds.StringMap();", "C# abstract toMap conversion should lower to the generated map stub");
 			assertNotContains(entryContent, "return m.toMap();", "C# abstract toMap conversion should not call toMap on an object receiver");
+		} catch (e:Dynamic) {
+			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			deleteRecursive(tmpRoot);
+			throw e;
+		}
+		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsMapSetSurfaceForBalancedTreeImpl():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_map_set_surface_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		final fakeBin = Path.join([tmpRoot, "fake-bin"]);
+		FileSystem.createDirectory(fakeBin);
+		final fakeMcs = Path.join([fakeBin, "mcs"]);
+		installTrueExecutable(fakeMcs);
+		final oldPath = Sys.getEnv("PATH");
+		Sys.putEnv("PATH", fakeBin + ":" + (oldPath == null ? "" : oldPath));
+		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
+		try {
+			final backend = BackendRegistry.requireForTarget("cs-native");
+			backend.emit(csMapSetSurfaceProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
+			final mapSourcePath = Path.join([outputDir, "src", "SortedStringMapImpl.cs"]);
+			assertTrue(FileSystem.exists(entrySourcePath), "C# map set regression should emit an entry wrapper");
+			assertTrue(FileSystem.exists(mapSourcePath), "C# map set regression should emit the map implementation support class");
+			final entryContent = File.getContent(entrySourcePath);
+			final mapContent = File.getContent(mapSourcePath);
+			assertContains(entryContent, "m.set(\"foo\", \"bar\");", "C# map set regression should keep the source call shape");
+			assertContains(mapContent, "public object set(object key, object value)",
+				"C# BalancedTree/IMap support classes should provide the set surface used by Issue8361");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
@@ -12845,6 +12904,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsPostIncrementExpressionUsesHelper();
 		assertCsEnumExtractSwitchExpressionUsesRuntimeShape();
 		assertCsAbstractToMapUsesGeneratedMapStub();
+		assertCsMapSetSurfaceForBalancedTreeImpl();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();

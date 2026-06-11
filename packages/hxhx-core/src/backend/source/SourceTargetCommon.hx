@@ -8904,6 +8904,12 @@ class SourceTargetCommon {
 				out.push(bodyIndent + "  }");
 			}
 		}
+		if (csSupportClassNeedsMapSetSurface(cls) && !emittedMethods.exists("set#2")) {
+			emittedMethods.set("set#2", true);
+			out.push(bodyIndent + "  public object set(object key, object value) {");
+			out.push(bodyIndent + "    return null;");
+			out.push(bodyIndent + "  }");
+		}
 		if (!sawConstructor) {
 			out.push(bodyIndent + "  public " + className + "() {");
 			out.push(bodyIndent + "  }");
@@ -8916,6 +8922,20 @@ class SourceTargetCommon {
 		out.push(bodyIndent + "}");
 		appendCsNamespaceClose(out, packagePath);
 		return out.join("\n");
+	}
+
+	static function csSupportClassNeedsMapSetSurface(cls:HxClassDecl):Bool {
+		if (csTypePathEndsWith(HxClassDecl.getExtendsPath(cls), "BalancedTree"))
+			return true;
+		for (path in HxClassDecl.getImplementsPaths(cls))
+			if (csTypePathEndsWith(path, "IMap"))
+				return true;
+		return false;
+	}
+
+	static function csTypePathEndsWith(path:String, suffix:String):Bool {
+		final compact = stripGenericTypeParams(removeTypeHintWhitespace(path));
+		return compact == suffix || StringTools.endsWith(compact, "." + suffix);
 	}
 
 	static function csFieldInitExpr(field:HxFieldDecl):String {
