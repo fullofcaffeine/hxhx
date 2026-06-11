@@ -6034,6 +6034,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaStringSubstrProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var text = \"abcdef\";",
+			"    Sys.println(text.substr(1, 3));",
+			"    Sys.println(text.substr(-2));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csFunctionTypeReturnLambdaProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7536,6 +7551,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "Sys.stderr().flush()", "Lua Sys.stderr().flush should keep source shape against the runtime namespace");
 		assertContains(content, "local args = Sys.args()", "Lua Sys.args should keep source shape against the runtime namespace");
 		assertContains(content, "print(args[0])", "Lua Sys.args values should stay zero-indexed for Haxe array access");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaStringSubstrSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_string_substr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaStringSubstrProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "local function __hxhx_string_substr(value, pos, len)", "Lua output should define a string substr helper");
+		assertContains(content, "__hxhx_string_mt.__index = function(value, key)", "Lua output should install a string method lookup hook");
+		assertContains(content, "if key == \"substr\" then return function(pos, len) return __hxhx_string_substr(value, pos, len) end end",
+			"Lua string method lookup should expose substr through the helper");
+		assertContains(content, "print(text.substr(1, 3))", "Lua string substr calls should keep source shape against the runtime hook");
+		assertContains(content, "print(text.substr((-2)))", "Lua string substr calls without length should keep source shape against the runtime hook");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "generated Lua string substr support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "bcd\nef\n", "generated Lua string substr output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -13581,6 +13618,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLuaSupportPreludeAndArrayShape();
 		assertLuaReflectStringMethodSupport();
 		assertLuaSysProcessSupport();
+		assertLuaStringSubstrSupport();
 		assertCsFunctionTypeReturnLambda();
 		assertCsFunctionTypeArgumentLambda();
 		assertCsArrayBackingAccess();
