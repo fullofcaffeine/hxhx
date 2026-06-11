@@ -6049,6 +6049,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaStaticHelperCallProgram():GenIrProgram {
+		final src = [
+			"function matchesExpectedMessage(actual:String) {",
+			"  return actual == \"ok\";",
+			"}",
+			"",
+			"function main() {",
+			"  var hasExpectedMessage = matchesExpectedMessage(\"ok\");",
+			"  Sys.println(Std.string(hasExpectedMessage));",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csFunctionTypeReturnLambdaProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7572,6 +7588,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("lua", [outputPath]);
 			assertTrue(run.code == 0, "generated Lua string substr support should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "bcd\nef\n", "generated Lua string substr output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaStaticHelperCalls():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_static_helper_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaStaticHelperCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "local matchesExpectedMessage", "Lua output should predeclare same-module static helpers before main");
+		assertContains(content, "matchesExpectedMessage = function(actual)", "Lua output should emit the static helper body");
+		assertContains(content, "return (actual == \"ok\")", "Lua static helper body should preserve its return expression");
+		assertContains(content, "local hasExpectedMessage = matchesExpectedMessage(\"ok\")",
+			"Lua main should call same-module static helpers through the emitted local function");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "generated Lua static helper call should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n", "generated Lua static helper call output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -13619,6 +13656,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLuaReflectStringMethodSupport();
 		assertLuaSysProcessSupport();
 		assertLuaStringSubstrSupport();
+		assertLuaStaticHelperCalls();
 		assertCsFunctionTypeReturnLambda();
 		assertCsFunctionTypeArgumentLambda();
 		assertCsArrayBackingAccess();
