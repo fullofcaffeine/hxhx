@@ -5964,6 +5964,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaSupportPreludeProgram():GenIrProgram {
+		final src = [
+			"class Support {",
+			"  public function new() {}",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var classes = [new Support()];",
+			"    classes.push(new Support());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csFunctionTypeReturnLambdaProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7366,6 +7384,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "type(kind.__hx_params) == \"table\"", "Lua enum-extract patterns should guard enum parameter storage");
 		assertContains(content, "local value = kind.__hx_params[1]", "Lua enum-extract bindings should use 1-based parameter indexing");
 		assertContains(content, "print(value)", "Lua enum-extract branch bodies should render after binding extraction");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaSupportPreludeAndArrayShape():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_support_prelude_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaSupportPreludeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "local function hxhx_array(values)", "Lua output should define the array helper before main");
+		assertContains(content, "local function __hxhx_stub_class(_name)", "Lua output should define a small support-class helper before main");
+		assertContains(content, "Support = Support or __hxhx_stub_class(\"Support\")", "Lua support classes should be available as globals");
+		assertContains(content, "local classes = hxhx_array({Support.new()})", "Lua array literals should be wrapped with push-capable tables");
+		assertContains(content, "classes.push(Support.new())", "Lua generated push call should remain source-shaped");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -13359,6 +13393,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsLambdaSequenceCallback();
 		assertLuaLambdaSequenceCallback();
 		assertLuaEnumExtractLambdaPattern();
+		assertLuaSupportPreludeAndArrayShape();
 		assertCsFunctionTypeReturnLambda();
 		assertCsFunctionTypeArgumentLambda();
 		assertCsArrayBackingAccess();
