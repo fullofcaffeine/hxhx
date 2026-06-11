@@ -3941,14 +3941,13 @@ class SourceTargetCommon {
 	}
 
 	static function tryCatchRawExpr(target:SourceNativeTarget, raw:String):String {
-		return switch (target) {
-			case Python:
-				pythonTryCatchRawExpr(raw);
-			case Php:
-				phpTryCatchRawExpr(raw);
-			case Java, Cs, Lua:
-				throw targetLabel(target) + " source backend MVP unsupported expression: ETryCatchRaw";
-		};
+		if (target == Python)
+			return pythonTryCatchRawExpr(raw);
+		if (target == Php)
+			return phpTryCatchRawExpr(raw);
+		if (target == Lua)
+			return luaTryCatchRawExpr(raw);
+		throw targetLabel(target) + " source backend MVP unsupported expression: ETryCatchRaw";
 	}
 
 	static function helperMacroProbeExpr(target:SourceNativeTarget, callee:HxExpr, args:Array<HxExpr>):Null<String> {
@@ -4743,6 +4742,45 @@ class SourceTargetCommon {
 				renderPythonTryExpr(tryBody, catches);
 			case _:
 				throw "Python source backend MVP unsupported expression: ETryCatchRaw";
+		};
+	}
+
+	static function luaTryCatchRawExpr(raw:String):String {
+		if (raw == null || raw.length == 0 || StringTools.startsWith(raw, "opaque_block_expr:"))
+			throw "Lua source backend MVP unsupported expression: ETryCatchRaw";
+		final stmts = HxParser.parseFunctionBodyText(raw);
+		if (stmts.length != 1)
+			throw "Lua source backend MVP unsupported expression: ETryCatchRaw";
+		return switch (stmts[0]) {
+			case STry(tryBody, catches, _):
+				renderLuaTryExpr(tryBody, catches);
+			case _:
+				throw "Lua source backend MVP unsupported expression: ETryCatchRaw";
+		};
+	}
+
+	static function renderLuaTryExpr(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>):String {
+		final tryExpr = luaReturningExpr(tryBody);
+		if (catches == null || catches.length == 0)
+			return "hxhx_try(function() return " + tryExpr + " end, function(__hx_err) return hxhx_throw(__hx_err) end)";
+		final c = catches[0];
+		final catchName = sanitizeTypeName(c.name);
+		final catchExpr = luaReturningExpr(c.body);
+		return "hxhx_try(function() return " + tryExpr + " end, function(" + catchName + ") return " + catchExpr + " end)";
+	}
+
+	static function luaReturningExpr(stmt:HxStmt):String {
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				if (stmts == null || stmts.length == 0) defaultValue(Lua); else luaReturningExpr(stmts[stmts.length - 1]);
+			case SExpr(expr, _) | SReturn(expr, _):
+				renderExpr(Lua, expr);
+			case SReturnVoid(_):
+				defaultValue(Lua);
+			case SThrow(expr, _):
+				"hxhx_throw(" + renderExpr(Lua, expr) + ")";
+			case _:
+				throw "Lua source backend MVP unsupported expression: ETryCatchRaw";
 		};
 	}
 
@@ -8723,6 +8761,16 @@ class SourceTargetCommon {
 			"    end",
 			"  end",
 			"  return values",
+			"end",
+			"",
+			"local function hxhx_throw(value)",
+			"  error(value, 0)",
+			"end",
+			"",
+			"local function hxhx_try(try_fn, catch_fn)",
+			"  local ok, result = pcall(try_fn)",
+			"  if ok then return result end",
+			"  return catch_fn(result)",
 			"end",
 			"",
 			"local function __hxhx_signal()",

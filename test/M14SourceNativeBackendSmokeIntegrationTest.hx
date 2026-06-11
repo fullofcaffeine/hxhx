@@ -3794,6 +3794,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaTryCatchRawExpressionProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var caught = try throw \"boom\" catch (e:String) e;",
+			"    Sys.println(caught);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function pythonTypeCheckProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -10796,6 +10810,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertLuaTryCatchRawExpression():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_try_expr_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaTryCatchRawExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "local function hxhx_throw(value)", "Lua try/catch expressions should emit the throw expression helper");
+		assertContains(content, "local function hxhx_try(try_fn, catch_fn)", "Lua try/catch expressions should emit the pcall expression helper");
+		assertContains(content, "local caught = hxhx_try(function() return hxhx_throw(\"boom\") end, function(e) return e end)",
+			"Lua raw try/catch expressions should lower through function-based pcall helpers");
+		assertContains(content, "print(caught)", "Lua try/catch expression results should remain usable by later statements");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonTypeCheck():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_type_check_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -13567,6 +13597,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpForKeyValue();
 		assertPythonForKeyValue();
 		assertPythonTryCatchRawExpression();
+		assertLuaTryCatchRawExpression();
 		assertPythonTypeCheck();
 		assertPhpTypeCheck();
 		assertPhpInterfaceCasts();
