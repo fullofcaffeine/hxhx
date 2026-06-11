@@ -6682,6 +6682,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(packagedFirstDiagnostic == null, "C# packaged first-type assembly metadata should remain valid");
 	}
 
+	static function assertCSharpUsingMetadataDiagnostics():Void {
+		final nonFirstSrc = ["interface Capability {}", "", "@:cs.using(\"System\")", "class Main {}"].join("\n");
+		final nonFirstParsed = ParserStage.parse(nonFirstSrc, "Main.hx");
+		final nonFirstDiagnostic = CSharpNoEmitDiagnostics.diagnosticForParsed(nonFirstParsed);
+		assertTrue(nonFirstDiagnostic != null, "C# non-first @:cs.using diagnostics should be detected");
+		assertContains(nonFirstDiagnostic, "Main.hx:3: characters 1-11 : @:cs.using can only be used on the first type of a module",
+			"C# diagnostics should reject @:cs.using after another module type");
+
+		final firstSrc = ["@:cs.using(\"System\")", "class Main {}"].join("\n");
+		final firstParsed = ParserStage.parse(firstSrc, "Main.hx");
+		final firstDiagnostic = CSharpNoEmitDiagnostics.diagnosticForParsed(firstParsed);
+		assertTrue(firstDiagnostic == null, "C# first-type @:cs.using metadata should remain valid");
+	}
+
 	static function assertCsRootOwnerImportLayout():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_owner_import_layout_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -13040,6 +13054,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCSharpAssemblyMetadataDiagnostics();
+		assertCSharpUsingMetadataDiagnostics();
 		assertCsRootOwnerImportLayout();
 		assertCsRuntimeShapeStubs();
 		assertCsImportedUtestShape();

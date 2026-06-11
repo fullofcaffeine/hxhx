@@ -10,8 +10,8 @@ import haxe.io.Path;
 	  Haxe diagnostic the compile-fail harness is checking.
 
 	What
-	- Scans parsed source text for the currently reached C# assembly metadata
-	  placement rules and generic-constraint incompatibility shapes.
+	- Scans parsed source text for the currently reached C# metadata placement
+	  rules and generic-constraint incompatibility shapes.
 	- Returns Haxe-style diagnostic text, or `null` when no C# diagnostic applies.
 
 	How
@@ -28,6 +28,7 @@ class CSharpNoEmitDiagnostics {
 		for (module in resolved) {
 			if (module == null)
 				continue;
+			appendUsingMetadataDiagnostics(ResolvedModule.getParsed(module), diagnostics);
 			appendAssemblyMetadataDiagnostics(ResolvedModule.getParsed(module), diagnostics);
 		}
 		for (module in resolved) {
@@ -40,6 +41,7 @@ class CSharpNoEmitDiagnostics {
 
 	public static function diagnosticForParsed(parsed:ParsedModule):Null<String> {
 		final diagnostics = new Array<String>();
+		appendUsingMetadataDiagnostics(parsed, diagnostics);
 		appendAssemblyMetadataDiagnostics(parsed, diagnostics);
 		appendIncompatibleConstraintDiagnostics(parsed, diagnostics);
 		return diagnostics.length == 0 ? null : diagnostics.join("\n");
@@ -51,6 +53,27 @@ class CSharpNoEmitDiagnostics {
 
 	public static function incompatibleConstraintDiagnosticForParsed(parsed:ParsedModule):Null<String> {
 		return diagnosticForParsed(parsed);
+	}
+
+	static function appendUsingMetadataDiagnostics(parsed:ParsedModule, diagnostics:Array<String>):Void {
+		if (parsed == null)
+			return;
+		final source = parsed.getSource();
+		if (source == null || source.length == 0 || source.indexOf("@:cs.using") < 0)
+			return;
+		final lines = source.split("\n");
+		var seenType = false;
+		for (idx in 0...lines.length) {
+			final line = lines[idx];
+			final trimmed = StringTools.trim(line);
+			if (isTypeDeclarationLine(trimmed)) {
+				seenType = true;
+				continue;
+			}
+			if (seenType && line.indexOf("@:cs.using") >= 0 && nextSignificantTypeLineIndex(lines, idx) >= 0) {
+				diagnostics.push(usingMetadataDiagnostic(parsed.getFilePath(), idx + 1, line));
+			}
+		}
 	}
 
 	static function appendAssemblyMetadataDiagnostics(parsed:ParsedModule, diagnostics:Array<String>):Void {
@@ -128,6 +151,20 @@ class CSharpNoEmitDiagnostics {
 		final endColumn = line.length + 1;
 		return diagnosticPath(filePath) + ":" + Std.string(lineNumber) + ": characters " + Std.string(startColumn) + "-" + Std.string(endColumn) + " : "
 			+ message;
+	}
+
+	static function usingMetadataDiagnostic(filePath:String, lineNumber:Int, line:String):String {
+		final marker = "@:cs.using";
+		final startColumn = line.indexOf(marker) + 1;
+		final endColumn = startColumn + marker.length;
+		return diagnosticPath(filePath)
+			+ ":"
+			+ Std.string(lineNumber)
+			+ ": characters "
+			+ Std.string(startColumn)
+			+ "-"
+			+ Std.string(endColumn)
+			+ " : @:cs.using can only be used on the first type of a module";
 	}
 
 	static function appendIncompatibleConstraintDiagnostics(parsed:ParsedModule, diagnostics:Array<String>):Void {
