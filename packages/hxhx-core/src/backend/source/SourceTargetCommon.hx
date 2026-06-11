@@ -2848,10 +2848,21 @@ class SourceTargetCommon {
 			case Php:
 				final callee = phpLambdaExpr(lambdaArgs, lambdaBody, [], phpAssignedCapturesInList(callArgs, lambdaArgs), []);
 				"(" + callee + ")(" + rendered + ")";
-			case Python, Java, Cs, Lua:
+			case Cs:
+				final callee = lambdaExpr(Cs, lambdaArgs, lambdaBody);
+				"((" + csLambdaCallDelegateType(lambdaArgs.length) + ")(" + callee + "))(" + rendered + ")";
+			case Python, Java, Lua:
 				final callee = lambdaExpr(target, lambdaArgs, lambdaBody);
 				callee + "(" + rendered + ")";
 		};
+	}
+
+	static function csLambdaCallDelegateType(arity:Int):String {
+		if (arity <= 0)
+			return "System.Func<object>";
+		final parts = [for (_ in 0...arity) "dynamic"];
+		parts.push("object");
+		return "System.Func<" + parts.join(", ") + ">";
 	}
 
 	static function arrayAccessExpr(target:SourceNativeTarget, receiver:HxExpr, index:HxExpr):String {

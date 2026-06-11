@@ -767,6 +767,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function csImmediateBlockLambdaCallProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var values = [0];",
+			"    var result = (function(addr) {",
+			"      trace(addr[0]);",
+			"      addr[0] = 42;",
+			"      return null;",
+			"    })(values);",
+			"    trace(result);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function csEntrySupportMembersProgram():GenIrProgram {
 		final src = [
 			"class HelperApi {",
@@ -6538,6 +6557,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			throw e;
 		}
 		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertCsImmediateBlockLambdaCallUsesDelegateInvoke():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_immediate_lambda_call_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("cs-native");
+		backend.emit(csImmediateBlockLambdaCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.cs"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "((System.Func<dynamic, object>)((addr) => {",
+			"C# immediately invoked block lambdas should cast to a delegate before invocation");
+		assertContains(content, "))(values)", "C# immediately invoked block lambdas should invoke the delegate with the call args");
+		assertNotContains(content, "}(values)", "C# immediately invoked block lambdas should not use invalid raw block-lambda invocation syntax");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -12905,6 +12939,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsEnumExtractSwitchExpressionUsesRuntimeShape();
 		assertCsAbstractToMapUsesGeneratedMapStub();
 		assertCsMapSetSurfaceForBalancedTreeImpl();
+		assertCsImmediateBlockLambdaCallUsesDelegateInvoke();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
 		assertCsRootOwnerImportLayout();
