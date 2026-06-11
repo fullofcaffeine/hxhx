@@ -450,10 +450,10 @@ class Stage3Compiler {
 			}
 		}
 		if (backendId == "cs-native") {
-			final constraintDiagnostic = CSharpNoEmitDiagnostics.incompatibleConstraintDiagnosticForResolved(resolved);
-			if (constraintDiagnostic != null) {
+			final csDiagnostic = CSharpNoEmitDiagnostics.diagnosticForResolved(resolved);
+			if (csDiagnostic != null) {
 				closeMacroSession();
-				return haxeDiagnosticError(constraintDiagnostic);
+				return haxeDiagnosticError(csDiagnostic);
 			}
 		}
 

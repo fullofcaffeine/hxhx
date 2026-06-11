@@ -10,20 +10,26 @@ import haxe.io.Path;
 	  Haxe diagnostic the compile-fail harness is checking.
 
 	What
-	- Scans parsed source text for the currently reached C# generic-constraint
-	  incompatibility shapes.
+	- Scans parsed source text for the currently reached C# assembly metadata
+	  placement rules and generic-constraint incompatibility shapes.
 	- Returns Haxe-style diagnostic text, or `null` when no C# diagnostic applies.
 
 	How
 	- This is deliberately source-level and narrow. The bootstrap AST does not yet
-	  model class type-parameter constraints, so the validator reads declaration
-	  lines directly and reports the whole class declaration range.
+	  model every C# target metadata/constraint detail, so the validator reads
+	  declaration lines directly and reports the same declaration spans that the
+	  C# compile-fail fixtures expect.
 **/
 class CSharpNoEmitDiagnostics {
-	public static function incompatibleConstraintDiagnosticForResolved(resolved:Array<ResolvedModule>):Null<String> {
+	public static function diagnosticForResolved(resolved:Array<ResolvedModule>):Null<String> {
 		if (resolved == null)
 			return null;
 		final diagnostics = new Array<String>();
+		for (module in resolved) {
+			if (module == null)
+				continue;
+			appendAssemblyMetadataDiagnostics(ResolvedModule.getParsed(module), diagnostics);
+		}
 		for (module in resolved) {
 			if (module == null)
 				continue;
@@ -32,10 +38,96 @@ class CSharpNoEmitDiagnostics {
 		return diagnostics.length == 0 ? null : diagnostics.join("\n");
 	}
 
-	public static function incompatibleConstraintDiagnosticForParsed(parsed:ParsedModule):Null<String> {
+	public static function diagnosticForParsed(parsed:ParsedModule):Null<String> {
 		final diagnostics = new Array<String>();
+		appendAssemblyMetadataDiagnostics(parsed, diagnostics);
 		appendIncompatibleConstraintDiagnostics(parsed, diagnostics);
 		return diagnostics.length == 0 ? null : diagnostics.join("\n");
+	}
+
+	public static function incompatibleConstraintDiagnosticForResolved(resolved:Array<ResolvedModule>):Null<String> {
+		return diagnosticForResolved(resolved);
+	}
+
+	public static function incompatibleConstraintDiagnosticForParsed(parsed:ParsedModule):Null<String> {
+		return diagnosticForParsed(parsed);
+	}
+
+	static function appendAssemblyMetadataDiagnostics(parsed:ParsedModule, diagnostics:Array<String>):Void {
+		if (parsed == null)
+			return;
+		final source = parsed.getSource();
+		if (source == null || source.length == 0 || source.indexOf("@:cs.assembly") < 0)
+			return;
+		final lines = source.split("\n");
+		final isTopLevelModule = !hasNamedPackage(lines);
+		var seenType = false;
+		for (idx in 0...lines.length) {
+			final line = lines[idx];
+			final trimmed = StringTools.trim(line);
+			if (isTypeDeclarationLine(trimmed)) {
+				seenType = true;
+				continue;
+			}
+			final typeLineIndex = nextSignificantTypeLineIndex(lines, idx);
+			if (line.indexOf("@:cs.assemblyMeta") >= 0 && typeLineIndex >= 0 && isTopLevelModule) {
+				diagnostics.push(assemblyMetadataDiagnostic(parsed.getFilePath(), typeLineIndex + 1, lines[typeLineIndex],
+					"@:cs.assemblyMeta cannot be used on top level modules"));
+			}
+			if (line.indexOf("@:cs.assemblyStrict") >= 0 && typeLineIndex >= 0) {
+				if (seenType)
+					diagnostics.push(assemblyMetadataDiagnostic(parsed.getFilePath(), typeLineIndex + 1, lines[typeLineIndex],
+						"@:cs.assemblyStrict can only be used on the first class of a module"));
+				if (isTopLevelModule)
+					diagnostics.push(assemblyMetadataDiagnostic(parsed.getFilePath(), typeLineIndex + 1, lines[typeLineIndex],
+						"@:cs.assemblyStrict cannot be used on top level modules"));
+			}
+		}
+	}
+
+	static function hasNamedPackage(lines:Array<String>):Bool {
+		for (line in lines) {
+			final trimmed = StringTools.trim(line);
+			if (trimmed.length == 0 || StringTools.startsWith(trimmed, "//"))
+				continue;
+			if (!StringTools.startsWith(trimmed, "package"))
+				return false;
+			return trimmed != "package;" && trimmed.length > "package".length + 1;
+		}
+		return false;
+	}
+
+	static function nextSignificantTypeLineIndex(lines:Array<String>, metadataIndex:Int):Int {
+		var idx = metadataIndex + 1;
+		while (idx < lines.length) {
+			final trimmed = StringTools.trim(lines[idx]);
+			if (trimmed.length == 0 || StringTools.startsWith(trimmed, "//")) {
+				idx++;
+				continue;
+			}
+			if (StringTools.startsWith(trimmed, "@:")) {
+				idx++;
+				continue;
+			}
+			return isTypeDeclarationLine(trimmed) ? idx : -1;
+		}
+		return -1;
+	}
+
+	static function isTypeDeclarationLine(trimmed:String):Bool {
+		return StringTools.startsWith(trimmed, "class ")
+			|| StringTools.startsWith(trimmed, "enum ")
+			|| StringTools.startsWith(trimmed, "abstract ")
+			|| StringTools.startsWith(trimmed, "typedef ")
+			|| StringTools.startsWith(trimmed, "interface ");
+	}
+
+	static function assemblyMetadataDiagnostic(filePath:String, lineNumber:Int, line:String, message:String):String {
+		final trimmed = StringTools.trim(line);
+		final startColumn = line.indexOf(trimmed) + 1;
+		final endColumn = line.length + 1;
+		return diagnosticPath(filePath) + ":" + Std.string(lineNumber) + ": characters " + Std.string(startColumn) + "-" + Std.string(endColumn) + " : "
+			+ message;
 	}
 
 	static function appendIncompatibleConstraintDiagnostics(parsed:ParsedModule, diagnostics:Array<String>):Void {
@@ -82,5 +174,20 @@ class CSharpNoEmitDiagnostics {
 		if (filePath == null || filePath.length == 0)
 			return "<unknown>";
 		return Path.withoutDirectory(filePath);
+	}
+
+	static function diagnosticPath(filePath:String):String {
+		if (filePath == null || filePath.length == 0)
+			return "<unknown>";
+		final normalizedPath = Path.normalize(filePath);
+		final normalizedCwd = Path.normalize(Sys.getCwd());
+		if (StringTools.startsWith(normalizedPath, normalizedCwd)) {
+			var relativePath = normalizedPath.substr(normalizedCwd.length);
+			if (StringTools.startsWith(relativePath, "/"))
+				relativePath = relativePath.substr(1);
+			if (relativePath.length > 0)
+				return relativePath;
+		}
+		return normalizedPath;
 	}
 }

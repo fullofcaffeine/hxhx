@@ -1725,7 +1725,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "sys.thread.RegularEvent" (fun () -> Obj.repr (Sys_thread_EventLoop.regularevent___empty ()));
   HxType.register_class_empty_ctor "sys.thread.Thread" (fun () -> Obj.repr (Sys_thread_Thread.__empty ()));
   HxType.register_class_instance_fields "CSharpNoEmitDiagnostics" [];
-  HxType.register_class_static_fields "CSharpNoEmitDiagnostics" [ "appendIncompatibleConstraintDiagnostics"; "diagnosticFileName"; "incompatibleConstraintDiagnosticForLine"; "incompatibleConstraintDiagnosticForParsed"; "incompatibleConstraintDiagnosticForResolved" ];
+  HxType.register_class_static_fields "CSharpNoEmitDiagnostics" [ "appendAssemblyMetadataDiagnostics"; "appendIncompatibleConstraintDiagnostics"; "assemblyMetadataDiagnostic"; "diagnosticFileName"; "diagnosticForParsed"; "diagnosticForResolved"; "diagnosticPath"; "hasNamedPackage"; "incompatibleConstraintDiagnosticForLine"; "incompatibleConstraintDiagnosticForParsed"; "incompatibleConstraintDiagnosticForResolved"; "isTypeDeclarationLine"; "nextSignificantTypeLineIndex" ];
   HxType.register_class_instance_fields "CompilerDriver" [];
   HxType.register_class_static_fields "CompilerDriver" [ "run" ];
   HxType.register_class_instance_fields "EmitterStage" [];

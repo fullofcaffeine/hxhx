@@ -6637,6 +6637,51 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"C# diagnostics should report unmanaged/new incompatibility at the class declaration");
 	}
 
+	static function assertCSharpAssemblyMetadataDiagnostics():Void {
+		final rootSrc = [
+			"@:cs.assemblyMeta(Test)",
+			"class RootMain {}",
+			"",
+			"@:cs.assemblyStrict(cs.system.reflection.AssemblyDelaySignAttribute(true))",
+			"class RootSecond {}"
+		].join("\n");
+		final rootParsed = ParserStage.parse(rootSrc, "Main.hx");
+		final rootDiagnostic = CSharpNoEmitDiagnostics.diagnosticForParsed(rootParsed);
+		assertTrue(rootDiagnostic != null, "C# root module assembly metadata diagnostics should be detected");
+		assertContains(rootDiagnostic, "Main.hx:2: characters 1-18 : @:cs.assemblyMeta cannot be used on top level modules",
+			"C# diagnostics should reject assembly metadata on root module type declarations");
+		assertContains(rootDiagnostic, "Main.hx:5: characters 1-20 : @:cs.assemblyStrict can only be used on the first class of a module",
+			"C# diagnostics should reject strict assembly metadata after another module type declaration");
+		assertContains(rootDiagnostic, "Main.hx:5: characters 1-20 : @:cs.assemblyStrict cannot be used on top level modules",
+			"C# diagnostics should reject strict assembly metadata on root module type declarations");
+
+		final packagedNonFirstSrc = [
+			"package fail;",
+			"",
+			"enum Earlier {}",
+			"",
+			"@:cs.assemblyStrict(cs.system.reflection.AssemblyDelaySignAttribute(true))",
+			"class Later {}"
+		].join("\n");
+		final packagedNonFirstParsed = ParserStage.parse(packagedNonFirstSrc, "src/fail/Later.hx");
+		final packagedNonFirstDiagnostic = CSharpNoEmitDiagnostics.diagnosticForParsed(packagedNonFirstParsed);
+		assertTrue(packagedNonFirstDiagnostic != null, "C# packaged non-first assembly metadata diagnostics should be detected");
+		assertContains(packagedNonFirstDiagnostic,
+			"src/fail/Later.hx:6: characters 1-15 : @:cs.assemblyStrict can only be used on the first class of a module",
+			"C# diagnostics should reject strict assembly metadata after a packaged module type declaration");
+
+		final packagedFirstSrc = [
+			"package pack;",
+			"",
+			"@:cs.assemblyMeta(System.Reflection.AssemblyDefaultAliasAttribute(\"test\"))",
+			"@:cs.assemblyStrict(cs.system.reflection.AssemblyDelaySignAttribute(true))",
+			"class Main {}"
+		].join("\n");
+		final packagedFirstParsed = ParserStage.parse(packagedFirstSrc, "src/pack/Main.hx");
+		final packagedFirstDiagnostic = CSharpNoEmitDiagnostics.diagnosticForParsed(packagedFirstParsed);
+		assertTrue(packagedFirstDiagnostic == null, "C# packaged first-type assembly metadata should remain valid");
+	}
+
 	static function assertCsRootOwnerImportLayout():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_cs_owner_import_layout_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -12994,6 +13039,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertCsImmediateBlockLambdaCallUsesDelegateInvoke();
 		assertCsNoCompilationNoMainSourceSet();
 		assertCSharpConstraintDiagnostics();
+		assertCSharpAssemblyMetadataDiagnostics();
 		assertCsRootOwnerImportLayout();
 		assertCsRuntimeShapeStubs();
 		assertCsImportedUtestShape();

@@ -381,7 +381,7 @@ let runOne = fun args -> try let __fallback_result_180 = let tempStruct = ref (O
                                   )) else ());
                                   raise (HxRuntime.Hx_return (Obj.repr (haxeDiagnosticError (overloadDiagnostic : string))))
                                 )) else ()) else ());
-                                ignore (if HxString.equals backendId "cs-native" then ignore (let constraintDiagnostic = (CSharpNoEmitDiagnostics.incompatibleConstraintDiagnosticForResolved (Obj.magic (!tempArray1)) : string) in if constraintDiagnostic != Obj.magic (HxRuntime.hx_null) then ignore ((
+                                ignore (if HxString.equals backendId "cs-native" then ignore (let csDiagnostic = (CSharpNoEmitDiagnostics.diagnosticForResolved (Obj.magic (!tempArray1)) : string) in if csDiagnostic != Obj.magic (HxRuntime.hx_null) then ignore ((
                                   ignore (if Obj.magic (!macroSession) != Obj.magic (HxRuntime.hx_null) then ignore ((
                                     ignore (Obj.obj (HxAnon.get (Obj.magic (!macroSession)) "close") ());
                                     let __assign_65 = Obj.magic (HxRuntime.hx_null) in (
@@ -389,7 +389,7 @@ let runOne = fun args -> try let __fallback_result_180 = let tempStruct = ref (O
                                       __assign_65
                                     )
                                   )) else ());
-                                  raise (HxRuntime.Hx_return (Obj.repr (haxeDiagnosticError (constraintDiagnostic : string))))
+                                  raise (HxRuntime.Hx_return (Obj.repr (haxeDiagnosticError (csDiagnostic : string))))
                                 )) else ()) else ());
                                 let anyBuildMacros = ref false in let buildExprsAll = Obj.magic (HxArray.create ()) in (
                                   ignore (let _g = ref 0 in while !_g < HxArray.length (!tempArray1) do ignore (let m = Obj.magic (HxArray.get (Obj.magic (!tempArray1)) (!_g)) in (
