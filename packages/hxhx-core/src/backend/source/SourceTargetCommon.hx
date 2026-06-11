@@ -7844,7 +7844,22 @@ class SourceTargetCommon {
 			case Cs:
 				renderCStyleSwitchStmtInto(target, scrutineeExpr, patterns, bodies, count, indent, childIndent, out);
 			case Lua:
-				throw targetLabel(target) + " source backend MVP unsupported statement: SSwitch";
+				if (count == 0)
+					return out;
+				final switchValue = "__hxhx_switch";
+				out.push(indent + "local " + switchValue + " = " + scrutineeExpr);
+				for (i in 0...count) {
+					final lowered = lowerSourceSwitchPattern(target, patterns[i], switchValue);
+					final keyword = i == 0 ? "if" : "elseif";
+					out.push(indent + keyword + " " + lowered.cond + " then");
+					for (binding in lowered.bindings) {
+						final bindName = sanitizeTypeName(binding.name);
+						out.push(childIndent + varDecl(target, bindName, binding.expr));
+					}
+					for (line in renderStmt(target, bodies[i], childIndent))
+						out.push(line);
+				}
+				out.push(indent + "end");
 		}
 		return out;
 	}

@@ -13355,6 +13355,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertLuaSwitchStatement():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_switch_stmt_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "local __hxhx_switch = \"python\"", "Lua switch statements should evaluate the scrutinee once");
+		assertContains(content, "if (__hxhx_switch == \"python\") then", "Lua switch statements should lower the first pattern as an if");
+		assertContains(content, "print(\"py\")", "Lua switch statement branch bodies should render");
+		assertContains(content, "elseif true then", "Lua wildcard switch branches should lower as an elseif true catch-all");
+		assertContains(content, "print(\"other\")", "Lua later switch statement branches should still render");
+		deleteRecursive(tmpRoot);
+	}
+
 	static function main():Void {
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
@@ -13634,5 +13650,6 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaUtilityProcessRuntime();
 		assertJavaFileSystemFullPathResolvesSymlink();
 		assertPhpSwitchStatement();
+		assertLuaSwitchStatement();
 	}
 }
