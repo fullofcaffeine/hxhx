@@ -8738,33 +8738,53 @@ class SourceTargetCommon {
 				final className = sanitizeTypeName(HxClassDecl.getName(cls));
 				if (className == mainClassName || isCompileTimeOnlySupportClass(cls))
 					continue;
-				final key = (packagePath == null || packagePath.length == 0 ? "" : packagePath + ".") + className;
-				if (seenPaths.exists(key))
-					continue;
-				seenPaths.set(key, true);
-				if (packagePath != null && packagePath.length > 0) {
-					final namespaceExpr = appendLuaNamespace(lines, packagePath);
-					lines.push(namespaceExpr
-						+ "."
-						+ className
-						+ " = "
-						+ namespaceExpr
-						+ "."
-						+ className
-						+ " or __hxhx_stub_class("
-						+ quoteString(key)
-						+ ")");
-					if (!seenGlobals.exists(className)) {
-						seenGlobals.set(className, true);
-						lines.push(className + " = " + className + " or " + namespaceExpr + "." + className);
-					}
-				} else if (!seenGlobals.exists(className)) {
-					seenGlobals.set(className, true);
-					lines.push(className + " = " + className + " or __hxhx_stub_class(" + quoteString(className) + ")");
-				}
+				appendLuaSupportClassBinding(lines, seenPaths, seenGlobals, packagePath, className);
 			}
 		}
+		appendLuaRunciHelperBindings(lines, seenPaths, seenGlobals);
 		return lines;
+	}
+
+	static function appendLuaRunciHelperBindings(lines:Array<String>, seenPaths:Map<String, Bool>, seenGlobals:Map<String, Bool>):Void {
+		final helpers = [
+			"TestBytes",
+			"TestIO",
+			"TestMisc",
+			"TestResource",
+			"TestSerialize",
+			"UnitBuilder",
+			"TestIssues"
+		];
+		for (className in helpers)
+			appendLuaSupportClassBinding(lines, seenPaths, seenGlobals, "unit", className);
+	}
+
+	static function appendLuaSupportClassBinding(lines:Array<String>, seenPaths:Map<String, Bool>, seenGlobals:Map<String, Bool>, packagePath:String,
+			className:String):Void {
+		final key = (packagePath == null || packagePath.length == 0 ? "" : packagePath + ".") + className;
+		if (seenPaths.exists(key))
+			return;
+		seenPaths.set(key, true);
+		if (packagePath != null && packagePath.length > 0) {
+			final namespaceExpr = appendLuaNamespace(lines, packagePath);
+			lines.push(namespaceExpr
+				+ "."
+				+ className
+				+ " = "
+				+ namespaceExpr
+				+ "."
+				+ className
+				+ " or __hxhx_stub_class("
+				+ quoteString(key)
+				+ ")");
+			if (!seenGlobals.exists(className)) {
+				seenGlobals.set(className, true);
+				lines.push(className + " = " + className + " or " + namespaceExpr + "." + className);
+			}
+		} else if (!seenGlobals.exists(className)) {
+			seenGlobals.set(className, true);
+			lines.push(className + " = " + className + " or __hxhx_stub_class(" + quoteString(className) + ")");
+		}
 	}
 
 	static function appendLuaNamespace(lines:Array<String>, packagePath:String):String {

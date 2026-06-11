@@ -7398,6 +7398,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "local function hxhx_array(values)", "Lua output should define the array helper before main");
 		assertContains(content, "local function __hxhx_stub_class(_name)", "Lua output should define a small support-class helper before main");
 		assertContains(content, "Support = Support or __hxhx_stub_class(\"Support\")", "Lua support classes should be available as globals");
+		assertContains(content, "unit.UnitBuilder = unit.UnitBuilder or __hxhx_stub_class(\"unit.UnitBuilder\")",
+			"Lua output should provide explicit unit helper globals skipped by compile-time-only filtering");
 		assertContains(content, "local classes = hxhx_array({Support.new()})", "Lua array literals should be wrapped with push-capable tables");
 		assertContains(content, "classes.push(Support.new())", "Lua generated push call should remain source-shaped");
 		deleteRecursive(tmpRoot);
