@@ -7614,6 +7614,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "local function __hxhx_sys_args()", "Lua output should expose focused Sys.args support");
 		assertContains(content, "local function __hxhx_sys_stderr()", "Lua output should expose focused Sys.stderr support");
 		assertContains(content, "local function __hxhx_process_new(command, args)", "Lua output should expose focused sys.io.Process support");
+		assertContains(content, "__HXHX_EXIT_CODE__", "Lua process helper should append an explicit shell exit-code marker");
+		assertContains(content, "exit_code = tonumber(parsed) or exit_code", "Lua process helper should parse the explicit child exit-code marker");
 		assertContains(content, "Sys.args = Sys.args or __hxhx_sys_args", "Lua output should wire Sys.args through the focused helper");
 		assertContains(content, "Sys.stderr = Sys.stderr or __hxhx_sys_stderr", "Lua output should wire Sys.stderr through the focused helper");
 		assertContains(content, "sys.io.Process.new = sys.io.Process.new or __hxhx_process_new",

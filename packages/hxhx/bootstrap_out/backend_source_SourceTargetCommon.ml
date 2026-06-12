@@ -17814,7 +17814,7 @@ let renderLuaSupportPrelude = fun program decl mainClassName -> (
     ignore (HxArray.push __arr_4089 "  for _, value in ipairs(args or {}) do");
     ignore (HxArray.push __arr_4089 "    cmd = cmd .. \" \" .. __hxhx_shell_quote(value)");
     ignore (HxArray.push __arr_4089 "  end");
-    ignore (HxArray.push __arr_4089 "  local handle = io.popen(cmd .. \" 2>&1\", \"r\")");
+    ignore (HxArray.push __arr_4089 "  local handle = io.popen(cmd .. \" 2>&1; printf '\\n__HXHX_EXIT_CODE__:%s\\n' $?\", \"r\")");
     ignore (HxArray.push __arr_4089 "  local output = \"\"");
     ignore (HxArray.push __arr_4089 "  local exit_code = 1");
     ignore (HxArray.push __arr_4089 "  if handle ~= nil then");
@@ -17823,6 +17823,12 @@ let renderLuaSupportPrelude = fun program decl mainClassName -> (
     ignore (HxArray.push __arr_4089 "    if type(ok) == \"number\" then exit_code = ok");
     ignore (HxArray.push __arr_4089 "    elseif ok == true then exit_code = 0");
     ignore (HxArray.push __arr_4089 "    elseif type(code) == \"number\" then exit_code = code end");
+    ignore (HxArray.push __arr_4089 "    local marker_start, _, parsed = string.find(output, \"\\n__HXHX_EXIT_CODE__:(%d+)\\n$\")");
+    ignore (HxArray.push __arr_4089 "    if parsed == nil then marker_start, _, parsed = string.find(output, \"\\n__HXHX_EXIT_CODE__:(%d+)$\") end");
+    ignore (HxArray.push __arr_4089 "    if parsed ~= nil then");
+    ignore (HxArray.push __arr_4089 "      exit_code = tonumber(parsed) or exit_code");
+    ignore (HxArray.push __arr_4089 "      output = string.sub(output, 1, marker_start - 1)");
+    ignore (HxArray.push __arr_4089 "    end");
     ignore (HxArray.push __arr_4089 "  end");
     ignore (HxArray.push __arr_4089 "  return {");
     ignore (HxArray.push __arr_4089 "    stderr = __hxhx_line_stream(output),");
