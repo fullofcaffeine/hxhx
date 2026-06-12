@@ -2667,7 +2667,16 @@ let emitFileSystemStaticFunctionBody = fun writer fnName params -> try let __fal
   | "isDirectory" -> ignore ((
     ignore (if HxArray.length params < 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let path = (HxArray.get (Obj.magic params) 0 : string) in (
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("try {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
       ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("return require(\"fs\").statSync(" ^ HxString.toStdString path) ^ ").isDirectory();" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("} catch (__hx_error) {" : string));
+      ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("if (__hx_error != null && (__hx_error.code === \"ENOENT\" || __hx_error.code === \"ENOTDIR\")) return false;" : string));
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("throw __hx_error;" : string));
+      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+      ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string));
       raise (HxRuntime.Hx_return (Obj.repr true))
     )
   ))

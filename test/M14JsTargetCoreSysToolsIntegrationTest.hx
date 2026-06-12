@@ -79,7 +79,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 	static function fileSystemModule():TypedModule {
 		final pathArg = new HxFunctionArg("path", "String", HxDefaultValue.NoDefault);
 		final fsClass = new HxClassDecl("FileSystem", false, [
-			new HxFunctionDecl("exists", HxVisibility.Public, true, [pathArg], "Bool", unsupportedBody("[js-native:unsupported_expr] kind=ETryCatchRaw"), "")
+			new HxFunctionDecl("exists", HxVisibility.Public, true, [pathArg], "Bool", unsupportedBody("[js-native:unsupported_expr] kind=ETryCatchRaw"), ""),
+			new HxFunctionDecl("isDirectory", HxVisibility.Public, true, [pathArg], "Bool", unsupportedBody("[js-native:unsupported_expr] kind=ETryCatchRaw"),
+				"")
 		]);
 		final decl = new HxModuleDecl("sys", [], fsClass, [fsClass], false, false);
 		return typedModule("", decl, "sys/FileSystem.hx");
@@ -1262,10 +1264,13 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println(Lambda.flatten([[1, 2], [3]]).join(","));',
 				'    Sys.println(Lambda.filter([1, 2, 3, 4], function(i) return i > 2).join(","));',
 				'    Sys.println(FileSystem.exists("."));',
+				'    Sys.println("cwd-is-dir=" + FileSystem.isDirectory("."));',
+				'    Sys.println("missing-is-dir=" + FileSystem.isDirectory(Path.join([Sys.getCwd(), "missing-dir-probe.hxml"])));',
 				'    Sys.println("args-len=" + Sys.args().length);',
 				'    var oldCwd = Sys.getCwd();',
-				'    var fileProbe = Path.join([oldCwd, "file-probe.txt"]);',
+				'    var fileProbe = Path.join([oldCwd, "' + tmpRoot + '/file-probe.txt"]);',
 				'    File.saveContent(fileProbe, "alpha");',
+				'    Sys.println("file-is-dir=" + FileSystem.isDirectory(fileProbe));',
 				'    Sys.println("file-content=" + File.getContent(fileProbe));',
 				'    File.copy(fileProbe, fileProbe + ".copy");',
 				'    Sys.println("file-copy=" + File.getContent(fileProbe + ".copy"));',
@@ -1544,6 +1549,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(js, "__hx_cls_haxe_SysTools.quoteWinArg = function", "SysTools quoteWinArg shim should emit");
 			assertContains(js, "__hx_cls_haxe_io_Path.normalize = function", "Path normalize shim should emit");
 			assertContains(js, "__hx_cls_sys_FileSystem.exists = function", "FileSystem exists shim should emit");
+			assertContains(js, "__hx_cls_sys_FileSystem.isDirectory = function", "FileSystem isDirectory shim should emit");
+			assertContains(js, "__hx_error.code === \"ENOENT\" || __hx_error.code === \"ENOTDIR\"",
+				"FileSystem.isDirectory should return false for missing paths without swallowing unrelated errors");
 			assertContains(js, "__hx_cls_sys_io_File.getContent = function", "sys.io.File getContent shim should emit");
 			assertContains(js, "readFileSync(path, \"utf8\")", "sys.io.File.getContent should use Node fs readFileSync");
 			assertContains(js, "__hx_cls_sys_io_File.saveContent = function", "sys.io.File saveContent shim should emit");
@@ -1788,6 +1796,9 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "1,2,3", "Lambda.flatten should concatenate nested iterables");
 			assertContains(stdout, "3,4", "Lambda.filter should preserve matching items");
 			assertContains(stdout, "true", "FileSystem.exists should use Node fs existsSync");
+			assertContains(stdout, "cwd-is-dir=true", "FileSystem.isDirectory should report directories");
+			assertContains(stdout, "missing-is-dir=false", "FileSystem.isDirectory should return false for missing paths");
+			assertContains(stdout, "file-is-dir=false", "FileSystem.isDirectory should return false for existing files");
 			assertContains(stdout, "args-len=0", "Sys.args should return an empty array when Node receives no script arguments");
 			assertContains(stdout, "file-content=alpha", "sys.io.File.getContent should read UTF-8 content under Node");
 			assertContains(stdout, "file-copy=alpha", "sys.io.File.copy should copy readable content under Node");

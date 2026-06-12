@@ -2851,7 +2851,16 @@ class JsTargetCore implements ITargetCore {
 				if (params.length < 1)
 					return false;
 				final path = params[0];
+				writer.writeln("try {");
+				writer.pushIndent();
 				writer.writeln("return require(\"fs\").statSync(" + path + ").isDirectory();");
+				writer.popIndent();
+				writer.writeln("} catch (__hx_error) {");
+				writer.pushIndent();
+				writer.writeln("if (__hx_error != null && (__hx_error.code === \"ENOENT\" || __hx_error.code === \"ENOTDIR\")) return false;");
+				writer.writeln("throw __hx_error;");
+				writer.popIndent();
+				writer.writeln("}");
 				return true;
 			case "readDirectory":
 				if (params.length < 1)
