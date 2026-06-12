@@ -5713,8 +5713,15 @@ class SourceTargetCommon {
 					+ ")"; else if (phpRuntimeMapType(typePath)) phpRuntimeMapConstructorExpr(typePath,
 					rendered); else if (phpRuntimeListType(typePath)) "new List_(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
 			case Lua:
-				if (typePath == "String" && args.length == 1) "tostring(" + renderExpr(Lua, args[0]) + ")"; else safeType + ".new(" + rendered + ")";
+				if (typePath == "String" && args.length == 1) "tostring(" + renderExpr(Lua,
+					args[0]) + ")"; else if (luaArrayConstructorTypePath(typePath)
+					&& args.length == 0) "hxhx_array({})"; else safeType + ".new(" + rendered + ")";
 		};
+	}
+
+	static function luaArrayConstructorTypePath(typePath:String):Bool {
+		final compact = removeTypeHintWhitespace(typePath == null ? "" : typePath);
+		return compact == "Array" || StringTools.startsWith(compact, "Array<");
 	}
 
 	static function csNativeArrayTypePath(typePath:String):Bool {

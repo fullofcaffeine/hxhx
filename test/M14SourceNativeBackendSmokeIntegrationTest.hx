@@ -5985,9 +5985,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"}",
 			"",
 			"class Main {",
+			"  static final cached = new Array<() -> Void>();",
 			"  static function main() {",
+			"    var empty = new Array<String>();",
+			"    empty.push(\"ok\");",
+			"    cached.push(function() Sys.println(empty[0]));",
 			"    var classes = [new Support()];",
 			"    classes.push(new Support());",
+			"    cached[0]();",
 			"  }",
 			"}",
 		].join("\n");
@@ -7591,8 +7596,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "Support = Support or __hxhx_stub_class(\"Support\")", "Lua support classes should be available as globals");
 		assertContains(content, "unit.UnitBuilder = unit.UnitBuilder or __hxhx_stub_class(\"unit.UnitBuilder\")",
 			"Lua output should provide explicit unit helper globals skipped by compile-time-only filtering");
+		assertContains(content, "local cached = hxhx_array({})", "Lua static Array constructors should lower to the array helper");
+		assertContains(content, "local empty = hxhx_array({})", "Lua local Array constructors should lower to the array helper");
 		assertContains(content, "local classes = hxhx_array({Support.new()})", "Lua array literals should be wrapped with push-capable tables");
+		assertContains(content, "empty.push(\"ok\")", "Lua constructed arrays should retain push support through the helper");
 		assertContains(content, "classes.push(Support.new())", "Lua generated push call should remain source-shaped");
+		assertNotContains(content, "Array.new()", "Lua empty Array constructors should not require a global Array class");
 		assertContains(content, "local __hxhx_traceback = (debug and debug.traceback) or tostring",
 			"Lua entrypoints should install a traceback handler before running main");
 		assertContains(content, "local __hxhx_ok, __hxhx_error = xpcall(main, __hxhx_traceback)",
