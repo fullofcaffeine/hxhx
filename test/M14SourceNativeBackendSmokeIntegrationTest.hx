@@ -6051,6 +6051,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaIssue9530StringMethodProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static var f = \"field\";",
+			"  static function main() {",
+			"    var sclass = new String(\"foo\");",
+			"    var scl = sclass.toUpperCase();",
+			"    Sys.println(scl);",
+			"    var f2 = f.toUpperCase();",
+			"    Sys.println(f2);",
+			"    var str = \"str\".toUpperCase();",
+			"    Sys.println(str);",
+			"    var isS = \"sss\".startsWith(\"s\");",
+			"    Sys.println(Std.string(isS));",
+			"    var i = \"foo\".indexOf(\"\");",
+			"    Sys.println(Std.string(i));",
+			"    Sys.println((\"dyn\" : Dynamic).toUpperCase());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function luaERegRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7657,13 +7682,45 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"Lua string method lookup should expose substr through the helper");
 		assertContains(content, "if key == \"startsWith\" then return function(prefix) return __hxhx_string_starts_with(value, prefix) end end",
 			"Lua string method lookup should expose startsWith through the helper");
-		assertContains(content, "print(text.substr(1, 3))", "Lua string substr calls should keep source shape against the runtime hook");
-		assertContains(content, "print(text.substr((-2)))", "Lua string substr calls without length should keep source shape against the runtime hook");
-		assertContains(content, "print(tostring(text.startsWith(\"abc\")))", "Lua string startsWith calls should keep source shape against the runtime hook");
+		assertContains(content, "print(__hxhx_string_substr(text, 1, 3))", "Lua string substr calls should lower through the focused helper");
+		assertContains(content, "print(__hxhx_string_substr(text, (-2)))", "Lua string substr calls without length should lower through the focused helper");
+		assertContains(content, "print(tostring(__hxhx_string_starts_with(text, \"abc\")))",
+			"Lua string startsWith calls should lower through the focused helper");
 		if (commandExists("lua")) {
 			final run = commandOutput("lua", [outputPath]);
 			assertTrue(run.code == 0, "generated Lua string substr support should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "bcd\nef\ntrue\nfalse\n", "generated Lua string method output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaIssue9530StringMethods():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_issue9530_string_methods_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaIssue9530StringMethodProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "local function __hxhx_string_index_of(value, needle, start)", "Lua output should expose focused indexOf support");
+		assertContains(content, "local function __hxhx_string_to_upper_case(value)", "Lua output should expose focused toUpperCase support");
+		assertContains(content, "local f = \"field\"", "Lua same-class static string fields should initialize before main");
+		assertContains(content, "local sclass = tostring(\"foo\")", "Lua String.new should lower to a plain string value");
+		assertContains(content, "local scl = __hxhx_string_to_upper_case(sclass)", "Lua local string toUpperCase should use helper lowering");
+		assertContains(content, "local f2 = __hxhx_string_to_upper_case(f)", "Lua static string field toUpperCase should use helper lowering");
+		assertContains(content, "local str = __hxhx_string_to_upper_case(\"str\")", "Lua literal toUpperCase should not emit invalid literal field syntax");
+		assertContains(content, "local isS = __hxhx_string_starts_with(\"sss\", \"s\")", "Lua literal startsWith should use helper lowering");
+		assertContains(content, "local i = __hxhx_string_index_of(\"foo\", \"\")", "Lua literal indexOf should use helper lowering");
+		assertContains(content, "print(__hxhx_string_to_upper_case(\"dyn\"))", "Lua dynamic-cast string toUpperCase should use helper lowering");
+		assertNotContains(content, "\"str\".toUpperCase", "Lua should not emit invalid string-literal member calls");
+		assertNotContains(content, "\"sss\".startsWith", "Lua should not emit invalid string-literal startsWith calls");
+		assertNotContains(content, "\"foo\".indexOf", "Lua should not emit invalid string-literal indexOf calls");
+		assertNotContains(content, "\"dyn\".toUpperCase", "Lua should not emit invalid dynamic string-literal member calls");
+		assertNotContains(content, "String.new(\"foo\")", "Lua should not require a String runtime class for String.new literals");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "generated Lua Issue9530 string method support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "FOO\nFIELD\nSTR\ntrue\n0\nDYN\n", "generated Lua Issue9530 output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -13807,6 +13864,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLuaReflectStringMethodSupport();
 		assertLuaSysProcessSupport();
 		assertLuaStringSubstrSupport();
+		assertLuaIssue9530StringMethods();
 		assertLuaERegRuntime();
 		assertLuaStringBoolConcat();
 		assertLuaStaticHelperCalls();

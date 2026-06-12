@@ -2473,6 +2473,16 @@ class SourceTargetCommon {
 					}
 				}
 			case Python, Java, Cs, Lua:
+				if (target == Lua) {
+					switch (receiver) {
+						case EIdent("String") if (field == "new" && args.length == 1):
+							return "tostring(" + renderExpr(Lua, args[0]) + ")";
+						case _:
+					}
+					final stringCall = luaStringFieldCall(receiver, field, args);
+					if (stringCall != null)
+						return stringCall;
+				}
 				if (target == Cs) {
 					switch (receiver) {
 						case EField(EIdent("cs"), "Lib"):
@@ -2880,6 +2890,54 @@ class SourceTargetCommon {
 		return phpRenderStringExtensionMethodsByField.exists(clean) ? phpRenderStringExtensionMethodsByField.get(clean) : null;
 	}
 
+	static function luaStringFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		if (!luaStringFieldReceiver(receiver, field))
+			return null;
+		final renderedReceiver = renderExpr(Lua, receiver);
+		final renderedArgs = [for (arg in args) renderExpr(Lua, arg)];
+		return switch (field) {
+			case "indexOf" if (args.length == 1 || args.length == 2):
+				"__hxhx_string_index_of(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "substr" if (args.length == 1 || args.length == 2):
+				"__hxhx_string_substr(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "startsWith" if (args.length == 1):
+				"__hxhx_string_starts_with(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "toUpperCase" if (args.length == 0):
+				"__hxhx_string_to_upper_case(" + renderedReceiver + ")";
+			case "toLowerCase" if (args.length == 0):
+				"__hxhx_string_to_lower_case(" + renderedReceiver + ")";
+			case _:
+				null;
+		};
+	}
+
+	static function luaStringFieldReceiver(receiver:HxExpr, field:String):Bool {
+		return switch (receiver) {
+			case EString(_):
+				true;
+			case EBinop("+", left, right): luaStringLikeOperand(left) || luaStringLikeOperand(right);
+			case ECall(EField(EIdent("Std"), "string"), _):
+				true;
+			case ECall(EField(EIdent("String"), "new"), _):
+				true;
+			case EIdent(name):
+				final hint = luaLocalTypeHint(name);
+				if (isStringTypeHint(luaUnwrapNullTypeHint(hint))) {
+					true;
+				} else if (luaRenderSameClassStaticFieldTypes != null
+					&& luaRenderSameClassStaticFieldTypes.exists(sanitizeTypeName(name))) {
+					isStringTypeHint(luaUnwrapNullTypeHint(luaRenderSameClassStaticFieldTypes.get(sanitizeTypeName(name))));
+				} else {
+					false;
+				}
+			case ECast(inner, castHint): isStringTypeHint(luaUnwrapNullTypeHint(castHint)) || isDynamicTypeHint(castHint) && luaStringLikeOperand(inner);
+			case EUntyped(inner) | EMacroExpr(inner, _):
+				luaStringFieldReceiver(inner, field);
+			case _:
+				false;
+		};
+	}
+
 	static function phpKnownStringResultReceiver(receiver:HxExpr):Bool {
 		return switch (receiver) {
 			case EField(_, "message"):
@@ -2948,6 +3006,15 @@ class SourceTargetCommon {
 		};
 	}
 
+	static function luaUnwrapNullTypeHint(typeHint:String):String {
+		final compact = removeTypeHintWhitespace(typeHint);
+		if (StringTools.startsWith(compact, "Null<") && StringTools.endsWith(compact, ">"))
+			return compact.substr("Null<".length, compact.length - "Null<".length - 1);
+		if (StringTools.startsWith(compact, "StdTypes.Null<") && StringTools.endsWith(compact, ">"))
+			return compact.substr("StdTypes.Null<".length, compact.length - "StdTypes.Null<".length - 1);
+		return compact;
+	}
+
 	static function javaStringLikeOperand(expr:HxExpr):Bool {
 		return switch (expr) {
 			case EString(_):
@@ -2967,6 +3034,11 @@ class SourceTargetCommon {
 			case EBinop("+", left, right): luaStringLikeOperand(left) || luaStringLikeOperand(right);
 			case ECall(EField(EIdent("Std"), "string"), _):
 				true;
+			case ECall(EField(EIdent("String"), "new"), _):
+				true;
+			case EIdent(name):
+				isStringTypeHint(luaUnwrapNullTypeHint(luaLocalTypeHint(name)));
+			case ECast(inner, castHint): isStringTypeHint(luaUnwrapNullTypeHint(castHint)) || isDynamicTypeHint(castHint) && luaStringLikeOperand(inner);
 			case _:
 				false;
 		};
@@ -5640,7 +5712,8 @@ class SourceTargetCommon {
 					+ rendered
 					+ ")"; else if (phpRuntimeMapType(typePath)) phpRuntimeMapConstructorExpr(typePath,
 					rendered); else if (phpRuntimeListType(typePath)) "new List_(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
-			case Lua: safeType + ".new(" + rendered + ")";
+			case Lua:
+				if (typePath == "String" && args.length == 1) "tostring(" + renderExpr(Lua, args[0]) + ")"; else safeType + ".new(" + rendered + ")";
 		};
 	}
 
@@ -6279,6 +6352,8 @@ class SourceTargetCommon {
 	static var csRenderEnumConstructors:Null<haxe.ds.StringMap<CsEnumCtorRef>> = null;
 	static var csRenderAmbiguousEnumConstructors:Null<haxe.ds.StringMap<Bool>> = null;
 	static var csRenderLocalTypes:Null<haxe.ds.StringMap<String>> = null;
+	static var luaRenderLocalTypes:Null<haxe.ds.StringMap<String>> = null;
+	static var luaRenderSameClassStaticFieldTypes:Null<Map<String, String>> = null;
 
 	static function withPhpLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
 		if (target != Php)
@@ -6306,6 +6381,21 @@ class SourceTargetCommon {
 			return result;
 		} catch (e) {
 			csRenderLocalTypes = previous;
+			throw e;
+		}
+	}
+
+	static function withLuaLocalTypes<T>(target:SourceNativeTarget, localTypes:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
+		if (target != Lua)
+			return f();
+		final previous = luaRenderLocalTypes;
+		luaRenderLocalTypes = localTypes;
+		try {
+			final result = f();
+			luaRenderLocalTypes = previous;
+			return result;
+		} catch (e) {
+			luaRenderLocalTypes = previous;
 			throw e;
 		}
 	}
@@ -6409,6 +6499,13 @@ class SourceTargetCommon {
 			return "";
 		final clean = sanitizeCsIdentifier(name);
 		return csRenderLocalTypes.exists(clean) ? csRenderLocalTypes.get(clean) : "";
+	}
+
+	static function luaLocalTypeHint(name:String):String {
+		if (luaRenderLocalTypes == null)
+			return "";
+		final clean = sanitizeTypeName(name);
+		return luaRenderLocalTypes.exists(clean) ? luaRenderLocalTypes.get(clean) : "";
 	}
 
 	static function phpOptionalLambdaArgNames(name:String):Null<Array<String>> {
@@ -7211,6 +7308,8 @@ class SourceTargetCommon {
 				"Int";
 			case EString(_):
 				"String";
+			case ECall(EField(EIdent("String"), "new"), _):
+				"String";
 			case EBool(_):
 				"Bool";
 			case EIdent("true" | "false"):
@@ -7439,56 +7538,58 @@ class SourceTargetCommon {
 	static function renderStmtWithLocals(target:SourceNativeTarget, stmt:HxStmt, indent:String, localTypes:haxe.ds.StringMap<String>):Array<String> {
 		return withPhpLocalTypes(target, localTypes, function() {
 			return withCsLocalTypes(target, localTypes, function() {
-				return switch (stmt) {
-					case SVar(name, typeHint, init, pos):
-						final cleanName = target == Cs ? sanitizeCsIdentifier(name) : sanitizeTypeName(name);
-						localTypes.set(cleanName, inferLocalTypeHint(typeHint, init));
-						phpRegisterOptionalLambdaLocal(cleanName, init);
-						final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
-						final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
-						return [indent + varDecl(target, cleanName, rhs, typeHint, value)];
-					case SExpr(EBinop("??=", left, right), _) if (target == Python):
-						return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
-					case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
-						return [indent + exprStmt(target, pythonAssignmentStmt(op, left, right))];
-					case SExpr(EBinop("=", EIdent(name), rhsExpr), _) if (target == Php && localTypes.exists(sanitizeTypeName(name))):
-						final cleanName = sanitizeTypeName(name);
-						final rhs = assignedValueExpr(target, rhsExpr, localTypes.get(cleanName));
-						return [indent + exprStmt(target, valueName(target, cleanName) + " = " + rhs)];
-					case SForIn(name, iterable, body, _) if (target == Php):
-						final phpLocals = copyStringMap(localTypes);
-						phpLocals.set(sanitizeTypeName(name), "");
-						return renderForIn(target, name, iterable, body, indent, phpLocals);
-					case SForKeyValue(keyName, valueName, iterable, body, _) if (target == Php):
-						final phpLocals = copyStringMap(localTypes);
-						phpLocals.set(sanitizeTypeName(keyName), "");
-						phpLocals.set(sanitizeTypeName(valueName), "");
-						return renderForKeyValue(target, keyName, valueName, iterable, body, indent, phpLocals);
-					case SBlock(stmts, _) if (target == Cs):
-						return renderCStyleScopedBlock(target, stmts, indent, localTypes);
-					case SBlock(stmts, _):
-						final out = new Array<String>();
-						final blockLocalTypes = copyStringMap(localTypes);
-						final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
-						final baseRefCaptures = phpRenderRefCaptureLocals;
-						final blockOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaArgNamesByLocal) : null;
-						final blockOptionalOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaOptionalArgNamesByLocal) : null;
-						withPhpOptionalLambdaLocals(target, blockOptionalArgNamesByLocal, blockOptionalOptionalArgNamesByLocal, function() {
-							for (i in 0...stmts.length) {
-								final s = stmts[i];
-								final refCaptures = target == Php ? phpMergeRefCaptureLocals(baseRefCaptures, refCapturesByStmt[i]) : null;
-								withPhpRefCaptureLocals(target, refCaptures, function() {
-									for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
-										out.push(line);
-								});
-							}
-							if (out.length == 0)
-								out.push(indent + emptyStmt(target));
-						});
-						return out;
-					case _:
-						return renderStmt(target, stmt, indent);
-				};
+				return withLuaLocalTypes(target, localTypes, function() {
+					return switch (stmt) {
+						case SVar(name, typeHint, init, pos):
+							final cleanName = target == Cs ? sanitizeCsIdentifier(name) : sanitizeTypeName(name);
+							localTypes.set(cleanName, inferLocalTypeHint(typeHint, init));
+							phpRegisterOptionalLambdaLocal(cleanName, init);
+							final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
+							final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
+							return [indent + varDecl(target, cleanName, rhs, typeHint, value)];
+						case SExpr(EBinop("??=", left, right), _) if (target == Python):
+							return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
+						case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
+							return [indent + exprStmt(target, pythonAssignmentStmt(op, left, right))];
+						case SExpr(EBinop("=", EIdent(name), rhsExpr), _) if (target == Php && localTypes.exists(sanitizeTypeName(name))):
+							final cleanName = sanitizeTypeName(name);
+							final rhs = assignedValueExpr(target, rhsExpr, localTypes.get(cleanName));
+							return [indent + exprStmt(target, valueName(target, cleanName) + " = " + rhs)];
+						case SForIn(name, iterable, body, _) if (target == Php):
+							final phpLocals = copyStringMap(localTypes);
+							phpLocals.set(sanitizeTypeName(name), "");
+							return renderForIn(target, name, iterable, body, indent, phpLocals);
+						case SForKeyValue(keyName, valueName, iterable, body, _) if (target == Php):
+							final phpLocals = copyStringMap(localTypes);
+							phpLocals.set(sanitizeTypeName(keyName), "");
+							phpLocals.set(sanitizeTypeName(valueName), "");
+							return renderForKeyValue(target, keyName, valueName, iterable, body, indent, phpLocals);
+						case SBlock(stmts, _) if (target == Cs):
+							return renderCStyleScopedBlock(target, stmts, indent, localTypes);
+						case SBlock(stmts, _):
+							final out = new Array<String>();
+							final blockLocalTypes = copyStringMap(localTypes);
+							final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
+							final baseRefCaptures = phpRenderRefCaptureLocals;
+							final blockOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaArgNamesByLocal) : null;
+							final blockOptionalOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaOptionalArgNamesByLocal) : null;
+							withPhpOptionalLambdaLocals(target, blockOptionalArgNamesByLocal, blockOptionalOptionalArgNamesByLocal, function() {
+								for (i in 0...stmts.length) {
+									final s = stmts[i];
+									final refCaptures = target == Php ? phpMergeRefCaptureLocals(baseRefCaptures, refCapturesByStmt[i]) : null;
+									withPhpRefCaptureLocals(target, refCaptures, function() {
+										for (line in renderStmtWithLocals(target, s, indent, blockLocalTypes))
+											out.push(line);
+									});
+								}
+								if (out.length == 0)
+									out.push(indent + emptyStmt(target));
+							});
+							return out;
+						case _:
+							return renderStmt(target, stmt, indent);
+					};
+				});
 			});
 		});
 	}
@@ -8815,13 +8916,22 @@ class SourceTargetCommon {
 			"end",
 			"",
 			"local __hxhx_reflect_method_keys = setmetatable({}, { __mode = \"k\" })",
+			"local function __hxhx_string_index_of(value, needle, start)",
+			"  local init = ((start or 0) + 1)",
+			"  local found = string.find(tostring(value or \"\"), tostring(needle or \"\"), init, true)",
+			"  if found == nil then return -1 end",
+			"  return found - 1",
+			"end",
+			"local function __hxhx_string_to_upper_case(value)",
+			"  return string.upper(tostring(value or \"\"))",
+			"end",
+			"local function __hxhx_string_to_lower_case(value)",
+			"  return string.lower(tostring(value or \"\"))",
+			"end",
 			"local function __hxhx_reflect_string_method(name)",
 			"  if name == \"indexOf\" then",
 			"    local fn = function(self, needle, start)",
-			"      local init = ((start or 0) + 1)",
-			"      local found = string.find(tostring(self), tostring(needle), init, true)",
-			"      if found == nil then return -1 end",
-			"      return found - 1",
+			"      return __hxhx_string_index_of(self, needle, start)",
 			"    end",
 			"    __hxhx_reflect_method_keys[fn] = \"String.indexOf\"",
 			"    return fn",
@@ -8870,8 +8980,11 @@ class SourceTargetCommon {
 			"local __hxhx_string_mt = debug and debug.getmetatable and debug.getmetatable(\"\") or getmetatable(\"\") or {}",
 			"local __hxhx_string_old_index = __hxhx_string_mt.__index",
 			"__hxhx_string_mt.__index = function(value, key)",
+			"  if key == \"indexOf\" then return function(needle, start) return __hxhx_string_index_of(value, needle, start) end end",
 			"  if key == \"substr\" then return function(pos, len) return __hxhx_string_substr(value, pos, len) end end",
 			"  if key == \"startsWith\" then return function(prefix) return __hxhx_string_starts_with(value, prefix) end end",
+			"  if key == \"toUpperCase\" then return function() return __hxhx_string_to_upper_case(value) end end",
+			"  if key == \"toLowerCase\" then return function() return __hxhx_string_to_lower_case(value) end end",
 			"  if type(__hxhx_string_old_index) == \"table\" then return __hxhx_string_old_index[key] end",
 			"  if type(__hxhx_string_old_index) == \"function\" then return __hxhx_string_old_index(value, key) end",
 			"  return nil",
@@ -16824,6 +16937,38 @@ class SourceTargetCommon {
 		}
 	}
 
+	static function appendLuaMainStaticFields(out:Array<String>, decl:HxModuleDecl, className:String):Void {
+		for (cls in HxModuleDecl.getClasses(decl)) {
+			if (sanitizeTypeName(HxClassDecl.getName(cls)) != className)
+				continue;
+			for (field in HxClassDecl.getFields(cls)) {
+				if (!HxFieldDecl.getIsStatic(field))
+					continue;
+				final init = HxFieldDecl.getInit(field);
+				if (init == null)
+					continue;
+				final name = sanitizeTypeName(HxFieldDecl.getName(field));
+				out.push("local " + name + " = " + assignedValueExpr(Lua, init, HxFieldDecl.getTypeHint(field)));
+			}
+		}
+	}
+
+	static function luaMainClassStaticFieldTypeMap(decl:HxModuleDecl, className:String):Map<String, String> {
+		final fields = new Map<String, String>();
+		for (cls in HxModuleDecl.getClasses(decl)) {
+			if (sanitizeTypeName(HxClassDecl.getName(cls)) != className)
+				continue;
+			for (field in HxClassDecl.getFields(cls)) {
+				if (HxFieldDecl.getIsStatic(field)) {
+					final explicit = normalizeTypeHint(HxFieldDecl.getTypeHint(field));
+					final inferred = explicit.length > 0 ? explicit : inferLocalTypeHint("", HxFieldDecl.getInit(field));
+					fields.set(sanitizeTypeName(HxFieldDecl.getName(field)), inferred);
+				}
+			}
+		}
+		return fields;
+	}
+
 	static function appendLuaUtilityProcessRuntime(out:Array<String>):Void {
 		for (line in LuaUtilityProcessRuntime.lines())
 			out.push(line);
@@ -16856,6 +17001,7 @@ class SourceTargetCommon {
 		final previousPhpTypeAliases = phpRenderTypeAliases;
 		final previousCsEnumConstructors = csRenderEnumConstructors;
 		final previousCsAmbiguousEnumConstructors = csRenderAmbiguousEnumConstructors;
+		final previousLuaSameClassStaticFieldTypes = luaRenderSameClassStaticFieldTypes;
 		if (target == Php) {
 			phpRenderInstanceMethodsByType = phpProgramInstanceMethodMap(program, decl);
 			phpRenderInstanceMethodArgsByType = phpProgramInstanceMethodArgsMap(program, decl);
@@ -16878,6 +17024,9 @@ class SourceTargetCommon {
 		if (target == Cs) {
 			csRenderAmbiguousEnumConstructors = new haxe.ds.StringMap<Bool>();
 			csRenderEnumConstructors = csProgramEnumConstructorMap(program, decl);
+		}
+		if (target == Lua) {
+			luaRenderSameClassStaticFieldTypes = luaMainClassStaticFieldTypeMap(decl, className);
 		}
 		switch (target) {
 			case Python:
@@ -19800,6 +19949,7 @@ class SourceTargetCommon {
 				if (className == "UtilityProcess") {
 					appendLuaUtilityProcessRuntime(lines);
 				} else {
+					appendLuaMainStaticFields(lines, decl, className);
 					appendLuaMainStaticHelpers(lines, decl, className, body);
 					lines.push("local function main()");
 					for (line in renderFunctionStmts(target, body, "  ", className + ".main"))
@@ -19829,6 +19979,7 @@ class SourceTargetCommon {
 		phpRenderTypeAliases = previousPhpTypeAliases;
 		csRenderEnumConstructors = previousCsEnumConstructors;
 		csRenderAmbiguousEnumConstructors = previousCsAmbiguousEnumConstructors;
+		luaRenderSameClassStaticFieldTypes = previousLuaSameClassStaticFieldTypes;
 		return lines.join("\n") + "\n";
 	}
 }
