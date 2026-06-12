@@ -417,14 +417,33 @@ class ParserStage {
 								&& sourceNullTypeHintIsMoreSpecific(HxFieldDecl.getTypeHint(f),
 									HxFieldDecl.getTypeHint(scannedField)) ? HxFieldDecl.getTypeHint(scannedField) : HxFieldDecl.getTypeHint(f);
 							final typeHintChanged = typeHint != HxFieldDecl.getTypeHint(f);
+							final scannedInit = scannedField == null ? null : HxFieldDecl.getInit(scannedField);
+							final nativeInit = HxFieldDecl.getInit(f);
+							// Native protocol fields can carry raw/unsupported initializer fallbacks; the
+							// source scanner often has a fuller parsed init for static fields.
+							final nativeInitUnsupported = switch (nativeInit) {
+								case null | EUnsupported(_):
+									true;
+								case _:
+									false;
+							}
+							final useScannedInit = scannedInit != null && nativeInitUnsupported;
+							final init = useScannedInit ? scannedInit : nativeInit;
+							final scannedInitText = scannedField == null ? "" : HxFieldDecl.getInitText(scannedField);
+							final initText = useScannedInit
+								&& scannedInitText != null
+								&& scannedInitText.length > 0 ? scannedInitText : HxFieldDecl.getInitText(f);
 							if (metadataChanged)
 								changed = true;
 							if (typeHintChanged)
 								changed = true;
+							if (useScannedInit)
+								changed = true;
 							patchedFields.push(metadataChanged
-								|| typeHintChanged ? new HxFieldDecl(HxFieldDecl.getName(f), HxFieldDecl.getVisibility(f), HxFieldDecl.getIsStatic(f),
-									typeHint, HxFieldDecl.getInit(f), metadata, HxFieldDecl.getPos(f), HxFieldDecl.getEndPos(f), HxFieldDecl.getIsFinal(f),
-									HxFieldDecl.getPropertyGet(f), HxFieldDecl.getPropertySet(f), HxFieldDecl.getInitText(f)) : f);
+								|| typeHintChanged
+								|| useScannedInit ? new HxFieldDecl(HxFieldDecl.getName(f), HxFieldDecl.getVisibility(f), HxFieldDecl.getIsStatic(f),
+									typeHint, init, metadata, HxFieldDecl.getPos(f), HxFieldDecl.getEndPos(f), HxFieldDecl.getIsFinal(f),
+									HxFieldDecl.getPropertyGet(f), HxFieldDecl.getPropertySet(f), initText) : f);
 							if (fieldName != null && fieldName.length > 0)
 								existingFieldNames.set(fieldName, true);
 						}

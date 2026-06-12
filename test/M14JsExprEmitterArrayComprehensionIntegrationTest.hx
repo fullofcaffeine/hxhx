@@ -33,9 +33,9 @@ class M14JsExprEmitterArrayComprehensionIntegrationTest {
 		assertContains(guardedJs, "if (keep(__arr_comp_value)) {", "guarded comprehension should lower the if-guard inside the loop");
 		assertContains(guardedJs, "__arr_comp_out.push(__arr_comp_value);", "guarded comprehension should still push the yielded value");
 
-		final staticNamesInit = HxParser.parseExprText('["ok", [for (i in 0...1) "a"].join(""),].concat(switch Sys.systemName() { case "Windows": []; case _: [
-			#if !(python || neko)
-			[for (i in 0...2) "b"].join(""),
+		final staticNamesInit = HxParser.parseExprText('["ok", [for (i in 0...100) "a"].join(""),].concat(switch Sys.systemName() { case "Windows": []; case _: [
+			#if !(python || neko || cpp || java || cs)
+			[for (i in 0...255) "b"].join(""),
 			#end
 		]; })');
 		final staticNamesInitJs = JsExprEmitter.emit(staticNamesInit, exprScope);
@@ -43,5 +43,29 @@ class M14JsExprEmitterArrayComprehensionIntegrationTest {
 		assertContains(staticNamesInitJs, "if (__sw === \"Windows\")",
 			"static array initializer switch should lower to branch tests instead of unsupported raw text");
 		assertContains(staticNamesInitJs, "__arr_comp_out.push(\"b\");", "switch branch array comprehension should lower inside concat argument");
+
+		final scannedModule = new HxParser('class FileNames {
+			static public var names(default, never) = [
+				"ok",
+				[for (i in 0...100) "a"].join(""),
+			].concat(switch (Sys.systemName()) {
+				case "Windows":
+					[];
+				case _:
+				[
+					#if !(python || neko || cpp || java || cs)
+					[for (i in 0...255) "b"].join(""),
+					#end
+				];
+			});
+		}').parseModule("FileNames");
+		final scannedFields = HxClassDecl.getFields(HxModuleDecl.getMainClass(scannedModule));
+		if (scannedFields.length != 1)
+			throw "expected one scanned static field";
+		final scannedInit = HxFieldDecl.getInit(scannedFields[0]);
+		if (scannedInit == null)
+			throw "expected FileNames.names static initializer to parse through scanner path";
+		final scannedInitJs = JsExprEmitter.emit(scannedInit, exprScope);
+		assertContains(scannedInitJs, "__arr_comp_out.push(\"b\");", "scanner path should preserve switch branch array comprehension");
 	}
 }
