@@ -6058,6 +6058,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var re = new EReg(\"Exception thrown from Haxe\", \"\");",
 			"    Sys.println(Std.string(re.match(\"Exception thrown from Haxe\")));",
 			"    Sys.println(Std.string(re.match(\"Other message\")));",
+			"    var pathRe = new EReg(\"bin/native-error\\\\.lua:\\\\d+: attempt to index .*\", \"\");",
+			"    Sys.println(Std.string(pathRe.match(\"bin/native-error.lua:242: attempt to index local object\")));",
+			"    Sys.println(Std.string(pathRe.match(\"bin/native-errorXlua:abc: attempt to index local object\")));",
 			"  }",
 			"}",
 		].join("\n");
@@ -7668,13 +7671,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "EReg.new = EReg.new or function(pattern, options)", "Lua output should expose focused EReg constructor support");
-		assertContains(content, "return string.find(haystack, needle, 1, true) ~= nil", "Lua EReg.match support should use the focused literal match helper");
+		assertContains(content, "local function __hxhx_ereg_lua_pattern(pattern)",
+			"Lua EReg.match support should translate focused Haxe regex syntax to Lua patterns");
+		assertContains(content, "elseif next_ch == \"d\" or next_ch == \"D\"",
+			"Lua EReg.match support should translate digit-class escapes used by upstream Lua error checks");
 		assertContains(content, "local re = EReg.new(\"Exception thrown from Haxe\", \"\")", "Lua EReg constructor calls should target EReg.new");
+		assertContains(content, "local pathRe = EReg.new(\"bin/native-error\\\\.lua:\\\\d+: attempt to index .*\", \"\")",
+			"Lua EReg constructor calls should preserve upstream-style escaped regex patterns");
 		assertContains(content, "print(tostring(re.match(\"Exception thrown from Haxe\")))", "Lua EReg.match calls should remain source-shaped");
 		if (commandExists("lua")) {
 			final run = commandOutput("lua", [outputPath]);
 			assertTrue(run.code == 0, "generated Lua EReg runtime support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\nfalse\n", "generated Lua EReg runtime output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "true\nfalse\ntrue\nfalse\n", "generated Lua EReg runtime output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
