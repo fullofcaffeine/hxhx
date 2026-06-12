@@ -65,10 +65,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return false;
 	}
 
-	static function csRuntimeTemplateContent():String {
+	static function sourceTemplateContent(targetDir:String, fileName:String):String {
 		final env = Sys.getEnv("HXHX_REPO_ROOT");
 		final root = env != null && env.length > 0 ? env : Sys.getCwd();
-		return File.getContent(Path.join([root, "packages", "hxhx-core", "source-templates", "cs", "__HxRuntime.cs"]));
+		return File.getContent(Path.join([root, "packages", "hxhx-core", "source-templates", targetDir, fileName]));
+	}
+
+	static function csRuntimeTemplateContent():String {
+		return sourceTemplateContent("cs", "__HxRuntime.cs");
+	}
+
+	static function indentedSourceTemplateContent(targetDir:String, fileName:String, indent:String):String {
+		final lines = sourceTemplateContent(targetDir, fileName).split("\n");
+		final out = new Array<String>();
+		for (i in 0...lines.length) {
+			final line = lines[i];
+			if (i == lines.length - 1 && line.length == 0)
+				continue;
+			out.push(indent + line);
+		}
+		return out.join("\n");
 	}
 
 	static function commandOutput(command:String, args:Array<String>):{code:Int, stdout:String, stderr:String} {
@@ -7406,16 +7422,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(mainContent, "File.saveContent(file, \"ok\")", "C# imported File calls should remain unqualified and compile via using");
 			assertContains(mainContent, "var platform = Sys.systemName()", "C# sys fixtures should keep Sys.systemName calls callable through root Sys");
 			assertContains(sysContent, "public static string systemName()", "C# Sys support should expose systemName");
+			assertContains(sysContent, indentedSourceTemplateContent("cs/import-stub-members", "Sys.cs", "  "),
+				"C# Sys support should use the repo-owned source template body");
 			assertContains(mainContent, "Sys.command(Sys.programPath()", "C# root Sys calls should remain callable through the synthesized support class");
 			assertContains(sysContent, "public static int command(object command, object args = null)", "C# Sys support should expose command");
 			assertContains(sysContent, "public static string programPath()", "C# Sys support should expose programPath");
 			assertContains(pathContent, "namespace haxe.io", "C# Path support should use the haxe.io namespace");
 			assertContains(pathContent, "public static string join(object paths)", "C# Path support should expose join");
+			assertContains(pathContent, indentedSourceTemplateContent("cs/import-stub-members", "Path.cs", "    "),
+				"C# Path support should use the repo-owned source template body");
 			assertContains(fileSystemContent, "namespace sys", "C# FileSystem support should use the sys namespace");
 			assertContains(fileSystemContent, "public static bool exists(object path)", "C# FileSystem support should expose exists");
+			assertContains(fileSystemContent, indentedSourceTemplateContent("cs/import-stub-members", "FileSystem.cs", "    "),
+				"C# FileSystem support should use the repo-owned source template body");
 			assertContains(fileContent, "namespace sys.io", "C# File support should use the sys.io namespace");
 			assertContains(fileContent, "public static void saveContent(object path, object content)", "C# File support should expose saveContent");
 			assertContains(fileContent, "public static void copy(object src, object dst)", "C# File support should expose copy");
+			assertContains(fileContent, indentedSourceTemplateContent("cs/import-stub-members", "File.cs", "    "),
+				"C# File support should use the repo-owned source template body");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);
