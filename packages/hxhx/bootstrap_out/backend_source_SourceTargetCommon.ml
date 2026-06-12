@@ -17738,10 +17738,16 @@ let renderLuaSupportPrelude = fun program decl mainClassName -> (
     ignore (HxArray.push __arr_4089 "  if l <= 0 then return \"\" end");
     ignore (HxArray.push __arr_4089 "  return string.sub(s, start_pos, start_pos + l - 1)");
     ignore (HxArray.push __arr_4089 "end");
+    ignore (HxArray.push __arr_4089 "local function __hxhx_string_starts_with(value, prefix)");
+    ignore (HxArray.push __arr_4089 "  local s = tostring(value or \"\")");
+    ignore (HxArray.push __arr_4089 "  local p = tostring(prefix or \"\")");
+    ignore (HxArray.push __arr_4089 "  return string.sub(s, 1, #p) == p");
+    ignore (HxArray.push __arr_4089 "end");
     ignore (HxArray.push __arr_4089 "local __hxhx_string_mt = debug and debug.getmetatable and debug.getmetatable(\"\") or getmetatable(\"\") or {}");
     ignore (HxArray.push __arr_4089 "local __hxhx_string_old_index = __hxhx_string_mt.__index");
     ignore (HxArray.push __arr_4089 "__hxhx_string_mt.__index = function(value, key)");
     ignore (HxArray.push __arr_4089 "  if key == \"substr\" then return function(pos, len) return __hxhx_string_substr(value, pos, len) end end");
+    ignore (HxArray.push __arr_4089 "  if key == \"startsWith\" then return function(prefix) return __hxhx_string_starts_with(value, prefix) end end");
     ignore (HxArray.push __arr_4089 "  if type(__hxhx_string_old_index) == \"table\" then return __hxhx_string_old_index[key] end");
     ignore (HxArray.push __arr_4089 "  if type(__hxhx_string_old_index) == \"function\" then return __hxhx_string_old_index(value, key) end");
     ignore (HxArray.push __arr_4089 "  return nil");
