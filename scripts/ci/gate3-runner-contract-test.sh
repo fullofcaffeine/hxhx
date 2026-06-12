@@ -23,6 +23,9 @@ grep -Fq 'command -v lua5.4' "$runner"
 grep -Fq 'need_cmd luarocks "Lua target dependencies"' "$runner"
 grep -Fq 'lua-luasec-direct-rockspec' "$runner"
 grep -Fq 'cat >"$WRAP_DIR/lua"' "$runner"
+grep -Fq 'kill_process_tree()' "$runner"
+grep -Fq 'kill_process_tree "$target_pid" TERM' "$runner"
+grep -Fq 'kill_process_tree "$target_pid" KILL' "$runner"
 grep -Fq "printf '%s\\n' \"\${REQUESTED_TARGETS}\"" "$extended_workflow"
 
 target_pinned_line="$(grep -nF 'probes+=("$HOME/haxe/versions/$UPSTREAM_REF/haxelib")' "$runner" | head -n 1 | cut -d: -f1)"
@@ -74,6 +77,83 @@ elapsed="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed" -gt 2 ]; then
   echo "watcher interrupt took ${elapsed}s" >&2
   exit 1
+fi
+
+if command -v pgrep >/dev/null 2>&1; then
+  kill_process_tree_contract() {
+    local pid="$1"
+    local signal="${2:-TERM}"
+    local child=""
+
+    if [ -z "$pid" ]; then
+      return 0
+    fi
+
+    while IFS= read -r child; do
+      if [ -n "$child" ]; then
+        kill_process_tree_contract "$child" "$signal"
+      fi
+    done < <(pgrep -P "$pid" 2>/dev/null || true)
+
+    kill "-$signal" "$pid" 2>/dev/null || true
+  }
+
+  tmp_dir="$(mktemp -d)"
+  cleanup_tree_contract() {
+    if [ -n "${tree_parent_pid:-}" ]; then
+      kill_process_tree_contract "$tree_parent_pid" KILL
+      wait "$tree_parent_pid" 2>/dev/null || true
+    fi
+    rm -rf "$tmp_dir"
+  }
+  trap cleanup_tree_contract EXIT
+
+  child_pid_file="$tmp_dir/child.pid"
+  cat >"$tmp_dir/spawn-child.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+trap 'exit 0' TERM
+bash -c 'trap "exit 0" TERM; echo "$$" >"$1"; while :; do sleep 1; done' bash "$CHILD_PID_FILE" &
+child="$!"
+wait "$child" 2>/dev/null || true
+EOF
+  chmod +x "$tmp_dir/spawn-child.sh"
+
+  CHILD_PID_FILE="$child_pid_file" "$tmp_dir/spawn-child.sh" >/dev/null 2>&1 &
+  tree_parent_pid="$!"
+
+  for _ in $(seq 1 50); do
+    if [ -s "$child_pid_file" ]; then
+      break
+    fi
+    sleep 0.1
+  done
+
+  if [ ! -s "$child_pid_file" ]; then
+    echo "tree contract child did not start" >&2
+    exit 1
+  fi
+
+  tree_child_pid="$(cat "$child_pid_file")"
+  kill_process_tree_contract "$tree_parent_pid" TERM
+
+  for _ in $(seq 1 50); do
+    if ! kill -0 "$tree_parent_pid" 2>/dev/null && ! kill -0 "$tree_child_pid" 2>/dev/null; then
+      break
+    fi
+    sleep 0.1
+  done
+
+  if kill -0 "$tree_child_pid" 2>/dev/null; then
+    echo "timeout process-tree kill left child process running" >&2
+    exit 1
+  fi
+
+  wait "$tree_parent_pid" 2>/dev/null || true
+  tree_parent_pid=""
+  trap - EXIT
+  rm -rf "$tmp_dir"
 fi
 
 echo "gate3 runner contract OK"

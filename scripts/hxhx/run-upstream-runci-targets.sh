@@ -151,6 +151,26 @@ should_retry_target() {
   return 1
 }
 
+kill_process_tree() {
+  local pid="$1"
+  local signal="${2:-TERM}"
+  local child=""
+
+  if [ -z "$pid" ]; then
+    return 0
+  fi
+
+  if command -v pgrep >/dev/null 2>&1; then
+    while IFS= read -r child; do
+      if [ -n "$child" ]; then
+        kill_process_tree "$child" "$signal"
+      fi
+    done < <(pgrep -P "$pid" 2>/dev/null || true)
+  fi
+
+  kill "-$signal" "$pid" 2>/dev/null || true
+}
+
 die_or_skip() {
   local msg="$1"
   if [ "$allow_skip" = "1" ]; then
@@ -960,10 +980,10 @@ run_target_attempt_with_watch() {
         if [ -n "$timeout_marker" ]; then
           printf 'timeout\n' >"$timeout_marker"
         fi
-        kill "$target_pid" 2>/dev/null || true
+        kill_process_tree "$target_pid" TERM
         sleep 2
         if kill -0 "$target_pid" 2>/dev/null; then
-          kill -9 "$target_pid" 2>/dev/null || true
+          kill_process_tree "$target_pid" KILL
         fi
       fi
     ) &
