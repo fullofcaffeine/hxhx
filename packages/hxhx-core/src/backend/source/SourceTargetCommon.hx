@@ -3186,6 +3186,11 @@ class SourceTargetCommon {
 				if (appendReturn)
 					out.push(indent + "return nil");
 				out;
+			case ECall(EIdent(name), args) if (traceAtLine(name) > 0 && args.length >= 1):
+				final out = [indent + traceStmtAtLine(Lua, renderExpr(Lua, args[0]), traceAtLine(name))];
+				if (appendReturn)
+					out.push(indent + "return nil");
+				out;
 			case ECall(EIdent("trace"), args) if (args.length >= 1):
 				final out = [indent + printStmt(Lua, renderExpr(Lua, args[0]))];
 				if (appendReturn)
@@ -6125,21 +6130,29 @@ class SourceTargetCommon {
 	static function traceStmt(target:SourceNativeTarget, expr:String, pos:HxPos):String {
 		if (target == Java && pos != null && pos.getLine() > 0)
 			return traceStmtAtLine(Java, expr, pos.getLine());
+		if (target == Lua && pos != null && pos.getLine() > 0)
+			return traceStmtAtLine(Lua, expr, pos.getLine());
 		return printStmt(target, expr);
 	}
 
 	static function traceStmtAtLine(target:SourceNativeTarget, expr:String, line:Int):String {
 		if (target == Java && line > 0)
 			return printStmt(Java, quoteString("Main.hx:" + Std.string(line) + ": ") + " + " + expr);
+		if (target == Lua && line > 0)
+			return printStmt(Lua, quoteString("Main.hx:" + Std.string(line) + ": ") + " .. tostring(" + expr + ")");
 		return printStmt(target, expr);
 	}
 
-	static function javaTraceAtLine(name:String):Int {
+	static function traceAtLine(name:String):Int {
 		final prefix = "__hxhx_trace_at_";
 		if (name == null || !StringTools.startsWith(name, prefix))
 			return 0;
 		final parsed = Std.parseInt(name.substr(prefix.length));
 		return parsed == null ? 0 : parsed;
+	}
+
+	static function javaTraceAtLine(name:String):Int {
+		return traceAtLine(name);
 	}
 
 	static function javaExprWithStmtTraceLine(expr:HxExpr, pos:HxPos):HxExpr {

@@ -6081,6 +6081,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaTraceLineProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    trace(\"hello\");",
+			"    trace(true);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function luaERegRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -7730,6 +7744,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("lua", [outputPath]);
 			assertTrue(run.code == 0, "generated Lua Issue9530 string method support should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "FOO\nFIELD\nSTR\ntrue\n0\nDYN\n", "generated Lua Issue9530 output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaTraceLineSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_trace_line_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaTraceLineProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "print(\"Main.hx:3: \" .. tostring(\"hello\"))", "Lua trace should include Haxe-style source line prefixes");
+		assertContains(content, "print(\"Main.hx:4: \" .. tostring(true))", "Lua trace should stringify non-string values with source line prefixes");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "generated Lua trace line support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "Main.hx:3: hello\nMain.hx:4: true\n", "generated Lua trace output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -13874,6 +13906,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLuaSysProcessSupport();
 		assertLuaStringSubstrSupport();
 		assertLuaIssue9530StringMethods();
+		assertLuaTraceLineSupport();
 		assertLuaERegRuntime();
 		assertLuaStringBoolConcat();
 		assertLuaStaticHelperCalls();
