@@ -2898,6 +2898,8 @@ class SourceTargetCommon {
 		return switch (field) {
 			case "indexOf" if (args.length == 1 || args.length == 2):
 				"__hxhx_string_index_of(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "contains" if (args.length == 1):
+				"__hxhx_string_contains(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "substr" if (args.length == 1 || args.length == 2):
 				"__hxhx_string_substr(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "startsWith" if (args.length == 1):
@@ -8948,6 +8950,9 @@ class SourceTargetCommon {
 			"local function __hxhx_string_to_lower_case(value)",
 			"  return string.lower(tostring(value or \"\"))",
 			"end",
+			"local function __hxhx_string_contains(value, needle)",
+			"  return string.find(tostring(value or \"\"), tostring(needle or \"\"), 1, true) ~= nil",
+			"end",
 			"local function __hxhx_reflect_string_method(name)",
 			"  if name == \"indexOf\" then",
 			"    local fn = function(self, needle, start)",
@@ -9001,6 +9006,7 @@ class SourceTargetCommon {
 			"local __hxhx_string_old_index = __hxhx_string_mt.__index",
 			"__hxhx_string_mt.__index = function(value, key)",
 			"  if key == \"indexOf\" then return function(needle, start) return __hxhx_string_index_of(value, needle, start) end end",
+			"  if key == \"contains\" then return function(needle) return __hxhx_string_contains(value, needle) end end",
 			"  if key == \"substr\" then return function(pos, len) return __hxhx_string_substr(value, pos, len) end end",
 			"  if key == \"startsWith\" then return function(prefix) return __hxhx_string_starts_with(value, prefix) end end",
 			"  if key == \"toUpperCase\" then return function() return __hxhx_string_to_upper_case(value) end end",

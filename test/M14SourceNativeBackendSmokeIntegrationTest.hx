@@ -6024,8 +6024,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    var proc = new sys.io.Process(\"lua\", [\"-v\"]);",
 			"    var firstLine = proc.stderr.readLine();",
+			"    var hasStackTrace = try {",
+			"      proc.stderr.readLine().contains(\"stack traceback\");",
+			"    } catch (_:haxe.io.Eof) {",
+			"      false;",
+			"    };",
 			"    proc.close();",
 			"    Sys.println(firstLine);",
+			"    Sys.println(Std.string(hasStackTrace));",
 			"    Sys.println(Std.string(proc.exitCode()));",
 			"    Sys.stderr().writeString(\"err\");",
 			"    Sys.stderr().flush();",
@@ -6048,6 +6054,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(text.substr(-2));",
 			"    Sys.println(Std.string(text.startsWith(\"abc\")));",
 			"    Sys.println(Std.string(text.startsWith(\"bcd\")));",
+			"    Sys.println(Std.string(text.contains(\"cd\")));",
 			"  }",
 			"}",
 		].join("\n");
@@ -7680,8 +7687,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "local proc = sys.io.Process.new(\"lua\", hxhx_array({\"-v\"}))",
 			"Lua sys.io.Process constructors should keep source shape against the runtime namespace");
 		assertContains(content, "local firstLine = proc.stderr.readLine()", "Lua process stderr streams should keep readLine calls source-shaped");
+		assertContains(content,
+			"local hasStackTrace = hxhx_try(function() return proc.stderr.readLine().contains(\"stack traceback\") end, function(_) return false end)",
+			"Lua process stderr readLine results should support the Issue10979 string contains check through the method hook");
 		assertContains(content, "proc.close()", "Lua process close calls should keep source shape against the helper object");
 		assertContains(content, "print(firstLine)", "Lua Sys.println should still lower to print for process output");
+		assertContains(content, "print(tostring(hasStackTrace))", "Lua Sys.println should report process stack-trace checks");
 		assertContains(content, "print(tostring(proc.exitCode()))", "Lua process exitCode calls should remain source-shaped against the helper object");
 		assertContains(content, "Sys.stderr().writeString(\"err\")", "Lua Sys.stderr().writeString should keep source shape against the runtime namespace");
 		assertContains(content, "Sys.stderr().flush()", "Lua Sys.stderr().flush should keep source shape against the runtime namespace");
@@ -7700,19 +7711,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "local function __hxhx_string_substr(value, pos, len)", "Lua output should define a string substr helper");
 		assertContains(content, "local function __hxhx_string_starts_with(value, prefix)", "Lua output should define a string startsWith helper");
+		assertContains(content, "local function __hxhx_string_contains(value, needle)", "Lua output should define a string contains helper");
 		assertContains(content, "__hxhx_string_mt.__index = function(value, key)", "Lua output should install a string method lookup hook");
 		assertContains(content, "if key == \"substr\" then return function(pos, len) return __hxhx_string_substr(value, pos, len) end end",
 			"Lua string method lookup should expose substr through the helper");
 		assertContains(content, "if key == \"startsWith\" then return function(prefix) return __hxhx_string_starts_with(value, prefix) end end",
 			"Lua string method lookup should expose startsWith through the helper");
+		assertContains(content, "if key == \"contains\" then return function(needle) return __hxhx_string_contains(value, needle) end end",
+			"Lua string method lookup should expose contains through the helper");
 		assertContains(content, "print(__hxhx_string_substr(text, 1, 3))", "Lua string substr calls should lower through the focused helper");
 		assertContains(content, "print(__hxhx_string_substr(text, (-2)))", "Lua string substr calls without length should lower through the focused helper");
 		assertContains(content, "print(tostring(__hxhx_string_starts_with(text, \"abc\")))",
 			"Lua string startsWith calls should lower through the focused helper");
+		assertContains(content, "print(tostring(__hxhx_string_contains(text, \"cd\")))", "Lua string contains calls should lower through the focused helper");
 		if (commandExists("lua")) {
 			final run = commandOutput("lua", [outputPath]);
 			assertTrue(run.code == 0, "generated Lua string substr support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "bcd\nef\ntrue\nfalse\n", "generated Lua string method output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "bcd\nef\ntrue\nfalse\ntrue\n", "generated Lua string method output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
