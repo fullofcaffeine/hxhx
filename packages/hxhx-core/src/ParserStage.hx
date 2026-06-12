@@ -97,11 +97,22 @@ class ParserStage {
 				continue;
 
 			final functionText = source.substring(t.startPos, end);
+			final bodyText = source.substring(sig.nextPos, end - 1);
 			try {
 				final synthetic = new HxParser("class __HxModule { public static " + functionText + " }").parseModule("__HxModule");
 				for (fn in HxClassDecl.getFunctions(HxModuleDecl.getMainClass(synthetic))) {
-					if (HxFunctionDecl.getIsStatic(fn))
-						out.push(fn);
+					if (HxFunctionDecl.getIsStatic(fn)) {
+						final body = try {
+							HxParser.offsetFunctionBodyColumns(HxParser.parseFunctionBodyTextAt(bodyText, source, sig.nextPos), 1);
+						} catch (_:HxParseError) {
+							HxFunctionDecl.getBody(fn);
+						} catch (_:String) {
+							HxFunctionDecl.getBody(fn);
+						}
+						out.push(new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), HxFunctionDecl.getIsStatic(fn),
+							HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn), body, HxFunctionDecl.getReturnStringLiteral(fn),
+							HxFunctionDecl.getMetadata(fn), HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), bodyText));
+					}
 				}
 			} catch (_:HxParseError) {} catch (_:String) {}
 			i = end;

@@ -276,6 +276,17 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 				'Main.hx:3: characters 27-37 : ... (?flags : Null<String>) -> Void',
 			].join("\n"),
 				'Top-level Issue10434 diagnostic should use the call-site position, not the overload declaration.');
+			final scannedTopLevelFunctions = @:privateAccess ParserStage.scanToplevelFunctions(upstream437TopLevelOverloadSrc, "Main");
+			assertEquals(Std.string(scannedTopLevelFunctions.length), '1', 'Native enrichment top-level scanner should discover the Issue10434 main function.');
+			switch (HxFunctionDecl.getBody(scannedTopLevelFunctions[0])[0]) {
+				case SExpr(_, pos):
+					assertEquals(Std.string(pos.getLine()), '7',
+						'Native enrichment top-level scanner should rebase function body statements to the original module line.');
+					assertEquals(Std.string(pos.getColumn()), '3',
+						'Native enrichment top-level scanner should match the Issue10434 call-site diagnostic column.');
+				case _:
+					throw 'Native enrichment top-level scanner did not parse Issue10434 main body as an expression statement.';
+			}
 
 			final vectorOutDir = haxe.io.Path.join([tmpRoot, 'vector_out']);
 			final vectorLengthArg = new HxFunctionArg("length", "Int", HxDefaultValue.NoDefault);
