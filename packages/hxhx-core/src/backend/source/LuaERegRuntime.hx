@@ -35,10 +35,10 @@ local function __hxhx_ereg_lua_pattern(pattern)
   local i = 1
   while i <= #raw do
     local ch = string.sub(raw, i, i)
-    if ch == "\\" then
+    if ch == "\\\\" then
       local next_ch = string.sub(raw, i + 1, i + 1)
       if next_ch == "" then
-        out[#out + 1] = "\\"
+        out[#out + 1] = "\\\\"
       elseif next_ch == "d" or next_ch == "D" or next_ch == "s" or next_ch == "S" or next_ch == "w" or next_ch == "W" then
         out[#out + 1] = "%" .. next_ch
         i = i + 1

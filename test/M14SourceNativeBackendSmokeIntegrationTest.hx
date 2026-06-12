@@ -7673,6 +7673,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "EReg.new = EReg.new or function(pattern, options)", "Lua output should expose focused EReg constructor support");
 		assertContains(content, "local function __hxhx_ereg_lua_pattern(pattern)",
 			"Lua EReg.match support should translate focused Haxe regex syntax to Lua patterns");
+		assertContains(content, "if ch == \"\\\\\" then", "Lua EReg.match support should emit a valid Lua backslash string literal");
+		assertContains(content, "out[#out + 1] = \"\\\\\"", "Lua EReg.match support should preserve a trailing escaped backslash as valid Lua syntax");
 		assertContains(content, "elseif next_ch == \"d\" or next_ch == \"D\"",
 			"Lua EReg.match support should translate digit-class escapes used by upstream Lua error checks");
 		assertContains(content, "local re = EReg.new(\"Exception thrown from Haxe\", \"\")", "Lua EReg constructor calls should target EReg.new");
