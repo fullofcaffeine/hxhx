@@ -32,12 +32,15 @@ env:
   HAXE_VERSION: "4.3.7"
   FULL1_GATE3_EXTENDED_ARTIFACTS_DIR: ".artifacts/full1"
   FULL1_GATE3_EXTENDED_TIMINGS_JSONL: ".artifacts/full1/gate3-full1-extended.timings.jsonl"
+  # Keep the inner matrix timeout below the job timeout so timeout failures
+  # are recorded as failed phases/artifacts instead of GitHub job cancellation.
+  FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC: "13200"
 
 jobs:
   full1_gate3_extended:
     name: Full1 Gate3 extended targets (strict)
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -405,8 +408,10 @@ jobs:
           echo "HXHX_GATE3_ALLOW_SKIP=${HXHX_GATE3_ALLOW_SKIP}"
           echo "HXHX_GATE3_MACRO_MODE=${HXHX_GATE3_MACRO_MODE}"
           echo "HXHX_FORBID_STAGE0=${HXHX_FORBID_STAGE0}"
+          echo "FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC=${FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC}"
           set +e
-          npm run test:upstream:runci-targets 2>&1 | tee "$log_path"
+          timeout --foreground "${FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC}s" \
+            npm run test:upstream:runci-targets 2>&1 | tee "$log_path"
           run_status="${PIPESTATUS[0]}"
           set -e
 
@@ -423,6 +428,9 @@ jobs:
 
           if [ "$run_status" -ne 0 ]; then
             echo "Strict extended Gate3 command failed with exit code ${run_status}." >&2
+            if [ "$run_status" -eq 124 ]; then
+              echo "Strict extended Gate3 command hit the inner matrix timeout before aggregate validation." >&2
+            fi
           fi
           if [ "$summary_status" -ne 0 ]; then
             echo "Strict extended Gate3 summary validation failed with exit code ${summary_status}." >&2

@@ -93,9 +93,11 @@ for (const needle of [
 
 for (const needle of [
   'FULL1_GATE3_EXTENDED_TIMINGS_JSONL',
+  'FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC',
   'gate3-full1-extended.timings.jsonl',
   'install_host_toolchains',
   'strict_extended_gate3_matrix',
+  'timeout --foreground "${FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC}s"',
   'Summarize Full1 Gate3 extended timings',
 ]) {
   requireIncludes(gate3WorkflowPath, gate3Workflow, needle)
