@@ -82,6 +82,22 @@ class Python {
 }
 EOF
 
+cat >"$fixture/tests/runci/targets/Lua.hx" <<'EOF'
+class Lua {
+	static function installLib(lib : String, version : String, ?server :String){
+		if (!commandSucceed("luarocks", ["show", lib, version])) {
+			final args = ["install", lib, version];
+			runCommand("luarocks", args);
+		}
+	}
+
+	static public function run(args:Array<String>) {
+		installLib("luasec", "1.0.2-1");
+		installLib("luasocket", "3.0rc1-2");
+	}
+}
+EOF
+
 cat >"$fixture/tests/runci/System.hx" <<'EOF'
 class System {
 	static public function runSysTest(cmd:String, ?args:Array<String>) {
@@ -112,6 +128,7 @@ python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" skip-utest-install-if-prese
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-skip-haxeserver-install-if-present --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" macro-optional-skip-party --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" sourcemaps-skip-sourcemap-install-if-present --upstream-dir "$fixture"
+python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" lua-luasec-direct-rockspec --upstream-dir "$fixture"
 python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" node-echo-server --upstream-dir "$fixture"
 
 grep -Fq "HXHX Gate runner: skip JS sys compile on macOS" "$fixture/tests/runci/targets/Js.hx"
@@ -131,6 +148,9 @@ grep -Fq 'runCommand("haxelib", ["path", "utest"])' "$fixture/tests/RunCi.hx"
 grep -Fq 'runCommand("haxelib", ["path", "haxeserver"])' "$fixture/tests/runci/targets/Macro.hx"
 grep -Fq "HXHX_GATE2_SKIP_PARTY" "$fixture/tests/runci/targets/Macro.hx"
 grep -Fq "['path', 'sourcemap']" "$fixture/tests/sourcemaps/src/Test.hx"
+grep -Fq "HXHX_GATE3_LUASEC_DIRECT_ROCKSPEC" "$fixture/tests/runci/targets/Lua.hx"
+grep -Fq "installLibFromRockspec" "$fixture/tests/runci/targets/Lua.hx"
+grep -Fq "raw.githubusercontent.com/lunarmodules/luasec/v1.0.2/luasec-1.0.2-1.rockspec" "$fixture/tests/runci/targets/Lua.hx"
 grep -Fq "HXHX_GATE3_NODE_ECHO_SERVER" "$fixture/tests/RunCi.hx"
 grep -Fq "hxhx_node_echo_server.js" "$fixture/tests/RunCi.hx"
 grep -Fq "nekotools" "$fixture/tests/RunCi.hx"

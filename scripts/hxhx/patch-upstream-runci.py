@@ -337,6 +337,56 @@ def patch_sourcemaps_skip_sourcemap_install_if_present(upstream_dir: str) -> Non
     write_text(path, src.replace(needle, replacement, 1))
 
 
+def patch_lua_luasec_direct_rockspec(upstream_dir: str) -> None:
+    path = upstream_path(upstream_dir, "tests/runci/targets/Lua.hx")
+    if not path.is_file():
+        return
+
+    src = read_text(path)
+    marker = "HXHX_GATE3_LUASEC_DIRECT_ROCKSPEC"
+    if marker in src:
+        return
+
+    helper_needle = "\n\tstatic public function run(args:Array<String>) {\n"
+    helper = (
+        "\n"
+        "\t// HXHX_GATE3_LUASEC_DIRECT_ROCKSPEC: bypass LuaRocks manifest search for LuaJIT.\n"
+        "\tstatic function installLibFromRockspec(lib:String, version:String, rockspec:String) {\n"
+        "\t\tif (!commandSucceed(\"luarocks\", [\"show\", lib, version])) {\n"
+        "\t\t\tfinal args = [\"install\", rockspec];\n"
+        "\t\t\tif (systemName == \"Mac\") {\n"
+        "\t\t\t\targs.push('OPENSSL_DIR=/usr/local/opt/openssl@3');\n"
+        "\t\t\t}\n"
+        "\t\t\trunCommand(\"luarocks\", args);\n"
+        "\t\t} else {\n"
+        "\t\t\tinfoMsg('Lua dependency $lib is already installed at version $version');\n"
+        "\t\t}\n"
+        "\t}\n"
+    )
+    if helper_needle not in src:
+        fail("Lua.hx run entrypoint not found")
+    src = src.replace(helper_needle, helper + helper_needle, 1)
+
+    install_needle = 'installLib("luasec", "1.0.2-1");'
+    lines: list[str] = []
+    changed = False
+    for line in src.splitlines(keepends=True):
+        if install_needle in line:
+            indent = line.split(install_needle, 1)[0]
+            lines.append(indent + "// HXHX_GATE3_LUASEC_DIRECT_ROCKSPEC: LuaJIT 2.0 cannot load the current huge LuaRocks manifest.\n")
+            lines.append(indent + 'installLib("luasocket", "3.0rc1-2");\n')
+            lines.append(
+                indent
+                + 'installLibFromRockspec("luasec", "1.0.2-1", "https://raw.githubusercontent.com/lunarmodules/luasec/v1.0.2/luasec-1.0.2-1.rockspec");\n'
+            )
+            changed = True
+        else:
+            lines.append(line)
+    if not changed:
+        fail("Lua.hx luasec install call not found")
+    write_text(path, "".join(lines))
+
+
 def patch_node_echo_server(upstream_dir: str) -> None:
     """Replace the shared Neko HTTP fixture with a stage0-free Node harness.
 
@@ -430,6 +480,7 @@ def main(argv: list[str]) -> None:
         "macro-skip-haxeserver-install-if-present": lambda: patch_macro_skip_haxeserver_install_if_present(args.upstream_dir),
         "macro-optional-skip-party": lambda: patch_macro_optional_skip_party(args.upstream_dir),
         "sourcemaps-skip-sourcemap-install-if-present": lambda: patch_sourcemaps_skip_sourcemap_install_if_present(args.upstream_dir),
+        "lua-luasec-direct-rockspec": lambda: patch_lua_luasec_direct_rockspec(args.upstream_dir),
         "node-echo-server": lambda: patch_node_echo_server(args.upstream_dir),
     }
     command = commands.get(args.command)

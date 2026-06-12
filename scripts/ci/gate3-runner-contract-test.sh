@@ -21,6 +21,7 @@ grep -Fq 'unset LD_LIBRARY_PATH' "$runner"
 grep -Fq 'resolve_lua_bin()' "$runner"
 grep -Fq 'command -v lua5.4' "$runner"
 grep -Fq 'need_cmd luarocks "Lua target dependencies"' "$runner"
+grep -Fq 'lua-luasec-direct-rockspec' "$runner"
 grep -Fq 'cat >"$WRAP_DIR/lua"' "$runner"
 grep -Fq "printf '%s\\n' \"\${REQUESTED_TARGETS}\"" "$extended_workflow"
 

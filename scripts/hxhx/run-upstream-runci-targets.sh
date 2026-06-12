@@ -571,6 +571,13 @@ patch_sourcemaps_skip_sourcemap_install_if_present() {
   python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" sourcemaps-skip-sourcemap-install-if-present --upstream-dir "$UPSTREAM_DIR"
 }
 
+patch_runci_lua_luasec_direct_rockspec() {
+  local lua_target="$UPSTREAM_DIR/tests/runci/targets/Lua.hx"
+  [ -f "$lua_target" ] || return 0
+
+  python3 "$ROOT/scripts/hxhx/patch-upstream-runci.py" lua-luasec-direct-rockspec --upstream-dir "$UPSTREAM_DIR"
+}
+
 patch_runci_node_echo_server() {
   local run_ci="$UPSTREAM_DIR/tests/RunCi.hx"
   local echo_dir="$UPSTREAM_DIR/tests/echoServer"
@@ -803,6 +810,7 @@ want_macro_patches=0
 want_js_patches=0
 want_node_echo_patch=0
 want_python_patches=0
+want_lua_patches=0
 for t in "${targets[@]}"; do
   t_norm="$(echo "$t" | tr '[:upper:]' '[:lower:]')"
   if [ "$t_norm" = "macro" ]; then
@@ -813,6 +821,9 @@ for t in "${targets[@]}"; do
   fi
   if [ "$t_norm" = "js" ]; then
     want_js_patches=1
+  fi
+  if [ "$t_norm" = "lua" ]; then
+    want_lua_patches=1
   fi
   if [ "$strict_node_echo_server" = "1" ] && { [ "$t_norm" != "macro" ] || [ "$macro_mode" = "stage0_shim" ]; }; then
     want_node_echo_patch=1
@@ -832,6 +843,9 @@ if [ "$want_node_echo_patch" = "1" ]; then
   need_cmd python3 "patch upstream runci to use the stage0-free Node echo harness"
   need_cmd node "run the stage0-free Gate3 echo harness"
 fi
+if [ "$want_lua_patches" = "1" ]; then
+  need_cmd python3 "patch upstream runci Lua target dependency setup"
+fi
 
 (
   cd "$UPSTREAM_DIR/tests"
@@ -849,6 +863,9 @@ fi
   fi
   if [ "$want_node_echo_patch" = "1" ]; then
     patch_runci_node_echo_server
+  fi
+  if [ "$want_lua_patches" = "1" ]; then
+    patch_runci_lua_luasec_direct_rockspec
   fi
 
   if [ "$want_macro_patches" = "1" ]; then
