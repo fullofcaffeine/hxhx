@@ -8938,6 +8938,7 @@ class SourceTargetCommon {
 			"sys.io.Process = sys.io.Process or {}",
 			"sys.io.Process.new = sys.io.Process.new or __hxhx_process_new"
 		];
+		appendLuaERegRuntime(lines);
 		final seenPaths = new Map<String, Bool>();
 		final seenGlobals = new Map<String, Bool>();
 		for (typed in program.getTypedModules()) {
@@ -16794,6 +16795,11 @@ class SourceTargetCommon {
 
 	static function appendLuaUtilityProcessRuntime(out:Array<String>):Void {
 		for (line in LuaUtilityProcessRuntime.lines())
+			out.push(line);
+	}
+
+	static function appendLuaERegRuntime(out:Array<String>):Void {
+		for (line in LuaERegRuntime.lines())
 			out.push(line);
 	}
 

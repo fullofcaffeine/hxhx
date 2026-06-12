@@ -88,6 +88,7 @@
 		"backend_source_SourceMvpTargetCore.ml",
 		"backend_source_PhpSourceTargetCore.ml",
 		"backend_source_LuaUtilityProcessRuntime.ml",
+		"backend_source_LuaERegRuntime.ml",
 		"backend_source_JavaSourceTargetCore.ml",
 		"backend_reflaxe_ReflaxeTargetAdapter.ml",
 		"backend_plugin_ManifestJsonParser.ml",
