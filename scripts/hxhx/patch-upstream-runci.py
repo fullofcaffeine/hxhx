@@ -351,9 +351,9 @@ def patch_lua_luasec_direct_rockspec(upstream_dir: str) -> None:
     helper = (
         "\n"
         "\t// HXHX_GATE3_LUASEC_DIRECT_ROCKSPEC: bypass LuaRocks manifest search for LuaJIT.\n"
-        "\tstatic function installLibFromRockspec(lib:String, version:String, rockspec:String) {\n"
+        "\tstatic function installLibFromPinnedRock(lib:String, version:String, rock:String) {\n"
         "\t\tif (!commandSucceed(\"luarocks\", [\"show\", lib, version])) {\n"
-        "\t\t\tfinal args = [\"install\", rockspec];\n"
+        "\t\t\tfinal args = [\"install\", rock];\n"
         "\t\t\tif (systemName == \"Mac\") {\n"
         "\t\t\t\targs.push('OPENSSL_DIR=/usr/local/opt/openssl@3');\n"
         "\t\t\t}\n"
@@ -374,10 +374,10 @@ def patch_lua_luasec_direct_rockspec(upstream_dir: str) -> None:
         if install_needle in line:
             indent = line.split(install_needle, 1)[0]
             lines.append(indent + "// HXHX_GATE3_LUASEC_DIRECT_ROCKSPEC: LuaJIT 2.0 cannot load the current huge LuaRocks manifest.\n")
-            lines.append(indent + 'installLib("luasocket", "3.0rc1-2");\n')
+            lines.append(indent + 'installLibFromPinnedRock("luasocket", "3.0rc1-2", "https://luarocks.org/luasocket-3.0rc1-2.src.rock");\n')
             lines.append(
                 indent
-                + 'installLibFromRockspec("luasec", "1.0.2-1", "https://raw.githubusercontent.com/lunarmodules/luasec/v1.0.2/luasec-1.0.2-1.rockspec");\n'
+                + 'installLibFromPinnedRock("luasec", "1.0.2-1", "https://raw.githubusercontent.com/lunarmodules/luasec/v1.0.2/luasec-1.0.2-1.rockspec");\n'
             )
             changed = True
         else:
