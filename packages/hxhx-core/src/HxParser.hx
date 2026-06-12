@@ -2028,6 +2028,10 @@ class HxParser {
 			return EArrayDecl(values);
 		}
 		while (!cur.kind.match(TEof)) {
+			if (cur.kind.match(TOther("#".code))) {
+				consumePreprocessorLine();
+				continue;
+			}
 			if (cur.kind.match(TOther("]".code))) {
 				bump();
 				break;
@@ -2044,6 +2048,8 @@ class HxParser {
 			}
 			if (cur.kind.match(TComma)) {
 				bump();
+				if (cur.kind.match(TOther("#".code)))
+					consumePreprocessorLine();
 				continue;
 			}
 			if (cur.kind.match(TOther("]".code))) {
@@ -2055,6 +2061,8 @@ class HxParser {
 				bump();
 			if (cur.kind.match(TComma)) {
 				bump();
+				if (cur.kind.match(TOther("#".code)))
+					consumePreprocessorLine();
 				continue;
 			}
 			if (cur.kind.match(TOther("]".code))) {
