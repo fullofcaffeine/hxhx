@@ -8,6 +8,12 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		}
 	}
 
+	static function assertNotContains(haystack:String, needle:String, label:String):Void {
+		if (haystack != null && haystack.indexOf(needle) >= 0) {
+			throw label + ": unexpected substring '" + needle + "' in '" + haystack + "'";
+		}
+	}
+
 	static function main() {
 		final scope = new JsFunctionScope(new haxe.ds.StringMap<String>());
 		final exprScope = scope.exprScope();
@@ -29,6 +35,11 @@ class M14JsExprEmitterSwitchExprIntegrationTest {
 		final throwJs = JsExprEmitter.emit(throwExpr, exprScope);
 		assertContains(throwJs, "(function(){ throw", "switch expression throw branch should lower to throwing IIFE");
 		assertContains(throwJs, "unknown value", "switch expression throw branch should keep message text");
+
+		final tryCatchThrow = HxParser.parseExprText("try { run(path); } catch(e:Dynamic) { trace(e); trace(name); throw e; }");
+		final tryCatchThrowJs = JsExprEmitter.emit(tryCatchThrow, exprScope);
+		assertContains(tryCatchThrowJs, "trace(e);trace(name); throw e;", "try/catch expression catch body should keep final throw as statement");
+		assertNotContains(tryCatchThrowJs, "return throw", "try/catch expression catch body must not emit invalid return throw");
 
 		final objectPattern = HxParser.parseExprText("switch (payload.expr) { case Wrap(Text(s)): s; case Group({ value : Wrap(Text(s)) }) | Raw({ value : Wrap(Text(s)) }): s; case Pick(_, name): name; case At(_, { value : Wrap(IntText(i) | FloatText(i)) }): Std.string(i); case InOp(In, _, { value : inner, pos : _ }): Std.string(inner); case _: \"none\"; }");
 		final objectPatternJs = JsExprEmitter.emit(objectPattern, exprScope);

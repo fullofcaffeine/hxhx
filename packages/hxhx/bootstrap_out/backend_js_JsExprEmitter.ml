@@ -1128,6 +1128,7 @@ let rec blockToReturningJs = fun body scope -> try let __fallback_result_84 = le
         ));
         let expr = (StringTools.trim (!tempString2 : string) : string) in (
           ignore (if HxString.length expr = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.toStdString (!tempString1) ^ " return null;" : string))) else ());
+          ignore (if StringTools.startsWith (expr : string) ("return " : string) || StringTools.startsWith (expr : string) ("throw " : string) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (!tempString1) ^ " ") ^ HxString.toStdString expr) ^ ";" : string))) else ());
           ignore (if StringTools.startsWith (expr : string) ("var " : string) || StringTools.startsWith (expr : string) ("let " : string) || StringTools.startsWith (expr : string) ("const " : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.toStdString (!trimmed) ^ "; return null;" : string))) else ());
           let controlThenReturn = (rewriteLeadingControlThenReturn (expr : string) scope : string) in (
             ignore (if controlThenReturn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString (!tempString1) ^ " ") ^ HxString.toStdString controlThenReturn : string))) else ());

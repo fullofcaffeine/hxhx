@@ -256,6 +256,8 @@ class JsExprEmitter {
 		final expr = StringTools.trim(lastSemi >= 0 ? trimmed.substr(lastSemi + 1) : trimmed);
 		if (expr.length == 0)
 			return prefix + " return null;";
+		if (StringTools.startsWith(expr, "return ") || StringTools.startsWith(expr, "throw "))
+			return prefix + " " + expr + ";";
 		if (StringTools.startsWith(expr, "var ") || StringTools.startsWith(expr, "let ") || StringTools.startsWith(expr, "const "))
 			return trimmed + "; return null;";
 		final controlThenReturn = rewriteLeadingControlThenReturn(expr, scope);
