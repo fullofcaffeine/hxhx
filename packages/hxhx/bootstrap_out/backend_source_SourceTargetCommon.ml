@@ -37880,7 +37880,9 @@ let renderProgram = fun target program context decl className body -> let lines 
           HxArray.push lines line
         )) done);
         ignore (HxArray.push lines "end");
-        HxArray.push lines "main()"
+        ignore (HxArray.push lines "local __hxhx_traceback = (debug and debug.traceback) or tostring");
+        ignore (HxArray.push lines "local __hxhx_ok, __hxhx_error = xpcall(main, __hxhx_traceback)");
+        HxArray.push lines "if not __hxhx_ok then error(__hxhx_error, 0) end"
       ))
     )));
   ignore (let __assign_6366 = Obj.magic previousPhpInstanceMethodsByType in (

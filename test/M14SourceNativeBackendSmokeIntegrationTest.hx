@@ -7568,6 +7568,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"Lua output should provide explicit unit helper globals skipped by compile-time-only filtering");
 		assertContains(content, "local classes = hxhx_array({Support.new()})", "Lua array literals should be wrapped with push-capable tables");
 		assertContains(content, "classes.push(Support.new())", "Lua generated push call should remain source-shaped");
+		assertContains(content, "local __hxhx_traceback = (debug and debug.traceback) or tostring",
+			"Lua entrypoints should install a traceback handler before running main");
+		assertContains(content, "local __hxhx_ok, __hxhx_error = xpcall(main, __hxhx_traceback)",
+			"Lua entrypoints should preserve traceback text for pcall(require, ...) embedding");
+		assertContains(content, "if not __hxhx_ok then error(__hxhx_error, 0) end",
+			"Lua entrypoints should rethrow traceback text without adding an extra Lua error level");
 		deleteRecursive(tmpRoot);
 	}
 

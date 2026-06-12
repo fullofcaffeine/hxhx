@@ -19805,7 +19805,9 @@ class SourceTargetCommon {
 					for (line in renderFunctionStmts(target, body, "  ", className + ".main"))
 						lines.push(line);
 					lines.push("end");
-					lines.push("main()");
+					lines.push("local __hxhx_traceback = (debug and debug.traceback) or tostring");
+					lines.push("local __hxhx_ok, __hxhx_error = xpcall(main, __hxhx_traceback)");
+					lines.push("if not __hxhx_ok then error(__hxhx_error, 0) end");
 				}
 		}
 		phpRenderInstanceMethodsByType = previousPhpInstanceMethodsByType;
