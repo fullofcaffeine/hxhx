@@ -343,14 +343,14 @@ def patch_lua_luasec_direct_rockspec(upstream_dir: str) -> None:
         return
 
     src = read_text(path)
-    marker = "HXHX_GATE3_LUASEC_DIRECT_ROCKSPEC"
+    marker = "HXHX_GATE3_LUA_PINNED_ROCKS"
     if marker in src:
         return
 
     helper_needle = "\n\tstatic public function run(args:Array<String>) {\n"
     helper = (
         "\n"
-        "\t// HXHX_GATE3_LUASEC_DIRECT_ROCKSPEC: bypass LuaRocks manifest search for LuaJIT.\n"
+        "\t// HXHX_GATE3_LUA_PINNED_ROCKS: bypass LuaRocks manifest search for LuaJIT.\n"
         "\tstatic function installLibFromPinnedRock(lib:String, version:String, rock:String) {\n"
         "\t\tif (!commandSucceed(\"luarocks\", [\"show\", lib, version])) {\n"
         "\t\t\tfinal args = [\"install\", rock];\n"
@@ -367,23 +367,45 @@ def patch_lua_luasec_direct_rockspec(upstream_dir: str) -> None:
         fail("Lua.hx run entrypoint not found")
     src = src.replace(helper_needle, helper + helper_needle, 1)
 
-    install_needle = 'installLib("luasec", "1.0.2-1");'
+    pinned_rocks = {
+        'installLib("luasec", "1.0.2-1");': [
+            "// HXHX_GATE3_LUA_PINNED_ROCKS: LuaJIT 2.0 cannot load the current huge LuaRocks manifest.\n",
+            'installLibFromPinnedRock("luasocket", "3.0rc1-2", "https://luarocks.org/luasocket-3.0rc1-2.src.rock");\n',
+            'installLibFromPinnedRock("luasec", "1.0.2-1", "https://raw.githubusercontent.com/lunarmodules/luasec/v1.0.2/luasec-1.0.2-1.rockspec");\n',
+        ],
+        'installLib("lrexlib-pcre2", "2.9.1-1");': [
+            'installLibFromPinnedRock("lrexlib-pcre2", "2.9.1-1", "https://luarocks.org/lrexlib-pcre2-2.9.1-1.src.rock");\n',
+        ],
+        'installLib("luv", "1.36.0-0");': [
+            'installLibFromPinnedRock("luv", "1.36.0-0", "https://luarocks.org/luv-1.36.0-0.src.rock");\n',
+        ],
+        'installLib("luasocket", "3.0rc1-2");': [
+            "// HXHX_GATE3_LUA_PINNED_ROCKS: luasocket is installed before luasec from a pinned source rock.\n",
+        ],
+        'installLib("luautf8", "0.1.1-1");': [
+            'installLibFromPinnedRock("luautf8", "0.1.1-1", "https://luarocks.org/luautf8-0.1.1-1.src.rock");\n',
+        ],
+        'installLib("hx-lua-simdjson", "0.0.1-1");': [
+            'installLibFromPinnedRock("hx-lua-simdjson", "0.0.1-1", "https://luarocks.org/hx-lua-simdjson-0.0.1-1.rockspec");\n',
+        ],
+    }
     lines: list[str] = []
-    changed = False
+    replaced: set[str] = set()
     for line in src.splitlines(keepends=True):
-        if install_needle in line:
-            indent = line.split(install_needle, 1)[0]
-            lines.append(indent + "// HXHX_GATE3_LUASEC_DIRECT_ROCKSPEC: LuaJIT 2.0 cannot load the current huge LuaRocks manifest.\n")
-            lines.append(indent + 'installLibFromPinnedRock("luasocket", "3.0rc1-2", "https://luarocks.org/luasocket-3.0rc1-2.src.rock");\n')
-            lines.append(
-                indent
-                + 'installLibFromPinnedRock("luasec", "1.0.2-1", "https://raw.githubusercontent.com/lunarmodules/luasec/v1.0.2/luasec-1.0.2-1.rockspec");\n'
-            )
-            changed = True
-        else:
+        replacement = None
+        for needle, replacement_lines in pinned_rocks.items():
+            if needle in line:
+                indent = line.split(needle, 1)[0]
+                replacement = [indent + replacement_line for replacement_line in replacement_lines]
+                replaced.add(needle)
+                break
+        if replacement is None:
             lines.append(line)
-    if not changed:
-        fail("Lua.hx luasec install call not found")
+        else:
+            lines.extend(replacement)
+    missing = sorted(set(pinned_rocks.keys()) - replaced)
+    if missing:
+        fail("Lua.hx install call(s) not found: " + ", ".join(missing))
     write_text(path, "".join(lines))
 
 

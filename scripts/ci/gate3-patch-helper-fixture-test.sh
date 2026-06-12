@@ -93,7 +93,11 @@ class Lua {
 
 	static public function run(args:Array<String>) {
 		installLib("luasec", "1.0.2-1");
+		installLib("lrexlib-pcre2", "2.9.1-1");
+		installLib("luv", "1.36.0-0");
 		installLib("luasocket", "3.0rc1-2");
+		installLib("luautf8", "0.1.1-1");
+		installLib("hx-lua-simdjson", "0.0.1-1");
 	}
 }
 EOF
@@ -148,10 +152,18 @@ grep -Fq 'runCommand("haxelib", ["path", "utest"])' "$fixture/tests/RunCi.hx"
 grep -Fq 'runCommand("haxelib", ["path", "haxeserver"])' "$fixture/tests/runci/targets/Macro.hx"
 grep -Fq "HXHX_GATE2_SKIP_PARTY" "$fixture/tests/runci/targets/Macro.hx"
 grep -Fq "['path', 'sourcemap']" "$fixture/tests/sourcemaps/src/Test.hx"
-grep -Fq "HXHX_GATE3_LUASEC_DIRECT_ROCKSPEC" "$fixture/tests/runci/targets/Lua.hx"
+grep -Fq "HXHX_GATE3_LUA_PINNED_ROCKS" "$fixture/tests/runci/targets/Lua.hx"
 grep -Fq "installLibFromPinnedRock" "$fixture/tests/runci/targets/Lua.hx"
 grep -Fq "https://luarocks.org/luasocket-3.0rc1-2.src.rock" "$fixture/tests/runci/targets/Lua.hx"
 grep -Fq "raw.githubusercontent.com/lunarmodules/luasec/v1.0.2/luasec-1.0.2-1.rockspec" "$fixture/tests/runci/targets/Lua.hx"
+grep -Fq "https://luarocks.org/lrexlib-pcre2-2.9.1-1.src.rock" "$fixture/tests/runci/targets/Lua.hx"
+grep -Fq "https://luarocks.org/luv-1.36.0-0.src.rock" "$fixture/tests/runci/targets/Lua.hx"
+grep -Fq "https://luarocks.org/luautf8-0.1.1-1.src.rock" "$fixture/tests/runci/targets/Lua.hx"
+grep -Fq "https://luarocks.org/hx-lua-simdjson-0.0.1-1.rockspec" "$fixture/tests/runci/targets/Lua.hx"
+if grep -Fq 'installLib("lrexlib-pcre2", "2.9.1-1")' "$fixture/tests/runci/targets/Lua.hx"; then
+  echo "Lua.hx still uses manifest lookup for lrexlib-pcre2" >&2
+  exit 1
+fi
 grep -Fq "HXHX_GATE3_NODE_ECHO_SERVER" "$fixture/tests/RunCi.hx"
 grep -Fq "hxhx_node_echo_server.js" "$fixture/tests/RunCi.hx"
 grep -Fq "nekotools" "$fixture/tests/RunCi.hx"
