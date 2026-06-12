@@ -65,6 +65,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return false;
 	}
 
+	static function csRuntimeTemplateContent():String {
+		final env = Sys.getEnv("HXHX_REPO_ROOT");
+		final root = env != null && env.length > 0 ? env : Sys.getCwd();
+		return File.getContent(Path.join([root, "packages", "hxhx-core", "source-templates", "cs", "__HxRuntime.cs"]));
+	}
+
 	static function commandOutput(command:String, args:Array<String>):{code:Int, stdout:String, stderr:String} {
 		final process = new sys.io.Process(command, args);
 		final stdout = process.stdout.readAll().toString();
@@ -7028,7 +7034,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(File.getContent(sourcePath), "public class LibraryOnly", "C# no-main library source should render the declared class");
 		assertContains(File.getContent(sourcePath), "return new { longInexistentName = true, otherName = true };",
 			"C# no-main library source should render simple support method bodies needed by library source sets");
-		assertContains(File.getContent(runtimeSourcePath), "namespace hxhx", "C# no-main library runtime source should define the hxhx namespace");
+		assertTrue(File.getContent(runtimeSourcePath) == csRuntimeTemplateContent(),
+			"C# no-main library runtime source should be emitted from the repo-owned source template");
 		assertTrue(hasArtifactPath(result.artifacts, runtimeSourcePath), "C# no-main library source-set should include the runtime source artifact");
 		deleteRecursive(tmpRoot);
 	}
