@@ -1407,6 +1407,13 @@ class SourceTargetCommon {
 		}
 		if (target == Java && op == "+" && !javaStringLikeOperand(left) && !javaStringLikeOperand(right))
 			return "Std.add_(" + renderExpr(Java, left) + ", " + renderExpr(Java, right) + ")";
+		if (target == Lua && op == "+") {
+			final renderedLeft = renderExpr(Lua, left);
+			final renderedRight = renderExpr(Lua, right);
+			if (luaStringLikeOperand(left) || luaStringLikeOperand(right))
+				return "(" + stringCall(Lua, renderedLeft) + " .. " + stringCall(Lua, renderedRight) + ")";
+			return "(" + renderedLeft + " + " + renderedRight + ")";
+		}
 		if (target == Java && (op == "-" || op == "*" || op == "/" || op == "%"))
 			return "(Std.int_(" + renderExpr(Java, left) + ") " + op + " Std.int_(" + renderExpr(Java, right) + "))";
 		final mapped = binopToken(target, op);
@@ -2946,6 +2953,18 @@ class SourceTargetCommon {
 			case EString(_):
 				true;
 			case EBinop("+", left, right): javaStringLikeOperand(left) || javaStringLikeOperand(right);
+			case ECall(EField(EIdent("Std"), "string"), _):
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function luaStringLikeOperand(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EString(_):
+				true;
+			case EBinop("+", left, right): luaStringLikeOperand(left) || luaStringLikeOperand(right);
 			case ECall(EField(EIdent("Std"), "string"), _):
 				true;
 			case _:

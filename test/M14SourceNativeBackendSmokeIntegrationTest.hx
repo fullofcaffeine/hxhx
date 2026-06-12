@@ -6064,6 +6064,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function luaStringBoolConcatProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var hasExpectedMessage = true;",
+			"    Sys.println(\"Has expected exception message: \" + hasExpectedMessage);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function luaStaticHelperCallProgram():GenIrProgram {
 		final src = [
 			"function matchesExpectedMessage(actual:String) {",
@@ -7653,6 +7667,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("lua", [outputPath]);
 			assertTrue(run.code == 0, "generated Lua EReg runtime support should execute, stderr:\n" + run.stderr);
 			assertTrue(run.stdout == "true\nfalse\n", "generated Lua EReg runtime output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertLuaStringBoolConcat():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_string_bool_concat_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("lua-native");
+		backend.emit(luaStringBoolConcatProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "(tostring(\"Has expected exception message: \") .. tostring(hasExpectedMessage))",
+			"Lua string concatenation should stringify Bool operands before using ..");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "generated Lua string+Bool concat should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "Has expected exception message: true\n", "generated Lua string+Bool concat output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -13712,7 +13744,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
 		emit("cs-native", "cs", "Main.cs", "System.Console.WriteLine((\"source-native:\" + \"cs\"));");
 		emit("php-native", "php", "index.php", "echo __hxhx_add(\"source-native:\", \"php\") . PHP_EOL;");
-		emit("lua-native", "lua", "Main.lua", "print((\"source-native:\" .. \"lua\"))");
+		emit("lua-native", "lua", "Main.lua", "print((tostring(\"source-native:\") .. tostring(\"lua\")))");
 		assertPythonOutputHint();
 		assertJavaJarPackaging();
 		assertCsExePackaging();
@@ -13752,6 +13784,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLuaSysProcessSupport();
 		assertLuaStringSubstrSupport();
 		assertLuaERegRuntime();
+		assertLuaStringBoolConcat();
 		assertLuaStaticHelperCalls();
 		assertCsFunctionTypeReturnLambda();
 		assertCsFunctionTypeArgumentLambda();
