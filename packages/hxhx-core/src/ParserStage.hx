@@ -26,21 +26,6 @@ class ParserStage {
 		return dot <= 0 ? name : name.substr(0, dot);
 	}
 
-	static function isIdentCode(code:Int):Bool {
-		return (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || (code >= 48 && code <= 57) || code == 95;
-	}
-
-	static function startsWithWord(source:String, index:Int, word:String):Bool {
-		if (index < 0 || index + word.length > source.length)
-			return false;
-		if (source.substr(index, word.length) != word)
-			return false;
-		final beforeOk = index == 0 || !isIdentCode(source.charCodeAt(index - 1));
-		final after = index + word.length;
-		final afterOk = after >= source.length || !isIdentCode(source.charCodeAt(after));
-		return beforeOk && afterOk;
-	}
-
 	static function compactSourceTypeHint(typeHint:String):String {
 		var compact = StringTools.trim(typeHint == null ? "" : typeHint);
 		compact = StringTools.replace(compact, " ", "");
@@ -68,116 +53,61 @@ class ParserStage {
 		return native == inner || StringTools.endsWith(native, "." + inner);
 	}
 
-	static function skipSpaces(source:String, index:Int):Int {
-		var i = index;
-		while (i < source.length) {
-			switch (source.charCodeAt(i)) {
-				case 9 | 10 | 13 | 32:
-					i++;
-				case _:
-					return i;
-			}
-		}
-		return i;
-	}
+	static function scanToplevelFunctions(source:String, expectedMainClass:Null<String>):Array<HxFunctionDecl> {
+		final out = new Array<HxFunctionDecl>();
+		if (source == null || source.length == 0 || expectedMainClass == null || expectedMainClass.length == 0)
+			return out;
 
-	static function findMatchingBrace(source:String, openIndex:Int):Int {
-		var depth = 1;
-		var i = openIndex + 1;
-		var stringQuote = 0;
-		var escaped = false;
-		var lineComment = false;
-		var blockComment = false;
-		while (i < source.length) {
-			final code = source.charCodeAt(i);
-			final next = i + 1 < source.length ? source.charCodeAt(i + 1) : -1;
-			if (lineComment) {
-				if (code == 10 || code == 13)
-					lineComment = false;
-				i++;
+		var braceDepth = 0;
+		var i = 0;
+		while (true) {
+			final t = ParserStageScanHelpers.scanNextToken(source, i);
+			i = t.nextPos;
+			if (t.text.length == 0)
+				break;
+			if (!t.isIdent) {
+				if (t.text == "{")
+					braceDepth += 1;
+				else if (t.text == "}")
+					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
 				continue;
 			}
-			if (blockComment) {
-				if (code == 42 && next == 47) {
-					blockComment = false;
-					i += 2;
-				} else {
-					i++;
-				}
+			if (braceDepth != 0 || t.text != "function")
 				continue;
-			}
-			if (stringQuote != 0) {
-				if (escaped) {
-					escaped = false;
-				} else if (code == 92) {
-					escaped = true;
-				} else if (code == stringQuote) {
-					stringQuote = 0;
-				}
-				i++;
-				continue;
-			}
-			if (code == 47 && next == 47) {
-				lineComment = true;
-				i += 2;
-				continue;
-			}
-			if (code == 47 && next == 42) {
-				blockComment = true;
-				i += 2;
-				continue;
-			}
-			if (code == 34 || code == 39) {
-				stringQuote = code;
-				i++;
-				continue;
-			}
-			if (code == 123) {
-				depth++;
-			} else if (code == 125) {
-				depth--;
-				if (depth == 0)
-					return i;
-			}
-			i++;
-		}
-		return -1;
-	}
 
-	static function scanToplevelMainFunction(source:String):Null<HxFunctionDecl> {
-		if (source == null || source.length == 0)
-			return null;
-		var index = 0;
-		while (index < source.length) {
-			final found = source.indexOf("function", index);
-			if (found < 0)
-				return null;
-			index = found + "function".length;
-			if (!startsWithWord(source, found, "function"))
+			var sig = ParserStageScanHelpers.scanNextToken(source, i);
+			while (sig.text.length > 0 && sig.text != "{" && sig.text != ";")
+				sig = ParserStageScanHelpers.scanNextToken(source, sig.nextPos);
+			if (sig.text != "{")
 				continue;
-			final nameStart = skipSpaces(source, index);
-			if (!startsWithWord(source, nameStart, "main"))
+
+			var depth = 1;
+			var end = sig.nextPos;
+			while (depth > 0) {
+				final bodyTok = ParserStageScanHelpers.scanNextToken(source, end);
+				if (bodyTok.text.length == 0)
+					break;
+				end = bodyTok.nextPos;
+				if (bodyTok.text == "{")
+					depth += 1;
+				else if (bodyTok.text == "}")
+					depth -= 1;
+			}
+			if (depth != 0)
 				continue;
-			final open = source.indexOf("{", nameStart + "main".length);
-			if (open < 0)
-				return null;
-			final close = findMatchingBrace(source, open);
-			if (close < 0)
-				return null;
-			final bodyText = source.substring(open + 1, close);
-			var body:Array<HxStmt> = [];
-			#if !hxhx_stage0_no_hx_parser
+
+			final functionText = source.substring(t.startPos, end);
 			try {
-				body = HxParser.offsetFunctionBodyColumns(HxParser.parseFunctionBodyTextAt(bodyText, source, open + 1), 1);
-			} catch (_:HxParseError) {
-				body = [];
-			} catch (_:String) {
-				body = [];
-			}
-			#end
-			return new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", body, "", null, HxPos.unknown(), HxPos.unknown(), bodyText);
+				final synthetic = new HxParser("class __HxModule { public static " + functionText + " }").parseModule("__HxModule");
+				for (fn in HxClassDecl.getFunctions(HxModuleDecl.getMainClass(synthetic))) {
+					if (HxFunctionDecl.getIsStatic(fn))
+						out.push(fn);
+				}
+			} catch (_:HxParseError) {} catch (_:String) {}
+			i = end;
 		}
-		return null;
+
+		return out;
 	}
 
 	public static function parse(source:String, ?filePath:String):ParsedModule {
@@ -556,8 +486,15 @@ class ParserStage {
 						}
 					}
 
-					final topMain = expectedMainClass != null && expectedMainClass.length > 0 ? scanToplevelMainFunction(source) : null;
-					if (topMain != null) {
+					final topFunctions = scanToplevelFunctions(source, expectedMainClass);
+					if (topFunctions.length > 0) {
+						var topHasMain = false;
+						for (fn in topFunctions) {
+							if (HxFunctionDecl.getName(fn) == "main") {
+								topHasMain = true;
+								break;
+							}
+						}
 						var mainHasMain = false;
 						for (fn in HxClassDecl.getFunctions(main)) {
 							if (HxFunctionDecl.getName(fn) == "main") {
@@ -566,13 +503,32 @@ class ParserStage {
 							}
 						}
 						if (mainName == null || mainName.length == 0 || mainName == "Unknown" || mainName != expectedMainClass) {
-							main = new HxClassDecl(expectedMainClass, true, [topMain], []);
+							main = new HxClassDecl(expectedMainClass, topHasMain, topFunctions, []);
 							mainName = expectedMainClass;
-						} else if (!mainHasMain) {
+							staticPatchApplied = true;
+						} else {
 							final functions = HxClassDecl.getFunctions(main).copy();
-							functions.push(topMain);
-							main = new HxClassDecl(HxClassDecl.getName(main), true, functions, HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main),
-								HxClassDecl.getMetadata(main), HxClassDecl.getIsInterface(main), HxClassDecl.getImplementsPaths(main));
+							final seenFunctions:Map<String, Bool> = new Map();
+							for (fn in functions) {
+								final fnName = HxFunctionDecl.getName(fn);
+								if (fnName != null && fnName.length > 0)
+									seenFunctions.set(fnName, true);
+							}
+							var changed = false;
+							for (fn in topFunctions) {
+								final fnName = HxFunctionDecl.getName(fn);
+								if (fnName == null || fnName.length == 0 || seenFunctions.exists(fnName))
+									continue;
+								functions.push(fn);
+								seenFunctions.set(fnName, true);
+								changed = true;
+							}
+							if (changed || (topHasMain && !mainHasMain)) {
+								main = new HxClassDecl(HxClassDecl.getName(main), HxClassDecl.getHasStaticMain(main) || topHasMain, functions,
+									HxClassDecl.getFields(main), HxClassDecl.getExtendsPath(main), HxClassDecl.getMetadata(main),
+									HxClassDecl.getIsInterface(main), HxClassDecl.getImplementsPaths(main));
+								staticPatchApplied = true;
+							}
 						}
 					}
 

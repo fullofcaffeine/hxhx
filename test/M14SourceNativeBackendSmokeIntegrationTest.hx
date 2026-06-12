@@ -6065,7 +6065,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  Sys.println(Std.string(hasExpectedMessage));",
 			"}",
 		].join("\n");
-		final parsed = ParserStage.parse(src, "Main.hx");
+		final parsed = ParserStage.parse(src, "RunScript.hx");
 		final typed = TyperStage.typeModule(parsed);
 		return MacroStage.expandProgram([typed], []);
 	}
@@ -7627,8 +7627,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaStaticHelperCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
-		final outputPath = Path.join([tmpRoot, "Main.lua"]);
+		backend.emit(luaStaticHelperCallProgram(), new BackendContext(tmpRoot, null, "RunScript", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "RunScript.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "local matchesExpectedMessage", "Lua output should predeclare same-module static helpers before main");
 		assertContains(content, "matchesExpectedMessage = function(actual)", "Lua output should emit the static helper body");

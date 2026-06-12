@@ -1788,7 +1788,7 @@ let init () : unit =
   HxType.register_class_instance_fields "ParsedModule" [ "decl"; "filePath"; "getDecl"; "getFilePath"; "getSource"; "source" ];
   HxType.register_class_static_fields "ParsedModule" [];
   HxType.register_class_instance_fields "ParserStage" [];
-  HxType.register_class_static_fields "ParserStage" [ "compactSourceTypeHint"; "enrichPureParserDecl"; "expectedMainClassFromFile"; "findMatchingBrace"; "isIdentCode"; "parse"; "parseViaNativeHooks"; "scanHelperAbstracts"; "scanHelperClasses"; "scanHelperEnums"; "scanHelperTypedefs"; "scanToplevelMainFunction"; "skipSpaces"; "sourceNullTypeHintIsMoreSpecific"; "startsWithWord" ];
+  HxType.register_class_static_fields "ParserStage" [ "compactSourceTypeHint"; "enrichPureParserDecl"; "expectedMainClassFromFile"; "parse"; "parseViaNativeHooks"; "scanHelperAbstracts"; "scanHelperClasses"; "scanHelperEnums"; "scanHelperTypedefs"; "scanToplevelFunctions"; "sourceNullTypeHintIsMoreSpecific" ];
   HxType.register_class_instance_fields "ParserStageNativeDecode" [];
   HxType.register_class_static_fields "ParserStageNativeDecode" [ "balancedSwitchEnd"; "compactTypeHint"; "decodeFieldPayload"; "decodeLenPayload"; "decodeMethodPayload"; "decodeNativeProtocol"; "decodeStaticFinalPayload"; "defaultValueFromText"; "findFunctionBodyStart"; "findMatchingParen"; "findTopLevelEquals"; "parseDecInt"; "parseRegexLiteral"; "parseReturnExprText"; "parseSourceSignatureArgs"; "protocolArgNames"; "sourceArgHintByName"; "sourceArgHintsMatchNames"; "sourceSignatureArgHints"; "sourceTypeHintIsMoreSpecific"; "splitN"; "splitTopLevelComma"; "stripNewTypeParams"; "throwFromErrLine"; "trimCapturedFieldInitializer"; "unescapePayload" ];
   HxType.register_class_instance_fields "ParserStageScanHelpers" [];

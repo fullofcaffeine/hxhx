@@ -16738,18 +16738,20 @@ class SourceTargetCommon {
 	static function appendLuaMainStaticHelpers(out:Array<String>, decl:HxModuleDecl, className:String, entryBody:Array<HxStmt>):Void {
 		final helperNames = new Array<String>();
 		final helpersByName = new Map<String, HxFunctionDecl>();
-		for (fn in HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl))) {
-			final fnName = HxFunctionDecl.getName(fn);
-			if (fnName == "main"
-				|| fnName == "new"
-				|| !HxFunctionDecl.getIsStatic(fn)
-				|| HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0)
-				continue;
-			final methodName = valueName(Lua, fnName);
-			if (helpersByName.exists(methodName))
-				continue;
-			helperNames.push(methodName);
-			helpersByName.set(methodName, fn);
+		for (cls in HxModuleDecl.getClasses(decl)) {
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				final fnName = HxFunctionDecl.getName(fn);
+				if (fnName == "main"
+					|| fnName == "new"
+					|| !HxFunctionDecl.getIsStatic(fn)
+					|| HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0)
+					continue;
+				final methodName = valueName(Lua, fnName);
+				if (helpersByName.exists(methodName))
+					continue;
+				helperNames.push(methodName);
+				helpersByName.set(methodName, fn);
+			}
 		}
 		if (helperNames.length == 0)
 			return;
