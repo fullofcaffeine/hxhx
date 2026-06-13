@@ -2410,6 +2410,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println([\"foo\" => 1].toString());",
 			"    var keyword = { \"new\": \"test\" };",
 			"    Sys.println(Reflect.field(keyword, \"new\"));",
+			"    Sys.println(({ name: \"foo\", args: [] }).name);",
 			"    var x = 5;",
 			"    Sys.println('${5}');",
 			"    Sys.println('a${x}b');",
@@ -8587,6 +8588,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_add_string(__hxhx_array_get($br, 1))", "PHP Map bracket reads should dispatch through the indexed get helper");
 		assertContains(content, "(new Map())->toString()", "PHP new-expression method receivers must be parenthesized for PHP 8.3");
 		assertNotContains(content, "new Map()->toString()", "PHP should not emit PHP-8.4-only new-expression member-call syntax");
+		assertContains(content, "(new __HxAnon([\"name\" => \"foo\", \"args\" => []]))->name",
+			"PHP anonymous-object member receivers must be parenthesized for PHP 8.3");
+		assertNotContains(content, "new __HxAnon([\"name\" => \"foo\", \"args\" => []])->name",
+			"PHP should not emit PHP-8.4-only anonymous-object member-call syntax");
 		assertContains(content, "__hxhx_map_literal([[1, 1]])->toString()", "PHP integer map literal toString should lower to the runtime Map shim");
 		assertContains(content, "__hxhx_map_literal([[\"foo\", 1]])->toString()", "PHP string map literal toString should lower to the runtime Map shim");
 		assertContains(content, "class Lambda {", "PHP source backend should emit a minimal Lambda helper");

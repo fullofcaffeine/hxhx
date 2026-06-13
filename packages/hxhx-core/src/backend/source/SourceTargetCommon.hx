@@ -2193,11 +2193,12 @@ class SourceTargetCommon {
 
 	static function phpReceiverExpr(receiver:HxExpr):String {
 		final rendered = renderExpr(Php, receiver);
+		final trimmed = StringTools.ltrim(rendered);
 		return switch (receiver) {
-			case ENew(_, _) | ECast(ENew(_, _), _):
+			case ENew(_, _) | EAnon(_, _) | ECast(ENew(_, _), _) | ECast(EAnon(_, _), _):
 				"(" + rendered + ")";
 			case _:
-				rendered;
+				if (StringTools.startsWith(trimmed, "new ")) "(" + rendered + ")"; else rendered;
 		};
 	}
 
