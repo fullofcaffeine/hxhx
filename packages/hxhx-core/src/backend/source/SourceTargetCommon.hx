@@ -4836,23 +4836,68 @@ class SourceTargetCommon {
 	static function helperIsNullableResult(args:Array<HxExpr>):Null<Bool> {
 		if (args == null || args.length != 1)
 			return null;
-		return helperExprNullableResult(args[0]);
+		return helperExprNullableResult(args[0], []);
 	}
 
-	static function helperExprNullableResult(expr:HxExpr):Null<Bool> {
+	static function helperExprNullableResult(expr:HxExpr, seen:Array<String>):Null<Bool> {
 		switch (expr) {
 			case EIdent(name):
 				final localHint = phpLocalTypeHint(name);
 				if (StringTools.trim(localHint).length > 0)
-					return isNullTypeHint(localHint);
+					if (isNullTypeHint(localHint))
+						return true;
+				final clean = sanitizeTypeName(name);
+				if (seen.indexOf(clean) < 0) {
+					final init = phpLocalInitExpr(clean);
+					if (init != null) {
+						final nextSeen = seen.copy();
+						nextSeen.push(clean);
+						final initNullable = helperExprNullableResult(init, nextSeen);
+						if (initNullable != null)
+							return initNullable;
+					}
+				}
+				if (StringTools.trim(localHint).length > 0)
+					return false;
+				if (phpCurrentInstanceFieldValue(clean)) {
+					final fieldHint = phpCurrentInstanceFieldTypeHint(clean);
+					if (StringTools.trim(fieldHint).length > 0)
+						return isNullTypeHint(fieldHint);
+				}
+			case EField(EThis, field):
+				final fieldHint = phpCurrentInstanceFieldTypeHint(field);
+				if (StringTools.trim(fieldHint).length > 0)
+					return isNullTypeHint(fieldHint);
+			case _:
+		}
+		switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				return helperExprNullableResult(inner, seen);
+			case EBinop("??", left, right):
+				final leftNullable = helperExprNullableResult(left, seen);
+				final rightNullable = helperExprNullableResult(right, seen);
+				if (leftNullable == false || rightNullable == false)
+					return false;
+				if (leftNullable == true && rightNullable == true)
+					return true;
+				return null;
+			case ETernary(cond, thenExpr, elseExpr):
+				final refined = helperNullCheckTernaryNullableResult(cond, thenExpr, elseExpr, seen);
+				if (refined != null)
+					return refined;
+				final thenNullable = helperExprNullableResult(thenExpr, seen);
+				final elseNullable = helperExprNullableResult(elseExpr, seen);
+				if (thenNullable == true || elseNullable == true)
+					return true;
+				if (thenNullable == false && elseNullable == false)
+					return false;
+				return null;
 			case _:
 		}
 		final hint = phpExprTypeHint(expr);
 		if (StringTools.trim(hint).length > 0)
 			return isNullTypeHint(hint);
 		switch (expr) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
-				return helperExprNullableResult(inner);
 			case ENull:
 				return true;
 			case EBool(_) | EInt(_) | EFloat(_) | EString(_) | ENew(_, _) | EArrayDecl(_) | EAnon(_, _) | ELambda(_, _):
@@ -4861,17 +4906,54 @@ class SourceTargetCommon {
 				return false;
 			case EIdent(_):
 				return null;
-			case EBinop("??", left, right):
-				final leftNullable = helperExprNullableResult(left);
-				final rightNullable = helperExprNullableResult(right);
-				if (leftNullable == false || rightNullable == false)
-					return false;
-				if (leftNullable == true && rightNullable == true)
-					return true;
-				return null;
 			case _:
 				return null;
 		}
+	}
+
+	static function helperNullCheckTernaryNullableResult(cond:HxExpr, thenExpr:HxExpr, elseExpr:HxExpr, seen:Array<String>):Null<Bool> {
+		final check = helperNullCheckSubject(cond);
+		if (check == null)
+			return null;
+		if (check.isEqualsNull && helperSameValueExpr(elseExpr, check.expr)) {
+			final fallbackNullable = helperExprNullableResult(thenExpr, seen);
+			return fallbackNullable == false ? false : null;
+		}
+		if (!check.isEqualsNull && helperSameValueExpr(thenExpr, check.expr)) {
+			final fallbackNullable = helperExprNullableResult(elseExpr, seen);
+			return fallbackNullable == false ? false : null;
+		}
+		return null;
+	}
+
+	static function helperNullCheckSubject(cond:HxExpr):Null<{expr:HxExpr, isEqualsNull:Bool}> {
+		return switch (cond) {
+			case EBinop("==", left, ENull):
+				{expr: left, isEqualsNull: true};
+			case EBinop("==", ENull, right):
+				{expr: right, isEqualsNull: true};
+			case EBinop("!=", left, ENull):
+				{expr: left, isEqualsNull: false};
+			case EBinop("!=", ENull, right):
+				{expr: right, isEqualsNull: false};
+			case _:
+				null;
+		};
+	}
+
+	static function helperSameValueExpr(left:HxExpr, right:HxExpr):Bool {
+		return switch [left, right] {
+			case [EIdent(leftName), EIdent(rightName)]:
+				sanitizeTypeName(leftName) == sanitizeTypeName(rightName);
+			case [EField(leftObj, leftField), EField(rightObj, rightField)]: sanitizeTypeName(leftField) == sanitizeTypeName(rightField) && helperSameValueExpr(leftObj,
+					rightObj);
+			case [EThis, EThis]:
+				true;
+			case [EThis, EIdent("this")] | [EIdent("this"), EThis]:
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function helperFollowWithAbstractsResult(args:Array<HxExpr>, once:Bool):Null<String> {
@@ -6993,19 +7075,22 @@ class SourceTargetCommon {
 
 	static function phpCurrentInstanceFieldValue(field:String):Bool {
 		if (phpRenderSameClassFieldNames == null)
-			return false;
+			return phpRenderSameClassName != null && phpTypeHasInstanceField(phpRenderSameClassName, field);
 		if (phpRenderSameClassFieldNames.exists(field))
 			return true;
-		return phpRenderSameClassFieldNames.exists(sanitizeTypeName(field));
+		final clean = sanitizeTypeName(field);
+		if (phpRenderSameClassFieldNames.exists(clean))
+			return true;
+		return phpRenderSameClassName != null && phpTypeHasInstanceField(phpRenderSameClassName, clean);
 	}
 
 	static function phpCurrentInstanceFieldTypeHint(field:String):String {
-		if (phpRenderSameClassFieldTypeHints == null)
-			return "";
-		if (phpRenderSameClassFieldTypeHints.exists(field))
+		if (phpRenderSameClassFieldTypeHints != null && phpRenderSameClassFieldTypeHints.exists(field))
 			return phpRenderSameClassFieldTypeHints.get(field);
 		final clean = sanitizeTypeName(field);
-		return phpRenderSameClassFieldTypeHints.exists(clean) ? phpRenderSameClassFieldTypeHints.get(clean) : "";
+		if (phpRenderSameClassFieldTypeHints != null && phpRenderSameClassFieldTypeHints.exists(clean))
+			return phpRenderSameClassFieldTypeHints.get(clean);
+		return phpRenderSameClassName == null ? "" : phpInstanceFieldTypeHintForType(phpRenderSameClassName, clean);
 	}
 
 	static function phpCurrentInstanceMethodArgs(field:String):Null<Array<HxFunctionArg>> {
@@ -7469,6 +7554,8 @@ class SourceTargetCommon {
 				inferLocalTypeHint("", inner);
 			case EBinop("??", left, right):
 				phpNullCoalesceTypeHint(left, right);
+			case ETernary(_, thenExpr, elseExpr):
+				phpTernaryTypeHint(thenExpr, elseExpr);
 			case _ if (phpExprReturnsInt64(init)):
 				"haxe.Int64";
 			case ECast(inner, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
@@ -7508,6 +7595,8 @@ class SourceTargetCommon {
 				phpLocalTypeHint(name);
 			case EBinop("??", left, right):
 				phpNullCoalesceTypeHint(left, right);
+			case ETernary(_, thenExpr, elseExpr):
+				phpTernaryTypeHint(thenExpr, elseExpr);
 			case EMacroExpr(inner, _) | EUntyped(inner):
 				phpExprTypeHint(inner);
 			case _:
@@ -7527,6 +7616,41 @@ class SourceTargetCommon {
 		if (StringTools.trim(leftHint).length == 0)
 			return "";
 		return isNullTypeHint(leftHint) ? phpUnwrapNullTypeHint(leftHint) : leftHint;
+	}
+
+	static function phpTernaryTypeHint(thenExpr:HxExpr, elseExpr:HxExpr):String {
+		final thenHint = phpExprTypeHint(thenExpr);
+		final elseHint = phpExprTypeHint(elseExpr);
+		if (StringTools.trim(thenHint).length == 0 || StringTools.trim(elseHint).length == 0)
+			return "";
+		return phpCommonNullableTypeHint(thenHint, elseHint);
+	}
+
+	static function phpCommonNullableTypeHint(leftHint:String, rightHint:String):String {
+		final left = normalizeTypeHint(leftHint);
+		final right = normalizeTypeHint(rightHint);
+		if (left.length == 0 || right.length == 0)
+			return "";
+		if (left == right)
+			return left;
+		final leftNullable = isNullTypeHint(left);
+		final rightNullable = isNullTypeHint(right);
+		final leftInner = leftNullable ? phpUnwrapNullTypeHint(left) : left;
+		final rightInner = rightNullable ? phpUnwrapNullTypeHint(right) : right;
+		final common = phpCommonValueTypeHint(leftInner, rightInner);
+		if (common.length == 0)
+			return "";
+		return (leftNullable || rightNullable) ? "Null<" + common + ">" : common;
+	}
+
+	static function phpCommonValueTypeHint(left:String, right:String):String {
+		final a = normalizeTypeHint(left);
+		final b = normalizeTypeHint(right);
+		if (a == b)
+			return a;
+		if ((a == "Float" && b == "Int") || (a == "Int" && b == "Float"))
+			return "Float";
+		return phpCommonClassTypeHint(a, b);
 	}
 
 	static function phpCommonClassTypeHint(leftHint:String, rightHint:String):String {
@@ -12944,7 +13068,7 @@ class SourceTargetCommon {
 					if (HxFieldDecl.getIsStatic(field))
 						continue;
 					final name = HxFieldDecl.getName(field);
-					final hint = HxFieldDecl.getTypeHint(field);
+					final hint = phpEffectiveFieldTypeHint(field);
 					fields.set(name, hint);
 					fields.set(sanitizeTypeName(name), hint);
 				}
@@ -16651,11 +16775,23 @@ class SourceTargetCommon {
 			if (HxFieldDecl.getIsStatic(field))
 				continue;
 			final name = HxFieldDecl.getName(field);
-			final hint = HxFieldDecl.getTypeHint(field);
+			final hint = phpEffectiveFieldTypeHint(field);
 			hints.set(name, hint);
 			hints.set(sanitizeTypeName(name), hint);
 		}
 		return hints;
+	}
+
+	static function phpEffectiveFieldTypeHint(field:HxFieldDecl):String {
+		final hint = StringTools.trim(HxFieldDecl.getTypeHint(field));
+		if (hint.length == 0 || isNullTypeHint(hint) || isDynamicTypeHint(hint))
+			return hint;
+		return switch (HxFieldDecl.getInit(field)) {
+			case ENull:
+				"Null<" + hint + ">";
+			case _:
+				hint;
+		};
 	}
 
 	static function phpBaseClassDecl(cls:HxClassDecl, classesByName:Map<String, HxClassDecl>):HxClassDecl {

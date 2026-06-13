@@ -1701,6 +1701,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class Main {",
 			"  var memberNull:Null<Bool> = null;",
 			"  final finalMemberNull:Null<Bool> = null;",
+			"  final nullFloat:Null<Float> = null;",
 			"  static function main() {",
 			"    new Main().run();",
 			"  }",
@@ -1713,6 +1714,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    final fieldNullBool = this.memberNull ?? maybe;",
 			"    final bareFieldNullBool = memberNull ?? maybe;",
 			"    final finalFieldNullBool = this.finalMemberNull ?? maybe;",
+			"    final nullF = false ? nullFloat : 0;",
 			"    final directNullable = HelperMacros.isNullable(nullable);",
 			"    final nonNullable = HelperMacros.isNullable(nullable ?? fallback);",
 			"    final stillNullable = HelperMacros.isNullable(nullable ?? maybe);",
@@ -1721,6 +1723,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    final fieldStillNullable = HelperMacros.isNullable(fieldNullBool);",
 			"    final bareFieldStillNullable = HelperMacros.isNullable(bareFieldNullBool);",
 			"    final finalFieldStillNullable = HelperMacros.isNullable(finalFieldNullBool);",
+			"    final ternaryNullable = HelperMacros.isNullable(nullF);",
 			"    final directNonNullable = HelperMacros.isNullable(fallback);",
 			"    Sys.println(Std.string(directNullable));",
 			"    Sys.println(Std.string(nonNullable));",
@@ -1730,6 +1733,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(fieldStillNullable));",
 			"    Sys.println(Std.string(bareFieldStillNullable));",
 			"    Sys.println(Std.string(finalFieldStillNullable));",
+			"    Sys.println(Std.string(ternaryNullable));",
 			"    Sys.println(Std.string(directNonNullable));",
 			"  }",
 			"}",
@@ -1781,9 +1785,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"final nullableBool:Null<Bool> = false;",
 			"final testBool = nullBool ?? true;",
 			"final testNullBool = nullBool ?? nullableBool;",
+			"var nullF = false ? nullFloat : 0;",
 			"final s:Int = nullInt == null ? 2 : nullInt;",
 			"f(HelperMacros.isNullable(testBool));",
 			"this.t(HelperMacros.isNullable(testNullBool));",
+			"this.t(HelperMacros.isNullable(nullF));",
 			"f(HelperMacros.isNullable(s));"
 		].join("\n");
 		final source = [
@@ -1799,6 +1805,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class TestNullCoalescing extends Test {",
 			"  final nullInt:Null<Int> = null;",
 			"  final nullBool:Null<Bool> = null;",
+			"  final nullFloat:Null<Float> = null;",
 			"  var count = 0;",
 			"  function call() { count++; return \"_\"; }",
 			"  static function main() {}",
@@ -1814,6 +1821,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"ast static_main 1",
 			protocolLine("field", ["nullInt", "private", "0", "Int", "null"].join("\n")),
 			protocolLine("field", ["nullBool", "private", "0", "Bool", "null"].join("\n")),
+			protocolLine("field", ["nullFloat", "private", "0", "Float", "null"].join("\n")),
 			protocolLine("field", ["count", "private", "0", "Int", "0"].join("\n")),
 			protocolLine("method", "main|public|1||Void||||"),
 			protocolLine("method_body", "main\n"),
@@ -11273,11 +11281,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$fieldStillNullable = true;", "PHP isNullable should preserve instance-field nullable ?? nullable as nullable");
 		assertContains(content, "$bareFieldStillNullable = true;", "PHP isNullable should preserve bare same-class field nullable ?? nullable as nullable");
 		assertContains(content, "$finalFieldStillNullable = true;", "PHP isNullable should preserve final instance-field nullable ?? nullable as nullable");
+		assertContains(content, "$ternaryNullable = true;", "PHP isNullable should report ternaries with nullable branches as nullable");
 		assertContains(content, "$directNonNullable = false;", "PHP isNullable should report non-null locals as non-null");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP nullable helper probes should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\nfalse\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\nfalse\n",
+			assertTrue(run.stdout == "true\nfalse\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\n",
 				"generated PHP nullable helper probe output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
@@ -11312,6 +11321,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "$this->f(false);", "PHP upstream-shaped null-coalescing probe should fold non-null coalesce as non-null");
 		assertContains(content, "$this->t(true);", "PHP upstream-shaped null-coalescing probe should fold nullable coalesce as nullable");
+		assertContains(content, "$nullF = (false ? $this->nullFloat : 0);", "PHP upstream-shaped nullable ternary probe should preserve the local initializer");
+		assertContains(content, "$this->t(true);\n    $this->t(true);\n    $this->f(false);",
+			"PHP upstream-shaped nullable ternary probe should fold nullable field ternaries as nullable");
 		deleteRecursive(tmpRoot);
 	}
 
