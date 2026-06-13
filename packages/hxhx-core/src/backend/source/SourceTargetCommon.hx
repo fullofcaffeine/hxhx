@@ -3758,6 +3758,10 @@ class SourceTargetCommon {
 			case EUnop(_, EIdent(name)):
 				if (names.indexOf(sanitizeTypeName(name)) < 0)
 					names.push(sanitizeTypeName(name));
+			case ECall(EField(receiver, field), args):
+				phpCollectArrayMutatingReceiverLocal(receiver, field, args, names);
+				phpCollectAssignedIdents(receiver, names);
+				phpCollectAssignedList(args, names);
 			case EField(receiver, _):
 				phpCollectAssignedIdents(receiver, names);
 			case ECall(callee, args):
@@ -3807,6 +3811,41 @@ class SourceTargetCommon {
 			return;
 		for (expr in exprs)
 			phpCollectAssignedIdents(expr, names);
+	}
+
+	static function phpCollectArrayMutatingReceiverLocal(receiver:HxExpr, field:String, args:Array<HxExpr>, names:Array<String>):Void {
+		final local = phpArrayMutatingReceiverLocal(receiver, field, args);
+		if (local != null && names.indexOf(local) < 0)
+			names.push(local);
+	}
+
+	static function phpArrayMutatingReceiverLocal(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		if (!phpArrayMutatingFieldCall(field, args))
+			return null;
+		return switch (receiver) {
+			case EIdent(name) if (phpArrayBackedReceiver(receiver) || phpLocalExists(name)):
+				final clean = sanitizeTypeName(name);
+				clean.length == 0 ? null : clean;
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				phpArrayMutatingReceiverLocal(inner, field, args);
+			case _:
+				null;
+		};
+	}
+
+	static function phpArrayMutatingFieldCall(field:String, args:Array<HxExpr>):Bool {
+		return switch (field) {
+			case "push" | "remove" if (args.length == 1):
+				true;
+			case "pop" if (args.length == 0):
+				true;
+			case "splice" if (args.length == 2):
+				true;
+			case "sort" if (args.length == 1):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function phpLaterAssignedLocalsByStmt(stmts:Array<HxStmt>):Array<Array<String>> {

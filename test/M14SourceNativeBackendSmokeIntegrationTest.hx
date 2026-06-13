@@ -13543,6 +13543,49 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpClosureCapturesArrayMutationsByReference():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_closure_array_mutation_capture_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    final arr = [];",
+			"    var item = function(n:Int) {",
+			"      arr.push(n);",
+			"      return n;",
+			"    }",
+			"    var first = item(1) ?? item(2) ?? item(3);",
+			"    Sys.println(first);",
+			"    Sys.println(arr.length);",
+			"    final nil = [];",
+			"    var missing = function(n:Int) {",
+			"      nil.push(n);",
+			"      return null;",
+			"    }",
+			"    var result = missing(1) ?? missing(2) ?? missing(3);",
+			"    Sys.println(result == null);",
+			"    Sys.println(nil.length);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "use (&$arr)", "PHP closures should ref-capture local arrays mutated through push");
+		assertContains(content, "use (&$nil)", "PHP closures should ref-capture nullable coalescing local array mutations");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP captured array mutation support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "1\n1\n1\n3\n", "generated PHP captured array mutation output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStringLengthInCharCodeAtArg():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_length_char_code_at_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -14358,6 +14401,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpInstanceMethodValueBind();
 		assertPhpStringUsingExtensionCalls();
 		assertPhpClosureCapturesMutableLocalByReference();
+		assertPhpClosureCapturesArrayMutationsByReference();
 		assertPhpStringLengthInCharCodeAtArg();
 		assertPhpStdPackageRootShadowing();
 		assertPhpStaticPropertyGetter();
