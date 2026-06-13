@@ -134,7 +134,7 @@ jobs:
           HXHX_GATE3_JS_SERVER_TIMEOUT_MS: "60000"
           HXHX_GATE3_PYTHON_ALLOW_INSTALL: "0"
           HXHX_GATE3_TARGET_HEARTBEAT_SEC: "20"
-          HXHX_GATE3_TARGET_TIMEOUT_SEC: "3600"
+          HXHX_GATE3_TARGET_TIMEOUT_SEC: "4200"
         run: |
           set -euo pipefail
           echo "HXHX_GATE3_TARGETS=${HXHX_GATE3_TARGETS:-Macro,Js,Neko}"

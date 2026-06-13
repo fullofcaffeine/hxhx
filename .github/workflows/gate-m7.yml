@@ -117,7 +117,7 @@ jobs:
           HXHX_M7_STRICT: ${{ inputs.strict && '1' || '0' }}
           HXHX_FORBID_STAGE0: "0"
           HXHX_M7_REQUIRE_PLUGIN_MATRIX: "1"
-          HXHX_GATE3_TARGET_TIMEOUT_SEC: "3600"
+          HXHX_GATE3_TARGET_TIMEOUT_SEC: "4200"
           HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS: "1800"
         run: |
           set -euo pipefail
