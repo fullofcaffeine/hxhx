@@ -4022,9 +4022,15 @@ class SourceTargetCommon {
 			final lowered = loweredCases[i];
 			final keyword = i == 0 ? "if" : "} elseif";
 			out.push("  " + keyword + " (" + lowered.cond + ") {");
-			for (binding in lowered.bindings)
-				out.push("    " + varDecl(Php, sanitizeTypeName(binding.name), binding.expr));
-			out.push("    return " + renderExpr(Php, exprs[i]) + ";");
+			final caseLocalTypes = copyStringMap(phpRenderLocalTypes);
+			for (binding in lowered.bindings) {
+				final bindName = sanitizeTypeName(binding.name);
+				caseLocalTypes.set(bindName, "");
+				out.push("    " + varDecl(Php, bindName, binding.expr));
+			}
+			withPhpLocalTypes(Php, caseLocalTypes, function() {
+				out.push("    return " + renderExpr(Php, exprs[i]) + ";");
+			});
 		}
 		if (count > 0)
 			out.push("  }");
@@ -8345,12 +8351,16 @@ class SourceTargetCommon {
 					final lowered = lowerSourceSwitchPattern(target, patterns[i], switchValue);
 					final keyword = i == 0 ? "if" : "} elseif";
 					out.push(indent + keyword + " (" + lowered.cond + ") {");
+					final caseLocalTypes = copyStringMap(phpRenderLocalTypes);
 					for (binding in lowered.bindings) {
 						final bindName = sanitizeTypeName(binding.name);
+						caseLocalTypes.set(bindName, "");
 						out.push(childIndent + varDecl(target, bindName, binding.expr));
 					}
-					for (line in renderStmt(target, bodies[i], childIndent))
-						out.push(line);
+					withPhpLocalTypes(Php, caseLocalTypes, function() {
+						for (line in renderStmtWithLocals(Php, bodies[i], childIndent, caseLocalTypes))
+							out.push(line);
+					});
 				}
 				out.push(indent + "}");
 			case Java:
@@ -17089,10 +17099,14 @@ class SourceTargetCommon {
 				SDoWhile(phpRewriteSameClassMembersInStmt(body, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)),
 					phpRewriteSameClassMemberExpr(cond, methodNames, fieldNames, staticFieldNames, className, locals), pos);
 			case SSwitch(scrutinee, patterns, bodies, pos):
-				SSwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, [
-					for (body in bodies)
-						phpRewriteSameClassMembersInStmt(body, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals))
-				], pos);
+				final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
+				final rewrittenBodies = new Array<HxStmt>();
+				for (i in 0...count) {
+					final caseLocals = copyStringArray(locals);
+					phpCollectDeclaredLocalsInPattern(patterns[i], caseLocals);
+					rewrittenBodies.push(phpRewriteSameClassMembersInStmt(bodies[i], methodNames, fieldNames, staticFieldNames, className, caseLocals));
+				}
+				SSwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, rewrittenBodies, pos);
 			case STry(tryBody, catches, pos):
 				STry(phpRewriteSameClassMembersInStmt(tryBody, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)), [
 					for (c in catches) {
@@ -17180,10 +17194,14 @@ class SourceTargetCommon {
 				EArrayComprehension(name, phpRewriteSameClassMemberExpr(iterable, methodNames, fieldNames, staticFieldNames, className, locals),
 					rewrittenGuard, phpRewriteSameClassMemberExpr(yieldExpr, methodNames, fieldNames, staticFieldNames, className, bodyLocals));
 			case ESwitch(scrutinee, patterns, exprs):
-				ESwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, [
-					for (expr in exprs)
-						phpRewriteSameClassMemberExpr(expr, methodNames, fieldNames, staticFieldNames, className, locals)
-				]);
+				final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+				final rewrittenExprs = new Array<HxExpr>();
+				for (i in 0...count) {
+					final caseLocals = copyStringArray(locals);
+					phpCollectDeclaredLocalsInPattern(patterns[i], caseLocals);
+					rewrittenExprs.push(phpRewriteSameClassMemberExpr(exprs[i], methodNames, fieldNames, staticFieldNames, className, caseLocals));
+				}
+				ESwitch(phpRewriteSameClassMemberExpr(scrutinee, methodNames, fieldNames, staticFieldNames, className, locals), patterns, rewrittenExprs);
 			case ELambda(args, body):
 				final bodyLocals = copyStringArray(locals);
 				for (arg in args)

@@ -1639,6 +1639,66 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpCallStackSameProgram():GenIrProgram {
+		final src = [
+			"import haxe.CallStack;",
+			"import haxe.CallStack.StackItem;",
+			"import haxe.Exception;",
+			"import haxe.ValueException;",
+			"import utest.Assert;",
+			"class Main {",
+			"  public function new() { }",
+			"  public function f():Bool return false;",
+			"  function stackData(item:StackItem):Dynamic {",
+			"    var result:Dynamic = {};",
+			"    switch (item) {",
+			"      case FilePos(source, f, line, _):",
+			"        result.file = f;",
+			"        result.line = line;",
+			"        switch (source) {",
+			"          case Method(_, method): result.method = method;",
+			"          case _:",
+			"        }",
+			"      case _:",
+			"    }",
+			"    return result;",
+			"  }",
+			"  function stacks():Array<CallStack> {",
+			"    var result:Array<CallStack> = [];",
+			"    result.push(CallStack.callStack());",
+			"    result.push(new Exception(\"\").stack);",
+			"    result.push(new ValueException(\"\").stack);",
+			"    result.push(@:privateAccess (Exception.thrown(\"\"):Exception).stack);",
+			"    return result;",
+			"  }",
+			"  function run() {",
+			"    var expected:Dynamic = null;",
+			"    var lineShift = 0;",
+			"    for (stack in stacks()) {",
+			"      var actual = stackData(stack[0]);",
+			"      if (expected == null) {",
+			"        expected = actual;",
+			"      } else {",
+			"        if (expected.line != actual.line) {",
+			"          if (lineShift == 0) lineShift = actual.line - expected.line;",
+			"          expected.line += lineShift;",
+			"        }",
+			"        Assert.same(expected, actual, true, \"stack item data mismatch\");",
+			"      }",
+			"    }",
+			"    Assert.same({ file: \"hxhx.php\", line: 1 }, { file: \"hxhx.php\", line: 1 }, true, \"anon same mismatch\");",
+			"    Sys.println(\"ok\");",
+			"  }",
+			"  static function main() {",
+			"    new Main().run();",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpHelperMacroFoldProgram():GenIrProgram {
 		final src = [
 			"import haxe.Exception;",
@@ -10898,6 +10958,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "1", "generated PHP Std.downcast should recognize haxe.Exception values");
 		}
 		deleteRecursive(stackTmpRoot);
+
+		final stackSameTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_call_stack_same_" + Std.string(Date.now().getTime()));
+		deleteRecursive(stackSameTmpRoot);
+		FileSystem.createDirectory(stackSameTmpRoot);
+		backend.emit(phpCallStackSameProgram(), new BackendContext(stackSameTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final stackSameContent = File.getContent(Path.join([stackSameTmpRoot, "index.php"]));
+		assertContains(stackSameContent, "Assert::same($expected, $actual, true, \"stack item data mismatch\")",
+			"PHP stack data parity regression should exercise recursive Assert.same");
+		assertContains(stackSameContent, "$result->file = __hxhx_copy_value($f);",
+			"PHP switch pattern locals should stay local when their names collide with same-class methods");
+		assertNotContains(stackSameContent, "return $this->f(...$__hxhx_args);", "PHP switch pattern locals should not rewrite to same-class method closures");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([stackSameTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP stack data same regression should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "ok", "generated PHP should consider normalized stack item data structurally equal");
+		}
+		deleteRecursive(stackSameTmpRoot);
 
 		final macroTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_helper_macro_fold_" + Std.string(Date.now().getTime()));
 		deleteRecursive(macroTmpRoot);
