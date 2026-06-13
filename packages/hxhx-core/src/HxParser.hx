@@ -1401,6 +1401,7 @@ class HxParser {
 		final optionalArgs = new Array<String>();
 		final defaultedArgs = new haxe.ds.StringMap<HxExpr>();
 		var defaultedArgCount = 0;
+		var restIndex = -1;
 		if (!cur.kind.match(TRParen)) {
 			while (true) {
 				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
@@ -1413,6 +1414,8 @@ class HxParser {
 				final isOptional = acceptOtherChar("?");
 				final argName = readIdent("argument name");
 				args.push(argName);
+				if (isRest)
+					restIndex = args.length - 1;
 				if (isOptional && optionalArgs.indexOf(argName) < 0)
 					optionalArgs.push(argName);
 
@@ -1487,7 +1490,9 @@ class HxParser {
 		}
 
 		final lambda:HxExpr = ELambda(args, defaultedArgCount == 0 ? bodyExpr : applyDefaultedArgs(bodyExpr));
-		return optionalArgs.length == 0 ? lambda : ECall(EIdent("__hxhx_optional_lambda"), [lambda, EArrayDecl([for (arg in optionalArgs) EString(arg)])]);
+		final restAware = restIndex < 0 ? lambda : HxExpr.ECall(HxExpr.EIdent("__hxhx_rest_lambda"), [lambda, HxExpr.EInt(restIndex)]);
+		return optionalArgs.length == 0 ? restAware : HxExpr.ECall(HxExpr.EIdent("__hxhx_optional_lambda"),
+			[restAware, HxExpr.EArrayDecl([for (arg in optionalArgs) HxExpr.EString(arg)])]);
 	}
 
 	function parseLocalFunctionStmt(pos:HxPos):HxStmt {
@@ -1507,6 +1512,7 @@ class HxParser {
 		final optionalArgs = new Array<String>();
 		final defaultedArgs = new haxe.ds.StringMap<HxExpr>();
 		var defaultedArgCount = 0;
+		var restIndex = -1;
 		if (!cur.kind.match(TRParen)) {
 			while (true) {
 				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
@@ -1518,6 +1524,8 @@ class HxParser {
 				final isOptional = acceptOtherChar("?");
 				final argName = readIdent("argument name");
 				args.push(argName);
+				if (isRest)
+					restIndex = args.length - 1;
 				if (isOptional && optionalArgs.indexOf(argName) < 0)
 					optionalArgs.push(argName);
 
@@ -1599,8 +1607,9 @@ class HxParser {
 		}
 
 		final lambda:HxExpr = ELambda(args, defaultedArgCount == 0 ? bodyExpr : applyDefaultedArgs(bodyExpr));
-		final init:HxExpr = optionalArgs.length == 0 ? lambda : ECall(EIdent("__hxhx_optional_lambda"),
-			[lambda, EArrayDecl([for (arg in optionalArgs) EString(arg)])]);
+		final restAware:HxExpr = restIndex < 0 ? lambda : HxExpr.ECall(HxExpr.EIdent("__hxhx_rest_lambda"), [lambda, HxExpr.EInt(restIndex)]);
+		final init:HxExpr = optionalArgs.length == 0 ? restAware : HxExpr.ECall(HxExpr.EIdent("__hxhx_optional_lambda"),
+			[restAware, HxExpr.EArrayDecl([for (arg in optionalArgs) HxExpr.EString(arg)])]);
 		return SVar(name, "", init, pos);
 	}
 

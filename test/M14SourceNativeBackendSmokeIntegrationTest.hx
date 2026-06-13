@@ -10755,6 +10755,68 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpLocalRestArrayAccess():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_local_rest_array_access_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    function restAt(a:Int, b:Int, ...r:Int) {",
+			"      return r[2];",
+			"    }",
+			"    function restToArray(a:Int, b:Int, ...r:Int) {",
+			"      return r.toArray();",
+			"    }",
+			"    function restReturn(a:Int, b:Int, ...r:Int) {",
+			"      return r;",
+			"    }",
+			"    function restIter(...r:Int) {",
+			"      return [for (i in r) i];",
+			"    }",
+			"    function restKeyValues(...r:Int) {",
+			"      var keys = [];",
+			"      var values = [];",
+			"      for (k => v in r) {",
+			"        keys.push(k);",
+			"        values.push(v);",
+			"      }",
+			"      return {keys: keys, values: values};",
+			"    }",
+			"    var kv = restKeyValues(3, 2, 1, 0);",
+			"    Sys.println(Std.string(restAt(1, 2, 0, 0, 123, 0)));",
+			"    Sys.println(restToArray(1, 2, 3, 4).join(\",\"));",
+			"    Sys.println(restReturn(1, 2, 5, 6).toArray().join(\",\"));",
+			"    Sys.println(restIter(3, 2, 1).join(\",\"));",
+			"    Sys.println(kv.keys.join(\",\") + \":\" + kv.values.join(\",\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$restAt = function($a, $b, ...$r)", "PHP local Rest functions should lower the final parameter as variadic");
+		assertContains(content, "return __hxhx_array_get($r, 2);", "PHP local Rest body should keep Rest as an indexable array");
+		assertContains(content, "$restToArray = function($a, $b, ...$r)", "PHP local Rest toArray functions should lower the final parameter as variadic");
+		assertContains(content, "return $r;", "PHP Rest.toArray on native arrays should lower to identity");
+		assertContains(content, "__hxhx_to_array($restReturn(1, 2, 5, 6))", "PHP Rest.toArray after Rest return should tolerate erased array-backed receivers");
+		assertContains(content, "(function() use ($r) {", "PHP Rest array comprehensions should capture the Rest array");
+		assertContains(content, "foreach (__hxhx_key_value_iter($r) as $__hx_kv_k_v)",
+			"PHP Rest key/value iteration should lower through the runtime key/value iterator");
+		assertNotContains(content, "function($a, $b, $r)", "PHP local Rest functions should not emit Rest as a fixed ordinary parameter");
+		assertNotContains(content, "$__hxhx_for_key_value", "PHP Rest key/value iteration should not emit unresolved helper calls");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP local Rest array access should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "123\n3,4\n5,6\n3,2,1\n0,1,2,3:3,2,1,0\n", "generated PHP local Rest array access output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonMacroType():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_macro_type_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -14599,6 +14661,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpDefaultArgsOnOverrides();
 		assertPhpTryCatchRawRenamesScopedLocalFunctions();
 		assertPhpLocalFunctionOptionalArgs();
+		assertPhpLocalRestArrayAccess();
 		assertPhpSameClassFunctionFieldCall();
 		assertPhpOptionalBeforeRequiredFunctionFieldCall();
 		assertPhpOpaqueBlockExprCapturesOuterLocals();

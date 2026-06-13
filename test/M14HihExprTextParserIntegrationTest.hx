@@ -339,9 +339,10 @@ class M14HihExprTextParserIntegrationTest {
 		final localRestFunctionStmts = HxParser.parseFunctionBodyText("function pick(first:Int, second:Int, ...rest:Int) { return rest[2]; } eq(123, pick(1, 2, 0, 0, 123, 0));");
 		assertTrue(localRestFunctionStmts.length == 2, "expected local rest function plus call statement");
 		switch (localRestFunctionStmts[0]) {
-			case SVar(name, _, ELambda(args, EArrayAccess(EIdent("rest"), EInt(2))), _):
+			case SVar(name, _, ECall(EIdent("__hxhx_rest_lambda"), [ELambda(args, EArrayAccess(EIdent("rest"), EInt(2))), EInt(restIndex)]), _):
 				assertTrue(name == "pick", "expected local rest function to lower to pick binding");
 				assertTrue(args.length == 3 && args[2] == "rest", "expected local rest arg to parse as runtime arg name");
+				assertTrue(restIndex == 2, "expected local rest arg index metadata");
 			case SVar(_, _, ELambda(_, EUnsupported(raw)), _):
 				fail("local rest function body parsed as unsupported: " + raw);
 			case SExpr(EUnsupported(raw), _):

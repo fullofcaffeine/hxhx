@@ -1250,9 +1250,19 @@ class SourceTargetCommon {
 				"__hxhx_throw(" + (args.length > 0 ? renderExpr(Php, args[0]) : "null") + ")";
 			case ECall(EIdent("__hxhx_for_in"), args) if (target == Php && args.length >= 3):
 				phpForInExpr(args[0], args[1], args[2]);
+			case ECall(EIdent("__hxhx_for_key_value"), args) if (target == Php && args.length >= 3):
+				phpForKeyValueExpr(args[0], args[1], args[2]);
+			case ECall(EIdent("__hxhx_rest_lambda"), [ELambda(lambdaArgs, lambdaBody), EInt(restIndex)]):
+				if (target == Php) phpLambdaExpr(lambdaArgs, lambdaBody, [], [], [], restIndex); else lambdaExpr(target, lambdaArgs, lambdaBody);
 			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(lambdaArgs, lambdaBody), EArrayDecl(optionalArgExprs)]):
 				final optionalArgNames = optionalLambdaArgNames(optionalArgExprs);
 				if (target == Php) phpLambdaExpr(lambdaArgs, lambdaBody, [], [], optionalArgNames); else lambdaExpr(target, lambdaArgs, lambdaBody);
+			case ECall(EIdent("__hxhx_optional_lambda"), [
+				ECall(EIdent("__hxhx_rest_lambda"), [ELambda(lambdaArgs, lambdaBody), EInt(restIndex)]),
+				EArrayDecl(optionalArgExprs)
+			]):
+				final optionalArgNames = optionalLambdaArgNames(optionalArgExprs);
+				if (target == Php) phpLambdaExpr(lambdaArgs, lambdaBody, [], [], optionalArgNames, restIndex); else lambdaExpr(target, lambdaArgs, lambdaBody);
 			case ECall(ELambda(lambdaArgs, lambdaBody), args):
 				lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
 			case ECall(ESuper, args):
@@ -2118,10 +2128,10 @@ class SourceTargetCommon {
 					return "__hxhx_length(" + renderExpr(target, receiver) + ")";
 				if (field == "code" && phpStringLikeReceiver(receiver))
 					return "__hxhx_string_char_code_at(" + renderExpr(target, receiver) + ", 0)";
-				if (field == "keys" || field == "iterator") {
-					final renderedReceiver = renderExpr(target, receiver);
-					return "(function() use (" + renderedReceiver + ") { return " + renderedReceiver + "->" + sanitizeTypeName(field) + "(); })";
-				}
+				if ((field == "keys" || field == "iterator")
+					&& phpReceiverHasInstanceMethod(receiver, field)
+					&& !phpReceiverHasInstanceField(receiver, field))
+					return phpMethodValueClosure(receiver, field);
 				final packageTypeRef = phpPackageQualifiedTypeReference(EField(receiver, field));
 				if (packageTypeRef != null)
 					return phpClassValueExpr(phpPackageQualifiedTypePath(EField(receiver, field)));
@@ -2195,6 +2205,11 @@ class SourceTargetCommon {
 
 	static function phpFieldReadAccess(receiver:String, field:String):String {
 		return "__hxhx_field(" + receiver + ", " + quotePhpString(sanitizeTypeName(field)) + ")";
+	}
+
+	static function phpMethodValueClosure(receiver:HxExpr, field:String):String {
+		final renderedReceiver = renderExpr(Php, receiver);
+		return "(function() use (" + renderedReceiver + ") { return " + renderedReceiver + "->" + sanitizeTypeName(field) + "(); })";
 	}
 
 	static function phpReceiverExpr(receiver:HxExpr):String {
@@ -2423,6 +2438,8 @@ class SourceTargetCommon {
 				final arrayCall = phpArrayFieldCall(receiver, field, phpArgs);
 				if (arrayCall != null)
 					return arrayCall;
+				if (field == "toArray" && args.length == 0)
+					return "__hxhx_to_array(" + renderExpr(Php, receiver) + ")";
 				if (field == "iterator" && args.length == 0)
 					return "__hxhx_iterator(" + renderExpr(Php, receiver) + ")";
 				if (field == "toStr" && args.length == 0 && phpStaticTypePath(receiver) == null)
@@ -2783,6 +2800,8 @@ class SourceTargetCommon {
 	}
 
 	static function phpArrayFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		if (field == "toArray" && args.length == 0 && phpArrayBackedReceiver(receiver))
+			return renderExpr(Php, receiver);
 		if (field == "join" && args.length == 1)
 			return "__hxhx_array_join(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 		if (field == "map" && args.length == 1 && phpArrayBackedReceiver(receiver))
@@ -3134,8 +3153,15 @@ class SourceTargetCommon {
 						renderExpr(target, iterable);
 				};
 				final renderedYield = phpArrayComprehensionYield(name, yieldExpr);
+				final usedNames = new Array<String>();
+				phpCollectUsedIdents(iterable, usedNames);
+				if (guardExpr != null)
+					phpCollectUsedIdents(guardExpr, usedNames);
+				phpCollectUsedIdents(yieldExpr, usedNames);
+				final valueCaptures = phpFilterCapturedNames(usedNames, [sanitizeTypeName(name)]);
+				final useClause = phpLambdaUseClause(valueCaptures, []);
 				final out = [
-					"(function() {",
+					"(function()" + useClause + " {",
 					"  $__hxhx_result = [];",
 					"  foreach (" + renderedIterable + " as " + binder + ") {"
 				];
@@ -3524,19 +3550,22 @@ class SourceTargetCommon {
 		return names;
 	}
 
-	static function phpLambdaExpr(args:Array<String>, body:HxExpr, valueNames:Array<String>, extraRefNames:Array<String>,
-			optionalArgNames:Array<String>):String {
+	static function phpLambdaExpr(args:Array<String>, body:HxExpr, valueNames:Array<String>, extraRefNames:Array<String>, optionalArgNames:Array<String>,
+			restIndex:Int = -1):String {
 		final renderedArgs = [
 			for (i in 0...args.length) {
 				final arg = args[i];
 				final clean = sanitizeTypeName(arg);
-				valueName(Php, clean) + (phpLambdaArgCanUsePhpDefault(args, optionalArgNames, i) ? " = null" : "");
+				final name = valueName(Php, clean);
+				if (i == restIndex) "..." + name; else name + (phpLambdaArgCanUsePhpDefault(args, optionalArgNames, i) ? " = null" : "");
 			}
 		].join(", ");
 		final thisCaptureName = phpRenderThisValueSlot && phpExprTouchesThis(body) ? "__hxhx_this_value" : null;
 		final lambdaLocalTypes = copyStringMap(phpRenderLocalTypes);
-		for (arg in args)
-			lambdaLocalTypes.set(sanitizeTypeName(arg), "");
+		for (i in 0...args.length) {
+			final clean = sanitizeTypeName(args[i]);
+			lambdaLocalTypes.set(clean, i == restIndex ? "Array<RestValue>" : "");
+		}
 		final renderedBody = withPhpLocalTypes(Php, lambdaLocalTypes, function() {
 			return thisCaptureName == null ? renderExpr(Php, body) : withPhpThisValueCapture(thisCaptureName, function() {
 				return renderExpr(Php, body);
@@ -3624,6 +3653,51 @@ class SourceTargetCommon {
 				out.join("\n");
 			case _:
 				callExpr(Php, "__hxhx_for_in", [iterable, bodyExpr, continuation]);
+		};
+	}
+
+	static function phpForKeyValueExpr(iterable:HxExpr, bodyExpr:HxExpr, continuation:HxExpr):String {
+		return switch (bodyExpr) {
+			case ELambda(args, body) if (args.length == 2):
+				final cleanKey = sanitizeTypeName(args[0]);
+				final cleanValue = sanitizeTypeName(args[1]);
+				final valueCaptures = new Array<String>();
+				final refCaptures = new Array<String>();
+				final iterableNames = new Array<String>();
+				phpCollectUsedIdents(iterable, iterableNames);
+				for (name in phpFilterCapturedNames(iterableNames, []))
+					if (valueCaptures.indexOf(name) < 0)
+						valueCaptures.push(name);
+				for (name in phpLambdaUsedCaptures(body, args))
+					if (valueCaptures.indexOf(name) < 0)
+						valueCaptures.push(name);
+				for (name in phpLambdaUsedCaptures(continuation, []))
+					if (valueCaptures.indexOf(name) < 0)
+						valueCaptures.push(name);
+				for (name in phpLambdaAssignedCaptures(body, args))
+					if (refCaptures.indexOf(name) < 0)
+						refCaptures.push(name);
+				for (name in phpLambdaAssignedCaptures(continuation, []))
+					if (refCaptures.indexOf(name) < 0)
+						refCaptures.push(name);
+				final useClause = phpLambdaUseClause(valueCaptures, refCaptures);
+				final pairName = "$__hx_kv_" + cleanKey + "_" + cleanValue;
+				final out = ["(function()" + useClause + " {",
+					"  foreach (__hxhx_key_value_iter("
+					+ renderExpr(Php, iterable)
+					+ ") as "
+					+ pairName
+					+ ") {",
+					"    " + valueName(Php, cleanKey) + " = " + pairName + "[0];",
+					"    " + valueName(Php, cleanValue) + " = " + pairName + "[1];",
+					"    " + exprStmt(Php, renderExpr(Php, body)),
+					"  }",
+					"  return " + renderExpr(Php, continuation) + ";",
+					"})()"
+				];
+				out.join("\n");
+			case _:
+				callExpr(Php, "__hxhx_for_key_value", [iterable, bodyExpr, continuation]);
 		};
 	}
 
@@ -4065,8 +4139,10 @@ class SourceTargetCommon {
 			case Php:
 				final pairs = new Array<String>();
 				final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
-				for (i in 0...count)
-					pairs.push(quoteString(sanitizeTypeName(fieldNames[i])) + " => " + renderExpr(target, fieldValues[i]));
+				for (i in 0...count) {
+					final fieldName = sanitizeTypeName(fieldNames[i]);
+					pairs.push(quoteString(fieldName) + " => " + phpAnonFieldValueExpr(fieldName, fieldValues[i], ""));
+				}
 				"new __HxAnon([" + pairs.join(", ") + "])";
 			case Cs:
 				final pairs = new Array<String>();
@@ -9063,10 +9139,19 @@ class SourceTargetCommon {
 		for (i in 0...count) {
 			final fieldName = sanitizeTypeName(fieldNames[i]);
 			final fieldHint = phpAnonFieldTypeHint(typeHint, fieldName);
-			final value = fieldHint.length == 0 ? renderExpr(Php, fieldValues[i]) : phpAssignedValueExpr(fieldValues[i], fieldHint);
+			final value = phpAnonFieldValueExpr(fieldName, fieldValues[i], fieldHint);
 			pairs.push(quoteString(fieldName) + " => " + value);
 		}
 		return "new __HxAnon([" + pairs.join(", ") + "])";
+	}
+
+	static function phpAnonFieldValueExpr(fieldName:String, value:HxExpr, fieldHint:String):String {
+		return switch (value) {
+			case EField(receiver, methodField) if (fieldName == "iterator" && (methodField == "keys" || methodField == "iterator")):
+				phpMethodValueClosure(receiver, methodField);
+			case _:
+				fieldHint.length == 0 ? renderExpr(Php, value) : phpAssignedValueExpr(value, fieldHint);
+		};
 	}
 
 	static function phpAnonFieldTypeHint(typeHint:String, fieldName:String):String {
@@ -15109,6 +15194,8 @@ class SourceTargetCommon {
 
 	static function renderPhpFunctionArg(arg:HxFunctionArg):String {
 		final name = valueName(Php, HxFunctionArg.getName(arg));
+		if (HxFunctionArg.getIsRest(arg))
+			return "..." + name;
 		return switch (HxFunctionArg.getDefaultValue(arg)) {
 			case Default(expr):
 				name + " = " + (phpExprIsConstantDefault(expr) ? renderExpr(Php, expr) : defaultValue(Php));
@@ -20032,6 +20119,12 @@ class SourceTargetCommon {
 				lines.push("  if (is_string($value)) return strlen($value);");
 				lines.push("  if (is_object($value) && property_exists($value, \"length\")) return $value->length;");
 				lines.push("  return 0;");
+				lines.push("}");
+				lines.push("function __hxhx_to_array($value) {");
+				lines.push("  if ($value instanceof __HxArray) return $value->toArray();");
+				lines.push("  if (is_array($value)) return $value;");
+				lines.push("  if (is_object($value) && method_exists($value, \"toArray\")) return $value->toArray();");
+				lines.push("  return $value;");
 				lines.push("}");
 				lines.push("function __hxhx_array_get($array, $index) {");
 				lines.push("  if ($array instanceof Map) return $array->get($index);");
