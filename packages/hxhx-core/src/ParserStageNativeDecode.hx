@@ -127,6 +127,8 @@ class ParserStageNativeDecode {
 			throw "Native frontend: missing terminal 'ok'";
 		}
 
+		final sourceFieldHints = sourceFieldTypeHints(source, className);
+
 		for (mp in methodPayloads) {
 			final name = {
 				final parts = mp.split("|");
@@ -148,15 +150,227 @@ class ParserStageNativeDecode {
 		}
 
 		for (fp in staticFinalPayloads) {
-			pushFieldMaybe(decodeStaticFinalPayload(fp));
+			pushFieldMaybe(decodeStaticFinalPayload(fp, sourceFieldHints));
 		}
 
 		for (fp in fieldPayloads) {
-			pushFieldMaybe(decodeFieldPayload(fp));
+			pushFieldMaybe(decodeFieldPayload(fp, false, sourceFieldHints));
 		}
 
 		final cls = new HxClassDecl(className, hasStaticMain, functions, fields);
 		return new HxModuleDecl(packagePath, imports, cls, [cls], headerOnly, hasToplevelMain);
+	}
+
+	static function fieldHintKey(name:String, isStatic:Bool):String {
+		return name + "|" + (isStatic ? "1" : "0");
+	}
+
+	static function expectedTypeName(expectedClass:String):String {
+		final raw = StringTools.trim(expectedClass == null ? "" : expectedClass);
+		final dot = raw.lastIndexOf(".");
+		return dot >= 0 ? raw.substr(dot + 1) : raw;
+	}
+
+	static function sourceFieldTypeHints(?source:String, ?expectedClass:String):Map<String, String> {
+		final out:Map<String, String> = [];
+		if (source == null || source.length == 0)
+			return out;
+		scanSourceFieldTypeHints(source, expectedTypeName(expectedClass), out);
+		return out;
+	}
+
+	static function scanSourceFieldTypeHints(source:String, expectedClass:String, out:Map<String, String>):Void {
+		final wanted = StringTools.trim(expectedClass == null ? "" : expectedClass);
+		var depth = 0;
+		var pos = 0;
+		while (pos < source.length) {
+			final tok = ParserStageScanHelpers.scanNextToken(source, pos);
+			if (tok.text.length == 0)
+				break;
+			pos = tok.nextPos;
+			if (tok.text == "{") {
+				depth += 1;
+				continue;
+			}
+			if (tok.text == "}") {
+				if (depth > 0)
+					depth -= 1;
+				continue;
+			}
+			if (depth != 0 || tok.text != "class")
+				continue;
+			final nameTok = ParserStageScanHelpers.scanNextToken(source, pos);
+			if (!nameTok.isIdent)
+				continue;
+			final className = nameTok.text;
+			pos = nameTok.nextPos;
+			if (wanted.length > 0 && className != wanted)
+				continue;
+			final open = scanUntilToken(source, pos, "{");
+			if (open < 0)
+				return;
+			scanClassFieldTypeHints(source, open, out);
+			return;
+		}
+	}
+
+	static function scanClassFieldTypeHints(source:String, classOpen:Int, out:Map<String, String>):Void {
+		var depth = 1;
+		var pos = classOpen + 1;
+		var pendingStatic = false;
+		while (pos < source.length && depth > 0) {
+			final tok = ParserStageScanHelpers.scanNextToken(source, pos);
+			if (tok.text.length == 0)
+				break;
+			pos = tok.nextPos;
+			if (tok.text == "{") {
+				depth += 1;
+				pendingStatic = false;
+				continue;
+			}
+			if (tok.text == "}") {
+				depth -= 1;
+				pendingStatic = false;
+				continue;
+			}
+			if (depth != 1)
+				continue;
+			switch (tok.text) {
+				case "public" | "private" | "inline" | "override" | "dynamic":
+				case "static":
+					pendingStatic = true;
+				case "function":
+					pendingStatic = false;
+				case "var" | "final":
+					final scanned = scanFieldTypeHintAfterVar(source, pos);
+					if (scanned.nextPos > pos)
+						pos = scanned.nextPos;
+					if (scanned.name.length > 0 && scanned.typeHint.length > 0)
+						out.set(fieldHintKey(scanned.name, pendingStatic), scanned.typeHint);
+					pendingStatic = false;
+				case _:
+					pendingStatic = false;
+			}
+		}
+	}
+
+	static function scanFieldTypeHintAfterVar(source:String, start:Int):{name:String, typeHint:String, nextPos:Int} {
+		var pos = start;
+		final nameTok = ParserStageScanHelpers.scanNextToken(source, pos);
+		if (!nameTok.isIdent)
+			return {name: "", typeHint: "", nextPos: pos};
+		final name = nameTok.text;
+		pos = nameTok.nextPos;
+		var typeHint = "";
+		while (pos < source.length) {
+			final tok = ParserStageScanHelpers.scanNextToken(source, pos);
+			if (tok.text.length == 0)
+				break;
+			pos = tok.nextPos;
+			switch (tok.text) {
+				case ":":
+					final end = findFieldTypeHintEnd(source, pos);
+					typeHint = StringTools.trim(source.substring(pos, end));
+					pos = end;
+					break;
+				case ";" | "=":
+					break;
+				case "{":
+					break;
+				case _:
+			}
+		}
+		return {name: name, typeHint: typeHint, nextPos: skipToFieldBoundary(source, pos)};
+	}
+
+	static function scanUntilToken(source:String, start:Int, token:String):Int {
+		var pos = start;
+		while (pos < source.length) {
+			final tok = ParserStageScanHelpers.scanNextToken(source, pos);
+			if (tok.text.length == 0)
+				return -1;
+			if (tok.text == token)
+				return tok.startPos;
+			pos = tok.nextPos;
+		}
+		return -1;
+	}
+
+	static function findFieldTypeHintEnd(source:String, start:Int):Int {
+		var pos = start;
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var angleDepth = 0;
+		while (pos < source.length) {
+			final c = source.charCodeAt(pos);
+			if (c == "\"".code || c == "'".code) {
+				pos = skipQuotedSource(source, pos);
+				continue;
+			}
+			switch (c) {
+				case "(".code:
+					parenDepth += 1;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth -= 1;
+				case "[".code:
+					bracketDepth += 1;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth -= 1;
+				case "<".code:
+					angleDepth += 1;
+				case ">".code:
+					if (angleDepth > 0)
+						angleDepth -= 1;
+				case "=".code | ";".code:
+					if (parenDepth == 0 && bracketDepth == 0 && angleDepth == 0)
+						return pos;
+				case _:
+			}
+			pos += 1;
+		}
+		return pos;
+	}
+
+	static function skipToFieldBoundary(source:String, start:Int):Int {
+		var pos = start;
+		while (pos < source.length) {
+			final c = source.charCodeAt(pos);
+			if (c == "\"".code || c == "'".code) {
+				pos = skipQuotedSource(source, pos);
+				continue;
+			}
+			if (c == ";".code)
+				return pos + 1;
+			if (c == "\n".code)
+				return pos + 1;
+			pos += 1;
+		}
+		return pos;
+	}
+
+	static function skipQuotedSource(source:String, start:Int):Int {
+		final quote = source.charCodeAt(start);
+		var pos = start + 1;
+		while (pos < source.length) {
+			final c = source.charCodeAt(pos);
+			if (c == "\\".code) {
+				pos += 2;
+				continue;
+			}
+			pos += 1;
+			if (c == quote)
+				break;
+		}
+		return pos;
+	}
+
+	static function sourceFieldTypeHintByName(hints:Map<String, String>, name:String, isStatic:Bool):String {
+		if (hints == null || name == null || name.length == 0)
+			return "";
+		final key = fieldHintKey(name, isStatic);
+		return hints.exists(key) ? hints.get(key) : "";
 	}
 
 	static function sourceSignatureArgHints(name:String, ?source:String, methodBodyStart:Int = -1, ?argNames:Array<String>):Array<{
@@ -682,7 +896,7 @@ class ParserStageNativeDecode {
 		return -1;
 	}
 
-	static function decodeFieldPayload(payload:String, isFinal:Bool = false):Null<HxFieldDecl> {
+	static function decodeFieldPayload(payload:String, isFinal:Bool, sourceFieldHints:Map<String, String>):Null<HxFieldDecl> {
 		// v=2 field payload (also accepted from v1 `ast static_final`):
 		//   name\nvis\nstatic\ntypehint\ninitexpr
 		if (payload == null || payload.length == 0)
@@ -694,7 +908,10 @@ class ParserStageNativeDecode {
 		final visLine = lines.length > 1 ? lines[1] : "public";
 		final vis = visLine == "private" ? HxVisibility.Private : HxVisibility.Public;
 		final isStatic = (lines.length > 2 ? lines[2] : "1") == "1";
-		final typeHint = lines.length > 3 ? lines[3] : "";
+		var typeHint = lines.length > 3 ? lines[3] : "";
+		final sourceHint = sourceFieldTypeHintByName(sourceFieldHints, name, isStatic);
+		if (sourceTypeHintIsMoreSpecific(typeHint, sourceHint))
+			typeHint = sourceHint;
 		final initRaw = lines.length > 4 ? trimCapturedFieldInitializer(lines.slice(4).join("\n")) : "";
 		var init:Null<HxExpr> = null;
 		if (initRaw.length > 0)
@@ -702,8 +919,8 @@ class ParserStageNativeDecode {
 		return new HxFieldDecl(name, vis, isStatic, typeHint, init, null, null, null, isFinal, "", "", initRaw);
 	}
 
-	static function decodeStaticFinalPayload(payload:String):Null<HxFieldDecl> {
-		return decodeFieldPayload(payload, true);
+	static function decodeStaticFinalPayload(payload:String, sourceFieldHints:Map<String, String>):Null<HxFieldDecl> {
+		return decodeFieldPayload(payload, true, sourceFieldHints);
 	}
 
 	static function trimCapturedFieldInitializer(raw:String):String {

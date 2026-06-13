@@ -1645,6 +1645,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"}",
 			"class Main {",
 			"  var memberNull:Null<Bool> = null;",
+			"  final finalMemberNull:Null<Bool> = null;",
 			"  static function main() {",
 			"    new Main().run();",
 			"  }",
@@ -1656,6 +1657,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    final testNullBool = nullable ?? maybe;",
 			"    final fieldNullBool = this.memberNull ?? maybe;",
 			"    final bareFieldNullBool = memberNull ?? maybe;",
+			"    final finalFieldNullBool = this.finalMemberNull ?? maybe;",
 			"    final directNullable = HelperMacros.isNullable(nullable);",
 			"    final nonNullable = HelperMacros.isNullable(nullable ?? fallback);",
 			"    final stillNullable = HelperMacros.isNullable(nullable ?? maybe);",
@@ -1663,6 +1665,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    final localStillNullable = HelperMacros.isNullable(testNullBool);",
 			"    final fieldStillNullable = HelperMacros.isNullable(fieldNullBool);",
 			"    final bareFieldStillNullable = HelperMacros.isNullable(bareFieldNullBool);",
+			"    final finalFieldStillNullable = HelperMacros.isNullable(finalFieldNullBool);",
 			"    final directNonNullable = HelperMacros.isNullable(fallback);",
 			"    Sys.println(Std.string(directNullable));",
 			"    Sys.println(Std.string(nonNullable));",
@@ -1671,6 +1674,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(localStillNullable));",
 			"    Sys.println(Std.string(fieldStillNullable));",
 			"    Sys.println(Std.string(bareFieldStillNullable));",
+			"    Sys.println(Std.string(finalFieldStillNullable));",
 			"    Sys.println(Std.string(directNonNullable));",
 			"  }",
 			"}",
@@ -1678,6 +1682,128 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpNativeProtocolNullableProbeProgram():GenIrProgram {
+		final body = [
+			"final nullableBool:Null<Bool> = false;",
+			"final testNullBool = nullBool ?? nullableBool;",
+			"final localStillNullable = HelperMacros.isNullable(testNullBool);",
+			"Sys.println(Std.string(localStillNullable));"
+		].join("\n");
+		final src = [
+			"class Main {",
+			"  final nullBool:Null<Bool> = null;",
+			"  static function main() {",
+			"    " + body.split("\n").join("\n    "),
+			"  }",
+			"}"
+		].join("\n");
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("class", "Main"),
+			"ast static_main 1",
+			protocolLine("field", ["nullBool", "private", "0", "Bool", "null"].join("\n")),
+			protocolLine("method", "main|public|1||Void||||"),
+			protocolLine("method_body", "main\n" + body),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, src);
+		final typed = TyperStage.typeModule(new ParsedModule(src, decl, "Main.hx"));
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpNativeProtocolUpstreamNullCoalescingProbeProgram():GenIrProgram {
+		final body = [
+			"eq(true, 0 != 1 ?? 2);",
+			"var a = call() ?? \"default\";",
+			"eq(count, 1);",
+			"eq(nullInt ?? nullInt, null);",
+			"eq(nullBool ?? nullBool, null);",
+			"final a:Dynamic = Std.random(0) + 1;",
+			"final b = Std.random(0) + 2;",
+			"eq(1 + a + 1 ?? 1 + b + 1, 3);",
+			"final nullableBool:Null<Bool> = false;",
+			"final testBool = nullBool ?? true;",
+			"final testNullBool = nullBool ?? nullableBool;",
+			"final s:Int = nullInt == null ? 2 : nullInt;",
+			"f(HelperMacros.isNullable(testBool));",
+			"this.t(HelperMacros.isNullable(testNullBool));",
+			"f(HelperMacros.isNullable(s));"
+		].join("\n");
+		final source = [
+			"package unit;",
+			"private class A {}",
+			"private class B extends A {}",
+			"private class C extends A {}",
+			"class Test {",
+			"  public function f(value:Bool) {}",
+			"  public function t(value:Bool) {}",
+			"  public function eq(a:Dynamic, b:Dynamic) {}",
+			"}",
+			"class TestNullCoalescing extends Test {",
+			"  final nullInt:Null<Int> = null;",
+			"  final nullBool:Null<Bool> = null;",
+			"  var count = 0;",
+			"  function call() { count++; return \"_\"; }",
+			"  static function main() {}",
+			"  function test() {",
+			"    " + body.split("\n").join("\n    "),
+			"  }",
+			"}"
+		].join("\n");
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("package", "unit"),
+			protocolLine("class", "unit.TestNullCoalescing"),
+			"ast static_main 1",
+			protocolLine("field", ["nullInt", "private", "0", "Int", "null"].join("\n")),
+			protocolLine("field", ["nullBool", "private", "0", "Bool", "null"].join("\n")),
+			protocolLine("field", ["count", "private", "0", "Int", "0"].join("\n")),
+			protocolLine("method", "main|public|1||Void||||"),
+			protocolLine("method_body", "main\n"),
+			protocolLine("method", "test|public|0||Void||||"),
+			protocolLine("method_body", "test\n" + body),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
+		final typed = TyperStage.typeModule(new ParsedModule(source, decl, "unit/TestNullCoalescing.hx"));
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function typedFunction(module:TypedModule, name:String):TyFunctionEnv {
+		for (fn in module.getEnv().getMainClass().getFunctions())
+			if (fn.getName() == name)
+				return fn;
+		throw "missing typed function " + name;
+	}
+
+	static function typedLocalDisplay(fn:TyFunctionEnv, name:String):String {
+		for (local in fn.getLocals())
+			if (local.getName() == name)
+				return local.getType().getDisplay();
+		return "<missing>";
+	}
+
+	static function assertNullableLocalTypeInferenceForMacroTypeof():Void {
+		final source = [
+			"package unit;",
+			"class TestNullCoalescing {",
+			"  final nullBool:Null<Bool> = null;",
+			"  function test() {",
+			"    final nullableBool:Null<Bool> = false;",
+			"    final testBool = this.nullBool ?? true;",
+			"    final testNullBool = this.nullBool ?? nullableBool;",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(source, "unit/TestNullCoalescing.hx");
+		final resolved = new ResolvedModule("unit.TestNullCoalescing", "unit/TestNullCoalescing.hx", parsed);
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final fn = typedFunction(typed, "test");
+		assertTrue(typedLocalDisplay(fn, "nullableBool") == "Null<Bool>", "typed local should preserve explicit Null<Bool> hint");
+		assertTrue(typedLocalDisplay(fn, "testBool") == "Bool", "null coalescing with non-null rhs should infer Bool");
+		assertTrue(typedLocalDisplay(fn, "testNullBool") == "Null<Bool>", "null coalescing with nullable rhs should infer Null<Bool>");
 	}
 
 	static function phpTypedAsHelperProbeProgram():GenIrProgram {
@@ -9247,6 +9373,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(sawScannedStringDefault, "source helper scanner should preserve string defaults on constructors");
 	}
 
+	static function assertNativeProtocolSourceFieldNullHintDecode():Void {
+		final source = [
+			"package unit;",
+			"private class Earlier {}",
+			"class Main {",
+			"  final nullBool:Null<Bool> = null;",
+			"  static function main() {}",
+			"}"
+		].join("\n");
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("class", "unit.Main"),
+			"ast static_main 1",
+			protocolLine("field", ["nullBool", "private", "0", "Bool", "null"].join("\n")),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
+		final fields = HxClassDecl.getFields(HxModuleDecl.getMainClass(decl));
+		assertTrue(fields.length == 1, "native protocol should decode the source-backed field");
+		assertTrue(HxFieldDecl.getName(fields[0]) == "nullBool", "native protocol should preserve the field name");
+		assertTrue(HxFieldDecl.getTypeHint(fields[0]) == "Null<Bool>", "native protocol should recover source generic Null<Bool> over erased payload Bool");
+	}
+
 	static function assertPhpPlusSemantics():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_plus_semantics_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11051,13 +11200,46 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$localStillNullable = true;", "PHP isNullable should preserve locals assigned nullable ?? nullable as nullable");
 		assertContains(content, "$fieldStillNullable = true;", "PHP isNullable should preserve instance-field nullable ?? nullable as nullable");
 		assertContains(content, "$bareFieldStillNullable = true;", "PHP isNullable should preserve bare same-class field nullable ?? nullable as nullable");
+		assertContains(content, "$finalFieldStillNullable = true;", "PHP isNullable should preserve final instance-field nullable ?? nullable as nullable");
 		assertContains(content, "$directNonNullable = false;", "PHP isNullable should report non-null locals as non-null");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP nullable helper probes should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "true\nfalse\ntrue\nfalse\ntrue\ntrue\ntrue\nfalse\n",
+			assertTrue(run.stdout == "true\nfalse\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\nfalse\n",
 				"generated PHP nullable helper probe output mismatch, got:\n" + run.stdout);
 		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpNativeProtocolNullableProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_native_protocol_nullable_probe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpNativeProtocolNullableProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$localStillNullable = true;", "PHP native-protocol nullable probe should preserve nullable ?? nullable as nullable");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP native-protocol nullable probe should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n", "generated PHP native-protocol nullable probe output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpNativeProtocolUpstreamNullCoalescingProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_native_protocol_upstream_null_coalescing_probe_"
+			+ Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpNativeProtocolUpstreamNullCoalescingProbeProgram(),
+			new BackendContext(tmpRoot, null, "unit.TestNullCoalescing", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$this->f(false);", "PHP upstream-shaped null-coalescing probe should fold non-null coalesce as non-null");
+		assertContains(content, "$this->t(true);", "PHP upstream-shaped null-coalescing probe should fold nullable coalesce as nullable");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -14018,6 +14200,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNativeProtocolOptionalArgDecode();
 		assertNativeProtocolDefaultArgSourceDecode();
 		assertNativeProtocolConstructorDefaultArgSourceDecode();
+		assertNativeProtocolSourceFieldNullHintDecode();
+		assertNullableLocalTypeInferenceForMacroTypeof();
 		assertPhpPlusSemantics();
 		assertPhpAnonymousToStringField();
 		assertPhpCyclicObjectStringification();
@@ -14070,6 +14254,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpLoweredAbstractCastTypeErrorProbe();
 		assertPhpTypedAsHelperProbe();
 		assertPhpHelperMacroNullableProbe();
+		assertPhpNativeProtocolNullableProbe();
+		assertPhpNativeProtocolUpstreamNullCoalescingProbe();
 		assertPhpFollowWithAbstractsProbe();
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();

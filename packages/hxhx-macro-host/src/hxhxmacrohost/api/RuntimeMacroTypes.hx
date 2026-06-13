@@ -976,6 +976,8 @@ class RuntimeMacroTypes {
 				resolveComplexType(ct);
 			case EBinop(OpAdd, e1, e2):
 				resolveAddType(typeofExpr(e1), typeofExpr(e2));
+			case EBinop(OpNullCoal, e1, e2):
+				resolveNullCoalesceType(typeofExpr(e1), typeofExpr(e2));
 			case _:
 				throw "runtime macro typeof: unsupported expr shape";
 		}
@@ -1381,6 +1383,14 @@ class RuntimeMacroTypes {
 		if (leftName == "Int" && rightName == "Int")
 			return intType();
 		throw "runtime macro typeof: unsupported add operands " + leftName + " + " + rightName;
+	}
+
+	static function resolveNullCoalesceType(left:Type, right:Type):Type {
+		if (right != null && !isDynamicType(right))
+			return right;
+		if (left != null && !isDynamicType(left))
+			return isNullWrapper(left) ? extractNullInner(left) : left;
+		return TDynamic(null);
 	}
 
 	static function ensureNoRuntimeParams(label:String, params:Array<Type>):Void {

@@ -4591,7 +4591,7 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EBool(_):
 				true;
-			case EIdent("true" | "false"):
+			case EIdent(name) if (name == "true" || name == "false"):
 				true;
 			case _:
 				false;
@@ -4749,6 +4749,13 @@ class SourceTargetCommon {
 	}
 
 	static function helperExprNullableResult(expr:HxExpr):Null<Bool> {
+		switch (expr) {
+			case EIdent(name):
+				final localHint = phpLocalTypeHint(name);
+				if (StringTools.trim(localHint).length > 0)
+					return isNullTypeHint(localHint);
+			case _:
+		}
 		final hint = phpExprTypeHint(expr);
 		if (StringTools.trim(hint).length > 0)
 			return isNullTypeHint(hint);
@@ -7346,7 +7353,7 @@ class SourceTargetCommon {
 				"String";
 			case EBool(_):
 				"Bool";
-			case EIdent("true" | "false"):
+			case EIdent(name) if (name == "true" || name == "false"):
 				"Bool";
 			case EFloat(_):
 				"Float";
@@ -7360,8 +7367,9 @@ class SourceTargetCommon {
 				phpNullCoalesceTypeHint(left, right);
 			case _ if (phpExprReturnsInt64(init)):
 				"haxe.Int64";
-			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
-				castHint;
+			case ECast(inner, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
+				final innerHint = phpExprTypeHint(inner);
+				if (isNullTypeHint(innerHint) && phpUnwrapNullTypeHint(innerHint) == normalizeTypeHint(castHint)) innerHint; else castHint;
 			case EMacroExpr(inner, _) | EUntyped(inner):
 				inferLocalTypeHint("", inner);
 			case _:
@@ -7379,7 +7387,7 @@ class SourceTargetCommon {
 				"String";
 			case EBool(_):
 				"Bool";
-			case EIdent("true" | "false"):
+			case EIdent(name) if (name == "true" || name == "false"):
 				"Bool";
 			case EFloat(_):
 				"Float";
@@ -7387,8 +7395,9 @@ class SourceTargetCommon {
 				typePath;
 			case EArrayDecl(_):
 				"Array";
-			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
-				castHint;
+			case ECast(inner, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
+				final innerHint = phpExprTypeHint(inner);
+				if (isNullTypeHint(innerHint) && phpUnwrapNullTypeHint(innerHint) == normalizeTypeHint(castHint)) innerHint; else castHint;
 			case EField(EThis, field):
 				phpCurrentInstanceFieldTypeHint(field);
 			case EIdent(name):
@@ -7403,15 +7412,23 @@ class SourceTargetCommon {
 	}
 
 	static function phpNullCoalesceTypeHint(left:HxExpr, right:HxExpr):String {
-		final leftHint = phpExprTypeHint(left);
-		final rightHint = phpExprTypeHint(right);
-		if (StringTools.trim(leftHint).length > 0 && !isNullTypeHint(leftHint))
-			return leftHint;
-		if (StringTools.trim(rightHint).length > 0 && !isNullTypeHint(rightHint))
-			return rightHint;
+		final leftHint = phpExprTypeHintForNullCoalesceOperand(left);
+		final rightHint = phpExprTypeHintForNullCoalesceOperand(right);
 		if (StringTools.trim(rightHint).length > 0)
 			return rightHint;
-		return leftHint;
+		if (StringTools.trim(leftHint).length == 0)
+			return "";
+		return isNullTypeHint(leftHint) ? phpUnwrapNullTypeHint(leftHint) : leftHint;
+	}
+
+	static function phpExprTypeHintForNullCoalesceOperand(expr:HxExpr):String {
+		return switch (expr) {
+			case EIdent(name):
+				final localHint = phpLocalTypeHint(name);
+				StringTools.trim(localHint).length > 0 ? localHint : phpExprTypeHint(expr);
+			case _:
+				phpExprTypeHint(expr);
+		};
 	}
 
 	static function phpExprReturnsInt64(expr:Null<HxExpr>):Bool {
@@ -7576,7 +7593,9 @@ class SourceTargetCommon {
 					return switch (stmt) {
 						case SVar(name, typeHint, init, pos):
 							final cleanName = target == Cs ? sanitizeCsIdentifier(name) : sanitizeTypeName(name);
-							localTypes.set(cleanName, inferLocalTypeHint(typeHint, init));
+							final inferredType = inferLocalTypeHint(typeHint, init);
+							final existingType = localTypes.exists(cleanName) ? localTypes.get(cleanName) : "";
+							localTypes.set(cleanName, phpPreferLocalTypeHint(existingType, inferredType));
 							phpRegisterOptionalLambdaLocal(cleanName, init);
 							final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 							final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
@@ -14903,6 +14922,8 @@ class SourceTargetCommon {
 									HxFunctionArg.getName(arg)
 							], function() {
 								final functionLocalTypes = phpFunctionLocalTypes(HxFunctionDecl.getArgs(fn));
+								phpMergeAstLocalTypeHints(functionLocalTypes, body);
+								phpMergeSourceLocalTypeHints(functionLocalTypes, HxFunctionDecl.getBodyText(fn));
 								final constructorSamples = isStatic
 									&& phpFunctionIsGeneric(fn) ? phpGenericConstructorSamplesForArgs(HxFunctionDecl.getArgs(fn)) : null;
 								withPhpGenericConstructorSamples(Php, constructorSamples, function() {
@@ -15030,6 +15051,165 @@ class SourceTargetCommon {
 				out.set(sanitizeTypeName(HxFunctionArg.getName(arg)), hint);
 		}
 		return out;
+	}
+
+	static function phpMergeSourceLocalTypeHints(localTypes:haxe.ds.StringMap<String>, bodyText:String):Void {
+		if (localTypes == null)
+			return;
+		final sourceHints = phpSourceLocalTypeHints(bodyText);
+		for (name in sourceHints.keys()) {
+			final existing = localTypes.exists(name) ? localTypes.get(name) : "";
+			localTypes.set(name, phpPreferLocalTypeHint(existing, sourceHints.get(name)));
+		}
+	}
+
+	static function phpMergeAstLocalTypeHints(localTypes:haxe.ds.StringMap<String>, stmts:Array<HxStmt>):Void {
+		if (localTypes == null || stmts == null)
+			return;
+		for (stmt in stmts) {
+			switch (stmt) {
+				case SVar(name, typeHint, _, _):
+					final cleanName = sanitizeTypeName(name);
+					final normalized = normalizeTypeHint(typeHint);
+					if (cleanName.length > 0 && normalized.length > 0) {
+						final existing = localTypes.exists(cleanName) ? localTypes.get(cleanName) : "";
+						localTypes.set(cleanName, phpPreferLocalTypeHint(existing, normalized));
+					}
+				case SBlock(body, _):
+					phpMergeAstLocalTypeHints(localTypes, body);
+				case _:
+			}
+		}
+	}
+
+	static function phpPreferLocalTypeHint(existing:String, incoming:String):String {
+		final oldHint = normalizeTypeHint(existing);
+		final newHint = normalizeTypeHint(incoming);
+		if (newHint.length == 0)
+			return oldHint;
+		if (oldHint.length == 0)
+			return newHint;
+		if (isNullTypeHint(oldHint) && !isNullTypeHint(newHint)) {
+			final inner = phpUnwrapNullTypeHint(oldHint);
+			if (newHint == inner || StringTools.endsWith(newHint, "." + inner))
+				return oldHint;
+		}
+		return newHint;
+	}
+
+	static function phpSourceLocalTypeHints(bodyText:String):haxe.ds.StringMap<String> {
+		final out = new haxe.ds.StringMap<String>();
+		if (bodyText == null || bodyText.length == 0)
+			return out;
+		var pos = 0;
+		while (pos < bodyText.length) {
+			final tok = ParserStageScanHelpers.scanNextToken(bodyText, pos);
+			if (tok.text.length == 0)
+				break;
+			pos = tok.nextPos;
+			if (tok.text != "var" && tok.text != "final")
+				continue;
+			final scanned = phpScanLocalTypeHintAfterVar(bodyText, pos);
+			if (scanned.nextPos > pos)
+				pos = scanned.nextPos;
+			final cleanName = sanitizeTypeName(scanned.name);
+			if (cleanName.length > 0 && scanned.typeHint.length > 0 && !out.exists(cleanName))
+				out.set(cleanName, scanned.typeHint);
+		}
+		return out;
+	}
+
+	static function phpScanLocalTypeHintAfterVar(source:String, start:Int):{name:String, typeHint:String, nextPos:Int} {
+		final nameTok = ParserStageScanHelpers.scanNextToken(source, start);
+		if (!nameTok.isIdent)
+			return {name: "", typeHint: "", nextPos: start};
+		var pos = nameTok.nextPos;
+		var typeHint = "";
+		while (pos < source.length) {
+			final tok = ParserStageScanHelpers.scanNextToken(source, pos);
+			if (tok.text.length == 0)
+				break;
+			pos = tok.nextPos;
+			switch (tok.text) {
+				case ":":
+					final end = phpFindSourceTypeHintEnd(source, pos);
+					typeHint = StringTools.trim(source.substring(pos, end));
+					pos = end;
+					break;
+				case "=" | ";" | "\n":
+					break;
+				case _:
+			}
+		}
+		return {name: nameTok.text, typeHint: typeHint, nextPos: phpSkipSourceStmtBoundary(source, pos)};
+	}
+
+	static function phpFindSourceTypeHintEnd(source:String, start:Int):Int {
+		var pos = start;
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var angleDepth = 0;
+		while (pos < source.length) {
+			final c = source.charCodeAt(pos);
+			if (c == "\"".code || c == "'".code) {
+				pos = phpSkipQuotedSource(source, pos);
+				continue;
+			}
+			switch (c) {
+				case "(".code:
+					parenDepth += 1;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth -= 1;
+				case "[".code:
+					bracketDepth += 1;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth -= 1;
+				case "<".code:
+					angleDepth += 1;
+				case ">".code:
+					if (angleDepth > 0)
+						angleDepth -= 1;
+				case "=".code | ";".code:
+					if (parenDepth == 0 && bracketDepth == 0 && angleDepth == 0)
+						return pos;
+				case _:
+			}
+			pos += 1;
+		}
+		return pos;
+	}
+
+	static function phpSkipSourceStmtBoundary(source:String, start:Int):Int {
+		var pos = start;
+		while (pos < source.length) {
+			final c = source.charCodeAt(pos);
+			if (c == "\"".code || c == "'".code) {
+				pos = phpSkipQuotedSource(source, pos);
+				continue;
+			}
+			if (c == ";".code || c == "\n".code)
+				return pos + 1;
+			pos += 1;
+		}
+		return pos;
+	}
+
+	static function phpSkipQuotedSource(source:String, start:Int):Int {
+		final quote = source.charCodeAt(start);
+		var pos = start + 1;
+		while (pos < source.length) {
+			final c = source.charCodeAt(pos);
+			if (c == "\\".code) {
+				pos += 2;
+				continue;
+			}
+			pos += 1;
+			if (c == quote)
+				break;
+		}
+		return pos;
 	}
 
 	static function phpNeedsUnitTestLocalStaticSlot(className:String):Bool {

@@ -41,6 +41,21 @@ class TyType {
 		return display == "Int" || display == "Float";
 	}
 
+	public function isNullWrapped():Bool {
+		return StringTools.startsWith(display, "Null<") && StringTools.endsWith(display, ">");
+	}
+
+	public function unwrapNull():TyType {
+		if (!isNullWrapped())
+			return this;
+		final inner = StringTools.trim(display.substr("Null<".length, display.length - "Null<".length - 1));
+		return inner.length == 0 ? unknown() : fromHintText(inner);
+	}
+
+	static function nullWrapped(inner:TyType):TyType {
+		return new TyType("Null<" + (inner == null ? "Dynamic" : inner.getDisplay()) + ">");
+	}
+
 	public static function fromHintText(hint:String):TyType {
 		if (hint == null)
 			return unknown();
@@ -89,6 +104,21 @@ class TyType {
 			return b;
 		if (b.display == "Null")
 			return a;
+
+		// Preserve explicit nullable wrappers when unifying hinted locals with
+		// non-null initializer expressions, e.g. `x:Null<Bool> = false`.
+		if (a.isNullWrapped() && b.isNullWrapped()) {
+			final u = unify(a.unwrapNull(), b.unwrapNull());
+			return u == null ? null : nullWrapped(u);
+		}
+		if (a.isNullWrapped()) {
+			final u = unify(a.unwrapNull(), b);
+			return u == null ? null : a;
+		}
+		if (b.isNullWrapped()) {
+			final u = unify(a, b.unwrapNull());
+			return u == null ? null : b;
+		}
 
 		// Numeric widening: Int + Float (or comparisons) unify to Float.
 		if (a.isNumeric() && b.isNumeric())

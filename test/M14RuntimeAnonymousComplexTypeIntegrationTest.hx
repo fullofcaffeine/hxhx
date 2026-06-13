@@ -74,5 +74,10 @@ class M14RuntimeAnonymousComplexTypeIntegrationTest {
 			case _:
 				fail("expected typedef final field to preserve final-ness");
 		}
+
+		final nullableFallback = RuntimeMacroTypes.typeofExpr(macro((null : Null<Bool>) ?? (false : Null<Bool>)));
+		assertTrue(RuntimeMacroTypes.toString(nullableFallback) == "Null<Bool>", "expected nullable ?? nullable typeof to stay Null<Bool>");
+		final nonNullableFallback = RuntimeMacroTypes.typeofExpr(macro((null : Null<Bool>) ?? true));
+		assertTrue(RuntimeMacroTypes.toString(nonNullableFallback) == "Bool", "expected nullable ?? non-null typeof to become Bool");
 	}
 }

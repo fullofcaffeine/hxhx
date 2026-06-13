@@ -589,6 +589,14 @@ class TyperStage {
 		return TyType.fromHintText(parts.join("->"));
 	}
 
+	static function inferNullCoalesceType(left:TyType, right:TyType):TyType {
+		if (right != null && !right.isUnknown())
+			return right;
+		if (left != null && !left.isUnknown())
+			return left.isNullWrapped() ? left.unwrapNull() : left;
+		return TyType.unknown();
+	}
+
 	static function currentStaticMethodReferenceType(name:String, ctx:TyperContext):Null<TyType> {
 		final c = ctx.currentClass();
 		if (c == null)
@@ -924,6 +932,10 @@ class TyperStage {
 				}
 			case EBinop(op, a, b):
 				switch (op) {
+					case "??":
+						final ta = inferExprType(a, scope, ctx, pos);
+						final tb = inferExprType(b, scope, ctx, pos);
+						inferNullCoalesceType(ta, tb);
 					case _ if (isAssignmentBinop(op)):
 						// Assignment as expression.
 						final rhs = inferExprType(b, scope, ctx, pos);
