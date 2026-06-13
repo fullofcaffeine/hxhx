@@ -344,6 +344,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpDynamicMissingFieldNullProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var inlineMissing = ({} : Dynamic).x;",
+			"    Sys.println(Std.string(inlineMissing == null));",
+			"    Sys.println(Std.string(inlineMissing ?? 2));",
+			"    var record:Dynamic = {};",
+			"    Sys.println(Std.string(record.x == null));",
+			"    Sys.println(Std.string(record.x ?? 3));",
+			"    var present:Dynamic = { x: 4 };",
+			"    Sys.println(Std.string(present.x));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function loopControlProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -11243,6 +11263,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpDynamicMissingFieldNull():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_dynamic_missing_field_null_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpDynamicMissingFieldNullProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_field((new __HxAnon([])), \"x\")",
+			"PHP inline Dynamic anonymous field read should route through null-safe field helper");
+		assertContains(content, "__hxhx_field($record, \"x\")", "PHP Dynamic local field read should route through null-safe field helper");
+		assertContains(content, "__hxhx_field($present, \"x\")", "PHP Dynamic local present field read should still use field helper");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Dynamic missing-field probe should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stderr.indexOf("Undefined property") < 0,
+				"generated PHP Dynamic missing-field probe should not emit undefined-property warnings, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n2\ntrue\n3\n4\n", "generated PHP Dynamic missing-field output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpFollowWithAbstractsProbe():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_follow_with_abstracts_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -14256,6 +14298,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpHelperMacroNullableProbe();
 		assertPhpNativeProtocolNullableProbe();
 		assertPhpNativeProtocolUpstreamNullCoalescingProbe();
+		assertPhpDynamicMissingFieldNull();
 		assertPhpFollowWithAbstractsProbe();
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();

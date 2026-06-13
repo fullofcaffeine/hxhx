@@ -2178,6 +2178,12 @@ class SourceTargetCommon {
 		return switch (receiver) {
 			case EIdent(name) if (phpLocalHasInstanceMethod(name, field)):
 				true;
+			case EIdent(name) if (isDynamicTypeHint(phpLocalTypeHint(name))):
+				true;
+			case ECast(_, typeHint) if (isDynamicTypeHint(typeHint)):
+				true;
+			case EUntyped(inner) | EMacroExpr(inner, _):
+				phpShouldUseFieldReadHelper(inner, field);
 			case ENull:
 				true;
 			case EField(staticReceiver, _) if (phpStaticTypePath(staticReceiver) != null):
