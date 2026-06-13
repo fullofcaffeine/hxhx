@@ -2677,6 +2677,50 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpHashMapRuntimeProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
+			SVar("grid", "", ENew("haxe.ds.HashMap", []), pos),
+			SExpr(EBinop("=", EArrayAccess(EIdent("grid"), ENew("Point", [EInt(0), EInt(0)])), EString("a")), pos),
+			SExpr(EBinop("=", EArrayAccess(EIdent("grid"), ENew("Point", [EInt(0), EInt(1)])), EString("b")), pos),
+			SExpr(EBinop("=", EArrayAccess(EIdent("grid"), ENew("Point", [EInt(1), EInt(0)])), EString("c")), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [EArrayAccess(EIdent("grid"), ENew("Point", [EInt(1), EInt(0)]))]), pos),
+			SVar("count", "", EInt(0), pos),
+			SForKeyValue("point", "label", EIdent("grid"), SBlock([
+				SIf(ECall(EField(EIdent("point"), "equals"), [ENew("Point", [EInt(0), EInt(1)])]),
+					SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("label")]), pos), null, pos),
+				SExpr(EBinop("+=", EIdent("count"), EInt(1)), pos)
+			], pos), pos),
+			SExpr(ECall(EField(EIdent("Sys"), "println"), [ECall(EField(EIdent("Std"), "string"), [EIdent("count")])]), pos)
+		], "");
+		final mainClass = new HxClassDecl("Main", true, [mainFn]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final pointCtor = new HxFunctionDecl("new", HxVisibility.Public, false, [
+			new HxFunctionArg("x", "Int", NoDefault),
+			new HxFunctionArg("y", "Int", NoDefault)
+		], "Void", [
+			SExpr(EBinop("=", EField(EThis, "x"), EIdent("x")), pos),
+			SExpr(EBinop("=", EField(EThis, "y"), EIdent("y")), pos)
+		], "");
+		final equalsFn = new HxFunctionDecl("equals", HxVisibility.Public, false, [new HxFunctionArg("point", "Point", NoDefault)], "Bool", [
+			SReturn(EBinop("&&", EBinop("==", EField(EThis, "x"), EField(EIdent("point"), "x")),
+				EBinop("==", EField(EThis, "y"), EField(EIdent("point"), "y"))),
+				pos)
+		], "");
+		final hashCodeFn = new HxFunctionDecl("hashCode", HxVisibility.Public, false, [], "Int", [
+			SReturn(EBinop("+", EField(EThis, "x"), EBinop("*", EInt(10000), EField(EThis, "y"))), pos)
+		], "");
+		final pointClass = new HxClassDecl("Point", false, [pointCtor, equalsFn, hashCodeFn], [
+			new HxFieldDecl("x", HxVisibility.Public, false, "Int", null),
+			new HxFieldDecl("y", HxVisibility.Public, false, "Int", null)
+		]);
+		final pointDecl = new HxModuleDecl("", [], pointClass, [pointClass], false, false);
+		return MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("Point.hx", pointDecl)
+		], []);
+	}
+
 	static function phpHaxeSerializerRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Box {",
@@ -8848,6 +8892,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpHashMapRuntimeShim():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_hash_map_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpHashMapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$grid = new Map(null, \"haxe.ds.HashMap\");", "PHP haxe.ds.HashMap construction should lower to a tagged Map shim");
+		assertContains(content, "if ($this->__hx_type === \"haxe.ds.HashMap\"", "PHP HashMap keys should use hashCode-based identity");
+		assertContains(content, "function __hxhx_key_value_iter($value)", "PHP key/value loops should lower through pair iterators");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP HashMap runtime should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "c\nb\n3", "generated PHP should read hash-equivalent object keys and iterate all HashMap entries");
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpHaxeSerializerRuntimeSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_serializer_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -11540,7 +11603,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpForKeyValueProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "foreach ($values as $index => $value) {", "PHP key/value loops should lower through foreach key => value");
+		assertContains(content, "foreach (__hxhx_key_value_iter($values) as $__hx_kv_index_value) {",
+			"PHP key/value loops should lower through the pair iterator helper");
+		assertContains(content, "$index = $__hx_kv_index_value[0];", "PHP key/value loops should bind the rendered key from pair slot 0");
+		assertContains(content, "$value = $__hx_kv_index_value[1];", "PHP key/value loops should bind the rendered value from pair slot 1");
 		assertContains(content, "echo __hxhx_add(__hxhx_add_string($index), __hxhx_add_string($value)) . PHP_EOL;",
 			"PHP key/value loop bodies should render with both loop bindings in scope");
 		deleteRecursive(tmpRoot);
@@ -14330,6 +14396,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpMapRuntimeShim();
 		assertPhpMapLiteralTypeTags();
 		assertPhpMapSetTypeTags();
+		assertPhpHashMapRuntimeShim();
 		assertPhpHaxeSerializerRuntimeSupport();
 		assertPhpHaxeSerializerImportRuntimeSupport();
 		assertPhpPoint3StringEqualityRuntimeSupport();

@@ -5944,7 +5944,7 @@ class SourceTargetCommon {
 
 	static function phpRuntimeMapType(typePath:String):Bool {
 		return switch (typePath) {
-			case "Map" | "StringMap" | "haxe.ds.StringMap" | "IntMap" | "haxe.ds.IntMap" | "ObjectMap" | "haxe.ds.ObjectMap":
+			case "Map" | "StringMap" | "haxe.ds.StringMap" | "IntMap" | "haxe.ds.IntMap" | "ObjectMap" | "haxe.ds.ObjectMap" | "HashMap" | "haxe.ds.HashMap":
 				true;
 			case _:
 				false;
@@ -5960,6 +5960,8 @@ class SourceTargetCommon {
 				"new Map(" + args + ", \"haxe.ds.IntMap\")";
 			case "ObjectMap" | "haxe.ds.ObjectMap":
 				"new Map(" + args + ", \"haxe.ds.ObjectMap\")";
+			case "HashMap" | "haxe.ds.HashMap":
+				"new Map(" + args + ", \"haxe.ds.HashMap\")";
 			case _:
 				"new Map(" + rendered + ")";
 		};
@@ -5973,6 +5975,8 @@ class SourceTargetCommon {
 			return "haxe.ds.IntMap";
 		if (compact == "ObjectMap" || compact == "haxe.ds.ObjectMap")
 			return "haxe.ds.ObjectMap";
+		if (compact == "HashMap" || compact == "haxe.ds.HashMap")
+			return "haxe.ds.HashMap";
 		if (!StringTools.startsWith(compact, "Map<") || !StringTools.endsWith(compact, ">"))
 			return "";
 		final inner = compact.substr(4, compact.length - 5);
@@ -8249,7 +8253,10 @@ class SourceTargetCommon {
 				for (line in renderStmt(target, body, childIndent))
 					out.push(line);
 			case Php:
-				out.push(indent + "foreach (" + source + " as " + keyValue + " => " + itemValue + ") {");
+				final pairName = "$__hx_kv_" + cleanKey + "_" + cleanItem;
+				out.push(indent + "foreach (__hxhx_key_value_iter(" + source + ") as " + pairName + ") {");
+				out.push(childIndent + keyValue + " = " + pairName + "[0];");
+				out.push(childIndent + itemValue + " = " + pairName + "[1];");
 				for (line in renderPhpLoopBody(body, childIndent, knownPhpLocals))
 					out.push(line);
 				out.push(indent + "}");
@@ -18941,7 +18948,7 @@ class SourceTargetCommon {
 				lines.push("    return $this->toString();");
 				lines.push("  }");
 				lines.push("}");
-				lines.push("class Map {");
+				lines.push("class Map implements \\IteratorAggregate {");
 				lines.push("  private $items;");
 				lines.push("  private $keys;");
 				lines.push("  public $__hx_type;");
@@ -18957,25 +18964,29 @@ class SourceTargetCommon {
 				lines.push("    if (is_bool($key)) return \"bool:\" . ($key ? \"1\" : \"0\");");
 				lines.push("    return gettype($key) . \":\" . strval($key);");
 				lines.push("  }");
+				lines.push("  private function keyIdFor($key) {");
+				lines.push("    if ($this->__hx_type === \"haxe.ds.HashMap\" && is_object($key) && method_exists($key, \"hashCode\")) return \"hash:\" . strval($key->hashCode());");
+				lines.push("    return self::keyId($key);");
+				lines.push("  }");
 				lines.push("  public function set($key, $value) {");
 				lines.push("    if ($this->__hx_type === \"Map\") {");
 				lines.push("      if (is_int($key)) $this->__hx_type = \"haxe.ds.IntMap\";");
 				lines.push("      else if (is_string($key)) $this->__hx_type = \"haxe.ds.StringMap\";");
 				lines.push("      else if (is_object($key)) $this->__hx_type = \"haxe.ds.ObjectMap\";");
 				lines.push("    }");
-				lines.push("    $id = self::keyId($key);");
+				lines.push("    $id = $this->keyIdFor($key);");
 				lines.push("    $this->items[$id] = $value;");
 				lines.push("    $this->keys[$id] = $key;");
 				lines.push("  }");
 				lines.push("  public function get($key) {");
-				lines.push("    $id = self::keyId($key);");
+				lines.push("    $id = $this->keyIdFor($key);");
 				lines.push("    return array_key_exists($id, $this->items) ? $this->items[$id] : null;");
 				lines.push("  }");
 				lines.push("  public function exists($key) {");
-				lines.push("    return array_key_exists(self::keyId($key), $this->items);");
+				lines.push("    return array_key_exists($this->keyIdFor($key), $this->items);");
 				lines.push("  }");
 				lines.push("  public function remove($key) {");
-				lines.push("    $id = self::keyId($key);");
+				lines.push("    $id = $this->keyIdFor($key);");
 				lines.push("    if (!array_key_exists($id, $this->items)) return false;");
 				lines.push("    unset($this->items[$id]);");
 				lines.push("    unset($this->keys[$id]);");
@@ -18986,6 +18997,14 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("  public function iterator() {");
 				lines.push("    return new __HxArrayIterator(array_values($this->items));");
+				lines.push("  }");
+				lines.push("  public function keyValuePairs() {");
+				lines.push("    $pairs = [];");
+				lines.push("    foreach ($this->items as $id => $value) $pairs[] = [$this->keys[$id], $value];");
+				lines.push("    return $pairs;");
+				lines.push("  }");
+				lines.push("  public function getIterator(): \\Traversable {");
+				lines.push("    return new \\ArrayIterator(array_values($this->items));");
 				lines.push("  }");
 				lines.push("  public function toString() {");
 				lines.push("    if (count($this->items) === 0) return \"[]\";");
@@ -19945,6 +19964,8 @@ class SourceTargetCommon {
 				lines.push("    case \"haxe.ds.IntMap\": return $value instanceof Map && ($value->__hx_type === \"haxe.ds.IntMap\" || $value->__hx_type === \"Map\");");
 				lines.push("    case \"ObjectMap\": return $value instanceof Map && ($value->__hx_type === \"haxe.ds.ObjectMap\" || $value->__hx_type === \"Map\");");
 				lines.push("    case \"haxe.ds.ObjectMap\": return $value instanceof Map && ($value->__hx_type === \"haxe.ds.ObjectMap\" || $value->__hx_type === \"Map\");");
+				lines.push("    case \"HashMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.HashMap\";");
+				lines.push("    case \"haxe.ds.HashMap\": return $value instanceof Map && $value->__hx_type === \"haxe.ds.HashMap\";");
 				lines.push("    case \"List\": return $value instanceof List_;");
 				lines.push("    case \"haxe.ds.List\": return $value instanceof List_;");
 				lines.push("    case \"Exception\": return $value instanceof \\Throwable;");
@@ -20093,6 +20114,15 @@ class SourceTargetCommon {
 				lines.push("  if (is_array($value)) return new __HxArrayIterator($value);");
 				lines.push("  if (is_object($value) && method_exists($value, \"iterator\")) return $value->iterator();");
 				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_key_value_iter($value) {");
+				lines.push("  if ($value instanceof Map) return $value->keyValuePairs();");
+				lines.push("  if ($value instanceof __HxArray) $value = $value->toArray();");
+				lines.push("  $pairs = [];");
+				lines.push("  if (is_array($value) || $value instanceof \\Traversable) {");
+				lines.push("    foreach ($value as $key => $item) $pairs[] = [$key, $item];");
+				lines.push("  }");
+				lines.push("  return $pairs;");
 				lines.push("}");
 				lines.push("function __hxhx_field($obj, $field) {");
 				lines.push("  $name = strval($field);");
