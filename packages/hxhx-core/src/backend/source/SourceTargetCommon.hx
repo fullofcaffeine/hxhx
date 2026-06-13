@@ -4836,94 +4836,99 @@ class SourceTargetCommon {
 	static function helperIsNullableResult(args:Array<HxExpr>):Null<Bool> {
 		if (args == null || args.length != 1)
 			return null;
-		return helperExprNullableResult(args[0], []);
+		final result = helperExprNullableState(args[0], []);
+		if (result == "true")
+			return true;
+		if (result == "false")
+			return false;
+		return null;
 	}
 
-	static function helperExprNullableResult(expr:HxExpr, seen:Array<String>):Null<Bool> {
+	static function helperExprNullableState(expr:HxExpr, seen:Array<String>):String {
 		switch (expr) {
 			case EIdent(name):
 				final localHint = phpLocalTypeHint(name);
 				if (StringTools.trim(localHint).length > 0)
 					if (isNullTypeHint(localHint))
-						return true;
+						return "true";
 				final clean = sanitizeTypeName(name);
 				if (seen.indexOf(clean) < 0) {
 					final init = phpLocalInitExpr(clean);
 					if (init != null) {
 						final nextSeen = seen.copy();
 						nextSeen.push(clean);
-						final initNullable = helperExprNullableResult(init, nextSeen);
-						if (initNullable != null)
+						final initNullable = helperExprNullableState(init, nextSeen);
+						if (initNullable.length > 0)
 							return initNullable;
 					}
 				}
 				if (StringTools.trim(localHint).length > 0)
-					return false;
+					return "false";
 				if (phpCurrentInstanceFieldValue(clean)) {
 					final fieldHint = phpCurrentInstanceFieldTypeHint(clean);
 					if (StringTools.trim(fieldHint).length > 0)
-						return isNullTypeHint(fieldHint);
+						return isNullTypeHint(fieldHint) ? "true" : "false";
 				}
 			case EField(EThis, field):
 				final fieldHint = phpCurrentInstanceFieldTypeHint(field);
 				if (StringTools.trim(fieldHint).length > 0)
-					return isNullTypeHint(fieldHint);
+					return isNullTypeHint(fieldHint) ? "true" : "false";
 			case _:
 		}
 		switch (expr) {
 			case EMacroExpr(inner, _) | EUntyped(inner):
-				return helperExprNullableResult(inner, seen);
+				return helperExprNullableState(inner, seen);
 			case EBinop("??", left, right):
-				final leftNullable = helperExprNullableResult(left, seen);
-				final rightNullable = helperExprNullableResult(right, seen);
-				if (leftNullable == false || rightNullable == false)
-					return false;
-				if (leftNullable == true && rightNullable == true)
-					return true;
-				return null;
+				final leftNullable = helperExprNullableState(left, seen);
+				final rightNullable = helperExprNullableState(right, seen);
+				if (leftNullable == "false" || rightNullable == "false")
+					return "false";
+				if (leftNullable == "true" && rightNullable == "true")
+					return "true";
+				return "";
 			case ETernary(cond, thenExpr, elseExpr):
-				final refined = helperNullCheckTernaryNullableResult(cond, thenExpr, elseExpr, seen);
-				if (refined != null)
+				final refined = helperNullCheckTernaryNullableState(cond, thenExpr, elseExpr, seen);
+				if (refined.length > 0)
 					return refined;
-				final thenNullable = helperExprNullableResult(thenExpr, seen);
-				final elseNullable = helperExprNullableResult(elseExpr, seen);
-				if (thenNullable == true || elseNullable == true)
-					return true;
-				if (thenNullable == false && elseNullable == false)
-					return false;
-				return null;
+				final thenNullable = helperExprNullableState(thenExpr, seen);
+				final elseNullable = helperExprNullableState(elseExpr, seen);
+				if (thenNullable == "true" || elseNullable == "true")
+					return "true";
+				if (thenNullable == "false" && elseNullable == "false")
+					return "false";
+				return "";
 			case _:
 		}
 		final hint = phpExprTypeHint(expr);
 		if (StringTools.trim(hint).length > 0)
-			return isNullTypeHint(hint);
+			return isNullTypeHint(hint) ? "true" : "false";
 		switch (expr) {
 			case ENull:
-				return true;
+				return "true";
 			case EBool(_) | EInt(_) | EFloat(_) | EString(_) | ENew(_, _) | EArrayDecl(_) | EAnon(_, _) | ELambda(_, _):
-				return false;
+				return "false";
 			case EIdent("true") | EIdent("false"):
-				return false;
+				return "false";
 			case EIdent(_):
-				return null;
+				return "";
 			case _:
-				return null;
+				return "";
 		}
 	}
 
-	static function helperNullCheckTernaryNullableResult(cond:HxExpr, thenExpr:HxExpr, elseExpr:HxExpr, seen:Array<String>):Null<Bool> {
+	static function helperNullCheckTernaryNullableState(cond:HxExpr, thenExpr:HxExpr, elseExpr:HxExpr, seen:Array<String>):String {
 		final check = helperNullCheckSubject(cond);
 		if (check == null)
-			return null;
+			return "";
 		if (check.isEqualsNull && helperSameValueExpr(elseExpr, check.expr)) {
-			final fallbackNullable = helperExprNullableResult(thenExpr, seen);
-			return fallbackNullable == false ? false : null;
+			final fallbackNullable = helperExprNullableState(thenExpr, seen);
+			return fallbackNullable == "false" ? "false" : "";
 		}
 		if (!check.isEqualsNull && helperSameValueExpr(thenExpr, check.expr)) {
-			final fallbackNullable = helperExprNullableResult(elseExpr, seen);
-			return fallbackNullable == false ? false : null;
+			final fallbackNullable = helperExprNullableState(elseExpr, seen);
+			return fallbackNullable == "false" ? "false" : "";
 		}
-		return null;
+		return "";
 	}
 
 	static function helperNullCheckSubject(cond:HxExpr):Null<{expr:HxExpr, isEqualsNull:Bool}> {
@@ -7554,7 +7559,8 @@ class SourceTargetCommon {
 				inferLocalTypeHint("", inner);
 			case EBinop("??", left, right):
 				phpNullCoalesceTypeHint(left, right);
-			case ETernary(_, thenExpr, elseExpr):
+			case ETernary(cond, thenExpr, elseExpr):
+				phpExprTypeHint(cond);
 				phpTernaryTypeHint(thenExpr, elseExpr);
 			case _ if (phpExprReturnsInt64(init)):
 				"haxe.Int64";
@@ -7595,7 +7601,8 @@ class SourceTargetCommon {
 				phpLocalTypeHint(name);
 			case EBinop("??", left, right):
 				phpNullCoalesceTypeHint(left, right);
-			case ETernary(_, thenExpr, elseExpr):
+			case ETernary(cond, thenExpr, elseExpr):
+				phpExprTypeHint(cond);
 				phpTernaryTypeHint(thenExpr, elseExpr);
 			case EMacroExpr(inner, _) | EUntyped(inner):
 				phpExprTypeHint(inner);
