@@ -2141,7 +2141,7 @@ class SourceTargetCommon {
 				} else if (field == "message") {
 					"__hxhx_message_field(" + renderExpr(target, receiver) + ")";
 				} else {
-					final renderedReceiver = renderExpr(target, receiver);
+					final renderedReceiver = phpReceiverExpr(receiver);
 					final propertyGetter = phpInstancePropertyGetterAccess(receiver, field);
 					if (propertyGetter != null)
 						propertyGetter;
@@ -2189,6 +2189,16 @@ class SourceTargetCommon {
 
 	static function phpFieldReadAccess(receiver:String, field:String):String {
 		return "__hxhx_field(" + receiver + ", " + quotePhpString(sanitizeTypeName(field)) + ")";
+	}
+
+	static function phpReceiverExpr(receiver:HxExpr):String {
+		final rendered = renderExpr(Php, receiver);
+		return switch (receiver) {
+			case ENew(_, _) | ECast(ENew(_, _), _):
+				"(" + rendered + ")";
+			case _:
+				rendered;
+		};
 	}
 
 	static function phpCallField(receiver:String, field:String, args:Array<HxExpr>):String {
@@ -2450,6 +2460,7 @@ class SourceTargetCommon {
 						case ESuper:
 							callExpr(target, "(" + phpSuperGetterCall(field) + ")", phpArgs);
 						case _:
+							final renderedReceiver = phpReceiverExpr(receiver);
 							final propertyGetter = phpInstancePropertyGetterAccess(receiver, field);
 							final dynamicCall = switch (receiver) {
 								case EIdent(name):
@@ -2460,15 +2471,15 @@ class SourceTargetCommon {
 							if (propertyGetter != null) {
 								callExpr(target, "(" + propertyGetter + ")", phpArgs);
 							} else if (dynamicCall) {
-								phpCallField(renderExpr(Php, receiver), field, phpArgs);
+								phpCallField(renderedReceiver, field, phpArgs);
 							} else {
 								final renderedArgs = phpRenderedCallArgsWithEnumPeerContext(field, phpArgs);
 								if (renderedArgs != null)
-									fieldAccess(target, renderExpr(target, receiver), field) + "(" + renderedArgs.join(", ") + ")";
+									fieldAccess(target, renderedReceiver, field) + "(" + renderedArgs.join(", ") + ")";
 								else if (phpReceiverHasInstanceField(receiver, field))
-									phpCallField(renderExpr(Php, receiver), field, phpAlignCallableFieldCallArgs(receiver, field, phpArgs));
+									phpCallField(renderedReceiver, field, phpAlignCallableFieldCallArgs(receiver, field, phpArgs));
 								else
-									callExpr(target, fieldAccess(target, renderExpr(target, receiver), field), phpArgs);
+									callExpr(target, fieldAccess(target, renderedReceiver, field), phpArgs);
 							}
 					}
 				}
