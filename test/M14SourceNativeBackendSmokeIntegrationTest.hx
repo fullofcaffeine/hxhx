@@ -1658,6 +1658,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpHelperMacroCommonBaseTypeStringProgram():GenIrProgram {
+		final src = [
+			"package unit;",
+			"private class A {}",
+			"private class B extends A {}",
+			"private class C extends A {}",
+			"class HelperMacros {",
+			"  public static function typeString(e) { return \"\"; }",
+			"}",
+			"class TestNullCoalescing {",
+			"  public function new() {}",
+			"  function eq(expected:String, actual:String) { Sys.println(actual); }",
+			"  public function test() {",
+			"    var a = \"default\";",
+			"    var b = \"fallback\";",
+			"    var c = false;",
+			"    var a = a ?? b;",
+			"    var b:B = cast null;",
+			"    var c:C = cast null;",
+			"    var a = if (b != null) b else c;",
+			"    var a = b ?? c;",
+			"    eq(\"unit._TestNullCoalescing.A\", HelperMacros.typeString(a));",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    new TestNullCoalescing().test();",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "TestNullCoalescing.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpHelperMacroNullableProbeProgram():GenIrProgram {
 		final src = [
 			"class HelperMacros {",
@@ -10806,6 +10841,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "haxe.Exception", "generated PHP helper macro typeString fold should preserve expected type string");
 		}
 		deleteRecursive(macroTmpRoot);
+
+		final commonBaseTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_helper_macro_common_base_" + Std.string(Date.now().getTime()));
+		deleteRecursive(commonBaseTmpRoot);
+		FileSystem.createDirectory(commonBaseTmpRoot);
+		backend.emit(phpHelperMacroCommonBaseTypeStringProgram(), new BackendContext(commonBaseTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final commonBaseContent = File.getContent(Path.join([commonBaseTmpRoot, "index.php"]));
+		assertContains(commonBaseContent, "\"unit._TestNullCoalescing.A\"",
+			"PHP HelperMacros.typeString should fold sibling-class null coalescing to the common private base type");
+		assertNotContains(commonBaseContent, "echo \"haxe.Exception\" . PHP_EOL;",
+			"PHP HelperMacros.typeString should not emit the fallback haxe.Exception for typed sibling-class null coalescing");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([commonBaseTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP helper macro common-base fold should execute, stderr:\n" + run.stderr);
+			assertContains(run.stdout, "unit._TestNullCoalescing.A",
+				"generated PHP helper macro common-base typeString fold should preserve expected type string");
+		}
+		deleteRecursive(commonBaseTmpRoot);
 
 		final notImplementedTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_not_implemented_exception_" + Std.string(Date.now().getTime()));
 		deleteRecursive(notImplementedTmpRoot);

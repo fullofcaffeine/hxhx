@@ -4783,8 +4783,54 @@ class SourceTargetCommon {
 				final normalized = normalizeProbeText(raw);
 				if (normalized.indexOf("thrownewException") >= 0 && normalized.indexOf("catch(e)e") >= 0) "haxe.Exception"; else null;
 			case _:
-				null;
+				final hint = phpTypeStringExprHint(args[0], []);
+				StringTools.trim(hint).length == 0 ? null : hint;
 		}
+	}
+
+	static function phpTypeStringExprHint(expr:Null<HxExpr>, seen:Array<String>):String {
+		if (expr == null)
+			return "";
+		return switch (expr) {
+			case EIdent(name):
+				final clean = sanitizeTypeName(name);
+				if (seen.indexOf(clean) >= 0) {
+					phpExprTypeHint(expr);
+				} else {
+					final init = phpLocalInitExpr(clean);
+					if (init != null) {
+						final nextSeen = seen.copy();
+						nextSeen.push(clean);
+						final initHint = phpTypeStringExprHint(init, nextSeen);
+						if (StringTools.trim(initHint).length > 0)
+							initHint;
+						else
+							phpExprTypeHint(expr);
+					} else {
+						phpExprTypeHint(expr);
+					}
+				}
+			case EBinop("??", left, right):
+				final leftHint = phpTypeStringExprHint(left, seen);
+				final rightHint = phpTypeStringExprHint(right, seen);
+				if (StringTools.trim(rightHint).length > 0) {
+					final common = phpCommonClassTypeHint(isNullTypeHint(leftHint) ? phpUnwrapNullTypeHint(leftHint) : leftHint, rightHint);
+					if (common.length > 0)
+						common;
+					else
+						rightHint;
+				} else if (StringTools.trim(leftHint).length == 0) {
+					"";
+				} else {
+					isNullTypeHint(leftHint) ? phpUnwrapNullTypeHint(leftHint) : leftHint;
+				}
+			case ECast(_, castHint) if (castHint != null && StringTools.trim(castHint).length > 0):
+				castHint;
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpTypeStringExprHint(inner, seen);
+			case _:
+				phpExprTypeHint(expr);
+		};
 	}
 
 	static function helperIsNullableResult(args:Array<HxExpr>):Null<Bool> {
@@ -6381,10 +6427,13 @@ class SourceTargetCommon {
 		final out = new Array<String>();
 		final localTypes = (target == Php || target == Cs)
 			&& initialLocalTypes != null ? copyStringMap(initialLocalTypes) : new haxe.ds.StringMap<String>();
+		final previousLocalInits = phpRenderLocalInits;
+		final localInits = target == Php ? copyExprMap(phpRenderLocalInits) : phpRenderLocalInits;
 		final refCapturesByStmt = target == Php ? phpLaterAssignedLocalsByStmt(stmts) : null;
 		final baseRefCaptures = phpRenderRefCaptureLocals;
 		final optionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaArgNamesByLocal) : null;
 		final optionalOptionalArgNamesByLocal = target == Php ? copyStringArrayMap(phpRenderOptionalLambdaOptionalArgNamesByLocal) : null;
+		phpRenderLocalInits = localInits;
 		withPhpOptionalLambdaLocals(target, optionalArgNamesByLocal, optionalOptionalArgNamesByLocal, function() {
 			for (i in 0...stmts.length) {
 				final stmt = stmts[i];
@@ -6397,10 +6446,12 @@ class SourceTargetCommon {
 			if (out.length == 0)
 				out.push(indent + emptyStmt(target));
 		});
+		phpRenderLocalInits = previousLocalInits;
 		return out;
 	}
 
 	static var phpRenderLocalTypes:Null<haxe.ds.StringMap<String>> = null;
+	static var phpRenderLocalInits:Null<haxe.ds.StringMap<HxExpr>> = null;
 	static var phpRenderCurrentFunctionName:Null<String> = null;
 	static var phpRenderCurrentInstanceMethodNames:Null<Map<String, Bool>> = null;
 	static var phpRenderCurrentInstanceMethodArgs:Null<Map<String, Array<HxFunctionArg>>> = null;
@@ -6418,6 +6469,7 @@ class SourceTargetCommon {
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderGenericStaticFunctionsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<HxFunctionDecl>>> = null;
 	static var phpRenderStaticCallableFieldsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
+	static var phpRenderClassBaseTypes:Null<haxe.ds.StringMap<String>> = null;
 	static var phpRenderStringExtensionMethodsByClass:Null<haxe.ds.StringMap<haxe.ds.StringMap<String>>> = null;
 	static var phpRenderStringExtensionMethodsByField:Null<haxe.ds.StringMap<String>> = null;
 	static var phpRenderKnownTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
@@ -6578,6 +6630,13 @@ class SourceTargetCommon {
 			return "";
 		final clean = sanitizeTypeName(name);
 		return phpRenderLocalTypes.exists(clean) ? phpRenderLocalTypes.get(clean) : "";
+	}
+
+	static function phpLocalInitExpr(name:String):Null<HxExpr> {
+		if (phpRenderLocalInits == null)
+			return null;
+		final clean = sanitizeTypeName(name);
+		return phpRenderLocalInits.exists(clean) ? phpRenderLocalInits.get(clean) : null;
 	}
 
 	static function csLocalTypeHint(name:String):String {
@@ -7459,11 +7518,62 @@ class SourceTargetCommon {
 	static function phpNullCoalesceTypeHint(left:HxExpr, right:HxExpr):String {
 		final leftHint = phpExprTypeHintForNullCoalesceOperand(left);
 		final rightHint = phpExprTypeHintForNullCoalesceOperand(right);
-		if (StringTools.trim(rightHint).length > 0)
+		if (StringTools.trim(rightHint).length > 0) {
+			final common = phpCommonClassTypeHint(isNullTypeHint(leftHint) ? phpUnwrapNullTypeHint(leftHint) : leftHint, rightHint);
+			if (common.length > 0)
+				return common;
 			return rightHint;
+		}
 		if (StringTools.trim(leftHint).length == 0)
 			return "";
 		return isNullTypeHint(leftHint) ? phpUnwrapNullTypeHint(leftHint) : leftHint;
+	}
+
+	static function phpCommonClassTypeHint(leftHint:String, rightHint:String):String {
+		final left = normalizeTypeHint(leftHint);
+		final right = normalizeTypeHint(rightHint);
+		if (left.length == 0 || right.length == 0)
+			return "";
+		if (left == right)
+			return left;
+		final leftAncestors = phpClassTypeAncestors(left);
+		final rightAncestors = phpClassTypeAncestors(right);
+		for (candidate in leftAncestors)
+			if (rightAncestors.indexOf(candidate) >= 0)
+				return candidate;
+		return "";
+	}
+
+	static function phpClassTypeAncestors(typeHint:String):Array<String> {
+		final out = new Array<String>();
+		var current = normalizeTypeHint(typeHint);
+		var guard = 0;
+		while (current.length > 0 && out.indexOf(current) < 0 && guard < 32) {
+			out.push(current);
+			final parent = phpClassBaseTypeHint(current);
+			current = parent == null ? "" : normalizeTypeHint(parent);
+			guard++;
+		}
+		return out;
+	}
+
+	static function phpClassBaseTypeHint(typeHint:String):Null<String> {
+		if (phpRenderClassBaseTypes == null)
+			return null;
+		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (raw.length == 0)
+			return null;
+		final candidates = [raw, normalizeTypeHint(raw), sanitizePhpTypeName(raw), sanitizePhpTypePath(raw)];
+		final dot = raw.lastIndexOf(".");
+		if (dot >= 0)
+			candidates.push(raw.substr(dot + 1));
+		final slash = raw.lastIndexOf("\\");
+		if (slash >= 0)
+			candidates.push(raw.substr(slash + 1));
+		for (candidate in candidates)
+			if (candidate != null && phpRenderClassBaseTypes.exists(candidate))
+				return phpRenderClassBaseTypes.get(candidate);
+		return null;
 	}
 
 	static function phpExprTypeHintForNullCoalesceOperand(expr:HxExpr):String {
@@ -7641,6 +7751,8 @@ class SourceTargetCommon {
 							final inferredType = inferLocalTypeHint(typeHint, init);
 							final existingType = localTypes.exists(cleanName) ? localTypes.get(cleanName) : "";
 							localTypes.set(cleanName, phpPreferLocalTypeHint(existingType, inferredType));
+							if (target == Php && phpRenderLocalInits != null && init != null)
+								phpRenderLocalInits.set(cleanName, init);
 							phpRegisterOptionalLambdaLocal(cleanName, init);
 							final value = target == Java && init != null ? javaExprWithStmtTraceLine(init, pos) : init;
 							final rhs = value == null ? defaultValue(target) : assignedValueExpr(target, value, typeHint);
@@ -7726,16 +7838,24 @@ class SourceTargetCommon {
 	}
 
 	static function renderFunctionStmts(target:SourceNativeTarget, body:Array<HxStmt>, indent:String, context:String,
-			?initialLocalTypes:haxe.ds.StringMap<String>):Array<String> {
+			?initialLocalTypes:haxe.ds.StringMap<String>, ?sourceBodyText:String):Array<String> {
 		return try {
 			final renderBody = switch (target) {
 				case Php: phpRenameScopedLocalStmts(body);
 				case Cs: csRenameScopedLocalStmts(body);
 				case _: body;
 			};
+			final scopedInitialLocalTypes = if (target == Php && initialLocalTypes != null) {
+				final localTypes = copyStringMap(initialLocalTypes);
+				phpMergeAstLocalTypeHints(localTypes, renderBody);
+				phpMergeSourceLocalTypeHintsForRenamedAst(localTypes, sourceBodyText, renderBody);
+				localTypes;
+			} else {
+				initialLocalTypes;
+			};
 			withPhpDynamicCallFields(target, target == Php ? phpDynamicCallFieldsForStmts(renderBody) : null, function() {
-				return withCsLocalTypes(target, target == Cs ? initialLocalTypes : null, function() {
-					return renderStmts(target, renderBody, indent, initialLocalTypes);
+				return withCsLocalTypes(target, target == Cs ? scopedInitialLocalTypes : null, function() {
+					return renderStmts(target, renderBody, indent, scopedInitialLocalTypes);
 				});
 			});
 		} catch (e:String) {
@@ -12390,6 +12510,91 @@ class SourceTargetCommon {
 		return names;
 	}
 
+	static function phpProgramClassBaseTypeMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<String> {
+		final bases = new haxe.ds.StringMap<String>();
+		function addKey(key:String, base:String):Void {
+			if (key == null || base == null)
+				return;
+			final cleanKey = StringTools.trim(key);
+			final cleanBase = StringTools.trim(base);
+			if (cleanKey.length == 0 || cleanBase.length == 0)
+				return;
+			bases.set(cleanKey, cleanBase);
+			bases.set(normalizeTypeHint(cleanKey), cleanBase);
+			bases.set(sanitizePhpTypeName(cleanKey), cleanBase);
+			bases.set(sanitizePhpTypePath(cleanKey), cleanBase);
+		}
+		function addClass(moduleDecl:HxModuleDecl, filePath:String, cls:HxClassDecl):Void {
+			final extendsPath = HxClassDecl.getExtendsPath(cls);
+			if (extendsPath == null || StringTools.trim(extendsPath).length == 0)
+				return;
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			final moduleName = phpExpectedModuleNameFromFile(filePath);
+			final className = HxClassDecl.getName(cls);
+			final macroName = phpMacroTypeNameInModule(pkg, moduleName, className);
+			final plainName = phpPlainTypeNameInModule(pkg, moduleName, className);
+			final baseName = phpMacroExtendsTypeName(pkg, moduleName, extendsPath);
+			addKey(className, baseName);
+			addKey(macroName, baseName);
+			addKey(plainName, baseName);
+			final packageName = pkg == null || pkg.length == 0 ? className : pkg + "." + className;
+			addKey(packageName, baseName);
+		}
+		function addDecl(moduleDecl:HxModuleDecl, filePath:String):Void {
+			if (moduleDecl == null)
+				return;
+			for (cls in HxModuleDecl.getClasses(moduleDecl))
+				addClass(moduleDecl, filePath, cls);
+		}
+		addDecl(decl, "");
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl(), typed.getParsed().getFilePath());
+		return bases;
+	}
+
+	static function phpExpectedModuleNameFromFile(filePath:Null<String>):String {
+		if (filePath == null || filePath.length == 0)
+			return "";
+		final base = Path.withoutDirectory(filePath);
+		if (base == null || base.length == 0)
+			return "";
+		final dot = base.lastIndexOf(".");
+		return dot <= 0 ? base : base.substr(0, dot);
+	}
+
+	static function phpPlainTypeNameInModule(pkg:String, moduleName:String, className:String):String {
+		final p = pkg == null ? "" : StringTools.trim(pkg);
+		final m = moduleName == null ? "" : StringTools.trim(moduleName);
+		final c = className == null ? "" : StringTools.trim(className);
+		if (c.length == 0)
+			return "";
+		var prefix = p;
+		if (m.length > 0 && c != m)
+			prefix = prefix.length == 0 ? m : prefix + "." + m;
+		return prefix.length == 0 ? c : prefix + "." + c;
+	}
+
+	static function phpMacroTypeNameInModule(pkg:String, moduleName:String, className:String):String {
+		final p = pkg == null ? "" : StringTools.trim(pkg);
+		final m = moduleName == null ? "" : StringTools.trim(moduleName);
+		final c = className == null ? "" : StringTools.trim(className);
+		if (c.length == 0)
+			return "";
+		var prefix = p;
+		if (m.length > 0 && c != m)
+			prefix = prefix.length == 0 ? "_" + m : prefix + "._" + m;
+		return prefix.length == 0 ? c : prefix + "." + c;
+	}
+
+	static function phpMacroExtendsTypeName(pkg:String, moduleName:String, extendsPath:String):String {
+		final raw = extendsPath == null ? "" : StringTools.trim(extendsPath);
+		if (raw.length == 0)
+			return "";
+		if (raw.indexOf(".") >= 0)
+			return raw;
+		return phpMacroTypeNameInModule(pkg, moduleName, raw);
+	}
+
 	static function phpProgramAbstractTypeNameMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<Bool> {
 		final names = new haxe.ds.StringMap<Bool>();
 		function hasAbstractMarker(cls:HxClassDecl):Bool {
@@ -14976,7 +15181,7 @@ class SourceTargetCommon {
 										withPhpStringExtensionMethods(Php, className, function() {
 											withPhpLocalEnumConstructors(localEnumConstructors, function() {
 												for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
-													functionLocalTypes))
+													functionLocalTypes, HxFunctionDecl.getBodyText(fn)))
 													out.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, staticFieldNames));
 											});
 										});
@@ -15144,6 +15349,75 @@ class SourceTargetCommon {
 
 	static function phpSourceLocalTypeHints(bodyText:String):haxe.ds.StringMap<String> {
 		final out = new haxe.ds.StringMap<String>();
+		for (decl in phpSourceLocalDeclarations(bodyText)) {
+			final cleanName = sanitizeTypeName(decl.name);
+			if (cleanName.length > 0 && decl.typeHint.length > 0 && !out.exists(cleanName))
+				out.set(cleanName, decl.typeHint);
+		}
+		return out;
+	}
+
+	static function phpMergeSourceLocalTypeHintsForRenamedAst(localTypes:haxe.ds.StringMap<String>, bodyText:Null<String>, stmts:Array<HxStmt>):Void {
+		if (localTypes == null || bodyText == null || bodyText.length == 0 || stmts == null)
+			return;
+		final sourceDecls = phpSourceLocalDeclarations(bodyText);
+		if (sourceDecls.length == 0)
+			return;
+		final cursor = {index: 0};
+		phpMergeSourceLocalTypeHintsForRenamedStmtList(localTypes, sourceDecls, cursor, stmts);
+	}
+
+	static function phpMergeSourceLocalTypeHintsForRenamedStmtList(localTypes:haxe.ds.StringMap<String>, sourceDecls:Array<{name:String, typeHint:String}>,
+			cursor:{index:Int}, stmts:Array<HxStmt>):Void {
+		if (stmts == null)
+			return;
+		for (stmt in stmts)
+			phpMergeSourceLocalTypeHintsForRenamedStmt(localTypes, sourceDecls, cursor, stmt);
+	}
+
+	static function phpMergeSourceLocalTypeHintsForRenamedStmt(localTypes:haxe.ds.StringMap<String>, sourceDecls:Array<{name:String, typeHint:String}>,
+			cursor:{index:Int}, stmt:HxStmt):Void {
+		switch (stmt) {
+			case SVar(name, _, _, _):
+				if (cursor.index < sourceDecls.length) {
+					final source = sourceDecls[cursor.index];
+					cursor.index = cursor.index + 1;
+					final cleanName = sanitizeTypeName(name);
+					final sourceName = sanitizeTypeName(source.name);
+					if (cleanName.length > 0
+						&& source.typeHint.length > 0
+						&& (cleanName == sourceName || phpScopedLocalBaseName(cleanName) == sourceName)) {
+						localTypes.set(cleanName, normalizeTypeHint(source.typeHint));
+					}
+				}
+			case SBlock(body, _):
+				phpMergeSourceLocalTypeHintsForRenamedStmtList(localTypes, sourceDecls, cursor, body);
+			case SIf(_, thenBranch, elseBranch, _):
+				phpMergeSourceLocalTypeHintsForRenamedStmt(localTypes, sourceDecls, cursor, thenBranch);
+				if (elseBranch != null)
+					phpMergeSourceLocalTypeHintsForRenamedStmt(localTypes, sourceDecls, cursor, elseBranch);
+			case SForIn(_, _, body, _) | SForKeyValue(_, _, _, body, _) | SWhile(_, body, _) | SDoWhile(body, _, _):
+				phpMergeSourceLocalTypeHintsForRenamedStmt(localTypes, sourceDecls, cursor, body);
+			case SSwitch(_, _, bodies, _):
+				for (body in bodies)
+					phpMergeSourceLocalTypeHintsForRenamedStmt(localTypes, sourceDecls, cursor, body);
+			case STry(tryBody, catches, _):
+				phpMergeSourceLocalTypeHintsForRenamedStmt(localTypes, sourceDecls, cursor, tryBody);
+				if (catches != null)
+					for (c in catches)
+						phpMergeSourceLocalTypeHintsForRenamedStmt(localTypes, sourceDecls, cursor, c.body);
+			case _:
+		}
+	}
+
+	static function phpScopedLocalBaseName(name:String):String {
+		final marker = "__hx_scope_";
+		final idx = name == null ? -1 : name.indexOf(marker);
+		return idx < 0 ? (name == null ? "" : name) : name.substr(0, idx);
+	}
+
+	static function phpSourceLocalDeclarations(bodyText:String):Array<{name:String, typeHint:String}> {
+		final out = new Array<{name:String, typeHint:String}>();
 		if (bodyText == null || bodyText.length == 0)
 			return out;
 		var pos = 0;
@@ -15157,9 +15431,8 @@ class SourceTargetCommon {
 			final scanned = phpScanLocalTypeHintAfterVar(bodyText, pos);
 			if (scanned.nextPos > pos)
 				pos = scanned.nextPos;
-			final cleanName = sanitizeTypeName(scanned.name);
-			if (cleanName.length > 0 && scanned.typeHint.length > 0 && !out.exists(cleanName))
-				out.set(cleanName, scanned.typeHint);
+			if (scanned.name.length > 0)
+				out.push({name: scanned.name, typeHint: scanned.typeHint});
 		}
 		return out;
 	}
@@ -15875,6 +16148,14 @@ class SourceTargetCommon {
 
 	static function copyStringMap(values:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
 		final out = new haxe.ds.StringMap<String>();
+		if (values != null)
+			for (key in values.keys())
+				out.set(key, values.get(key));
+		return out;
+	}
+
+	static function copyExprMap(values:haxe.ds.StringMap<HxExpr>):haxe.ds.StringMap<HxExpr> {
+		final out = new haxe.ds.StringMap<HxExpr>();
 		if (values != null)
 			for (key in values.keys())
 				out.set(key, values.get(key));
@@ -17084,6 +17365,7 @@ class SourceTargetCommon {
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
 		final previousPhpGenericStaticFunctionsByType = phpRenderGenericStaticFunctionsByType;
 		final previousPhpStaticCallableFieldsByType = phpRenderStaticCallableFieldsByType;
+		final previousPhpClassBaseTypes = phpRenderClassBaseTypes;
 		final previousPhpStringExtensionMethodsByClass = phpRenderStringExtensionMethodsByClass;
 		final previousPhpStringExtensionMethodsByField = phpRenderStringExtensionMethodsByField;
 		final previousPhpKnownTypeNames = phpRenderKnownTypeNames;
@@ -17105,6 +17387,7 @@ class SourceTargetCommon {
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
 			phpRenderGenericStaticFunctionsByType = phpProgramGenericStaticFunctionMap(program, decl);
 			phpRenderStaticCallableFieldsByType = phpProgramStaticCallableFieldMap(program, decl);
+			phpRenderClassBaseTypes = phpProgramClassBaseTypeMap(program, decl);
 			phpRenderStringExtensionMethodsByClass = phpProgramStringExtensionMethodMap(program, decl);
 			phpRenderStringExtensionMethodsByField = null;
 			phpRenderKnownTypeNames = phpProgramKnownTypeNameMap(program, decl);
@@ -20063,6 +20346,7 @@ class SourceTargetCommon {
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
 		phpRenderGenericStaticFunctionsByType = previousPhpGenericStaticFunctionsByType;
 		phpRenderStaticCallableFieldsByType = previousPhpStaticCallableFieldsByType;
+		phpRenderClassBaseTypes = previousPhpClassBaseTypes;
 		phpRenderStringExtensionMethodsByClass = previousPhpStringExtensionMethodsByClass;
 		phpRenderStringExtensionMethodsByField = previousPhpStringExtensionMethodsByField;
 		phpRenderKnownTypeNames = previousPhpKnownTypeNames;
