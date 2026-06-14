@@ -6890,6 +6890,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStrictScalarSwitchProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var switchVal = \"1\";",
+			"    var result = switch (switchVal) {",
+			"      case \"01\": false;",
+			"      case \"1\": true;",
+			"      default: false;",
+			"    };",
+			"    Sys.println(Std.string(result));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function javaArraySwitchStatementProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -15010,9 +15029,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$__hxhx_switch = \"python\";", "PHP switch statements should evaluate the scrutinee once");
-		assertContains(content, "if (($__hxhx_switch == \"python\")) {", "PHP switch statements should lower the first case to if");
+		assertContains(content, "if (($__hxhx_switch === \"python\")) {", "PHP switch statements should lower literal cases with strict comparison");
 		assertContains(content, "} elseif (true) {", "PHP wildcard switch branches should lower to elseif true");
 		assertContains(content, "echo \"other\" . PHP_EOL;", "PHP switch statement branch bodies should render");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpStrictScalarSwitch():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_strict_scalar_switch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStrictScalarSwitchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "if (($__hxhx_switch === \"01\")) {", "PHP string switch should not use loose comparison for the first case");
+		assertContains(content, "} elseif (($__hxhx_switch === \"1\")) {", "PHP string switch should not use loose comparison for the matching case");
+		assertNotContains(content, "$__hxhx_switch == \"01\"", "PHP string switch should not emit loose comparison against numeric-looking strings");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP strict scalar switch should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n", "generated PHP strict scalar switch output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -15357,6 +15395,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLuaUtilityProcessRuntime();
 		assertJavaFileSystemFullPathResolvesSymlink();
 		assertPhpSwitchStatement();
+		assertPhpStrictScalarSwitch();
 		assertLuaSwitchStatement();
 		assertLuaArraySwitchStatement();
 	}

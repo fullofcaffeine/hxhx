@@ -6394,7 +6394,9 @@ class SourceTargetCommon {
 		return switch (target) {
 			case Java:
 				"java.util.Objects.equals(" + left + ", " + right + ")";
-			case Python | Cs | Php | Lua:
+			case Php:
+				"(" + left + " === " + right + ")";
+			case Python | Cs | Lua:
 				"(" + left + " == " + right + ")";
 		};
 	}
