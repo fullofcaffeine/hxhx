@@ -2822,6 +2822,8 @@ class SourceTargetCommon {
 	static function phpArrayFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
 		if (field == "toArray" && args.length == 0 && phpArrayBackedReceiver(receiver))
 			return renderExpr(Php, receiver);
+		if (field == "toString" && args.length == 0 && phpArrayBackedReceiver(receiver))
+			return "__hxhx_add_string(" + renderExpr(Php, receiver) + ")";
 		if (field == "join" && args.length == 1)
 			return "__hxhx_array_join(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 		if (field == "map" && args.length == 1 && phpArrayBackedReceiver(receiver))

@@ -10801,6 +10801,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    function restForward(...r:Int) {",
 			"      return restSpread(...r);",
 			"    }",
+			"    function restToString(...r:Int) {",
+			"      return r.toString();",
+			"    }",
 			"    function restTyped(args:haxe.Rest<Int>) {",
 			"      return args[2];",
 			"    }",
@@ -10814,6 +10817,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(sequence.initial.join(\",\") + \":\" + sequence.appended.join(\",\") + \":\" + sequence.prepended.join(\",\"));",
 			"    Sys.println(restSpread(...[7, 8, 9]).join(\",\"));",
 			"    Sys.println(restForward(4, 5, 6).join(\",\"));",
+			"    Sys.println(restToString(1, 2, 3));",
 			"    Sys.println(Std.string(restTyped(1, 2, 3, 4)));",
 			"    Sys.println(Std.string(restTyped(...[5, 6, 7, 8])));",
 			"    if (false) Sys.println(new Main(...[10, 11]).values.join(\",\"));",
@@ -10837,6 +10841,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP Rest key/value iteration should lower through the runtime key/value iterator");
 		assertContains(content, "__hxhx_rest_append($r, 9)", "PHP Rest.append on array-backed receivers should lower to a runtime helper");
 		assertContains(content, "__hxhx_rest_prepend($r, 0)", "PHP Rest.prepend on array-backed receivers should lower to a runtime helper");
+		assertContains(content, "return __hxhx_add_string($r);", "PHP Rest.toString on array-backed receivers should lower through Haxe stringification");
 		assertContains(content, "$restSpread(...array_values(__hxhx_to_array([7, 8, 9])))", "PHP array spread call arguments should lower to PHP splat syntax");
 		assertContains(content, "$restSpread(...array_values(__hxhx_to_array($r)))", "PHP Rest forwarding spread should splat array-backed Rest values");
 		assertContains(content, "$restTyped = function(...$args)", "PHP local trailing Rest<T> parameters should lower as variadic");
@@ -10847,10 +10852,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNotContains(content, "$__hxhx_spread", "PHP spread arguments should not emit unresolved synthetic spread calls");
 		assertNotContains(content, "$r->append", "PHP Rest.append should not dispatch as an object method on array-backed Rest values");
 		assertNotContains(content, "$r->prepend", "PHP Rest.prepend should not dispatch as an object method on array-backed Rest values");
+		assertNotContains(content, "$r->toString", "PHP Rest.toString should not dispatch as an object method on array-backed Rest values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP local Rest array access should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "123\n3,4\n5,6\n3,2,1\n0,1,2,3:3,2,1,0\n1,2:1,2,9:0,1,2\n7,8,9\n4,5,6\n3\n7\n",
+			assertTrue(run.stdout == "123\n3,4\n5,6\n3,2,1\n0,1,2,3:3,2,1,0\n1,2:1,2,9:0,1,2\n7,8,9\n4,5,6\n[1,2,3]\n3\n7\n",
 				"generated PHP local Rest array access output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
