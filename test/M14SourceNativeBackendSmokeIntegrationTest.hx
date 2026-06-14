@@ -6724,6 +6724,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpOptionalEnumCtorProgram():GenIrProgram {
+		final src = [
+			"enum MaybeNumber {",
+			"  A(?x:Int);",
+			"  B(x:Int);",
+			"}",
+			"class Main {",
+			"  static function label(value:MaybeNumber):String {",
+			"    return switch value {",
+			"      case A(x): x == null ? \"null\" : \"value\";",
+			"      case B(x): \"b\" + x;",
+			"    }",
+			"  }",
+			"  static function main() {",
+			"    Sys.println(label(A()));",
+			"    Sys.println(label(A(3)));",
+			"    Sys.println(label(B(4)));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function switchStatementProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -12475,6 +12500,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpOptionalEnumCtor():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_optional_enum_ctor_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpOptionalEnumCtorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function A($x = null)", "PHP optional enum constructor args should default to null");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP optional enum constructor should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "null\nvalue\nb4\n", "generated PHP optional enum constructor output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15105,6 +15147,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTupleOrPatternCapture();
 		assertPhpEnumIntGuard();
 		assertPhpClassSwitch();
+		assertPhpOptionalEnumCtor();
 		assertSwitchStatement();
 		assertJavaArraySwitchStatement();
 		assertCsReservedLocalIdentifier();

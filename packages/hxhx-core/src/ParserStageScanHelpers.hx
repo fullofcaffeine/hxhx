@@ -455,17 +455,17 @@ class ParserStageScanHelpers {
 					final ctorName = ctor.name;
 					if (ctorName == null || ctorName.length == 0)
 						continue;
-					final argNames = ctor.args == null ? [] : ctor.args;
-					if (argNames.length == 0) {
+					final ctorArgs = ctor.args == null ? [] : ctor.args;
+					if (ctorArgs.length == 0) {
 						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", enumRuntimeValue(enumName, ctorName, ctorIndex, []),
 							ctor.metadata));
 					} else {
 						final args = new Array<HxFunctionArg>();
 						final values = new Array<HxExpr>();
-						for (a in argNames)
-							args.push(new HxFunctionArg(a, "", HxDefaultValue.NoDefault, false, false));
-						for (a in argNames)
-							values.push(EIdent(a));
+						for (a in ctorArgs)
+							args.push(new HxFunctionArg(a.name, "", HxDefaultValue.NoDefault, a.isOptional, false));
+						for (a in ctorArgs)
+							values.push(EIdent(a.name));
 						// Constructors conceptually return an enum value; during bring-up we keep the
 						// type wide to avoid OCaml type errors in heavily-`Obj.magic` codegen.
 						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic", [
@@ -677,8 +677,8 @@ class ParserStageScanHelpers {
 	}
 
 	public static function scanEnumBodyForCtors(source:String,
-			start:Int):{nextPos:Int, ctors:Array<{name:String, args:Array<String>, metadata:Array<String>}>} {
-		final ctors = new Array<{name:String, args:Array<String>, metadata:Array<String>}>();
+			start:Int):{nextPos:Int, ctors:Array<{name:String, args:Array<{name:String, isOptional:Bool}>, metadata:Array<String>}>} {
+		final ctors = new Array<{name:String, args:Array<{name:String, isOptional:Bool}>, metadata:Array<String>}>();
 
 		var depth = 1; // we start just after `{`
 		var i = start;
@@ -787,7 +787,7 @@ class ParserStageScanHelpers {
 			if (depth != 1)
 				continue;
 			final ctorName = t.text;
-			final ctorArgs = new Array<String>();
+			final ctorArgs = new Array<{name:String, isOptional:Bool}>();
 			final ctorMetadata = pendingMetadata.copy();
 			pendingMetadata = [];
 
@@ -862,7 +862,7 @@ class ParserStageScanHelpers {
 
 					final nm = at.text;
 					final argName = (nm == null || nm.length == 0) ? ("arg" + argIndex) : nm;
-					ctorArgs.push(argName);
+					ctorArgs.push({name: argName, isOptional: pendingOptional});
 					argIndex += 1;
 					expectArg = false;
 					pendingOptional = false;
