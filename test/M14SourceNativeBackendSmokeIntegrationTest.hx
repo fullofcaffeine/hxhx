@@ -6700,6 +6700,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpClassSwitchProgram():GenIrProgram {
+		final src = [
+			"class MyClass {}",
+			"class OtherClass {}",
+			"class Main {",
+			"  static function label(value:Class<Dynamic>):String {",
+			"    return switch value {",
+			"      case String: \"String\";",
+			"      case MyClass: \"MyClass\";",
+			"      case _: \"other\";",
+			"    }",
+			"  }",
+			"  static function main() {",
+			"    Sys.println(label(String));",
+			"    Sys.println(label(MyClass));",
+			"    Sys.println(label(OtherClass));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function switchStatementProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -12433,6 +12457,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpClassSwitch():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_class_switch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpClassSwitchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_equals($__hxhx_switch, __hxhx_class_value(\"String\"))", "PHP class switch should compare builtin class values");
+		assertContains(content, "__hxhx_equals($__hxhx_switch, __hxhx_class_value(\"MyClass\"))", "PHP class switch should compare user class values");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP class switch should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "String\nMyClass\nother\n", "generated PHP class switch output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15062,6 +15104,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertUnsupportedSwitchGuardExpression();
 		assertPhpTupleOrPatternCapture();
 		assertPhpEnumIntGuard();
+		assertPhpClassSwitch();
 		assertSwitchStatement();
 		assertJavaArraySwitchStatement();
 		assertCsReservedLocalIdentifier();

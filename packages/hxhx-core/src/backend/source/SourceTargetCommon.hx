@@ -8714,19 +8714,15 @@ class SourceTargetCommon {
 	static function sourceEnumValueCond(target:SourceNativeTarget, scrutinee:String, name:String):String {
 		return switch (target) {
 			case Php:
-				"("
-				+ scrutinee
-				+ " !== null && is_object("
-				+ scrutinee
-				+ ") && property_exists("
-				+ scrutinee
-				+ ", "
-				+ quoteString("__hx_ctor")
-				+ ") && "
-				+ scrutinee
-				+ "->__hx_ctor === "
-				+ quoteString(name)
-				+ ")";
+				final enumCond = "(" + scrutinee + " !== null && is_object(" + scrutinee + ") && property_exists(" + scrutinee + ", "
+					+ quoteString("__hx_ctor") + ") && " + scrutinee + "->__hx_ctor === " + quoteString(name) + ")";
+				if (phpBuiltinTypeValueName(name) || phpKnownTypeName(name)) "("
+					+ enumCond
+					+ " || __hxhx_equals("
+					+ scrutinee
+					+ ", "
+					+ phpClassValueExpr(name)
+					+ "))"; else enumCond;
 			case Python:
 				"("
 				+ scrutinee
