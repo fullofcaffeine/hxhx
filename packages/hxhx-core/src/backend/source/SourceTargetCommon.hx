@@ -2147,8 +2147,11 @@ class SourceTargetCommon {
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
 					final mathConstant = typePath == "Math" ? phpMathConstantAccess(field) : null;
+					final superGlobal = phpSuperGlobalIntrinsicField(typePath, field);
 					if (mathConstant != null)
 						mathConstant;
+					else if (superGlobal != null)
+						superGlobal;
 					else if (typePath == "Reflect" && field == "compare")
 						"[Reflect::class, \"compare\"]";
 					else if (isInt64TypeHint(typePath) && phpInt64StaticMethodName(field))
@@ -2662,6 +2665,27 @@ class SourceTargetCommon {
 				true;
 			case _:
 				false;
+		};
+	}
+
+	static function phpSuperGlobalIntrinsicField(typePath:String, field:String):Null<String> {
+		return switch (typePath) {
+			case "SuperGlobal" | "\\php\\SuperGlobal" | "php\\SuperGlobal":
+				switch (field) {
+					case "GLOBALS": "$GLOBALS";
+					case "_SERVER": "$_SERVER";
+					case "_GET": "$_GET";
+					case "_POST": "$_POST";
+					case "_FILES": "$_FILES";
+					case "_COOKIE": "$_COOKIE";
+					case "_REQUEST": "$_REQUEST";
+					case "_ENV": "$_ENV";
+					case "_SESSION": "$_SESSION";
+					case _:
+						null;
+				}
+			case _:
+				null;
 		};
 	}
 
@@ -6815,6 +6839,9 @@ class SourceTargetCommon {
 	}
 
 	static function phpStaticPropertyAccess(typePath:String, field:String):String {
+		final superGlobal = phpSuperGlobalIntrinsicField(typePath, field);
+		if (superGlobal != null)
+			return superGlobal;
 		final cleanField = sanitizeTypeName(field);
 		final getter = "get_" + cleanField;
 		if (!phpInStaticPropertyAccessor(cleanField) && phpKnownStaticMethod(typePath, getter))

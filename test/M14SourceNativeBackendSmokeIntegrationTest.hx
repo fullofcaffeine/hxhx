@@ -1976,9 +1976,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"private class B extends A {}",
 			"private class C extends A {}",
 			"class Test {",
-			"  public function f(value:Bool) {}",
-			"  public function t(value:Bool) {}",
-			"  public function eq(a:Dynamic, b:Dynamic) {}",
+			"  public function new() {}",
+			"  public function f(value:Bool) { if (value) throw \"expected false\"; }",
+			"  public function t(value:Bool) { if (!value) throw \"expected true\"; }",
+			"  public function eq(a:Dynamic, b:Dynamic) { if (a != b) throw \"expected \" + Std.string(a) + \" but it is \" + Std.string(b); }",
 			"}",
 			"class TestNullCoalescing extends Test {",
 			"  final nullInt:Null<Int> = null;",
@@ -2001,6 +2002,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			protocolLine("field", ["nullBool", "private", "0", "Bool", "null"].join("\n")),
 			protocolLine("field", ["nullFloat", "private", "0", "Float", "null"].join("\n")),
 			protocolLine("field", ["count", "private", "0", "Int", "0"].join("\n")),
+			protocolLine("method", "eq|public|0|a,b|Void|||a:Dynamic,b:Dynamic|"),
+			protocolLine("method_body", "eq\nif (a != b) throw \"expected \" + Std.string(a) + \" but it is \" + Std.string(b);"),
+			protocolLine("method", "f|public|0|value|Void|||value:Bool|"),
+			protocolLine("method_body", "f\nif (value) throw \"expected false\";"),
+			protocolLine("method", "t|public|0|value|Void|||value:Bool|"),
+			protocolLine("method_body", "t\nif (!value) throw \"expected true\";"),
+			protocolLine("method", "call|private|0||String||||"),
+			protocolLine("method_body", "call\ncount++;\nreturn \"_\";"),
 			protocolLine("method", "main|public|1||Void||||"),
 			protocolLine("method_body", "main\n"),
 			protocolLine("method", "test|public|0||Void||||"),
@@ -4536,6 +4545,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(Syntax.code(\"{0} + {1}\", one, two)));",
 			"    var anon = {field: \"ok\"};",
 			"    Sys.println(Std.string(Syntax.field(anon, \"field\")));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpSuperGlobalIntrinsicProgram():GenIrProgram {
+		final src = [
+			"import php.SuperGlobal;",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(SuperGlobal.GLOBALS != null));",
+			"    Sys.println(Std.string(SuperGlobal._SERVER != null));",
 			"  }",
 			"}",
 		].join("\n");
@@ -12219,6 +12243,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$nullF = (false ? $this->nullFloat : 0);", "PHP upstream-shaped nullable ternary probe should preserve the local initializer");
 		assertContains(content, "$this->t(true);\n    $this->t(true);\n    $this->f(false);",
 			"PHP upstream-shaped nullable ternary probe should fold nullable field ternaries as nullable");
+		if (commandExists("php")) {
+			final escapedPath = StringTools.replace(outputPath, "\\", "\\\\");
+			final run = commandOutput("php", ["-r", 'require "${escapedPath}"; (new unit_TestNullCoalescing())->test();']);
+			assertTrue(run.code == 0, "generated PHP upstream-shaped null-coalescing probe should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "", "generated PHP upstream-shaped null-coalescing probe should not print output, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -13173,6 +13203,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertTrue(run.stdout == "3\nok\n", "generated PHP Syntax intrinsic output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
+
+		final superGlobalTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_superglobal_intrinsics_" + Std.string(Date.now().getTime()));
+		deleteRecursive(superGlobalTmpRoot);
+		FileSystem.createDirectory(superGlobalTmpRoot);
+		backend.emit(phpSuperGlobalIntrinsicProgram(), new BackendContext(superGlobalTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final superGlobalOutputPath = Path.join([superGlobalTmpRoot, "index.php"]);
+		final superGlobalContent = File.getContent(superGlobalOutputPath);
+		assertContains(superGlobalContent, "$GLOBALS", "PHP SuperGlobal.GLOBALS should lower to the native PHP superglobal");
+		assertContains(superGlobalContent, "$_SERVER", "PHP SuperGlobal._SERVER should lower to the native PHP superglobal");
+		assertNotContains(superGlobalContent, "SuperGlobal::$GLOBALS", "PHP SuperGlobal.GLOBALS should not emit a runtime class property");
+		assertNotContains(superGlobalContent, "SuperGlobal::$_SERVER", "PHP SuperGlobal._SERVER should not emit a runtime class property");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [superGlobalOutputPath]);
+			assertTrue(run.code == 0, "generated PHP SuperGlobal intrinsic support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\n", "generated PHP SuperGlobal intrinsic output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(superGlobalTmpRoot);
 
 		final userTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_user_syntax_class_" + Std.string(Date.now().getTime()));
 		deleteRecursive(userTmpRoot);
@@ -14644,6 +14691,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var first = item(1) ?? item(2) ?? item(3);",
 			"    Sys.println(first);",
 			"    Sys.println(arr.length);",
+			"    for (i => v in [1]) {",
+			"      Sys.println(arr[i] == v);",
+			"    }",
 			"    final nil = [];",
 			"    var missing = function(n:Int) {",
 			"      nil.push(n);",
@@ -14652,6 +14702,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var result = missing(1) ?? missing(2) ?? missing(3);",
 			"    Sys.println(result == null);",
 			"    Sys.println(nil.length);",
+			"    for (i => v in [1, 2, 3]) {",
+			"      Sys.println(nil[i] == v);",
+			"    }",
 			"  }",
 			"}",
 		].join("\n");
@@ -14667,7 +14720,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP captured array mutation support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "1\n1\n1\n3\n", "generated PHP captured array mutation output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "1\n1\n1\n1\n3\n1\n1\n1\n", "generated PHP captured array mutation output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}

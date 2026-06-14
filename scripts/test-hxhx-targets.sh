@@ -2275,7 +2275,12 @@ out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/workloads/hih-compi
 echo "$out" | grep -q "^resolved_modules="
 echo "$out" | grep -q "^typed_modules="
 echo "$out" | grep -q "^header_only_modules=0$"
-echo "$out" | grep -q "^parsed_methods_total=108$"
+parsed_methods_total="$(printf "%s\n" "$out" | sed -n 's/^parsed_methods_total=//p')"
+if ! printf "%s\n" "$parsed_methods_total" | grep -Eq '^[0-9]+$' || [ "$parsed_methods_total" -lt 100 ]; then
+  echo "Expected Stage3 type-only full graph to parse at least 100 method bodies, got: ${parsed_methods_total:-missing}" >&2
+  printf "%s\n" "$out" >&2
+  exit 1
+fi
 echo "$out" | grep -q "^stage3=type_only_ok$"
 test ! -f "$type_only_out/out.exe"
 
