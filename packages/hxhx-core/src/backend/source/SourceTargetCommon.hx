@@ -16012,7 +16012,7 @@ class SourceTargetCommon {
 		final classHeader = "class " + className + extendsText + implementsText + " {";
 		final out = ["#[\\AllowDynamicProperties]", classHeader];
 		var memberCount = 0;
-		final classFunctions = phpClassFunctionsWithAbstractFacadeMethods(cls, className, scanClasses);
+		final classFunctions = PhpAbstractFacadeSupport.classFunctionsWithFacadeMethods(cls, className, scanClasses, sanitizePhpTypePath, sanitizeTypeName);
 		final instanceFields = new Array<HxFieldDecl>();
 		final emittedFields = new Map<String, Bool>();
 		final emittedMethods = new Map<String, Bool>();
@@ -16205,49 +16205,6 @@ class SourceTargetCommon {
 			out.push("");
 		out.push("}");
 		return out;
-	}
-
-	static function phpClassFunctionsWithAbstractFacadeMethods(cls:HxClassDecl, className:String, scanClasses:Array<HxClassDecl>):Array<HxFunctionDecl> {
-		final out = HxClassDecl.getFunctions(cls).copy();
-		final seen = new Map<String, Bool>();
-		for (fn in out)
-			seen.set(sanitizeTypeName(HxFunctionDecl.getName(fn)), true);
-		if (scanClasses == null)
-			return out;
-		for (facade in scanClasses) {
-			if (facade == cls || !phpClassHasAbstractMarker(facade))
-				continue;
-			final underlying = phpAbstractUnderlyingTypeName(facade);
-			if (underlying == null || sanitizePhpTypePath(underlying) != className)
-				continue;
-			for (fn in HxClassDecl.getFunctions(facade)) {
-				if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
-					continue;
-				final methodName = sanitizeTypeName(HxFunctionDecl.getName(fn));
-				if (seen.exists(methodName))
-					continue;
-				seen.set(methodName, true);
-				out.push(fn);
-			}
-		}
-		return out;
-	}
-
-	static function phpClassHasAbstractMarker(cls:HxClassDecl):Bool {
-		for (meta in HxClassDecl.getMetadata(cls))
-			if (meta == "__hxhx_abstract")
-				return true;
-		return false;
-	}
-
-	static function phpAbstractUnderlyingTypeName(cls:HxClassDecl):Null<String> {
-		for (raw in HxClassDecl.getMetadata(cls)) {
-			final text = StringTools.trim(raw == null ? "" : raw);
-			final prefix = "__hxhx_abstract_underlying=";
-			if (StringTools.startsWith(text, prefix))
-				return text.substr(prefix.length);
-		}
-		return null;
 	}
 
 	static function phpClassIsPoint3Like(cls:HxClassDecl, className:String):Bool {

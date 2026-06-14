@@ -3,6 +3,7 @@
 module JavaSourceTargetCore = Backend_source_JavaSourceTargetCore
 module LuaERegRuntime = Backend_source_LuaERegRuntime
 module LuaUtilityProcessRuntime = Backend_source_LuaUtilityProcessRuntime
+module PhpAbstractFacadeSupport = Backend_source_PhpAbstractFacadeSupport
 module PhpSourceTargetCore = Backend_source_PhpSourceTargetCore
 module SourceMvpTargetCore = Backend_source_SourceMvpTargetCore
 module SourceNativeBackend = Backend_source_SourceNativeBackend
