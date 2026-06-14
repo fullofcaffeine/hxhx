@@ -3863,6 +3863,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStringToolsReplaceProgram():GenIrProgram {
+		final dollar = "$";
+		final src = [
+			"using StringTools;",
+			"class Main {",
+			"  static function main() {",
+			"    var pattern = \"" + dollar + "a" + dollar + "b\";",
+			"    var result = pattern.replace(\"" + dollar + "a\", \"A\").replace(\"" + dollar + "b\", \"B\");",
+			"    Sys.println(result);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpStringFromCharCodeProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -10425,6 +10442,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStringToolsReplace():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_tools_replace_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStringToolsReplaceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function replace($value, $sub, $by)", "PHP StringTools helper should expose replace");
+		assertContains(content, "StringTools::replace(StringTools::replace($pattern,",
+			"PHP chained StringTools.replace extension calls should lower to nested static helper calls");
+		assertNotContains(content, "->replace(", "PHP string replace extension calls should not emit object-method calls on raw strings");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP StringTools.replace support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "AB\n", "generated PHP StringTools.replace output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStringFromCharCode():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_from_char_code_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15213,6 +15250,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStdRandomRuntime();
 		assertPhpTernaryAssignmentLogical();
 		assertPhpStringIndexOf();
+		assertPhpStringToolsReplace();
 		assertPhpStringFromCharCode();
 		assertPhpWebShim();
 		assertPhpMacroExpr();

@@ -2941,6 +2941,8 @@ class SourceTargetCommon {
 				"__hxhx_string_char_code_at(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "substr" if (args.length == 1 || args.length == 2):
 				"__hxhx_string_substr(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "replace" if (args.length == 2):
+				"StringTools::replace(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "toUpperCase" if (args.length == 0):
 				"strtoupper(__hxhx_string_value(" + renderedReceiver + "))";
 			case "toLowerCase" if (args.length == 0):
@@ -3028,8 +3030,10 @@ class SourceTargetCommon {
 						true;
 					case "toString":
 						args.length == 0;
-					case "replace":
-						phpERegLikeReceiver(base);
+					case "replace": phpERegLikeReceiver(base) || (args.length == 2
+							&& (phpStringLikeReceiver(base)
+								|| phpVariableStringReceiver(base, field)
+								|| phpKnownStringResultReceiver(base)));
 					case _:
 						false;
 				}
@@ -3049,7 +3053,7 @@ class SourceTargetCommon {
 				if (hint.length > 0)
 					return hint == "String";
 				switch (field) {
-					case "indexOf" | "lastIndexOf" | "split" | "charCodeAt" | "substr":
+					case "indexOf" | "lastIndexOf" | "split" | "charCodeAt" | "substr" | "replace":
 						true;
 					case _:
 						false;
@@ -19550,6 +19554,9 @@ class SourceTargetCommon {
 				lines.push("  }");
 				lines.push("  public static function urlDecode($value) {");
 				lines.push("    return rawurldecode(strval($value));");
+				lines.push("  }");
+				lines.push("  public static function replace($value, $sub, $by) {");
+				lines.push("    return str_replace(strval($sub), strval($by), strval($value));");
 				lines.push("  }");
 				lines.push("  public static function hex($value, $digits = null) {");
 				lines.push("    $hex = strtoupper(dechex(intval($value) & 0xFFFFFFFF));");
