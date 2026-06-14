@@ -1252,6 +1252,8 @@ class SourceTargetCommon {
 				phpForInExpr(args[0], args[1], args[2]);
 			case ECall(EIdent("__hxhx_for_key_value"), args) if (target == Php && args.length >= 3):
 				phpForKeyValueExpr(args[0], args[1], args[2]);
+			case ECall(EIdent("__hxhx_while"), args) if (target == Php && args.length >= 3):
+				phpWhileExpr(args[0], args[1], args[2]);
 			case ECall(EIdent("__hxhx_rest_lambda"), [ELambda(lambdaArgs, lambdaBody), EInt(restIndex)]):
 				if (target == Php) phpLambdaExpr(lambdaArgs, lambdaBody, [], [], [], restIndex); else lambdaExpr(target, lambdaArgs, lambdaBody);
 			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(lambdaArgs, lambdaBody), EArrayDecl(optionalArgExprs)]):
@@ -3729,6 +3731,35 @@ class SourceTargetCommon {
 				out.join("\n");
 			case _:
 				callExpr(Php, "__hxhx_for_key_value", [iterable, bodyExpr, continuation]);
+		};
+	}
+
+	static function phpWhileExpr(condExpr:HxExpr, bodyExpr:HxExpr, continuation:HxExpr):String {
+		return switch [condExpr, bodyExpr] {
+			case [ELambda(condArgs, condBody), ELambda(bodyArgs, body)] if (condArgs.length == 0 && bodyArgs.length == 0):
+				final valueCaptures = new Array<String>();
+				final refCaptures = new Array<String>();
+				for (expr in [condBody, body, continuation])
+					for (name in phpLambdaUsedCaptures(expr, []))
+						if (valueCaptures.indexOf(name) < 0)
+							valueCaptures.push(name);
+				for (expr in [condBody, body, continuation])
+					for (name in phpLambdaAssignedCaptures(expr, []))
+						if (refCaptures.indexOf(name) < 0)
+							refCaptures.push(name);
+				final useClause = phpLambdaUseClause(valueCaptures, refCaptures);
+				final out = [
+					"(function()" + useClause + " {",
+					"  while (" + renderExpr(Php, condBody) + ") {",
+					"    $__hxhx_while_value = " + renderExpr(Php, body) + ";",
+					"    if ($__hxhx_while_value !== null) return $__hxhx_while_value;",
+					"  }",
+					"  return " + renderExpr(Php, continuation) + ";",
+					"})()"
+				];
+				out.join("\n");
+			case _:
+				callExpr(Php, "__hxhx_while", [condExpr, bodyExpr, continuation]);
 		};
 	}
 

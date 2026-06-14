@@ -12235,6 +12235,38 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpLambdaWhileReturnFlow():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_lambda_while_return_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var l = function() {",
+			"      while (true)",
+			"        return \"foo\";",
+			"    };",
+			"    Sys.println(l());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "while (true)", "PHP should lower expression-level while return-flow into a real while loop");
+		assertNotContains(content, "$__hxhx_while(", "PHP should not emit the internal while expression sentinel as a runtime callable");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP lambda while-return smoke should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "foo\n", "generated PHP lambda while-return output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertSwitchExpression():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_switch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -14813,6 +14845,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpLocalRestArrayAccess();
 		assertPhpSameClassFunctionFieldCall();
 		assertPhpOptionalBeforeRequiredFunctionFieldCall();
+		assertPhpLambdaWhileReturnFlow();
 		assertPhpOpaqueBlockExprCapturesOuterLocals();
 		assertPhpNullFieldAccessThrowsNpe();
 		assertPhpConstructorDefaultArgs();
