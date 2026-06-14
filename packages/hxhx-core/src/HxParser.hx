@@ -1419,10 +1419,13 @@ class HxParser {
 				if (isOptional && optionalArgs.indexOf(argName) < 0)
 					optionalArgs.push(argName);
 
+				var argType = "";
 				if (cur.kind.match(TColon)) {
 					bump();
-					readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
+					argType = readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
 				}
+				if (!isRest && isRestTypeHintText(argType))
+					restIndex = args.length - 1;
 
 				if (acceptOtherChar("=")) {
 					if (optionalArgs.indexOf(argName) < 0)
@@ -1529,10 +1532,13 @@ class HxParser {
 				if (isOptional && optionalArgs.indexOf(argName) < 0)
 					optionalArgs.push(argName);
 
+				var argType = "";
 				if (cur.kind.match(TColon)) {
 					bump();
-					readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
+					argType = readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
 				}
+				if (!isRest && isRestTypeHintText(argType))
+					restIndex = args.length - 1;
 
 				if (acceptOtherChar("=")) {
 					if (optionalArgs.indexOf(argName) < 0)
@@ -4559,5 +4565,13 @@ class HxParser {
 		}
 		final mainClass = chosen == null ? new HxClassDecl("Unknown", false, [], []) : chosen;
 		return new HxModuleDecl(packagePath, imports, mainClass, classes, false, hasToplevelMain);
+	}
+
+	static function isRestTypeHintText(typeHint:String):Bool {
+		final hint = StringTools.trim(typeHint == null ? "" : typeHint);
+		return hint == "Rest"
+			|| StringTools.startsWith(hint, "Rest<")
+			|| StringTools.startsWith(hint, "haxe.Rest<")
+			|| StringTools.startsWith(hint, "haxe.extern.Rest<");
 	}
 }

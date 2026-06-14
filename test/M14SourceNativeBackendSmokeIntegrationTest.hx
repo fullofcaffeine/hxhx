@@ -10801,6 +10801,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    function restForward(...r:Int) {",
 			"      return restSpread(...r);",
 			"    }",
+			"    function restTyped(args:haxe.Rest<Int>) {",
+			"      return args[2];",
+			"    }",
 			"    var kv = restKeyValues(3, 2, 1, 0);",
 			"    var sequence = restAppendPrepend(1, 2);",
 			"    Sys.println(Std.string(restAt(1, 2, 0, 0, 123, 0)));",
@@ -10811,6 +10814,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(sequence.initial.join(\",\") + \":\" + sequence.appended.join(\",\") + \":\" + sequence.prepended.join(\",\"));",
 			"    Sys.println(restSpread(...[7, 8, 9]).join(\",\"));",
 			"    Sys.println(restForward(4, 5, 6).join(\",\"));",
+			"    Sys.println(Std.string(restTyped(1, 2, 3, 4)));",
+			"    Sys.println(Std.string(restTyped(...[5, 6, 7, 8])));",
 			"    if (false) Sys.println(new Main(...[10, 11]).values.join(\",\"));",
 			"  }",
 			"}",
@@ -10834,6 +10839,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_rest_prepend($r, 0)", "PHP Rest.prepend on array-backed receivers should lower to a runtime helper");
 		assertContains(content, "$restSpread(...array_values(__hxhx_to_array([7, 8, 9])))", "PHP array spread call arguments should lower to PHP splat syntax");
 		assertContains(content, "$restSpread(...array_values(__hxhx_to_array($r)))", "PHP Rest forwarding spread should splat array-backed Rest values");
+		assertContains(content, "$restTyped = function(...$args)", "PHP local trailing Rest<T> parameters should lower as variadic");
+		assertContains(content, "return __hxhx_array_get($args, 2);", "PHP local Rest<T> bodies should see an array-backed rest parameter");
 		assertContains(content, "new Main(...array_values(__hxhx_to_array([10, 11])))", "PHP constructor spread arguments should lower to PHP splat syntax");
 		assertNotContains(content, "function($a, $b, $r)", "PHP local Rest functions should not emit Rest as a fixed ordinary parameter");
 		assertNotContains(content, "$__hxhx_for_key_value", "PHP Rest key/value iteration should not emit unresolved helper calls");
@@ -10843,7 +10850,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP local Rest array access should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "123\n3,4\n5,6\n3,2,1\n0,1,2,3:3,2,1,0\n1,2:1,2,9:0,1,2\n7,8,9\n4,5,6\n",
+			assertTrue(run.stdout == "123\n3,4\n5,6\n3,2,1\n0,1,2,3:3,2,1,0\n1,2:1,2,9:0,1,2\n7,8,9\n4,5,6\n3\n7\n",
 				"generated PHP local Rest array access output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
