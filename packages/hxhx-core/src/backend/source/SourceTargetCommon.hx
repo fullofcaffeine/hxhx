@@ -6516,8 +6516,8 @@ class SourceTargetCommon {
 				final rendered = [for (arg in args) phpCallArgExpr(arg)].join(", ");
 				final genericSample = phpGenericConstructorSample(typePath);
 				if (genericSample != null) "__hxhx_construct_like(" + genericSample + (rendered.length == 0 ? "" : ", " + rendered) + ")"; else
-					if (typePath == "Array") "[]"; else if (typePath == "Exception"
-					|| typePath == "haxe.Exception") "new ValueException("
+					if (typePath == "Array"
+					|| phpNativeArrayTypePath(typePath)) "[]"; else if (typePath == "Exception" || typePath == "haxe.Exception") "new ValueException("
 					+ rendered
 					+ ")"; else if (phpRuntimeMapType(typePath)) phpRuntimeMapConstructorExpr(typePath,
 					rendered); else if (phpRuntimeListType(typePath)) "new List_(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
@@ -6537,6 +6537,13 @@ class SourceTargetCommon {
 	static function csNativeArrayTypePath(typePath:String):Bool {
 		final clean = stripGenericTypeParams(removeTypeHintWhitespace(csTypePath(typePath)));
 		return clean == "NativeArray" || clean == "cs.NativeArray";
+	}
+
+	static function phpNativeArrayTypePath(typePath:String):Bool {
+		final raw = stripGenericTypeParams(removeTypeHintWhitespace(typePath));
+		final clean = StringTools.replace(sanitizePhpTypePath(raw), "\\", ".");
+		return clean == "NativeArray" || clean == "php.NativeArray" || clean == "NativeAssocArray" || clean == "php.NativeAssocArray"
+			|| clean == "NativeIndexedArray" || clean == "php.NativeIndexedArray";
 	}
 
 	static function pythonRuntimeMapType(typePath:String):Bool {
@@ -6893,8 +6900,26 @@ class SourceTargetCommon {
 		final rendered = (renderedArgs == null ? [for (arg in args) phpCallArgExpr(arg)] : renderedArgs).join(", ");
 		if (typePath == "String" && field == "fromCharCode" && args.length == 1)
 			return "__hxhx_string_from_char_code(" + rendered + ")";
+		if (phpGlobalTypePath(typePath))
+			return sanitizePhpGlobalFunctionName(field) + "(" + rendered + ")";
+		if (phpLibTypePath(typePath) && field == "objectOfAssociativeArray" && args.length == 1)
+			return "__hxhx_object_of_associative_array(" + rendered + ")";
 		final specialized = phpExplicitGenericStaticSpecializationName(typePath, field, args);
 		return typePath + "::" + (specialized == null ? sanitizeTypeName(field) : specialized) + "(" + rendered + ")";
+	}
+
+	static function phpGlobalTypePath(typePath:String):Bool {
+		final clean = StringTools.replace(stripGenericTypeParams(removeTypeHintWhitespace(typePath)), "\\", ".");
+		return clean == "Global" || clean == "Global_" || clean == "php.Global" || clean == "php.Global_";
+	}
+
+	static function sanitizePhpGlobalFunctionName(name:String):String {
+		return sanitizeTypeName(name);
+	}
+
+	static function phpLibTypePath(typePath:String):Bool {
+		final clean = StringTools.replace(stripGenericTypeParams(removeTypeHintWhitespace(typePath)), "\\", ".");
+		return clean == "Lib" || clean == "php.Lib";
 	}
 
 	static function phpSuperGetterCall(field:String):String {
@@ -20922,6 +20947,17 @@ class SourceTargetCommon {
 				lines.push("  if (is_array($value)) return $value;");
 				lines.push("  if (is_object($value) && method_exists($value, \"toArray\")) return $value->toArray();");
 				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_object_of_associative_array($array) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) return $array;");
+				lines.push("  $out = new \\stdClass();");
+				lines.push("  foreach ($array as $key => $value) {");
+				lines.push("    if ($value instanceof __HxArray || is_array($value)) $value = __hxhx_object_of_associative_array($value);");
+				lines.push("    $field = strval($key);");
+				lines.push("    $out->$field = $value;");
+				lines.push("  }");
+				lines.push("  return $out;");
 				lines.push("}");
 				lines.push("function __hxhx_rest_append($array, $value) {");
 				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");

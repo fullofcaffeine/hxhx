@@ -1210,6 +1210,37 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpNativeAssocArrayProgram():GenIrProgram {
+		final src = [
+			"import php.NativeAssocArray;",
+			"import php.Lib;",
+			"import php.Global;",
+			"class Main {",
+			"  static function main() {",
+			"    var arr = new NativeAssocArray<Dynamic>();",
+			"    var innerArr = new NativeAssocArray<Int>();",
+			"    innerArr[\"one\"] = 1;",
+			"    innerArr[\"two\"] = 2;",
+			"    arr[\"inner\"] = innerArr;",
+			"    var obj = Lib.objectOfAssociativeArray(arr);",
+			"    var innerObj = obj.inner;",
+			"    Sys.println(Std.string(Global.is_object(innerObj)));",
+			"    Sys.println(Std.string(innerObj.one));",
+			"    Sys.println(Std.string(innerObj.two));",
+			"    var values = [];",
+			"    for (value in innerArr) values.push(value);",
+			"    Sys.println(values.join(\",\"));",
+			"    var keys = [];",
+			"    for (key => value in innerArr) keys.push(key);",
+			"    Sys.println(keys.join(\",\"));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpSameClassArrayFieldMapProgram():GenIrProgram {
 		final src = [
 			"class Holder {",
@@ -11044,6 +11075,34 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpNativeAssocArray():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_native_assoc_array_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpNativeAssocArrayProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$arr = [];", "PHP NativeAssocArray constructor should lower to native array syntax");
+		assertContains(content, "$innerArr = [];", "PHP generic NativeAssocArray constructor should lower to native array syntax");
+		assertContains(content, "__hxhx_array_set($innerArr, \"one\", 1)", "PHP NativeAssocArray writes should use the shared indexed setter");
+		assertContains(content, "__hxhx_array_set($arr, \"inner\", __hxhx_copy_value($innerArr))",
+			"PHP nested NativeAssocArray writes should use the shared indexed setter while preserving value semantics");
+		assertContains(content, "__hxhx_object_of_associative_array($arr)",
+			"PHP Lib.objectOfAssociativeArray should lower through the object conversion helper");
+		assertContains(content, "is_object($innerObj)", "PHP Global.is_object should lower to the native PHP global function");
+		assertContains(content, "function __hxhx_object_of_associative_array($array)", "PHP runtime should include objectOfAssociativeArray support");
+		assertNotContains(content, "new NativeAssocArray", "PHP should not emit a fake NativeAssocArray runtime class constructor");
+		assertNotContains(content, "NativeAssocArray::", "PHP NativeAssocArray support should not depend on a static runtime class surface");
+		assertNotContains(content, "Global_::is_object", "PHP Global.is_object should not depend on a fake Global_ runtime class");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP NativeAssocArray support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n1\n2\n1,2\none,two\n", "generated PHP NativeAssocArray output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpSameClassArrayFieldMap():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_same_class_array_field_map_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15316,6 +15375,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonNumericLiteralFieldCallSyntax();
 		assertPhpArrayConstructor();
 		assertPhpArrayOperations();
+		assertPhpNativeAssocArray();
 		assertPhpSameClassArrayFieldMap();
 		assertPhpObjectArrayAccess();
 		assertPhpReservedTypeName();

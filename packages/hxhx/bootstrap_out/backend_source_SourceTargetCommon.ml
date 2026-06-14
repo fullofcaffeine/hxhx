@@ -5493,6 +5493,8 @@ let phpStaticMethodValueAccess = fun typePath field -> try let __fallback_result
 
 let phpThisMethodValueAccess = fun field -> ("function(...$__hxhx_args) { return $this->" ^ HxString.toStdString (sanitizeTypeName (field : string))) ^ "(...$__hxhx_args); }"
 
+let sanitizePhpGlobalFunctionName = fun name -> sanitizeTypeName (name : string)
+
 let phpSuperGetterCall = fun field -> ("parent::get_" ^ HxString.toStdString (sanitizeTypeName (field : string))) ^ "()"
 
 let pythonThisValueExpr = fun () -> "self.__hx_value"
@@ -7169,6 +7171,8 @@ let luaArrayConstructorTypePath = fun typePath -> let tempString = ref ("" : str
 
 let csNativeArrayTypePath = fun typePath -> let clean = (stripGenericTypeParams (removeTypeHintWhitespace (csTypePath (typePath : string) : string) : string) : string) in HxString.equals clean "NativeArray" || HxString.equals clean "cs.NativeArray"
 
+let phpNativeArrayTypePath = fun typePath -> let raw = (stripGenericTypeParams (removeTypeHintWhitespace (typePath : string) : string) : string) in let clean = (StringTools.replace (sanitizePhpTypePath (raw : string) : string) ("\\" : string) ("." : string) : string) in HxString.equals clean "NativeArray" || HxString.equals clean "php.NativeArray" || HxString.equals clean "NativeAssocArray" || HxString.equals clean "php.NativeAssocArray" || HxString.equals clean "NativeIndexedArray" || HxString.equals clean "php.NativeIndexedArray"
+
 let phpRuntimeMapTagForTypeHint = fun typeHint -> try let __fallback_result_3189 = let compact = (removeTypeHintWhitespace (typeHint : string) : string) in (
   ignore (if HxString.equals compact "StringMap" || HxString.equals compact "haxe.ds.StringMap" then raise (HxRuntime.Hx_return (Obj.repr ("haxe.ds.StringMap" : string))) else ());
   ignore (if HxString.equals compact "IntMap" || HxString.equals compact "haxe.ds.IntMap" then raise (HxRuntime.Hx_return (Obj.repr ("haxe.ds.IntMap" : string))) else ());
@@ -7200,6 +7204,10 @@ let phpRuntimeMapTagForTypeHint = fun typeHint -> try let __fallback_result_3189
   )
 ) in Obj.magic __fallback_result_3189 with
   | HxRuntime.Hx_return __ret_3188 -> Obj.obj __ret_3188
+
+let phpGlobalTypePath = fun typePath -> let clean = (StringTools.replace (stripGenericTypeParams (removeTypeHintWhitespace (typePath : string) : string) : string) ("\\" : string) ("." : string) : string) in HxString.equals clean "Global" || HxString.equals clean "Global_" || HxString.equals clean "php.Global" || HxString.equals clean "php.Global_"
+
+let phpLibTypePath = fun typePath -> let clean = (StringTools.replace (stripGenericTypeParams (removeTypeHintWhitespace (typePath : string) : string) : string) ("\\" : string) ("." : string) : string) in HxString.equals clean "Lib" || HxString.equals clean "php.Lib"
 
 let phpTypeHintsCompatible = fun actual expected -> try let __fallback_result_3864 = let cleanActual = (phpUnwrapNullTypeHint (normalizeTypeHint (actual : string) : string) : string) in let cleanExpected = (phpUnwrapNullTypeHint (normalizeTypeHint (expected : string) : string) : string) in (
   ignore (if HxString.length cleanActual = 0 || HxString.length cleanExpected = 0 || isDynamicTypeHint (cleanActual : string) || isDynamicTypeHint (cleanExpected : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
@@ -34743,7 +34751,7 @@ and constructorExpr = fun target typePath args -> let safeType = (sanitizeTypePa
           tempResult := __assign_3158;
           __assign_3158
         )
-      ) else if HxString.equals typePath "Array" then let __assign_3159 = ("[]" : string) in (
+      ) else if HxString.equals typePath "Array" || phpNativeArrayTypePath (typePath : string) then let __assign_3159 = ("[]" : string) in (
         tempResult := __assign_3159;
         __assign_3159
       ) else if HxString.equals typePath "Exception" || HxString.equals typePath "haxe.Exception" then let __assign_3160 = (("new ValueException(" ^ HxString.toStdString rendered) ^ ")" : string) in (
@@ -34902,6 +34910,8 @@ and phpStaticMethodCall = fun typePath field args -> try let __fallback_result_3
   ));
   let rendered = (HxArray.join (!tempMaybeArray) ", " (fun x -> Std.string (Obj.repr x)) : string) in (
     ignore (if HxString.equals typePath "String" && HxString.equals field "fromCharCode" && HxArray.length args = 1 then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_string_from_char_code(" ^ HxString.toStdString rendered) ^ ")" : string))) else ());
+    ignore (if phpGlobalTypePath (typePath : string) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (sanitizePhpGlobalFunctionName (field : string)) ^ "(") ^ HxString.toStdString rendered) ^ ")" : string))) else ());
+    ignore (if phpLibTypePath (typePath : string) && HxString.equals field "objectOfAssociativeArray" && HxArray.length args = 1 then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_object_of_associative_array(" ^ HxString.toStdString rendered) ^ ")" : string))) else ());
     let specialized = (phpExplicitGenericStaticSpecializationName (typePath : string) (field : string) (Obj.magic args) (Obj.magic (HxRuntime.hx_null)) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (if specialized == Obj.magic (HxRuntime.hx_null) then let __assign_3293 = Obj.magic (sanitizeTypeName (field : string) : string) in (
         tempMaybeString := __assign_3293;
@@ -42061,6 +42071,17 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  if (is_array($value)) return $value;");
       ignore (HxArray.push lines "  if (is_object($value) && method_exists($value, \"toArray\")) return $value->toArray();");
       ignore (HxArray.push lines "  return $value;");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_object_of_associative_array($array) {");
+      ignore (HxArray.push lines "  if ($array instanceof __HxArray) $array = $array->toArray();");
+      ignore (HxArray.push lines "  if (!is_array($array)) return $array;");
+      ignore (HxArray.push lines "  $out = new \\stdClass();");
+      ignore (HxArray.push lines "  foreach ($array as $key => $value) {");
+      ignore (HxArray.push lines "    if ($value instanceof __HxArray || is_array($value)) $value = __hxhx_object_of_associative_array($value);");
+      ignore (HxArray.push lines "    $field = strval($key);");
+      ignore (HxArray.push lines "    $out->$field = $value;");
+      ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  return $out;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_rest_append($array, $value) {");
       ignore (HxArray.push lines "  if ($array instanceof __HxArray) $array = $array->toArray();");
