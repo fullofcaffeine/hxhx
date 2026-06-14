@@ -2481,6 +2481,9 @@ class SourceTargetCommon {
 					return "__hxhx_int64_div_mod(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 				if (field == "ofInt" && phpIntLiteralExtensionReceiver(receiver))
 					return phpStaticMethodCall(phpInt64TypePath(), field, [receiver]);
+				final enumCtorCall = phpEnumCtorValueFieldCall(receiver, field, phpArgs);
+				if (enumCtorCall != null)
+					return enumCtorCall;
 				final typePath = phpStaticTypePath(receiver);
 				if (typePath != null) {
 					final syntaxIntrinsic = phpSyntaxIntrinsicCall(typePath, field, phpArgs);
@@ -7452,6 +7455,24 @@ class SourceTargetCommon {
 		if (ref.hasArgs)
 			return "function(...$__hxhx_args) { return " + ref.enumName + "::" + ref.ctorName + "(...$__hxhx_args); }";
 		return ref.enumName + "::$" + ref.ctorName;
+	}
+
+	static function phpEnumCtorReceiverValueExpr(receiver:HxExpr):Null<String> {
+		return switch (receiver) {
+			case EIdent(name) if (!phpLocalExists(name)):
+				phpEnumCtorValueExpr(name);
+			case _:
+				null;
+		};
+	}
+
+	static function phpEnumCtorValueFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		final enumValue = phpEnumCtorReceiverValueExpr(receiver);
+		if (enumValue == null)
+			return null;
+		if (field == "getName" && args.length == 0)
+			return "__hxhx_enum_get_name(" + enumValue + ")";
+		return null;
 	}
 
 	static function phpEnumCtorCallExpr(ref:PhpEnumCtorRef, args:Array<HxExpr>):String {
@@ -20813,6 +20834,9 @@ class SourceTargetCommon {
 				lines.push("    if ($value instanceof __HxAnon && property_exists($value, \"__hx_index\") && intval($value->__hx_index) === intval($index)) return strval($name);");
 				lines.push("  }");
 				lines.push("  return null;");
+				lines.push("}");
+				lines.push("function __hxhx_enum_get_name($value) {");
+				lines.push("  return is_object($value) && property_exists($value, \"__hx_ctor\") ? strval($value->__hx_ctor) : null;");
 				lines.push("}");
 				lines.push("function __hxhx_value_type($ctor, $index, $params = []) {");
 				lines.push("  return new __HxAnon([\"__hx_enum\" => \"ValueType\", \"__hx_ctor\" => $ctor, \"__hx_index\" => $index, \"__hx_params\" => $params]);");

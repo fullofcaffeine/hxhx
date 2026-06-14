@@ -1277,6 +1277,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpReservedEnumCtorGetNameProgram():GenIrProgram {
+		final src = [
+			"enum Annotation {",
+			"  Abstract;",
+			"  Const(i:String);",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Abstract.getName());",
+			"    var x = Const(\"foo\");",
+			"    var s = switch (x) {",
+			"      case Const(s): s;",
+			"      case Abstract: \"null\";",
+			"    };",
+			"    Sys.println(s);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpDuplicateStaticFieldProgram():GenIrProgram {
 		final mainFn = new HxFunctionDecl("main", Public, true, [], "Void",
 			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("ok")]), HxPos.unknown())], "");
@@ -10983,6 +11006,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpReservedEnumCtorGetName():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_reserved_enum_ctor_get_name_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpReservedEnumCtorGetNameProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hxhx_enum_get_name(Annotation::$Abstract)", "PHP enum constructor getName should use the enum value surface");
+		assertContains(content, "Annotation::$Abstract", "PHP reserved enum constructors should use the enum static field surface");
+		assertNotContains(content, "Abstract_::getName()", "PHP enum constructor getName should not lower as a static class call");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP reserved enum constructor getName should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "Abstract\nfoo\n", "generated PHP reserved enum constructor getName output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpDuplicateStaticFieldEmission():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_duplicate_static_field_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15148,6 +15190,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpSameClassArrayFieldMap();
 		assertPhpObjectArrayAccess();
 		assertPhpReservedTypeName();
+		assertPhpReservedEnumCtorGetName();
 		assertPhpDuplicateStaticFieldEmission();
 		assertPhpDuplicateMethodEmission();
 		assertPhpReservedValueName();
