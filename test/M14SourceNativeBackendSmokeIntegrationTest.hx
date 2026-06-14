@@ -6648,6 +6648,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpTupleOrPatternCaptureProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function test(a:Int, b:Int, c:Int):String {",
+			"    return switch [a, b, c] {",
+			"      case [x, 1, 2] | [1, 2, x] | [1, x, 2]: '0|x:$x';",
+			"      case [2, y, z] | [z, 2, y] | [y, z, 2]: '2|y:$y,z:$z';",
+			"      case _: '_';",
+			"    }",
+			"  }",
+			"  static function main() {",
+			"    Sys.println(test(9, 1, 2));",
+			"    Sys.println(test(1, 2, 9));",
+			"    Sys.println(test(1, 9, 2));",
+			"    Sys.println(test(2, 9, 8));",
+			"    Sys.println(test(8, 2, 9));",
+			"    Sys.println(test(9, 8, 2));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function switchStatementProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -12345,6 +12370,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpTupleOrPatternCapture():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_tuple_or_pattern_capture_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTupleOrPatternCaptureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$x = (", "PHP or-pattern captures should be initialized from the selected alternative");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP tuple or-pattern capture should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "0|x:9\n0|x:9\n0|x:9\n2|y:9,z:8\n2|y:9,z:8\n2|y:9,z:8\n",
+				"generated PHP tuple or-pattern capture output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -14972,6 +15015,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpLambdaImmediateCallExpression();
 		assertSwitchExpression();
 		assertUnsupportedSwitchGuardExpression();
+		assertPhpTupleOrPatternCapture();
 		assertSwitchStatement();
 		assertJavaArraySwitchStatement();
 		assertCsReservedLocalIdentifier();

@@ -8610,17 +8610,17 @@ class SourceTargetCommon {
 				{cond: trueLiteral(target), bindings: [{name: name, expr: scrutinee}]};
 			case POr(patterns):
 				final parts = new Array<String>();
-				var commonBindings:Null<Array<SourceSwitchPatternBinding>> = null;
+				final alternatives = new Array<SourceSwitchPatternLowered>();
 				if (patterns != null) {
 					for (p in patterns) {
 						final lowered = lowerSourceSwitchPattern(target, p, scrutinee);
 						parts.push("(" + lowered.cond + ")");
-						commonBindings = mergeSourceSwitchBindings(commonBindings, lowered.bindings);
+						alternatives.push(lowered);
 					}
 				}
 				{
 					cond: parts.length == 0 ? falseLiteral(target) : parts.join(target == Python || target == Lua ? " or " : " || "),
-					bindings: commonBindings == null ? [] : commonBindings
+					bindings: mergeSourceSwitchOrBindings(target, alternatives)
 				};
 			case PParsedIntSwitchGuard(inner, bindingName, multiplier, matchValue):
 				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
@@ -8968,26 +8968,43 @@ class SourceTargetCommon {
 		return valueName(target, name);
 	}
 
-	static function mergeSourceSwitchBindings(existing:Null<Array<SourceSwitchPatternBinding>>,
-			next:Array<SourceSwitchPatternBinding>):Array<SourceSwitchPatternBinding> {
-		if (existing == null)
-			return copySourceSwitchBindings(next);
-		if (next == null || existing.length != next.length)
+	static function mergeSourceSwitchOrBindings(target:SourceNativeTarget, alternatives:Array<SourceSwitchPatternLowered>):Array<SourceSwitchPatternBinding> {
+		if (alternatives == null || alternatives.length == 0)
 			return [];
-		final out = new Array<SourceSwitchPatternBinding>();
-		for (binding in existing) {
-			var found = false;
-			for (candidate in next) {
-				if (candidate.name == binding.name && candidate.expr == binding.expr) {
-					found = true;
-					break;
-				}
-			}
-			if (!found)
+		final first = alternatives[0].bindings;
+		if (first == null || first.length == 0)
+			return [];
+		for (alternative in alternatives) {
+			if (alternative.bindings == null || alternative.bindings.length != first.length)
 				return [];
-			out.push(binding);
+		}
+		final out = new Array<SourceSwitchPatternBinding>();
+		for (i in 0...first.length) {
+			final name = first[i].name;
+			var expr = "";
+			for (alternative in alternatives) {
+				if (findSourceSwitchBinding(alternative.bindings, name) == null)
+					return [];
+			}
+			var idx = alternatives.length - 1;
+			expr = findSourceSwitchBinding(alternatives[idx].bindings, name).expr;
+			while (idx > 0) {
+				idx--;
+				expr = conditionalExpr(target, alternatives[idx].cond, findSourceSwitchBinding(alternatives[idx].bindings, name).expr, expr);
+			}
+			out.push({name: name, expr: expr});
 		}
 		return out;
+	}
+
+	static function findSourceSwitchBinding(bindings:Array<SourceSwitchPatternBinding>, name:String):Null<SourceSwitchPatternBinding> {
+		if (bindings == null)
+			return null;
+		for (binding in bindings) {
+			if (binding.name == name)
+				return binding;
+		}
+		return null;
 	}
 
 	static function copySourceSwitchBindings(bindings:Array<SourceSwitchPatternBinding>):Array<SourceSwitchPatternBinding> {
