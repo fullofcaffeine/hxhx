@@ -2502,10 +2502,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"      case Node(Leaf(\"foo\"), _):",
 			"      case Leaf(_):",
 			"    });",
+			"    var missingY = HelperMacros.getErrorMessage(switch(Leaf(\"foo\")) {",
+			"      case Leaf(x) | Leaf(y):",
+			"    });",
+			"    var missingX = HelperMacros.getErrorMessage(switch(Leaf(\"foo\")) {",
+			"      case Leaf(x) | Leaf(x) | Leaf(_):",
+			"    });",
+			"    var missingL = HelperMacros.getErrorMessage(switch(Leaf(\"foo\")) {",
+			"      case Node(l = Leaf(x), _) | Node(Leaf(x), _):",
+			"    });",
+			"    var duplicateL = HelperMacros.getErrorMessage(switch(Leaf(\"foo\")) {",
+			"      case Node(l = Leaf(l), _):",
+			"    });",
+			"    var badType = HelperMacros.getErrorMessage(switch(Leaf(\"foo\")) {",
+			"      case Node(l = Leaf(_), _) | Leaf(l):",
+			"      case _:",
+			"    });",
 			"    Sys.println(boolMessage);",
 			"    Sys.println(opMessage);",
 			"    Sys.println(arrayMessage);",
 			"    Sys.println(leafMessage);",
+			"    Sys.println(missingY);",
+			"    Sys.println(missingX);",
+			"    Sys.println(missingL);",
+			"    Sys.println(duplicateL);",
+			"    Sys.println(badType);",
 			"  }",
 			"}",
 		].join("\n");
@@ -11706,10 +11727,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "\"Unmatched patterns: false\"", "PHP getErrorMessage bool probe should fold non-exhaustive bool diagnostics");
 		assertContains(content, "\"Unmatched patterns: OpNeg | OpNegBits\"", "PHP getErrorMessage enum-like probe should fold missing enum diagnostics");
 		assertContains(content, "\"Unmatched patterns: Node(Node, _)\"", "PHP getErrorMessage enum-constructor probe should fold nested enum diagnostics");
+		assertContains(content, "\"Variable y must appear exactly once in each sub-pattern\"",
+			"PHP getErrorMessage invalid or-pattern probe should fold missing-y diagnostics");
+		assertContains(content, "\"Variable x must appear exactly once in each sub-pattern\"",
+			"PHP getErrorMessage invalid or-pattern probe should fold missing-x diagnostics");
+		assertContains(content, "\"Variable l is bound multiple times\"",
+			"PHP getErrorMessage duplicate binding probe should fold duplicate capture diagnostics");
+		assertContains(content, "\"String should be unit.Tree<String>\"", "PHP getErrorMessage binding type probe should fold mismatch diagnostics");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP getErrorMessage probes should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "Unmatched patterns: false\nUnmatched patterns: OpNeg | OpNegBits\nUnmatched patterns: false\nUnmatched patterns: Node(Node, _)\n",
+			assertTrue(run.stdout == "Unmatched patterns: false\nUnmatched patterns: OpNeg | OpNegBits\nUnmatched patterns: false\nUnmatched patterns: Node(Node, _)\n"
+				+ "Variable y must appear exactly once in each sub-pattern\nVariable x must appear exactly once in each sub-pattern\n"
+				+ "Variable l must appear exactly once in each sub-pattern\nVariable l is bound multiple times\nString should be unit.Tree<String>\n",
 				"generated PHP getErrorMessage probe output mismatch, got:\n"
 				+ run.stdout);
 		}

@@ -4353,10 +4353,199 @@ class SourceTargetCommon {
 			case EMacroExpr(inner, _) | EUntyped(inner):
 				helperGetErrorMessageExpr(inner);
 			case ESwitch(scrutinee, patterns, _):
-				helperSwitchNonExhaustiveMessage(scrutinee, patterns);
+				final invalidBinding = helperSwitchInvalidBindingMessage(patterns);
+				invalidBinding == null ? helperSwitchNonExhaustiveMessage(scrutinee, patterns) : invalidBinding;
 			case _:
 				null;
 		};
+	}
+
+	static function helperSwitchInvalidBindingMessage(patterns:Array<HxSwitchPattern>):Null<String> {
+		if (patterns == null)
+			return null;
+		for (pattern in patterns) {
+			final duplicate = helperDuplicateBindingName(pattern);
+			if (duplicate != null)
+				return "Variable " + duplicate + " is bound multiple times";
+			switch (pattern) {
+				case POr(alternatives):
+					final orMessage = helperOrBindingMessage(alternatives);
+					if (orMessage != null)
+						return orMessage;
+				case _:
+			}
+		}
+		return null;
+	}
+
+	static function helperOrBindingMessage(patterns:Array<HxSwitchPattern>):Null<String> {
+		if (patterns == null || patterns.length < 2)
+			return null;
+		final baseCounts = helperPatternBindingCounts(patterns[0]);
+		final baseOrder = helperPatternBindingOrder(patterns[0]);
+		for (i in 1...patterns.length) {
+			final altCounts = helperPatternBindingCounts(patterns[i]);
+			final altOrder = helperPatternBindingOrder(patterns[i]);
+			for (name in altOrder) {
+				if (!baseCounts.exists(name))
+					return "Variable " + name + " must appear exactly once in each sub-pattern";
+			}
+			for (name in baseOrder) {
+				if (!altCounts.exists(name) || altCounts.get(name) != 1)
+					return "Variable " + name + " must appear exactly once in each sub-pattern";
+			}
+		}
+		for (name in baseOrder) {
+			if (baseCounts.get(name) != 1)
+				return "Variable " + name + " must appear exactly once in each sub-pattern";
+		}
+		return helperOrBindingTypeMismatchMessage(patterns);
+	}
+
+	static function helperDuplicateBindingName(pattern:HxSwitchPattern):Null<String> {
+		return switch (pattern) {
+			case POr(patterns):
+				if (patterns == null) {
+					null;
+				} else {
+					var found:Null<String> = null;
+					for (p in patterns) {
+						final duplicate = helperDuplicateBindingName(p);
+						if (found == null && duplicate != null)
+							found = duplicate;
+					}
+					found;
+				}
+			case _:
+				final counts = helperPatternBindingCounts(pattern);
+				final order = helperPatternBindingOrder(pattern);
+				for (name in order)
+					if (counts.get(name) > 1)
+						return name;
+				null;
+		};
+	}
+
+	static function helperPatternBindingCounts(pattern:HxSwitchPattern):Map<String, Int> {
+		final counts = new Map<String, Int>();
+		helperCollectPatternBindings(pattern, counts, []);
+		return counts;
+	}
+
+	static function helperPatternBindingOrder(pattern:HxSwitchPattern):Array<String> {
+		final order = new Array<String>();
+		helperCollectPatternBindings(pattern, new Map<String, Int>(), order);
+		return order;
+	}
+
+	static function helperCollectPatternBindings(pattern:HxSwitchPattern, counts:Map<String, Int>, order:Array<String>):Void {
+		function add(name:String):Void {
+			if (name == null || name.length == 0 || name == "_")
+				return;
+			name = helperDiagnosticBindingName(name);
+			counts.set(name, counts.exists(name) ? counts.get(name) + 1 : 1);
+			if (order.indexOf(name) < 0)
+				order.push(name);
+		}
+		switch (pattern) {
+			case PBind(name):
+				add(name);
+			case PCapture(name, inner):
+				add(name);
+				helperCollectPatternBindings(inner, counts, order);
+			case PEnumExtract(_, args):
+				if (args != null)
+					for (arg in args)
+						helperCollectPatternBindings(arg, counts, order);
+			case PObject(_, fieldPatterns) | PArray(fieldPatterns) | POr(fieldPatterns):
+				if (fieldPatterns != null)
+					for (fieldPattern in fieldPatterns)
+						helperCollectPatternBindings(fieldPattern, counts, order);
+			case PExtractor(_, resultPattern) | PLengthGuard(resultPattern, _, _) | PStartsWithGuard(resultPattern, _, _) |
+				PIntEqualsGuard(resultPattern, _, _) | PIntCompareGuard(resultPattern, _, _, _) | PParsedIntSwitchGuard(resultPattern, _, _, _) |
+				PUnsupportedGuard(resultPattern):
+				helperCollectPatternBindings(resultPattern, counts, order);
+			case _:
+		}
+	}
+
+	static function helperOrBindingTypeMismatchMessage(patterns:Array<HxSwitchPattern>):Null<String> {
+		if (patterns == null || patterns.length < 2)
+			return null;
+		final expectedByName = new Map<String, String>();
+		final order = new Array<String>();
+		for (pattern in patterns) {
+			final current = new Map<String, String>();
+			helperCollectPatternBindingTypes(pattern, "unit.Tree<String>", current);
+			for (name in helperPatternBindingOrder(pattern)) {
+				final actual = current.get(name);
+				if (actual == null)
+					continue;
+				if (!expectedByName.exists(name)) {
+					expectedByName.set(name, actual);
+					order.push(name);
+				} else if (expectedByName.get(name) != actual) {
+					return actual + " should be " + expectedByName.get(name);
+				}
+			}
+		}
+		return null;
+	}
+
+	static function helperCollectPatternBindingTypes(pattern:HxSwitchPattern, contextType:String, out:Map<String, String>):Void {
+		function setType(name:String, typeName:String):Void {
+			name = helperDiagnosticBindingName(name);
+			if (name != null && name.length > 0 && name != "_" && typeName != null && typeName.length > 0 && !out.exists(name))
+				out.set(name, typeName);
+		}
+		switch (pattern) {
+			case PBind(name):
+				setType(name, contextType);
+			case PCapture(name, inner):
+				setType(name, contextType.length > 0 ? contextType : helperPatternValueType(inner));
+				helperCollectPatternBindingTypes(inner, helperPatternPayloadType(inner), out);
+			case PEnumExtract(name, args):
+				final payloadType = name == "Leaf" ? "String" : "unit.Tree<String>";
+				if (args != null)
+					for (arg in args)
+						helperCollectPatternBindingTypes(arg, payloadType, out);
+			case PObject(_, fieldPatterns) | PArray(fieldPatterns) | POr(fieldPatterns):
+				if (fieldPatterns != null)
+					for (fieldPattern in fieldPatterns)
+						helperCollectPatternBindingTypes(fieldPattern, contextType, out);
+			case PExtractor(_, resultPattern) | PLengthGuard(resultPattern, _, _) | PStartsWithGuard(resultPattern, _, _) |
+				PIntEqualsGuard(resultPattern, _, _) | PIntCompareGuard(resultPattern, _, _, _) | PParsedIntSwitchGuard(resultPattern, _, _, _) |
+				PUnsupportedGuard(resultPattern):
+				helperCollectPatternBindingTypes(resultPattern, contextType, out);
+			case _:
+		}
+	}
+
+	static function helperPatternValueType(pattern:HxSwitchPattern):String {
+		return switch (pattern) {
+			case PEnumExtract("Leaf", _) | PEnumExtract("Node", _):
+				"unit.Tree<String>";
+			case _:
+				"";
+		};
+	}
+
+	static function helperPatternPayloadType(pattern:HxSwitchPattern):String {
+		return switch (pattern) {
+			case PEnumExtract("Leaf", _):
+				"String";
+			case PEnumExtract("Node", _):
+				"unit.Tree<String>";
+			case _:
+				"";
+		};
+	}
+
+	static function helperDiagnosticBindingName(name:String):String {
+		if (name == null)
+			return "";
+		final marker = name.indexOf("__hx_scope_");
+		return marker < 0 ? name : name.substr(0, marker);
 	}
 
 	static function helperSwitchNonExhaustiveMessage(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>):Null<String> {
