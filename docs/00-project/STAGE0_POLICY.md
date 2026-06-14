@@ -134,6 +134,19 @@ Selected defaults (worker + stage0 policy), with evidence:
 
 ## Stage0 Contributor Profiling (Regen Lane)
 
+Stage0 profiling and A/B knobs are **diagnostic-only**. They exist to help
+maintainers understand source-build cost, memory pressure, and graph-amplifier
+effects while burning down Full1 work.
+
+They are not release proof:
+
+- They do not prove Haxe 4.3.7 behavioral parity.
+- They do not prove Full 1.0 performance parity.
+- They must not be enabled in release/dist lanes or committed bootstrap
+  snapshots unless a separate parity/release bead explicitly promotes the knob.
+- Treat any `recommendation=promotable` result as "worth a promotion review",
+  not as automatic permission to change defaults.
+
 Use the profiling helper for reproducible contributor summaries:
 
 ```bash
@@ -212,6 +225,9 @@ npm run hxhx:profile:stage0-regen-ab -- \
 This writes `results.tsv` plus `summary.json`/`summary.txt` with median and average reduction percentages,
 pair parity fields, and a recommendation classification (`promotable|profiling-only|rejected`).
 Only runs with `peak_rss_mb > 0` are included in reduction math.
+The summary also records `contract_role=diagnostic-only` and
+`release_evidence=false`; keep those fields intact if the artifact is copied
+into a bead, PR, or CI note.
 
 For parity-sensitive probes, require per-rep status parity (`status` or `status+exit`):
 

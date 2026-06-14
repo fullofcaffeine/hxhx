@@ -116,6 +116,12 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
 
 ## Interpretation
 
+- All rows in this matrix are source-build diagnostics, not release evidence.
+  They help rank candidate graph-amplifier mitigations, but they do not prove
+  Haxe 4.3.7 parity, Full 1.0 performance parity, or release readiness.
+- A "promotable" A/B result means "open a promotion review"; it does not mean
+  "enable the knob in default source builds, release lanes, or committed
+  bootstrap snapshots" without separate parity/release evidence.
 - The strongest single knob in this matrix remains `HXHX_STAGE0_DISABLE_PREPASSES=1`.
 - `--no-line-directives` gives a small but stable win in this sample family (`~1-2%` median).
 - `--no-expr-macros` is not viable as a mitigation in this probe family (regresses median peak RSS).

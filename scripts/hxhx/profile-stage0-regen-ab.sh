@@ -15,6 +15,7 @@ MIN_REDUCTION_PCT="${HXHX_STAGE0_AB_MIN_REDUCTION_PCT:-}"
 REDUCTION_METRIC="${HXHX_STAGE0_AB_REDUCTION_METRIC:-median}"
 REQUIRE_STATUS_PARITY="${HXHX_STAGE0_AB_REQUIRE_STATUS_PARITY:-0}"
 PARITY_MODE="${HXHX_STAGE0_AB_PARITY_MODE:-status-exit}"
+CONTRACT_ROLE="diagnostic-only"
 
 usage() {
 	cat <<'USAGE'
@@ -22,6 +23,9 @@ Usage: bash scripts/hxhx/profile-stage0-regen-ab.sh [options]
 
 Runs repeated A/B profiling for stage0 regen and summarizes peak RSS reduction
 using median/average across repetitions.
+
+This runner is diagnostic-only. Its output may guide source-build tuning, but it
+is not Full 1.0 release proof and must not be used as Haxe parity evidence.
 
 Options:
   --reps <N>                    Number of A/B repetitions (default: 3)
@@ -202,6 +206,7 @@ echo "baseline_args=${BASELINE_ARGS_RAW:-<none>}"
 echo "mitigation_args=${MITIGATION_ARGS_RAW:-<none>}"
 echo "min_reduction_pct=${MIN_REDUCTION_PCT:-<none>} reduction_metric=$REDUCTION_METRIC"
 echo "require_status_parity=$REQUIRE_STATUS_PARITY parity_mode=$PARITY_MODE"
+echo "contract_role=$CONTRACT_ROLE release_evidence=false"
 echo "out_dir=$OUT_DIR"
 
 run_lane() {
@@ -267,6 +272,7 @@ const fs = require("fs");
 const tsvPath = process.argv[1];
 const summaryJsonPath = process.argv[2];
 const parityMode = process.argv[3];
+const contractRole = process.argv[4];
 const lines = fs.readFileSync(tsvPath, "utf8").trim().split(/\n/);
 const rows = lines.slice(1).map((line) => {
   const [rep, lane, peak, peakSource, totalSec, status, exitCode, reportJson] = line.split("\t");
@@ -360,6 +366,10 @@ if (parityClassification === "non-equivalent" || parityClassification === "insuf
 }
 const out = {
   schema: "stage0-profile-ab-summary.v1",
+  contract_role: contractRole,
+  release_evidence: false,
+  proof_scope: "maintenance-source-build-diagnostic",
+  proof_note: "Stage0 source-build A/B profiling is observability evidence only; it is not Haxe 4.3.7 parity or Full 1.0 release proof.",
   runs: rows.length,
   baseline_runs: baseline.length,
   mitigation_runs: mitigation.length,
@@ -392,7 +402,9 @@ console.log(`paired_runs=${pairedRuns}`);
 console.log(`equivalent_pairs=${equivalentPairs}`);
 console.log(`parity_classification=${parityClassification}`);
 console.log(`recommendation=${recommendation}`);
-' "$RESULTS_TSV" "$SUMMARY_JSON" "$PARITY_MODE" | tee "$SUMMARY_TXT"
+console.log(`contract_role=${contractRole}`);
+console.log("release_evidence=false");
+' "$RESULTS_TSV" "$SUMMARY_JSON" "$PARITY_MODE" "$CONTRACT_ROLE" | tee "$SUMMARY_TXT"
 
 if [ "$REQUIRE_STATUS_PARITY" = "1" ]; then
 	paired_runs="$(jq -r '.paired_runs // 0' "$SUMMARY_JSON")"
