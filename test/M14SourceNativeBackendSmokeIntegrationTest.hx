@@ -8898,6 +8898,45 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpHaxeHttpRuntimeSupport():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_haxe_http_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var http = new haxe.Http(\"http://127.0.0.1:1/\");",
+			"    http.onData = data -> Sys.println(data);",
+			"    http.onBytes = bytes -> Sys.println(bytes.length);",
+			"    http.onError = err -> Sys.println(\"error:\" + (err.length > 0));",
+			"    http.setHeader(\"X-Test\", \"yes\");",
+			"    http.setParameter(\"q\", \"hxhx\");",
+			"    http.setPostData(\"hello\");",
+			"    http.setPostBytes(haxe.io.Bytes.ofString(\"bytes\"));",
+			"    Sys.println(\"http-created\");",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class Http", "PHP haxe namespace support should provide haxe.Http");
+		assertContains(content, "public function setPostData($data)", "PHP haxe.Http should support setPostData");
+		assertContains(content, "public function setPostBytes($data)", "PHP haxe.Http should support setPostBytes");
+		assertContains(content, "public function request($post = null)", "PHP haxe.Http should expose request for upstream unit HTTP tests");
+		assertContains(content, "new haxe\\Http(\"http://127.0.0.1:1/\")", "PHP generated code should construct namespaced haxe.Http");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP haxe.Http construction smoke should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "http-created\n", "generated PHP haxe.Http construction output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMapRuntimeShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -14741,6 +14780,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpHaxeFormatJsonParserRuntimeSupport();
 		assertPhpHaxeResourceRuntimeSupport();
 		assertPhpUtestRunnerAsyncDispatch();
+		assertPhpHaxeHttpRuntimeSupport();
 		assertPhpStdDateToolsSupport();
 		assertPhpPackageQualifiedClassReference();
 		assertPhpStdStringMapClassReference();
