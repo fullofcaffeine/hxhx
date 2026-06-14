@@ -18191,6 +18191,7 @@ class SourceTargetCommon {
 				lines.push("      $payload = $this->postBytes !== null ? $this->bytesPayload($this->postBytes) : ($this->postData === null ? null : strval($this->postData));");
 				lines.push("      $usePost = $post === null ? $payload !== null : (bool)$post;");
 				lines.push("      $url = strval($this->url);");
+				lines.push("      if (strpos($url, \"http://localhost:\") === 0) $url = \"http://127.0.0.1:\" . substr($url, strlen(\"http://localhost:\"));");
 				lines.push("      if (!$usePost && count($this->params) > 0) $url .= (strpos($url, \"?\") === false ? \"?\" : \"&\") . http_build_query($this->params);");
 				lines.push("      $headerLines = [];");
 				lines.push("      foreach ($this->headers as $name => $value) $headerLines[] = $name . \": \" . $value;");

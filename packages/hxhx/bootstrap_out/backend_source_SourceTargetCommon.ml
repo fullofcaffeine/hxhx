@@ -38443,6 +38443,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "      $payload = $this->postBytes !== null ? $this->bytesPayload($this->postBytes) : ($this->postData === null ? null : strval($this->postData));");
       ignore (HxArray.push lines "      $usePost = $post === null ? $payload !== null : (bool)$post;");
       ignore (HxArray.push lines "      $url = strval($this->url);");
+      ignore (HxArray.push lines "      if (strpos($url, \"http://localhost:\") === 0) $url = \"http://127.0.0.1:\" . substr($url, strlen(\"http://localhost:\"));");
       ignore (HxArray.push lines "      if (!$usePost && count($this->params) > 0) $url .= (strpos($url, \"?\") === false ? \"?\" : \"&\") . http_build_query($this->params);");
       ignore (HxArray.push lines "      $headerLines = [];");
       ignore (HxArray.push lines "      foreach ($this->headers as $name => $value) $headerLines[] = $name . \": \" . $value;");

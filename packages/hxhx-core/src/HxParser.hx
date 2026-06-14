@@ -3448,6 +3448,8 @@ class HxParser {
 		// - If we don't advance to the end of the statement, parsing can get stuck on
 		//   the same token forever.
 		while (!stop() && !cur.kind.match(TSemicolon) && !cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+			if (isSemicolonlessStatementBoundary())
+				return;
 			switch (cur.kind) {
 				case TLParen:
 					bump();
@@ -3461,6 +3463,55 @@ class HxParser {
 		}
 		if (cur.kind.match(TSemicolon))
 			bump();
+	}
+
+	function isSemicolonlessStatementBoundary():Bool {
+		final start = currentIndex();
+		if (start <= 0)
+			return false;
+
+		var i = start - 1;
+		var sawNewline = false;
+		while (i >= 0) {
+			final ch = source.charCodeAt(i);
+			switch (ch) {
+				case " ".code | "\t".code | "\r".code:
+					i--;
+				case "\n".code:
+					sawNewline = true;
+					i--;
+				case "}".code:
+					return sawNewline && tokenCanStartStatement(cur.kind);
+				case _:
+					return false;
+			}
+		}
+		return false;
+	}
+
+	static function tokenCanStartStatement(kind:HxTokenKind):Bool {
+		if (kind.match(TIdent(_)) || kind.match(TLBrace) || kind.match(TLParen))
+			return true;
+		return switch (kind) {
+			case TKeyword(k):
+				k == KIf
+				|| k == KSwitch
+				|| k == KTry
+				|| k == KWhile
+				|| k == KDo
+				|| k == KFor
+				|| k == KThrow
+				|| k == KReturn
+				|| k == KInline
+				|| k == KFunction
+				|| k == KVar
+				|| k == KFinal
+				|| k == KBreak
+				|| k == KContinue;
+			case TOther(c): c == "@".code || c == "#".code;
+			case _:
+				false;
+		}
 	}
 
 	function syncToStmtEnd():Void {

@@ -8906,15 +8906,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"class Main {",
 			"  static function main() {",
 			"    var http = new haxe.Http(\"http://127.0.0.1:1/\");",
+			"    var seen = \"\";",
 			"    http.onData = data -> Sys.println(data);",
 			"    http.onBytes = bytes -> Sys.println(bytes.length);",
-			"    http.onError = err -> Sys.println(\"error:\" + (err.length > 0));",
+			"    http.onError = err -> {",
+			"      seen = \"before\";",
+			"      seen = \"error:\" + (err.length > 0);",
+			"    };",
 			"    http.setHeader(\"X-Test\", \"yes\");",
 			"    http.setParameter(\"q\", \"hxhx\");",
 			"    http.setPostData(\"hello\");",
 			"    http.setPostBytes(haxe.io.Bytes.ofString(\"bytes\"));",
+			"    var onError = http.onError;",
+			"    onError(\"boom\");",
+			"    Sys.println(seen);",
 			"    Sys.println(\"http-created\");",
 			"  }",
+			"  static function semicolonless() run(() -> {",
+			"    var transport = new haxe.Http(\"http://127.0.0.1:1/\");",
+			"    var seen = \"\";",
+			"    transport.onError = err -> {",
+			"      seen = \"before\";",
+			"      seen = \"semicolonless:\" + (err.length > 0);",
+			"    }",
+			"    var onError = transport.onError;",
+			"    onError(\"boom\");",
+			"  });",
+			"  static function run(test:()->Void) test();",
 			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(src, "Main.hx");
@@ -8928,11 +8946,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public function setPostData($data)", "PHP haxe.Http should support setPostData");
 		assertContains(content, "public function setPostBytes($data)", "PHP haxe.Http should support setPostBytes");
 		assertContains(content, "public function request($post = null)", "PHP haxe.Http should expose request for upstream unit HTTP tests");
+		assertContains(content, "http://127.0.0.1:", "PHP haxe.Http should normalize localhost to IPv4 for the upstream echo server");
+		assertContains(content, "$http->onError = function($err)", "PHP should preserve braced arrow callbacks assigned to haxe.Http fields");
+		assertContains(content, "$transport->onError = function($err)",
+			"PHP should preserve semicolonless braced arrow callbacks assigned inside expression-bodied methods");
 		assertContains(content, "new haxe\\Http(\"http://127.0.0.1:1/\")", "PHP generated code should construct namespaced haxe.Http");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Http construction smoke should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "http-created\n", "generated PHP haxe.Http construction output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "error:true\nhttp-created\n", "generated PHP haxe.Http construction output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
