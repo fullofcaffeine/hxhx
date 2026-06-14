@@ -2501,7 +2501,8 @@ class SourceTargetCommon {
 				} else {
 					switch (receiver) {
 						case ESuper:
-							callExpr(target, "(" + phpSuperGetterCall(field) + ")", phpArgs);
+							if (phpCurrentInstanceMethodValue(field)) callExpr(target, "parent::" + sanitizeTypeName(field),
+								phpArgs); else callExpr(target, "(" + phpSuperGetterCall(field) + ")", phpArgs);
 						case _:
 							final renderedReceiver = phpReceiverExpr(receiver);
 							final propertyGetter = phpInstancePropertyGetterAccess(receiver, field);

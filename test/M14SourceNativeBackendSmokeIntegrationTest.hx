@@ -4034,6 +4034,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  function get_prop() return 1;",
 			"  function set_prop(v:Int) return v;",
 			"  function get_fProp() return function(i:Int) return \"test\" + i;",
+			"  public function label(left:Int, right:Int) return \"label\" + left + right;",
 			"}",
 			"",
 			"class Child extends Base {",
@@ -4044,6 +4045,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    return function(i:Int) return s + i;",
 			"  }",
 			"  public function test() return super.fProp(2);",
+			"  public function testMethod() return super.label(...[3, 4]);",
 			"}",
 			"",
 			"class Main {",
@@ -4053,6 +4055,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(child.prop = 4));",
 			"    Sys.println(child.test());",
 			"    Sys.println(child.fProp(9));",
+			"    Sys.println(child.testMethod());",
 			"  }",
 			"}",
 		].join("\n");
@@ -11753,12 +11756,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "return __hxhx_add((parent::set_prop($v)), 1);", "PHP super property writes should lower through parent setters");
 		assertContains(content, "$s = (parent::get_fProp())(0);",
 			"PHP calls through super property getter results should lower through parent getters before invocation");
+		assertContains(content, "return parent::label(...array_values(__hxhx_to_array([3, 4])));",
+			"PHP super method calls with spread arguments should dispatch directly to parent methods");
 		assertNotContains(content, "Child::fProp(", "PHP function-valued property calls should not lower as undefined class methods");
 		assertNotContains(content, "->fProp(", "PHP function-valued property calls should not lower as undefined instance methods");
+		assertNotContains(content, "parent::get_label", "PHP super method calls should not lower through property getter dispatch");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP super property support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "2\n5\ntest2\ntest09\n", "generated PHP super property output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "2\n5\ntest2\ntest09\nlabel34\n", "generated PHP super property output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
