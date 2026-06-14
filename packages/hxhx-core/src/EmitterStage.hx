@@ -1238,8 +1238,8 @@ class EmitterStage {
 							walk(item);
 				case PExtractor(_extractorText, resultPattern):
 					walk(resultPattern);
-				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PParsedIntSwitchGuard(inner, _, _, _),
-					PUnsupportedGuard(inner):
+				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
+					PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
 					walk(inner);
 				case POr(patterns):
 					if (patterns != null)
@@ -1283,8 +1283,8 @@ class EmitterStage {
 							walk(items[i], "(HxArray.get (Obj.magic " + value + ") " + Std.string(i) + ")");
 				case PExtractor(_extractorText, resultPattern):
 					walk(resultPattern, value);
-				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PParsedIntSwitchGuard(inner, _, _, _),
-					PUnsupportedGuard(inner):
+				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
+					PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
 					walk(inner, value);
 				case POr(patterns):
 					// Stage3 bring-up supports the common upstream shape where all alternatives bind
@@ -3766,8 +3766,8 @@ class EmitterStage {
 							"false";
 						case PExtractor(_extractorText, _resultPattern):
 							"false";
-						case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PParsedIntSwitchGuard(inner, _, _, _),
-							PUnsupportedGuard(inner):
+						case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
+							PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
 							patternCond(inner);
 					};
 				}
@@ -3785,7 +3785,7 @@ class EmitterStage {
 								extendTyByIdentForStage3(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case PArray(_items):
 								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
-							case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _),
+							case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PIntCompareGuard(_, _, _, _),
 								PParsedIntSwitchGuard(_, _, _, _), PUnsupportedGuard(_):
 								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case PEnumExtract(_name, _args):
@@ -5292,7 +5292,7 @@ class EmitterStage {
 								"false";
 							case PExtractor(_extractorText, _resultPattern):
 								"false";
-							case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _),
+							case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
 								PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
 								patternCond(inner);
 						};
@@ -5312,7 +5312,7 @@ class EmitterStage {
 								case PArray(_items):
 									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _),
-									PParsedIntSwitchGuard(_, _, _, _), PUnsupportedGuard(_):
+									PIntCompareGuard(_, _, _, _), PParsedIntSwitchGuard(_, _, _, _), PUnsupportedGuard(_):
 									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case PEnumExtract(_name, _args):
 									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));

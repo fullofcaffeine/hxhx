@@ -17,6 +17,7 @@ type hxswitchpattern =
 | PLengthGuard of hxswitchpattern * string * int
 | PStartsWithGuard of hxswitchpattern * string * string
 | PIntEqualsGuard of hxswitchpattern * string * int
+| PIntCompareGuard of hxswitchpattern * string * string * int
 | PParsedIntSwitchGuard of hxswitchpattern * string * int * int
 | PUnsupportedGuard of hxswitchpattern
 | PBind of string

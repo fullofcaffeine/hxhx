@@ -578,11 +578,17 @@ class HxParser {
 				PStartsWithGuard(pattern, name, prefix);
 			case EBinop("==", EIdent(name), EInt(value)):
 				PIntEqualsGuard(pattern, name, value);
+			case EBinop(op, EIdent(name), EInt(value)) if (isIntCompareGuardOp(op)):
+				PIntCompareGuard(pattern, name, op, value);
 			case ESwitch(EBinop("*", ECall(EField(EIdent("Std"), "parseInt"), [EIdent(name)]), EInt(multiplier)), patterns, exprs):
 				switchParsedIntGuard(pattern, name, multiplier, patterns, exprs);
 			case _:
 				PUnsupportedGuard(pattern);
 		}
+	}
+
+	function isIntCompareGuardOp(op:String):Bool {
+		return op == "<" || op == "<=" || op == ">" || op == ">=";
 	}
 
 	function switchParsedIntGuard(pattern:HxSwitchPattern, name:String, multiplier:Int, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):HxSwitchPattern {

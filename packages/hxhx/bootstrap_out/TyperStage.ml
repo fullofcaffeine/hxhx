@@ -140,6 +140,12 @@ let rec declarePatternBindings = fun scope pattern baseTy -> ignore (match patte
     ignore _p2;
     let inner = Obj.magic _g in declarePatternBindings (Obj.magic scope) (Obj.magic inner) (Obj.magic baseTy)
   ))
+  | HxSwitchPattern.PIntCompareGuard (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in (
+    ignore _p1;
+    ignore _p2;
+    ignore _p3;
+    let inner = Obj.magic _g in declarePatternBindings (Obj.magic scope) (Obj.magic inner) (Obj.magic baseTy)
+  ))
   | HxSwitchPattern.PParsedIntSwitchGuard (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in (
     ignore _p1;
     ignore _p2;

@@ -6673,6 +6673,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpEnumIntGuardProgram():GenIrProgram {
+		final src = [
+			"enum Choice<T> {",
+			"  One(value:Int);",
+			"  Two;",
+			"}",
+			"class Main {",
+			"  static function label<T>(value:Choice<T>):String {",
+			"    return switch value {",
+			"      case One(x) if (x > 1): \">1\";",
+			"      case One(x) if (x <= 1): \"<=1\";",
+			"      case One(_): \"impossible\";",
+			"      case Two: \"Two\";",
+			"    }",
+			"  }",
+			"  static function main() {",
+			"    Sys.println(label(One(1)));",
+			"    Sys.println(label(One(2)));",
+			"    Sys.println(label(Two));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function switchStatementProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -12388,6 +12415,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpEnumIntGuard():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_enum_int_guard_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpEnumIntGuardProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "__hx_params[0] > 1", "PHP enum int guard should lower the greater-than comparison");
+		assertContains(content, "__hx_params[0] <= 1", "PHP enum int guard should lower the less-than-or-equal comparison");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP enum int guard should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "<=1\n>1\nTwo\n", "generated PHP enum int guard output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertSwitchStatement():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15016,6 +15061,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertSwitchExpression();
 		assertUnsupportedSwitchGuardExpression();
 		assertPhpTupleOrPatternCapture();
+		assertPhpEnumIntGuard();
 		assertSwitchStatement();
 		assertJavaArraySwitchStatement();
 		assertCsReservedLocalIdentifier();

@@ -1161,6 +1161,25 @@ class M14HihExprTextParserIntegrationTest {
 					case _:
 						fail("expected captured OR pattern with integer equality guard");
 				}
+				final comparePatternExpr = HxParser.parseExprText('switch v { case One(x) if (x <= 1): "<=1"; case One(x) if (x > 1): ">1"; case _: "_"; }');
+				switch (comparePatternExpr) {
+					case ESwitch(EIdent("v"), comparePatterns, _):
+						assertTrue(comparePatterns.length == 3, "expected integer comparison guard cases");
+						switch (comparePatterns[0]) {
+							case PIntCompareGuard(PEnumExtract("One", [PBind("x")]), "x", "<=", 1):
+							case _:
+								fail("expected enum extractor pattern with integer <= guard");
+						}
+						switch (comparePatterns[1]) {
+							case PIntCompareGuard(PEnumExtract("One", [PBind("x")]), "x", ">", 1):
+							case _:
+								fail("expected enum extractor pattern with integer > guard");
+						}
+					case EUnsupported(raw):
+						fail("integer comparison guard switch parsed as unsupported: " + raw);
+					case _:
+						fail("expected integer comparison guard switch expression");
+				}
 			case EUnsupported(raw):
 				fail("grouped switch expression parsed as unsupported: " + raw);
 			case _:
