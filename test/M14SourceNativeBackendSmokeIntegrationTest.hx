@@ -1089,6 +1089,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpMacroSwitchGuardProgram():GenIrProgram {
+		final src = [
+			"import haxe.macro.Expr;",
+			"class Main {",
+			"  static function switchGuard(e:Expr):String {",
+			"    return switch(e.expr) {",
+			"      case EConst(CInt(i)) if (switch(Std.parseInt(i) * 2) { case 4: true; case _: false; }): \"3\";",
+			"      case EConst(_): \"4\";",
+			"      case _: \"5\";",
+			"    }",
+			"  }",
+			"  static function main() {",
+			"    Sys.println(switchGuard(macro 2));",
+			"    Sys.println(switchGuard(macro 5));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpDollarStringProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -10190,6 +10212,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpMacroSwitchGuard():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_macro_switch_guard_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpMacroSwitchGuardProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "Std::parseInt($__hxhx_switch->__hx_params[0]->__hx_params[0])",
+			"PHP guarded macro switch should substitute enum extractor bindings inside nested switch guards");
+		assertNotContains(content, "&& false", "PHP parsed nested switch guards should not be lowered as unsupported guards");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP guarded macro switch should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "3\n4\n", "generated PHP guarded macro switch output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPythonMacroExpr():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_python_macro_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -14768,6 +14809,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStringFromCharCode();
 		assertPhpWebShim();
 		assertPhpMacroExpr();
+		assertPhpMacroSwitchGuard();
 		assertPythonMacroExpr();
 		assertPhpDollarString();
 		assertPhpInt64LiteralExtension();

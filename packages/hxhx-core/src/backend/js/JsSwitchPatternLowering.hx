@@ -60,6 +60,9 @@ class JsSwitchPatternLowering {
 			case PUnsupportedGuard(inner):
 				final lowered = lower(inner, scrutineeVar);
 				{cond: "(" + lowered.cond + ") && false", bindings: lowered.bindings};
+			case PParsedIntSwitchGuard(inner, _, _, _):
+				final lowered = lower(inner, scrutineeVar);
+				{cond: "(" + lowered.cond + ") && false", bindings: lowered.bindings};
 			case PBind(name):
 				{cond: "true", bindings: [{name: name, expr: scrutineeVar}]};
 			case POr(patterns):

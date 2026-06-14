@@ -578,9 +578,25 @@ class HxParser {
 				PStartsWithGuard(pattern, name, prefix);
 			case EBinop("==", EIdent(name), EInt(value)):
 				PIntEqualsGuard(pattern, name, value);
+			case ESwitch(EBinop("*", ECall(EField(EIdent("Std"), "parseInt"), [EIdent(name)]), EInt(multiplier)), patterns, exprs):
+				switchParsedIntGuard(pattern, name, multiplier, patterns, exprs);
 			case _:
 				PUnsupportedGuard(pattern);
 		}
+	}
+
+	function switchParsedIntGuard(pattern:HxSwitchPattern, name:String, multiplier:Int, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):HxSwitchPattern {
+		if (patterns != null && exprs != null) {
+			final count = patterns.length < exprs.length ? patterns.length : exprs.length;
+			for (i in 0...count) {
+				switch [patterns[i], exprs[i]] {
+					case [PInt(value), EBool(true)]:
+						return PParsedIntSwitchGuard(pattern, name, multiplier, value);
+					case _:
+				}
+			}
+		}
+		return PUnsupportedGuard(pattern);
 	}
 
 	function parseSwitchPatternCaseGroup():HxSwitchPattern {

@@ -5939,7 +5939,8 @@ class SourceTargetCommon {
 				+ ") "
 				+ (target == Python || target == Lua ? "and" : "&&")
 				+ " false)";
-			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _):
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
+				PParsedIntSwitchGuard(_, _, _, _):
 				throw targetLabel(target) + " source backend MVP unsupported switch pattern: " + patternKind(pattern);
 		};
 	}
@@ -5989,6 +5990,7 @@ class SourceTargetCommon {
 			case PLengthGuard(_, _, _): "PLengthGuard";
 			case PStartsWithGuard(_, _, _): "PStartsWithGuard";
 			case PIntEqualsGuard(_, _, _): "PIntEqualsGuard";
+			case PParsedIntSwitchGuard(_, _, _, _): "PParsedIntSwitchGuard";
 			case PUnsupportedGuard(_): "PUnsupportedGuard";
 			case PBind(_): "PBind";
 			case POr(_): "POr";
@@ -8558,7 +8560,7 @@ class SourceTargetCommon {
 		return switch (pattern) {
 			case PArray(_) | PExtractor(_, _) | PEnumExtract(_, _):
 				true;
-			case PCapture(_, inner) | PUnsupportedGuard(inner):
+			case PCapture(_, inner) | PParsedIntSwitchGuard(inner, _, _, _) | PUnsupportedGuard(inner):
 				csPatternNeedsSourceLowering(inner);
 			case POr(patterns):
 				if (patterns == null) {
@@ -8620,6 +8622,19 @@ class SourceTargetCommon {
 					cond: parts.length == 0 ? falseLiteral(target) : parts.join(target == Python || target == Lua ? " or " : " || "),
 					bindings: commonBindings == null ? [] : commonBindings
 				};
+			case PParsedIntSwitchGuard(inner, bindingName, multiplier, matchValue):
+				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
+				final bound = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
+				final guardValue = sourceParsedIntSwitchGuardValue(target, bound, multiplier);
+				{cond: "(("
+					+ lowered.cond
+					+ ") "
+					+ sourceAndOp(target)
+					+ " "
+					+ equalityCond(target, guardValue, Std.string(matchValue))
+					+ ")",
+					bindings: lowered.bindings
+				};
 			case PUnsupportedGuard(inner):
 				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee);
 				{cond: "((" + lowered.cond + ") " + sourceAndOp(target) + " " + falseLiteral(target) + ")", bindings: lowered.bindings};
@@ -8658,6 +8673,27 @@ class SourceTargetCommon {
 
 	static function sourceAndOp(target:SourceNativeTarget):String {
 		return target == Python || target == Lua ? "and" : "&&";
+	}
+
+	static function sourceParsedIntSwitchGuardValue(target:SourceNativeTarget, value:String, multiplier:Int):String {
+		final parsed = switch (target) {
+			case Php:
+				"Std::parseInt(" + value + ")";
+			case Python:
+				"int(" + value + ")";
+			case Java:
+				"Std.parseInt(" + value + ")";
+			case Cs:
+				"int.Parse(System.Convert.ToString(" + value + "))";
+			case Lua:
+				"tonumber(" + value + ")";
+		};
+		return switch (target) {
+			case Php:
+				"__hxhx_mul(" + parsed + ", " + Std.string(multiplier) + ")";
+			case Python | Java | Cs | Lua:
+				"(" + parsed + " * " + Std.string(multiplier) + ")";
+		};
 	}
 
 	static function sourceEnumValueCond(target:SourceNativeTarget, scrutinee:String, name:String):String {
@@ -16234,7 +16270,7 @@ class SourceTargetCommon {
 					for (item in items)
 						phpCollectDeclaredLocalsInPattern(item, names);
 			case PExtractor(_, resultPattern) | PLengthGuard(resultPattern, _, _) | PStartsWithGuard(resultPattern, _, _) |
-				PIntEqualsGuard(resultPattern, _, _) | PUnsupportedGuard(resultPattern):
+				PIntEqualsGuard(resultPattern, _, _) | PParsedIntSwitchGuard(resultPattern, _, _, _) | PUnsupportedGuard(resultPattern):
 				phpCollectDeclaredLocalsInPattern(resultPattern, names);
 			case POr(patterns):
 				if (patterns != null)
@@ -16755,6 +16791,9 @@ class SourceTargetCommon {
 			case PIntEqualsGuard(inner, bindingName, value):
 				PIntEqualsGuard(phpRenameScopedPattern(inner, env, counters, rewriteRawText), env.exists(bindingName) ? env.get(bindingName) : bindingName,
 					value);
+			case PParsedIntSwitchGuard(inner, bindingName, multiplier, matchValue):
+				PParsedIntSwitchGuard(phpRenameScopedPattern(inner, env, counters, rewriteRawText),
+					env.exists(bindingName) ? env.get(bindingName) : bindingName, multiplier, matchValue);
 			case PUnsupportedGuard(inner):
 				PUnsupportedGuard(phpRenameScopedPattern(inner, env, counters, rewriteRawText));
 			case POr(patterns):

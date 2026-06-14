@@ -21,14 +21,15 @@
 	  - extractor patterns such as `extract(_) => Some(value)` as a parsed,
 		bring-up-safe shape
 	  - guarded patterns for currently supported guard forms
+	  - parsed-int switch guards for the small guard shape used by upstream macro tests
 	  - binder patterns (`case name:`) used as a catch-all.
 
 	How
 	- This is *not* full Haxe `switch` semantics:
-	  - no guards (`if`),
+	  - only the guard forms listed above are modeled,
 	  - limited multiple patterns (`case a | b:`) are supported without guards.
 	  - enum constructor extractors only model constructor name + positional params;
-		guards and richer pattern forms remain out of scope.
+		richer pattern forms remain out of scope.
 	- It is intentionally “bring-up friendly” so we can run unmodified upstream
 	  harnesses without copying or translating upstream compiler code.
 **/
@@ -47,6 +48,7 @@ enum HxSwitchPattern {
 	PLengthGuard(pattern:HxSwitchPattern, bindingName:String, length:Int);
 	PStartsWithGuard(pattern:HxSwitchPattern, bindingName:String, prefix:String);
 	PIntEqualsGuard(pattern:HxSwitchPattern, bindingName:String, value:Int);
+	PParsedIntSwitchGuard(pattern:HxSwitchPattern, bindingName:String, multiplier:Int, matchValue:Int);
 	PUnsupportedGuard(pattern:HxSwitchPattern);
 	PBind(name:String);
 
