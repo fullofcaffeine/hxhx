@@ -9140,6 +9140,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(tmpRoot);
 		final src = [
 			"class Main {",
+			"  public var values:Array<Int>;",
+			"  public function new(...r:Int) {",
+			"    values = r.toArray();",
+			"  }",
 			"  static function main() {",
 			"    var sm = new haxe.ds.StringMap<Int>();",
 			"    sm.set(\"b\", 2);",
@@ -10788,6 +10792,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"      var prepended = r.prepend(0);",
 			"      return {initial: r.toArray(), appended: appended.toArray(), prepended: prepended.toArray()};",
 			"    }",
+			"    function restSpread(...r:Int) {",
+			"      return r.toArray();",
+			"    }",
+			"    function restForward(...r:Int) {",
+			"      return restSpread(...r);",
+			"    }",
 			"    var kv = restKeyValues(3, 2, 1, 0);",
 			"    var sequence = restAppendPrepend(1, 2);",
 			"    Sys.println(Std.string(restAt(1, 2, 0, 0, 123, 0)));",
@@ -10796,6 +10806,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(restIter(3, 2, 1).join(\",\"));",
 			"    Sys.println(kv.keys.join(\",\") + \":\" + kv.values.join(\",\"));",
 			"    Sys.println(sequence.initial.join(\",\") + \":\" + sequence.appended.join(\",\") + \":\" + sequence.prepended.join(\",\"));",
+			"    Sys.println(restSpread(...[7, 8, 9]).join(\",\"));",
+			"    Sys.println(restForward(4, 5, 6).join(\",\"));",
+			"    if (false) Sys.println(new Main(...[10, 11]).values.join(\",\"));",
 			"  }",
 			"}",
 		].join("\n");
@@ -10816,14 +10829,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP Rest key/value iteration should lower through the runtime key/value iterator");
 		assertContains(content, "__hxhx_rest_append($r, 9)", "PHP Rest.append on array-backed receivers should lower to a runtime helper");
 		assertContains(content, "__hxhx_rest_prepend($r, 0)", "PHP Rest.prepend on array-backed receivers should lower to a runtime helper");
+		assertContains(content, "$restSpread(...array_values(__hxhx_to_array([7, 8, 9])))", "PHP array spread call arguments should lower to PHP splat syntax");
+		assertContains(content, "$restSpread(...array_values(__hxhx_to_array($r)))", "PHP Rest forwarding spread should splat array-backed Rest values");
+		assertContains(content, "new Main(...array_values(__hxhx_to_array([10, 11])))", "PHP constructor spread arguments should lower to PHP splat syntax");
 		assertNotContains(content, "function($a, $b, $r)", "PHP local Rest functions should not emit Rest as a fixed ordinary parameter");
 		assertNotContains(content, "$__hxhx_for_key_value", "PHP Rest key/value iteration should not emit unresolved helper calls");
+		assertNotContains(content, "$__hxhx_spread", "PHP spread arguments should not emit unresolved synthetic spread calls");
 		assertNotContains(content, "$r->append", "PHP Rest.append should not dispatch as an object method on array-backed Rest values");
 		assertNotContains(content, "$r->prepend", "PHP Rest.prepend should not dispatch as an object method on array-backed Rest values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP local Rest array access should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "123\n3,4\n5,6\n3,2,1\n0,1,2,3:3,2,1,0\n1,2:1,2,9:0,1,2\n",
+			assertTrue(run.stdout == "123\n3,4\n5,6\n3,2,1\n0,1,2,3:3,2,1,0\n1,2:1,2,9:0,1,2\n7,8,9\n4,5,6\n",
 				"generated PHP local Rest array access output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);

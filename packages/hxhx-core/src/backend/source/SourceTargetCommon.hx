@@ -2227,7 +2227,7 @@ class SourceTargetCommon {
 		final rendered = [receiver, quotePhpString(sanitizeTypeName(field))];
 		if (args != null)
 			for (arg in args)
-				rendered.push(renderExpr(Php, arg));
+				rendered.push(phpCallArgExpr(arg));
 		return "__hxhx_call_field(" + rendered.join(", ") + ")";
 	}
 
@@ -2249,17 +2249,18 @@ class SourceTargetCommon {
 	}
 
 	static function superConstructorCallExpr(target:SourceNativeTarget, args:Array<HxExpr>):String {
-		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
 		return switch (target) {
-			case Python: "super().__init__(" + rendered + ")";
-			case Php: "parent::__construct(" + rendered + ")";
+			case Python:
+				"super().__init__(" + [for (arg in args) renderExpr(Python, arg)].join(", ") + ")";
+			case Php:
+				"parent::__construct(" + [for (arg in args) phpCallArgExpr(arg)].join(", ") + ")";
 			case Java, Cs, Lua:
 				throw targetLabel(target) + " source backend MVP unsupported expression: ESuper";
 		};
 	}
 
 	static function callExpr(target:SourceNativeTarget, callee:String, args:Array<HxExpr>):String {
-		final renderedArgs = [for (arg in args) renderExpr(target, arg)];
+		final renderedArgs = [for (arg in args) callArgExpr(target, arg)];
 		if (target == Php) {
 			for (i in 0...renderedArgs.length)
 				renderedArgs[i] = phpFoldRenderedTypeErrorProbe(renderedArgs[i]);
@@ -2278,6 +2279,24 @@ class SourceTargetCommon {
 		}
 		final rendered = renderedArgs.join(", ");
 		return callee + "(" + rendered + ")";
+	}
+
+	static function callArgExpr(target:SourceNativeTarget, arg:HxExpr):String {
+		return switch (target) {
+			case Php:
+				phpCallArgExpr(arg);
+			case Python, Java, Cs, Lua:
+				renderExpr(target, arg);
+		}
+	}
+
+	static function phpCallArgExpr(arg:HxExpr):String {
+		return switch (arg) {
+			case ECall(EIdent("__hxhx_spread"), [inner]):
+				"...array_values(__hxhx_to_array(" + renderExpr(Php, inner) + "))";
+			case _:
+				renderExpr(Php, arg);
+		};
 	}
 
 	static function phpFoldRenderedTypeErrorProbe(rendered:String):String {
@@ -5987,19 +6006,22 @@ class SourceTargetCommon {
 	}
 
 	static function constructorExpr(target:SourceNativeTarget, typePath:String, args:Array<HxExpr>):String {
-		final rendered = [for (arg in args) renderExpr(target, arg)].join(", ");
 		final safeType = sanitizeTypePath(target, typePath);
 		return switch (target) {
 			case Python:
+				final rendered = [for (arg in args) renderExpr(Python, arg)].join(", ");
 				if (pythonRuntimeMapType(typePath)) "Map(" + rendered + ")"; else safeType + "(" + rendered + ")";
-			case Java: "new " + safeType + "(" + rendered + ")";
+			case Java:
+				"new " + safeType + "(" + [for (arg in args) renderExpr(Java, arg)].join(", ") + ")";
 			case Cs:
+				final rendered = [for (arg in args) renderExpr(Cs, arg)].join(", ");
 				if (typePath == "Array" || typePath == "Array<T>") "new " + csArrayRuntimeType() + "(new object[] { " + rendered + " })"; else
 					if (csNativeArrayTypePath(typePath)
 					&& args.length == 1) "new object[System.Convert.ToInt32("
 					+ renderExpr(Cs, args[0])
 					+ ")]"; else "new " + safeType + "(" + rendered + ")";
 			case Php:
+				final rendered = [for (arg in args) phpCallArgExpr(arg)].join(", ");
 				final genericSample = phpGenericConstructorSample(typePath);
 				if (genericSample != null) "__hxhx_construct_like(" + genericSample + (rendered.length == 0 ? "" : ", " + rendered) + ")"; else
 					if (typePath == "Array") "[]"; else if (typePath == "Exception"
@@ -6008,6 +6030,7 @@ class SourceTargetCommon {
 					+ ")"; else if (phpRuntimeMapType(typePath)) phpRuntimeMapConstructorExpr(typePath,
 					rendered); else if (phpRuntimeListType(typePath)) "new List_(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
 			case Lua:
+				final rendered = [for (arg in args) renderExpr(Lua, arg)].join(", ");
 				if (typePath == "String" && args.length == 1) "tostring(" + renderExpr(Lua,
 					args[0]) + ")"; else if (luaArrayConstructorTypePath(typePath)
 					&& args.length == 0) "hxhx_array({})"; else safeType + ".new(" + rendered + ")";
@@ -6375,7 +6398,7 @@ class SourceTargetCommon {
 
 	static function phpStaticMethodCall(typePath:String, field:String, args:Array<HxExpr>):String {
 		final renderedArgs = phpRenderedCallArgsWithEnumPeerContext(field, args);
-		final rendered = (renderedArgs == null ? [for (arg in args) renderExpr(Php, arg)] : renderedArgs).join(", ");
+		final rendered = (renderedArgs == null ? [for (arg in args) phpCallArgExpr(arg)] : renderedArgs).join(", ");
 		if (typePath == "String" && field == "fromCharCode" && args.length == 1)
 			return "__hxhx_string_from_char_code(" + rendered + ")";
 		final specialized = phpExplicitGenericStaticSpecializationName(typePath, field, args);
@@ -6387,7 +6410,7 @@ class SourceTargetCommon {
 	}
 
 	static function phpSuperSetterCall(field:String, args:Array<HxExpr>):String {
-		final rendered = [for (arg in args) renderExpr(Php, arg)].join(", ");
+		final rendered = [for (arg in args) phpCallArgExpr(arg)].join(", ");
 		return "parent::set_" + sanitizeTypeName(field) + "(" + rendered + ")";
 	}
 
@@ -7024,10 +7047,10 @@ class SourceTargetCommon {
 		if (enumName == null)
 			return null;
 		final rendered = new Array<String>();
-		rendered.push(renderExpr(Php, args[0]));
-		rendered.push(withPhpPreferredEnum(enumName, function() return renderExpr(Php, args[1])));
+		rendered.push(phpCallArgExpr(args[0]));
+		rendered.push(withPhpPreferredEnum(enumName, function() return phpCallArgExpr(args[1])));
 		for (i in 2...args.length)
-			rendered.push(renderExpr(Php, args[i]));
+			rendered.push(phpCallArgExpr(args[i]));
 		return rendered;
 	}
 
@@ -15201,9 +15224,9 @@ class SourceTargetCommon {
 		};
 	}
 
-	static function renderPhpFunctionArg(arg:HxFunctionArg):String {
+	static function renderPhpFunctionArg(arg:HxFunctionArg, isRestLike:Bool = false):String {
 		final name = valueName(Php, HxFunctionArg.getName(arg));
-		if (HxFunctionArg.getIsRest(arg))
+		if (isRestLike)
 			return "..." + name;
 		return switch (HxFunctionArg.getDefaultValue(arg)) {
 			case Default(expr):
@@ -15211,6 +15234,28 @@ class SourceTargetCommon {
 			case NoDefault:
 				HxFunctionArg.getIsOptional(arg) ? name + " = null" : name;
 		}
+	}
+
+	static function phpRenderedFunctionArgs(args:Array<HxFunctionArg>):String {
+		if (args == null)
+			return "";
+		final last = args.length - 1;
+		return [
+			for (i in 0...args.length)
+				renderPhpFunctionArg(args[i], i == last && phpFunctionArgIsRestLike(args[i]))
+		].join(", ");
+	}
+
+	static function phpFunctionArgIsRestLike(arg:HxFunctionArg):Bool {
+		if (arg == null)
+			return false;
+		if (HxFunctionArg.getIsRest(arg))
+			return true;
+		final hint = StringTools.trim(HxFunctionArg.getTypeHint(arg));
+		return hint == "Rest"
+			|| StringTools.startsWith(hint, "Rest<")
+			|| StringTools.startsWith(hint, "haxe.Rest<")
+			|| StringTools.startsWith(hint, "haxe.extern.Rest<");
 	}
 
 	static function phpStaticInitFallbackLines(fn:HxFunctionDecl, className:String, staticMemberNames:Map<String, Bool>, indent:String):Array<String> {
@@ -15365,10 +15410,7 @@ class SourceTargetCommon {
 			if (emittedMethods.exists(methodName))
 				continue;
 			emittedMethods.set(methodName, true);
-			final args = [
-				for (arg in HxFunctionDecl.getArgs(fn))
-					renderPhpFunctionArg(arg)
-			].join(", ");
+			final args = phpRenderedFunctionArgs(HxFunctionDecl.getArgs(fn));
 			final prefix = isStatic && !isCtor ? "  public static function " : "  public function ";
 			out.push(prefix + methodName + "(" + args + ") {");
 			if (isCtor) {
@@ -15445,10 +15487,7 @@ class SourceTargetCommon {
 			final methodName = sanitizeTypeName(HxFunctionDecl.getName(fn));
 			if (!genericStaticSpecializations.exists(methodName))
 				continue;
-			final args = [
-				for (arg in HxFunctionDecl.getArgs(fn))
-					renderPhpFunctionArg(arg)
-			].join(", ");
+			final args = phpRenderedFunctionArgs(HxFunctionDecl.getArgs(fn));
 			final callArgs = [
 				for (arg in HxFunctionDecl.getArgs(fn))
 					valueName(Php, HxFunctionArg.getName(arg))
@@ -15539,10 +15578,17 @@ class SourceTargetCommon {
 
 	static function phpFunctionLocalTypes(args:Array<HxFunctionArg>):haxe.ds.StringMap<String> {
 		final out = new haxe.ds.StringMap<String>();
-		for (arg in args) {
+		if (args == null)
+			return out;
+		final last = args.length - 1;
+		for (i in 0...args.length) {
+			final arg = args[i];
 			final hint = normalizeTypeHint(HxFunctionArg.getTypeHint(arg));
-			if (hint.length > 0)
-				out.set(sanitizeTypeName(HxFunctionArg.getName(arg)), hint);
+			final clean = sanitizeTypeName(HxFunctionArg.getName(arg));
+			if (clean.length > 0 && i == last && phpFunctionArgIsRestLike(arg))
+				out.set(clean, "Array<RestValue>");
+			else if (hint.length > 0)
+				out.set(clean, hint);
 		}
 		return out;
 	}
