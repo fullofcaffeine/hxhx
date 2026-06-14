@@ -2137,6 +2137,9 @@ class SourceTargetCommon {
 					return "__hxhx_length(" + renderExpr(target, receiver) + ")";
 				if (field == "code" && phpStringLikeReceiver(receiver))
 					return "__hxhx_string_char_code_at(" + renderExpr(target, receiver) + ", 0)";
+				final bootField = phpBootIntrinsicField(receiver, field);
+				if (bootField != null)
+					return bootField;
 				final stringMethodValue = phpStringMethodValueClosure(receiver, field);
 				if (stringMethodValue != null)
 					return stringMethodValue;
@@ -2507,24 +2510,29 @@ class SourceTargetCommon {
 					final syntaxIntrinsic = phpSyntaxIntrinsicCall(typePath, field, phpArgs);
 					if (syntaxIntrinsic != null) {
 						syntaxIntrinsic;
-					} else if (typePath == "UnitBuilder" && field == "generateSpec") {
-						// Upstream's unit harness expects this compile-time macro to define
-						// additional spec classes. PHP source bring-up cannot execute that macro
-						// result at runtime, so keep the harness moving with an empty spec list.
-						"[]";
-					} else if ((typePath == "Exception" || typePath == "haxe.Exception" || typePath == "haxe\\Exception")
-						&& field == "thrown") {
-						"ValueException::thrown(" + [for (arg in phpArgs) renderExpr(Php, arg)].join(", ") + ")";
-					} else if (typePath == "TestIssues" && field == "addIssueClasses") {
-						// Same compile-time-only harness pattern as UnitBuilder.generateSpec:
-						// the real macro mutates the test class list during compilation.
-						"/* hxhx skipped TestIssues.addIssueClasses */ null";
-					} else if (isInt64TypeHint(typePath) && phpInt64StaticMethodName(field)) {
-						phpStaticMethodCall(phpInt64TypePath(), field, phpArgs);
-					} else if (phpKnownStaticCallableField(typePath, field)) {
-						"(" + phpStaticPropertyAccess(typePath, field) + ")(" + [for (arg in phpArgs) renderExpr(Php, arg)].join(", ") + ")";
 					} else {
-						phpStaticMethodCall(typePath, field, phpArgs);
+						final bootIntrinsic = phpBootIntrinsicCall(typePath, field, phpArgs);
+						if (bootIntrinsic != null)
+							bootIntrinsic;
+						else if (typePath == "UnitBuilder" && field == "generateSpec") {
+							// Upstream's unit harness expects this compile-time macro to define
+							// additional spec classes. PHP source bring-up cannot execute that macro
+							// result at runtime, so keep the harness moving with an empty spec list.
+							"[]";
+						} else if ((typePath == "Exception" || typePath == "haxe.Exception" || typePath == "haxe\\Exception")
+							&& field == "thrown") {
+							"ValueException::thrown(" + [for (arg in phpArgs) renderExpr(Php, arg)].join(", ") + ")";
+						} else if (typePath == "TestIssues" && field == "addIssueClasses") {
+							// Same compile-time-only harness pattern as UnitBuilder.generateSpec:
+							// the real macro mutates the test class list during compilation.
+							"/* hxhx skipped TestIssues.addIssueClasses */ null";
+						} else if (isInt64TypeHint(typePath) && phpInt64StaticMethodName(field)) {
+							phpStaticMethodCall(phpInt64TypePath(), field, phpArgs);
+						} else if (phpKnownStaticCallableField(typePath, field)) {
+							"(" + phpStaticPropertyAccess(typePath, field) + ")(" + [for (arg in phpArgs) renderExpr(Php, arg)].join(", ") + ")";
+						} else {
+							phpStaticMethodCall(typePath, field, phpArgs);
+						}
 					}
 				} else {
 					switch (receiver) {
@@ -2668,6 +2676,40 @@ class SourceTargetCommon {
 			case _:
 				null;
 		}
+	}
+
+	static function phpBootIntrinsicField(receiver:HxExpr, field:String):Null<String> {
+		if (field != "phpClassName")
+			return null;
+		return switch (receiver) {
+			case ECall(EField(bootReceiver, "castClass"), args) if (args.length == 1
+				&& phpIsBootTypePath(phpStaticTypePath(bootReceiver))):
+				"__hxhx_native_class_name(" + renderExpr(Php, args[0]) + ")";
+			case _:
+				null;
+		}
+	}
+
+	static function phpBootIntrinsicCall(typePath:Null<String>, field:String, args:Array<HxExpr>):Null<String> {
+		if (!phpIsBootTypePath(typePath))
+			return null;
+		return switch (field) {
+			case "getPrefix" if (args.length == 0):
+				quotePhpString("");
+			case "castClass" if (args.length == 1):
+				"__hxhx_class_value(" + renderExpr(Php, args[0]) + ")";
+			case _:
+				null;
+		}
+	}
+
+	static function phpIsBootTypePath(typePath:Null<String>):Bool {
+		return switch (typePath) {
+			case "Boot" | "\\php\\Boot" | "php\\Boot":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function phpIsSyntaxIntrinsicTypePath(typePath:String):Bool {
