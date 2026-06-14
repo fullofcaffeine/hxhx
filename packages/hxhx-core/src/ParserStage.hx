@@ -1193,7 +1193,7 @@ class ParserStage {
 			if (headerTok.text != "{")
 				continue;
 
-			final fields = [new HxFieldDecl("__hx_is_enum", HxVisibility.Public, true, "Bool", EBool(true))];
+			final fields = isEnumAbstract ? [] : [new HxFieldDecl("__hx_is_enum", HxVisibility.Public, true, "Bool", EBool(true))];
 			final functions = new Array<HxFunctionDecl>();
 			if (isEnumAbstract) {
 				final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos);
@@ -1232,7 +1232,8 @@ class ParserStage {
 				}
 			}
 
-			out.push(new HxClassDecl(enumName, false, functions, fields, "", enumMetadata));
+			final classMetadata = isEnumAbstract ? enumMetadata.concat(["__hxhx_abstract"]) : enumMetadata;
+			out.push(new HxClassDecl(enumName, false, functions, fields, "", classMetadata));
 		}
 
 		return out;

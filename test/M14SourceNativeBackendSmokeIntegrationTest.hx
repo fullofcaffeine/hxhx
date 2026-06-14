@@ -3560,6 +3560,43 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedStd], []);
 	}
 
+	static function phpFakeEnumAbstractSwitchProgram():GenIrProgram {
+		final src = [
+			"class HelperMacros {",
+			"  public static function getErrorMessage(e) {",
+			"    return \"runtime\";",
+			"  }",
+			"}",
+			"enum abstract FakeEnumAbstract(Int) {",
+			"  var NotFound = 404;",
+			"  var MethodNotAllowed = 405;",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var a = FakeEnumAbstract.NotFound;",
+			"    var r = switch(a) {",
+			"      case NotFound: 1;",
+			"      case _: 2;",
+			"    };",
+			"    var message = HelperMacros.getErrorMessage(switch(a) {",
+			"      case NotFound:",
+			"    });",
+			"    Sys.println(r);",
+			"    Sys.println(message);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final baseDecl = parsed.getDecl();
+		final main = HxModuleDecl.getMainClass(baseDecl);
+		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main)))
+			.concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(src, HxClassDecl.getName(main)));
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
+		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpStdIoErrorEnumSupportProgram():GenIrProgram {
 		final mainSrc = [
 			"import haxe.io.Error;",
@@ -10030,6 +10067,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpFakeEnumAbstractSwitch():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_fake_enum_abstract_switch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpFakeEnumAbstractSwitchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static $NotFound = 404;", "PHP enum abstract helper fields should preserve primitive initializer values");
+		assertNotContains(content, "FakeEnumAbstract::$NotFound = new __HxAnon", "PHP enum abstract values should not be materialized as real enum objects");
+		assertContains(content, "__hxhx_equals($__hxhx_switch, FakeEnumAbstract::$NotFound)",
+			"PHP enum abstract switch patterns should compare against the primitive static value");
+		assertContains(content, "\"Unmatched patterns: MethodNotAllowed\"", "PHP getErrorMessage should fold fake enum abstract non-exhaustive diagnostics");
+		assertNotContains(content, "getErrorMessage", "PHP fake enum abstract diagnostic should not emit a runtime helper call");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP fake enum abstract switch should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "1\nUnmatched patterns: MethodNotAllowed\n",
+				"generated PHP fake enum abstract switch output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStdIoErrorEnumSupport():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_std_io_error_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15058,6 +15118,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpCyclicObjectStringification();
 		assertPhpEnumString();
 		assertPhpStdEnumAbstractSupport();
+		assertPhpFakeEnumAbstractSwitch();
 		assertPhpStdIoErrorEnumSupport();
 		assertPhpStdIoErrorRuntimeExceptions();
 		assertPhpBitwisePrecedence();
