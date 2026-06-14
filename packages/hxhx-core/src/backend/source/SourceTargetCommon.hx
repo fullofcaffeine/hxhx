@@ -2806,6 +2806,10 @@ class SourceTargetCommon {
 			return "__hxhx_array_join(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
 		if (field == "map" && args.length == 1 && phpArrayBackedReceiver(receiver))
 			return "__hxhx_array_map(" + renderExpr(Php, receiver) + ", " + renderExpr(Php, args[0]) + ")";
+		if (field == "append" && args.length == 1 && phpArrayBackedReceiver(receiver))
+			return "__hxhx_rest_append(" + renderExpr(Php, receiver) + ", " + phpArrayBackedSequenceValue(receiver, args[0]) + ")";
+		if (field == "prepend" && args.length == 1 && phpArrayBackedReceiver(receiver))
+			return "__hxhx_rest_prepend(" + renderExpr(Php, receiver) + ", " + phpArrayBackedSequenceValue(receiver, args[0]) + ")";
 		final mutableReceiver = phpMutableReceiverExpr(receiver);
 		if (mutableReceiver == null)
 			return null;
@@ -2831,6 +2835,11 @@ class SourceTargetCommon {
 			case _:
 				null;
 		};
+	}
+
+	static function phpArrayBackedSequenceValue(receiver:HxExpr, value:HxExpr):String {
+		final itemHint = phpReceiverArrayItemTypeHint(receiver);
+		return isInt64TypeHint(itemHint) ? phpAssignedValueExpr(value, itemHint) : renderExpr(Php, value);
 	}
 
 	static function phpReceiverArrayItemTypeHint(receiver:HxExpr):String {
@@ -20125,6 +20134,20 @@ class SourceTargetCommon {
 				lines.push("  if (is_array($value)) return $value;");
 				lines.push("  if (is_object($value) && method_exists($value, \"toArray\")) return $value->toArray();");
 				lines.push("  return $value;");
+				lines.push("}");
+				lines.push("function __hxhx_rest_append($array, $value) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) $array = [];");
+				lines.push("  $result = array_values($array);");
+				lines.push("  $result[] = $value;");
+				lines.push("  return $result;");
+				lines.push("}");
+				lines.push("function __hxhx_rest_prepend($array, $value) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) $array = [];");
+				lines.push("  $result = array_values($array);");
+				lines.push("  array_unshift($result, $value);");
+				lines.push("  return $result;");
 				lines.push("}");
 				lines.push("function __hxhx_array_get($array, $index) {");
 				lines.push("  if ($array instanceof Map) return $array->get($index);");

@@ -10783,12 +10783,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"      }",
 			"      return {keys: keys, values: values};",
 			"    }",
+			"    function restAppendPrepend(...r:Int) {",
+			"      var appended = r.append(9);",
+			"      var prepended = r.prepend(0);",
+			"      return {initial: r.toArray(), appended: appended.toArray(), prepended: prepended.toArray()};",
+			"    }",
 			"    var kv = restKeyValues(3, 2, 1, 0);",
+			"    var sequence = restAppendPrepend(1, 2);",
 			"    Sys.println(Std.string(restAt(1, 2, 0, 0, 123, 0)));",
 			"    Sys.println(restToArray(1, 2, 3, 4).join(\",\"));",
 			"    Sys.println(restReturn(1, 2, 5, 6).toArray().join(\",\"));",
 			"    Sys.println(restIter(3, 2, 1).join(\",\"));",
 			"    Sys.println(kv.keys.join(\",\") + \":\" + kv.values.join(\",\"));",
+			"    Sys.println(sequence.initial.join(\",\") + \":\" + sequence.appended.join(\",\") + \":\" + sequence.prepended.join(\",\"));",
 			"  }",
 			"}",
 		].join("\n");
@@ -10807,12 +10814,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "(function() use ($r) {", "PHP Rest array comprehensions should capture the Rest array");
 		assertContains(content, "foreach (__hxhx_key_value_iter($r) as $__hx_kv_k_v)",
 			"PHP Rest key/value iteration should lower through the runtime key/value iterator");
+		assertContains(content, "__hxhx_rest_append($r, 9)", "PHP Rest.append on array-backed receivers should lower to a runtime helper");
+		assertContains(content, "__hxhx_rest_prepend($r, 0)", "PHP Rest.prepend on array-backed receivers should lower to a runtime helper");
 		assertNotContains(content, "function($a, $b, $r)", "PHP local Rest functions should not emit Rest as a fixed ordinary parameter");
 		assertNotContains(content, "$__hxhx_for_key_value", "PHP Rest key/value iteration should not emit unresolved helper calls");
+		assertNotContains(content, "$r->append", "PHP Rest.append should not dispatch as an object method on array-backed Rest values");
+		assertNotContains(content, "$r->prepend", "PHP Rest.prepend should not dispatch as an object method on array-backed Rest values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP local Rest array access should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "123\n3,4\n5,6\n3,2,1\n0,1,2,3:3,2,1,0\n", "generated PHP local Rest array access output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "123\n3,4\n5,6\n3,2,1\n0,1,2,3:3,2,1,0\n1,2:1,2,9:0,1,2\n",
+				"generated PHP local Rest array access output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
