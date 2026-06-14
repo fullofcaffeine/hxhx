@@ -17,6 +17,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NODE_VERSION: "20"
   HAXE_VERSION: "4.3.7"
+  # Diagnostic lane follows the same worker policy unless a probe explicitly
+  # overrides it for a measured A/B.
+  HXHX_DUNE_JOBS: "auto"
 
 jobs:
   full1_source_probe:

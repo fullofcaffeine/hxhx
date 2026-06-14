@@ -30,6 +30,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NODE_VERSION: "20"
   HAXE_VERSION: "4.3.7"
+  # Benchmark-backed policy: keep dune worker selection automatic unless a
+  # workflow-specific memory envelope has fresh evidence for a fixed cap.
+  HXHX_DUNE_JOBS: "auto"
   FULL1_GATE3_EXTENDED_ARTIFACTS_DIR: ".artifacts/full1"
   FULL1_GATE3_EXTENDED_TIMINGS_JSONL: ".artifacts/full1/gate3-full1-extended.timings.jsonl"
   # Keep the inner matrix timeout below the job timeout so timeout failures

@@ -24,6 +24,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NODE_VERSION: "20"
   HAXE_VERSION: "4.3.7"
+  # Benchmark-backed policy: keep dune worker selection automatic unless a
+  # workflow-specific memory envelope has fresh evidence for a fixed cap.
+  HXHX_DUNE_JOBS: "auto"
 
 jobs:
   full1_plugin_proofs:

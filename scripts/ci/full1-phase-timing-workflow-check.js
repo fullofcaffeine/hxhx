@@ -3,7 +3,8 @@
  * Guard Full1 phase timing workflow wiring.
  *
  * The timing helper has fixture coverage for record shape; this guard checks
- * that heavy Full1 workflows keep publishing the expected timing artifacts.
+ * that heavy Full1 workflows keep publishing the expected timing artifacts and
+ * keep the benchmark-backed OCaml/dune worker/cache policy explicit.
  */
 
 const fs = require('fs')
@@ -32,6 +33,8 @@ const evalWorkflowPath = '.github/workflows/full1-eval-native.yml'
 const pluginWorkflowPath = '.github/workflows/full1-plugin-parity.yml'
 const macroWorkflowPath = '.github/workflows/macro-runtime-parity-weekly.yml'
 const gate3WorkflowPath = '.github/workflows/gate3-full1-extended.yml'
+const sourceProbeWorkflowPath = '.github/workflows/full1-source-probe.yml'
+const reconcileWorkflowPath = '.github/workflows/full1-bootstrap-source-reconcile.yml'
 
 const suiteWorkflow = read(suiteWorkflowPath)
 const perfWorkflow = read(perfWorkflowPath)
@@ -39,6 +42,8 @@ const evalWorkflow = read(evalWorkflowPath)
 const pluginWorkflow = read(pluginWorkflowPath)
 const macroWorkflow = read(macroWorkflowPath)
 const gate3Workflow = read(gate3WorkflowPath)
+const sourceProbeWorkflow = read(sourceProbeWorkflowPath)
+const reconcileWorkflow = read(reconcileWorkflowPath)
 
 for (const needle of [
   'build_hxhx.timings.jsonl',
@@ -101,6 +106,30 @@ for (const needle of [
   'Summarize Full1 Gate3 extended timings',
 ]) {
   requireIncludes(gate3WorkflowPath, gate3Workflow, needle)
+}
+
+for (const [relPath, workflow] of [
+  [suiteWorkflowPath, suiteWorkflow],
+  [perfWorkflowPath, perfWorkflow],
+  [evalWorkflowPath, evalWorkflow],
+  [pluginWorkflowPath, pluginWorkflow],
+  [macroWorkflowPath, macroWorkflow],
+  [gate3WorkflowPath, gate3Workflow],
+  [sourceProbeWorkflowPath, sourceProbeWorkflow],
+  [reconcileWorkflowPath, reconcileWorkflow],
+]) {
+  requireIncludes(relPath, workflow, 'HXHX_DUNE_JOBS:')
+  if (!workflow.includes('HXHX_DUNE_JOBS: "auto"') && !workflow.includes("HXHX_DUNE_JOBS: 'auto'")) {
+    fail(`${relPath} must keep benchmark-backed HXHX_DUNE_JOBS=auto explicit`)
+  }
+}
+
+for (const [relPath, workflow] of [
+  [perfWorkflowPath, perfWorkflow],
+  [pluginWorkflowPath, pluginWorkflow],
+]) {
+  requireIncludes(relPath, workflow, 'uses: ocaml/setup-ocaml@v3')
+  requireIncludes(relPath, workflow, 'dune-cache: true')
 }
 
 console.log('[full1-phase-timing-workflow-check] ok')

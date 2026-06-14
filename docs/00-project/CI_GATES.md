@@ -116,6 +116,13 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 
 Heavy Full1 workflows use event+ref scoped concurrency and cancel stale in-progress reruns so manual retries and scheduled evidence runs do not pile up behind obsolete work.
 
+Heavy Full1 OCaml/dune worker and cache policy:
+- Full1 workflows that build `hxhx`, macro host artifacts, or plugin/eval proof binaries keep `HXHX_DUNE_JOBS=auto` explicit.
+- Fixed worker caps such as `HXHX_DUNE_JOBS=2` or `HXHX_DUNE_JOBS=4` are allowed only for a workflow-specific memory/throughput experiment with fresh evidence.
+- Current benchmark source: `docs/benchmarks/STAGE0_BOOTSTRAP_THROUGHPUT_2026_03_05.md`.
+  In that bounded matrix, fixed worker settings increased peak RSS compared with `auto`, so `auto` remains the default.
+- Workflows that already require `ocaml/setup-ocaml` for opam-backed proof setup keep `dune-cache: true`; apt-based Full1 lanes should not be converted to opam/setup-ocaml without comparable timing/RSS evidence.
+
 Full1 suite runner timing artifacts:
 - build jobs emit `build_hxhx.timings.*` and `build_macro_host.timings.*`
 - suite jobs emit `<suite>.timings.jsonl`, `<suite>.timings.summary.json`, and `<suite>.timings.md`
