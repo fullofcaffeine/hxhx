@@ -42063,6 +42063,8 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_add($left, $right) {");
       ignore (HxArray.push lines "  if (is_string($left) || is_string($right)) return __hxhx_add_string($left) . __hxhx_add_string($right);");
+      ignore (HxArray.push lines "  if ($left === null && (is_int($right) || is_float($right))) return $right;");
+      ignore (HxArray.push lines "  if ($right === null && (is_int($left) || is_float($left))) return $left;");
       ignore (HxArray.push lines "  if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) return __hxhx_int64_add($left, $right);");
       ignore (HxArray.push lines "  if (__hxhx_is_point3($left) && __hxhx_is_point3($right)) return __hxhx_point3($left->x + $right->x, $left->y + $right->y, $left->z + $right->z);");
       ignore (HxArray.push lines "  $leftAbstract = is_object($left) && property_exists($left, \"__hx_value\");");

@@ -3514,6 +3514,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpDynamicAddOrConcatNullProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function add(a:Dynamic, b:Dynamic):Dynamic return a + b;",
+			"  static function main() {",
+			"    Sys.println(Std.string(add(1, \"a\")));",
+			"    Sys.println(Std.string(add(\"a\", 1)));",
+			"    Sys.println(Std.string(add(\"a\", \"b\")));",
+			"    Sys.println(Std.string(add(1, null)));",
+			"    Sys.println(Std.string(add(null, 1)));",
+			"    Sys.println(Std.string(add(\"a\", null)));",
+			"    Sys.println(Std.string(add(null, \"b\")));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpEnumStringProgram():GenIrProgram {
 		final src = [
 			"enum MyEnum {",
@@ -10130,6 +10150,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpDynamicAddOrConcatNullSemantics():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_dynamic_add_or_concat_null_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpDynamicAddOrConcatNullProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "return __hxhx_add($a, $b);", "PHP dynamic add helper should lower through the Haxe add runtime helper");
+		assertContains(content, "Main::add(1, null)", "PHP dynamic numeric/null add calls should keep null operands");
+		assertContains(content, "Main::add(\"a\", null)", "PHP dynamic string/null add calls should keep null operands");
+		assertContains(content, "if ($left === null && (is_int($right) || is_float($right))) return $right;",
+			"PHP add helper should treat null as zero for dynamic numeric add");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP dynamic add-or-concat null support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "1a\na1\nab\n1\n1\nanull\nnullb\n", "generated PHP dynamic add-or-concat null output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpAnonymousToStringField():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_anon_to_string_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15491,6 +15532,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNativeProtocolSourceFieldNullHintDecode();
 		assertNullableLocalTypeInferenceForMacroTypeof();
 		assertPhpPlusSemantics();
+		assertPhpDynamicAddOrConcatNullSemantics();
 		assertPhpAnonymousToStringField();
 		assertPhpCyclicObjectStringification();
 		assertPhpEnumString();
