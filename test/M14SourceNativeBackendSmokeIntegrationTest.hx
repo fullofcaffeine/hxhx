@@ -3961,6 +3961,36 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStringMethodClosureProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var fn:Dynamic = \"foo\".toUpperCase;",
+			"    Sys.println(Type.getClassName(Type.getClass(fn)).split(\".\").pop());",
+			"    Sys.println(fn());",
+			"    var reflected:Dynamic = Reflect.field(\"bar\", \"split\");",
+			"    Sys.println(reflected(\"a\")[1]);",
+			"    var str = \"bar\";",
+			"    var anon:{",
+			"      function toUpperCase():String;",
+			"      function split(delimiter:String):Array<String>;",
+			"      function charAt(index:Int):String;",
+			"      function substring(startIndex:Int, ?endIndex:Int):String;",
+			"      function toString():String;",
+			"    } = str;",
+			"    Sys.println(anon.toUpperCase());",
+			"    Sys.println(anon.split(\"a\")[1]);",
+			"    Sys.println(anon.charAt(1));",
+			"    Sys.println(anon.substring(0, 2));",
+			"    Sys.println(anon.toString());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpStringToolsReplaceProgram():GenIrProgram {
 		final dollar = "$";
 		final src = [
@@ -10609,6 +10639,32 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpStringMethodClosure():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_method_closure_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpStringMethodClosureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "new HxDynamicStr(\"foo\", \"toUpperCase\")", "PHP string method values should lower to HxDynamicStr callables");
+		assertContains(content, "class HxDynamicStr", "PHP runtime should expose the dynamic string method callable");
+		assertContains(content, "if (is_string($object) && __hxhx_string_method_exists($field)) return new HxDynamicStr($object, $field);",
+			"PHP Reflect.field should expose string method values");
+		assertContains(content, "__hxhx_array_pop_value(__hxhx_string_split(Type::getClassName(Type::getClass($fn)), \".\"))",
+			"PHP split/pop on a known string result should lower without raw string or array object calls");
+		assertContains(content, "__hxhx_string_char_at($anon, 1)", "PHP structural string charAt calls should lower through the helper");
+		assertContains(content, "__hxhx_string_substring($anon, 0, 2)", "PHP structural string substring calls should lower through the helper");
+		assertNotContains(content, "\"foo\"->toUpperCase", "PHP string method values should not emit object field access on raw strings");
+		assertNotContains(content, "$str->split", "PHP structural string split calls should not emit object method calls on raw strings");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP string method closures should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "HxDynamicStr\nFOO\nr\nBAR\nr\na\nba\nbar\n", "generated PHP string method closure output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpStringToolsReplace():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_string_tools_replace_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15552,6 +15608,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStdRandomRuntime();
 		assertPhpTernaryAssignmentLogical();
 		assertPhpStringIndexOf();
+		assertPhpStringMethodClosure();
 		assertPhpStringToolsReplace();
 		assertPhpStringFromCharCode();
 		assertPhpWebShim();

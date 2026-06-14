@@ -2137,6 +2137,9 @@ class SourceTargetCommon {
 					return "__hxhx_length(" + renderExpr(target, receiver) + ")";
 				if (field == "code" && phpStringLikeReceiver(receiver))
 					return "__hxhx_string_char_code_at(" + renderExpr(target, receiver) + ", 0)";
+				final stringMethodValue = phpStringMethodValueClosure(receiver, field);
+				if (stringMethodValue != null)
+					return stringMethodValue;
 				if ((field == "keys" || field == "iterator")
 					&& phpReceiverHasInstanceMethod(receiver, field)
 					&& !phpReceiverHasInstanceField(receiver, field))
@@ -2222,6 +2225,12 @@ class SourceTargetCommon {
 	static function phpMethodValueClosure(receiver:HxExpr, field:String):String {
 		final renderedReceiver = renderExpr(Php, receiver);
 		return "(function() use (" + renderedReceiver + ") { return " + renderedReceiver + "->" + sanitizeTypeName(field) + "(); })";
+	}
+
+	static function phpStringMethodValueClosure(receiver:HxExpr, field:String):Null<String> {
+		if (!phpStringMethodField(field) || !phpStringMethodReceiver(receiver, field))
+			return null;
+		return "new HxDynamicStr(" + renderExpr(Php, receiver) + ", " + quotePhpString(sanitizeTypeName(field)) + ")";
 	}
 
 	static function phpReceiverExpr(receiver:HxExpr):String {
@@ -2471,6 +2480,8 @@ class SourceTargetCommon {
 				final arrayCall = phpArrayFieldCall(receiver, field, phpArgs);
 				if (arrayCall != null)
 					return arrayCall;
+				if (field == "pop" && args.length == 0 && phpArrayResultReceiver(receiver))
+					return "__hxhx_array_pop_value(" + renderExpr(Php, receiver) + ")";
 				if (field == "toArray" && args.length == 0)
 					return "__hxhx_to_array(" + renderExpr(Php, receiver) + ")";
 				if (field == "iterator" && args.length == 0)
@@ -2954,11 +2965,13 @@ class SourceTargetCommon {
 	}
 
 	static function phpStringFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
-		if (!phpStringLikeReceiver(receiver) && !phpVariableStringReceiver(receiver, field) && !phpKnownStringResultReceiver(receiver))
+		if (!phpStringMethodReceiver(receiver, field))
 			return null;
 		final renderedReceiver = renderExpr(Php, receiver);
 		final renderedArgs = [for (arg in args) renderExpr(Php, arg)];
 		return switch (field) {
+			case "charAt" if (args.length == 1):
+				"__hxhx_string_char_at(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "indexOf":
 				"__hxhx_string_index_of(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "lastIndexOf":
@@ -2969,8 +2982,12 @@ class SourceTargetCommon {
 				"__hxhx_string_char_code_at(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "substr" if (args.length == 1 || args.length == 2):
 				"__hxhx_string_substr(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "substring" if (args.length == 1 || args.length == 2):
+				"__hxhx_string_substring(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
 			case "replace" if (args.length == 2):
 				"StringTools::replace(" + ([renderedReceiver].concat(renderedArgs)).join(", ") + ")";
+			case "toString" if (args.length == 0):
+				"__hxhx_string_value(" + renderedReceiver + ")";
 			case "toUpperCase" if (args.length == 0):
 				"strtoupper(__hxhx_string_value(" + renderedReceiver + "))";
 			case "toLowerCase" if (args.length == 0):
@@ -3052,6 +3069,8 @@ class SourceTargetCommon {
 		return switch (receiver) {
 			case EField(_, "message"):
 				true;
+			case ECall(EField(EIdent("Type"), "getClassName"), _):
+				true;
 			case ECall(EField(base, field), args):
 				switch (field) {
 					case "matched" | "matchedLeft" | "matchedRight":
@@ -3072,6 +3091,10 @@ class SourceTargetCommon {
 		};
 	}
 
+	static function phpStringMethodReceiver(receiver:HxExpr, field:String):Bool {
+		return phpStringLikeReceiver(receiver) || phpVariableStringReceiver(receiver, field) || phpKnownStringResultReceiver(receiver);
+	}
+
 	static function phpVariableStringReceiver(receiver:HxExpr, field:String):Bool {
 		return switch (receiver) {
 			case EIdent(name):
@@ -3079,9 +3102,10 @@ class SourceTargetCommon {
 				if (hint == "EReg")
 					return false;
 				if (hint.length > 0)
-					return hint == "String";
+					return isStringTypeHint(phpUnwrapNullTypeHint(hint)) || phpStructuralStringMethodHint(hint, field);
 				switch (field) {
-					case "indexOf" | "lastIndexOf" | "split" | "charCodeAt" | "substr" | "replace":
+					case "charAt" | "indexOf" | "lastIndexOf" | "split" | "charCodeAt" | "substr" | "substring" | "replace" | "toString" | "toUpperCase" |
+						"toLowerCase":
 						true;
 					case _:
 						false;
@@ -3089,6 +3113,23 @@ class SourceTargetCommon {
 			case _:
 				false;
 		};
+	}
+
+	static function phpStringMethodField(field:String):Bool {
+		return switch (field) {
+			case "charAt" | "indexOf" | "lastIndexOf" | "split" | "charCodeAt" | "substr" | "substring" | "replace" | "toString" | "toUpperCase" |
+				"toLowerCase":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function phpStructuralStringMethodHint(typeHint:String, field:String):Bool {
+		if (!phpStringMethodField(field))
+			return false;
+		final compact = removeTypeHintWhitespace(typeHint);
+		return compact.indexOf("function" + field + "(") >= 0 || compact.indexOf(field + "(") >= 0 && compact.indexOf("String") >= 0;
 	}
 
 	static function phpERegLikeReceiver(receiver:HxExpr):Bool {
@@ -3113,6 +3154,16 @@ class SourceTargetCommon {
 			case EBinop("+", left, right): phpStringLikeReceiver(left) || phpStringLikeReceiver(right);
 			case ECall(EField(EIdent("Std"), "string"), _):
 				true;
+			case _:
+				false;
+		};
+	}
+
+	static function phpArrayResultReceiver(receiver:HxExpr):Bool {
+		return switch (receiver) {
+			case ECall(EField(base, "split"), args): args.length == 1 && phpStringMethodReceiver(base, "split");
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				phpArrayResultReceiver(inner);
 			case _:
 				false;
 		};
@@ -20002,6 +20053,42 @@ class SourceTargetCommon {
 				lines.push("    return $this->toString();");
 				lines.push("  }");
 				lines.push("}");
+				lines.push("class HxDynamicStr {");
+				lines.push("  public $__hx_string_value;");
+				lines.push("  public $__hx_field;");
+				lines.push("  public function __construct($value, $field = null) {");
+				lines.push("    $this->__hx_string_value = __hxhx_string_value($value);");
+				lines.push("    $this->__hx_field = $field;");
+				lines.push("  }");
+				lines.push("  private function __hx_call($name, $args) {");
+				lines.push("    switch ($name) {");
+				lines.push("      case \"charAt\": return __hxhx_string_char_at($this->__hx_string_value, $args[0] ?? 0);");
+				lines.push("      case \"indexOf\": return __hxhx_string_index_of($this->__hx_string_value, $args[0] ?? \"\", $args[1] ?? 0);");
+				lines.push("      case \"lastIndexOf\": return __hxhx_string_last_index_of($this->__hx_string_value, $args[0] ?? \"\", $args[1] ?? null);");
+				lines.push("      case \"split\": return __hxhx_string_split($this->__hx_string_value, $args[0] ?? \"\");");
+				lines.push("      case \"charCodeAt\": return __hxhx_string_char_code_at($this->__hx_string_value, $args[0] ?? 0);");
+				lines.push("      case \"substr\": return __hxhx_string_substr($this->__hx_string_value, $args[0] ?? 0, $args[1] ?? null);");
+				lines.push("      case \"substring\": return __hxhx_string_substring($this->__hx_string_value, $args[0] ?? 0, $args[1] ?? null);");
+				lines.push("      case \"toString\": return $this->__hx_string_value;");
+				lines.push("      case \"toUpperCase\": return strtoupper($this->__hx_string_value);");
+				lines.push("      case \"toLowerCase\": return strtolower($this->__hx_string_value);");
+				lines.push("    }");
+				lines.push("    return null;");
+				lines.push("  }");
+				lines.push("  public function __invoke(...$args) { return $this->__hx_call($this->__hx_field, $args); }");
+				lines.push("  public function __call($name, $args) { return $this->__hx_call($name, $args); }");
+				lines.push("  public function charAt($index) { return $this->__hx_call(\"charAt\", [$index]); }");
+				lines.push("  public function indexOf($needle, $start = 0) { return $this->__hx_call(\"indexOf\", [$needle, $start]); }");
+				lines.push("  public function lastIndexOf($needle, $start = null) { return $this->__hx_call(\"lastIndexOf\", [$needle, $start]); }");
+				lines.push("  public function split($delimiter) { return $this->__hx_call(\"split\", [$delimiter]); }");
+				lines.push("  public function charCodeAt($index) { return $this->__hx_call(\"charCodeAt\", [$index]); }");
+				lines.push("  public function substr($pos, $len = null) { return $this->__hx_call(\"substr\", [$pos, $len]); }");
+				lines.push("  public function substring($start, $end = null) { return $this->__hx_call(\"substring\", [$start, $end]); }");
+				lines.push("  public function toString() { return $this->__hx_string_value; }");
+				lines.push("  public function toUpperCase() { return $this->__hx_call(\"toUpperCase\", []); }");
+				lines.push("  public function toLowerCase() { return $this->__hx_call(\"toLowerCase\", []); }");
+				lines.push("  public function __toString() { return $this->__hx_string_value; }");
+				lines.push("}");
 				lines.push("class Lambda {");
 				lines.push("  private static function toArray($value) {");
 				lines.push("    if ($value instanceof __HxArray) return array_values($value->toArray());");
@@ -20090,6 +20177,7 @@ class SourceTargetCommon {
 				lines.push("    return true;");
 				lines.push("  }");
 				lines.push("  public static function field($object, $field) {");
+				lines.push("    if (is_string($object) && __hxhx_string_method_exists($field)) return new HxDynamicStr($object, $field);");
 				lines.push("    if (is_object($object) && property_exists($object, $field)) return $object->$field;");
 				lines.push("    if (is_object($object) && method_exists($object, $field)) return function(...$__hxhx_args) use ($object, $field) { return $object->$field(...$__hxhx_args); };");
 				lines.push("    if (is_array($object) && array_key_exists($field, $object)) return $object[$field];");
@@ -20432,6 +20520,11 @@ class SourceTargetCommon {
 				lines.push("    if (!is_array($array->__hx_value) || count($array->__hx_value) === 0) return null;");
 				lines.push("    return array_pop($array->__hx_value);");
 				lines.push("  }");
+				lines.push("  if (!is_array($array) || count($array) === 0) return null;");
+				lines.push("  return array_pop($array);");
+				lines.push("}");
+				lines.push("function __hxhx_array_pop_value($array) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
 				lines.push("  if (!is_array($array) || count($array) === 0) return null;");
 				lines.push("  return array_pop($array);");
 				lines.push("}");
@@ -21164,6 +21257,7 @@ class SourceTargetCommon {
 				lines.push("function __hxhx_field($obj, $field) {");
 				lines.push("  $name = strval($field);");
 				lines.push("  if ($obj === null) throw ValueException::thrown(\"NPE\");");
+				lines.push("  if (is_string($obj) && __hxhx_string_method_exists($name)) return new HxDynamicStr($obj, $name);");
 				lines.push("  if (is_object($obj)) {");
 				lines.push("    if (property_exists($obj, $name)) return $obj->$name;");
 				lines.push("    if (__hxhx_is_int64($obj) && $name === \"toStr\") return function() use ($obj) { return __hxhx_int64_to_string($obj); };");
@@ -21236,6 +21330,11 @@ class SourceTargetCommon {
 				lines.push("  if ($d === \"\") return str_split($s);");
 				lines.push("  return explode($d, $s);");
 				lines.push("}");
+				lines.push("function __hxhx_string_char_at($value, $index) {");
+				lines.push("  $s = __hxhx_string_value($value);");
+				lines.push("  $i = (int)$index;");
+				lines.push("  return ($i < 0 || $i >= strlen($s)) ? \"\" : $s[$i];");
+				lines.push("}");
 				lines.push("function __hxhx_string_char_code_at($value, $index) {");
 				lines.push("  $s = __hxhx_string_value($value);");
 				lines.push("  $i = (int)$index;");
@@ -21247,6 +21346,20 @@ class SourceTargetCommon {
 				lines.push("  $p = (int)$pos;");
 				lines.push("  $result = $len === null ? substr($s, $p) : substr($s, $p, (int)$len);");
 				lines.push("  return $result === false ? \"\" : $result;");
+				lines.push("}");
+				lines.push("function __hxhx_string_substring($value, $start, $end = null) {");
+				lines.push("  $s = __hxhx_string_value($value);");
+				lines.push("  $len = strlen($s);");
+				lines.push("  $a = max(0, min($len, (int)$start));");
+				lines.push("  $b = $end === null ? $len : max(0, min($len, (int)$end));");
+				lines.push("  if ($a > $b) { $tmp = $a; $a = $b; $b = $tmp; }");
+				lines.push("  return substr($s, $a, $b - $a);");
+				lines.push("}");
+				lines.push("function __hxhx_string_method_exists($name) {");
+				lines.push("  switch (strval($name)) {");
+				lines.push("    case \"charAt\": case \"indexOf\": case \"lastIndexOf\": case \"split\": case \"charCodeAt\": case \"substr\": case \"substring\": case \"toString\": case \"toUpperCase\": case \"toLowerCase\": return true;");
+				lines.push("  }");
+				lines.push("  return false;");
 				lines.push("}");
 				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
 				lines.push("  $old = $obj->$field;");
