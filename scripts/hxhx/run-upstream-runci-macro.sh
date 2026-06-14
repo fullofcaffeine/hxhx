@@ -143,6 +143,14 @@ kill_process_tree_hard() {
   kill -KILL "$pid" 2>/dev/null || true
 }
 
+validate_current_source_hxhx_bin_if_requested() {
+  if [ "${HXHX_REQUIRE_CURRENT_SOURCE_BIN:-0}" != "1" ]; then
+    return 0
+  fi
+  HXHX_BIN="$(bash "$ROOT/scripts/hxhx/validate-current-source-hxhx-bin.sh" "$HXHX_BIN")"
+  export HXHX_BIN
+}
+
 run_with_gate2_timeout_and_heartbeat() {
   local timeout_sec="$1"
   shift
@@ -1199,6 +1207,7 @@ if [ -n "${HXHX_BIN:-}" ]; then
     *) : ;; # bare command name, assume it is on PATH
   esac
 fi
+validate_current_source_hxhx_bin_if_requested
 
 if { [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3_no_emit_direct" ]; } && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
   # Prefer the repo's committed bootstrap macro host snapshot so this rung stays stage0-free

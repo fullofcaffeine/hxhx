@@ -243,6 +243,8 @@
     "test:full1:source-probe": "node scripts/ci/full1-source-probe.js",
     "test:full1:bootstrap-source-reconcile": "node scripts/ci/full1-bootstrap-source-reconcile.js",
     "hxhx:dist": "bash scripts/hxhx/build-dist.sh",
+    "hxhx:build-current-source": "bash scripts/hxhx/build-current-source-hxhx.sh",
+    "hxhx:validate-current-source-bin": "bash scripts/hxhx/validate-current-source-hxhx-bin.sh",
     "hxhx:build-plugin": "bash scripts/hxhx/build-backend-plugin.sh",
     "hxhx:plugin:init": "bash scripts/hxhx/plugin-init.sh",
     "hxhx:plugin:promote-backend": "bash scripts/hxhx/promote-backend-plugin.sh",

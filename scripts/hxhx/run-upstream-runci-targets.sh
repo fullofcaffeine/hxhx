@@ -171,6 +171,14 @@ kill_process_tree() {
   kill "-$signal" "$pid" 2>/dev/null || true
 }
 
+validate_current_source_hxhx_bin_if_requested() {
+  if [ "${HXHX_REQUIRE_CURRENT_SOURCE_BIN:-0}" != "1" ]; then
+    return 0
+  fi
+  HXHX_BIN="$(bash "$ROOT/scripts/hxhx/validate-current-source-hxhx-bin.sh" "$HXHX_BIN")"
+  export HXHX_BIN
+}
+
 die_or_skip() {
   local msg="$1"
   if [ "$allow_skip" = "1" ]; then
@@ -672,6 +680,7 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
   echo "Failed to build stage1 hxhx binary." >&2
   exit 1
 fi
+validate_current_source_hxhx_bin_if_requested
 
 WRAP_DIR="$(mktemp -d)"
 

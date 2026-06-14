@@ -61,6 +61,32 @@ Useful markers:
 - Gate 2 Stage3 emit-runner attempts print `gate2_stage3_emit_runner_start`,
   `gate2_stage3_emit_runner_heartbeat`, and `gate2_stage3_emit_runner_end status=<pass|fail|timeout> exit=<code> elapsed=<sec>s`.
 
+## Build A Fresh Current-Source `HXHX_BIN`
+
+Use this when a Full1 blocker might be fixed in source but not yet reflected in
+the committed bootstrap snapshot:
+
+```bash
+npm run -s hxhx:build-current-source
+source packages/hxhx/out/hxhx-current-source.env
+HXHX_REQUIRE_CURRENT_SOURCE_BIN=1 HXHX_BIN="$HXHX_BIN" \
+  HXHX_GATE3_TARGETS=Js npm run -s test:upstream:runci-targets
+```
+
+What this loop guarantees:
+
+- `hxhx:build-current-source` forces `HXHX_FORCE_STAGE0=1`, so the binary is
+  built from the current source tree rather than the committed bootstrap
+  snapshot.
+- `packages/hxhx/out/hxhx-current-source.env` records the binary path, git HEAD,
+  dirty/clean state, tracked-status hash, and build duration.
+- `HXHX_REQUIRE_CURRENT_SOURCE_BIN=1` makes Gate2/Gate3 local repro runners fail
+  fast if `HXHX_BIN` is missing provenance metadata, points at a different
+  binary, or was built from a different tracked checkout state.
+- If you intentionally want to reuse a stale proof binary for diagnosis only,
+  set `HXHX_CURRENT_SOURCE_ALLOW_STALE=1`; do not use stale-binary evidence for
+  closure notes.
+
 ## Source-Build Probe (Non-Blocking Diagnostic Lane)
 
 Use this when you need to check whether a source-only fix works before bootstrap snapshots catch up.
