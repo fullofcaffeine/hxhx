@@ -154,6 +154,9 @@ run_with_gate2_timeout_and_heartbeat() {
 
   "$@" &
   local cmd_pid="$!"
+  local start_epoch
+  start_epoch="$(date +%s)"
+  echo "gate2_stage3_emit_runner_start pid=${cmd_pid} timeout=${timeout_sec}s heartbeat=${HXHX_GATE2_RUNCI_HEARTBEAT_SEC}s"
   local timed_out_file=""
   local timeout_watcher_pid=""
   local heartbeat_pid=""
@@ -203,10 +206,21 @@ run_with_gate2_timeout_and_heartbeat() {
 
   if [ -s "$timed_out_file" ]; then
     rm -f "$timed_out_file"
+    local timeout_end_epoch
+    timeout_end_epoch="$(date +%s)"
+    echo "gate2_stage3_emit_runner_end status=timeout exit=124 elapsed=$((timeout_end_epoch - start_epoch))s pid=${cmd_pid}"
     return 124
   fi
 
   rm -f "$timed_out_file"
+  local end_epoch
+  local status_label
+  end_epoch="$(date +%s)"
+  status_label="fail"
+  if [ "$code" -eq 0 ]; then
+    status_label="pass"
+  fi
+  echo "gate2_stage3_emit_runner_end status=${status_label} exit=${code} elapsed=$((end_epoch - start_epoch))s pid=${cmd_pid}"
   return "$code"
 }
 

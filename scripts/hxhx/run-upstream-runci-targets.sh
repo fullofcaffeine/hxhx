@@ -947,6 +947,9 @@ run_target_attempt_with_watch() {
   set +e
   run_target_attempt "$target" "$t_lower" &
   target_pid="$!"
+  local attempt_start_epoch
+  attempt_start_epoch="$(date +%s)"
+  echo "gate3_target_attempt_start target=${target} attempt=${attempt}/${max_attempts} pid=${target_pid} heartbeat=${target_heartbeat_sec}s timeout=${target_timeout_sec}s"
 
   if [ "$target_heartbeat_sec" -gt 0 ]; then
     (
@@ -1010,6 +1013,19 @@ run_target_attempt_with_watch() {
     fi
     rm -f "$timeout_marker"
   fi
+
+  local attempt_end_epoch
+  local attempt_elapsed
+  local attempt_status
+  attempt_end_epoch="$(date +%s)"
+  attempt_elapsed="$((attempt_end_epoch - attempt_start_epoch))"
+  attempt_status="fail"
+  if [ "$code" -eq 0 ]; then
+    attempt_status="pass"
+  elif [ "$code" -eq 124 ]; then
+    attempt_status="timeout"
+  fi
+  echo "gate3_target_attempt_end target=${target} attempt=${attempt}/${max_attempts} status=${attempt_status} exit=${code} elapsed=${attempt_elapsed}s pid=${target_pid}"
 
   return "$code"
 }

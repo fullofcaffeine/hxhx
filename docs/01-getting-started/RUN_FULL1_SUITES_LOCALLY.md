@@ -48,6 +48,19 @@ Each command writes:
 npm run -s test:full1:suites:strict
 ```
 
+## Monitor Long Local Runs
+
+Use one attached terminal/session per heavy local gate and treat that output as
+the source of truth. Do not decide that a run is finished from stale `ps`
+polling alone.
+
+Useful markers:
+
+- Gate 3 target attempts print `gate3_target_attempt_start`,
+  `gate3_target_heartbeat`, and `gate3_target_attempt_end status=<pass|fail|timeout> exit=<code> elapsed=<sec>s`.
+- Gate 2 Stage3 emit-runner attempts print `gate2_stage3_emit_runner_start`,
+  `gate2_stage3_emit_runner_heartbeat`, and `gate2_stage3_emit_runner_end status=<pass|fail|timeout> exit=<code> elapsed=<sec>s`.
+
 ## Source-Build Probe (Non-Blocking Diagnostic Lane)
 
 Use this when you need to check whether a source-only fix works before bootstrap snapshots catch up.
