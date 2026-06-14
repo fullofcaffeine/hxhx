@@ -1854,10 +1854,26 @@ class ParserStageScanHelpers {
 					false;
 			};
 		}
-		return switch (stmts) {
-			case [SReturn(expr, _)]:
-				!hasUnsupportedExpr(expr);
-			case [SVar(_, _, init, _), SReturn(ret, _)]: !hasUnsupportedExpr(init) && !hasUnsupportedExpr(ret);
+		// Keep scanned static helper bodies only when they are linear and every
+		// statement is understood by the current source-native lowering path.
+		for (stmt in stmts) {
+			switch (stmt) {
+				case SVar(_, _, init, _):
+					if (hasUnsupportedExpr(init))
+						return false;
+				case SExpr(expr, _):
+					if (hasUnsupportedExpr(expr))
+						return false;
+				case SReturn(expr, _):
+					if (hasUnsupportedExpr(expr))
+						return false;
+				case _:
+					return false;
+			}
+		}
+		return switch (stmts[stmts.length - 1]) {
+			case SReturn(_, _):
+				true;
 			case _:
 				false;
 		};

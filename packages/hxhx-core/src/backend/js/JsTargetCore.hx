@@ -1051,6 +1051,9 @@ class JsTargetCore implements ITargetCore {
 		if (fullName == "haxe.ds.Vector")
 			return emitVectorStaticFunctionBody(writer, fnName, params);
 
+		if (fullName == "haxe.Int64")
+			return emitHaxeInt64StaticFunctionBody(writer, fnName, params);
+
 		if (fullName == "Std")
 			return emitStdStaticFunctionBody(writer, fnName, params);
 
@@ -2265,6 +2268,33 @@ class JsTargetCore implements ITargetCore {
 
 	static function emitVectorFromArrayCopyBody(writer:JsWriter, array:String):Void {
 		writer.writeln("return " + array + " == null ? null : " + array + ".slice();");
+	}
+
+	static function emitHaxeInt64StaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {
+		switch (fnName) {
+			case "compare" | "ucompare":
+				if (params.length < 2)
+					return false;
+				final left = params[0];
+				final right = params[1];
+				final highExpr = fnName == "ucompare" ? "((__hx_value.high >>> 0) * 4294967296)" : "(__hx_value.high * 4294967296)";
+				writer.writeln("var __hx_to_number = function(__hx_value) {");
+				writer.pushIndent();
+				writer.writeln("if (__hx_value && typeof __hx_value === \"object\" && __hx_value.high != null && __hx_value.low != null) {");
+				writer.pushIndent();
+				writer.writeln("return " + highExpr + " + (__hx_value.low >>> 0);");
+				writer.popIndent();
+				writer.writeln("}");
+				writer.writeln("return Number(__hx_value);");
+				writer.popIndent();
+				writer.writeln("};");
+				writer.writeln("var __hx_left = __hx_to_number(" + left + ");");
+				writer.writeln("var __hx_right = __hx_to_number(" + right + ");");
+				writer.writeln("return __hx_left < __hx_right ? -1 : (__hx_left > __hx_right ? 1 : 0);");
+				return true;
+			case _:
+				return false;
+		}
 	}
 
 	static function emitHaxeIoBytesStaticFunctionBody(writer:JsWriter, fnName:String, params:Array<String>):Bool {

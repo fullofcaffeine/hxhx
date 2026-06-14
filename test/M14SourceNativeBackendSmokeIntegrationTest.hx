@@ -1657,6 +1657,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpStaticMethodArrayMutationProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(Class2146.test()));",
+			"  }",
+			"}",
+			"private class DummyForRef {",
+			"  public var field:Int = 0;",
+			"  public function new() {}",
+			"  public function getThis() return this;",
+			"}",
+			"class Class2146 {",
+			"  var array:Array<Class2146>;",
+			"  function new() {",
+			"    array = new Array<Class2146>();",
+			"  }",
+			"  public static function test() {",
+			"    var a = new Class2146();",
+			"    var b = new Class2146();",
+			"    var c = new Class2146();",
+			"    a.array.push(b);",
+			"    b.array.push(a);",
+			"    c.array.push(a);",
+			"    return Lambda.has(c.array,b);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final baseDecl = parsed.getDecl();
+		final main = HxModuleDecl.getMainClass(baseDecl);
+		final helpers = ParserStageScanHelpers.scanModuleLocalHelperClasses(src, HxClassDecl.getName(main));
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, [main].concat(helpers),
+			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
+		final typed = TyperStage.typeModule(new ParsedModule(src, enriched, "Main.hx"));
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpCallStackProgram():GenIrProgram {
 		final src = [
 			"import haxe.CallStack;",
@@ -11518,6 +11556,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "ok", "generated PHP Array.push should append the value");
 		}
 		deleteRecursive(pushTmpRoot);
+
+		final staticBodyTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_static_method_array_mutation_" + Std.string(Date.now().getTime()));
+		deleteRecursive(staticBodyTmpRoot);
+		FileSystem.createDirectory(staticBodyTmpRoot);
+		backend.emit(phpStaticMethodArrayMutationProgram(), new BackendContext(staticBodyTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final staticBodyContent = File.getContent(Path.join([staticBodyTmpRoot, "index.php"]));
+		assertContains(staticBodyContent, "$a = new Class2146();", "PHP static helper method bodies should retain local construction");
+		assertContains(staticBodyContent, "__hxhx_array_push($a->array, $b)", "PHP static helper method bodies should retain instance array pushes");
+		assertContains(staticBodyContent, "return Lambda::has($c->array, $b);", "PHP static helper method bodies should retain Lambda.has returns");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [Path.join([staticBodyTmpRoot, "index.php"])]);
+			assertTrue(run.code == 0, "generated PHP static method array mutation support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "false\n", "generated PHP static method array mutation output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(staticBodyTmpRoot);
 
 		final stackTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_call_stack_" + Std.string(Date.now().getTime()));
 		deleteRecursive(stackTmpRoot);
