@@ -1272,6 +1272,8 @@ class SourceTargetCommon {
 				if (target == Php) phpLambdaExpr(lambdaArgs, lambdaBody, [], [], optionalArgNames, restIndex); else lambdaExpr(target, lambdaArgs, lambdaBody);
 			case ECall(ELambda(lambdaArgs, lambdaBody), args):
 				lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
+			case ECall(EThis, args) if (target == Php && phpRenderThisValueSlot):
+				callExpr(Php, "(" + phpThisValueExpr() + ")", args);
 			case ECall(ESuper, args):
 				superConstructorCallExpr(target, args);
 			case ECall(callee, args):
@@ -2282,6 +2284,8 @@ class SourceTargetCommon {
 			final testHelper = phpTestHelperCall(callee, rendered);
 			if (testHelper != null)
 				return testHelper;
+			if (callee == "$this" && phpRenderThisValueSlot)
+				return "(" + phpThisValueExpr() + ")(" + rendered + ")";
 			return callee + "(" + rendered + ")";
 		}
 		final rendered = renderedArgs.join(", ");
@@ -16008,10 +16012,11 @@ class SourceTargetCommon {
 		final classHeader = "class " + className + extendsText + implementsText + " {";
 		final out = ["#[\\AllowDynamicProperties]", classHeader];
 		var memberCount = 0;
+		final classFunctions = phpClassFunctionsWithAbstractFacadeMethods(cls, className, scanClasses);
 		final instanceFields = new Array<HxFieldDecl>();
 		final emittedFields = new Map<String, Bool>();
 		final emittedMethods = new Map<String, Bool>();
-		final needsThisValueSlot = phpClassNeedsThisValueSlot(cls);
+		final needsThisValueSlot = phpFunctionsNeedThisValueSlot(classFunctions);
 		if (needsThisValueSlot) {
 			out.push("  public $__hx_value;");
 			emittedFields.set("__hx_value", true);
@@ -16022,7 +16027,7 @@ class SourceTargetCommon {
 			emittedFields.set("__basic_x", true);
 			memberCount += 1;
 		}
-		for (fn in HxClassDecl.getFunctions(cls)) {
+		for (fn in classFunctions) {
 			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new" || !phpFunctionIsDynamic(fn))
 				continue;
 			final fieldName = sanitizeTypeName(HxFunctionDecl.getName(fn));
@@ -16065,7 +16070,7 @@ class SourceTargetCommon {
 			phpInstanceFieldTypeHintMapForType(className));
 		final staticFieldNames = phpCurrentClassStaticMemberNames(cls);
 		final genericStaticSpecializations = phpGenericStaticSpecializations(cls, scanClasses);
-		for (fn in HxClassDecl.getFunctions(cls)) {
+		for (fn in classFunctions) {
 			if (isCompileTimeOnlyFunction(fn))
 				continue;
 			if (HxFunctionDecl.getName(fn) == "main")
@@ -16151,7 +16156,7 @@ class SourceTargetCommon {
 			out.push("  }");
 			memberCount += 1;
 		}
-		for (fn in HxClassDecl.getFunctions(cls)) {
+		for (fn in classFunctions) {
 			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new" || !phpFunctionIsGeneric(fn))
 				continue;
 			final methodName = sanitizeTypeName(HxFunctionDecl.getName(fn));
@@ -16200,6 +16205,49 @@ class SourceTargetCommon {
 			out.push("");
 		out.push("}");
 		return out;
+	}
+
+	static function phpClassFunctionsWithAbstractFacadeMethods(cls:HxClassDecl, className:String, scanClasses:Array<HxClassDecl>):Array<HxFunctionDecl> {
+		final out = HxClassDecl.getFunctions(cls).copy();
+		final seen = new Map<String, Bool>();
+		for (fn in out)
+			seen.set(sanitizeTypeName(HxFunctionDecl.getName(fn)), true);
+		if (scanClasses == null)
+			return out;
+		for (facade in scanClasses) {
+			if (facade == cls || !phpClassHasAbstractMarker(facade))
+				continue;
+			final underlying = phpAbstractUnderlyingTypeName(facade);
+			if (underlying == null || sanitizePhpTypePath(underlying) != className)
+				continue;
+			for (fn in HxClassDecl.getFunctions(facade)) {
+				if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
+					continue;
+				final methodName = sanitizeTypeName(HxFunctionDecl.getName(fn));
+				if (seen.exists(methodName))
+					continue;
+				seen.set(methodName, true);
+				out.push(fn);
+			}
+		}
+		return out;
+	}
+
+	static function phpClassHasAbstractMarker(cls:HxClassDecl):Bool {
+		for (meta in HxClassDecl.getMetadata(cls))
+			if (meta == "__hxhx_abstract")
+				return true;
+		return false;
+	}
+
+	static function phpAbstractUnderlyingTypeName(cls:HxClassDecl):Null<String> {
+		for (raw in HxClassDecl.getMetadata(cls)) {
+			final text = StringTools.trim(raw == null ? "" : raw);
+			final prefix = "__hxhx_abstract_underlying=";
+			if (StringTools.startsWith(text, prefix))
+				return text.substr(prefix.length);
+		}
+		return null;
 	}
 
 	static function phpClassIsPoint3Like(cls:HxClassDecl, className:String):Bool {
@@ -16598,7 +16646,13 @@ class SourceTargetCommon {
 	}
 
 	static function phpClassNeedsThisValueSlot(cls:HxClassDecl):Bool {
-		for (fn in HxClassDecl.getFunctions(cls))
+		return phpFunctionsNeedThisValueSlot(HxClassDecl.getFunctions(cls));
+	}
+
+	static function phpFunctionsNeedThisValueSlot(functions:Array<HxFunctionDecl>):Bool {
+		if (functions == null)
+			return false;
+		for (fn in functions)
 			if (phpStmtListNeedsThisValueSlot(HxFunctionDecl.getBody(fn)))
 				return true;
 		return false;
@@ -16648,6 +16702,8 @@ class SourceTargetCommon {
 			case EUnop("++" | "pre++" | "post++" | "--" | "pre--" | "post--", EThis):
 				true;
 			case EBinop(op, EThis, _) if (isAssignmentOp(op) || op == "??=" || op == ">>>="):
+				true;
+			case ECall(EThis, _):
 				true;
 			case EThis:
 				false;

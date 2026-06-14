@@ -61,6 +61,12 @@ Agent policy:
   - Do not add fake generated classes to `SourceTargetCommon` just to satisfy one gate failure when the correct model is extern/intrinsic behavior.
   - If a short inline helper is unavoidable during Full1 burn-down, keep it tiny, document why in the bead, add focused coverage, and file/link a follow-up architecture bead before expanding it.
   - When an inline `out.push` block starts looking like a real library/runtime implementation, stop and extract or redesign before continuing.
+- Avoid mega-file gravity.
+  - Before adding substantial logic to a file that is already large or mixed-purpose, check whether the change belongs in a target-specific module, shared helper module, source template, runtime support file, parser helper, or technical doc instead.
+  - Treat common backend files as dispatch/shared-semantics seams, not dumping grounds for target-specific lowering, runtime libraries, test harness shims, and parser workarounds.
+  - Use upstream Haxe as a behavior/architecture reference point only: upstream keeps target generators such as PHP, C#, Java, and Lua in separate generator modules plus shared generator support. Stay close to that ownership idea where it helps, without copying upstream compiler code or mechanically mirroring its implementation.
+  - If a bounded Full1 fix must touch a mega-file, keep the change narrow, add focused coverage, and record whether an extraction follow-up already exists. If none exists, file one before expanding the same area again.
+  - If a single file starts owning multiple independent target families or exceeds reviewable size for routine patches, prefer an incremental extraction plan over another local helper in that file.
 - For long-running attached sessions, do not wait indefinitely on silence alone.
   - Set a bounded silent-check window up front.
   - After that window, perform an active checkpoint: verify the exact child process, whether the expected artifact changed recently, and whether the session is still the right gate to wait on.

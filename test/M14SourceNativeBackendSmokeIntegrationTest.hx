@@ -4120,6 +4120,39 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpAbstractCallableFacadeProgram():GenIrProgram {
+		final src = [
+			"typedef Job = () -> Void;",
+			"",
+			"abstract JobRunner(Job -> Void) to Job -> Void {",
+			"  public function new(run:Job -> Void) {",
+			"    this = run;",
+			"  }",
+			"}",
+			"",
+			"abstract Runnable(JobRunner) from JobRunner to JobRunner {",
+			"  public inline function run(job:Job):Void {",
+			"    (this:Job -> Void)(job);",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function make():Runnable {",
+			"    return new JobRunner(function(job) job());",
+			"  }",
+			"  static function main() {",
+			"    var fired = false;",
+			"    var runner = make();",
+			"    runner.run(function() fired = true);",
+			"    Sys.println(Std.string(fired));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpExposingAbstractArrayProgram():GenIrProgram {
 		final src = [
 			"class ExposingArray {",
@@ -12321,6 +12354,24 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpAbstractCallableFacade():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_callable_facade_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpAbstractCallableFacadeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "function run($job)", "PHP abstract callable facades should preserve instance methods from wrapper abstracts");
+		assertContains(content, "($this->__hx_value)($job)", "PHP abstract callable facades should invoke their backing callable value");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP abstract callable facade should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n", "generated PHP abstract callable facade output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpExposingAbstractArray():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_exposing_abstract_array_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15407,6 +15458,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpArrayComprehensionClosure();
 		assertPhpAbstractThisPostfix();
 		assertPhpAbstractThisClosureCapture();
+		assertPhpAbstractCallableFacade();
 		assertPhpExposingAbstractArray();
 		assertPhpInlineCastSelfReturn();
 		assertPhpConstrainedParameterScannerFlow();

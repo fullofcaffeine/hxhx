@@ -647,6 +647,7 @@ class ParserStageScanHelpers {
 
 			final abstractName = nameTok.text;
 			i = nameTok.nextPos;
+			final abstractUnderlying = scanAbstractUnderlyingType(source, i);
 
 			final isMain = mainTypeName != null && abstractName == mainTypeName;
 			final alreadySeen = seen.exists(abstractName);
@@ -670,11 +671,39 @@ class ParserStageScanHelpers {
 				i = headerTok.nextPos;
 			}
 
-			if (shouldRecord)
-				out.push(new HxClassDecl(abstractName, false, functions, fields, "", ["__hxhx_abstract"]));
+			if (shouldRecord) {
+				final metadata = ["__hxhx_abstract"];
+				if (abstractUnderlying.length > 0)
+					metadata.push("__hxhx_abstract_underlying=" + abstractUnderlying);
+				out.push(new HxClassDecl(abstractName, false, functions, fields, "", metadata));
+			}
 		}
 
 		return out;
+	}
+
+	static function scanAbstractUnderlyingType(source:String, start:Int):String {
+		final open = scanNextToken(source, start);
+		if (open.text != "(")
+			return "";
+		final parts = new Array<String>();
+		var depth = 1;
+		var i = open.nextPos;
+		while (depth > 0) {
+			final tok = scanNextToken(source, i);
+			if (tok.text.length == 0)
+				return "";
+			i = tok.nextPos;
+			if (tok.text == "(") {
+				depth += 1;
+			} else if (tok.text == ")") {
+				depth -= 1;
+				if (depth <= 0)
+					break;
+			}
+			parts.push(tok.text);
+		}
+		return StringTools.trim(parts.join(""));
 	}
 
 	public static function scanEnumBodyForCtors(source:String,
