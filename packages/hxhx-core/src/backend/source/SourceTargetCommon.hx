@@ -5457,11 +5457,13 @@ class SourceTargetCommon {
 	static function pythonMacroExprDef(expr:HxExpr):String {
 		return switch (expr) {
 			case EString(value):
-				pythonMacroEnum("EConst", [pythonMacroEnum("CString", [quoteString(value)])]);
+				pythonMacroEnum("EConst", [
+					pythonMacroEnum("CString", [quoteString(value), pythonMacroEnum("DoubleQuotes", [])])
+				]);
 			case EInt(value):
-				pythonMacroEnum("EConst", [pythonMacroEnum("CInt", [quoteString(Std.string(value))])]);
+				pythonMacroEnum("EConst", [pythonMacroEnum("CInt", [quoteString(Std.string(value)), "None"])]);
 			case EFloat(value):
-				pythonMacroEnum("EConst", [pythonMacroEnum("CFloat", [quoteString(Std.string(value))])]);
+				pythonMacroEnum("EConst", [pythonMacroEnum("CFloat", [quoteString(Std.string(value)), "None"])]);
 			case ENull:
 				pythonMacroEnum("EConst", [pythonMacroEnum("CIdent", [quoteString("null")])]);
 			case EIdent(name):
@@ -5852,11 +5854,13 @@ class SourceTargetCommon {
 	static function phpMacroExprDef(expr:HxExpr):String {
 		return switch (expr) {
 			case EString(value):
-				phpMacroEnum("EConst", [phpMacroEnum("CString", [quotePhpString(value)])]);
+				phpMacroEnum("EConst", [
+					phpMacroEnum("CString", [quotePhpString(value), phpMacroEnum("DoubleQuotes", [])])
+				]);
 			case EInt(value):
-				phpMacroEnum("EConst", [phpMacroEnum("CInt", [quotePhpString(Std.string(value))])]);
+				phpMacroEnum("EConst", [phpMacroEnum("CInt", [quotePhpString(Std.string(value)), "null"])]);
 			case EFloat(value):
-				phpMacroEnum("EConst", [phpMacroEnum("CFloat", [quotePhpString(Std.string(value))])]);
+				phpMacroEnum("EConst", [phpMacroEnum("CFloat", [quotePhpString(Std.string(value)), "null"])]);
 			case ENull:
 				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quotePhpString("null")])]);
 			case EIdent(name):

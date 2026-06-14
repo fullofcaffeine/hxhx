@@ -1073,8 +1073,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final src = [
 			"class Main {",
 			"  static function main() {",
+			"    var intExpr = macro 0;",
+			"    var floatExpr = macro 1.5;",
 			"    var expr = macro untyped (\"bar\");",
 			"    var mapExpr = macro [1 => \"one\"];",
+			"    Sys.println(Std.string(intExpr));",
+			"    Sys.println(Std.string(floatExpr));",
 			"    Sys.println(Std.string(expr));",
 			"    Sys.println(Std.string(mapExpr));",
 			"  }",
@@ -10176,6 +10180,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "\"__hx_ctor\" => \"EUntyped\"", "PHP macro expressions should preserve untyped wrappers");
 		assertContains(content, "\"__hx_ctor\" => \"EParenthesis\"", "PHP macro expressions should preserve parenthesis wrappers");
 		assertContains(content, "\"__hx_ctor\" => \"CString\"", "PHP macro string constants should lower to CString nodes");
+		assertContains(content, "\"__hx_ctor\" => \"CInt\", \"__hx_index\" => 0, \"__hx_params\" => [\"0\", null]",
+			"PHP macro int constants should preserve the nullable suffix payload expected by haxe.macro.Expr.Constant.CInt");
+		assertContains(content, "\"__hx_ctor\" => \"CFloat\", \"__hx_index\" => 0, \"__hx_params\" => [\"1.5\", null]",
+			"PHP macro float constants should preserve the nullable suffix payload expected by haxe.macro.Expr.Constant.CFloat");
+		assertContains(content, "\"__hx_ctor\" => \"CString\", \"__hx_index\" => 0, \"__hx_params\" => [\"bar\", (object)[\"__hx_ctor\" => \"DoubleQuotes\"",
+			"PHP macro string constants should preserve the quote-kind payload expected by haxe.macro.Expr.Constant.CString");
 		assertContains(content, "\"__hx_ctor\" => \"OpArrow\"", "PHP macro map entries should lower to OpArrow nodes");
 		deleteRecursive(tmpRoot);
 	}
