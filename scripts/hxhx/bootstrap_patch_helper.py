@@ -4062,110 +4062,6 @@ def cmd_patch_plugin_dune_layout(argv: list[str]) -> None:
     write_text(path_str, src.replace(needle, replacement, 1))
 
 
-def cmd_patch_js_target_core_native_js_lib_externs(argv: list[str]) -> None:
-    if len(argv) != 1:
-        fail("usage: patch-js-target-core-native-js-lib-externs <path>\n")
-    path_str = argv[0]
-    src = read_text(path_str)
-
-    # Newer regenerated bootstrap snapshots already carry the source-side native JS extern
-    # lowering directly. In that case there is nothing left for this compatibility patch to
-    # inject, so treat the helper as a no-op instead of failing on stale anchors.
-    if (
-        ((
-            "let nativeJsGlobalExternRef = fun fullName ->" in src
-            and "nativeJsGlobalExternRef (Obj.obj (HxAnon.get unit \"fullName\") : string)" in src
-        ) or (
-            "let nativeJsLibGlobalRef = fun fullName ->" in src
-            and "nativeJsLibGlobalRef (Obj.obj (HxAnon.get unit \"fullName\") : string)" in src
-        ))
-        and "tempLeft <> emitNative" in src
-    ):
-        write_text(path_str, src)
-        return
-
-    old_var = '''  ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var " ^ HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef"))) ^ " = {};" : string));'''
-    new_var = '''  ignore (
-    if StringTools.startsWith ((Obj.obj (HxAnon.get unit "fullName") : string)) ("js.lib." : string) then (
-      let nativeParts = HxString.split (HxString.substr (Obj.obj (HxAnon.get unit "fullName") : string) (HxString.length "js.lib.") (-1)) ("." : string) in
-      let nativeExpr = ref ("globalThis" : string) in
-      let nativeGuard = ref ("(globalThis != null)" : string) in (
-        ignore (let _g_native = ref 0 in while !_g_native < HxArray.length nativeParts do ignore (let part = (HxArray.get (Obj.magic nativeParts) (!_g_native) : string) in (
-          let partIndex = !_g_native in
-          ignore (let __old_native = !_g_native in let __new_native = HxInt.add __old_native 1 in (
-            ignore (_g_native := __new_native);
-            __new_native
-          ));
-          ignore (if part == Obj.magic (HxRuntime.hx_null) || HxString.length part = 0 then () else (
-            let globalPart = if partIndex = 0 && HxString.equals part "intl" then ("Intl" : string) else (part : string) in
-            let __assign_native = ((((HxString.toStdString (!nativeExpr) ^ "[") ^ HxString.toStdString (Backend_js_JsNameMangler.quoteString (globalPart : string))) ^ "]") : string) in (
-              nativeExpr := __assign_native;
-              nativeGuard := ((((("(" ^ HxString.toStdString (!nativeGuard)) ^ " && ") ^ HxString.toStdString (!nativeExpr)) ^ " != null)") : string);
-              ()
-            )
-          ))
-        )) done);
-        Backend_js_JsWriter.writeln (Obj.magic writer) (((((((("var " ^ HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef"))) ^ " = (") ^ HxString.toStdString (!nativeGuard)) ^ " ? ") ^ HxString.toStdString (!nativeExpr)) ^ " : {})") ^ ";" : string))
-      )
-    ) else (
-      Backend_js_JsWriter.writeln (Obj.magic writer) (("var " ^ HxString.toStdString (Obj.obj (HxAnon.get unit "jsRef"))) ^ " = {};" : string)
-    )
-  );
-  (* hxhx(stage3) bootstrap shim: js.lib extern native global repair *)'''
-
-    old_fields = '''      ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in try while !_g < HxArray.length _g1 do try ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in ('''
-    new_fields = '''      ignore (let _g = ref 0 in let _g1 = if StringTools.startsWith ((Obj.obj (HxAnon.get unit "fullName") : string)) ("js.lib." : string) then Obj.magic (let __arr_native_js_lib_fields = HxArray.create () in __arr_native_js_lib_fields) else Obj.magic (HxClassDecl.getFields (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in try while !_g < HxArray.length _g1 do try ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in ('''
-
-    old_functions = '''      let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in ('''
-    new_functions = '''      let _g = ref 0 in let _g1 = if StringTools.startsWith ((Obj.obj (HxAnon.get unit "fullName") : string)) ("js.lib." : string) then Obj.magic (let __arr_native_js_lib_functions = HxArray.create () in __arr_native_js_lib_functions) else Obj.magic (HxClassDecl.getFunctions (Obj.magic (Obj.obj (HxAnon.get unit "decl")))) in try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in ('''
-
-    old_emit_loop = '''        let classRefs = Obj.magic (buildClassRefs (Obj.magic (Obj.obj (HxAnon.get classes "bySimpleName"))) (Obj.magic (Obj.obj (HxAnon.get classes "byFullName")))) in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get classes "units")) in (
-          ignore (while !_g < HxArray.length _g1 do ignore (let unit = HxArray.get (Obj.magic _g1) (!_g) in (
-            ignore (let __old_4 = !_g in let __new_5 = HxInt.add __old_4 1 in (
-              ignore (_g := __new_5);
-              __new_5
-            ));
-            emitClass (Obj.magic writer) unit (Obj.magic classRefs) (Obj.magic (Obj.obj (HxAnon.get classes "bySimpleName")))
-          )) done);
-          let mainRef = (resolveMainRef ((Obj.magic context : Backend_BackendContext.t).mainModule : string) (Obj.magic (Obj.obj (HxAnon.get classes "bySimpleName"))) (Obj.magic (Obj.obj (HxAnon.get classes "byFullName"))) : string) in ('''
-
-    new_emit_loop = '''        let classRefs = Obj.magic (buildClassRefs (Obj.magic (Obj.obj (HxAnon.get classes "bySimpleName"))) (Obj.magic (Obj.obj (HxAnon.get classes "byFullName")))) in let units = Obj.magic (Obj.obj (HxAnon.get classes "units")) in (
-          ignore (try let _g_native = ref 0 in while !_g_native < HxArray.length units do try ignore (let unit = HxArray.get (Obj.magic units) (!_g_native) in (
-            ignore (let __old_native_4 = !_g_native in let __new_native_5 = HxInt.add __old_native_4 1 in (
-              ignore (_g_native := __new_native_5);
-              __new_native_5
-            ));
-            ignore (if not (StringTools.startsWith ((Obj.obj (HxAnon.get unit "fullName") : string)) ("js.lib." : string)) then raise (HxRuntime.Hx_continue) else ());
-            emitClass (Obj.magic writer) unit (Obj.magic classRefs) (Obj.magic (Obj.obj (HxAnon.get classes "bySimpleName")))
-          )) with
-            | HxRuntime.Hx_continue -> () done with
-            | HxRuntime.Hx_break -> ());
-          ignore (try let _g_other = ref 0 in while !_g_other < HxArray.length units do try ignore (let unit = HxArray.get (Obj.magic units) (!_g_other) in (
-            ignore (let __old_other_4 = !_g_other in let __new_other_5 = HxInt.add __old_other_4 1 in (
-              ignore (_g_other := __new_other_5);
-              __new_other_5
-            ));
-            ignore (if StringTools.startsWith ((Obj.obj (HxAnon.get unit "fullName") : string)) ("js.lib." : string) then raise (HxRuntime.Hx_continue) else ());
-            emitClass (Obj.magic writer) unit (Obj.magic classRefs) (Obj.magic (Obj.obj (HxAnon.get classes "bySimpleName")))
-          )) with
-            | HxRuntime.Hx_continue -> () done with
-            | HxRuntime.Hx_break -> ());
-          let mainRef = (resolveMainRef ((Obj.magic context : Backend_BackendContext.t).mainModule : string) (Obj.magic (Obj.obj (HxAnon.get classes "bySimpleName"))) (Obj.magic (Obj.obj (HxAnon.get classes "byFullName"))) : string) in ('''
-
-
-    for old, new, label in (
-        (old_var, new_var, "js lib var alias"),
-        (old_fields, new_fields, "js lib static fields"),
-        (old_functions, new_functions, "js lib static functions"),
-        (old_emit_loop, new_emit_loop, "js lib emit order"),
-    ):
-        if old not in src:
-            fail(f"build-hxhx: failed to locate bootstrap JsTargetCore {label} anchor\\n")
-        src = src.replace(old, new, 1)
-
-    write_text(path_str, src)
-
-
 def cmd_patch_js_target_core_systools_static_bodies(argv: list[str]) -> None:
     if len(argv) != 1:
         fail("usage: patch-js-target-core-systools-static-bodies <path>\n")
@@ -4421,7 +4317,6 @@ COMMANDS: Dict[str, Callable[[list[str]], None]] = {
     "patch-int-compare-precedence": cmd_patch_int_compare_precedence,
     "patch-float-modulo-mutable-local": cmd_patch_float_modulo_mutable_local,
     "patch-plugin-dune-layout": cmd_patch_plugin_dune_layout,
-    "patch-js-target-core-native-js-lib-externs": cmd_patch_js_target_core_native_js_lib_externs,
     "patch-js-target-core-systools-static-bodies": cmd_patch_js_target_core_systools_static_bodies,
     "patch-hxtype-registry-js-target-core-systools": cmd_patch_hxtype_registry_js_target_core_systools,
     "patch-typerstage-lowercase-static-receiver-guard": cmd_patch_typerstage_lowercase_static_receiver_guard,

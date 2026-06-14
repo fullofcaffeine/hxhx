@@ -933,28 +933,16 @@ patch_bootstrap_emitter_plugin_dune_layout() {
   run_bootstrap_patch_helper patch-plugin-dune-layout "$emitter_path"
 }
 
-patch_bootstrap_js_target_core_native_js_lib_externs() {
-  local build_dir="$1"
-  local target_core_path="$build_dir/backend_js_JsTargetCore.ml"
-  local marker='(* hxhx(stage3) bootstrap shim: js.lib extern native global repair *)'
-
-  if [ ! -f "$target_core_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal "$marker" "$target_core_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-js-target-core-native-js-lib-externs "$target_core_path"
-}
-
 patch_bootstrap_js_target_core_systools_static_bodies() {
   local build_dir="$1"
   local target_core_path="$build_dir/backend_js_JsTargetCore.ml"
   local registry_path="$build_dir/HxTypeRegistry.ml"
   local marker='(* hxhx(stage3) bootstrap shim: js target core SysTools static bodies *)'
 
+  # Remaining JsTargetCore bootstrap shim surface: SysTools static bodies only.
+  # Native js.lib extern lowering is source-owned in JsTargetCore and the
+  # committed bootstrap snapshot; scripts/ci/bootstrap-build-no-mutation-check.js
+  # guards against restoring that retired patch path here.
   if [ -f "$target_core_path" ]; then
     if ! file_contains_literal "$marker" "$target_core_path" && ! file_contains_literal 'let emitKnownStaticFunctionBody = fun writer fullName fnName params ->' "$target_core_path"; then
       run_bootstrap_patch_helper patch-js-target-core-systools-static-bodies "$target_core_path"
@@ -1083,7 +1071,6 @@ finalize_bootstrap_dir() {
   patch_bootstrap_emitter_int_compare_precedence "$build_dir"
   patch_bootstrap_emitter_float_modulo_mutable_local "$build_dir"
   patch_bootstrap_emitter_plugin_dune_layout "$build_dir"
-  patch_bootstrap_js_target_core_native_js_lib_externs "$build_dir"
   patch_bootstrap_js_target_core_systools_static_bodies "$build_dir"
   patch_bootstrap_typerstage_lowercase_static_receiver_guard "$build_dir"
   patch_bootstrap_clirouting_ocaml_eval_hxml "$build_dir"

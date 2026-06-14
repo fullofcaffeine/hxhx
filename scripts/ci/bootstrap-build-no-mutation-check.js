@@ -20,6 +20,8 @@ function read(file) {
 const build = read(buildScript)
 const regen = read(regenScript)
 const sanitize = read(sanitizeScript)
+const finalize = read(finalizeScript)
+const bootstrapPatchHelper = read(path.join(repoRoot, 'scripts', 'hxhx', 'bootstrap_patch_helper.py'))
 
 if (!fs.existsSync(finalizeScript)) {
   fail('missing scripts/hxhx/finalize-bootstrap-dir.sh')
@@ -40,6 +42,17 @@ for (const token of forbiddenBuildTokens) {
 
 if (!regen.includes('finalize-bootstrap-dir.sh')) {
   fail('scripts/hxhx/regenerate-hxhx-bootstrap.sh must finalize bootstrap_out before sharding')
+}
+
+const retiredBootstrapPatchTokens = [
+  'patch_bootstrap_js_target_core_native_js_lib_externs',
+  'patch-js-target-core-native-js-lib-externs',
+  'js.lib extern native global repair',
+]
+for (const token of retiredBootstrapPatchTokens) {
+  if (finalize.includes(token) || bootstrapPatchHelper.includes(token)) {
+    fail(`retired bootstrap JsTargetCore js.lib extern patch must not be restored (found: ${token})`)
+  }
 }
 
 for (const token of forbiddenBuildTokens) {
