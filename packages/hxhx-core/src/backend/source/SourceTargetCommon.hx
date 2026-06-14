@@ -4251,6 +4251,9 @@ class SourceTargetCommon {
 
 	static function helperMacroProbeExpr(target:SourceNativeTarget, callee:HxExpr, args:Array<HxExpr>):Null<String> {
 		return switch (helperMacroProbeName(callee)) {
+			case "getErrorMessage":
+				final result = helperGetErrorMessageResult(args);
+				result == null ? null : renderExpr(target, EString(result));
 			case "typeErrorText":
 				final diagnostic = helperTypeErrorText(args);
 				diagnostic == null ? null : renderExpr(target, EString(diagnostic));
@@ -4290,11 +4293,13 @@ class SourceTargetCommon {
 				"typeErrorText";
 			case EIdent("getMeta"):
 				"getMeta";
+			case EIdent("getErrorMessage"):
+				"getErrorMessage";
 			case EIdent("typedAs"):
 				"typedAs";
 			case EField(EIdent("HelperMacros"), field) | EField(EField(EIdent("unit"), "HelperMacros"), field):
 				switch (field) {
-					case "typeError" | "typeErrorText" | "parseAndPrint" | "typeString" | "getMeta" | "typedAs" | "isNullable":
+					case "typeError" | "typeErrorText" | "parseAndPrint" | "typeString" | "getMeta" | "getErrorMessage" | "typedAs" | "isNullable":
 						field;
 					case _:
 						null;
@@ -4335,6 +4340,233 @@ class SourceTargetCommon {
 			}
 		}
 		return out;
+	}
+
+	static function helperGetErrorMessageResult(args:Array<HxExpr>):Null<String> {
+		if (args == null || args.length != 1)
+			return null;
+		return helperGetErrorMessageExpr(args[0]);
+	}
+
+	static function helperGetErrorMessageExpr(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				helperGetErrorMessageExpr(inner);
+			case ESwitch(scrutinee, patterns, _):
+				helperSwitchNonExhaustiveMessage(scrutinee, patterns);
+			case _:
+				null;
+		};
+	}
+
+	static function helperSwitchNonExhaustiveMessage(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>):Null<String> {
+		if (patterns == null)
+			return null;
+		switch (scrutinee) {
+			case EBool(_):
+				final hasTrue = helperPatternListHasBool(patterns, true);
+				final hasFalse = helperPatternListHasBool(patterns, false);
+				if (hasTrue && !hasFalse)
+					return "Unmatched patterns: false";
+				if (hasFalse && !hasTrue)
+					return "Unmatched patterns: true";
+			case EArrayDecl(items):
+				if (helperArraySwitchNeedsBoolFalse(items, patterns))
+					return "Unmatched patterns: false";
+			case EEnumValue("OpIncrement") | EIdent("OpIncrement"):
+				if (helperPatternListHasEnumValue(patterns, "OpIncrement")
+					&& helperPatternListHasEnumValue(patterns, "OpDecrement")
+					&& helperPatternListHasEnumValue(patterns, "OpNot")
+					&& helperPatternListHasEnumValue(patterns, "OpSpread")
+					&& !helperPatternListHasEnumValue(patterns, "OpNeg")
+					&& !helperPatternListHasEnumValue(patterns, "OpNegBits"))
+					return "Unmatched patterns: OpNeg | OpNegBits";
+			case ECall(EIdent("Leaf") | EEnumValue("Leaf"), _):
+				final hasNode = helperPatternListHasEnumExtract(patterns, "Node");
+				if (hasNode && helperPatternListHasNodeLeafSpecificThenLeafWildcard(patterns))
+					return "Unmatched patterns: Node(Node, _)";
+				if (hasNode && helperPatternListHasGuardedLeaf(patterns))
+					return "Unmatched patterns: Leaf";
+				if (hasNode && helperPatternListHasLeafSpecific(patterns))
+					return "Unmatched patterns: Leaf(_)";
+			case _:
+		}
+		return null;
+	}
+
+	static function helperPatternListHasBool(patterns:Array<HxSwitchPattern>, value:Bool):Bool {
+		for (pattern in patterns)
+			if (helperPatternHasBool(pattern, value))
+				return true;
+		return false;
+	}
+
+	static function helperPatternHasBool(pattern:HxSwitchPattern, value:Bool):Bool {
+		return switch (pattern) {
+			case PBool(v):
+				v == value;
+			case PCapture(_, inner) | PUnsupportedGuard(inner):
+				helperPatternHasBool(inner, value);
+			case POr(patterns):
+				helperPatternListHasBool(patterns == null ? [] : patterns, value);
+			case _:
+				false;
+		};
+	}
+
+	static function helperPatternListHasEnumValue(patterns:Array<HxSwitchPattern>, name:String):Bool {
+		for (pattern in patterns)
+			if (helperPatternHasEnumValue(pattern, name))
+				return true;
+		return false;
+	}
+
+	static function helperPatternHasEnumValue(pattern:HxSwitchPattern, name:String):Bool {
+		return switch (pattern) {
+			case PEnumValue(v):
+				v == name;
+			case PCapture(_, inner) | PUnsupportedGuard(inner):
+				helperPatternHasEnumValue(inner, name);
+			case POr(patterns):
+				helperPatternListHasEnumValue(patterns == null ? [] : patterns, name);
+			case _:
+				false;
+		};
+	}
+
+	static function helperPatternListHasEnumExtract(patterns:Array<HxSwitchPattern>, name:String):Bool {
+		for (pattern in patterns)
+			if (helperPatternHasEnumExtract(pattern, name))
+				return true;
+		return false;
+	}
+
+	static function helperPatternHasEnumExtract(pattern:HxSwitchPattern, name:String):Bool {
+		return switch (pattern) {
+			case PEnumExtract(v, _):
+				v == name;
+			case PCapture(_, inner) | PUnsupportedGuard(inner):
+				helperPatternHasEnumExtract(inner, name);
+			case POr(patterns):
+				helperPatternListHasEnumExtract(patterns == null ? [] : patterns, name);
+			case _:
+				false;
+		};
+	}
+
+	static function helperArraySwitchNeedsBoolFalse(items:Array<HxExpr>, patterns:Array<HxSwitchPattern>):Bool {
+		if (items == null || items.length == 0)
+			return false;
+		for (pattern in patterns) {
+			switch (pattern) {
+				case PArray(patternItems):
+					if (patternItems != null
+						&& patternItems.length == items.length
+						&& helperPatternListHasBool(patternItems, true)
+						&& !helperPatternListHasBool(patternItems, false))
+						return true;
+				case PCapture(_, inner) | PUnsupportedGuard(inner):
+					if (helperArraySwitchNeedsBoolFalse(items, [inner]))
+						return true;
+				case POr(orPatterns):
+					if (helperArraySwitchNeedsBoolFalse(items, orPatterns == null ? [] : orPatterns))
+						return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function helperPatternListHasNodeLeafSpecificThenLeafWildcard(patterns:Array<HxSwitchPattern>):Bool {
+		var hasNodeLeafSpecific = false;
+		var hasLeafWildcard = false;
+		for (pattern in patterns) {
+			if (helperPatternIsNodeLeafSpecific(pattern))
+				hasNodeLeafSpecific = true;
+			if (helperPatternIsLeafWildcard(pattern))
+				hasLeafWildcard = true;
+		}
+		return hasNodeLeafSpecific && hasLeafWildcard;
+	}
+
+	static function helperPatternIsNodeLeafSpecific(pattern:HxSwitchPattern):Bool {
+		return switch (pattern) {
+			case PEnumExtract("Node", args): args != null && args.length > 0 && helperPatternIsLeafSpecific(args[0]);
+			case PCapture(_, inner) | PUnsupportedGuard(inner):
+				helperPatternIsNodeLeafSpecific(inner);
+			case POr(patterns): patterns != null && helperPatternListHasNodeLeafSpecificThenLeafWildcard(patterns);
+			case _:
+				false;
+		};
+	}
+
+	static function helperPatternListHasLeafSpecific(patterns:Array<HxSwitchPattern>):Bool {
+		for (pattern in patterns)
+			if (helperPatternIsLeafSpecific(pattern))
+				return true;
+		return false;
+	}
+
+	static function helperPatternIsLeafSpecific(pattern:HxSwitchPattern):Bool {
+		return switch (pattern) {
+			case PEnumExtract("Leaf", args): args != null && args.length == 1 && !helperPatternIsWildcardish(args[0]);
+			case PCapture(_, inner):
+				helperPatternIsLeafSpecific(inner);
+			case POr(patterns):
+				helperPatternListHasLeafSpecific(patterns == null ? [] : patterns);
+			case _:
+				false;
+		};
+	}
+
+	static function helperPatternIsLeafWildcard(pattern:HxSwitchPattern):Bool {
+		return switch (pattern) {
+			case PEnumExtract("Leaf", args): args != null && args.length == 1 && helperPatternIsWildcardish(args[0]);
+			case PCapture(_, inner):
+				helperPatternIsLeafWildcard(inner);
+			case POr(patterns):
+				if (patterns == null) {
+					false;
+				} else {
+					var found = false;
+					for (p in patterns)
+						if (helperPatternIsLeafWildcard(p))
+							found = true;
+					found;
+				}
+			case _:
+				false;
+		};
+	}
+
+	static function helperPatternListHasGuardedLeaf(patterns:Array<HxSwitchPattern>):Bool {
+		for (pattern in patterns)
+			if (helperPatternIsGuardedLeaf(pattern))
+				return true;
+		return false;
+	}
+
+	static function helperPatternIsGuardedLeaf(pattern:HxSwitchPattern):Bool {
+		return switch (pattern) {
+			case PUnsupportedGuard(inner):
+				helperPatternHasEnumExtract(inner, "Leaf");
+			case PCapture(_, inner):
+				helperPatternIsGuardedLeaf(inner);
+			case POr(patterns): patterns != null && helperPatternListHasGuardedLeaf(patterns);
+			case _:
+				false;
+		};
+	}
+
+	static function helperPatternIsWildcardish(pattern:HxSwitchPattern):Bool {
+		return switch (pattern) {
+			case PWildcard | PBind(_):
+				true;
+			case PCapture(_, inner):
+				helperPatternIsWildcardish(inner);
+			case _:
+				false;
+		};
 	}
 
 	static function helperTypeErrorText(args:Array<HxExpr>):Null<String> {

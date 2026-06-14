@@ -2472,6 +2472,48 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpGetErrorMessageProbeProgram():GenIrProgram {
+		final src = [
+			"class HelperMacros {",
+			"  public static function getErrorMessage(e) {",
+			"    return \"runtime\";",
+			"  }",
+			"}",
+			"enum Tree {",
+			"  Leaf(v:String);",
+			"  Node(left:Tree, right:Tree);",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var boolMessage = HelperMacros.getErrorMessage(switch(true) {",
+			"      case true:",
+			"    });",
+			"    var opMessage = HelperMacros.getErrorMessage(switch(OpIncrement) {",
+			"      case OpIncrement:",
+			"      case OpDecrement:",
+			"      case OpNot:",
+			"      case OpSpread:",
+			"    });",
+			"    var arrayMessage = HelperMacros.getErrorMessage(switch [1, true, \"foo\"] {",
+			"      case [_, true, _]:",
+			"    });",
+			"    var leafMessage = HelperMacros.getErrorMessage(switch(Leaf(\"foo\")) {",
+			"      case Node(Leaf(\"foo\"), _):",
+			"      case Leaf(_):",
+			"    });",
+			"    Sys.println(boolMessage);",
+			"    Sys.println(opMessage);",
+			"    Sys.println(arrayMessage);",
+			"    Sys.println(leafMessage);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function phpTypeErrorExpressionProbeProgram():GenIrProgram {
 		final src = [
 			"class MyInt2 {",
@@ -11652,6 +11694,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpGetErrorMessageProbe():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_get_error_message_probe_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpGetErrorMessageProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertNotContains(content, "getErrorMessage", "PHP source backend should fold HelperMacros.getErrorMessage compile-time probes");
+		assertContains(content, "\"Unmatched patterns: false\"", "PHP getErrorMessage bool probe should fold non-exhaustive bool diagnostics");
+		assertContains(content, "\"Unmatched patterns: OpNeg | OpNegBits\"", "PHP getErrorMessage enum-like probe should fold missing enum diagnostics");
+		assertContains(content, "\"Unmatched patterns: Node(Node, _)\"", "PHP getErrorMessage enum-constructor probe should fold nested enum diagnostics");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP getErrorMessage probes should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "Unmatched patterns: false\nUnmatched patterns: OpNeg | OpNegBits\nUnmatched patterns: false\nUnmatched patterns: Node(Node, _)\n",
+				"generated PHP getErrorMessage probe output mismatch, got:\n"
+				+ run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpTypeErrorExpressionProbe():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_type_error_expression_probe_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15006,6 +15070,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTryCatchExpression();
 		assertPhpThrownValueCatch();
 		assertPhpTypeErrorProbe();
+		assertPhpGetErrorMessageProbe();
 		assertPhpTypeErrorExpressionProbe();
 		assertPhpTypeErrorBlockProbe();
 		assertPhpAbstractCastConstraint();
