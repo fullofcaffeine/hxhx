@@ -14329,6 +14329,50 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpRefParameterSemantics():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_ref_parameters_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"import php.Ref;",
+			"class Box {",
+			"  public var value:Int;",
+			"  public function new(value:Int) { this.value = value; }",
+			"  public function self():Box return this;",
+			"}",
+			"class Main {",
+			"  static function reset(v:Ref<Int>) v = 0;",
+			"  static function main() {",
+			"    function setTo(v:Ref<Int>) v = 10;",
+			"    var local = 0;",
+			"    setTo(local);",
+			"    Sys.println(Std.string(local));",
+			"    var box = new Box(5);",
+			"    setTo(box.self().value);",
+			"    Sys.println(Std.string(box.value));",
+			"    reset(box.self().value);",
+			"    Sys.println(Std.string(box.value));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "$setTo = function(&$v)", "PHP local functions typed as php.Ref<T> should declare by-reference parameters");
+		assertContains(content, "public static function reset(&$v)", "PHP methods typed as php.Ref<T> should declare by-reference parameters");
+		assertNotContains(content, "Ref::", "PHP Ref<T> should be a compile-time by-reference signal, not a runtime class call");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP Ref<T> parameter support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "10\n10\n0\n", "generated PHP Ref<T> parameter support output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpInlineCastSelfReturn():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_inline_cast_self_return_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15566,6 +15610,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpOpaqueBlockExprCapturesOuterLocals();
 		assertPhpNullFieldAccessThrowsNpe();
 		assertPhpConstructorDefaultArgs();
+		assertPhpRefParameterSemantics();
 		assertPhpStringBufRuntimeSupport();
 		assertPhpClosureBindCallbacks();
 		assertPhpInstanceMethodValueBind();

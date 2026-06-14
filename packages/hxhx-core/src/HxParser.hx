@@ -1534,10 +1534,12 @@ class HxParser {
 		expect(TLParen, "'('");
 
 		final args = new Array<String>();
+		final argTypeHints = new Array<String>();
 		final optionalArgs = new Array<String>();
 		final defaultedArgs = new haxe.ds.StringMap<HxExpr>();
 		var defaultedArgCount = 0;
 		var restIndex = -1;
+		var hasFunctionTypeHint = false;
 		if (!cur.kind.match(TRParen)) {
 			while (true) {
 				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
@@ -1559,6 +1561,9 @@ class HxParser {
 					bump();
 					argType = readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
 				}
+				if (localFunctionArgTypeHintNeedsBackend(argType))
+					hasFunctionTypeHint = true;
+				argTypeHints.push((isOptional ? "?" : "") + (argType.length == 0 ? "Dynamic" : argType));
 				if (!isRest && isRestTypeHintText(argType))
 					restIndex = args.length - 1;
 
@@ -1579,9 +1584,10 @@ class HxParser {
 		}
 		expect(TRParen, "')'");
 
+		var returnType = "";
 		if (cur.kind.match(TColon)) {
 			bump();
-			readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
+			returnType = readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
 				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
 		}
 
@@ -1638,7 +1644,24 @@ class HxParser {
 		final restAware:HxExpr = restIndex < 0 ? lambda : HxExpr.ECall(HxExpr.EIdent("__hxhx_rest_lambda"), [lambda, HxExpr.EInt(restIndex)]);
 		final init:HxExpr = optionalArgs.length == 0 ? restAware : HxExpr.ECall(HxExpr.EIdent("__hxhx_optional_lambda"),
 			[restAware, HxExpr.EArrayDecl([for (arg in optionalArgs) HxExpr.EString(arg)])]);
-		return SVar(name, "", init, pos);
+		final functionTypeHint = !hasFunctionTypeHint
+			|| argTypeHints.length == 0 ? "" : "("
+				+ argTypeHints.join(", ")
+				+ ")->"
+				+ (returnType.length == 0 ? "Dynamic" : returnType);
+		return SVar(name, functionTypeHint, init, pos);
+	}
+
+	function localFunctionArgTypeHintNeedsBackend(typeHint:String):Bool {
+		var hint = StringTools.trim(typeHint == null ? "" : typeHint);
+		while (StringTools.startsWith(hint, "?"))
+			hint = StringTools.trim(hint.substr(1));
+		return hint == "Ref"
+			|| hint == "php.Ref"
+			|| hint == "\\php\\Ref"
+			|| StringTools.startsWith(hint, "Ref<")
+			|| StringTools.startsWith(hint, "php.Ref<")
+			|| StringTools.startsWith(hint, "\\php\\Ref<");
 	}
 
 	function lambdaBodyExprFromStmts(stmts:Array<HxStmt>):HxExpr {

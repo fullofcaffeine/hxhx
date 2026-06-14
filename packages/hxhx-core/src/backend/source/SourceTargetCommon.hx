@@ -3624,13 +3624,14 @@ class SourceTargetCommon {
 	}
 
 	static function phpLambdaExpr(args:Array<String>, body:HxExpr, valueNames:Array<String>, extraRefNames:Array<String>, optionalArgNames:Array<String>,
-			restIndex:Int = -1):String {
+			restIndex:Int = -1, ?refArgIndexes:Array<Int>):String {
 		final renderedArgs = [
 			for (i in 0...args.length) {
 				final arg = args[i];
 				final clean = sanitizeTypeName(arg);
 				final name = valueName(Php, clean);
-				if (i == restIndex) "..." + name; else name + (phpLambdaArgCanUsePhpDefault(args, optionalArgNames, i) ? " = null" : "");
+				final refPrefix = i != restIndex && phpLambdaArgIsRefLike(refArgIndexes, i) ? "&" : "";
+				if (i == restIndex) "..." + name; else refPrefix + name + (phpLambdaArgCanUsePhpDefault(args, optionalArgNames, i) ? " = null" : "");
 			}
 		].join(", ");
 		final thisCaptureName = phpRenderThisValueSlot && phpExprTouchesThis(body) ? "__hxhx_this_value" : null;
@@ -3675,6 +3676,10 @@ class SourceTargetCommon {
 		final lambda = "function(" + renderedArgs + ")" + useClause + " { " + prologue + "return " + renderedBody + "; }";
 		return thisCaptureName == null ? lambda : "(function(" + valueName(Php, thisCaptureName) + ") { return " + lambda
 			+ "; })(__hxhx_copy_value($this->__hx_value))";
+	}
+
+	static function phpLambdaArgIsRefLike(refArgIndexes:Null<Array<Int>>, index:Int):Bool {
+		return refArgIndexes != null && refArgIndexes.indexOf(index) >= 0;
 	}
 
 	static function phpLambdaArgCanUsePhpDefault(args:Array<String>, optionalArgNames:Array<String>, index:Int):Bool {
@@ -5204,6 +5209,20 @@ class SourceTargetCommon {
 				names.push(clean);
 		}
 		return names;
+	}
+
+	static function phpFunctionTypeRefArgIndexesForLambda(typeHint:String, args:Array<String>):Array<Int> {
+		final indexes = new Array<Int>();
+		if (args == null || args.length == 0)
+			return indexes;
+		final params = phpFunctionTypeParams(typeHint);
+		if (params == null)
+			return indexes;
+		final limit = args.length < params.length ? args.length : params.length;
+		for (i in 0...limit)
+			if (phpFunctionArgIsRefLike(params[i]))
+				indexes.push(i);
+		return indexes;
 	}
 
 	static function helperOptionalLambdaCallTypeError(callee:HxExpr, args:Array<HxExpr>):Null<Bool> {
@@ -9748,8 +9767,9 @@ class SourceTargetCommon {
 		switch (expr) {
 			case ELambda(args, body):
 				final optionalArgNames = phpFunctionTypeOptionalArgNamesForLambda(typeHint, args);
-				if (optionalArgNames.length > 0)
-					return phpLambdaExpr(args, body, [], [], optionalArgNames);
+				final refArgIndexes = phpFunctionTypeRefArgIndexesForLambda(typeHint, args);
+				if (optionalArgNames.length > 0 || refArgIndexes.length > 0)
+					return phpLambdaExpr(args, body, [], [], optionalArgNames, -1, refArgIndexes);
 			case EAnon(fieldNames, fieldValues):
 				return phpTypedAnonExpr(fieldNames, fieldValues, typeHint);
 			case EArrayDecl(items):
@@ -15929,11 +15949,12 @@ class SourceTargetCommon {
 		final name = valueName(Php, HxFunctionArg.getName(arg));
 		if (isRestLike)
 			return "..." + name;
+		final byRefName = phpFunctionArgIsRefLike(arg) ? "&" + name : name;
 		return switch (HxFunctionArg.getDefaultValue(arg)) {
 			case Default(expr):
-				name + " = " + (phpExprIsConstantDefault(expr) ? renderExpr(Php, expr) : defaultValue(Php));
+				byRefName + " = " + (phpExprIsConstantDefault(expr) ? renderExpr(Php, expr) : defaultValue(Php));
 			case NoDefault:
-				HxFunctionArg.getIsOptional(arg) ? name + " = null" : name;
+				HxFunctionArg.getIsOptional(arg) ? byRefName + " = null" : byRefName;
 		}
 	}
 
@@ -15957,6 +15978,22 @@ class SourceTargetCommon {
 			|| StringTools.startsWith(hint, "Rest<")
 			|| StringTools.startsWith(hint, "haxe.Rest<")
 			|| StringTools.startsWith(hint, "haxe.extern.Rest<");
+	}
+
+	static function phpFunctionArgIsRefLike(arg:HxFunctionArg):Bool {
+		if (arg == null)
+			return false;
+		var hint = StringTools.trim(HxFunctionArg.getTypeHint(arg));
+		while (StringTools.startsWith(hint, "?"))
+			hint = StringTools.trim(hint.substr(1));
+		if (hint.length == 0)
+			return false;
+		return hint == "Ref"
+			|| hint == "php.Ref"
+			|| hint == "\\php\\Ref"
+			|| StringTools.startsWith(hint, "Ref<")
+			|| StringTools.startsWith(hint, "php.Ref<")
+			|| StringTools.startsWith(hint, "\\php\\Ref<");
 	}
 
 	static function phpStaticInitFallbackLines(fn:HxFunctionDecl, className:String, staticMemberNames:Map<String, Bool>, indent:String):Array<String> {
