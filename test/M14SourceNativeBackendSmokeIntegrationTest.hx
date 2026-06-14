@@ -10280,7 +10280,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content,
 			"return new __HxAnon([\"__hx_enum\" => \"MultiEnum\", \"__hx_ctor\" => \"With\", \"__hx_index\" => 2, \"__hx_params\" => [$i]]);",
 			"PHP scanned enum constructors should retain their constructor index");
-		assertContains(content, "return MyEnum::C(...$__hxhx_args);", "PHP enum constructor values should lower to callable closures");
+		assertContains(content, "$c = [MyEnum::class, \"C\"];", "PHP enum constructor values should lower to stable callable arrays");
 		assertContains(content, "$unqualifiedNested = A::D(A::$A);", "PHP unqualified enum constructor calls should resolve through the owning enum helper");
 		assertContains(content, "Type::enumEq($latest, ELatest::$Same)",
 			"PHP duplicate unqualified enum constructors should use peer enum type context when available");
@@ -11036,24 +11036,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$e = __hxhx_int64_literal(\"47244640255\", \"i64\");", "PHP typed Int64 decimal literals should construct Int64 values");
 		assertContains(content, "$f = __hxhx_int64_literal(\"0x7FFFFFFFFFFFFFFF\", \"i64\");", "PHP typed Int64 hex literals should construct Int64 values");
 		assertContains(content, "$c = \\haxe\\Int64::make(2, 3);", "PHP imported Int64 calls should lower to qualified haxe.Int64 calls");
-		assertContains(content, "$capturedMake = function(...$__hxhx_args) { return \\haxe\\Int64::make(...$__hxhx_args); };",
-			"PHP captured Int64.make should lower to a qualified callable");
+		assertContains(content, "$capturedMake = [\\haxe\\Int64::class, \"make\"];", "PHP captured Int64.make should lower to a qualified callable");
 		assertContains(content, "$imported = \\haxe\\Int64::make(4, 5);", "PHP imported haxe.Int64.* make calls should lower to qualified static calls");
-		assertContains(content, "$importedMake = __hxhx_copy_value(function(...$__hxhx_args) { return \\haxe\\Int64::make(...$__hxhx_args); });",
+		assertContains(content, "$importedMake = __hxhx_copy_value([\\haxe\\Int64::class, \"make\"]);",
 			"PHP captured imported haxe.Int64.* make should lower to a qualified callable");
 		assertContains(content, "\\haxe\\Int64::compare($captured, $imported)",
 			"PHP imported haxe.Int64.* compare calls should lower to qualified static calls");
-		assertContains(content, "$capturedOfInt = function(...$__hxhx_args) { return \\haxe\\Int64::ofInt(...$__hxhx_args); };",
-			"PHP captured haxe.Int64.ofInt should lower to a qualified callable");
+		assertContains(content, "$capturedOfInt = [\\haxe\\Int64::class, \"ofInt\"];", "PHP captured haxe.Int64.ofInt should lower to a qualified callable");
 		assertContains(content, "\\haxe\\Int64::neg(\\haxe\\Int64::ofInt(6))", "PHP imported haxe.Int64.* neg calls should lower to qualified static calls");
-		assertContains(content, "$capturedNeg = __hxhx_copy_value(function(...$__hxhx_args) { return \\haxe\\Int64::neg(...$__hxhx_args); });",
+		assertContains(content, "$capturedNeg = __hxhx_copy_value([\\haxe\\Int64::class, \"neg\"]);",
 			"PHP captured imported haxe.Int64.* neg should lower to a qualified callable");
 		assertContains(content, "public static function parseInt($value)", "PHP Std should expose parseInt");
 		assertContains(content, "Std::parseInt(\"65.3\")", "PHP Std.parseInt calls should lower to the Std support class");
 		assertContains(content, "public static function parseFloat($value)", "PHP Std should expose parseFloat");
 		assertContains(content, "Std::parseFloat(\"12.5\")", "PHP Std.parseFloat calls should lower to the Std support class");
 		assertContains(content, "\\haxe\\Int64::fromFloat(12.0)", "PHP imported haxe.Int64.* fromFloat calls should lower to qualified static calls");
-		assertContains(content, "$capturedFromFloat = __hxhx_copy_value(function(...$__hxhx_args) { return \\haxe\\Int64::fromFloat(...$__hxhx_args); });",
+		assertContains(content, "$capturedFromFloat = __hxhx_copy_value([\\haxe\\Int64::class, \"fromFloat\"]);",
 			"PHP captured imported haxe.Int64.* fromFloat should lower to a qualified callable");
 		assertContains(content, "public static function hex($value, $digits = null)", "PHP StringTools should expose hex");
 		assertContains(content, "StringTools::hex((-8))", "PHP StringTools.hex calls should lower to the StringTools support class");
@@ -14608,6 +14606,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  public function add(x:Int, y:Int):Int {",
 			"    return base + x + y;",
 			"  }",
+			"  public static function ping():Void {}",
 			"}",
 			"class ParamBind<T> {",
 			"  public function new() {}",
@@ -14645,6 +14644,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(Reflect.compareMethods(c.add, d.add)));",
 			"    Sys.println(Std.string(Reflect.compareMethods(String.fromCharCode, String.fromCharCode)));",
 			"    Sys.println(Std.string(Reflect.compareMethods(c.add, null)));",
+			"    Sys.println(Std.string((MyClass:Dynamic).ping == (MyClass:Dynamic).ping));",
+			"    var fn1 = (c:Dynamic).add;",
+			"    var fn2 = (c:Dynamic).add;",
+			"    var fn3 = (d:Dynamic).add;",
+			"    Sys.println(Std.string(fn1 == fn2));",
+			"    var callbacks = [fn1];",
+			"    Sys.println(Std.string(callbacks.indexOf(fn2)));",
+			"    Sys.println(Std.string(callbacks.remove(fn2)));",
+			"    callbacks = [fn1];",
+			"    Sys.println(Std.string(callbacks.indexOf(fn3)));",
+			"    Sys.println(Std.string(callbacks.remove(fn3)));",
 			"    var p = new ParamBind<String>();",
 			"    var label = p.label;",
 			"    Sys.println(p.bind(\"ok\"));",
@@ -14662,6 +14672,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_field($c, \"add\")", "PHP instance method values should lower through the callable field helper");
+		assertContains(content, "__hxhx_field(__hxhx_class_value(\"MyClass\"), \"ping\")",
+			"PHP dynamic static method values should lower through the stable callable field helper");
+		assertContains(content, "if (is_callable($left) || is_callable($right)) return Reflect::compareMethods($left, $right);",
+			"PHP equality helper should compare callable method references by Haxe method identity");
+		assertContains(content, "function __hxhx_array_index_of($array, $value)", "PHP arrays should index values through Haxe equality");
 		assertContains(content, "$p->bind(\"ok\")", "PHP instance methods named bind should not be mistaken for Haxe partial application");
 		assertContains(content, "public static function compareMethods($a, $b)", "PHP Reflect should expose compareMethods");
 		assertNotContains(content, "__hxhx_bind($this->id, 3)", "PHP same-instance method values should not bind missing properties");
@@ -14669,7 +14684,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP instance method-value bind support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "103\n103\n103\ntrue\nfalse\ntrue\nfalse\nok\n>ok\n>ok\n3\n25\n",
+			assertTrue(run.stdout == "103\n103\n103\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\n0\ntrue\n-1\nfalse\nok\n>ok\n>ok\n3\n25\n",
 				"generated PHP method-value bind support should preserve receiver binding, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
@@ -14807,7 +14822,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "use (&$x)", "PHP closures should capture mutable locals by reference");
-		assertContains(content, "return Math::cos(...$__hxhx_args);", "PHP static method values should lower to callable closures");
+		assertContains(content, "[Math::class, \"cos\"]", "PHP static method values should lower to stable callable arrays");
 		assertNotContains(content, "$this->bar();", "PHP local closures named like helper methods should not rewrite to same-class helper calls");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);

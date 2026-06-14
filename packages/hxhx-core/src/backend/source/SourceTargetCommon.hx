@@ -6969,11 +6969,11 @@ class SourceTargetCommon {
 	static function phpStaticMethodValueAccess(typePath:String, field:String):String {
 		if (typePath == "String" && field == "fromCharCode")
 			return "function(...$__hxhx_args) { return __hxhx_string_from_char_code(...$__hxhx_args); }";
-		return "function(...$__hxhx_args) { return " + typePath + "::" + sanitizeTypeName(field) + "(...$__hxhx_args); }";
+		return "[" + typePath + "::class, " + quotePhpString(sanitizeTypeName(field)) + "]";
 	}
 
 	static function phpThisMethodValueAccess(field:String):String {
-		return "function(...$__hxhx_args) { return $this->" + sanitizeTypeName(field) + "(...$__hxhx_args); }";
+		return "[$this, " + quotePhpString(sanitizeTypeName(field)) + "]";
 	}
 
 	static function phpKnownStaticMethod(typePath:String, field:String):Bool {
@@ -13022,8 +13022,8 @@ class SourceTargetCommon {
 		lines.push("      return count($this->items) === 0;");
 		lines.push("    }");
 		lines.push("    public function remove($value) {");
-		lines.push("      $index = array_search($value, $this->items, true);");
-		lines.push("      if ($index === false) return false;");
+		lines.push("      $index = \\__hxhx_array_index_of($this->items, $value);");
+		lines.push("      if ($index < 0) return false;");
 		lines.push("      array_splice($this->items, $index, 1);");
 		lines.push("      return true;");
 		lines.push("    }");
@@ -19869,11 +19869,10 @@ class SourceTargetCommon {
 				lines.push("    $this->items = $items;");
 				lines.push("  }");
 				lines.push("  public function indexOf($value) {");
-				lines.push("    $index = array_search($value, $this->items, true);");
-				lines.push("    return $index === false ? -1 : $index;");
+				lines.push("    return __hxhx_array_index_of($this->items, $value);");
 				lines.push("  }");
 				lines.push("  public function contains($value) {");
-				lines.push("    return array_search($value, $this->items, true) !== false;");
+				lines.push("    return __hxhx_array_index_of($this->items, $value) >= 0;");
 				lines.push("  }");
 				lines.push("  public function pop() {");
 				lines.push("    return count($this->items) === 0 ? null : array_pop($this->items);");
@@ -19959,8 +19958,8 @@ class SourceTargetCommon {
 				lines.push("    return $this->length === 0;");
 				lines.push("  }");
 				lines.push("  public function remove($value) {");
-				lines.push("    $index = array_search($value, $this->items, true);");
-				lines.push("    if ($index === false) return false;");
+				lines.push("    $index = __hxhx_array_index_of($this->items, $value);");
+				lines.push("    if ($index < 0) return false;");
 				lines.push("    array_splice($this->items, $index, 1);");
 				lines.push("    $this->syncLength();");
 				lines.push("    return true;");
@@ -20179,12 +20178,12 @@ class SourceTargetCommon {
 				lines.push("  public static function field($object, $field) {");
 				lines.push("    if (is_string($object) && __hxhx_string_method_exists($field)) return new HxDynamicStr($object, $field);");
 				lines.push("    if (is_object($object) && property_exists($object, $field)) return $object->$field;");
-				lines.push("    if (is_object($object) && method_exists($object, $field)) return function(...$__hxhx_args) use ($object, $field) { return $object->$field(...$__hxhx_args); };");
+				lines.push("    if (is_object($object) && method_exists($object, $field)) return [$object, $field];");
 				lines.push("    if (is_array($object) && array_key_exists($field, $object)) return $object[$field];");
 				lines.push("    $runtime = __hxhx_class_candidate($object);");
 				lines.push("    if ($runtime !== null) {");
 				lines.push("      if (property_exists($runtime, $field)) return $runtime::${$field};");
-				lines.push("      if (method_exists($runtime, $field)) return function(...$__hxhx_args) use ($runtime, $field) { return $runtime::$field(...$__hxhx_args); };");
+				lines.push("      if (method_exists($runtime, $field)) return [$runtime, $field];");
 				lines.push("    }");
 				lines.push("    return null;");
 				lines.push("  }");
@@ -20877,6 +20876,7 @@ class SourceTargetCommon {
 				lines.push("    $rightValue = __hxhx_int64_value($right);");
 				lines.push("    return $leftValue->high === $rightValue->high && $leftValue->low === $rightValue->low;");
 				lines.push("  }");
+				lines.push("  if (is_callable($left) || is_callable($right)) return Reflect::compareMethods($left, $right);");
 				lines.push("  if ($left === null || $right === null) return $left === $right;");
 				lines.push("  $leftHasBoxedValue = is_object($left) && property_exists($left, \"__hx_value\") && $left->__hx_value !== null;");
 				lines.push("  $rightHasBoxedValue = is_object($right) && property_exists($right, \"__hx_value\") && $right->__hx_value !== null;");
@@ -21209,10 +21209,16 @@ class SourceTargetCommon {
 				lines.push("  if ($collection instanceof Xml) return $collection->remove($value);");
 				lines.push("  if ($collection instanceof __HxArray) $collection = $collection->toArray();");
 				lines.push("  if (!is_array($collection)) return false;");
-				lines.push("  $index = array_search($value, $collection, true);");
-				lines.push("  if ($index === false) return false;");
+				lines.push("  $index = __hxhx_array_index_of($collection, $value);");
+				lines.push("  if ($index < 0) return false;");
 				lines.push("  array_splice($collection, $index, 1);");
 				lines.push("  return true;");
+				lines.push("}");
+				lines.push("function __hxhx_array_index_of($array, $value) {");
+				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
+				lines.push("  if (!is_array($array)) return -1;");
+				lines.push("  foreach (array_values($array) as $index => $item) if (__hxhx_equals($item, $value)) return $index;");
+				lines.push("  return -1;");
 				lines.push("}");
 				lines.push("function __hxhx_array_splice(&$array, $pos, $len) {");
 				lines.push("  if ($array instanceof __HxArray) $array = $array->toArray();");
@@ -21261,7 +21267,7 @@ class SourceTargetCommon {
 				lines.push("  if (is_object($obj)) {");
 				lines.push("    if (property_exists($obj, $name)) return $obj->$name;");
 				lines.push("    if (__hxhx_is_int64($obj) && $name === \"toStr\") return function() use ($obj) { return __hxhx_int64_to_string($obj); };");
-				lines.push("    if (method_exists($obj, $name)) return function(...$args) use ($obj, $name) { return $obj->$name(...$args); };");
+				lines.push("    if (method_exists($obj, $name)) return [$obj, $name];");
 				lines.push("  }");
 				lines.push("  if (is_array($obj) && array_key_exists($name, $obj)) return $obj[$name];");
 				lines.push("  return null;");
@@ -21295,6 +21301,7 @@ class SourceTargetCommon {
 				lines.push("  };");
 				lines.push("}");
 				lines.push("function __hxhx_string_index_of($value, $needle, $start = 0) {");
+				lines.push("  if (is_array($value) || $value instanceof __HxArray) return __hxhx_array_index_of($value, $needle);");
 				lines.push("  $s = __hxhx_string_value($value);");
 				lines.push("  $n = __hxhx_string_value($needle);");
 				lines.push("  $len = strlen($s);");

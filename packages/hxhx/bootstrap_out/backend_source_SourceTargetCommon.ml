@@ -5552,11 +5552,11 @@ let phpMathConstantAccess = fun field -> let tempResult = ref (Obj.magic (HxRunt
 
 let phpStaticMethodValueAccess = fun typePath field -> try let __fallback_result_3340 = (
   ignore (if HxString.equals typePath "String" && HxString.equals field "fromCharCode" then raise (HxRuntime.Hx_return (Obj.repr ("function(...$__hxhx_args) { return __hxhx_string_from_char_code(...$__hxhx_args); }" : string))) else ());
-  ((("function(...$__hxhx_args) { return " ^ HxString.toStdString typePath) ^ "::") ^ HxString.toStdString (sanitizeTypeName (field : string))) ^ "(...$__hxhx_args); }"
+  ((("[" ^ HxString.toStdString typePath) ^ "::class, ") ^ HxString.toStdString (quotePhpString (sanitizeTypeName (field : string) : string))) ^ "]"
 ) in Obj.magic __fallback_result_3340 with
   | HxRuntime.Hx_return __ret_3339 -> Obj.obj __ret_3339
 
-let phpThisMethodValueAccess = fun field -> ("function(...$__hxhx_args) { return $this->" ^ HxString.toStdString (sanitizeTypeName (field : string))) ^ "(...$__hxhx_args); }"
+let phpThisMethodValueAccess = fun field -> ("[$this, " ^ HxString.toStdString (quotePhpString (sanitizeTypeName (field : string) : string))) ^ "]"
 
 let sanitizePhpGlobalFunctionName = fun name -> sanitizeTypeName (name : string)
 
@@ -11433,8 +11433,8 @@ let appendPhpGenericStackRuntime = fun lines -> ignore ((
   ignore (HxArray.push lines "      return count($this->items) === 0;");
   ignore (HxArray.push lines "    }");
   ignore (HxArray.push lines "    public function remove($value) {");
-  ignore (HxArray.push lines "      $index = array_search($value, $this->items, true);");
-  ignore (HxArray.push lines "      if ($index === false) return false;");
+  ignore (HxArray.push lines "      $index = \\__hxhx_array_index_of($this->items, $value);");
+  ignore (HxArray.push lines "      if ($index < 0) return false;");
   ignore (HxArray.push lines "      array_splice($this->items, $index, 1);");
   ignore (HxArray.push lines "      return true;");
   ignore (HxArray.push lines "    }");
@@ -41257,11 +41257,10 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    $this->items = $items;");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public function indexOf($value) {");
-      ignore (HxArray.push lines "    $index = array_search($value, $this->items, true);");
-      ignore (HxArray.push lines "    return $index === false ? -1 : $index;");
+      ignore (HxArray.push lines "    return __hxhx_array_index_of($this->items, $value);");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public function contains($value) {");
-      ignore (HxArray.push lines "    return array_search($value, $this->items, true) !== false;");
+      ignore (HxArray.push lines "    return __hxhx_array_index_of($this->items, $value) >= 0;");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public function pop() {");
       ignore (HxArray.push lines "    return count($this->items) === 0 ? null : array_pop($this->items);");
@@ -41347,8 +41346,8 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    return $this->length === 0;");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  public function remove($value) {");
-      ignore (HxArray.push lines "    $index = array_search($value, $this->items, true);");
-      ignore (HxArray.push lines "    if ($index === false) return false;");
+      ignore (HxArray.push lines "    $index = __hxhx_array_index_of($this->items, $value);");
+      ignore (HxArray.push lines "    if ($index < 0) return false;");
       ignore (HxArray.push lines "    array_splice($this->items, $index, 1);");
       ignore (HxArray.push lines "    $this->syncLength();");
       ignore (HxArray.push lines "    return true;");
@@ -41567,12 +41566,12 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  public static function field($object, $field) {");
       ignore (HxArray.push lines "    if (is_string($object) && __hxhx_string_method_exists($field)) return new HxDynamicStr($object, $field);");
       ignore (HxArray.push lines "    if (is_object($object) && property_exists($object, $field)) return $object->$field;");
-      ignore (HxArray.push lines "    if (is_object($object) && method_exists($object, $field)) return function(...$__hxhx_args) use ($object, $field) { return $object->$field(...$__hxhx_args); };");
+      ignore (HxArray.push lines "    if (is_object($object) && method_exists($object, $field)) return [$object, $field];");
       ignore (HxArray.push lines "    if (is_array($object) && array_key_exists($field, $object)) return $object[$field];");
       ignore (HxArray.push lines "    $runtime = __hxhx_class_candidate($object);");
       ignore (HxArray.push lines "    if ($runtime !== null) {");
       ignore (HxArray.push lines "      if (property_exists($runtime, $field)) return $runtime::${$field};");
-      ignore (HxArray.push lines "      if (method_exists($runtime, $field)) return function(...$__hxhx_args) use ($runtime, $field) { return $runtime::$field(...$__hxhx_args); };");
+      ignore (HxArray.push lines "      if (method_exists($runtime, $field)) return [$runtime, $field];");
       ignore (HxArray.push lines "    }");
       ignore (HxArray.push lines "    return null;");
       ignore (HxArray.push lines "  }");
@@ -42265,6 +42264,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "    $rightValue = __hxhx_int64_value($right);");
       ignore (HxArray.push lines "    return $leftValue->high === $rightValue->high && $leftValue->low === $rightValue->low;");
       ignore (HxArray.push lines "  }");
+      ignore (HxArray.push lines "  if (is_callable($left) || is_callable($right)) return Reflect::compareMethods($left, $right);");
       ignore (HxArray.push lines "  if ($left === null || $right === null) return $left === $right;");
       ignore (HxArray.push lines "  $leftHasBoxedValue = is_object($left) && property_exists($left, \"__hx_value\") && $left->__hx_value !== null;");
       ignore (HxArray.push lines "  $rightHasBoxedValue = is_object($right) && property_exists($right, \"__hx_value\") && $right->__hx_value !== null;");
@@ -42595,10 +42595,16 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  if ($collection instanceof Xml) return $collection->remove($value);");
       ignore (HxArray.push lines "  if ($collection instanceof __HxArray) $collection = $collection->toArray();");
       ignore (HxArray.push lines "  if (!is_array($collection)) return false;");
-      ignore (HxArray.push lines "  $index = array_search($value, $collection, true);");
-      ignore (HxArray.push lines "  if ($index === false) return false;");
+      ignore (HxArray.push lines "  $index = __hxhx_array_index_of($collection, $value);");
+      ignore (HxArray.push lines "  if ($index < 0) return false;");
       ignore (HxArray.push lines "  array_splice($collection, $index, 1);");
       ignore (HxArray.push lines "  return true;");
+      ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_array_index_of($array, $value) {");
+      ignore (HxArray.push lines "  if ($array instanceof __HxArray) $array = $array->toArray();");
+      ignore (HxArray.push lines "  if (!is_array($array)) return -1;");
+      ignore (HxArray.push lines "  foreach (array_values($array) as $index => $item) if (__hxhx_equals($item, $value)) return $index;");
+      ignore (HxArray.push lines "  return -1;");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_array_splice(&$array, $pos, $len) {");
       ignore (HxArray.push lines "  if ($array instanceof __HxArray) $array = $array->toArray();");
@@ -42647,7 +42653,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  if (is_object($obj)) {");
       ignore (HxArray.push lines "    if (property_exists($obj, $name)) return $obj->$name;");
       ignore (HxArray.push lines "    if (__hxhx_is_int64($obj) && $name === \"toStr\") return function() use ($obj) { return __hxhx_int64_to_string($obj); };");
-      ignore (HxArray.push lines "    if (method_exists($obj, $name)) return function(...$args) use ($obj, $name) { return $obj->$name(...$args); };");
+      ignore (HxArray.push lines "    if (method_exists($obj, $name)) return [$obj, $name];");
       ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if (is_array($obj) && array_key_exists($name, $obj)) return $obj[$name];");
       ignore (HxArray.push lines "  return null;");
@@ -42681,6 +42687,7 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  };");
       ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_string_index_of($value, $needle, $start = 0) {");
+      ignore (HxArray.push lines "  if (is_array($value) || $value instanceof __HxArray) return __hxhx_array_index_of($value, $needle);");
       ignore (HxArray.push lines "  $s = __hxhx_string_value($value);");
       ignore (HxArray.push lines "  $n = __hxhx_string_value($needle);");
       ignore (HxArray.push lines "  $len = strlen($s);");
