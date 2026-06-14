@@ -8860,6 +8860,44 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpUtestRunnerAsyncDispatch():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_utest_async_dispatch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class AsyncCase {",
+			"  public function new() {}",
+			"  public function testAsync(async:utest.Async) {",
+			"    async.done();",
+			"    Sys.println(\"async-done\");",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var runner = new Runner();",
+			"    runner.addCase(new AsyncCase());",
+			"    runner.run();",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class __HxUtestAsync", "PHP Runner shim should provide a minimal utest Async runtime object");
+		assertContains(content, "new \\ReflectionMethod($case, $method)", "PHP Runner shim should inspect test method arity before dispatch");
+		assertContains(content, "$case->$method(new __HxUtestAsync())", "PHP Runner shim should pass Async to one-argument utest methods");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP utest async dispatch smoke should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "async-done\n", "generated PHP utest async dispatch output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpMapRuntimeShim():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_map_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -14702,6 +14740,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpHaxeFormatJsonPrinterRuntimeSupport();
 		assertPhpHaxeFormatJsonParserRuntimeSupport();
 		assertPhpHaxeResourceRuntimeSupport();
+		assertPhpUtestRunnerAsyncDispatch();
 		assertPhpStdDateToolsSupport();
 		assertPhpPackageQualifiedClassReference();
 		assertPhpStdStringMapClassReference();
