@@ -162,6 +162,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function fallback() return 5; static function main() { var value:Null<Int> = null; value ??= fallback(); var got = value ??= fallback(); Sys.println(got); } }'),
+			context);
+		final nullCoalesceAssignSource = File.getContent(sourcePath);
+		assertContains(nullCoalesceAssignSource, "if (value == null)", "expected Neko null-coalescing assignment to check the target");
+		assertContains(nullCoalesceAssignSource, "value = fallback();", "expected Neko null-coalescing assignment to update the target lazily");
+		assertContains(nullCoalesceAssignSource, "return value;", "expected Neko null-coalescing assignment expression to return the resulting target");
+		assertNotContains(nullCoalesceAssignSource, "??=", "null-coalescing assignment syntax should not leak into Neko source");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		final anonResult = BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var o = { name: "neko", count: 2 }; Sys.println(o.name); } }'), context);
 		assertTrue(anonResult.entryPath == sourcePath, "anon source-only mode should report generated Neko source");

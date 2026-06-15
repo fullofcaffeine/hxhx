@@ -627,6 +627,8 @@ class NekoTargetCore {
 				"Std_isOfType(" + renderExpr(context, left) + ", " + renderTypeTestExpr(context, right) + ")";
 			case EBinop("??", left, right):
 				renderNullCoalesceExpr(context, left, right);
+			case EBinop("??=", left, right):
+				renderNullCoalesceAssignExpr(context, left, right);
 			case EBinop(op, left, right):
 				"(" + renderExpr(context, left) + " " + op + " " + renderExpr(context, right) + ")";
 			case ETernary(cond, thenExpr, elseExpr):
@@ -706,6 +708,28 @@ class NekoTargetCore {
 			+ "; if (__hxhx_coalesce != null) { return __hxhx_coalesce; } else { return "
 			+ renderExpr(context, right)
 			+ "; } })()";
+	}
+
+	static function renderNullCoalesceAssignExpr(context:NekoEmitContext, left:HxExpr, right:HxExpr):String {
+		final target = renderAssignableExpr(context, left, "null-coalescing assignment");
+		return "(function() { if ("
+			+ target
+			+ " == null) { "
+			+ target
+			+ " = "
+			+ renderExpr(context, right)
+			+ "; } return "
+			+ target
+			+ "; })()";
+	}
+
+	static function renderAssignableExpr(context:NekoEmitContext, expr:HxExpr, detail:String):String {
+		return switch (expr) {
+			case EIdent(_) | EField(_, _) | EArrayAccess(_, _):
+				renderExpr(context, expr);
+			case _:
+				unsupportedExpr(detail + " target " + exprTag(expr));
+		}
 	}
 
 	static function renderUnsupportedNumericLiteral(raw:String):Null<String> {
