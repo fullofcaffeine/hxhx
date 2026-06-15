@@ -670,6 +670,8 @@ class NekoTargetCore {
 	static function renderUnsupportedRecoveryLiteral(raw:String):Null<String> {
 		if (raw == null)
 			return null;
+		if (raw == "=")
+			return "null";
 		if (StringTools.startsWith(raw, "for_expr:"))
 			return "null";
 		return renderUnsupportedNumericLiteral(raw);

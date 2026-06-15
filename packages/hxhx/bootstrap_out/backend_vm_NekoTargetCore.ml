@@ -248,6 +248,7 @@ let renderUnsupportedNumericLiteral = fun raw -> try let __fallback_result_175 =
 
 let renderUnsupportedRecoveryLiteral = fun raw -> try let __fallback_result_165 = (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if HxString.equals raw "=" then raise (HxRuntime.Hx_return (Obj.repr ("null" : string))) else ());
   ignore (if StringTools.startsWith (raw : string) ("for_expr:" : string) then raise (HxRuntime.Hx_return (Obj.repr ("null" : string))) else ());
   renderUnsupportedNumericLiteral (raw : string)
 ) in Obj.magic __fallback_result_165 with
