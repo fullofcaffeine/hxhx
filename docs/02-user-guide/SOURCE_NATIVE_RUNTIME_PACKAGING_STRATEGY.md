@@ -180,10 +180,10 @@ Upstream compatibility:
 1. PHP stable runtime template split.
    - Priority: P2.
    - Bead: `haxe.ocaml-yt1u`.
-   - Move stable PHP runtime classes/helpers from `renderPhpSupportClasses` and
-     adjacent `appendPhp*Runtime` functions into template families such as
-     runtime core, std/type/reflection, XML/date/string/resource support, and IO
-     support.
+   - First slice: move standalone stable runtime classes from adjacent
+     `appendPhp*Runtime` functions into template files.
+   - Follow-up bead: `haxe.ocaml-fzb1` for the remaining monolithic PHP core
+     runtime/helper block in the main PHP output path.
    - Keep generated class-name, reflection, metadata, and resource maps emitted
      as data injected around those templates.
 
