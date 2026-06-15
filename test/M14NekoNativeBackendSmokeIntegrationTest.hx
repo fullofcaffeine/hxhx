@@ -306,6 +306,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { function test() { throw "boom"; } var result = try { test(); } catch(e:String) { e; }; Sys.println(result); } }'),
+			context);
+		final simpleCallCatchSource = File.getContent(sourcePath);
+		assertContains(simpleCallCatchSource, "try { return test(); } catch e { return e; }", "expected simple call catch-value raw lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class TestLocalStatic { public function new() {} public function basic() { static var x = 1; static final y = "final"; x++; return { x: x, y: y }; } public static function main() { var obj = new TestLocalStatic(); var value = obj.basic(); Sys.println(value.x); value = obj.basic(); Sys.println(value.x); } }'),
 			context);
 		final localStaticSource = File.getContent(sourcePath);

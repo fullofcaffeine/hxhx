@@ -724,6 +724,10 @@ class NekoTargetCore {
 			final sliced = "$ssub(" + stringSub.bytes + ", " + stringSub.pos + ", " + stringSub.len + ")";
 			return "(function() { try { return " + sliced + "; } catch e { $throw(" + quote("OutsideBounds") + "); return null; } })()";
 		}
+		final simpleCallCatch = parseSimpleCallCatchValueRaw(raw);
+		if (simpleCallCatch != null) {
+			return "(function() { try { return " + simpleCallCatch + "(); } catch e { return e; } })()";
+		}
 		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
 	}
 
@@ -749,6 +753,12 @@ class NekoTargetCore {
 			bytes: safeIdent(pattern.matched(1)),
 			pos: safeIdent(pattern.matched(2))
 		};
+	}
+
+	static function parseSimpleCallCatchValueRaw(raw:String):Null<String> {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		final pattern = ~/^try\{([A-Za-z_][A-Za-z0-9_]*)\(\);\}catch\(e:[^)]+\)\{e;\}$/;
+		return pattern.match(compact) ? safeIdent(pattern.matched(1)) : null;
 	}
 
 	static function renderBytesConstructorCall(context:NekoEmitContext, len:String, data:String):String {
