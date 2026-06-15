@@ -17,6 +17,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			throw message + " (missing `" + needle + "` in `" + haystack + "`)";
 	}
 
+	static function assertFailsContains(fn:Void->Void, expected:String):Void {
+		var message = "";
+		try {
+			fn();
+		} catch (e:haxe.Exception) {
+			message = e.message;
+		} catch (e:String) {
+			message = e;
+		}
+		assertTrue(message.indexOf(expected) >= 0, "expected failure containing `" + expected + "`, got `" + message + "`");
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -66,6 +78,12 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(anonSource, "__hxhx_o.name = \"neko\";", "expected anonymous object string field assignment");
 		assertContains(anonSource, "__hxhx_o.count = 2;", "expected anonymous object int field assignment");
 
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		assertFailsContains(function() {
+			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var f = x -> x; } }'), context);
+		}, "ELambda");
 		deleteRecursive(outDir);
 	}
 }

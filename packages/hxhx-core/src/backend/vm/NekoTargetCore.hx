@@ -234,7 +234,41 @@ class NekoTargetCore {
 				renderAnon(fieldNames, fieldValues);
 			case EArrayComprehension(_, _, _, _) | ERange(_, _) | ELambda(_, _) | ENew(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) |
 				ESwitch(_, _, _) | EUnsupported(_):
-				unsupportedExpr(Std.string(expr));
+				unsupportedExpr(exprTag(expr));
+		}
+	}
+
+	static function exprTag(expr:HxExpr):String {
+		return switch (expr) {
+			case ENull: "ENull";
+			case EBool(_): "EBool";
+			case EString(_): "EString";
+			case EInt(_): "EInt";
+			case EFloat(_): "EFloat";
+			case EEnumValue(_): "EEnumValue";
+			case EThis: "EThis";
+			case ESuper: "ESuper";
+			case EIdent(_): "EIdent";
+			case EField(_, _): "EField";
+			case ECall(_, _): "ECall";
+			case EMacroExpr(_, _): "EMacroExpr";
+			case EMacroType(typeText): "EMacroType(" + typeText + ")";
+			case ELambda(_, _): "ELambda";
+			case ETryCatchRaw(raw): "ETryCatchRaw(" + raw + ")";
+			case ESwitchRaw(raw): "ESwitchRaw(" + raw + ")";
+			case ESwitch(_, _, _): "ESwitch";
+			case ENew(typePath, _): "ENew(" + typePath + ")";
+			case EUnop(op, _): "EUnop(" + op + ")";
+			case EBinop(op, _, _): "EBinop(" + op + ")";
+			case ETernary(_, _, _): "ETernary";
+			case EAnon(_, _): "EAnon";
+			case EArrayComprehension(_, _, _, _): "EArrayComprehension";
+			case EArrayDecl(_): "EArrayDecl";
+			case EArrayAccess(_, _): "EArrayAccess";
+			case ERange(_, _): "ERange";
+			case ECast(_, typeHint): "ECast(" + typeHint + ")";
+			case EUntyped(_): "EUntyped";
+			case EUnsupported(raw): "EUnsupported(" + raw + ")";
 		}
 	}
 
