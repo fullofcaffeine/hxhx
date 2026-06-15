@@ -32,6 +32,12 @@ private typedef NekoReachable = {
 	var staticFunctions:Array<NekoStaticFunctionRef>;
 }
 
+private typedef NekoBytesSubRaw = {
+	var len:String;
+	var bytes:String;
+	var pos:String;
+}
+
 /**
 	MVP native Neko target core.
 
@@ -336,7 +342,12 @@ class NekoTargetCore {
 			case ESuper:
 			case EIdent(_):
 			case EMacroType(_):
-			case ETryCatchRaw(_):
+			case ETryCatchRaw(raw):
+				if (parseBytesSubTryRaw(raw) != null) {
+					final bytesInfo = lookupBytesClass(context);
+					if (bytesInfo != null)
+						addConstructor(bytesInfo);
+				}
 			case ESwitchRaw(_):
 			case ERange(start, end):
 				collectExprRefs(context, start, addConstructor, addStatic);
@@ -556,7 +567,7 @@ class NekoTargetCore {
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				renderArrayComprehension(context, name, iterable, guardExpr, yieldExpr);
 			case ETryCatchRaw(raw):
-				renderTryCatchRaw(raw);
+				renderTryCatchRaw(context, raw);
 			case ERange(start, end):
 				renderRangeExpr(context, start, end);
 			case EMacroType(_) | ESwitchRaw(_) | EUnsupported(_):
@@ -645,7 +656,7 @@ class NekoTargetCore {
 		return parts.join(" ");
 	}
 
-	static function renderTryCatchRaw(raw:String):String {
+	static function renderTryCatchRaw(context:NekoEmitContext, raw:String):String {
 		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
 		if (compact.indexOf("try{") == 0 && compact.indexOf("catch(e:Exception){e.stack;}") >= 0) {
 			return
@@ -654,7 +665,42 @@ class NekoTargetCore {
 		if (compact.indexOf("try{throw") == 0 && compact.indexOf("catch(e){e;}") >= 0) {
 			return "(function() { var __hxhx_probe = $new(null); try { $throw(__hxhx_probe); return null; } catch e { return e; } })()";
 		}
+		final bytesSub = parseBytesSubTryRaw(raw);
+		if (bytesSub != null) {
+			final ctor = renderBytesConstructorCall(context, bytesSub.len, "$ssub(" + bytesSub.bytes + ", " + bytesSub.pos + ", " + bytesSub.len + ")");
+			return "(function() { try { return " + ctor + "; } catch e { $throw(" + quote("OutsideBounds") + "); return null; } })()";
+		}
 		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
+	}
+
+	static function parseBytesSubTryRaw(raw:String):Null<NekoBytesSubRaw> {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		final pattern = ~/^try\{newBytes\(([^,{}()]+),untyped__dollar__ssub\(([^,{}()]+),([^,{}()]+),([^,{}()]+)\)\);\}catch\([^)]*\)\{throwError\.OutsideBounds;\}$/;
+		if (!pattern.match(compact))
+			return null;
+		return {
+			len: safeIdent(pattern.matched(1)),
+			bytes: safeIdent(pattern.matched(2)),
+			pos: safeIdent(pattern.matched(3))
+		};
+	}
+
+	static function renderBytesConstructorCall(context:NekoEmitContext, len:String, data:String):String {
+		final info = lookupBytesClass(context);
+		if (info != null)
+			return mangleConstructor(info.fullName) + "(" + len + ", " + data + ")";
+		return "(function() { var __hxhx_bytes = $new(null); __hxhx_bytes.__hx_ctor = "
+			+ quote("haxe.io.Bytes")
+			+ "; __hxhx_bytes.__hx_params = $array("
+			+ len
+			+ ", "
+			+ data
+			+ "); return __hxhx_bytes; })()";
+	}
+
+	static function lookupBytesClass(context:NekoEmitContext):Null<NekoClassInfo> {
+		final qualified = lookupClass(context, "haxe.io.Bytes");
+		return qualified == null ? lookupClass(context, "Bytes") : qualified;
 	}
 
 	static function renderArrayComprehension(context:NekoEmitContext, name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr):String {
