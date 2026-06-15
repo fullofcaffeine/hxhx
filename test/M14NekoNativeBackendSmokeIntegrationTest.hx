@@ -129,6 +129,14 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var value = ~1; Sys.println(value); } }'), context);
+		final bitwiseNotSource = File.getContent(sourcePath);
+		assertContains(bitwiseNotSource, "var value = (1 ^ -1);", "expected Neko bitwise-not lowering");
+		assertNotContains(bitwiseNotSource, "~1", "bitwise-not syntax should not leak into Neko source");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		final anonResult = BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var o = { name: "neko", count: 2 }; Sys.println(o.name); } }'), context);
 		assertTrue(anonResult.entryPath == sourcePath, "anon source-only mode should report generated Neko source");

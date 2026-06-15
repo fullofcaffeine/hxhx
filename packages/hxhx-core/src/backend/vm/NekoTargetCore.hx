@@ -619,6 +619,8 @@ class NekoTargetCore {
 				renderCall(context, callee, args);
 			case EUnop("!", inner):
 				"$not(" + renderExpr(context, inner) + ")";
+			case EUnop("~", inner):
+				"(" + renderExpr(context, inner) + " ^ -1)";
 			case EUnop(op, inner):
 				"(" + op + renderExpr(context, inner) + ")";
 			case EBinop("is", left, right):
