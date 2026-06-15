@@ -810,15 +810,25 @@ class NekoTargetCore {
 
 	static function parseOpaqueObjectLocalRaw(raw:String):Null<NekoOpaqueObjectLocalRaw> {
 		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
-		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\}=\{\2:("[^"]*"|-?[0-9.]+)(?:,([A-Za-z_][A-Za-z0-9_]*):("[^"]*"|-?[0-9.]+))?\};\}$/;
+		final twoFieldPattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\}=\{\2:("[^"]*"|-?[0-9.]+),([A-Za-z_][A-Za-z0-9_]*):("[^"]*"|-?[0-9.]+)\};\}$/;
+		if (twoFieldPattern.match(compact)) {
+			return {
+				local: safeIdent(twoFieldPattern.matched(1)),
+				field: safeIdent(twoFieldPattern.matched(2)),
+				value: twoFieldPattern.matched(3),
+				extraField: safeIdent(twoFieldPattern.matched(4)),
+				extraValue: twoFieldPattern.matched(5)
+			};
+		}
+		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\}=\{\2:("[^"]*"|-?[0-9.]+)\};\}$/;
 		if (!pattern.match(compact))
 			return null;
 		return {
 			local: safeIdent(pattern.matched(1)),
 			field: safeIdent(pattern.matched(2)),
 			value: pattern.matched(3),
-			extraField: pattern.matched(4) == null ? null : safeIdent(pattern.matched(4)),
-			extraValue: pattern.matched(5)
+			extraField: null,
+			extraValue: null
 		};
 	}
 
