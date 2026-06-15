@@ -461,10 +461,20 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { try { throw "boom"; } catch (e:String) { Sys.println(e); } } }'),
 			context);
 		final trySource = File.getContent(sourcePath);
-		assertContains(trySource, "try\n  {", "expected Neko try statement lowering");
-		assertContains(trySource, "catch e\n  {", "expected Neko catch binding lowering");
+		assertContains(trySource, "try {", "expected Neko try statement lowering");
+		assertContains(trySource, "catch e {", "expected Neko catch binding lowering");
 		assertContains(trySource, "$throw(\"boom\");", "expected throw lowering inside try");
 		assertContains(trySource, "$print(e, \"\\n\")", "expected catch body lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function copy() {} static function main() { try copy(); catch (e:Dynamic) throw e; } }'), context);
+		final singleTrySource = File.getContent(sourcePath);
+		assertContains(singleTrySource, "try {", "expected single-statement Neko try body to use a block");
+		assertContains(singleTrySource, "copy();", "expected try expression body to remain inside the block");
+		assertContains(singleTrySource, "catch e {", "expected single-statement Neko catch body to use a block");
 
 		deleteRecursive(outDir);
 

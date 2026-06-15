@@ -2900,8 +2900,7 @@ and renderControlBlock = fun out context header body indent -> ignore ((
   HxArray.push out (HxString.toStdString indent ^ "}")
 ))
 and renderTryStmt = fun out context tryBody catches indent -> ignore (try (
-  ignore (HxArray.push out (HxString.toStdString indent ^ "try"));
-  ignore (renderStmt (Obj.magic out) context (Obj.magic tryBody) (indent : string));
+  ignore (renderControlBlock (Obj.magic out) context ("try" : string) (Obj.magic tryBody) (indent : string));
   ignore (if catches == Obj.magic (HxRuntime.hx_null) || HxArray.length catches = 0 then ignore ((
     ignore (HxArray.push out (HxString.toStdString indent ^ "catch __hxhx_e"));
     ignore (HxArray.push out (HxString.toStdString indent ^ "{"));
@@ -2909,10 +2908,7 @@ and renderTryStmt = fun out context tryBody catches indent -> ignore (try (
     ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  let c = HxArray.get (Obj.magic catches) 0 in (
-    ignore (HxArray.push out ((HxString.toStdString indent ^ "catch ") ^ HxString.toStdString (safeIdent (Obj.obj (HxAnon.get c "name") : string))));
-    renderStmt (Obj.magic out) context (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) (indent : string)
-  )
+  let c = HxArray.get (Obj.magic catches) 0 in renderControlBlock (Obj.magic out) context ("catch " ^ HxString.toStdString (safeIdent (Obj.obj (HxAnon.get c "name") : string)) : string) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) (indent : string)
 ) with
   | HxRuntime.Hx_return __ret_112 -> Obj.obj __ret_112)
 and renderForInStmt = fun out context name iterable body indent -> ignore (let safeName = (safeIdent (name : string) : string) in let iterableName = ("__hxhx_iter_" ^ HxString.toStdString safeName : string) in let indexName = ("__hxhx_index_" ^ HxString.toStdString safeName : string) in (

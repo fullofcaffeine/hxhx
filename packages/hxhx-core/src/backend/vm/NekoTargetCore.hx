@@ -557,8 +557,7 @@ class NekoTargetCore {
 
 	static function renderTryStmt(out:Array<String>, context:NekoEmitContext, tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>,
 			indent:String):Void {
-		out.push(indent + "try");
-		renderStmt(out, context, tryBody, indent);
+		renderControlBlock(out, context, "try", tryBody, indent);
 		if (catches == null || catches.length == 0) {
 			out.push(indent + "catch __hxhx_e");
 			out.push(indent + "{");
@@ -567,8 +566,7 @@ class NekoTargetCore {
 			return;
 		}
 		final c = catches[0];
-		out.push(indent + "catch " + safeIdent(c.name));
-		renderStmt(out, context, c.body, indent);
+		renderControlBlock(out, context, "catch " + safeIdent(c.name), c.body, indent);
 	}
 
 	static function stmtTag(stmt:HxStmt):String {
