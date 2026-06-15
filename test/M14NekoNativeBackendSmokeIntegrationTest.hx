@@ -101,6 +101,11 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"ETryCatchRaw");
 		final opaqueTypedLocalInit = @:privateAccess NekoTargetCore.renderExpr(cast null, ETryCatchRaw('opaque_block_expr:{ var i:Int = z; }'));
 		assertContains(opaqueTypedLocalInit, "var i = z;", "opaque typed local init should emit the captured initializer safely");
+		final macroInExpr = @:privateAccess NekoTargetCore.renderExpr(cast null, EMacroExpr(EBinop("in", EInt(1), EInt(0)), []));
+		assertContains(macroInExpr, '__hxhx_o.__hx_ctor = "EBinop";', "macro in-expression should lower to macro EBinop");
+		assertContains(macroInExpr, '__hxhx_o.__hx_ctor = "OpIn";', "macro in-expression should preserve OpIn");
+		assertContains(macroInExpr, '__hxhx_o.__hx_ctor = "CInt";', "macro in-expression should lower int operands");
+		assertNotContains(macroInExpr, " in ", "macro in-expression syntax should not leak into Neko source");
 
 		final outDir = Path.join([".tmp", "m14_neko_native_backend_smoke"]);
 		deleteRecursive(outDir);
@@ -297,6 +302,14 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(macroTypeSource, "__hxhx_o.__hx_ctor = \"TPath\";", "expected macro type paths to lower to TPath");
 		assertContains(macroTypeSource, "__hxhx_o.name = \"X\";", "expected macro type argument path");
 		assertContains(macroTypeSource, "__hxhx_o.name = \"Y\";", "expected macro type return path");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var e = macro (1 in 0); Sys.println(e.expr); } }'), context);
+		final macroExprSource = File.getContent(sourcePath);
+		assertContains(macroExprSource, '__hxhx_o.__hx_ctor = "EBinop";', "expected macro in-expression source to lower to macro EBinop");
+		assertContains(macroExprSource, '__hxhx_o.__hx_ctor = "OpIn";', "expected macro in-expression source to preserve OpIn");
+		assertNotContains(macroExprSource, " in ", "macro in-expression syntax should not leak into generated Neko source");
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);

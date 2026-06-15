@@ -633,8 +633,10 @@ class NekoTargetCore {
 				"(" + renderExpr(context, left) + " " + op + " " + renderExpr(context, right) + ")";
 			case ETernary(cond, thenExpr, elseExpr):
 				renderConditionalExpr(context, cond, thenExpr, elseExpr);
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case ECast(inner, _) | EUntyped(inner):
 				renderExpr(context, inner);
+			case EMacroExpr(inner, wrappers):
+				NekoMacroExprLowering.render(inner, wrappers, function(value) return renderExpr(context, value));
 			case EArrayDecl(values):
 				renderArray(context, values);
 			case EArrayAccess(array, index):

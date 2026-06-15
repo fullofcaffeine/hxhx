@@ -2071,12 +2071,9 @@ let rec renderExpr = fun context expr -> let tempResult = ref ("" : string) in (
       tempResult := __assign_148;
       __assign_148
     )
-    | HxExpr.EMacroExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
-      ignore _p1;
-      let inner = Obj.magic _g in let __assign_149 = (renderExpr context (Obj.magic inner) : string) in (
-        tempResult := __assign_149;
-        __assign_149
-      )
+    | HxExpr.EMacroExpr (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let inner = Obj.magic _g in let wrappers = Obj.magic _g1 in let __assign_149 = (Backend_vm_NekoMacroExprLowering.render (Obj.magic inner) (Obj.magic wrappers) (fun value -> renderExpr context (Obj.magic value)) : string) in (
+      tempResult := __assign_149;
+      __assign_149
     )
     | HxExpr.EMacroType _p0 -> let _g = (_p0 : string) in let typeText = (_g : string) in let __assign_150 = (Backend_vm_NekoMacroTypeLowering.render (typeText : string) : string) in (
       tempResult := __assign_150;
