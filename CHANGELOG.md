@@ -1,3 +1,10 @@
+## [0.15.22](https://github.com/fullofcaffeine/hxhx/compare/v0.15.21...v0.15.22) (2026-06-15)
+
+
+### Bug Fixes
+
+* **php:** dispatch extern inline overloads ([6f336fe](https://github.com/fullofcaffeine/hxhx/commit/6f336feebd0813257489f56e227e16a9cf3a7c39))
+
 ## [0.15.21](https://github.com/fullofcaffeine/hxhx/compare/v0.15.20...v0.15.21) (2026-06-15)
 
 
