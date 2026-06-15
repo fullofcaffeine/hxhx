@@ -9490,6 +9490,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP source backend should emit Array support from the repo-owned runtime template");
 		assertContains(content, sourceTemplateContent("php/runtime", "Map.php"),
 			"PHP source backend should emit Map support from the repo-owned runtime template");
+		assertContains(content, sourceTemplateContent("php/runtime", "Utest.php"),
+			"PHP source backend should emit utest bring-up support from the repo-owned runtime template");
 		assertContains(content, "class __HxArray", "PHP source backend should emit a minimal array helper");
 		assertContains(content, "class Map", "PHP source backend should emit a minimal Map helper");
 		assertContains(content, "public function set($key, $value)", "PHP Map helper should support set");
@@ -9537,6 +9539,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "Utest.php"),
+			"PHP source backend should emit utest bring-up support from the repo-owned runtime template");
 		assertContains(content, "class __HxUtestAsync", "PHP Runner shim should provide a minimal utest Async runtime object");
 		assertContains(content, "new \\ReflectionMethod($case, $method)", "PHP Runner shim should inspect test method arity before dispatch");
 		assertContains(content, "$case->$method(new __HxUtestAsync())", "PHP Runner shim should pass Async to one-argument utest methods");
