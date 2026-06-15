@@ -38,6 +38,15 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected malformed body to recover as unsupported parse marker");
 		}
 
+		final unsupportedKeywordExpr = HxParser.parseExprText("case value");
+		switch (unsupportedKeywordExpr) {
+			case EUnsupported(raw):
+				assertTrue(raw.indexOf("case@idx=") == 0, "expected unsupported keyword detail to include keyword and index");
+				assertTrue(raw.indexOf("@near=case value") >= 0, "expected unsupported keyword detail to include source context");
+			case _:
+				fail("expected unsupported keyword expression diagnostic");
+		}
+
 		final anonymousFunctionStmt = HxParser.parseFunctionBodyText("function() { return 1; }; after();");
 		assertTrue(anonymousFunctionStmt.length == 2, "expected anonymous function statement plus following statement");
 		switch (anonymousFunctionStmt[0]) {

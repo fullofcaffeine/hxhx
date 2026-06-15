@@ -112,6 +112,17 @@ class HxParser {
 		return posIndex(cur.getPos());
 	}
 
+	function unsupportedKeywordDetail(raw:String):String {
+		final index = currentIndex();
+		var tail = "";
+		if (source != null && index >= 0 && index < source.length) {
+			final len = source.length - index > 48 ? 48 : source.length - index;
+			tail = source.substr(index, len);
+			tail = StringTools.replace(StringTools.replace(tail, "\n", "\\n"), "\r", "\\r");
+		}
+		return raw + "@idx=" + Std.string(index) + "@near=" + tail;
+	}
+
 	function sliceSource(start:Int, end:Int):String {
 		final safeStart = start < 0 ? 0 : start;
 		final safeEnd = end < safeStart ? safeStart : (end > source.length ? source.length : end);
@@ -1308,8 +1319,9 @@ class HxParser {
 				} else {
 					// Best-effort: capture the keyword as a string.
 					final raw = keywordText(k);
+					final detail = unsupportedKeywordDetail(raw);
 					bump();
-					EUnsupported(raw);
+					EUnsupported(detail);
 				}
 			case TString(s, interpolate):
 				bump();
