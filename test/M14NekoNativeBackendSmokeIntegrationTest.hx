@@ -140,6 +140,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var label = switch 5 { case value = (4 | 5 | 6) if (value == 5): "middle"; default: "other"; }; Sys.println(label); } }'),
+			context);
+		final intEqualsGuardSwitchExprSource = File.getContent(sourcePath);
+		assertContains(intEqualsGuardSwitchExprSource, "var value = __hxhx_switch;", "expected guarded switch capture binding");
+		assertContains(intEqualsGuardSwitchExprSource, "(__hxhx_switch == 5)", "expected guarded switch integer equality condition");
+		assertContains(intEqualsGuardSwitchExprSource, 'return "middle";', "expected guarded switch expression branch return");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { switch (1) { case 1: Sys.println("one"); default: Sys.println("other"); } } }'), context);
 		final switchStmtSource = File.getContent(sourcePath);
 		assertContains(switchStmtSource, "switch 1 {", "expected Neko switch statement");
@@ -180,6 +190,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final orSwitchStmtSource = File.getContent(sourcePath);
 		assertContains(orSwitchStmtSource, '((__hxhx_switch == "Linux")) || ((__hxhx_switch == "Windows"))', "expected OR switch statement condition");
 		assertContains(orSwitchStmtSource, "$print(\"desktop\", \"\\n\")", "expected OR switch statement branch body");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { switch 5 { case value = (4 | 5 | 6) if (value == 5): Sys.println("middle"); default: Sys.println("other"); } } }'),
+			context);
+		final intEqualsGuardSwitchStmtSource = File.getContent(sourcePath);
+		assertContains(intEqualsGuardSwitchStmtSource, "var value = __hxhx_switch;", "expected guarded switch statement capture binding");
+		assertContains(intEqualsGuardSwitchStmtSource, "(__hxhx_switch == 5)", "expected guarded switch statement integer equality condition");
+		assertContains(intEqualsGuardSwitchStmtSource, "$print(\"middle\", \"\\n\")", "expected guarded switch statement branch body");
 
 		deleteRecursive(outDir);
 
