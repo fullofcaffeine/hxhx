@@ -134,6 +134,23 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('package unit; class UnitBuilder { public static function generateSpec(path:String) return [path]; } class Main { static function main() { var specs = unit.UnitBuilder.generateSpec("src/unitstd"); Sys.println(specs.length); } }'),
+			context);
+		final unitBuilderSource = File.getContent(sourcePath);
+		assertContains(unitBuilderSource, "var specs = $array();", "expected compile-time-only UnitBuilder.generateSpec fallback");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { TestIssues.addIssueClasses("src/unit/issues", "unit.issues"); Sys.println("ok"); } }'), context);
+		final testIssuesSource = File.getContent(sourcePath);
+		assertContains(testIssuesSource, "null;", "expected compile-time-only TestIssues.addIssueClasses fallback");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		assertFailsContains(function() {
 			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
 		}, "ERange");

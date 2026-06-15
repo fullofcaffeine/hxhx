@@ -433,6 +433,10 @@ class NekoTargetCore {
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
 			case EField(EIdent("Sys"), "args"):
 				return "$loader.args";
+			case EField(EField(EIdent("unit"), "UnitBuilder"), "generateSpec") | EField(EIdent("UnitBuilder"), "generateSpec"):
+				return "$array()";
+			case EField(EIdent("TestIssues"), "addIssueClasses") | EField(EField(EIdent("unit"), "TestIssues"), "addIssueClasses"):
+				return "null";
 			case EField(EField(EIdent("neko"), "Web"), "setHeader"):
 				return "null";
 			case EField(EIdent("Sys"), "print"):
