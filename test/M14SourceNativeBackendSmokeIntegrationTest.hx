@@ -14889,6 +14889,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "StringBuf.php"),
+			"PHP source backend should emit StringBuf from the repo-owned runtime template");
 		assertContains(content, "class StringBuf {", "PHP runtime should provide StringBuf");
 		assertContains(content, "$b->addSub(\"Bla\", 1, 2);", "PHP StringBuf addSub calls should emit normally");
 		if (commandExists("php")) {

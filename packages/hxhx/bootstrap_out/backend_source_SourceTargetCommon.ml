@@ -13065,43 +13065,7 @@ let appendPhpDateRuntime = fun lines -> ignore (appendSourceNativeTemplateLines 
 
 let appendPhpDateToolsSupport = fun lines -> ignore (appendSourceNativeTemplateLines (Obj.magic lines) ("" : string) ("php/runtime" : string) ("DateTools.php" : string))
 
-let appendPhpStringBufRuntime = fun lines -> ignore ((
-  ignore (HxArray.push lines "class StringBuf {");
-  ignore (HxArray.push lines "  private $parts = [];");
-  ignore (HxArray.push lines "  public $length = 0;");
-  ignore (HxArray.push lines "  private function appendText($text) {");
-  ignore (HxArray.push lines "    $value = strval($text);");
-  ignore (HxArray.push lines "    $this->parts[] = $value;");
-  ignore (HxArray.push lines "    $this->length += function_exists(\"mb_strlen\") ? mb_strlen($value, \"UTF-8\") : strlen($value);");
-  ignore (HxArray.push lines "  }");
-  ignore (HxArray.push lines "  public function add($value) {");
-  ignore (HxArray.push lines "    $this->appendText(__hxhx_add_string($value));");
-  ignore (HxArray.push lines "    return null;");
-  ignore (HxArray.push lines "  }");
-  ignore (HxArray.push lines "  public function addSub($value, $pos, $len = null) {");
-  ignore (HxArray.push lines "    $text = strval($value);");
-  ignore (HxArray.push lines "    $start = (int)$pos;");
-  ignore (HxArray.push lines "    if (function_exists(\"mb_substr\")) {");
-  ignore (HxArray.push lines "      $part = $len === null ? mb_substr($text, $start, null, \"UTF-8\") : mb_substr($text, $start, (int)$len, \"UTF-8\");");
-  ignore (HxArray.push lines "    } else {");
-  ignore (HxArray.push lines "      $part = $len === null ? substr($text, $start) : substr($text, $start, (int)$len);");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    $this->appendText($part === false ? \"\" : $part);");
-  ignore (HxArray.push lines "    return null;");
-  ignore (HxArray.push lines "  }");
-  ignore (HxArray.push lines "  public function addChar($code) {");
-  ignore (HxArray.push lines "    $value = (int)$code;");
-  ignore (HxArray.push lines "    if (function_exists(\"mb_chr\")) {");
-  ignore (HxArray.push lines "      $this->appendText(mb_chr($value, \"UTF-8\"));");
-  ignore (HxArray.push lines "    } else {");
-  ignore (HxArray.push lines "      $this->appendText(html_entity_decode(\"&#\" . $value . \";\", ENT_NOQUOTES, \"UTF-8\"));");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    return null;");
-  ignore (HxArray.push lines "  }");
-  ignore (HxArray.push lines "  public function toString() { return implode(\"\", $this->parts); }");
-  ignore (HxArray.push lines "  public function __toString() { return $this->toString(); }");
-  HxArray.push lines "}"
-))
+let appendPhpStringBufRuntime = fun lines -> ignore (appendSourceNativeTemplateLines (Obj.magic lines) ("" : string) ("php/runtime" : string) ("StringBuf.php" : string))
 
 let appendPhpResourceRuntime = fun lines resources -> ignore ((
   ignore (HxArray.push lines "  class Resource {");
