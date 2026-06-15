@@ -10881,6 +10881,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "DynamicString.php"),
 			"PHP source backend should emit dynamic string support from the repo-owned runtime template");
+		assertContains(content, sourceTemplateContent("php/runtime", "StringHelpers.php"),
+			"PHP source backend should emit string helpers from the repo-owned runtime template");
 		assertContains(content, sourceTemplateContent("php/runtime", "Reflect.php"),
 			"PHP source backend should emit Reflect support from the repo-owned runtime template");
 		assertContains(content, "new HxDynamicStr(\"foo\", \"toUpperCase\")", "PHP string method values should lower to HxDynamicStr callables");
