@@ -12176,6 +12176,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(md5TmpRoot);
 		backend.emit(phpMd5MakeProgram(), new BackendContext(md5TmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final md5Content = File.getContent(Path.join([md5TmpRoot, "index.php"]));
+		assertContains(md5Content, sourceTemplateContent("php/namespaces", "HaxeCrypto.php"),
+			"PHP source backend should emit haxe.crypto helpers from the repo-owned namespace template");
 		assertContains(md5Content, "public static function make($bytes)", "PHP haxe.crypto.Md5 should expose make(Bytes)");
 		assertContains(md5Content, "\\haxe\\io\\Bytes::ofHex(md5($bytes->toString()))", "PHP Md5.make should return digest bytes");
 		if (commandExists("php")) {
