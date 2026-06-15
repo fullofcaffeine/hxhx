@@ -5813,6 +5813,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class DateTools:", "Python std support should provide a small DateTools helper when std DateTools is skipped");
+		assertContains(content, sourceTemplateContent("python/support", "DateTools.py"),
+			"Python DateTools support should emit from the repo-owned support template");
 		assertContains(content, "def minutes(n):", "Python std DateTools helper should include minute conversion");
 		assertContains(content, "InitBase.sinline = DateTools.minutes(1)", "Python static initializer should be able to reference std DateTools");
 		assertNotContains(content, "std-datetools-source-should-not-render", "Python DateTools support should not dump the upstream std source body");
@@ -5934,6 +5936,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class StringMap(dict):", "Python std support should provide a small StringMap helper when std StringMap is skipped");
+		assertContains(content, sourceTemplateContent("python/support", "StringMap.py"),
+			"Python StringMap support should emit from the repo-owned support template");
 		assertContains(content, "haxe = hxhx_anon()", "Python support should synthesize the haxe namespace for std type references");
 		assertContains(content, "haxe.ds = hxhx_anon()", "Python support should synthesize the haxe.ds namespace for std type references");
 		assertContains(content, "haxe.ds.StringMap = StringMap", "Python support should expose StringMap through haxe.ds");
@@ -5985,6 +5989,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def u(s):", "Python support should synthesize the global type-name helper used by static initializers");
+		assertContains(content, sourceTemplateContent("python/support", "TypeNameHelpers.py"),
+			"Python type-name helpers should emit from the repo-owned support template");
 		assertContains(content, "def u2(s, s2):", "Python support should synthesize the qualified type-name helper used by static initializers");
 		assertContains(content, "TestReflect.TNAMES = Array([u(\"haxe.ds.StringMap\"), u2(\"unit\", \"MyEnum\")])",
 			"Python static initializer should preserve generated type-name helper calls");
@@ -6022,6 +6028,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class UnitBuilder:", "Python support should synthesize a UnitBuilder runtime fallback for macro-only generateSpec");
+		assertContains(content, sourceTemplateContent("python/support", "UnitBuilder.py"),
+			"Python UnitBuilder fallback should emit from the repo-owned support template");
 		assertContains(content, "def generateSpec(basePath):", "Python UnitBuilder fallback should expose the package-qualified static method");
 		assertContains(content, "unit.UnitBuilder = UnitBuilder", "Python support should expose UnitBuilder through the unit namespace");
 		assertContains(content, "print(str(unit.UnitBuilder.generateSpec(\"src/unitstd\")))",
@@ -6063,6 +6071,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class TestIssues:", "Python support should synthesize a TestIssues runtime fallback for macro-only issue registration");
+		assertContains(content, sourceTemplateContent("python/support", "TestIssues.py"),
+			"Python TestIssues fallback should emit from the repo-owned support template");
 		assertContains(content, "def addIssueClasses(dir, pack):", "Python TestIssues fallback should expose the static registration hook");
 		assertContains(content, "unit.TestIssues = TestIssues", "Python support should expose TestIssues through the unit namespace");
 		assertContains(content, "TestIssues.addIssueClasses(\"src/unit/issues\", \"unit.issues\")",
@@ -6105,6 +6115,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("python/runtime", "Prelude.py"),
+			"Python source backend should emit the shared runtime prelude from the repo-owned template");
 		assertContains(content, "class Array(list):", "Python runtime should define a Haxe-style Array constructor shim");
 		assertContains(content, "def push(self, value):", "Python Array shim should expose push for upstream utest handlers");
 		assertContains(content, "literal = Array([\"c\"])", "Python array literals should use the Array shim so push remains available");
@@ -6200,6 +6212,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Compiler:", "Python support should synthesize a haxe.macro.Compiler fallback from std source");
+		assertContains(content, sourceTemplateContent("python/support", "MacroCompiler.py"),
+			"Python macro Compiler fallback should emit from the repo-owned support template");
 		assertContains(content, "def getDefine(key):", "Python Compiler fallback should expose getDefine");
 		assertContains(content, "haxe.macro.Compiler = Compiler", "Python support should expose Compiler through the haxe.macro namespace");
 		assertNotContains(content, "compiler-get-define-std-source-should-not-render", "Python Compiler fallback should not render std source bodies");
@@ -6398,6 +6412,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Reflect:", "Python std Reflect fallback should emit when std Reflect is excluded from helper classes");
+		assertContains(content, sourceTemplateContent("python/support", "Reflect.py"),
+			"Python Reflect fallback should emit from the repo-owned support template");
 		assertContains(content, "def getProperty(obj, name):", "Python std Reflect fallback should expose getProperty");
 		assertContains(content, "def isObject(value):", "Python std Reflect fallback should expose isObject");
 		assertContains(content, "Reflect.getProperty(meta, \"testMethod\")", "Python Reflect.getProperty calls should target the fallback helper");
@@ -6454,6 +6470,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Type:", "Python std Type fallback should emit when std Type is excluded from helper classes");
+		assertContains(content, sourceTemplateContent("python/support", "Type.py"), "Python Type fallback should emit from the repo-owned support template");
 		assertContains(content, "def getClass(value):", "Python std Type fallback should expose getClass");
 		assertContains(content, "def getClassName(cls):", "Python std Type fallback should expose getClassName");
 		assertContains(content, "def getInstanceFields(cls):", "Python std Type fallback should expose getInstanceFields");
@@ -6503,6 +6520,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class StringTools:", "Python std StringTools fallback should emit when std StringTools is excluded from helper classes");
+		assertContains(content, sourceTemplateContent("python/support", "StringTools.py"),
+			"Python StringTools fallback should emit from the repo-owned support template");
 		assertContains(content, "def startsWith(value, prefix):", "Python std StringTools fallback should expose startsWith");
 		assertContains(content, "StringTools.startsWith(\"testCase\", \"test\")", "Python StringTools.startsWith calls should target the fallback helper");
 		assertContains(content, "def endsWith(value, suffix):", "Python std StringTools fallback should expose endsWith");
@@ -6536,6 +6555,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Vector(Array):", "Python std Vector fallback should emit when std Vector is excluded from helper classes");
+		assertContains(content, sourceTemplateContent("python/support", "Vector.py"),
+			"Python Vector fallback should emit from the repo-owned support template");
 		assertContains(content, "haxe.ds.Vector = Vector", "Python std Vector fallback should be reachable through haxe.ds namespace");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
@@ -6606,6 +6627,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Meta:", "Python std Meta fallback should emit when haxe.rtti.Meta is excluded from helper classes");
+		assertContains(content, sourceTemplateContent("python/support", "Meta.py"), "Python Meta fallback should emit from the repo-owned support template");
 		assertContains(content, "def getFields(cls):", "Python std Meta fallback should expose getFields");
 		assertContains(content, "Meta.getFields(None)", "Python Meta.getFields calls should target the fallback helper");
 		if (commandExists("python3")) {
@@ -6637,6 +6659,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class ValueException(Exception):", "Python source backend should emit the ValueException base helper when subclasses need it");
+		assertContains(content, sourceTemplateContent("python/support", "ValueException.py"),
+			"Python ValueException support should emit from the repo-owned support template");
 		assertContains(content, "class NoConstructorValueException(ValueException):", "Python support subclasses should keep their ValueException base");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
