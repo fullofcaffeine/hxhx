@@ -89,9 +89,10 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
-		assertFailsContains(function() {
-			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var f = x -> x; } }'), context);
-		}, "ELambda");
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var f = x -> x; Sys.println(f(3)); } }'), context);
+		final lambdaSource = File.getContent(sourcePath);
+		assertContains(lambdaSource, "var f = function(x) { return x; };", "expected Neko lambda lowering");
+		assertContains(lambdaSource, "$print(f(3), \"\\n\")", "expected lambda call lowering");
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);

@@ -257,8 +257,9 @@ class NekoTargetCore {
 				renderAnon(fieldNames, fieldValues);
 			case ENew(typePath, args):
 				renderNew(typePath, args);
-			case EArrayComprehension(_, _, _, _) | ERange(_, _) | ELambda(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) |
-				EUnsupported(_):
+			case ELambda(args, body):
+				renderLambda(args, body);
+			case EArrayComprehension(_, _, _, _) | ERange(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EUnsupported(_):
 				unsupportedExpr(exprTag(expr));
 		}
 	}
@@ -314,6 +315,11 @@ class NekoTargetCore {
 		parts.push(tmp + ".__hx_params = " + renderArray(args) + ";");
 		parts.push("return " + tmp + "; })()");
 		return parts.join(" ");
+	}
+
+	static function renderLambda(args:Array<String>, body:HxExpr):String {
+		final params = [for (arg in args) safeIdent(arg)];
+		return "function(" + params.join(", ") + ") { return " + renderExpr(body) + "; }";
 	}
 
 	static function renderArray(values:Array<HxExpr>):String {
