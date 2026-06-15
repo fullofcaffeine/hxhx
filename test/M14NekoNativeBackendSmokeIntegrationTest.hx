@@ -82,6 +82,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertNativeReturnCaseFragmentDecode();
 		assertTrue(@:privateAccess NekoTargetCore.renderExpr(cast null,
 			EUnsupported("8")) == "8", "numeric unsupported fragments should render as integer literals");
+		assertTrue(@:privateAccess NekoTargetCore.renderExpr(cast null, EUnsupported("for_expr:for (key => value in 1) { }")) == "null",
+			"for-expression recovery fragments should render as neutral null");
 		assertFailsContains(() -> @:privateAccess NekoTargetCore.renderExpr(cast null, EUnsupported("not_numeric")), "EUnsupported(not_numeric)");
 
 		final outDir = Path.join([".tmp", "m14_neko_native_backend_smoke"]);

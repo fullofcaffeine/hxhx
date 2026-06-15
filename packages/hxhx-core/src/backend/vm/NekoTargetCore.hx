@@ -662,9 +662,17 @@ class NekoTargetCore {
 			case ESwitchRaw(_):
 				unsupportedExpr(exprTag(expr));
 			case EUnsupported(raw):
-				final numeric = renderUnsupportedNumericLiteral(raw);
-				numeric == null ? unsupportedExpr(exprTag(expr)) : numeric;
+				final recovery = renderUnsupportedRecoveryLiteral(raw);
+				recovery == null ? unsupportedExpr(exprTag(expr)) : recovery;
 		}
+	}
+
+	static function renderUnsupportedRecoveryLiteral(raw:String):Null<String> {
+		if (raw == null)
+			return null;
+		if (StringTools.startsWith(raw, "for_expr:"))
+			return "null";
+		return renderUnsupportedNumericLiteral(raw);
 	}
 
 	static function renderUnsupportedNumericLiteral(raw:String):Null<String> {
