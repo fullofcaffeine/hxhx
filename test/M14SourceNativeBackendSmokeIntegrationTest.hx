@@ -4762,6 +4762,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var one = 1;",
 			"    var two = 2;",
 			"    Sys.println(Std.string(Syntax.code(\"{0} + {1}\", one, two)));",
+			"    Sys.println(Std.string(untyped __php__(\"{0} * {1}\", one, two)));",
 			"    var anon = {field: \"ok\"};",
 			"    Sys.println(Std.string(Syntax.field(anon, \"field\")));",
 			"    var o = new Dummy();",
@@ -13717,6 +13718,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$one + $two", "PHP Syntax.code should inline literal PHP with rendered arguments");
+		assertContains(content, "$one * $two", "PHP __php__ should inline literal PHP with rendered arguments");
 		assertContains(content, "__hxhx_field($anon, \"field\")", "PHP Syntax.field should lower through the field helper");
 		assertContains(content, "$phpClassName = __hxhx_native_class_name(__hxhx_class_value(\"Dummy\"));",
 			"PHP Boot.castClass(...).phpClassName should lower to the native class-name helper");
@@ -13724,11 +13726,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_is_of_type($o, $phpClassName)", "PHP Syntax.instanceof should support native class-name operands");
 		assertNotContains(content, "Syntax::code", "imported php.Syntax.code should not emit a runtime class call");
 		assertNotContains(content, "Syntax::field", "imported php.Syntax.field should not emit a runtime class call");
+		assertNotContains(content, "__php__(", "PHP __php__ should not emit a runtime function call");
 		assertNotContains(content, "Boot::castClass", "imported php.Boot.castClass should not emit a runtime class call");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Syntax intrinsic support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "3\nok\ntrue\ntrue\n", "generated PHP Syntax intrinsic output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "3\n2\nok\ntrue\ntrue\n", "generated PHP Syntax intrinsic output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 

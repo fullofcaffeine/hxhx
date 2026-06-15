@@ -1272,6 +1272,11 @@ class SourceTargetCommon {
 			case ECall(EIdent("__cs__"), args) if (target == Cs):
 				final raw = csSyntaxCodeExpr(args);
 				raw == null ? callExpr(target, "__cs__", args) : raw;
+			case ECall(EIdent("__php__"), args) if (target == Php):
+				final raw = phpSyntaxCodeExpr(args);
+				if (raw == null)
+					throw "PHP source backend MVP unsupported __php__ intrinsic arguments";
+				raw;
 			case ECall(EIdent("trace"), args) if (target == Cs && args.length >= 1):
 				"__hxhx_trace(" + renderExpr(Cs, args[0]) + ")";
 			case ECall(EIdent("__hxhx_throw"), args) if (target == Php):
@@ -2680,6 +2685,8 @@ class SourceTargetCommon {
 	static function phpSyntaxIntrinsicCall(typePath:String, field:String, args:Array<HxExpr>):Null<String> {
 		if (!phpIsSyntaxIntrinsicTypePath(typePath))
 			return null;
+		// `php.Syntax` is compile-time target syntax, not a runtime class surface.
+		// Keep this list narrow and covered before adding more raw PHP escapes.
 		return switch (field) {
 			case "code" | "codeDeref":
 				phpSyntaxCodeExpr(args);

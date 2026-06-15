@@ -59,7 +59,7 @@ at the observable behavior level for Haxe 4.3.7 compatibility claims.
 | Target | Current surfaces | Classification | Direction |
 | --- | --- | --- | --- |
 | PHP | `renderPhpSupportClasses`, `appendPhpGenericStackRuntime`, `appendPhpXmlRuntime`, `appendPhpDateRuntime`, `appendPhpDateToolsSupport`, `appendPhpStringBufRuntime`, `appendPhpResourceRuntime`, reflection/meta helpers, class-name maps | Mixed: large stable runtime plus generated program tables | Highest priority. Split stable runtime into PHP templates and keep generated maps/resources as injected tables. |
-| PHP native syntax | `php.Syntax` / raw PHP expression seams | Extern/intrinsic boundary | Define policy and lower narrow syntax forms directly. Do not grow PHP runtime classes for compile-time syntax. |
+| PHP native syntax | `php.Syntax` / `__php__` raw PHP expression seams | Extern/intrinsic boundary | Lower narrow syntax forms directly. Do not grow PHP runtime classes for compile-time syntax. |
 | C# | `renderCsRuntimeSupportSource`, import-stub members, `appendCsUtilityProcessRuntime`, `appendCsUtestRunnerAddCasesStub`, `appendCsPostUpdateVarSupport`; some import stubs already templated | Mixed runtime templates, harness shims, small glue | Continue extraction. Stable support should live in C# templates; small expression-lowering helpers may remain generated. |
 | Java | Import-stub members, nested stubs, array/std support, signal support, main support, utility-process runtime | Mixed runtime and generated class shape | Template stable Java support. Keep class-shape/nested-stub emission generated where it depends on the imported type. |
 | Python | `appendPythonReflectSupport`, `appendPythonTypeSupport`, `appendPythonStringToolsSupport`, `appendPythonVectorSupport`, `appendPythonMetaSupport`, `appendPythonDateToolsSupport`, `appendPythonStringMapSupport`, test/macro helper shims | Mostly stable runtime shims plus a few test helpers | Move stable std/runtime shims to Python templates. Keep target gate-only helpers small and documented. |
@@ -124,6 +124,57 @@ Cons:
 
 Use this for native syntax and intentionally exposed target intrinsics, not for
 `Type`, `Reflect`, `Array`, `Date`, or other general runtime surfaces.
+
+## Target-Native Intrinsic Policy
+
+Target-native APIs are not all runtime support. Classify them before adding code:
+
+| Question | Classification | Implementation boundary |
+| --- | --- | --- |
+| Is the API a typed Haxe surface for target syntax that has no runtime object? | Extern/core declaration plus intrinsic lowering | Add/keep a Haxe-facing extern/core surface and lower recognized calls directly in the backend. Do not emit a generated class. |
+| Is the API a raw target-code escape hatch such as `__php__`, `php.Syntax.code`, or `__cs__`? | Raw syntax intrinsic | Require a literal template string and lower placeholders through rendered target expressions. Unsupported argument shapes should fail or stay explicitly unsupported, not emit fake runtime calls. |
+| Is the API a narrow target-owned value such as `php.SuperGlobal._SERVER` or `php.Boot.castClass(...).phpClassName`? | Target-core intrinsic | Lower the known field/call directly to the target expression/helper. Keep the supported field/call list explicit. |
+| Is the API normal reusable behavior such as `Reflect`, `Type`, `Array`, `Date`, or `StringTools`? | Runtime support / stdlib support | Use a target template or typed runtime support module. Do not hide it as a raw syntax intrinsic. |
+| Is the API target-specific but reusable and typed, for example platform file/process helpers? | Extern-backed runtime module | Prefer a Haxe extern/core declaration plus a repo-owned target runtime module/template. |
+| Is the API broad, unsafe, or not yet understood? | Unsupported or R&D bead | Keep it unsupported, add a focused bead, and avoid one-off fake generated classes. |
+
+Rules for raw syntax intrinsics:
+
+- The first argument must be a literal snippet/template unless a bead explicitly
+  designs and tests a broader typed representation.
+- Placeholder arguments (`{0}`, `{1}`, ...) are rendered with the active target
+  expression renderer.
+- The generated output must not contain calls such as `Syntax::code(...)`,
+  `__php__(...)`, or `Lib.unsafe(...)` when the API is classified as compile-time
+  syntax.
+- User-defined classes that merely share a short name, such as a local `Syntax`
+  class, must continue to emit normally. Intrinsic matching must use resolved
+  target/core type identity, not only the short class name.
+
+Current applications:
+
+| Surface | Status | Regression coverage |
+| --- | --- | --- |
+| `php.Syntax.code` / `codeDeref` | Lowered directly through `phpSyntaxCodeExpr`. | `assertPhpSyntaxIntrinsics` checks rendered PHP and rejects `Syntax::code`. |
+| `untyped __php__(...)` | Lowered directly through `phpSyntaxCodeExpr`; unsupported argument shapes fail instead of becoming runtime calls. | `assertPhpSyntaxIntrinsics` checks rendered PHP and rejects `__php__(`. |
+| `php.Syntax.field` / `getField` | Lowered to the PHP field helper. | `assertPhpSyntaxIntrinsics`. |
+| `php.Syntax.instanceof` | Lowered to the PHP type-check helper. | `assertPhpSyntaxIntrinsics`. |
+| `php.Syntax.nativeClassName` and `php.Boot.castClass(...).phpClassName` | Lowered to native class-name helpers. | `assertPhpSyntaxIntrinsics`. |
+| `php.Syntax.arrayDecl` / `customArrayDecl` | Lowered to PHP array syntax for recognized shapes. | Covered by the same intrinsic lowering seam; add a narrower fixture when expanding shape support. |
+| `php.SuperGlobal.*` | Lowered to PHP superglobal variables for the explicit supported field list. | `assertPhpSyntaxIntrinsics` superglobal sub-check. |
+| `cs.Lib.unsafe` / `fixed` / `pointerOfArray` / `valueOf`, `__cs__` | Adjacent C# raw/core intrinsic seam. | Existing C# source-native raw intrinsic and `cs.Lib` assertions. |
+
+Adjacent target APIs that need the same rule as they mature:
+
+- Java/C# native platform externs: keep platform classes as extern/core surfaces
+  or typed templates, not generated fake classes.
+- Lua raw syntax helpers if/when introduced: require a literal-snippet policy
+  before adding backend support.
+- Python native syntax helpers if/when introduced: prefer typed helpers first;
+  raw injection needs a separate safety/design bead.
+- JavaScript-style `js.Syntax` / `__js__` behavior in the JS backend remains an
+  adjacent precedent, not a reason for source-native targets to accept broad raw
+  snippets without target-specific tests.
 
 ## Constraints
 
@@ -222,9 +273,9 @@ Upstream compatibility:
 7. Target-native intrinsic/extern policy.
    - Priority: P3, thinking:high.
    - Bead: `haxe.ocaml-ajze`.
-   - Define when APIs such as `php.Syntax` are extern/core declarations with
-     direct lowering versus runtime support. Apply the rule to adjacent raw
-     target APIs as they appear.
+   - Status: initial policy applied to PHP raw syntax/core intrinsics
+     (`php.Syntax`, `__php__`, `php.Boot`, and `php.SuperGlobal`).
+   - Continue applying the rule to adjacent raw target APIs as they appear.
 
 ## Checkpoint Review
 
