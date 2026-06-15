@@ -184,7 +184,27 @@ class NekoTargetCore {
 			case SThrow(expr, _):
 				out.push(indent + "$throw(" + renderExpr(expr) + ");");
 			case SForIn(_, _, _, _) | SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _) | STry(_, _, _):
-				unsupported("statement", Std.string(stmt));
+				unsupported("statement", stmtTag(stmt));
+		}
+	}
+
+	static function stmtTag(stmt:HxStmt):String {
+		return switch (stmt) {
+			case SBlock(_, _): "SBlock";
+			case SVar(name, _, _, _): "SVar(" + name + ")";
+			case SIf(_, _, _, _): "SIf";
+			case SForIn(name, _, _, _): "SForIn(" + name + ")";
+			case SForKeyValue(keyName, valueName, _, _, _): "SForKeyValue(" + keyName + "," + valueName + ")";
+			case SWhile(_, _, _): "SWhile";
+			case SDoWhile(_, _, _): "SDoWhile";
+			case SSwitch(_, _, _, _): "SSwitch";
+			case STry(_, _, _): "STry";
+			case SBreak(_): "SBreak";
+			case SContinue(_): "SContinue";
+			case SThrow(_, _): "SThrow";
+			case SReturnVoid(_): "SReturnVoid";
+			case SReturn(_, _): "SReturn";
+			case SExpr(_, _): "SExpr";
 		}
 	}
 

@@ -93,5 +93,11 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var f = x -> x; } }'), context);
 		}, "ELambda");
 		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		assertFailsContains(function() {
+			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
+		}, "SForIn(i)");
+		deleteRecursive(outDir);
 	}
 }
