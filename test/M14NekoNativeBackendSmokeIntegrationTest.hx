@@ -112,6 +112,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var verbose = Sys.args().indexOf("-v") >= 0; var values = [1]; values.push(2); Sys.println(verbose); } }'),
+			context);
+		final arrayMethodSource = File.getContent(sourcePath);
+		assertContains(arrayMethodSource, "var __hxhx_array_indexOf = function(a, value)", "expected Neko array indexOf helper");
+		assertContains(arrayMethodSource, "var __hxhx_array_push = function(a, value)", "expected Neko array push helper");
+		assertContains(arrayMethodSource, 'var verbose = (__hxhx_array_indexOf($$loader.args, "-v") >= 0);', "expected Sys.args().indexOf lowering");
+		assertContains(arrayMethodSource, "__hxhx_array_push(values, 2);", "expected array push lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		assertFailsContains(function() {
 			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
 		}, "ERange");

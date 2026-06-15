@@ -38,6 +38,24 @@ let sourcePathForBytecode = fun outputPath -> let dir = (Haxe_io_Path.directory 
   __arr_11
 )))
 
+let renderRuntimeHelpers = fun out -> ignore ((
+  ignore (HxArray.push out "var __hxhx_array_indexOf = function(a, value) {");
+  ignore (HxArray.push out "  var i = 0;");
+  ignore (HxArray.push out "  var len = $asize(a);");
+  ignore (HxArray.push out "  while (i < len) {");
+  ignore (HxArray.push out "    if (a[i] == value) return i;");
+  ignore (HxArray.push out "    i = i + 1;");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  return -1;");
+  ignore (HxArray.push out "}");
+  ignore (HxArray.push out "");
+  ignore (HxArray.push out "var __hxhx_array_push = function(a, value) {");
+  ignore (HxArray.push out "  a[$asize(a)] = value;");
+  ignore (HxArray.push out "  return a;");
+  ignore (HxArray.push out "}");
+  HxArray.push out ""
+))
+
 let stmtTag = fun stmt -> let tempResult = ref ("" : string) in (
   ignore (match stmt with
     | HxStmt.SBlock (_p0, _p1) -> (
@@ -1081,12 +1099,21 @@ and renderCall = fun callee args -> try let __fallback_result_188 = let tempArra
       | HxExpr.EUnsupported _ -> 28) = 8 then ignore (let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_185 -> __enum_param_185
       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "Sys" then ignore (match _g1 with
+      | "args" -> raise (HxRuntime.Hx_return (Obj.repr ("$loader.args" : string)))
+      | "indexOf" -> ignore (let receiver = Obj.magic _g in if HxArray.length args >= 1 then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_array_indexOf(" ^ HxString.toStdString (renderExpr (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (HxArray.get (Obj.magic (!tempArray)) 0)) ^ ")" : string))) else ignore (let className = (_g2 : string) in let hx_method = (_g1 : string) in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (mangleFunction (className : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")")))))
       | "print" -> raise (HxRuntime.Hx_return (Obj.repr (("$print(" ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string)))
       | "println" -> raise (HxRuntime.Hx_return (Obj.repr (("$print(" ^ HxString.toStdString (HxArray.join (HxArray.concat (!tempArray) (let __arr_186 = HxArray.create () in (
         ignore (HxArray.push __arr_186 (quote ("\n" : string)));
         __arr_186
       ))) ", " (fun x -> x))) ^ ")" : string)))
-      | _ -> ignore (let className = (_g2 : string) in let hx_method = (_g1 : string) in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (mangleFunction (className : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")"))))) else ignore (let className = (_g2 : string) in let hx_method = (_g1 : string) in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (mangleFunction (className : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")"))))) else raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderExpr (Obj.magic callee)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))))
+      | "push" -> ignore (let receiver = Obj.magic _g in if HxArray.length args >= 1 then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_array_push(" ^ HxString.toStdString (renderExpr (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (HxArray.get (Obj.magic (!tempArray)) 0)) ^ ")" : string))) else ignore (let className = (_g2 : string) in let hx_method = (_g1 : string) in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (mangleFunction (className : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")")))))
+      | _ -> ignore (let className = (_g2 : string) in let hx_method = (_g1 : string) in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (mangleFunction (className : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")"))))) else ignore (match _g1 with
+      | "indexOf" -> ignore (let receiver = Obj.magic _g in if HxArray.length args >= 1 then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_array_indexOf(" ^ HxString.toStdString (renderExpr (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (HxArray.get (Obj.magic (!tempArray)) 0)) ^ ")" : string))) else ignore (let className = (_g2 : string) in let hx_method = (_g1 : string) in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (mangleFunction (className : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")")))))
+      | "push" -> ignore (let receiver = Obj.magic _g in if HxArray.length args >= 1 then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_array_push(" ^ HxString.toStdString (renderExpr (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (HxArray.get (Obj.magic (!tempArray)) 0)) ^ ")" : string))) else ignore (let className = (_g2 : string) in let hx_method = (_g1 : string) in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (mangleFunction (className : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")")))))
+      | _ -> ignore (let className = (_g2 : string) in let hx_method = (_g1 : string) in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (mangleFunction (className : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")")))))) else ignore (match _g1 with
+      | "indexOf" -> ignore (let receiver = Obj.magic _g in if HxArray.length args >= 1 then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_array_indexOf(" ^ HxString.toStdString (renderExpr (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (HxArray.get (Obj.magic (!tempArray)) 0)) ^ ")" : string))) else raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderExpr (Obj.magic callee)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))))
+      | "push" -> ignore (let receiver = Obj.magic _g in if HxArray.length args >= 1 then raise (HxRuntime.Hx_return (Obj.repr (((("__hxhx_array_push(" ^ HxString.toStdString (renderExpr (Obj.magic receiver))) ^ ", ") ^ HxString.toStdString (HxArray.get (Obj.magic (!tempArray)) 0)) ^ ")" : string))) else raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderExpr (Obj.magic callee)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))))
+      | _ -> raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderExpr (Obj.magic callee)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string)))))
     | _ -> raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderExpr (Obj.magic callee)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string)))
 ) in Obj.magic __fallback_result_188 with
   | HxRuntime.Hx_return __ret_187 -> Obj.obj __ret_187
@@ -1232,6 +1259,7 @@ let renderProgram = fun program context -> let modules = Obj.magic (MacroExpande
   let out = Obj.magic (HxArray.create ()) in (
     ignore (HxArray.push out "// Generated by hxhx native Neko backend MVP");
     ignore (HxArray.push out "");
+    ignore (renderRuntimeHelpers (Obj.magic out));
     let main = findMain (Obj.magic modules) ((Obj.magic context : Backend_BackendContext.t).mainModule : string) in (
       ignore (if main == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "Neko native backend requires a static main entrypoint") ["Dynamic"; "String"]) else ());
       let mainDecl = Obj.magic (Obj.obj (HxAnon.get main "decl")) in let mainClass = Obj.magic (Obj.obj (HxAnon.get main "cls")) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic mainDecl) : string) in let className = (HxClassDecl.getName (Obj.magic mainClass) : string) in let tempString = ref ("" : string) in (
