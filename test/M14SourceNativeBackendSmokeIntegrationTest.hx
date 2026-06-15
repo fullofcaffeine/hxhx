@@ -590,7 +590,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"utest.Runner",
 			"utest.ui.Report",
 			"utest.ui.common.HeaderDisplayMode",
-			"utest.ui.common.SuccessResultsDisplayMode"
+			"utest.ui.common.SuccessResultsDisplayMode",
+			"haxe.Serializer"
 		];
 		final mainDecl = new HxModuleDecl("", imports, mainClass, [mainClass], false, false);
 		final mainParsed = new ParsedModule("", mainDecl, "tests/sys/Main.hx");
@@ -8327,6 +8328,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final stubReportContent = File.getContent(Path.join([stubOnlyDir, "src", "utest", "ui", "Report.cs"]));
 			final stubHeaderContent = File.getContent(Path.join([stubOnlyDir, "src", "utest", "ui", "common", "HeaderDisplayMode.cs"]));
 			final stubSuccessContent = File.getContent(Path.join([stubOnlyDir, "src", "utest", "ui", "common", "SuccessResultsDisplayMode.cs"]));
+			final stubSerializerContent = File.getContent(Path.join([stubOnlyDir, "src", "haxe", "Serializer.cs"]));
 			assertContains(stubRunnerContent, indentedSourceTemplateContent("cs/import-stub-members", "UtestRunner.cs", "    "),
 				"C# utest.Runner import stub should use the repo-owned member template");
 			assertContains(stubReportContent, indentedSourceTemplateContent("cs/import-stub-members", "UtestReport.cs", "    "),
@@ -8335,6 +8337,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				"C# HeaderDisplayMode import stub should use the repo-owned member template");
 			assertContains(stubSuccessContent, indentedSourceTemplateContent("cs/import-stub-members", "UtestSuccessResultsDisplayMode.cs", "    "),
 				"C# SuccessResultsDisplayMode import stub should use the repo-owned member template");
+			assertContains(stubSerializerContent, indentedSourceTemplateContent("cs/import-stub-members", "HaxeSerializer.cs", "    "),
+				"C# haxe.Serializer import stub should use the repo-owned member template");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);

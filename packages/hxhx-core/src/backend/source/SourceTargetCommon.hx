@@ -11363,13 +11363,7 @@ class SourceTargetCommon {
 			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "UtestSuccessResultsDisplayMode.cs");
 		}
 		if (qualified == "haxe.Serializer") {
-			out.push(indent + "public static object USE_ENUM_INDEX = false;");
-			out.push(indent + "public static string run(object value) {");
-			out.push(indent + "  return System.Convert.ToString(value);");
-			out.push(indent + "}");
-			out.push(indent + "public string toString() {");
-			out.push(indent + "  return \"\";");
-			out.push(indent + "}");
+			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "HaxeSerializer.cs");
 		}
 	}
 

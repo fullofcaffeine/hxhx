@@ -8472,15 +8472,7 @@ let appendCsImportStubMembers = fun out indent packagePath className -> ignore (
   ignore (if HxString.equals qualified "utest.ui.Report" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("UtestReport.cs" : string)) else ());
   ignore (if HxString.equals qualified "utest.ui.common.HeaderDisplayMode" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("UtestHeaderDisplayMode.cs" : string)) else ());
   ignore (if HxString.equals qualified "utest.ui.common.SuccessResultsDisplayMode" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("UtestSuccessResultsDisplayMode.cs" : string)) else ());
-  if HxString.equals qualified "haxe.Serializer" then ignore ((
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public static object USE_ENUM_INDEX = false;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public static string run(object value) {"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  return System.Convert.ToString(value);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public string toString() {"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  return \"\";"));
-    HxArray.push out (HxString.toStdString indent ^ "}")
-  )) else ()
+  if HxString.equals qualified "haxe.Serializer" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("HaxeSerializer.cs" : string)) else ()
 ))
 
 let renderCsImportStub = fun packagePath className nestedNames noRoot -> let noRoot = if Obj.repr noRoot == HxRuntime.hx_null then false else noRoot in let tempString = ref ("" : string) in (
