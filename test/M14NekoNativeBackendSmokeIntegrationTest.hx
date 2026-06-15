@@ -81,6 +81,14 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var o = new TestOps(7); } }'), context);
+		final newSource = File.getContent(sourcePath);
+		assertContains(newSource, "__hxhx_o.__hx_ctor = \"TestOps\";", "expected constructor tag on lowered Neko object");
+		assertContains(newSource, "__hxhx_o.__hx_params = $array(7);", "expected constructor args on lowered Neko object");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		assertFailsContains(function() {
 			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var f = x -> x; } }'), context);
 		}, "ELambda");

@@ -227,13 +227,15 @@ class NekoTargetCore {
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				renderExpr(inner);
 			case EArrayDecl(values):
-				"[" + [for (v in values) renderExpr(v)].join(", ") + "]";
+				renderArray(values);
 			case EArrayAccess(array, index):
 				renderExpr(array) + "[" + renderExpr(index) + "]";
 			case EAnon(fieldNames, fieldValues):
 				renderAnon(fieldNames, fieldValues);
-			case EArrayComprehension(_, _, _, _) | ERange(_, _) | ELambda(_, _) | ENew(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) |
-				ESwitch(_, _, _) | EUnsupported(_):
+			case ENew(typePath, args):
+				renderNew(typePath, args);
+			case EArrayComprehension(_, _, _, _) | ERange(_, _) | ELambda(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) |
+				EUnsupported(_):
 				unsupportedExpr(exprTag(expr));
 		}
 	}
@@ -280,6 +282,19 @@ class NekoTargetCore {
 			parts.push(tmp + "." + safeIdent(fieldNames[i]) + " = " + renderExpr(fieldValues[i]) + ";");
 		parts.push("return " + tmp + "; })()");
 		return parts.join(" ");
+	}
+
+	static function renderNew(typePath:String, args:Array<HxExpr>):String {
+		final tmp = "__hxhx_o";
+		final parts = ["(function() { var " + tmp + " = $new(null);"];
+		parts.push(tmp + ".__hx_ctor = " + quote(typePath) + ";");
+		parts.push(tmp + ".__hx_params = " + renderArray(args) + ";");
+		parts.push("return " + tmp + "; })()");
+		return parts.join(" ");
+	}
+
+	static function renderArray(values:Array<HxExpr>):String {
+		return "$array(" + [for (v in values) renderExpr(v)].join(", ") + ")";
 	}
 
 	static function renderCall(callee:HxExpr, args:Array<HxExpr>):String {
