@@ -978,17 +978,21 @@ class NekoTargetCore {
 		out.push(indent + "switch " + renderExpr(context, scrutinee) + " {");
 		for (i in 0...count) {
 			final pattern = patterns[i];
-			final prefix = switch (pattern) {
+			final prefix:Null<String> = switch (pattern) {
 				case PWildcard | PBind(_):
 					"default";
 				case PNull | PBool(_) | PString(_) | PInt(_) | PEnumValue(_) | PEnumExtract(_, _):
 					renderSwitchPatternValue(pattern);
 				case PCapture(_, inner):
 					renderSwitchPatternValue(inner);
+				case PUnsupportedGuard(_):
+					null;
 				case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
-					PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _) | PUnsupportedGuard(_) | POr(_):
+					PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _) | POr(_):
 					unsupported("switch pattern", patternKind(pattern));
 			}
+			if (prefix == null)
+				continue;
 			out.push(indent + "  " + prefix + " => {");
 			renderStmt(out, context, bodies[i], indent + "    ");
 			out.push(indent + "  }");
@@ -999,12 +1003,15 @@ class NekoTargetCore {
 	static function renderSwitchExpr(context:NekoEmitContext, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
 		final cases = new Array<String>();
 		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
-		for (i in 0...count)
-			cases.push(renderSwitchCase(context, patterns[i], exprs[i]));
+		for (i in 0...count) {
+			final rendered = renderSwitchCase(context, patterns[i], exprs[i]);
+			if (rendered != null)
+				cases.push(rendered);
+		}
 		return "switch " + renderExpr(context, scrutinee) + " { " + cases.join(" ") + " }";
 	}
 
-	static function renderSwitchCase(context:NekoEmitContext, pattern:HxSwitchPattern, expr:HxExpr):String {
+	static function renderSwitchCase(context:NekoEmitContext, pattern:HxSwitchPattern, expr:HxExpr):Null<String> {
 		return switch (pattern) {
 			case PWildcard | PBind(_):
 				"default => " + renderExpr(context, expr);
@@ -1012,8 +1019,10 @@ class NekoTargetCore {
 				renderSwitchPatternValue(pattern) + " => " + renderExpr(context, expr);
 			case PCapture(_, inner):
 				renderSwitchCase(context, inner, expr);
+			case PUnsupportedGuard(_):
+				null;
 			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
-				PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _) | PUnsupportedGuard(_) | POr(_):
+				PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _) | POr(_):
 				unsupported("switch pattern", patternKind(pattern));
 		}
 	}

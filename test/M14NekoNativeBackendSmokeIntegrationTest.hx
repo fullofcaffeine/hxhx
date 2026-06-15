@@ -109,12 +109,34 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var label = switch (1) { case 1 if (Std.random(2) == 1): "guarded"; default: "fallback"; }; Sys.println(label); } }'),
+			context);
+		final guardedSwitchExprSource = File.getContent(sourcePath);
+		assertContains(guardedSwitchExprSource, 'var label = switch 1 { default => "fallback" };',
+			"expected unsupported guarded switch expression branch to be disabled");
+		assertNotContains(guardedSwitchExprSource, '"guarded"', "unsupported guarded switch expression branch must not execute unguarded");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { switch (1) { case 1: Sys.println("one"); default: Sys.println("other"); } } }'), context);
 		final switchStmtSource = File.getContent(sourcePath);
 		assertContains(switchStmtSource, "switch 1 {", "expected Neko switch statement");
 		assertContains(switchStmtSource, "1 => {", "expected Neko switch case block");
 		assertContains(switchStmtSource, "$print(\"one\", \"\\n\")", "expected switch case body");
 		assertContains(switchStmtSource, "default => {", "expected Neko switch default block");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { switch (1) { case 1 if (Std.random(2) == 1): Sys.println("guarded"); default: Sys.println("fallback"); } } }'),
+			context);
+		final guardedSwitchStmtSource = File.getContent(sourcePath);
+		assertContains(guardedSwitchStmtSource, "switch 1 {", "expected guarded Neko switch statement to still lower");
+		assertContains(guardedSwitchStmtSource, "default => {", "expected default to remain after disabled guarded switch branch");
+		assertContains(guardedSwitchStmtSource, "$print(\"fallback\", \"\\n\")", "expected default body to remain");
+		assertNotContains(guardedSwitchStmtSource, '"guarded"', "unsupported guarded switch statement branch must not execute unguarded");
 
 		deleteRecursive(outDir);
 

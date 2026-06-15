@@ -1671,44 +1671,44 @@ and renderSwitchExpr = fun context scrutinee patterns exprs -> let cases = Obj.m
     ignore (while !_g < _g1 do ignore (let i = let __old_269 = !_g in let __new_270 = HxInt.add __old_269 1 in (
       ignore (_g := __new_270);
       __old_269
-    ) in HxArray.push cases (renderSwitchCase context (Obj.magic (HxArray.get (Obj.magic patterns) i)) (Obj.magic (HxArray.get (Obj.magic exprs) i)))) done);
+    ) in let rendered = (renderSwitchCase context (Obj.magic (HxArray.get (Obj.magic patterns) i)) (Obj.magic (HxArray.get (Obj.magic exprs) i)) : string) in if rendered != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push cases rendered) else ()) done);
     ((("switch " ^ HxString.toStdString (renderExpr context (Obj.magic scrutinee))) ^ " { ") ^ HxString.toStdString (HxArray.join cases " " (fun x -> x))) ^ " }"
   )
 )
-and renderSwitchCase = fun context pattern expr -> let tempResult = ref ("" : string) in (
+and renderSwitchCase = fun context pattern expr -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match pattern with
-    | HxSwitchPattern.PNull -> let __assign_271 = ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
+    | HxSwitchPattern.PNull -> let __assign_271 = Obj.magic ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
       tempResult := __assign_271;
       __assign_271
     )
-    | HxSwitchPattern.PWildcard -> let __assign_272 = ("default => " ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
+    | HxSwitchPattern.PWildcard -> let __assign_272 = Obj.magic ("default => " ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
       tempResult := __assign_272;
       __assign_272
     )
     | HxSwitchPattern.PBool _p0 -> (
       ignore _p0;
-      let __assign_273 = ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
+      let __assign_273 = Obj.magic ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
         tempResult := __assign_273;
         __assign_273
       )
     )
     | HxSwitchPattern.PString _p0 -> (
       ignore _p0;
-      let __assign_274 = ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
+      let __assign_274 = Obj.magic ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
         tempResult := __assign_274;
         __assign_274
       )
     )
     | HxSwitchPattern.PInt _p0 -> (
       ignore _p0;
-      let __assign_275 = ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
+      let __assign_275 = Obj.magic ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
         tempResult := __assign_275;
         __assign_275
       )
     )
     | HxSwitchPattern.PEnumValue _p0 -> (
       ignore _p0;
-      let __assign_276 = ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
+      let __assign_276 = Obj.magic ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
         tempResult := __assign_276;
         __assign_276
       )
@@ -1716,7 +1716,7 @@ and renderSwitchCase = fun context pattern expr -> let tempResult = ref ("" : st
     | HxSwitchPattern.PEnumExtract (_p0, _p1) -> (
       ignore _p0;
       ignore _p1;
-      let __assign_277 = ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
+      let __assign_277 = Obj.magic ((HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) ^ " => ") ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
         tempResult := __assign_277;
         __assign_277
       )
@@ -1724,21 +1724,21 @@ and renderSwitchCase = fun context pattern expr -> let tempResult = ref ("" : st
     | HxSwitchPattern.PObject (_p0, _p1) -> (
       ignore _p0;
       ignore _p1;
-      let __assign_278 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+      let __assign_278 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
         tempResult := __assign_278;
         __assign_278
       )
     )
     | HxSwitchPattern.PCapture (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_279 = (renderSwitchCase context (Obj.magic inner) (Obj.magic expr) : string) in (
+      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_279 = Obj.magic (renderSwitchCase context (Obj.magic inner) (Obj.magic expr) : string) in (
         tempResult := __assign_279;
         __assign_279
       )
     )
     | HxSwitchPattern.PArray _p0 -> (
       ignore _p0;
-      let __assign_280 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+      let __assign_280 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
         tempResult := __assign_280;
         __assign_280
       )
@@ -1746,7 +1746,7 @@ and renderSwitchCase = fun context pattern expr -> let tempResult = ref ("" : st
     | HxSwitchPattern.PExtractor (_p0, _p1) -> (
       ignore _p0;
       ignore _p1;
-      let __assign_281 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+      let __assign_281 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
         tempResult := __assign_281;
         __assign_281
       )
@@ -1755,7 +1755,7 @@ and renderSwitchCase = fun context pattern expr -> let tempResult = ref ("" : st
       ignore _p0;
       ignore _p1;
       ignore _p2;
-      let __assign_282 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+      let __assign_282 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
         tempResult := __assign_282;
         __assign_282
       )
@@ -1764,7 +1764,7 @@ and renderSwitchCase = fun context pattern expr -> let tempResult = ref ("" : st
       ignore _p0;
       ignore _p1;
       ignore _p2;
-      let __assign_283 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+      let __assign_283 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
         tempResult := __assign_283;
         __assign_283
       )
@@ -1773,7 +1773,7 @@ and renderSwitchCase = fun context pattern expr -> let tempResult = ref ("" : st
       ignore _p0;
       ignore _p1;
       ignore _p2;
-      let __assign_284 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+      let __assign_284 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
         tempResult := __assign_284;
         __assign_284
       )
@@ -1783,7 +1783,7 @@ and renderSwitchCase = fun context pattern expr -> let tempResult = ref ("" : st
       ignore _p1;
       ignore _p2;
       ignore _p3;
-      let __assign_285 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+      let __assign_285 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
         tempResult := __assign_285;
         __assign_285
       )
@@ -1793,28 +1793,28 @@ and renderSwitchCase = fun context pattern expr -> let tempResult = ref ("" : st
       ignore _p1;
       ignore _p2;
       ignore _p3;
-      let __assign_286 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+      let __assign_286 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
         tempResult := __assign_286;
         __assign_286
       )
     )
     | HxSwitchPattern.PUnsupportedGuard _p0 -> (
       ignore _p0;
-      let __assign_287 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+      let __assign_287 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
         tempResult := __assign_287;
         __assign_287
       )
     )
     | HxSwitchPattern.PBind _p0 -> (
       ignore _p0;
-      let __assign_288 = ("default => " ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
+      let __assign_288 = Obj.magic ("default => " ^ HxString.toStdString (renderExpr context (Obj.magic expr)) : string) in (
         tempResult := __assign_288;
         __assign_288
       )
     )
     | HxSwitchPattern.POr _p0 -> (
       ignore _p0;
-      let __assign_289 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+      let __assign_289 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
         tempResult := __assign_289;
         __assign_289
       )
@@ -2263,82 +2263,82 @@ and renderSwitchStmt = fun out context scrutinee patterns bodies indent -> ignor
   let count = !tempNumber in (
     ignore (HxArray.push out (((HxString.toStdString indent ^ "switch ") ^ HxString.toStdString (renderExpr context (Obj.magic scrutinee))) ^ " {"));
     let _g = ref 0 in let _g1 = count in (
-      ignore (while !_g < _g1 do ignore (let i = let __old_245 = !_g in let __new_246 = HxInt.add __old_245 1 in (
+      ignore (try while !_g < _g1 do try ignore (let i = let __old_245 = !_g in let __new_246 = HxInt.add __old_245 1 in (
         ignore (_g := __new_246);
         __old_245
-      ) in let pattern = Obj.magic (HxArray.get (Obj.magic patterns) i) in let tempString = ref ("" : string) in (
+      ) in let pattern = Obj.magic (HxArray.get (Obj.magic patterns) i) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
         ignore (match pattern with
-          | HxSwitchPattern.PNull -> let __assign_247 = (renderSwitchPatternValue (Obj.magic pattern) : string) in (
-            tempString := __assign_247;
+          | HxSwitchPattern.PNull -> let __assign_247 = Obj.magic (renderSwitchPatternValue (Obj.magic pattern) : string) in (
+            tempMaybeString := __assign_247;
             __assign_247
           )
-          | HxSwitchPattern.PWildcard -> let __assign_248 = ("default" : string) in (
-            tempString := __assign_248;
+          | HxSwitchPattern.PWildcard -> let __assign_248 = Obj.magic ("default" : string) in (
+            tempMaybeString := __assign_248;
             __assign_248
           )
           | HxSwitchPattern.PBool _p0 -> (
             ignore _p0;
-            let __assign_249 = (renderSwitchPatternValue (Obj.magic pattern) : string) in (
-              tempString := __assign_249;
+            let __assign_249 = Obj.magic (renderSwitchPatternValue (Obj.magic pattern) : string) in (
+              tempMaybeString := __assign_249;
               __assign_249
             )
           )
           | HxSwitchPattern.PString _p0 -> (
             ignore _p0;
-            let __assign_250 = (renderSwitchPatternValue (Obj.magic pattern) : string) in (
-              tempString := __assign_250;
+            let __assign_250 = Obj.magic (renderSwitchPatternValue (Obj.magic pattern) : string) in (
+              tempMaybeString := __assign_250;
               __assign_250
             )
           )
           | HxSwitchPattern.PInt _p0 -> (
             ignore _p0;
-            let __assign_251 = (renderSwitchPatternValue (Obj.magic pattern) : string) in (
-              tempString := __assign_251;
+            let __assign_251 = Obj.magic (renderSwitchPatternValue (Obj.magic pattern) : string) in (
+              tempMaybeString := __assign_251;
               __assign_251
             )
           )
           | HxSwitchPattern.PEnumValue _p0 -> (
             ignore _p0;
-            let __assign_252 = (renderSwitchPatternValue (Obj.magic pattern) : string) in (
-              tempString := __assign_252;
+            let __assign_252 = Obj.magic (renderSwitchPatternValue (Obj.magic pattern) : string) in (
+              tempMaybeString := __assign_252;
               __assign_252
             )
           )
           | HxSwitchPattern.PEnumExtract (_p0, _p1) -> (
             ignore _p0;
             ignore _p1;
-            let __assign_253 = (renderSwitchPatternValue (Obj.magic pattern) : string) in (
-              tempString := __assign_253;
+            let __assign_253 = Obj.magic (renderSwitchPatternValue (Obj.magic pattern) : string) in (
+              tempMaybeString := __assign_253;
               __assign_253
             )
           )
           | HxSwitchPattern.PObject (_p0, _p1) -> (
             ignore _p0;
             ignore _p1;
-            let __assign_254 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
-              tempString := __assign_254;
+            let __assign_254 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+              tempMaybeString := __assign_254;
               __assign_254
             )
           )
           | HxSwitchPattern.PCapture (_p0, _p1) -> (
             ignore _p0;
-            let _g3 = Obj.magic _p1 in let inner = Obj.magic _g3 in let __assign_255 = (renderSwitchPatternValue (Obj.magic inner) : string) in (
-              tempString := __assign_255;
+            let _g3 = Obj.magic _p1 in let inner = Obj.magic _g3 in let __assign_255 = Obj.magic (renderSwitchPatternValue (Obj.magic inner) : string) in (
+              tempMaybeString := __assign_255;
               __assign_255
             )
           )
           | HxSwitchPattern.PArray _p0 -> (
             ignore _p0;
-            let __assign_256 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
-              tempString := __assign_256;
+            let __assign_256 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+              tempMaybeString := __assign_256;
               __assign_256
             )
           )
           | HxSwitchPattern.PExtractor (_p0, _p1) -> (
             ignore _p0;
             ignore _p1;
-            let __assign_257 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
-              tempString := __assign_257;
+            let __assign_257 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+              tempMaybeString := __assign_257;
               __assign_257
             )
           )
@@ -2346,8 +2346,8 @@ and renderSwitchStmt = fun out context scrutinee patterns bodies indent -> ignor
             ignore _p0;
             ignore _p1;
             ignore _p2;
-            let __assign_258 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
-              tempString := __assign_258;
+            let __assign_258 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+              tempMaybeString := __assign_258;
               __assign_258
             )
           )
@@ -2355,8 +2355,8 @@ and renderSwitchStmt = fun out context scrutinee patterns bodies indent -> ignor
             ignore _p0;
             ignore _p1;
             ignore _p2;
-            let __assign_259 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
-              tempString := __assign_259;
+            let __assign_259 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+              tempMaybeString := __assign_259;
               __assign_259
             )
           )
@@ -2364,8 +2364,8 @@ and renderSwitchStmt = fun out context scrutinee patterns bodies indent -> ignor
             ignore _p0;
             ignore _p1;
             ignore _p2;
-            let __assign_260 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
-              tempString := __assign_260;
+            let __assign_260 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+              tempMaybeString := __assign_260;
               __assign_260
             )
           )
@@ -2374,8 +2374,8 @@ and renderSwitchStmt = fun out context scrutinee patterns bodies indent -> ignor
             ignore _p1;
             ignore _p2;
             ignore _p3;
-            let __assign_261 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
-              tempString := __assign_261;
+            let __assign_261 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+              tempMaybeString := __assign_261;
               __assign_261
             )
           )
@@ -2384,38 +2384,41 @@ and renderSwitchStmt = fun out context scrutinee patterns bodies indent -> ignor
             ignore _p1;
             ignore _p2;
             ignore _p3;
-            let __assign_262 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
-              tempString := __assign_262;
+            let __assign_262 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+              tempMaybeString := __assign_262;
               __assign_262
             )
           )
           | HxSwitchPattern.PUnsupportedGuard _p0 -> (
             ignore _p0;
-            let __assign_263 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
-              tempString := __assign_263;
+            let __assign_263 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+              tempMaybeString := __assign_263;
               __assign_263
             )
           )
           | HxSwitchPattern.PBind _p0 -> (
             ignore _p0;
-            let __assign_264 = ("default" : string) in (
-              tempString := __assign_264;
+            let __assign_264 = Obj.magic ("default" : string) in (
+              tempMaybeString := __assign_264;
               __assign_264
             )
           )
           | HxSwitchPattern.POr _p0 -> (
             ignore _p0;
-            let __assign_265 = (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
-              tempString := __assign_265;
+            let __assign_265 = Obj.magic (unsupported ("switch pattern" : string) (patternKind (Obj.magic pattern) : string) : string) in (
+              tempMaybeString := __assign_265;
               __assign_265
             )
           ));
-        let prefix = (!tempString : string) in (
+        let prefix = (!tempMaybeString : string) in (
+          ignore (if prefix == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
           ignore (HxArray.push out (((HxString.toStdString indent ^ "  ") ^ HxString.toStdString prefix) ^ " => {"));
           ignore (renderStmt (Obj.magic out) context (Obj.magic (HxArray.get (Obj.magic bodies) i)) (HxString.toStdString indent ^ "    " : string));
           HxArray.push out (HxString.toStdString indent ^ "  }")
         )
-      )) done);
+      )) with
+        | HxRuntime.Hx_continue -> () done with
+        | HxRuntime.Hx_break -> ());
       HxArray.push out (HxString.toStdString indent ^ "}")
     )
   )
