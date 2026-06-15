@@ -83,12 +83,8 @@ class NekoTargetCore {
 	}
 
 	static function commandWorks(command:String):Bool {
-		try {
-			final code = Sys.command("sh", ["-c", "command -v " + shellQuote(command) + " >/dev/null 2>&1"]);
-			return code == 0;
-		} catch (_:Dynamic) {
-			return false;
-		}
+		final code = Sys.command("sh", ["-c", "command -v " + shellQuote(command) + " >/dev/null 2>&1"]);
+		return code == 0;
 	}
 
 	static function renderProgram(program:GenIrProgram, context:BackendContext):String {
@@ -234,10 +230,22 @@ class NekoTargetCore {
 				"[" + [for (v in values) renderExpr(v)].join(", ") + "]";
 			case EArrayAccess(array, index):
 				renderExpr(array) + "[" + renderExpr(index) + "]";
-			case EAnon(_, _) | EArrayComprehension(_, _, _, _) | ERange(_, _) | ELambda(_, _) | ENew(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) |
+			case EAnon(fieldNames, fieldValues):
+				renderAnon(fieldNames, fieldValues);
+			case EArrayComprehension(_, _, _, _) | ERange(_, _) | ELambda(_, _) | ENew(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) |
 				ESwitch(_, _, _) | EUnsupported(_):
 				unsupportedExpr(Std.string(expr));
 		}
+	}
+
+	static function renderAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>):String {
+		final tmp = "__hxhx_o";
+		final parts = ["(function() { var " + tmp + " = $new(null);"];
+		final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
+		for (i in 0...count)
+			parts.push(tmp + "." + safeIdent(fieldNames[i]) + " = " + renderExpr(fieldValues[i]) + ";");
+		parts.push("return " + tmp + "; })()");
+		return parts.join(" ");
 	}
 
 	static function renderCall(callee:HxExpr, args:Array<HxExpr>):String {
@@ -296,11 +304,11 @@ class NekoTargetCore {
 		FileSystem.createDirectory(path);
 	}
 
-	static function unsupported(kind:String, detail:String):Dynamic {
+	static function unsupported(kind:String, detail:String):String {
 		throw "Neko native backend MVP does not yet support " + kind + ": " + detail;
 	}
 
-	static function unsupportedExpr(detail:String):Dynamic {
+	static function unsupportedExpr(detail:String):String {
 		return unsupported("expression", detail);
 	}
 }

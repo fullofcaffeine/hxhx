@@ -1944,7 +1944,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.source._SourceTargetCommon.PhpMetadataObjectField" [ "name"; "value" ];
   HxType.register_class_static_fields "backend.source._SourceTargetCommon.PhpMetadataObjectField" [ "getName"; "getValue" ];
   HxType.register_class_instance_fields "backend.vm.NekoTargetCore" [];
-  HxType.register_class_static_fields "backend.vm.NekoTargetCore" [ "commandWorks"; "emit"; "ensureDirectory"; "findMain"; "mangleFunction"; "matchesMain"; "outputBytecodePath"; "quote"; "renderCall"; "renderExpr"; "renderFunction"; "renderProgram"; "renderStmt"; "resolveNekoc"; "safeIdent"; "shellQuote"; "sourcePathForBytecode"; "unsupported"; "unsupportedExpr" ];
+  HxType.register_class_static_fields "backend.vm.NekoTargetCore" [ "commandWorks"; "emit"; "ensureDirectory"; "findMain"; "mangleFunction"; "matchesMain"; "outputBytecodePath"; "quote"; "renderAnon"; "renderCall"; "renderExpr"; "renderFunction"; "renderProgram"; "renderStmt"; "resolveNekoc"; "safeIdent"; "shellQuote"; "sourcePathForBytecode"; "unsupported"; "unsupportedExpr" ];
   HxType.register_class_instance_fields "backend.vm.VmNativeBackend" [];
   HxType.register_class_static_fields "backend.vm.VmNativeBackend" [ "nekoCapabilities"; "nekoDescriptor"; "nekoRegistration" ];
   HxType.register_class_instance_fields "haxe.Exception" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];

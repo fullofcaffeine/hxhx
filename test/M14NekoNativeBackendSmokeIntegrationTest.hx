@@ -56,5 +56,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(source, "Main_main();", "expected entrypoint invocation");
 
 		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		final anonResult = BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var o = { name: "neko", count: 2 }; Sys.println(o.name); } }'), context);
+		assertTrue(anonResult.entryPath == sourcePath, "anon source-only mode should report generated Neko source");
+		final anonSource = File.getContent(sourcePath);
+		assertContains(anonSource, "var __hxhx_o = $new(null);", "expected Neko object allocation for anonymous object literal");
+		assertContains(anonSource, "__hxhx_o.name = \"neko\";", "expected anonymous object string field assignment");
+		assertContains(anonSource, "__hxhx_o.count = 2;", "expected anonymous object int field assignment");
+
+		deleteRecursive(outDir);
 	}
 }
