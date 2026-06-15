@@ -444,6 +444,8 @@ class NekoTargetCore {
 				out.push(indent + "return null;");
 			case SReturn(expr, _):
 				out.push(indent + "return " + renderExpr(context, expr) + ";");
+			case SExpr(ECall(ESuper, _), _):
+				out.push(indent + "null;");
 			case SExpr(expr, _):
 				out.push(indent + renderExpr(context, expr) + ";");
 			case SBreak(_):

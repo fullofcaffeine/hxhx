@@ -213,6 +213,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Base { public function new() {} } class Child extends Base { public function new() { super(); } } class Main { static function main() { var child = new Child(); } }'),
+			context);
+		final superCtorSource = File.getContent(sourcePath);
+		assertContains(superCtorSource, "var __hxhx_new_Child = function()", "expected child constructor factory");
+		assertContains(superCtorSource, "null;", "expected bare super constructor call to lower to no-op placeholder");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { try { throw "boom"; } catch (e:String) { Sys.println(e); } } }'),
 			context);
 		final trySource = File.getContent(sourcePath);
