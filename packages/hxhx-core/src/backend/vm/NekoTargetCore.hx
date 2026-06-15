@@ -763,6 +763,10 @@ class NekoTargetCore {
 					+ ";")
 				+ " return __hxhx_o; })(); return null; })()";
 		}
+		final opaqueTypedLocalRef = parseOpaqueTypedLocalRefRaw(raw);
+		if (opaqueTypedLocalRef != null) {
+			return "(function() { var " + opaqueTypedLocalRef + " = null; return " + opaqueTypedLocalRef + "; })()";
+		}
 		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
 	}
 
@@ -830,6 +834,12 @@ class NekoTargetCore {
 			extraField: null,
 			extraValue: null
 		};
+	}
+
+	static function parseOpaqueTypedLocalRefRaw(raw:String):Null<String> {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):[^;{}]+;\1;\}$/;
+		return pattern.match(compact) ? safeIdent(pattern.matched(1)) : null;
 	}
 
 	static function renderBytesConstructorCall(context:NekoEmitContext, len:String, data:String):String {

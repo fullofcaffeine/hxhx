@@ -352,6 +352,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('typedef TypedefToStringMap<T> = haxe.ds.StringMap<T>; class Main { static function main() { var result = { var x:TypedefToStringMap<String>; x; }; Sys.println(result); } }'),
+			context);
+		final opaqueTypedLocalRefSource = File.getContent(sourcePath);
+		assertContains(opaqueTypedLocalRefSource, "var x = null; return x;", "expected typed local reference opaque block lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class TestLocalStatic { public function new() {} public function basic() { static var x = 1; static final y = "final"; x++; return { x: x, y: y }; } public static function main() { var obj = new TestLocalStatic(); var value = obj.basic(); Sys.println(value.x); value = obj.basic(); Sys.println(value.x); } }'),
 			context);
 		final localStaticSource = File.getContent(sourcePath);
