@@ -9486,6 +9486,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP source backend should emit anonymous-object support from the repo-owned runtime template");
 		assertContains(content, sourceTemplateContent("php/runtime", "Sys.php"),
 			"PHP source backend should emit Sys support from the repo-owned runtime template");
+		assertContains(content, sourceTemplateContent("php/runtime", "Array.php"),
+			"PHP source backend should emit Array support from the repo-owned runtime template");
+		assertContains(content, sourceTemplateContent("php/runtime", "Map.php"),
+			"PHP source backend should emit Map support from the repo-owned runtime template");
 		assertContains(content, "class __HxArray", "PHP source backend should emit a minimal array helper");
 		assertContains(content, "class Map", "PHP source backend should emit a minimal Map helper");
 		assertContains(content, "public function set($key, $value)", "PHP Map helper should support set");
@@ -9923,6 +9927,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "Array.php"),
+			"PHP source backend should emit array iterator support from the repo-owned runtime template");
+		assertContains(content, sourceTemplateContent("php/runtime", "Map.php"),
+			"PHP source backend should emit Map support from the repo-owned runtime template");
 		assertContains(content, "class __HxArrayIterator implements \\IteratorAggregate", "PHP array iterator should also be foreach-compatible");
 		assertContains(content, "return new __HxArrayIterator(array_values($this->keys));", "PHP Map.keys should return an iterator-compatible wrapper");
 		assertContains(content, "$keyIt = $sm->keys();", "PHP Map.keys calls should keep the map iterator shape");
@@ -13721,6 +13729,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static function resolveClass($name)", "PHP Type runtime should expose resolveClass");
 		assertContains(content, "\"List\" => \"haxe.ds.List\"", "PHP class-name map should include imported haxe.ds.List alias");
 		assertContains(content, "\"List_\" => \"haxe.ds.List\"", "PHP class-name map should include sanitized haxe.ds.List runtime alias");
+		assertContains(content, sourceTemplateContent("php/runtime", "List.php"),
+			"PHP source backend should emit List support from the repo-owned runtime template");
 		assertContains(content, "class List_ implements \\IteratorAggregate", "PHP runtime should emit a sanitized List support class");
 		assertContains(content, "$values = new List_()", "PHP haxe.ds.List construction should lower to the runtime shim");
 		assertContains(content, "__hxhx_is_of_type($values, \"List\")", "PHP Std.isOfType should check haxe.ds.List values through the runtime helper");
