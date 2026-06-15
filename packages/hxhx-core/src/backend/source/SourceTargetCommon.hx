@@ -11439,32 +11439,16 @@ class SourceTargetCommon {
 		out.push("    public " + safeClass + "() {");
 		out.push("    }");
 		if (safeClass == "Runner") {
-			out.push("    public " + csSignalRuntimeType() + " onProgress = new " + csSignalRuntimeType() + "();");
-			out.push("    public " + csSignalRuntimeType() + " onTestStart = new " + csSignalRuntimeType() + "();");
-			out.push("    public object report = null;");
-			out.push("    public object addCase(params object[] args) {");
-			out.push("      return null;");
-			out.push("    }");
-			appendCsUtestRunnerAddCasesStub(out, "    ");
-			out.push("    public object run(params object[] args) {");
-			out.push("      return null;");
-			out.push("    }");
+			appendSourceNativeTemplateLines(out, "    ", "cs/runci-helper-members", "Runner.cs");
 		}
 		if (safeClass == "Report") {
-			out.push("    public object displayHeader = null;");
-			out.push("    public object displaySuccessResults = null;");
-			out.push("    public static Report create(params object[] args) {");
-			out.push("      return new Report();");
-			out.push("    }");
+			appendSourceNativeTemplateLines(out, "    ", "cs/runci-helper-members", "Report.cs");
 		}
 		if (safeClass == "UnitBuilder") {
-			out.push("    public static object[] generateSpec(params object[] args) {");
-			out.push("      return new object[0];");
-			out.push("    }");
+			appendSourceNativeTemplateLines(out, "    ", "cs/runci-helper-members", "UnitBuilder.cs");
 		}
 		if (safeClass == "TestIssues") {
-			out.push("    public static void addIssueClasses(params object[] args) {");
-			out.push("    }");
+			appendSourceNativeTemplateLines(out, "    ", "cs/runci-helper-members", "TestIssues.cs");
 		}
 		out.push("  }");
 		appendCsNamespaceClose(out, "unit");

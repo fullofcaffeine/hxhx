@@ -8235,9 +8235,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertNotContains(csLibContent, "public static object pointerOfArray",
 				"C# pointerOfArray is a generator intrinsic, not a generated runtime method");
 			assertNotContains(csLibContent, "public static object valueOf", "C# valueOf is a generator intrinsic, not a generated runtime method");
+			assertContains(runnerContent, indentedSourceTemplateContent("cs/runci-helper-members", "Runner.cs", "    "),
+				"C# unit Runner helper should use the repo-owned runci helper member template");
 			assertContains(runnerContent, "public global::hxhx.__HxSignal onProgress", "C# Runner stub should expose utest signal fields");
 			assertContains(mainContent, "public object add(System.Func<dynamic, object> callback)",
 				"C# signal support should expose a one-argument delegate overload for callback lambdas");
+			assertContains(reportContent, indentedSourceTemplateContent("cs/runci-helper-members", "Report.cs", "    "),
+				"C# unit Report helper should use the repo-owned runci helper member template");
 			assertContains(reportContent, "public static Report create", "C# Report stub should expose the factory used by unit TestMain");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
