@@ -929,10 +929,13 @@ let rec collectStmtRefs = fun context stmt addConstructor addStatic -> ignore (m
   | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> ignore ((
     ignore _p0;
     ignore _p1;
-    ignore _p2;
-    ignore _p3;
-    ignore _p4;
-    ()
+    let _g3 = Obj.magic _p2 in let _g1 = Obj.magic _p3 in (
+      ignore _p4;
+      let iterable = Obj.magic _g3 in let body = Obj.magic _g1 in (
+        ignore (collectExprRefs context (Obj.magic iterable) addConstructor addStatic);
+        collectStmtRefs context (Obj.magic body) addConstructor addStatic
+      )
+    )
   ))
   | HxStmt.SWhile (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
     ignore _p2;
@@ -1908,13 +1911,9 @@ let rec renderStmt = fun out context stmt indent -> ignore (match stmt with
     ignore _p3;
     let name = (_g : string) in let iterable = Obj.magic _g1 in let body = Obj.magic _g2 in renderForInStmt (Obj.magic out) context (name : string) (Obj.magic iterable) (Obj.magic body) (indent : string)
   ))
-  | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> ignore ((
-    ignore _p0;
-    ignore _p1;
-    ignore _p2;
-    ignore _p3;
+  | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in (
     ignore _p4;
-    unsupported ("statement" : string) (stmtTag (Obj.magic stmt) : string)
+    let keyName = (_g : string) in let valueName = (_g1 : string) in let iterable = Obj.magic _g2 in let body = Obj.magic _g3 in renderForKeyValueStmt (Obj.magic out) context (keyName : string) (valueName : string) (Obj.magic iterable) (Obj.magic body) (indent : string)
   ))
   | HxStmt.SWhile (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
     ignore _p2;
@@ -1987,6 +1986,20 @@ and renderForInStmt = fun out context name iterable body indent -> ignore (let s
   ignore (HxArray.push out (((((HxString.toStdString indent ^ "  while (") ^ HxString.toStdString indexName) ^ " < $asize(") ^ HxString.toStdString iterableName) ^ ")) {"));
   ignore (HxArray.push out (((((((HxString.toStdString indent ^ "    var ") ^ HxString.toStdString safeName) ^ " = ") ^ HxString.toStdString iterableName) ^ "[") ^ HxString.toStdString indexName) ^ "];"));
   ignore (HxArray.push out (((((HxString.toStdString indent ^ "    ") ^ HxString.toStdString indexName) ^ " = ") ^ HxString.toStdString indexName) ^ " + 1;"));
+  ignore (renderStmt (Obj.magic out) context (Obj.magic body) (HxString.toStdString indent ^ "    " : string));
+  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
+  HxArray.push out (HxString.toStdString indent ^ "}")
+))
+and renderForKeyValueStmt = fun out context keyName valueName iterable body indent -> ignore (let safeKeyName = (safeIdent (keyName : string) : string) in let safeValueName = (safeIdent (valueName : string) : string) in let sourceName = ("__hxhx_kv_source_" ^ HxString.toStdString safeKeyName : string) in let fieldsName = ("__hxhx_kv_fields_" ^ HxString.toStdString safeKeyName : string) in let fieldName = ("__hxhx_kv_field_" ^ HxString.toStdString safeKeyName : string) in let indexName = ("__hxhx_kv_index_" ^ HxString.toStdString safeKeyName : string) in (
+  ignore (HxArray.push out (HxString.toStdString indent ^ "{"));
+  ignore (HxArray.push out (((((HxString.toStdString indent ^ "  var ") ^ HxString.toStdString sourceName) ^ " = ") ^ HxString.toStdString (renderExpr context (Obj.magic iterable))) ^ ";"));
+  ignore (HxArray.push out (((((HxString.toStdString indent ^ "  var ") ^ HxString.toStdString fieldsName) ^ " = $objfields(") ^ HxString.toStdString sourceName) ^ ");"));
+  ignore (HxArray.push out (((HxString.toStdString indent ^ "  var ") ^ HxString.toStdString indexName) ^ " = 0;"));
+  ignore (HxArray.push out (((((HxString.toStdString indent ^ "  while (") ^ HxString.toStdString indexName) ^ " < $asize(") ^ HxString.toStdString fieldsName) ^ ")) {"));
+  ignore (HxArray.push out (((((((HxString.toStdString indent ^ "    var ") ^ HxString.toStdString fieldName) ^ " = ") ^ HxString.toStdString fieldsName) ^ "[") ^ HxString.toStdString indexName) ^ "];"));
+  ignore (HxArray.push out (((((HxString.toStdString indent ^ "    ") ^ HxString.toStdString indexName) ^ " = ") ^ HxString.toStdString indexName) ^ " + 1;"));
+  ignore (HxArray.push out (((((HxString.toStdString indent ^ "    var ") ^ HxString.toStdString safeKeyName) ^ " = $field(") ^ HxString.toStdString fieldName) ^ ");"));
+  ignore (HxArray.push out (((((((HxString.toStdString indent ^ "    var ") ^ HxString.toStdString safeValueName) ^ " = $objget(") ^ HxString.toStdString sourceName) ^ ", ") ^ HxString.toStdString fieldName) ^ ");"));
   ignore (renderStmt (Obj.magic out) context (Obj.magic body) (HxString.toStdString indent ^ "    " : string));
   ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
   HxArray.push out (HxString.toStdString indent ^ "}")

@@ -141,6 +141,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var values = { first: 1, second: 2 }; for (label => value in values) Sys.println(label); } }'),
+			context);
+		final keyValueForSource = File.getContent(sourcePath);
+		assertContains(keyValueForSource, "var __hxhx_kv_fields_label = $objfields(__hxhx_kv_source_label);", "expected object field collection");
+		assertContains(keyValueForSource, "var label = $field(__hxhx_kv_field_label);", "expected key hash conversion");
+		assertContains(keyValueForSource, "var value = $objget(__hxhx_kv_source_label, __hxhx_kv_field_label);", "expected value lookup");
+		assertContains(keyValueForSource, "$print(label, \"\\n\")", "expected key/value loop body");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { if (neko.Web.isModNeko) neko.Web.setHeader("Content-Type", "text/plain"); Sys.println("ok"); } }'),
 			context);
 		final webSource = File.getContent(sourcePath);

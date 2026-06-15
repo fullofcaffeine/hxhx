@@ -266,6 +266,9 @@ class NekoTargetCore {
 			case SForIn(_, iterable, body, _):
 				collectExprRefs(context, iterable, addConstructor, addStatic);
 				collectStmtRefs(context, body, addConstructor, addStatic);
+			case SForKeyValue(_, _, iterable, body, _):
+				collectExprRefs(context, iterable, addConstructor, addStatic);
+				collectStmtRefs(context, body, addConstructor, addStatic);
 			case STry(tryBody, catches, _):
 				collectStmtRefs(context, tryBody, addConstructor, addStatic);
 				for (c in catches)
@@ -273,7 +276,7 @@ class NekoTargetCore {
 			case SReturn(expr, _) | SThrow(expr, _) | SExpr(expr, _):
 				collectExprRefs(context, expr, addConstructor, addStatic);
 			case SReturnVoid(_) | SBreak(_) | SContinue(_):
-			case SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _):
+			case SDoWhile(_, _, _) | SSwitch(_, _, _, _):
 		}
 	}
 
@@ -431,6 +434,8 @@ class NekoTargetCore {
 				renderStmt(out, context, body, indent);
 			case SForIn(name, iterable, body, _):
 				renderForInStmt(out, context, name, iterable, body, indent);
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				renderForKeyValueStmt(out, context, keyName, valueName, iterable, body, indent);
 			case SReturnVoid(_):
 				out.push(indent + "return null;");
 			case SReturn(expr, _):
@@ -445,7 +450,7 @@ class NekoTargetCore {
 				out.push(indent + "$throw(" + renderExpr(context, expr) + ");");
 			case STry(tryBody, catches, _):
 				renderTryStmt(out, context, tryBody, catches, indent);
-			case SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _):
+			case SDoWhile(_, _, _) | SSwitch(_, _, _, _):
 				unsupported("statement", stmtTag(stmt));
 		}
 	}
@@ -648,6 +653,28 @@ class NekoTargetCore {
 		out.push(indent + "  while (" + indexName + " < $asize(" + iterableName + ")) {");
 		out.push(indent + "    var " + safeName + " = " + iterableName + "[" + indexName + "];");
 		out.push(indent + "    " + indexName + " = " + indexName + " + 1;");
+		renderStmt(out, context, body, indent + "    ");
+		out.push(indent + "  }");
+		out.push(indent + "}");
+	}
+
+	static function renderForKeyValueStmt(out:Array<String>, context:NekoEmitContext, keyName:String, valueName:String, iterable:HxExpr, body:HxStmt,
+			indent:String):Void {
+		final safeKeyName = safeIdent(keyName);
+		final safeValueName = safeIdent(valueName);
+		final sourceName = "__hxhx_kv_source_" + safeKeyName;
+		final fieldsName = "__hxhx_kv_fields_" + safeKeyName;
+		final fieldName = "__hxhx_kv_field_" + safeKeyName;
+		final indexName = "__hxhx_kv_index_" + safeKeyName;
+		out.push(indent + "{");
+		out.push(indent + "  var " + sourceName + " = " + renderExpr(context, iterable) + ";");
+		out.push(indent + "  var " + fieldsName + " = $objfields(" + sourceName + ");");
+		out.push(indent + "  var " + indexName + " = 0;");
+		out.push(indent + "  while (" + indexName + " < $asize(" + fieldsName + ")) {");
+		out.push(indent + "    var " + fieldName + " = " + fieldsName + "[" + indexName + "];");
+		out.push(indent + "    " + indexName + " = " + indexName + " + 1;");
+		out.push(indent + "    var " + safeKeyName + " = $field(" + fieldName + ");");
+		out.push(indent + "    var " + safeValueName + " = $objget(" + sourceName + ", " + fieldName + ");");
 		renderStmt(out, context, body, indent + "    ");
 		out.push(indent + "  }");
 		out.push(indent + "}");
