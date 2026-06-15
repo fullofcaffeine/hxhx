@@ -38,6 +38,12 @@ private typedef NekoBytesSubRaw = {
 	var pos:String;
 }
 
+private typedef NekoFieldReadCatchRaw = {
+	var receiver:String;
+	var field:String;
+	var fallback:String;
+}
+
 /**
 	MVP native Neko target core.
 
@@ -728,6 +734,11 @@ class NekoTargetCore {
 		if (simpleCallCatch != null) {
 			return "(function() { try { return " + simpleCallCatch + "(); } catch e { return e; } })()";
 		}
+		final fieldReadCatch = parseFieldReadCatchStringRaw(raw);
+		if (fieldReadCatch != null) {
+			return "(function() { try { return " + fieldReadCatch.receiver + "." + fieldReadCatch.field + "; } catch e { return "
+				+ quote(fieldReadCatch.fallback) + "; } })()";
+		}
 		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
 	}
 
@@ -759,6 +770,18 @@ class NekoTargetCore {
 		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
 		final pattern = ~/^try\{([A-Za-z_][A-Za-z0-9_]*)\(\);\}catch\(e:[^)]+\)\{e;\}$/;
 		return pattern.match(compact) ? safeIdent(pattern.matched(1)) : null;
+	}
+
+	static function parseFieldReadCatchStringRaw(raw:String):Null<NekoFieldReadCatchRaw> {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		final pattern = ~/^try\{([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*);\}catch\(e:[^)]+\)\{"([^"]*)";\}$/;
+		if (!pattern.match(compact))
+			return null;
+		return {
+			receiver: safeIdent(pattern.matched(1)),
+			field: safeIdent(pattern.matched(2)),
+			fallback: pattern.matched(3)
+		};
 	}
 
 	static function renderBytesConstructorCall(context:NekoEmitContext, len:String, data:String):String {
