@@ -181,6 +181,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var t = macro :X -> Y; Sys.println("macro-type"); } }'), context);
+		final macroTypeSource = File.getContent(sourcePath);
+		assertContains(macroTypeSource, "__hxhx_o.__hx_ctor = \"TFunction\";", "expected macro type arrow to lower to TFunction");
+		assertContains(macroTypeSource, "__hxhx_o.__hx_ctor = \"TPath\";", "expected macro type paths to lower to TPath");
+		assertContains(macroTypeSource, "__hxhx_o.name = \"X\";", "expected macro type argument path");
+		assertContains(macroTypeSource, "__hxhx_o.name = \"Y\";", "expected macro type return path");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { switch (1) { case 1: Sys.println("one"); default: Sys.println("other"); } } }'), context);
 		final switchStmtSource = File.getContent(sourcePath);

@@ -1897,12 +1897,9 @@ let rec renderExpr = fun context expr -> let tempResult = ref ("" : string) in (
         __assign_145
       )
     )
-    | HxExpr.EMacroType _p0 -> (
-      ignore _p0;
-      let __assign_146 = (unsupportedExpr (exprTag (Obj.magic expr) : string) : string) in (
-        tempResult := __assign_146;
-        __assign_146
-      )
+    | HxExpr.EMacroType _p0 -> let _g = (_p0 : string) in let typeText = (_g : string) in let __assign_146 = (Backend_vm_NekoMacroTypeLowering.render (typeText : string) : string) in (
+      tempResult := __assign_146;
+      __assign_146
     )
     | HxExpr.ELambda (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let args = Obj.magic _g in let body = Obj.magic _g1 in let __assign_147 = (renderLambda context (Obj.magic args) (Obj.magic body) : string) in (
       tempResult := __assign_147;

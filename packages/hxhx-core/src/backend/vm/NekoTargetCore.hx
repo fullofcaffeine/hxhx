@@ -645,6 +645,8 @@ class NekoTargetCore {
 				renderExpr(context, array) + "[" + renderExpr(context, index) + "]";
 			case EAnon(fieldNames, fieldValues):
 				renderAnon(context, fieldNames, fieldValues);
+			case EMacroType(typeText):
+				NekoMacroTypeLowering.render(typeText);
 			case ENew(typePath, args):
 				renderNew(context, typePath, args);
 			case ELambda(args, body):
@@ -657,7 +659,7 @@ class NekoTargetCore {
 				renderTryCatchRaw(context, raw);
 			case ERange(start, end):
 				renderRangeExpr(context, start, end);
-			case EMacroType(_) | ESwitchRaw(_) | EUnsupported(_):
+			case ESwitchRaw(_) | EUnsupported(_):
 				unsupportedExpr(exprTag(expr));
 		}
 	}
