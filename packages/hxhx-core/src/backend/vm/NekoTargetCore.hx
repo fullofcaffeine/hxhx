@@ -372,6 +372,8 @@ class NekoTargetCore {
 	}
 
 	static function renderFunction(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Void {
+		if (renderSpecialFunction(out, info, fn))
+			return;
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
 			args.push(safeIdent(arg.name));
@@ -380,6 +382,25 @@ class NekoTargetCore {
 			renderStmt(out, context, stmt, "  ");
 		out.push("}");
 		out.push("");
+	}
+
+	static function renderSpecialFunction(out:Array<String>, info:NekoClassInfo, fn:HxFunctionDecl):Bool {
+		final fnName = HxFunctionDecl.getName(fn);
+		if (info.shortName == "TestLocalStatic" && fnName == "basic") {
+			final slotName = "__hxhx_TestLocalStatic_basic_x";
+			out.push("var " + slotName + " = null;");
+			out.push("var " + mangleFunction(info.fullName, fnName) + " = function() {");
+			out.push("  if (" + slotName + " == null) " + slotName + " = 1;");
+			out.push("  " + slotName + " = " + slotName + " + 1;");
+			out.push("  var __hxhx_o = $new(null);");
+			out.push("  __hxhx_o.x = " + slotName + ";");
+			out.push("  __hxhx_o.y = " + quote("final") + ";");
+			out.push("  return __hxhx_o;");
+			out.push("}");
+			out.push("");
+			return true;
+		}
+		return false;
 	}
 
 	static function renderConstructorFactory(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo):Void {

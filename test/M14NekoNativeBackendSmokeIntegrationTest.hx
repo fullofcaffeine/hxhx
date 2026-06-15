@@ -305,6 +305,19 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class TestLocalStatic { static function basic() { static var x = 1; x++; return { x: x, y: "final" }; } public static function main() { var value = TestLocalStatic.basic(); Sys.println(value.x); } }'),
+			context);
+		final localStaticSource = File.getContent(sourcePath);
+		assertContains(localStaticSource, "var __hxhx_TestLocalStatic_basic_x = null;", "expected local static persistent slot");
+		assertContains(localStaticSource, "if (__hxhx_TestLocalStatic_basic_x == null) __hxhx_TestLocalStatic_basic_x = 1;",
+			"expected local static initialization guard");
+		assertContains(localStaticSource, "__hxhx_o.y = \"final\";", "expected local static fixture result object");
+		assertNotContains(localStaticSource, "EUnsupported", "expected local static fixture bridge to avoid unsupported expression output");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
 		final rangeForSource = File.getContent(sourcePath);
 		assertContains(rangeForSource, "var __hxhx_range_out = $array();", "expected range expression result allocation");
