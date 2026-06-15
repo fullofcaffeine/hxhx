@@ -9644,6 +9644,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP should not emit PHP-8.4-only anonymous-object member-call syntax");
 		assertContains(content, "__hxhx_map_literal([[1, 1]])->toString()", "PHP integer map literal toString should lower to the runtime Map shim");
 		assertContains(content, "__hxhx_map_literal([[\"foo\", 1]])->toString()", "PHP string map literal toString should lower to the runtime Map shim");
+		assertContains(content, sourceTemplateContent("php/runtime", "Lambda.php"),
+			"PHP source backend should emit Lambda support from the repo-owned runtime template");
+		assertContains(content, sourceTemplateContent("php/runtime", "Reflect.php"),
+			"PHP source backend should emit Reflect support from the repo-owned runtime template");
 		assertContains(content, "class Lambda {", "PHP source backend should emit a minimal Lambda helper");
 		assertContains(content, "class Reflect {", "PHP source backend should emit a minimal Reflect helper for Array.sort callbacks");
 		assertContains(content, "public static function field($object, $field)", "PHP Reflect helper should support dynamic field lookup");
@@ -10071,6 +10075,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpReflectMakeVarArgsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "Reflect.php"),
+			"PHP source backend should emit Reflect support from the repo-owned runtime template");
 		assertContains(content, "public static function makeVarArgs($f)", "PHP Reflect helper should support makeVarArgs");
 		assertContains(content, "return function(...$args) use ($f) { return $f($args); };",
 			"PHP Reflect.makeVarArgs should pass variadic arguments as one Haxe array argument");
@@ -10867,6 +10873,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpStringMethodClosureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "DynamicString.php"),
+			"PHP source backend should emit dynamic string support from the repo-owned runtime template");
+		assertContains(content, sourceTemplateContent("php/runtime", "Reflect.php"),
+			"PHP source backend should emit Reflect support from the repo-owned runtime template");
 		assertContains(content, "new HxDynamicStr(\"foo\", \"toUpperCase\")", "PHP string method values should lower to HxDynamicStr callables");
 		assertContains(content, "class HxDynamicStr", "PHP runtime should expose the dynamic string method callable");
 		assertContains(content, "if (is_string($object) && __hxhx_string_method_exists($field)) return new HxDynamicStr($object, $field);",
