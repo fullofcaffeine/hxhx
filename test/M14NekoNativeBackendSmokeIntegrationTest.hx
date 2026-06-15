@@ -119,6 +119,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var p = -1; if (p < 0) p = 0; else if (p > 1) p = 1; Sys.println(p); } }'), context);
+		final assignmentIfSource = File.getContent(sourcePath);
+		assertContains(assignmentIfSource, "if (p < 0) {", "expected Neko if body to use a block");
+		assertContains(assignmentIfSource, "(p = 0);", "expected assignment body to remain side-effecting");
+		assertContains(assignmentIfSource, "else {", "expected Neko else body to use a block");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		final anonResult = BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var o = { name: "neko", count: 2 }; Sys.println(o.name); } }'), context);
 		assertTrue(anonResult.entryPath == sourcePath, "anon source-only mode should report generated Neko source");

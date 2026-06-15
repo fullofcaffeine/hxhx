@@ -511,15 +511,11 @@ class NekoTargetCore {
 			case SVar(name, _, init, _):
 				out.push(indent + "var " + safeIdent(name) + (init == null ? "" : " = " + renderExpr(context, init)) + ";");
 			case SIf(cond, thenBranch, elseBranch, _):
-				out.push(indent + "if " + renderExpr(context, cond) + " ");
-				renderStmt(out, context, thenBranch, indent);
-				if (elseBranch != null) {
-					out.push(indent + "else ");
-					renderStmt(out, context, elseBranch, indent);
-				}
+				renderControlBlock(out, context, "if " + renderExpr(context, cond), thenBranch, indent);
+				if (elseBranch != null)
+					renderControlBlock(out, context, "else", elseBranch, indent);
 			case SWhile(cond, body, _):
-				out.push(indent + "while " + renderExpr(context, cond) + " ");
-				renderStmt(out, context, body, indent);
+				renderControlBlock(out, context, "while " + renderExpr(context, cond), body, indent);
 			case SForIn(name, iterable, body, _):
 				renderForInStmt(out, context, name, iterable, body, indent);
 			case SForKeyValue(keyName, valueName, iterable, body, _):
@@ -545,6 +541,18 @@ class NekoTargetCore {
 			case SDoWhile(_, _, _):
 				unsupported("statement", stmtTag(stmt));
 		}
+	}
+
+	static function renderControlBlock(out:Array<String>, context:NekoEmitContext, header:String, body:HxStmt, indent:String):Void {
+		out.push(indent + header + " {");
+		switch (body) {
+			case SBlock(stmts, _):
+				for (stmt in stmts)
+					renderStmt(out, context, stmt, indent + "  ");
+			case _:
+				renderStmt(out, context, body, indent + "  ");
+		}
+		out.push(indent + "}");
 	}
 
 	static function renderTryStmt(out:Array<String>, context:NekoEmitContext, tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>,
