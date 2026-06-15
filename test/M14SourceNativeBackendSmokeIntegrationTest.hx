@@ -10061,6 +10061,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/namespaces", "HaxeRtti.php"),
+			"PHP source backend should emit haxe.rtti.Meta from the repo-owned namespace template");
 		assertContains(content, "namespace haxe\\rtti", "PHP source backend should emit haxe.rtti namespace runtime support");
 		assertContains(content, "class Meta {", "PHP source backend should emit haxe.rtti.Meta runtime support");
 		assertContains(content, "function __hxhx_meta_type($cls)", "PHP source backend should emit metadata payload tables");
@@ -10951,6 +10953,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpWebProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/namespaces", "PhpWeb.php"),
+			"PHP source backend should emit php.Web from the repo-owned namespace template");
 		assertContains(content, "namespace php {", "PHP source backend should emit the php.Web namespace shim");
 		assertContains(content, "class Web", "PHP source backend should emit the php.Web class shim");
 		assertContains(content, "if (php\\Web::$isModNeko) {", "php.Web static fields should lower through PHP static property syntax");
@@ -14245,6 +14249,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/namespaces", "HaxeFormat.php"),
+			"PHP source backend should emit haxe.format helpers from the repo-owned namespace template");
 		assertContains(content, "namespace haxe\\format {", "PHP runtime should expose haxe.format namespace helpers");
 		assertContains(content, "class JsonPrinter {", "PHP runtime should expose haxe.format.JsonPrinter");
 		assertContains(content, "\\haxe\\Json::stringify($value, $replacer, $space)", "PHP JsonPrinter should delegate through the shared haxe.Json encoder");
