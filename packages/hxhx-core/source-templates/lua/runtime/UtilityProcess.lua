@@ -1,26 +1,4 @@
-package backend.source;
-
-/**
-	Repo-owned Lua runtime support for the upstream sys-test `UtilityProcess` helper.
-
-	Why
-	- The upstream sys/unicode harness compiles `UtilityProcess` as a small executable and then
-	  invokes commands such as `stdout.writeString`, `stdin.readLine`, and `exitCode`.
-	- Rendering the source helper body directly currently pulls in anonymous-object option shapes
-	  that the Lua source backend does not support yet.
-	- Keeping this behavior in a target runtime support module avoids growing the main backend
-	  emitter with a large inline stub while the broader target-runtime extraction work proceeds.
-
-	What
-	- Returns Lua source lines for a focused command dispatcher.
-	- The dispatcher is intentionally scoped to commands used by the upstream sys/unicode harness.
-**/
-class LuaUtilityProcessRuntime {
-	public static function lines():Array<String> {
-		return SOURCE.split("\n");
-	}
-
-	static final SOURCE = '-- hxhx Lua sys runtime shim: UtilityProcess is a tiny upstream sys-test helper.
+-- hxhx Lua sys runtime shim: UtilityProcess is a tiny upstream sys-test helper.
 local __hxhx_utility_env = {}
 local function __hxhx_utility_arg(args, index)
   if args == nil then return "" end
@@ -132,5 +110,4 @@ end
 local function main()
   __hxhx_runUtility(__hxhx_sys_args())
 end
-main()';
-}
+main()

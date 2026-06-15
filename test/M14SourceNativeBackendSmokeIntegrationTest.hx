@@ -8624,6 +8624,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(luaSupportPreludeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("lua/runtime", "Prelude.lua"),
+			"Lua output should emit the stable support prelude from the repo-owned runtime template");
 		assertContains(content, "local function hxhx_array(values)", "Lua output should define the array helper before main");
 		assertContains(content, "local function __hxhx_stub_class(_name)", "Lua output should define a small support-class helper before main");
 		assertContains(content, "Support = Support or __hxhx_stub_class(\"Support\")", "Lua support classes should be available as globals");
@@ -8801,6 +8803,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(luaERegRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("lua/runtime", "EReg.lua"), "Lua output should emit EReg support from the repo-owned runtime template");
 		assertContains(content, "EReg.new = EReg.new or function(pattern, options)", "Lua output should expose focused EReg constructor support");
 		assertContains(content, "local function __hxhx_ereg_lua_pattern(pattern)",
 			"Lua EReg.match support should translate focused Haxe regex syntax to Lua patterns");
@@ -8868,6 +8871,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(luaUtilityProcessRuntimeProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "UtilityProcess.lua"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("lua/runtime", "UtilityProcess.lua"),
+			"Lua UtilityProcess should emit the sys-test runtime from the repo-owned runtime template");
 		assertContains(content, "hxhx Lua sys runtime shim", "Lua UtilityProcess entrypoint should use the focused runtime shim");
 		assertContains(content, "local function __hxhx_runUtility(args)", "Lua UtilityProcess shim should expose the sys-test command dispatcher");
 		assertNotContains(content, "config.execPath", "Lua UtilityProcess should not render the source helper body with anonymous-object options");
