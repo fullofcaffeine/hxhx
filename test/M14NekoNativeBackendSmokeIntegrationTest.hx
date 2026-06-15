@@ -17,6 +17,11 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			throw message + " (missing `" + needle + "` in `" + haystack + "`)";
 	}
 
+	static function assertNotContains(haystack:String, needle:String, message:String):Void {
+		if (haystack.indexOf(needle) >= 0)
+			throw message + " (unexpected `" + needle + "` in `" + haystack + "`)";
+	}
+
 	static function assertFailsContains(fn:Void->Void, expected:String):Void {
 		var message = "";
 		try {
@@ -147,6 +152,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Main { static function main() { TestIssues.addIssueClasses("src/unit/issues", "unit.issues"); Sys.println("ok"); } }'), context);
 		final testIssuesSource = File.getContent(sourcePath);
 		assertContains(testIssuesSource, "null;", "expected compile-time-only TestIssues.addIssueClasses fallback");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var runner = new Runner(); runner.addCase(1); Report.create(runner); } }'), context);
+		final receiverCallSource = File.getContent(sourcePath);
+		assertContains(receiverCallSource, "runner.addCase(1);", "expected lowercase receiver method call to stay qualified");
+		assertContains(receiverCallSource, "Report_create(runner);", "expected uppercase static call to keep static lowering");
+		assertNotContains(receiverCallSource, "runner_addCase(1);", "lowercase receiver call must not become static free function");
 
 		deleteRecursive(outDir);
 

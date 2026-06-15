@@ -447,7 +447,7 @@ class NekoTargetCore {
 				return "__hxhx_array_indexOf(" + renderExpr(receiver) + ", " + renderedArgs[0] + ")";
 			case EField(receiver, "push") if (args.length >= 1):
 				return "__hxhx_array_push(" + renderExpr(receiver) + ", " + renderedArgs[0] + ")";
-			case EField(EIdent(className), method):
+			case EField(EIdent(className), method) if (isUpperStart(className)):
 				return mangleFunction(className, method) + "(" + renderedArgs.join(", ") + ")";
 			case _:
 				return renderExpr(callee) + "(" + renderedArgs.join(", ") + ")";
@@ -460,6 +460,13 @@ class NekoTargetCore {
 
 	static function mangleFunction(fullClassName:String, method:String):String {
 		return safeIdent(StringTools.replace(fullClassName, ".", "_") + "_" + method);
+	}
+
+	static function isUpperStart(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		final c = name.charCodeAt(0);
+		return c >= "A".code && c <= "Z".code;
 	}
 
 	static function safeIdent(name:String):String {
