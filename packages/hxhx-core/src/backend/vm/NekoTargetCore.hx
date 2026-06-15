@@ -259,7 +259,9 @@ class NekoTargetCore {
 				renderNew(typePath, args);
 			case ELambda(args, body):
 				renderLambda(args, body);
-			case EArrayComprehension(_, _, _, _) | ERange(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EUnsupported(_):
+			case ESwitch(scrutinee, patterns, exprs):
+				renderSwitchExpr(scrutinee, patterns, exprs);
+			case EArrayComprehension(_, _, _, _) | ERange(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | EUnsupported(_):
 				unsupportedExpr(exprTag(expr));
 		}
 	}
@@ -324,6 +326,68 @@ class NekoTargetCore {
 
 	static function renderArray(values:Array<HxExpr>):String {
 		return "$array(" + [for (v in values) renderExpr(v)].join(", ") + ")";
+	}
+
+	static function renderSwitchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
+		final scrutineeExpr = renderExpr(scrutinee);
+		var chain = "null";
+		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+		for (i in 0...count) {
+			final idx = count - 1 - i;
+			chain = "(" + renderSwitchPatternCond(scrutineeExpr, patterns[idx]) + " ? " + renderExpr(exprs[idx]) + " : " + chain + ")";
+		}
+		return chain;
+	}
+
+	static function renderSwitchPatternCond(scrutinee:String, pattern:HxSwitchPattern):String {
+		return switch (pattern) {
+			case PNull:
+				"(" + scrutinee + " == null)";
+			case PWildcard | PBind(_):
+				"true";
+			case PBool(value):
+				"(" + scrutinee + " == " + (value ? "true" : "false") + ")";
+			case PString(value):
+				"(" + scrutinee + " == " + quote(value) + ")";
+			case PInt(value):
+				"(" + scrutinee + " == " + Std.string(value) + ")";
+			case PEnumValue(name) | PEnumExtract(name, _):
+				"(" + scrutinee + " == " + quote(name) + ")";
+			case PCapture(_, inner):
+				renderSwitchPatternCond(scrutinee, inner);
+			case POr(patterns):
+				if (patterns == null || patterns.length == 0) "false"; else "("
+					+ [for (p in patterns) "(" + renderSwitchPatternCond(scrutinee, p) + ")"].join(" || ") + ")";
+			case PUnsupportedGuard(inner):
+				"((" + renderSwitchPatternCond(scrutinee, inner) + ") && false)";
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
+				PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
+				unsupported("switch pattern", patternKind(pattern));
+		}
+	}
+
+	static function patternKind(pattern:HxSwitchPattern):String {
+		return switch (pattern) {
+			case PNull: "PNull";
+			case PWildcard: "PWildcard";
+			case PBool(_): "PBool";
+			case PString(_): "PString";
+			case PInt(_): "PInt";
+			case PEnumValue(_): "PEnumValue";
+			case PEnumExtract(_, _): "PEnumExtract";
+			case PObject(_, _): "PObject";
+			case PCapture(_, _): "PCapture";
+			case PArray(_): "PArray";
+			case PExtractor(_, _): "PExtractor";
+			case PLengthGuard(_, _, _): "PLengthGuard";
+			case PStartsWithGuard(_, _, _): "PStartsWithGuard";
+			case PIntEqualsGuard(_, _, _): "PIntEqualsGuard";
+			case PIntCompareGuard(_, _, _, _): "PIntCompareGuard";
+			case PParsedIntSwitchGuard(_, _, _, _): "PParsedIntSwitchGuard";
+			case PUnsupportedGuard(_): "PUnsupportedGuard";
+			case PBind(_): "PBind";
+			case POr(_): "POr";
+		}
 	}
 
 	static function renderCall(callee:HxExpr, args:Array<HxExpr>):String {
