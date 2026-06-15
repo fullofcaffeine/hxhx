@@ -11271,48 +11271,7 @@ let phpProgramDuplicateTypeNameMap = fun program decl -> let out = Obj.magic (Hx
   out
 )
 
-let appendPhpGenericStackRuntime = fun lines -> ignore ((
-  ignore (HxArray.push lines "namespace haxe\\ds {");
-  ignore (HxArray.push lines "  class GenericStack implements \\IteratorAggregate {");
-  ignore (HxArray.push lines "    private $items;");
-  ignore (HxArray.push lines "    public function __construct() {");
-  ignore (HxArray.push lines "      $this->items = [];");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    public function add($value) {");
-  ignore (HxArray.push lines "      array_unshift($this->items, $value);");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    public function first() {");
-  ignore (HxArray.push lines "      return count($this->items) === 0 ? null : $this->items[0];");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    public function pop() {");
-  ignore (HxArray.push lines "      return count($this->items) === 0 ? null : array_shift($this->items);");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    public function isEmpty() {");
-  ignore (HxArray.push lines "      return count($this->items) === 0;");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    public function remove($value) {");
-  ignore (HxArray.push lines "      $index = \\__hxhx_array_index_of($this->items, $value);");
-  ignore (HxArray.push lines "      if ($index < 0) return false;");
-  ignore (HxArray.push lines "      array_splice($this->items, $index, 1);");
-  ignore (HxArray.push lines "      return true;");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    public function iterator() {");
-  ignore (HxArray.push lines "      return new \\__HxArrayIterator($this->items);");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    public function getIterator(): \\Traversable {");
-  ignore (HxArray.push lines "      return new \\ArrayIterator($this->items);");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    public function toString() {");
-  ignore (HxArray.push lines "      $parts = [];");
-  ignore (HxArray.push lines "      foreach ($this->items as $item) $parts[] = \\__hxhx_add_string($item);");
-  ignore (HxArray.push lines "      return \"{\" . implode(\",\", $parts) . \"}\";");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "    public function __toString() {");
-  ignore (HxArray.push lines "      return $this->toString();");
-  ignore (HxArray.push lines "    }");
-  ignore (HxArray.push lines "  }");
-  HxArray.push lines "}"
-))
+let appendPhpGenericStackRuntime = fun lines -> ignore (appendSourceNativeTemplateLines (Obj.magic lines) ("" : string) ("php/runtime" : string) ("GenericStack.php" : string))
 
 let rec phpRecordReferencedMemberExpr = fun expr names -> ignore (try (
   ignore (if expr == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());

@@ -13349,55 +13349,18 @@ class SourceTargetCommon {
 	}
 
 	/**
-		Emits the PHP runtime shim for `haxe.ds.GenericStack`.
+		Appends the PHP runtime shim for `haxe.ds.GenericStack` from a repo-owned template.
 
 		The source backend lowers std constructors to their canonical namespace, so
 		GenericStack must exist under `haxe\ds` even when generated code is the only
 		reference. Keep this behavior-driven and intentionally narrow: LIFO
 		add/pop/first, Haxe iterator support, and the std string shape used by
-		upstream-derived PHP workloads.
+		upstream-derived PHP workloads. The target-language body lives outside the
+		emitter so it can be reviewed and tested as runtime support, not as ad-hoc
+		compiler string assembly.
 	**/
 	static function appendPhpGenericStackRuntime(lines:Array<String>):Void {
-		lines.push("namespace haxe\\ds {");
-		lines.push("  class GenericStack implements \\IteratorAggregate {");
-		lines.push("    private $items;");
-		lines.push("    public function __construct() {");
-		lines.push("      $this->items = [];");
-		lines.push("    }");
-		lines.push("    public function add($value) {");
-		lines.push("      array_unshift($this->items, $value);");
-		lines.push("    }");
-		lines.push("    public function first() {");
-		lines.push("      return count($this->items) === 0 ? null : $this->items[0];");
-		lines.push("    }");
-		lines.push("    public function pop() {");
-		lines.push("      return count($this->items) === 0 ? null : array_shift($this->items);");
-		lines.push("    }");
-		lines.push("    public function isEmpty() {");
-		lines.push("      return count($this->items) === 0;");
-		lines.push("    }");
-		lines.push("    public function remove($value) {");
-		lines.push("      $index = \\__hxhx_array_index_of($this->items, $value);");
-		lines.push("      if ($index < 0) return false;");
-		lines.push("      array_splice($this->items, $index, 1);");
-		lines.push("      return true;");
-		lines.push("    }");
-		lines.push("    public function iterator() {");
-		lines.push("      return new \\__HxArrayIterator($this->items);");
-		lines.push("    }");
-		lines.push("    public function getIterator(): \\Traversable {");
-		lines.push("      return new \\ArrayIterator($this->items);");
-		lines.push("    }");
-		lines.push("    public function toString() {");
-		lines.push("      $parts = [];");
-		lines.push("      foreach ($this->items as $item) $parts[] = \\__hxhx_add_string($item);");
-		lines.push("      return \"{\" . implode(\",\", $parts) . \"}\";");
-		lines.push("    }");
-		lines.push("    public function __toString() {");
-		lines.push("      return $this->toString();");
-		lines.push("    }");
-		lines.push("  }");
-		lines.push("}");
+		appendSourceNativeTemplateLines(lines, "", "php/runtime", "GenericStack.php");
 	}
 
 	static function phpMetadataExists(metadata:Array<String>, name:String):Bool {

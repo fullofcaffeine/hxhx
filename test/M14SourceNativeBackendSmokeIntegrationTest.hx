@@ -9873,6 +9873,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpGenericStackRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "GenericStack.php"),
+			"PHP source backend should emit GenericStack from the repo-owned runtime template");
 		assertContains(content, "class GenericStack", "PHP source backend should emit haxe.ds.GenericStack runtime support");
 		assertContains(content, "$stack = new haxe\\ds\\GenericStack();", "PHP haxe.ds.GenericStack construction should target the namespace shim");
 		if (commandExists("php")) {
