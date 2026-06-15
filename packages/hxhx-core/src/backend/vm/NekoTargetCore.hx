@@ -171,6 +171,9 @@ class NekoTargetCore {
 			case SWhile(cond, body, _):
 				out.push(indent + "while " + renderExpr(cond) + " ");
 				renderStmt(out, body, indent);
+			case SForIn(name, iterable, body, _):
+				out.push(indent + "for (" + safeIdent(name) + " in " + renderExpr(iterable) + ") ");
+				renderStmt(out, body, indent);
 			case SReturnVoid(_):
 				out.push(indent + "return null;");
 			case SReturn(expr, _):
@@ -183,7 +186,7 @@ class NekoTargetCore {
 				out.push(indent + "continue;");
 			case SThrow(expr, _):
 				out.push(indent + "$throw(" + renderExpr(expr) + ");");
-			case SForIn(_, _, _, _) | SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _) | STry(_, _, _):
+			case SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _) | STry(_, _, _):
 				unsupported("statement", stmtTag(stmt));
 		}
 	}

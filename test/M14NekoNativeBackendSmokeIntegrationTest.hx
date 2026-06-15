@@ -95,9 +95,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in [1, 2]) Sys.println(i); } }'), context);
+		final forSource = File.getContent(sourcePath);
+		assertContains(forSource, "for (i in $array(1, 2))", "expected Neko for-in lowering over array literal");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		assertFailsContains(function() {
 			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
-		}, "SForIn(i)");
+		}, "ERange");
 		deleteRecursive(outDir);
 	}
 }

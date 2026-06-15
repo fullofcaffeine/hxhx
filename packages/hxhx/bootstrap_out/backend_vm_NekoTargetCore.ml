@@ -780,12 +780,12 @@ let rec renderStmt = fun out stmt indent -> ignore (match stmt with
       )) else ()
     )
   ))
-  | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> ignore ((
-    ignore _p0;
-    ignore _p1;
-    ignore _p2;
+  | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in (
     ignore _p3;
-    unsupported ("statement" : string) (stmtTag (Obj.magic stmt) : string)
+    let name = (_g : string) in let iterable = Obj.magic _g1 in let body = Obj.magic _g2 in (
+      ignore (HxArray.push out (((((HxString.toStdString indent ^ "for (") ^ HxString.toStdString (safeIdent (name : string))) ^ " in ") ^ HxString.toStdString (renderExpr (Obj.magic iterable))) ^ ") "));
+      renderStmt (Obj.magic out) (Obj.magic body) (indent : string)
+    )
   ))
   | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> ignore ((
     ignore _p0;
