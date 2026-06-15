@@ -630,13 +630,7 @@ class NekoTargetCore {
 			case EBinop(op, left, right):
 				"(" + renderExpr(context, left) + " " + op + " " + renderExpr(context, right) + ")";
 			case ETernary(cond, thenExpr, elseExpr):
-				"("
-				+ renderExpr(context, cond)
-				+ " ? "
-				+ renderExpr(context, thenExpr)
-				+ " : "
-				+ renderExpr(context, elseExpr)
-				+ ")";
+				renderConditionalExpr(context, cond, thenExpr, elseExpr);
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				renderExpr(context, inner);
 			case EArrayDecl(values):
@@ -675,6 +669,16 @@ class NekoTargetCore {
 		if (StringTools.startsWith(raw, "for_expr:"))
 			return "null";
 		return renderUnsupportedNumericLiteral(raw);
+	}
+
+	static function renderConditionalExpr(context:NekoEmitContext, cond:HxExpr, thenExpr:HxExpr, elseExpr:HxExpr):String {
+		return "(if ("
+			+ renderExpr(context, cond)
+			+ ") "
+			+ renderExpr(context, thenExpr)
+			+ " else "
+			+ renderExpr(context, elseExpr)
+			+ ")";
 	}
 
 	static function renderUnsupportedNumericLiteral(raw:String):Null<String> {

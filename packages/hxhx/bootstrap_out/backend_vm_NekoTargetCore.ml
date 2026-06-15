@@ -1962,7 +1962,7 @@ let rec renderExpr = fun context expr -> let tempResult = ref ("" : string) in (
       tempResult := __assign_153;
       __assign_153
     )
-    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in let __assign_154 = (((((("(" ^ HxString.toStdString (renderExpr context (Obj.magic cond))) ^ " ? ") ^ HxString.toStdString (renderExpr context (Obj.magic thenExpr))) ^ " : ") ^ HxString.toStdString (renderExpr context (Obj.magic elseExpr))) ^ ")" : string) in (
+    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in let __assign_154 = (renderConditionalExpr context (Obj.magic cond) (Obj.magic thenExpr) (Obj.magic elseExpr) : string) in (
       tempResult := __assign_154;
       __assign_154
     )
@@ -2006,6 +2006,7 @@ let rec renderExpr = fun context expr -> let tempResult = ref ("" : string) in (
     ));
   !tempResult
 )
+and renderConditionalExpr = fun context cond thenExpr elseExpr -> ((((("(if (" ^ HxString.toStdString (renderExpr context (Obj.magic cond))) ^ ") ") ^ HxString.toStdString (renderExpr context (Obj.magic thenExpr))) ^ " else ") ^ HxString.toStdString (renderExpr context (Obj.magic elseExpr))) ^ ")"
 and renderAnon = fun context fieldNames fieldValues -> let tmp = ("__hxhx_o" : string) in let parts = Obj.magic (let __arr_205 = HxArray.create () in (
   ignore (HxArray.push __arr_205 (("(function() { var " ^ HxString.toStdString tmp) ^ " = $new(null);"));
   __arr_205
