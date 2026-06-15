@@ -87,6 +87,9 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess NekoTargetCore.renderExpr(cast null, EUnsupported("=")) == "null",
 			"single-token assignment recovery fragments should render as neutral null");
 		assertFailsContains(() -> @:privateAccess NekoTargetCore.renderExpr(cast null, EUnsupported("not_numeric")), "EUnsupported(not_numeric)");
+		assertTrue(@:privateAccess NekoTargetCore.isNekoNumericLiteralText("1.2e+35"), "scientific float text should be valid Neko numeric text");
+		assertTrue(! @:privateAccess NekoTargetCore.isNekoNumericLiteralText(String.fromCharCode(0xF0) + "bad"),
+			"invalid byte-like float text must not be emitted as raw Neko source");
 
 		final outDir = Path.join([".tmp", "m14_neko_native_backend_smoke"]);
 		deleteRecursive(outDir);

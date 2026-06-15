@@ -718,11 +718,30 @@ class NekoTargetCore {
 
 	static function renderFloatLiteral(value:Float):String {
 		final raw = Std.string(value);
+		if (!isNekoNumericLiteralText(raw))
+			return "null";
 		return hasExponent(raw) ? '$$float(${quote(raw)})' : raw;
 	}
 
 	static function hasExponent(value:String):Bool {
 		return value.indexOf("e") >= 0 || value.indexOf("E") >= 0;
+	}
+
+	static function isNekoNumericLiteralText(value:String):Bool {
+		if (value == null || value.length == 0)
+			return false;
+		var hasDigit = false;
+		for (i in 0...value.length) {
+			final c = value.charCodeAt(i);
+			if (c >= "0".code && c <= "9".code) {
+				hasDigit = true;
+				continue;
+			}
+			if (c == ".".code || c == "-".code || c == "+".code || c == "e".code || c == "E".code)
+				continue;
+			return false;
+		}
+		return hasDigit;
 	}
 
 	static function exprTag(expr:HxExpr):String {
