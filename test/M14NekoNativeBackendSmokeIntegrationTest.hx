@@ -657,7 +657,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var flag = true; var value = 1 + if (flag) 2 else 3; Sys.println(value); } }'), context);
 		final binaryIfSource = File.getContent(sourcePath);
-		assertContains(binaryIfSource, "var value = (1 + (if (flag) 2 else 3));", "expected binary RHS if expression to lower as Neko conditional expression");
+		assertContains(binaryIfSource, "var value = (1 + (if (flag) { 2; } else { 3; }));",
+			"expected binary RHS if expression to lower as Neko conditional expression");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function make() return { s: "bar" }; static function main() { var flag = true; var value = if (flag) { s: "foo" } else make(); Sys.println(value.s); } }'),
+			context);
+		final iifeIfSource = File.getContent(sourcePath);
+		assertContains(iifeIfSource, "var value = (if (flag) { (function()",
+			"expected Neko conditional branch values to use blocks around IIFE-compatible expressions");
+
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);

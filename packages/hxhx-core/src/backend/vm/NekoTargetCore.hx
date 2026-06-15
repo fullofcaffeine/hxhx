@@ -672,11 +672,11 @@ class NekoTargetCore {
 	static function renderConditionalExpr(context:NekoEmitContext, cond:HxExpr, thenExpr:HxExpr, elseExpr:HxExpr):String {
 		return "(if ("
 			+ renderExpr(context, cond)
-			+ ") "
+			+ ") { "
 			+ renderExpr(context, thenExpr)
-			+ " else "
+			+ "; } else { "
 			+ renderExpr(context, elseExpr)
-			+ ")";
+			+ "; })";
 	}
 
 	static function renderTypeTestExpr(context:NekoEmitContext, expr:HxExpr):String {

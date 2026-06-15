@@ -2114,7 +2114,7 @@ let rec renderExpr = fun context expr -> let tempResult = ref ("" : string) in (
     ));
   !tempResult
 )
-and renderConditionalExpr = fun context cond thenExpr elseExpr -> ((((("(if (" ^ HxString.toStdString (renderExpr context (Obj.magic cond))) ^ ") ") ^ HxString.toStdString (renderExpr context (Obj.magic thenExpr))) ^ " else ") ^ HxString.toStdString (renderExpr context (Obj.magic elseExpr))) ^ ")"
+and renderConditionalExpr = fun context cond thenExpr elseExpr -> ((((("(if (" ^ HxString.toStdString (renderExpr context (Obj.magic cond))) ^ ") { ") ^ HxString.toStdString (renderExpr context (Obj.magic thenExpr))) ^ "; } else { ") ^ HxString.toStdString (renderExpr context (Obj.magic elseExpr))) ^ "; })"
 and renderTypeTestExpr = fun context expr -> let typePath = (typePathText (Obj.magic expr) : string) in let tempResult = ref ("" : string) in (
   ignore (if typePath == Obj.magic (HxRuntime.hx_null) then let __assign_173 = (renderExpr context (Obj.magic expr) : string) in (
     tempResult := __assign_173;
