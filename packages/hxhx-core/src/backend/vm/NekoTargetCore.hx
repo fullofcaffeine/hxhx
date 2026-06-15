@@ -1083,7 +1083,7 @@ class NekoTargetCore {
 
 	static function patternNeedsNekoIfLowering(pattern:HxSwitchPattern):Bool {
 		return switch (pattern) {
-			case PObject(_, _) | PArray(_) | PIntEqualsGuard(_, _, _):
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PIntEqualsGuard(_, _, _):
 				true;
 			case PCapture(_, inner) | PUnsupportedGuard(inner):
 				patternNeedsNekoIfLowering(inner);
@@ -1119,6 +1119,8 @@ class NekoTargetCore {
 				lowerNekoArrayPattern(items, scrutinee);
 			case PObject(fieldNames, fieldPatterns):
 				lowerNekoObjectPattern(fieldNames, fieldPatterns, scrutinee);
+			case PExtractor(extractorText, resultPattern):
+				lowerNekoExtractorPattern(extractorText, resultPattern, scrutinee);
 			case PUnsupportedGuard(inner):
 				final lowered = lowerNekoSwitchPattern(inner, scrutinee);
 				{cond: "(" + lowered.cond + " && false)", bindings: lowered.bindings};
@@ -1128,9 +1130,32 @@ class NekoTargetCore {
 				{cond: "((" + lowered.cond + ") && (" + bound + " == " + Std.string(value) + "))", bindings: lowered.bindings};
 			case POr(patterns):
 				lowerNekoOrPattern(patterns, scrutinee);
-			case PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
+			case PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
 				unsupportedSwitchPatternLowering(pattern);
 		}
+	}
+
+	static function lowerNekoExtractorPattern(extractorText:String, resultPattern:HxSwitchPattern, scrutinee:String):NekoSwitchPatternLowered {
+		final applied = switch (StringTools.trim(extractorText)) {
+			case "Std.parseInt(_)":
+				nekoStdParseIntExpr(scrutinee);
+			case _:
+				null;
+		}
+		final lowered = lowerNekoSwitchPattern(resultPattern, applied == null ? scrutinee : applied);
+		if (applied == null)
+			return {cond: "false", bindings: lowered.bindings};
+		return lowered;
+	}
+
+	static function nekoStdParseIntExpr(value:String):String {
+		return "(function(__hxhx_extract) { var __hxhx_extract_t = $typeof(__hxhx_extract);"
+			+ " if (__hxhx_extract_t == $tint) return __hxhx_extract;"
+			+ " if (__hxhx_extract_t == $tfloat) return $int(__hxhx_extract);"
+			+ " if (__hxhx_extract_t != $tobject) return null;"
+			+ " return $int(__hxhx_extract.__s); })("
+			+ value
+			+ ")";
 	}
 
 	static function lowerNekoObjectPattern(fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {

@@ -161,6 +161,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var label = switch ["exitCode", "5"] { case ["exitCode", Std.parseInt(_) => code]: code; default: 0; }; Sys.println(label); } }'),
+			context);
+		final extractorSwitchExprSource = File.getContent(sourcePath);
+		assertContains(extractorSwitchExprSource, "var __hxhx_switch = $array(\"exitCode\", \"5\");", "expected extractor switch expression temp");
+		assertContains(extractorSwitchExprSource, "var __hxhx_extract_t = $typeof(__hxhx_extract);", "expected Std.parseInt extractor helper");
+		assertContains(extractorSwitchExprSource, "var code = (function(__hxhx_extract)", "expected extractor result binding");
+		assertContains(extractorSwitchExprSource, "return code;", "expected extractor switch expression branch return");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { switch (1) { case 1: Sys.println("one"); default: Sys.println("other"); } } }'), context);
 		final switchStmtSource = File.getContent(sourcePath);
 		assertContains(switchStmtSource, "switch 1 {", "expected Neko switch statement");
@@ -223,6 +234,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(objectSwitchStmtSource, "$objget(__hxhx_switch, $hash(\"value\"))", "expected object switch statement field lookup");
 		assertContains(objectSwitchStmtSource, "var name = $objget(__hxhx_switch, $hash(\"value\"));", "expected object switch statement field binding");
 		assertContains(objectSwitchStmtSource, "$print(name, \"\\n\")", "expected object switch statement branch body");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { switch ["exitCode", "5"] { case ["exitCode", Std.parseInt(_) => code]: Sys.println(code); default: Sys.println(0); } } }'),
+			context);
+		final extractorSwitchStmtSource = File.getContent(sourcePath);
+		assertContains(extractorSwitchStmtSource, "var __hxhx_extract_t = $typeof(__hxhx_extract);", "expected statement Std.parseInt extractor helper");
+		assertContains(extractorSwitchStmtSource, "var code = (function(__hxhx_extract)", "expected statement extractor result binding");
+		assertContains(extractorSwitchStmtSource, "$print(code, \"\\n\")", "expected extractor switch statement branch body");
 
 		deleteRecursive(outDir);
 
