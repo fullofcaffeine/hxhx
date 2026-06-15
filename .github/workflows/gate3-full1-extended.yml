@@ -466,4 +466,5 @@ jobs:
             .artifacts/full1/gate3-full1-extended.timings.jsonl
             .artifacts/full1/gate3-full1-extended.timings.summary.json
             .artifacts/full1/gate3-full1-extended.timings.md
+            .artifacts/full1/gate3-target-artifacts/**
           if-no-files-found: warn

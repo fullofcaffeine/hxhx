@@ -938,6 +938,46 @@ run_target_attempt() {
   fi
 }
 
+capture_target_failure_artifacts() {
+  local target="$1"
+  local t_lower="$2"
+  local exit_code="$3"
+  local artifact_root="${HXHX_GATE3_FAILURE_ARTIFACTS_DIR:-${FULL1_GATE3_EXTENDED_ARTIFACTS_DIR:-}}"
+  local target_artifacts=""
+  local source_file=""
+  local copied=0
+
+  if [ -z "$artifact_root" ]; then
+    return 0
+  fi
+
+  case "$t_lower" in
+    neko) ;;
+    *) return 0 ;;
+  esac
+
+  target_artifacts="$artifact_root/gate3-target-artifacts/$target"
+  mkdir -p "$target_artifacts"
+  {
+    echo "target=$target"
+    echo "exit=$exit_code"
+    echo "worktree=$UPSTREAM_DIR"
+    echo "captured_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  } >"$target_artifacts/manifest.txt"
+
+  while IFS= read -r source_file; do
+    copied=1
+    cp "$source_file" "$target_artifacts/$(basename "$source_file")"
+    nl -ba "$source_file" >"$target_artifacts/$(basename "$source_file").nl.txt"
+  done < <(find "$UPSTREAM_DIR/tests" -path '*/bin/*.neko' -type f -size -2M 2>/dev/null | sort)
+
+  if [ "$copied" -eq 1 ]; then
+    echo "gate3_failure_artifacts target=${target} dir=${target_artifacts}"
+  else
+    echo "gate3_failure_artifacts target=${target} dir=${target_artifacts} files=0"
+  fi
+}
+
 run_target_attempt_with_watch() {
   local target="$1"
   local t_lower="$2"
@@ -1093,6 +1133,7 @@ for target in "${targets[@]}"; do
     else
       summary+=("$target: FAIL (${dt}s, exit $code${attempts_note})")
     fi
+    capture_target_failure_artifacts "$target" "$t_lower" "$code"
     failures=1
     if [ "${HXHX_GATE3_FAIL_FAST:-0}" = "1" ]; then
       break
