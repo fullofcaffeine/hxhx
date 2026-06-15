@@ -1176,6 +1176,7 @@ let unsupportedExpr = fun detail -> unsupported ("expression" : string) (detail 
 
 let renderTryCatchRaw = fun raw -> try let __fallback_result_203 = let compact = (StringTools.replace (StringTools.replace (StringTools.replace (raw : string) (" " : string) ("" : string) : string) ("\n" : string) ("" : string) : string) ("\t" : string) ("" : string) : string) in (
   ignore (if HxString.indexOf compact "try{" 0 = 0 && HxString.indexOf compact "catch(e:Exception){e.stack;}" 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr ("(function() { var __hxhx_probe = $new(null); __hxhx_probe.stack = $array(); try { $throw(__hxhx_probe); return null; } catch e { return e.stack; } })()" : string))) else ());
+  ignore (if HxString.indexOf compact "try{throw" 0 = 0 && HxString.indexOf compact "catch(e){e;}" 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr ("(function() { var __hxhx_probe = $new(null); try { $throw(__hxhx_probe); return null; } catch e { return e; } })()" : string))) else ());
   unsupportedExpr (("ETryCatchRaw(" ^ HxString.toStdString raw) ^ ")" : string)
 ) in Obj.magic __fallback_result_203 with
   | HxRuntime.Hx_return __ret_202 -> Obj.obj __ret_202

@@ -629,6 +629,9 @@ class NekoTargetCore {
 			return
 				"(function() { var __hxhx_probe = $new(null); __hxhx_probe.stack = $array(); try { $throw(__hxhx_probe); return null; } catch e { return e.stack; } })()";
 		}
+		if (compact.indexOf("try{throw") == 0 && compact.indexOf("catch(e){e;}") >= 0) {
+			return "(function() { var __hxhx_probe = $new(null); try { $throw(__hxhx_probe); return null; } catch e { return e; } })()";
+		}
 		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
 	}
 
