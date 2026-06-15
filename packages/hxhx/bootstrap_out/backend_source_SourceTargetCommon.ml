@@ -8774,14 +8774,8 @@ let appendCsImportStubMembers = fun out indent packagePath className -> ignore (
     ignore (HxArray.push out (HxString.toStdString indent ^ "  return new Report();"));
     HxArray.push out (HxString.toStdString indent ^ "}")
   )) else ());
-  ignore (if HxString.equals qualified "utest.ui.common.HeaderDisplayMode" then ignore ((
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public static object AlwaysShowHeader = \"AlwaysShowHeader\";"));
-    HxArray.push out (HxString.toStdString indent ^ "public static object NeverShowHeader = \"NeverShowHeader\";")
-  )) else ());
-  ignore (if HxString.equals qualified "utest.ui.common.SuccessResultsDisplayMode" then ignore ((
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public static object AlwaysShowSuccessResults = \"AlwaysShowSuccessResults\";"));
-    HxArray.push out (HxString.toStdString indent ^ "public static object NeverShowSuccessResults = \"NeverShowSuccessResults\";")
-  )) else ());
+  ignore (if HxString.equals qualified "utest.ui.common.HeaderDisplayMode" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("UtestHeaderDisplayMode.cs" : string)) else ());
+  ignore (if HxString.equals qualified "utest.ui.common.SuccessResultsDisplayMode" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("UtestSuccessResultsDisplayMode.cs" : string)) else ());
   if HxString.equals qualified "haxe.Serializer" then ignore ((
     ignore (HxArray.push out (HxString.toStdString indent ^ "public static object USE_ENUM_INDEX = false;"));
     ignore (HxArray.push out (HxString.toStdString indent ^ "public static string run(object value) {"));

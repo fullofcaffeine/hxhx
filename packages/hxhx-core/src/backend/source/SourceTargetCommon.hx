@@ -11370,12 +11370,10 @@ class SourceTargetCommon {
 			out.push(indent + "}");
 		}
 		if (qualified == "utest.ui.common.HeaderDisplayMode") {
-			out.push(indent + "public static object AlwaysShowHeader = \"AlwaysShowHeader\";");
-			out.push(indent + "public static object NeverShowHeader = \"NeverShowHeader\";");
+			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "UtestHeaderDisplayMode.cs");
 		}
 		if (qualified == "utest.ui.common.SuccessResultsDisplayMode") {
-			out.push(indent + "public static object AlwaysShowSuccessResults = \"AlwaysShowSuccessResults\";");
-			out.push(indent + "public static object NeverShowSuccessResults = \"NeverShowSuccessResults\";");
+			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "UtestSuccessResultsDisplayMode.cs");
 		}
 		if (qualified == "haxe.Serializer") {
 			out.push(indent + "public static object USE_ENUM_INDEX = false;");
