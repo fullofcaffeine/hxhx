@@ -545,7 +545,9 @@ class NekoTargetCore {
 				renderSwitchExpr(context, scrutinee, patterns, exprs);
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				renderArrayComprehension(context, name, iterable, guardExpr, yieldExpr);
-			case ERange(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | EUnsupported(_):
+			case ETryCatchRaw(raw):
+				renderTryCatchRaw(raw);
+			case ERange(_, _) | EMacroType(_) | ESwitchRaw(_) | EUnsupported(_):
 				unsupportedExpr(exprTag(expr));
 		}
 	}
@@ -613,6 +615,15 @@ class NekoTargetCore {
 
 	static function renderArray(context:NekoEmitContext, values:Array<HxExpr>):String {
 		return "$array(" + [for (v in values) renderExpr(context, v)].join(", ") + ")";
+	}
+
+	static function renderTryCatchRaw(raw:String):String {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		if (compact.indexOf("try{thrownewException(") == 0 && compact.indexOf("catch(e:Exception){e.stack;}") >= 0) {
+			return
+				"(function() { var __hxhx_probe = $new(null); __hxhx_probe.stack = $array(); try { $throw(__hxhx_probe); return null; } catch e { return e.stack; } })()";
+		}
+		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
 	}
 
 	static function renderArrayComprehension(context:NekoEmitContext, name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr):String {

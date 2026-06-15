@@ -213,6 +213,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var stack = try { throw new Exception(""); } catch(e:Exception) { e.stack; }; Sys.println(stack.length); } }'),
+			context);
+		final tryExprSource = File.getContent(sourcePath);
+		assertContains(tryExprSource, "var __hxhx_probe = $new(null);", "expected exception-stack probe object");
+		assertContains(tryExprSource, "__hxhx_probe.stack = $array();", "expected exception-stack field");
+		assertContains(tryExprSource, "try { $throw(__hxhx_probe); return null; } catch e { return e.stack; }", "expected raw try/catch expression lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		assertFailsContains(function() {
 			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
 		}, "ERange");
