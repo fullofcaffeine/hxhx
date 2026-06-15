@@ -12285,7 +12285,7 @@ let phpProgramEnumConstructorsByEnumMap = fun program decl -> let out = Obj.magi
 
 let phpProgramTypeAliasMap = fun program decl -> let aliases = Obj.magic (HxMap.create_string ()) in let addImport = fun rawImport -> ignore (try (
   ignore (if rawImport == Obj.magic (HxRuntime.hx_null) || HxString.length rawImport = 0 || HxString.indexOf rawImport "*" 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  ignore (if not (HxString.equals rawImport "haxe.Resource") && not (HxString.equals rawImport "haxe.Json") && not (HxString.equals rawImport "haxe.Serializer") && not (HxString.equals rawImport "haxe.Unserializer") && not (HxString.equals rawImport "haxe.rtti.Meta") && not (HxString.equals rawImport "php.Syntax") then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  ignore (if not (HxString.equals rawImport "haxe.Resource") && not (HxString.equals rawImport "haxe.Json") && not (HxString.equals rawImport "haxe.Serializer") && not (HxString.equals rawImport "haxe.Template") && not (HxString.equals rawImport "haxe.Unserializer") && not (HxString.equals rawImport "haxe.rtti.Meta") && not (HxString.equals rawImport "php.Syntax") then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let parts = Obj.magic (HxString.split rawImport ".") in (
     ignore (if HxArray.length parts < 2 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     let shortName = (sanitizePhpTypeName (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string) : string) in let qualified = (sanitizePhpTypePath (rawImport : string) : string) in if HxString.indexOf qualified "\\" 0 >= 0 then ignore (HxMap.set_string aliases shortName ("\\" ^ HxString.toStdString qualified)) else ()
@@ -23342,111 +23342,6 @@ let phpRenderEmittedTypeNames = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) :
 
 let phpRenderLocalTypeNames = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : string HxMap.string_map)
 
-let phpRenderedTypeName = fun typePath -> try let __fallback_result_3719 = (
-  ignore (if typePath == Obj.magic (HxRuntime.hx_null) || HxString.length typePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  let clean = (stripGenericTypeParams (removeTypeHintWhitespace (typePath : string) : string) : string) in (
-    ignore (if phpRuntimeMapType (clean : string) || phpRuntimeListType (clean : string) then raise (HxRuntime.Hx_return (Obj.repr (clean : string))) else ());
-    let tempString = ref ("" : string) in (
-      ignore (if HxString.indexOf clean "." 0 >= 0 then let __assign_3713 = (HxString.substr clean (HxInt.add (HxString.lastIndexOf clean "." (HxString.length clean)) 1) (-1) : string) in (
-        tempString := __assign_3713;
-        __assign_3713
-      ) else let __assign_3714 = (clean : string) in (
-        tempString := __assign_3714;
-        __assign_3714
-      ));
-      let shortName = (sanitizePhpTypeName (!tempString : string) : string) in (
-        ignore (if HxString.indexOf clean "." 0 < 0 && !phpRenderLocalTypeNames != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (!phpRenderLocalTypeNames) shortName then raise (HxRuntime.Hx_return (Obj.repr (HxMap.get_string (!phpRenderLocalTypeNames) shortName : string))) else ());
-        ignore (if !phpRenderEmittedTypeNames != Obj.magic (HxRuntime.hx_null) then ignore (let candidates = Obj.magic (let __arr_3715 = HxArray.create () in (
-          ignore (HxArray.push __arr_3715 clean);
-          ignore (HxArray.push __arr_3715 (sanitizePhpTypePath (clean : string)));
-          ignore (HxArray.push __arr_3715 shortName);
-          __arr_3715
-        )) in let _g = ref 0 in while !_g < HxArray.length candidates do ignore (let candidate = (HxArray.get (Obj.magic candidates) (!_g) : string) in (
-          ignore (let __old_3716 = !_g in let __new_3717 = HxInt.add __old_3716 1 in (
-            ignore (_g := __new_3717);
-            __new_3717
-          ));
-          if HxMap.exists_string (!phpRenderEmittedTypeNames) candidate then raise (HxRuntime.Hx_return (Obj.repr (HxMap.get_string (!phpRenderEmittedTypeNames) candidate : string))) else ()
-        )) done) else ());
-        sanitizePhpTypePath (clean : string)
-      )
-    )
-  )
-) in Obj.magic __fallback_result_3719 with
-  | HxRuntime.Hx_return __ret_3718 -> Obj.obj __ret_3718
-
-let phpTypeCheckExpr = fun value typeName -> let tempResult = ref ("" : string) in (
-  ignore (match typeName with
-    | "Any" | "Dynamic" -> let __assign_785 = ("true" : string) in (
-      tempResult := __assign_785;
-      __assign_785
-    )
-    | "Array" -> let __assign_786 = (("is_array(" ^ HxString.toStdString value) ^ ")" : string) in (
-      tempResult := __assign_786;
-      __assign_786
-    )
-    | "Bool" -> let __assign_787 = (("is_bool(" ^ HxString.toStdString value) ^ ")" : string) in (
-      tempResult := __assign_787;
-      __assign_787
-    )
-    | "Float" -> let __assign_788 = (((("(is_int(" ^ HxString.toStdString value) ^ ") || is_float(") ^ HxString.toStdString value) ^ "))" : string) in (
-      tempResult := __assign_788;
-      __assign_788
-    )
-    | "Int" -> let __assign_789 = ((((((((((((((("(is_int(" ^ HxString.toStdString value) ^ ") || (is_float(") ^ HxString.toStdString value) ^ ") && is_finite(") ^ HxString.toStdString value) ^ ") && floor(") ^ HxString.toStdString value) ^ ") == ") ^ HxString.toStdString value) ^ " && ") ^ HxString.toStdString value) ^ " >= -2147483648 && ") ^ HxString.toStdString value) ^ " <= 2147483647") ^ "))" : string) in (
-      tempResult := __assign_789;
-      __assign_789
-    )
-    | "String" -> let __assign_790 = (("is_string(" ^ HxString.toStdString value) ^ ")" : string) in (
-      tempResult := __assign_790;
-      __assign_790
-    )
-    | "StringMap" | "haxe.ds.StringMap" -> let __assign_791 = (((("(" ^ HxString.toStdString value) ^ " instanceof Map && ") ^ HxString.toStdString value) ^ "->__hx_type === \"haxe.ds.StringMap\")" : string) in (
-      tempResult := __assign_791;
-      __assign_791
-    )
-    | _ -> let __assign_784 = (((("__hxhx_is_of_type(" ^ HxString.toStdString value) ^ ", ") ^ HxString.toStdString (quotePhpString (phpRenderedTypeName (typeName : string) : string))) ^ ")" : string) in (
-      tempResult := __assign_784;
-      __assign_784
-    ));
-  !tempResult
-)
-
-let phpPackageQualifiedTypeReference = fun expr -> let path = (phpPackageQualifiedTypePath (Obj.magic expr) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if path == Obj.magic (HxRuntime.hx_null) then let __assign_3295 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_3295;
-    __assign_3295
-  ) else let __assign_3296 = Obj.magic (quotePhpString (phpRenderedTypeName (path : string) : string) : string) in (
-    tempResult := __assign_3296;
-    __assign_3296
-  ));
-  !tempResult
-)
-
-let rec phpTypeExprName = fun expr -> let tempResult = ref ("" : string) in (
-  ignore (match expr with
-    | HxExpr.EEnumValue _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_3310 = (phpRenderedTypeName (name : string) : string) in (
-      tempResult := __assign_3310;
-      __assign_3310
-    )
-    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_3311 = (phpRenderedTypeName (name : string) : string) in (
-      tempResult := __assign_3311;
-      __assign_3311
-    )
-    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let field = (_g1 : string) in let prefix = (phpTypeExprName (Obj.magic receiver) : string) in if HxString.length prefix = 0 then let __assign_3312 = (phpRenderedTypeName (field : string) : string) in (
-      tempResult := __assign_3312;
-      __assign_3312
-    ) else let __assign_3313 = (phpRenderedTypeName ((HxString.toStdString prefix ^ ".") ^ HxString.toStdString field : string) : string) in (
-      tempResult := __assign_3313;
-      __assign_3313
-    )
-    | _ -> let __assign_3309 = ("Dynamic" : string) in (
-      tempResult := __assign_3309;
-      __assign_3309
-    ));
-  !tempResult
-)
-
 let withPhpLocalTypeNames = fun target names f -> try let __fallback_result_3729 = (
   ignore (if target <> Php then raise (HxRuntime.Hx_return (Obj.repr (f ()))) else ());
   let previous = Obj.magic (!phpRenderLocalTypeNames) in (
@@ -23558,6 +23453,7 @@ let appendPhpClassNameMap = fun lines program decl -> ignore (let names = HxMap.
       ignore (HxMap.set_string _g "GenericStack" "haxe.ds.GenericStack");
       ignore (HxMap.set_string _g "List" "haxe.ds.List");
       ignore (HxMap.set_string _g "List_" "haxe.ds.List");
+      ignore (HxMap.set_string _g "Template" "haxe.Template");
       let __assign_5488 = _g in (
         tempMap := __assign_5488;
         __assign_5488
@@ -23566,6 +23462,8 @@ let appendPhpClassNameMap = fun lines program decl -> ignore (let names = HxMap.
     ignore (let shortName = HxIterator.of_array (HxMap.keys_string (!tempMap)) in while (let __iter_5489 = shortName in fun () -> HxIterator.hasNext (Obj.magic __iter_5489)) () do ignore (let shortName2 = ((let __iter_5490 = shortName in fun () -> HxIterator.next (Obj.magic __iter_5490)) () : string) in if not (HxMap.exists_string names shortName2) then ignore (let value = (HxMap.get_string (!tempMap) shortName2 : string) in HxMap.set_string names shortName2 value) else ()) done);
     ignore (if not (HxMap.exists_string runtimeNames "GenericStack") then ignore (HxMap.set_string runtimeNames "GenericStack" "haxe\\ds\\GenericStack") else ());
     ignore (if not (HxMap.exists_string runtimeNames "haxe.ds.GenericStack") then ignore (HxMap.set_string runtimeNames "haxe.ds.GenericStack" "haxe\\ds\\GenericStack") else ());
+    ignore (if not (HxMap.exists_string runtimeNames "Template") then ignore (HxMap.set_string runtimeNames "Template" "haxe\\Template") else ());
+    ignore (if not (HxMap.exists_string runtimeNames "haxe.Template") then ignore (HxMap.set_string runtimeNames "haxe.Template" "haxe\\Template") else ());
     let entries = Obj.magic (HxArray.create ()) in (
       ignore (let shortName = HxIterator.of_array (HxMap.keys_string names) in while (let __iter_5491 = shortName in fun () -> HxIterator.hasNext (Obj.magic __iter_5491)) () do ignore (let shortName2 = ((let __iter_5492 = shortName in fun () -> HxIterator.next (Obj.magic __iter_5492)) () : string) in HxArray.push entries ((HxString.toStdString (quotePhpString (shortName2 : string)) ^ " => ") ^ HxString.toStdString (quotePhpString (HxMap.get_string names shortName2 : string)))) done);
       ignore (HxArray.sort entries (fun left right -> let tempResult = ref (0 : int) in (
@@ -24432,6 +24330,116 @@ and phpCollectUsedList = fun exprs names -> ignore (try (
   )) done
 ) with
   | HxRuntime.Hx_return __ret_1886 -> Obj.obj __ret_1886)
+
+let phpRenderedTypeName = fun typePath -> try let __fallback_result_3719 = (
+  ignore (if typePath == Obj.magic (HxRuntime.hx_null) || HxString.length typePath = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  let clean = (stripGenericTypeParams (removeTypeHintWhitespace (typePath : string) : string) : string) in (
+    ignore (if phpRuntimeMapType (clean : string) || phpRuntimeListType (clean : string) then raise (HxRuntime.Hx_return (Obj.repr (clean : string))) else ());
+    let tempString = ref ("" : string) in (
+      ignore (if HxString.indexOf clean "." 0 >= 0 then let __assign_3713 = (HxString.substr clean (HxInt.add (HxString.lastIndexOf clean "." (HxString.length clean)) 1) (-1) : string) in (
+        tempString := __assign_3713;
+        __assign_3713
+      ) else let __assign_3714 = (clean : string) in (
+        tempString := __assign_3714;
+        __assign_3714
+      ));
+      let shortName = (sanitizePhpTypeName (!tempString : string) : string) in (
+        ignore (if HxString.equals clean "haxe.Template" then raise (HxRuntime.Hx_return (Obj.repr ("haxe\\Template" : string))) else ());
+        ignore (if HxString.indexOf clean "." 0 < 0 && HxString.equals shortName "Template" && (!phpRenderLocalTypeNames == Obj.magic (HxRuntime.hx_null) || not (HxMap.exists_string (!phpRenderLocalTypeNames) shortName)) then raise (HxRuntime.Hx_return (Obj.repr ("haxe\\Template" : string))) else ());
+        ignore (if HxString.indexOf clean "." 0 < 0 && !phpRenderLocalTypeNames != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (!phpRenderLocalTypeNames) shortName then raise (HxRuntime.Hx_return (Obj.repr (HxMap.get_string (!phpRenderLocalTypeNames) shortName : string))) else ());
+        let alias = (phpImportedTypeAlias (shortName : string) : string) in (
+          ignore (if alias != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (alias : string))) else ());
+          ignore (if !phpRenderEmittedTypeNames != Obj.magic (HxRuntime.hx_null) then ignore (let candidates = Obj.magic (let __arr_3715 = HxArray.create () in (
+            ignore (HxArray.push __arr_3715 clean);
+            ignore (HxArray.push __arr_3715 (sanitizePhpTypePath (clean : string)));
+            ignore (HxArray.push __arr_3715 shortName);
+            __arr_3715
+          )) in let _g = ref 0 in while !_g < HxArray.length candidates do ignore (let candidate = (HxArray.get (Obj.magic candidates) (!_g) : string) in (
+            ignore (let __old_3716 = !_g in let __new_3717 = HxInt.add __old_3716 1 in (
+              ignore (_g := __new_3717);
+              __new_3717
+            ));
+            if HxMap.exists_string (!phpRenderEmittedTypeNames) candidate then raise (HxRuntime.Hx_return (Obj.repr (HxMap.get_string (!phpRenderEmittedTypeNames) candidate : string))) else ()
+          )) done) else ());
+          sanitizePhpTypePath (clean : string)
+        )
+      )
+    )
+  )
+) in Obj.magic __fallback_result_3719 with
+  | HxRuntime.Hx_return __ret_3718 -> Obj.obj __ret_3718
+
+let phpTypeCheckExpr = fun value typeName -> let tempResult = ref ("" : string) in (
+  ignore (match typeName with
+    | "Any" | "Dynamic" -> let __assign_785 = ("true" : string) in (
+      tempResult := __assign_785;
+      __assign_785
+    )
+    | "Array" -> let __assign_786 = (("is_array(" ^ HxString.toStdString value) ^ ")" : string) in (
+      tempResult := __assign_786;
+      __assign_786
+    )
+    | "Bool" -> let __assign_787 = (("is_bool(" ^ HxString.toStdString value) ^ ")" : string) in (
+      tempResult := __assign_787;
+      __assign_787
+    )
+    | "Float" -> let __assign_788 = (((("(is_int(" ^ HxString.toStdString value) ^ ") || is_float(") ^ HxString.toStdString value) ^ "))" : string) in (
+      tempResult := __assign_788;
+      __assign_788
+    )
+    | "Int" -> let __assign_789 = ((((((((((((((("(is_int(" ^ HxString.toStdString value) ^ ") || (is_float(") ^ HxString.toStdString value) ^ ") && is_finite(") ^ HxString.toStdString value) ^ ") && floor(") ^ HxString.toStdString value) ^ ") == ") ^ HxString.toStdString value) ^ " && ") ^ HxString.toStdString value) ^ " >= -2147483648 && ") ^ HxString.toStdString value) ^ " <= 2147483647") ^ "))" : string) in (
+      tempResult := __assign_789;
+      __assign_789
+    )
+    | "String" -> let __assign_790 = (("is_string(" ^ HxString.toStdString value) ^ ")" : string) in (
+      tempResult := __assign_790;
+      __assign_790
+    )
+    | "StringMap" | "haxe.ds.StringMap" -> let __assign_791 = (((("(" ^ HxString.toStdString value) ^ " instanceof Map && ") ^ HxString.toStdString value) ^ "->__hx_type === \"haxe.ds.StringMap\")" : string) in (
+      tempResult := __assign_791;
+      __assign_791
+    )
+    | _ -> let __assign_784 = (((("__hxhx_is_of_type(" ^ HxString.toStdString value) ^ ", ") ^ HxString.toStdString (quotePhpString (phpRenderedTypeName (typeName : string) : string))) ^ ")" : string) in (
+      tempResult := __assign_784;
+      __assign_784
+    ));
+  !tempResult
+)
+
+let phpPackageQualifiedTypeReference = fun expr -> let path = (phpPackageQualifiedTypePath (Obj.magic expr) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if path == Obj.magic (HxRuntime.hx_null) then let __assign_3295 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_3295;
+    __assign_3295
+  ) else let __assign_3296 = Obj.magic (quotePhpString (phpRenderedTypeName (path : string) : string) : string) in (
+    tempResult := __assign_3296;
+    __assign_3296
+  ));
+  !tempResult
+)
+
+let rec phpTypeExprName = fun expr -> let tempResult = ref ("" : string) in (
+  ignore (match expr with
+    | HxExpr.EEnumValue _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_3310 = (phpRenderedTypeName (name : string) : string) in (
+      tempResult := __assign_3310;
+      __assign_3310
+    )
+    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_3311 = (phpRenderedTypeName (name : string) : string) in (
+      tempResult := __assign_3311;
+      __assign_3311
+    )
+    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let field = (_g1 : string) in let prefix = (phpTypeExprName (Obj.magic receiver) : string) in if HxString.length prefix = 0 then let __assign_3312 = (phpRenderedTypeName (field : string) : string) in (
+      tempResult := __assign_3312;
+      __assign_3312
+    ) else let __assign_3313 = (phpRenderedTypeName ((HxString.toStdString prefix ^ ".") ^ HxString.toStdString field : string) : string) in (
+      tempResult := __assign_3313;
+      __assign_3313
+    )
+    | _ -> let __assign_3309 = ("Dynamic" : string) in (
+      tempResult := __assign_3309;
+      __assign_3309
+    ));
+  !tempResult
+)
 
 let phpInt64StaticCall = fun callee argCount -> let tempResult = ref (false : bool) in (
   ignore (match callee with

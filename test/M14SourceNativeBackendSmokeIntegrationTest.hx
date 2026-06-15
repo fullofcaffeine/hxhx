@@ -4058,9 +4058,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"",
 			"class TemplateWrap {",
 			"  public function new(s:String) {",
-			"    this = new haxe.Template(s);",
+			"    this = new Template(s);",
 			"  }",
-			"  public function get():haxe.Template {",
+			"  public function get():Template {",
 			"    return this;",
 			"  }",
 			"}",
@@ -4138,6 +4138,32 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(ihash.get(\"_s1\")));",
 			"    var special = new MySpecialString(\"My debugging abstract\");",
 			"    Sys.println(special.substr(3));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function phpTemplateWrapRuntimeProgram():GenIrProgram {
+		final src = [
+			"class TemplateWrap {",
+			"  public function new(s:String) {",
+			"    this = new Template(s);",
+			"  }",
+			"  public function get():Template {",
+			"    return this;",
+			"  }",
+			"}",
+			"",
+			"class Main {",
+			"  static function main() {",
+			"    var tpl:TemplateWrap = \"Hi ::t::\";",
+			"    Sys.println(tpl.get().execute({ t: \"ok\" }));",
+			"    var later:TemplateWrap;",
+			"    later = \"Again ::t::\";",
+			"    Sys.println(later.get().execute({ t: \"ok\" }));",
 			"  }",
 			"}",
 		].join("\n");
@@ -12500,6 +12526,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_div($left, $right)", "PHP runtime should dispatch abstract string slicing division");
 		assertContains(content, "$tpl = __hxhx_to_template_wrap(\"Hi ::t::\");",
 			"PHP abstract @:from-style typed variable declarations should construct the wrapper");
+		assertContains(content, "new haxe\\Template($s)", "PHP haxe.Template constructors should use the namespaced runtime shim");
 		assertContains(content, "$text = __hxhx_to_string_value($tpl);", "PHP abstract @:to-style String declarations should use string conversion");
 		assertContains(content, "$later = __hxhx_to_template_wrap(\"Again ::t::\");",
 			"PHP abstract @:from-style typed assignments should construct the wrapper");
@@ -12519,6 +12546,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$my->invert()->get()", "PHP abstract-style unary minus should dispatch the known operator method before member access");
 		assertContains(content, "return __hxhx_construct_like($left, $sum);",
 			"PHP abstract-style numeric addition should preserve the left boxed abstract shape");
+		deleteRecursive(tmpRoot);
+	}
+
+	static function assertPhpTemplateWrapRuntime():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_template_wrap_runtime_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpTemplateWrapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "new haxe\\Template($s)", "PHP haxe.Template constructors should use the namespaced runtime shim");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP TemplateWrap runtime should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "Hi ok\nAgain ok\n", "generated PHP TemplateWrap runtime output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -15830,6 +15874,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpDynamicMissingFieldNull();
 		assertPhpFollowWithAbstractsProbe();
 		assertPhpArrayComprehensionClosure();
+		assertPhpTemplateWrapRuntime();
 		assertPhpAbstractThisPostfix();
 		assertPhpAbstractThisClosureCapture();
 		assertPhpAbstractCallableFacade();

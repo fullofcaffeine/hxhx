@@ -7587,8 +7587,17 @@ class SourceTargetCommon {
 		if (phpRuntimeMapType(clean) || phpRuntimeListType(clean))
 			return clean;
 		final shortName = sanitizePhpTypeName(clean.indexOf(".") >= 0 ? clean.substr(clean.lastIndexOf(".") + 1) : clean);
+		if (clean == "haxe.Template")
+			return "haxe\\Template";
+		if (clean.indexOf(".") < 0
+			&& shortName == "Template"
+			&& (phpRenderLocalTypeNames == null || !phpRenderLocalTypeNames.exists(shortName)))
+			return "haxe\\Template";
 		if (clean.indexOf(".") < 0 && phpRenderLocalTypeNames != null && phpRenderLocalTypeNames.exists(shortName))
 			return phpRenderLocalTypeNames.get(shortName);
+		final alias = phpImportedTypeAlias(shortName);
+		if (alias != null)
+			return alias;
 		if (phpRenderEmittedTypeNames != null) {
 			final candidates = [clean, sanitizePhpTypePath(clean), shortName];
 			for (candidate in candidates)
@@ -13148,7 +13157,8 @@ class SourceTargetCommon {
 			"StringMap" => "haxe.ds.StringMap",
 			"GenericStack" => "haxe.ds.GenericStack",
 			"List" => "haxe.ds.List",
-			"List_" => "haxe.ds.List"
+			"List_" => "haxe.ds.List",
+			"Template" => "haxe.Template"
 		];
 		for (shortName in stdAliases.keys())
 			if (!names.exists(shortName))
@@ -13157,6 +13167,10 @@ class SourceTargetCommon {
 			runtimeNames.set("GenericStack", "haxe\\ds\\GenericStack");
 		if (!runtimeNames.exists("haxe.ds.GenericStack"))
 			runtimeNames.set("haxe.ds.GenericStack", "haxe\\ds\\GenericStack");
+		if (!runtimeNames.exists("Template"))
+			runtimeNames.set("Template", "haxe\\Template");
+		if (!runtimeNames.exists("haxe.Template"))
+			runtimeNames.set("haxe.Template", "haxe\\Template");
 		final entries = new Array<String>();
 		for (shortName in names.keys())
 			entries.push(quotePhpString(shortName) + " => " + quotePhpString(names.get(shortName)));
@@ -14163,8 +14177,8 @@ class SourceTargetCommon {
 		function addImport(rawImport:String):Void {
 			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
 				return;
-			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Unserializer"
-				&& rawImport != "haxe.rtti.Meta" && rawImport != "php.Syntax")
+			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Template"
+				&& rawImport != "haxe.Unserializer" && rawImport != "haxe.rtti.Meta" && rawImport != "php.Syntax")
 				return;
 			final parts = rawImport.split(".");
 			if (parts.length < 2)
