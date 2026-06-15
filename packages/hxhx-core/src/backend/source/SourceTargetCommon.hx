@@ -11351,23 +11351,10 @@ class SourceTargetCommon {
 			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "File.cs");
 		}
 		if (qualified == "utest.Runner") {
-			out.push(indent + "public " + csSignalRuntimeType() + " onProgress = new " + csSignalRuntimeType() + "();");
-			out.push(indent + "public " + csSignalRuntimeType() + " onTestStart = new " + csSignalRuntimeType() + "();");
-			out.push(indent + "public object report = null;");
-			out.push(indent + "public object addCase(params object[] args) {");
-			out.push(indent + "  return null;");
-			out.push(indent + "}");
-			appendCsUtestRunnerAddCasesStub(out, indent);
-			out.push(indent + "public object run(params object[] args) {");
-			out.push(indent + "  return null;");
-			out.push(indent + "}");
+			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "UtestRunner.cs");
 		}
 		if (qualified == "utest.ui.Report") {
-			out.push(indent + "public object displayHeader = null;");
-			out.push(indent + "public object displaySuccessResults = null;");
-			out.push(indent + "public static Report create(params object[] args) {");
-			out.push(indent + "  return new Report();");
-			out.push(indent + "}");
+			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "UtestReport.cs");
 		}
 		if (qualified == "utest.ui.common.HeaderDisplayMode") {
 			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "UtestHeaderDisplayMode.cs");

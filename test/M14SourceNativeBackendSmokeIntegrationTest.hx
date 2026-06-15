@@ -586,7 +586,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final mainFn = new HxFunctionDecl("main", Public, true, [], "Void",
 			[SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("ok")]), HxPos.unknown())], "");
 		final mainClass = new HxClassDecl("Main", true, [mainFn], []);
-		final imports = ["utest.ui.common.HeaderDisplayMode", "utest.ui.common.SuccessResultsDisplayMode"];
+		final imports = [
+			"utest.Runner",
+			"utest.ui.Report",
+			"utest.ui.common.HeaderDisplayMode",
+			"utest.ui.common.SuccessResultsDisplayMode"
+		];
 		final mainDecl = new HxModuleDecl("", imports, mainClass, [mainClass], false, false);
 		final mainParsed = new ParsedModule("", mainDecl, "tests/sys/Main.hx");
 		final mainTyped = new TypedModule(mainParsed, new TyModuleEnv("", [], new TyClassEnv("Main", [])));
@@ -8318,8 +8323,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 			final stubOnlyDir = Path.join([tmpRoot, "bin", "cs-stub-only"]);
 			backend.emit(csImportedUtestDisplayModeStubProgram(), new BackendContext(stubOnlyDir, null, "Main", true, true, new StringMap<String>()));
+			final stubRunnerContent = File.getContent(Path.join([stubOnlyDir, "src", "utest", "Runner.cs"]));
+			final stubReportContent = File.getContent(Path.join([stubOnlyDir, "src", "utest", "ui", "Report.cs"]));
 			final stubHeaderContent = File.getContent(Path.join([stubOnlyDir, "src", "utest", "ui", "common", "HeaderDisplayMode.cs"]));
 			final stubSuccessContent = File.getContent(Path.join([stubOnlyDir, "src", "utest", "ui", "common", "SuccessResultsDisplayMode.cs"]));
+			assertContains(stubRunnerContent, indentedSourceTemplateContent("cs/import-stub-members", "UtestRunner.cs", "    "),
+				"C# utest.Runner import stub should use the repo-owned member template");
+			assertContains(stubReportContent, indentedSourceTemplateContent("cs/import-stub-members", "UtestReport.cs", "    "),
+				"C# utest.ui.Report import stub should use the repo-owned member template");
 			assertContains(stubHeaderContent, indentedSourceTemplateContent("cs/import-stub-members", "UtestHeaderDisplayMode.cs", "    "),
 				"C# HeaderDisplayMode import stub should use the repo-owned member template");
 			assertContains(stubSuccessContent, indentedSourceTemplateContent("cs/import-stub-members", "UtestSuccessResultsDisplayMode.cs", "    "),
