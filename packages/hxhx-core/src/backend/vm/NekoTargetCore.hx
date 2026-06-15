@@ -4,9 +4,33 @@ import backend.BackendContext;
 import backend.EmitArtifact;
 import backend.EmitResult;
 import backend.GenIrProgram;
+import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
+
+private typedef NekoClassInfo = {
+	var fullName:String;
+	var shortName:String;
+	var cls:HxClassDecl;
+}
+
+private typedef NekoEmitContext = {
+	var classes:StringMap<NekoClassInfo>;
+	var selfName:Null<String>;
+	var currentClass:Null<NekoClassInfo>;
+}
+
+private typedef NekoStaticFunctionRef = {
+	var key:String;
+	var info:NekoClassInfo;
+	var fn:HxFunctionDecl;
+}
+
+private typedef NekoReachable = {
+	var constructors:Array<NekoClassInfo>;
+	var staticFunctions:Array<NekoStaticFunctionRef>;
+}
 
 /**
 	MVP native Neko target core.
@@ -100,28 +124,29 @@ class NekoTargetCore {
 		final main = findMain(modules, context.mainModule);
 		if (main == null)
 			throw "Neko native backend requires a static main entrypoint";
-		final mainDecl = main.decl;
-		final mainClass = main.cls;
-		final pkg = HxModuleDecl.getPackagePath(mainDecl);
-		final className = HxClassDecl.getName(mainClass);
-		final fullClassName = pkg == null || pkg.length == 0 ? className : pkg + "." + className;
-		for (field in HxClassDecl.getFields(mainClass)) {
-			if (!HxFieldDecl.getIsStatic(field))
-				unsupported("instance field", fullClassName + "." + HxFieldDecl.getName(field));
-		}
-		for (fn in HxClassDecl.getFunctions(mainClass)) {
-			if (!HxFunctionDecl.getIsStatic(fn))
-				unsupported("instance method", fullClassName + "." + HxFunctionDecl.getName(fn));
-			renderFunction(out, fullClassName, fn);
-		}
-		final entry = mangleFunction(fullClassName, "main");
+		final emitContext:NekoEmitContext = {
+			classes: buildClassMap(modules),
+			selfName: null,
+			currentClass: null
+		};
+		final mainInfo = lookupClass(emitContext, main.fullName);
+		if (mainInfo == null)
+			throw "Neko native backend could not resolve main class: " + main.fullName;
+
+		final reachable = collectReachable(emitContext, mainInfo);
+		for (info in reachable.constructors)
+			renderConstructorFactory(out, emitContext, info);
+		for (ref in reachable.staticFunctions)
+			renderFunction(out, emitContext, ref.info, ref.fn);
+
+		final entry = mangleFunction(mainInfo.fullName, "main");
 		out.push(entry + "();");
 		out.push("");
 		return out.join("\n");
 	}
 
-	static function findMain(modules:Array<TypedModule>, requested:String):Null<{decl:HxModuleDecl, cls:HxClassDecl}> {
-		var fallback:Null<{decl:HxModuleDecl, cls:HxClassDecl}> = null;
+	static function findMain(modules:Array<TypedModule>, requested:String):Null<{decl:HxModuleDecl, cls:HxClassDecl, fullName:String}> {
+		var fallback:Null<{decl:HxModuleDecl, cls:HxClassDecl, fullName:String}> = null;
 		for (typed in modules) {
 			final decl = typed.getParsed().getDecl();
 			final pkg = HxModuleDecl.getPackagePath(decl);
@@ -130,7 +155,7 @@ class NekoTargetCore {
 				final fullClassName = pkg == null || pkg.length == 0 ? className : pkg + "." + className;
 				for (fn in HxClassDecl.getFunctions(cls)) {
 					if (HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "main") {
-						final found = {decl: decl, cls: cls};
+						final found = {decl: decl, cls: cls, fullName: fullClassName};
 						if (fallback == null)
 							fallback = found;
 						if (matchesMain(requested, fullClassName))
@@ -140,6 +165,23 @@ class NekoTargetCore {
 			}
 		}
 		return fallback;
+	}
+
+	static function buildClassMap(modules:Array<TypedModule>):StringMap<NekoClassInfo> {
+		final classes = new StringMap<NekoClassInfo>();
+		for (typed in modules) {
+			final decl = typed.getParsed().getDecl();
+			final pkg = HxModuleDecl.getPackagePath(decl);
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				final shortName = HxClassDecl.getName(cls);
+				final fullName = pkg == null || pkg.length == 0 ? shortName : pkg + "." + shortName;
+				final info:NekoClassInfo = {fullName: fullName, shortName: shortName, cls: cls};
+				classes.set(fullName, info);
+				if (!classes.exists(shortName))
+					classes.set(shortName, info);
+			}
+		}
+		return classes;
 	}
 
 	static function renderRuntimeHelpers(out:Array<String>):Void {
@@ -160,50 +202,243 @@ class NekoTargetCore {
 		out.push("");
 	}
 
-	static function renderFunction(out:Array<String>, fullClassName:String, fn:HxFunctionDecl):Void {
+	static function collectReachable(context:NekoEmitContext, mainInfo:NekoClassInfo):NekoReachable {
+		final constructors = new Array<NekoClassInfo>();
+		final constructorSeen = new StringMap<Bool>();
+		final staticFunctions = new Array<NekoStaticFunctionRef>();
+		final staticSeen = new StringMap<Bool>();
+		var addConstructor:NekoClassInfo->Void = null;
+		var addStatic:NekoClassInfo->HxFunctionDecl->Void = null;
+
+		addConstructor = function(info:NekoClassInfo):Void {
+			if (constructorSeen.exists(info.fullName))
+				return;
+			constructorSeen.set(info.fullName, true);
+			constructors.push(info);
+			for (field in HxClassDecl.getFields(info.cls)) {
+				if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getInit(field) != null)
+					collectExprRefs(context, HxFieldDecl.getInit(field), addConstructor, addStatic);
+			}
+			for (fn in HxClassDecl.getFunctions(info.cls)) {
+				if (!HxFunctionDecl.getIsStatic(fn) && !isMacroFunction(fn)) {
+					for (stmt in HxFunctionDecl.getBody(fn))
+						collectStmtRefs(context, stmt, addConstructor, addStatic);
+				}
+			}
+		};
+
+		addStatic = function(info:NekoClassInfo, fn:HxFunctionDecl):Void {
+			if (isMacroFunction(fn))
+				return;
+			final key = mangleFunction(info.fullName, HxFunctionDecl.getName(fn));
+			if (staticSeen.exists(key))
+				return;
+			staticSeen.set(key, true);
+			staticFunctions.push({key: key, info: info, fn: fn});
+			for (stmt in HxFunctionDecl.getBody(fn))
+				collectStmtRefs(context, stmt, addConstructor, addStatic);
+		};
+
+		for (fn in HxClassDecl.getFunctions(mainInfo.cls)) {
+			if (HxFunctionDecl.getIsStatic(fn))
+				addStatic(mainInfo, fn);
+		}
+		return {constructors: constructors, staticFunctions: staticFunctions};
+	}
+
+	static function collectStmtRefs(context:NekoEmitContext, stmt:HxStmt, addConstructor:NekoClassInfo->Void,
+			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectStmtRefs(context, s, addConstructor, addStatic);
+			case SVar(_, _, init, _):
+				if (init != null)
+					collectExprRefs(context, init, addConstructor, addStatic);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectExprRefs(context, cond, addConstructor, addStatic);
+				collectStmtRefs(context, thenBranch, addConstructor, addStatic);
+				if (elseBranch != null)
+					collectStmtRefs(context, elseBranch, addConstructor, addStatic);
+			case SWhile(cond, body, _):
+				collectExprRefs(context, cond, addConstructor, addStatic);
+				collectStmtRefs(context, body, addConstructor, addStatic);
+			case SForIn(_, iterable, body, _):
+				collectExprRefs(context, iterable, addConstructor, addStatic);
+				collectStmtRefs(context, body, addConstructor, addStatic);
+			case SReturn(expr, _) | SThrow(expr, _) | SExpr(expr, _):
+				collectExprRefs(context, expr, addConstructor, addStatic);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+			case SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _) | STry(_, _, _):
+		}
+	}
+
+	static function collectExprRefs(context:NekoEmitContext, expr:HxExpr, addConstructor:NekoClassInfo->Void,
+			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
+		switch (expr) {
+			case ENew(typePath, args):
+				final info = lookupClass(context, typePath);
+				if (info != null)
+					addConstructor(info);
+				for (arg in args)
+					collectExprRefs(context, arg, addConstructor, addStatic);
+			case ECall(callee, args):
+				collectCallRefs(context, callee, args, addConstructor, addStatic);
+			case EField(obj, _):
+				collectExprRefs(context, obj, addConstructor, addStatic);
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				collectExprRefs(context, inner, addConstructor, addStatic);
+			case EBinop(_, left, right):
+				collectExprRefs(context, left, addConstructor, addStatic);
+				collectExprRefs(context, right, addConstructor, addStatic);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectExprRefs(context, cond, addConstructor, addStatic);
+				collectExprRefs(context, thenExpr, addConstructor, addStatic);
+				collectExprRefs(context, elseExpr, addConstructor, addStatic);
+			case EArrayDecl(values):
+				for (value in values)
+					collectExprRefs(context, value, addConstructor, addStatic);
+			case EArrayAccess(array, index):
+				collectExprRefs(context, array, addConstructor, addStatic);
+				collectExprRefs(context, index, addConstructor, addStatic);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectExprRefs(context, value, addConstructor, addStatic);
+			case ELambda(_, body):
+				collectExprRefs(context, body, addConstructor, addStatic);
+			case ESwitch(scrutinee, _, exprs):
+				collectExprRefs(context, scrutinee, addConstructor, addStatic);
+				for (value in exprs)
+					collectExprRefs(context, value, addConstructor, addStatic);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
+				collectExprRefs(context, iterable, addConstructor, addStatic);
+				if (guardExpr != null)
+					collectExprRefs(context, guardExpr, addConstructor, addStatic);
+				collectExprRefs(context, yieldExpr, addConstructor, addStatic);
+			case ENull:
+			case EBool(_):
+			case EString(_):
+			case EInt(_):
+			case EFloat(_):
+			case EEnumValue(_):
+			case EThis:
+			case ESuper:
+			case EIdent(_):
+			case EMacroType(_):
+			case ETryCatchRaw(_):
+			case ESwitchRaw(_):
+			case ERange(_, _):
+			case EUnsupported(_):
+		}
+	}
+
+	static function collectCallRefs(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, addConstructor:NekoClassInfo->Void,
+			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
+		switch (callee) {
+			case EField(EIdent(className), method) if (isUpperStart(className)):
+				final info = lookupClass(context, className);
+				final fn = info == null ? null : findFunction(info.cls, method, true);
+				if (info != null && fn != null)
+					addStatic(info, fn);
+			case _:
+				collectExprRefs(context, callee, addConstructor, addStatic);
+		}
+		for (arg in args)
+			collectExprRefs(context, arg, addConstructor, addStatic);
+	}
+
+	static function renderFunction(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Void {
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
 			args.push(safeIdent(arg.name));
-		out.push("var " + mangleFunction(fullClassName, HxFunctionDecl.getName(fn)) + " = function(" + args.join(", ") + ") {");
+		out.push("var " + mangleFunction(info.fullName, HxFunctionDecl.getName(fn)) + " = function(" + args.join(", ") + ") {");
 		for (stmt in HxFunctionDecl.getBody(fn))
-			renderStmt(out, stmt, "  ");
+			renderStmt(out, context, stmt, "  ");
 		out.push("}");
 		out.push("");
 	}
 
-	static function renderStmt(out:Array<String>, stmt:HxStmt, indent:String):Void {
+	static function renderConstructorFactory(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo):Void {
+		final ctor = findFunction(info.cls, "new", false);
+		final args = new Array<String>();
+		if (ctor != null) {
+			for (arg in HxFunctionDecl.getArgs(ctor))
+				args.push(safeIdent(arg.name));
+		}
+		final selfName = "__hxhx_self";
+		final instanceContext = withSelf(context, selfName, info);
+		out.push("var " + mangleConstructor(info.fullName) + " = function(" + args.join(", ") + ") {");
+		out.push("  var " + selfName + " = $new(null);");
+		out.push("  " + selfName + ".__hx_ctor = " + quote(info.fullName) + ";");
+		out.push("  " + selfName + ".__hx_params = $array(" + args.join(", ") + ");");
+		for (field in HxClassDecl.getFields(info.cls)) {
+			if (!HxFieldDecl.getIsStatic(field)) {
+				final init = HxFieldDecl.getInit(field);
+				out.push("  "
+					+ selfName
+					+ "."
+					+ safeIdent(HxFieldDecl.getName(field))
+					+ " = "
+					+ (init == null ? "null" : renderExpr(instanceContext, init))
+					+ ";");
+			}
+		}
+		for (fn in HxClassDecl.getFunctions(info.cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) != "new" && !isMacroFunction(fn))
+				renderInstanceMethod(out, instanceContext, selfName, fn);
+		}
+		if (ctor != null && !isMacroFunction(ctor)) {
+			for (stmt in HxFunctionDecl.getBody(ctor))
+				renderStmt(out, instanceContext, stmt, "  ");
+		}
+		out.push("  return " + selfName + ";");
+		out.push("}");
+		out.push("");
+	}
+
+	static function renderInstanceMethod(out:Array<String>, context:NekoEmitContext, selfName:String, fn:HxFunctionDecl):Void {
+		final args = new Array<String>();
+		for (arg in HxFunctionDecl.getArgs(fn))
+			args.push(safeIdent(arg.name));
+		out.push("  " + selfName + "." + safeIdent(HxFunctionDecl.getName(fn)) + " = function(" + args.join(", ") + ") {");
+		for (stmt in HxFunctionDecl.getBody(fn))
+			renderStmt(out, context, stmt, "    ");
+		out.push("  };");
+	}
+
+	static function renderStmt(out:Array<String>, context:NekoEmitContext, stmt:HxStmt, indent:String):Void {
 		switch (stmt) {
 			case SBlock(stmts, _):
 				out.push(indent + "{");
 				for (s in stmts)
-					renderStmt(out, s, indent + "  ");
+					renderStmt(out, context, s, indent + "  ");
 				out.push(indent + "}");
 			case SVar(name, _, init, _):
-				out.push(indent + "var " + safeIdent(name) + (init == null ? "" : " = " + renderExpr(init)) + ";");
+				out.push(indent + "var " + safeIdent(name) + (init == null ? "" : " = " + renderExpr(context, init)) + ";");
 			case SIf(cond, thenBranch, elseBranch, _):
-				out.push(indent + "if " + renderExpr(cond) + " ");
-				renderStmt(out, thenBranch, indent);
+				out.push(indent + "if " + renderExpr(context, cond) + " ");
+				renderStmt(out, context, thenBranch, indent);
 				if (elseBranch != null) {
 					out.push(indent + "else ");
-					renderStmt(out, elseBranch, indent);
+					renderStmt(out, context, elseBranch, indent);
 				}
 			case SWhile(cond, body, _):
-				out.push(indent + "while " + renderExpr(cond) + " ");
-				renderStmt(out, body, indent);
+				out.push(indent + "while " + renderExpr(context, cond) + " ");
+				renderStmt(out, context, body, indent);
 			case SForIn(name, iterable, body, _):
-				renderForInStmt(out, name, iterable, body, indent);
+				renderForInStmt(out, context, name, iterable, body, indent);
 			case SReturnVoid(_):
 				out.push(indent + "return null;");
 			case SReturn(expr, _):
-				out.push(indent + "return " + renderExpr(expr) + ";");
+				out.push(indent + "return " + renderExpr(context, expr) + ";");
 			case SExpr(expr, _):
-				out.push(indent + renderExpr(expr) + ";");
+				out.push(indent + renderExpr(context, expr) + ";");
 			case SBreak(_):
 				out.push(indent + "break;");
 			case SContinue(_):
 				out.push(indent + "continue;");
 			case SThrow(expr, _):
-				out.push(indent + "$throw(" + renderExpr(expr) + ");");
+				out.push(indent + "$throw(" + renderExpr(context, expr) + ");");
 			case SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _) | STry(_, _, _):
 				unsupported("statement", stmtTag(stmt));
 		}
@@ -229,7 +464,7 @@ class NekoTargetCore {
 		}
 	}
 
-	static function renderExpr(expr:HxExpr):String {
+	static function renderExpr(context:NekoEmitContext, expr:HxExpr):String {
 		return switch (expr) {
 			case ENull:
 				"null";
@@ -244,43 +479,43 @@ class NekoTargetCore {
 			case EEnumValue(name):
 				quote(name);
 			case EThis:
-				unsupportedExpr("this");
+				if (context.selfName == null) unsupportedExpr("this"); else context.selfName;
 			case ESuper:
 				unsupportedExpr("super");
 			case EField(EField(EIdent("neko"), "Web"), "isModNeko"):
 				"false";
 			case EIdent(name):
-				safeIdent(name);
+				if (context.selfName != null && isCurrentInstanceMethod(context, name)) context.selfName + "." + safeIdent(name); else safeIdent(name);
 			case EField(obj, field):
-				renderExpr(obj) + "." + safeIdent(field);
+				renderExpr(context, obj) + "." + safeIdent(field);
 			case ECall(callee, args):
-				renderCall(callee, args);
+				renderCall(context, callee, args);
 			case EUnop(op, inner):
-				"(" + op + renderExpr(inner) + ")";
+				"(" + op + renderExpr(context, inner) + ")";
 			case EBinop(op, left, right):
-				"(" + renderExpr(left) + " " + op + " " + renderExpr(right) + ")";
+				"(" + renderExpr(context, left) + " " + op + " " + renderExpr(context, right) + ")";
 			case ETernary(cond, thenExpr, elseExpr):
 				"("
-				+ renderExpr(cond)
+				+ renderExpr(context, cond)
 				+ " ? "
-				+ renderExpr(thenExpr)
+				+ renderExpr(context, thenExpr)
 				+ " : "
-				+ renderExpr(elseExpr)
+				+ renderExpr(context, elseExpr)
 				+ ")";
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
-				renderExpr(inner);
+				renderExpr(context, inner);
 			case EArrayDecl(values):
-				renderArray(values);
+				renderArray(context, values);
 			case EArrayAccess(array, index):
-				renderExpr(array) + "[" + renderExpr(index) + "]";
+				renderExpr(context, array) + "[" + renderExpr(context, index) + "]";
 			case EAnon(fieldNames, fieldValues):
-				renderAnon(fieldNames, fieldValues);
+				renderAnon(context, fieldNames, fieldValues);
 			case ENew(typePath, args):
-				renderNew(typePath, args);
+				renderNew(context, typePath, args);
 			case ELambda(args, body):
-				renderLambda(args, body);
+				renderLambda(context, args, body);
 			case ESwitch(scrutinee, patterns, exprs):
-				renderSwitchExpr(scrutinee, patterns, exprs);
+				renderSwitchExpr(context, scrutinee, patterns, exprs);
 			case EArrayComprehension(_, _, _, _) | ERange(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | EUnsupported(_):
 				unsupportedExpr(exprTag(expr));
 		}
@@ -320,65 +555,68 @@ class NekoTargetCore {
 		}
 	}
 
-	static function renderAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>):String {
+	static function renderAnon(context:NekoEmitContext, fieldNames:Array<String>, fieldValues:Array<HxExpr>):String {
 		final tmp = "__hxhx_o";
 		final parts = ["(function() { var " + tmp + " = $new(null);"];
 		final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
 		for (i in 0...count)
-			parts.push(tmp + "." + safeIdent(fieldNames[i]) + " = " + renderExpr(fieldValues[i]) + ";");
+			parts.push(tmp + "." + safeIdent(fieldNames[i]) + " = " + renderExpr(context, fieldValues[i]) + ";");
 		parts.push("return " + tmp + "; })()");
 		return parts.join(" ");
 	}
 
-	static function renderNew(typePath:String, args:Array<HxExpr>):String {
+	static function renderNew(context:NekoEmitContext, typePath:String, args:Array<HxExpr>):String {
+		final info = lookupClass(context, typePath);
+		if (info != null)
+			return mangleConstructor(info.fullName) + "(" + [for (arg in args) renderExpr(context, arg)].join(", ") + ")";
 		final tmp = "__hxhx_o";
 		final parts = ["(function() { var " + tmp + " = $new(null);"];
 		parts.push(tmp + ".__hx_ctor = " + quote(typePath) + ";");
-		parts.push(tmp + ".__hx_params = " + renderArray(args) + ";");
+		parts.push(tmp + ".__hx_params = " + renderArray(context, args) + ";");
 		parts.push("return " + tmp + "; })()");
 		return parts.join(" ");
 	}
 
-	static function renderLambda(args:Array<String>, body:HxExpr):String {
+	static function renderLambda(context:NekoEmitContext, args:Array<String>, body:HxExpr):String {
 		final params = [for (arg in args) safeIdent(arg)];
-		return "function(" + params.join(", ") + ") { return " + renderExpr(body) + "; }";
+		return "function(" + params.join(", ") + ") { return " + renderExpr(context, body) + "; }";
 	}
 
-	static function renderArray(values:Array<HxExpr>):String {
-		return "$array(" + [for (v in values) renderExpr(v)].join(", ") + ")";
+	static function renderArray(context:NekoEmitContext, values:Array<HxExpr>):String {
+		return "$array(" + [for (v in values) renderExpr(context, v)].join(", ") + ")";
 	}
 
-	static function renderForInStmt(out:Array<String>, name:String, iterable:HxExpr, body:HxStmt, indent:String):Void {
+	static function renderForInStmt(out:Array<String>, context:NekoEmitContext, name:String, iterable:HxExpr, body:HxStmt, indent:String):Void {
 		final safeName = safeIdent(name);
 		final iterableName = "__hxhx_iter_" + safeName;
 		final indexName = "__hxhx_index_" + safeName;
 		out.push(indent + "{");
-		out.push(indent + "  var " + iterableName + " = " + renderExpr(iterable) + ";");
+		out.push(indent + "  var " + iterableName + " = " + renderExpr(context, iterable) + ";");
 		out.push(indent + "  var " + indexName + " = 0;");
 		out.push(indent + "  while (" + indexName + " < $asize(" + iterableName + ")) {");
 		out.push(indent + "    var " + safeName + " = " + iterableName + "[" + indexName + "];");
 		out.push(indent + "    " + indexName + " = " + indexName + " + 1;");
-		renderStmt(out, body, indent + "    ");
+		renderStmt(out, context, body, indent + "    ");
 		out.push(indent + "  }");
 		out.push(indent + "}");
 	}
 
-	static function renderSwitchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
+	static function renderSwitchExpr(context:NekoEmitContext, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
 		final cases = new Array<String>();
 		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
 		for (i in 0...count)
-			cases.push(renderSwitchCase(patterns[i], exprs[i]));
-		return "switch " + renderExpr(scrutinee) + " { " + cases.join(" ") + " }";
+			cases.push(renderSwitchCase(context, patterns[i], exprs[i]));
+		return "switch " + renderExpr(context, scrutinee) + " { " + cases.join(" ") + " }";
 	}
 
-	static function renderSwitchCase(pattern:HxSwitchPattern, expr:HxExpr):String {
+	static function renderSwitchCase(context:NekoEmitContext, pattern:HxSwitchPattern, expr:HxExpr):String {
 		return switch (pattern) {
 			case PWildcard | PBind(_):
-				"default => " + renderExpr(expr);
+				"default => " + renderExpr(context, expr);
 			case PNull | PBool(_) | PString(_) | PInt(_) | PEnumValue(_) | PEnumExtract(_, _):
-				renderSwitchPatternValue(pattern) + " => " + renderExpr(expr);
+				renderSwitchPatternValue(pattern) + " => " + renderExpr(context, expr);
 			case PCapture(_, inner):
-				renderSwitchCase(inner, expr);
+				renderSwitchCase(context, inner, expr);
 			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
 				PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _) | PUnsupportedGuard(_) | POr(_):
 				unsupported("switch pattern", patternKind(pattern));
@@ -426,8 +664,8 @@ class NekoTargetCore {
 		}
 	}
 
-	static function renderCall(callee:HxExpr, args:Array<HxExpr>):String {
-		final renderedArgs = [for (arg in args) renderExpr(arg)];
+	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>):String {
+		final renderedArgs = [for (arg in args) renderExpr(context, arg)];
 		switch (callee) {
 			case EIdent("trace"):
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
@@ -444,18 +682,65 @@ class NekoTargetCore {
 			case EField(EIdent("Sys"), "println"):
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
 			case EField(receiver, "indexOf") if (args.length >= 1):
-				return "__hxhx_array_indexOf(" + renderExpr(receiver) + ", " + renderedArgs[0] + ")";
+				return "__hxhx_array_indexOf(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(receiver, "push") if (args.length >= 1):
-				return "__hxhx_array_push(" + renderExpr(receiver) + ", " + renderedArgs[0] + ")";
+				return "__hxhx_array_push(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(EIdent(className), method) if (isUpperStart(className)):
-				return mangleFunction(className, method) + "(" + renderedArgs.join(", ") + ")";
+				final info = lookupClass(context, className);
+				final fullClassName = info == null ? className : info.fullName;
+				return mangleFunction(fullClassName, method) + "(" + renderedArgs.join(", ") + ")";
 			case _:
-				return renderExpr(callee) + "(" + renderedArgs.join(", ") + ")";
+				return renderExpr(context, callee) + "(" + renderedArgs.join(", ") + ")";
 		}
+	}
+
+	static function lookupClass(context:NekoEmitContext, typePath:String):Null<NekoClassInfo> {
+		if (typePath == null || typePath.length == 0)
+			return null;
+		final exact = context.classes.get(typePath);
+		if (exact != null)
+			return exact;
+		final shortName = typePath.split(".").pop();
+		return context.classes.get(shortName);
+	}
+
+	static function findFunction(cls:HxClassDecl, name:String, isStatic:Bool):Null<HxFunctionDecl> {
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getName(fn) == name && HxFunctionDecl.getIsStatic(fn) == isStatic)
+				return fn;
+		}
+		return null;
+	}
+
+	static function isCurrentInstanceMethod(context:NekoEmitContext, name:String):Bool {
+		if (context.currentClass == null)
+			return false;
+		final fn = findFunction(context.currentClass.cls, name, false);
+		return fn != null && HxFunctionDecl.getName(fn) != "new" && !isMacroFunction(fn);
+	}
+
+	static function isMacroFunction(fn:HxFunctionDecl):Bool {
+		for (meta in HxFunctionDecl.getMetadata(fn)) {
+			if (meta == "macro")
+				return true;
+		}
+		return false;
+	}
+
+	static function withSelf(context:NekoEmitContext, selfName:String, info:NekoClassInfo):NekoEmitContext {
+		return {
+			classes: context.classes,
+			selfName: selfName,
+			currentClass: info
+		};
 	}
 
 	static function matchesMain(requested:String, fullClassName:String):Bool {
 		return requested == null || requested.length == 0 || requested == fullClassName || requested == fullClassName.split(".").pop();
+	}
+
+	static function mangleConstructor(fullClassName:String):String {
+		return "__hxhx_new_" + safeIdent(StringTools.replace(fullClassName, ".", "_"));
 	}
 
 	static function mangleFunction(fullClassName:String, method:String):String {

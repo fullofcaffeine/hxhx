@@ -166,6 +166,19 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Runner { public function new() {} public function addCase(value) { Sys.println(value); } } class Main { static function main() { var runner = new Runner(); runner.addCase("case"); } }'),
+			context);
+		final instanceSource = File.getContent(sourcePath);
+		assertContains(instanceSource, "var __hxhx_new_Runner = function()", "expected known constructor factory");
+		assertContains(instanceSource, "__hxhx_self.addCase = function(value)", "expected instance method closure on object");
+		assertContains(instanceSource, "$print(value, \"\\n\")", "expected method body lowering");
+		assertContains(instanceSource, "var runner = __hxhx_new_Runner();", "expected known constructor call lowering");
+		assertContains(instanceSource, "runner.addCase(\"case\");", "expected instance method call");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		assertFailsContains(function() {
 			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
 		}, "ERange");
