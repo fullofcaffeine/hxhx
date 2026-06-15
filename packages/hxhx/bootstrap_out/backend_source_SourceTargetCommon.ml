@@ -8664,52 +8664,7 @@ let csSignalRuntimeType = fun () -> "global::hxhx.__HxSignal"
 
 let appendCsImportStubMembers = fun out indent packagePath className -> ignore (let qualified = (csQualifiedClassName (packagePath : string) (className : string) (Obj.magic (HxRuntime.hx_null)) : string) in (
   ignore (if HxString.equals qualified "Sys" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("Sys.cs" : string)) else ());
-  ignore (if HxString.equals qualified "Reflect" then ignore ((
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public static global::hxhx.__HxArray fields(object obj) {"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (obj == null) return new global::hxhx.__HxArray(new object[] { });"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var type = obj as System.Type;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  object receiver = type == null ? obj : null;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (type == null) type = obj.GetType();"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var names = new System.Collections.Generic.List<object>();"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  foreach (var fieldInfo in type.GetFields(flags)) names.Add(fieldInfo.Name);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  foreach (var property in type.GetProperties(flags)) names.Add(property.Name);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  return new global::hxhx.__HxArray(names.ToArray());"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public static object field(object obj, object field) {"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (obj == null) return null;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  string name = System.Convert.ToString(field);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var type = obj as System.Type;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  object receiver = type == null ? obj : null;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (type == null) type = obj.GetType();"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var property = type.GetProperty(name, flags);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (property != null) return property.GetValue(receiver, null);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var fieldInfo = type.GetField(name, flags);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (fieldInfo != null) return fieldInfo.GetValue(receiver);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  return null;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public static int compare(object a, object b) {"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  return string.Compare(System.Convert.ToString(a), System.Convert.ToString(b), System.StringComparison.Ordinal);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "}"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "public static object setProperty(object obj, object field, object value) {"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (obj == null) return value;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  string name = System.Convert.ToString(field);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var type = obj as System.Type;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  object receiver = type == null ? obj : null;"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (type == null) type = obj.GetType();"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var readOnly = type.GetMethod(\"__hxhx_isReadOnlyField\", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (readOnly != null && System.Convert.ToBoolean(readOnly.Invoke(null, new object[] { name }))) {"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "    throw new System.MemberAccessException();"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var property = type.GetProperty(name, flags);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (property != null) { property.SetValue(receiver, value, null); return value; }"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  var fieldInfo = type.GetField(name, flags);"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  if (fieldInfo != null) { fieldInfo.SetValue(receiver, value); return value; }"));
-    ignore (HxArray.push out (HxString.toStdString indent ^ "  return value;"));
-    HxArray.push out (HxString.toStdString indent ^ "}")
-  )) else ());
+  ignore (if HxString.equals qualified "Reflect" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("Reflect.cs" : string)) else ());
   ignore (if HxString.equals qualified "haxe.io.Path" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("Path.cs" : string)) else ());
   ignore (if HxString.equals qualified "sys.FileSystem" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("FileSystem.cs" : string)) else ());
   ignore (if HxString.equals qualified "sys.io.File" then ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("cs/import-stub-members" : string) ("File.cs" : string)) else ());

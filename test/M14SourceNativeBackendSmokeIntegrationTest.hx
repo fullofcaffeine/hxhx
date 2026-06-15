@@ -7598,6 +7598,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(reflectContent, "public static global::hxhx.__HxArray fields(object obj)", "C# Reflect shim should expose Reflect.fields");
 			assertContains(reflectContent, "public static object field(object obj, object field)", "C# Reflect shim should expose Reflect.field");
 			assertContains(reflectContent, "public static int compare(object a, object b)", "C# Reflect shim should expose Reflect.compare");
+			assertContains(reflectContent, indentedSourceTemplateContent("cs/import-stub-members", "Reflect.cs", "  "),
+				"C# Reflect support should use the repo-owned source template body");
 		} catch (e:Dynamic) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			deleteRecursive(tmpRoot);

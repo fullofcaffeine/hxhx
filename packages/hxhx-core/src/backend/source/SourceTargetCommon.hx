@@ -11318,55 +11318,7 @@ class SourceTargetCommon {
 			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "Sys.cs");
 		}
 		if (qualified == "Reflect") {
-			out.push(indent + "public static global::hxhx.__HxArray fields(object obj) {");
-			out.push(indent + "  if (obj == null) return new global::hxhx.__HxArray(new object[] { });");
-			out.push(indent + "  var type = obj as System.Type;");
-			out.push(indent + "  object receiver = type == null ? obj : null;");
-			out.push(indent + "  if (type == null) type = obj.GetType();");
-			out.push(indent
-				+ "  var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;");
-			out.push(indent + "  var names = new System.Collections.Generic.List<object>();");
-			out.push(indent + "  foreach (var fieldInfo in type.GetFields(flags)) names.Add(fieldInfo.Name);");
-			out.push(indent + "  foreach (var property in type.GetProperties(flags)) names.Add(property.Name);");
-			out.push(indent + "  return new global::hxhx.__HxArray(names.ToArray());");
-			out.push(indent + "}");
-			out.push(indent + "public static object field(object obj, object field) {");
-			out.push(indent + "  if (obj == null) return null;");
-			out.push(indent + "  string name = System.Convert.ToString(field);");
-			out.push(indent
-				+ "  var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;");
-			out.push(indent + "  var type = obj as System.Type;");
-			out.push(indent + "  object receiver = type == null ? obj : null;");
-			out.push(indent + "  if (type == null) type = obj.GetType();");
-			out.push(indent + "  var property = type.GetProperty(name, flags);");
-			out.push(indent + "  if (property != null) return property.GetValue(receiver, null);");
-			out.push(indent + "  var fieldInfo = type.GetField(name, flags);");
-			out.push(indent + "  if (fieldInfo != null) return fieldInfo.GetValue(receiver);");
-			out.push(indent + "  return null;");
-			out.push(indent + "}");
-			out.push(indent + "public static int compare(object a, object b) {");
-			out.push(indent + "  return string.Compare(System.Convert.ToString(a), System.Convert.ToString(b), System.StringComparison.Ordinal);");
-			out.push(indent + "}");
-			out.push(indent + "public static object setProperty(object obj, object field, object value) {");
-			out.push(indent + "  if (obj == null) return value;");
-			out.push(indent + "  string name = System.Convert.ToString(field);");
-			out.push(indent
-				+ "  var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;");
-			out.push(indent + "  var type = obj as System.Type;");
-			out.push(indent + "  object receiver = type == null ? obj : null;");
-			out.push(indent + "  if (type == null) type = obj.GetType();");
-			out.push(indent
-				+
-				"  var readOnly = type.GetMethod(\"__hxhx_isReadOnlyField\", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);");
-			out.push(indent + "  if (readOnly != null && System.Convert.ToBoolean(readOnly.Invoke(null, new object[] { name }))) {");
-			out.push(indent + "    throw new System.MemberAccessException();");
-			out.push(indent + "  }");
-			out.push(indent + "  var property = type.GetProperty(name, flags);");
-			out.push(indent + "  if (property != null) { property.SetValue(receiver, value, null); return value; }");
-			out.push(indent + "  var fieldInfo = type.GetField(name, flags);");
-			out.push(indent + "  if (fieldInfo != null) { fieldInfo.SetValue(receiver, value); return value; }");
-			out.push(indent + "  return value;");
-			out.push(indent + "}");
+			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "Reflect.cs");
 		}
 		if (qualified == "haxe.io.Path") {
 			appendSourceNativeTemplateLines(out, indent, "cs/import-stub-members", "Path.cs");
