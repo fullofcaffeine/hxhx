@@ -116,6 +116,7 @@ class M14DirectFlagCliContractTest {
 		assertEquals(nativeNeko.lane, "native-neko", "native neko lane");
 		assertEquals(nativeNeko.backendId, "neko-native", "native neko backend");
 		assertTrue(hasDefine(nativeNeko.forwarded, "neko"), "native neko define");
+		assertEquals(Stage3Args.findTargetOutputFileHint(["--neko", "out.n", "-main", "Main"], "neko-native"), "out.n", "native neko output file hint");
 
 		final nativeHl = plan(["--hl", "out.hl", "-main", "Main"]);
 		assertEquals(nativeHl.lane, "native-hl", "native hl lane");

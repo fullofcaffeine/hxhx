@@ -119,6 +119,10 @@ class Stage3Args {
 		return switch (backendId) {
 			case "js-native":
 				["-js", "--js"];
+			case "neko-native":
+				["-neko", "--neko"];
+			case "hl-native":
+				["-hl", "--hl"];
 			case "python-native":
 				["-python", "--python"];
 			case "lua-native":

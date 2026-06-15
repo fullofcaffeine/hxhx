@@ -74,7 +74,7 @@ class M14BackendRegistryIntegrationTest {
 
 		final neko = BackendRegistry.descriptorForTarget("neko-native");
 		assertTrue(neko != null, "descriptorForTarget(neko-native) returned null");
-		assertTrue(neko.implId == "builtin/neko-native-placeholder", "unexpected neko-native implId");
+		assertTrue(neko.implId == "builtin/neko-native-source-mvp", "unexpected neko-native implId");
 
 		final hl = BackendRegistry.descriptorForTarget("hl-native");
 		assertTrue(hl != null, "descriptorForTarget(hl-native) returned null");

@@ -146,37 +146,53 @@ let targetDefineForBackend = fun backendId -> let tempResult = ref ("" : string)
 
 let targetOutputFlags = fun backendId -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (match backendId with
-    | "java-native" -> let __assign_25 = Obj.magic (let __arr_26 = HxArray.create () in (
-      ignore (HxArray.push __arr_26 "-jvm");
-      ignore (HxArray.push __arr_26 "--jvm");
+    | "hl-native" -> let __assign_25 = Obj.magic (let __arr_26 = HxArray.create () in (
+      ignore (HxArray.push __arr_26 "-hl");
+      ignore (HxArray.push __arr_26 "--hl");
       __arr_26
     )) in (
       tempResult := __assign_25;
       __assign_25
     )
-    | "js-native" -> let __assign_27 = Obj.magic (let __arr_28 = HxArray.create () in (
-      ignore (HxArray.push __arr_28 "-js");
-      ignore (HxArray.push __arr_28 "--js");
+    | "java-native" -> let __assign_27 = Obj.magic (let __arr_28 = HxArray.create () in (
+      ignore (HxArray.push __arr_28 "-jvm");
+      ignore (HxArray.push __arr_28 "--jvm");
       __arr_28
     )) in (
       tempResult := __assign_27;
       __assign_27
     )
-    | "lua-native" -> let __assign_29 = Obj.magic (let __arr_30 = HxArray.create () in (
-      ignore (HxArray.push __arr_30 "-lua");
-      ignore (HxArray.push __arr_30 "--lua");
+    | "js-native" -> let __assign_29 = Obj.magic (let __arr_30 = HxArray.create () in (
+      ignore (HxArray.push __arr_30 "-js");
+      ignore (HxArray.push __arr_30 "--js");
       __arr_30
     )) in (
       tempResult := __assign_29;
       __assign_29
     )
-    | "python-native" -> let __assign_31 = Obj.magic (let __arr_32 = HxArray.create () in (
-      ignore (HxArray.push __arr_32 "-python");
-      ignore (HxArray.push __arr_32 "--python");
+    | "lua-native" -> let __assign_31 = Obj.magic (let __arr_32 = HxArray.create () in (
+      ignore (HxArray.push __arr_32 "-lua");
+      ignore (HxArray.push __arr_32 "--lua");
       __arr_32
     )) in (
       tempResult := __assign_31;
       __assign_31
+    )
+    | "neko-native" -> let __assign_33 = Obj.magic (let __arr_34 = HxArray.create () in (
+      ignore (HxArray.push __arr_34 "-neko");
+      ignore (HxArray.push __arr_34 "--neko");
+      __arr_34
+    )) in (
+      tempResult := __assign_33;
+      __assign_33
+    )
+    | "python-native" -> let __assign_35 = Obj.magic (let __arr_36 = HxArray.create () in (
+      ignore (HxArray.push __arr_36 "-python");
+      ignore (HxArray.push __arr_36 "--python");
+      __arr_36
+    )) in (
+      tempResult := __assign_35;
+      __assign_35
     )
     | _ -> let __assign_23 = Obj.magic (let __arr_24 = HxArray.create () in __arr_24) in (
       tempResult := __assign_23;
@@ -187,46 +203,46 @@ let targetOutputFlags = fun backendId -> let tempResult = ref (Obj.magic (HxRunt
 
 let targetOutputDirectoryFlags = fun backendId -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (match backendId with
-    | "cpp-native" -> let __assign_35 = Obj.magic (let __arr_36 = HxArray.create () in (
-      ignore (HxArray.push __arr_36 "-cpp");
-      ignore (HxArray.push __arr_36 "--cpp");
-      __arr_36
-    )) in (
-      tempResult := __assign_35;
-      __assign_35
-    )
-    | "cs-native" -> let __assign_37 = Obj.magic (let __arr_38 = HxArray.create () in (
-      ignore (HxArray.push __arr_38 "-cs");
-      ignore (HxArray.push __arr_38 "--cs");
-      __arr_38
-    )) in (
-      tempResult := __assign_37;
-      __assign_37
-    )
-    | "java-native" -> let __assign_39 = Obj.magic (let __arr_40 = HxArray.create () in (
-      ignore (HxArray.push __arr_40 "-java");
-      ignore (HxArray.push __arr_40 "--java");
+    | "cpp-native" -> let __assign_39 = Obj.magic (let __arr_40 = HxArray.create () in (
+      ignore (HxArray.push __arr_40 "-cpp");
+      ignore (HxArray.push __arr_40 "--cpp");
       __arr_40
     )) in (
       tempResult := __assign_39;
       __assign_39
     )
-    | "php-native" -> let __assign_41 = Obj.magic (let __arr_42 = HxArray.create () in (
-      ignore (HxArray.push __arr_42 "-php");
-      ignore (HxArray.push __arr_42 "--php");
+    | "cs-native" -> let __assign_41 = Obj.magic (let __arr_42 = HxArray.create () in (
+      ignore (HxArray.push __arr_42 "-cs");
+      ignore (HxArray.push __arr_42 "--cs");
       __arr_42
     )) in (
       tempResult := __assign_41;
       __assign_41
     )
-    | _ -> let __assign_33 = Obj.magic (let __arr_34 = HxArray.create () in __arr_34) in (
-      tempResult := __assign_33;
-      __assign_33
+    | "java-native" -> let __assign_43 = Obj.magic (let __arr_44 = HxArray.create () in (
+      ignore (HxArray.push __arr_44 "-java");
+      ignore (HxArray.push __arr_44 "--java");
+      __arr_44
+    )) in (
+      tempResult := __assign_43;
+      __assign_43
+    )
+    | "php-native" -> let __assign_45 = Obj.magic (let __arr_46 = HxArray.create () in (
+      ignore (HxArray.push __arr_46 "-php");
+      ignore (HxArray.push __arr_46 "--php");
+      __arr_46
+    )) in (
+      tempResult := __assign_45;
+      __assign_45
+    )
+    | _ -> let __assign_37 = Obj.magic (let __arr_38 = HxArray.create () in __arr_38) in (
+      tempResult := __assign_37;
+      __assign_37
     ));
   !tempResult
 )
 
-let findTargetOutputFileHint = fun args backendId -> try let __fallback_result_44 = let expanded = Obj.magic (Hxhx_Stage1Compiler.stage1args_expandHxmlArgs (Obj.magic args)) in (
+let findTargetOutputFileHint = fun args backendId -> try let __fallback_result_48 = let expanded = Obj.magic (Hxhx_Stage1Compiler.stage1args_expandHxmlArgs (Obj.magic args)) in (
   ignore (if expanded == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let targetFlags = Obj.magic (targetOutputFlags (backendId : string)) in (
     ignore (if HxArray.length targetFlags = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -241,10 +257,10 @@ let findTargetOutputFileHint = fun args backendId -> try let __fallback_result_4
       Obj.magic (HxRuntime.hx_null)
     )
   )
-) in Obj.magic __fallback_result_44 with
-  | HxRuntime.Hx_return __ret_43 -> Obj.obj __ret_43
+) in Obj.magic __fallback_result_48 with
+  | HxRuntime.Hx_return __ret_47 -> Obj.obj __ret_47
 
-let findTargetOutputDirectoryHint = fun args backendId -> try let __fallback_result_46 = let expanded = Obj.magic (Hxhx_Stage1Compiler.stage1args_expandHxmlArgs (Obj.magic args)) in (
+let findTargetOutputDirectoryHint = fun args backendId -> try let __fallback_result_50 = let expanded = Obj.magic (Hxhx_Stage1Compiler.stage1args_expandHxmlArgs (Obj.magic args)) in (
   ignore (if expanded == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let targetFlags = Obj.magic (targetOutputDirectoryFlags (backendId : string)) in (
     ignore (if HxArray.length targetFlags = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -259,43 +275,43 @@ let findTargetOutputDirectoryHint = fun args backendId -> try let __fallback_res
       Obj.magic (HxRuntime.hx_null)
     )
   )
-) in Obj.magic __fallback_result_46 with
-  | HxRuntime.Hx_return __ret_45 -> Obj.obj __ret_45
+) in Obj.magic __fallback_result_50 with
+  | HxRuntime.Hx_return __ret_49 -> Obj.obj __ret_49
 
-let initialRoots = fun parsedMain parsedRoots parsedMacros -> try let __fallback_result_52 = let roots = Obj.magic (HxArray.create ()) in (
+let initialRoots = fun parsedMain parsedRoots parsedMacros -> try let __fallback_result_56 = let roots = Obj.magic (HxArray.create ()) in (
   ignore (if parsedMain != Obj.magic (HxRuntime.hx_null) && HxString.length parsedMain > 0 then ignore (HxArray.push roots parsedMain) else ignore (if parsedRoots != Obj.magic (HxRuntime.hx_null) && HxArray.length parsedRoots > 0 then ignore (let _g = ref 0 in while !_g < HxArray.length parsedRoots do ignore (let r = (HxArray.get (Obj.magic parsedRoots) (!_g) : string) in (
-    ignore (let __old_47 = !_g in let __new_48 = HxInt.add __old_47 1 in (
-      ignore (_g := __new_48);
-      __new_48
+    ignore (let __old_51 = !_g in let __new_52 = HxInt.add __old_51 1 in (
+      ignore (_g := __new_52);
+      __new_52
     ));
     if r != Obj.magic (HxRuntime.hx_null) && HxString.length r > 0 then ignore (HxArray.push roots r) else ()
   )) done) else ignore (if HxArray.length parsedMacros > 0 then ignore (let inferred = (Hxhx_Stage3PathSupport.inferMainFromMacroExpr (HxArray.get (Obj.magic parsedMacros) 0 : string) : string) in (
-    ignore (if HxString.length inferred = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_49 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_49 "roots" (Obj.repr roots));
-      ignore (HxAnon.set __anon_49 "missingMainFromMacro" (HxRuntime.box_bool true));
-      __anon_49
+    ignore (if HxString.length inferred = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_53 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_53 "roots" (Obj.repr roots));
+      ignore (HxAnon.set __anon_53 "missingMainFromMacro" (HxRuntime.box_bool true));
+      __anon_53
     )))) else ());
     HxArray.push roots inferred
   )) else ())));
-  let __anon_50 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_50 "roots" (Obj.repr roots));
-    ignore (HxAnon.set __anon_50 "missingMainFromMacro" (HxRuntime.box_bool false));
-    __anon_50
+  let __anon_54 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_54 "roots" (Obj.repr roots));
+    ignore (HxAnon.set __anon_54 "missingMainFromMacro" (HxRuntime.box_bool false));
+    __anon_54
   )
-) in Obj.magic __fallback_result_52 with
-  | HxRuntime.Hx_return __ret_51 -> Obj.magic __ret_51
+) in Obj.magic __fallback_result_56 with
+  | HxRuntime.Hx_return __ret_55 -> Obj.magic __ret_55
 
-let findFlagValue = fun args a b -> try let __fallback_result_56 = let i = ref 0 in (
+let findFlagValue = fun args a b -> try let __fallback_result_60 = let i = ref 0 in (
   ignore (while !i < HxArray.length args do ignore (let t = (HxArray.get (Obj.magic args) (!i) : string) in (
     ignore (if (HxString.equals t a || HxString.equals t b) && HxInt.add (!i) 1 < HxArray.length args then raise (HxRuntime.Hx_return (Obj.repr (HxArray.get (Obj.magic args) (HxInt.add (!i) 1) : string))) else ());
-    let __old_53 = !i in let __new_54 = HxInt.add __old_53 1 in (
-      ignore (i := __new_54);
-      __old_53
+    let __old_57 = !i in let __new_58 = HxInt.add __old_57 1 in (
+      ignore (i := __new_58);
+      __old_57
     )
   )) done);
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_56 with
-  | HxRuntime.Hx_return __ret_55 -> Obj.obj __ret_55
+) in Obj.magic __fallback_result_60 with
+  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59
 
 let findManyFlagValues = fun args a b c -> let out = Obj.magic (HxArray.create ()) in let i = ref 0 in (
   ignore (try while !i < HxArray.length args do try ignore (let t = (HxArray.get (Obj.magic args) (!i) : string) in let hx_match = HxString.equals t a || HxString.equals t b || c != Obj.magic (HxRuntime.hx_null) && HxString.equals t c in (
@@ -304,9 +320,9 @@ let findManyFlagValues = fun args a b c -> let out = Obj.magic (HxArray.create (
       ignore (i := HxInt.add (!i) 2);
       raise (HxRuntime.Hx_continue)
     )) else ());
-    let __old_57 = !i in let __new_58 = HxInt.add __old_57 1 in (
-      ignore (i := __new_58);
-      __old_57
+    let __old_61 = !i in let __new_62 = HxInt.add __old_61 1 in (
+      ignore (i := __new_62);
+      __old_61
     )
   )) with
     | HxRuntime.Hx_continue -> () done with
@@ -314,8 +330,8 @@ let findManyFlagValues = fun args a b c -> let out = Obj.magic (HxArray.create (
   out
 )
 
-let summarizeArgs = fun args -> try let __fallback_result_60 = let joined = (HxArray.join args " " (fun x -> x) : string) in let maxLen = 160 in (
+let summarizeArgs = fun args -> try let __fallback_result_64 = let joined = (HxArray.join args " " (fun x -> x) : string) in let maxLen = 160 in (
   ignore (if HxString.length joined <= maxLen then raise (HxRuntime.Hx_return (Obj.repr (joined : string))) else ());
   HxString.toStdString (HxString.substr joined 0 maxLen) ^ "..."
-) in Obj.magic __fallback_result_60 with
-  | HxRuntime.Hx_return __ret_59 -> Obj.obj __ret_59
+) in Obj.magic __fallback_result_64 with
+  | HxRuntime.Hx_return __ret_63 -> Obj.obj __ret_63

@@ -19,7 +19,7 @@ let buildBuiltinRegistrations = fun () -> let registrations = Obj.magic (HxArray
     ignore (HxAnon.set __anon_1 "create" (Obj.repr (fun () -> Backend_ocaml_OcamlStage3Backend.create ())));
     __anon_1
   )));
-  ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.nekoRegistration ()));
+  ignore (HxArray.push registrations (Backend_vm_VmNativeBackend.nekoRegistration ()));
   ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.hlRegistration ()));
   ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.cppRegistration ()));
   ignore (HxArray.push registrations (Backend_source_SourceNativeBackend.pythonRegistration ()));
