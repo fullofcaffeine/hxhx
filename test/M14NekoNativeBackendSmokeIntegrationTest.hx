@@ -108,6 +108,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { switch (1) { case 1: Sys.println("one"); default: Sys.println("other"); } } }'), context);
+		final switchStmtSource = File.getContent(sourcePath);
+		assertContains(switchStmtSource, "switch 1 {", "expected Neko switch statement");
+		assertContains(switchStmtSource, "1 => {", "expected Neko switch case block");
+		assertContains(switchStmtSource, "$print(\"one\", \"\\n\")", "expected switch case body");
+		assertContains(switchStmtSource, "default => {", "expected Neko switch default block");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in [1, 2]) Sys.println(i); } }'), context);
 		final forSource = File.getContent(sourcePath);
 		assertContains(forSource, "var __hxhx_iter_i = $array(1, 2);", "expected Neko for-in iterable temp");

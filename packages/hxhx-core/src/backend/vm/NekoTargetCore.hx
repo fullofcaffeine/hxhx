@@ -273,10 +273,14 @@ class NekoTargetCore {
 				collectStmtRefs(context, tryBody, addConstructor, addStatic);
 				for (c in catches)
 					collectStmtRefs(context, c.body, addConstructor, addStatic);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectExprRefs(context, scrutinee, addConstructor, addStatic);
+				for (body in bodies)
+					collectStmtRefs(context, body, addConstructor, addStatic);
 			case SReturn(expr, _) | SThrow(expr, _) | SExpr(expr, _):
 				collectExprRefs(context, expr, addConstructor, addStatic);
 			case SReturnVoid(_) | SBreak(_) | SContinue(_):
-			case SDoWhile(_, _, _) | SSwitch(_, _, _, _):
+			case SDoWhile(_, _, _):
 		}
 	}
 
@@ -450,7 +454,9 @@ class NekoTargetCore {
 				out.push(indent + "$throw(" + renderExpr(context, expr) + ");");
 			case STry(tryBody, catches, _):
 				renderTryStmt(out, context, tryBody, catches, indent);
-			case SDoWhile(_, _, _) | SSwitch(_, _, _, _):
+			case SSwitch(scrutinee, patterns, bodies, _):
+				renderSwitchStmt(out, context, scrutinee, patterns, bodies, indent);
+			case SDoWhile(_, _, _):
 				unsupported("statement", stmtTag(stmt));
 		}
 	}
@@ -688,6 +694,30 @@ class NekoTargetCore {
 		out.push(indent + "    var " + safeValueName + " = $objget(" + sourceName + ", " + fieldName + ");");
 		renderStmt(out, context, body, indent + "    ");
 		out.push(indent + "  }");
+		out.push(indent + "}");
+	}
+
+	static function renderSwitchStmt(out:Array<String>, context:NekoEmitContext, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
+			indent:String):Void {
+		final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
+		out.push(indent + "switch " + renderExpr(context, scrutinee) + " {");
+		for (i in 0...count) {
+			final pattern = patterns[i];
+			final prefix = switch (pattern) {
+				case PWildcard | PBind(_):
+					"default";
+				case PNull | PBool(_) | PString(_) | PInt(_) | PEnumValue(_) | PEnumExtract(_, _):
+					renderSwitchPatternValue(pattern);
+				case PCapture(_, inner):
+					renderSwitchPatternValue(inner);
+				case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
+					PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _) | PUnsupportedGuard(_) | POr(_):
+					unsupported("switch pattern", patternKind(pattern));
+			}
+			out.push(indent + "  " + prefix + " => {");
+			renderStmt(out, context, bodies[i], indent + "    ");
+			out.push(indent + "  }");
+		}
 		out.push(indent + "}");
 	}
 
