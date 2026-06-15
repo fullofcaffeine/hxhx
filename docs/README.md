@@ -44,6 +44,7 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 ## Architecture and policy
 
 - Stage model and backend layering: `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
+- Source-native runtime packaging strategy: `docs/02-user-guide/SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md`
 - `.cross.hx` vs `_std` beginner guide: `docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`
 - Reflaxe family cross-override audit: `docs/00-project/REFLAXE_FAMILY_CROSS_OVERRIDE_AUDIT.md`
 - Reflaxe family cross-override matrix: `docs/00-project/REFLAXE_FAMILY_CROSS_OVERRIDE_MATRIX.md`
