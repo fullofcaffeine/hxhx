@@ -628,5 +628,12 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final notSource = File.getContent(sourcePath);
 		assertContains(notSource, "var value = $not(true);", "expected boolean not to lower to Neko intrinsic");
 		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var ok = 1 is Int; Sys.println(ok); } }'), context);
+		final isSource = File.getContent(sourcePath);
+		assertContains(isSource, 'var ok = Std_isOfType(1, "Int");', "expected Haxe is-expression to lower through Std.isOfType");
+		assertNotContains(isSource, " is ", "Haxe is-expression syntax should not leak into Neko source");
+		deleteRecursive(outDir);
 	}
 }

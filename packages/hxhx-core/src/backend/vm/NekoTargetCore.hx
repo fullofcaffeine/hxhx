@@ -615,6 +615,8 @@ class NekoTargetCore {
 				"$not(" + renderExpr(context, inner) + ")";
 			case EUnop(op, inner):
 				"(" + op + renderExpr(context, inner) + ")";
+			case EBinop("is", left, right):
+				"Std_isOfType(" + renderExpr(context, left) + ", " + renderTypeTestExpr(context, right) + ")";
 			case EBinop(op, left, right):
 				"(" + renderExpr(context, left) + " " + op + " " + renderExpr(context, right) + ")";
 			case ETernary(cond, thenExpr, elseExpr):
@@ -667,6 +669,25 @@ class NekoTargetCore {
 			+ " else "
 			+ renderExpr(context, elseExpr)
 			+ ")";
+	}
+
+	static function renderTypeTestExpr(context:NekoEmitContext, expr:HxExpr):String {
+		final typePath = typePathText(expr);
+		return typePath == null ? renderExpr(context, expr) : quote(typePath);
+	}
+
+	static function typePathText(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EString(value):
+				value;
+			case EIdent(name):
+				name;
+			case EField(owner, field):
+				final prefix = typePathText(owner);
+				prefix == null ? field : prefix + "." + field;
+			case _:
+				null;
+		}
 	}
 
 	static function renderUnsupportedNumericLiteral(raw:String):Null<String> {
