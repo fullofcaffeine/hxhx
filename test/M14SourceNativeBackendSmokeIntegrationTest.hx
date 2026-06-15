@@ -13750,6 +13750,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpTypeReflectionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "Type.php"),
+			"PHP source backend should emit Type support from the repo-owned runtime template");
 		assertContains(content, "class Type {", "PHP runtime should emit the Type support class");
 		assertContains(content, "public static function getClassName($cls)", "PHP Type runtime should expose getClassName");
 		assertContains(content, "public static function resolveClass($name)", "PHP Type runtime should expose resolveClass");
