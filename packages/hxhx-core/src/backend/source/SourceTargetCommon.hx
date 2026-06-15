@@ -1107,6 +1107,27 @@ class SourceTargetCommon {
 		return "\"" + s + "\"";
 	}
 
+	static function phpAssocEntry(key:String, valueExpr:String):String {
+		return quotePhpString(key) + " => " + valueExpr;
+	}
+
+	static function phpSortedAssocEntries(entries:Array<String>):Array<String> {
+		final sorted = entries.copy();
+		sorted.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+		return sorted;
+	}
+
+	static function phpAssocArrayExpr(entries:Array<String>):String {
+		return "[" + phpSortedAssocEntries(entries).join(", ") + "]";
+	}
+
+	static function appendPhpStaticAssocMap(lines:Array<String>, indent:String, variableName:String, entries:Array<String>):Void {
+		lines.push(indent + "static $" + variableName + " = [");
+		for (entry in phpSortedAssocEntries(entries))
+			lines.push(indent + "  " + entry + ",");
+		lines.push(indent + "];");
+	}
+
 	static function phpClassValueExpr(typePath:String):String {
 		return "__hxhx_class_value(" + quotePhpString(typePath) + ")";
 	}
@@ -13185,12 +13206,10 @@ class SourceTargetCommon {
 		runtimeNames.set("haxe.crypto.Base64", "haxe\\crypto\\Base64");
 		final entries = new Array<String>();
 		for (shortName in names.keys())
-			entries.push(quotePhpString(shortName) + " => " + quotePhpString(names.get(shortName)));
-		entries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+			entries.push(phpAssocEntry(shortName, quotePhpString(names.get(shortName))));
 		final runtimeEntries = new Array<String>();
 		for (logicalName in runtimeNames.keys())
-			runtimeEntries.push(quotePhpString(logicalName) + " => " + quotePhpString(runtimeNames.get(logicalName)));
-		runtimeEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
+			runtimeEntries.push(phpAssocEntry(logicalName, quotePhpString(runtimeNames.get(logicalName))));
 		lines.push("class __HxClassValue {");
 		lines.push("  public $__hx_class_name;");
 		lines.push("  public function __construct($name) { $this->__hx_class_name = $name; }");
@@ -13198,15 +13217,12 @@ class SourceTargetCommon {
 		lines.push("}");
 		lines.push("function __hxhx_class_name($name) {");
 		lines.push("  if ($name instanceof __HxClassValue) return $name->__hx_class_name;");
-		lines.push("  static $map = [");
-		for (entry in entries)
-			lines.push("    " + entry + ",");
-		lines.push("  ];");
+		appendPhpStaticAssocMap(lines, "  ", "classNames", entries);
 		lines.push("  $raw = str_replace(\"\\\\\", \".\", strval($name));");
 		lines.push("  $parts = explode(\".\", $raw);");
 		lines.push("  $short = end($parts);");
-		lines.push("  if (array_key_exists($raw, $map)) return $map[$raw];");
-		lines.push("  if (array_key_exists($short, $map)) return $map[$short];");
+		lines.push("  if (array_key_exists($raw, $classNames)) return $classNames[$raw];");
+		lines.push("  if (array_key_exists($short, $classNames)) return $classNames[$short];");
 		lines.push("  return $raw;");
 		lines.push("}");
 		lines.push("function __hxhx_class_value($name) {");
@@ -13217,13 +13233,10 @@ class SourceTargetCommon {
 		lines.push("}");
 		lines.push("function __hxhx_runtime_class_name($name) {");
 		lines.push("  $logical = __hxhx_class_name($name);");
-		lines.push("  static $map = [");
-		for (entry in runtimeEntries)
-			lines.push("    " + entry + ",");
-		lines.push("  ];");
-		lines.push("  if (array_key_exists($logical, $map)) return $map[$logical];");
+		appendPhpStaticAssocMap(lines, "  ", "runtimeClassNames", runtimeEntries);
+		lines.push("  if (array_key_exists($logical, $runtimeClassNames)) return $runtimeClassNames[$logical];");
 		lines.push("  $raw = str_replace(\"\\\\\", \".\", strval($name));");
-		lines.push("  if (array_key_exists($raw, $map)) return $map[$raw];");
+		lines.push("  if (array_key_exists($raw, $runtimeClassNames)) return $runtimeClassNames[$raw];");
 		lines.push("  $parts = explode(\".\", $logical);");
 		lines.push("  return end($parts);");
 		lines.push("}");
@@ -13550,9 +13563,8 @@ class SourceTargetCommon {
 		function mapLiteral(names:Array<String>):String {
 			final entries = new Array<String>();
 			for (name in names)
-				entries.push(quotePhpString(name) + " => true");
-			entries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
-			return "[" + entries.join(", ") + "]";
+				entries.push(phpAssocEntry(name, "true"));
+			return phpAssocArrayExpr(entries);
 		}
 		function addDecl(moduleDecl:HxModuleDecl):Void {
 			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
@@ -13589,44 +13601,28 @@ class SourceTargetCommon {
 						instanceHidden.push(fnName);
 				}
 				if (instanceHidden.length > 0)
-					instanceEntries.push(quotePhpString(fullName) + " => " + mapLiteral(instanceHidden));
+					instanceEntries.push(phpAssocEntry(fullName, mapLiteral(instanceHidden)));
 				if (staticHidden.length > 0)
-					staticEntries.push(quotePhpString(fullName) + " => " + mapLiteral(staticHidden));
+					staticEntries.push(phpAssocEntry(fullName, mapLiteral(staticHidden)));
 				if (extraInstance.length > 0)
-					extraInstanceEntries.push(quotePhpString(fullName) + " => " + mapLiteral(extraInstance));
+					extraInstanceEntries.push(phpAssocEntry(fullName, mapLiteral(extraInstance)));
 				if (extraStatic.length > 0)
-					extraStaticEntries.push(quotePhpString(fullName) + " => " + mapLiteral(extraStatic));
+					extraStaticEntries.push(phpAssocEntry(fullName, mapLiteral(extraStatic)));
 			}
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
 			addDecl(typed.getParsed().getDecl());
-		instanceEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
-		staticEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
-		extraInstanceEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
-		extraStaticEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
 		lines.push("function __hxhx_hidden_reflection_fields($cls, $wantStatic) {");
-		lines.push("  static $instance = [");
-		for (entry in instanceEntries)
-			lines.push("    " + entry + ",");
-		lines.push("  ];");
-		lines.push("  static $statics = [");
-		for (entry in staticEntries)
-			lines.push("    " + entry + ",");
-		lines.push("  ];");
+		appendPhpStaticAssocMap(lines, "  ", "instance", instanceEntries);
+		appendPhpStaticAssocMap(lines, "  ", "statics", staticEntries);
 		lines.push("  $logical = __hxhx_class_name($cls);");
 		lines.push("  $map = $wantStatic ? $statics : $instance;");
 		lines.push("  return array_key_exists($logical, $map) ? $map[$logical] : [];");
 		lines.push("}");
 		lines.push("function __hxhx_extra_reflection_fields($cls, $wantStatic) {");
-		lines.push("  static $instance = [");
-		for (entry in extraInstanceEntries)
-			lines.push("    " + entry + ",");
-		lines.push("  ];");
-		lines.push("  static $statics = [");
-		for (entry in extraStaticEntries)
-			lines.push("    " + entry + ",");
-		lines.push("  ];");
+		appendPhpStaticAssocMap(lines, "  ", "instance", extraInstanceEntries);
+		appendPhpStaticAssocMap(lines, "  ", "statics", extraStaticEntries);
 		lines.push("  $logical = __hxhx_class_name($cls);");
 		lines.push("  $map = $wantStatic ? $statics : $instance;");
 		lines.push("  return array_key_exists($logical, $map) ? $map[$logical] : [];");
@@ -13793,9 +13789,9 @@ class SourceTargetCommon {
 				final field = phpMetadataObjectField(item);
 				final name = phpMetadataObjectFieldName(PhpMetadataObjectField.getName(field));
 				if (name.length > 0)
-					fields.push(quotePhpString(name) + " => " + phpMetadataArgExpr(PhpMetadataObjectField.getValue(field)));
+					fields.push(phpAssocEntry(name, phpMetadataArgExpr(PhpMetadataObjectField.getValue(field))));
 			}
-			return "new __HxAnon([" + fields.join(", ") + "])";
+			return "new __HxAnon(" + phpAssocArrayExpr(fields) + ")";
 		}
 		if (text == "true" || text == "false")
 			return text;
@@ -13819,11 +13815,10 @@ class SourceTargetCommon {
 				if (name.length == 0 || name == "macro" || name == "dynamic" || name == "overload")
 					continue;
 				final args = [for (arg in phpMetadataArgs(raw)) phpMetadataArgExpr(arg)];
-				entries.push(quotePhpString(name) + " => " + (args.length == 0 ? "null" : "[" + args.join(", ") + "]"));
+				entries.push(phpAssocEntry(name, args.length == 0 ? "null" : "[" + args.join(", ") + "]"));
 			}
 		}
-		entries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
-		return "[" + entries.join(", ") + "]";
+		return phpAssocArrayExpr(entries);
 	}
 
 	static function appendPhpMetaRuntime(lines:Array<String>, program:GenIrProgram, decl:HxModuleDecl):Void {
@@ -13839,7 +13834,7 @@ class SourceTargetCommon {
 		function addMemberMeta(out:Array<String>, name:String, metadata:Array<String>):Void {
 			final literal = phpMetadataLiteral(metadata);
 			if (literal != "[]")
-				out.push(quotePhpString(name) + " => " + literal);
+				out.push(phpAssocEntry(name, literal));
 		}
 		function phpMetadataMemberName(name:String):String {
 			return name == "new" ? "_" : name;
@@ -13859,7 +13854,7 @@ class SourceTargetCommon {
 				final typeLiteral = phpMetadataLiteral(HxClassDecl.getMetadata(cls));
 				if (typeLiteral != "[]")
 					for (alias in aliases)
-						typeEntries.push(quotePhpString(alias) + " => " + typeLiteral);
+						typeEntries.push(phpAssocEntry(alias, typeLiteral));
 				final statics = new Array<String>();
 				final fields = new Array<String>();
 				var isEnum = false;
@@ -13883,23 +13878,18 @@ class SourceTargetCommon {
 						addMemberMeta(fields, memberName, HxFunctionDecl.getMetadata(fn));
 				}
 				if (statics.length > 0) {
-					statics.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
 					for (alias in aliases)
-						staticsEntries.push(quotePhpString(alias) + " => [" + statics.join(", ") + "]");
+						staticsEntries.push(phpAssocEntry(alias, phpAssocArrayExpr(statics)));
 				}
 				if (fields.length > 0) {
-					fields.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
 					for (alias in aliases)
-						fieldsEntries.push(quotePhpString(alias) + " => [" + fields.join(", ") + "]");
+						fieldsEntries.push(phpAssocEntry(alias, phpAssocArrayExpr(fields)));
 				}
 			}
 		}
 		addDecl(decl);
 		for (typed in program.getTypedModules())
 			addDecl(typed.getParsed().getDecl());
-		typeEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
-		staticsEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
-		fieldsEntries.sort(function(left, right) return left < right ? -1 : (left > right ? 1 : 0));
 		lines.push("function __hxhx_meta_object($entries) {");
 		lines.push("  if (array_key_exists(\"_\", $entries)) {");
 		lines.push("    if (!array_key_exists(\"new\", $entries)) $entries[\"new\"] = $entries[\"_\"];");
@@ -13914,17 +13904,17 @@ class SourceTargetCommon {
 		lines.push("}");
 		lines.push("function __hxhx_meta_key($cls) { return __hxhx_class_name($cls); }");
 		lines.push("function __hxhx_meta_type($cls) {");
-		lines.push("  static $map = [" + typeEntries.join(", ") + "];");
+		lines.push("  static $map = " + phpAssocArrayExpr(typeEntries) + ";");
 		lines.push("  $key = __hxhx_meta_key($cls);");
 		lines.push("  return array_key_exists($key, $map) ? __hxhx_meta_object($map[$key]) : new __HxAnon();");
 		lines.push("}");
 		lines.push("function __hxhx_meta_statics($cls) {");
-		lines.push("  static $map = [" + staticsEntries.join(", ") + "];");
+		lines.push("  static $map = " + phpAssocArrayExpr(staticsEntries) + ";");
 		lines.push("  $key = __hxhx_meta_key($cls);");
 		lines.push("  return array_key_exists($key, $map) ? __hxhx_meta_fields_object($map[$key]) : new __HxAnon();");
 		lines.push("}");
 		lines.push("function __hxhx_meta_fields($cls) {");
-		lines.push("  static $map = [" + fieldsEntries.join(", ") + "];");
+		lines.push("  static $map = " + phpAssocArrayExpr(fieldsEntries) + ";");
 		lines.push("  $key = __hxhx_meta_key($cls);");
 		lines.push("  return array_key_exists($key, $map) ? __hxhx_meta_fields_object($map[$key]) : new __HxAnon();");
 		lines.push("}");
@@ -14957,30 +14947,30 @@ class SourceTargetCommon {
 	}
 
 	static function appendPhpResourceRuntime(lines:Array<String>, resources:Array<backend.BackendResource>):Void {
+		final entries = new Array<String>();
+		for (resource in resources)
+			entries.push(phpAssocEntry(resource.name, quotePhpString(resource.data.toHex())));
 		lines.push("  class Resource {");
 		lines.push("    private static $content = [");
-		for (resource in resources) {
-			lines.push("      [\"name\" => " + quotePhpString(resource.name) + ", \"hex\" => " + quotePhpString(resource.data.toHex()) + "],");
-		}
+		for (entry in entries)
+			lines.push("      " + entry + ",");
 		lines.push("    ];");
 		lines.push("    private static function find($name) {");
-		lines.push("      foreach (self::$content as $entry) if ($entry[\"name\"] === strval($name)) return $entry;");
-		lines.push("      return null;");
+		lines.push("      $key = strval($name);");
+		lines.push("      return array_key_exists($key, self::$content) ? self::$content[$key] : null;");
 		lines.push("    }");
 		lines.push("    public static function listNames() {");
-		lines.push("      $names = [];");
-		lines.push("      foreach (self::$content as $entry) $names[] = $entry[\"name\"];");
-		lines.push("      return new \\__HxArray($names);");
+		lines.push("      return new \\__HxArray(array_keys(self::$content));");
 		lines.push("    }");
 		lines.push("    public static function getString($name) {");
-		lines.push("      $entry = self::find($name);");
-		lines.push("      if ($entry === null) return null;");
-		lines.push("      return \\haxe\\io\\Bytes::ofHex($entry[\"hex\"])->toString();");
+		lines.push("      $hex = self::find($name);");
+		lines.push("      if ($hex === null) return null;");
+		lines.push("      return \\haxe\\io\\Bytes::ofHex($hex)->toString();");
 		lines.push("    }");
 		lines.push("    public static function getBytes($name) {");
-		lines.push("      $entry = self::find($name);");
-		lines.push("      if ($entry === null) return null;");
-		lines.push("      return \\haxe\\io\\Bytes::ofHex($entry[\"hex\"]);");
+		lines.push("      $hex = self::find($name);");
+		lines.push("      if ($hex === null) return null;");
+		lines.push("      return \\haxe\\io\\Bytes::ofHex($hex);");
 		lines.push("    }");
 		lines.push("  }");
 	}

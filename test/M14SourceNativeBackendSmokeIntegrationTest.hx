@@ -13757,6 +13757,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Type {", "PHP runtime should emit the Type support class");
 		assertContains(content, "public static function getClassName($cls)", "PHP Type runtime should expose getClassName");
 		assertContains(content, "public static function resolveClass($name)", "PHP Type runtime should expose resolveClass");
+		assertContains(content, "static $classNames = [", "PHP class-name registry should use the shared static table emitter");
+		assertContains(content, "static $runtimeClassNames = [", "PHP runtime class-name registry should use the shared static table emitter");
 		assertContains(content, "\"List\" => \"haxe.ds.List\"", "PHP class-name map should include imported haxe.ds.List alias");
 		assertContains(content, "\"List_\" => \"haxe.ds.List\"", "PHP class-name map should include sanitized haxe.ds.List runtime alias");
 		assertContains(content, sourceTemplateContent("php/runtime", "List.php"),
@@ -13776,6 +13778,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static function getClassFields($cls)", "PHP Type runtime should expose getClassFields");
 		assertContains(content, "public static function typeof($value)", "PHP Type runtime should expose typeof");
 		assertContains(content, "__hxhx_value_type(\"TClass\", 6", "PHP ValueType constructors should lower to enum-like runtime values");
+		assertContains(content, "function __hxhx_hidden_reflection_fields($cls, $wantStatic)",
+			"PHP reflection policy should emit generated hidden-field registries");
+		assertContains(content, "function __hxhx_extra_reflection_fields($cls, $wantStatic)",
+			"PHP reflection policy should emit generated extra-field registries");
 		assertContains(content, "\"DceReflectThing\" => [\"get_unusedProp\" => true", "PHP reflection policy should hide unused private DCE-style members");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -14343,6 +14349,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Resource {", "PHP runtime should expose haxe.Resource");
 		assertContains(content, "public static function listNames()", "PHP haxe.Resource should list embedded resource names");
 		assertContains(content, "public static function getBytes($name)", "PHP haxe.Resource should expose embedded bytes");
+		assertContains(content, "return new \\__HxArray(array_keys(self::$content));",
+			"PHP haxe.Resource registry should expose names from the keyed static content table");
+		assertContains(content, "return array_key_exists($key, self::$content) ? self::$content[$key] : null;",
+			"PHP haxe.Resource registry should use keyed lookup instead of scanning generated rows");
 		assertContains(content, "\\haxe\\Resource::getString", "PHP imported haxe.Resource calls should target the namespaced runtime class");
 		assertContains(content, "48656c6c6f0021576f726c64", "PHP haxe.Resource should embed binary payloads as hex");
 		if (commandExists("php")) {
