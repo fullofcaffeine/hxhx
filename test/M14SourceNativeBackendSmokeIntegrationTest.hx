@@ -8513,6 +8513,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(csUtilityProcessRuntimeShimProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "UtilityProcess.cs"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, indentedSourceTemplateContent("cs/runtime", "UtilityProcessMembers.cs", "  "),
+			"C# UtilityProcess shim should emit helper members from the repo-owned runtime template");
 		assertContains(content, "hxhx C# sys runtime shim", "C# UtilityProcess should use the focused sys-test runtime shim");
 		assertContains(content, "public static object runUtility(object args, object options)",
 			"C# UtilityProcess should keep a callable runUtility wrapper for imported helper calls");
