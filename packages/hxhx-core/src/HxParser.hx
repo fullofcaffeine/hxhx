@@ -3712,7 +3712,13 @@ class HxParser {
 					SExpr(EUnsupported("inline"), pos);
 				}
 			case TKeyword(KFunction):
-				parseLocalFunctionStmt(pos);
+				if (peekKind().match(TLParen)) {
+					final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+					syncToStmtEnd();
+					SExpr(expr, pos);
+				} else {
+					parseLocalFunctionStmt(pos);
+				}
 			case TKeyword(KVar):
 				bump();
 				parseVarStmt(pos);

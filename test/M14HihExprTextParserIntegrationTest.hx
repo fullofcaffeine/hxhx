@@ -38,6 +38,16 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected malformed body to recover as unsupported parse marker");
 		}
 
+		final anonymousFunctionStmt = HxParser.parseFunctionBodyText("function() { return 1; }; after();");
+		assertTrue(anonymousFunctionStmt.length == 2, "expected anonymous function statement plus following statement");
+		switch (anonymousFunctionStmt[0]) {
+			case SExpr(ELambda([], EInt(1)), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("anonymous function statement parsed as unsupported: " + raw);
+			case _:
+				fail("expected anonymous function statement to parse as lambda expression");
+		}
+
 		// Native parser payloads can compact escaped quote strings to `"""`.
 		// This should still parse as a normal string literal (`"`).
 		final denseArrayRaw = '[" ".code,"(".code,")".code,"%".code,"!".code,"^".code,""".code,"<".code,">".code,"&".code,"|".code,"\\n".code,"\\r".code,",".code,";".code]';
