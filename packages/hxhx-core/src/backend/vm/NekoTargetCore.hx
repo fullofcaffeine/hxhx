@@ -44,6 +44,13 @@ private typedef NekoFieldReadCatchRaw = {
 	var fallback:String;
 }
 
+private typedef NekoMethodCallCatchRaw = {
+	var receiver:String;
+	var method:String;
+	var arg:String;
+	var fallback:String;
+}
+
 private typedef NekoOpaqueObjectLocalRaw = {
 	var local:String;
 	var field:String;
@@ -752,6 +759,11 @@ class NekoTargetCore {
 			return "(function() { try { return " + fieldReadCatch.receiver + "." + fieldReadCatch.field + "; } catch e { return "
 				+ quote(fieldReadCatch.fallback) + "; } })()";
 		}
+		final methodCallCatch = parseMethodCallCatchStringRaw(raw);
+		if (methodCallCatch != null) {
+			return "(function() { try { return " + methodCallCatch.receiver + "." + methodCallCatch.method + "(" + quote(methodCallCatch.arg)
+				+ "); } catch e { return " + quote(methodCallCatch.fallback) + "; } })()";
+		}
 		final opaqueObjectLocal = parseOpaqueObjectLocalRaw(raw);
 		if (opaqueObjectLocal != null) {
 			return "(function() { var "
@@ -818,6 +830,19 @@ class NekoTargetCore {
 			receiver: safeIdent(pattern.matched(1)),
 			field: safeIdent(pattern.matched(2)),
 			fallback: pattern.matched(3)
+		};
+	}
+
+	static function parseMethodCallCatchStringRaw(raw:String):Null<NekoMethodCallCatchRaw> {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		final pattern = ~/^try\{([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\("([^"]*)"\);\}catch\(e:[^)]+\)\{"([^"]*)";\}$/;
+		if (!pattern.match(compact))
+			return null;
+		return {
+			receiver: safeIdent(pattern.matched(1)),
+			method: safeIdent(pattern.matched(2)),
+			arg: pattern.matched(3),
+			fallback: pattern.matched(4)
 		};
 	}
 

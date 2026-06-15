@@ -324,6 +324,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var pl = ["a", "b"]; var result = try { pl.join(","); } catch(e:Dynamic) { "???"; }; Sys.println(result); } }'),
+			context);
+		final methodCallCatchSource = File.getContent(sourcePath);
+		assertContains(methodCallCatchSource, "try { return pl.join(\",\"); } catch e { return \"???\"; }", "expected method-call catch-string raw lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var result = { var b: { v:Dynamic } = { v: "foo" }; }; Sys.println(result); } }'), context);
 		final opaqueObjectLocalSource = File.getContent(sourcePath);
 		assertContains(opaqueObjectLocalSource, "var b = (function() { var __hxhx_o = $new(null); __hxhx_o.v = \"foo\"; return __hxhx_o; })(); return null;",
