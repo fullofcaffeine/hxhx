@@ -295,6 +295,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var len = 1; var b = "abc"; var pos = 0; var value = try { new String(untyped __dollar__ssub(b, pos, len)); } catch(e:Dynamic) { throw Error.OutsideBounds; }; Sys.println(value); } }'),
+			context);
+		final stringSubTryExprSource = File.getContent(sourcePath);
+		assertContains(stringSubTryExprSource, "try { return $ssub(b, pos, len); } catch e { $throw(\"OutsideBounds\"); return null; }",
+			"expected String raw sub try/catch lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
 		final rangeForSource = File.getContent(sourcePath);
 		assertContains(rangeForSource, "var __hxhx_range_out = $array();", "expected range expression result allocation");

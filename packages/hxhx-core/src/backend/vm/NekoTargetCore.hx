@@ -670,6 +670,11 @@ class NekoTargetCore {
 			final ctor = renderBytesConstructorCall(context, bytesSub.len, "$ssub(" + bytesSub.bytes + ", " + bytesSub.pos + ", " + bytesSub.len + ")");
 			return "(function() { try { return " + ctor + "; } catch e { $throw(" + quote("OutsideBounds") + "); return null; } })()";
 		}
+		final stringSub = parseStringSubTryRaw(raw);
+		if (stringSub != null) {
+			final sliced = "$ssub(" + stringSub.bytes + ", " + stringSub.pos + ", " + stringSub.len + ")";
+			return "(function() { try { return " + sliced + "; } catch e { $throw(" + quote("OutsideBounds") + "); return null; } })()";
+		}
 		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
 	}
 
@@ -682,6 +687,18 @@ class NekoTargetCore {
 			len: safeIdent(pattern.matched(1)),
 			bytes: safeIdent(pattern.matched(2)),
 			pos: safeIdent(pattern.matched(3))
+		};
+	}
+
+	static function parseStringSubTryRaw(raw:String):Null<NekoBytesSubRaw> {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		final pattern = ~/^try\{newString\(untyped__dollar__ssub\(([^,{}()]+),([^,{}()]+),([^,{}()]+)\)\);\}catch\([^)]*\)\{throwError\.OutsideBounds;\}$/;
+		if (!pattern.match(compact))
+			return null;
+		return {
+			len: safeIdent(pattern.matched(3)),
+			bytes: safeIdent(pattern.matched(1)),
+			pos: safeIdent(pattern.matched(2))
 		};
 	}
 
