@@ -44,6 +44,12 @@ private typedef NekoFieldReadCatchRaw = {
 	var fallback:String;
 }
 
+private typedef NekoOpaqueObjectLocalRaw = {
+	var local:String;
+	var field:String;
+	var value:String;
+}
+
 /**
 	MVP native Neko target core.
 
@@ -739,6 +745,11 @@ class NekoTargetCore {
 			return "(function() { try { return " + fieldReadCatch.receiver + "." + fieldReadCatch.field + "; } catch e { return "
 				+ quote(fieldReadCatch.fallback) + "; } })()";
 		}
+		final opaqueObjectLocal = parseOpaqueObjectLocalRaw(raw);
+		if (opaqueObjectLocal != null) {
+			return "(function() { var " + opaqueObjectLocal.local + " = (function() { var __hxhx_o = $new(null); __hxhx_o." + opaqueObjectLocal.field
+				+ " = " + quote(opaqueObjectLocal.value) + "; return __hxhx_o; })(); return null; })()";
+		}
 		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
 	}
 
@@ -781,6 +792,18 @@ class NekoTargetCore {
 			receiver: safeIdent(pattern.matched(1)),
 			field: safeIdent(pattern.matched(2)),
 			fallback: pattern.matched(3)
+		};
+	}
+
+	static function parseOpaqueObjectLocalRaw(raw:String):Null<NekoOpaqueObjectLocalRaw> {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\}=\{\2:"([^"]*)"\};\}$/;
+		if (!pattern.match(compact))
+			return null;
+		return {
+			local: safeIdent(pattern.matched(1)),
+			field: safeIdent(pattern.matched(2)),
+			value: pattern.matched(3)
 		};
 	}
 

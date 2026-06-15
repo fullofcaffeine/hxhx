@@ -324,6 +324,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var result = { var b: { v:Dynamic } = { v: "foo" }; }; Sys.println(result); } }'), context);
+		final opaqueObjectLocalSource = File.getContent(sourcePath);
+		assertContains(opaqueObjectLocalSource, "var b = (function() { var __hxhx_o = $new(null); __hxhx_o.v = \"foo\"; return __hxhx_o; })(); return null;",
+			"expected typed local object opaque block lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class TestLocalStatic { public function new() {} public function basic() { static var x = 1; static final y = "final"; x++; return { x: x, y: y }; } public static function main() { var obj = new TestLocalStatic(); var value = obj.basic(); Sys.println(value.x); value = obj.basic(); Sys.println(value.x); } }'),
 			context);
 		final localStaticSource = File.getContent(sourcePath);
