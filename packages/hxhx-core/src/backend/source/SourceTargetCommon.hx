@@ -7614,6 +7614,14 @@ class SourceTargetCommon {
 				return "haxe\\io\\BytesInput";
 			case "haxe.io.BytesOutput":
 				return "haxe\\io\\BytesOutput";
+			case "haxe.crypto.Md5":
+				return "haxe\\crypto\\Md5";
+			case "haxe.crypto.Sha1":
+				return "haxe\\crypto\\Sha1";
+			case "haxe.crypto.BaseCode":
+				return "haxe\\crypto\\BaseCode";
+			case "haxe.crypto.Base64":
+				return "haxe\\crypto\\Base64";
 			case _:
 		}
 		if (clean.indexOf(".") >= 0 || (phpRenderLocalTypeNames != null && phpRenderLocalTypeNames.exists(shortName)))
@@ -7623,6 +7631,10 @@ class SourceTargetCommon {
 			case "Bytes": "haxe\\io\\Bytes";
 			case "BytesInput": "haxe\\io\\BytesInput";
 			case "BytesOutput": "haxe\\io\\BytesOutput";
+			case "Md5": "haxe\\crypto\\Md5";
+			case "Sha1": "haxe\\crypto\\Sha1";
+			case "BaseCode": "haxe\\crypto\\BaseCode";
+			case "Base64": "haxe\\crypto\\Base64";
 			case _: null;
 		}
 	}
@@ -13174,6 +13186,8 @@ class SourceTargetCommon {
 		for (typed in program.getTypedModules())
 			addDecl(typed.getParsed().getDecl());
 		final stdAliases = [
+			"Base64" => "haxe.crypto.Base64",
+			"BaseCode" => "haxe.crypto.BaseCode",
 			"Bytes" => "haxe.io.Bytes",
 			"BytesInput" => "haxe.io.BytesInput",
 			"BytesOutput" => "haxe.io.BytesOutput",
@@ -13198,6 +13212,14 @@ class SourceTargetCommon {
 		runtimeNames.set("haxe.io.BytesInput", "haxe\\io\\BytesInput");
 		runtimeNames.set("BytesOutput", "haxe\\io\\BytesOutput");
 		runtimeNames.set("haxe.io.BytesOutput", "haxe\\io\\BytesOutput");
+		runtimeNames.set("Md5", "haxe\\crypto\\Md5");
+		runtimeNames.set("haxe.crypto.Md5", "haxe\\crypto\\Md5");
+		runtimeNames.set("Sha1", "haxe\\crypto\\Sha1");
+		runtimeNames.set("haxe.crypto.Sha1", "haxe\\crypto\\Sha1");
+		runtimeNames.set("BaseCode", "haxe\\crypto\\BaseCode");
+		runtimeNames.set("haxe.crypto.BaseCode", "haxe\\crypto\\BaseCode");
+		runtimeNames.set("Base64", "haxe\\crypto\\Base64");
+		runtimeNames.set("haxe.crypto.Base64", "haxe\\crypto\\Base64");
 		final entries = new Array<String>();
 		for (shortName in names.keys())
 			entries.push(quotePhpString(shortName) + " => " + quotePhpString(names.get(shortName)));
@@ -14206,7 +14228,8 @@ class SourceTargetCommon {
 				return;
 			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Template"
 				&& rawImport != "haxe.Unserializer" && rawImport != "haxe.rtti.Meta" && rawImport != "haxe.io.Bytes" && rawImport != "haxe.io.BytesInput"
-				&& rawImport != "haxe.io.BytesOutput" && rawImport != "php.Syntax")
+				&& rawImport != "haxe.io.BytesOutput" && rawImport != "haxe.crypto.Md5" && rawImport != "haxe.crypto.Sha1"
+				&& rawImport != "haxe.crypto.BaseCode" && rawImport != "haxe.crypto.Base64" && rawImport != "php.Syntax")
 				return;
 			final parts = rawImport.split(".");
 			if (parts.length < 2)

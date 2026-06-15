@@ -12066,6 +12066,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpBaseCodeProgram(), new BackendContext(baseCodeTmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final baseCodeContent = File.getContent(Path.join([baseCodeTmpRoot, "index.php"]));
 		assertContains(baseCodeContent, "class BaseCode", "PHP haxe.crypto.BaseCode should be emitted");
+		assertContains(baseCodeContent, "new haxe\\crypto\\BaseCode(", "PHP haxe.crypto.BaseCode constructors should use the namespaced runtime shim");
 		assertContains(baseCodeContent, "public function encodeString($value)", "PHP BaseCode should expose encodeString");
 		assertContains(baseCodeContent, "public function decodeString($value)", "PHP BaseCode should expose decodeString");
 		if (commandExists("php")) {
