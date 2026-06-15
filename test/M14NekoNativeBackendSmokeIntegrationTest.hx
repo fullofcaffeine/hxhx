@@ -388,6 +388,14 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(rangeForSource, "while (__hxhx_range_i < __hxhx_range_end)", "expected range expression loop");
 		assertContains(rangeForSource, "__hxhx_array_push(__hxhx_range_out, __hxhx_range_i);", "expected range expression append");
 		assertContains(rangeForSource, "var __hxhx_iter_i = (function() {", "expected range for-in to reuse iterable lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var flag = true; var value = 1 + if (flag) 2 else 3; Sys.println(value); } }'), context);
+		final binaryIfSource = File.getContent(sourcePath);
+		assertContains(binaryIfSource, "var value = (1 + (flag ? 2 : 3));", "expected binary RHS if expression to lower as ternary");
 		deleteRecursive(outDir);
 	}
 }

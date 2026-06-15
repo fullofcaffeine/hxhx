@@ -2380,6 +2380,8 @@ class HxParser {
 			case TIdent(name) if (name == "macro"):
 				bump();
 				parseMacroQuoteExpr(stop);
+			case TKeyword(k) if (k == KIf):
+				parseIfExpr(stop);
 			case TKeyword(k) if (k == KSwitch):
 				parseSwitchExpr(stop);
 			case TOther("@".code):
@@ -2739,36 +2741,8 @@ class HxParser {
 			return parseSwitchExpr(stop);
 		}
 
-		// Stage 3 expansion: `if (cond) thenExpr else elseExpr` as an *expression*.
-		//
-		// Why
-		// - Upstream harness code uses `static final X = if (...) ... else ...;` patterns
-		//   (notably in runci/Config.hx and runci/System.hx).
-		// - Without parsing this shape, class-scope constants fall back to `EUnsupported`,
-		//   which forces the Stage3 emitter to collapse the value to bring-up poison.
-		//
-		// Bring-up scope
-		// - Branches are expressions (not statement blocks).
-		// - Missing `else` is treated as unsupported.
 		if (!stop() && cur.kind.match(TKeyword(KIf))) {
-			bump(); // `if`
-			expect(TLParen, "'('");
-			final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-			// Best-effort resync to `)`.
-			if (!cur.kind.match(TRParen)) {
-				while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
-					bump();
-			}
-			if (cur.kind.match(TRParen))
-				bump();
-
-			final thenExpr = parseExpr(() -> cur.kind.match(TKeyword(KElse)) || cur.kind.match(TEof));
-			if (cur.kind.match(TSemicolon) && peekKind().match(TKeyword(KElse)))
-				bump();
-			if (!acceptKeyword(KElse))
-				return EUnsupported("if_missing_else");
-			final elseExpr = parseExpr(stop);
-			return ETernary(cond, thenExpr, elseExpr);
+			return parseIfExpr(stop);
 		}
 
 		var e = parseBinaryExpr(1, stop);
@@ -2794,6 +2768,39 @@ class HxParser {
 			e = ECast(e, hint);
 		}
 		return e;
+	}
+
+	function parseIfExpr(stop:() -> Bool):HxExpr {
+		// Stage 3 expansion: `if (cond) thenExpr else elseExpr` as an *expression*.
+		//
+		// Why
+		// - Upstream harness code uses `static final X = if (...) ... else ...;` patterns
+		//   (notably in runci/Config.hx and runci/System.hx).
+		// - The same shape can also appear where parsing is already inside unary/binary
+		//   precedence handling (for example `x + if (...) a else b`). Handling it at the
+		//   unary boundary prevents fallback to `EUnsupported("if")`.
+		//
+		// Bring-up scope
+		// - Branches are expressions (not statement blocks).
+		// - Missing `else` is treated as unsupported.
+		bump(); // `if`
+		expect(TLParen, "'('");
+		final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+		// Best-effort resync to `)`.
+		if (!cur.kind.match(TRParen)) {
+			while (!cur.kind.match(TRParen) && !cur.kind.match(TEof))
+				bump();
+		}
+		if (cur.kind.match(TRParen))
+			bump();
+
+		final thenExpr = parseExpr(() -> cur.kind.match(TKeyword(KElse)) || cur.kind.match(TEof));
+		if (cur.kind.match(TSemicolon) && peekKind().match(TKeyword(KElse)))
+			bump();
+		if (!acceptKeyword(KElse))
+			return EUnsupported("if_missing_else");
+		final elseExpr = parseExpr(stop);
+		return ETernary(cond, thenExpr, elseExpr);
 	}
 
 	function tryReadArrowLambdaExpr(stop:() -> Bool):Null<HxExpr> {

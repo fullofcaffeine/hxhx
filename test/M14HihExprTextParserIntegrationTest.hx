@@ -1241,6 +1241,17 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected switch expression with if/else branch");
 		}
 
+		final binaryIfExpr = HxParser.parseExprText('1 + if (flag) 2 else 3');
+		switch (binaryIfExpr) {
+			case EBinop("+", EInt(1), ETernary(EIdent("flag"), EInt(2), EInt(3))):
+			case EBinop("+", _, EUnsupported(raw)):
+				fail("binary RHS if expression parsed as unsupported: " + raw);
+			case EUnsupported(raw):
+				fail("binary if expression parsed as unsupported: " + raw);
+			case _:
+				fail("expected binary RHS if expression to parse as ternary");
+		}
+
 		final emptyCaseSwitchExpr = HxParser.parseExprText('switch true { case true: case false: }');
 		switch (emptyCaseSwitchExpr) {
 			case ESwitch(EBool(true), patterns, exprs):
