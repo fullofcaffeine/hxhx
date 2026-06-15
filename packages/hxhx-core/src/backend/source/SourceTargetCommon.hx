@@ -1856,7 +1856,7 @@ class SourceTargetCommon {
 			case "Dynamic" | "Any":
 				"true";
 			case _:
-				"__hxhx_is_of_type(" + value + ", " + quotePhpString(typeName) + ")";
+				"__hxhx_is_of_type(" + value + ", " + quotePhpString(phpRenderedTypeName(typeName)) + ")";
 		};
 	}
 
@@ -6670,7 +6670,8 @@ class SourceTargetCommon {
 					|| phpNativeArrayTypePath(typePath)) "[]"; else if (typePath == "Exception" || typePath == "haxe.Exception") "new ValueException("
 					+ rendered
 					+ ")"; else if (phpRuntimeMapType(typePath)) phpRuntimeMapConstructorExpr(typePath,
-					rendered); else if (phpRuntimeListType(typePath)) "new List_(" + rendered + ")"; else "new " + safeType + "(" + rendered + ")";
+					rendered); else if (phpRuntimeListType(typePath)) "new List_(" + rendered + ")"; else "new " + phpRenderedTypeName(typePath) + "("
+					+ rendered + ")";
 			case Lua:
 				final rendered = [for (arg in args) renderExpr(Lua, arg)].join(", ");
 				if (typePath == "String" && args.length == 1) "tostring(" + renderExpr(Lua,
@@ -6822,7 +6823,7 @@ class SourceTargetCommon {
 
 	static function phpPackageQualifiedTypeReference(expr:HxExpr):Null<String> {
 		final path = phpPackageQualifiedTypePath(expr);
-		return path == null ? null : quotePhpString(path);
+		return path == null ? null : quotePhpString(phpRenderedTypeName(path));
 	}
 
 	static function phpPackageQualifiedTypePath(expr:HxExpr):Null<String> {
@@ -6856,10 +6857,10 @@ class SourceTargetCommon {
 	static function phpTypeExprName(expr:HxExpr):String {
 		return switch (expr) {
 			case EIdent(name) | EEnumValue(name):
-				name;
+				phpRenderedTypeName(name);
 			case EField(receiver, field):
 				final prefix = phpTypeExprName(receiver);
-				if (prefix.length == 0) field else prefix + "." + field;
+				if (prefix.length == 0) phpRenderedTypeName(field); else phpRenderedTypeName(prefix + "." + field);
 			case _:
 				"Dynamic";
 		};
@@ -6910,9 +6911,9 @@ class SourceTargetCommon {
 	static function phpStdIsOfTypeTypeArg(expr:HxExpr):String {
 		return switch (expr) {
 			case EIdent(name) if (!phpLocalExists(name) && looksLikeTypePathRoot(name)):
-				quotePhpString(name);
+				quotePhpString(phpRenderedTypeName(name));
 			case EEnumValue(name):
-				quotePhpString(name);
+				quotePhpString(phpRenderedTypeName(name));
 			case EField(_, _):
 				final packageTypeRef = phpPackageQualifiedTypeReference(expr);
 				if (packageTypeRef != null) packageTypeRef; else renderExpr(Php, expr);
@@ -7354,6 +7355,10 @@ class SourceTargetCommon {
 	static var phpRenderStringExtensionMethodsByField:Null<haxe.ds.StringMap<String>> = null;
 	static var phpRenderKnownTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
 	static var phpRenderAbstractTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
+	static var phpRenderEmittedTypeNames:Null<haxe.ds.StringMap<String>> = null;
+	static var phpRenderLocalTypeNames:Null<haxe.ds.StringMap<String>> = null;
+	static var phpRenderDuplicateTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
+	static var phpRenderInterfaceTypeNames:Null<haxe.ds.StringMap<Bool>> = null;
 	static var phpRenderEnumConstructors:Null<haxe.ds.StringMap<PhpEnumCtorRef>> = null;
 	static var phpRenderAmbiguousEnumConstructors:Null<haxe.ds.StringMap<Bool>> = null;
 	static var phpRenderEnumConstructorsByEnum:Null<haxe.ds.StringMap<haxe.ds.StringMap<PhpEnumCtorRef>>> = null;
@@ -7573,6 +7578,39 @@ class SourceTargetCommon {
 		if (phpRenderKnownTypeNames == null)
 			return false;
 		return phpRenderKnownTypeNames.exists(name) || phpRenderKnownTypeNames.exists(sanitizeTypeName(name));
+	}
+
+	static function phpRenderedTypeName(typePath:String):String {
+		if (typePath == null || typePath.length == 0)
+			return "";
+		final clean = stripGenericTypeParams(removeTypeHintWhitespace(typePath));
+		if (phpRuntimeMapType(clean) || phpRuntimeListType(clean))
+			return clean;
+		final shortName = sanitizePhpTypeName(clean.indexOf(".") >= 0 ? clean.substr(clean.lastIndexOf(".") + 1) : clean);
+		if (clean.indexOf(".") < 0 && phpRenderLocalTypeNames != null && phpRenderLocalTypeNames.exists(shortName))
+			return phpRenderLocalTypeNames.get(shortName);
+		if (phpRenderEmittedTypeNames != null) {
+			final candidates = [clean, sanitizePhpTypePath(clean), shortName];
+			for (candidate in candidates)
+				if (phpRenderEmittedTypeNames.exists(candidate))
+					return phpRenderEmittedTypeNames.get(candidate);
+		}
+		return sanitizePhpTypePath(clean);
+	}
+
+	static function withPhpLocalTypeNames<T>(target:SourceNativeTarget, names:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
+		if (target != Php)
+			return f();
+		final previous = phpRenderLocalTypeNames;
+		phpRenderLocalTypeNames = names;
+		try {
+			final result = f();
+			phpRenderLocalTypeNames = previous;
+			return result;
+		} catch (e) {
+			phpRenderLocalTypeNames = previous;
+			throw e;
+		}
 	}
 
 	static function phpKnownAbstractTypeName(name:String):Bool {
@@ -13090,14 +13128,17 @@ class SourceTargetCommon {
 				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
 				if (names.exists(shortName))
 					continue;
+				final emittedName = phpEmittedTypeNameForModuleClass(moduleDecl, cls);
 				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
 				names.set(shortName, fullName);
 				if (pkg != null && pkg.length > 0 && mainName != null && mainName.length > 0 && HxClassDecl.getName(cls) != mainName)
 					names.set(pkg + "." + mainName + "." + HxClassDecl.getName(cls), fullName);
-				runtimeNames.set(shortName, shortName);
-				runtimeNames.set(fullName, shortName);
+				runtimeNames.set(shortName, emittedName);
+				runtimeNames.set(fullName, emittedName);
+				if (emittedName != shortName)
+					runtimeNames.set(emittedName, emittedName);
 				if (pkg != null && pkg.length > 0 && mainName != null && mainName.length > 0 && HxClassDecl.getName(cls) != mainName)
-					runtimeNames.set(pkg + "." + mainName + "." + HxClassDecl.getName(cls), shortName);
+					runtimeNames.set(pkg + "." + mainName + "." + HxClassDecl.getName(cls), emittedName);
 			}
 		}
 		addDecl(decl);
@@ -13165,6 +13206,118 @@ class SourceTargetCommon {
 		lines.push("  if ($logical === \"Array\") return \"Array_hx\";");
 		lines.push("  return str_replace(\".\", \"\\\\\", $logical);");
 		lines.push("}");
+	}
+
+	static function phpEmittedTypeNameForModuleClass(moduleDecl:HxModuleDecl, cls:HxClassDecl):String {
+		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
+		if (moduleDecl == null)
+			return className;
+		if (phpRenderDuplicateTypeNames == null || !phpRenderDuplicateTypeNames.exists(className))
+			return className;
+		final main = HxModuleDecl.getMainClass(moduleDecl);
+		final mainName = main == null ? "" : sanitizePhpTypeName(HxClassDecl.getName(main));
+		if (mainName.length == 0 || className == mainName)
+			return className;
+		return sanitizePhpTypeName(mainName + "_" + className);
+	}
+
+	static function phpModuleLocalTypeNameMap(moduleDecl:HxModuleDecl):haxe.ds.StringMap<String> {
+		final out = new haxe.ds.StringMap<String>();
+		if (moduleDecl == null)
+			return out;
+		for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+			final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+			out.set(shortName, phpEmittedTypeNameForModuleClass(moduleDecl, cls));
+		}
+		return out;
+	}
+
+	static function phpAddEmittedTypeNameKeys(out:haxe.ds.StringMap<String>, moduleDecl:HxModuleDecl, cls:HxClassDecl, includeShortName:Bool):Void {
+		if (out == null || moduleDecl == null || cls == null)
+			return;
+		final rawName = HxClassDecl.getName(cls);
+		final shortName = sanitizePhpTypeName(rawName);
+		final emittedName = phpEmittedTypeNameForModuleClass(moduleDecl, cls);
+		final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+		final main = HxModuleDecl.getMainClass(moduleDecl);
+		final mainName = main == null ? "" : HxClassDecl.getName(main);
+		final fullName = pkg == null || pkg.length == 0 ? rawName : pkg + "." + rawName;
+		final keys = [rawName, shortName, fullName, sanitizePhpTypePath(fullName), emittedName];
+		if (pkg != null && pkg.length > 0 && mainName != null && mainName.length > 0 && rawName != mainName)
+			keys.push(pkg + "." + mainName + "." + rawName);
+		for (key in keys) {
+			final clean = StringTools.trim(key);
+			if (clean.length == 0)
+				continue;
+			if ((clean == rawName || clean == shortName) && !includeShortName)
+				continue;
+			out.set(clean, emittedName);
+		}
+	}
+
+	static function phpProgramShortTypeNameCounts(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<Int> {
+		final counts = new haxe.ds.StringMap<Int>();
+		final seen = new haxe.ds.StringMap<Bool>();
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			if (moduleDecl == null)
+				return;
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			final main = HxModuleDecl.getMainClass(moduleDecl);
+			final mainName = main == null ? "" : HxClassDecl.getName(main);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				final key = (pkg == null ? "" : pkg) + ":" + mainName + ":" + shortName;
+				if (seen.exists(key))
+					continue;
+				seen.set(key, true);
+				counts.set(shortName, counts.exists(shortName) ? counts.get(shortName) + 1 : 1);
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return counts;
+	}
+
+	static function phpProgramEmittedTypeNameMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<String> {
+		final out = new haxe.ds.StringMap<String>();
+		final counts = phpProgramShortTypeNameCounts(program, decl);
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			if (moduleDecl == null)
+				return;
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				phpAddEmittedTypeNameKeys(out, moduleDecl, cls, counts.exists(shortName) && counts.get(shortName) == 1);
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return out;
+	}
+
+	static function phpProgramDuplicateTypeNameMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<Bool> {
+		final out = new haxe.ds.StringMap<Bool>();
+		final counts = phpProgramShortTypeNameCounts(program, decl);
+		for (name in counts.keys())
+			if (counts.get(name) > 1)
+				out.set(name, true);
+		return out;
+	}
+
+	static function phpProgramInterfaceTypeNameMap(program:GenIrProgram, decl:HxModuleDecl):haxe.ds.StringMap<Bool> {
+		final out = new haxe.ds.StringMap<Bool>();
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			if (moduleDecl == null)
+				return;
+			for (cls in HxModuleDecl.getClasses(moduleDecl))
+				if (HxClassDecl.getIsInterface(cls))
+					out.set(phpEmittedTypeNameForModuleClass(moduleDecl, cls), true);
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return out;
 	}
 
 	/**
@@ -15088,7 +15241,7 @@ class SourceTargetCommon {
 	static function renderPhpSupportClasses(program:GenIrProgram, decl:HxModuleDecl, mainClassName:String):Array<String> {
 		final out = new Array<String>();
 		final seen = new Map<String, Bool>();
-		final pending = new Array<HxClassDecl>();
+		final pending = new Array<{moduleDecl:HxModuleDecl, cls:HxClassDecl}>();
 		final importedSupportTypeNames = phpProgramImportedSupportTypeNameMap(program, decl);
 		var sawStdDateTools = false;
 		var mainFilePath = "";
@@ -15103,31 +15256,32 @@ class SourceTargetCommon {
 			}
 		}
 		final classesByName:Map<String, HxClassDecl> = [];
-		final moduleByClassName:Map<String, HxModuleDecl> = [];
 		final scanClasses = new Array<HxClassDecl>();
 		final scanClassNames = new Map<String, Bool>();
-		function trackScanClass(cls:HxClassDecl):Void {
-			final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
+		function trackScanClass(moduleDecl:HxModuleDecl, cls:HxClassDecl):Void {
+			final className = phpEmittedTypeNameForModuleClass(moduleDecl, cls);
 			if (scanClassNames.exists(className))
 				return;
 			scanClassNames.set(className, true);
 			scanClasses.push(cls);
 		}
-		function queueClass(cls:HxClassDecl):Void {
-			trackScanClass(cls);
-			final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
+		function queueClass(moduleDecl:HxModuleDecl, cls:HxClassDecl):Void {
+			trackScanClass(moduleDecl, cls);
+			final className = phpEmittedTypeNameForModuleClass(moduleDecl, cls);
 			classesByName.set(className, cls);
+			final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+			if (!classesByName.exists(shortName))
+				classesByName.set(shortName, cls);
 			if (isCompileTimeOnlySupportClass(cls))
 				return;
 			if ((className == mainClassName && !phpMainClassNeedsRuntimeSupport(cls)) || seen.exists(className))
 				return;
 			seen.set(className, true);
-			pending.push(cls);
+			pending.push({moduleDecl: moduleDecl, cls: cls});
 		}
 		function appendDeclClasses(moduleDecl:HxModuleDecl, filePath:String):Void {
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
-				moduleByClassName.set(sanitizePhpTypeName(HxClassDecl.getName(cls)), moduleDecl);
-				trackScanClass(cls);
+				trackScanClass(moduleDecl, cls);
 			}
 			final modulePackage = phpSupportPackage(moduleDecl, filePath);
 			if (isStdSourceFile(filePath)) {
@@ -15135,7 +15289,7 @@ class SourceTargetCommon {
 					if (sanitizePhpTypeName(HxClassDecl.getName(cls)) == "DateTools")
 						sawStdDateTools = true;
 					if (phpShouldEmitStdSupportClass(cls, moduleDecl, filePath))
-						queueClass(cls);
+						queueClass(moduleDecl, cls);
 				}
 				return;
 			}
@@ -15144,26 +15298,25 @@ class SourceTargetCommon {
 				final emitImportedModuleEnums = phpModuleHasImportedSupportClass(moduleDecl, importedSupportTypeNames);
 				for (cls in HxModuleDecl.getClasses(moduleDecl))
 					if (emitImportedModuleEnums && phpShouldEmitImportedSupportClass(cls))
-						queueClass(cls);
+						queueClass(moduleDecl, cls);
 				return;
 			}
 			for (cls in HxModuleDecl.getClasses(moduleDecl))
-				queueClass(cls);
+				queueClass(moduleDecl, cls);
 		}
 		appendDeclClasses(decl, mainFilePath);
 		for (typed in program.getTypedModules())
 			appendDeclClasses(typed.getParsed().getDecl(), typed.getParsed().getFilePath());
 		final pendingNames = new Map<String, Bool>();
-		for (cls in pending)
-			pendingNames.set(sanitizePhpTypeName(HxClassDecl.getName(cls)), true);
+		for (item in pending)
+			pendingNames.set(phpEmittedTypeNameForModuleClass(item.moduleDecl, item.cls), true);
 		if (sawStdDateTools && !pendingNames.exists("DateTools"))
 			appendPhpDateToolsSupport(out);
 		final postStaticInitializers = new Array<String>();
-		for (cls in pending) {
+		for (item in pending) {
 			if (out.length > 0)
 				out.push("");
-			final pendingClassName = sanitizePhpTypeName(HxClassDecl.getName(cls));
-			for (line in renderPhpHelperClass(cls, moduleByClassName.get(pendingClassName), classesByName, postStaticInitializers, scanClasses, pendingNames))
+			for (line in renderPhpHelperClass(item.cls, item.moduleDecl, classesByName, postStaticInitializers, scanClasses, pendingNames))
 				out.push(line);
 		}
 		if (postStaticInitializers.length > 0) {
@@ -16315,6 +16468,8 @@ class SourceTargetCommon {
 			return false;
 		if (emittedClassNames != null && !emittedClassNames.exists(name))
 			return false;
+		if (phpRenderInterfaceTypeNames != null)
+			return phpRenderInterfaceTypeNames.exists(name);
 		var sawInterface = false;
 		if (scanClasses == null)
 			return false;
@@ -16332,9 +16487,10 @@ class SourceTargetCommon {
 
 	static function renderPhpHelperClass(cls:HxClassDecl, moduleDecl:HxModuleDecl, classesByName:Map<String, HxClassDecl>,
 			postStaticInitializers:Array<String>, scanClasses:Array<HxClassDecl>, emittedClassNames:Map<String, Bool>):Array<String> {
-		final className = sanitizePhpTypeName(HxClassDecl.getName(cls));
+		final localTypeNames = phpModuleLocalTypeNameMap(moduleDecl);
+		final className = phpEmittedTypeNameForModuleClass(moduleDecl, cls);
 		final localEnumConstructors = phpModuleLocalEnumConstructorMap(moduleDecl);
-		final baseName = phpBaseClassName(HxClassDecl.getExtendsPath(cls));
+		final baseName = withPhpLocalTypeNames(Php, localTypeNames, function() return phpRenderedTypeName(HxClassDecl.getExtendsPath(cls)));
 		final isInterface = HxClassDecl.getIsInterface(cls);
 		if (isInterface) {
 			final canExtendBase = baseName != null
@@ -16345,7 +16501,7 @@ class SourceTargetCommon {
 		}
 		final implementsNames = new Array<String>();
 		for (path in HxClassDecl.getImplementsPaths(cls)) {
-			final name = phpBaseClassName(path);
+			final name = withPhpLocalTypeNames(Php, localTypeNames, function() return phpRenderedTypeName(path));
 			if (name != null && name.length > 0 && phpEmittedNameIsKnownInterface(name, scanClasses, emittedClassNames))
 				implementsNames.push(name);
 		}
@@ -16392,13 +16548,23 @@ class SourceTargetCommon {
 			}
 			final init = HxFieldDecl.getInit(field);
 			final hasSetterInit = HxFieldDecl.getPropertySet(field) == "set" && init != null;
-			final rhs = hasSetterInit ? defaultValue(Php) : phpStaticFieldDefault(init);
+			final rhs = hasSetterInit ? defaultValue(Php) : withPhpLocalTypeNames(Php, localTypeNames, function() return phpStaticFieldDefault(init));
 			out.push("  public static $" + fieldName + " = " + rhs + ";");
 			if (init != null && postStaticInitializers != null) {
 				if (hasSetterInit)
-					postStaticInitializers.push(className + "::set_" + fieldName + "(" + renderExpr(Php, init) + ");");
+					postStaticInitializers.push(className
+						+ "::set_"
+						+ fieldName
+						+ "("
+						+ withPhpLocalTypeNames(Php, localTypeNames, function() return renderExpr(Php, init))
+						+ ");");
 				else if (!phpExprIsConstantDefault(init))
-					postStaticInitializers.push(className + "::$" + fieldName + " = " + renderExpr(Php, init) + ";");
+					postStaticInitializers.push(className
+						+ "::$"
+						+ fieldName
+						+ " = "
+						+ withPhpLocalTypeNames(Php, localTypeNames, function() return renderExpr(Php, init))
+						+ ";");
 			}
 			memberCount += 1;
 		}
@@ -16484,10 +16650,12 @@ class SourceTargetCommon {
 								withPhpGenericConstructorSamples(Php, constructorSamples, function() {
 									withPhpThisValueSlot(Php, needsThisValueSlot, function() {
 										withPhpStringExtensionMethods(Php, className, function() {
-											withPhpLocalEnumConstructors(localEnumConstructors, function() {
-												for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
-													functionLocalTypes, HxFunctionDecl.getBodyText(fn)))
-													out.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, staticFieldNames));
+											withPhpLocalTypeNames(Php, localTypeNames, function() {
+												withPhpLocalEnumConstructors(localEnumConstructors, function() {
+													for (line in renderFunctionStmts(Php, body, "    ", className + "." + HxFunctionDecl.getName(fn),
+														functionLocalTypes, HxFunctionDecl.getBodyText(fn)))
+														out.push(phpRewriteRenderedExplicitGenericStaticCalls(line, className, staticFieldNames));
+												});
 											});
 										});
 									});
@@ -18790,6 +18958,10 @@ class SourceTargetCommon {
 		final previousPhpStringExtensionMethodsByField = phpRenderStringExtensionMethodsByField;
 		final previousPhpKnownTypeNames = phpRenderKnownTypeNames;
 		final previousPhpAbstractTypeNames = phpRenderAbstractTypeNames;
+		final previousPhpEmittedTypeNames = phpRenderEmittedTypeNames;
+		final previousPhpLocalTypeNames = phpRenderLocalTypeNames;
+		final previousPhpDuplicateTypeNames = phpRenderDuplicateTypeNames;
+		final previousPhpInterfaceTypeNames = phpRenderInterfaceTypeNames;
 		final previousPhpEnumConstructors = phpRenderEnumConstructors;
 		final previousPhpAmbiguousEnumConstructors = phpRenderAmbiguousEnumConstructors;
 		final previousPhpEnumConstructorsByEnum = phpRenderEnumConstructorsByEnum;
@@ -18816,6 +18988,10 @@ class SourceTargetCommon {
 			phpRenderStringExtensionMethodsByField = null;
 			phpRenderKnownTypeNames = phpProgramKnownTypeNameMap(program, decl);
 			phpRenderAbstractTypeNames = phpProgramAbstractTypeNameMap(program, decl);
+			phpRenderDuplicateTypeNames = phpProgramDuplicateTypeNameMap(program, decl);
+			phpRenderEmittedTypeNames = phpProgramEmittedTypeNameMap(program, decl);
+			phpRenderLocalTypeNames = phpModuleLocalTypeNameMap(decl);
+			phpRenderInterfaceTypeNames = phpProgramInterfaceTypeNameMap(program, decl);
 			phpRenderAmbiguousEnumConstructors = new haxe.ds.StringMap<Bool>();
 			phpRenderEnumConstructors = phpProgramEnumConstructorMap(program, decl);
 			phpRenderEnumConstructorsByEnum = phpProgramEnumConstructorsByEnumMap(program, decl);
@@ -21998,6 +22174,10 @@ class SourceTargetCommon {
 		phpRenderStringExtensionMethodsByField = previousPhpStringExtensionMethodsByField;
 		phpRenderKnownTypeNames = previousPhpKnownTypeNames;
 		phpRenderAbstractTypeNames = previousPhpAbstractTypeNames;
+		phpRenderEmittedTypeNames = previousPhpEmittedTypeNames;
+		phpRenderLocalTypeNames = previousPhpLocalTypeNames;
+		phpRenderDuplicateTypeNames = previousPhpDuplicateTypeNames;
+		phpRenderInterfaceTypeNames = previousPhpInterfaceTypeNames;
 		phpRenderEnumConstructors = previousPhpEnumConstructors;
 		phpRenderAmbiguousEnumConstructors = previousPhpAmbiguousEnumConstructors;
 		phpRenderEnumConstructorsByEnum = previousPhpEnumConstructorsByEnum;

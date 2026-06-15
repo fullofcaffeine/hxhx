@@ -4567,6 +4567,52 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpModuleLocalTypeCollisionProgram():GenIrProgram {
+		final supportSrc = [
+			"package unit;",
+			"class SupportOne {",
+			"  public static function touch() {",
+			"    var p = new Point(3);",
+			"    return p.label();",
+			"  }",
+			"}",
+			"private class Point {",
+			"  var value:Int;",
+			"  public function new(value:Int) { this.value = value; }",
+			"  public function label() return \"support:\" + value;",
+			"}",
+		].join("\n");
+		final interfaceSrc = [
+			"package unit;",
+			"private interface IX {}",
+			"private class Point implements IX {",
+			"  public function new() {}",
+			"  public function getX() return 7;",
+			"}",
+			"class UsesInterface {",
+			"  public static function run() {",
+			"    var p = new Point();",
+			"    Sys.println(Std.string(Std.isOfType(p, Point)));",
+			"    Sys.println(Std.string(Std.isOfType(p, IX)));",
+			"    Sys.println(p.getX());",
+			"  }",
+			"}",
+		].join("\n");
+		final mainSrc = [
+			"package unit;",
+			"class Main {",
+			"  static function main() {",
+			"    SupportOne.touch();",
+			"    UsesInterface.run();",
+			"  }",
+			"}",
+		].join("\n");
+		final support = TyperStage.typeModule(ParserStage.parse(supportSrc, "unit/SupportOne.hx"));
+		final usesInterface = TyperStage.typeModule(ParserStage.parse(interfaceSrc, "unit/UsesInterface.hx"));
+		final main = TyperStage.typeModule(ParserStage.parse(mainSrc, "unit/Main.hx"));
+		return MacroStage.expandProgram([support, usesInterface, main], []);
+	}
+
 	static function phpArrayDynamicCastProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -13271,6 +13317,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpModuleLocalTypeCollisions():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_module_local_types_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpModuleLocalTypeCollisionProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "class SupportOne_Point", "PHP private helper classes should be emitted with their owner module to avoid collisions");
+		assertContains(content, "class UsesInterface_Point implements IX",
+			"PHP private helper class/interface pairs should keep native interface checks after name mangling");
+		assertContains(content, "$p = new UsesInterface_Point();",
+			"PHP constructors should resolve module-local private helper classes from the current module");
+		assertContains(content, "__hxhx_is_of_type($p, \"IX\")", "PHP Std.isOfType should resolve module-local private interfaces from the current module");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP module-local type collision support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\ntrue\n7\n", "generated PHP module-local type collision output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpArrayDynamicCasts():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_dynamic_casts_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15778,6 +15846,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTypeCheck();
 		assertPhpTypeCheck();
 		assertPhpInterfaceCasts();
+		assertPhpModuleLocalTypeCollisions();
 		assertPhpArrayDynamicCasts();
 		assertPhpAbstractValueCasts();
 		assertPhpSyntaxIntrinsics();
