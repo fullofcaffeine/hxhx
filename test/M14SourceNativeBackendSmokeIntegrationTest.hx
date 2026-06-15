@@ -3653,6 +3653,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpModuleLocalDuplicateEnumConstructorProgram():GenIrProgram {
+		final mainSrc = [
+			"package unit;",
+			"class TestGADT {",
+			"  static function main() {",
+			"    var e = EConst(3);",
+			"    Sys.println(Std.string(e));",
+			"  }",
+			"}",
+			"enum Expr {",
+			"  EConst(i:Int);",
+			"}",
+		].join("\n");
+		final parsedMain = ParserStage.parse(mainSrc, "unit/TestGADT.hx");
+		final baseDecl = parsedMain.getDecl();
+		final main = HxModuleDecl.getMainClass(baseDecl);
+		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperEnums(mainSrc, HxClassDecl.getName(main)));
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
+		final typedMain = TyperStage.typeModule(new ParsedModule(mainSrc, enriched, "unit/TestGADT.hx"));
+		final otherSrc = ["package other;", "class Expr {", "  public function new() {}", "}",].join("\n");
+		final typedOther = TyperStage.typeModule(ParserStage.parse(otherSrc, "other/Expr.hx"));
+		return MacroStage.expandProgram([typedOther, typedMain], []);
+	}
+
 	static function phpStdEnumAbstractSupportProgram():GenIrProgram {
 		final mainSrc = [
 			"import haxe.display.KeywordKind;",
@@ -10393,6 +10418,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				+ run.stdout);
 		}
 		deleteRecursive(tmpRoot);
+
+		final duplicateTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_module_local_duplicate_enum_" + Std.string(Date.now().getTime()));
+		deleteRecursive(duplicateTmpRoot);
+		FileSystem.createDirectory(duplicateTmpRoot);
+		backend.emit(phpModuleLocalDuplicateEnumConstructorProgram(),
+			new BackendContext(duplicateTmpRoot, null, "unit.TestGADT", true, false, new StringMap<String>()));
+		final duplicateOutputPath = Path.join([duplicateTmpRoot, "index.php"]);
+		final duplicateContent = File.getContent(duplicateOutputPath);
+		assertContains(duplicateContent, "class TestGADT_Expr", "PHP duplicate module-local enum should emit with a module-qualified name");
+		assertContains(duplicateContent, "TestGADT_Expr::EConst(3)", "PHP local enum constructor calls should use the emitted module-qualified enum class");
+		assertNotContains(duplicateContent, "$e = Expr::EConst(3);", "PHP local enum constructor calls should not use the ambiguous bare enum name");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [duplicateOutputPath]);
+			assertTrue(run.code == 0, "generated PHP duplicate module-local enum program should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "EConst(3)\n", "generated PHP duplicate module-local enum output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(duplicateTmpRoot);
 	}
 
 	static function assertPhpStdEnumAbstractSupport():Void {

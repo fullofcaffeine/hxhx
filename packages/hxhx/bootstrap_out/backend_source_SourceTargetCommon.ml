@@ -12145,72 +12145,6 @@ let phpProgramAbstractTypeNameMap = fun program decl -> let names = Obj.magic (H
   names
 )
 
-let phpModuleLocalEnumConstructorMap = fun moduleDecl -> try let __fallback_result_5800 = let out = Obj.magic (HxMap.create_string ()) in (
-  ignore (if moduleDecl == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
-  let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic moduleDecl)) in (
-    ignore (try while !_g < HxArray.length _g1 do try ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_5788 = !_g in let __new_5789 = HxInt.add __old_5788 1 in (
-        ignore (_g := __new_5789);
-        __new_5789
-      ));
-      let enumName = (sanitizePhpTypeName (HxClassDecl.getName (Obj.magic cls) : string) : string) in (
-        ignore (if enumName == Obj.magic (HxRuntime.hx_null) || HxString.length enumName = 0 then raise (HxRuntime.Hx_continue) else ());
-        let isEnum = ref false in (
-          ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g2 < HxArray.length _g3 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-            ignore (let __old_5790 = !_g2 in let __new_5791 = HxInt.add __old_5790 1 in (
-              ignore (_g2 := __new_5791);
-              __new_5791
-            ));
-            if HxString.equals (HxFieldDecl.getName (Obj.magic field)) "__hx_is_enum" then ignore (let __assign_5792 = true in (
-              isEnum := __assign_5792;
-              __assign_5792
-            )) else ()
-          )) done);
-          ignore (if not (!isEnum) then raise (HxRuntime.Hx_continue) else ());
-          ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in try while !_g2 < HxArray.length _g3 do try ignore (let field = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-            ignore (let __old_5793 = !_g2 in let __new_5794 = HxInt.add __old_5793 1 in (
-              ignore (_g2 := __new_5794);
-              __new_5794
-            ));
-            let name = (HxFieldDecl.getName (Obj.magic field) : string) in (
-              ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) || StringTools.startsWith (name : string) ("__hx_" : string) then raise (HxRuntime.Hx_continue) else ());
-              HxMap.set_string out (sanitizeTypeName (name : string)) (let __anon_5795 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_5795 "enumName" (Obj.repr enumName));
-                ignore (HxAnon.set __anon_5795 "ctorName" (Obj.repr (sanitizeTypeName (name : string))));
-                ignore (HxAnon.set __anon_5795 "hasArgs" (HxRuntime.box_bool false));
-                __anon_5795
-              ))
-            )
-          )) with
-            | HxRuntime.Hx_continue -> () done with
-            | HxRuntime.Hx_break -> ());
-          let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in try while !_g2 < HxArray.length _g3 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-            ignore (let __old_5796 = !_g2 in let __new_5797 = HxInt.add __old_5796 1 in (
-              ignore (_g2 := __new_5797);
-              __new_5797
-            ));
-            let name = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
-              ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || HxString.equals name "new" || StringTools.startsWith (name : string) ("__hx_" : string) then raise (HxRuntime.Hx_continue) else ());
-              HxMap.set_string out (sanitizeTypeName (name : string)) (let __anon_5798 = HxAnon.create () in (
-                ignore (HxAnon.set __anon_5798 "enumName" (Obj.repr enumName));
-                ignore (HxAnon.set __anon_5798 "ctorName" (Obj.repr (sanitizeTypeName (name : string))));
-                ignore (HxAnon.set __anon_5798 "hasArgs" (HxRuntime.box_bool true));
-                __anon_5798
-              ))
-            )
-          )) with
-            | HxRuntime.Hx_continue -> () done with
-            | HxRuntime.Hx_break -> ()
-        )
-      )
-    )) with
-      | HxRuntime.Hx_continue -> () done with
-      | HxRuntime.Hx_break -> ());
-    out
-  )
-) in Obj.magic __fallback_result_5800 with
-  | HxRuntime.Hx_return __ret_5799 -> Obj.obj __ret_5799
-
 let phpProgramEnumConstructorsByEnumMap = fun program decl -> let out = Obj.magic (HxMap.create_string ()) in let addRef = fun ref -> ignore ((
   ignore (if not (HxMap.exists_string out (Obj.obj (HxAnon.get ref "enumName"))) then ignore (HxMap.set_string out (Obj.obj (HxAnon.get ref "enumName")) (HxMap.create_string ())) else ());
   HxMap.set_string (HxMap.get_string out (Obj.obj (HxAnon.get ref "enumName"))) (Obj.obj (HxAnon.get ref "ctorName")) ref
@@ -23734,6 +23668,72 @@ let phpProgramInterfaceTypeNameMap = fun program decl -> let out = Obj.magic (Hx
   out
 )
 
+let phpModuleLocalEnumConstructorMap = fun moduleDecl -> try let __fallback_result_5800 = let out = Obj.magic (HxMap.create_string ()) in (
+  ignore (if moduleDecl == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
+  let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic moduleDecl)) in (
+    ignore (try while !_g < HxArray.length _g1 do try ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+      ignore (let __old_5788 = !_g in let __new_5789 = HxInt.add __old_5788 1 in (
+        ignore (_g := __new_5789);
+        __new_5789
+      ));
+      let enumName = (phpEmittedTypeNameForModuleClass (Obj.magic moduleDecl) (Obj.magic cls) : string) in (
+        ignore (if enumName == Obj.magic (HxRuntime.hx_null) || HxString.length enumName = 0 then raise (HxRuntime.Hx_continue) else ());
+        let isEnum = ref false in (
+          ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g2 < HxArray.length _g3 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
+            ignore (let __old_5790 = !_g2 in let __new_5791 = HxInt.add __old_5790 1 in (
+              ignore (_g2 := __new_5791);
+              __new_5791
+            ));
+            if HxString.equals (HxFieldDecl.getName (Obj.magic field)) "__hx_is_enum" then ignore (let __assign_5792 = true in (
+              isEnum := __assign_5792;
+              __assign_5792
+            )) else ()
+          )) done);
+          ignore (if not (!isEnum) then raise (HxRuntime.Hx_continue) else ());
+          ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in try while !_g2 < HxArray.length _g3 do try ignore (let field = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
+            ignore (let __old_5793 = !_g2 in let __new_5794 = HxInt.add __old_5793 1 in (
+              ignore (_g2 := __new_5794);
+              __new_5794
+            ));
+            let name = (HxFieldDecl.getName (Obj.magic field) : string) in (
+              ignore (if not (HxFieldDecl.getIsStatic (Obj.magic field)) || StringTools.startsWith (name : string) ("__hx_" : string) then raise (HxRuntime.Hx_continue) else ());
+              HxMap.set_string out (sanitizeTypeName (name : string)) (let __anon_5795 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_5795 "enumName" (Obj.repr enumName));
+                ignore (HxAnon.set __anon_5795 "ctorName" (Obj.repr (sanitizeTypeName (name : string))));
+                ignore (HxAnon.set __anon_5795 "hasArgs" (HxRuntime.box_bool false));
+                __anon_5795
+              ))
+            )
+          )) with
+            | HxRuntime.Hx_continue -> () done with
+            | HxRuntime.Hx_break -> ());
+          let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in try while !_g2 < HxArray.length _g3 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
+            ignore (let __old_5796 = !_g2 in let __new_5797 = HxInt.add __old_5796 1 in (
+              ignore (_g2 := __new_5797);
+              __new_5797
+            ));
+            let name = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
+              ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || HxString.equals name "new" || StringTools.startsWith (name : string) ("__hx_" : string) then raise (HxRuntime.Hx_continue) else ());
+              HxMap.set_string out (sanitizeTypeName (name : string)) (let __anon_5798 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_5798 "enumName" (Obj.repr enumName));
+                ignore (HxAnon.set __anon_5798 "ctorName" (Obj.repr (sanitizeTypeName (name : string))));
+                ignore (HxAnon.set __anon_5798 "hasArgs" (HxRuntime.box_bool true));
+                __anon_5798
+              ))
+            )
+          )) with
+            | HxRuntime.Hx_continue -> () done with
+            | HxRuntime.Hx_break -> ()
+        )
+      )
+    )) with
+      | HxRuntime.Hx_continue -> () done with
+      | HxRuntime.Hx_break -> ());
+    out
+  )
+) in Obj.magic __fallback_result_5800 with
+  | HxRuntime.Hx_return __ret_5799 -> Obj.obj __ret_5799
+
 let phpRenderInterfaceTypeNames = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : bool HxMap.string_map)
 
 let phpEmittedNameIsKnownInterface = fun name scanClasses emittedClassNames -> try let __fallback_result_6496 = (
@@ -23787,7 +23787,7 @@ let phpProgramEnumConstructorMap = fun program decl -> let out = Obj.magic (HxMa
     ignore (_g := __new_5762);
     __new_5762
   ));
-  let enumName = (sanitizePhpTypeName (HxClassDecl.getName (Obj.magic cls) : string) : string) in (
+  let enumName = (phpEmittedTypeNameForModuleClass (Obj.magic moduleDecl) (Obj.magic cls) : string) in (
     ignore (if enumName == Obj.magic (HxRuntime.hx_null) || HxString.length enumName = 0 || HxMap.exists_string seen enumName then raise (HxRuntime.Hx_continue) else ());
     let isEnum = ref false in (
       ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g2 < HxArray.length _g3 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (

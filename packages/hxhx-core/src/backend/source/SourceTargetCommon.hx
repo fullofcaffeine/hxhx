@@ -14023,7 +14023,7 @@ class SourceTargetCommon {
 		}
 		function addDecl(moduleDecl:HxModuleDecl, preferLocal:Bool):Void {
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
-				final enumName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				final enumName = phpEmittedTypeNameForModuleClass(moduleDecl, cls);
 				if (enumName == null || enumName.length == 0 || seen.exists(enumName))
 					continue;
 				var isEnum = false;
@@ -14112,7 +14112,7 @@ class SourceTargetCommon {
 		if (moduleDecl == null)
 			return out;
 		for (cls in HxModuleDecl.getClasses(moduleDecl)) {
-			final enumName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+			final enumName = phpEmittedTypeNameForModuleClass(moduleDecl, cls);
 			if (enumName == null || enumName.length == 0)
 				continue;
 			var isEnum = false;
