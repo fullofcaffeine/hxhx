@@ -11987,6 +11987,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(bytesContent, "class Bytes {", "PHP runtime should expose haxe.io.Bytes");
 		assertContains(bytesContent, "class BytesInput {", "PHP runtime should expose haxe.io.BytesInput");
 		assertContains(bytesContent, "class BytesOutput {", "PHP runtime should expose haxe.io.BytesOutput");
+		assertContains(bytesContent, "new haxe\\io\\BytesInput($text)", "PHP haxe.io.BytesInput constructors should use the namespaced runtime shim");
+		assertContains(bytesContent, "new haxe\\io\\BytesOutput()", "PHP haxe.io.BytesOutput constructors should use the namespaced runtime shim");
 		assertContains(bytesContent, "public function get_position()", "PHP BytesInput should expose typed position getters");
 		assertContains(bytesContent, "public function set_position($value)", "PHP BytesInput should expose typed position setters");
 		assertContains(bytesContent, "use ($b)", "PHP lambdas should value-capture outer object locals that are not reassigned later");

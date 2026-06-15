@@ -7587,12 +7587,9 @@ class SourceTargetCommon {
 		if (phpRuntimeMapType(clean) || phpRuntimeListType(clean))
 			return clean;
 		final shortName = sanitizePhpTypeName(clean.indexOf(".") >= 0 ? clean.substr(clean.lastIndexOf(".") + 1) : clean);
-		if (clean == "haxe.Template")
-			return "haxe\\Template";
-		if (clean.indexOf(".") < 0
-			&& shortName == "Template"
-			&& (phpRenderLocalTypeNames == null || !phpRenderLocalTypeNames.exists(shortName)))
-			return "haxe\\Template";
+		final runtimeType = phpRuntimeSupportRenderedTypeName(clean, shortName);
+		if (runtimeType != null)
+			return runtimeType;
 		if (clean.indexOf(".") < 0 && phpRenderLocalTypeNames != null && phpRenderLocalTypeNames.exists(shortName))
 			return phpRenderLocalTypeNames.get(shortName);
 		final alias = phpImportedTypeAlias(shortName);
@@ -7605,6 +7602,29 @@ class SourceTargetCommon {
 					return phpRenderEmittedTypeNames.get(candidate);
 		}
 		return sanitizePhpTypePath(clean);
+	}
+
+	static function phpRuntimeSupportRenderedTypeName(clean:String, shortName:String):Null<String> {
+		switch (clean) {
+			case "haxe.Template":
+				return "haxe\\Template";
+			case "haxe.io.Bytes":
+				return "haxe\\io\\Bytes";
+			case "haxe.io.BytesInput":
+				return "haxe\\io\\BytesInput";
+			case "haxe.io.BytesOutput":
+				return "haxe\\io\\BytesOutput";
+			case _:
+		}
+		if (clean.indexOf(".") >= 0 || (phpRenderLocalTypeNames != null && phpRenderLocalTypeNames.exists(shortName)))
+			return null;
+		return switch (shortName) {
+			case "Template": "haxe\\Template";
+			case "Bytes": "haxe\\io\\Bytes";
+			case "BytesInput": "haxe\\io\\BytesInput";
+			case "BytesOutput": "haxe\\io\\BytesOutput";
+			case _: null;
+		}
 	}
 
 	static function withPhpLocalTypeNames<T>(target:SourceNativeTarget, names:Null<haxe.ds.StringMap<String>>, f:() -> T):T {
@@ -13154,6 +13174,9 @@ class SourceTargetCommon {
 		for (typed in program.getTypedModules())
 			addDecl(typed.getParsed().getDecl());
 		final stdAliases = [
+			"Bytes" => "haxe.io.Bytes",
+			"BytesInput" => "haxe.io.BytesInput",
+			"BytesOutput" => "haxe.io.BytesOutput",
 			"StringMap" => "haxe.ds.StringMap",
 			"GenericStack" => "haxe.ds.GenericStack",
 			"List" => "haxe.ds.List",
@@ -13167,10 +13190,14 @@ class SourceTargetCommon {
 			runtimeNames.set("GenericStack", "haxe\\ds\\GenericStack");
 		if (!runtimeNames.exists("haxe.ds.GenericStack"))
 			runtimeNames.set("haxe.ds.GenericStack", "haxe\\ds\\GenericStack");
-		if (!runtimeNames.exists("Template"))
-			runtimeNames.set("Template", "haxe\\Template");
-		if (!runtimeNames.exists("haxe.Template"))
-			runtimeNames.set("haxe.Template", "haxe\\Template");
+		runtimeNames.set("Template", "haxe\\Template");
+		runtimeNames.set("haxe.Template", "haxe\\Template");
+		runtimeNames.set("Bytes", "haxe\\io\\Bytes");
+		runtimeNames.set("haxe.io.Bytes", "haxe\\io\\Bytes");
+		runtimeNames.set("BytesInput", "haxe\\io\\BytesInput");
+		runtimeNames.set("haxe.io.BytesInput", "haxe\\io\\BytesInput");
+		runtimeNames.set("BytesOutput", "haxe\\io\\BytesOutput");
+		runtimeNames.set("haxe.io.BytesOutput", "haxe\\io\\BytesOutput");
 		final entries = new Array<String>();
 		for (shortName in names.keys())
 			entries.push(quotePhpString(shortName) + " => " + quotePhpString(names.get(shortName)));
@@ -14178,7 +14205,8 @@ class SourceTargetCommon {
 			if (rawImport == null || rawImport.length == 0 || rawImport.indexOf("*") >= 0)
 				return;
 			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Template"
-				&& rawImport != "haxe.Unserializer" && rawImport != "haxe.rtti.Meta" && rawImport != "php.Syntax")
+				&& rawImport != "haxe.Unserializer" && rawImport != "haxe.rtti.Meta" && rawImport != "haxe.io.Bytes" && rawImport != "haxe.io.BytesInput"
+				&& rawImport != "haxe.io.BytesOutput" && rawImport != "php.Syntax")
 				return;
 			final parts = rawImport.split(".");
 			if (parts.length < 2)
