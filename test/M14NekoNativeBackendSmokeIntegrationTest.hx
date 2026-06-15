@@ -130,6 +130,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var label = switch "Linux" { case "Linux" | "Windows": "desktop"; default: "other"; }; Sys.println(label); } }'),
+			context);
+		final orSwitchExprSource = File.getContent(sourcePath);
+		assertContains(orSwitchExprSource, "var __hxhx_switch = \"Linux\";", "expected OR switch expression temp");
+		assertContains(orSwitchExprSource, '((__hxhx_switch == "Linux")) || ((__hxhx_switch == "Windows"))', "expected OR switch condition");
+		assertContains(orSwitchExprSource, 'return "desktop";', "expected OR switch expression branch return");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { switch (1) { case 1: Sys.println("one"); default: Sys.println("other"); } } }'), context);
 		final switchStmtSource = File.getContent(sourcePath);
 		assertContains(switchStmtSource, "switch 1 {", "expected Neko switch statement");
@@ -160,6 +170,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(arraySwitchStmtSource, "if (__hxhx_switch != null) && ($asize(__hxhx_switch) == 2)", "expected array switch statement if lowering");
 		assertContains(arraySwitchStmtSource, "$print(\"mismatch\", \"\\n\")", "expected array switch statement branch body");
 		assertContains(arraySwitchStmtSource, "else if true", "expected array switch statement default branch");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { switch "Linux" { case "Linux" | "Windows": Sys.println("desktop"); default: Sys.println("other"); } } }'),
+			context);
+		final orSwitchStmtSource = File.getContent(sourcePath);
+		assertContains(orSwitchStmtSource, '((__hxhx_switch == "Linux")) || ((__hxhx_switch == "Windows"))', "expected OR switch statement condition");
+		assertContains(orSwitchStmtSource, "$print(\"desktop\", \"\\n\")", "expected OR switch statement branch body");
 
 		deleteRecursive(outDir);
 

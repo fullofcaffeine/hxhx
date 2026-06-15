@@ -1087,16 +1087,8 @@ class NekoTargetCore {
 				true;
 			case PCapture(_, inner) | PUnsupportedGuard(inner):
 				patternNeedsNekoIfLowering(inner);
-			case POr(patterns):
-				if (patterns == null) {
-					false;
-				} else {
-					var needs = false;
-					for (p in patterns)
-						if (patternNeedsNekoIfLowering(p))
-							needs = true;
-					needs;
-				}
+			case POr(_):
+				true;
 			case _:
 				false;
 		}
@@ -1158,7 +1150,7 @@ class NekoTargetCore {
 			for (pattern in patterns)
 				conds.push("(" + lowerNekoSwitchPattern(pattern, scrutinee).cond + ")");
 		}
-		return {cond: conds.length == 0 ? "false" : conds.join(" || "), bindings: []};
+		return {cond: conds.length == 0 ? "false" : "(" + conds.join(" || ") + ")", bindings: []};
 	}
 
 	static function unsupportedSwitchPatternLowering(pattern:HxSwitchPattern):NekoSwitchPatternLowered {
