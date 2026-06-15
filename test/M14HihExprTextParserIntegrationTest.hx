@@ -59,6 +59,16 @@ class M14HihExprTextParserIntegrationTest {
 			}
 		}
 
+		final recoveredStrayBrace = HxParser.parseFunctionBodyText('}\nafter();');
+		assertTrue(recoveredStrayBrace.length >= 1, "expected stray brace recovery to keep a neutral marker");
+		switch (recoveredStrayBrace[0]) {
+			case SExpr(ENull, _):
+			case SExpr(EUnsupported(raw), _):
+				fail("stray recovered brace should not stay unsupported: " + raw);
+			case _:
+				fail("stray recovered brace should decode as neutral expression statement");
+		}
+
 		final anonymousFunctionStmt = HxParser.parseFunctionBodyText("function() { return 1; }; after();");
 		assertTrue(anonymousFunctionStmt.length == 2, "expected anonymous function statement plus following statement");
 		switch (anonymousFunctionStmt[0]) {

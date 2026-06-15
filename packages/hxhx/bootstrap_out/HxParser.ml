@@ -30809,7 +30809,7 @@ and parseFunctionBodyStatementsBestEffort = fun self (wrapperCloseOnly : bool) -
         (Obj.magic self : t).cur <- __assign_4470;
         __assign_4470
       )));
-      HxArray.push out (HxStmt.SExpr (Obj.magic (HxExpr.EUnsupported ("stray_rbrace" : string)), Obj.magic (HxPos.unknown ())))
+      HxArray.push out (HxStmt.SExpr (Obj.magic (HxExpr.ENull), Obj.magic (HxPos.unknown ())))
     )
   ))
   | _ -> ignore (try (

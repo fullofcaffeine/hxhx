@@ -4164,7 +4164,7 @@ class HxParser {
 					}
 					// Stray brace: consume it and continue so we don't silently truncate the body.
 					bump();
-					out.push(SExpr(EUnsupported("stray_rbrace"), HxPos.unknown()));
+					out.push(SExpr(ENull, HxPos.unknown()));
 				case _:
 					try {
 						parseStmtInto(out, () -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
