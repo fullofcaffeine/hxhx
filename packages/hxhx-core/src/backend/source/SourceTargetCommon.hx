@@ -13175,12 +13175,16 @@ class SourceTargetCommon {
 				final emittedName = phpEmittedTypeNameForModuleClass(moduleDecl, cls);
 				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
 				names.set(shortName, fullName);
+				if (mainName != null && mainName.length > 0 && HxClassDecl.getName(cls) != mainName)
+					names.set(mainName + "." + HxClassDecl.getName(cls), fullName);
 				if (pkg != null && pkg.length > 0 && mainName != null && mainName.length > 0 && HxClassDecl.getName(cls) != mainName)
 					names.set(pkg + "." + mainName + "." + HxClassDecl.getName(cls), fullName);
 				runtimeNames.set(shortName, emittedName);
 				runtimeNames.set(fullName, emittedName);
 				if (emittedName != shortName)
 					runtimeNames.set(emittedName, emittedName);
+				if (mainName != null && mainName.length > 0 && HxClassDecl.getName(cls) != mainName)
+					runtimeNames.set(mainName + "." + HxClassDecl.getName(cls), emittedName);
 				if (pkg != null && pkg.length > 0 && mainName != null && mainName.length > 0 && HxClassDecl.getName(cls) != mainName)
 					runtimeNames.set(pkg + "." + mainName + "." + HxClassDecl.getName(cls), emittedName);
 			}
@@ -13307,6 +13311,8 @@ class SourceTargetCommon {
 		final mainName = main == null ? "" : HxClassDecl.getName(main);
 		final fullName = pkg == null || pkg.length == 0 ? rawName : pkg + "." + rawName;
 		final keys = [rawName, shortName, fullName, sanitizePhpTypePath(fullName), emittedName];
+		if (mainName != null && mainName.length > 0 && rawName != mainName)
+			keys.push(mainName + "." + rawName);
 		if (pkg != null && pkg.length > 0 && mainName != null && mainName.length > 0 && rawName != mainName)
 			keys.push(pkg + "." + mainName + "." + rawName);
 		for (key in keys) {
@@ -21627,8 +21633,9 @@ class SourceTargetCommon {
 				lines.push("  if ($type === null) return false;");
 				lines.push("  if (!is_object($value)) return false;");
 				lines.push("  $resolved = __hxhx_class_name($type);");
+				lines.push("  $runtime = __hxhx_runtime_class_name($type);");
 				lines.push("  $short = substr($resolved, strrpos($resolved, \".\") === false ? 0 : strrpos($resolved, \".\") + 1);");
-				lines.push("  $candidates = [$type, str_replace(\".\", \"\\\\\", $type), $resolved, str_replace(\".\", \"\\\\\", $resolved), $short, $short . \"_\"];");
+				lines.push("  $candidates = [$type, $runtime, str_replace(\".\", \"\\\\\", $type), $resolved, str_replace(\".\", \"\\\\\", $resolved), $short, $short . \"_\"];");
 				lines.push("  if ($value instanceof __HxAnon && property_exists($value, \"__hx_ctor\") && property_exists($value, \"__hx_params\")) {");
 				lines.push("    if (property_exists($value, \"__hx_enum\")) {");
 				lines.push("      $enumName = __hxhx_class_name($value->__hx_enum);");

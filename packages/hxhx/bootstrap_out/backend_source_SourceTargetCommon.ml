@@ -23421,10 +23421,12 @@ let appendPhpClassNameMap = fun lines program decl -> ignore (let names = HxMap.
         ));
         let fullName = (!tempString1 : string) in (
           ignore (HxMap.set_string names shortName fullName);
+          ignore (if mainName != Obj.magic (HxRuntime.hx_null) && HxString.length mainName > 0 && not (HxString.equals (HxClassDecl.getName (Obj.magic cls)) mainName) then ignore (let key = ((HxString.toStdString mainName ^ ".") ^ HxString.toStdString (HxClassDecl.getName (Obj.magic cls)) : string) in HxMap.set_string names key fullName) else ());
           ignore (if pkg != Obj.magic (HxRuntime.hx_null) && HxString.length pkg > 0 && mainName != Obj.magic (HxRuntime.hx_null) && HxString.length mainName > 0 && not (HxString.equals (HxClassDecl.getName (Obj.magic cls)) mainName) then ignore (let key = ((((HxString.toStdString pkg ^ ".") ^ HxString.toStdString mainName) ^ ".") ^ HxString.toStdString (HxClassDecl.getName (Obj.magic cls)) : string) in HxMap.set_string names key fullName) else ());
           ignore (HxMap.set_string runtimeNames shortName emittedName);
           ignore (HxMap.set_string runtimeNames fullName emittedName);
           ignore (if not (HxString.equals emittedName shortName) then ignore (HxMap.set_string runtimeNames emittedName emittedName) else ());
+          ignore (if mainName != Obj.magic (HxRuntime.hx_null) && HxString.length mainName > 0 && not (HxString.equals (HxClassDecl.getName (Obj.magic cls)) mainName) then ignore (let key = ((HxString.toStdString mainName ^ ".") ^ HxString.toStdString (HxClassDecl.getName (Obj.magic cls)) : string) in HxMap.set_string runtimeNames key emittedName) else ());
           if pkg != Obj.magic (HxRuntime.hx_null) && HxString.length pkg > 0 && mainName != Obj.magic (HxRuntime.hx_null) && HxString.length mainName > 0 && not (HxString.equals (HxClassDecl.getName (Obj.magic cls)) mainName) then ignore (let key = ((((HxString.toStdString pkg ^ ".") ^ HxString.toStdString mainName) ^ ".") ^ HxString.toStdString (HxClassDecl.getName (Obj.magic cls)) : string) in HxMap.set_string runtimeNames key emittedName) else ()
         )
       )
@@ -23604,6 +23606,7 @@ let phpAddEmittedTypeNameKeys = fun out moduleDecl cls includeShortName -> ignor
         ignore (HxArray.push __arr_5529 emittedName);
         __arr_5529
       )) in (
+        ignore (if !tempString != Obj.magic (HxRuntime.hx_null) && HxString.length (!tempString) > 0 && not (HxString.equals rawName (!tempString)) then ignore (HxArray.push keys ((HxString.toStdString (!tempString) ^ ".") ^ HxString.toStdString rawName)) else ());
         ignore (if pkg != Obj.magic (HxRuntime.hx_null) && HxString.length pkg > 0 && !tempString != Obj.magic (HxRuntime.hx_null) && HxString.length (!tempString) > 0 && not (HxString.equals rawName (!tempString)) then ignore (HxArray.push keys ((((HxString.toStdString pkg ^ ".") ^ HxString.toStdString (!tempString)) ^ ".") ^ HxString.toStdString rawName)) else ());
         let _g = ref 0 in try while !_g < HxArray.length keys do try ignore (let key = (HxArray.get (Obj.magic keys) (!_g) : string) in (
           ignore (let __old_5530 = !_g in let __new_5531 = HxInt.add __old_5530 1 in (
@@ -43388,8 +43391,9 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  if ($type === null) return false;");
       ignore (HxArray.push lines "  if (!is_object($value)) return false;");
       ignore (HxArray.push lines "  $resolved = __hxhx_class_name($type);");
+      ignore (HxArray.push lines "  $runtime = __hxhx_runtime_class_name($type);");
       ignore (HxArray.push lines "  $short = substr($resolved, strrpos($resolved, \".\") === false ? 0 : strrpos($resolved, \".\") + 1);");
-      ignore (HxArray.push lines "  $candidates = [$type, str_replace(\".\", \"\\\\\", $type), $resolved, str_replace(\".\", \"\\\\\", $resolved), $short, $short . \"_\"];");
+      ignore (HxArray.push lines "  $candidates = [$type, $runtime, str_replace(\".\", \"\\\\\", $type), $resolved, str_replace(\".\", \"\\\\\", $resolved), $short, $short . \"_\"];");
       ignore (HxArray.push lines "  if ($value instanceof __HxAnon && property_exists($value, \"__hx_ctor\") && property_exists($value, \"__hx_params\")) {");
       ignore (HxArray.push lines "    if (property_exists($value, \"__hx_enum\")) {");
       ignore (HxArray.push lines "      $enumName = __hxhx_class_name($value->__hx_enum);");

@@ -4618,6 +4618,47 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function phpModuleLocalQualifiedInterfaceCastProgram():GenIrProgram {
+		final mainSrc = [
+			"package unit;",
+			"class MyClass {",
+			"  static function main() {",
+			"    var v = new CI1();",
+			"    Sys.println(Std.string(cast(v, MyClass.I1) == v));",
+			"  }",
+			"}",
+			"interface I1 {}",
+			"class Base {",
+			"  public function new() {}",
+			"}",
+			"class CI1 extends Base implements I1 {",
+			"  public function new() {}",
+			"}",
+		].join("\n");
+		final parsedMain = ParserStage.parse(mainSrc, "unit/MyClass.hx");
+		final baseDecl = parsedMain.getDecl();
+		final main = HxModuleDecl.getMainClass(baseDecl);
+		final classes = [main].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(mainSrc, HxClassDecl.getName(main)));
+		final enriched = new HxModuleDecl(HxModuleDecl.getPackagePath(baseDecl), HxModuleDecl.getImports(baseDecl), main, classes,
+			HxModuleDecl.getHeaderOnly(baseDecl), HxModuleDecl.getHasToplevelMain(baseDecl));
+		final typedMain = TyperStage.typeModule(new ParsedModule(mainSrc, enriched, "unit/MyClass.hx"));
+		final otherSrc = [
+			"package other;",
+			"interface I1 {}",
+			"class Other {",
+			"  public static function touch() {}",
+			"}",
+		].join("\n");
+		final parsedOther = ParserStage.parse(otherSrc, "other/Other.hx");
+		final otherBaseDecl = parsedOther.getDecl();
+		final otherMain = HxModuleDecl.getMainClass(otherBaseDecl);
+		final otherClasses = [otherMain].concat(ParserStageScanHelpers.scanModuleLocalHelperClasses(otherSrc, HxClassDecl.getName(otherMain)));
+		final otherEnriched = new HxModuleDecl(HxModuleDecl.getPackagePath(otherBaseDecl), HxModuleDecl.getImports(otherBaseDecl), otherMain, otherClasses,
+			HxModuleDecl.getHeaderOnly(otherBaseDecl), HxModuleDecl.getHasToplevelMain(otherBaseDecl));
+		final typedOther = TyperStage.typeModule(new ParsedModule(otherSrc, otherEnriched, "other/Other.hx"));
+		return MacroStage.expandProgram([typedOther, typedMain], []);
+	}
+
 	static function phpModuleLocalTypeCollisionProgram():GenIrProgram {
 		final supportSrc = [
 			"package unit;",
@@ -13406,6 +13447,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertPhpModuleLocalQualifiedInterfaceCasts():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_module_local_interface_casts_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpModuleLocalQualifiedInterfaceCastProgram(), new BackendContext(tmpRoot, null, "unit.MyClass", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "interface MyClass_I1 {", "PHP duplicate module-local interfaces should emit with their owner module name");
+		assertContains(content, "class CI1 extends Base implements MyClass_I1 {",
+			"PHP module-local classes should implement the emitted module-local interface name");
+		assertContains(content, "__hxhx_cast($v, \"MyClass.I1\")", "PHP casts to module-qualified helper interfaces should keep the logical Haxe type path");
+		assertContains(content, "\"MyClass.I1\" => \"unit.I1\"", "PHP logical class map should resolve module-qualified helper interface paths");
+		assertContains(content, "\"MyClass.I1\" => \"MyClass_I1\"",
+			"PHP runtime class map should resolve module-qualified helper interface paths to emitted PHP names");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP module-local interface casts should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "true\n", "generated PHP module-local interface cast output mismatch, got:\n" + run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpModuleLocalTypeCollisions():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_module_local_types_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15936,6 +16000,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonTypeCheck();
 		assertPhpTypeCheck();
 		assertPhpInterfaceCasts();
+		assertPhpModuleLocalQualifiedInterfaceCasts();
 		assertPhpModuleLocalTypeCollisions();
 		assertPhpArrayDynamicCasts();
 		assertPhpAbstractValueCasts();
