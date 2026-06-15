@@ -9482,6 +9482,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpSysArgsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "Anon.php"),
+			"PHP source backend should emit anonymous-object support from the repo-owned runtime template");
 		assertContains(content, "class __HxArray", "PHP source backend should emit a minimal array helper");
 		assertContains(content, "class Map", "PHP source backend should emit a minimal Map helper");
 		assertContains(content, "public function set($key, $value)", "PHP Map helper should support set");
@@ -12198,6 +12200,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(stringToolsUrlTmpRoot);
 		backend.emit(phpStringToolsUrlProgram(), new BackendContext(stringToolsUrlTmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final stringToolsUrlContent = File.getContent(Path.join([stringToolsUrlTmpRoot, "index.php"]));
+		assertContains(stringToolsUrlContent, sourceTemplateContent("php/runtime", "StringTools.php"),
+			"PHP source backend should emit StringTools from the repo-owned runtime template");
 		assertContains(stringToolsUrlContent, "class StringTools", "PHP StringTools should be emitted");
 		assertContains(stringToolsUrlContent, "public static function urlEncode($value)", "PHP StringTools should expose urlEncode");
 		assertContains(stringToolsUrlContent, "public static function urlDecode($value)", "PHP StringTools should expose urlDecode");

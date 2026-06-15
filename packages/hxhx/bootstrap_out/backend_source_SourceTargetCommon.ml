@@ -41992,33 +41992,8 @@ let renderProgram = fun target program context decl className body -> let lines 
         ignore (HxArray.push lines "  }");
         HxArray.push lines "}"
       )) else ());
-      ignore (HxArray.push lines "class StringTools {");
-      ignore (HxArray.push lines "  public static function urlEncode($value) {");
-      ignore (HxArray.push lines "    return rawurlencode(strval($value));");
-      ignore (HxArray.push lines "  }");
-      ignore (HxArray.push lines "  public static function urlDecode($value) {");
-      ignore (HxArray.push lines "    return rawurldecode(strval($value));");
-      ignore (HxArray.push lines "  }");
-      ignore (HxArray.push lines "  public static function replace($value, $sub, $by) {");
-      ignore (HxArray.push lines "    return str_replace(strval($sub), strval($by), strval($value));");
-      ignore (HxArray.push lines "  }");
-      ignore (HxArray.push lines "  public static function hex($value, $digits = null) {");
-      ignore (HxArray.push lines "    $hex = strtoupper(dechex(intval($value) & 0xFFFFFFFF));");
-      ignore (HxArray.push lines "    if ($digits !== null) $hex = str_pad($hex, intval($digits), \"0\", STR_PAD_LEFT);");
-      ignore (HxArray.push lines "    return $hex;");
-      ignore (HxArray.push lines "  }");
-      ignore (HxArray.push lines "}");
-      ignore (HxArray.push lines "#[\\AllowDynamicProperties]");
-      ignore (HxArray.push lines "class __HxAnon {");
-      ignore (HxArray.push lines "  public function __construct($fields = []) {");
-      ignore (HxArray.push lines "    foreach ($fields as $name => $value) $this->$name = $value;");
-      ignore (HxArray.push lines "  }");
-      ignore (HxArray.push lines "  public function __call($name, $args) {");
-      ignore (HxArray.push lines "    $value = $this->$name ?? null;");
-      ignore (HxArray.push lines "    if (is_callable($value)) return $value(...$args);");
-      ignore (HxArray.push lines "    throw new \\Error(\"Call to undefined method __HxAnon::\" . $name . \"()\");");
-      ignore (HxArray.push lines "  }");
-      ignore (HxArray.push lines "}");
+      ignore (appendSourceNativeTemplateLines (Obj.magic lines) ("" : string) ("php/runtime" : string) ("StringTools.php" : string));
+      ignore (appendSourceNativeTemplateLines (Obj.magic lines) ("" : string) ("php/runtime" : string) ("Anon.php" : string));
       ignore (if not (phpProgramDeclaresClass (Obj.magic program) ("SimpleEnum" : string)) then ignore ((
         ignore (HxArray.push lines "class SimpleEnum {");
         ignore (HxArray.push lines "  public static $__hx_is_enum = true;");

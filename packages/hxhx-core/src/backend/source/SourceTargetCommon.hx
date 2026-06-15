@@ -19931,33 +19931,8 @@ class SourceTargetCommon {
 					lines.push("  }");
 					lines.push("}");
 				}
-				lines.push("class StringTools {");
-				lines.push("  public static function urlEncode($value) {");
-				lines.push("    return rawurlencode(strval($value));");
-				lines.push("  }");
-				lines.push("  public static function urlDecode($value) {");
-				lines.push("    return rawurldecode(strval($value));");
-				lines.push("  }");
-				lines.push("  public static function replace($value, $sub, $by) {");
-				lines.push("    return str_replace(strval($sub), strval($by), strval($value));");
-				lines.push("  }");
-				lines.push("  public static function hex($value, $digits = null) {");
-				lines.push("    $hex = strtoupper(dechex(intval($value) & 0xFFFFFFFF));");
-				lines.push("    if ($digits !== null) $hex = str_pad($hex, intval($digits), \"0\", STR_PAD_LEFT);");
-				lines.push("    return $hex;");
-				lines.push("  }");
-				lines.push("}");
-				lines.push("#[\\AllowDynamicProperties]");
-				lines.push("class __HxAnon {");
-				lines.push("  public function __construct($fields = []) {");
-				lines.push("    foreach ($fields as $name => $value) $this->$name = $value;");
-				lines.push("  }");
-				lines.push("  public function __call($name, $args) {");
-				lines.push("    $value = $this->$name ?? null;");
-				lines.push("    if (is_callable($value)) return $value(...$args);");
-				lines.push("    throw new \\Error(\"Call to undefined method __HxAnon::\" . $name . \"()\");");
-				lines.push("  }");
-				lines.push("}");
+				appendSourceNativeTemplateLines(lines, "", "php/runtime", "StringTools.php");
+				appendSourceNativeTemplateLines(lines, "", "php/runtime", "Anon.php");
 				if (!phpProgramDeclaresClass(program, "SimpleEnum")) {
 					lines.push("class SimpleEnum {");
 					lines.push("  public static $__hx_is_enum = true;");
