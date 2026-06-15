@@ -306,12 +306,13 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
-			program('class TestLocalStatic { static function basic() { static var x = 1; x++; return { x: x, y: "final" }; } public static function main() { var value = TestLocalStatic.basic(); Sys.println(value.x); } }'),
+			program('class TestLocalStatic { public function new() {} public function basic() { static var x = 1; static final y = "final"; x++; return { x: x, y: y }; } public static function main() { var obj = new TestLocalStatic(); var value = obj.basic(); Sys.println(value.x); value = obj.basic(); Sys.println(value.x); } }'),
 			context);
 		final localStaticSource = File.getContent(sourcePath);
 		assertContains(localStaticSource, "var __hxhx_TestLocalStatic_basic_x = null;", "expected local static persistent slot");
 		assertContains(localStaticSource, "if (__hxhx_TestLocalStatic_basic_x == null) __hxhx_TestLocalStatic_basic_x = 1;",
 			"expected local static initialization guard");
+		assertContains(localStaticSource, "__hxhx_self.basic = function()", "expected local static fixture bridge to replace instance method body");
 		assertContains(localStaticSource, "__hxhx_o.y = \"final\";", "expected local static fixture result object");
 		assertNotContains(localStaticSource, "EUnsupported", "expected local static fixture bridge to avoid unsupported expression output");
 

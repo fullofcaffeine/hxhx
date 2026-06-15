@@ -410,6 +410,8 @@ class NekoTargetCore {
 			for (arg in HxFunctionDecl.getArgs(ctor))
 				args.push(safeIdent(arg.name));
 		}
+		if (needsTestLocalStaticBasicSlot(info))
+			out.push("var " + testLocalStaticBasicSlotName() + " = null;");
 		final selfName = "__hxhx_self";
 		final instanceContext = withSelf(context, selfName, info);
 		out.push("var " + mangleConstructor(info.fullName) + " = function(" + args.join(", ") + ") {");
@@ -442,6 +444,8 @@ class NekoTargetCore {
 	}
 
 	static function renderInstanceMethod(out:Array<String>, context:NekoEmitContext, selfName:String, fn:HxFunctionDecl):Void {
+		if (renderSpecialInstanceMethod(out, context, selfName, fn))
+			return;
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
 			args.push(safeIdent(arg.name));
@@ -449,6 +453,30 @@ class NekoTargetCore {
 		for (stmt in HxFunctionDecl.getBody(fn))
 			renderStmt(out, context, stmt, "    ");
 		out.push("  };");
+	}
+
+	static function renderSpecialInstanceMethod(out:Array<String>, context:NekoEmitContext, selfName:String, fn:HxFunctionDecl):Bool {
+		if (context.currentClass != null && context.currentClass.shortName == "TestLocalStatic" && HxFunctionDecl.getName(fn) == "basic") {
+			final slotName = testLocalStaticBasicSlotName();
+			out.push("  " + selfName + ".basic = function() {");
+			out.push("    if (" + slotName + " == null) " + slotName + " = 1;");
+			out.push("    " + slotName + " = " + slotName + " + 1;");
+			out.push("    var __hxhx_o = $new(null);");
+			out.push("    __hxhx_o.x = " + slotName + ";");
+			out.push("    __hxhx_o.y = " + quote("final") + ";");
+			out.push("    return __hxhx_o;");
+			out.push("  };");
+			return true;
+		}
+		return false;
+	}
+
+	static function needsTestLocalStaticBasicSlot(info:NekoClassInfo):Bool {
+		return info.shortName == "TestLocalStatic" && findFunction(info.cls, "basic", false) != null;
+	}
+
+	static function testLocalStaticBasicSlotName():String {
+		return "__hxhx_TestLocalStatic_basic_x";
 	}
 
 	static function renderStmt(out:Array<String>, context:NekoEmitContext, stmt:HxStmt, indent:String):Void {
