@@ -7614,6 +7614,8 @@ class SourceTargetCommon {
 				return "haxe\\io\\BytesInput";
 			case "haxe.io.BytesOutput":
 				return "haxe\\io\\BytesOutput";
+			case "haxe.ds.GenericStack":
+				return "haxe\\ds\\GenericStack";
 			case "haxe.crypto.Md5":
 				return "haxe\\crypto\\Md5";
 			case "haxe.crypto.Sha1":
@@ -7631,6 +7633,7 @@ class SourceTargetCommon {
 			case "Bytes": "haxe\\io\\Bytes";
 			case "BytesInput": "haxe\\io\\BytesInput";
 			case "BytesOutput": "haxe\\io\\BytesOutput";
+			case "GenericStack": "haxe\\ds\\GenericStack";
 			case "Md5": "haxe\\crypto\\Md5";
 			case "Sha1": "haxe\\crypto\\Sha1";
 			case "BaseCode": "haxe\\crypto\\BaseCode";
@@ -13200,10 +13203,8 @@ class SourceTargetCommon {
 		for (shortName in stdAliases.keys())
 			if (!names.exists(shortName))
 				names.set(shortName, stdAliases.get(shortName));
-		if (!runtimeNames.exists("GenericStack"))
-			runtimeNames.set("GenericStack", "haxe\\ds\\GenericStack");
-		if (!runtimeNames.exists("haxe.ds.GenericStack"))
-			runtimeNames.set("haxe.ds.GenericStack", "haxe\\ds\\GenericStack");
+		runtimeNames.set("GenericStack", "haxe\\ds\\GenericStack");
+		runtimeNames.set("haxe.ds.GenericStack", "haxe\\ds\\GenericStack");
 		runtimeNames.set("Template", "haxe\\Template");
 		runtimeNames.set("haxe.Template", "haxe\\Template");
 		runtimeNames.set("Bytes", "haxe\\io\\Bytes");
@@ -14228,8 +14229,8 @@ class SourceTargetCommon {
 				return;
 			if (rawImport != "haxe.Resource" && rawImport != "haxe.Json" && rawImport != "haxe.Serializer" && rawImport != "haxe.Template"
 				&& rawImport != "haxe.Unserializer" && rawImport != "haxe.rtti.Meta" && rawImport != "haxe.io.Bytes" && rawImport != "haxe.io.BytesInput"
-				&& rawImport != "haxe.io.BytesOutput" && rawImport != "haxe.crypto.Md5" && rawImport != "haxe.crypto.Sha1"
-				&& rawImport != "haxe.crypto.BaseCode" && rawImport != "haxe.crypto.Base64" && rawImport != "php.Syntax")
+				&& rawImport != "haxe.io.BytesOutput" && rawImport != "haxe.ds.GenericStack" && rawImport != "haxe.crypto.Md5"
+				&& rawImport != "haxe.crypto.Sha1" && rawImport != "haxe.crypto.BaseCode" && rawImport != "haxe.crypto.Base64" && rawImport != "php.Syntax")
 				return;
 			final parts = rawImport.split(".");
 			if (parts.length < 2)
