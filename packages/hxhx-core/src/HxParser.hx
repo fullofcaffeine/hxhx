@@ -3700,6 +3700,8 @@ class HxParser {
 		final inlineNekoElseThrow = tryParseInlineNekoElseThrowStmt(pos);
 		if (inlineNekoElseThrow != null)
 			return inlineNekoElseThrow;
+		if (cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault)))
+			return parseRecoveredCaseFragmentStmt(pos);
 
 		return switch (cur.kind) {
 			case TLBrace:
@@ -4035,6 +4037,27 @@ class HxParser {
 				syncToStmtEndUntil(stop);
 				SExpr(expr, pos);
 		}
+	}
+
+	function parseRecoveredCaseFragmentStmt(pos:HxPos):HxStmt {
+		// Native frontend recovery can occasionally hand us a method-body slice that
+		// starts inside a switch case list. At top level this is not a real Haxe
+		// statement, so consume one case/default fragment as neutral recovery instead
+		// of emitting an EUnsupported(case...) that blocks backend burn-down.
+		bump(); // `case` / `default`
+		while (!cur.kind.match(TColon) && !cur.kind.match(TEof) && !cur.kind.match(TRBrace) && !cur.kind.match(TKeyword(KCase))
+			&& !cur.kind.match(TKeyword(KDefault))) {
+			bump();
+		}
+		if (cur.kind.match(TColon))
+			bump();
+		while (!cur.kind.match(TSemicolon) && !cur.kind.match(TEof) && !cur.kind.match(TRBrace) && !cur.kind.match(TKeyword(KCase))
+			&& !cur.kind.match(TKeyword(KDefault))) {
+			bump();
+		}
+		if (cur.kind.match(TSemicolon))
+			bump();
+		return SExpr(ENull, pos);
 	}
 
 	function tryParseInlineNekoElseThrowStmt(pos:HxPos):Null<HxStmt> {

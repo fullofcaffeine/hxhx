@@ -47,6 +47,18 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected unsupported keyword expression diagnostic");
 		}
 
+		final recoveredCaseFragment = HxParser.parseFunctionBodyText('case OpIncrement: "++";\n\t\t\tcase OpDecrement: "--";');
+		assertTrue(recoveredCaseFragment.length == 2, "expected top-level case fragments to recover as neutral statements");
+		for (stmt in recoveredCaseFragment) {
+			switch (stmt) {
+				case SExpr(ENull, _):
+				case SExpr(EUnsupported(raw), _):
+					fail("top-level recovered case fragment should not stay unsupported: " + raw);
+				case _:
+					fail("top-level recovered case fragment should decode as neutral expression statement");
+			}
+		}
+
 		final anonymousFunctionStmt = HxParser.parseFunctionBodyText("function() { return 1; }; after();");
 		assertTrue(anonymousFunctionStmt.length == 2, "expected anonymous function statement plus following statement");
 		switch (anonymousFunctionStmt[0]) {
