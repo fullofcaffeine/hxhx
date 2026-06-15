@@ -4094,6 +4094,15 @@ class HxParser {
 		inline function isWrapperCloseBrace():Bool {
 			return cur.kind.match(TRBrace) && (!wrapperCloseOnly || peekKind().match(TEof));
 		}
+		inline function oneLine(text:String):String {
+			if (text == null)
+				return "";
+			return StringTools.replace(StringTools.replace(text, "\n", " "), "\r", " ");
+		}
+		inline function bodyParseErrorDetail(errorText:String):String {
+			final lbl = debugBodyLabel == null || debugBodyLabel.length == 0 ? "<unknown>" : debugBodyLabel;
+			return "body_parse_error fn=" + oneLine(lbl) + " tok=" + oneLine(curTokLabel()) + " err=" + oneLine(errorText);
+		}
 		while (true) {
 			switch (cur.kind) {
 				case TEof:
@@ -4119,15 +4128,15 @@ class HxParser {
 					try {
 						parseStmtInto(out, () -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
 						0; // ensure try/catch has a concrete, consistent expression type across targets
-					} catch (_:HxParseError) {
+					} catch (e:HxParseError) {
 						if (Sys.getEnv("HXHX_TRACE_BODY_STMT_PARSE_ERROR") == "1") {
 							try {
 								final lbl = debugBodyLabel == null || debugBodyLabel.length == 0 ? "<unknown>" : debugBodyLabel;
-								Sys.println("body_stmt_parse_error fn=" + lbl + " tok=" + curTokLabel());
+								Sys.println("body_stmt_parse_error fn=" + lbl + " tok=" + curTokLabel() + " err=" + e.message);
 							} catch (_:haxe.io.Error) {} catch (_:String) {}
 						}
 						// Surface that we hit a parse hole so later stages can diagnose why a body is partial.
-						out.push(SExpr(EUnsupported("body_parse_error"), HxPos.unknown()));
+						out.push(SExpr(EUnsupported(bodyParseErrorDetail(e.message)), HxPos.unknown()));
 
 						// Best-effort resync: advance until a plausible statement boundary.
 						while (true) {
@@ -4149,15 +4158,15 @@ class HxParser {
 							}
 						}
 						0;
-					} catch (_:String) {
+					} catch (e:String) {
 						if (Sys.getEnv("HXHX_TRACE_BODY_STMT_PARSE_ERROR") == "1") {
 							try {
 								final lbl = debugBodyLabel == null || debugBodyLabel.length == 0 ? "<unknown>" : debugBodyLabel;
-								Sys.println("body_stmt_parse_error fn=" + lbl + " tok=" + curTokLabel());
+								Sys.println("body_stmt_parse_error fn=" + lbl + " tok=" + curTokLabel() + " err=" + e);
 							} catch (_:haxe.io.Error) {} catch (_:String) {}
 						}
 						// Surface that we hit a parse hole so later stages can diagnose why a body is partial.
-						out.push(SExpr(EUnsupported("body_parse_error"), HxPos.unknown()));
+						out.push(SExpr(EUnsupported(bodyParseErrorDetail(e)), HxPos.unknown()));
 
 						// Best-effort resync: advance until a plausible statement boundary.
 						while (true) {

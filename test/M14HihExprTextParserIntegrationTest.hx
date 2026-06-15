@@ -27,6 +27,17 @@ class M14HihExprTextParserIntegrationTest {
 		assertTrue(ParserStageScanHelpers.hasUnsupportedStmtList([SExpr(ECall(EIdent("f"), [EUnsupported("<eof-stmt>")]), HxPos.unknown())]),
 			"unsupported scanner must inspect call arguments");
 
+		final malformedBodyStmts = HxParser.parseFunctionBodyText("foo.; after();");
+		assertTrue(malformedBodyStmts.length >= 1, "expected malformed body to produce a recovery statement");
+		switch (malformedBodyStmts[0]) {
+			case SExpr(EUnsupported(raw), _):
+				assertTrue(raw.indexOf("body_parse_error") == 0, "expected detailed body parse marker");
+				assertTrue(raw.indexOf("tok=") >= 0, "expected detailed body parse marker to include token");
+				assertTrue(raw.indexOf("err=") >= 0, "expected detailed body parse marker to include error");
+			case _:
+				fail("expected malformed body to recover as unsupported parse marker");
+		}
+
 		// Native parser payloads can compact escaped quote strings to `"""`.
 		// This should still parse as a normal string literal (`"`).
 		final denseArrayRaw = '[" ".code,"(".code,")".code,"%".code,"!".code,"^".code,""".code,"<".code,">".code,"&".code,"|".code,"\\n".code,"\\r".code,",".code,";".code]';
