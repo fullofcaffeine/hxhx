@@ -99,13 +99,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var label = switch (1) { case 1: "one"; default: "other"; }; Sys.println(label); } }'), context);
 		final switchSource = File.getContent(sourcePath);
-		assertContains(switchSource, 'var label = ((1 == 1) ? "one" : (true ? "other" : null));', "expected Neko switch expression lowering");
+		assertContains(switchSource, 'var label = switch 1 { 1 => "one" default => "other" };', "expected Neko switch expression lowering");
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in [1, 2]) Sys.println(i); } }'), context);
 		final forSource = File.getContent(sourcePath);
-		assertContains(forSource, "for (i in $array(1, 2))", "expected Neko for-in lowering over array literal");
+		assertContains(forSource, "var __hxhx_iter_i = $array(1, 2);", "expected Neko for-in iterable temp");
+		assertContains(forSource, "while (__hxhx_index_i < $asize(__hxhx_iter_i))", "expected Neko for-in while lowering");
+		assertContains(forSource, "var i = __hxhx_iter_i[__hxhx_index_i];", "expected Neko for-in value binding");
 
 		deleteRecursive(outDir);
 

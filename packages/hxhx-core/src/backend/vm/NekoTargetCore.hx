@@ -172,8 +172,7 @@ class NekoTargetCore {
 				out.push(indent + "while " + renderExpr(cond) + " ");
 				renderStmt(out, body, indent);
 			case SForIn(name, iterable, body, _):
-				out.push(indent + "for (" + safeIdent(name) + " in " + renderExpr(iterable) + ") ");
-				renderStmt(out, body, indent);
+				renderForInStmt(out, name, iterable, body, indent);
 			case SReturnVoid(_):
 				out.push(indent + "return null;");
 			case SReturn(expr, _):
@@ -328,40 +327,56 @@ class NekoTargetCore {
 		return "$array(" + [for (v in values) renderExpr(v)].join(", ") + ")";
 	}
 
-	static function renderSwitchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
-		final scrutineeExpr = renderExpr(scrutinee);
-		var chain = "null";
-		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
-		for (i in 0...count) {
-			final idx = count - 1 - i;
-			chain = "(" + renderSwitchPatternCond(scrutineeExpr, patterns[idx]) + " ? " + renderExpr(exprs[idx]) + " : " + chain + ")";
-		}
-		return chain;
+	static function renderForInStmt(out:Array<String>, name:String, iterable:HxExpr, body:HxStmt, indent:String):Void {
+		final safeName = safeIdent(name);
+		final iterableName = "__hxhx_iter_" + safeName;
+		final indexName = "__hxhx_index_" + safeName;
+		out.push(indent + "{");
+		out.push(indent + "  var " + iterableName + " = " + renderExpr(iterable) + ";");
+		out.push(indent + "  var " + indexName + " = 0;");
+		out.push(indent + "  while (" + indexName + " < $asize(" + iterableName + ")) {");
+		out.push(indent + "    var " + safeName + " = " + iterableName + "[" + indexName + "];");
+		out.push(indent + "    " + indexName + " = " + indexName + " + 1;");
+		renderStmt(out, body, indent + "    ");
+		out.push(indent + "  }");
+		out.push(indent + "}");
 	}
 
-	static function renderSwitchPatternCond(scrutinee:String, pattern:HxSwitchPattern):String {
+	static function renderSwitchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
+		final cases = new Array<String>();
+		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+		for (i in 0...count)
+			cases.push(renderSwitchCase(patterns[i], exprs[i]));
+		return "switch " + renderExpr(scrutinee) + " { " + cases.join(" ") + " }";
+	}
+
+	static function renderSwitchCase(pattern:HxSwitchPattern, expr:HxExpr):String {
+		return switch (pattern) {
+			case PWildcard | PBind(_):
+				"default => " + renderExpr(expr);
+			case PNull | PBool(_) | PString(_) | PInt(_) | PEnumValue(_) | PEnumExtract(_, _):
+				renderSwitchPatternValue(pattern) + " => " + renderExpr(expr);
+			case PCapture(_, inner):
+				renderSwitchCase(inner, expr);
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
+				PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _) | PUnsupportedGuard(_) | POr(_):
+				unsupported("switch pattern", patternKind(pattern));
+		}
+	}
+
+	static function renderSwitchPatternValue(pattern:HxSwitchPattern):String {
 		return switch (pattern) {
 			case PNull:
-				"(" + scrutinee + " == null)";
-			case PWildcard | PBind(_):
-				"true";
+				"null";
 			case PBool(value):
-				"(" + scrutinee + " == " + (value ? "true" : "false") + ")";
+				value ? "true" : "false";
 			case PString(value):
-				"(" + scrutinee + " == " + quote(value) + ")";
+				quote(value);
 			case PInt(value):
-				"(" + scrutinee + " == " + Std.string(value) + ")";
+				Std.string(value);
 			case PEnumValue(name) | PEnumExtract(name, _):
-				"(" + scrutinee + " == " + quote(name) + ")";
-			case PCapture(_, inner):
-				renderSwitchPatternCond(scrutinee, inner);
-			case POr(patterns):
-				if (patterns == null || patterns.length == 0) "false"; else "("
-					+ [for (p in patterns) "(" + renderSwitchPatternCond(scrutinee, p) + ")"].join(" || ") + ")";
-			case PUnsupportedGuard(inner):
-				"((" + renderSwitchPatternCond(scrutinee, inner) + ") && false)";
-			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
-				PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
+				quote(name);
+			case _:
 				unsupported("switch pattern", patternKind(pattern));
 		}
 	}
