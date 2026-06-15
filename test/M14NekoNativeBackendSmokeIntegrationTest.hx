@@ -99,6 +99,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(opaqueTwoFieldObject, '__hxhx_o.w = "foo";', "opaque object block should emit the second captured field safely");
 		assertFailsContains(() -> @:privateAccess NekoTargetCore.renderExpr(cast null, ETryCatchRaw('opaque_block_expr:{ var b:{v:Int} = {w:1}; }')),
 			"ETryCatchRaw");
+		final opaqueTypedLocalInit = @:privateAccess NekoTargetCore.renderExpr(cast null, ETryCatchRaw('opaque_block_expr:{ var i:Int = z; }'));
+		assertContains(opaqueTypedLocalInit, "var i = z;", "opaque typed local init should emit the captured initializer safely");
 
 		final outDir = Path.join([".tmp", "m14_neko_native_backend_smoke"]);
 		deleteRecursive(outDir);

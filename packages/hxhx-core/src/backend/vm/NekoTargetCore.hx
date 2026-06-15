@@ -936,7 +936,11 @@ class NekoTargetCore {
 		}
 		final opaqueTypedLocalInit = parseOpaqueTypedLocalInitRaw(raw);
 		if (opaqueTypedLocalInit != null) {
-			return "(function() { var " + opaqueTypedLocalInit.local + " = " + opaqueTypedLocalInit.value + "; return null; })()";
+			return "(function() { var "
+				+ opaqueTypedLocalInit.local
+				+ " = "
+				+ sanitizeNekoValueExpr(opaqueTypedLocalInit.value)
+				+ "; return null; })()";
 		}
 		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
 	}

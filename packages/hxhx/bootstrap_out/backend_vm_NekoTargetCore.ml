@@ -1951,7 +1951,7 @@ let renderTryCatchRaw = fun context raw -> try let __fallback_result_288 = let c
               let opaqueTypedLocalRef = (parseOpaqueTypedLocalRefRaw (raw : string) : string) in (
                 ignore (if opaqueTypedLocalRef != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((("(function() { var " ^ HxString.toStdString opaqueTypedLocalRef) ^ " = null; return ") ^ HxString.toStdString opaqueTypedLocalRef) ^ "; })()" : string))) else ());
                 let opaqueTypedLocalInit = parseOpaqueTypedLocalInitRaw (raw : string) in (
-                  ignore (if opaqueTypedLocalInit != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((("(function() { var " ^ HxString.toStdString (Obj.obj (HxAnon.get opaqueTypedLocalInit "local"))) ^ " = ") ^ HxString.toStdString (snd opaqueTypedLocalInit)) ^ "; return null; })()" : string))) else ());
+                  ignore (if opaqueTypedLocalInit != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((("(function() { var " ^ HxString.toStdString (Obj.obj (HxAnon.get opaqueTypedLocalInit "local"))) ^ " = ") ^ HxString.toStdString (sanitizeNekoValueExpr (snd opaqueTypedLocalInit : string))) ^ "; return null; })()" : string))) else ());
                   unsupportedExpr (("ETryCatchRaw(" ^ HxString.toStdString raw) ^ ")" : string)
                 )
               )
