@@ -9496,6 +9496,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP source backend should emit exception support from the repo-owned runtime template");
 		assertContains(content, sourceTemplateContent("php/runtime", "ValueHelpers.php"),
 			"PHP source backend should emit value helpers from the repo-owned runtime template");
+		assertContains(content, sourceTemplateContent("php/runtime", "RuntimeHelpers.php"),
+			"PHP source backend should emit runtime helpers from the repo-owned runtime template");
 		assertContains(content, "class __HxArray", "PHP source backend should emit a minimal array helper");
 		assertContains(content, "class Map", "PHP source backend should emit a minimal Map helper");
 		assertContains(content, "public function set($key, $value)", "PHP Map helper should support set");
