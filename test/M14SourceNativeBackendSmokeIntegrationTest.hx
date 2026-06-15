@@ -11040,6 +11040,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$g = __hxhx_int_literal(\"0xFFFFFFFF\", \"i32\");", "PHP i32 hex suffix literals should preserve raw text");
 		assertContains(content, "$h = -1593839907;", "PHP unsuffixed large hex literals should emit signed Haxe Int values");
 		assertNotContains(content, "__hxhx_cast(-1, \"UInt\")", "PHP UInt casts should not lower through nominal runtime casts");
+		assertContains(content, sourceTemplateContent("php/runtime", "Int64.php"),
+			"PHP source backend should emit Int64 helpers from the repo-owned runtime template");
 		assertContains(content, "if ($suffix === \"\" || $suffix === \"i32\")", "PHP runtime should normalize signed Int/i32 literals");
 		assertContains(content, "function __hxhx_int32_value($value)", "PHP runtime should normalize high-bit integer equality as Haxe Int");
 		assertContains(content, "function __hxhx_int_literal($text, $suffix)", "PHP runtime should include numeric suffix literal normalization support");
@@ -11250,6 +11252,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "Int64.php"),
+			"PHP source backend should emit Int64 helpers from the repo-owned runtime template");
 		assertContains(content, "class Int64 {", "PHP runtime should expose haxe.Int64");
 		assertContains(content, "public static function make($high, $low)", "PHP haxe.Int64 should expose make");
 		assertContains(content, "public static function ofInt($value)", "PHP haxe.Int64 should expose ofInt");
