@@ -3813,9 +3813,12 @@ class SourceTargetCommon {
 					if (refCaptures.indexOf(name) < 0)
 						refCaptures.push(name);
 				final useClause = phpLambdaUseClause(valueCaptures, refCaptures);
-				final out = [
-					"(function()" + useClause + " {",
-					"  foreach (" + renderExpr(Php, iterable) + " as " + valueName(Php, cleanName) + ") {",
+				final out = ["(function()" + useClause + " {",
+					"  foreach (__hxhx_iter("
+					+ renderExpr(Php, iterable)
+					+ ") as "
+					+ valueName(Php, cleanName)
+					+ ") {",
 					"    " + exprStmt(Php, renderExpr(Php, body)),
 					"  }",
 					"  return " + renderExpr(Php, continuation) + ";",
@@ -9030,7 +9033,7 @@ class SourceTargetCommon {
 					out.push(line);
 				out.push(indent + "}");
 			case Php:
-				out.push(indent + "foreach (" + source + " as " + value + ") {");
+				out.push(indent + "foreach (__hxhx_iter(" + source + ") as " + value + ") {");
 				for (line in renderPhpLoopBody(body, childIndent, knownPhpLocals))
 					out.push(line);
 				out.push(indent + "}");
@@ -21293,10 +21296,18 @@ class SourceTargetCommon {
 				lines.push("  if (is_object($value) && method_exists($value, \"iterator\")) return $value->iterator();");
 				lines.push("  return $value;");
 				lines.push("}");
+				lines.push("function __hxhx_iter($value) {");
+				lines.push("  if (is_string($value)) return new __HxArrayIterator(str_split($value));");
+				lines.push("  return __hxhx_iterator($value);");
+				lines.push("}");
 				lines.push("function __hxhx_key_value_iter($value) {");
 				lines.push("  if ($value instanceof Map) return $value->keyValuePairs();");
 				lines.push("  if ($value instanceof __HxArray) $value = $value->toArray();");
 				lines.push("  $pairs = [];");
+				lines.push("  if (is_string($value)) {");
+				lines.push("    foreach (str_split($value) as $key => $item) $pairs[] = [$key, $item];");
+				lines.push("    return $pairs;");
+				lines.push("  }");
 				lines.push("  if (is_array($value) || $value instanceof \\Traversable) {");
 				lines.push("    foreach ($value as $key => $item) $pairs[] = [$key, $item];");
 				lines.push("  }");

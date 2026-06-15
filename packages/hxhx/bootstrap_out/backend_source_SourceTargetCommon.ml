@@ -32724,7 +32724,7 @@ and phpForInExpr = fun iterable bodyExpr continuation -> let tempResult = ref ("
     )) done);
     let useClause = (phpLambdaUseClause (Obj.magic valueCaptures) (Obj.magic refCaptures) : string) in let out = Obj.magic (let __arr_1818 = HxArray.create () in (
       ignore (HxArray.push __arr_1818 (("(function()" ^ HxString.toStdString useClause) ^ " {"));
-      ignore (HxArray.push __arr_1818 (((("  foreach (" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic iterable))) ^ " as ") ^ HxString.toStdString (valueName (Obj.magic Php) (cleanName : string))) ^ ") {"));
+      ignore (HxArray.push __arr_1818 (((("  foreach (__hxhx_iter(" ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic iterable))) ^ ") as ") ^ HxString.toStdString (valueName (Obj.magic Php) (cleanName : string))) ^ ") {"));
       ignore (HxArray.push __arr_1818 ("    " ^ HxString.toStdString (exprStmt (Obj.magic Php) (renderExpr (Obj.magic Php) (Obj.magic body) : string))));
       ignore (HxArray.push __arr_1818 "  }");
       ignore (HxArray.push __arr_1818 (("  return " ^ HxString.toStdString (renderExpr (Obj.magic Php) (Obj.magic continuation))) ^ ";"));
@@ -36483,7 +36483,7 @@ and renderForIn = fun target name iterable body indent knownPhpLocals -> let cle
       HxArray.push out (HxString.toStdString indent ^ "}")
     ))
     | Php -> ignore ((
-      ignore (HxArray.push out (((((HxString.toStdString indent ^ "foreach (") ^ HxString.toStdString source) ^ " as ") ^ HxString.toStdString value) ^ ") {"));
+      ignore (HxArray.push out (((((HxString.toStdString indent ^ "foreach (__hxhx_iter(") ^ HxString.toStdString source) ^ ") as ") ^ HxString.toStdString value) ^ ") {"));
       ignore (let _g = ref 0 in let _g1 = Obj.magic (renderPhpLoopBody (Obj.magic body) (childIndent : string) (Obj.magic knownPhpLocals)) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
         ignore (let __old_4413 = !_g in let __new_4414 = HxInt.add __old_4413 1 in (
           ignore (_g := __new_4414);
@@ -42774,10 +42774,18 @@ let renderProgram = fun target program context decl className body -> let lines 
       ignore (HxArray.push lines "  if (is_object($value) && method_exists($value, \"iterator\")) return $value->iterator();");
       ignore (HxArray.push lines "  return $value;");
       ignore (HxArray.push lines "}");
+      ignore (HxArray.push lines "function __hxhx_iter($value) {");
+      ignore (HxArray.push lines "  if (is_string($value)) return new __HxArrayIterator(str_split($value));");
+      ignore (HxArray.push lines "  return __hxhx_iterator($value);");
+      ignore (HxArray.push lines "}");
       ignore (HxArray.push lines "function __hxhx_key_value_iter($value) {");
       ignore (HxArray.push lines "  if ($value instanceof Map) return $value->keyValuePairs();");
       ignore (HxArray.push lines "  if ($value instanceof __HxArray) $value = $value->toArray();");
       ignore (HxArray.push lines "  $pairs = [];");
+      ignore (HxArray.push lines "  if (is_string($value)) {");
+      ignore (HxArray.push lines "    foreach (str_split($value) as $key => $item) $pairs[] = [$key, $item];");
+      ignore (HxArray.push lines "    return $pairs;");
+      ignore (HxArray.push lines "  }");
       ignore (HxArray.push lines "  if (is_array($value) || $value instanceof \\Traversable) {");
       ignore (HxArray.push lines "    foreach ($value as $key => $item) $pairs[] = [$key, $item];");
       ignore (HxArray.push lines "  }");

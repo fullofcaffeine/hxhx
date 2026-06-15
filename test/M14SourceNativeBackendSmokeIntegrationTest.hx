@@ -4399,6 +4399,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    for (index => value in values) {",
 			"      Sys.println(Std.string(index) + Std.string(value));",
 			"    }",
+			"    var expected:php.NativeString = \"123456\";",
+			"    var actual = \"\";",
+			"    for (c in expected) actual += c;",
+			"    Sys.println(actual);",
+			"    actual = \"\";",
+			"    var keys = [];",
+			"    for (i => c in expected) {",
+			"      keys.push(i);",
+			"      actual += c;",
+			"    }",
+			"    Sys.println(actual);",
+			"    Sys.println(keys.join(\",\"));",
 			"  }",
 			"}",
 		].join("\n");
@@ -12593,6 +12605,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$value = $__hx_kv_index_value[1];", "PHP key/value loops should bind the rendered value from pair slot 1");
 		assertContains(content, "echo __hxhx_add(__hxhx_add_string($index), __hxhx_add_string($value)) . PHP_EOL;",
 			"PHP key/value loop bodies should render with both loop bindings in scope");
+		assertContains(content, "foreach (__hxhx_iter($expected) as $c) {", "PHP string value loops should lower through the runtime iterator helper");
+		assertContains(content, "foreach (__hxhx_key_value_iter($expected) as $__hx_kv_i_c) {",
+			"PHP string key/value loops should lower through the pair iterator helper");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP key/value loop support should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "010\n120\n123456\n123456\n0,1,2,3,4,5\n", "generated PHP key/value loop output mismatch, got:\n" + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
