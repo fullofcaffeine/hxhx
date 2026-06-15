@@ -130,6 +130,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var values = [for (v in [1, 2]) if (v > 1) v]; Sys.println(values.length); } }'), context);
+		final arrayComprehensionSource = File.getContent(sourcePath);
+		assertContains(arrayComprehensionSource, "var __hxhx_comp_v = $array();", "expected array comprehension result allocation");
+		assertContains(arrayComprehensionSource, "while (__hxhx_index_v < $asize(__hxhx_iter_v))", "expected array comprehension loop");
+		assertContains(arrayComprehensionSource, "if (v > 1) {", "expected array comprehension guard");
+		assertContains(arrayComprehensionSource, "__hxhx_array_push(__hxhx_comp_v, v);", "expected array comprehension push");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { if (neko.Web.isModNeko) neko.Web.setHeader("Content-Type", "text/plain"); Sys.println("ok"); } }'),
 			context);
 		final webSource = File.getContent(sourcePath);

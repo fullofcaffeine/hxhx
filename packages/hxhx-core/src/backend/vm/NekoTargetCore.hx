@@ -538,7 +538,9 @@ class NekoTargetCore {
 				renderLambda(context, args, body);
 			case ESwitch(scrutinee, patterns, exprs):
 				renderSwitchExpr(context, scrutinee, patterns, exprs);
-			case EArrayComprehension(_, _, _, _) | ERange(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | EUnsupported(_):
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				renderArrayComprehension(context, name, iterable, guardExpr, yieldExpr);
+			case ERange(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | EUnsupported(_):
 				unsupportedExpr(exprTag(expr));
 		}
 	}
@@ -606,6 +608,34 @@ class NekoTargetCore {
 
 	static function renderArray(context:NekoEmitContext, values:Array<HxExpr>):String {
 		return "$array(" + [for (v in values) renderExpr(context, v)].join(", ") + ")";
+	}
+
+	static function renderArrayComprehension(context:NekoEmitContext, name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr):String {
+		final safeName = safeIdent(name);
+		final resultName = "__hxhx_comp_" + safeName;
+		final iterableName = "__hxhx_iter_" + safeName;
+		final indexName = "__hxhx_index_" + safeName;
+		final parts = [
+			"(function() {",
+			"var " + resultName + " = $array();",
+			"var " + iterableName + " = " + renderExpr(context, iterable) + ";",
+			"var " + indexName + " = 0;",
+			"while (" + indexName + " < $asize(" + iterableName + ")) {",
+			"var " + safeName + " = " + iterableName + "[" + indexName + "];",
+			indexName + " = " + indexName + " + 1;"
+		];
+		final push = "__hxhx_array_push(" + resultName + ", " + renderExpr(context, yieldExpr) + ");";
+		if (guardExpr == null) {
+			parts.push(push);
+		} else {
+			parts.push("if " + renderExpr(context, guardExpr) + " {");
+			parts.push(push);
+			parts.push("}");
+		}
+		parts.push("}");
+		parts.push("return " + resultName + ";");
+		parts.push("})()");
+		return parts.join(" ");
 	}
 
 	static function renderForInStmt(out:Array<String>, context:NekoEmitContext, name:String, iterable:HxExpr, body:HxStmt, indent:String):Void {
