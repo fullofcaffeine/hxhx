@@ -64,6 +64,16 @@ private typedef NekoOpaqueTypedLocalInitRaw = {
 	var value:String;
 }
 
+private typedef NekoSwitchPatternBinding = {
+	var name:String;
+	var expr:String;
+}
+
+private typedef NekoSwitchPatternLowered = {
+	var cond:String;
+	var bindings:Array<NekoSwitchPatternBinding>;
+}
+
 /**
 	MVP native Neko target core.
 
@@ -974,6 +984,10 @@ class NekoTargetCore {
 
 	static function renderSwitchStmt(out:Array<String>, context:NekoEmitContext, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
 			indent:String):Void {
+		if (switchNeedsIfLowering(patterns)) {
+			renderSwitchIfStmt(out, context, scrutinee, patterns, bodies, indent);
+			return;
+		}
 		final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
 		out.push(indent + "switch " + renderExpr(context, scrutinee) + " {");
 		for (i in 0...count) {
@@ -1001,6 +1015,8 @@ class NekoTargetCore {
 	}
 
 	static function renderSwitchExpr(context:NekoEmitContext, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
+		if (switchNeedsIfLowering(patterns))
+			return renderSwitchIfExpr(context, scrutinee, patterns, exprs);
 		final cases = new Array<String>();
 		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
 		for (i in 0...count) {
@@ -1009,6 +1025,145 @@ class NekoTargetCore {
 				cases.push(rendered);
 		}
 		return "switch " + renderExpr(context, scrutinee) + " { " + cases.join(" ") + " }";
+	}
+
+	static function renderSwitchIfStmt(out:Array<String>, context:NekoEmitContext, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>,
+			indent:String):Void {
+		final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
+		final switchValue = "__hxhx_switch";
+		out.push(indent + "{");
+		out.push(indent + "  var " + switchValue + " = " + renderExpr(context, scrutinee) + ";");
+		var emitted = false;
+		for (i in 0...count) {
+			final lowered = lowerNekoSwitchPattern(patterns[i], switchValue);
+			out.push(indent + "  " + (emitted ? "else " : "") + "if " + lowered.cond + " {");
+			renderNekoSwitchBindings(out, lowered.bindings, indent + "    ");
+			renderStmt(out, context, bodies[i], indent + "    ");
+			out.push(indent + "  }");
+			emitted = true;
+		}
+		out.push(indent + "}");
+	}
+
+	static function renderSwitchIfExpr(context:NekoEmitContext, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):String {
+		final count = patterns == null || exprs == null ? 0 : (patterns.length < exprs.length ? patterns.length : exprs.length);
+		final switchValue = "__hxhx_switch";
+		final parts = [
+			"(function() { var " + switchValue + " = " + renderExpr(context, scrutinee) + ";"
+		];
+		var emitted = false;
+		for (i in 0...count) {
+			final lowered = lowerNekoSwitchPattern(patterns[i], switchValue);
+			parts.push((emitted ? "else " : "") + "if " + lowered.cond + " {");
+			for (binding in lowered.bindings)
+				parts.push("var " + safeIdent(binding.name) + " = " + binding.expr + ";");
+			parts.push("return " + renderExpr(context, exprs[i]) + ";");
+			parts.push("}");
+			emitted = true;
+		}
+		parts.push("return null; })()");
+		return parts.join(" ");
+	}
+
+	static function renderNekoSwitchBindings(out:Array<String>, bindings:Array<NekoSwitchPatternBinding>, indent:String):Void {
+		if (bindings == null)
+			return;
+		for (binding in bindings)
+			out.push(indent + "var " + safeIdent(binding.name) + " = " + binding.expr + ";");
+	}
+
+	static function switchNeedsIfLowering(patterns:Array<HxSwitchPattern>):Bool {
+		if (patterns == null)
+			return false;
+		for (pattern in patterns)
+			if (patternNeedsNekoIfLowering(pattern))
+				return true;
+		return false;
+	}
+
+	static function patternNeedsNekoIfLowering(pattern:HxSwitchPattern):Bool {
+		return switch (pattern) {
+			case PArray(_):
+				true;
+			case PCapture(_, inner) | PUnsupportedGuard(inner):
+				patternNeedsNekoIfLowering(inner);
+			case POr(patterns):
+				if (patterns == null) {
+					false;
+				} else {
+					var needs = false;
+					for (p in patterns)
+						if (patternNeedsNekoIfLowering(p))
+							needs = true;
+					needs;
+				}
+			case _:
+				false;
+		}
+	}
+
+	static function lowerNekoSwitchPattern(pattern:HxSwitchPattern, scrutinee:String):NekoSwitchPatternLowered {
+		return switch (pattern) {
+			case PNull:
+				{cond: "(" + scrutinee + " == null)", bindings: []};
+			case PWildcard:
+				{cond: "true", bindings: []};
+			case PBool(value):
+				{cond: "(" + scrutinee + " == " + (value ? "true" : "false") + ")", bindings: []};
+			case PString(value):
+				{cond: "(" + scrutinee + " == " + quote(value) + ")", bindings: []};
+			case PInt(value):
+				{cond: "(" + scrutinee + " == " + Std.string(value) + ")", bindings: []};
+			case PEnumValue(name) | PEnumExtract(name, _):
+				{cond: "(" + scrutinee + " == " + quote(name) + ")", bindings: []};
+			case PBind(name):
+				{cond: "true", bindings: [{name: name, expr: scrutinee}]};
+			case PCapture(name, inner):
+				final lowered = lowerNekoSwitchPattern(inner, scrutinee);
+				final bindings = lowered.bindings.copy();
+				bindings.push({name: name, expr: scrutinee});
+				{cond: lowered.cond, bindings: bindings};
+			case PArray(items):
+				lowerNekoArrayPattern(items, scrutinee);
+			case PUnsupportedGuard(inner):
+				final lowered = lowerNekoSwitchPattern(inner, scrutinee);
+				{cond: "(" + lowered.cond + " && false)", bindings: lowered.bindings};
+			case POr(patterns):
+				lowerNekoOrPattern(patterns, scrutinee);
+			case PObject(_, _) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
+				PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
+				unsupportedSwitchPatternLowering(pattern);
+		}
+	}
+
+	static function lowerNekoArrayPattern(items:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
+		final count = items == null ? 0 : items.length;
+		final conds = ["(" + scrutinee + " != null)", "($asize(" + scrutinee + ") == " + count + ")"];
+		final bindings = new Array<NekoSwitchPatternBinding>();
+		if (items != null) {
+			for (i in 0...items.length) {
+				final lowered = lowerNekoSwitchPattern(items[i], scrutinee + "[" + i + "]");
+				if (lowered.cond != "true")
+					conds.push("(" + lowered.cond + ")");
+				for (binding in lowered.bindings)
+					bindings.push(binding);
+			}
+		}
+		return {cond: conds.join(" && "), bindings: bindings};
+	}
+
+	static function lowerNekoOrPattern(patterns:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
+		final conds = new Array<String>();
+		if (patterns != null) {
+			for (pattern in patterns)
+				conds.push("(" + lowerNekoSwitchPattern(pattern, scrutinee).cond + ")");
+		}
+		return {cond: conds.length == 0 ? "false" : conds.join(" || "), bindings: []};
+	}
+
+	static function unsupportedSwitchPatternLowering(pattern:HxSwitchPattern):NekoSwitchPatternLowered {
+		unsupported("switch pattern", patternKind(pattern));
+		return {cond: "false", bindings: []};
 	}
 
 	static function renderSwitchCase(context:NekoEmitContext, pattern:HxSwitchPattern, expr:HxExpr):Null<String> {

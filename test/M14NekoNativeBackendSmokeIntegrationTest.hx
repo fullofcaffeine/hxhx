@@ -119,6 +119,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var ok = true; var expected = false; var label = switch [ok, expected] { case [true, false]: "mismatch"; default: "other"; }; Sys.println(label); } }'),
+			context);
+		final arraySwitchExprSource = File.getContent(sourcePath);
+		assertContains(arraySwitchExprSource, "var __hxhx_switch = $array(ok, expected);", "expected array switch expression temp");
+		assertContains(arraySwitchExprSource, "($asize(__hxhx_switch) == 2)", "expected array switch length guard");
+		assertContains(arraySwitchExprSource, "(__hxhx_switch[0] == true)", "expected first array switch item guard");
+		assertContains(arraySwitchExprSource, "return \"mismatch\";", "expected array switch expression branch return");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { switch (1) { case 1: Sys.println("one"); default: Sys.println("other"); } } }'), context);
 		final switchStmtSource = File.getContent(sourcePath);
 		assertContains(switchStmtSource, "switch 1 {", "expected Neko switch statement");
@@ -137,6 +148,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(guardedSwitchStmtSource, "default => {", "expected default to remain after disabled guarded switch branch");
 		assertContains(guardedSwitchStmtSource, "$print(\"fallback\", \"\\n\")", "expected default body to remain");
 		assertNotContains(guardedSwitchStmtSource, '"guarded"', "unsupported guarded switch statement branch must not execute unguarded");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var ok = true; var expected = false; switch [ok, expected] { case [true, false]: Sys.println("mismatch"); default: Sys.println("other"); } } }'),
+			context);
+		final arraySwitchStmtSource = File.getContent(sourcePath);
+		assertContains(arraySwitchStmtSource, "var __hxhx_switch = $array(ok, expected);", "expected array switch statement temp");
+		assertContains(arraySwitchStmtSource, "if (__hxhx_switch != null) && ($asize(__hxhx_switch) == 2)", "expected array switch statement if lowering");
+		assertContains(arraySwitchStmtSource, "$print(\"mismatch\", \"\\n\")", "expected array switch statement branch body");
+		assertContains(arraySwitchStmtSource, "else if true", "expected array switch statement default branch");
 
 		deleteRecursive(outDir);
 
