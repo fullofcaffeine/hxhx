@@ -4968,6 +4968,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  static function set_sx(value:Int):Int return value;",
 			"  static function set_sy(value:Int):Int return value;",
 			"}",
+			"class DceReflectThing {",
+			"  @:keep function kept():Void {}",
+			"  function used():Void {}",
+			"  function unused():Void {}",
+			"  var usedVar:Int = 0;",
+			"  var unusedVar:Int = 1;",
+			"  @:isVar var usedProp(get, set):Int = 1;",
+			"  var unusedProp(get, set):Int;",
+			"  public function new() {",
+			"    used();",
+			"    usedVar = 1;",
+			"    usedProp = 2;",
+			"    usedProp;",
+			"  }",
+			"  function get_usedProp():Int return usedProp;",
+			"  function set_usedProp(value:Int):Int return value;",
+			"  function get_unusedProp():Int return 0;",
+			"  function set_unusedProp(value:Int):Int return value;",
+			"}",
 			"class Main {",
 			"  static function main() {",
 			"    var types:Array<Dynamic> = [String, Array, List, ReflectThing, MyReflectEnum];",
@@ -4999,6 +5018,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    var staticPropertyFields = Type.getClassFields(PropertyThing);",
 			"    staticPropertyFields.sort(Reflect.compare);",
 			"    Sys.println(staticPropertyFields.join(\"#\"));",
+			"    var dceFields = Type.getInstanceFields(DceReflectThing);",
+			"    dceFields.sort(Reflect.compare);",
+			"    Sys.println(dceFields.join(\"#\"));",
 			"    Sys.println(Type.getEnumName(en));",
 			"    Sys.println(Std.string(Type.resolveEnum(\"MyReflectEnum\") == en));",
 			"    Sys.println(Type.getClassName(Type.getClass(\"hello\")));",
@@ -13699,10 +13721,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public static function getClassFields($cls)", "PHP Type runtime should expose getClassFields");
 		assertContains(content, "public static function typeof($value)", "PHP Type runtime should expose typeof");
 		assertContains(content, "__hxhx_value_type(\"TClass\", 6", "PHP ValueType constructors should lower to enum-like runtime values");
+		assertContains(content, "\"DceReflectThing\" => [\"get_unusedProp\" => true", "PHP reflection policy should hide unused private DCE-style members");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP Type reflection support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "String\nArray\ntrue\ntrue\ntrue\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nmethod#value\nhelper#stat\nget_x#set_x#set_y#y\nget_sx#set_sx#set_sy#sy\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\ntrue\ntrue\nhaxe.ds.StringMap\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\n",
+			assertTrue(run.stdout == "String\nArray\ntrue\ntrue\ntrue\nhaxe.ds.List\ntrue\nReflectThing\ntrue\nmethod#value\nhelper#stat\nget_x#set_x#set_y#y\nget_sx#set_sx#set_sy#sy\nget_usedProp#kept#set_usedProp#used#usedProp#usedVar\nMyReflectEnum\ntrue\nString\ntrue\ntrue\nhaxe.ds.List\n2\na\nb\ntrue\ntrue\nhaxe.ds.StringMap\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\n",
 				"generated PHP Type reflection output mismatch, got:\n"
 				+ run.stdout);
 		}

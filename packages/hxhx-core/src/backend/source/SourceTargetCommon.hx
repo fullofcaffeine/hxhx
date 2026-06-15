@@ -13469,6 +13469,163 @@ class SourceTargetCommon {
 		return true;
 	}
 
+	static function phpRecordReferencedMemberExpr(expr:Null<HxExpr>, names:Map<String, Bool>):Void {
+		if (expr == null)
+			return;
+		function record(name:String):Void {
+			final clean = sanitizeTypeName(name);
+			if (clean.length > 0)
+				names.set(clean, true);
+		}
+		switch (expr) {
+			case EIdent(name) | EEnumValue(name):
+				record(name);
+			case EField(obj, field):
+				phpRecordReferencedMemberExpr(obj, names);
+				record(field);
+			case ECall(callee, args):
+				phpRecordReferencedMemberExpr(callee, names);
+				for (arg in args)
+					phpRecordReferencedMemberExpr(arg, names);
+			case EMacroExpr(inner, _):
+				phpRecordReferencedMemberExpr(inner, names);
+			case ELambda(_, body):
+				phpRecordReferencedMemberExpr(body, names);
+			case ESwitch(scrutinee, _, exprs):
+				phpRecordReferencedMemberExpr(scrutinee, names);
+				for (caseExpr in exprs)
+					phpRecordReferencedMemberExpr(caseExpr, names);
+			case ENew(_, args) | EArrayDecl(args):
+				for (arg in args)
+					phpRecordReferencedMemberExpr(arg, names);
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner):
+				phpRecordReferencedMemberExpr(inner, names);
+			case EBinop(_, left, right):
+				phpRecordReferencedMemberExpr(left, names);
+				phpRecordReferencedMemberExpr(right, names);
+			case ETernary(cond, thenExpr, elseExpr):
+				phpRecordReferencedMemberExpr(cond, names);
+				phpRecordReferencedMemberExpr(thenExpr, names);
+				phpRecordReferencedMemberExpr(elseExpr, names);
+			case EAnon(_, values):
+				for (value in values)
+					phpRecordReferencedMemberExpr(value, names);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
+				phpRecordReferencedMemberExpr(iterable, names);
+				phpRecordReferencedMemberExpr(guardExpr, names);
+				phpRecordReferencedMemberExpr(yieldExpr, names);
+			case EArrayAccess(array, index) | ERange(array, index):
+				phpRecordReferencedMemberExpr(array, names);
+				phpRecordReferencedMemberExpr(index, names);
+			case ENull | EBool(_) | EString(_) | EInt(_) | EFloat(_) | EThis | ESuper | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | EUnsupported(_):
+		}
+	}
+
+	static function phpRecordReferencedMemberStmt(stmt:HxStmt, names:Map<String, Bool>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (inner in stmts)
+					phpRecordReferencedMemberStmt(inner, names);
+			case SVar(_, _, init, _):
+				phpRecordReferencedMemberExpr(init, names);
+			case SIf(cond, thenBranch, elseBranch, _):
+				phpRecordReferencedMemberExpr(cond, names);
+				phpRecordReferencedMemberStmt(thenBranch, names);
+				if (elseBranch != null)
+					phpRecordReferencedMemberStmt(elseBranch, names);
+			case SForIn(_, iterable, body, _) | SForKeyValue(_, _, iterable, body, _) | SWhile(iterable, body, _):
+				phpRecordReferencedMemberExpr(iterable, names);
+				phpRecordReferencedMemberStmt(body, names);
+			case SDoWhile(body, cond, _):
+				phpRecordReferencedMemberStmt(body, names);
+				phpRecordReferencedMemberExpr(cond, names);
+			case SSwitch(scrutinee, _, bodies, _):
+				phpRecordReferencedMemberExpr(scrutinee, names);
+				for (body in bodies)
+					phpRecordReferencedMemberStmt(body, names);
+			case STry(tryBody, catches, _):
+				phpRecordReferencedMemberStmt(tryBody, names);
+				for (catchDecl in catches)
+					phpRecordReferencedMemberStmt(catchDecl.body, names);
+			case SThrow(expr, _) | SReturn(expr, _) | SExpr(expr, _):
+				phpRecordReferencedMemberExpr(expr, names);
+			case SBreak(_) | SContinue(_) | SReturnVoid(_):
+		}
+	}
+
+	static function phpReflectionLivePrivateMembers(cls:HxClassDecl):{fields:Map<String, Bool>, functions:Map<String, Bool>} {
+		final fields = new Map<String, Bool>();
+		final functions = new Map<String, Bool>();
+		final functionByName = new Map<String, HxFunctionDecl>();
+		final queue = new Array<String>();
+		function markFunction(name:String):Void {
+			final clean = sanitizeTypeName(name);
+			if (clean.length == 0 || functions.exists(clean))
+				return;
+			functions.set(clean, true);
+			queue.push(clean);
+		}
+		function markField(name:String):Void {
+			final clean = sanitizeTypeName(name);
+			if (clean.length > 0)
+				fields.set(clean, true);
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final name = sanitizeTypeName(HxFunctionDecl.getName(fn));
+			functionByName.set(name, fn);
+			if (HxFunctionDecl.getVisibility(fn) == Public || name == "new" || phpMetadataExists(HxFunctionDecl.getMetadata(fn), "keep"))
+				markFunction(name);
+		}
+		for (field in HxClassDecl.getFields(cls))
+			if (HxFieldDecl.getVisibility(field) == Public || phpMetadataExists(HxFieldDecl.getMetadata(field), "keep"))
+				markField(HxFieldDecl.getName(field));
+		var index = 0;
+		while (index < queue.length) {
+			final fnName = queue[index++];
+			final fn = functionByName.get(fnName);
+			if (fn == null)
+				continue;
+			final referenced = new Map<String, Bool>();
+			for (stmt in HxFunctionDecl.getBody(fn))
+				phpRecordReferencedMemberStmt(stmt, referenced);
+			for (name in referenced.keys()) {
+				if (functionByName.exists(name))
+					markFunction(name);
+				markField(name);
+				if (StringTools.startsWith(name, "get_") || StringTools.startsWith(name, "set_"))
+					markField(name.substr(4));
+			}
+		}
+		for (fieldName in fields.keys()) {
+			markFunction("get_" + fieldName);
+			markFunction("set_" + fieldName);
+		}
+		return {fields: fields, functions: functions};
+	}
+
+	static function phpReflectionShouldHideDceField(field:HxFieldDecl, live:Map<String, Bool>):Bool {
+		if (HxFieldDecl.getVisibility(field) == Public || phpMetadataExists(HxFieldDecl.getMetadata(field), "keep"))
+			return false;
+		return !live.exists(sanitizeTypeName(HxFieldDecl.getName(field)));
+	}
+
+	static function phpReflectionShouldHideFunction(fn:HxFunctionDecl, live:{fields:Map<String, Bool>, functions:Map<String, Bool>},
+			fieldsByName:Map<String, HxFieldDecl>):Bool {
+		final name = sanitizeTypeName(HxFunctionDecl.getName(fn));
+		if (name == "new" || HxFunctionDecl.getVisibility(fn) == Public || phpMetadataExists(HxFunctionDecl.getMetadata(fn), "keep"))
+			return false;
+		if (StringTools.startsWith(name, "get_") || StringTools.startsWith(name, "set_")) {
+			final fieldName = name.substr(4);
+			final field = fieldsByName.get(fieldName);
+			if (field != null
+				&& (HxFieldDecl.getVisibility(field) == Public
+					|| phpMetadataExists(HxFieldDecl.getMetadata(field), "keep")
+					|| live.fields.exists(fieldName)))
+				return false;
+		}
+		return !live.functions.exists(name);
+	}
+
 	static function appendPhpReflectionFieldPolicy(lines:Array<String>, program:GenIrProgram, decl:HxModuleDecl):Void {
 		final instanceEntries = new Array<String>();
 		final staticEntries = new Array<String>();
@@ -13494,14 +13651,27 @@ class SourceTargetCommon {
 				final staticHidden = new Array<String>();
 				final extraInstance = phpReflectionExtraInstanceFields(cls, sanitizePhpTypeName(rawClassName));
 				final extraStatic = new Array<String>();
+				final live = phpReflectionLivePrivateMembers(cls);
+				final fieldsByName = new Map<String, HxFieldDecl>();
+				for (field in HxClassDecl.getFields(cls))
+					fieldsByName.set(sanitizeTypeName(HxFieldDecl.getName(field)), field);
 				for (field in HxClassDecl.getFields(cls)) {
-					if (!phpReflectionShouldHideField(field))
+					if (!phpReflectionShouldHideField(field) && !phpReflectionShouldHideDceField(field, live.fields))
 						continue;
 					final fieldName = sanitizeTypeName(HxFieldDecl.getName(field));
 					if (HxFieldDecl.getIsStatic(field))
 						staticHidden.push(fieldName);
 					else
 						instanceHidden.push(fieldName);
+				}
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					if (!phpReflectionShouldHideFunction(fn, live, fieldsByName))
+						continue;
+					final fnName = sanitizeTypeName(HxFunctionDecl.getName(fn));
+					if (HxFunctionDecl.getIsStatic(fn))
+						staticHidden.push(fnName);
+					else
+						instanceHidden.push(fnName);
 				}
 				if (instanceHidden.length > 0)
 					instanceEntries.push(quotePhpString(fullName) + " => " + mapLiteral(instanceHidden));
@@ -22084,6 +22254,7 @@ class SourceTargetCommon {
 				lines.push("    foreach ($reflection->getMethods() as $method) {");
 				lines.push("      if ($method->isConstructor() || $method->isStatic() !== $wantStatic) continue;");
 				lines.push("      $name = $method->getName();");
+				lines.push("      if (array_key_exists($name, $hidden)) continue;");
 				lines.push("      if (self::exposeFieldName($name) && !in_array($name, $fields, true)) $fields[] = $name;");
 				lines.push("    }");
 				lines.push("    $accessors = [];");
