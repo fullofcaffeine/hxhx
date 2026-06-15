@@ -17,6 +17,14 @@ This repo treats `Dynamic`, `Any`, and `untyped` as restricted escape hatches.
 That guard scans scoped compiler lanes and fails if restricted constructs appear outside allowlisted boundary files.
 It explicitly checks typed/generic `Dynamic` and typed/generic `Any` usage, plus `untyped __ocaml__`.
 
+Raw target injection has an additional OCaml-specific design record:
+
+- `docs/00-project/OCAML_SCOPED_RAW_INJECTION_AUTHORITY.md`
+
+That policy defines the proposed `@:ocamlAllowRaw` authority marker for rare low-level modules. It does not weaken
+the default rule here: raw `__ocaml__` remains forbidden by default in app/compiler code and must not bypass metal or
+`@:haxeMetal` checks.
+
 ## Allowlist categories
 
 ### Permanent boundary allowlist

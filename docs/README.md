@@ -50,4 +50,5 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - Reflaxe family cross-override matrix: `docs/00-project/REFLAXE_FAMILY_CROSS_OVERRIDE_MATRIX.md`
 - Stage0 policy and strict mode behavior: `docs/00-project/STAGE0_POLICY.md`
 - Dynamic/untyped boundary policy: `docs/00-project/DYNAMIC_UNTYPED_POLICY.md`
+- OCaml scoped raw-injection authority policy: `docs/00-project/OCAML_SCOPED_RAW_INJECTION_AUTHORITY.md`
 - Provenance and licensing policy: `docs/00-project/PROVENANCE_POLICY.md`

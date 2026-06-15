@@ -116,6 +116,9 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - reflection calls (`Reflect.*`, `Type.*`)
   - explicit `Dynamic` annotations in key typed positions
 - Stage0 portable builds can still enforce strict checks in `@:haxeMetal` modules.
+- Scoped raw-injection authority is tracked separately in
+  `docs/00-project/OCAML_SCOPED_RAW_INJECTION_AUTHORITY.md`; the proposed `@:ocamlAllowRaw` marker is portable-only
+  and must not bypass `metal` or `@:haxeMetal` rejection of raw `__ocaml__`.
 - If compilation must continue without metal constraints, users must explicitly choose:
   - `-D ocaml_profile=portable`
 - Explicit fallback lane (Stage0): `-D ocaml_metal_allow_fallback`

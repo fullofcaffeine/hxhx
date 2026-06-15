@@ -235,8 +235,11 @@ You can inject raw OCaml using:
 untyped __ocaml__("(* ocaml here *)")
 ```
 
-This is intentionally constrained (constant string only) and should be reserved for early bring-up or interop;
-prefer a typed extern surface when something will be reused.
+This is intentionally constrained (constant string only) and should be reserved for target authors building low-level
+bridges. Application code should prefer typed Haxe APIs, externs, runtime modules, or compiler intrinsics. The scoped
+authority policy for rare framework-owned raw islands is documented in
+`docs/00-project/OCAML_SCOPED_RAW_INJECTION_AUTHORITY.md`; raw `__ocaml__` remains rejected in `metal` and
+`@:haxeMetal` lanes.
 
 ### Reflection note (portable)
 
