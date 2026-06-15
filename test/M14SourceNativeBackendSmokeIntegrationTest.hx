@@ -12143,6 +12143,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(bytesTmpRoot);
 		backend.emit(phpBytesRuntimeProgram(), new BackendContext(bytesTmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final bytesContent = File.getContent(Path.join([bytesTmpRoot, "index.php"]));
+		assertContains(bytesContent, sourceTemplateContent("php/namespaces", "HaxeIo.php"),
+			"PHP source backend should emit haxe.io helpers from the repo-owned namespace template");
 		assertContains(bytesContent, "namespace haxe\\io {", "PHP runtime should expose haxe.io namespace helpers");
 		assertContains(bytesContent, "class Bytes {", "PHP runtime should expose haxe.io.Bytes");
 		assertContains(bytesContent, "class BytesInput {", "PHP runtime should expose haxe.io.BytesInput");
