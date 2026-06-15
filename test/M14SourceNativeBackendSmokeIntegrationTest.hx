@@ -12234,6 +12234,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(xmlTmpRoot);
 		backend.emit(phpXmlRuntimeProgram(), new BackendContext(xmlTmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final xmlContent = File.getContent(Path.join([xmlTmpRoot, "index.php"]));
+		assertContains(xmlContent, sourceTemplateContent("php/runtime", "Xml.php"), "PHP source backend should emit Xml from the repo-owned runtime template");
 		assertContains(xmlContent, "class Xml", "PHP runtime should expose a minimal Xml class");
 		assertContains(xmlContent, "public static function parse($source)", "PHP Xml runtime should expose parse");
 		if (commandExists("php")) {
