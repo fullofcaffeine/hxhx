@@ -284,9 +284,12 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
-		assertFailsContains(function() {
-			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
-		}, "ERange");
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
+		final rangeForSource = File.getContent(sourcePath);
+		assertContains(rangeForSource, "var __hxhx_range_out = $array();", "expected range expression result allocation");
+		assertContains(rangeForSource, "while (__hxhx_range_i < __hxhx_range_end)", "expected range expression loop");
+		assertContains(rangeForSource, "__hxhx_array_push(__hxhx_range_out, __hxhx_range_i);", "expected range expression append");
+		assertContains(rangeForSource, "var __hxhx_iter_i = (function() {", "expected range for-in to reuse iterable lowering");
 		deleteRecursive(outDir);
 	}
 }

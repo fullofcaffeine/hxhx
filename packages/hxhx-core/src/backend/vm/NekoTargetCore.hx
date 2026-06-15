@@ -338,7 +338,9 @@ class NekoTargetCore {
 			case EMacroType(_):
 			case ETryCatchRaw(_):
 			case ESwitchRaw(_):
-			case ERange(_, _):
+			case ERange(start, end):
+				collectExprRefs(context, start, addConstructor, addStatic);
+				collectExprRefs(context, end, addConstructor, addStatic);
 			case EUnsupported(_):
 		}
 	}
@@ -555,7 +557,9 @@ class NekoTargetCore {
 				renderArrayComprehension(context, name, iterable, guardExpr, yieldExpr);
 			case ETryCatchRaw(raw):
 				renderTryCatchRaw(raw);
-			case ERange(_, _) | EMacroType(_) | ESwitchRaw(_) | EUnsupported(_):
+			case ERange(start, end):
+				renderRangeExpr(context, start, end);
+			case EMacroType(_) | ESwitchRaw(_) | EUnsupported(_):
 				unsupportedExpr(exprTag(expr));
 		}
 	}
@@ -623,6 +627,22 @@ class NekoTargetCore {
 
 	static function renderArray(context:NekoEmitContext, values:Array<HxExpr>):String {
 		return "$array(" + [for (v in values) renderExpr(context, v)].join(", ") + ")";
+	}
+
+	static function renderRangeExpr(context:NekoEmitContext, start:HxExpr, end:HxExpr):String {
+		final parts = [
+			"(function() {",
+			"var __hxhx_range_out = $array();",
+			"var __hxhx_range_i = " + renderExpr(context, start) + ";",
+			"var __hxhx_range_end = " + renderExpr(context, end) + ";",
+			"while (__hxhx_range_i < __hxhx_range_end) {",
+			"__hxhx_array_push(__hxhx_range_out, __hxhx_range_i);",
+			"__hxhx_range_i = __hxhx_range_i + 1;",
+			"}",
+			"return __hxhx_range_out;",
+			"})()"
+		];
+		return parts.join(" ");
 	}
 
 	static function renderTryCatchRaw(raw:String):String {
