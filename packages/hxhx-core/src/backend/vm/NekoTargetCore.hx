@@ -594,7 +594,7 @@ class NekoTargetCore {
 			case EInt(value):
 				Std.string(value);
 			case EFloat(value):
-				Std.string(value);
+				renderFloatLiteral(value);
 			case EEnumValue(name):
 				quote(name);
 			case EThis:
@@ -706,6 +706,15 @@ class NekoTargetCore {
 			i++;
 		}
 		return raw;
+	}
+
+	static function renderFloatLiteral(value:Float):String {
+		final raw = Std.string(value);
+		return hasExponent(raw) ? '$$float(${quote(raw)})' : raw;
+	}
+
+	static function hasExponent(value:String):Bool {
+		return value.indexOf("e") >= 0 || value.indexOf("E") >= 0;
 	}
 
 	static function exprTag(expr:HxExpr):String {

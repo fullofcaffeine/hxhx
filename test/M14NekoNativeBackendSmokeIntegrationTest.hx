@@ -110,6 +110,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function feq(a:Float, b:Float) {} static function main() { feq(1.2e+35, 1.2e+35); } }'), context);
+		final scientificFloatSource = File.getContent(sourcePath);
+		assertContains(scientificFloatSource, 'feq($$float("1.2e+35"), $$float("1.2e+35"));',
+			"expected scientific float arguments to avoid Neko call-position literal syntax");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		final anonResult = BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var o = { name: "neko", count: 2 }; Sys.println(o.name); } }'), context);
 		assertTrue(anonResult.entryPath == sourcePath, "anon source-only mode should report generated Neko source");
