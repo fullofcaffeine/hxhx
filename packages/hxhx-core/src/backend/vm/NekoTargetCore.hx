@@ -247,6 +247,8 @@ class NekoTargetCore {
 				unsupportedExpr("this");
 			case ESuper:
 				unsupportedExpr("super");
+			case EField(EField(EIdent("neko"), "Web"), "isModNeko"):
+				"false";
 			case EIdent(name):
 				safeIdent(name);
 			case EField(obj, field):
@@ -431,6 +433,8 @@ class NekoTargetCore {
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
 			case EField(EIdent("Sys"), "args"):
 				return "$loader.args";
+			case EField(EField(EIdent("neko"), "Web"), "setHeader"):
+				return "null";
 			case EField(EIdent("Sys"), "print"):
 				return "$print(" + renderedArgs.join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):

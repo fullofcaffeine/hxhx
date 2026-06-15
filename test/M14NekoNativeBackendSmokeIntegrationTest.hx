@@ -124,6 +124,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { if (neko.Web.isModNeko) neko.Web.setHeader("Content-Type", "text/plain"); Sys.println("ok"); } }'),
+			context);
+		final webSource = File.getContent(sourcePath);
+		assertContains(webSource, "if false", "expected neko.Web.isModNeko CLI lowering");
+		assertContains(webSource, "null;", "expected neko.Web.setHeader no-op lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		assertFailsContains(function() {
 			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
 		}, "ERange");
