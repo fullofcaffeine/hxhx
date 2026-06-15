@@ -1080,7 +1080,7 @@ let parseFieldReadCatchStringRaw = fun raw -> try let __fallback_result_223 = le
 ) in Obj.magic __fallback_result_223 with
   | HxRuntime.Hx_return __ret_222 -> Obj.magic __ret_222
 
-let parseOpaqueObjectLocalRaw = fun raw -> try let __fallback_result_226 = let compact = (StringTools.replace (StringTools.replace (StringTools.replace (raw : string) (" " : string) ("" : string) : string) ("\n" : string) ("" : string) : string) ("\t" : string) ("" : string) : string) in let pattern = Obj.magic (EReg.create ("^opaque_block_expr:\\{var([A-Za-z_][A-Za-z0-9_]*):\\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\\}=\\{\\2:\"([^\"]*)\"\\};\\}$" : string) ("" : string)) in (
+let parseOpaqueObjectLocalRaw = fun raw -> try let __fallback_result_226 = let compact = (StringTools.replace (StringTools.replace (StringTools.replace (raw : string) (" " : string) ("" : string) : string) ("\n" : string) ("" : string) : string) ("\t" : string) ("" : string) : string) in let pattern = Obj.magic (EReg.create ("^opaque_block_expr:\\{var([A-Za-z_][A-Za-z0-9_]*):\\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\\}=\\{\\2:(\"[^\"]*\"|-?[0-9.]+)\\};\\}$" : string) ("" : string)) in (
   ignore (if not (EReg.hx_match (Obj.magic pattern) (compact : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   let __anon_224 = HxAnon.create () in (
     ignore (HxAnon.set __anon_224 "local" (Obj.repr (safeIdent (EReg.matched (Obj.magic pattern) 1 : string))));
@@ -1292,7 +1292,7 @@ let renderTryCatchRaw = fun context raw -> try let __fallback_result_212 = let c
         let fieldReadCatch = parseFieldReadCatchStringRaw (raw : string) in (
           ignore (if fieldReadCatch != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("(function() { try { return " ^ HxString.toStdString (Obj.obj (HxAnon.get fieldReadCatch "receiver"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get fieldReadCatch "field"))) ^ "; } catch e { return ") ^ HxString.toStdString (quote (Obj.obj (HxAnon.get fieldReadCatch "fallback") : string))) ^ "; } })()" : string))) else ());
           let opaqueObjectLocal = parseOpaqueObjectLocalRaw (raw : string) in (
-            ignore (if opaqueObjectLocal != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("(function() { var " ^ HxString.toStdString (Obj.obj (HxAnon.get opaqueObjectLocal "local"))) ^ " = (function() { var __hxhx_o = $new(null); __hxhx_o.") ^ HxString.toStdString (Obj.obj (HxAnon.get opaqueObjectLocal "field"))) ^ " = ") ^ HxString.toStdString (quote (snd opaqueObjectLocal : string))) ^ "; return __hxhx_o; })(); return null; })()" : string))) else ());
+            ignore (if opaqueObjectLocal != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("(function() { var " ^ HxString.toStdString (Obj.obj (HxAnon.get opaqueObjectLocal "local"))) ^ " = (function() { var __hxhx_o = $new(null); __hxhx_o.") ^ HxString.toStdString (Obj.obj (HxAnon.get opaqueObjectLocal "field"))) ^ " = ") ^ HxString.toStdString (snd opaqueObjectLocal)) ^ "; return __hxhx_o; })(); return null; })()" : string))) else ());
             unsupportedExpr (("ETryCatchRaw(" ^ HxString.toStdString raw) ^ ")" : string)
           )
         )
