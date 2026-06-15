@@ -150,6 +150,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var label = switch ({ value: "neko" }) { case { value: name }: name; default: "other"; }; Sys.println(label); } }'),
+			context);
+		final objectSwitchExprSource = File.getContent(sourcePath);
+		assertContains(objectSwitchExprSource, "var __hxhx_switch = (function() { var __hxhx_o = $new(null);", "expected object switch expression temp");
+		assertContains(objectSwitchExprSource, "$objget(__hxhx_switch, $hash(\"value\"))", "expected object switch field lookup");
+		assertContains(objectSwitchExprSource, "var name = $objget(__hxhx_switch, $hash(\"value\"));", "expected object switch field binding");
+		assertContains(objectSwitchExprSource, "return name;", "expected object switch expression branch return");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { switch (1) { case 1: Sys.println("one"); default: Sys.println("other"); } } }'), context);
 		final switchStmtSource = File.getContent(sourcePath);
 		assertContains(switchStmtSource, "switch 1 {", "expected Neko switch statement");
@@ -177,9 +188,9 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final arraySwitchStmtSource = File.getContent(sourcePath);
 		assertContains(arraySwitchStmtSource, "var __hxhx_switch = $array(ok, expected);", "expected array switch statement temp");
-		assertContains(arraySwitchStmtSource, "if (__hxhx_switch != null) && ($asize(__hxhx_switch) == 2)", "expected array switch statement if lowering");
+		assertContains(arraySwitchStmtSource, "(__hxhx_switch != null) && ($asize(__hxhx_switch) == 2)", "expected array switch statement if lowering");
 		assertContains(arraySwitchStmtSource, "$print(\"mismatch\", \"\\n\")", "expected array switch statement branch body");
-		assertContains(arraySwitchStmtSource, "else if true", "expected array switch statement default branch");
+		assertContains(arraySwitchStmtSource, "else if (true)", "expected array switch statement default branch");
 
 		deleteRecursive(outDir);
 
@@ -201,6 +212,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(intEqualsGuardSwitchStmtSource, "var value = __hxhx_switch;", "expected guarded switch statement capture binding");
 		assertContains(intEqualsGuardSwitchStmtSource, "(__hxhx_switch == 5)", "expected guarded switch statement integer equality condition");
 		assertContains(intEqualsGuardSwitchStmtSource, "$print(\"middle\", \"\\n\")", "expected guarded switch statement branch body");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { switch ({ value: "neko" }) { case { value: name }: Sys.println(name); default: Sys.println("other"); } } }'),
+			context);
+		final objectSwitchStmtSource = File.getContent(sourcePath);
+		assertContains(objectSwitchStmtSource, "$objget(__hxhx_switch, $hash(\"value\"))", "expected object switch statement field lookup");
+		assertContains(objectSwitchStmtSource, "var name = $objget(__hxhx_switch, $hash(\"value\"));", "expected object switch statement field binding");
+		assertContains(objectSwitchStmtSource, "$print(name, \"\\n\")", "expected object switch statement branch body");
 
 		deleteRecursive(outDir);
 

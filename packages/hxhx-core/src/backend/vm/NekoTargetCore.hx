@@ -1036,7 +1036,7 @@ class NekoTargetCore {
 		var emitted = false;
 		for (i in 0...count) {
 			final lowered = lowerNekoSwitchPattern(patterns[i], switchValue);
-			out.push(indent + "  " + (emitted ? "else " : "") + "if " + lowered.cond + " {");
+			out.push(indent + "  " + (emitted ? "else " : "") + "if (" + lowered.cond + ") {");
 			renderNekoSwitchBindings(out, lowered.bindings, indent + "    ");
 			renderStmt(out, context, bodies[i], indent + "    ");
 			out.push(indent + "  }");
@@ -1054,7 +1054,7 @@ class NekoTargetCore {
 		var emitted = false;
 		for (i in 0...count) {
 			final lowered = lowerNekoSwitchPattern(patterns[i], switchValue);
-			parts.push((emitted ? "else " : "") + "if " + lowered.cond + " {");
+			parts.push((emitted ? "else " : "") + "if (" + lowered.cond + ") {");
 			for (binding in lowered.bindings)
 				parts.push("var " + safeIdent(binding.name) + " = " + binding.expr + ";");
 			parts.push("return " + renderExpr(context, exprs[i]) + ";");
@@ -1083,7 +1083,7 @@ class NekoTargetCore {
 
 	static function patternNeedsNekoIfLowering(pattern:HxSwitchPattern):Bool {
 		return switch (pattern) {
-			case PArray(_) | PIntEqualsGuard(_, _, _):
+			case PObject(_, _) | PArray(_) | PIntEqualsGuard(_, _, _):
 				true;
 			case PCapture(_, inner) | PUnsupportedGuard(inner):
 				patternNeedsNekoIfLowering(inner);
@@ -1117,6 +1117,8 @@ class NekoTargetCore {
 				{cond: lowered.cond, bindings: bindings};
 			case PArray(items):
 				lowerNekoArrayPattern(items, scrutinee);
+			case PObject(fieldNames, fieldPatterns):
+				lowerNekoObjectPattern(fieldNames, fieldPatterns, scrutinee);
 			case PUnsupportedGuard(inner):
 				final lowered = lowerNekoSwitchPattern(inner, scrutinee);
 				{cond: "(" + lowered.cond + " && false)", bindings: lowered.bindings};
@@ -1126,10 +1128,26 @@ class NekoTargetCore {
 				{cond: "((" + lowered.cond + ") && (" + bound + " == " + Std.string(value) + "))", bindings: lowered.bindings};
 			case POr(patterns):
 				lowerNekoOrPattern(patterns, scrutinee);
-			case PObject(_, _) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntCompareGuard(_, _, _, _) |
-				PParsedIntSwitchGuard(_, _, _, _):
+			case PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
 				unsupportedSwitchPatternLowering(pattern);
 		}
+	}
+
+	static function lowerNekoObjectPattern(fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
+		final conds = ["(" + scrutinee + " != null)"];
+		final bindings = new Array<NekoSwitchPatternBinding>();
+		if (fieldNames != null && fieldPatterns != null) {
+			final count = fieldNames.length < fieldPatterns.length ? fieldNames.length : fieldPatterns.length;
+			for (i in 0...count) {
+				final fieldExpr = "$objget(" + scrutinee + ", $hash(" + quote(fieldNames[i]) + "))";
+				final lowered = lowerNekoSwitchPattern(fieldPatterns[i], fieldExpr);
+				if (lowered.cond != "true")
+					conds.push("(" + lowered.cond + ")");
+				for (binding in lowered.bindings)
+					bindings.push(binding);
+			}
+		}
+		return {cond: conds.join(" && "), bindings: bindings};
 	}
 
 	static function lowerNekoArrayPattern(items:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
