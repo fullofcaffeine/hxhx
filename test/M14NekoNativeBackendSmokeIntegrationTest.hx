@@ -611,5 +611,11 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final binaryIfSource = File.getContent(sourcePath);
 		assertContains(binaryIfSource, "var value = (1 + (if (flag) 2 else 3));", "expected binary RHS if expression to lower as Neko conditional expression");
 		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var value = !true; Sys.println(value); } }'), context);
+		final notSource = File.getContent(sourcePath);
+		assertContains(notSource, "var value = $not(true);", "expected boolean not to lower to Neko intrinsic");
+		deleteRecursive(outDir);
 	}
 }

@@ -625,6 +625,8 @@ class NekoTargetCore {
 				renderExpr(context, obj) + "." + safeIdent(field);
 			case ECall(callee, args):
 				renderCall(context, callee, args);
+			case EUnop("!", inner):
+				"$not(" + renderExpr(context, inner) + ")";
 			case EUnop(op, inner):
 				"(" + op + renderExpr(context, inner) + ")";
 			case EBinop(op, left, right):
