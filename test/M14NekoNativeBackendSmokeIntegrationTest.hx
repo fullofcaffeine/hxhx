@@ -223,6 +223,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Base { public function new() {} public function setup() {} } class Child extends Base { public function new() { super(); } public function setup() { super.setup(); } } class Main { static function main() { var child = new Child(); child.setup(); } }'),
+			context);
+		final superMethodSource = File.getContent(sourcePath);
+		assertContains(superMethodSource, "__hxhx_self.setup = function()", "expected child setup method closure");
+		assertContains(superMethodSource, "null;", "expected super method call to lower to no-op placeholder");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { try { throw "boom"; } catch (e:String) { Sys.println(e); } } }'),
 			context);
 		final trySource = File.getContent(sourcePath);

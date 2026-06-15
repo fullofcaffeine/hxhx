@@ -605,6 +605,8 @@ class NekoTargetCore {
 				if (context.selfName == null) unsupportedExpr("this"); else context.selfName;
 			case ESuper:
 				unsupportedExpr("super");
+			case EField(ESuper, _):
+				"null";
 			case EField(EField(EIdent("neko"), "Web"), "isModNeko"):
 				"false";
 			case EIdent(name):
@@ -1078,6 +1080,8 @@ class NekoTargetCore {
 				return "__hxhx_array_indexOf(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(receiver, "push") if (args.length >= 1):
 				return "__hxhx_array_push(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
+			case EField(ESuper, _):
+				return "null";
 			case EField(EIdent(className), method) if (isUpperStart(className)):
 				final info = lookupClass(context, className);
 				final fullClassName = info == null ? className : info.fullName;
