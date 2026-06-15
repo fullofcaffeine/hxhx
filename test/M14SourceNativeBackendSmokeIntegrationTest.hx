@@ -14039,6 +14039,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "Date.php"), "PHP source backend should emit Date from the repo-owned runtime template");
 		assertContains(content, "class Date {", "PHP runtime should provide the Haxe Date class");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -14333,6 +14334,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "DateTools.php"),
+			"PHP source backend should emit DateTools from the repo-owned runtime template");
 		assertContains(content, "class DateTools {", "PHP std support should provide a DateTools helper when std DateTools is skipped");
 		assertContains(content, "public static function minutes($n)", "PHP DateTools helper should include minute conversion");
 		assertContains(content, "InitBase::$sinline = DateTools::minutes(1);", "PHP static initializer should be able to reference std DateTools");
