@@ -14161,6 +14161,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/namespaces", "HaxeCore.php"),
+			"PHP source backend should emit stable haxe namespace helpers from the repo-owned core template");
 		assertContains(content, "class Json {", "PHP haxe namespace support should provide haxe.Json");
 		assertContains(content, "\\haxe\\Json::parse", "PHP imported haxe.Json calls should reference the namespaced runtime class");
 		assertContains(content, "\\haxe\\Json::stringify", "PHP imported haxe.Json stringify should reference the namespaced runtime class");
