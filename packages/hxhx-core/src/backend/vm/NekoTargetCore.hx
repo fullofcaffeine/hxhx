@@ -625,6 +625,8 @@ class NekoTargetCore {
 				"(" + op + renderExpr(context, inner) + ")";
 			case EBinop("is", left, right):
 				"Std_isOfType(" + renderExpr(context, left) + ", " + renderTypeTestExpr(context, right) + ")";
+			case EBinop("??", left, right):
+				renderNullCoalesceExpr(context, left, right);
 			case EBinop(op, left, right):
 				"(" + renderExpr(context, left) + " " + op + " " + renderExpr(context, right) + ")";
 			case ETernary(cond, thenExpr, elseExpr):
@@ -696,6 +698,14 @@ class NekoTargetCore {
 			case _:
 				null;
 		}
+	}
+
+	static function renderNullCoalesceExpr(context:NekoEmitContext, left:HxExpr, right:HxExpr):String {
+		return "(function() { var __hxhx_coalesce = "
+			+ renderExpr(context, left)
+			+ "; if (__hxhx_coalesce != null) { return __hxhx_coalesce; } else { return "
+			+ renderExpr(context, right)
+			+ "; } })()";
 	}
 
 	static function renderUnsupportedNumericLiteral(raw:String):Null<String> {
