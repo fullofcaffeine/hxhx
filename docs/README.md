@@ -30,6 +30,7 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - Reflaxe promotion matrix contract: `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
 - Reflaxe promotion matrix tradeoffs: `docs/00-project/REFLAXE_PROMOTION_MATRIX_TRADEOFFS.md`
 - Public `Scoped 1.0` / `Full 1.0` claim checklist: `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
+- North-star product goals and planning owners: `docs/00-project/NORTH_STAR_GOALS.md`
 - Weekly scheduled-gate audit runbook: `docs/00-project/WEEKLY_CI_EVIDENCE.md`
 - Delegated vs native execution modes: `docs/02-user-guide/concepts/execution_modes.md`
 - Delegation truth table (what still routes to stage0): `docs/02-user-guide/concepts/what_delegates_today.md`

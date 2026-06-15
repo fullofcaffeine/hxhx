@@ -241,6 +241,19 @@ This repository is intended to become:
 - a **MIT-licensed, production-grade Haxe-in-Haxe compiler** (`hxhx`) that can eventually act as a
   **drop-in replacement** for upstream Haxe (target version: **4.3.7**), including macros + plugin system.
 
+North-star planning lives in `docs/00-project/NORTH_STAR_GOALS.md` and the README `Goals status` table.
+Keep these aligned with beads whenever scope changes. The current long-term goals are:
+
+- stable `reflaxe.ocaml` with both upstream Haxe and `hxhx`,
+- stable `hxhx` as a Haxe `4.3.7`-equivalent or better MIT compiler, including performance,
+- a hackable Haxe-in-Haxe compiler that makes Haxe itself easier for Haxe developers to read, modify, test, and fork,
+- pluggable compiler customization that can be enabled/disabled without corrupting the baseline Haxe contract,
+- practical Haxe-family compiler variations/forks implemented in Haxe when a plugin is not enough,
+- Reflaxe-to-native promotion so prototype targets can become upstream-Haxe plugins/host adapters, `hxhx` plugins, or builtin `hxhx` targets.
+
+If a task changes any of these goals, their production-readiness status, or their owning bead plan, update the
+north-star doc and README table in the same slice or record explicitly why no docs change is required.
+
 To avoid copyleft obligations and preserve the ability to embed/bundle `hxhx` in proprietary apps:
 
 - **Do not copy** upstream Haxe *compiler* source code (`vendor/haxe/src`) into this repo.

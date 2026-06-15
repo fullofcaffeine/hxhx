@@ -1,0 +1,116 @@
+# North-Star Goals
+
+This page records the long-term product direction for this repository. It is a planning contract, not a release claim.
+
+The short version:
+
+1. Make `reflaxe.ocaml` a stable OCaml target that works well with both upstream Haxe and `hxhx`.
+2. Make `hxhx` a stable, MIT-licensed Haxe-in-Haxe compiler that is 1:1 compatible with Haxe `4.3.7`, or better where compatibility allows, including compiler performance.
+3. Make Haxe easier to hack by implementing the compiler in Haxe: the compiler should be readable, editable, testable, and approachable to Haxe developers.
+4. Make Haxe easy to bend without breaking Haxe: extensions should be pluggable, removable, and isolated from the baseline compiler contract.
+5. Make it practical to create full Haxe-family compiler variations in Haxe when a project needs a real fork or dialect.
+6. Make Reflaxe compilers easy to prototype as Reflaxe targets and then promote into native plugin or builtin target forms for upstream Haxe and/or `hxhx`.
+
+## Goal 1: Stable `reflaxe.ocaml`
+
+`reflaxe.ocaml` should be usable as a production OCaml target from two host paths:
+
+- upstream Haxe `4.3.7` plus `-lib reflaxe.ocaml`, and
+- `hxhx` native lanes once the relevant `hxhx` compatibility evidence is green.
+
+Current planning owners:
+
+- standalone upstream-Haxe product readiness: `haxe.ocaml-ro10`
+- `hxhx + reflaxe.ocaml` production-route status: `haxe.ocaml-n5ae`
+- public status board: README `Goals status` table
+
+## Goal 2: Stable `hxhx` parity
+
+`hxhx` should become a practical drop-in equivalent to upstream Haxe `4.3.7` while staying MIT-compatible and clean-room in implementation.
+
+The bar is not “passes our local smoke tests.” The bar is upstream-derived behavioral evidence:
+
+- upstream suite gates for the declared compatibility scope,
+- macro and plugin parity,
+- no required stage0 fallback for correctness,
+- performance parity or better for compiler workloads,
+- release enforcement that blocks misleading public `1.0` claims.
+
+Current planning owners:
+
+- Full 1.0 closure: `haxe.ocaml-f1cl`
+- strict upstream target gates: `haxe.ocaml-f1cl.3`, `haxe.ocaml-f1cl.3.1`, `haxe.ocaml-blsl`, `haxe.ocaml-sssk`
+- release enforcement: `haxe.ocaml-f1cl.6`, `haxe.ocaml-f1cl.7`
+
+## Goal 3: Hackable Haxe-in-Haxe compiler
+
+One reason to build `hxhx` in Haxe is to make Haxe itself easier to understand and change.
+
+The compiler should feel like a Haxe project, not a sealed artifact:
+
+- compiler concepts should be documented in Haxe-facing terms,
+- implementation seams should be small enough to edit without spelunking giant files,
+- tests should make behavior changes safe to attempt,
+- contributors should be able to prototype compiler changes without learning the upstream OCaml implementation first,
+- architectural choices should optimize for clarity and maintainability as well as parity.
+
+This does not weaken compatibility. The default compiler still has to behave like Haxe `4.3.7`; hackability is how we make that behavior easier to evolve and verify.
+
+Current planning owners:
+
+- Full 1.0 parity and release contract: `haxe.ocaml-f1cl`
+- modular customization and variation architecture: `haxe.ocaml-vary`
+
+## Goal 4: Pluggable compiler customization
+
+We want a supported way to bend Haxe to project needs without turning baseline `hxhx` into an unreviewable fork.
+
+The preferred model is:
+
+- baseline `hxhx` stays Haxe-compatible by default,
+- extensions are explicit and removable,
+- extension hooks are stable enough for real users,
+- plugin behavior is auditable in CI,
+- custom behavior cannot silently weaken Haxe `4.3.7` compatibility claims.
+
+Candidate mechanisms include compiler plugins, native target plugins, macro/runtime hooks, and explicit feature-gated extension points. The exact API surface should be designed under a dedicated architecture bead before being promoted as a public platform.
+
+Current planning owner:
+
+- modular compiler customization and dialect architecture: `haxe.ocaml-vary`
+
+## Goal 5: Haxe-family compiler variations
+
+Sometimes a project needs more than a plugin: it may need a custom Haxe-family language, policy set, target bundle, or distribution.
+
+The repo should make that practical in Haxe by keeping the compiler understandable and modular:
+
+- frontend, typer, macro host, backend, and target-runtime boundaries should be separable,
+- variation points should be explicit instead of accidental edits to large files,
+- forks/dialects should be able to reuse the baseline compiler while making intentional differences visible,
+- the default `hxhx` release must remain Haxe-compatible unless a variation is explicitly selected.
+
+This is related to plugin extensibility, but not identical: plugins should cover pluggable changes; compiler variations cover deliberate alternate compiler products.
+
+Current planning owner:
+
+- modular compiler customization and dialect architecture: `haxe.ocaml-vary`
+
+## Goal 6: Reflaxe-to-native promotion
+
+Reflaxe should stay the fast prototyping layer for compiler targets. Once a target is stable, there should be a clear path to promote it into native forms:
+
+- an upstream Haxe plugin or host-adapter path where supported,
+- an `hxhx` native plugin path,
+- an `hxhx` builtin target path,
+- eventually a reusable target core that can be packaged in more than one host shape without rewriting the backend.
+
+Current planning owners:
+
+- promotion matrix: `haxe.ocaml-rpmx`
+- Full 1.0 plugin parity inside `hxhx`: `haxe.ocaml-f1cl.8`
+- native plugin hardening: `haxe.ocaml-anoy`
+
+## Operating Rule
+
+When a task changes compatibility scope, plugin architecture, target promotion, release claims, or production-readiness wording, update this page or explicitly record why it remains unchanged. Keep the README `Goals status` table aligned with this document, but keep the README focused on what users can do today.
