@@ -659,9 +659,30 @@ class NekoTargetCore {
 				renderTryCatchRaw(context, raw);
 			case ERange(start, end):
 				renderRangeExpr(context, start, end);
-			case ESwitchRaw(_) | EUnsupported(_):
+			case ESwitchRaw(_):
 				unsupportedExpr(exprTag(expr));
+			case EUnsupported(raw):
+				final numeric = renderUnsupportedNumericLiteral(raw);
+				numeric == null ? unsupportedExpr(exprTag(expr)) : numeric;
 		}
+	}
+
+	static function renderUnsupportedNumericLiteral(raw:String):Null<String> {
+		if (raw == null || raw.length == 0)
+			return null;
+		var i = 0;
+		if (raw.charCodeAt(0) == "-".code) {
+			if (raw.length == 1)
+				return null;
+			i = 1;
+		}
+		while (i < raw.length) {
+			final c = raw.charCodeAt(i);
+			if (c < "0".code || c > "9".code)
+				return null;
+			i++;
+		}
+		return raw;
 	}
 
 	static function exprTag(expr:HxExpr):String {
