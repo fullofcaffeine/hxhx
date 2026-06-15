@@ -93,6 +93,12 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess NekoTargetCore.sanitizeNekoValueExpr("value + 1") == "value + 1", "safe Neko expressions should remain unchanged");
 		assertTrue(@:privateAccess NekoTargetCore.sanitizeNekoValueExpr("x" + String.fromCharCode(0) + "bad") == "null",
 			"control-byte expression text must be neutralized before Neko source emission");
+		final opaqueObject = @:privateAccess NekoTargetCore.renderExpr(cast null, ETryCatchRaw('opaque_block_expr:{ var b:{v:Int} = {v:1}; }'));
+		assertContains(opaqueObject, "__hxhx_o.v = 1;", "opaque object block should emit the captured field value safely");
+		final opaqueTwoFieldObject = @:privateAccess NekoTargetCore.renderExpr(cast null, ETryCatchRaw('opaque_block_expr:{ var b:{v:Int} = {v:1,w:"foo"}; }'));
+		assertContains(opaqueTwoFieldObject, '__hxhx_o.w = "foo";', "opaque object block should emit the second captured field safely");
+		assertFailsContains(() -> @:privateAccess NekoTargetCore.renderExpr(cast null, ETryCatchRaw('opaque_block_expr:{ var b:{v:Int} = {w:1}; }')),
+			"ETryCatchRaw");
 
 		final outDir = Path.join([".tmp", "m14_neko_native_backend_smoke"]);
 		deleteRecursive(outDir);
