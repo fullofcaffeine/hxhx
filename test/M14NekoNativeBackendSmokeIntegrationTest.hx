@@ -90,6 +90,9 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess NekoTargetCore.isNekoNumericLiteralText("1.2e+35"), "scientific float text should be valid Neko numeric text");
 		assertTrue(! @:privateAccess NekoTargetCore.isNekoNumericLiteralText(String.fromCharCode(0xF0) + "bad"),
 			"invalid byte-like float text must not be emitted as raw Neko source");
+		assertTrue(@:privateAccess NekoTargetCore.sanitizeNekoValueExpr("value + 1") == "value + 1", "safe Neko expressions should remain unchanged");
+		assertTrue(@:privateAccess NekoTargetCore.sanitizeNekoValueExpr("x" + String.fromCharCode(0) + "bad") == "null",
+			"control-byte expression text must be neutralized before Neko source emission");
 
 		final outDir = Path.join([".tmp", "m14_neko_native_backend_smoke"]);
 		deleteRecursive(outDir);

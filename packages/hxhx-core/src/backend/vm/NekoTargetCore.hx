@@ -783,9 +783,24 @@ class NekoTargetCore {
 		final parts = ["(function() { var " + tmp + " = $new(null);"];
 		final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
 		for (i in 0...count)
-			parts.push(tmp + "." + safeIdent(fieldNames[i]) + " = " + renderExpr(context, fieldValues[i]) + ";");
+			parts.push(tmp + "." + safeIdent(fieldNames[i]) + " = " + sanitizeNekoValueExpr(renderExpr(context, fieldValues[i])) + ";");
 		parts.push("return " + tmp + "; })()");
 		return parts.join(" ");
+	}
+
+	static function sanitizeNekoValueExpr(rendered:String):String {
+		return containsUnsafeNekoSourceByte(rendered) ? "null" : rendered;
+	}
+
+	static function containsUnsafeNekoSourceByte(value:String):Bool {
+		if (value == null)
+			return true;
+		for (i in 0...value.length) {
+			final c = value.charCodeAt(i);
+			if (c < 32 && c != "\t".code && c != "\n".code && c != "\r".code)
+				return true;
+		}
+		return false;
 	}
 
 	static function renderNew(context:NekoEmitContext, typePath:String, args:Array<HxExpr>):String {
