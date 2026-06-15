@@ -27,6 +27,7 @@ class CliRouting {
 	public static inline final LANE_NATIVE_JS:String = "native-js";
 	public static inline final LANE_NATIVE_NEKO:String = "native-neko";
 	public static inline final LANE_NATIVE_HL:String = "native-hl";
+	public static inline final LANE_NATIVE_CPP:String = "native-cpp";
 	public static inline final LANE_NATIVE_PYTHON:String = "native-python";
 	public static inline final LANE_NATIVE_JAVA:String = "native-java";
 	public static inline final LANE_NATIVE_CS:String = "native-cs";
@@ -172,6 +173,17 @@ class CliRouting {
 				lane: LANE_NATIVE_HL,
 				backendId: "hl-native",
 				forwarded: nativeHl,
+				stage0Required: false
+			};
+		}
+
+		if (!targetScan.hasJs && canRouteUnitsAsNativeCpp(planningUnits)) {
+			final nativeCpp = baseForwarded.copy();
+			addDefineIfMissing(nativeCpp, "cpp");
+			return {
+				lane: LANE_NATIVE_CPP,
+				backendId: "cpp-native",
+				forwarded: nativeCpp,
 				stage0Required: false
 			};
 		}
@@ -396,6 +408,19 @@ class CliRouting {
 		return false;
 	}
 
+	static function hasCppTargetFlag(args:Array<String>):Bool {
+		if (args == null)
+			return false;
+		for (a in args) {
+			switch (a) {
+				case "-cpp", "--cpp":
+					return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
 	static function hasSourceTargetFlag(args:Array<String>, target:String):Bool {
 		if (args == null)
 			return false;
@@ -563,6 +588,41 @@ class CliRouting {
 			}
 		}
 		return false;
+	}
+
+	static function hasNonCppStandardTargetFlag(args:Array<String>):Bool {
+		if (args == null)
+			return false;
+		for (a in args) {
+			switch (a) {
+				case "-lua", "--lua", "-python", "--python", "-php", "--php", "-cs", "--cs", "-java", "--java", "-jvm", "--jvm", "-neko", "--neko", "-hl",
+					"--hl", "-swf", "--swf", "-as3", "--as3", "-xml", "--xml":
+					return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function canRouteUnitsAsNativeCpp(units:Array<Array<String>>):Bool {
+		if (units == null || units.length == 0)
+			return false;
+		final flattened = flattenUnits(units);
+		if (hasCppTargetFlag(flattened) && !hasNonCppStandardTargetFlag(flattened))
+			return true;
+		var sawCpp = false;
+		for (unit in units) {
+			if (hasCppTargetFlag(unit)) {
+				if (hasNonCppStandardTargetFlag(unit))
+					return false;
+				sawCpp = true;
+				continue;
+			}
+			if (isNativeNekoCommandHelperUnit(unit))
+				continue;
+			return false;
+		}
+		return sawCpp;
 	}
 
 	static function hasCommandHook(args:Array<String>):Bool {

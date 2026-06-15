@@ -122,6 +122,13 @@ class M14DirectFlagCliContractTest {
 		assertEquals(nativeHl.backendId, "hl-native", "native hl backend");
 		assertTrue(hasDefine(nativeHl.forwarded, "hl"), "native hl define");
 
+		final nativeCpp = plan(["--cpp", "cpp_out", "-main", "Main"]);
+		assertEquals(nativeCpp.lane, "native-cpp", "native cpp lane");
+		assertEquals(nativeCpp.backendId, "cpp-native", "native cpp backend");
+		assertTrue(hasDefine(nativeCpp.forwarded, "cpp"), "native cpp define");
+		assertEquals(Stage3Args.findTargetOutputDirectoryHint(["--cpp", "cpp_out", "-main", "Main"], "cpp-native"), "cpp_out",
+			"native cpp output directory hint");
+
 		final nativePython = plan(["--python", "py_out", "-main", "Main"]);
 		assertEquals(nativePython.lane, "native-python", "native python lane");
 		assertEquals(nativePython.backendId, "python-native", "native python backend");
@@ -225,6 +232,15 @@ class M14DirectFlagCliContractTest {
 		assertTrue(hasDefine(sysCs.forwarded, "cs"), "sys-style mixed helper cs hxml define");
 		assertEquals(Stage3Args.findTargetOutputDirectoryHint(["--main", "Main", "-cs", "bin/cs"], "cs-native"), "bin/cs",
 			"sys-style cs hxml output directory hint");
+
+		final sysCppHxmlPath = tmpDir + "/compile-cpp.hxml";
+		File.saveContent(sysCppHxmlPath, "compile-each.hxml\n--main Main\n-cpp bin/cpp\n\n--next\ncompile-each.hxml\n--main UtilityProcess\n-cpp bin/cpp\n");
+		final sysCpp = plan([sysCppHxmlPath]);
+		assertEquals(sysCpp.lane, "native-cpp", "sys-style mixed helper cpp hxml lane");
+		assertEquals(sysCpp.backendId, "cpp-native", "sys-style mixed helper cpp hxml backend");
+		assertTrue(hasDefine(sysCpp.forwarded, "cpp"), "sys-style mixed helper cpp hxml define");
+		assertEquals(Stage3Args.findTargetOutputDirectoryHint(["--main", "Main", "-cpp", "bin/cpp"], "cpp-native"), "bin/cpp",
+			"sys-style cpp hxml output directory hint");
 
 		final cwdHxmlDir = tmpDir + "/cwd-java";
 		if (!FileSystem.exists(cwdHxmlDir))

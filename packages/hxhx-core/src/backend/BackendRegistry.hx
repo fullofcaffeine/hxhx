@@ -40,6 +40,7 @@ class BackendRegistry {
 		});
 		registrations.push(UnsupportedNativeTargetBackend.nekoRegistration());
 		registrations.push(UnsupportedNativeTargetBackend.hlRegistration());
+		registrations.push(UnsupportedNativeTargetBackend.cppRegistration());
 		registrations.push(SourceNativeBackend.pythonRegistration());
 		registrations.push(SourceNativeBackend.javaRegistration());
 		registrations.push(SourceNativeBackend.csRegistration());

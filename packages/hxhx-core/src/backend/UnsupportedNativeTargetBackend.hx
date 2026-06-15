@@ -1,7 +1,7 @@
 package backend;
 
 /**
-	Placeholder backend registration for declared native VM target tracks.
+	Placeholder backend registration for declared native VM/C++ target tracks.
 
 	Why
 	- Full1 strict target evidence must distinguish "CLI never routed this target" from
@@ -10,7 +10,7 @@ package backend;
 	  target-specific failure seam without weakening no-stage0/no-skip policy.
 
 	What
-	- Provides backend descriptors for VM target families that are declared but not
+	- Provides backend descriptors for VM/C++ target families that are declared but not
 	  implemented yet.
 	- Supports `--hxhx-no-emit` so front-end/macro/type smoke checks can select the
 	  target without emitting artifacts.
@@ -19,11 +19,12 @@ package backend;
 	How
 	- Keep this backend intentionally small and fail-fast.
 	- Replace each placeholder with a real target-core backend as the corresponding
-	  Full1 VM target track lands.
+	  Full1 target track lands.
 **/
 class UnsupportedNativeTargetBackend {
 	public static inline var NEKO_TARGET_ID = "neko-native";
 	public static inline var HL_TARGET_ID = "hl-native";
+	public static inline var CPP_TARGET_ID = "cpp-native";
 
 	public static function nekoDescriptor():TargetDescriptor {
 		return descriptor(NEKO_TARGET_ID, "builtin/neko-native-placeholder", "Native Neko backend placeholder", "process");
@@ -31,6 +32,10 @@ class UnsupportedNativeTargetBackend {
 
 	public static function hlDescriptor():TargetDescriptor {
 		return descriptor(HL_TARGET_ID, "builtin/hl-native-placeholder", "Native HashLink backend placeholder", "process");
+	}
+
+	public static function cppDescriptor():TargetDescriptor {
+		return descriptor(CPP_TARGET_ID, "builtin/cpp-native-placeholder", "Native C++/hxcpp backend placeholder", "process");
 	}
 
 	static function descriptor(targetId:String, implId:String, description:String, hostCap:String):TargetDescriptor {
@@ -70,6 +75,14 @@ class UnsupportedNativeTargetBackend {
 		return {
 			descriptor: d,
 			create: function() return new TargetCoreBackend(d, function(program, context) return emitUnsupported("HashLink", program, context))
+		};
+	}
+
+	public static function cppRegistration():BackendRegistrationSpec {
+		final d = cppDescriptor();
+		return {
+			descriptor: d,
+			create: function() return new TargetCoreBackend(d, function(program, context) return emitUnsupported("C++", program, context))
 		};
 	}
 }

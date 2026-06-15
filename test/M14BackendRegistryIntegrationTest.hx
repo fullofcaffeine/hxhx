@@ -60,6 +60,7 @@ class M14BackendRegistryIntegrationTest {
 		assertTrue(has(ids, "js-native"), "backend registry missing js-native target id");
 		assertTrue(has(ids, "neko-native"), "backend registry missing neko-native target id");
 		assertTrue(has(ids, "hl-native"), "backend registry missing hl-native target id");
+		assertTrue(has(ids, "cpp-native"), "backend registry missing cpp-native target id");
 
 		final ocaml = BackendRegistry.descriptorForTarget("ocaml-stage3");
 		assertTrue(ocaml != null, "descriptorForTarget(ocaml-stage3) returned null");
@@ -78,6 +79,10 @@ class M14BackendRegistryIntegrationTest {
 		final hl = BackendRegistry.descriptorForTarget("hl-native");
 		assertTrue(hl != null, "descriptorForTarget(hl-native) returned null");
 		assertTrue(hl.implId == "builtin/hl-native-placeholder", "unexpected hl-native implId");
+
+		final cpp = BackendRegistry.descriptorForTarget("cpp-native");
+		assertTrue(cpp != null, "descriptorForTarget(cpp-native) returned null");
+		assertTrue(cpp.implId == "builtin/cpp-native-placeholder", "unexpected cpp-native implId");
 
 		final python = BackendRegistry.descriptorForTarget("python-native");
 		assertTrue(python != null, "descriptorForTarget(python-native) returned null");

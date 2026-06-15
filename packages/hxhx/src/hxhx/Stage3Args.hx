@@ -98,6 +98,8 @@ class Stage3Args {
 				"neko";
 			case "hl-native":
 				"hl";
+			case "cpp-native":
+				"cpp";
 			case "python-native":
 				"python";
 			case "java-native":
@@ -136,6 +138,8 @@ class Stage3Args {
 				["-cs", "--cs"];
 			case "php-native":
 				["-php", "--php"];
+			case "cpp-native":
+				["-cpp", "--cpp"];
 			case _:
 				[];
 		};

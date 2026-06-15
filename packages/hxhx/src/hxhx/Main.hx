@@ -47,6 +47,7 @@ class Main {
 	static inline final LANE_NATIVE_JS:String = "native-js";
 	static inline final LANE_NATIVE_NEKO:String = "native-neko";
 	static inline final LANE_NATIVE_HL:String = "native-hl";
+	static inline final LANE_NATIVE_CPP:String = "native-cpp";
 	static inline final LANE_NATIVE_PYTHON:String = "native-python";
 	static inline final LANE_NATIVE_JAVA:String = "native-java";
 	static inline final LANE_NATIVE_CS:String = "native-cs";
@@ -720,8 +721,8 @@ class Main {
 		}
 
 		switch (plan.lane) {
-			case LANE_NATIVE_OCAML | LANE_NATIVE_JS | LANE_NATIVE_NEKO | LANE_NATIVE_HL | LANE_NATIVE_PYTHON | LANE_NATIVE_JAVA | LANE_NATIVE_CS |
-				LANE_NATIVE_PHP | LANE_NATIVE_LUA:
+			case LANE_NATIVE_OCAML | LANE_NATIVE_JS | LANE_NATIVE_NEKO | LANE_NATIVE_HL | LANE_NATIVE_CPP | LANE_NATIVE_PYTHON | LANE_NATIVE_JAVA |
+				LANE_NATIVE_CS | LANE_NATIVE_PHP | LANE_NATIVE_LUA:
 				if (ocamlInterpLike) {
 					fatal("hxhx: --hxhx-ocaml-interp cannot be combined with native target lanes.");
 				}

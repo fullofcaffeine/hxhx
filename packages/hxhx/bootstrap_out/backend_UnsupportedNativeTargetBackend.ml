@@ -42,6 +42,8 @@ let nekoDescriptor = fun () -> descriptor ("neko-native" : string) ("builtin/nek
 
 let hlDescriptor = fun () -> descriptor ("hl-native" : string) ("builtin/hl-native-placeholder" : string) ("Native HashLink backend placeholder" : string) ("process" : string)
 
+let cppDescriptor = fun () -> descriptor ("cpp-native" : string) ("builtin/cpp-native-placeholder" : string) ("Native C++/hxcpp backend placeholder" : string) ("process" : string)
+
 let emitUnsupported = fun targetLabel _program _context -> (
   ignore _program;
   (
@@ -60,4 +62,10 @@ let hlRegistration = fun () -> let d = hlDescriptor () in let __anon_6 = HxAnon.
   ignore (HxAnon.set __anon_6 "descriptor" d);
   ignore (HxAnon.set __anon_6 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> emitUnsupported ("HashLink" : string) (Obj.magic program) (Obj.magic context)))));
   __anon_6
+)
+
+let cppRegistration = fun () -> let d = cppDescriptor () in let __anon_7 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_7 "descriptor" d);
+  ignore (HxAnon.set __anon_7 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> emitUnsupported ("C++" : string) (Obj.magic program) (Obj.magic context)))));
+  __anon_7
 )
