@@ -9484,6 +9484,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "Anon.php"),
 			"PHP source backend should emit anonymous-object support from the repo-owned runtime template");
+		assertContains(content, sourceTemplateContent("php/runtime", "Sys.php"),
+			"PHP source backend should emit Sys support from the repo-owned runtime template");
 		assertContains(content, "class __HxArray", "PHP source backend should emit a minimal array helper");
 		assertContains(content, "class Map", "PHP source backend should emit a minimal Map helper");
 		assertContains(content, "public function set($key, $value)", "PHP Map helper should support set");
@@ -10714,6 +10716,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpMathRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "Math.php"),
+			"PHP source backend should emit Math support from the repo-owned runtime template");
 		assertContains(content, "class Math", "PHP source backend should emit a minimal Math runtime shim");
 		assertContains(content, "public static function isNaN($value)", "PHP Math shim should support isNaN");
 		assertContains(content, "public static function isFinite($value)", "PHP Math shim should support isFinite");
@@ -10761,6 +10765,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpStdRandomRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
+		assertContains(content, sourceTemplateContent("php/runtime", "Std.php"),
+			"PHP source backend should emit Std support from the repo-owned runtime template");
 		assertContains(content, "public static function random($x)", "PHP Std shim should support random");
 		assertContains(content, "return $limit <= 0 ? 0 : mt_rand(0, $limit - 1);", "PHP Std.random should preserve zero and positive bounds");
 		if (commandExists("php")) {
