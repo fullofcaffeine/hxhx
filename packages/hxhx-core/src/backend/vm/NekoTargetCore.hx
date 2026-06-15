@@ -227,21 +227,7 @@ class NekoTargetCore {
 	}
 
 	static function renderRuntimeHelpers(out:Array<String>):Void {
-		out.push("var __hxhx_array_indexOf = function(a, value) {");
-		out.push("  var i = 0;");
-		out.push("  var len = $asize(a);");
-		out.push("  while (i < len) {");
-		out.push("    if (a[i] == value) return i;");
-		out.push("    i = i + 1;");
-		out.push("  }");
-		out.push("  return -1;");
-		out.push("}");
-		out.push("");
-		out.push("var __hxhx_array_push = function(a, value) {");
-		out.push("  a[$asize(a)] = value;");
-		out.push("  return a;");
-		out.push("}");
-		out.push("");
+		NekoRuntimeSupport.render(out);
 	}
 
 	static function collectReachable(context:NekoEmitContext, mainInfo:NekoClassInfo):NekoReachable {
@@ -746,6 +732,9 @@ class NekoTargetCore {
 	}
 
 	static function renderNew(context:NekoEmitContext, typePath:String, args:Array<HxExpr>):String {
+		final mapKind = mapKindForTypePath(typePath);
+		if (mapKind != null)
+			return "__hxhx_map_new(" + quote(mapKind) + ")";
 		final info = lookupClass(context, typePath);
 		if (info != null)
 			return mangleConstructor(info.fullName) + "(" + [for (arg in args) renderExpr(context, arg)].join(", ") + ")";
@@ -763,7 +752,48 @@ class NekoTargetCore {
 	}
 
 	static function renderArray(context:NekoEmitContext, values:Array<HxExpr>):String {
+		if (isMapLiteral(values))
+			return renderMapLiteral(context, values);
 		return "$array(" + [for (v in values) renderExpr(context, v)].join(", ") + ")";
+	}
+
+	static function isMapLiteral(values:Array<HxExpr>):Bool {
+		if (values == null || values.length == 0)
+			return false;
+		for (value in values) {
+			switch (value) {
+				case EBinop("=>", _, _):
+				case _:
+					return false;
+			}
+		}
+		return true;
+	}
+
+	static function renderMapLiteral(context:NekoEmitContext, entries:Array<HxExpr>):String {
+		final parts = ["(function() { var __hxhx_m = __hxhx_map_new(" + quote("Map") + ");"];
+		for (entry in entries) {
+			switch (entry) {
+				case EBinop("=>", key, value):
+					parts.push("__hxhx_m.set(" + renderExpr(context, key) + ", " + renderExpr(context, value) + ");");
+				case _:
+			}
+		}
+		parts.push("return __hxhx_m; })()");
+		return parts.join(" ");
+	}
+
+	static function mapKindForTypePath(typePath:String):Null<String> {
+		return switch (typePath) {
+			case "Map":
+				"Map";
+			case "haxe.ds.IntMap" | "IntMap":
+				"haxe.ds.IntMap";
+			case "haxe.ds.StringMap" | "StringMap":
+				"haxe.ds.StringMap";
+			case _:
+				null;
+		}
 	}
 
 	static function renderRangeExpr(context:NekoEmitContext, start:HxExpr, end:HxExpr):String {

@@ -129,6 +129,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var empty = new Map(); var one = [1 => 1]; Sys.println(one.toString()); } }'), context);
+		final mapSource = File.getContent(sourcePath);
+		assertContains(mapSource, "var empty = __hxhx_map_new(\"Map\");", "expected neutral Map construction to use the Neko map helper");
+		assertContains(mapSource, "var one = (function() { var __hxhx_m = __hxhx_map_new(\"Map\");", "expected map literal allocation helper");
+		assertContains(mapSource, "__hxhx_m.set(1, 1);", "expected map literal entries to lower through set");
+		assertNotContains(mapSource, "1 => 1", "map literal syntax should not leak into Neko source");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var f = x -> x; Sys.println(f(3)); } }'), context);
 		final lambdaSource = File.getContent(sourcePath);
 		assertContains(lambdaSource, "var f = function(x) { return x; };", "expected Neko lambda lowering");

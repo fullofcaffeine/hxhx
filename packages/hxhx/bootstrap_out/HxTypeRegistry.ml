@@ -97,6 +97,7 @@ let init () : unit =
   ignore (HxType.class_ "backend.source.SourceTargetCommon");
   ignore (HxType.class_ "backend.source._SourceTargetCommon.PhpMetadataObjectField");
   ignore (HxType.class_ "backend.vm.NekoMacroTypeLowering");
+  ignore (HxType.class_ "backend.vm.NekoRuntimeSupport");
   ignore (HxType.class_ "backend.vm.NekoTargetCore");
   ignore (HxType.class_ "backend.vm.VmNativeBackend");
   ignore (HxType.class_ "haxe.Exception");
@@ -1318,6 +1319,9 @@ let init () : unit =
   HxType.register_class_ctor "backend.vm.NekoMacroTypeLowering" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_vm_NekoMacroTypeLowering.create ())
   );
+  HxType.register_class_ctor "backend.vm.NekoRuntimeSupport" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_vm_NekoRuntimeSupport.create ())
+  );
   HxType.register_class_ctor "backend.vm.NekoTargetCore" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_vm_NekoTargetCore.create ())
   );
@@ -1692,6 +1696,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "backend.source.SourceTargetCommon" (fun () -> Obj.repr (Backend_source_SourceTargetCommon.__empty ()));
   HxType.register_class_empty_ctor "backend.source._SourceTargetCommon.PhpMetadataObjectField" (fun () -> Obj.repr (Backend_source_SourceTargetCommon.phpmetadataobjectfield___empty ()));
   HxType.register_class_empty_ctor "backend.vm.NekoMacroTypeLowering" (fun () -> Obj.repr (Backend_vm_NekoMacroTypeLowering.__empty ()));
+  HxType.register_class_empty_ctor "backend.vm.NekoRuntimeSupport" (fun () -> Obj.repr (Backend_vm_NekoRuntimeSupport.__empty ()));
   HxType.register_class_empty_ctor "backend.vm.NekoTargetCore" (fun () -> Obj.repr (Backend_vm_NekoTargetCore.__empty ()));
   HxType.register_class_empty_ctor "backend.vm.VmNativeBackend" (fun () -> Obj.repr (Backend_vm_VmNativeBackend.__empty ()));
   HxType.register_class_empty_ctor "haxe.Exception" (fun () -> Obj.repr (Haxe_Exception.__empty ()));
@@ -1950,8 +1955,10 @@ let init () : unit =
   HxType.register_class_static_fields "backend.source._SourceTargetCommon.PhpMetadataObjectField" [ "getName"; "getValue" ];
   HxType.register_class_instance_fields "backend.vm.NekoMacroTypeLowering" [];
   HxType.register_class_static_fields "backend.vm.NekoMacroTypeLowering" [ "anonObject"; "findTopLevelArrow"; "findTopLevelChar"; "macroEnum"; "macroTypePath"; "quote"; "render"; "safeIdent"; "stripGenericTypeParams"; "trimLeadingTypeColon" ];
+  HxType.register_class_instance_fields "backend.vm.NekoRuntimeSupport" [];
+  HxType.register_class_static_fields "backend.vm.NekoRuntimeSupport" [ "render" ];
   HxType.register_class_instance_fields "backend.vm.NekoTargetCore" [];
-  HxType.register_class_static_fields "backend.vm.NekoTargetCore" [ "buildClassMap"; "collectCallRefs"; "collectExprRefs"; "collectReachable"; "collectStmtRefs"; "commandWorks"; "emit"; "ensureDirectory"; "exprTag"; "findFunction"; "findMain"; "isCurrentInstanceMethod"; "isMacroFunction"; "isUpperStart"; "lookupBytesClass"; "lookupClass"; "lowerNekoArrayPattern"; "lowerNekoExtractorPattern"; "lowerNekoObjectPattern"; "lowerNekoOrPattern"; "lowerNekoSwitchPattern"; "mangleConstructor"; "mangleFunction"; "matchesMain"; "needsTestLocalStaticBasicSlot"; "nekoIntCompareGuardCond"; "nekoStdParseIntExpr"; "nekoSwitchBindingValue"; "outputBytecodePath"; "parseBytesSubTryRaw"; "parseFieldReadCatchStringRaw"; "parseMethodCallCatchStringRaw"; "parseOpaqueObjectLocalRaw"; "parseOpaqueTypedLocalInitRaw"; "parseOpaqueTypedLocalRefRaw"; "parseSimpleCallCatchValueRaw"; "parseStringSubTryRaw"; "patternKind"; "patternNeedsNekoIfLowering"; "quote"; "renderAnon"; "renderArray"; "renderArrayComprehension"; "renderBytesConstructorCall"; "renderCall"; "renderConditionalExpr"; "renderConstructorFactory"; "renderExpr"; "renderForInStmt"; "renderForKeyValueStmt"; "renderFunction"; "renderInstanceMethod"; "renderLambda"; "renderNekoSwitchBindings"; "renderNew"; "renderProgram"; "renderRangeExpr"; "renderRuntimeHelpers"; "renderSpecialFunction"; "renderSpecialInstanceMethod"; "renderStmt"; "renderSwitchCase"; "renderSwitchExpr"; "renderSwitchIfExpr"; "renderSwitchIfStmt"; "renderSwitchPatternValue"; "renderSwitchStmt"; "renderTryCatchRaw"; "renderTryStmt"; "renderUnsupportedNumericLiteral"; "renderUnsupportedRecoveryLiteral"; "resolveNekoc"; "safeIdent"; "shellQuote"; "sourcePathForBytecode"; "stmtTag"; "switchNeedsIfLowering"; "testLocalStaticBasicSlotName"; "unsupported"; "unsupportedExpr"; "unsupportedSwitchPatternLowering"; "withSelf" ];
+  HxType.register_class_static_fields "backend.vm.NekoTargetCore" [ "buildClassMap"; "collectCallRefs"; "collectExprRefs"; "collectReachable"; "collectStmtRefs"; "commandWorks"; "emit"; "ensureDirectory"; "exprTag"; "findFunction"; "findMain"; "isCurrentInstanceMethod"; "isMacroFunction"; "isMapLiteral"; "isUpperStart"; "lookupBytesClass"; "lookupClass"; "lowerNekoArrayPattern"; "lowerNekoExtractorPattern"; "lowerNekoObjectPattern"; "lowerNekoOrPattern"; "lowerNekoSwitchPattern"; "mangleConstructor"; "mangleFunction"; "mapKindForTypePath"; "matchesMain"; "needsTestLocalStaticBasicSlot"; "nekoIntCompareGuardCond"; "nekoStdParseIntExpr"; "nekoSwitchBindingValue"; "outputBytecodePath"; "parseBytesSubTryRaw"; "parseFieldReadCatchStringRaw"; "parseMethodCallCatchStringRaw"; "parseOpaqueObjectLocalRaw"; "parseOpaqueTypedLocalInitRaw"; "parseOpaqueTypedLocalRefRaw"; "parseSimpleCallCatchValueRaw"; "parseStringSubTryRaw"; "patternKind"; "patternNeedsNekoIfLowering"; "quote"; "renderAnon"; "renderArray"; "renderArrayComprehension"; "renderBytesConstructorCall"; "renderCall"; "renderConditionalExpr"; "renderConstructorFactory"; "renderExpr"; "renderForInStmt"; "renderForKeyValueStmt"; "renderFunction"; "renderInstanceMethod"; "renderLambda"; "renderMapLiteral"; "renderNekoSwitchBindings"; "renderNew"; "renderProgram"; "renderRangeExpr"; "renderRuntimeHelpers"; "renderSpecialFunction"; "renderSpecialInstanceMethod"; "renderStmt"; "renderSwitchCase"; "renderSwitchExpr"; "renderSwitchIfExpr"; "renderSwitchIfStmt"; "renderSwitchPatternValue"; "renderSwitchStmt"; "renderTryCatchRaw"; "renderTryStmt"; "renderUnsupportedNumericLiteral"; "renderUnsupportedRecoveryLiteral"; "resolveNekoc"; "safeIdent"; "shellQuote"; "sourcePathForBytecode"; "stmtTag"; "switchNeedsIfLowering"; "testLocalStaticBasicSlotName"; "unsupported"; "unsupportedExpr"; "unsupportedSwitchPatternLowering"; "withSelf" ];
   HxType.register_class_instance_fields "backend.vm.VmNativeBackend" [];
   HxType.register_class_static_fields "backend.vm.VmNativeBackend" [ "nekoCapabilities"; "nekoDescriptor"; "nekoRegistration" ];
   HxType.register_class_instance_fields "haxe.Exception" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
@@ -2198,6 +2205,7 @@ let init () : unit =
   HxType.register_class_tags "backend.source.SourceTargetCommon" [ "backend.source.SourceTargetCommon" ];
   HxType.register_class_tags "backend.source._SourceTargetCommon.PhpMetadataObjectField" [ "backend.source._SourceTargetCommon.PhpMetadataObjectField" ];
   HxType.register_class_tags "backend.vm.NekoMacroTypeLowering" [ "backend.vm.NekoMacroTypeLowering" ];
+  HxType.register_class_tags "backend.vm.NekoRuntimeSupport" [ "backend.vm.NekoRuntimeSupport" ];
   HxType.register_class_tags "backend.vm.NekoTargetCore" [ "backend.vm.NekoTargetCore" ];
   HxType.register_class_tags "backend.vm.VmNativeBackend" [ "backend.vm.VmNativeBackend" ];
   HxType.register_class_tags "haxe.Exception" [ "haxe.Exception" ];
