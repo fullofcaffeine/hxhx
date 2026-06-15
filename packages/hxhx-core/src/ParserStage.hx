@@ -60,61 +60,86 @@ class ParserStage {
 
 		var braceDepth = 0;
 		var i = 0;
+		var declarationStart = -1;
 		while (true) {
 			final t = ParserStageScanHelpers.scanNextToken(source, i);
 			i = t.nextPos;
 			if (t.text.length == 0)
 				break;
-			if (!t.isIdent) {
-				if (t.text == "{")
-					braceDepth += 1;
-				else if (t.text == "}")
-					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
+			if (t.text == "{") {
+				braceDepth += 1;
 				continue;
 			}
-			if (braceDepth != 0 || t.text != "function")
+			if (t.text == "}") {
+				braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
 				continue;
+			}
+			if (braceDepth != 0)
+				continue;
+			switch (t.text) {
+				case "public" | "private" | "static" | "inline" | "extern" | "overload" | "override":
+					if (declarationStart < 0)
+						declarationStart = t.startPos;
+					continue;
+				case _:
+			}
+			if (t.text != "function") {
+				declarationStart = -1;
+				continue;
+			}
 
 			var sig = ParserStageScanHelpers.scanNextToken(source, i);
 			while (sig.text.length > 0 && sig.text != "{" && sig.text != ";")
 				sig = ParserStageScanHelpers.scanNextToken(source, sig.nextPos);
-			if (sig.text != "{")
+			if (sig.text != "{" && sig.text != ";")
 				continue;
 
-			var depth = 1;
+			final hasBracedBody = sig.text == "{";
 			var end = sig.nextPos;
-			while (depth > 0) {
-				final bodyTok = ParserStageScanHelpers.scanNextToken(source, end);
-				if (bodyTok.text.length == 0)
-					break;
-				end = bodyTok.nextPos;
-				if (bodyTok.text == "{")
-					depth += 1;
-				else if (bodyTok.text == "}")
-					depth -= 1;
+			var bodyText = "";
+			if (hasBracedBody) {
+				var depth = 1;
+				while (depth > 0) {
+					final bodyTok = ParserStageScanHelpers.scanNextToken(source, end);
+					if (bodyTok.text.length == 0)
+						break;
+					end = bodyTok.nextPos;
+					if (bodyTok.text == "{")
+						depth += 1;
+					else if (bodyTok.text == "}")
+						depth -= 1;
+				}
+				if (depth != 0)
+					continue;
+				bodyText = source.substr(sig.nextPos, end - sig.nextPos - 1);
 			}
-			if (depth != 0)
-				continue;
 
-			final functionText = source.substring(t.startPos, end);
-			final bodyText = source.substring(sig.nextPos, end - 1);
+			final functionStart = declarationStart >= 0 ? declarationStart : t.startPos;
+			final functionKeywordOffset = t.startPos - functionStart;
+			final functionText = source.substr(functionStart, functionKeywordOffset) + "static " + source.substr(t.startPos, end - t.startPos);
 			try {
-				final synthetic = new HxParser("class __HxModule { public static " + functionText + " }").parseModule("__HxModule");
+				final synthetic = new HxParser("class __HxModule { " + functionText + " }").parseModule("__HxModule");
 				for (fn in HxClassDecl.getFunctions(HxModuleDecl.getMainClass(synthetic))) {
 					if (HxFunctionDecl.getIsStatic(fn)) {
-						final body = try {
-							HxParser.offsetFunctionBodyColumns(HxParser.parseFunctionBodyTextAt(bodyText, source, sig.nextPos), 1);
-						} catch (_:HxParseError) {
-							HxFunctionDecl.getBody(fn);
-						} catch (_:String) {
+						final body = if (hasBracedBody) {
+							try {
+								HxParser.offsetFunctionBodyColumns(HxParser.parseFunctionBodyTextAt(bodyText, source, sig.nextPos), 1);
+							} catch (_:HxParseError) {
+								HxFunctionDecl.getBody(fn);
+							} catch (_:String) {
+								HxFunctionDecl.getBody(fn);
+							}
+						} else {
 							HxFunctionDecl.getBody(fn);
 						}
+						final emittedBodyText = hasBracedBody ? bodyText : HxFunctionDecl.getBodyText(fn);
 						out.push(new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), HxFunctionDecl.getIsStatic(fn),
 							HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn), body, HxFunctionDecl.getReturnStringLiteral(fn),
-							HxFunctionDecl.getMetadata(fn), HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), bodyText));
+							HxFunctionDecl.getMetadata(fn), HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), emittedBodyText));
 					}
 				}
 			} catch (_:HxParseError) {} catch (_:String) {}
+			declarationStart = -1;
 			i = end;
 		}
 
@@ -313,6 +338,18 @@ class ParserStage {
 									return false;
 							}
 							return true;
+						}
+
+						function functionMergeKey(fn:HxFunctionDecl):String {
+							final fnName = HxFunctionDecl.getName(fn);
+							if (fnName == null || fnName.length == 0)
+								return "";
+							if (!hasMetadata(HxFunctionDecl.getMetadata(fn), "overload"))
+								return fnName;
+							final parts = [fnName, "overload"];
+							for (arg in HxFunctionDecl.getArgs(fn))
+								parts.push(HxFunctionArg.getTypeHint(arg));
+							return parts.join("|");
 						}
 
 						function hasOnlyUnsupportedBody(body:Array<HxStmt>):Bool {
@@ -518,6 +555,27 @@ class ParserStage {
 
 					final topFunctions = scanToplevelFunctions(source, expectedMainClass);
 					if (topFunctions.length > 0) {
+						function topFunctionMergeKey(fn:HxFunctionDecl):String {
+							final fnName = HxFunctionDecl.getName(fn);
+							if (fnName == null || fnName.length == 0)
+								return "";
+							final metadata = HxFunctionDecl.getMetadata(fn);
+							var isOverload = false;
+							if (metadata != null) {
+								for (value in metadata) {
+									if (value == "overload") {
+										isOverload = true;
+										break;
+									}
+								}
+							}
+							if (!isOverload)
+								return fnName;
+							final parts = [fnName, "overload"];
+							for (arg in HxFunctionDecl.getArgs(fn))
+								parts.push(HxFunctionArg.getTypeHint(arg));
+							return parts.join("|");
+						}
 						var topHasMain = false;
 						for (fn in topFunctions) {
 							if (HxFunctionDecl.getName(fn) == "main") {
@@ -540,17 +598,17 @@ class ParserStage {
 							final functions = HxClassDecl.getFunctions(main).copy();
 							final seenFunctions:Map<String, Bool> = new Map();
 							for (fn in functions) {
-								final fnName = HxFunctionDecl.getName(fn);
-								if (fnName != null && fnName.length > 0)
-									seenFunctions.set(fnName, true);
+								final key = topFunctionMergeKey(fn);
+								if (key.length > 0)
+									seenFunctions.set(key, true);
 							}
 							var changed = false;
 							for (fn in topFunctions) {
-								final fnName = HxFunctionDecl.getName(fn);
-								if (fnName == null || fnName.length == 0 || seenFunctions.exists(fnName))
+								final key = topFunctionMergeKey(fn);
+								if (key.length == 0 || seenFunctions.exists(key))
 									continue;
 								functions.push(fn);
-								seenFunctions.set(fnName, true);
+								seenFunctions.set(key, true);
 								changed = true;
 							}
 							if (changed || (topHasMain && !mainHasMain)) {

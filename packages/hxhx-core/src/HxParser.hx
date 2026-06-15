@@ -4558,6 +4558,43 @@ class HxParser {
 					continue;
 				case _:
 			}
+			var moduleMemberVisibility:HxVisibility = Public;
+			final moduleFunctionMetadata = pendingTypeMetadata.copy();
+			var keepModuleModifiers = true;
+			while (keepModuleModifiers) {
+				keepModuleModifiers = false;
+				if (acceptKeyword(KPublic)) {
+					moduleMemberVisibility = Public;
+					keepModuleModifiers = true;
+				} else if (acceptKeyword(KPrivate)) {
+					moduleMemberVisibility = Private;
+					keepModuleModifiers = true;
+				} else if (acceptKeyword(KStatic) || acceptKeyword(KInline)) {
+					keepModuleModifiers = true;
+				} else {
+					switch (cur.kind) {
+						case TIdent(name) if (name == "overload"):
+							moduleFunctionMetadata.push("overload");
+							bump();
+							keepModuleModifiers = true;
+						case TIdent(name) if (name == "extern" || name == "override"):
+							bump();
+							keepModuleModifiers = true;
+						case _:
+					}
+				}
+			}
+			switch (cur.kind) {
+				case TKeyword(KFinal):
+					pendingTypeMetadata = [];
+					parseModuleField(true);
+					continue;
+				case TKeyword(KVar):
+					pendingTypeMetadata = [];
+					parseModuleField(false);
+					continue;
+				case _:
+			}
 			switch (cur.kind) {
 				case TKeyword(KClass) | TIdent("interface"):
 					final classMetadata = pendingTypeMetadata.copy();
@@ -4613,7 +4650,7 @@ class HxParser {
 					// Detect module-level `function main(...)` entrypoint.
 					final fnStart = cur.getPos();
 					bump();
-					final parsedFn = parseFunctionDecl(Public, true, [], fnStart);
+					final parsedFn = parseFunctionDecl(moduleMemberVisibility, true, moduleFunctionMetadata, fnStart);
 					final fn = new HxFunctionDecl(HxFunctionDecl.getName(parsedFn), HxFunctionDecl.getVisibility(parsedFn),
 						HxFunctionDecl.getIsStatic(parsedFn), HxFunctionDecl.getArgs(parsedFn), HxFunctionDecl.getReturnTypeHint(parsedFn),
 						offsetFunctionBodyColumns(HxFunctionDecl.getBody(parsedFn), 1), HxFunctionDecl.getReturnStringLiteral(parsedFn),

@@ -13532,6 +13532,70 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function phpOverloadDispatchProgram():GenIrProgram {
+		final src = [
+			"private overload extern inline function freeChoose(value:Int):String return \"module-int:\" + value;",
+			"private overload extern inline function freeChoose(value:String):String return \"module-string:\" + value;",
+			"class Main {",
+			"  overload extern static inline function moduleChoose(value:Int):String return \"module-int:\" + value;",
+			"  overload extern static inline function moduleChoose(value:String):String return \"module-string:\" + value;",
+			"  static function main() {",
+			"    var chooser:InstanceChooser = new InstanceChooser();",
+			"    var dynamicChooser:Dynamic = chooser;",
+			"    Sys.println(StaticChooser.choose(7));",
+			"    Sys.println(StaticChooser.choose(\"bee\"));",
+			"    Sys.println(chooser.choose(7));",
+			"    Sys.println(chooser.choose(\"bee\"));",
+			"    Sys.println(dynamicChooser.choose(\"bee\"));",
+			"    Sys.println(freeChoose(7));",
+			"    Sys.println(freeChoose(\"bee\"));",
+			"    Sys.println(moduleChoose(7));",
+			"    Sys.println(moduleChoose(\"bee\"));",
+			"  }",
+			"}",
+			"private class StaticChooser {",
+			"  overload extern public static inline function choose(value:Int):String return \"static-int:\" + value;",
+			"  overload extern public static inline function choose(value:String):String return \"static-string:\" + value;",
+			"}",
+			"private class InstanceChooser {",
+			"  public function new() {}",
+			"  overload extern public inline function choose(value:Int):String return \"instance-int:\" + value;",
+			"  overload extern public inline function choose(value:String):String return \"instance-string:\" + value;",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function assertPhpOverloadDispatch():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_overload_dispatch_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final backend = BackendRegistry.requireForTarget("php-native");
+		backend.emit(phpOverloadDispatchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final outputPath = Path.join([tmpRoot, "index.php"]);
+		final content = File.getContent(outputPath);
+		assertContains(content, "public static function choose_Int($value)", "PHP overload dispatch should emit static Int variants");
+		assertContains(content, "public static function choose_String($value)", "PHP overload dispatch should emit static String variants");
+		assertContains(content, "public function choose_Int($value)", "PHP overload dispatch should emit instance Int variants");
+		assertContains(content, "public function choose_String($value)", "PHP overload dispatch should emit instance String variants");
+		assertContains(content, "public function choose($value)", "PHP overload dispatch should emit instance base dispatchers");
+		assertContains(content, "StaticChooser::choose_String(\"bee\")", "PHP overload dispatch should select String static variants");
+		assertContains(content, "__hxhx_call_field($chooser, \"choose_String\", \"bee\")", "PHP overload dispatch should select String instance variants");
+		assertContains(content, "$dynamicChooser->choose(\"bee\")", "PHP overload dispatch should preserve base dynamic member calls");
+		assertContains(content, "Main::freeChoose_String(\"bee\")", "PHP overload dispatch should select String top-level module variants");
+		assertContains(content, "Main::moduleChoose_String(\"bee\")", "PHP overload dispatch should select String same-module variants");
+		if (commandExists("php")) {
+			final run = commandOutput("php", [outputPath]);
+			assertTrue(run.code == 0, "generated PHP overload dispatch should execute, stderr:\n" + run.stderr);
+			assertTrue(run.stdout == "static-int:7\nstatic-string:bee\ninstance-int:7\ninstance-string:bee\ninstance-string:bee\nmodule-int:7\nmodule-string:bee\nmodule-int:7\nmodule-string:bee\n",
+				"generated PHP overload dispatch output mismatch, got:\n"
+				+ run.stdout);
+		}
+		deleteRecursive(tmpRoot);
+	}
+
 	static function assertPhpGenericConstructible():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_generic_constructible_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -15723,6 +15787,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpTypeReflection();
 		assertPhpGenericStaticReflection();
 		assertPhpGenericStaticReflectionTextFallback();
+		assertPhpOverloadDispatch();
 		assertPhpGenericConstructible();
 		assertPhpTypeErrorGenericNull();
 		assertPhpShiftAssignment();

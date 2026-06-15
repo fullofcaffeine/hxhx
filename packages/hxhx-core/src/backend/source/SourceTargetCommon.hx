@@ -40,6 +40,8 @@ private typedef PhpEnumAbstractValueRef = {
 	final fieldName:String;
 };
 
+private typedef PhpOverloadMethodMap = haxe.ds.StringMap<haxe.ds.StringMap<Array<HxFunctionDecl>>>;
+
 private typedef CsEnumCtorRef = {
 	final enumName:String;
 	final ctorName:String;
@@ -2556,10 +2558,15 @@ class SourceTargetCommon {
 								final renderedArgs = phpRenderedCallArgsWithEnumPeerContext(field, phpArgs);
 								if (renderedArgs != null)
 									fieldAccess(target, renderedReceiver, field) + "(" + renderedArgs.join(", ") + ")";
-								else if (phpReceiverHasInstanceField(receiver, field))
-									phpCallField(renderedReceiver, field, phpAlignCallableFieldCallArgs(receiver, field, phpArgs));
-								else
-									callExpr(target, fieldAccess(target, renderedReceiver, field), phpArgs);
+								else {
+									final overloadName = phpInstanceOverloadMethodName(receiver, field, phpArgs);
+									if (overloadName != null)
+										phpCallField(renderedReceiver, overloadName, phpArgs);
+									else if (phpReceiverHasInstanceField(receiver, field))
+										phpCallField(renderedReceiver, field, phpAlignCallableFieldCallArgs(receiver, field, phpArgs));
+									else
+										callExpr(target, fieldAccess(target, renderedReceiver, field), phpArgs);
+								}
 							}
 					}
 				}
@@ -7050,6 +7057,9 @@ class SourceTargetCommon {
 			return sanitizePhpGlobalFunctionName(field) + "(" + rendered + ")";
 		if (phpLibTypePath(typePath) && field == "objectOfAssociativeArray" && args.length == 1)
 			return "__hxhx_object_of_associative_array(" + rendered + ")";
+		final selectedOverload = phpStaticOverloadMethodName(typePath, field, args);
+		if (selectedOverload != null)
+			return typePath + "::" + selectedOverload + "(" + rendered + ")";
 		final specialized = phpExplicitGenericStaticSpecializationName(typePath, field, args);
 		return typePath + "::" + (specialized == null ? sanitizeTypeName(field) : specialized) + "(" + rendered + ")";
 	}
@@ -7335,6 +7345,8 @@ class SourceTargetCommon {
 	static var phpRenderInstanceFieldTypeHintsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<String>>> = null;
 	static var phpRenderDynamicMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderStaticMethodsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
+	static var phpRenderStaticOverloadsByType:Null<PhpOverloadMethodMap> = null;
+	static var phpRenderInstanceOverloadsByType:Null<PhpOverloadMethodMap> = null;
 	static var phpRenderGenericStaticFunctionsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<HxFunctionDecl>>> = null;
 	static var phpRenderStaticCallableFieldsByType:Null<haxe.ds.StringMap<haxe.ds.StringMap<Bool>>> = null;
 	static var phpRenderClassBaseTypes:Null<haxe.ds.StringMap<String>> = null;
@@ -8120,6 +8132,123 @@ class SourceTargetCommon {
 			return methods.get(field);
 		final clean = sanitizeTypeName(field);
 		return methods.exists(clean) ? methods.get(clean) : null;
+	}
+
+	static function phpOverloadMethodMapForType(typeHint:String, maps:Null<PhpOverloadMethodMap>):Null<haxe.ds.StringMap<Array<HxFunctionDecl>>> {
+		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (raw.length == 0 || maps == null)
+			return null;
+		final candidates = [raw, sanitizePhpTypePath(raw), sanitizePhpTypeName(raw)];
+		final dot = raw.lastIndexOf(".");
+		if (dot >= 0)
+			candidates.push(raw.substr(dot + 1));
+		final slash = raw.lastIndexOf("\\");
+		if (slash >= 0)
+			candidates.push(raw.substr(slash + 1));
+		for (candidate in candidates) {
+			if (candidate != null && maps.exists(candidate))
+				return maps.get(candidate);
+		}
+		return null;
+	}
+
+	static function phpOverloadTypeScore(expected:String, actual:String):Int {
+		final exp = phpUnwrapNullTypeHint(normalizeTypeHint(expected));
+		final act = phpUnwrapNullTypeHint(normalizeTypeHint(actual));
+		if (exp.length == 0 || act.length == 0 || isDynamicTypeHint(exp) || isDynamicTypeHint(act))
+			return 0;
+		if (exp == act || sanitizePhpTypePath(exp) == sanitizePhpTypePath(act))
+			return 4;
+		if ((exp == "Float" && act == "Int") || (exp == "Int" && act == "Float"))
+			return 1;
+		return -1;
+	}
+
+	static function phpOverloadCandidateScore(fn:HxFunctionDecl, args:Array<HxExpr>, localTypes:haxe.ds.StringMap<String>):Int {
+		final params = HxFunctionDecl.getArgs(fn);
+		if (args.length > params.length)
+			return -1;
+		for (i in args.length...params.length)
+			if (!HxFunctionArg.getIsOptional(params[i]))
+				return -1;
+		var score = 0;
+		for (i in 0...args.length) {
+			final actual = phpGenericTypeHintFromExpr(args[i], localTypes);
+			final argScore = phpOverloadTypeScore(HxFunctionArg.getTypeHint(params[i]), actual);
+			if (argScore < 0)
+				return -1;
+			score += argScore;
+		}
+		return score;
+	}
+
+	static function phpOverloadSuffixForArgs(args:Array<HxFunctionArg>):String {
+		if (args == null || args.length == 0)
+			return "Void";
+		return [for (arg in args) phpGenericTypeSuffix(HxFunctionArg.getTypeHint(arg))].join("_");
+	}
+
+	static function phpOverloadMethodName(fn:HxFunctionDecl):String {
+		return sanitizeTypeName(HxFunctionDecl.getName(fn)) + "_" + phpOverloadSuffixForArgs(HxFunctionDecl.getArgs(fn));
+	}
+
+	static function phpRenderedMethodName(fn:HxFunctionDecl, isCtor:Bool):String {
+		if (isCtor)
+			return "__construct";
+		return metadataHasName(HxFunctionDecl.getMetadata(fn), "overload") ? phpOverloadMethodName(fn) : sanitizeTypeName(HxFunctionDecl.getName(fn));
+	}
+
+	static function phpOverloadMethodNameForType(typeHint:String, field:String, args:Array<HxExpr>, maps:Null<PhpOverloadMethodMap>):Null<String> {
+		final methods = phpOverloadMethodMapForType(typeHint, maps);
+		if (methods != null) {
+			final cleanField = sanitizeTypeName(field);
+			final candidates = methods.exists(cleanField) ? methods.get(cleanField) : (methods.exists(field) ? methods.get(field) : null);
+			if (candidates != null && candidates.length > 0) {
+				var bestScore = -1;
+				var best:Null<HxFunctionDecl> = null;
+				var ambiguous = false;
+				for (candidate in candidates) {
+					final score = phpOverloadCandidateScore(candidate, args, phpRenderLocalTypes);
+					if (score < 0)
+						continue;
+					if (score > bestScore) {
+						bestScore = score;
+						best = candidate;
+						ambiguous = false;
+					} else if (score == bestScore) {
+						ambiguous = true;
+					}
+				}
+				if (best != null && !ambiguous)
+					return phpOverloadMethodName(best);
+			}
+		}
+		return null;
+	}
+
+	static function phpOverloadFallbackName(field:String, args:Array<HxExpr>, methods:Null<haxe.ds.StringMap<Bool>>):Null<String> {
+		if (methods == null || args == null)
+			return null;
+		final parts = new Array<String>();
+		for (arg in args) {
+			final suffix = phpGenericSpecializationSuffixFromExpr(arg, phpRenderLocalTypes);
+			if (suffix == null || suffix.length == 0)
+				return null;
+			parts.push(suffix);
+		}
+		final candidate = sanitizeTypeName(field) + "_" + (parts.length == 0 ? "Void" : parts.join("_"));
+		return methods.exists(candidate) ? candidate : null;
+	}
+
+	static function phpStaticOverloadMethodName(typePath:String, field:String, args:Array<HxExpr>):Null<String> {
+		final selected = phpOverloadMethodNameForType(typePath, field, args, phpRenderStaticOverloadsByType);
+		return selected != null ? selected : phpOverloadFallbackName(field, args, phpStaticMethodMapForType(typePath));
+	}
+
+	static function phpInstanceOverloadMethodName(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		final typeHint = phpExprTypeHint(receiver);
+		final selected = phpOverloadMethodNameForType(typeHint, field, args, phpRenderInstanceOverloadsByType);
+		return selected != null ? selected : phpOverloadFallbackName(field, args, phpInstanceMethodMapForType(typeHint));
 	}
 
 	static function phpInstanceFieldMapForType(typeHint:String):Null<haxe.ds.StringMap<Bool>> {
@@ -13916,6 +14045,7 @@ class SourceTargetCommon {
 					if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 						continue;
 					methods.set(sanitizeTypeName(HxFunctionDecl.getName(fn)), true);
+					methods.set(phpRenderedMethodName(fn, false), true);
 				}
 				for (field in HxClassDecl.getFields(cls)) {
 					if (HxFieldDecl.getIsStatic(field))
@@ -14131,6 +14261,58 @@ class SourceTargetCommon {
 					if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 						continue;
 					methods.set(sanitizeTypeName(HxFunctionDecl.getName(fn)), true);
+					methods.set(phpRenderedMethodName(fn, false), true);
+				}
+				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
+				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
+				addKey(shortName, methods);
+				addKey(fullName, methods);
+				addKey(sanitizePhpTypePath(fullName), methods);
+			}
+		}
+		addDecl(decl);
+		for (typed in program.getTypedModules())
+			addDecl(typed.getParsed().getDecl());
+		return out;
+	}
+
+	static function phpProgramOverloadMethodMap(program:GenIrProgram, decl:HxModuleDecl, wantStatic:Bool):PhpOverloadMethodMap {
+		final out:PhpOverloadMethodMap = new haxe.ds.StringMap<haxe.ds.StringMap<Array<HxFunctionDecl>>>();
+		function pushUnique(list:Array<HxFunctionDecl>, fn:HxFunctionDecl):Void {
+			final name = phpOverloadMethodName(fn);
+			for (existing in list)
+				if (phpOverloadMethodName(existing) == name)
+					return;
+			list.push(fn);
+		}
+		function addKey(key:String, methods:haxe.ds.StringMap<Array<HxFunctionDecl>>):Void {
+			if (key == null || key.length == 0)
+				return;
+			if (!out.exists(key)) {
+				out.set(key, methods);
+				return;
+			}
+			final existing = out.get(key);
+			for (name in methods.keys()) {
+				if (!existing.exists(name))
+					existing.set(name, []);
+				for (fn in methods.get(name))
+					pushUnique(existing.get(name), fn);
+			}
+		}
+		function addDecl(moduleDecl:HxModuleDecl):Void {
+			final pkg = HxModuleDecl.getPackagePath(moduleDecl);
+			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final methods = new haxe.ds.StringMap<Array<HxFunctionDecl>>();
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					if (HxFunctionDecl.getIsStatic(fn) != wantStatic
+						|| HxFunctionDecl.getName(fn) == "new"
+						|| !metadataHasName(HxFunctionDecl.getMetadata(fn), "overload"))
+						continue;
+					final name = sanitizeTypeName(HxFunctionDecl.getName(fn));
+					if (!methods.exists(name))
+						methods.set(name, []);
+					pushUnique(methods.get(name), fn);
 				}
 				final shortName = sanitizePhpTypeName(HxClassDecl.getName(cls));
 				final fullName = pkg == null || pkg.length == 0 ? HxClassDecl.getName(cls) : pkg + "." + HxClassDecl.getName(cls);
@@ -16230,6 +16412,8 @@ class SourceTargetCommon {
 			phpInstanceFieldTypeHintMapForType(className));
 		final staticFieldNames = phpCurrentClassStaticMemberNames(cls);
 		final genericStaticSpecializations = phpGenericStaticSpecializations(cls, scanClasses);
+		final staticOverloadGroups = phpOverloadGroups(classFunctions, true);
+		final instanceOverloadGroups = phpOverloadGroups(classFunctions, false);
 		for (fn in classFunctions) {
 			if (isCompileTimeOnlyFunction(fn))
 				continue;
@@ -16241,7 +16425,7 @@ class SourceTargetCommon {
 				sawConstructor = true;
 			if (isStatic && HxFunctionDecl.getName(fn) == "__init__" && postStaticInitializers != null)
 				postStaticInitializers.push(className + "::__init__();");
-			final methodName = isCtor ? "__construct" : sanitizeTypeName(HxFunctionDecl.getName(fn));
+			final methodName = phpRenderedMethodName(fn, isCtor);
 			if (emittedMethods.exists(methodName))
 				continue;
 			emittedMethods.set(methodName, true);
@@ -16337,6 +16521,8 @@ class SourceTargetCommon {
 				memberCount += 1;
 			}
 		}
+		memberCount += appendPhpOverloadDispatchers(out, staticOverloadGroups, emittedMethods, true);
+		memberCount += appendPhpOverloadDispatchers(out, instanceOverloadGroups, emittedMethods, false);
 		if (!sawConstructor && instanceFields.length > 0) {
 			out.push("  public function __construct() {");
 			for (field in instanceFields) {
@@ -16372,6 +16558,78 @@ class SourceTargetCommon {
 			|| className == "MyVector"
 			|| StringTools.endsWith(className, "_MyPoint3")
 			|| StringTools.endsWith(className, "_MyVector");
+	}
+
+	static function phpOverloadGroups(functions:Array<HxFunctionDecl>, wantStatic:Bool):haxe.ds.StringMap<Array<HxFunctionDecl>> {
+		final out = new haxe.ds.StringMap<Array<HxFunctionDecl>>();
+		if (functions == null)
+			return out;
+		for (fn in functions) {
+			if (HxFunctionDecl.getIsStatic(fn) != wantStatic
+				|| HxFunctionDecl.getName(fn) == "new"
+				|| !metadataHasName(HxFunctionDecl.getMetadata(fn), "overload"))
+				continue;
+			final name = sanitizeTypeName(HxFunctionDecl.getName(fn));
+			if (!out.exists(name))
+				out.set(name, []);
+			out.get(name).push(fn);
+		}
+		return out;
+	}
+
+	static function phpOverloadDispatchCheck(value:String, typeHint:String):String {
+		final hint = phpUnwrapNullTypeHint(normalizeTypeHint(typeHint));
+		return switch (hint) {
+			case "String":
+				"is_string(" + value + ")";
+			case "Int" | "UInt":
+				"is_int(" + value + ")";
+			case "Float":
+				"is_float(" + value + ") || is_int(" + value + ")";
+			case "Bool":
+				"is_bool(" + value + ")";
+			case "":
+				"";
+			case _ if (isDynamicTypeHint(hint)):
+				"";
+			case _:
+				value + " instanceof " + sanitizePhpTypePath(hint);
+		};
+	}
+
+	static function appendPhpOverloadDispatchers(out:Array<String>, groups:haxe.ds.StringMap<Array<HxFunctionDecl>>, emittedMethods:Map<String, Bool>,
+			isStatic:Bool):Int {
+		var count = 0;
+		for (name in groups.keys()) {
+			if (emittedMethods.exists(name))
+				continue;
+			final overloads = groups.get(name);
+			if (overloads == null || overloads.length == 0)
+				continue;
+			emittedMethods.set(name, true);
+			final args = HxFunctionDecl.getArgs(overloads[0]);
+			final renderedArgs = phpRenderedFunctionArgs(args);
+			final callArgs = [for (arg in args) valueName(Php, HxFunctionArg.getName(arg))].join(", ");
+			final prefix = isStatic ? "  public static function " : "  public function ";
+			final receiver = isStatic ? "self::" : "$this->";
+			out.push(prefix + name + "(" + renderedArgs + ") {");
+			for (fn in overloads) {
+				final params = HxFunctionDecl.getArgs(fn);
+				final checks = new Array<String>();
+				final limit = params.length < args.length ? params.length : args.length;
+				for (i in 0...limit) {
+					final check = phpOverloadDispatchCheck(valueName(Php, HxFunctionArg.getName(args[i])), HxFunctionArg.getTypeHint(params[i]));
+					if (check.length > 0)
+						checks.push(check);
+				}
+				if (checks.length > 0)
+					out.push("    if (" + checks.join(" && ") + ") return " + receiver + phpOverloadMethodName(fn) + "(" + callArgs + ");");
+			}
+			out.push("    return " + receiver + phpOverloadMethodName(overloads[0]) + "(" + callArgs + ");");
+			out.push("  }");
+			count += 1;
+		}
+		return count;
 	}
 
 	static function phpFunctionArgConversionPrologue(args:Array<HxFunctionArg>, indent:String):Array<String> {
@@ -18523,6 +18781,8 @@ class SourceTargetCommon {
 		final previousPhpInstanceFieldTypeHintsByType = phpRenderInstanceFieldTypeHintsByType;
 		final previousPhpDynamicMethodsByType = phpRenderDynamicMethodsByType;
 		final previousPhpStaticMethodsByType = phpRenderStaticMethodsByType;
+		final previousPhpStaticOverloadsByType = phpRenderStaticOverloadsByType;
+		final previousPhpInstanceOverloadsByType = phpRenderInstanceOverloadsByType;
 		final previousPhpGenericStaticFunctionsByType = phpRenderGenericStaticFunctionsByType;
 		final previousPhpStaticCallableFieldsByType = phpRenderStaticCallableFieldsByType;
 		final previousPhpClassBaseTypes = phpRenderClassBaseTypes;
@@ -18547,6 +18807,8 @@ class SourceTargetCommon {
 			phpRenderInstanceFieldTypeHintsByType = phpProgramInstanceFieldTypeHintMap(program, decl);
 			phpRenderDynamicMethodsByType = phpProgramDynamicMethodMap(program, decl);
 			phpRenderStaticMethodsByType = phpProgramStaticMethodMap(program, decl);
+			phpRenderStaticOverloadsByType = phpProgramOverloadMethodMap(program, decl, true);
+			phpRenderInstanceOverloadsByType = phpProgramOverloadMethodMap(program, decl, false);
 			phpRenderGenericStaticFunctionsByType = phpProgramGenericStaticFunctionMap(program, decl);
 			phpRenderStaticCallableFieldsByType = phpProgramStaticCallableFieldMap(program, decl);
 			phpRenderClassBaseTypes = phpProgramClassBaseTypeMap(program, decl);
@@ -21727,6 +21989,8 @@ class SourceTargetCommon {
 		phpRenderInstanceFieldTypeHintsByType = previousPhpInstanceFieldTypeHintsByType;
 		phpRenderDynamicMethodsByType = previousPhpDynamicMethodsByType;
 		phpRenderStaticMethodsByType = previousPhpStaticMethodsByType;
+		phpRenderStaticOverloadsByType = previousPhpStaticOverloadsByType;
+		phpRenderInstanceOverloadsByType = previousPhpInstanceOverloadsByType;
 		phpRenderGenericStaticFunctionsByType = previousPhpGenericStaticFunctionsByType;
 		phpRenderStaticCallableFieldsByType = previousPhpStaticCallableFieldsByType;
 		phpRenderClassBaseTypes = previousPhpClassBaseTypes;
