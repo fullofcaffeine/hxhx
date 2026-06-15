@@ -742,6 +742,8 @@ let stripNewTypeParams = fun raw -> try let __fallback_result_264 = let tempStri
 ) in Obj.magic __fallback_result_264 with
   | HxRuntime.Hx_return __ret_263 -> Obj.obj __ret_263
 
+let looksLikeSwitchCaseFragment = fun exprText -> HxString.equals exprText "case" || StringTools.startsWith (exprText : string) ("case " : string) || StringTools.startsWith (exprText : string) ("case\t" : string) || StringTools.startsWith (exprText : string) ("case\n" : string) || HxString.equals exprText "default" || StringTools.startsWith (exprText : string) ("default:" : string) || StringTools.startsWith (exprText : string) ("default " : string)
+
 let parseRegexLiteral = fun source -> try let __fallback_result_312 = (
   ignore (if not (StringTools.startsWith (source : string) ("~/" : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   let index = ref 2 in let escaped = ref false in (
@@ -796,6 +798,7 @@ let parseRegexLiteral = fun source -> try let __fallback_result_312 = (
 
 let parseReturnExprText = fun raw -> try let __fallback_result_289 = let exprText = (StringTools.trim (raw : string) : string) in let exprText = (stripNewTypeParams (exprText : string) : string) in (
   ignore (if HxString.length exprText = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.EUnsupported ("<empty-return-expr>" : string))))) else ());
+  ignore (if looksLikeSwitchCaseFragment (exprText : string) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.ENull)))) else ());
   let regexLiteral = parseRegexLiteral (exprText : string) in (
     ignore (if regexLiteral != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxExpr.ENew (("EReg" : string), Obj.magic (let __arr_265 = HxArray.create () in (
       ignore (HxArray.push __arr_265 (HxExpr.EString (Obj.obj (HxAnon.get regexLiteral "pattern") : string)));

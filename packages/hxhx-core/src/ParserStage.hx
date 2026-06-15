@@ -3418,6 +3418,8 @@ class ParserStage {
 		s = stripNewTypeParams(s);
 		if (s.length == 0)
 			return EUnsupported("<empty-return-expr>");
+		if (looksLikeSwitchCaseFragment(s))
+			return ENull;
 
 		final regexLiteral = parseRegexLiteral(s);
 		if (regexLiteral != null)
@@ -3482,6 +3484,19 @@ class ParserStage {
 			EUnsupported(s);
 		}
 		#end
+	}
+
+	static function looksLikeSwitchCaseFragment(exprText:String):Bool {
+		// Native return-expression summaries are lossy hints. When OCaml-side
+		// token capture starts inside a switch case list, the fragment is not a
+		// valid expression and must not poison backend emission as EUnsupported.
+		return exprText == "case"
+			|| StringTools.startsWith(exprText, "case ")
+			|| StringTools.startsWith(exprText, "case\t")
+			|| StringTools.startsWith(exprText, "case\n")
+			|| exprText == "default"
+			|| StringTools.startsWith(exprText, "default:")
+			|| StringTools.startsWith(exprText, "default ");
 	}
 
 	static function parseRegexLiteral(source:String):Null<{pattern:String, flags:String}> {

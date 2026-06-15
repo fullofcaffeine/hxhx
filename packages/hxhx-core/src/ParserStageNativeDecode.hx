@@ -1004,6 +1004,8 @@ class ParserStageNativeDecode {
 		exprText = stripNewTypeParams(exprText);
 		if (exprText.length == 0)
 			return EUnsupported("<empty-return-expr>");
+		if (looksLikeSwitchCaseFragment(exprText))
+			return ENull;
 
 		final regexLiteral = parseRegexLiteral(exprText);
 		if (regexLiteral != null)
@@ -1070,6 +1072,19 @@ class ParserStageNativeDecode {
 		}
 		return parsed;
 		#end
+	}
+
+	static function looksLikeSwitchCaseFragment(exprText:String):Bool {
+		// Native return-expression summaries are lossy hints. When OCaml-side
+		// token capture starts inside a switch case list, the fragment is not a
+		// valid expression and must not poison backend emission as EUnsupported.
+		return exprText == "case"
+			|| StringTools.startsWith(exprText, "case ")
+			|| StringTools.startsWith(exprText, "case\t")
+			|| StringTools.startsWith(exprText, "case\n")
+			|| exprText == "default"
+			|| StringTools.startsWith(exprText, "default:")
+			|| StringTools.startsWith(exprText, "default ");
 	}
 
 	static function parseRegexLiteral(source:String):Null<{pattern:String, flags:String}> {
