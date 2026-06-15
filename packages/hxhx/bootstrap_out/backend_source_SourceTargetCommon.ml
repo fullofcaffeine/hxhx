@@ -7971,56 +7971,6 @@ let javaEnumLikeClass = fun cls -> try let __fallback_result_4997 = let count = 
 ) in Obj.magic __fallback_result_4997 with
   | HxRuntime.Hx_return __ret_4996 -> Obj.obj __ret_4996
 
-let appendJavaImportStubMembers = fun out packagePath className -> ignore (let qualified = (javaQualifiedClassName (packagePath : string) (className : string) : string) in (
-  ignore (if HxString.equals qualified "sys.FileSystem" then ignore ((
-    ignore (HxArray.push out "  public static boolean exists(Object path) {");
-    ignore (HxArray.push out "    return java.nio.file.Files.exists(java.nio.file.Paths.get(String.valueOf(path)));");
-    ignore (HxArray.push out "  }");
-    ignore (HxArray.push out "  public static boolean isDirectory(Object path) {");
-    ignore (HxArray.push out "    return java.nio.file.Files.isDirectory(java.nio.file.Paths.get(String.valueOf(path)));");
-    ignore (HxArray.push out "  }");
-    ignore (HxArray.push out "  public static java.util.ArrayList<String> readDirectory(Object path) {");
-    ignore (HxArray.push out "    java.util.ArrayList<String> out = new java.util.ArrayList<String>();");
-    ignore (HxArray.push out "    try (java.nio.file.DirectoryStream<java.nio.file.Path> stream = java.nio.file.Files.newDirectoryStream(java.nio.file.Paths.get(String.valueOf(path)))) {");
-    ignore (HxArray.push out "      for (java.nio.file.Path entry : stream) out.add(entry.getFileName().toString());");
-    ignore (HxArray.push out "    } catch (Exception e) {");
-    ignore (HxArray.push out "      throw new RuntimeException(e);");
-    ignore (HxArray.push out "    }");
-    ignore (HxArray.push out "    return out;");
-    ignore (HxArray.push out "  }");
-    ignore (HxArray.push out "  public static void createDirectory(Object path) {");
-    ignore (HxArray.push out "    try { java.nio.file.Files.createDirectories(java.nio.file.Paths.get(String.valueOf(path))); }");
-    ignore (HxArray.push out "    catch (Exception e) { throw new RuntimeException(e); }");
-    ignore (HxArray.push out "  }");
-    ignore (HxArray.push out "  public static void deleteFile(Object path) {");
-    ignore (HxArray.push out "    try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(String.valueOf(path))); }");
-    ignore (HxArray.push out "    catch (Exception e) { throw new RuntimeException(e); }");
-    ignore (HxArray.push out "  }");
-    ignore (HxArray.push out "  public static void deleteDirectory(Object path) {");
-    ignore (HxArray.push out "    deleteFile(path);");
-    ignore (HxArray.push out "  }");
-    ignore (HxArray.push out "  public static void rename(Object from, Object to) {");
-    ignore (HxArray.push out "    try { java.nio.file.Files.move(java.nio.file.Paths.get(String.valueOf(from)), java.nio.file.Paths.get(String.valueOf(to)), java.nio.file.StandardCopyOption.REPLACE_EXISTING); }");
-    ignore (HxArray.push out "    catch (Exception e) { throw new RuntimeException(e); }");
-    ignore (HxArray.push out "  }");
-    ignore (HxArray.push out "  public static Object stat(Object path) {");
-    ignore (HxArray.push out "    return exists(path) ? new Object() : null;");
-    ignore (HxArray.push out "  }");
-    ignore (HxArray.push out "  public static String absolutePath(Object path) {");
-    ignore (HxArray.push out "    return java.nio.file.Paths.get(String.valueOf(path)).toAbsolutePath().normalize().toString();");
-    ignore (HxArray.push out "  }");
-    ignore (HxArray.push out "  public static String fullPath(Object path) {");
-    ignore (HxArray.push out "    try { return java.nio.file.Paths.get(String.valueOf(path)).toRealPath().toString(); }");
-    ignore (HxArray.push out "    catch (Exception e) { return absolutePath(path); }");
-    HxArray.push out "  }"
-  )) else ());
-  if HxString.equals qualified "haxe.CallStack" then ignore ((
-    ignore (HxArray.push out "  public static Object exceptionStack(Object... args) {");
-    ignore (HxArray.push out "    return null;");
-    HxArray.push out "  }"
-  )) else ()
-))
-
 let javaNestedImportStubNames = fun program decl className -> let currentPath = (javaQualifiedClassName (HxModuleDecl.getPackagePath (Obj.magic decl) : string) (className : string) : string) in let prefix = (HxString.toStdString currentPath ^ "." : string) in let seen = HxMap.create_string () in let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic program) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let typed = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
     ignore (let __old_5025 = !_g in let __new_5026 = HxInt.add __old_5025 1 in (
@@ -8046,61 +7996,6 @@ let javaNestedImportStubNames = fun program decl className -> let currentPath = 
   )) done);
   out
 )
-
-let renderJavaRunciHelperStub = fun className -> let safeClass = (sanitizeJavaIdentifier (className : string) : string) in let out = Obj.magic (let __arr_5029 = HxArray.create () in (
-  ignore (HxArray.push __arr_5029 "// Generated by hxhx Stage3 Java source backend MVP");
-  ignore (HxArray.push __arr_5029 "package unit;");
-  ignore (HxArray.push __arr_5029 "");
-  ignore (HxArray.push __arr_5029 (("public class " ^ HxString.toStdString safeClass) ^ " {"));
-  __arr_5029
-)) in (
-  ignore (HxArray.push out (("  public " ^ HxString.toStdString safeClass) ^ "() {"));
-  ignore (HxArray.push out "  }");
-  ignore (if HxString.equals safeClass "UnitBuilder" then ignore ((
-    ignore (HxArray.push out "  public static Object[] generateSpec(Object... args) {");
-    ignore (HxArray.push out "    return new Object[0];");
-    HxArray.push out "  }"
-  )) else ());
-  ignore (if HxString.equals safeClass "TestIssues" then ignore ((
-    ignore (HxArray.push out "  public static void addIssueClasses(Object... args) {");
-    HxArray.push out "  }"
-  )) else ());
-  ignore (HxArray.push out "}");
-  HxArray.join out "\n" (fun x -> x)
-)
-
-let emitJavaRunciHelperStubs = fun sourceDir sourcePaths seen -> ignore (let helpers = Obj.magic (let __arr_168 = HxArray.create () in (
-  ignore (HxArray.push __arr_168 "TestBytes");
-  ignore (HxArray.push __arr_168 "TestIO");
-  ignore (HxArray.push __arr_168 "TestMisc");
-  ignore (HxArray.push __arr_168 "TestResource");
-  ignore (HxArray.push __arr_168 "TestSerialize");
-  ignore (HxArray.push __arr_168 "UnitBuilder");
-  ignore (HxArray.push __arr_168 "TestIssues");
-  __arr_168
-)) in let _g = ref 0 in try while !_g < HxArray.length helpers do try ignore (let className = (HxArray.get (Obj.magic helpers) (!_g) : string) in (
-  ignore (let __old_169 = !_g in let __new_170 = HxInt.add __old_169 1 in (
-    ignore (_g := __new_170);
-    __new_170
-  ));
-  let key = (javaQualifiedClassName ("unit" : string) (className : string) : string) in (
-    ignore (if HxMap.exists_string seen key then raise (HxRuntime.Hx_continue) else ());
-    ignore (HxMap.set_string seen key true);
-    let path = (javaSourcePath (sourceDir : string) ("unit" : string) (className : string) : string) in (
-      ignore (if HxFileSystem.exists path then ignore ((
-        ignore (HxArray.push sourcePaths path);
-        raise (HxRuntime.Hx_continue)
-      )) else ());
-      ignore (ensureParentDirectory (path : string));
-      let content = (renderJavaRunciHelperStub (className : string) : string) in (
-        ignore (HxFile.saveContent (path : string) (content : string));
-        HxArray.push sourcePaths path
-      )
-    )
-  )
-)) with
-  | HxRuntime.Hx_continue -> () done with
-  | HxRuntime.Hx_break -> ())
 
 let csTypePathEndsWith = fun path suffix -> let compact = (stripGenericTypeParams (removeTypeHintWhitespace (path : string) : string) : string) in HxString.equals compact suffix || StringTools.endsWith (compact : string) ("." ^ HxString.toStdString suffix : string)
 
@@ -8458,6 +8353,59 @@ let appendSourceNativeTemplateLines = fun out indent targetDir fileName -> ignor
 ) in let line = (HxArray.get (Obj.magic lines) i : string) in (
   ignore (if i = HxInt.sub (HxArray.length lines) 1 && HxString.length line = 0 then raise (HxRuntime.Hx_continue) else ());
   HxArray.push out (HxString.toStdString indent ^ HxString.toStdString line)
+)) with
+  | HxRuntime.Hx_continue -> () done with
+  | HxRuntime.Hx_break -> ())
+
+let appendJavaImportStubMembers = fun out packagePath className -> ignore (let qualified = (javaQualifiedClassName (packagePath : string) (className : string) : string) in (
+  ignore (if HxString.equals qualified "sys.FileSystem" then ignore (appendSourceNativeTemplateLines (Obj.magic out) ("  " : string) ("java/import-stub-members" : string) ("FileSystem.java" : string)) else ());
+  if HxString.equals qualified "haxe.CallStack" then ignore (appendSourceNativeTemplateLines (Obj.magic out) ("  " : string) ("java/import-stub-members" : string) ("CallStack.java" : string)) else ()
+))
+
+let renderJavaRunciHelperStub = fun className -> let safeClass = (sanitizeJavaIdentifier (className : string) : string) in let out = Obj.magic (let __arr_5029 = HxArray.create () in (
+  ignore (HxArray.push __arr_5029 "// Generated by hxhx Stage3 Java source backend MVP");
+  ignore (HxArray.push __arr_5029 "package unit;");
+  ignore (HxArray.push __arr_5029 "");
+  ignore (HxArray.push __arr_5029 (("public class " ^ HxString.toStdString safeClass) ^ " {"));
+  __arr_5029
+)) in (
+  ignore (HxArray.push out (("  public " ^ HxString.toStdString safeClass) ^ "() {"));
+  ignore (HxArray.push out "  }");
+  ignore (if HxString.equals safeClass "UnitBuilder" then ignore (appendSourceNativeTemplateLines (Obj.magic out) ("  " : string) ("java/runci-helper-members" : string) ("UnitBuilder.java" : string)) else ());
+  ignore (if HxString.equals safeClass "TestIssues" then ignore (appendSourceNativeTemplateLines (Obj.magic out) ("  " : string) ("java/runci-helper-members" : string) ("TestIssues.java" : string)) else ());
+  ignore (HxArray.push out "}");
+  HxArray.join out "\n" (fun x -> x)
+)
+
+let emitJavaRunciHelperStubs = fun sourceDir sourcePaths seen -> ignore (let helpers = Obj.magic (let __arr_168 = HxArray.create () in (
+  ignore (HxArray.push __arr_168 "TestBytes");
+  ignore (HxArray.push __arr_168 "TestIO");
+  ignore (HxArray.push __arr_168 "TestMisc");
+  ignore (HxArray.push __arr_168 "TestResource");
+  ignore (HxArray.push __arr_168 "TestSerialize");
+  ignore (HxArray.push __arr_168 "UnitBuilder");
+  ignore (HxArray.push __arr_168 "TestIssues");
+  __arr_168
+)) in let _g = ref 0 in try while !_g < HxArray.length helpers do try ignore (let className = (HxArray.get (Obj.magic helpers) (!_g) : string) in (
+  ignore (let __old_169 = !_g in let __new_170 = HxInt.add __old_169 1 in (
+    ignore (_g := __new_170);
+    __new_170
+  ));
+  let key = (javaQualifiedClassName ("unit" : string) (className : string) : string) in (
+    ignore (if HxMap.exists_string seen key then raise (HxRuntime.Hx_continue) else ());
+    ignore (HxMap.set_string seen key true);
+    let path = (javaSourcePath (sourceDir : string) ("unit" : string) (className : string) : string) in (
+      ignore (if HxFileSystem.exists path then ignore ((
+        ignore (HxArray.push sourcePaths path);
+        raise (HxRuntime.Hx_continue)
+      )) else ());
+      ignore (ensureParentDirectory (path : string));
+      let content = (renderJavaRunciHelperStub (className : string) : string) in (
+        ignore (HxFile.saveContent (path : string) (content : string));
+        HxArray.push sourcePaths path
+      )
+    )
+  )
 )) with
   | HxRuntime.Hx_continue -> () done with
   | HxRuntime.Hx_break -> ())
@@ -9613,38 +9561,10 @@ let javaSupportClassNeedsSignal = fun cls -> try let __fallback_result_5312 = le
 ) in Obj.magic __fallback_result_5312 with
   | HxRuntime.Hx_return __ret_5311 -> Obj.obj __ret_5311
 
-let appendJavaArraySupport = fun out indent -> ignore ((
-  ignore (HxArray.push out (HxString.toStdString indent ^ "public static class __HxArray implements Iterable<Object> {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  private final java.util.ArrayList<Object> items = new java.util.ArrayList<Object>();"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public __HxArray(Object[] values) {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    for (Object value : values) {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "      items.add(value);"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public void push(Object value) {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    items.add(value);"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  public java.util.Iterator<Object> iterator() {"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "    return items.iterator();"));
-  ignore (HxArray.push out (HxString.toStdString indent ^ "  }"));
-  HxArray.push out (HxString.toStdString indent ^ "}")
-))
+let appendJavaArraySupport = fun out indent -> ignore (appendSourceNativeTemplateLines (Obj.magic out) (indent : string) ("java/support-class-members" : string) ("ArraySupport.java" : string))
 
 let appendJavaSignalSupport = fun out -> ignore ((
-  ignore (HxArray.push out "  @FunctionalInterface");
-  ignore (HxArray.push out "  public static interface __HxCallback {");
-  ignore (HxArray.push out "    Object apply(__HxEvent value);");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static class __HxSignal {");
-  ignore (HxArray.push out "    public void add(__HxCallback callback) {");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static class __HxEvent {");
-  ignore (HxArray.push out "    public __HxResult result = new __HxResult();");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static class __HxResult {");
-  ignore (HxArray.push out "    public __HxArray assertations = new __HxArray(new Object[0]);");
-  ignore (HxArray.push out "  }");
+  ignore (appendSourceNativeTemplateLines (Obj.magic out) ("  " : string) ("java/support-class-members" : string) ("SignalSupport.java" : string));
   appendJavaArraySupport (Obj.magic out) ("  " : string)
 ))
 
@@ -10485,99 +10405,7 @@ let appendJavaEntryBodyCallSupportMembers = fun out emittedMethods body classNam
     | HxRuntime.Hx_break -> ()
 ))
 
-let appendJavaStdSupport = fun out -> ignore ((
-  ignore (HxArray.push out "");
-  ignore (HxArray.push out "class Std {");
-  ignore (HxArray.push out "  public static int int_(Object value) {");
-  ignore (HxArray.push out "    return value instanceof Number ? ((Number)value).intValue() : 0;");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static int parseInt(String value) {");
-  ignore (HxArray.push out "    try { return Integer.parseInt(value); } catch (Exception e) { return 0; }");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static Object add_(Object left, Object right) {");
-  ignore (HxArray.push out "    if (left instanceof String || right instanceof String) return String.valueOf(left) + String.valueOf(right);");
-  ignore (HxArray.push out "    return int_(left) + int_(right);");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "}");
-  ignore (HxArray.push out "");
-  ignore (HxArray.push out "class Sys {");
-  ignore (HxArray.push out "  public static String[] __hxhx_args = new String[0];");
-  ignore (HxArray.push out "  private static java.util.HashMap<String, String> __hxhx_env = new java.util.HashMap<String, String>();");
-  ignore (HxArray.push out "  public static String[] args() {");
-  ignore (HxArray.push out "    return __hxhx_args;");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static String getEnv(String name) {");
-  ignore (HxArray.push out "    if (__hxhx_env.containsKey(name)) return __hxhx_env.get(name);");
-  ignore (HxArray.push out "    String value = System.getenv(name);");
-  ignore (HxArray.push out "    if (value != null) return value;");
-  ignore (HxArray.push out "    return System.getProperty(name);");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static void putEnv(String name, String value) {");
-  ignore (HxArray.push out "    if (value == null) __hxhx_env.remove(name); else __hxhx_env.put(name, value);");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static __HxStringMap environment() {");
-  ignore (HxArray.push out "    java.util.HashMap<String, String> env = new java.util.HashMap<String, String>(System.getenv());");
-  ignore (HxArray.push out "    env.putAll(__hxhx_env);");
-  ignore (HxArray.push out "    return new __HxStringMap(env);");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static String getCwd() {");
-  ignore (HxArray.push out "    return System.getProperty(\"user.dir\", \"\");");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static String programPath() {");
-  ignore (HxArray.push out "    try { return new java.io.File(Sys.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getPath(); }");
-  ignore (HxArray.push out "    catch (Exception e) { return System.getProperty(\"java.class.path\", \"\"); }");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static void print(Object value) {");
-  ignore (HxArray.push out "    System.out.print(String.valueOf(value));");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static void println(Object value) {");
-  ignore (HxArray.push out "    System.out.println(String.valueOf(value));");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static int command(Object... args) {");
-  ignore (HxArray.push out "    if (args == null || args.length == 0 || args[0] == null) return 0;");
-  ignore (HxArray.push out "    try {");
-  ignore (HxArray.push out "      java.util.ArrayList<String> command = new java.util.ArrayList<String>();");
-  ignore (HxArray.push out "      if (args.length == 1) {");
-  ignore (HxArray.push out "        for (String item : __hxhx_shellCommand(String.valueOf(args[0]))) command.add(item);");
-  ignore (HxArray.push out "      } else {");
-  ignore (HxArray.push out "        command.add(String.valueOf(args[0]));");
-  ignore (HxArray.push out "        if (args.length > 1 && args[1] instanceof Iterable) {");
-  ignore (HxArray.push out "          for (Object item : (Iterable<?>)args[1]) command.add(String.valueOf(item));");
-  ignore (HxArray.push out "        }");
-  ignore (HxArray.push out "      }");
-  ignore (HxArray.push out "      java.lang.ProcessBuilder builder = new ProcessBuilder(command).inheritIO();");
-  ignore (HxArray.push out "      builder.environment().putAll(__hxhx_env);");
-  ignore (HxArray.push out "      java.lang.Process process = builder.start();");
-  ignore (HxArray.push out "      return process.waitFor();");
-  ignore (HxArray.push out "    } catch (Exception e) {");
-  ignore (HxArray.push out "      return -1;");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static String systemName() {");
-  ignore (HxArray.push out "    String os = System.getProperty(\"os.name\", \"\").toLowerCase();");
-  ignore (HxArray.push out "    if (os.contains(\"win\")) return \"Windows\";");
-  ignore (HxArray.push out "    if (os.contains(\"mac\")) return \"Mac\";");
-  ignore (HxArray.push out "    return \"Linux\";");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public static void exit(Object code) {");
-  ignore (HxArray.push out "    System.exit(code instanceof Number ? ((Number)code).intValue() : 0);");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  private static String[] __hxhx_shellCommand(String command) {");
-  ignore (HxArray.push out "    if (\"Windows\".equals(systemName())) return new String[] {\"cmd\", \"/c\", command};");
-  ignore (HxArray.push out "    return new String[] {\"sh\", \"-c\", command};");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "}");
-  ignore (HxArray.push out "");
-  ignore (HxArray.push out "class __HxStringMap {");
-  ignore (HxArray.push out "  private final java.util.HashMap<String, String> values;");
-  ignore (HxArray.push out "  public __HxStringMap(java.util.HashMap<String, String> values) {");
-  ignore (HxArray.push out "    this.values = values;");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  public String get(String key) {");
-  ignore (HxArray.push out "    return values.get(key);");
-  ignore (HxArray.push out "  }");
-  HxArray.push out "}"
-))
+let appendJavaStdSupport = fun out -> ignore (appendSourceNativeTemplateLines (Obj.magic out) ("" : string) ("java/runtime" : string) ("StdSys.java" : string))
 
 let appendJavaUtilityProcessRuntime = fun out className -> ignore ((
   ignore (HxArray.push out "    // hxhx Java sys runtime shim: UtilityProcess is a tiny upstream sys-test helper.");
@@ -10589,104 +10417,7 @@ let appendJavaUtilityProcessRuntime = fun out className -> ignore ((
   ignore (HxArray.push out "    }");
   ignore (HxArray.push out "    return;");
   ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  private static void __hxhx_runUtility(String[] args) throws Exception {");
-  ignore (HxArray.push out "    if (args == null || args.length == 0) return;");
-  ignore (HxArray.push out "    String command = args[0];");
-  ignore (HxArray.push out "    if (\"putEnv\".equals(command)) {");
-  ignore (HxArray.push out "      if (args.length >= 5) {");
-  ignore (HxArray.push out "        Sys.putEnv(args[1], __hxhx_sequenceArg(args, 2));");
-  ignore (HxArray.push out "        String[] tail = java.util.Arrays.copyOfRange(args, 4, args.length);");
-  ignore (HxArray.push out "        __hxhx_runUtility(tail);");
-  ignore (HxArray.push out "      }");
-  ignore (HxArray.push out "      return;");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "    if (\"getCwd\".equals(command)) { System.out.println(Sys.getCwd()); return; }");
-  ignore (HxArray.push out "    if (\"getEnv\".equals(command) && args.length > 1) { System.out.println(__hxhx_nullToEmpty(Sys.getEnv(args[1]))); return; }");
-  ignore (HxArray.push out "    if (\"checkEnv\".equals(command) && args.length > 2) { System.exit(java.util.Objects.equals(args[2], Sys.getEnv(args[1])) ? 0 : 1); return; }");
-  ignore (HxArray.push out "    if (\"environment\".equals(command) && args.length > 1) { System.out.println(__hxhx_nullToEmpty(Sys.environment().get(args[1]))); return; }");
-  ignore (HxArray.push out "    if (\"exitCode\".equals(command) && args.length > 1) { System.exit(__hxhx_parseInt(args[1])); return; }");
-  ignore (HxArray.push out "    if (\"args\".equals(command) && args.length > 1) { System.out.println(args[1]); return; }");
-  ignore (HxArray.push out "    if (\"println\".equals(command)) { System.out.println(__hxhx_sequenceArg(args, 1)); return; }");
-  ignore (HxArray.push out "    if (\"print\".equals(command)) { System.out.print(__hxhx_sequenceArg(args, 1)); return; }");
-  ignore (HxArray.push out "    if (\"trace\".equals(command)) { System.out.println(__hxhx_sequenceArg(args, 1)); return; }");
-  ignore (HxArray.push out "    if (\"stdin.readLine\".equals(command)) {");
-  ignore (HxArray.push out "      java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(System.in, java.nio.charset.StandardCharsets.UTF_8));");
-  ignore (HxArray.push out "      String line = reader.readLine();");
-  ignore (HxArray.push out "      System.out.println(line == null ? \"\" : line);");
-  ignore (HxArray.push out "      return;");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "    if (\"stdin.readString\".equals(command) && args.length > 1) {");
-  ignore (HxArray.push out "      System.out.println(__hxhx_readChars(__hxhx_parseInt(args[1])));");
-  ignore (HxArray.push out "      return;");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "    if (\"stdin.readUntil\".equals(command) && args.length > 1) {");
-  ignore (HxArray.push out "      System.out.println(__hxhx_readUntil(__hxhx_parseInt(args[1])));");
-  ignore (HxArray.push out "      return;");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "    if (\"stderr.writeString\".equals(command)) { System.err.print(__hxhx_sequenceArg(args, 1)); System.err.flush(); return; }");
-  ignore (HxArray.push out "    if (\"stdout.writeString\".equals(command)) { System.out.print(__hxhx_sequenceArg(args, 1)); System.out.flush(); return; }");
-  ignore (HxArray.push out "    if (\"programPath\".equals(command)) { System.out.println(__hxhx_programPath()); return; }");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  private static String __hxhx_sequenceArg(String[] args, int index) {");
-  ignore (HxArray.push out "    if (args.length <= index) return \"\";");
-  ignore (HxArray.push out "    String token = args[index];");
-  ignore (HxArray.push out "    String mode = args.length > index + 1 ? args[index + 1] : \"\";");
-  ignore (HxArray.push out "    try { return __hxhx_unicodeSequence(Integer.parseInt(token), \"nfc\".equals(mode)); }");
-  ignore (HxArray.push out "    catch (Exception e) { return token; }");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  private static String __hxhx_unicodeSequence(int index, boolean nfc) {");
-  ignore (HxArray.push out "    switch (index) {");
-  ignore (HxArray.push out "      case 0: return __hxhx_codepoints(0x0001);");
-  ignore (HxArray.push out "      case 1: return __hxhx_codepoints(0x007F);");
-  ignore (HxArray.push out "      case 2: return __hxhx_codepoints(0x0080);");
-  ignore (HxArray.push out "      case 3: return __hxhx_codepoints(0x07FF);");
-  ignore (HxArray.push out "      case 4: return __hxhx_codepoints(0x0800);");
-  ignore (HxArray.push out "      case 5: return __hxhx_codepoints(0xD7FF);");
-  ignore (HxArray.push out "      case 6: return __hxhx_codepoints(0xE000);");
-  ignore (HxArray.push out "      case 7: return __hxhx_codepoints(0xFFFD);");
-  ignore (HxArray.push out "      case 8: return __hxhx_codepoints(0x10000);");
-  ignore (HxArray.push out "      case 9: return __hxhx_codepoints(0x1FFFF);");
-  ignore (HxArray.push out "      case 10: return __hxhx_codepoints(0xFFFFF);");
-  ignore (HxArray.push out "      case 11: return __hxhx_codepoints(0x100000);");
-  ignore (HxArray.push out "      case 12: return __hxhx_codepoints(0x10FFFF);");
-  ignore (HxArray.push out "      case 13: return __hxhx_codepoints(0x1F602, 0x1F604, 0x1F619);");
-  ignore (HxArray.push out "      case 14: return nfc ? __hxhx_codepoints(0x0227) : __hxhx_codepoints(0x0061, 0x0307);");
-  ignore (HxArray.push out "      case 15: return nfc ? __hxhx_codepoints(0x4E2D, 0x6587, 0xFF0C, 0x306B, 0x307B, 0x3093, 0x3054) : __hxhx_codepoints(0x4E2D, 0x6587, 0xFF0C, 0x306B, 0x307B, 0x3093, 0x3053, 0x3099);");
-  ignore (HxArray.push out "      default: return \"\";");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  private static String __hxhx_codepoints(int... codepoints) {");
-  ignore (HxArray.push out "    StringBuilder builder = new StringBuilder();");
-  ignore (HxArray.push out "    for (int codepoint : codepoints) builder.appendCodePoint(codepoint);");
-  ignore (HxArray.push out "    return builder.toString();");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  private static String __hxhx_nullToEmpty(String value) {");
-  ignore (HxArray.push out "    return value == null ? \"\" : value;");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  private static int __hxhx_parseInt(String value) {");
-  ignore (HxArray.push out "    try { return value != null && value.startsWith(\"0x\") ? Integer.parseInt(value.substring(2), 16) : Integer.parseInt(String.valueOf(value)); }");
-  ignore (HxArray.push out "    catch (Exception e) { return 0; }");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  private static String __hxhx_readChars(int len) throws Exception {");
-  ignore (HxArray.push out "    java.io.InputStreamReader reader = new java.io.InputStreamReader(System.in, java.nio.charset.StandardCharsets.UTF_8);");
-  ignore (HxArray.push out "    StringBuilder builder = new StringBuilder();");
-  ignore (HxArray.push out "    for (int i = 0; i < len; i++) {");
-  ignore (HxArray.push out "      int ch = reader.read();");
-  ignore (HxArray.push out "      if (ch < 0) break;");
-  ignore (HxArray.push out "      builder.append((char)ch);");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "    return builder.toString();");
-  ignore (HxArray.push out "  }");
-  ignore (HxArray.push out "  private static String __hxhx_readUntil(int end) throws Exception {");
-  ignore (HxArray.push out "    java.io.InputStreamReader reader = new java.io.InputStreamReader(System.in, java.nio.charset.StandardCharsets.UTF_8);");
-  ignore (HxArray.push out "    StringBuilder builder = new StringBuilder();");
-  ignore (HxArray.push out "    while (true) {");
-  ignore (HxArray.push out "      int ch = reader.read();");
-  ignore (HxArray.push out "      if (ch < 0 || ch == end) break;");
-  ignore (HxArray.push out "      builder.append((char)ch);");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "    return builder.toString();");
-  ignore (HxArray.push out "  }");
+  ignore (appendSourceNativeTemplateLines (Obj.magic out) ("  " : string) ("java/runtime" : string) ("UtilityProcessMembers.java" : string));
   ignore (HxArray.push out "  private static String __hxhx_programPath() {");
   ignore (HxArray.push out (("    try { return new java.io.File(" ^ HxString.toStdString className) ^ ".class.getProtectionDomain().getCodeSource().getLocation().toURI()).getPath(); }"));
   ignore (HxArray.push out "    catch (Exception e) { return System.getProperty(\"java.class.path\", \"\"); }");

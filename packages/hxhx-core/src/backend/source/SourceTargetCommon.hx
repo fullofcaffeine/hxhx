@@ -10721,53 +10721,10 @@ class SourceTargetCommon {
 
 	static function appendJavaImportStubMembers(out:Array<String>, packagePath:String, className:String):Void {
 		final qualified = javaQualifiedClassName(packagePath, className);
-		if (qualified == "sys.FileSystem") {
-			out.push("  public static boolean exists(Object path) {");
-			out.push("    return java.nio.file.Files.exists(java.nio.file.Paths.get(String.valueOf(path)));");
-			out.push("  }");
-			out.push("  public static boolean isDirectory(Object path) {");
-			out.push("    return java.nio.file.Files.isDirectory(java.nio.file.Paths.get(String.valueOf(path)));");
-			out.push("  }");
-			out.push("  public static java.util.ArrayList<String> readDirectory(Object path) {");
-			out.push("    java.util.ArrayList<String> out = new java.util.ArrayList<String>();");
-			out.push("    try (java.nio.file.DirectoryStream<java.nio.file.Path> stream = java.nio.file.Files.newDirectoryStream(java.nio.file.Paths.get(String.valueOf(path)))) {");
-			out.push("      for (java.nio.file.Path entry : stream) out.add(entry.getFileName().toString());");
-			out.push("    } catch (Exception e) {");
-			out.push("      throw new RuntimeException(e);");
-			out.push("    }");
-			out.push("    return out;");
-			out.push("  }");
-			out.push("  public static void createDirectory(Object path) {");
-			out.push("    try { java.nio.file.Files.createDirectories(java.nio.file.Paths.get(String.valueOf(path))); }");
-			out.push("    catch (Exception e) { throw new RuntimeException(e); }");
-			out.push("  }");
-			out.push("  public static void deleteFile(Object path) {");
-			out.push("    try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(String.valueOf(path))); }");
-			out.push("    catch (Exception e) { throw new RuntimeException(e); }");
-			out.push("  }");
-			out.push("  public static void deleteDirectory(Object path) {");
-			out.push("    deleteFile(path);");
-			out.push("  }");
-			out.push("  public static void rename(Object from, Object to) {");
-			out.push("    try { java.nio.file.Files.move(java.nio.file.Paths.get(String.valueOf(from)), java.nio.file.Paths.get(String.valueOf(to)), java.nio.file.StandardCopyOption.REPLACE_EXISTING); }");
-			out.push("    catch (Exception e) { throw new RuntimeException(e); }");
-			out.push("  }");
-			out.push("  public static Object stat(Object path) {");
-			out.push("    return exists(path) ? new Object() : null;");
-			out.push("  }");
-			out.push("  public static String absolutePath(Object path) {");
-			out.push("    return java.nio.file.Paths.get(String.valueOf(path)).toAbsolutePath().normalize().toString();");
-			out.push("  }");
-			out.push("  public static String fullPath(Object path) {");
-			out.push("    try { return java.nio.file.Paths.get(String.valueOf(path)).toRealPath().toString(); }");
-			out.push("    catch (Exception e) { return absolutePath(path); }");
-			out.push("  }");
-		}
-		if (qualified == "haxe.CallStack") {
-			out.push("  public static Object exceptionStack(Object... args) {");
-			out.push("    return null;");
-			out.push("  }");
-		}
+		if (qualified == "sys.FileSystem")
+			appendSourceNativeTemplateLines(out, "  ", "java/import-stub-members", "FileSystem.java");
+		if (qualified == "haxe.CallStack")
+			appendSourceNativeTemplateLines(out, "  ", "java/import-stub-members", "CallStack.java");
 	}
 
 	static function javaNestedImportStubNames(program:GenIrProgram, decl:HxModuleDecl, className:String):Array<String> {
@@ -10813,15 +10770,10 @@ class SourceTargetCommon {
 		];
 		out.push("  public " + safeClass + "() {");
 		out.push("  }");
-		if (safeClass == "UnitBuilder") {
-			out.push("  public static Object[] generateSpec(Object... args) {");
-			out.push("    return new Object[0];");
-			out.push("  }");
-		}
-		if (safeClass == "TestIssues") {
-			out.push("  public static void addIssueClasses(Object... args) {");
-			out.push("  }");
-		}
+		if (safeClass == "UnitBuilder")
+			appendSourceNativeTemplateLines(out, "  ", "java/runci-helper-members", "UnitBuilder.java");
+		if (safeClass == "TestIssues")
+			appendSourceNativeTemplateLines(out, "  ", "java/runci-helper-members", "TestIssues.java");
 		out.push("}");
 		return out.join("\n");
 	}
@@ -11620,38 +11572,12 @@ class SourceTargetCommon {
 	}
 
 	static function appendJavaSignalSupport(out:Array<String>):Void {
-		out.push("  @FunctionalInterface");
-		out.push("  public static interface __HxCallback {");
-		out.push("    Object apply(__HxEvent value);");
-		out.push("  }");
-		out.push("  public static class __HxSignal {");
-		out.push("    public void add(__HxCallback callback) {");
-		out.push("    }");
-		out.push("  }");
-		out.push("  public static class __HxEvent {");
-		out.push("    public __HxResult result = new __HxResult();");
-		out.push("  }");
-		out.push("  public static class __HxResult {");
-		out.push("    public __HxArray assertations = new __HxArray(new Object[0]);");
-		out.push("  }");
+		appendSourceNativeTemplateLines(out, "  ", "java/support-class-members", "SignalSupport.java");
 		appendJavaArraySupport(out, "  ");
 	}
 
 	static function appendJavaArraySupport(out:Array<String>, indent:String):Void {
-		out.push(indent + "public static class __HxArray implements Iterable<Object> {");
-		out.push(indent + "  private final java.util.ArrayList<Object> items = new java.util.ArrayList<Object>();");
-		out.push(indent + "  public __HxArray(Object[] values) {");
-		out.push(indent + "    for (Object value : values) {");
-		out.push(indent + "      items.add(value);");
-		out.push(indent + "    }");
-		out.push(indent + "  }");
-		out.push(indent + "  public void push(Object value) {");
-		out.push(indent + "    items.add(value);");
-		out.push(indent + "  }");
-		out.push(indent + "  public java.util.Iterator<Object> iterator() {");
-		out.push(indent + "    return items.iterator();");
-		out.push(indent + "  }");
-		out.push(indent + "}");
+		appendSourceNativeTemplateLines(out, indent, "java/support-class-members", "ArraySupport.java");
 	}
 
 	static function appendJavaMainSupportMembers(out:Array<String>, decl:HxModuleDecl, className:String, body:Array<HxStmt>):Void {
@@ -12037,97 +11963,7 @@ class SourceTargetCommon {
 	}
 
 	static function appendJavaStdSupport(out:Array<String>):Void {
-		out.push("");
-		out.push("class Std {");
-		out.push("  public static int int_(Object value) {");
-		out.push("    return value instanceof Number ? ((Number)value).intValue() : 0;");
-		out.push("  }");
-		out.push("  public static int parseInt(String value) {");
-		out.push("    try { return Integer.parseInt(value); } catch (Exception e) { return 0; }");
-		out.push("  }");
-		out.push("  public static Object add_(Object left, Object right) {");
-		out.push("    if (left instanceof String || right instanceof String) return String.valueOf(left) + String.valueOf(right);");
-		out.push("    return int_(left) + int_(right);");
-		out.push("  }");
-		out.push("}");
-		out.push("");
-		out.push("class Sys {");
-		out.push("  public static String[] __hxhx_args = new String[0];");
-		out.push("  private static java.util.HashMap<String, String> __hxhx_env = new java.util.HashMap<String, String>();");
-		out.push("  public static String[] args() {");
-		out.push("    return __hxhx_args;");
-		out.push("  }");
-		out.push("  public static String getEnv(String name) {");
-		out.push("    if (__hxhx_env.containsKey(name)) return __hxhx_env.get(name);");
-		out.push("    String value = System.getenv(name);");
-		out.push("    if (value != null) return value;");
-		out.push("    return System.getProperty(name);");
-		out.push("  }");
-		out.push("  public static void putEnv(String name, String value) {");
-		out.push("    if (value == null) __hxhx_env.remove(name); else __hxhx_env.put(name, value);");
-		out.push("  }");
-		out.push("  public static __HxStringMap environment() {");
-		out.push("    java.util.HashMap<String, String> env = new java.util.HashMap<String, String>(System.getenv());");
-		out.push("    env.putAll(__hxhx_env);");
-		out.push("    return new __HxStringMap(env);");
-		out.push("  }");
-		out.push("  public static String getCwd() {");
-		out.push("    return System.getProperty(\"user.dir\", \"\");");
-		out.push("  }");
-		out.push("  public static String programPath() {");
-		out.push("    try { return new java.io.File(Sys.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getPath(); }");
-		out.push("    catch (Exception e) { return System.getProperty(\"java.class.path\", \"\"); }");
-		out.push("  }");
-		out.push("  public static void print(Object value) {");
-		out.push("    System.out.print(String.valueOf(value));");
-		out.push("  }");
-		out.push("  public static void println(Object value) {");
-		out.push("    System.out.println(String.valueOf(value));");
-		out.push("  }");
-		out.push("  public static int command(Object... args) {");
-		out.push("    if (args == null || args.length == 0 || args[0] == null) return 0;");
-		out.push("    try {");
-		out.push("      java.util.ArrayList<String> command = new java.util.ArrayList<String>();");
-		out.push("      if (args.length == 1) {");
-		out.push("        for (String item : __hxhx_shellCommand(String.valueOf(args[0]))) command.add(item);");
-		out.push("      } else {");
-		out.push("        command.add(String.valueOf(args[0]));");
-		out.push("        if (args.length > 1 && args[1] instanceof Iterable) {");
-		out.push("          for (Object item : (Iterable<?>)args[1]) command.add(String.valueOf(item));");
-		out.push("        }");
-		out.push("      }");
-		out.push("      java.lang.ProcessBuilder builder = new ProcessBuilder(command).inheritIO();");
-		out.push("      builder.environment().putAll(__hxhx_env);");
-		out.push("      java.lang.Process process = builder.start();");
-		out.push("      return process.waitFor();");
-		out.push("    } catch (Exception e) {");
-		out.push("      return -1;");
-		out.push("    }");
-		out.push("  }");
-		out.push("  public static String systemName() {");
-		out.push("    String os = System.getProperty(\"os.name\", \"\").toLowerCase();");
-		out.push("    if (os.contains(\"win\")) return \"Windows\";");
-		out.push("    if (os.contains(\"mac\")) return \"Mac\";");
-		out.push("    return \"Linux\";");
-		out.push("  }");
-		out.push("  public static void exit(Object code) {");
-		out.push("    System.exit(code instanceof Number ? ((Number)code).intValue() : 0);");
-		out.push("  }");
-		out.push("  private static String[] __hxhx_shellCommand(String command) {");
-		out.push("    if (\"Windows\".equals(systemName())) return new String[] {\"cmd\", \"/c\", command};");
-		out.push("    return new String[] {\"sh\", \"-c\", command};");
-		out.push("  }");
-		out.push("}");
-		out.push("");
-		out.push("class __HxStringMap {");
-		out.push("  private final java.util.HashMap<String, String> values;");
-		out.push("  public __HxStringMap(java.util.HashMap<String, String> values) {");
-		out.push("    this.values = values;");
-		out.push("  }");
-		out.push("  public String get(String key) {");
-		out.push("    return values.get(key);");
-		out.push("  }");
-		out.push("}");
+		appendSourceNativeTemplateLines(out, "", "java/runtime", "StdSys.java");
 	}
 
 	static function appendJavaUtilityProcessRuntime(out:Array<String>, className:String):Void {
@@ -12140,104 +11976,7 @@ class SourceTargetCommon {
 		out.push("    }");
 		out.push("    return;");
 		out.push("  }");
-		out.push("  private static void __hxhx_runUtility(String[] args) throws Exception {");
-		out.push("    if (args == null || args.length == 0) return;");
-		out.push("    String command = args[0];");
-		out.push("    if (\"putEnv\".equals(command)) {");
-		out.push("      if (args.length >= 5) {");
-		out.push("        Sys.putEnv(args[1], __hxhx_sequenceArg(args, 2));");
-		out.push("        String[] tail = java.util.Arrays.copyOfRange(args, 4, args.length);");
-		out.push("        __hxhx_runUtility(tail);");
-		out.push("      }");
-		out.push("      return;");
-		out.push("    }");
-		out.push("    if (\"getCwd\".equals(command)) { System.out.println(Sys.getCwd()); return; }");
-		out.push("    if (\"getEnv\".equals(command) && args.length > 1) { System.out.println(__hxhx_nullToEmpty(Sys.getEnv(args[1]))); return; }");
-		out.push("    if (\"checkEnv\".equals(command) && args.length > 2) { System.exit(java.util.Objects.equals(args[2], Sys.getEnv(args[1])) ? 0 : 1); return; }");
-		out.push("    if (\"environment\".equals(command) && args.length > 1) { System.out.println(__hxhx_nullToEmpty(Sys.environment().get(args[1]))); return; }");
-		out.push("    if (\"exitCode\".equals(command) && args.length > 1) { System.exit(__hxhx_parseInt(args[1])); return; }");
-		out.push("    if (\"args\".equals(command) && args.length > 1) { System.out.println(args[1]); return; }");
-		out.push("    if (\"println\".equals(command)) { System.out.println(__hxhx_sequenceArg(args, 1)); return; }");
-		out.push("    if (\"print\".equals(command)) { System.out.print(__hxhx_sequenceArg(args, 1)); return; }");
-		out.push("    if (\"trace\".equals(command)) { System.out.println(__hxhx_sequenceArg(args, 1)); return; }");
-		out.push("    if (\"stdin.readLine\".equals(command)) {");
-		out.push("      java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(System.in, java.nio.charset.StandardCharsets.UTF_8));");
-		out.push("      String line = reader.readLine();");
-		out.push("      System.out.println(line == null ? \"\" : line);");
-		out.push("      return;");
-		out.push("    }");
-		out.push("    if (\"stdin.readString\".equals(command) && args.length > 1) {");
-		out.push("      System.out.println(__hxhx_readChars(__hxhx_parseInt(args[1])));");
-		out.push("      return;");
-		out.push("    }");
-		out.push("    if (\"stdin.readUntil\".equals(command) && args.length > 1) {");
-		out.push("      System.out.println(__hxhx_readUntil(__hxhx_parseInt(args[1])));");
-		out.push("      return;");
-		out.push("    }");
-		out.push("    if (\"stderr.writeString\".equals(command)) { System.err.print(__hxhx_sequenceArg(args, 1)); System.err.flush(); return; }");
-		out.push("    if (\"stdout.writeString\".equals(command)) { System.out.print(__hxhx_sequenceArg(args, 1)); System.out.flush(); return; }");
-		out.push("    if (\"programPath\".equals(command)) { System.out.println(__hxhx_programPath()); return; }");
-		out.push("  }");
-		out.push("  private static String __hxhx_sequenceArg(String[] args, int index) {");
-		out.push("    if (args.length <= index) return \"\";");
-		out.push("    String token = args[index];");
-		out.push("    String mode = args.length > index + 1 ? args[index + 1] : \"\";");
-		out.push("    try { return __hxhx_unicodeSequence(Integer.parseInt(token), \"nfc\".equals(mode)); }");
-		out.push("    catch (Exception e) { return token; }");
-		out.push("  }");
-		out.push("  private static String __hxhx_unicodeSequence(int index, boolean nfc) {");
-		out.push("    switch (index) {");
-		out.push("      case 0: return __hxhx_codepoints(0x0001);");
-		out.push("      case 1: return __hxhx_codepoints(0x007F);");
-		out.push("      case 2: return __hxhx_codepoints(0x0080);");
-		out.push("      case 3: return __hxhx_codepoints(0x07FF);");
-		out.push("      case 4: return __hxhx_codepoints(0x0800);");
-		out.push("      case 5: return __hxhx_codepoints(0xD7FF);");
-		out.push("      case 6: return __hxhx_codepoints(0xE000);");
-		out.push("      case 7: return __hxhx_codepoints(0xFFFD);");
-		out.push("      case 8: return __hxhx_codepoints(0x10000);");
-		out.push("      case 9: return __hxhx_codepoints(0x1FFFF);");
-		out.push("      case 10: return __hxhx_codepoints(0xFFFFF);");
-		out.push("      case 11: return __hxhx_codepoints(0x100000);");
-		out.push("      case 12: return __hxhx_codepoints(0x10FFFF);");
-		out.push("      case 13: return __hxhx_codepoints(0x1F602, 0x1F604, 0x1F619);");
-		out.push("      case 14: return nfc ? __hxhx_codepoints(0x0227) : __hxhx_codepoints(0x0061, 0x0307);");
-		out.push("      case 15: return nfc ? __hxhx_codepoints(0x4E2D, 0x6587, 0xFF0C, 0x306B, 0x307B, 0x3093, 0x3054) : __hxhx_codepoints(0x4E2D, 0x6587, 0xFF0C, 0x306B, 0x307B, 0x3093, 0x3053, 0x3099);");
-		out.push("      default: return \"\";");
-		out.push("    }");
-		out.push("  }");
-		out.push("  private static String __hxhx_codepoints(int... codepoints) {");
-		out.push("    StringBuilder builder = new StringBuilder();");
-		out.push("    for (int codepoint : codepoints) builder.appendCodePoint(codepoint);");
-		out.push("    return builder.toString();");
-		out.push("  }");
-		out.push("  private static String __hxhx_nullToEmpty(String value) {");
-		out.push("    return value == null ? \"\" : value;");
-		out.push("  }");
-		out.push("  private static int __hxhx_parseInt(String value) {");
-		out.push("    try { return value != null && value.startsWith(\"0x\") ? Integer.parseInt(value.substring(2), 16) : Integer.parseInt(String.valueOf(value)); }");
-		out.push("    catch (Exception e) { return 0; }");
-		out.push("  }");
-		out.push("  private static String __hxhx_readChars(int len) throws Exception {");
-		out.push("    java.io.InputStreamReader reader = new java.io.InputStreamReader(System.in, java.nio.charset.StandardCharsets.UTF_8);");
-		out.push("    StringBuilder builder = new StringBuilder();");
-		out.push("    for (int i = 0; i < len; i++) {");
-		out.push("      int ch = reader.read();");
-		out.push("      if (ch < 0) break;");
-		out.push("      builder.append((char)ch);");
-		out.push("    }");
-		out.push("    return builder.toString();");
-		out.push("  }");
-		out.push("  private static String __hxhx_readUntil(int end) throws Exception {");
-		out.push("    java.io.InputStreamReader reader = new java.io.InputStreamReader(System.in, java.nio.charset.StandardCharsets.UTF_8);");
-		out.push("    StringBuilder builder = new StringBuilder();");
-		out.push("    while (true) {");
-		out.push("      int ch = reader.read();");
-		out.push("      if (ch < 0 || ch == end) break;");
-		out.push("      builder.append((char)ch);");
-		out.push("    }");
-		out.push("    return builder.toString();");
-		out.push("  }");
+		appendSourceNativeTemplateLines(out, "  ", "java/runtime", "UtilityProcessMembers.java");
 		out.push("  private static String __hxhx_programPath() {");
 		out.push("    try { return new java.io.File(" + className + ".class.getProtectionDomain().getCodeSource().getLocation().toURI()).getPath(); }");
 		out.push("    catch (Exception e) { return System.getProperty(\"java.class.path\", \"\"); }");

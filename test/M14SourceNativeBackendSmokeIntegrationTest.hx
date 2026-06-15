@@ -7414,6 +7414,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(FileSystem.exists(sourcePath), "Java source backend should emit source under the target output directory");
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should package the jar path expected by upstream runci");
 		final sourceContent = File.getContent(sourcePath);
+		assertContains(sourceContent, sourceTemplateContent("java/runtime", "StdSys.java"),
+			"Java source backend should emit Std/Sys support from the repo-owned runtime template");
 		assertContains(sourceContent, "class Std", "Java source backend should provide minimal Std support class");
 		assertContains(sourceContent, "public static int parseInt(String value)", "Java Std.parseInt support should handle sys helper exit codes");
 		assertContains(sourceContent, "class Sys", "Java source backend should provide minimal Sys support class");
@@ -8991,6 +8993,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final callStackStubPath = Path.join([outputDir, "src", "haxe", "CallStack.java"]);
 		final moduleLocalStubPath = Path.join([outputDir, "src", "MyClass", "UsingBase.java"]);
 		final testBytesStubPath = Path.join([outputDir, "src", "unit", "TestBytes.java"]);
+		final unitBuilderStubPath = Path.join([outputDir, "src", "unit", "UnitBuilder.java"]);
+		final testIssuesStubPath = Path.join([outputDir, "src", "unit", "TestIssues.java"]);
 		final jarPath = outputDir + ".jar";
 		assertTrue(result.entryPath == jarPath, "Java source backend should still report the packaged jar for support-class programs");
 		assertTrue(FileSystem.exists(mainSourcePath), "Java source backend should emit the main Java source file");
@@ -9004,6 +9008,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(FileSystem.exists(callStackStubPath), "Java source backend should synthesize haxe.CallStack stubs");
 		assertTrue(FileSystem.exists(moduleLocalStubPath), "Java source backend should synthesize stubs for module-local dotted imports");
 		assertTrue(FileSystem.exists(testBytesStubPath), "Java source backend should synthesize compile-only runci helper classes");
+		assertTrue(FileSystem.exists(unitBuilderStubPath), "Java source backend should synthesize UnitBuilder runci helper support");
+		assertTrue(FileSystem.exists(testIssuesStubPath), "Java source backend should synthesize TestIssues runci helper support");
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should package a jar after compiling support classes");
 		final mainContent = File.getContent(mainSourcePath);
 		final helperContent = File.getContent(helperSourcePath);
@@ -9012,17 +9018,29 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final functionalSupportContent = File.getContent(functionalSupportSourcePath);
 		final reportContent = File.getContent(reportStubPath);
 		final callStackContent = File.getContent(callStackStubPath);
+		final unitBuilderContent = File.getContent(unitBuilderStubPath);
+		final testIssuesContent = File.getContent(testIssuesStubPath);
 		assertContains(helperContent, "public class Helper", "Java support source should declare the sibling class");
 		assertContains(helperContent, "assert_", "Java support source should sanitize reserved method names");
 		assertContains(helperContent, "Object native_", "Java support source should sanitize reserved argument names");
 		assertContains(helperContent, "Object __", "Java support source should sanitize underscore-only argument names");
 		assertContains(reportContent, "public interface IReport", "Java import stubs should model interface-like names as interfaces");
 		assertContains(callStackContent, "public static Object exceptionStack(Object... args)", "Java haxe.CallStack stubs should include exceptionStack");
+		assertContains(callStackContent, indentedSourceTemplateContent("java/import-stub-members", "CallStack.java", "  "),
+			"Java haxe.CallStack support should use the repo-owned import-stub template body");
+		assertContains(unitBuilderContent, indentedSourceTemplateContent("java/runci-helper-members", "UnitBuilder.java", "  "),
+			"Java UnitBuilder support should use the repo-owned runci helper template body");
+		assertContains(testIssuesContent, indentedSourceTemplateContent("java/runci-helper-members", "TestIssues.java", "  "),
+			"Java TestIssues support should use the repo-owned runci helper template body");
 		assertContains(objectShapeContent, "public String toString()", "Java support source should preserve Object-compatible toString signatures");
 		assertContains(objectShapeContent, "public int hashCode()", "Java support source should preserve Object-compatible hashCode signatures");
 		assertContains(objectShapeContent, "public boolean equals(Object other)", "Java support source should preserve Object-compatible equals signatures");
 		assertContains(objectShapeContent, "public Object wide(Object... args)", "Java support methods should include varargs fallback overloads");
 		assertContains(signalOwnerContent, "public __HxSignal onProgress = new __HxSignal()", "Java on* fields should expose callable signal placeholders");
+		assertContains(signalOwnerContent, indentedSourceTemplateContent("java/support-class-members", "SignalSupport.java", "  "),
+			"Java signal helper support should use the repo-owned class-member template body");
+		assertContains(signalOwnerContent, indentedSourceTemplateContent("java/support-class-members", "ArraySupport.java", "  "),
+			"Java signal helper support should include array helper support from the repo-owned template");
 		assertContains(signalOwnerContent, "public static SignalOwner create()", "Java static create support methods should return the owning class");
 		assertContains(signalOwnerContent, "return new SignalOwner()", "Java static create support methods should return a non-null owning instance");
 		assertContains(functionalSupportContent, "java.util.function.Consumer<Object>", "Java support methods should expose one-arg functional overloads");
@@ -13459,6 +13477,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new BackendContext(outputDir, null, "UtilityProcess", true, true, new StringMap<String>()));
 		final sourcePath = Path.join([outputDir, "src", "UtilityProcess.java"]);
 		final content = File.getContent(sourcePath);
+		assertContains(content, indentedSourceTemplateContent("java/runtime", "UtilityProcessMembers.java", "  "),
+			"Java UtilityProcess should emit helper members from the repo-owned runtime template");
 		assertContains(content, "hxhx Java sys runtime shim", "Java UtilityProcess entrypoint should use the runtime shim");
 		assertNotContains(content, "compile shim", "Java UtilityProcess should not keep the compile-only shim");
 		assertTrue(FileSystem.exists(result.entryPath), "Java UtilityProcess runtime shim should still package a jar");
@@ -13518,6 +13538,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
 		final sourcePath = Path.join([outputDir, "src", "sys", "FileSystem.java"]);
 		assertTrue(FileSystem.exists(sourcePath), "Java source backend should emit a sys.FileSystem support stub");
+		final content = File.getContent(sourcePath);
+		assertContains(content, indentedSourceTemplateContent("java/import-stub-members", "FileSystem.java", "  "),
+			"Java sys.FileSystem support should use the repo-owned import-stub template body");
 		final run = commandOutput("java", ["-jar", result.entryPath]);
 		assertTrue(run.code == 0, "Java FileSystem.fullPath symlink case should run: " + run.stderr);
 		assertContains(Path.normalize(run.stdout), Path.normalize(FileSystem.fullPath(targetDir)),
