@@ -48,6 +48,8 @@ private typedef NekoOpaqueObjectLocalRaw = {
 	var local:String;
 	var field:String;
 	var value:String;
+	var extraField:Null<String>;
+	var extraValue:Null<String>;
 }
 
 /**
@@ -747,8 +749,19 @@ class NekoTargetCore {
 		}
 		final opaqueObjectLocal = parseOpaqueObjectLocalRaw(raw);
 		if (opaqueObjectLocal != null) {
-			return "(function() { var " + opaqueObjectLocal.local + " = (function() { var __hxhx_o = $new(null); __hxhx_o." + opaqueObjectLocal.field
-				+ " = " + opaqueObjectLocal.value + "; return __hxhx_o; })(); return null; })()";
+			return "(function() { var "
+				+ opaqueObjectLocal.local
+				+ " = (function() { var __hxhx_o = $new(null); __hxhx_o."
+				+ opaqueObjectLocal.field
+				+ " = "
+				+ opaqueObjectLocal.value
+				+ ";"
+				+ (opaqueObjectLocal.extraField == null ? "" : " __hxhx_o."
+					+ opaqueObjectLocal.extraField
+					+ " = "
+					+ opaqueObjectLocal.extraValue
+					+ ";")
+				+ " return __hxhx_o; })(); return null; })()";
 		}
 		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
 	}
@@ -797,13 +810,15 @@ class NekoTargetCore {
 
 	static function parseOpaqueObjectLocalRaw(raw:String):Null<NekoOpaqueObjectLocalRaw> {
 		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
-		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\}=\{\2:("[^"]*"|-?[0-9.]+)\};\}$/;
+		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\}=\{\2:("[^"]*"|-?[0-9.]+)(?:,([A-Za-z_][A-Za-z0-9_]*):("[^"]*"|-?[0-9.]+))?\};\}$/;
 		if (!pattern.match(compact))
 			return null;
 		return {
 			local: safeIdent(pattern.matched(1)),
 			field: safeIdent(pattern.matched(2)),
-			value: pattern.matched(3)
+			value: pattern.matched(3),
+			extraField: pattern.matched(4) == null ? null : safeIdent(pattern.matched(4)),
+			extraValue: pattern.matched(5)
 		};
 	}
 
