@@ -179,6 +179,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { try { throw "boom"; } catch (e:String) { Sys.println(e); } } }'),
+			context);
+		final trySource = File.getContent(sourcePath);
+		assertContains(trySource, "try\n  {", "expected Neko try statement lowering");
+		assertContains(trySource, "catch e\n  {", "expected Neko catch binding lowering");
+		assertContains(trySource, "$throw(\"boom\");", "expected throw lowering inside try");
+		assertContains(trySource, "$print(e, \"\\n\")", "expected catch body lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		assertFailsContains(function() {
 			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
 		}, "ERange");

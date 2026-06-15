@@ -266,10 +266,14 @@ class NekoTargetCore {
 			case SForIn(_, iterable, body, _):
 				collectExprRefs(context, iterable, addConstructor, addStatic);
 				collectStmtRefs(context, body, addConstructor, addStatic);
+			case STry(tryBody, catches, _):
+				collectStmtRefs(context, tryBody, addConstructor, addStatic);
+				for (c in catches)
+					collectStmtRefs(context, c.body, addConstructor, addStatic);
 			case SReturn(expr, _) | SThrow(expr, _) | SExpr(expr, _):
 				collectExprRefs(context, expr, addConstructor, addStatic);
 			case SReturnVoid(_) | SBreak(_) | SContinue(_):
-			case SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _) | STry(_, _, _):
+			case SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _):
 		}
 	}
 
@@ -439,9 +443,27 @@ class NekoTargetCore {
 				out.push(indent + "continue;");
 			case SThrow(expr, _):
 				out.push(indent + "$throw(" + renderExpr(context, expr) + ");");
-			case SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _) | STry(_, _, _):
+			case STry(tryBody, catches, _):
+				renderTryStmt(out, context, tryBody, catches, indent);
+			case SForKeyValue(_, _, _, _, _) | SDoWhile(_, _, _) | SSwitch(_, _, _, _):
 				unsupported("statement", stmtTag(stmt));
 		}
+	}
+
+	static function renderTryStmt(out:Array<String>, context:NekoEmitContext, tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>,
+			indent:String):Void {
+		out.push(indent + "try");
+		renderStmt(out, context, tryBody, indent);
+		if (catches == null || catches.length == 0) {
+			out.push(indent + "catch __hxhx_e");
+			out.push(indent + "{");
+			out.push(indent + "  $throw(__hxhx_e);");
+			out.push(indent + "}");
+			return;
+		}
+		final c = catches[0];
+		out.push(indent + "catch " + safeIdent(c.name));
+		renderStmt(out, context, c.body, indent);
 	}
 
 	static function stmtTag(stmt:HxStmt):String {
