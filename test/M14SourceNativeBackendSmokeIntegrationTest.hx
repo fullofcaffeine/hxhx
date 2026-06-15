@@ -9521,9 +9521,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final src = [
+			"import haxe.Http;",
 			"class Main {",
 			"  static function main() {",
 			"    var http = new haxe.Http(\"http://127.0.0.1:1/\");",
+			"    var imported = new Http(\"http://127.0.0.1:1/\");",
 			"    var seen = \"\";",
 			"    http.onData = data -> Sys.println(data);",
 			"    http.onBytes = bytes -> Sys.println(bytes.length);",
@@ -9539,6 +9541,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"    onError(\"boom\");",
 			"    Sys.println(seen);",
 			"    Sys.println(\"http-created\");",
+			"    Sys.println(imported.url);",
 			"  }",
 			"  static function semicolonless() run(() -> {",
 			"    var transport = new haxe.Http(\"http://127.0.0.1:1/\");",
@@ -9569,10 +9572,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$transport->onError = function($err)",
 			"PHP should preserve semicolonless braced arrow callbacks assigned inside expression-bodied methods");
 		assertContains(content, "new haxe\\Http(\"http://127.0.0.1:1/\")", "PHP generated code should construct namespaced haxe.Http");
+		assertNotContains(content, "new Http(\"http://127.0.0.1:1/\")", "PHP imported haxe.Http constructors should not lower to bare Http");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.Http construction smoke should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "error:true\nhttp-created\n", "generated PHP haxe.Http construction output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "error:true\nhttp-created\nhttp://127.0.0.1:1/\n",
+				"generated PHP haxe.Http construction output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}

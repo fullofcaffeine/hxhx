@@ -7606,6 +7606,8 @@ class SourceTargetCommon {
 
 	static function phpRuntimeSupportRenderedTypeName(clean:String, shortName:String):Null<String> {
 		switch (clean) {
+			case "haxe.Http":
+				return "haxe\\Http";
 			case "haxe.Template":
 				return "haxe\\Template";
 			case "haxe.io.Bytes":
@@ -7629,6 +7631,7 @@ class SourceTargetCommon {
 		if (clean.indexOf(".") >= 0 || (phpRenderLocalTypeNames != null && phpRenderLocalTypeNames.exists(shortName)))
 			return null;
 		return switch (shortName) {
+			case "Http": "haxe\\Http";
 			case "Template": "haxe\\Template";
 			case "Bytes": "haxe\\io\\Bytes";
 			case "BytesInput": "haxe\\io\\BytesInput";
@@ -13202,6 +13205,7 @@ class SourceTargetCommon {
 			"GenericStack" => "haxe.ds.GenericStack",
 			"List" => "haxe.ds.List",
 			"List_" => "haxe.ds.List",
+			"Http" => "haxe.Http",
 			"Template" => "haxe.Template"
 		];
 		for (shortName in stdAliases.keys())
@@ -13209,6 +13213,8 @@ class SourceTargetCommon {
 				names.set(shortName, stdAliases.get(shortName));
 		runtimeNames.set("GenericStack", "haxe\\ds\\GenericStack");
 		runtimeNames.set("haxe.ds.GenericStack", "haxe\\ds\\GenericStack");
+		runtimeNames.set("Http", "haxe\\Http");
+		runtimeNames.set("haxe.Http", "haxe\\Http");
 		runtimeNames.set("Template", "haxe\\Template");
 		runtimeNames.set("haxe.Template", "haxe\\Template");
 		runtimeNames.set("Bytes", "haxe\\io\\Bytes");
