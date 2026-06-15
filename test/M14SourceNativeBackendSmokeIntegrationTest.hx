@@ -12326,6 +12326,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(eRegTmpRoot);
 		backend.emit(phpERegProgram(), new BackendContext(eRegTmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final eRegContent = File.getContent(Path.join([eRegTmpRoot, "index.php"]));
+		assertContains(eRegContent, sourceTemplateContent("php/runtime", "EReg.php"),
+			"PHP source backend should emit EReg support from the repo-owned runtime template");
 		assertContains(eRegContent, "class EReg {", "PHP source-native runtime should emit an EReg support class");
 		assertContains(eRegContent, "if ($this->last === null || !array_key_exists(0, $this->matches) || $n < 0) throw new \\Exception(\"EReg::matched\");",
 			"PHP EReg.matched should throw when called before any successful match");
