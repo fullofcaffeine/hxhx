@@ -619,7 +619,9 @@ class NekoTargetCore {
 
 	static function renderTryCatchRaw(raw:String):String {
 		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
-		if (compact.indexOf("try{thrownewException(") == 0 && compact.indexOf("catch(e:Exception){e.stack;}") >= 0) {
+		if (compact.indexOf("try{thrownew") == 0
+			&& compact.indexOf("Exception(") > 0
+			&& compact.indexOf("catch(e:Exception){e.stack;}") >= 0) {
 			return
 				"(function() { var __hxhx_probe = $new(null); __hxhx_probe.stack = $array(); try { $throw(__hxhx_probe); return null; } catch e { return e.stack; } })()";
 		}

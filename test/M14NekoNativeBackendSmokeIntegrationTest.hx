@@ -224,6 +224,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var stack = try { throw new ValueException(""); } catch(e:Exception) { e.stack; }; Sys.println(stack.length); } }'),
+			context);
+		final valueTryExprSource = File.getContent(sourcePath);
+		assertContains(valueTryExprSource, "try { $throw(__hxhx_probe); return null; } catch e { return e.stack; }",
+			"expected ValueException raw try/catch expression lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		assertFailsContains(function() {
 			BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
 		}, "ERange");
