@@ -621,6 +621,10 @@ class NekoTargetCore {
 				"$not(" + renderExpr(context, inner) + ")";
 			case EUnop("~", inner):
 				"(" + renderExpr(context, inner) + " ^ -1)";
+			case EUnop("post++", inner):
+				renderPostfixIncDecExpr(context, inner, 1);
+			case EUnop("post--", inner):
+				renderPostfixIncDecExpr(context, inner, -1);
 			case EUnop(op, inner):
 				"(" + op + renderExpr(context, inner) + ")";
 			case EBinop("is", left, right):
@@ -732,6 +736,18 @@ class NekoTargetCore {
 			case _:
 				unsupportedExpr(detail + " target " + exprTag(expr));
 		}
+	}
+
+	static function renderPostfixIncDecExpr(context:NekoEmitContext, expr:HxExpr, delta:Int):String {
+		final target = renderAssignableExpr(context, expr, delta < 0 ? "postfix decrement" : "postfix increment");
+		final op = delta < 0 ? " - " + Std.string(-delta) : " + " + Std.string(delta);
+		return "(function() { var __hxhx_post_old = "
+			+ target
+			+ "; "
+			+ target
+			+ " = (__hxhx_post_old"
+			+ op
+			+ "); return __hxhx_post_old; })()";
 	}
 
 	static function renderUnsupportedNumericLiteral(raw:String):Null<String> {

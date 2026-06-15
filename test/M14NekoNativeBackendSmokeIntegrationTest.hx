@@ -157,6 +157,20 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var value = 1; var old = value++; var negOld = -(value--); Sys.println(old + negOld); } }'),
+			context);
+		final postfixSource = File.getContent(sourcePath);
+		assertContains(postfixSource, "var __hxhx_post_old = value;", "expected Neko postfix update to capture the old value");
+		assertContains(postfixSource, "value = (__hxhx_post_old + 1);", "expected Neko postfix increment to update the local");
+		assertContains(postfixSource, "value = (__hxhx_post_old - 1);", "expected Neko postfix decrement to update the local");
+		assertContains(postfixSource, "return __hxhx_post_old;", "expected Neko postfix update to return the old value");
+		assertNotContains(postfixSource, "post++", "postfix increment token should not leak into Neko source");
+		assertNotContains(postfixSource, "post--", "postfix decrement token should not leak into Neko source");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function fallback() return 2; static function main() { var value:Null<Int> = null; var got = value ?? fallback(); Sys.println(got); } }'),
 			context);
 		final nullCoalesceSource = File.getContent(sourcePath);
