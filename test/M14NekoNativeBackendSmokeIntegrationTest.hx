@@ -150,6 +150,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var label = switch 6 { case value = (4 | 5 | 6) if (value > 4): "large"; default: "other"; }; Sys.println(label); } }'),
+			context);
+		final intCompareGuardSwitchExprSource = File.getContent(sourcePath);
+		assertContains(intCompareGuardSwitchExprSource, "var value = __hxhx_switch;", "expected compare guarded switch capture binding");
+		assertContains(intCompareGuardSwitchExprSource, "(__hxhx_switch > 4)", "expected guarded switch integer comparison condition");
+		assertContains(intCompareGuardSwitchExprSource, 'return "large";', "expected compare guarded switch expression branch return");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var label = switch ({ value: "neko" }) { case { value: name }: name; default: "other"; }; Sys.println(label); } }'),
 			context);
 		final objectSwitchExprSource = File.getContent(sourcePath);
@@ -223,6 +233,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(intEqualsGuardSwitchStmtSource, "var value = __hxhx_switch;", "expected guarded switch statement capture binding");
 		assertContains(intEqualsGuardSwitchStmtSource, "(__hxhx_switch == 5)", "expected guarded switch statement integer equality condition");
 		assertContains(intEqualsGuardSwitchStmtSource, "$print(\"middle\", \"\\n\")", "expected guarded switch statement branch body");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { switch 6 { case value = (4 | 5 | 6) if (value > 4): Sys.println("large"); default: Sys.println("other"); } } }'),
+			context);
+		final intCompareGuardSwitchStmtSource = File.getContent(sourcePath);
+		assertContains(intCompareGuardSwitchStmtSource, "var value = __hxhx_switch;", "expected compare guarded switch statement capture binding");
+		assertContains(intCompareGuardSwitchStmtSource, "(__hxhx_switch > 4)", "expected guarded switch statement integer comparison condition");
+		assertContains(intCompareGuardSwitchStmtSource, "$print(\"large\", \"\\n\")", "expected compare guarded switch statement branch body");
 
 		deleteRecursive(outDir);
 

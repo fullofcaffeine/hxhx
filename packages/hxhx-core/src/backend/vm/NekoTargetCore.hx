@@ -1083,7 +1083,7 @@ class NekoTargetCore {
 
 	static function patternNeedsNekoIfLowering(pattern:HxSwitchPattern):Bool {
 		return switch (pattern) {
-			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PIntEqualsGuard(_, _, _):
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _):
 				true;
 			case PCapture(_, inner) | PUnsupportedGuard(inner):
 				patternNeedsNekoIfLowering(inner);
@@ -1128,10 +1128,23 @@ class NekoTargetCore {
 				final lowered = lowerNekoSwitchPattern(inner, scrutinee);
 				final bound = nekoSwitchBindingValue(bindingName, lowered.bindings);
 				{cond: "((" + lowered.cond + ") && (" + bound + " == " + Std.string(value) + "))", bindings: lowered.bindings};
+			case PIntCompareGuard(inner, bindingName, op, value):
+				final lowered = lowerNekoSwitchPattern(inner, scrutinee);
+				final bound = nekoSwitchBindingValue(bindingName, lowered.bindings);
+				{cond: "((" + lowered.cond + ") && " + nekoIntCompareGuardCond(bound, op, value) + ")", bindings: lowered.bindings};
 			case POr(patterns):
 				lowerNekoOrPattern(patterns, scrutinee);
-			case PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
+			case PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PParsedIntSwitchGuard(_, _, _, _):
 				unsupportedSwitchPatternLowering(pattern);
+		}
+	}
+
+	static function nekoIntCompareGuardCond(value:String, op:String, expected:Int):String {
+		return switch (op) {
+			case "<" | "<=" | ">" | ">=":
+				"(" + value + " " + op + " " + Std.string(expected) + ")";
+			case _:
+				"false";
 		}
 	}
 
