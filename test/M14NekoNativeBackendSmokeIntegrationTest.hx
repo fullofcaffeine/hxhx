@@ -248,7 +248,9 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			selfName: "__hxhx_self",
 			currentClass: {fullName: "Flag", shortName: "Flag", cls: abstractClass},
 			symbolTable: null,
-			locals: new haxe.ds.StringMap<Bool>()
+			locals: new haxe.ds.StringMap<Bool>(),
+			insideTry: false,
+			breakFlag: null
 		};
 		assertTrue(@:privateAccess NekoTargetCore.renderExpr(abstractThisContext, EThis) == "__hxhx_self.__hx_value",
 			"abstract this reads should use the underlying value slot");
@@ -278,7 +280,9 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			selfName: null,
 			currentClass: nativeDecodedMainInfo,
 			symbolTable: "__hxhx_symbols",
-			locals: new haxe.ds.StringMap<Bool>()
+			locals: new haxe.ds.StringMap<Bool>(),
+			insideTry: false,
+			breakFlag: null
 		};
 		assertTrue(@:privateAccess NekoTargetCore.renderExpr(nativeDecodedAbstractContext, EIdent("X86_64")) == '"X86_64"',
 			"native-decoded enum abstract constants without field declarations should still lower to backing strings");
@@ -294,7 +298,9 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			selfName: null,
 			currentClass: serializerInfo,
 			symbolTable: "__hxhx_symbols",
-			locals: new haxe.ds.StringMap<Bool>()
+			locals: new haxe.ds.StringMap<Bool>(),
+			insideTry: false,
+			breakFlag: null
 		};
 		assertTrue(@:privateAccess NekoTargetCore.renderExpr(serializerContext, EIdent("DEFAULT_RESOLVER")) != '"DEFAULT_RESOLVER"',
 			"uppercase static fields outside the native-decoded Arch bridge must remain assignable identifiers");
@@ -441,7 +447,11 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			classes: null,
 			mainClass: null,
 			currentClass: null,
-			selfName: "__hxhx_self"
+			selfName: "__hxhx_self",
+			symbolTable: null,
+			locals: new haxe.ds.StringMap<Bool>(),
+			insideTry: false,
+			breakFlag: null
 		}, EUnop("post++", EThis));
 		assertContains(postfixThisSource, "var __hxhx_post_old = __hxhx_self.__hx_value;", "expected Neko postfix this update to read backing value slot");
 		assertContains(postfixThisSource, "__hxhx_self.__hx_value = (__hxhx_post_old + 1);", "expected Neko postfix this update to write backing value slot");
@@ -1155,6 +1165,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var value = !true; Sys.println(value); } }'), context);
 		final notSource = File.getContent(sourcePath);
 		assertContains(notSource, "var value = $not(true);", "expected boolean not to lower to Neko intrinsic");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { try { while (true) { switch 0 { case 0: break; default: Sys.println("x"); } } } catch (e:Dynamic) { throw e; } } }'),
+			context);
+		final tryLoopBreakSource = File.getContent(sourcePath);
+		assertContains(tryLoopBreakSource, "var __hxhx_try_loop_", "expected try-contained break loop to use a Neko-safe loop flag");
+		assertContains(tryLoopBreakSource, " = false;", "expected try-contained break to clear the loop flag");
+		assertNotContains(tryLoopBreakSource, "break;", "Neko bytecode rejects break across try frames");
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);

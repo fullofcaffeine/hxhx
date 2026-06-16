@@ -22,6 +22,8 @@ private typedef NekoEmitContext = {
 	var currentClass:Null<NekoClassInfo>;
 	var symbolTable:Null<String>;
 	var locals:StringMap<Bool>;
+	var insideTry:Bool;
+	var breakFlag:Null<String>;
 }
 
 private typedef NekoStaticFunctionRef = {
@@ -223,7 +225,9 @@ class NekoTargetCore {
 			selfName: null,
 			currentClass: null,
 			symbolTable: null,
-			locals: emptyLocals()
+			locals: emptyLocals(),
+			insideTry: false,
+			breakFlag: null
 		};
 		final mainInfo = lookupClass(emitContext, main.fullName);
 		if (mainInfo == null)
@@ -255,7 +259,9 @@ class NekoTargetCore {
 			selfName: null,
 			currentClass: null,
 			symbolTable: SPLIT_SYMBOL_TABLE,
-			locals: emptyLocals()
+			locals: emptyLocals(),
+			insideTry: false,
+			breakFlag: null
 		};
 		final classMeta = buildRuntimeClassMeta(modules);
 		final mainInfo = lookupClass(emitContext, main.fullName);
@@ -954,7 +960,10 @@ class NekoTargetCore {
 				if (elseBranch != null)
 					renderControlBlock(out, context, "else", elseBranch, indent);
 			case SWhile(cond, body, _):
-				renderControlBlock(out, context, "while " + renderExpr(context, cond), body, indent);
+				if (context.insideTry && stmtContainsBreak(body))
+					renderTrySafeWhileStmt(out, context, cond, body, indent);
+				else
+					renderControlBlock(out, context, "while " + renderExpr(context, cond), body, indent);
 			case SForIn(name, iterable, body, _):
 				renderForInStmt(out, context, name, iterable, body, indent);
 			case SForKeyValue(keyName, valueName, iterable, body, _):
@@ -971,7 +980,10 @@ class NekoTargetCore {
 			case SExpr(expr, _):
 				out.push(indent + renderExpr(context, expr) + ";");
 			case SBreak(_):
-				out.push(indent + "break;");
+				if (context.breakFlag != null)
+					out.push(indent + context.breakFlag + " = false;");
+				else
+					out.push(indent + "break;");
 			case SContinue(_):
 				out.push(indent + "continue;");
 			case SThrow(expr, _):
@@ -1034,9 +1046,25 @@ class NekoTargetCore {
 		out.push(indent + "}");
 	}
 
+	static function renderTrySafeWhileStmt(out:Array<String>, context:NekoEmitContext, cond:HxExpr, body:HxStmt, indent:String):Void {
+		final flag = "__hxhx_try_loop_" + out.length;
+		final blockContext = withBreakFlag(childContext(context), flag);
+		out.push(indent + "var " + flag + " = true;");
+		out.push(indent + "while (" + flag + " && " + renderExpr(context, cond) + ") {");
+		switch (body) {
+			case SBlock(stmts, _):
+				for (stmt in stmts)
+					renderStmt(out, blockContext, stmt, indent + "  ");
+			case _:
+				renderStmt(out, blockContext, body, indent + "  ");
+		}
+		out.push(indent + "}");
+	}
+
 	static function renderTryStmt(out:Array<String>, context:NekoEmitContext, tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>,
 			indent:String):Void {
-		renderControlBlock(out, context, "try", tryBody, indent);
+		final tryContext = withInsideTry(context);
+		renderControlBlock(out, tryContext, "try", tryBody, indent);
 		if (catches == null || catches.length == 0) {
 			out.push(indent + "catch __hxhx_e");
 			out.push(indent + "{");
@@ -1045,8 +1073,49 @@ class NekoTargetCore {
 			return;
 		}
 		final c = catches[0];
-		final catchContext = withLocal(context, c.name);
+		final catchContext = withLocal(tryContext, c.name);
 		renderControlBlock(out, catchContext, "catch " + safeIdent(c.name), c.body, indent);
+	}
+
+	static function stmtContainsBreak(stmt:HxStmt):Bool {
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				var found = false;
+				for (s in stmts) {
+					if (stmtContainsBreak(s)) {
+						found = true;
+						break;
+					}
+				}
+				found;
+			case SIf(_, thenBranch, elseBranch, _): stmtContainsBreak(thenBranch) || (elseBranch != null && stmtContainsBreak(elseBranch));
+			case SSwitch(_, _, bodies, _):
+				var found = false;
+				for (body in bodies) {
+					if (stmtContainsBreak(body)) {
+						found = true;
+						break;
+					}
+				}
+				found;
+			case STry(tryBody, catches, _):
+				var found = stmtContainsBreak(tryBody);
+				if (!found && catches != null) {
+					for (c in catches) {
+						if (stmtContainsBreak(c.body)) {
+							found = true;
+							break;
+						}
+					}
+				}
+				found;
+			case SBreak(_):
+				true;
+			case SWhile(_, _, _) | SDoWhile(_, _, _) | SForIn(_, _, _, _) | SForKeyValue(_, _, _, _, _):
+				false;
+			case SVar(_, _, _, _) | SReturnVoid(_) | SReturn(_, _) | SExpr(_, _) | SContinue(_) | SThrow(_, _):
+				false;
+		}
 	}
 
 	static function stmtTag(stmt:HxStmt):String {
@@ -2458,7 +2527,9 @@ class NekoTargetCore {
 			selfName: context.selfName,
 			currentClass: context.currentClass,
 			symbolTable: context.symbolTable,
-			locals: cloneLocals(context.locals)
+			locals: cloneLocals(context.locals),
+			insideTry: context.insideTry,
+			breakFlag: context.breakFlag
 		};
 	}
 
@@ -2487,6 +2558,18 @@ class NekoTargetCore {
 		return withLocals(context, names);
 	}
 
+	static function withInsideTry(context:NekoEmitContext):NekoEmitContext {
+		final next = childContext(context);
+		next.insideTry = true;
+		return next;
+	}
+
+	static function withBreakFlag(context:NekoEmitContext, flag:String):NekoEmitContext {
+		final next = childContext(context);
+		next.breakFlag = flag;
+		return next;
+	}
+
 	static function isMacroFunction(fn:HxFunctionDecl):Bool {
 		for (meta in HxFunctionDecl.getMetadata(fn)) {
 			if (meta == "macro")
@@ -2501,7 +2584,9 @@ class NekoTargetCore {
 			selfName: selfName,
 			currentClass: info,
 			symbolTable: context.symbolTable,
-			locals: cloneLocals(context.locals)
+			locals: cloneLocals(context.locals),
+			insideTry: context.insideTry,
+			breakFlag: context.breakFlag
 		};
 	}
 
@@ -2511,7 +2596,9 @@ class NekoTargetCore {
 			selfName: context.selfName,
 			currentClass: info,
 			symbolTable: context.symbolTable,
-			locals: cloneLocals(context.locals)
+			locals: cloneLocals(context.locals),
+			insideTry: context.insideTry,
+			breakFlag: context.breakFlag
 		};
 	}
 
