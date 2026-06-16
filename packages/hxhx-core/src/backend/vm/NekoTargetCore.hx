@@ -674,6 +674,13 @@ class NekoTargetCore {
 	}
 
 	static function renderConstructorFactory(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo):Void {
+		if (isListTypePath(info.fullName)) {
+			out.push(renderConstructorDefinitionPrefix(context, info.fullName) + "function() {");
+			out.push("  return __hxhx_list_new();");
+			out.push("}");
+			out.push("");
+			return;
+		}
 		final ctor = findFunction(info.cls, "new", false);
 		final args = new Array<String>();
 		if (ctor != null) {
@@ -901,8 +908,6 @@ class NekoTargetCore {
 				"false";
 			case EIdent(name):
 				renderIdent(context, name);
-			case EField(obj, "length"):
-				"$asize(" + renderExpr(context, obj) + ")";
 			case EField(obj, field):
 				"__hxhx_field(" + renderExpr(context, obj) + ", " + quote(field) + ")";
 			case ECall(callee, args):
@@ -1199,6 +1204,8 @@ class NekoTargetCore {
 	static function renderNew(context:NekoEmitContext, typePath:String, args:Array<HxExpr>):String {
 		if ((typePath == "Array" || typePath == "StdTypes.Array") && args.length == 0)
 			return "$array()";
+		if (isListTypePath(typePath) && args.length == 0)
+			return "__hxhx_list_new()";
 		final mapKind = mapKindForTypePath(typePath);
 		if (mapKind != null)
 			return "__hxhx_map_new(" + quote(mapKind) + ")";
@@ -1261,6 +1268,10 @@ class NekoTargetCore {
 			case _:
 				null;
 		}
+	}
+
+	static function isListTypePath(typePath:String):Bool {
+		return typePath == "List" || typePath == "haxe.ds.List";
 	}
 
 	static function renderRangeExpr(context:NekoEmitContext, start:HxExpr, end:HxExpr):String {

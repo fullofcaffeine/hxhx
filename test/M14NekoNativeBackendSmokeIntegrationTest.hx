@@ -190,8 +190,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"expected split runtime metadata for instance fields");
 		assertContains(reflectionSource, "$print(__hxhx_type_class_name(__hxhx_type_get_class(c)), \"\\n\");",
 			"expected Type.getClassName(Type.getClass(...)) to lower to runtime metadata helpers");
-		assertContains(reflectionSource, "$print($asize(__hxhx_type_fields(__hxhx_instance_fields, __hxhx_type_get_class(c))), \"\\n\");",
-			"expected Type.getInstanceFields to return metadata-backed arrays");
+		assertContains(reflectionSource, "$print(__hxhx_field(__hxhx_type_fields(__hxhx_instance_fields, __hxhx_type_get_class(c)), \"length\"), \"\\n\");",
+			"expected Type.getInstanceFields to return metadata-backed arrays with field-aware length");
 		assertContains(reflectionSource, "$print(__hxhx_reflect_has_field(c, \"testFoo\"), \"\\n\");", "expected Reflect.hasField runtime helper");
 		assertContains(reflectionSource, "$print(__hxhx_reflect_is_function((if (c == null) null else $objget(c, $hash(\"testFoo\")))), \"\\n\");",
 			"expected Reflect.isFunction to lower to runtime helper for method discovery");
@@ -216,7 +216,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final lengthFieldSource = File.getContent(sourcePath);
 		assertContains(lengthFieldSource, "(h.length = 3);", "expected length assignment to stay a field lvalue");
-		assertContains(lengthFieldSource, "$print($asize(h), \"\\n\")", "expected length reads to lower to Neko array-size access");
+		assertContains(lengthFieldSource, "$print(__hxhx_field(h, \"length\"), \"\\n\")", "expected length reads to use field-aware access");
 		assertNotContains(lengthFieldSource, "($asize(h) = 3)", "length read lowering must not be used as an assignment target");
 
 		deleteRecursive(outDir);
@@ -682,6 +682,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(arrayCtorSource, "__hxhx_self.handlers = __hxhx_array_push(__hxhx_self.handlers, handler)",
 			"expected Array.push on the initialized instance field to retain resized native array");
 		assertNotContains(arrayCtorSource, "__hxhx_new_Array()", "new Array() must not construct a Haxe object for Neko array operations");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var results = new List(); results.add("ok"); Sys.println(results.length); } }'), context);
+		final listCtorSource = File.getContent(sourcePath);
+		assertContains(listCtorSource, "var results = __hxhx_list_new();", "expected new List() to use Neko runtime support");
+		assertContains(listCtorSource, '__hxhx_field(results, "add")("ok");', "expected List.add calls to use the runtime list method");
+		assertContains(listCtorSource, "$print(__hxhx_field(results, \"length\"), \"\\n\")", "expected List.length reads to use field-aware access");
+		assertNotContains(listCtorSource, '__hxhx_self.__hx_ctor = "List";', "List constructor must not be a hollow metadata-only object");
 
 		deleteRecursive(outDir);
 

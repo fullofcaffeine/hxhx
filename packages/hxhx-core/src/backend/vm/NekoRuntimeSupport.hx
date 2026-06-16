@@ -17,8 +17,8 @@ typedef NekoRuntimeClassMeta = {
 	  such as map-literal arrows into Neko source.
 
 	What
-	- Adds target-owned helpers for string conversion, array push/indexOf, and a
-	  minimal Map-like object with set/get/exists/remove/keys/iterator/toString.
+	- Adds target-owned helpers for string conversion, array push/indexOf, and
+	  compact List/Map-like objects used by the upstream-derived runner path.
 
 	How
 	- Keeps the support prelude in one module so future extraction to a template
@@ -138,7 +138,10 @@ class NekoRuntimeSupport {
 		out.push("}");
 		out.push("");
 		out.push("var __hxhx_field = function(o, field) {");
-		out.push("  if (o == null || $typeof(o) != $tobject) return null;");
+		out.push("  if (o == null) return null;");
+		out.push("  if ($typeof(o) == $tarray) return if (field == \"length\") $asize(o) else null;");
+		out.push("  if ($typeof(o) == $tstring) return if (field == \"length\") $ssize(o) else null;");
+		out.push("  if ($typeof(o) != $tobject) return null;");
 		out.push("  var getter = $objget(o, $hash(\"get_\" + field));");
 		out.push("  if ($typeof(getter) == $tfunction) return getter();");
 		out.push("  return $objget(o, $hash(field));");
@@ -151,6 +154,67 @@ class NekoRuntimeSupport {
 		out.push("  if ($ssize(s) < $ssize(start)) return false;");
 		out.push("  var pos = try $sfind(s, 0, start) catch e null;");
 		out.push("  return pos == 0;");
+		out.push("}");
+		out.push("");
+		out.push("var __hxhx_array_iterator = function(values) {");
+		out.push("  var index = 0;");
+		out.push("  var iterator = $new(null);");
+		out.push("  iterator.hasNext = function() { return index < $asize(values); };");
+		out.push("  iterator.next = function() { var value = values[index]; index = index + 1; return value; };");
+		out.push("  return iterator;");
+		out.push("}");
+		out.push("");
+		out.push("var __hxhx_list_new = function() {");
+		out.push("  var list = $new(null);");
+		out.push("  list.__hx_ctor = \"List\";");
+		out.push("  list.__hx_params = $array();");
+		out.push("  list.__hx_value = null;");
+		out.push("  list.__hxhx_items = $array();");
+		out.push("  list.length = 0;");
+		out.push("  list.add = function(value) { list.__hxhx_items = __hxhx_array_push(list.__hxhx_items, value); list.length = $asize(list.__hxhx_items); return value; };");
+		out.push("  list.push = function(value) { list.add(value); };");
+		out.push("  list.first = function() { return if (list.length == 0) null else list.__hxhx_items[0]; };");
+		out.push("  list.last = function() { return if (list.length == 0) null else list.__hxhx_items[list.length - 1]; };");
+		out.push("  list.pop = function() {");
+		out.push("    if (list.length == 0) return null;");
+		out.push("    var value = list.__hxhx_items[0];");
+		out.push("    var next = $array();");
+		out.push("    var i = 1;");
+		out.push("    while (i < list.length) { next = __hxhx_array_push(next, list.__hxhx_items[i]); i = i + 1; }");
+		out.push("    list.__hxhx_items = next;");
+		out.push("    list.length = $asize(next);");
+		out.push("    return value;");
+		out.push("  };");
+		out.push("  list.isEmpty = function() { return list.length == 0; };");
+		out.push("  list.clear = function() { list.__hxhx_items = $array(); list.length = 0; };");
+		out.push("  list.remove = function(value) {");
+		out.push("    var next = $array();");
+		out.push("    var removed = false;");
+		out.push("    var i = 0;");
+		out.push("    while (i < list.length) {");
+		out.push("      var item = list.__hxhx_items[i];");
+		out.push("      if ($not(removed) && item == value) removed = true; else next = __hxhx_array_push(next, item);");
+		out.push("      i = i + 1;");
+		out.push("    }");
+		out.push("    list.__hxhx_items = next;");
+		out.push("    list.length = $asize(next);");
+		out.push("    return removed;");
+		out.push("  };");
+		out.push("  list.iterator = function() { return __hxhx_array_iterator(list.__hxhx_items); };");
+		out.push("  list.keyValueIterator = function() {");
+		out.push("    var values = $array();");
+		out.push("    var i = 0;");
+		out.push("    while (i < list.length) { values = __hxhx_array_push(values, $array(i, list.__hxhx_items[i])); i = i + 1; }");
+		out.push("    return __hxhx_array_iterator(values);");
+		out.push("  };");
+		out.push("  list.join = function(sep) {");
+		out.push("    var out = \"\";");
+		out.push("    var i = 0;");
+		out.push("    while (i < list.length) { if (i > 0) out = out + sep; out = out + __hxhx_string(list.__hxhx_items[i]); i = i + 1; }");
+		out.push("    return out;");
+		out.push("  };");
+		out.push("  list.toString = function() { return \"{\" + list.join(\", \") + \"}\"; };");
+		out.push("  return list;");
 		out.push("}");
 		out.push("");
 		out.push("var __hxhx_map_new = function(kind) {");
