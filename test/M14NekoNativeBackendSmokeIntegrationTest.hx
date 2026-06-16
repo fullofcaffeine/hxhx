@@ -110,6 +110,11 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"ETryCatchRaw");
 		final opaqueTypedLocalInit = @:privateAccess NekoTargetCore.renderExpr(cast null, ETryCatchRaw('opaque_block_expr:{ var i:Int = z; }'));
 		assertContains(opaqueTypedLocalInit, "var i = z;", "opaque typed local init should emit the captured initializer safely");
+		final putEnvRaw = @:privateAccess NekoTargetCore.renderExpr(cast null,
+			ETryCatchRaw('try{Sys.putEnv("NON_EXISTENT",null);true;}catch(e:Dynamic){trace(e);false;}'));
+		assertContains(putEnvRaw, '__hxhx_sys_put_env("NON_EXISTENT", null); return true;', "Sys.putEnv raw try parser should preserve null and success bool");
+		assertContains(putEnvRaw, "$" + 'print(e, "\\n"); return false;',
+			"Sys.putEnv raw try parser should preserve fallback bool without regex capture noise");
 		final macroInExpr = @:privateAccess NekoTargetCore.renderExpr(cast null, EMacroExpr(EBinop("in", EInt(1), EInt(0)), []));
 		assertContains(macroInExpr, '.__hx_ctor = "EBinop";', "macro in-expression should lower to macro EBinop");
 		assertContains(macroInExpr, '.__hx_ctor = "OpIn";', "macro in-expression should preserve OpIn");

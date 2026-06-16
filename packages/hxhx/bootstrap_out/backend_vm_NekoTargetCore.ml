@@ -640,14 +640,38 @@ let mapKindForTypePath = fun typePath -> let tempResult = ref (Obj.magic (HxRunt
 
 let isListTypePath = fun typePath -> HxString.equals typePath "List" || HxString.equals typePath "haxe.ds.List"
 
-let parseSysPutEnvBoolTryRaw = fun raw -> try let __fallback_result_429 = let compact = (StringTools.replace (StringTools.replace (StringTools.replace (raw : string) (" " : string) ("" : string) : string) ("\n" : string) ("" : string) : string) ("\t" : string) ("" : string) : string) in let pattern = Obj.magic (EReg.create ("^try\\{Sys\\.putEnv\\(\"([^\"]*)\",(null|\"[^\"]*\")\\);(true|false);\\}catch\\(e(?::[^)]*)?\\)\\{trace\\(e\\);(true|false);\\}$" : string) ("" : string)) in (
-  ignore (if not (EReg.hx_match (Obj.magic pattern) (compact : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-  let __anon_427 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_427 "name" (Obj.repr (EReg.matched (Obj.magic pattern) 1)));
-    ignore (HxAnon.set __anon_427 "value" (Obj.repr (sanitizeNekoValueExpr (EReg.matched (Obj.magic pattern) 2 : string))));
-    ignore (HxAnon.set __anon_427 "success" (Obj.repr (EReg.matched (Obj.magic pattern) 3)));
-    ignore (HxAnon.set __anon_427 "fallback" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
-    __anon_427
+let parseSysPutEnvBoolTryRaw = fun raw -> try let __fallback_result_429 = let compact = (StringTools.replace (StringTools.replace (StringTools.replace (raw : string) (" " : string) ("" : string) : string) ("\n" : string) ("" : string) : string) ("\t" : string) ("" : string) : string) in let prefix = ("try{Sys.putEnv(\"" : string) in (
+  ignore (if not (StringTools.startsWith (compact : string) (prefix : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+  let afterPrefix = (HxString.substr compact (HxString.length prefix) (-1) : string) in let nameEnd = HxString.indexOf afterPrefix "\"," 0 in (
+    ignore (if nameEnd < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+    let name = (HxString.substr afterPrefix 0 nameEnd : string) in let afterName = (HxString.substr afterPrefix (HxInt.add nameEnd 2) (-1) : string) in let valueEnd = HxString.indexOf afterName ");" 0 in (
+      ignore (if valueEnd < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+      let value = (HxString.substr afterName 0 valueEnd : string) in (
+        ignore (if not (HxString.equals value "null") && not (StringTools.startsWith (value : string) ("\"" : string) && StringTools.endsWith (value : string) ("\"" : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+        let afterCall = (HxString.substr afterName (HxInt.add valueEnd 2) (-1) : string) in let catchMarker = (";}catch(e" : string) in let successEnd = HxString.indexOf afterCall catchMarker 0 in (
+          ignore (if successEnd < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+          let success = (HxString.substr afterCall 0 successEnd : string) in (
+            ignore (if not (HxString.equals success "true") && not (HxString.equals success "false") then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+            let afterCatchStart = (HxString.substr afterCall (HxInt.add successEnd (HxString.length catchMarker)) (-1) : string) in let traceMarker = ("){trace(e);" : string) in let traceStart = HxString.indexOf afterCatchStart traceMarker 0 in (
+              ignore (if traceStart < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+              let afterTrace = (HxString.substr afterCatchStart (HxInt.add traceStart (HxString.length traceMarker)) (-1) : string) in (
+                ignore (if not (StringTools.endsWith (afterTrace : string) (";}" : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+                let fallback = (HxString.substr afterTrace 0 (HxInt.sub (HxString.length afterTrace) 2) : string) in (
+                  ignore (if not (HxString.equals fallback "true") && not (HxString.equals fallback "false") then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+                  let __anon_427 = HxAnon.create () in (
+                    ignore (HxAnon.set __anon_427 "name" (Obj.repr name));
+                    ignore (HxAnon.set __anon_427 "value" (Obj.repr (sanitizeNekoValueExpr (value : string))));
+                    ignore (HxAnon.set __anon_427 "success" (Obj.repr success));
+                    ignore (HxAnon.set __anon_427 "fallback" (Obj.repr fallback));
+                    __anon_427
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
 ) in Obj.magic __fallback_result_429 with
   | HxRuntime.Hx_return __ret_428 -> Obj.magic __ret_428

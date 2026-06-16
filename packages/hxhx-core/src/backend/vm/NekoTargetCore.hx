@@ -1582,14 +1582,45 @@ class NekoTargetCore {
 
 	static function parseSysPutEnvBoolTryRaw(raw:String):Null<NekoSysPutEnvBoolTryRaw> {
 		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
-		final pattern = ~/^try\{Sys\.putEnv\("([^"]*)",(null|"[^"]*")\);(true|false);\}catch\(e(?::[^)]*)?\)\{trace\(e\);(true|false);\}$/;
-		if (!pattern.match(compact))
+		final prefix = "try{Sys.putEnv(\"";
+		if (!StringTools.startsWith(compact, prefix))
+			return null;
+		final afterPrefix = compact.substr(prefix.length);
+		final nameEnd = afterPrefix.indexOf("\",");
+		if (nameEnd < 0)
+			return null;
+		final name = afterPrefix.substr(0, nameEnd);
+		final afterName = afterPrefix.substr(nameEnd + 2);
+		final valueEnd = afterName.indexOf(");");
+		if (valueEnd < 0)
+			return null;
+		final value = afterName.substr(0, valueEnd);
+		if (value != "null" && !(StringTools.startsWith(value, "\"") && StringTools.endsWith(value, "\"")))
+			return null;
+		final afterCall = afterName.substr(valueEnd + 2);
+		final catchMarker = ";}catch(e";
+		final successEnd = afterCall.indexOf(catchMarker);
+		if (successEnd < 0)
+			return null;
+		final success = afterCall.substr(0, successEnd);
+		if (success != "true" && success != "false")
+			return null;
+		final afterCatchStart = afterCall.substr(successEnd + catchMarker.length);
+		final traceMarker = "){trace(e);";
+		final traceStart = afterCatchStart.indexOf(traceMarker);
+		if (traceStart < 0)
+			return null;
+		final afterTrace = afterCatchStart.substr(traceStart + traceMarker.length);
+		if (!StringTools.endsWith(afterTrace, ";}"))
+			return null;
+		final fallback = afterTrace.substr(0, afterTrace.length - 2);
+		if (fallback != "true" && fallback != "false")
 			return null;
 		return {
-			name: pattern.matched(1),
-			value: sanitizeNekoValueExpr(pattern.matched(2)),
-			success: pattern.matched(3),
-			fallback: pattern.matched(4)
+			name: name,
+			value: sanitizeNekoValueExpr(value),
+			success: success,
+			fallback: fallback
 		};
 	}
 
