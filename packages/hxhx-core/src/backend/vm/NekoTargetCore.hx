@@ -925,6 +925,8 @@ class NekoTargetCore {
 				renderNullCoalesceAssignExpr(context, left, right);
 			case EBinop("=", left, right):
 				renderAssignExpr(context, left, right);
+			case EBinop(op, left, right) if (isCompoundAssignmentOp(op)):
+				renderCompoundAssignExpr(context, op, left, right);
 			case EBinop(op, left, right):
 				"(" + renderExpr(context, left) + " " + op + " " + renderExpr(context, right) + ")";
 			case ETernary(cond, thenExpr, elseExpr):
@@ -1028,6 +1030,16 @@ class NekoTargetCore {
 			case _:
 				"(" + renderAssignableExpr(context, left, "assignment") + " = " + renderExpr(context, right) + ")";
 		}
+	}
+
+	static function isCompoundAssignmentOp(op:String):Bool {
+		return op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=" || op == "&=" || op == "|=" || op == "^=" || op == "<<=" || op == ">>="
+			|| op == ">>>=";
+	}
+
+	static function renderCompoundAssignExpr(context:NekoEmitContext, op:String, left:HxExpr, right:HxExpr):String {
+		final target = renderAssignableExpr(context, left, "compound assignment");
+		return "(" + target + " " + op + " " + renderExpr(context, right) + ")";
 	}
 
 	static function renderArrayPushExpr(context:NekoEmitContext, receiver:HxExpr, value:String):String {

@@ -130,6 +130,10 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(enumSwitchExpr, "var message = __hxhx_enum_params(__hxhx_switch)[0];", "enum extractor switches should bind positional payloads");
 		final propertyReadExpr = @:privateAccess NekoTargetCore.renderExpr(cast null, EField(EIdent("fixture"), "isIgnored"));
 		assertContains(propertyReadExpr, '__hxhx_field(fixture, "isIgnored")', "field reads should honor get_<field> property accessors when present");
+		final compoundFieldAssignExpr = @:privateAccess NekoTargetCore.renderExpr(cast null,
+			EBinop("+=", EField(EIdent("expected"), "line"), EIdent("lineShift")));
+		assertContains(compoundFieldAssignExpr, "(expected.line += lineShift)", "compound field assignments must render a Neko lvalue");
+		assertNotContains(compoundFieldAssignExpr, "__hxhx_field(expected", "compound field assignments must not use read helpers as lvalues");
 
 		final outDir = Path.join([".tmp", "m14_neko_native_backend_smoke"]);
 		deleteRecursive(outDir);
