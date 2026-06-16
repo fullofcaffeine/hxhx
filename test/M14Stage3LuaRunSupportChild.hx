@@ -36,9 +36,14 @@ class M14Stage3LuaRunSupportChild {
 			final absBin = FileSystem.fullPath(bin);
 			final fakeLua = Path.join([absBin, "lua"]);
 			File.saveContent(fakeLua, "#!/usr/bin/env sh\nprintf '%s\\n' \"lua-stdout:$*\"\n");
+			final fakeNeko = Path.join([absBin, "neko"]);
+			File.saveContent(fakeNeko, "#!/usr/bin/env sh\nprintf '%s\\n' \"neko-stdout:$*\"\n");
 			final chmodCode = Sys.command("chmod", ["+x", fakeLua]);
 			if (chmodCode != 0)
 				throw "failed to chmod fake lua";
+			final chmodNekoCode = Sys.command("chmod", ["+x", fakeNeko]);
+			if (chmodNekoCode != 0)
+				throw "failed to chmod fake neko";
 			Sys.putEnv("PATH", absBin + ":" + (oldPath == null ? "" : oldPath));
 
 			switch (mode) {
@@ -49,6 +54,12 @@ class M14Stage3LuaRunSupportChild {
 				case "run":
 					final emitted = new EmitResult("artifact.lua", [], false);
 					final err = Stage3RunSupport.runEmittedArtifact("lua-native", false, [], true, ["alpha", "beta"], tmp, emitted, false);
+					if (err != null)
+						throw err;
+				case "neko-cmd":
+					mkdirp(Path.join([tmp, "bin"]));
+					final emitted = new EmitResult(Path.join([tmp, "bin", "main.n"]), [], false);
+					final err = Stage3RunSupport.runEmittedArtifact("neko-native", true, ["neko bin/main.n"], false, [], tmp, emitted, false);
 					if (err != null)
 						throw err;
 				case _:

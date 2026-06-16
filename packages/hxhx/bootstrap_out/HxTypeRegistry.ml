@@ -2048,7 +2048,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.Stage3PathSupport" [];
   HxType.register_class_static_fields "hxhx.Stage3PathSupport" [ "absFromCwd"; "inferMainFromDisplayRequest"; "inferMainFromMacroExpr"; "inferRepoRootForScripts" ];
   HxType.register_class_instance_fields "hxhx.Stage3RunSupport" [];
-  HxType.register_class_static_fields "hxhx.Stage3RunSupport" [ "absFromCwd"; "canRunNode"; "isSafeCommandWord"; "parseSafeHaxelibDevCommand"; "parseSafeJavaJarCommand"; "parseSafeLuaCommand"; "parseSafePythonScriptCommand"; "runCommandInCwd"; "runCommandOnlyUnit"; "runEmittedArtifact"; "runSafeCommandOnlyHooks"; "runSafeJavaJarHookForArtifact"; "runSafeLuaCommands"; "runSafePythonHookForArtifact"; "splitCommandWords" ];
+  HxType.register_class_static_fields "hxhx.Stage3RunSupport" [ "absFromCwd"; "canRunNode"; "isSafeCommandWord"; "parseSafeHaxelibDevCommand"; "parseSafeJavaJarCommand"; "parseSafeLuaCommand"; "parseSafeNekoCommand"; "parseSafePythonScriptCommand"; "runCommandInCwd"; "runCommandOnlyUnit"; "runEmittedArtifact"; "runSafeCommandOnlyHooks"; "runSafeJavaJarHookForArtifact"; "runSafeLuaCommands"; "runSafeNekoHookForArtifact"; "runSafePythonHookForArtifact"; "splitCommandWords" ];
   HxType.register_class_instance_fields "hxhx.Stage3SetupSupport" [];
   HxType.register_class_static_fields "hxhx.Stage3SetupSupport" [ "buildDefinesMap"; "collectLibraryDefines"; "collectLibraryMacros"; "collectMacroStdPaths"; "macroHostClassPaths"; "projectClassPaths"; "resolveLibraries"; "trim" ];
   HxType.register_class_instance_fields "hxhx.Stage3WaitServer" [];

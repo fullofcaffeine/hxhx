@@ -114,6 +114,26 @@ class Stage3RunSupport {
 		return runCommandInCwd(matched.command, [matched.script], cwd);
 	}
 
+	public static function runSafeNekoHookForArtifact(commands:Array<String>, cwd:String, artifactPath:String):Null<Int> {
+		if (commands == null || commands.length == 0 || artifactPath == null || artifactPath.length == 0)
+			return null;
+		final artifactAbs = Path.normalize(artifactPath);
+		var matched:Null<String> = null;
+		for (command in commands) {
+			final neko = parseSafeNekoCommand(command);
+			if (neko == null)
+				return null;
+			final moduleAbs = Path.normalize(absFromCwd(cwd, neko));
+			if (moduleAbs == artifactAbs) {
+				matched = neko;
+				break;
+			}
+		}
+		if (matched == null)
+			return null;
+		return runCommandInCwd("neko", [matched], cwd);
+	}
+
 	public static function runSafeLuaCommands(commands:Array<String>, cwd:String):Null<Int> {
 		if (commands == null || commands.length == 0)
 			return null;
@@ -153,6 +173,14 @@ class Stage3RunSupport {
 					if (cmdCode != 0)
 						return "command hook failed with exit code " + Std.string(cmdCode);
 					Sys.println("stage3=cmd_ok");
+					return null;
+				}
+			}
+			if (backendId == "neko-native" && parsedHadCmd) {
+				final cmdCode = runSafeNekoHookForArtifact(parsedCmdCommands, cwd, emitted.entryPath);
+				if (cmdCode != null) {
+					if (cmdCode != 0)
+						return "command hook failed with exit code " + Std.string(cmdCode);
 					return null;
 				}
 			}
@@ -217,6 +245,18 @@ class Stage3RunSupport {
 		if (script.length == 0 || script.indexOf(";") >= 0 || script.indexOf("&&") >= 0 || script.indexOf("|") >= 0)
 			return null;
 		return {command: runner, script: script};
+	}
+
+	static function parseSafeNekoCommand(command:String):Null<String> {
+		final words = splitCommandWords(command);
+		if (words.length != 2)
+			return null;
+		if (words[0] != "neko")
+			return null;
+		final module = words[1];
+		if (!isSafeCommandWord(module) || StringTools.startsWith(module, "-"))
+			return null;
+		return module;
 	}
 
 	static function parseSafeLuaCommand(command:String):Null<{command:String, args:Array<String>}> {

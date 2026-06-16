@@ -19,9 +19,12 @@ class M14Stage3LuaRunSupportIntegrationTest {
 
 	static function main():Void {
 		final cmdStdout = runChild("cmd");
-		assertTrue(cmdStdout == "lua-stdout:runner.lua alpha", "expected command-only Lua stdout, got `" + cmdStdout + "`");
+		assertTrue(cmdStdout == "lua-stdout:runner.lua alpha\nstage3=cmd_ok", "expected command-only Lua stdout and marker, got `" + cmdStdout + "`");
 
 		final runStdout = runChild("run");
 		assertTrue(runStdout == "lua-stdout:artifact.lua alpha beta", "expected --run Lua stdout/args, got `" + runStdout + "`");
+
+		final nekoCmdStdout = runChild("neko-cmd");
+		assertTrue(nekoCmdStdout == "neko-stdout:bin/main.n", "expected post-emit Neko --cmd stdout only, got `" + nekoCmdStdout + "`");
 	}
 }
