@@ -20,29 +20,63 @@ let nekoCapabilities = fun () -> let __anon_1 = HxAnon.create () in (
   __anon_1
 )
 
-let nekoDescriptor = fun () -> let __anon_2 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_2 "id" (Obj.repr "neko-native"));
-  ignore (HxAnon.set __anon_2 "implId" (Obj.repr "builtin/neko-native-source-mvp"));
-  ignore (HxAnon.set __anon_2 "abiVersion" (Obj.repr 1));
-  ignore (HxAnon.set __anon_2 "priority" (Obj.repr 120));
-  ignore (HxAnon.set __anon_2 "description" (Obj.repr "Native Neko source backend (MVP)"));
-  ignore (HxAnon.set __anon_2 "capabilities" (nekoCapabilities ()));
-  ignore (HxAnon.set __anon_2 "requires" (let __anon_3 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_3 "genIrVersion" (Obj.repr 1));
-    ignore (HxAnon.set __anon_3 "macroApiVersion" (Obj.repr 1));
-    ignore (HxAnon.set __anon_3 "hostCaps" (Obj.repr (let __arr_4 = HxArray.create () in (
-      ignore (HxArray.push __arr_4 "filesystem");
-      ignore (HxArray.push __arr_4 "process");
-      ignore (HxArray.push __arr_4 "neko");
-      __arr_4
-    ))));
-    __anon_3
-  )));
+let hlCapabilities = fun () -> let __anon_2 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_2 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_2 "supportsBuildExecutable" (HxRuntime.box_bool false));
+  ignore (HxAnon.set __anon_2 "supportsCustomOutputFile" (HxRuntime.box_bool true));
   __anon_2
 )
 
-let nekoRegistration = fun () -> let d = nekoDescriptor () in let __anon_5 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_5 "descriptor" d);
-  ignore (HxAnon.set __anon_5 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> Backend_vm_NekoTargetCore.emit (Obj.magic program) (Obj.magic context)))));
-  __anon_5
+let nekoDescriptor = fun () -> let __anon_3 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_3 "id" (Obj.repr "neko-native"));
+  ignore (HxAnon.set __anon_3 "implId" (Obj.repr "builtin/neko-native-source-mvp"));
+  ignore (HxAnon.set __anon_3 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_3 "priority" (Obj.repr 120));
+  ignore (HxAnon.set __anon_3 "description" (Obj.repr "Native Neko source backend (MVP)"));
+  ignore (HxAnon.set __anon_3 "capabilities" (nekoCapabilities ()));
+  ignore (HxAnon.set __anon_3 "requires" (let __anon_4 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_4 "genIrVersion" (Obj.repr 1));
+    ignore (HxAnon.set __anon_4 "macroApiVersion" (Obj.repr 1));
+    ignore (HxAnon.set __anon_4 "hostCaps" (Obj.repr (let __arr_5 = HxArray.create () in (
+      ignore (HxArray.push __arr_5 "filesystem");
+      ignore (HxArray.push __arr_5 "process");
+      ignore (HxArray.push __arr_5 "neko");
+      __arr_5
+    ))));
+    __anon_4
+  )));
+  __anon_3
+)
+
+let hlDescriptor = fun () -> let __anon_6 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_6 "id" (Obj.repr "hl-native"));
+  ignore (HxAnon.set __anon_6 "implId" (Obj.repr "builtin/hl-native-bytecode-boundary"));
+  ignore (HxAnon.set __anon_6 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_6 "priority" (Obj.repr 120));
+  ignore (HxAnon.set __anon_6 "description" (Obj.repr "Native HashLink bytecode backend boundary"));
+  ignore (HxAnon.set __anon_6 "capabilities" (hlCapabilities ()));
+  ignore (HxAnon.set __anon_6 "requires" (let __anon_7 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_7 "genIrVersion" (Obj.repr 1));
+    ignore (HxAnon.set __anon_7 "macroApiVersion" (Obj.repr 1));
+    ignore (HxAnon.set __anon_7 "hostCaps" (Obj.repr (let __arr_8 = HxArray.create () in (
+      ignore (HxArray.push __arr_8 "filesystem");
+      ignore (HxArray.push __arr_8 "process");
+      ignore (HxArray.push __arr_8 "hashlink");
+      __arr_8
+    ))));
+    __anon_7
+  )));
+  __anon_6
+)
+
+let nekoRegistration = fun () -> let d = nekoDescriptor () in let __anon_9 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_9 "descriptor" d);
+  ignore (HxAnon.set __anon_9 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> Backend_vm_NekoTargetCore.emit (Obj.magic program) (Obj.magic context)))));
+  __anon_9
+)
+
+let hlRegistration = fun () -> let d = hlDescriptor () in let __anon_10 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_10 "descriptor" d);
+  ignore (HxAnon.set __anon_10 "create" (Obj.repr (fun () -> Backend_TargetCoreBackend.create d (fun program context -> Backend_vm_HashLinkTargetCore.emit (Obj.magic program) (Obj.magic context)))));
+  __anon_10
 )

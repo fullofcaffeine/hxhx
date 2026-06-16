@@ -78,7 +78,7 @@ class M14BackendRegistryIntegrationTest {
 
 		final hl = BackendRegistry.descriptorForTarget("hl-native");
 		assertTrue(hl != null, "descriptorForTarget(hl-native) returned null");
-		assertTrue(hl.implId == "builtin/hl-native-placeholder", "unexpected hl-native implId");
+		assertTrue(hl.implId == "builtin/hl-native-bytecode-boundary", "unexpected hl-native implId");
 
 		final cpp = BackendRegistry.descriptorForTarget("cpp-native");
 		assertTrue(cpp != null, "descriptorForTarget(cpp-native) returned null");

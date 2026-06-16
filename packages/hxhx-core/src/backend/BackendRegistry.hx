@@ -40,7 +40,7 @@ class BackendRegistry {
 			create: function() return new OcamlStage3Backend()
 		});
 		registrations.push(VmNativeBackend.nekoRegistration());
-		registrations.push(UnsupportedNativeTargetBackend.hlRegistration());
+		registrations.push(VmNativeBackend.hlRegistration());
 		registrations.push(UnsupportedNativeTargetBackend.cppRegistration());
 		registrations.push(SourceNativeBackend.pythonRegistration());
 		registrations.push(SourceNativeBackend.javaRegistration());

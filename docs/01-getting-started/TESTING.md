@@ -339,6 +339,8 @@ Notes:
 - Socket server/client protocol regression coverage lives in `npm run test:hxhx-targets`
 - Stage3 receiver-call over-application regression (`other.add(n)` should not become `add (this_) (other) (n)`) is covered by `npm run test:m14:hih-emitter-receiver-call` (source-level, no Stage0 rebuild needed).
 - Backend registry descriptor/selection regression coverage is in `npm run test:m14:backend-registry`.
+- Neko native backend smoke coverage is in `npm run test:m14:neko-native-backend-smoke`.
+- HashLink native backend boundary smoke coverage is in `npm run test:m14:hashlink-native-backend-smoke`.
 - OCaml target-core wrapper wiring regression coverage is in `npm run test:m14:target-core-wiring`.
 - JS target-core wrapper wiring regression coverage is in `npm run test:m14:js-target-core-wiring`.
 - Statement-level parser coverage for try/catch + throw is in `npm run test:m14:hih-try-throw-stmt`.

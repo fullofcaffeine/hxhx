@@ -1,7 +1,8 @@
 package backend;
 
 /**
-	Placeholder backend registration for declared native VM/C++ target tracks.
+	Placeholder backend registration for declared native target tracks without a
+	specific target-core boundary yet.
 
 	Why
 	- Full1 strict target evidence must distinguish "CLI never routed this target" from
@@ -10,8 +11,8 @@ package backend;
 	  target-specific failure seam without weakening no-stage0/no-skip policy.
 
 	What
-	- Provides backend descriptors for VM/C++ target families that are declared but not
-	  implemented yet.
+	- Provides backend descriptors for target families that are declared but not
+	  implemented yet and do not yet have a more specific target-core boundary.
 	- Supports `--hxhx-no-emit` so front-end/macro/type smoke checks can select the
 	  target without emitting artifacts.
 	- Fails on real emission with an explicit target-specific implementation error.
@@ -22,17 +23,7 @@ package backend;
 	  Full1 target track lands.
 **/
 class UnsupportedNativeTargetBackend {
-	public static inline var NEKO_TARGET_ID = "neko-native";
-	public static inline var HL_TARGET_ID = "hl-native";
 	public static inline var CPP_TARGET_ID = "cpp-native";
-
-	public static function nekoDescriptor():TargetDescriptor {
-		return descriptor(NEKO_TARGET_ID, "builtin/neko-native-placeholder", "Native Neko backend placeholder", "process");
-	}
-
-	public static function hlDescriptor():TargetDescriptor {
-		return descriptor(HL_TARGET_ID, "builtin/hl-native-placeholder", "Native HashLink backend placeholder", "process");
-	}
 
 	public static function cppDescriptor():TargetDescriptor {
 		return descriptor(CPP_TARGET_ID, "builtin/cpp-native-placeholder", "Native C++/hxcpp backend placeholder", "process");
@@ -60,22 +51,6 @@ class UnsupportedNativeTargetBackend {
 
 	static function emitUnsupported(targetLabel:String, _program:GenIrProgram, _context:BackendContext):EmitResult {
 		throw targetLabel + " native backend reached Stage3 dispatch but is not implemented yet.";
-	}
-
-	public static function nekoRegistration():BackendRegistrationSpec {
-		final d = nekoDescriptor();
-		return {
-			descriptor: d,
-			create: function() return new TargetCoreBackend(d, function(program, context) return emitUnsupported("Neko", program, context))
-		};
-	}
-
-	public static function hlRegistration():BackendRegistrationSpec {
-		final d = hlDescriptor();
-		return {
-			descriptor: d,
-			create: function() return new TargetCoreBackend(d, function(program, context) return emitUnsupported("HashLink", program, context))
-		};
 	}
 
 	public static function cppRegistration():BackendRegistrationSpec {

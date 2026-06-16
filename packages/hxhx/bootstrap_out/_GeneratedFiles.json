@@ -88,6 +88,7 @@
 		"backend_vm_NekoRuntimeSupport.ml",
 		"backend_vm_NekoMacroTypeLowering.ml",
 		"backend_vm_NekoMacroExprLowering.ml",
+		"backend_vm_HashLinkTargetCore.ml",
 		"backend_source_SourceTargetCommon.ml",
 		"backend_source_SourceNativeBackend.ml",
 		"backend_source_SourceMvpTargetCore.ml",
