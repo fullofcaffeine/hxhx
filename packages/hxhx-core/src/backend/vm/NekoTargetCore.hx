@@ -21,6 +21,7 @@ private typedef NekoEmitContext = {
 	var selfName:Null<String>;
 	var currentClass:Null<NekoClassInfo>;
 	var symbolTable:Null<String>;
+	var locals:StringMap<Bool>;
 }
 
 private typedef NekoStaticFunctionRef = {
@@ -206,7 +207,8 @@ class NekoTargetCore {
 			classes: classMap,
 			selfName: null,
 			currentClass: null,
-			symbolTable: null
+			symbolTable: null,
+			locals: emptyLocals()
 		};
 		final mainInfo = lookupClass(emitContext, main.fullName);
 		if (mainInfo == null)
@@ -237,7 +239,8 @@ class NekoTargetCore {
 			classes: buildClassMap(modules),
 			selfName: null,
 			currentClass: null,
-			symbolTable: SPLIT_SYMBOL_TABLE
+			symbolTable: SPLIT_SYMBOL_TABLE,
+			locals: emptyLocals()
 		};
 		final classMeta = buildRuntimeClassMeta(modules);
 		final mainInfo = lookupClass(emitContext, main.fullName);
@@ -562,12 +565,13 @@ class NekoTargetCore {
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
 			args.push(safeIdent(arg.name));
+		final functionContext = withFunctionArgs(context, fn);
 		final useVarArgs = shouldUseVarArgs(context, args);
 		out.push(renderFunctionDefinitionPrefix(context, info.fullName, HxFunctionDecl.getName(fn)) + renderFunctionStart(args, useVarArgs));
 		if (useVarArgs)
 			renderVarArgBindings(out, args, "  ");
 		for (stmt in HxFunctionDecl.getBody(fn))
-			renderStmt(out, context, stmt, "  ");
+			renderStmt(out, functionContext, stmt, "  ");
 		out.push(renderFunctionEnd(useVarArgs));
 		out.push("");
 	}
@@ -657,6 +661,7 @@ class NekoTargetCore {
 			out.push("var " + testLocalStaticBasicSlotName() + " = null;");
 		final selfName = "__hxhx_self";
 		final instanceContext = withSelf(context, selfName, info);
+		final constructorContext = ctor == null ? instanceContext : withFunctionArgs(instanceContext, ctor);
 		final useVarArgs = shouldUseVarArgs(context, args);
 		out.push(renderConstructorDefinitionPrefix(context, info.fullName) + renderFunctionStart(args, useVarArgs));
 		if (useVarArgs)
@@ -683,7 +688,7 @@ class NekoTargetCore {
 		}
 		if (ctor != null && !isMacroFunction(ctor)) {
 			for (stmt in HxFunctionDecl.getBody(ctor))
-				renderStmt(out, instanceContext, stmt, "  ");
+				renderStmt(out, constructorContext, stmt, "  ");
 		}
 		out.push("  return " + selfName + ";");
 		out.push(renderFunctionEnd(useVarArgs));
@@ -696,12 +701,13 @@ class NekoTargetCore {
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
 			args.push(safeIdent(arg.name));
+		final methodContext = withFunctionArgs(context, fn);
 		final useVarArgs = shouldUseVarArgs(context, args);
 		out.push("  " + selfName + "." + safeIdent(HxFunctionDecl.getName(fn)) + " = " + renderFunctionStart(args, useVarArgs));
 		if (useVarArgs)
 			renderVarArgBindings(out, args, "    ");
 		for (stmt in HxFunctionDecl.getBody(fn))
-			renderStmt(out, context, stmt, "    ");
+			renderStmt(out, methodContext, stmt, "    ");
 		out.push("  " + renderFunctionEnd(useVarArgs) + ";");
 	}
 
@@ -749,12 +755,14 @@ class NekoTargetCore {
 	static function renderStmt(out:Array<String>, context:NekoEmitContext, stmt:HxStmt, indent:String):Void {
 		switch (stmt) {
 			case SBlock(stmts, _):
+				final blockContext = childContext(context);
 				out.push(indent + "{");
 				for (s in stmts)
-					renderStmt(out, context, s, indent + "  ");
+					renderStmt(out, blockContext, s, indent + "  ");
 				out.push(indent + "}");
 			case SVar(name, _, init, _):
 				out.push(indent + "var " + safeIdent(name) + (init == null ? "" : " = " + renderExpr(context, init)) + ";");
+				registerLocal(context, name);
 			case SIf(cond, thenBranch, elseBranch, _):
 				renderControlBlock(out, context, "if " + renderExpr(context, cond), thenBranch, indent);
 				if (elseBranch != null)
@@ -789,13 +797,14 @@ class NekoTargetCore {
 	}
 
 	static function renderControlBlock(out:Array<String>, context:NekoEmitContext, header:String, body:HxStmt, indent:String):Void {
+		final blockContext = childContext(context);
 		out.push(indent + header + " {");
 		switch (body) {
 			case SBlock(stmts, _):
 				for (stmt in stmts)
-					renderStmt(out, context, stmt, indent + "  ");
+					renderStmt(out, blockContext, stmt, indent + "  ");
 			case _:
-				renderStmt(out, context, body, indent + "  ");
+				renderStmt(out, blockContext, body, indent + "  ");
 		}
 		out.push(indent + "}");
 	}
@@ -811,7 +820,8 @@ class NekoTargetCore {
 			return;
 		}
 		final c = catches[0];
-		renderControlBlock(out, context, "catch " + safeIdent(c.name), c.body, indent);
+		final catchContext = withLocal(context, c.name);
+		renderControlBlock(out, catchContext, "catch " + safeIdent(c.name), c.body, indent);
 	}
 
 	static function stmtTag(stmt:HxStmt):String {
@@ -857,7 +867,7 @@ class NekoTargetCore {
 			case EField(EField(EIdent("neko"), "Web"), "isModNeko") | EField(EIdent("Web"), "isModNeko"):
 				"false";
 			case EIdent(name):
-				if (context.selfName != null && isCurrentInstanceMethod(context, name)) context.selfName + "." + safeIdent(name); else safeIdent(name);
+				renderIdent(context, name);
 			case EField(obj, "length"):
 				"$asize(" + renderExpr(context, obj) + ")";
 			case EField(obj, field):
@@ -1415,13 +1425,14 @@ class NekoTargetCore {
 		final safeName = safeIdent(name);
 		final iterableName = "__hxhx_iter_" + safeName;
 		final indexName = "__hxhx_index_" + safeName;
+		final bodyContext = withLocal(context, name);
 		out.push(indent + "{");
 		out.push(indent + "  var " + iterableName + " = " + renderExpr(context, iterable) + ";");
 		out.push(indent + "  var " + indexName + " = 0;");
 		out.push(indent + "  while (" + indexName + " < $asize(" + iterableName + ")) {");
 		out.push(indent + "    var " + safeName + " = " + iterableName + "[" + indexName + "];");
 		out.push(indent + "    " + indexName + " = " + indexName + " + 1;");
-		renderStmt(out, context, body, indent + "    ");
+		renderStmt(out, bodyContext, body, indent + "    ");
 		out.push(indent + "  }");
 		out.push(indent + "}");
 	}
@@ -1430,6 +1441,7 @@ class NekoTargetCore {
 			indent:String):Void {
 		final safeKeyName = safeIdent(keyName);
 		final safeValueName = safeIdent(valueName);
+		final bodyContext = withLocals(context, [keyName, valueName]);
 		final sourceName = "__hxhx_kv_source_" + safeKeyName;
 		final fieldsName = "__hxhx_kv_fields_" + safeKeyName;
 		final fieldName = "__hxhx_kv_field_" + safeKeyName;
@@ -1443,7 +1455,7 @@ class NekoTargetCore {
 		out.push(indent + "    " + indexName + " = " + indexName + " + 1;");
 		out.push(indent + "    var " + safeKeyName + " = $field(" + fieldName + ");");
 		out.push(indent + "    var " + safeValueName + " = $objget(" + sourceName + ", " + fieldName + ");");
-		renderStmt(out, context, body, indent + "    ");
+		renderStmt(out, bodyContext, body, indent + "    ");
 		out.push(indent + "  }");
 		out.push(indent + "}");
 	}
@@ -1831,6 +1843,87 @@ class NekoTargetCore {
 		return fn != null && HxFunctionDecl.getName(fn) != "new" && !isMacroFunction(fn);
 	}
 
+	/**
+		Resolves a bare identifier inside the current Neko emission scope.
+
+		Local names win first so method parameters, `var` declarations, loop binders,
+		and catch binders do not get rewritten accidentally. If no local shadows the
+		name, current-class instance methods and fields are emitted through the
+		constructor-created receiver object so constructor/method bodies mutate the
+		real instance state instead of unqualified Neko globals.
+	**/
+	static function renderIdent(context:NekoEmitContext, name:String):String {
+		if (isLocalName(context, name))
+			return safeIdent(name);
+		if (context.selfName != null && isCurrentInstanceMethod(context, name))
+			return context.selfName + "." + safeIdent(name);
+		if (context.selfName != null && isCurrentInstanceField(context, name))
+			return context.selfName + "." + safeIdent(name);
+		return safeIdent(name);
+	}
+
+	static function isCurrentInstanceField(context:NekoEmitContext, name:String):Bool {
+		if (context.currentClass == null)
+			return false;
+		for (field in HxClassDecl.getFields(context.currentClass.cls)) {
+			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name)
+				return true;
+		}
+		return false;
+	}
+
+	static function isLocalName(context:NekoEmitContext, name:String):Bool {
+		return context.locals != null && context.locals.exists(name);
+	}
+
+	static function emptyLocals():StringMap<Bool> {
+		return new StringMap<Bool>();
+	}
+
+	static function cloneLocals(locals:StringMap<Bool>):StringMap<Bool> {
+		final copy = new StringMap<Bool>();
+		if (locals != null) {
+			for (name in locals.keys())
+				copy.set(name, true);
+		}
+		return copy;
+	}
+
+	static function childContext(context:NekoEmitContext):NekoEmitContext {
+		return {
+			classes: context.classes,
+			selfName: context.selfName,
+			currentClass: context.currentClass,
+			symbolTable: context.symbolTable,
+			locals: cloneLocals(context.locals)
+		};
+	}
+
+	static function registerLocal(context:NekoEmitContext, name:String):Void {
+		if (context.locals != null)
+			context.locals.set(name, true);
+	}
+
+	static function withLocal(context:NekoEmitContext, name:String):NekoEmitContext {
+		final next = childContext(context);
+		registerLocal(next, name);
+		return next;
+	}
+
+	static function withLocals(context:NekoEmitContext, names:Array<String>):NekoEmitContext {
+		final next = childContext(context);
+		for (name in names)
+			registerLocal(next, name);
+		return next;
+	}
+
+	static function withFunctionArgs(context:NekoEmitContext, fn:HxFunctionDecl):NekoEmitContext {
+		final names = new Array<String>();
+		for (arg in HxFunctionDecl.getArgs(fn))
+			names.push(arg.name);
+		return withLocals(context, names);
+	}
+
 	static function isMacroFunction(fn:HxFunctionDecl):Bool {
 		for (meta in HxFunctionDecl.getMetadata(fn)) {
 			if (meta == "macro")
@@ -1844,7 +1937,8 @@ class NekoTargetCore {
 			classes: context.classes,
 			selfName: selfName,
 			currentClass: info,
-			symbolTable: context.symbolTable
+			symbolTable: context.symbolTable,
+			locals: cloneLocals(context.locals)
 		};
 	}
 

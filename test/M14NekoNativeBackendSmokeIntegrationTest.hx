@@ -617,6 +617,20 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Dispatcher { public function new() {} public function add(handler) {} } class Runner { public var onProgress:Dispatcher; public function new() { onProgress = new Dispatcher(); } } class Main { static function main() { var runner = new Runner(); runner.onProgress.add(function(_) return null); } }'),
+			context);
+		final instanceFieldSource = File.getContent(sourcePath);
+		assertContains(instanceFieldSource, "(__hxhx_self.onProgress = __hxhx_new_Dispatcher())",
+			"expected constructor assignment to target the instance field");
+		assertContains(instanceFieldSource, "runner.onProgress.add(function(_) { return null; });",
+			"expected initialized instance field method call to stay qualified");
+		assertNotContains(instanceFieldSource, "(onProgress = __hxhx_new_Dispatcher())",
+			"constructor field assignment must not become an unqualified local assignment");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Base { public function new() {} } class Child extends Base { public function new() { super(); } } class Main { static function main() { var child = new Child(); } }'),
 			context);
 		final superCtorSource = File.getContent(sourcePath);
