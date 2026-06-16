@@ -179,6 +179,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(reflectionSource, "__hxhx_reflect_call_method(c, (if (c == null) null else $objget(c, $hash(\"testFoo\"))), $array());",
 			"expected Reflect.callMethod to lower to runtime helper");
 
+		final metaSplit = @:privateAccess NekoTargetCore.renderSplitProgram(program('package haxe.rtti; class Case { public function new() {} } class Meta { public static function getMeta(t) return t.__meta__; public static function getFields(t) { var meta = getMeta(t); return if (meta == null || meta.fields == null) {} else meta.fields; } } class Main { static function main() { var c = new Case(); Sys.println(Meta.getFields(Type.getClass(c)) != null); } }'),
+			splitContext, sourcePath);
+		final metaSource = supportSource(metaSplit);
+		assertContains(metaSource, "var __hxhx_meta_get = function(t) {", "expected Neko metadata runtime helper");
+		assertContains(metaSource, "__hxhx_symbols.haxe_rtti_Meta_getMeta = $varargs(function(__hxhx_args) {",
+			"expected haxe.rtti.Meta.getMeta to remain reachable");
+		assertContains(metaSource, "return __hxhx_meta_get(t);", "expected haxe.rtti.Meta.getMeta to avoid direct __meta__ field reads");
+		assertContains(metaSource, "return __hxhx_meta_section(t, \"fields\");", "expected haxe.rtti.Meta.getFields to return empty metadata safely");
+		assertNotContains(metaSource, "return t.__meta__;", "haxe.rtti.Meta must not emit unsafe direct __meta__ access for Neko class tokens");
+
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);

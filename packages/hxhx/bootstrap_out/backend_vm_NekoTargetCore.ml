@@ -3557,6 +3557,24 @@ let renderSpecialFunction = fun out context info fn -> try let __fallback_result
     ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_string_starts_with(s, start)" : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ignore ()) else ());
+  ignore (if HxString.equals (Obj.obj (HxAnon.get info "fullName")) "haxe.rtti.Meta" then ignore (match fnName with
+    | "getFields" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_meta_section(t, \"fields\")" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "getMeta" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_meta_get(t)" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "getStatics" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_meta_section(t, \"statics\")" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "getType" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_meta_section(t, \"obj\")" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | _ -> ignore ()) else ());
   ignore (if HxString.equals (Obj.obj (HxAnon.get info "shortName")) "TestLocalStatic" && HxString.equals fnName "basic" then ignore (let slotName = ("__hxhx_TestLocalStatic_basic_x" : string) in (
     ignore (HxArray.push out (("var " ^ HxString.toStdString slotName) ^ " = null;"));
     ignore (HxArray.push out (HxString.toStdString (renderFunctionDefinitionPrefix context (Obj.obj (HxAnon.get info "fullName") : string) (fnName : string)) ^ "function() {"));

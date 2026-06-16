@@ -626,6 +626,23 @@ class NekoTargetCore {
 				case _:
 			}
 		}
+		if (info.fullName == "haxe.rtti.Meta") {
+			switch (fnName) {
+				case "getMeta":
+					renderRuntimeForwarder(out, context, info, fn, "__hxhx_meta_get(t)");
+					return true;
+				case "getFields":
+					renderRuntimeForwarder(out, context, info, fn, "__hxhx_meta_section(t, \"fields\")");
+					return true;
+				case "getStatics":
+					renderRuntimeForwarder(out, context, info, fn, "__hxhx_meta_section(t, \"statics\")");
+					return true;
+				case "getType":
+					renderRuntimeForwarder(out, context, info, fn, "__hxhx_meta_section(t, \"obj\")");
+					return true;
+				case _:
+			}
+		}
 		if (info.shortName == "TestLocalStatic" && fnName == "basic") {
 			final slotName = "__hxhx_TestLocalStatic_basic_x";
 			out.push("var " + slotName + " = null;");
