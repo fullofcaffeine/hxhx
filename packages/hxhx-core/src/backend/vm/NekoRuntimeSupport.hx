@@ -137,6 +137,13 @@ class NekoRuntimeSupport {
 		out.push("  return $call(func, o, args);");
 		out.push("}");
 		out.push("");
+		out.push("var __hxhx_field = function(o, field) {");
+		out.push("  if (o == null || $typeof(o) != $tobject) return null;");
+		out.push("  var getter = $objget(o, $hash(\"get_\" + field));");
+		out.push("  if ($typeof(getter) == $tfunction) return getter();");
+		out.push("  return $objget(o, $hash(field));");
+		out.push("}");
+		out.push("");
 		out.push("var __hxhx_string_starts_with = function(s, start) {");
 		out.push("  if (s == null || start == null) return false;");
 		out.push("  if ($typeof(s) != $tstring) s = __hxhx_string(s);");

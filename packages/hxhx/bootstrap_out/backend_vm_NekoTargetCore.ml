@@ -2276,13 +2276,13 @@ let rec renderExpr = fun context expr -> let tempResult = ref ("" : string) in (
           tempResult := __assign_192;
           __assign_192
         )
-        | _ -> let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_190 = ((HxString.toStdString (renderExpr context (Obj.magic obj)) ^ ".") ^ HxString.toStdString (safeIdent (field : string)) : string) in (
+        | _ -> let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_190 = (((("__hxhx_field(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
           tempResult := __assign_190;
           __assign_190
         ) else if HxString.equals _g1 "length" then let obj = Obj.magic _g in let __assign_193 = (("$asize(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ")" : string) in (
         tempResult := __assign_193;
         __assign_193
-      ) else let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_194 = ((HxString.toStdString (renderExpr context (Obj.magic obj)) ^ ".") ^ HxString.toStdString (safeIdent (field : string)) : string) in (
+      ) else let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_194 = (((("__hxhx_field(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
         tempResult := __assign_194;
         __assign_194
       )
@@ -2326,32 +2326,32 @@ let rec renderExpr = fun context expr -> let tempResult = ref ("" : string) in (
           tempResult := __assign_198;
           __assign_198
         )
-        | _ -> let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_196 = ((HxString.toStdString (renderExpr context (Obj.magic obj)) ^ ".") ^ HxString.toStdString (safeIdent (field : string)) : string) in (
+        | _ -> let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_196 = (((("__hxhx_field(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
           tempResult := __assign_196;
           __assign_196
         ) else if HxString.equals _g1 "length" then let obj = Obj.magic _g in let __assign_199 = (("$asize(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ")" : string) in (
         tempResult := __assign_199;
         __assign_199
-      ) else let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_200 = ((HxString.toStdString (renderExpr context (Obj.magic obj)) ^ ".") ^ HxString.toStdString (safeIdent (field : string)) : string) in (
+      ) else let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_200 = (((("__hxhx_field(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
         tempResult := __assign_200;
         __assign_200
       ) else if HxString.equals _g1 "length" then let obj = Obj.magic _g in let __assign_201 = (("$asize(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ")" : string) in (
         tempResult := __assign_201;
         __assign_201
-      ) else let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_202 = ((HxString.toStdString (renderExpr context (Obj.magic obj)) ^ ".") ^ HxString.toStdString (safeIdent (field : string)) : string) in (
+      ) else let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_202 = (((("__hxhx_field(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
         tempResult := __assign_202;
         __assign_202
       ) else if HxString.equals _g1 "length" then let obj = Obj.magic _g in let __assign_203 = (("$asize(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ")" : string) in (
         tempResult := __assign_203;
         __assign_203
-      ) else let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_204 = ((HxString.toStdString (renderExpr context (Obj.magic obj)) ^ ".") ^ HxString.toStdString (safeIdent (field : string)) : string) in (
+      ) else let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_204 = (((("__hxhx_field(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
         tempResult := __assign_204;
         __assign_204
       )
       | _ -> if HxString.equals _g1 "length" then let obj = Obj.magic _g in let __assign_187 = (("$asize(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ")" : string) in (
         tempResult := __assign_187;
         __assign_187
-      ) else let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_188 = ((HxString.toStdString (renderExpr context (Obj.magic obj)) ^ ".") ^ HxString.toStdString (safeIdent (field : string)) : string) in (
+      ) else let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_188 = (((("__hxhx_field(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
         tempResult := __assign_188;
         __assign_188
       ))

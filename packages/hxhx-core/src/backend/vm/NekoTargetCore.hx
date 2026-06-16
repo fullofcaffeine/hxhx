@@ -904,7 +904,7 @@ class NekoTargetCore {
 			case EField(obj, "length"):
 				"$asize(" + renderExpr(context, obj) + ")";
 			case EField(obj, field):
-				renderExpr(context, obj) + "." + safeIdent(field);
+				"__hxhx_field(" + renderExpr(context, obj) + ", " + quote(field) + ")";
 			case ECall(callee, args):
 				renderCall(context, callee, args);
 			case EUnop("!", inner):

@@ -128,6 +128,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"enum switches should match no-payload values and enum objects by constructor");
 		assertContains(enumSwitchExpr, '__hxhx_enum_ctor_is(__hxhx_switch, "Failure")', "enum extractor switches should check the constructor name");
 		assertContains(enumSwitchExpr, "var message = __hxhx_enum_params(__hxhx_switch)[0];", "enum extractor switches should bind positional payloads");
+		final propertyReadExpr = @:privateAccess NekoTargetCore.renderExpr(cast null, EField(EIdent("fixture"), "isIgnored"));
+		assertContains(propertyReadExpr, '__hxhx_field(fixture, "isIgnored")', "field reads should honor get_<field> property accessors when present");
 
 		final outDir = Path.join([".tmp", "m14_neko_native_backend_smoke"]);
 		deleteRecursive(outDir);
@@ -175,7 +177,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"expected split instance methods with parameters to accept missing/extra Neko arguments");
 		assertContains(splitVarArgsSource, "var teardown = __hxhx_args[2];", "expected method varargs to bind omitted arguments as null");
 		assertContains(splitVarArgsSource, "if (prefix == null) prefix = \"test\";", "expected method varargs to apply parsed default values");
-		assertContains(splitVarArgsSource, 'runner.addCase("case");', "expected call sites to stay idiomatic receiver calls");
+		assertContains(splitVarArgsSource, '__hxhx_field(runner, "addCase")("case");', "expected receiver calls to route through property-aware field reads");
 
 		final reflectionSplit = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Case { public var value:Int; public function new() {} public function testFoo() {} public static function helper() {} } class Main { static function main() { var c = new Case(); Sys.println(Type.getClassName(Type.getClass(c))); Sys.println(Type.getInstanceFields(Type.getClass(c)).length); Sys.println(Reflect.hasField(c, "testFoo")); Sys.println(Reflect.isFunction(Reflect.field(c, "testFoo"))); Reflect.callMethod(c, Reflect.field(c, "testFoo"), []); } }'),
 			splitContext, sourcePath);
@@ -633,7 +635,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var runner = new Runner(); runner.addCase(1); Report.create(runner); } }'), context);
 		final receiverCallSource = File.getContent(sourcePath);
-		assertContains(receiverCallSource, "runner.addCase(1);", "expected lowercase receiver method call to stay qualified");
+		assertContains(receiverCallSource, '__hxhx_field(runner, "addCase")(1);',
+			"expected lowercase receiver method call to stay property-aware and qualified");
 		assertContains(receiverCallSource, "Report_create(runner);", "expected uppercase static call to keep static lowering");
 		assertNotContains(receiverCallSource, "runner_addCase(1);", "lowercase receiver call must not become static free function");
 
@@ -648,7 +651,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(instanceSource, "__hxhx_self.addCase = function(value)", "expected instance method closure on object");
 		assertContains(instanceSource, "$print(value, \"\\n\")", "expected method body lowering");
 		assertContains(instanceSource, "var runner = __hxhx_new_Runner();", "expected known constructor call lowering");
-		assertContains(instanceSource, "runner.addCase(\"case\");", "expected instance method call");
+		assertContains(instanceSource, "__hxhx_field(runner, \"addCase\")(\"case\");", "expected instance method call to use property-aware field reads");
 
 		deleteRecursive(outDir);
 
@@ -659,8 +662,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final instanceFieldSource = File.getContent(sourcePath);
 		assertContains(instanceFieldSource, "(__hxhx_self.onProgress = __hxhx_new_Dispatcher())",
 			"expected constructor assignment to target the instance field");
-		assertContains(instanceFieldSource, "runner.onProgress.add(function(_) { return null; });",
-			"expected initialized instance field method call to stay qualified");
+		assertContains(instanceFieldSource, "__hxhx_field(__hxhx_field(runner, \"onProgress\"), \"add\")(function(_) { return null; });",
+			"expected initialized instance field method call to stay property-aware and qualified");
 		assertNotContains(instanceFieldSource, "(onProgress = __hxhx_new_Dispatcher())",
 			"constructor field assignment must not become an unqualified local assignment");
 

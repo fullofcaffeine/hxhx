@@ -142,6 +142,13 @@ let render = fun out classes -> ignore ((
     ignore (HxArray.push out "  return $call(func, o, args);");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_field = function(o, field) {");
+    ignore (HxArray.push out "  if (o == null || $typeof(o) != $tobject) return null;");
+    ignore (HxArray.push out "  var getter = $objget(o, $hash(\"get_\" + field));");
+    ignore (HxArray.push out "  if ($typeof(getter) == $tfunction) return getter();");
+    ignore (HxArray.push out "  return $objget(o, $hash(field));");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
     ignore (HxArray.push out "var __hxhx_string_starts_with = function(s, start) {");
     ignore (HxArray.push out "  if (s == null || start == null) return false;");
     ignore (HxArray.push out "  if ($typeof(s) != $tstring) s = __hxhx_string(s);");
