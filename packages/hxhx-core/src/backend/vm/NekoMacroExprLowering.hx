@@ -17,29 +17,49 @@ package backend.vm;
 **/
 class NekoMacroExprLowering {
 	public static function render(expr:HxExpr, wrappers:Array<String>, fallback:HxExpr->String):String {
-		var exprDef = macroExprDef(expr, fallback);
+		final builder = new NekoMacroExprBuilder(fallback);
+		var exprDef = builder.macroExprDef(expr);
 		if (wrappers != null) {
 			var i = wrappers.length;
 			while (i > 0) {
 				i--;
 				exprDef = switch (wrappers[i]) {
 					case "parenthesis":
-						macroEnum("EParenthesis", [macroExprObject(exprDef)]);
+						builder.macroEnum("EParenthesis", [builder.macroExprObject(exprDef)]);
 					case "untyped":
-						macroEnum("EUntyped", [macroExprObject(exprDef)]);
+						builder.macroEnum("EUntyped", [builder.macroExprObject(exprDef)]);
 					case _:
 						exprDef;
 				}
 			}
 		}
-		return macroExprObject(exprDef);
+		return builder.render(builder.macroExprObject(exprDef));
+	}
+}
+
+class NekoMacroExprBuilder {
+	final fallback:HxExpr->String;
+	final statements:Array<String>;
+	var nextObjectId:Int = 0;
+
+	public function new(fallback:HxExpr->String) {
+		this.fallback = fallback;
+		this.statements = [];
 	}
 
-	static function macroExprObject(exprDef:String):String {
+	public function render(root:String):String {
+		final parts = ["(function() {"];
+		for (statement in statements)
+			parts.push(statement);
+		parts.push("return " + root + "; })()");
+		return parts.join(" ");
+	}
+
+	public function macroExprObject(exprDef:String):String {
 		return anonObject(["expr", "pos"], [exprDef, "null"]);
 	}
 
-	static function macroExprDef(expr:HxExpr, fallback:HxExpr->String):String {
+	public function macroExprDef(expr:HxExpr):String {
 		return switch (expr) {
 			case EString(value):
 				macroEnum("EConst", [macroEnum("CString", [quote(value), macroEnum("DoubleQuotes", [])])]);
@@ -52,16 +72,24 @@ class NekoMacroExprLowering {
 			case EIdent(name):
 				macroEnum("EConst", [macroEnum("CIdent", [quote(name)])]);
 			case EField(receiver, field):
-				macroEnum("EField", [render(receiver, [], fallback), quote(field)]);
+				macroEnum("EField", [macroExprObject(macroExprDef(receiver)), quote(field)]);
 			case EArrayAccess(receiver, index):
-				macroEnum("EArray", [render(receiver, [], fallback), render(index, [], fallback)]);
+				macroEnum("EArray", [macroExprObject(macroExprDef(receiver)), macroExprObject(macroExprDef(index))]);
 			case EArrayDecl(values):
-				final items = values == null ? [] : [for (value in values) render(value, [], fallback)];
+				final items = values == null ? [] : [for (value in values) macroExprObject(macroExprDef(value))];
 				macroEnum("EArrayDecl", ["$array(" + items.join(", ") + ")"]);
 			case EBinop("in", left, right):
-				macroEnum("EBinop", [macroEnum("OpIn", []), render(left, [], fallback), render(right, [], fallback)]);
+				macroEnum("EBinop", [
+					macroEnum("OpIn", []),
+					macroExprObject(macroExprDef(left)),
+					macroExprObject(macroExprDef(right))
+				]);
 			case EBinop("=>", left, right):
-				macroEnum("EBinop", [macroEnum("OpArrow", []), render(left, [], fallback), render(right, [], fallback)]);
+				macroEnum("EBinop", [
+					macroEnum("OpArrow", []),
+					macroExprObject(macroExprDef(left)),
+					macroExprObject(macroExprDef(right))
+				]);
 			case ECall(EIdent("__hxhx_macro_if"), args):
 				final cond = args.length > 0 ? args[0] : HxExpr.EBool(false);
 				final thenExpr = args.length > 1 ? args[1] : HxExpr.ENull;
@@ -70,39 +98,42 @@ class NekoMacroExprLowering {
 						case EIdent("__hxhx_macro_missing_else"):
 							"null";
 						case other:
-							render(other, [], fallback);
+							macroExprObject(macroExprDef(other));
 					}
 				} else {
 					"null";
 				}
-				macroEnum("EIf", [render(cond, [], fallback), render(thenExpr, [], fallback), elseExpr]);
+				macroEnum("EIf", [
+					macroExprObject(macroExprDef(cond)),
+					macroExprObject(macroExprDef(thenExpr)),
+					elseExpr
+				]);
 			case ECall(callee, args):
-				final loweredArgs = args == null ? [] : [for (arg in args) render(arg, [], fallback)];
-				macroEnum("ECall", [render(callee, [], fallback), "$array(" + loweredArgs.join(", ") + ")"]);
+				final loweredArgs = args == null ? [] : [for (arg in args) macroExprObject(macroExprDef(arg))];
+				macroEnum("ECall", [macroExprObject(macroExprDef(callee)), "$array(" + loweredArgs.join(", ") + ")"]);
 			case EUntyped(inner):
-				macroEnum("EUntyped", [render(inner, [], fallback)]);
+				macroEnum("EUntyped", [macroExprObject(macroExprDef(inner))]);
 			case EUnop(op, inner):
-				macroEnum("EUnop", [quote(op), render(inner, [], fallback)]);
+				macroEnum("EUnop", [quote(op), macroExprObject(macroExprDef(inner))]);
 			case _:
 				macroEnum("EConst", [macroEnum("CIdent", [quote(fallback(expr))])]);
 		}
 	}
 
-	static function macroEnum(name:String, params:Array<String>):String {
+	public function macroEnum(name:String, params:Array<String>):String {
 		return anonObject(["__hx_ctor", "__hx_index", "__hx_params"], [quote(name), "0", "$array(" + (params == null ? "" : params.join(", ")) + ")"]);
 	}
 
-	static function anonObject(fieldNames:Array<String>, fieldValues:Array<String>):String {
-		final tmp = "__hxhx_o";
-		final parts = ["(function() { var " + tmp + " = $new(null);"];
+	function anonObject(fieldNames:Array<String>, fieldValues:Array<String>):String {
+		final tmp = "__hxhx_macro_o" + nextObjectId++;
+		statements.push("var " + tmp + " = $new(null);");
 		final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
 		for (i in 0...count)
-			parts.push(tmp + "." + safeIdent(fieldNames[i]) + " = " + fieldValues[i] + ";");
-		parts.push("return " + tmp + "; })()");
-		return parts.join(" ");
+			statements.push(tmp + "." + safeIdent(fieldNames[i]) + " = " + fieldValues[i] + ";");
+		return tmp;
 	}
 
-	static function quote(value:String):String {
+	function quote(value:String):String {
 		if (value == null)
 			return "\"\"";
 		var out = "\"";
@@ -126,7 +157,7 @@ class NekoMacroExprLowering {
 		return out + "\"";
 	}
 
-	static function safeIdent(name:String):String {
+	function safeIdent(name:String):String {
 		if (name == null || name.length == 0)
 			return "_";
 		return ~/[^A-Za-z0-9_]/g.replace(name, "_");
