@@ -75,7 +75,7 @@ private typedef NekoNestedMethodCallCatchRaw = {
 
 private typedef NekoSysPutEnvBoolTryRaw = {
 	var name:String;
-	var value:String;
+	var envValue:String;
 	var success:String;
 	var fallback:String;
 }
@@ -1481,7 +1481,7 @@ class NekoTargetCore {
 		}
 		final sysPutEnvBoolTry = parseSysPutEnvBoolTryRaw(raw);
 		if (sysPutEnvBoolTry != null) {
-			return "(function() { try { __hxhx_sys_put_env(" + quote(sysPutEnvBoolTry.name) + ", " + sysPutEnvBoolTry.value + "); return "
+			return "(function() { try { __hxhx_sys_put_env(" + quote(sysPutEnvBoolTry.name) + ", " + sysPutEnvBoolTry.envValue + "); return "
 				+ sysPutEnvBoolTry.success + "; } catch e { $print(e, \"\\n\"); return " + sysPutEnvBoolTry.fallback + "; } })()";
 		}
 		final opaqueObjectLocal = parseOpaqueObjectLocalRaw(raw);
@@ -1618,7 +1618,7 @@ class NekoTargetCore {
 			return null;
 		return {
 			name: name,
-			value: sanitizeNekoValueExpr(value),
+			envValue: sanitizeNekoValueExpr(value),
 			success: success,
 			fallback: fallback
 		};

@@ -660,7 +660,7 @@ let parseSysPutEnvBoolTryRaw = fun raw -> try let __fallback_result_429 = let co
                   ignore (if not (HxString.equals fallback "true") && not (HxString.equals fallback "false") then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
                   let __anon_427 = HxAnon.create () in (
                     ignore (HxAnon.set __anon_427 "name" (Obj.repr name));
-                    ignore (HxAnon.set __anon_427 "value" (Obj.repr (sanitizeNekoValueExpr (value : string))));
+                    ignore (HxAnon.set __anon_427 "envValue" (Obj.repr (sanitizeNekoValueExpr (value : string))));
                     ignore (HxAnon.set __anon_427 "success" (Obj.repr success));
                     ignore (HxAnon.set __anon_427 "fallback" (Obj.repr fallback));
                     __anon_427
@@ -2808,7 +2808,7 @@ let renderTryCatchRaw = fun context raw -> try let __fallback_result_409 = let c
             let nestedMethodCallCatch = parseNestedMethodCallCatchStringRaw (raw : string) in (
               ignore (if nestedMethodCallCatch != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((((("(function() { try { return " ^ HxString.toStdString (Obj.obj (HxAnon.get nestedMethodCallCatch "receiver"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get nestedMethodCallCatch "field"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get nestedMethodCallCatch "method"))) ^ "(); } catch e { return ") ^ HxString.toStdString (quote (Obj.obj (HxAnon.get nestedMethodCallCatch "fallback") : string))) ^ "; } })()" : string))) else ());
               let sysPutEnvBoolTry = parseSysPutEnvBoolTryRaw (raw : string) in (
-                ignore (if sysPutEnvBoolTry != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((((("(function() { try { __hxhx_sys_put_env(" ^ HxString.toStdString (quote (Obj.obj (HxAnon.get sysPutEnvBoolTry "name") : string))) ^ ", ") ^ HxString.toStdString (snd sysPutEnvBoolTry)) ^ "); return ") ^ HxString.toStdString (Obj.obj (HxAnon.get sysPutEnvBoolTry "success"))) ^ "; } catch e { $print(e, \"\\n\"); return ") ^ HxString.toStdString (Obj.obj (HxAnon.get sysPutEnvBoolTry "fallback"))) ^ "; } })()" : string))) else ());
+                ignore (if sysPutEnvBoolTry != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((((("(function() { try { __hxhx_sys_put_env(" ^ HxString.toStdString (quote (Obj.obj (HxAnon.get sysPutEnvBoolTry "name") : string))) ^ ", ") ^ HxString.toStdString (Obj.obj (HxAnon.get sysPutEnvBoolTry "envValue"))) ^ "); return ") ^ HxString.toStdString (Obj.obj (HxAnon.get sysPutEnvBoolTry "success"))) ^ "; } catch e { $print(e, \"\\n\"); return ") ^ HxString.toStdString (Obj.obj (HxAnon.get sysPutEnvBoolTry "fallback"))) ^ "; } })()" : string))) else ());
                 let opaqueObjectLocal = parseOpaqueObjectLocalRaw (raw : string) in (
                   ignore (if opaqueObjectLocal != Obj.magic (HxRuntime.hx_null) then ignore (let tempString = ref ("" : string) in (
                     ignore (if Obj.obj (HxAnon.get opaqueObjectLocal "extraField") == Obj.magic (HxRuntime.hx_null) then let __assign_406 = ("" : string) in (
