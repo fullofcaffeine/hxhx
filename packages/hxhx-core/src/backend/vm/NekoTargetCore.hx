@@ -565,6 +565,15 @@ class NekoTargetCore {
 				final fn = info == null ? null : findFunction(info.cls, method, true);
 				if (info != null && fn != null)
 					addStatic(info, fn);
+			case EField(receiver, method):
+				final info = context.currentClass;
+				final fn = info == null ? null : findFunction(info.cls, method, true);
+				if (info != null && fn != null && isAbstractValueHelperFunction(fn)) {
+					addStatic(info, fn);
+					collectExprRefs(context, receiver, addConstructor, addStatic);
+				} else {
+					collectExprRefs(context, callee, addConstructor, addStatic);
+				}
 			case _:
 				collectExprRefs(context, callee, addConstructor, addStatic);
 		}
@@ -574,6 +583,8 @@ class NekoTargetCore {
 
 	static function renderFunction(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Void {
 		if (renderSpecialFunction(out, context, info, fn))
+			return;
+		if (renderAbstractValueHelperFunction(out, context, info, fn))
 			return;
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
@@ -699,6 +710,22 @@ class NekoTargetCore {
 		out.push("  return " + resultExpr + ";");
 		out.push(renderFunctionEnd(useVarArgs));
 		out.push("");
+	}
+
+	static function renderAbstractValueHelperFunction(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Bool {
+		if (!isAbstractValueHelperFunction(fn))
+			return false;
+		final args = ["abstract"];
+		final useVarArgs = shouldUseVarArgs(context, args);
+		final functionContext = withLocals(withCurrentClass(context, info), args);
+		out.push(renderFunctionDefinitionPrefix(context, info.fullName, HxFunctionDecl.getName(fn)) + renderFunctionStart(args, useVarArgs));
+		if (useVarArgs)
+			out.push("  var abstract = __hxhx_args[0];");
+		for (stmt in HxFunctionDecl.getBody(fn))
+			renderStmt(out, functionContext, stmt, "  ");
+		out.push(renderFunctionEnd(useVarArgs));
+		out.push("");
+		return true;
 	}
 
 	static function renderConstructorFactory(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo):Void {
@@ -2014,6 +2041,8 @@ class NekoTargetCore {
 				return "__hxhx_string_starts_with(" + renderedArgs[0] + ", " + renderedArgs[1] + ")";
 			case EEnumValue(name):
 				return renderEnumCtorCall(name, renderedArgs);
+			case EField(receiver, method) if (lookupCurrentAbstractValueHelper(context, method) != null):
+				return renderFunctionRef(context, context.currentClass.fullName, method) + "(" + renderExpr(context, receiver) + ")";
 			case EField(EIdent("Sys"), "systemName"):
 				return "__hxhx_sys_system_name()";
 			case EField(EIdent("Sys"), "getEnv") if (args.length >= 1):
@@ -2080,6 +2109,13 @@ class NekoTargetCore {
 		return null;
 	}
 
+	static function lookupCurrentAbstractValueHelper(context:NekoEmitContext, method:String):Null<HxFunctionDecl> {
+		if (context == null || context.currentClass == null)
+			return null;
+		final fn = findFunction(context.currentClass.cls, method, true);
+		return fn != null && isAbstractValueHelperFunction(fn) ? fn : null;
+	}
+
 	static function isSysIoProcessTypePath(typePath:String):Bool {
 		return typePath == "sys.io.Process";
 	}
@@ -2117,6 +2153,8 @@ class NekoTargetCore {
 			return safeIdent(name);
 		if (isLocalName(context, name))
 			return safeIdent(name);
+		if (isEnumAbstractConstantName(context, name))
+			return quote(name);
 		if (context.selfName != null && isCurrentInstanceMethod(context, name))
 			return context.selfName + "." + safeIdent(name);
 		if (context.selfName != null && isCurrentInstanceField(context, name))
@@ -2135,6 +2173,39 @@ class NekoTargetCore {
 
 	static function isDynamicStaticFunction(fn:HxFunctionDecl):Bool {
 		return HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getMetadata(fn).indexOf("dynamic") >= 0;
+	}
+
+	static function isEnumAbstractConstantName(context:NekoEmitContext, name:String):Bool {
+		if (context.currentClass == null || name == null || name.length == 0 || !isUpperStart(name))
+			return false;
+		var hasAbstractMarker = false;
+		for (info in context.classes) {
+			if (isAbstractInfo(info)) {
+				hasAbstractMarker = true;
+				break;
+			}
+		}
+		if (!hasAbstractMarker)
+			return false;
+		for (field in HxClassDecl.getFields(context.currentClass.cls)) {
+			if (HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name && HxFieldDecl.getInit(field) == null)
+				return true;
+		}
+		return false;
+	}
+
+	static function isAbstractValueHelperFunction(fn:HxFunctionDecl):Bool {
+		if (fn == null || !HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getArgs(fn).length != 0)
+			return false;
+		final body = HxFunctionDecl.getBody(fn);
+		if (body.length != 1)
+			return false;
+		return switch (body[0]) {
+			case SReturn(ESwitch(EIdent("abstract"), _, _), _):
+				true;
+			case _:
+				false;
+		}
 	}
 
 	static function isAbstractInfo(info:Null<NekoClassInfo>):Bool {

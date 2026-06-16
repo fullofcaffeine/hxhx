@@ -212,6 +212,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(@:privateAccess NekoTargetCore.renderExpr(abstractThisContext, EBinop("!=", EThis, ENull)), "(__hxhx_self.__hx_value != null)",
 			"abstract property getters must not treat the wrapper object as this");
 
+		final enumAbstractSplit = @:privateAccess NekoTargetCore.renderSplitProgram(program('enum abstract Arch(String) { final Arm64; final Arm; final X86; final X86_64; public function getNdllSuffix():String { return switch abstract { case Arm64: "Arm64"; case Arm: "Arm"; case X86_64: "64"; case X86: ""; }; } } class Main { static function main() { var arch = X86_64; var suffix = arch.getNdllSuffix(); Sys.println(suffix); } }'),
+			splitContext, sourcePath);
+		final enumAbstractSource = supportSource(enumAbstractSplit);
+		assertContains(enumAbstractSource, 'var arch = "X86_64";', "expected enum abstract constants to lower to string backing values");
+		assertContains(enumAbstractSource, "__hxhx_symbols.Main_getNdllSuffix = $varargs(function(__hxhx_args) {",
+			"expected enum abstract helper method to stay reachable in split mode");
+		assertContains(enumAbstractSource, "var abstract = __hxhx_args[0];", "expected enum abstract helper to receive the backing value");
+		assertContains(enumAbstractSource, "var suffix = __hxhx_symbols.Main_getNdllSuffix(arch);",
+			"expected enum abstract receiver method calls to route through the helper");
+		assertNotContains(enumAbstractSource, '__hxhx_field(arch, "getNdllSuffix")()',
+			"enum abstract methods must not be called as object fields on a string backing value");
+
 		final splitSysTime = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Sys { public static function time():Float return 0; public static function println(v) {} } class Main { static function main() { Sys.println(Sys.time()); } }'),
 			splitContext, sourcePath);
 		final splitSysTimeSource = supportSource(splitSysTime);
