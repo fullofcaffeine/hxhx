@@ -144,6 +144,14 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(split.entrySource, "$loader.loadmodule(", "expected split entry module to load support chunks");
 		assertContains(split.entrySource, "__hxhx_symbols.Main_main();", "expected split entrypoint to call through symbol table");
 
+		final splitSiblingStatic = @:privateAccess NekoTargetCore.renderSplitProgram(program('class MetaLike { public static function getMeta(v) return v; public static function getFields(v) return getMeta(v); } class Main { static function main() { Sys.println(MetaLike.getFields("ok")); } }'),
+			splitContext, sourcePath);
+		final splitSiblingStaticSource = supportSource(splitSiblingStatic);
+		assertContains(splitSiblingStaticSource, "__hxhx_symbols.MetaLike_getMeta = $varargs(function(__hxhx_args) {",
+			"expected split collector to include same-class static callees");
+		assertContains(splitSiblingStaticSource, "return __hxhx_symbols.MetaLike_getMeta(v);",
+			"expected bare same-class static calls to use the split symbol table");
+
 		final splitVarArgs = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Runner { public function new(seed) {} public function addCase(test, setup = null, teardown = null, prefix = "test") { Sys.println(prefix); } } class Main { static function main() { var runner = new Runner("seed"); runner.addCase("case"); } }'),
 			splitContext, sourcePath);
 		final splitVarArgsSource = supportSource(splitVarArgs);
@@ -262,7 +270,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final nullCoalesceSource = File.getContent(sourcePath);
 		assertContains(nullCoalesceSource, "var __hxhx_coalesce = value;", "expected Neko null-coalescing lowering to capture the left value once");
-		assertContains(nullCoalesceSource, "return fallback();", "expected Neko null-coalescing lowering to keep fallback lazy");
+		assertContains(nullCoalesceSource, "return Main_fallback();", "expected Neko null-coalescing lowering to keep fallback lazy");
 		assertNotContains(nullCoalesceSource, "??", "null-coalescing syntax should not leak into Neko source");
 
 		deleteRecursive(outDir);
@@ -273,7 +281,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final nullCoalesceAssignSource = File.getContent(sourcePath);
 		assertContains(nullCoalesceAssignSource, "if (value == null)", "expected Neko null-coalescing assignment to check the target");
-		assertContains(nullCoalesceAssignSource, "value = fallback();", "expected Neko null-coalescing assignment to update the target lazily");
+		assertContains(nullCoalesceAssignSource, "value = Main_fallback();", "expected Neko null-coalescing assignment to update the target lazily");
 		assertContains(nullCoalesceAssignSource, "return value;", "expected Neko null-coalescing assignment expression to return the resulting target");
 		assertNotContains(nullCoalesceAssignSource, "??=", "null-coalescing assignment syntax should not leak into Neko source");
 

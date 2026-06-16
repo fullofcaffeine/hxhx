@@ -429,8 +429,9 @@ class NekoTargetCore {
 				return;
 			staticSeen.set(key, true);
 			staticFunctions.push({key: key, info: info, fn: fn});
+			final staticContext = withCurrentClass(context, info);
 			for (stmt in HxFunctionDecl.getBody(fn))
-				collectStmtRefs(context, stmt, addConstructor, addStatic);
+				collectStmtRefs(staticContext, stmt, addConstructor, addStatic);
 		};
 
 		for (fn in HxClassDecl.getFunctions(mainInfo.cls)) {
@@ -552,6 +553,11 @@ class NekoTargetCore {
 				final fn = info == null ? null : findFunction(info.cls, method, true);
 				if (info != null && fn != null)
 					addStatic(info, fn);
+			case EIdent(method):
+				final info = context.currentClass;
+				final fn = info == null ? null : findFunction(info.cls, method, true);
+				if (info != null && fn != null)
+					addStatic(info, fn);
 			case _:
 				collectExprRefs(context, callee, addConstructor, addStatic);
 		}
@@ -565,7 +571,7 @@ class NekoTargetCore {
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
 			args.push(safeIdent(arg.name));
-		final functionContext = withFunctionArgs(context, fn);
+		final functionContext = withFunctionArgs(withCurrentClass(context, info), fn);
 		final useVarArgs = shouldUseVarArgs(context, args);
 		out.push(renderFunctionDefinitionPrefix(context, info.fullName, HxFunctionDecl.getName(fn)) + renderFunctionStart(args, useVarArgs));
 		if (useVarArgs)
@@ -1893,7 +1899,16 @@ class NekoTargetCore {
 			return context.selfName + "." + safeIdent(name);
 		if (context.selfName != null && isCurrentInstanceField(context, name))
 			return context.selfName + "." + safeIdent(name);
+		if (isCurrentStaticFunction(context, name))
+			return renderFunctionRef(context, context.currentClass.fullName, name);
 		return safeIdent(name);
+	}
+
+	static function isCurrentStaticFunction(context:NekoEmitContext, name:String):Bool {
+		if (context.currentClass == null)
+			return false;
+		final fn = findFunction(context.currentClass.cls, name, true);
+		return fn != null && !isMacroFunction(fn);
 	}
 
 	static function isCurrentInstanceField(context:NekoEmitContext, name:String):Bool {
@@ -1970,6 +1985,16 @@ class NekoTargetCore {
 		return {
 			classes: context.classes,
 			selfName: selfName,
+			currentClass: info,
+			symbolTable: context.symbolTable,
+			locals: cloneLocals(context.locals)
+		};
+	}
+
+	static function withCurrentClass(context:NekoEmitContext, info:NekoClassInfo):NekoEmitContext {
+		return {
+			classes: context.classes,
+			selfName: context.selfName,
 			currentClass: info,
 			symbolTable: context.symbolTable,
 			locals: cloneLocals(context.locals)
