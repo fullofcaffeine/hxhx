@@ -34,5 +34,8 @@ class M14Stage3LuaRunSupportIntegrationTest {
 
 		final collectStdout = runChild("collect-neko-ndll");
 		assertTrue(collectStdout.indexOf("/dummy_ndll/ndll/") >= 0, "expected Neko ndll discovery output, got `" + collectStdout + "`");
+
+		final resolverStdout = runChild("library-resolver-haxelib-always");
+		assertTrue(resolverStdout == "resolver=always", "expected haxelib --always resolver fallback, got `" + resolverStdout + "`");
 	}
 }

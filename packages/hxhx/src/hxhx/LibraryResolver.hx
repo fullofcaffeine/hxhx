@@ -96,7 +96,7 @@ class LibraryResolver {
 			return lixSpec;
 
 		final haxelibSpec = tryResolveViaCommand(haxelibBin(), ["path", lib]);
-		if (haxelibSpec != null)
+		if (haxelibSpec != null && !isScopedMetadataMiss(lib, haxelibSpec))
 			return haxelibSpec;
 
 		// When `haxelib` is a lix shim, plain `haxelib path` can stay scoped to
@@ -106,6 +106,16 @@ class LibraryResolver {
 			return haxelibAlwaysSpec;
 
 		throw "failed to resolve -lib " + lib + " via lix or haxelib";
+	}
+
+	static function isScopedMetadataMiss(lib:String, spec:LibrarySpec):Bool {
+		if (spec.classPaths.length > 0 || spec.defines.length > 0 || spec.macros.length > 0)
+			return false;
+		final prefix = "-lib " + lib + " is missing ";
+		for (arg in spec.unknownArgs)
+			if (StringTools.startsWith(arg, prefix) && arg.indexOf("haxe_libraries/") >= 0)
+				return true;
+		return false;
 	}
 
 	static function tryResolveViaCommand(bin:String, args:Array<String>):Null<LibrarySpec> {

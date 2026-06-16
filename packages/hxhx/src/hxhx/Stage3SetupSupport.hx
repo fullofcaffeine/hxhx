@@ -68,6 +68,14 @@ class Stage3SetupSupport {
 						out.push(ndll);
 				}
 			}
+			for (arg in s.unknownArgs) {
+				final nativeRoot = nekoNativeLinkPath(arg);
+				if (nativeRoot == null)
+					continue;
+				final ndll = trailingSlash(Path.normalize(Path.join([Stage3PathSupport.absFromCwd(cwd, nativeRoot), platform])));
+				if (sys.FileSystem.exists(ndll) && sys.FileSystem.isDirectory(ndll) && out.indexOf(ndll) == -1)
+					out.push(ndll);
+			}
 		}
 		return out;
 	}
@@ -115,6 +123,15 @@ class Stage3SetupSupport {
 		if (parent != null && parent.length > 0)
 			push(parent);
 		return out;
+	}
+
+	static function nekoNativeLinkPath(arg:String):Null<String> {
+		if (arg == null)
+			return null;
+		if (!StringTools.startsWith(arg, "-L "))
+			return null;
+		final path = trim(arg.substr(3));
+		return path.length == 0 ? null : path;
 	}
 
 	static function stripTrailingSlashes(path:String):String {

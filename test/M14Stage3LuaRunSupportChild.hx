@@ -1,5 +1,6 @@
 import backend.EmitResult;
 import haxe.io.Path;
+import hxhx.LibraryResolver;
 import hxhx.Stage3RunSupport;
 import hxhx.Stage3SetupSupport;
 import sys.FileSystem;
@@ -34,6 +35,8 @@ class M14Stage3LuaRunSupportChild {
 		final oldPath = Sys.getEnv("PATH");
 		final oldNekoPath = Sys.getEnv("NEKOPATH");
 		final oldFakeNekoPrintPath = Sys.getEnv("HXHX_FAKE_NEKO_PRINT_PATH");
+		final oldHaxelibBin = Sys.getEnv("HAXELIB_BIN");
+		final oldLixBin = Sys.getEnv("LIX_BIN");
 		try {
 			mkdirp(bin);
 			final absBin = FileSystem.fullPath(bin);
@@ -89,12 +92,30 @@ class M14Stage3LuaRunSupportChild {
 							classPaths: ["dummy_ndll/src"],
 							defines: [],
 							macros: [],
-							unknownArgs: []
+							unknownArgs: ["-L dummy_ndll/ndll"]
 						}
 					], tmp);
 					if (paths.length != 1)
 						throw "expected one Neko ndll path, got " + paths.length;
 					Sys.println("ndll-path=" + paths[0]);
+				case "library-resolver-haxelib-always":
+					final libRoot = Path.join([tmp, "dummy_ndll"]);
+					mkdirp(Path.join([libRoot, "ndll", Stage3SetupSupport.nekoNdllHostPlatform()]));
+					final fakeLix = Path.join([absBin, "lix"]);
+					File.saveContent(fakeLix, "#!/usr/bin/env sh\nexit 1\n");
+					final fakeHaxelib = Path.join([absBin, "haxelib"]);
+					File.saveContent(fakeHaxelib,
+						"#!/usr/bin/env sh\nif [ \"$1\" = \"path\" ]; then printf '%s\\n' '-lib dummy_ndll is missing haxe_libraries/dummy_ndll.hxml'; exit 0; fi\nif [ \"$1\" = \"--always\" ] && [ \"$2\" = \"path\" ]; then printf '%s\\n' '-L dummy_ndll/ndll/' 'dummy_ndll/' '-D dummy_ndll=0.0.0'; exit 0; fi\nexit 1\n");
+					if (Sys.command("chmod", ["+x", fakeLix]) != 0 || Sys.command("chmod", ["+x", fakeHaxelib]) != 0)
+						throw "failed to chmod fake haxelib/lix";
+					Sys.putEnv("LIX_BIN", fakeLix);
+					Sys.putEnv("HAXELIB_BIN", fakeHaxelib);
+					final spec = LibraryResolver.resolve("dummy_ndll", tmp, new Map<String, Bool>(), 0);
+					if (spec.classPaths.length != 1 || spec.classPaths[0] != "dummy_ndll/")
+						throw "expected haxelib --always classpath fallback, got " + spec.classPaths.join(",");
+					if (spec.unknownArgs.indexOf("-L dummy_ndll/ndll/") == -1)
+						throw "expected haxelib --always native -L path";
+					Sys.println("resolver=always");
 				case _:
 					throw "unknown mode: " + mode;
 			}
@@ -102,18 +123,24 @@ class M14Stage3LuaRunSupportChild {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			Sys.putEnv("NEKOPATH", oldNekoPath == null ? "" : oldNekoPath);
 			Sys.putEnv("HXHX_FAKE_NEKO_PRINT_PATH", oldFakeNekoPrintPath == null ? "" : oldFakeNekoPrintPath);
+			Sys.putEnv("HAXELIB_BIN", oldHaxelibBin == null ? "" : oldHaxelibBin);
+			Sys.putEnv("LIX_BIN", oldLixBin == null ? "" : oldLixBin);
 			rmrf(tmp);
 			throw e.message;
 		} catch (raw:String) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 			Sys.putEnv("NEKOPATH", oldNekoPath == null ? "" : oldNekoPath);
 			Sys.putEnv("HXHX_FAKE_NEKO_PRINT_PATH", oldFakeNekoPrintPath == null ? "" : oldFakeNekoPrintPath);
+			Sys.putEnv("HAXELIB_BIN", oldHaxelibBin == null ? "" : oldHaxelibBin);
+			Sys.putEnv("LIX_BIN", oldLixBin == null ? "" : oldLixBin);
 			rmrf(tmp);
 			throw raw;
 		}
 		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
 		Sys.putEnv("NEKOPATH", oldNekoPath == null ? "" : oldNekoPath);
 		Sys.putEnv("HXHX_FAKE_NEKO_PRINT_PATH", oldFakeNekoPrintPath == null ? "" : oldFakeNekoPrintPath);
+		Sys.putEnv("HAXELIB_BIN", oldHaxelibBin == null ? "" : oldHaxelibBin);
+		Sys.putEnv("LIX_BIN", oldLixBin == null ? "" : oldLixBin);
 		rmrf(tmp);
 	}
 }
