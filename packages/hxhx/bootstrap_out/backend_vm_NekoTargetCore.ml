@@ -122,11 +122,6 @@ let renderFunctionEnd = fun useVarArgs -> let tempResult = ref ("" : string) in 
   !tempResult
 )
 
-let renderVarArgBindings = fun out args indent -> ignore (let _g = ref 0 in let _g1 = HxArray.length args in while !_g < _g1 do ignore (let i = let __old_146 = !_g in let __new_147 = HxInt.add __old_146 1 in (
-  ignore (_g := __new_147);
-  __old_146
-) in HxArray.push out (((((HxString.toStdString indent ^ "var ") ^ HxString.toStdString (HxArray.get (Obj.magic args) i)) ^ " = __hxhx_args[") ^ string_of_int i) ^ "];")) done)
-
 let testLocalStaticBasicSlotName = fun () -> "__hxhx_TestLocalStatic_basic_x"
 
 let stmtTag = fun stmt -> let tempResult = ref ("" : string) in (
@@ -1698,23 +1693,6 @@ let renderFunctionDefinitionPrefix = fun context fullClassName hx_method -> let 
   !tempResult
 )
 
-let renderRuntimeForwarder = fun out context info fn resultExpr -> ignore (let args = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in (
-  ignore (while !_g < HxArray.length _g1 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_121 = !_g in let __new_122 = HxInt.add __old_121 1 in (
-      ignore (_g := __new_122);
-      __new_122
-    ));
-    HxArray.push args (safeIdent ((Obj.magic arg : HxFunctionArg.t).name : string))
-  )) done);
-  let useVarArgs = shouldUseVarArgs context (Obj.magic args) in (
-    ignore (HxArray.push out (HxString.toStdString (renderFunctionDefinitionPrefix context (Obj.obj (HxAnon.get info "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string)) ^ HxString.toStdString (renderFunctionStart (Obj.magic args) useVarArgs)));
-    ignore (if useVarArgs then ignore (renderVarArgBindings (Obj.magic out) (Obj.magic args) ("  " : string)) else ());
-    ignore (HxArray.push out (("  return " ^ HxString.toStdString resultExpr) ^ ";"));
-    ignore (HxArray.push out (renderFunctionEnd useVarArgs));
-    HxArray.push out ""
-  )
-))
-
 let renderConstructorRef = fun context fullClassName -> let name = (mangleConstructor (fullClassName : string) : string) in let tempResult = ref ("" : string) in (
   ignore (if context != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get context "symbolTable") != Obj.magic (HxRuntime.hx_null) then let __assign_706 = ((HxString.toStdString (Obj.obj (HxAnon.get context "symbolTable")) ^ ".") ^ HxString.toStdString name : string) in (
     tempResult := __assign_706;
@@ -1746,64 +1724,6 @@ let splitChunkHeader = fun symbolsLoadName classMeta -> let out = Obj.magic (HxA
   ignore (renderRuntimeHelpers (Obj.magic out) (Obj.magic classMeta));
   out
 )
-
-let renderSpecialFunction = fun out context info fn -> try let __fallback_result_120 = let fnName = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
-  ignore (if HxString.equals (Obj.obj (HxAnon.get info "fullName")) "Type" then ignore (match fnName with
-    | "getClass" -> ignore ((
-      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_type_get_class(o)" : string));
-      raise (HxRuntime.Hx_return (Obj.repr true))
-    ))
-    | "getClassFields" -> ignore ((
-      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_type_fields(__hxhx_static_fields, c)" : string));
-      raise (HxRuntime.Hx_return (Obj.repr true))
-    ))
-    | "getClassName" -> ignore ((
-      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_type_class_name(c)" : string));
-      raise (HxRuntime.Hx_return (Obj.repr true))
-    ))
-    | "getInstanceFields" -> ignore ((
-      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_type_fields(__hxhx_instance_fields, c)" : string));
-      raise (HxRuntime.Hx_return (Obj.repr true))
-    ))
-    | _ -> ignore ()) else ());
-  ignore (if HxString.equals (Obj.obj (HxAnon.get info "fullName")) "Reflect" then ignore (match fnName with
-    | "field" -> ignore ((
-      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("if (o == null) null else $objget(o, $hash(field))" : string));
-      raise (HxRuntime.Hx_return (Obj.repr true))
-    ))
-    | "fields" -> ignore ((
-      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_reflect_fields(o)" : string));
-      raise (HxRuntime.Hx_return (Obj.repr true))
-    ))
-    | "hasField" -> ignore ((
-      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_reflect_has_field(o, field)" : string));
-      raise (HxRuntime.Hx_return (Obj.repr true))
-    ))
-    | "isObject" -> ignore ((
-      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("v != null && $typeof(v) == $tobject" : string));
-      raise (HxRuntime.Hx_return (Obj.repr true))
-    ))
-    | _ -> ignore ()) else ());
-  ignore (if HxString.equals (Obj.obj (HxAnon.get info "fullName")) "StringTools" then ignore (if HxString.equals fnName "startsWith" then ignore ((
-    ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_string_starts_with(s, start)" : string));
-    raise (HxRuntime.Hx_return (Obj.repr true))
-  )) else ignore ()) else ());
-  ignore (if HxString.equals (Obj.obj (HxAnon.get info "shortName")) "TestLocalStatic" && HxString.equals fnName "basic" then ignore (let slotName = ("__hxhx_TestLocalStatic_basic_x" : string) in (
-    ignore (HxArray.push out (("var " ^ HxString.toStdString slotName) ^ " = null;"));
-    ignore (HxArray.push out (HxString.toStdString (renderFunctionDefinitionPrefix context (Obj.obj (HxAnon.get info "fullName") : string) (fnName : string)) ^ "function() {"));
-    ignore (HxArray.push out (((("  if (" ^ HxString.toStdString slotName) ^ " == null) ") ^ HxString.toStdString slotName) ^ " = 1;"));
-    ignore (HxArray.push out (((("  " ^ HxString.toStdString slotName) ^ " = ") ^ HxString.toStdString slotName) ^ " + 1;"));
-    ignore (HxArray.push out "  var __hxhx_o = $new(null);");
-    ignore (HxArray.push out (("  __hxhx_o.x = " ^ HxString.toStdString slotName) ^ ";"));
-    ignore (HxArray.push out (("  __hxhx_o.y = " ^ HxString.toStdString (quote ("final" : string))) ^ ";"));
-    ignore (HxArray.push out "  return __hxhx_o;");
-    ignore (HxArray.push out "}");
-    ignore (HxArray.push out "");
-    raise (HxRuntime.Hx_return (Obj.repr true))
-  )) else ());
-  false
-) in Obj.magic __fallback_result_120 with
-  | HxRuntime.Hx_return __ret_119 -> Obj.obj __ret_119
 
 let renderSpecialInstanceMethod = fun out context selfName fn -> try let __fallback_result_149 = (
   ignore (if Obj.obj (HxAnon.get context "currentClass") != Obj.magic (HxRuntime.hx_null) && HxString.equals (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get context "currentClass")) "shortName")) "TestLocalStatic" && HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "basic" then ignore (let slotName = (testLocalStaticBasicSlotName () : string) in (
@@ -3574,6 +3494,91 @@ and renderCall = fun context callee args -> try let __fallback_result_675 = let 
 ) in Obj.magic __fallback_result_675 with
   | HxRuntime.Hx_return __ret_674 -> Obj.obj __ret_674
 
+let renderVarArgBindings = fun out context args indent -> ignore (let _g = ref 0 in let _g1 = HxArray.length args in while !_g < _g1 do ignore (let i = let __old_146 = !_g in let __new_147 = HxInt.add __old_146 1 in (
+  ignore (_g := __new_147);
+  __old_146
+) in let arg = Obj.magic (HxArray.get (Obj.magic args) i) in let name = (safeIdent (HxFunctionArg.getName (Obj.magic arg) : string) : string) in (
+  ignore (HxArray.push out (((((HxString.toStdString indent ^ "var ") ^ HxString.toStdString name) ^ " = __hxhx_args[") ^ string_of_int i) ^ "];"));
+  let _g2 = Obj.magic (HxFunctionArg.getDefaultValue (Obj.magic arg)) in match _g2 with
+    | HxDefaultValue.NoDefault -> ignore (if HxFunctionArg.getIsRest (Obj.magic arg) then ignore (HxArray.push out (((((HxString.toStdString indent ^ "if (") ^ HxString.toStdString name) ^ " == null) ") ^ HxString.toStdString name) ^ " = $array();")) else ())
+    | HxDefaultValue.Default _p0 -> ignore (let _g3 = Obj.magic _p0 in let expr = Obj.magic _g3 in HxArray.push out (((((((HxString.toStdString indent ^ "if (") ^ HxString.toStdString name) ^ " == null) ") ^ HxString.toStdString name) ^ " = ") ^ HxString.toStdString (renderExpr context (Obj.magic expr))) ^ ";"))
+)) done)
+
+let renderRuntimeForwarder = fun out context info fn resultExpr -> ignore (let args = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_121 = !_g in let __new_122 = HxInt.add __old_121 1 in (
+      ignore (_g := __new_122);
+      __new_122
+    ));
+    HxArray.push args (safeIdent ((Obj.magic arg : HxFunctionArg.t).name : string))
+  )) done);
+  let useVarArgs = shouldUseVarArgs context (Obj.magic args) in (
+    ignore (HxArray.push out (HxString.toStdString (renderFunctionDefinitionPrefix context (Obj.obj (HxAnon.get info "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string)) ^ HxString.toStdString (renderFunctionStart (Obj.magic args) useVarArgs)));
+    ignore (if useVarArgs then ignore (renderVarArgBindings (Obj.magic out) (withFunctionArgs context (Obj.magic fn)) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) ("  " : string)) else ());
+    ignore (HxArray.push out (("  return " ^ HxString.toStdString resultExpr) ^ ";"));
+    ignore (HxArray.push out (renderFunctionEnd useVarArgs));
+    HxArray.push out ""
+  )
+))
+
+let renderSpecialFunction = fun out context info fn -> try let __fallback_result_120 = let fnName = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
+  ignore (if HxString.equals (Obj.obj (HxAnon.get info "fullName")) "Type" then ignore (match fnName with
+    | "getClass" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_type_get_class(o)" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "getClassFields" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_type_fields(__hxhx_static_fields, c)" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "getClassName" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_type_class_name(c)" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "getInstanceFields" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_type_fields(__hxhx_instance_fields, c)" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | _ -> ignore ()) else ());
+  ignore (if HxString.equals (Obj.obj (HxAnon.get info "fullName")) "Reflect" then ignore (match fnName with
+    | "field" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("if (o == null) null else $objget(o, $hash(field))" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "fields" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_reflect_fields(o)" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "hasField" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_reflect_has_field(o, field)" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | "isObject" -> ignore ((
+      ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("v != null && $typeof(v) == $tobject" : string));
+      raise (HxRuntime.Hx_return (Obj.repr true))
+    ))
+    | _ -> ignore ()) else ());
+  ignore (if HxString.equals (Obj.obj (HxAnon.get info "fullName")) "StringTools" then ignore (if HxString.equals fnName "startsWith" then ignore ((
+    ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_string_starts_with(s, start)" : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ignore ()) else ());
+  ignore (if HxString.equals (Obj.obj (HxAnon.get info "shortName")) "TestLocalStatic" && HxString.equals fnName "basic" then ignore (let slotName = ("__hxhx_TestLocalStatic_basic_x" : string) in (
+    ignore (HxArray.push out (("var " ^ HxString.toStdString slotName) ^ " = null;"));
+    ignore (HxArray.push out (HxString.toStdString (renderFunctionDefinitionPrefix context (Obj.obj (HxAnon.get info "fullName") : string) (fnName : string)) ^ "function() {"));
+    ignore (HxArray.push out (((("  if (" ^ HxString.toStdString slotName) ^ " == null) ") ^ HxString.toStdString slotName) ^ " = 1;"));
+    ignore (HxArray.push out (((("  " ^ HxString.toStdString slotName) ^ " = ") ^ HxString.toStdString slotName) ^ " + 1;"));
+    ignore (HxArray.push out "  var __hxhx_o = $new(null);");
+    ignore (HxArray.push out (("  __hxhx_o.x = " ^ HxString.toStdString slotName) ^ ";"));
+    ignore (HxArray.push out (("  __hxhx_o.y = " ^ HxString.toStdString (quote ("final" : string))) ^ ";"));
+    ignore (HxArray.push out "  return __hxhx_o;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ());
+  false
+) in Obj.magic __fallback_result_120 with
+  | HxRuntime.Hx_return __ret_119 -> Obj.obj __ret_119
+
 let rec renderStmt = fun out context stmt indent -> ignore (match stmt with
   | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
     ignore _p1;
@@ -4035,7 +4040,7 @@ let renderFunction = fun out context info fn -> ignore (try (
     )) done);
     let functionContext = withFunctionArgs context (Obj.magic fn) in let useVarArgs = shouldUseVarArgs context (Obj.magic args) in (
       ignore (HxArray.push out (HxString.toStdString (renderFunctionDefinitionPrefix context (Obj.obj (HxAnon.get info "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string)) ^ HxString.toStdString (renderFunctionStart (Obj.magic args) useVarArgs)));
-      ignore (if useVarArgs then ignore (renderVarArgBindings (Obj.magic out) (Obj.magic args) ("  " : string)) else ());
+      ignore (if useVarArgs then ignore (renderVarArgBindings (Obj.magic out) functionContext (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) ("  " : string)) else ());
       ignore (let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in while !_g < HxArray.length _g1 do ignore (let stmt = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
         ignore (let __old_116 = !_g in let __new_117 = HxInt.add __old_116 1 in (
           ignore (_g := __new_117);
@@ -4062,7 +4067,7 @@ let renderInstanceMethod = fun out context selfName fn -> ignore (try (
     )) done);
     let methodContext = withFunctionArgs context (Obj.magic fn) in let useVarArgs = shouldUseVarArgs context (Obj.magic args) in (
       ignore (HxArray.push out ((((("  " ^ HxString.toStdString selfName) ^ ".") ^ HxString.toStdString (safeIdent (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ " = ") ^ HxString.toStdString (renderFunctionStart (Obj.magic args) useVarArgs)));
-      ignore (if useVarArgs then ignore (renderVarArgBindings (Obj.magic out) (Obj.magic args) ("    " : string)) else ());
+      ignore (if useVarArgs then ignore (renderVarArgBindings (Obj.magic out) methodContext (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) ("    " : string)) else ());
       ignore (let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in while !_g < HxArray.length _g1 do ignore (let stmt = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
         ignore (let __old_139 = !_g in let __new_140 = HxInt.add __old_139 1 in (
           ignore (_g := __new_140);
@@ -4095,7 +4100,7 @@ let renderConstructorFactory = fun out context info -> ignore (let ctor = Obj.ma
     ));
     let useVarArgs = shouldUseVarArgs context (Obj.magic args) in (
       ignore (HxArray.push out (HxString.toStdString (renderConstructorDefinitionPrefix context (Obj.obj (HxAnon.get info "fullName") : string)) ^ HxString.toStdString (renderFunctionStart (Obj.magic args) useVarArgs)));
-      ignore (if useVarArgs then ignore (renderVarArgBindings (Obj.magic out) (Obj.magic args) ("  " : string)) else ());
+      ignore (if useVarArgs then ignore (renderVarArgBindings (Obj.magic out) (Obj.magic (!tempNekoEmitContext)) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic ctor))) ("  " : string)) else ());
       ignore (HxArray.push out (("  var " ^ HxString.toStdString selfName) ^ " = $new(null);"));
       ignore (HxArray.push out (((("  " ^ HxString.toStdString selfName) ^ ".__hx_ctor = ") ^ HxString.toStdString (quote (Obj.obj (HxAnon.get info "fullName") : string))) ^ ";"));
       ignore (HxArray.push out (((("  " ^ HxString.toStdString selfName) ^ ".__hx_params = $array(") ^ HxString.toStdString (HxArray.join args ", " (fun x -> x))) ^ ");"));

@@ -144,7 +144,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(split.entrySource, "$loader.loadmodule(", "expected split entry module to load support chunks");
 		assertContains(split.entrySource, "__hxhx_symbols.Main_main();", "expected split entrypoint to call through symbol table");
 
-		final splitVarArgs = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Runner { public function new(seed) {} public function addCase(test, setup, teardown) { Sys.println(test); } } class Main { static function main() { var runner = new Runner("seed"); runner.addCase("case"); } }'),
+		final splitVarArgs = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Runner { public function new(seed) {} public function addCase(test, setup = null, teardown = null, prefix = "test") { Sys.println(prefix); } } class Main { static function main() { var runner = new Runner("seed"); runner.addCase("case"); } }'),
 			splitContext, sourcePath);
 		final splitVarArgsSource = supportSource(splitVarArgs);
 		assertContains(splitVarArgsSource, "__hxhx_symbols.__hxhx_new_Runner = $varargs(function(__hxhx_args) {",
@@ -153,6 +153,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(splitVarArgsSource, "__hxhx_self.addCase = $varargs(function(__hxhx_args) {",
 			"expected split instance methods with parameters to accept missing/extra Neko arguments");
 		assertContains(splitVarArgsSource, "var teardown = __hxhx_args[2];", "expected method varargs to bind omitted arguments as null");
+		assertContains(splitVarArgsSource, "if (prefix == null) prefix = \"test\";", "expected method varargs to apply parsed default values");
 		assertContains(splitVarArgsSource, 'runner.addCase("case");', "expected call sites to stay idiomatic receiver calls");
 
 		final reflectionSplit = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Case { public var value:Int; public function new() {} public function testFoo() {} public static function helper() {} } class Main { static function main() { var c = new Case(); Sys.println(Type.getClassName(Type.getClass(c))); Sys.println(Type.getInstanceFields(Type.getClass(c)).length); Sys.println(Reflect.hasField(c, "testFoo")); Sys.println(Reflect.isFunction(Reflect.field(c, "testFoo"))); Reflect.callMethod(c, Reflect.field(c, "testFoo"), []); } }'),
