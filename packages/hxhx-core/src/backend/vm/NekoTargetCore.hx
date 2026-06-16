@@ -579,6 +579,13 @@ class NekoTargetCore {
 		for (stmt in HxFunctionDecl.getBody(fn))
 			renderStmt(out, functionContext, stmt, "  ");
 		out.push(renderFunctionEnd(useVarArgs));
+		if (isDynamicStaticFunction(fn))
+			out.push(renderStaticObjectRef(info.fullName)
+				+ "."
+				+ safeIdent(HxFunctionDecl.getName(fn))
+				+ " = "
+				+ renderFunctionRef(context, info.fullName, HxFunctionDecl.getName(fn))
+				+ ";");
 		out.push("");
 	}
 
@@ -622,6 +629,14 @@ class NekoTargetCore {
 			switch (fnName) {
 				case "startsWith":
 					renderRuntimeForwarder(out, context, info, fn, "__hxhx_string_starts_with(s, start)");
+					return true;
+				case _:
+			}
+		}
+		if (info.fullName == "Sys") {
+			switch (fnName) {
+				case "time":
+					renderRuntimeForwarder(out, context, info, fn, "$loader.loadprim(\"std@sys_time\", 0)()");
 					return true;
 				case _:
 			}
@@ -908,8 +923,8 @@ class NekoTargetCore {
 				"false";
 			case EIdent(name):
 				renderIdent(context, name);
-			case EField(EIdent(className), field) if (lookupStaticFieldOwner(context, className, field) != null):
-				final info = lookupStaticFieldOwner(context, className, field);
+			case EField(EIdent(className), field) if (lookupMutableStaticMemberOwner(context, className, field) != null):
+				final info = lookupMutableStaticMemberOwner(context, className, field);
 				"__hxhx_field("
 				+ renderStaticObjectRef(info.fullName)
 				+ ", "
@@ -1076,8 +1091,8 @@ class NekoTargetCore {
 		return switch (expr) {
 			case EThis:
 				renderThisValueSlotExpr(context, detail);
-			case EField(EIdent(className), field) if (lookupStaticFieldOwner(context, className, field) != null):
-				final info = lookupStaticFieldOwner(context, className, field);
+			case EField(EIdent(className), field) if (lookupMutableStaticMemberOwner(context, className, field) != null):
+				final info = lookupMutableStaticMemberOwner(context, className, field);
 				renderStaticObjectRef(info.fullName) + "." + safeIdent(field);
 			case EField(obj, field):
 				renderExpr(context, obj) + "." + safeIdent(field);
@@ -1927,9 +1942,9 @@ class NekoTargetCore {
 			case EField(EIdent(className), method) if (isUpperStart(className)):
 				final info = lookupClass(context, className);
 				final fn = info == null ? null : findFunction(info.cls, method, true);
-				if (info != null && fn != null)
+				if (info != null && fn != null && !isDynamicStaticFunction(fn))
 					return renderFunctionRef(context, info.fullName, method) + "(" + renderedArgs.join(", ") + ")";
-				final staticFieldOwner = lookupStaticFieldOwner(context, className, method);
+				final staticFieldOwner = lookupMutableStaticMemberOwner(context, className, method);
 				if (staticFieldOwner != null)
 					return "__hxhx_field("
 						+ renderStaticObjectRef(staticFieldOwner.fullName)
@@ -1961,12 +1976,16 @@ class NekoTargetCore {
 		return context.classes.get(shortName);
 	}
 
-	static function lookupStaticFieldOwner(context:NekoEmitContext, className:String, fieldName:String):Null<NekoClassInfo> {
+	static function lookupMutableStaticMemberOwner(context:NekoEmitContext, className:String, fieldName:String):Null<NekoClassInfo> {
 		final info = lookupClass(context, className);
 		if (info == null)
 			return null;
 		for (field in HxClassDecl.getFields(info.cls)) {
 			if (HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == fieldName)
+				return info;
+		}
+		for (fn in HxClassDecl.getFunctions(info.cls)) {
+			if (HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == fieldName && isDynamicStaticFunction(fn))
 				return info;
 		}
 		return null;
@@ -2019,6 +2038,10 @@ class NekoTargetCore {
 			return false;
 		final fn = findFunction(context.currentClass.cls, name, true);
 		return fn != null && !isMacroFunction(fn);
+	}
+
+	static function isDynamicStaticFunction(fn:HxFunctionDecl):Bool {
+		return HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getMetadata(fn).indexOf("dynamic") >= 0;
 	}
 
 	static function isCurrentInstanceField(context:NekoEmitContext, name:String):Bool {

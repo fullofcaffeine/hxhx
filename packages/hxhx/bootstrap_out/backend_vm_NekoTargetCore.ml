@@ -923,66 +923,73 @@ let lookupBytesClass = fun context -> let qualified = lookupClass context ("haxe
   Obj.magic (!tempResult)
 )
 
-let lookupStaticFieldOwner = fun context className fieldName -> try let __fallback_result_765 = let info = lookupClass context (className : string) in (
-  ignore (if info == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-  let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic (Obj.obj (HxAnon.get info "cls")))) in (
-    ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_762 = !_g in let __new_763 = HxInt.add __old_762 1 in (
-        ignore (_g := __new_763);
-        __new_763
-      ));
-      if HxFieldDecl.getIsStatic (Obj.magic field) && HxString.equals (HxFieldDecl.getName (Obj.magic field)) fieldName then raise (HxRuntime.Hx_return (Obj.repr info)) else ()
-    )) done);
-    Obj.magic (HxRuntime.hx_null)
-  )
-) in Obj.magic __fallback_result_765 with
-  | HxRuntime.Hx_return __ret_764 -> Obj.magic __ret_764
-
-let findFunction = fun cls name isStatic -> try let __fallback_result_769 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
+let findFunction = fun cls name isStatic -> try let __fallback_result_771 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_766 = !_g in let __new_767 = HxInt.add __old_766 1 in (
-      ignore (_g := __new_767);
-      __new_767
+    ignore (let __old_768 = !_g in let __new_769 = HxInt.add __old_768 1 in (
+      ignore (_g := __new_769);
+      __new_769
     ));
     if HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) name && HxFunctionDecl.getIsStatic (Obj.magic fn) = isStatic then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic fn))) else ()
   )) done);
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_769 with
-  | HxRuntime.Hx_return __ret_768 -> Obj.obj __ret_768
+) in Obj.magic __fallback_result_771 with
+  | HxRuntime.Hx_return __ret_770 -> Obj.obj __ret_770
 
 let needsTestLocalStaticBasicSlot = fun info -> HxString.equals (Obj.obj (HxAnon.get info "shortName")) "TestLocalStatic" && findFunction (Obj.magic (Obj.obj (HxAnon.get info "cls"))) ("basic" : string) false != Obj.magic (HxRuntime.hx_null)
 
-let isCurrentInstanceField = fun context name -> try let __fallback_result_779 = (
+let isDynamicStaticFunction = fun fn -> HxFunctionDecl.getIsStatic (Obj.magic fn) && HxArray.indexOf (HxFunctionDecl.getMetadata (Obj.magic fn)) "dynamic" 0 >= 0
+
+let lookupMutableStaticMemberOwner = fun context className fieldName -> try let __fallback_result_767 = let info = lookupClass context (className : string) in (
+  ignore (if info == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+  ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic (Obj.obj (HxAnon.get info "cls")))) in while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_762 = !_g in let __new_763 = HxInt.add __old_762 1 in (
+      ignore (_g := __new_763);
+      __new_763
+    ));
+    if HxFieldDecl.getIsStatic (Obj.magic field) && HxString.equals (HxFieldDecl.getName (Obj.magic field)) fieldName then raise (HxRuntime.Hx_return (Obj.repr info)) else ()
+  )) done);
+  ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic (Obj.obj (HxAnon.get info "cls")))) in while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_764 = !_g in let __new_765 = HxInt.add __old_764 1 in (
+      ignore (_g := __new_765);
+      __new_765
+    ));
+    if HxFunctionDecl.getIsStatic (Obj.magic fn) && HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) fieldName && isDynamicStaticFunction (Obj.magic fn) then raise (HxRuntime.Hx_return (Obj.repr info)) else ()
+  )) done);
+  Obj.magic (HxRuntime.hx_null)
+) in Obj.magic __fallback_result_767 with
+  | HxRuntime.Hx_return __ret_766 -> Obj.magic __ret_766
+
+let isCurrentInstanceField = fun context name -> try let __fallback_result_781 = (
   ignore (if Obj.obj (HxAnon.get context "currentClass") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get context "currentClass")) "cls")))) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_776 = !_g in let __new_777 = HxInt.add __old_776 1 in (
-        ignore (_g := __new_777);
-        __new_777
+      ignore (let __old_778 = !_g in let __new_779 = HxInt.add __old_778 1 in (
+        ignore (_g := __new_779);
+        __new_779
       ));
       if not (HxFieldDecl.getIsStatic (Obj.magic field)) && HxString.equals (HxFieldDecl.getName (Obj.magic field)) name then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
-) in Obj.magic __fallback_result_779 with
-  | HxRuntime.Hx_return __ret_778 -> Obj.obj __ret_778
+) in Obj.magic __fallback_result_781 with
+  | HxRuntime.Hx_return __ret_780 -> Obj.obj __ret_780
 
 let isLocalName = fun context name -> Obj.obj (HxAnon.get context "locals") != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.obj (HxAnon.get context "locals")) name
 
 let emptyLocals = fun () -> HxMap.create_string ()
 
 let cloneLocals = fun locals -> let copy = Obj.magic (HxMap.create_string ()) in (
-  ignore (if locals != Obj.magic (HxRuntime.hx_null) then ignore (let name = HxIterator.of_array (HxMap.keys_string locals) in while (let __iter_780 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_780)) () do ignore (let name2 = ((let __iter_781 = name in fun () -> HxIterator.next (Obj.magic __iter_781)) () : string) in HxMap.set_string copy name2 true) done) else ());
+  ignore (if locals != Obj.magic (HxRuntime.hx_null) then ignore (let name = HxIterator.of_array (HxMap.keys_string locals) in while (let __iter_782 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_782)) () do ignore (let name2 = ((let __iter_783 = name in fun () -> HxIterator.next (Obj.magic __iter_783)) () : string) in HxMap.set_string copy name2 true) done) else ());
   copy
 )
 
-let childContext = fun context -> let __anon_782 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_782 "classes" (Obj.repr (Obj.obj (HxAnon.get context "classes"))));
-  ignore (HxAnon.set __anon_782 "selfName" (Obj.repr (Obj.obj (HxAnon.get context "selfName"))));
-  ignore (HxAnon.set __anon_782 "currentClass" (Obj.obj (HxAnon.get context "currentClass")));
-  ignore (HxAnon.set __anon_782 "symbolTable" (Obj.repr (Obj.obj (HxAnon.get context "symbolTable"))));
-  ignore (HxAnon.set __anon_782 "locals" (Obj.repr (cloneLocals (Obj.magic (Obj.obj (HxAnon.get context "locals"))))));
-  __anon_782
+let childContext = fun context -> let __anon_784 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_784 "classes" (Obj.repr (Obj.obj (HxAnon.get context "classes"))));
+  ignore (HxAnon.set __anon_784 "selfName" (Obj.repr (Obj.obj (HxAnon.get context "selfName"))));
+  ignore (HxAnon.set __anon_784 "currentClass" (Obj.obj (HxAnon.get context "currentClass")));
+  ignore (HxAnon.set __anon_784 "symbolTable" (Obj.repr (Obj.obj (HxAnon.get context "symbolTable"))));
+  ignore (HxAnon.set __anon_784 "locals" (Obj.repr (cloneLocals (Obj.magic (Obj.obj (HxAnon.get context "locals"))))));
+  __anon_784
 )
 
 let registerLocal = fun context name -> ignore (if Obj.obj (HxAnon.get context "locals") != Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string (Obj.obj (HxAnon.get context "locals")) name true) else ())
@@ -994,9 +1001,9 @@ let withLocal = fun context name -> let next = childContext context in (
 
 let withLocals = fun context names -> let next = childContext context in let _g = ref 0 in (
   ignore (while !_g < HxArray.length names do ignore (let name = (HxArray.get (Obj.magic names) (!_g) : string) in (
-    ignore (let __old_783 = !_g in let __new_784 = HxInt.add __old_783 1 in (
-      ignore (_g := __new_784);
-      __new_784
+    ignore (let __old_785 = !_g in let __new_786 = HxInt.add __old_785 1 in (
+      ignore (_g := __new_786);
+      __new_786
     ));
     registerLocal next (name : string)
   )) done);
@@ -1005,26 +1012,26 @@ let withLocals = fun context names -> let next = childContext context in let _g 
 
 let withFunctionArgs = fun context fn -> let names = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_785 = !_g in let __new_786 = HxInt.add __old_785 1 in (
-      ignore (_g := __new_786);
-      __new_786
+    ignore (let __old_787 = !_g in let __new_788 = HxInt.add __old_787 1 in (
+      ignore (_g := __new_788);
+      __new_788
     ));
     HxArray.push names ((Obj.magic arg : HxFunctionArg.t).name)
   )) done);
   withLocals context (Obj.magic names)
 )
 
-let isMacroFunction = fun fn -> try let __fallback_result_790 = let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn)) in (
+let isMacroFunction = fun fn -> try let __fallback_result_792 = let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn)) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let meta = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_787 = !_g in let __new_788 = HxInt.add __old_787 1 in (
-      ignore (_g := __new_788);
-      __new_788
+    ignore (let __old_789 = !_g in let __new_790 = HxInt.add __old_789 1 in (
+      ignore (_g := __new_790);
+      __new_790
     ));
     if HxString.equals meta "macro" then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in Obj.magic __fallback_result_790 with
-  | HxRuntime.Hx_return __ret_789 -> Obj.obj __ret_789
+) in Obj.magic __fallback_result_792 with
+  | HxRuntime.Hx_return __ret_791 -> Obj.obj __ret_791
 
 let collectRuntimeFields = fun cls isStatic -> let seen = Obj.magic (HxMap.create_string ()) in let fields = Obj.magic (HxArray.create ()) in let add = fun name -> ignore (try (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 || HxMap.exists_string seen name then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
@@ -1080,34 +1087,34 @@ let buildRuntimeClassMeta = fun modules -> let metas = Obj.magic (HxArray.create
   metas
 )
 
-let isCurrentInstanceMethod = fun context name -> try let __fallback_result_771 = (
+let isCurrentInstanceMethod = fun context name -> try let __fallback_result_773 = (
   ignore (if Obj.obj (HxAnon.get context "currentClass") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let fn = Obj.magic (findFunction (Obj.magic (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get context "currentClass")) "cls"))) (name : string) false) in fn != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new") && not (isMacroFunction (Obj.magic fn))
-) in Obj.magic __fallback_result_771 with
-  | HxRuntime.Hx_return __ret_770 -> Obj.obj __ret_770
+) in Obj.magic __fallback_result_773 with
+  | HxRuntime.Hx_return __ret_772 -> Obj.obj __ret_772
 
-let isCurrentStaticFunction = fun context name -> try let __fallback_result_775 = (
+let isCurrentStaticFunction = fun context name -> try let __fallback_result_777 = (
   ignore (if Obj.obj (HxAnon.get context "currentClass") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let fn = Obj.magic (findFunction (Obj.magic (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get context "currentClass")) "cls"))) (name : string) true) in fn != Obj.magic (HxRuntime.hx_null) && not (isMacroFunction (Obj.magic fn))
-) in Obj.magic __fallback_result_775 with
-  | HxRuntime.Hx_return __ret_774 -> Obj.obj __ret_774
+) in Obj.magic __fallback_result_777 with
+  | HxRuntime.Hx_return __ret_776 -> Obj.obj __ret_776
 
-let withSelf = fun context selfName info -> let __anon_791 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_791 "classes" (Obj.repr (Obj.obj (HxAnon.get context "classes"))));
-  ignore (HxAnon.set __anon_791 "selfName" (Obj.repr selfName));
-  ignore (HxAnon.set __anon_791 "currentClass" info);
-  ignore (HxAnon.set __anon_791 "symbolTable" (Obj.repr (Obj.obj (HxAnon.get context "symbolTable"))));
-  ignore (HxAnon.set __anon_791 "locals" (Obj.repr (cloneLocals (Obj.magic (Obj.obj (HxAnon.get context "locals"))))));
-  __anon_791
+let withSelf = fun context selfName info -> let __anon_793 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_793 "classes" (Obj.repr (Obj.obj (HxAnon.get context "classes"))));
+  ignore (HxAnon.set __anon_793 "selfName" (Obj.repr selfName));
+  ignore (HxAnon.set __anon_793 "currentClass" info);
+  ignore (HxAnon.set __anon_793 "symbolTable" (Obj.repr (Obj.obj (HxAnon.get context "symbolTable"))));
+  ignore (HxAnon.set __anon_793 "locals" (Obj.repr (cloneLocals (Obj.magic (Obj.obj (HxAnon.get context "locals"))))));
+  __anon_793
 )
 
-let withCurrentClass = fun context info -> let __anon_792 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_792 "classes" (Obj.repr (Obj.obj (HxAnon.get context "classes"))));
-  ignore (HxAnon.set __anon_792 "selfName" (Obj.repr (Obj.obj (HxAnon.get context "selfName"))));
-  ignore (HxAnon.set __anon_792 "currentClass" info);
-  ignore (HxAnon.set __anon_792 "symbolTable" (Obj.repr (Obj.obj (HxAnon.get context "symbolTable"))));
-  ignore (HxAnon.set __anon_792 "locals" (Obj.repr (cloneLocals (Obj.magic (Obj.obj (HxAnon.get context "locals"))))));
-  __anon_792
+let withCurrentClass = fun context info -> let __anon_794 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_794 "classes" (Obj.repr (Obj.obj (HxAnon.get context "classes"))));
+  ignore (HxAnon.set __anon_794 "selfName" (Obj.repr (Obj.obj (HxAnon.get context "selfName"))));
+  ignore (HxAnon.set __anon_794 "currentClass" info);
+  ignore (HxAnon.set __anon_794 "symbolTable" (Obj.repr (Obj.obj (HxAnon.get context "symbolTable"))));
+  ignore (HxAnon.set __anon_794 "locals" (Obj.repr (cloneLocals (Obj.magic (Obj.obj (HxAnon.get context "locals"))))));
+  __anon_794
 )
 
 let matchesMain = fun requested fullClassName -> requested == Obj.magic (HxRuntime.hx_null) || HxString.length requested = 0 || HxString.equals requested fullClassName || HxString.equals requested (HxArray.pop (HxString.split fullClassName ".") ())
@@ -1156,32 +1163,32 @@ let findMain = fun modules requested -> try let __fallback_result_57 = let fallb
 ) in Obj.magic __fallback_result_57 with
   | HxRuntime.Hx_return __ret_56 -> Obj.magic __ret_56
 
-let isUpperStart = fun name -> try let __fallback_result_806 = (
+let isUpperStart = fun name -> try let __fallback_result_808 = (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  let c = HxString.charCodeAt name 0 in (let __nullable_801 = c in let __nullable_802 = 65 in if __nullable_801 == HxRuntime.hx_null then false else Obj.obj __nullable_801 >= __nullable_802) && (let __nullable_803 = c in let __nullable_804 = 90 in if __nullable_803 == HxRuntime.hx_null then false else Obj.obj __nullable_803 <= __nullable_804)
-) in Obj.magic __fallback_result_806 with
-  | HxRuntime.Hx_return __ret_805 -> Obj.obj __ret_805
+  let c = HxString.charCodeAt name 0 in (let __nullable_803 = c in let __nullable_804 = 65 in if __nullable_803 == HxRuntime.hx_null then false else Obj.obj __nullable_803 >= __nullable_804) && (let __nullable_805 = c in let __nullable_806 = 90 in if __nullable_805 == HxRuntime.hx_null then false else Obj.obj __nullable_805 <= __nullable_806)
+) in Obj.magic __fallback_result_808 with
+  | HxRuntime.Hx_return __ret_807 -> Obj.obj __ret_807
 
-let safeIdent = fun name -> try let __fallback_result_826 = (
+let safeIdent = fun name -> try let __fallback_result_828 = (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr ("_" : string))) else ());
   let out = Obj.magic (StringBuf.create ()) in let _g = ref 0 in let _g1 = HxString.length name in (
-    ignore (while !_g < _g1 do ignore (let i = let __old_807 = !_g in let __new_808 = HxInt.add __old_807 1 in (
-      ignore (_g := __new_808);
-      __old_807
-    ) in let c = HxString.charCodeAt name i in let ok = (let __nullable_809 = c in let __nullable_810 = 97 in if __nullable_809 == HxRuntime.hx_null then false else Obj.obj __nullable_809 >= __nullable_810) && (let __nullable_811 = c in let __nullable_812 = 122 in if __nullable_811 == HxRuntime.hx_null then false else Obj.obj __nullable_811 <= __nullable_812) || (let __nullable_813 = c in let __nullable_814 = 65 in if __nullable_813 == HxRuntime.hx_null then false else Obj.obj __nullable_813 >= __nullable_814) && (let __nullable_815 = c in let __nullable_816 = 90 in if __nullable_815 == HxRuntime.hx_null then false else Obj.obj __nullable_815 <= __nullable_816) || (let __nullable_817 = c in if __nullable_817 == HxRuntime.hx_null then false else Obj.obj __nullable_817 = 95) || i > 0 && (let __nullable_818 = c in let __nullable_819 = 48 in if __nullable_818 == HxRuntime.hx_null then false else Obj.obj __nullable_818 >= __nullable_819) && (let __nullable_820 = c in let __nullable_821 = 57 in if __nullable_820 == HxRuntime.hx_null then false else Obj.obj __nullable_820 <= __nullable_821) in let tempNumber = ref (0 : int) in (
-      ignore (if ok then let __assign_822 = let __nullable_int_823 = c in if __nullable_int_823 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_823 in (
-        tempNumber := __assign_822;
-        __assign_822
-      ) else let __assign_824 = 95 in (
+    ignore (while !_g < _g1 do ignore (let i = let __old_809 = !_g in let __new_810 = HxInt.add __old_809 1 in (
+      ignore (_g := __new_810);
+      __old_809
+    ) in let c = HxString.charCodeAt name i in let ok = (let __nullable_811 = c in let __nullable_812 = 97 in if __nullable_811 == HxRuntime.hx_null then false else Obj.obj __nullable_811 >= __nullable_812) && (let __nullable_813 = c in let __nullable_814 = 122 in if __nullable_813 == HxRuntime.hx_null then false else Obj.obj __nullable_813 <= __nullable_814) || (let __nullable_815 = c in let __nullable_816 = 65 in if __nullable_815 == HxRuntime.hx_null then false else Obj.obj __nullable_815 >= __nullable_816) && (let __nullable_817 = c in let __nullable_818 = 90 in if __nullable_817 == HxRuntime.hx_null then false else Obj.obj __nullable_817 <= __nullable_818) || (let __nullable_819 = c in if __nullable_819 == HxRuntime.hx_null then false else Obj.obj __nullable_819 = 95) || i > 0 && (let __nullable_820 = c in let __nullable_821 = 48 in if __nullable_820 == HxRuntime.hx_null then false else Obj.obj __nullable_820 >= __nullable_821) && (let __nullable_822 = c in let __nullable_823 = 57 in if __nullable_822 == HxRuntime.hx_null then false else Obj.obj __nullable_822 <= __nullable_823) in let tempNumber = ref (0 : int) in (
+      ignore (if ok then let __assign_824 = let __nullable_int_825 = c in if __nullable_int_825 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_825 in (
         tempNumber := __assign_824;
         __assign_824
+      ) else let __assign_826 = 95 in (
+        tempNumber := __assign_826;
+        __assign_826
       ));
       StringBuf.addChar (Obj.magic out) (!tempNumber)
     )) done);
     StringBuf.toString (Obj.magic out) ()
   )
-) in Obj.magic __fallback_result_826 with
-  | HxRuntime.Hx_return __ret_825 -> Obj.obj __ret_825
+) in Obj.magic __fallback_result_828 with
+  | HxRuntime.Hx_return __ret_827 -> Obj.obj __ret_827
 
 let parseBytesSubTryRaw = fun raw -> try let __fallback_result_371 = let compact = (StringTools.replace (StringTools.replace (StringTools.replace (raw : string) (" " : string) ("" : string) : string) ("\n" : string) ("" : string) : string) ("\t" : string) ("" : string) : string) in let pattern = Obj.magic (EReg.create ("^try\\{newBytes\\(([^,{}()]+),untyped__dollar__ssub\\(([^,{}()]+),([^,{}()]+),([^,{}()]+)\\)\\);\\}catch\\([^)]*\\)\\{throwError\\.OutsideBounds;\\}$" : string) ("" : string)) in (
   ignore (if not (EReg.hx_match (Obj.magic pattern) (compact : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
@@ -1693,17 +1700,6 @@ let collectReachable = fun context mainInfo -> let constructors = Obj.magic (HxA
 )
 
 let renderConstructorDefinitionPrefix = fun context fullClassName -> let name = (mangleConstructor (fullClassName : string) : string) in let tempResult = ref ("" : string) in (
-  ignore (if Obj.obj (HxAnon.get context "symbolTable") == Obj.magic (HxRuntime.hx_null) then let __assign_793 = (("var " ^ HxString.toStdString name) ^ " = " : string) in (
-    tempResult := __assign_793;
-    __assign_793
-  ) else let __assign_794 = (((HxString.toStdString (Obj.obj (HxAnon.get context "symbolTable")) ^ ".") ^ HxString.toStdString name) ^ " = " : string) in (
-    tempResult := __assign_794;
-    __assign_794
-  ));
-  !tempResult
-)
-
-let renderFunctionDefinitionPrefix = fun context fullClassName hx_method -> let name = (mangleFunction (fullClassName : string) (hx_method : string) : string) in let tempResult = ref ("" : string) in (
   ignore (if Obj.obj (HxAnon.get context "symbolTable") == Obj.magic (HxRuntime.hx_null) then let __assign_795 = (("var " ^ HxString.toStdString name) ^ " = " : string) in (
     tempResult := __assign_795;
     __assign_795
@@ -1714,18 +1710,18 @@ let renderFunctionDefinitionPrefix = fun context fullClassName hx_method -> let 
   !tempResult
 )
 
-let renderConstructorRef = fun context fullClassName -> let name = (mangleConstructor (fullClassName : string) : string) in let tempResult = ref ("" : string) in (
-  ignore (if context != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get context "symbolTable") != Obj.magic (HxRuntime.hx_null) then let __assign_797 = ((HxString.toStdString (Obj.obj (HxAnon.get context "symbolTable")) ^ ".") ^ HxString.toStdString name : string) in (
+let renderFunctionDefinitionPrefix = fun context fullClassName hx_method -> let name = (mangleFunction (fullClassName : string) (hx_method : string) : string) in let tempResult = ref ("" : string) in (
+  ignore (if Obj.obj (HxAnon.get context "symbolTable") == Obj.magic (HxRuntime.hx_null) then let __assign_797 = (("var " ^ HxString.toStdString name) ^ " = " : string) in (
     tempResult := __assign_797;
     __assign_797
-  ) else let __assign_798 = (name : string) in (
+  ) else let __assign_798 = (((HxString.toStdString (Obj.obj (HxAnon.get context "symbolTable")) ^ ".") ^ HxString.toStdString name) ^ " = " : string) in (
     tempResult := __assign_798;
     __assign_798
   ));
   !tempResult
 )
 
-let renderFunctionRef = fun context fullClassName hx_method -> let name = (mangleFunction (fullClassName : string) (hx_method : string) : string) in let tempResult = ref ("" : string) in (
+let renderConstructorRef = fun context fullClassName -> let name = (mangleConstructor (fullClassName : string) : string) in let tempResult = ref ("" : string) in (
   ignore (if context != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get context "symbolTable") != Obj.magic (HxRuntime.hx_null) then let __assign_799 = ((HxString.toStdString (Obj.obj (HxAnon.get context "symbolTable")) ^ ".") ^ HxString.toStdString name : string) in (
     tempResult := __assign_799;
     __assign_799
@@ -1736,15 +1732,26 @@ let renderFunctionRef = fun context fullClassName hx_method -> let name = (mangl
   !tempResult
 )
 
-let renderIdent = fun context name -> try let __fallback_result_773 = (
+let renderFunctionRef = fun context fullClassName hx_method -> let name = (mangleFunction (fullClassName : string) (hx_method : string) : string) in let tempResult = ref ("" : string) in (
+  ignore (if context != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get context "symbolTable") != Obj.magic (HxRuntime.hx_null) then let __assign_801 = ((HxString.toStdString (Obj.obj (HxAnon.get context "symbolTable")) ^ ".") ^ HxString.toStdString name : string) in (
+    tempResult := __assign_801;
+    __assign_801
+  ) else let __assign_802 = (name : string) in (
+    tempResult := __assign_802;
+    __assign_802
+  ));
+  !tempResult
+)
+
+let renderIdent = fun context name -> try let __fallback_result_775 = (
   ignore (if context == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (safeIdent (name : string) : string))) else ());
   ignore (if isLocalName context (name : string) then raise (HxRuntime.Hx_return (Obj.repr (safeIdent (name : string) : string))) else ());
   ignore (if Obj.obj (HxAnon.get context "selfName") != Obj.magic (HxRuntime.hx_null) && isCurrentInstanceMethod context (name : string) then raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString (Obj.obj (HxAnon.get context "selfName")) ^ ".") ^ HxString.toStdString (safeIdent (name : string)) : string))) else ());
   ignore (if Obj.obj (HxAnon.get context "selfName") != Obj.magic (HxRuntime.hx_null) && isCurrentInstanceField context (name : string) then raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString (Obj.obj (HxAnon.get context "selfName")) ^ ".") ^ HxString.toStdString (safeIdent (name : string)) : string))) else ());
   ignore (if isCurrentStaticFunction context (name : string) then raise (HxRuntime.Hx_return (Obj.repr (renderFunctionRef context (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get context "currentClass")) "fullName") : string) (name : string) : string))) else ());
   safeIdent (name : string)
-) in Obj.magic __fallback_result_773 with
-  | HxRuntime.Hx_return __ret_772 -> Obj.obj __ret_772
+) in Obj.magic __fallback_result_775 with
+  | HxRuntime.Hx_return __ret_774 -> Obj.obj __ret_774
 
 let quote = fun value -> ("\"" ^ HxString.toStdString (StringTools.replace (StringTools.replace (StringTools.replace (value : string) ("\\" : string) ("\\\\" : string) : string) ("\n" : string) ("\\n" : string) : string) ("\"" : string) ("\\\"" : string))) ^ "\""
 
@@ -1829,7 +1836,7 @@ let rec ensureDirectory = fun path -> ignore (try (
     HxFileSystem.createDirectory path
   )
 ) with
-  | HxRuntime.Hx_return __ret_827 -> Obj.obj __ret_827)
+  | HxRuntime.Hx_return __ret_829 -> Obj.obj __ret_829)
 
 let unsupported = fun kind detail -> HxType.hx_throw_typed_rtti (Obj.repr ((("Neko native backend MVP does not yet support " ^ HxString.toStdString kind) ^ ": ") ^ HxString.toStdString detail)) ["Dynamic"; "String"]
 
@@ -2292,13 +2299,13 @@ let rec renderExpr = fun context expr -> let tempResult = ref ("" : string) in (
       | HxExpr.EIdent _p0 -> let _g2 = (_p0 : string) in if HxString.equals _g2 "Web" then if HxString.equals _g1 "isModNeko" then let __assign_190 = ("false" : string) in (
         tempResult := __assign_190;
         __assign_190
-      ) else let className = (_g2 : string) in let field = (_g1 : string) in if lookupStaticFieldOwner context (className : string) (field : string) != Obj.magic (HxRuntime.hx_null) then let info = lookupStaticFieldOwner context (className : string) (field : string) in let __assign_191 = (((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get info "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
+      ) else let className = (_g2 : string) in let field = (_g1 : string) in if lookupMutableStaticMemberOwner context (className : string) (field : string) != Obj.magic (HxRuntime.hx_null) then let info = lookupMutableStaticMemberOwner context (className : string) (field : string) in let __assign_191 = (((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get info "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
         tempResult := __assign_191;
         __assign_191
       ) else let obj = Obj.magic _g in let field2 = (_g1 : string) in let __assign_192 = (((("__hxhx_field(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ", ") ^ HxString.toStdString (quote (field2 : string))) ^ ")" : string) in (
         tempResult := __assign_192;
         __assign_192
-      ) else let className = (_g2 : string) in let field = (_g1 : string) in if lookupStaticFieldOwner context (className : string) (field : string) != Obj.magic (HxRuntime.hx_null) then let info = lookupStaticFieldOwner context (className : string) (field : string) in let __assign_193 = (((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get info "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
+      ) else let className = (_g2 : string) in let field = (_g1 : string) in if lookupMutableStaticMemberOwner context (className : string) (field : string) != Obj.magic (HxRuntime.hx_null) then let info = lookupMutableStaticMemberOwner context (className : string) (field : string) in let __assign_193 = (((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get info "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (field : string))) ^ ")" : string) in (
         tempResult := __assign_193;
         __assign_193
       ) else let obj = Obj.magic _g in let field2 = (_g1 : string) in let __assign_194 = (((("__hxhx_field(" ^ HxString.toStdString (renderExpr context (Obj.magic obj))) ^ ", ") ^ HxString.toStdString (quote (field2 : string))) ^ ")" : string) in (
@@ -2647,7 +2654,7 @@ and renderAssignableExpr = fun context expr detail -> let tempResult = ref ("" :
       | HxExpr.EUntyped _ -> 27
       | HxExpr.EUnsupported _ -> 28) = 8 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_251 -> __enum_param_251
-      | _ -> failwith "Unexpected enum parameter" : string) in let className = (_g2 : string) in let field = (_g1 : string) in if lookupStaticFieldOwner context (className : string) (field : string) != Obj.magic (HxRuntime.hx_null) then let info = lookupStaticFieldOwner context (className : string) (field : string) in let __assign_252 = ((HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get info "fullName") : string)) ^ ".") ^ HxString.toStdString (safeIdent (field : string)) : string) in (
+      | _ -> failwith "Unexpected enum parameter" : string) in let className = (_g2 : string) in let field = (_g1 : string) in if lookupMutableStaticMemberOwner context (className : string) (field : string) != Obj.magic (HxRuntime.hx_null) then let info = lookupMutableStaticMemberOwner context (className : string) (field : string) in let __assign_252 = ((HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get info "fullName") : string)) ^ ".") ^ HxString.toStdString (safeIdent (field : string)) : string) in (
       tempResult := __assign_252;
       __assign_252
     ) else let obj = Obj.magic _g in let field2 = (_g1 : string) in let __assign_253 = ((HxString.toStdString (renderExpr context (Obj.magic obj)) ^ ".") ^ HxString.toStdString (safeIdent (field2 : string)) : string) in (
@@ -3100,8 +3107,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_621
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_622 = (className : string) in (
@@ -3125,8 +3132,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_625
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl1) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString1 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_626 = (className : string) in (
@@ -3150,8 +3157,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_617
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl2) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString2 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_618 = (className : string) in (
@@ -3176,8 +3183,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_633
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl3) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString3 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_634 = (className : string) in (
@@ -3201,8 +3208,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_637
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl4) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString4 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_638 = (className : string) in (
@@ -3226,8 +3233,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_641
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl5) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString5 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_642 = (className : string) in (
@@ -3251,8 +3258,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_645
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl6) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString6 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_646 = (className : string) in (
@@ -3276,8 +3283,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_649
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl7) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString7 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_650 = (className : string) in (
@@ -3301,8 +3308,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_653
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl8) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString8 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_654 = (className : string) in (
@@ -3326,8 +3333,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_657
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl9) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString9 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_658 = (className : string) in (
@@ -3351,8 +3358,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_661
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl10) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString10 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_662 = (className : string) in (
@@ -3376,8 +3383,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_629
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl11) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString11 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_630 = (className : string) in (
@@ -3402,8 +3409,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_669
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl12) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString12 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_670 = (className : string) in (
@@ -3427,8 +3434,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_673
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl13) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString13 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_674 = (className : string) in (
@@ -3452,8 +3459,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_677
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl14) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString14 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_678 = (className : string) in (
@@ -3477,8 +3484,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_665
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl15) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString15 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_666 = (className : string) in (
@@ -3504,8 +3511,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_685
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl16) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString16 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_686 = (className : string) in (
@@ -3534,8 +3541,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_690
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl17) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString17 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_691 = (className : string) in (
@@ -3559,8 +3566,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_681
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl18) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString18 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_682 = (className : string) in (
@@ -3586,8 +3593,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_698
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl19) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString19 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_699 = (className : string) in (
@@ -3611,8 +3618,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_702
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl20) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString20 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_703 = (className : string) in (
@@ -3636,8 +3643,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_694
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl21) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString21 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_695 = (className : string) in (
@@ -3662,8 +3669,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_710
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl22) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString22 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_711 = (className : string) in (
@@ -3687,8 +3694,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_714
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl23) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString23 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_715 = (className : string) in (
@@ -3712,8 +3719,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_718
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl24) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString24 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_719 = (className : string) in (
@@ -3737,8 +3744,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_722
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl25) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString25 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_723 = (className : string) in (
@@ -3762,8 +3769,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_726
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl26) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString26 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_727 = (className : string) in (
@@ -3787,8 +3794,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_730
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl27) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString27 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_731 = (className : string) in (
@@ -3812,8 +3819,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_706
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl28) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString28 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_707 = (className : string) in (
@@ -3839,8 +3846,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_738
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl29) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString29 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_739 = (className : string) in (
@@ -3864,8 +3871,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_742
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl30) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString30 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_743 = (className : string) in (
@@ -3889,8 +3896,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_734
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl31) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString31 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_735 = (className : string) in (
@@ -3915,8 +3922,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_750
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl32) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString32 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_751 = (className : string) in (
@@ -3940,8 +3947,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_754
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl33) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString33 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_755 = (className : string) in (
@@ -3966,8 +3973,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_746
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl34) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString34 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_747 = (className : string) in (
@@ -3992,8 +3999,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_609
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl35) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString35 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_610 = (className : string) in (
@@ -4017,8 +4024,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_613
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl36) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString36 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_614 = (className : string) in (
@@ -4042,8 +4049,8 @@ and renderCall = fun context callee args -> try let __fallback_result_759 = let 
               __assign_605
             ));
             let fn = Obj.magic (!tempMaybeHxFunctionDecl37) in (
-              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
-              let staticFieldOwner = lookupStaticFieldOwner context (className : string) (hx_method : string) in (
+              ignore (if info != Obj.magic (HxRuntime.hx_null) && fn != Obj.magic (HxRuntime.hx_null) && not (isDynamicStaticFunction (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (hx_method : string)) ^ "(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
+              let staticFieldOwner = lookupMutableStaticMemberOwner context (className : string) (hx_method : string) in (
                 ignore (if staticFieldOwner != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("__hxhx_field(" ^ HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get staticFieldOwner "fullName") : string))) ^ ", ") ^ HxString.toStdString (quote (hx_method : string))) ^ ")(") ^ HxString.toStdString (HxArray.join (!tempArray) ", " (fun x -> x))) ^ ")" : string))) else ());
                 let tempString37 = ref ("" : string) in (
                   ignore (if info == Obj.magic (HxRuntime.hx_null) then let __assign_606 = (className : string) in (
@@ -4215,6 +4222,10 @@ let renderSpecialFunction = fun out context info fn -> try let __fallback_result
     | _ -> ignore ()) else ());
   ignore (if HxString.equals (Obj.obj (HxAnon.get info "fullName")) "StringTools" then ignore (if HxString.equals fnName "startsWith" then ignore ((
     ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("__hxhx_string_starts_with(s, start)" : string));
+    raise (HxRuntime.Hx_return (Obj.repr true))
+  )) else ignore ()) else ());
+  ignore (if HxString.equals (Obj.obj (HxAnon.get info "fullName")) "Sys" then ignore (if HxString.equals fnName "time" then ignore ((
+    ignore (renderRuntimeForwarder (Obj.magic out) context info (Obj.magic fn) ("$loader.loadprim(\"std@sys_time\", 0)()" : string));
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) else ignore ()) else ());
   ignore (if HxString.equals (Obj.obj (HxAnon.get info "fullName")) "haxe.rtti.Meta" then ignore (match fnName with
@@ -4722,6 +4733,7 @@ let renderFunction = fun out context info fn -> ignore (try (
         renderStmt (Obj.magic out) functionContext (Obj.magic stmt) ("  " : string)
       )) done);
       ignore (HxArray.push out (renderFunctionEnd useVarArgs));
+      ignore (if isDynamicStaticFunction (Obj.magic fn) then ignore (HxArray.push out (((((HxString.toStdString (renderStaticObjectRef (Obj.obj (HxAnon.get info "fullName") : string)) ^ ".") ^ HxString.toStdString (safeIdent (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ " = ") ^ HxString.toStdString (renderFunctionRef context (Obj.obj (HxAnon.get info "fullName") : string) (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ ";")) else ());
       HxArray.push out ""
     )
   )
