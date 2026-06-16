@@ -1058,6 +1058,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final mainLoopSource = File.getContent(sourcePath);
 		assertContains(mainLoopSource, "var __hxhx_main_loop_add = function(callback) {", "expected MainLoop.add Neko runtime helper");
+		assertContains(mainLoopSource, "$" + "not(event.stopped)", "expected MainLoop.add helper to use Neko boolean-not syntax");
 		assertContains(mainLoopSource, "__hxhx_main_loop_add(function()", "expected MainLoop.add calls to lower to the runtime helper");
 
 		deleteRecursive(outDir);

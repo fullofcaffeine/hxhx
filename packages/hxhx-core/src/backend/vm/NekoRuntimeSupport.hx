@@ -177,7 +177,7 @@ class NekoRuntimeSupport {
 		out.push("  event.f = callback;");
 		out.push("  event.stopped = false;");
 		out.push("  event.stop = function() { event.stopped = true; return null; };");
-		out.push("  event.call = function() { if (!event.stopped && callback != null) callback(); return null; };");
+		out.push("  event.call = function() { if ($not(event.stopped) && callback != null) callback(); return null; };");
 		out.push("  event.delay = function(_seconds) { event.call(); return event; };");
 		out.push("  return event;");
 		out.push("}");

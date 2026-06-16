@@ -180,7 +180,7 @@ let render = fun out classes symbolTable -> ignore ((
     ignore (HxArray.push out "  event.f = callback;");
     ignore (HxArray.push out "  event.stopped = false;");
     ignore (HxArray.push out "  event.stop = function() { event.stopped = true; return null; };");
-    ignore (HxArray.push out "  event.call = function() { if (!event.stopped && callback != null) callback(); return null; };");
+    ignore (HxArray.push out "  event.call = function() { if ($not(event.stopped) && callback != null) callback(); return null; };");
     ignore (HxArray.push out "  event.delay = function(_seconds) { event.call(); return event; };");
     ignore (HxArray.push out "  return event;");
     ignore (HxArray.push out "}");
