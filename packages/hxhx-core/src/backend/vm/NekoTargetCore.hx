@@ -579,6 +579,15 @@ class NekoTargetCore {
 	static function collectCallRefs(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, addConstructor:NekoClassInfo->Void,
 			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
 		switch (callee) {
+			case EField(receiver, "addCases"):
+				final packageName = utestAddCasesPackageArg(args);
+				if (packageName != null) {
+					for (info in utestAddCasesCandidates(context, packageName))
+						addConstructor(info);
+					collectExprRefs(context, receiver, addConstructor, addStatic);
+				} else {
+					collectExprRefs(context, callee, addConstructor, addStatic);
+				}
 			case EField(EIdent(className), method) if (isUpperStart(className)):
 				final info = lookupClass(context, className);
 				final fn = info == null ? null : findFunction(info.cls, method, true);
@@ -603,6 +612,37 @@ class NekoTargetCore {
 		}
 		for (arg in args)
 			collectExprRefs(context, arg, addConstructor, addStatic);
+	}
+
+	static function utestAddCasesPackageArg(args:Array<HxExpr>):Null<String> {
+		if (args == null || args.length == 0)
+			return null;
+		return switch (args[0]) {
+			case EString(value): value;
+			case _: null;
+		}
+	}
+
+	static function utestAddCasesCandidates(context:NekoEmitContext, packageName:String):Array<NekoClassInfo> {
+		final out = new Array<NekoClassInfo>();
+		if (context == null || context.classes == null || packageName == null || packageName.length == 0)
+			return out;
+		final prefix = packageName + ".";
+		final seen = new StringMap<Bool>();
+		for (info in context.classes) {
+			if (seen.exists(info.fullName))
+				continue;
+			seen.set(info.fullName, true);
+			if (!StringTools.startsWith(info.fullName, prefix))
+				continue;
+			if (!StringTools.startsWith(info.shortName, "Test"))
+				continue;
+			if (HxClassDecl.getIsInterface(info.cls) || isAbstractInfo(info))
+				continue;
+			out.push(info);
+		}
+		out.sort(function(a, b) return Reflect.compare(a.fullName, b.fullName));
+		return out;
 	}
 
 	static function renderFunction(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Void {
@@ -925,6 +965,7 @@ class NekoTargetCore {
 				out.push(indent + "return " + renderExpr(context, expr) + ";");
 			case SExpr(ECall(ESuper, _), _):
 				out.push(indent + "null;");
+			case SExpr(ECall(EField(receiver, "addCases"), args), _) if (renderUtestAddCasesStmt(out, context, receiver, args, indent)):
 			case SExpr(EBinop("=", left, right), _) if (shouldSplitStatementAssignmentRhs(context, right)):
 				renderSplitAssignmentStmt(out, context, left, right, indent);
 			case SExpr(expr, _):
@@ -957,6 +998,27 @@ class NekoTargetCore {
 		final target = renderAssignableExpr(context, left, "assignment");
 		out.push(indent + "var __hxhx_assign_tmp = " + renderExpr(context, right) + ";");
 		out.push(indent + target + " = __hxhx_assign_tmp;");
+	}
+
+	static function renderUtestAddCasesStmt(out:Array<String>, context:NekoEmitContext, receiver:HxExpr, args:Array<HxExpr>, indent:String):Bool {
+		final packageName = utestAddCasesPackageArg(args);
+		if (packageName == null)
+			return false;
+		final cases = utestAddCasesCandidates(context, packageName);
+		if (cases.length == 0)
+			return false;
+		final runner = renderExpr(context, receiver);
+		for (info in cases) {
+			out.push(indent
+				+ "__hxhx_field("
+				+ runner
+				+ ", "
+				+ quote("addCase")
+				+ ")("
+				+ renderConstructorRef(context, info.fullName)
+				+ "());");
+		}
+		return true;
 	}
 
 	static function renderControlBlock(out:Array<String>, context:NekoEmitContext, header:String, body:HxStmt, indent:String):Void {

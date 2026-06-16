@@ -78,6 +78,13 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function programMany(sources:Array<{path:String, source:String}>) {
+		final modules = new Array<TypedModule>();
+		for (source in sources)
+			modules.push(TyperStage.typeModule(ParserStage.parse(source.source, source.path)));
+		return MacroStage.expandProgram(modules, []);
+	}
+
 	static function supportSource(split:{support:Array<{source:String}>}):String {
 		final buf = new StringBuf();
 		for (part in split.support) {
@@ -187,6 +194,32 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(splitVarArgsSource, "var teardown = __hxhx_args[2];", "expected method varargs to bind omitted arguments as null");
 		assertContains(splitVarArgsSource, "if (prefix == null) prefix = \"test\";", "expected method varargs to apply parsed default values");
 		assertContains(splitVarArgsSource, '__hxhx_field(runner, "addCase")("case");', "expected receiver calls to route through property-aware field reads");
+
+		final splitAddCases = @:privateAccess NekoTargetCore.renderSplitProgram(programMany([
+			{
+				path: "utest/Runner.hx",
+				source: 'package utest; class Runner { public function new() {} public function addCase(test) {} public macro function addCases(path:String, ?recursive:Bool = true) {} public function run() {} }'
+			},
+			{path: "cases/TestOne.hx", source: 'package cases; class TestOne { public function new() {} public function testOne() {} }'},
+			{path: "cases/TestTwo.hx", source: 'package cases; class TestTwo { public function new() {} public function testTwo() {} }'},
+			{path: "cases/Helper.hx", source: 'package cases; class Helper { public function new() {} }'},
+			{
+				path: "Main.hx",
+				source: 'import utest.Runner; class Main { static function main() { var runner = new Runner(); runner.addCases("cases"); runner.run(); } }'
+			}
+		]), splitContext, sourcePath);
+		final splitAddCasesSource = supportSource(splitAddCases);
+		assertContains(splitAddCasesSource, "__hxhx_symbols.__hxhx_new_cases_TestOne = function()",
+			"utest addCases lowering should keep the first discovered test constructor reachable");
+		assertContains(splitAddCasesSource, "__hxhx_symbols.__hxhx_new_cases_TestTwo = function()",
+			"utest addCases lowering should keep the second discovered test constructor reachable");
+		assertContains(splitAddCasesSource, '__hxhx_field(runner, "addCase")(__hxhx_symbols.__hxhx_new_cases_TestOne());',
+			"utest addCases lowering should register the first package test class");
+		assertContains(splitAddCasesSource, '__hxhx_field(runner, "addCase")(__hxhx_symbols.__hxhx_new_cases_TestTwo());',
+			"utest addCases lowering should register the second package test class");
+		assertNotContains(splitAddCasesSource, '__hxhx_field(runner, "addCases")("cases");',
+			"utest addCases macro calls must not remain as runtime addCases calls");
+		assertNotContains(splitAddCasesSource, "__hxhx_new_cases_Helper", "utest addCases lowering should not register non-Test helper classes");
 
 		final splitStaticFields = @:privateAccess NekoTargetCore.renderSplitProgram(program('class AssertLike { public static var results:Dynamic; public dynamic static function createAsync(?x:Int) return x == null ? 3 : x; } class Handler { public function new() {} public function bind() { AssertLike.results = 1; AssertLike.createAsync = (?x:Int) -> x == null ? 7 : x; } } class Main { static function main() { Sys.println(AssertLike.createAsync()); var h = new Handler(); h.bind(); Sys.println(AssertLike.results); Sys.println(AssertLike.createAsync()); } }'),
 			splitContext, sourcePath);
