@@ -269,6 +269,8 @@ let nekoCandidateLibraryRoots = fun classPath -> let out = Obj.magic (HxArray.cr
   )
 )
 
+let isNekoPlatformPath = fun path platforms -> let normalized = (stripTrailingSlashes (Haxe_io_Path.normalize (path : string) : string) : string) in let base = (Haxe_io_Path.withoutDirectory (normalized : string) : string) in HxArray.indexOf platforms base 0 <> -1
+
 let trailingSlash = fun path -> let tempResult = ref ("" : string) in (
   ignore (if StringTools.endsWith (path : string) ("/" : string) then let __assign_74 = (path : string) in (
     tempResult := __assign_74;
@@ -317,17 +319,20 @@ let collectNekoNdllPaths = fun libsResolved cwd -> let platforms = Obj.magic (ne
       ));
       let nativeRoot = (nekoNativeLinkPath (arg : string) : string) in (
         ignore (if nativeRoot == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
-        let _g3 = ref 0 in while !_g3 < HxArray.length platforms do ignore (let platform = (HxArray.get (Obj.magic platforms) (!_g3) : string) in (
-          ignore (let __old_27 = !_g3 in let __new_28 = HxInt.add __old_27 1 in (
-            ignore (_g3 := __new_28);
-            __new_28
-          ));
-          let ndll = (trailingSlash (Haxe_io_Path.normalize (Haxe_io_Path.join (Obj.magic (let __arr_29 = HxArray.create () in (
-            ignore (HxArray.push __arr_29 (Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (nativeRoot : string)));
-            ignore (HxArray.push __arr_29 platform);
-            __arr_29
-          ))) : string) : string) : string) in if HxFileSystem.exists ndll && HxFileSystem.isDirectory ndll && HxArray.indexOf out ndll 0 = -1 then ignore (HxArray.push out ndll) else ()
-        )) done
+        let nativeRootAbs = (Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (nativeRoot : string) : string) in (
+          ignore (let _g3 = ref 0 in while !_g3 < HxArray.length platforms do ignore (let platform = (HxArray.get (Obj.magic platforms) (!_g3) : string) in (
+            ignore (let __old_27 = !_g3 in let __new_28 = HxInt.add __old_27 1 in (
+              ignore (_g3 := __new_28);
+              __new_28
+            ));
+            let ndll = (trailingSlash (Haxe_io_Path.normalize (Haxe_io_Path.join (Obj.magic (let __arr_29 = HxArray.create () in (
+              ignore (HxArray.push __arr_29 nativeRootAbs);
+              ignore (HxArray.push __arr_29 platform);
+              __arr_29
+            ))) : string) : string) : string) in if HxFileSystem.exists ndll && HxFileSystem.isDirectory ndll && HxArray.indexOf out ndll 0 = -1 then ignore (HxArray.push out ndll) else ()
+          )) done);
+          let direct = (trailingSlash (Haxe_io_Path.normalize (nativeRootAbs : string) : string) : string) in if isNekoPlatformPath (direct : string) (Obj.magic platforms) && HxFileSystem.exists direct && HxFileSystem.isDirectory direct && HxArray.indexOf out direct 0 = -1 then ignore (HxArray.push out direct) else ()
+        )
       )
     )) with
       | HxRuntime.Hx_continue -> () done with

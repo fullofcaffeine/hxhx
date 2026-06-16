@@ -98,6 +98,21 @@ class M14Stage3LuaRunSupportChild {
 					if (paths.length != 1)
 						throw "expected one Neko ndll path, got " + paths.length;
 					Sys.println("ndll-path=" + paths[0]);
+				case "collect-neko-ndll-direct-platform":
+					final libRoot = Path.join([tmp, "dummy_ndll"]);
+					final ndll = Path.join([libRoot, "ndll", Stage3SetupSupport.nekoNdllHostPlatform()]);
+					mkdirp(ndll);
+					final paths = Stage3SetupSupport.collectNekoNdllPaths([
+						{
+							classPaths: [],
+							defines: [],
+							macros: [],
+							unknownArgs: ["-L dummy_ndll/ndll/" + Stage3SetupSupport.nekoNdllHostPlatform() + "/"]
+						}
+					], tmp);
+					if (paths.length != 1)
+						throw "expected one direct Neko ndll path, got " + paths.length;
+					Sys.println("ndll-direct-path=" + paths[0]);
 				case "library-resolver-haxelib-always":
 					final libRoot = Path.join([tmp, "dummy_ndll"]);
 					mkdirp(Path.join([libRoot, "ndll", Stage3SetupSupport.nekoNdllHostPlatform()]));

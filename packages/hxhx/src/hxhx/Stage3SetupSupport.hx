@@ -74,11 +74,18 @@ class Stage3SetupSupport {
 				final nativeRoot = nekoNativeLinkPath(arg);
 				if (nativeRoot == null)
 					continue;
+				final nativeRootAbs = Stage3PathSupport.absFromCwd(cwd, nativeRoot);
 				for (platform in platforms) {
-					final ndll = trailingSlash(Path.normalize(Path.join([Stage3PathSupport.absFromCwd(cwd, nativeRoot), platform])));
+					final ndll = trailingSlash(Path.normalize(Path.join([nativeRootAbs, platform])));
 					if (sys.FileSystem.exists(ndll) && sys.FileSystem.isDirectory(ndll) && out.indexOf(ndll) == -1)
 						out.push(ndll);
 				}
+				final direct = trailingSlash(Path.normalize(nativeRootAbs));
+				if (isNekoPlatformPath(direct, platforms)
+					&& sys.FileSystem.exists(direct)
+					&& sys.FileSystem.isDirectory(direct)
+					&& out.indexOf(direct) == -1)
+					out.push(direct);
 			}
 		}
 		return out;
@@ -152,6 +159,12 @@ class Stage3SetupSupport {
 			return null;
 		final path = trim(arg.substr(3));
 		return path.length == 0 ? null : path;
+	}
+
+	static function isNekoPlatformPath(path:String, platforms:Array<String>):Bool {
+		final normalized = stripTrailingSlashes(Path.normalize(path));
+		final base = Path.withoutDirectory(normalized);
+		return platforms.indexOf(base) != -1;
 	}
 
 	static function stripTrailingSlashes(path:String):String {
