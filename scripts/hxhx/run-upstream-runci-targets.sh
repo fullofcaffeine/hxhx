@@ -974,7 +974,7 @@ capture_target_failure_artifacts() {
     copied=1
     cp "$source_file" "$target_artifacts/$(basename "$source_file")"
     nl -ba "$source_file" >"$target_artifacts/$(basename "$source_file").nl.txt"
-  done < <(find "$UPSTREAM_DIR/tests" -path '*/bin/*.neko' -type f -size -2M 2>/dev/null | sort)
+  done < <(find "$UPSTREAM_DIR/tests" \( -path '*/bin/*.neko' -o -path '*/export/*.neko' \) -type f -size -2M 2>/dev/null | sort)
 
   issue10937_dir="$UPSTREAM_DIR/tests/misc/neko/projects/Issue10937"
   if [ -d "$issue10937_dir" ]; then
