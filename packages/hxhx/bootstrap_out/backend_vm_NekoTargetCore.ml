@@ -640,50 +640,6 @@ let mapKindForTypePath = fun typePath -> let tempResult = ref (Obj.magic (HxRunt
 
 let isListTypePath = fun typePath -> HxString.equals typePath "List" || HxString.equals typePath "haxe.ds.List"
 
-let shouldSplitStatementAssignmentRhs = fun expr -> let tempResult = ref (false : bool) in (
-  ignore (if (match expr with
-    | HxExpr.ENull -> 0
-    | HxExpr.EBool _ -> 1
-    | HxExpr.EString _ -> 2
-    | HxExpr.EInt _ -> 3
-    | HxExpr.EFloat _ -> 4
-    | HxExpr.EEnumValue _ -> 5
-    | HxExpr.EThis -> 6
-    | HxExpr.ESuper -> 7
-    | HxExpr.EIdent _ -> 8
-    | HxExpr.EField (_, _) -> 9
-    | HxExpr.ECall (_, _) -> 10
-    | HxExpr.EMacroExpr (_, _) -> 11
-    | HxExpr.EMacroType _ -> 12
-    | HxExpr.ELambda (_, _) -> 13
-    | HxExpr.ETryCatchRaw _ -> 14
-    | HxExpr.ESwitchRaw _ -> 15
-    | HxExpr.ESwitch (_, _, _) -> 16
-    | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
-    | HxExpr.EBinop (_, _, _) -> 19
-    | HxExpr.ETernary (_, _, _) -> 20
-    | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-    | HxExpr.EArrayDecl _ -> 23
-    | HxExpr.EArrayAccess (_, _) -> 24
-    | HxExpr.ERange (_, _) -> 25
-    | HxExpr.ECast (_, _) -> 26
-    | HxExpr.EUntyped _ -> 27
-    | HxExpr.EUnsupported _ -> 28) = 17 then let _g = (match expr with
-    | HxExpr.ENew (__enum_param_155, _) -> __enum_param_155
-    | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (match expr with
-    | HxExpr.ENew (_, __enum_param_156) -> __enum_param_156
-    | _ -> failwith "Unexpected enum parameter") in let typePath = (_g : string) in let args = Obj.magic _g1 in let __assign_157 = isListTypePath (typePath : string) && HxArray.length args = 0 in (
-    tempResult := __assign_157;
-    __assign_157
-  ) else let __assign_158 = false in (
-    tempResult := __assign_158;
-    __assign_158
-  ));
-  !tempResult
-)
-
 let rec patternNeedsNekoIfLowering = fun pattern -> let tempResult = ref (false : bool) in (
   ignore (match pattern with
     | HxSwitchPattern.PEnumValue _p0 -> (
@@ -955,6 +911,50 @@ let lookupClass = fun context typePath -> try let __fallback_result_764 = (
   )
 ) in Obj.magic __fallback_result_764 with
   | HxRuntime.Hx_return __ret_763 -> Obj.magic __ret_763
+
+let shouldSplitStatementAssignmentRhs = fun context expr -> let tempResult = ref (false : bool) in (
+  ignore (if (match expr with
+    | HxExpr.ENull -> 0
+    | HxExpr.EBool _ -> 1
+    | HxExpr.EString _ -> 2
+    | HxExpr.EInt _ -> 3
+    | HxExpr.EFloat _ -> 4
+    | HxExpr.EEnumValue _ -> 5
+    | HxExpr.EThis -> 6
+    | HxExpr.ESuper -> 7
+    | HxExpr.EIdent _ -> 8
+    | HxExpr.EField (_, _) -> 9
+    | HxExpr.ECall (_, _) -> 10
+    | HxExpr.EMacroExpr (_, _) -> 11
+    | HxExpr.EMacroType _ -> 12
+    | HxExpr.ELambda (_, _) -> 13
+    | HxExpr.ETryCatchRaw _ -> 14
+    | HxExpr.ESwitchRaw _ -> 15
+    | HxExpr.ESwitch (_, _, _) -> 16
+    | HxExpr.ENew (_, _) -> 17
+    | HxExpr.EUnop (_, _) -> 18
+    | HxExpr.EBinop (_, _, _) -> 19
+    | HxExpr.ETernary (_, _, _) -> 20
+    | HxExpr.EAnon (_, _) -> 21
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
+    | HxExpr.EArrayDecl _ -> 23
+    | HxExpr.EArrayAccess (_, _) -> 24
+    | HxExpr.ERange (_, _) -> 25
+    | HxExpr.ECast (_, _) -> 26
+    | HxExpr.EUntyped _ -> 27
+    | HxExpr.EUnsupported _ -> 28) = 17 then let _g = (match expr with
+    | HxExpr.ENew (__enum_param_155, _) -> __enum_param_155
+    | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (match expr with
+    | HxExpr.ENew (_, __enum_param_156) -> __enum_param_156
+    | _ -> failwith "Unexpected enum parameter") in let typePath = (_g : string) in let args = Obj.magic _g1 in let __assign_157 = isListTypePath (typePath : string) && HxArray.length args = 0 || mapKindForTypePath (typePath : string) != Obj.magic (HxRuntime.hx_null) || lookupClass context (typePath : string) != Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_157;
+    __assign_157
+  ) else let __assign_158 = false in (
+    tempResult := __assign_158;
+    __assign_158
+  ));
+  !tempResult
+)
 
 let lookupBytesClass = fun context -> let qualified = lookupClass context ("haxe.io.Bytes" : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (if qualified == Obj.magic (HxRuntime.hx_null) then let __assign_397 = Obj.magic (lookupClass context ("Bytes" : string)) in (
@@ -4321,10 +4321,8 @@ let renderSpecialFunction = fun out context info fn -> try let __fallback_result
   | HxRuntime.Hx_return __ret_119 -> Obj.obj __ret_119
 
 let renderSplitAssignmentStmt = fun out context left right indent -> ignore (let target = (renderAssignableExpr context (Obj.magic left) ("assignment" : string) : string) in (
-  ignore (HxArray.push out (HxString.toStdString indent ^ "{"));
-  ignore (HxArray.push out (((HxString.toStdString indent ^ "  var __hxhx_assign_tmp = ") ^ HxString.toStdString (renderExpr context (Obj.magic right))) ^ ";"));
-  ignore (HxArray.push out (((HxString.toStdString indent ^ "  ") ^ HxString.toStdString target) ^ " = __hxhx_assign_tmp;"));
-  HxArray.push out (HxString.toStdString indent ^ "}")
+  ignore (HxArray.push out (((HxString.toStdString indent ^ "var __hxhx_assign_tmp = ") ^ HxString.toStdString (renderExpr context (Obj.magic right))) ^ ";"));
+  HxArray.push out ((HxString.toStdString indent ^ HxString.toStdString target) ^ " = __hxhx_assign_tmp;")
 ))
 
 let rec renderStmt = fun out context stmt indent -> ignore (match stmt with
@@ -4448,7 +4446,7 @@ let rec renderStmt = fun out context stmt indent -> ignore (match stmt with
           | HxExpr.EUntyped _ -> 27
           | HxExpr.EUnsupported _ -> 28) = 7 then ignore (HxArray.push out (HxString.toStdString indent ^ "null;")) else ignore (let expr = Obj.magic _g in HxArray.push out ((HxString.toStdString indent ^ HxString.toStdString (renderExpr context (Obj.magic expr))) ^ ";"))
       ))
-      | HxExpr.EBinop (_p0, _p1, _p2) -> ignore (let _g2 = (_p0 : string) in let _g3 = Obj.magic _p1 in let _g4 = Obj.magic _p2 in if HxString.equals _g2 "=" then ignore (let left = Obj.magic _g3 in let right = Obj.magic _g4 in if shouldSplitStatementAssignmentRhs (Obj.magic right) then ignore (renderSplitAssignmentStmt (Obj.magic out) context (Obj.magic left) (Obj.magic right) (indent : string)) else ignore (let expr = Obj.magic _g in HxArray.push out ((HxString.toStdString indent ^ HxString.toStdString (renderExpr context (Obj.magic expr))) ^ ";"))) else ignore (let expr = Obj.magic _g in HxArray.push out ((HxString.toStdString indent ^ HxString.toStdString (renderExpr context (Obj.magic expr))) ^ ";")))
+      | HxExpr.EBinop (_p0, _p1, _p2) -> ignore (let _g2 = (_p0 : string) in let _g3 = Obj.magic _p1 in let _g4 = Obj.magic _p2 in if HxString.equals _g2 "=" then ignore (let left = Obj.magic _g3 in let right = Obj.magic _g4 in if shouldSplitStatementAssignmentRhs context (Obj.magic right) then ignore (renderSplitAssignmentStmt (Obj.magic out) context (Obj.magic left) (Obj.magic right) (indent : string)) else ignore (let expr = Obj.magic _g in HxArray.push out ((HxString.toStdString indent ^ HxString.toStdString (renderExpr context (Obj.magic expr))) ^ ";"))) else ignore (let expr = Obj.magic _g in HxArray.push out ((HxString.toStdString indent ^ HxString.toStdString (renderExpr context (Obj.magic expr))) ^ ";")))
       | _ -> ignore (let expr = Obj.magic _g in HxArray.push out ((HxString.toStdString indent ^ HxString.toStdString (renderExpr context (Obj.magic expr))) ^ ";"))
   )))
 and renderControlBlock = fun out context header body indent -> ignore (let blockContext = childContext context in (

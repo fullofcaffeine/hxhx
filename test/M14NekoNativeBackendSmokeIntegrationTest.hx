@@ -711,12 +711,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Dispatcher { public function new() {} public function add(handler) {} } class Runner { public var onProgress:Dispatcher; public function new() { onProgress = new Dispatcher(); } } class Main { static function main() { var runner = new Runner(); runner.onProgress.add(function(_) return null); } }'),
 			context);
 		final instanceFieldSource = File.getContent(sourcePath);
-		assertContains(instanceFieldSource, "(__hxhx_self.onProgress = __hxhx_new_Dispatcher())",
-			"expected constructor assignment to target the instance field");
+		assertContains(instanceFieldSource, "var __hxhx_assign_tmp = __hxhx_new_Dispatcher();",
+			"expected constructor-call assignment RHS to split through a temp");
+		assertContains(instanceFieldSource, "__hxhx_self.onProgress = __hxhx_assign_tmp;",
+			"expected split constructor assignment to target the instance field");
 		assertContains(instanceFieldSource, "__hxhx_field(__hxhx_field(runner, \"onProgress\"), \"add\")(function(_) { return null; });",
 			"expected initialized instance field method call to stay property-aware and qualified");
 		assertNotContains(instanceFieldSource, "(onProgress = __hxhx_new_Dispatcher())",
 			"constructor field assignment must not become an unqualified local assignment");
+		assertNotContains(instanceFieldSource, "(__hxhx_self.onProgress = __hxhx_new_Dispatcher())",
+			"constructor-call assignment must avoid the direct assignment-call shape that Neko rejects");
 
 		deleteRecursive(outDir);
 
