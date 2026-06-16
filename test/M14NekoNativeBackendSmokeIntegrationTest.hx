@@ -631,6 +631,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Dispatcher { var handlers:Array<Dynamic>; public function new() { handlers = new Array(); } public function add(handler) { handlers.push(handler); } } class Main { static function main() { var dispatcher = new Dispatcher(); dispatcher.add(function(_) return null); } }'),
+			context);
+		final arrayCtorSource = File.getContent(sourcePath);
+		assertContains(arrayCtorSource, "(__hxhx_self.handlers = $array())", "expected new Array() instance-field assignment to lower to native Neko array");
+		assertContains(arrayCtorSource, "__hxhx_array_push(__hxhx_self.handlers, handler)",
+			"expected Array.push on the initialized instance field to use native Neko array helper");
+		assertNotContains(arrayCtorSource, "__hxhx_new_Array()", "new Array() must not construct a Haxe object for Neko array operations");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Base { public function new() {} } class Child extends Base { public function new() { super(); } } class Main { static function main() { var child = new Child(); } }'),
 			context);
 		final superCtorSource = File.getContent(sourcePath);

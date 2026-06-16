@@ -2676,27 +2676,30 @@ and renderAnon = fun context fieldNames fieldValues -> let tmp = ("__hxhx_o" : s
     HxArray.join parts " " (fun x -> x)
   )
 )
-and renderNew = fun context typePath args -> try let __fallback_result_334 = let mapKind = (mapKindForTypePath (typePath : string) : string) in (
-  ignore (if mapKind != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_map_new(" ^ HxString.toStdString (quote (mapKind : string))) ^ ")" : string))) else ());
-  let info = lookupClass context (typePath : string) in (
-    ignore (if info != Obj.magic (HxRuntime.hx_null) then ignore (let _g = Obj.magic (let __arr_329 = HxArray.create () in __arr_329) in let _g1 = ref 0 in (
-      ignore (while !_g1 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g1)) in (
-        ignore (let __old_330 = !_g1 in let __new_331 = HxInt.add __old_330 1 in (
-          ignore (_g1 := __new_331);
-          __new_331
-        ));
-        HxArray.push _g (renderExpr context (Obj.magic arg))
-      )) done);
-      let tempArray = Obj.magic _g in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderConstructorRef context (Obj.obj (HxAnon.get info "fullName") : string)) ^ "(") ^ HxString.toStdString (HxArray.join tempArray ", " (fun x -> x))) ^ ")")))
-    )) else ());
-    let tmp = ("__hxhx_o" : string) in let parts = Obj.magic (let __arr_332 = HxArray.create () in (
-      ignore (HxArray.push __arr_332 (("(function() { var " ^ HxString.toStdString tmp) ^ " = $new(null);"));
-      __arr_332
-    )) in (
-      ignore (HxArray.push parts (((HxString.toStdString tmp ^ ".__hx_ctor = ") ^ HxString.toStdString (quote (typePath : string))) ^ ";"));
-      ignore (HxArray.push parts (((HxString.toStdString tmp ^ ".__hx_params = ") ^ HxString.toStdString (renderArray context (Obj.magic args))) ^ ";"));
-      ignore (HxArray.push parts (("return " ^ HxString.toStdString tmp) ^ "; })()"));
-      HxArray.join parts " " (fun x -> x)
+and renderNew = fun context typePath args -> try let __fallback_result_334 = (
+  ignore (if (HxString.equals typePath "Array" || HxString.equals typePath "StdTypes.Array") && HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr ("$array()" : string))) else ());
+  let mapKind = (mapKindForTypePath (typePath : string) : string) in (
+    ignore (if mapKind != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_map_new(" ^ HxString.toStdString (quote (mapKind : string))) ^ ")" : string))) else ());
+    let info = lookupClass context (typePath : string) in (
+      ignore (if info != Obj.magic (HxRuntime.hx_null) then ignore (let _g = Obj.magic (let __arr_329 = HxArray.create () in __arr_329) in let _g1 = ref 0 in (
+        ignore (while !_g1 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g1)) in (
+          ignore (let __old_330 = !_g1 in let __new_331 = HxInt.add __old_330 1 in (
+            ignore (_g1 := __new_331);
+            __new_331
+          ));
+          HxArray.push _g (renderExpr context (Obj.magic arg))
+        )) done);
+        let tempArray = Obj.magic _g in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderConstructorRef context (Obj.obj (HxAnon.get info "fullName") : string)) ^ "(") ^ HxString.toStdString (HxArray.join tempArray ", " (fun x -> x))) ^ ")")))
+      )) else ());
+      let tmp = ("__hxhx_o" : string) in let parts = Obj.magic (let __arr_332 = HxArray.create () in (
+        ignore (HxArray.push __arr_332 (("(function() { var " ^ HxString.toStdString tmp) ^ " = $new(null);"));
+        __arr_332
+      )) in (
+        ignore (HxArray.push parts (((HxString.toStdString tmp ^ ".__hx_ctor = ") ^ HxString.toStdString (quote (typePath : string))) ^ ";"));
+        ignore (HxArray.push parts (((HxString.toStdString tmp ^ ".__hx_params = ") ^ HxString.toStdString (renderArray context (Obj.magic args))) ^ ";"));
+        ignore (HxArray.push parts (("return " ^ HxString.toStdString tmp) ^ "; })()"));
+        HxArray.join parts " " (fun x -> x)
+      )
     )
   )
 ) in Obj.magic __fallback_result_334 with

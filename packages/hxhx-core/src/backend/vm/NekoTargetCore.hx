@@ -1134,6 +1134,8 @@ class NekoTargetCore {
 	}
 
 	static function renderNew(context:NekoEmitContext, typePath:String, args:Array<HxExpr>):String {
+		if ((typePath == "Array" || typePath == "StdTypes.Array") && args.length == 0)
+			return "$array()";
 		final mapKind = mapKindForTypePath(typePath);
 		if (mapKind != null)
 			return "__hxhx_map_new(" + quote(mapKind) + ")";
