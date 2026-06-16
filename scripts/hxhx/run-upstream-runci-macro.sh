@@ -1375,7 +1375,11 @@ cat >"$WRAP_DIR/neko" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 if [ "${NEKO_WRAPPER_EXPORT_NEKOPATH}" = "1" ] && [ -n "${NEKOPATH_DIR}" ]; then
-  export NEKOPATH="${NEKOPATH_DIR}"
+  if [ -n "\${NEKOPATH:-}" ]; then
+    export NEKOPATH="\${NEKOPATH}:${NEKOPATH_DIR}"
+  else
+    export NEKOPATH="${NEKOPATH_DIR}"
+  fi
   export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
   export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
   export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
