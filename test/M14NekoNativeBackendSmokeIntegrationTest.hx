@@ -555,6 +555,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('import neko.Web; class Main { static function main() { if (Web.isModNeko) Web.setHeader("Content-Type", "text/plain"); Sys.println("ok"); } }'),
+			context);
+		final importedWebSource = File.getContent(sourcePath);
+		assertContains(importedWebSource, "if false", "expected imported Web.isModNeko CLI lowering");
+		assertContains(importedWebSource, "null;", "expected imported Web.setHeader no-op lowering");
+		assertNotContains(importedWebSource, "Web.isModNeko", "imported Web.isModNeko must not emit a runtime field access");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('package unit; class UnitBuilder { public static function generateSpec(path:String) return [path]; } class Main { static function main() { var specs = unit.UnitBuilder.generateSpec("src/unitstd"); Sys.println(specs.length); } }'),
 			context);
 		final unitBuilderSource = File.getContent(sourcePath);

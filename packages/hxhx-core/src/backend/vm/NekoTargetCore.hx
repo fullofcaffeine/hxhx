@@ -854,7 +854,7 @@ class NekoTargetCore {
 				unsupportedExpr("super");
 			case EField(ESuper, _):
 				"null";
-			case EField(EField(EIdent("neko"), "Web"), "isModNeko"):
+			case EField(EField(EIdent("neko"), "Web"), "isModNeko") | EField(EIdent("Web"), "isModNeko"):
 				"false";
 			case EIdent(name):
 				if (context.selfName != null && isCurrentInstanceMethod(context, name)) context.selfName + "." + safeIdent(name); else safeIdent(name);
@@ -1767,7 +1767,7 @@ class NekoTargetCore {
 				return "null";
 			case EField(EIdent("Compiler"), "excludeFile") | EField(EField(EField(EIdent("haxe"), "macro"), "Compiler"), "excludeFile"):
 				return "null";
-			case EField(EField(EIdent("neko"), "Web"), "setHeader"):
+			case EField(EField(EIdent("neko"), "Web"), "setHeader") | EField(EIdent("Web"), "setHeader"):
 				return "null";
 			case EField(EIdent("Type"), "getClass") if (args.length >= 1):
 				return "__hxhx_type_get_class(" + renderedArgs[0] + ")";
