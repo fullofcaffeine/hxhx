@@ -317,6 +317,30 @@ class Hxml {
 		var cur = new StringBuf();
 		var quote:Int = 0; // 0 = none, otherwise quote char code
 
+		function restFlagAt(prefix:String):Bool {
+			final p = prefix.length;
+			if (i + p > s.length || s.substr(i, p) != prefix)
+				return false;
+			final j = i + p;
+			return j >= s.length || isSpace(s.charCodeAt(j));
+		}
+
+		function consumeRestFlag(prefix:String):Null<Array<String>> {
+			if (!restFlagAt(prefix))
+				return null;
+			var k = i + prefix.length;
+			while (k < s.length && isSpace(s.charCodeAt(k)))
+				k++;
+			final rest = StringTools.rtrim(s.substr(k));
+			if (rest.length == 0) {
+				Sys.println("hxhx(stage1): missing value after " + prefix);
+				return null;
+			}
+			tokens.push(prefix);
+			tokens.push(rest);
+			return tokens;
+		}
+
 		inline function flush():Void {
 			if (cur.length > 0) {
 				tokens.push(cur.toString());
@@ -326,6 +350,15 @@ class Hxml {
 
 		while (i < s.length) {
 			final c = s.charCodeAt(i);
+
+			if (quote == 0 && cur.length == 0) {
+				if (restFlagAt("--macro"))
+					return consumeRestFlag("--macro");
+				if (restFlagAt("--cmd"))
+					return consumeRestFlag("--cmd");
+				if (restFlagAt("-cmd"))
+					return consumeRestFlag("-cmd");
+			}
 
 			// Comment start (only when not in quotes, and preceded by whitespace).
 			if (quote == 0 && c == "#".code) {

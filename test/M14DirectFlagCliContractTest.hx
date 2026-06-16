@@ -1,4 +1,5 @@
 import hxhx.CliRouting;
+import hxhx.Hxml;
 import hxhx.Stage3Args;
 import sys.FileSystem;
 import sys.io.File;
@@ -255,6 +256,14 @@ class M14DirectFlagCliContractTest {
 		final javaCwdHxml = plan(["--cwd", cwdHxmlDir, "build.hxml"]);
 		assertEquals(javaCwdHxml.lane, "native-java", "cwd-relative java hxml lane");
 		assertTrue(hasDefine(javaCwdHxml.forwarded, "java"), "cwd-relative java hxml define");
+
+		final inlineCmdHxmlPath = tmpDir + "/inline-cmd.hxml";
+		File.saveContent(inlineCmdHxmlPath, "--main Main --neko bin/main.n -lib dummy_ndll --cmd neko bin/main.n\n");
+		final inlineCmdTokens = Hxml.parseFile(inlineCmdHxmlPath);
+		assertTrue(inlineCmdTokens != null, "inline --cmd hxml should parse");
+		assertIntEquals(inlineCmdTokens.indexOf("bin/main.n"), 3, "target output should remain the -neko value");
+		assertTrue(hasArgPair(inlineCmdTokens, "--cmd", "neko bin/main.n"), "inline --cmd should consume the rest of the hxml line");
+		assertIntEquals(inlineCmdTokens.lastIndexOf("bin/main.n"), 3, "inline --cmd payload should not leave a stray positional artifact");
 
 		assertTrue(CliRouting.isJsNativeHelperUnit([
 			"-p",
