@@ -181,6 +181,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { Sys.println(StringTools.startsWith("caseName", "case")); Sys.println(StringTools.startsWith("caseName", null)); } }'),
+			context);
+		final startsWithSource = File.getContent(sourcePath);
+		assertContains(startsWithSource, '__hxhx_string_starts_with("caseName", "case")', "expected StringTools.startsWith direct intrinsic");
+		assertContains(startsWithSource, '__hxhx_string_starts_with("caseName", null)', "expected StringTools.startsWith null-safe intrinsic");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function feq(a:Float, b:Float) {} static function main() { feq(1.2e+35, 1.2e+35); } }'), context);
 		final scientificFloatSource = File.getContent(sourcePath);
 		assertContains(scientificFloatSource, 'feq($$float("1.2e+35"), $$float("1.2e+35"));',

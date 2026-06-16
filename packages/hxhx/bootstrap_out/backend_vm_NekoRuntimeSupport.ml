@@ -91,6 +91,15 @@ let render = fun out classes -> ignore ((
     ignore (HxArray.push out "  return o != null && $typeof(o) == $tobject && $objget(o, $hash(field)) != null;");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_string_starts_with = function(s, start) {");
+    ignore (HxArray.push out "  if (s == null || start == null) return false;");
+    ignore (HxArray.push out "  if ($typeof(s) != $tstring) s = __hxhx_string(s);");
+    ignore (HxArray.push out "  if ($typeof(start) != $tstring) start = __hxhx_string(start);");
+    ignore (HxArray.push out "  if ($ssize(s) < $ssize(start)) return false;");
+    ignore (HxArray.push out "  var pos = try $sfind(s, 0, start) catch e null;");
+    ignore (HxArray.push out "  return pos == 0;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
     ignore (HxArray.push out "var __hxhx_map_new = function(kind) {");
     ignore (HxArray.push out "  var map = $new(null);");
     ignore (HxArray.push out "  map.__hx_ctor = kind;");

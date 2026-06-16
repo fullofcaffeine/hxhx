@@ -608,6 +608,14 @@ class NekoTargetCore {
 				case _:
 			}
 		}
+		if (info.fullName == "StringTools") {
+			switch (fnName) {
+				case "startsWith":
+					renderRuntimeForwarder(out, context, info, fn, "__hxhx_string_starts_with(s, start)");
+					return true;
+				case _:
+			}
+		}
 		if (info.shortName == "TestLocalStatic" && fnName == "basic") {
 			final slotName = "__hxhx_TestLocalStatic_basic_x";
 			out.push("var " + slotName + " = null;");
@@ -1777,6 +1785,8 @@ class NekoTargetCore {
 				return "(if (" + renderedArgs[0] + " == null) null else $objget(" + renderedArgs[0] + ", $hash(" + renderedArgs[1] + ")))";
 			case EField(EIdent("Reflect"), "fields") if (args.length >= 1):
 				return "__hxhx_reflect_fields(" + renderedArgs[0] + ")";
+			case EField(EIdent("StringTools"), "startsWith") if (args.length >= 2):
+				return "__hxhx_string_starts_with(" + renderedArgs[0] + ", " + renderedArgs[1] + ")";
 			case EField(EIdent("Sys"), "print"):
 				return "$print(" + renderedArgs.join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):

@@ -86,6 +86,15 @@ class NekoRuntimeSupport {
 		out.push("  return o != null && $typeof(o) == $tobject && $objget(o, $hash(field)) != null;");
 		out.push("}");
 		out.push("");
+		out.push("var __hxhx_string_starts_with = function(s, start) {");
+		out.push("  if (s == null || start == null) return false;");
+		out.push("  if ($typeof(s) != $tstring) s = __hxhx_string(s);");
+		out.push("  if ($typeof(start) != $tstring) start = __hxhx_string(start);");
+		out.push("  if ($ssize(s) < $ssize(start)) return false;");
+		out.push("  var pos = try $sfind(s, 0, start) catch e null;");
+		out.push("  return pos == 0;");
+		out.push("}");
+		out.push("");
 		out.push("var __hxhx_map_new = function(kind) {");
 		out.push("  var map = $new(null);");
 		out.push("  map.__hx_ctor = kind;");
