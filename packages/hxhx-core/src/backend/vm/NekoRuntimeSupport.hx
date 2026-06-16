@@ -7,7 +7,8 @@ typedef NekoRuntimeClassMeta = {
 }
 
 /**
-	Emits the small native Neko runtime prelude used by the Stage3 Neko backend.
+	Renders the target-owned native Neko runtime prelude used by the Stage3
+	Neko backend.
 
 	Why
 	- `NekoTargetCore` should describe Haxe-to-Neko lowering decisions, not keep
@@ -15,18 +16,27 @@ typedef NekoRuntimeClassMeta = {
 	- The Neko Full1 gate currently needs a compact Map/array support surface to
 	  compile and execute upstream unit-runner code without leaking Haxe syntax
 	  such as map-literal arrows into Neko source.
+	- Keeping runtime helpers behind this module makes future extraction to a
+	  template file or standalone Neko runtime mechanical instead of entangling
+	  helper ownership with expression/statement lowering.
 
 	What
-	- Adds target-owned helpers for string conversion, array push/indexOf, and
-	  compact List/Map-like objects used by the upstream-derived runner path.
+	- Adds target-owned helpers for string conversion, array push/indexOf,
+	  reflection metadata, sys/process bridges, and compact List/Map-like
+	  objects used by the upstream-derived runner path.
+	- This is for runtime support APIs only. Pure syntax constructs should be
+	  lowered directly in `NekoTargetCore` as intrinsics rather than added here
+	  as fake library classes.
 
 	How
 	- Keeps the support prelude in one module so future extraction to a template
 	  or standalone runtime file is a mechanical move instead of more emitter
 	  growth.
+	- New helpers should land here only with focused coverage that proves the
+	  backend references the helper instead of inlining another emitter stub.
 **/
 class NekoRuntimeSupport {
-	public static function render(out:Array<String>, classes:Array<NekoRuntimeClassMeta>, ?symbolTable:String):Void {
+	public static function renderPrelude(out:Array<String>, classes:Array<NekoRuntimeClassMeta>, ?symbolTable:String):Void {
 		out.push("var __hxhx_string = function(value) {");
 		out.push("  if (value == null) return \"null\";");
 		out.push("  if ($typeof(value) == $tobject && value.toString != null) return value.toString();");

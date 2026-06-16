@@ -26,7 +26,7 @@ let renderStringArray = fun values -> let _g = Obj.magic (let __arr_3 = HxArray.
   ("$array(" ^ HxString.toStdString (HxArray.join _g ", " (fun x -> x))) ^ ")"
 )
 
-let render = fun out classes symbolTable -> ignore ((
+let renderPrelude = fun out classes symbolTable -> ignore ((
   ignore (HxArray.push out "var __hxhx_string = function(value) {");
   ignore (HxArray.push out "  if (value == null) return \"null\";");
   ignore (HxArray.push out "  if ($typeof(value) == $tobject && value.toString != null) return value.toString();");

@@ -177,6 +177,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(split.support[0].source, "$exports.symbols = $new(null);", "expected split Neko symbol table module");
 		assertContains(split.support[1].source, "__hxhx_symbols.Helper_value = function()", "expected split static function registration");
 		assertContains(split.support[1].source, "__hxhx_symbols.Helper_value()", "expected split static calls to use symbol table");
+		assertContains(split.support[1].source, "var __hxhx_array_push = function(a, value)",
+			"expected split support chunks to include the target-owned Neko runtime prelude");
 		assertContains(split.entrySource, "$loader.loadmodule(", "expected split entry module to load support chunks");
 		assertContains(split.entrySource, "__hxhx_symbols.Main_main();", "expected split entrypoint to call through symbol table");
 
