@@ -1,5 +1,11 @@
 package backend.vm;
 
+typedef NekoRuntimeClassMeta = {
+	var fullName:String;
+	var instanceFields:Array<String>;
+	var staticFields:Array<String>;
+}
+
 /**
 	Emits the small native Neko runtime prelude used by the Stage3 Neko backend.
 
@@ -20,7 +26,7 @@ package backend.vm;
 	  growth.
 **/
 class NekoRuntimeSupport {
-	public static function render(out:Array<String>):Void {
+	public static function render(out:Array<String>, classes:Array<NekoRuntimeClassMeta>):Void {
 		out.push("var __hxhx_string = function(value) {");
 		out.push("  if (value == null) return \"null\";");
 		out.push("  if ($typeof(value) == $tobject && value.toString != null) return value.toString();");
@@ -40,6 +46,44 @@ class NekoRuntimeSupport {
 		out.push("var __hxhx_array_push = function(a, value) {");
 		out.push("  a[$asize(a)] = value;");
 		out.push("  return a;");
+		out.push("}");
+		out.push("");
+		out.push("var __hxhx_instance_fields = $new(null);");
+		out.push("var __hxhx_static_fields = $new(null);");
+		for (meta in classes) {
+			out.push("$objset(__hxhx_instance_fields, $hash(" + quote(meta.fullName) + "), " + renderStringArray(meta.instanceFields) + ");");
+			out.push("$objset(__hxhx_static_fields, $hash(" + quote(meta.fullName) + "), " + renderStringArray(meta.staticFields) + ");");
+		}
+		out.push("var __hxhx_type_class_name = function(c) {");
+		out.push("  if (c == null) return null;");
+		out.push("  return \"\" + c;");
+		out.push("}");
+		out.push("");
+		out.push("var __hxhx_type_get_class = function(o) {");
+		out.push("  if (o == null) return null;");
+		out.push("  if ($typeof(o) == $tarray) return \"Array\";");
+		out.push("  if ($typeof(o) == $tobject && o.__hx_ctor != null) return o.__hx_ctor;");
+		out.push("  return null;");
+		out.push("}");
+		out.push("");
+		out.push("var __hxhx_type_fields = function(map, c) {");
+		out.push("  var name = __hxhx_type_class_name(c);");
+		out.push("  if (name == null) return $array();");
+		out.push("  var fields = $objget(map, $hash(name));");
+		out.push("  return if (fields == null) $array() else fields;");
+		out.push("}");
+		out.push("");
+		out.push("var __hxhx_reflect_fields = function(o) {");
+		out.push("  var names = $array();");
+		out.push("  if (o == null || $typeof(o) != $tobject) return names;");
+		out.push("  var raw = $objfields(o);");
+		out.push("  var i = 0;");
+		out.push("  while (i < $asize(raw)) { names[$asize(names)] = $field(raw[i]); i = i + 1; }");
+		out.push("  return names;");
+		out.push("}");
+		out.push("");
+		out.push("var __hxhx_reflect_has_field = function(o, field) {");
+		out.push("  return o != null && $typeof(o) == $tobject && $objget(o, $hash(field)) != null;");
 		out.push("}");
 		out.push("");
 		out.push("var __hxhx_map_new = function(kind) {");
@@ -98,5 +142,13 @@ class NekoRuntimeSupport {
 		out.push("  return map;");
 		out.push("}");
 		out.push("");
+	}
+
+	static function renderStringArray(values:Array<String>):String {
+		return "$array(" + [for (value in values) quote(value)].join(", ") + ")";
+	}
+
+	static function quote(value:String):String {
+		return '"' + StringTools.replace(StringTools.replace(StringTools.replace(value, "\\", "\\\\"), "\n", "\\n"), '"', '\\"') + '"';
 	}
 }

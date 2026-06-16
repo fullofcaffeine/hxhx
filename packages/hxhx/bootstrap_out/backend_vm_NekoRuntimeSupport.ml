@@ -13,7 +13,20 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoR
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoRuntimeSupport" } : t)
 
-let render = fun out -> ignore ((
+let quote = fun value -> ("\"" ^ HxString.toStdString (StringTools.replace (StringTools.replace (StringTools.replace (value : string) ("\\" : string) ("\\\\" : string) : string) ("\n" : string) ("\\n" : string) : string) ("\"" : string) ("\\\"" : string))) ^ "\""
+
+let renderStringArray = fun values -> let _g = Obj.magic (let __arr_3 = HxArray.create () in __arr_3) in let _g1 = ref 0 in (
+  ignore (while !_g1 < HxArray.length values do ignore (let value = (HxArray.get (Obj.magic values) (!_g1) : string) in (
+    ignore (let __old_4 = !_g1 in let __new_5 = HxInt.add __old_4 1 in (
+      ignore (_g1 := __new_5);
+      __new_5
+    ));
+    HxArray.push _g (quote (value : string))
+  )) done);
+  ("$array(" ^ HxString.toStdString (HxArray.join _g ", " (fun x -> x))) ^ ")"
+)
+
+let render = fun out classes -> ignore ((
   ignore (HxArray.push out "var __hxhx_string = function(value) {");
   ignore (HxArray.push out "  if (value == null) return \"null\";");
   ignore (HxArray.push out "  if ($typeof(value) == $tobject && value.toString != null) return value.toString();");
@@ -35,60 +48,104 @@ let render = fun out -> ignore ((
   ignore (HxArray.push out "  return a;");
   ignore (HxArray.push out "}");
   ignore (HxArray.push out "");
-  ignore (HxArray.push out "var __hxhx_map_new = function(kind) {");
-  ignore (HxArray.push out "  var map = $new(null);");
-  ignore (HxArray.push out "  map.__hx_ctor = kind;");
-  ignore (HxArray.push out "  map.__hx_params = $array();");
-  ignore (HxArray.push out "  map.__hxhx_pairs = $array();");
-  ignore (HxArray.push out "  map.__hxhx_find = function(key) {");
-  ignore (HxArray.push out "    var i = 0;");
-  ignore (HxArray.push out "    while (i < $asize(map.__hxhx_pairs)) {");
-  ignore (HxArray.push out "      if (map.__hxhx_pairs[i][0] == key) return i;");
-  ignore (HxArray.push out "      i = i + 1;");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "    return -1;");
-  ignore (HxArray.push out "  };");
-  ignore (HxArray.push out "  map.set = function(key, value) {");
-  ignore (HxArray.push out "    var i = map.__hxhx_find(key);");
-  ignore (HxArray.push out "    if (i < 0) map.__hxhx_pairs[$asize(map.__hxhx_pairs)] = $array(key, value);");
-  ignore (HxArray.push out "    else map.__hxhx_pairs[i][1] = value;");
-  ignore (HxArray.push out "  };");
-  ignore (HxArray.push out "  map.get = function(key) {");
-  ignore (HxArray.push out "    var i = map.__hxhx_find(key);");
-  ignore (HxArray.push out "    return if (i < 0) null else map.__hxhx_pairs[i][1];");
-  ignore (HxArray.push out "  };");
-  ignore (HxArray.push out "  map.exists = function(key) { return map.__hxhx_find(key) >= 0; };");
-  ignore (HxArray.push out "  map.remove = function(key) {");
-  ignore (HxArray.push out "    var i = map.__hxhx_find(key);");
-  ignore (HxArray.push out "    if (i < 0) return false;");
-  ignore (HxArray.push out "    var last = $asize(map.__hxhx_pairs) - 1;");
-  ignore (HxArray.push out "    map.__hxhx_pairs[i] = map.__hxhx_pairs[last];");
-  ignore (HxArray.push out "    $asize(map.__hxhx_pairs, last);");
-  ignore (HxArray.push out "    return true;");
-  ignore (HxArray.push out "  };");
-  ignore (HxArray.push out "  map.keys = function() {");
-  ignore (HxArray.push out "    var keys = $array();");
-  ignore (HxArray.push out "    var i = 0;");
-  ignore (HxArray.push out "    while (i < $asize(map.__hxhx_pairs)) { keys[$asize(keys)] = map.__hxhx_pairs[i][0]; i = i + 1; }");
-  ignore (HxArray.push out "    return keys.iterator();");
-  ignore (HxArray.push out "  };");
-  ignore (HxArray.push out "  map.iterator = function() {");
-  ignore (HxArray.push out "    var values = $array();");
-  ignore (HxArray.push out "    var i = 0;");
-  ignore (HxArray.push out "    while (i < $asize(map.__hxhx_pairs)) { values[$asize(values)] = map.__hxhx_pairs[i][1]; i = i + 1; }");
-  ignore (HxArray.push out "    return values.iterator();");
-  ignore (HxArray.push out "  };");
-  ignore (HxArray.push out "  map.toString = function() {");
-  ignore (HxArray.push out "    var parts = $array();");
-  ignore (HxArray.push out "    var i = 0;");
-  ignore (HxArray.push out "    while (i < $asize(map.__hxhx_pairs)) {");
-  ignore (HxArray.push out "      var pair = map.__hxhx_pairs[i];");
-  ignore (HxArray.push out "      parts[$asize(parts)] = __hxhx_string(pair[0]) + \" => \" + __hxhx_string(pair[1]);");
-  ignore (HxArray.push out "      i = i + 1;");
-  ignore (HxArray.push out "    }");
-  ignore (HxArray.push out "    return \"[\" + parts.join(\", \") + \"]\";");
-  ignore (HxArray.push out "  };");
-  ignore (HxArray.push out "  return map;");
-  ignore (HxArray.push out "}");
-  HxArray.push out ""
+  ignore (HxArray.push out "var __hxhx_instance_fields = $new(null);");
+  ignore (HxArray.push out "var __hxhx_static_fields = $new(null);");
+  let _g = ref 0 in (
+    ignore (while !_g < HxArray.length classes do ignore (let meta = HxArray.get (Obj.magic classes) (!_g) in (
+      ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
+        ignore (_g := __new_2);
+        __new_2
+      ));
+      ignore (HxArray.push out (((("$objset(__hxhx_instance_fields, $hash(" ^ HxString.toStdString (quote (Obj.obj (HxAnon.get meta "fullName") : string))) ^ "), ") ^ HxString.toStdString (renderStringArray (Obj.magic (Obj.obj (HxAnon.get meta "instanceFields"))))) ^ ");"));
+      HxArray.push out (((("$objset(__hxhx_static_fields, $hash(" ^ HxString.toStdString (quote (Obj.obj (HxAnon.get meta "fullName") : string))) ^ "), ") ^ HxString.toStdString (renderStringArray (Obj.magic (Obj.obj (HxAnon.get meta "staticFields"))))) ^ ");")
+    )) done);
+    ignore (HxArray.push out "var __hxhx_type_class_name = function(c) {");
+    ignore (HxArray.push out "  if (c == null) return null;");
+    ignore (HxArray.push out "  return \"\" + c;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_type_get_class = function(o) {");
+    ignore (HxArray.push out "  if (o == null) return null;");
+    ignore (HxArray.push out "  if ($typeof(o) == $tarray) return \"Array\";");
+    ignore (HxArray.push out "  if ($typeof(o) == $tobject && o.__hx_ctor != null) return o.__hx_ctor;");
+    ignore (HxArray.push out "  return null;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_type_fields = function(map, c) {");
+    ignore (HxArray.push out "  var name = __hxhx_type_class_name(c);");
+    ignore (HxArray.push out "  if (name == null) return $array();");
+    ignore (HxArray.push out "  var fields = $objget(map, $hash(name));");
+    ignore (HxArray.push out "  return if (fields == null) $array() else fields;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_reflect_fields = function(o) {");
+    ignore (HxArray.push out "  var names = $array();");
+    ignore (HxArray.push out "  if (o == null || $typeof(o) != $tobject) return names;");
+    ignore (HxArray.push out "  var raw = $objfields(o);");
+    ignore (HxArray.push out "  var i = 0;");
+    ignore (HxArray.push out "  while (i < $asize(raw)) { names[$asize(names)] = $field(raw[i]); i = i + 1; }");
+    ignore (HxArray.push out "  return names;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_reflect_has_field = function(o, field) {");
+    ignore (HxArray.push out "  return o != null && $typeof(o) == $tobject && $objget(o, $hash(field)) != null;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_map_new = function(kind) {");
+    ignore (HxArray.push out "  var map = $new(null);");
+    ignore (HxArray.push out "  map.__hx_ctor = kind;");
+    ignore (HxArray.push out "  map.__hx_params = $array();");
+    ignore (HxArray.push out "  map.__hxhx_pairs = $array();");
+    ignore (HxArray.push out "  map.__hxhx_find = function(key) {");
+    ignore (HxArray.push out "    var i = 0;");
+    ignore (HxArray.push out "    while (i < $asize(map.__hxhx_pairs)) {");
+    ignore (HxArray.push out "      if (map.__hxhx_pairs[i][0] == key) return i;");
+    ignore (HxArray.push out "      i = i + 1;");
+    ignore (HxArray.push out "    }");
+    ignore (HxArray.push out "    return -1;");
+    ignore (HxArray.push out "  };");
+    ignore (HxArray.push out "  map.set = function(key, value) {");
+    ignore (HxArray.push out "    var i = map.__hxhx_find(key);");
+    ignore (HxArray.push out "    if (i < 0) map.__hxhx_pairs[$asize(map.__hxhx_pairs)] = $array(key, value);");
+    ignore (HxArray.push out "    else map.__hxhx_pairs[i][1] = value;");
+    ignore (HxArray.push out "  };");
+    ignore (HxArray.push out "  map.get = function(key) {");
+    ignore (HxArray.push out "    var i = map.__hxhx_find(key);");
+    ignore (HxArray.push out "    return if (i < 0) null else map.__hxhx_pairs[i][1];");
+    ignore (HxArray.push out "  };");
+    ignore (HxArray.push out "  map.exists = function(key) { return map.__hxhx_find(key) >= 0; };");
+    ignore (HxArray.push out "  map.remove = function(key) {");
+    ignore (HxArray.push out "    var i = map.__hxhx_find(key);");
+    ignore (HxArray.push out "    if (i < 0) return false;");
+    ignore (HxArray.push out "    var last = $asize(map.__hxhx_pairs) - 1;");
+    ignore (HxArray.push out "    map.__hxhx_pairs[i] = map.__hxhx_pairs[last];");
+    ignore (HxArray.push out "    $asize(map.__hxhx_pairs, last);");
+    ignore (HxArray.push out "    return true;");
+    ignore (HxArray.push out "  };");
+    ignore (HxArray.push out "  map.keys = function() {");
+    ignore (HxArray.push out "    var keys = $array();");
+    ignore (HxArray.push out "    var i = 0;");
+    ignore (HxArray.push out "    while (i < $asize(map.__hxhx_pairs)) { keys[$asize(keys)] = map.__hxhx_pairs[i][0]; i = i + 1; }");
+    ignore (HxArray.push out "    return keys.iterator();");
+    ignore (HxArray.push out "  };");
+    ignore (HxArray.push out "  map.iterator = function() {");
+    ignore (HxArray.push out "    var values = $array();");
+    ignore (HxArray.push out "    var i = 0;");
+    ignore (HxArray.push out "    while (i < $asize(map.__hxhx_pairs)) { values[$asize(values)] = map.__hxhx_pairs[i][1]; i = i + 1; }");
+    ignore (HxArray.push out "    return values.iterator();");
+    ignore (HxArray.push out "  };");
+    ignore (HxArray.push out "  map.toString = function() {");
+    ignore (HxArray.push out "    var parts = $array();");
+    ignore (HxArray.push out "    var i = 0;");
+    ignore (HxArray.push out "    while (i < $asize(map.__hxhx_pairs)) {");
+    ignore (HxArray.push out "      var pair = map.__hxhx_pairs[i];");
+    ignore (HxArray.push out "      parts[$asize(parts)] = __hxhx_string(pair[0]) + \" => \" + __hxhx_string(pair[1]);");
+    ignore (HxArray.push out "      i = i + 1;");
+    ignore (HxArray.push out "    }");
+    ignore (HxArray.push out "    return \"[\" + parts.join(\", \") + \"]\";");
+    ignore (HxArray.push out "  };");
+    ignore (HxArray.push out "  return map;");
+    ignore (HxArray.push out "}");
+    HxArray.push out ""
+  )
 ))
