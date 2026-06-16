@@ -224,6 +224,25 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertNotContains(enumAbstractSource, '__hxhx_field(arch, "getNdllSuffix")()',
 			"enum abstract methods must not be called as object fields on a string backing value");
 
+		final nativeDecodedMainClass = new HxClassDecl("Main", false, [], [], "", []);
+		final nativeDecodedArchClass = new HxClassDecl("Arch", false, [], [], "", ["__hxhx_abstract"]);
+		final nativeDecodedClasses = new haxe.ds.StringMap<Dynamic>();
+		final nativeDecodedMainInfo:Dynamic = {fullName: "Main", shortName: "Main", cls: nativeDecodedMainClass};
+		nativeDecodedClasses.set("Main", nativeDecodedMainInfo);
+		nativeDecodedClasses.set("Arch", {fullName: "Arch", shortName: "Arch", cls: nativeDecodedArchClass});
+		final nativeDecodedAbstractContext = cast {
+			classes: nativeDecodedClasses,
+			selfName: null,
+			currentClass: nativeDecodedMainInfo,
+			symbolTable: "__hxhx_symbols",
+			locals: new haxe.ds.StringMap<Bool>()
+		};
+		assertTrue(@:privateAccess NekoTargetCore.renderExpr(nativeDecodedAbstractContext, EIdent("X86_64")) == '"X86_64"',
+			"native-decoded enum abstract constants without field declarations should still lower to backing strings");
+		assertContains(@:privateAccess NekoTargetCore.renderExpr(nativeDecodedAbstractContext, ECall(EField(EIdent("arch"), "getNdllSuffix"), [])),
+			"__hxhx_neko_ndll_suffix(arch)", "native-decoded enum abstract method calls should use the Neko ndll suffix helper");
+		assertContains(enumAbstractSource, "var __hxhx_neko_ndll_suffix = function(arch) {", "expected Neko ndll suffix fallback helper");
+
 		final splitSysTime = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Sys { public static function time():Float return 0; public static function println(v) {} } class Main { static function main() { Sys.println(Sys.time()); } }'),
 			splitContext, sourcePath);
 		final splitSysTimeSource = supportSource(splitSysTime);
