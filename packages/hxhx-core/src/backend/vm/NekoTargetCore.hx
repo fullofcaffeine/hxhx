@@ -520,13 +520,13 @@ class NekoTargetCore {
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
 			args.push(safeIdent(arg.name));
-		out.push(renderFunctionDefinitionPrefix(context, info.fullName, HxFunctionDecl.getName(fn))
-			+ "function("
-			+ args.join(", ")
-			+ ") {");
+		final useVarArgs = shouldUseVarArgs(context, args);
+		out.push(renderFunctionDefinitionPrefix(context, info.fullName, HxFunctionDecl.getName(fn)) + renderFunctionStart(args, useVarArgs));
+		if (useVarArgs)
+			renderVarArgBindings(out, args, "  ");
 		for (stmt in HxFunctionDecl.getBody(fn))
 			renderStmt(out, context, stmt, "  ");
-		out.push("}");
+		out.push(renderFunctionEnd(useVarArgs));
 		out.push("");
 	}
 
@@ -560,7 +560,10 @@ class NekoTargetCore {
 			out.push("var " + testLocalStaticBasicSlotName() + " = null;");
 		final selfName = "__hxhx_self";
 		final instanceContext = withSelf(context, selfName, info);
-		out.push(renderConstructorDefinitionPrefix(context, info.fullName) + "function(" + args.join(", ") + ") {");
+		final useVarArgs = shouldUseVarArgs(context, args);
+		out.push(renderConstructorDefinitionPrefix(context, info.fullName) + renderFunctionStart(args, useVarArgs));
+		if (useVarArgs)
+			renderVarArgBindings(out, args, "  ");
 		out.push("  var " + selfName + " = $new(null);");
 		out.push("  " + selfName + ".__hx_ctor = " + quote(info.fullName) + ";");
 		out.push("  " + selfName + ".__hx_params = $array(" + args.join(", ") + ");");
@@ -586,7 +589,7 @@ class NekoTargetCore {
 				renderStmt(out, instanceContext, stmt, "  ");
 		}
 		out.push("  return " + selfName + ";");
-		out.push("}");
+		out.push(renderFunctionEnd(useVarArgs));
 		out.push("");
 	}
 
@@ -596,10 +599,30 @@ class NekoTargetCore {
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
 			args.push(safeIdent(arg.name));
-		out.push("  " + selfName + "." + safeIdent(HxFunctionDecl.getName(fn)) + " = function(" + args.join(", ") + ") {");
+		final useVarArgs = shouldUseVarArgs(context, args);
+		out.push("  " + selfName + "." + safeIdent(HxFunctionDecl.getName(fn)) + " = " + renderFunctionStart(args, useVarArgs));
+		if (useVarArgs)
+			renderVarArgBindings(out, args, "    ");
 		for (stmt in HxFunctionDecl.getBody(fn))
 			renderStmt(out, context, stmt, "    ");
-		out.push("  };");
+		out.push("  " + renderFunctionEnd(useVarArgs) + ";");
+	}
+
+	static function shouldUseVarArgs(context:NekoEmitContext, args:Array<String>):Bool {
+		return context != null && context.symbolTable != null && args.length > 0;
+	}
+
+	static function renderFunctionStart(args:Array<String>, useVarArgs:Bool):String {
+		return useVarArgs ? "$varargs(function(__hxhx_args) {" : "function(" + args.join(", ") + ") {";
+	}
+
+	static function renderFunctionEnd(useVarArgs:Bool):String {
+		return useVarArgs ? "})" : "}";
+	}
+
+	static function renderVarArgBindings(out:Array<String>, args:Array<String>, indent:String):Void {
+		for (i in 0...args.length)
+			out.push(indent + "var " + args[i] + " = __hxhx_args[" + i + "];");
 	}
 
 	static function renderSpecialInstanceMethod(out:Array<String>, context:NekoEmitContext, selfName:String, fn:HxFunctionDecl):Bool {

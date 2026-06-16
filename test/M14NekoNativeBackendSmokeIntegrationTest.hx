@@ -78,6 +78,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function supportSource(split:{support:Array<{source:String}>}):String {
+		final buf = new StringBuf();
+		for (part in split.support) {
+			buf.add(part.source);
+			buf.add("\n");
+		}
+		return buf.toString();
+	}
+
 	static function main():Void {
 		assertNativeReturnCaseFragmentDecode();
 		assertTrue(@:privateAccess NekoTargetCore.renderExpr(cast null,
@@ -134,6 +143,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(split.support[1].source, "__hxhx_symbols.Helper_value()", "expected split static calls to use symbol table");
 		assertContains(split.entrySource, "$loader.loadmodule(", "expected split entry module to load support chunks");
 		assertContains(split.entrySource, "__hxhx_symbols.Main_main();", "expected split entrypoint to call through symbol table");
+
+		final splitVarArgs = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Runner { public function new(seed) {} public function addCase(test, setup, teardown) { Sys.println(test); } } class Main { static function main() { var runner = new Runner("seed"); runner.addCase("case"); } }'),
+			splitContext, sourcePath);
+		final splitVarArgsSource = supportSource(splitVarArgs);
+		assertContains(splitVarArgsSource, "__hxhx_symbols.__hxhx_new_Runner = $varargs(function(__hxhx_args) {",
+			"expected split constructors with parameters to accept missing/extra Neko arguments");
+		assertContains(splitVarArgsSource, "var seed = __hxhx_args[0];", "expected constructor varargs to bind declared arguments");
+		assertContains(splitVarArgsSource, "__hxhx_self.addCase = $varargs(function(__hxhx_args) {",
+			"expected split instance methods with parameters to accept missing/extra Neko arguments");
+		assertContains(splitVarArgsSource, "var teardown = __hxhx_args[2];", "expected method varargs to bind omitted arguments as null");
+		assertContains(splitVarArgsSource, 'runner.addCase("case");', "expected call sites to stay idiomatic receiver calls");
 
 		deleteRecursive(outDir);
 
