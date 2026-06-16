@@ -212,7 +212,7 @@ let resolveViaProcess = fun lib -> try let __fallback_result_35 = let lixSpec = 
   ignore (HxArray.push __arr_31 lib);
   __arr_31
 ))) in (
-  ignore (if lixSpec != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr lixSpec)) else ());
+  ignore (if lixSpec != Obj.magic (HxRuntime.hx_null) && not (isScopedMetadataMiss (lib : string) lixSpec) then raise (HxRuntime.Hx_return (Obj.repr lixSpec)) else ());
   let haxelibSpec = tryResolveViaCommand (haxelibBin () : string) (Obj.magic (let __arr_32 = HxArray.create () in (
     ignore (HxArray.push __arr_32 "path");
     ignore (HxArray.push __arr_32 lib);

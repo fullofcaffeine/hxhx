@@ -92,15 +92,15 @@ class LibraryResolver {
 
 	static function resolveViaProcess(lib:String):LibrarySpec {
 		final lixSpec = tryResolveViaCommand(lixBin(), ["run-haxelib", "path", lib]);
-		if (lixSpec != null)
+		if (lixSpec != null && !isScopedMetadataMiss(lib, lixSpec))
 			return lixSpec;
 
 		final haxelibSpec = tryResolveViaCommand(haxelibBin(), ["path", lib]);
 		if (haxelibSpec != null && !isScopedMetadataMiss(lib, haxelibSpec))
 			return haxelibSpec;
 
-		// When `haxelib` is a lix shim, plain `haxelib path` can stay scoped to
-		// local `haxe_libraries` metadata. `--always` forces native haxelib lookup.
+		// Lix and lix-shimmed haxelib can report only a scoped haxe_libraries
+		// miss. `--always` forces native haxelib lookup for dev/global libs.
 		final haxelibAlwaysSpec = tryResolveViaCommand(haxelibBin(), ["--always", "path", lib]);
 		if (haxelibAlwaysSpec != null)
 			return haxelibAlwaysSpec;

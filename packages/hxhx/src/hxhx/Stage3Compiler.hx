@@ -392,6 +392,14 @@ class Stage3Compiler {
 		// Macro state exists even in non-macro runs; it is a no-op unless the macro host calls back.
 		hxhx.macro.MacroState.reset();
 		final libsResolved = Stage3SetupSupport.resolveLibraries(parsedLibs, cwd);
+		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+			Sys.println("stage3_driver=libs_resolved count=" + libsResolved.length);
+			for (i in 0...libsResolved.length) {
+				final spec = libsResolved[i];
+				Sys.println("stage3_driver=lib[" + i + "].class_paths=" + spec.classPaths.join("|"));
+				Sys.println("stage3_driver=lib[" + i + "].unknown_args=" + spec.unknownArgs.join("|"));
+			}
+		}
 		final libDefines = Stage3SetupSupport.collectLibraryDefines(libsResolved);
 		final allDefines = parsedDefines.concat(libDefines);
 		hxhx.macro.MacroState.seedFromCliDefines(allDefines);
@@ -860,6 +868,11 @@ class Stage3Compiler {
 		Stage3DiagnosticsSupport.printHxMacroDefines("macro_define2");
 
 		final nekoNdllPaths = backendId == "neko-native" ? Stage3SetupSupport.collectNekoNdllPaths(libsResolved, cwd) : [];
+		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+			Sys.println("stage3_driver=neko_ndll_paths count=" + nekoNdllPaths.length);
+			for (i in 0...nekoNdllPaths.length)
+				Sys.println("stage3_driver=neko_ndll_path[" + i + "]=" + nekoNdllPaths[i]);
+		}
 		final emitted = try {
 			Stage3EmitSupport.emitWithBackend(backend, expanded, backendId, typedModules.length, cwd, outAbs, targetOutputHintRaw, targetOutputDirHintRaw,
 				parsedMain, emitFullBodies, supportsCustomOutputFile, supportsBuildExecutable, definesMap, backendResources, nekoNdllPaths);

@@ -1063,7 +1063,7 @@ class NekoTargetCore {
 			case EArrayDecl(values):
 				renderArray(context, values);
 			case EArrayAccess(array, EInt(0)) if (isNekoLoaderLocalGetPathCall(array)):
-				"$loader.path[0][0]";
+				"$loader.path[0]";
 			case EArrayAccess(array, index):
 				renderExpr(context, array) + "[" + renderExpr(context, index) + "]";
 			case EAnon(fieldNames, fieldValues):

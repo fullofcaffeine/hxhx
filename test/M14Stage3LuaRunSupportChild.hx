@@ -116,6 +116,25 @@ class M14Stage3LuaRunSupportChild {
 					if (spec.unknownArgs.indexOf("-L dummy_ndll/ndll/") == -1)
 						throw "expected haxelib --always native -L path";
 					Sys.println("resolver=always");
+				case "library-resolver-lix-scoped-miss":
+					final libRoot = Path.join([tmp, "dummy_ndll"]);
+					mkdirp(Path.join([libRoot, "ndll", Stage3SetupSupport.nekoNdllHostPlatform()]));
+					final fakeLix = Path.join([absBin, "lix"]);
+					File.saveContent(fakeLix,
+						"#!/usr/bin/env sh\nif [ \"$1\" = \"run-haxelib\" ] && [ \"$2\" = \"path\" ]; then printf '%s\\n' '-lib dummy_ndll is missing haxe_libraries/dummy_ndll.hxml'; exit 0; fi\nexit 1\n");
+					final fakeHaxelib = Path.join([absBin, "haxelib"]);
+					File.saveContent(fakeHaxelib,
+						"#!/usr/bin/env sh\nif [ \"$1\" = \"path\" ]; then exit 1; fi\nif [ \"$1\" = \"--always\" ] && [ \"$2\" = \"path\" ]; then printf '%s\\n' '-L dummy_ndll/ndll/' 'dummy_ndll/' '-D dummy_ndll=0.0.0'; exit 0; fi\nexit 1\n");
+					if (Sys.command("chmod", ["+x", fakeLix]) != 0 || Sys.command("chmod", ["+x", fakeHaxelib]) != 0)
+						throw "failed to chmod fake haxelib/lix";
+					Sys.putEnv("LIX_BIN", fakeLix);
+					Sys.putEnv("HAXELIB_BIN", fakeHaxelib);
+					final spec = LibraryResolver.resolve("dummy_ndll", tmp, new Map<String, Bool>(), 0);
+					if (spec.classPaths.length != 1 || spec.classPaths[0] != "dummy_ndll/")
+						throw "expected haxelib --always classpath fallback after Lix miss, got " + spec.classPaths.join(",");
+					if (spec.unknownArgs.indexOf("-L dummy_ndll/ndll/") == -1)
+						throw "expected haxelib --always native -L path after Lix miss";
+					Sys.println("resolver=lix-scoped-miss");
 				case _:
 					throw "unknown mode: " + mode;
 			}

@@ -3039,7 +3039,7 @@ let rec renderExpr = fun context expr -> let tempResult = ref ("" : string) in (
       | HxExpr.EUntyped _ -> 27
       | HxExpr.EUnsupported _ -> 28) = 3 then let _g2 = match _g1 with
       | HxExpr.EInt __enum_param_252 -> __enum_param_252
-      | _ -> failwith "Unexpected enum parameter" in if _g2 = 0 then let array = Obj.magic _g in if isNekoLoaderLocalGetPathCall (Obj.magic array) then let __assign_253 = ("$loader.path[0][0]" : string) in (
+      | _ -> failwith "Unexpected enum parameter" in if _g2 = 0 then let array = Obj.magic _g in if isNekoLoaderLocalGetPathCall (Obj.magic array) then let __assign_253 = ("$loader.path[0]" : string) in (
       tempResult := __assign_253;
       __assign_253
     ) else let index = Obj.magic _g1 in let array2 = Obj.magic _g in let __assign_254 = (((HxString.toStdString (renderExpr context (Obj.magic array2)) ^ "[") ^ HxString.toStdString (renderExpr context (Obj.magic index))) ^ "]" : string) in (

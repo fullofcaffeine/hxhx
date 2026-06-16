@@ -37,5 +37,9 @@ class M14Stage3LuaRunSupportIntegrationTest {
 
 		final resolverStdout = runChild("library-resolver-haxelib-always");
 		assertTrue(resolverStdout == "resolver=always", "expected haxelib --always resolver fallback, got `" + resolverStdout + "`");
+
+		final lixResolverStdout = runChild("library-resolver-lix-scoped-miss");
+		assertTrue(lixResolverStdout == "resolver=lix-scoped-miss",
+			"expected Lix scoped metadata miss to fall through to haxelib --always, got `" + lixResolverStdout + "`");
 	}
 }

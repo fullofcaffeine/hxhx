@@ -58,30 +58,50 @@ class Stage3SetupSupport {
 	}
 
 	public static function collectNekoNdllPaths(libsResolved:Array<HaxelibSpec>, cwd:String):Array<String> {
-		final platform = nekoNdllHostPlatform();
+		final platforms = nekoNdllHostPlatforms();
 		final out = new Array<String>();
 		for (s in libsResolved) {
 			for (p in s.classPaths) {
 				for (root in nekoCandidateLibraryRoots(Stage3PathSupport.absFromCwd(cwd, p))) {
-					final ndll = trailingSlash(Path.normalize(Path.join([root, "ndll", platform])));
-					if (sys.FileSystem.exists(ndll) && sys.FileSystem.isDirectory(ndll) && out.indexOf(ndll) == -1)
-						out.push(ndll);
+					for (platform in platforms) {
+						final ndll = trailingSlash(Path.normalize(Path.join([root, "ndll", platform])));
+						if (sys.FileSystem.exists(ndll) && sys.FileSystem.isDirectory(ndll) && out.indexOf(ndll) == -1)
+							out.push(ndll);
+					}
 				}
 			}
 			for (arg in s.unknownArgs) {
 				final nativeRoot = nekoNativeLinkPath(arg);
 				if (nativeRoot == null)
 					continue;
-				final ndll = trailingSlash(Path.normalize(Path.join([Stage3PathSupport.absFromCwd(cwd, nativeRoot), platform])));
-				if (sys.FileSystem.exists(ndll) && sys.FileSystem.isDirectory(ndll) && out.indexOf(ndll) == -1)
-					out.push(ndll);
+				for (platform in platforms) {
+					final ndll = trailingSlash(Path.normalize(Path.join([Stage3PathSupport.absFromCwd(cwd, nativeRoot), platform])));
+					if (sys.FileSystem.exists(ndll) && sys.FileSystem.isDirectory(ndll) && out.indexOf(ndll) == -1)
+						out.push(ndll);
+				}
 			}
 		}
 		return out;
 	}
 
 	public static function nekoNdllHostPlatform():String {
-		return Sys.systemName() + nekoNdllHostSuffix();
+		return nekoNdllHostPlatforms()[0];
+	}
+
+	public static function nekoNdllHostPlatforms():Array<String> {
+		final system = Sys.systemName();
+		final suffix = nekoNdllHostSuffix();
+		final out = new Array<String>();
+		function push(value:String):Void {
+			if (value != null && value.length > 0 && out.indexOf(value) == -1)
+				out.push(value);
+		}
+		if (suffix.length > 0)
+			push(system + suffix);
+		else
+			push(system + "64");
+		push(system);
+		return out;
 	}
 
 	static function nekoNdllHostSuffix():String {
