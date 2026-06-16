@@ -949,6 +949,7 @@ capture_target_failure_artifacts() {
   local artifact_root="${HXHX_GATE3_FAILURE_ARTIFACTS_DIR:-${FULL1_GATE3_EXTENDED_ARTIFACTS_DIR:-}}"
   local target_artifacts=""
   local source_file=""
+  local issue10937_dir=""
   local copied=0
 
   if [ -z "$artifact_root" ]; then
@@ -974,6 +975,33 @@ capture_target_failure_artifacts() {
     cp "$source_file" "$target_artifacts/$(basename "$source_file")"
     nl -ba "$source_file" >"$target_artifacts/$(basename "$source_file").nl.txt"
   done < <(find "$UPSTREAM_DIR/tests" -path '*/bin/*.neko' -type f -size -2M 2>/dev/null | sort)
+
+  issue10937_dir="$UPSTREAM_DIR/tests/misc/neko/projects/Issue10937"
+  if [ -d "$issue10937_dir" ]; then
+    {
+      echo "cwd=$issue10937_dir"
+      echo "haxelib_wrapper=$WRAP_DIR/haxelib"
+      echo
+      echo "== dummy_ndll directories =="
+      find "$issue10937_dir/dummy_ndll" -maxdepth 4 -type d 2>/dev/null | sort || true
+      echo
+      echo "== haxelib path dummy_ndll =="
+      set +e
+      (
+        cd "$issue10937_dir"
+        PATH="$WRAP_DIR:$PATH" haxelib path dummy_ndll
+      )
+      echo "exit=$?"
+      echo
+      echo "== haxelib --always path dummy_ndll =="
+      (
+        cd "$issue10937_dir"
+        PATH="$WRAP_DIR:$PATH" haxelib --always path dummy_ndll
+      )
+      echo "exit=$?"
+      set -e
+    } >"$target_artifacts/haxelib_path_dummy_ndll.txt" 2>&1
+  fi
 
   if [ "$copied" -eq 1 ]; then
     echo "gate3_failure_artifacts target=${target} dir=${target_artifacts}"
