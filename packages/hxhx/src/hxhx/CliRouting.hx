@@ -188,6 +188,15 @@ class CliRouting {
 			};
 		}
 
+		if (!targetScan.hasJs && !targetScan.hasNonJs && canRouteCommandOnlyUnitsAsStage3(planningUnits)) {
+			return {
+				lane: LANE_NATIVE_NEKO,
+				backendId: "neko-native",
+				forwarded: baseForwarded.copy(),
+				stage0Required: false
+			};
+		}
+
 		final sourceTarget = sourceTargetForUnits(planningUnits);
 		if (!targetScan.hasJs && sourceTarget != null) {
 			final nativeSource = baseForwarded.copy();
@@ -636,6 +645,17 @@ class CliRouting {
 			}
 		}
 		return false;
+	}
+
+	static function canRouteCommandOnlyUnitsAsStage3(units:Array<Array<String>>):Bool {
+		if (units == null || units.length == 0)
+			return false;
+		for (unit in units) {
+			final scan = scanStandardTargetFlags(unit);
+			if (scan.hasJs || scan.hasNonJs || scan.hasLegacy || !hasCommandHook(unit))
+				return false;
+		}
+		return true;
 	}
 
 	public static function isJsNativeHelperUnit(args:Array<String>):Bool {

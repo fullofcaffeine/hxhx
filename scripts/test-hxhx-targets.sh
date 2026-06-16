@@ -2144,6 +2144,23 @@ out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only "$tmpcmd/build.hxml")"
 test "$(echo "$out" | grep -c '^stage3=skipped_cmd_only$')" -eq 1
 test "$(echo "$out" | grep -c '^stage3=type_only_ok$')" -eq 1
 
+echo "== Stage3 bring-up: cmd-only haxelib dev hook runs"
+tmpcmdlib="$tmpdir/cmd_only_haxelib_dev"
+mkdir -p "$tmpcmdlib/dummy_ndll" "$tmpcmdlib/bin"
+abs_tmpcmdlib="$PWD/$tmpcmdlib"
+cat >"$tmpcmdlib/bin/haxelib" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "$*" > "$HXHX_TEST_HAXELIB_LOG"
+SH
+chmod +x "$tmpcmdlib/bin/haxelib"
+cat >"$tmpcmdlib/setup.hxml" <<HX
+--cmd haxelib dev dummy_ndll dummy_ndll
+HX
+out="$(cd "$tmpcmdlib" && HXHX_TEST_HAXELIB_LOG="$abs_tmpcmdlib/haxelib.log" PATH="$abs_tmpcmdlib/bin:$PATH" "$HXHX_BIN" "$abs_tmpcmdlib/setup.hxml")"
+test "$(echo "$out" | grep -c '^stage3=cmd_ok$')" -eq 1
+test "$(cat "$tmpcmdlib/haxelib.log")" = "dev dummy_ndll dummy_ndll"
+
 if command -v python3 >/dev/null 2>&1; then
   echo "== Stage3 bring-up: Python .hxml -cmd runs emitted artifact"
   tmppythoncmd="$tmpdir/python_cmd_hxml"

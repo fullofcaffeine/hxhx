@@ -42,11 +42,14 @@ class Stage3RunSupport {
 		for (command in commands) {
 			final javaJar = parseSafeJavaJarCommand(command);
 			final lua = parseSafeLuaCommand(command);
+			final haxelibDev = parseSafeHaxelibDevCommand(command);
 			var code:Null<Int> = null;
 			if (javaJar != null) {
 				code = runCommandInCwd("java", ["-jar", javaJar], cwd);
 			} else if (lua != null) {
 				code = runCommandInCwd(lua.command, lua.args, cwd);
+			} else if (haxelibDev != null) {
+				code = runCommandInCwd("haxelib", ["dev", haxelibDev.lib, haxelibDev.path], cwd);
 			} else {
 				return null;
 			}
@@ -64,6 +67,7 @@ class Stage3RunSupport {
 		if (cmdCode != null) {
 			if (cmdCode != 0)
 				return "command hook failed with exit code " + Std.string(cmdCode);
+			Sys.println("stage3=cmd_ok");
 			return null;
 		}
 		Sys.println("stage3=skipped_cmd_only");
@@ -227,6 +231,21 @@ class Stage3RunSupport {
 				return null;
 		}
 		return {command: runner, args: words.slice(1)};
+	}
+
+	static function parseSafeHaxelibDevCommand(command:String):Null<{lib:String, path:String}> {
+		final words = splitCommandWords(command);
+		if (words.length != 4)
+			return null;
+		if (words[0] != "haxelib" || words[1] != "dev")
+			return null;
+		final lib = words[2];
+		final path = words[3];
+		if (!isSafeCommandWord(lib) || !isSafeCommandWord(path))
+			return null;
+		if (StringTools.startsWith(lib, "-") || StringTools.startsWith(path, "-"))
+			return null;
+		return {lib: lib, path: path};
 	}
 
 	static function isSafeCommandWord(word:String):Bool {

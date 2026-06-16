@@ -118,6 +118,11 @@ class M14DirectFlagCliContractTest {
 		assertTrue(hasDefine(nativeNeko.forwarded, "neko"), "native neko define");
 		assertEquals(Stage3Args.findTargetOutputFileHint(["--neko", "out.n", "-main", "Main"], "neko-native"), "out.n", "native neko output file hint");
 
+		final commandOnly = plan(["--cmd", "haxelib dev dummy_ndll dummy_ndll"]);
+		assertEquals(commandOnly.lane, "native-neko", "command-only setup lane");
+		assertEquals(commandOnly.backendId, "neko-native", "command-only setup backend");
+		assertTrue(commandOnly.forwarded.indexOf("--cmd") != -1, "command-only setup must preserve --cmd for Stage3");
+
 		final nativeHl = plan(["--hl", "out.hl", "-main", "Main"]);
 		assertEquals(nativeHl.lane, "native-hl", "native hl lane");
 		assertEquals(nativeHl.backendId, "hl-native", "native hl backend");
