@@ -902,6 +902,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var uname = { stdout: { readLine: function() return "Linux" } }; var result = try { uname.stdout.readLine(); } catch(e:haxe.io.Eof) { ""; }; Sys.println(result); } }'),
+			context);
+		final nestedMethodCallCatchSource = File.getContent(sourcePath);
+		assertContains(nestedMethodCallCatchSource, "try { return uname.stdout.readLine(); } catch e { return \"\"; }",
+			"expected nested method-call catch-string raw lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var result = { var b: { v:Dynamic } = { v: "foo" }; }; Sys.println(result); } }'), context);
 		final opaqueObjectLocalSource = File.getContent(sourcePath);
 		assertContains(opaqueObjectLocalSource, "var b = (function() { var __hxhx_o = $new(null); __hxhx_o.v = \"foo\"; return __hxhx_o; })(); return null;",
