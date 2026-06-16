@@ -73,6 +73,13 @@ private typedef NekoNestedMethodCallCatchRaw = {
 	var fallback:String;
 }
 
+private typedef NekoSysPutEnvBoolTryRaw = {
+	var name:String;
+	var value:String;
+	var success:String;
+	var fallback:String;
+}
+
 private typedef NekoOpaqueObjectLocalRaw = {
 	var local:String;
 	var field:String;
@@ -681,6 +688,9 @@ class NekoTargetCore {
 					return true;
 				case "getEnv":
 					renderRuntimeForwarder(out, context, info, fn, "__hxhx_sys_get_env(s)");
+					return true;
+				case "putEnv":
+					renderRuntimeForwarder(out, context, info, fn, "__hxhx_sys_put_env(s, v)");
 					return true;
 				case _:
 			}
@@ -1469,6 +1479,11 @@ class NekoTargetCore {
 			return "(function() { try { return " + nestedMethodCallCatch.receiver + "." + nestedMethodCallCatch.field + "." + nestedMethodCallCatch.method
 				+ "(); } catch e { return " + quote(nestedMethodCallCatch.fallback) + "; } })()";
 		}
+		final sysPutEnvBoolTry = parseSysPutEnvBoolTryRaw(raw);
+		if (sysPutEnvBoolTry != null) {
+			return "(function() { try { __hxhx_sys_put_env(" + quote(sysPutEnvBoolTry.name) + ", " + sysPutEnvBoolTry.value + "); return "
+				+ sysPutEnvBoolTry.success + "; } catch e { $print(e, \"\\n\"); return " + sysPutEnvBoolTry.fallback + "; } })()";
+		}
 		final opaqueObjectLocal = parseOpaqueObjectLocalRaw(raw);
 		if (opaqueObjectLocal != null) {
 			return "(function() { var "
@@ -1561,6 +1576,19 @@ class NekoTargetCore {
 			receiver: safeIdent(pattern.matched(1)),
 			field: safeIdent(pattern.matched(2)),
 			method: safeIdent(pattern.matched(3)),
+			fallback: pattern.matched(4)
+		};
+	}
+
+	static function parseSysPutEnvBoolTryRaw(raw:String):Null<NekoSysPutEnvBoolTryRaw> {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		final pattern = ~/^try\{Sys\.putEnv\("([^"]*)",(null|"[^"]*")\);(true|false);\}catch\(e(?::[^)]*)?\)\{trace\(e\);(true|false);\}$/;
+		if (!pattern.match(compact))
+			return null;
+		return {
+			name: pattern.matched(1),
+			value: sanitizeNekoValueExpr(pattern.matched(2)),
+			success: pattern.matched(3),
 			fallback: pattern.matched(4)
 		};
 	}
@@ -2073,6 +2101,8 @@ class NekoTargetCore {
 				return "__hxhx_sys_system_name()";
 			case EField(EIdent("Sys"), "getEnv") if (args.length >= 1):
 				return "__hxhx_sys_get_env(" + renderedArgs[0] + ")";
+			case EField(EIdent("Sys"), "putEnv") if (args.length >= 2):
+				return "__hxhx_sys_put_env(" + renderedArgs[0] + ", " + renderedArgs[1] + ")";
 			case EField(EIdent("Sys"), "print"):
 				return "$print(" + renderedArgs.join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):

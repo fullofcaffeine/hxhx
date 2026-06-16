@@ -165,6 +165,10 @@ let render = fun out classes symbolTable -> ignore ((
     ignore (HxArray.push out "  return $loader.loadprim(\"std@get_env\", 1)(name);");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_sys_put_env = function(name, value) {");
+    ignore (HxArray.push out "  return $loader.loadprim(\"std@put_env\", 2)(name, value);");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
     ignore (HxArray.push out "var __hxhx_neko_ndll_suffix = function(arch) {");
     ignore (HxArray.push out "  return if (arch == \"Arm64\") \"Arm64\" else if (arch == \"Arm\") \"Arm\" else if (arch == \"X86_64\") \"64\" else if (arch == \"X86\") \"\" else null;");
     ignore (HxArray.push out "}");

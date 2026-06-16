@@ -262,14 +262,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(splitSysTimeSource, "__hxhx_symbols.Sys_time = function() {", "expected Sys.time to remain a reachable Neko static");
 		assertContains(splitSysTimeSource, "return $loader.loadprim(\"std@sys_time\", 0)();", "expected Sys.time to lower to the Neko std primitive");
 
-		final splitSysRuntime = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Sys { public static function systemName():String return ""; public static function getEnv(s:String):String return null; public static function println(v) {} } class Main { static function main() { Sys.println(Sys.systemName()); Sys.println(Sys.getEnv("PATH")); } }'),
+		final splitSysRuntime = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Sys { public static function systemName():String return ""; public static function getEnv(s:String):String return null; public static function putEnv(s:String, v:Null<String>):Void {} public static function println(v) {} } class Main { static function main() { Sys.println(Sys.systemName()); Sys.println(Sys.getEnv("PATH")); Sys.putEnv("HXHX_NEKO_SMOKE", null); } }'),
 			splitContext, sourcePath);
 		final splitSysRuntimeSource = supportSource(splitSysRuntime);
 		assertContains(splitSysRuntimeSource, "var __hxhx_sys_system_name = function() {", "expected Neko Sys runtime helper");
 		assertContains(splitSysRuntimeSource, "return __hxhx_sys_system_name();", "expected Sys.systemName static forwarder");
 		assertContains(splitSysRuntimeSource, "return __hxhx_sys_get_env(s);", "expected Sys.getEnv static forwarder");
+		assertContains(splitSysRuntimeSource, "return __hxhx_sys_put_env(s, v);", "expected Sys.putEnv static forwarder");
 		assertNotContains(splitSysRuntimeSource, "__hxhx_symbols.Sys_systemName = function() {\n}", "Sys.systemName must not emit an empty split static");
 		assertNotContains(splitSysRuntimeSource, "__hxhx_symbols.Sys_getEnv = function() {\n}", "Sys.getEnv must not emit an empty split static");
+		assertNotContains(splitSysRuntimeSource, "__hxhx_symbols.Sys_putEnv = function() {\n}", "Sys.putEnv must not emit an empty split static");
 
 		final splitProcess = @:privateAccess NekoTargetCore.renderSplitProgram(program('package sys.io; class Process { public var stdout:Dynamic; public function new(cmd:String, args:Array<String>, ?detached:Bool) {} public function close() {} public function kill() {} } class Main { static function main() { var p = new Process("uname", ["-m"]); var arch = p.stdout.readLine(); p.kill(); p.close(); } }'),
 			splitContext, sourcePath);
@@ -992,6 +994,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final nestedMethodCallCatchSource = File.getContent(sourcePath);
 		assertContains(nestedMethodCallCatchSource, "try { return uname.stdout.readLine(); } catch e { return \"\"; }",
 			"expected nested method-call catch-string raw lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var ok = try { Sys.putEnv("NON_EXISTENT", null); true; } catch(e) { trace(e); false; }; Sys.println(ok); } }'),
+			context);
+		final sysPutEnvTrySource = File.getContent(sourcePath);
+		assertContains(sysPutEnvTrySource, "var __hxhx_sys_put_env = function(name, value) {", "expected Sys.putEnv Neko runtime helper");
+		assertContains(sysPutEnvTrySource,
+			'try { __hxhx_sys_put_env("NON_EXISTENT", null); return true; } catch e { ' + "$" + 'print(e, "\\n"); return false; }',
+			"expected Sys.putEnv bool try/catch raw lowering");
 
 		deleteRecursive(outDir);
 

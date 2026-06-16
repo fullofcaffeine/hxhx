@@ -162,6 +162,10 @@ class NekoRuntimeSupport {
 		out.push("  return $loader.loadprim(\"std@get_env\", 1)(name);");
 		out.push("}");
 		out.push("");
+		out.push("var __hxhx_sys_put_env = function(name, value) {");
+		out.push("  return $loader.loadprim(\"std@put_env\", 2)(name, value);");
+		out.push("}");
+		out.push("");
 		out.push("var __hxhx_neko_ndll_suffix = function(arch) {");
 		out.push("  return if (arch == \"Arm64\") \"Arm64\" else if (arch == \"Arm\") \"Arm\" else if (arch == \"X86_64\") \"64\" else if (arch == \"X86\") \"\" else null;");
 		out.push("}");
