@@ -520,6 +520,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('import haxe.macro.Compiler; class Main { static function main() { var pattern = Compiler.getDefine("UTEST_PATTERN"); Compiler.define("HX_TEST", "1"); Compiler.excludeFile("ignored.hx"); Sys.println(pattern); } }'),
+			context);
+		final macroCompilerSource = File.getContent(sourcePath);
+		assertContains(macroCompilerSource, "var pattern = null;", "expected macro Compiler.getDefine to lower to a neutral runtime value");
+		assertNotContains(macroCompilerSource, "haxe_macro_Compiler_getDefine", "macro Compiler.getDefine must not emit a missing runtime call");
+		assertNotContains(macroCompilerSource, "haxe_macro_Compiler_define", "macro Compiler.define must not emit a missing runtime call");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var runner = new Runner(); runner.addCase(1); Report.create(runner); } }'), context);
 		final receiverCallSource = File.getContent(sourcePath);
 		assertContains(receiverCallSource, "runner.addCase(1);", "expected lowercase receiver method call to stay qualified");

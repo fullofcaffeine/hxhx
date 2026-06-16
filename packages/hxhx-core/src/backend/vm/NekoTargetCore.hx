@@ -1637,6 +1637,12 @@ class NekoTargetCore {
 				return "$array()";
 			case EField(EIdent("TestIssues"), "addIssueClasses") | EField(EField(EIdent("unit"), "TestIssues"), "addIssueClasses"):
 				return "null";
+			case EField(EIdent("Compiler"), "getDefine") | EField(EField(EField(EIdent("haxe"), "macro"), "Compiler"), "getDefine"):
+				return "null";
+			case EField(EIdent("Compiler"), "define") | EField(EField(EField(EIdent("haxe"), "macro"), "Compiler"), "define"):
+				return "null";
+			case EField(EIdent("Compiler"), "excludeFile") | EField(EField(EField(EIdent("haxe"), "macro"), "Compiler"), "excludeFile"):
+				return "null";
 			case EField(EField(EIdent("neko"), "Web"), "setHeader"):
 				return "null";
 			case EField(EIdent("Sys"), "print"):
