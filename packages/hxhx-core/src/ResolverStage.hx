@@ -199,6 +199,58 @@ class ResolverStage {
 		return out;
 	}
 
+	/**
+		Discover modules selected by utest's `Runner.addCases("pack")` macro surface.
+
+		Why:
+		- Upstream utest discovers package test classes at macro time, so those classes can be
+		  registered even when `Main` does not import them.
+		- Stage3 does not yet run that macro generically, but Neko Full1 needs the same modules in
+		  the typed/emitted graph before backend lowering can turn `addCases` into real `addCase`
+		  registrations.
+
+		What:
+		- Handles only string-literal package names.
+		- Includes existing `Test*.hx` modules directly under that package directory.
+		- Does not act like a broad package wildcard import.
+	**/
+	static function implicitUtestAddCasesDeps(source:String, classPaths:Array<String>):Array<String> {
+		final outSet = new Map<String, Bool>();
+		if (source == null || source.length == 0 || classPaths == null || classPaths.length == 0)
+			return [];
+
+		final re = ~/\baddCases\s*\(\s*["']([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)["']/g;
+		var pos = 0;
+		while (re.matchSub(source, pos, -1)) {
+			final packageName = re.matched(1);
+			if (packageName != null && packageName.length > 0) {
+				final relDir = packageName.split(".").join("/");
+				for (cp in classPaths) {
+					final dir = Path.join([cp, relDir]);
+					if (!sys.FileSystem.exists(dir) || !sys.FileSystem.isDirectory(dir))
+						continue;
+					try {
+						for (name in sys.FileSystem.readDirectory(dir)) {
+							if (!StringTools.startsWith(name, "Test") || !StringTools.endsWith(name, ".hx"))
+								continue;
+							final moduleName = name.substr(0, name.length - ".hx".length);
+							if (moduleName.length > 0)
+								outSet.set(packageName + "." + moduleName, true);
+						}
+					} catch (_:haxe.io.Error) {} catch (_:String) {}
+				}
+			}
+			final mp = re.matchedPos();
+			pos = mp.pos + mp.len;
+		}
+
+		final out = new Array<String>();
+		for (dep in outSet.keys())
+			out.push(dep);
+		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
+		return out;
+	}
+
 	public static function parseProject(classPaths:Array<String>, mainModule:String):Array<ResolvedModule> {
 		return parseProjectRoots(classPaths, [mainModule], null);
 	}
@@ -452,6 +504,14 @@ class ResolverStage {
 				final exists = resolveModuleFile(classPaths, dep) != null;
 				if (traceDeps)
 					Sys.println("resolver_qualified_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
+				if (exists)
+					deps.push(dep);
+			}
+
+			for (dep in implicitUtestAddCasesDeps(filteredSource, classPaths)) {
+				final exists = resolveModuleFile(classPaths, dep) != null;
+				if (traceDeps)
+					Sys.println("resolver_utest_addcases_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
 				if (exists)
 					deps.push(dep);
 			}

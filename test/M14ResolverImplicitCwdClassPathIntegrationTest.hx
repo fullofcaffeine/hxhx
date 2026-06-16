@@ -22,10 +22,23 @@ class M14ResolverImplicitCwdClassPathIntegrationTest {
 	static function main():Void {
 		final tmpRoot = haxe.io.Path.normalize('.tmp/m14_resolver_implicit_cwd_' + Std.string(Date.now().getTime()));
 		final explicitSrc = haxe.io.Path.join([tmpRoot, 'src']);
+		final casesDir = haxe.io.Path.join([explicitSrc, 'cases']);
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		FileSystem.createDirectory(explicitSrc);
+		FileSystem.createDirectory(casesDir);
 		File.saveContent(haxe.io.Path.join([tmpRoot, 'RootMain.hx']), ['class RootMain {', '  static function main() {}', '}'].join("\n"));
+		File.saveContent(haxe.io.Path.join([explicitSrc, 'Main.hx']), [
+			'class Main {',
+			'  static function main() {',
+			'    var runner = new Runner();',
+			'    runner.addCases("cases");',
+			'  }',
+			'}'
+		].join("\n"));
+		File.saveContent(haxe.io.Path.join([casesDir, 'TestOne.hx']), ['package cases;', 'class TestOne {}'].join("\n"));
+		File.saveContent(haxe.io.Path.join([casesDir, 'TestTwo.hx']), ['package cases;', 'class TestTwo {}'].join("\n"));
+		File.saveContent(haxe.io.Path.join([casesDir, 'Helper.hx']), ['package cases;', 'class Helper {}'].join("\n"));
 
 		try {
 			var missingWithoutCwd = false;
@@ -45,6 +58,15 @@ class M14ResolverImplicitCwdClassPathIntegrationTest {
 
 			final duplicate = ResolverStage.withImplicitCwdClassPath([explicitSrc, tmpRoot], tmpRoot);
 			assertTrue(duplicate.length == 2, 'Expected implicit cwd classpath to avoid duplicate cwd entries.');
+
+			final addCasesResolved = ResolverStage.parseProjectRoots([explicitSrc], ['Main'], null);
+			final addCasesModules = new Map<String, Bool>();
+			for (m in addCasesResolved)
+				addCasesModules.set(ResolvedModule.getModulePath(m), true);
+			assertTrue(addCasesModules.exists('Main'), 'Expected root Main module to resolve.');
+			assertTrue(addCasesModules.exists('cases.TestOne'), 'Expected utest addCases("cases") to include TestOne.');
+			assertTrue(addCasesModules.exists('cases.TestTwo'), 'Expected utest addCases("cases") to include TestTwo.');
+			assertTrue(!addCasesModules.exists('cases.Helper'), 'Expected utest addCases("cases") to ignore non-Test helper modules.');
 		} catch (e:Dynamic) {
 			Sys.println('debug_out=' + tmpRoot);
 			throw e;

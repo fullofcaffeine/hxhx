@@ -1845,7 +1845,7 @@ let init () : unit =
   HxType.register_class_instance_fields "ResolvedModule" [ "filePath"; "modulePath"; "parsed" ];
   HxType.register_class_static_fields "ResolvedModule" [ "getFilePath"; "getModulePath"; "getParsed" ];
   HxType.register_class_instance_fields "ResolverStage" [];
-  HxType.register_class_static_fields "ResolverStage" [ "implicitQualifiedTypeDeps"; "implicitSamePackageDeps"; "normalizeImport"; "parseProject"; "parseProjectRoots"; "parseProjectRootsShallow"; "resolveImplicitSamePackageTypesEnabled"; "resolveModuleFile"; "traceResolverDepsEnabled"; "withImplicitCwdClassPath" ];
+  HxType.register_class_static_fields "ResolverStage" [ "implicitQualifiedTypeDeps"; "implicitSamePackageDeps"; "implicitUtestAddCasesDeps"; "normalizeImport"; "parseProject"; "parseProjectRoots"; "parseProjectRootsShallow"; "resolveImplicitSamePackageTypesEnabled"; "resolveModuleFile"; "traceResolverDepsEnabled"; "withImplicitCwdClassPath" ];
   HxType.register_class_instance_fields "StringBuf" [ "add"; "addChar"; "addSub"; "buf"; "get_length"; "toString" ];
   HxType.register_class_static_fields "StringBuf" [];
   HxType.register_class_instance_fields "StringTools" [];
