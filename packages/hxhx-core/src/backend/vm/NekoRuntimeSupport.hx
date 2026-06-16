@@ -137,6 +137,16 @@ class NekoRuntimeSupport {
 		out.push("  return $call(func, o, args);");
 		out.push("}");
 		out.push("");
+		out.push("var __hxhx_optional_lambda = function(fn, optionalNames) {");
+		out.push("  return $varargs(function(args) {");
+		out.push("    var total = $nargs(fn);");
+		out.push("    var padded = $amake(total);");
+		out.push("    var i = 0;");
+		out.push("    while (i < total) { padded[i] = if (i < $asize(args)) args[i] else null; i = i + 1; }");
+		out.push("    return $call(fn, null, padded);");
+		out.push("  });");
+		out.push("}");
+		out.push("");
 		out.push("var __hxhx_field = function(o, field) {");
 		out.push("  if (o == null) return null;");
 		out.push("  if ($typeof(o) == $tarray) return if (field == \"length\") $asize(o) else null;");

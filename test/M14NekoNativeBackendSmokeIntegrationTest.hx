@@ -357,6 +357,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var f = (?x:Int) -> x == null ? 7 : x; Sys.println(f()); Sys.println(f(3)); } }'), context);
+		final optionalLambdaSource = File.getContent(sourcePath);
+		assertContains(optionalLambdaSource, "var __hxhx_optional_lambda = function(fn, optionalNames) {",
+			"expected Neko support prelude to define optional lambda helper");
+		assertContains(optionalLambdaSource, "var f = __hxhx_optional_lambda(function(x) { return (if ((x == null)) { 7; } else { x; }); }, $array(\"x\"));",
+			"expected optional-argument lambdas to route through the Neko arity adapter");
+		assertContains(optionalLambdaSource, "$print(f(), \"\\n\")", "expected zero-arg optional lambda call to remain a call site");
+		assertContains(optionalLambdaSource, "$print(f(3), \"\\n\")", "expected explicit optional lambda argument call to remain a call site");
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function main() { var label = switch (1) { case 1: "one"; default: "other"; }; Sys.println(label); } }'), context);
 		final switchSource = File.getContent(sourcePath);
 		assertContains(switchSource, 'var label = switch 1 { 1 => "one" default => "other" };', "expected Neko switch expression lowering");

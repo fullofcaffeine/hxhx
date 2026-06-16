@@ -142,6 +142,16 @@ let render = fun out classes -> ignore ((
     ignore (HxArray.push out "  return $call(func, o, args);");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_optional_lambda = function(fn, optionalNames) {");
+    ignore (HxArray.push out "  return $varargs(function(args) {");
+    ignore (HxArray.push out "    var total = $nargs(fn);");
+    ignore (HxArray.push out "    var padded = $amake(total);");
+    ignore (HxArray.push out "    var i = 0;");
+    ignore (HxArray.push out "    while (i < total) { padded[i] = if (i < $asize(args)) args[i] else null; i = i + 1; }");
+    ignore (HxArray.push out "    return $call(fn, null, padded);");
+    ignore (HxArray.push out "  });");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
     ignore (HxArray.push out "var __hxhx_field = function(o, field) {");
     ignore (HxArray.push out "  if (o == null) return null;");
     ignore (HxArray.push out "  if ($typeof(o) == $tarray) return if (field == \"length\") $asize(o) else null;");
