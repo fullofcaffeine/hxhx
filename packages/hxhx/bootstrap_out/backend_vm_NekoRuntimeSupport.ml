@@ -248,6 +248,16 @@ let render = fun out classes symbolTable -> ignore ((
     ignore (HxArray.push out "  return pos == 0;");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_string_ends_with = function(s, suffix) {");
+    ignore (HxArray.push out "  if (s == null || suffix == null) return false;");
+    ignore (HxArray.push out "  if ($typeof(s) != $tstring) s = __hxhx_string(s);");
+    ignore (HxArray.push out "  if ($typeof(suffix) != $tstring) suffix = __hxhx_string(suffix);");
+    ignore (HxArray.push out "  var offset = $ssize(s) - $ssize(suffix);");
+    ignore (HxArray.push out "  if (offset < 0) return false;");
+    ignore (HxArray.push out "  var pos = try $sfind(s, offset, suffix) catch e null;");
+    ignore (HxArray.push out "  return pos == offset;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
     ignore (HxArray.push out "var __hxhx_array_iterator = function(values) {");
     ignore (HxArray.push out "  var index = 0;");
     ignore (HxArray.push out "  var iterator = $new(null);");

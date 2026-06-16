@@ -245,6 +245,16 @@ class NekoRuntimeSupport {
 		out.push("  return pos == 0;");
 		out.push("}");
 		out.push("");
+		out.push("var __hxhx_string_ends_with = function(s, suffix) {");
+		out.push("  if (s == null || suffix == null) return false;");
+		out.push("  if ($typeof(s) != $tstring) s = __hxhx_string(s);");
+		out.push("  if ($typeof(suffix) != $tstring) suffix = __hxhx_string(suffix);");
+		out.push("  var offset = $ssize(s) - $ssize(suffix);");
+		out.push("  if (offset < 0) return false;");
+		out.push("  var pos = try $sfind(s, offset, suffix) catch e null;");
+		out.push("  return pos == offset;");
+		out.push("}");
+		out.push("");
 		out.push("var __hxhx_array_iterator = function(values) {");
 		out.push("  var index = 0;");
 		out.push("  var iterator = $new(null);");

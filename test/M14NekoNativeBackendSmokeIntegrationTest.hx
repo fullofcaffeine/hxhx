@@ -333,6 +333,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { var p = neko.vm.Loader.local().getPath()[0]; if (p.endsWith("/")) Sys.println(StringTools.endsWith(p, "/")); } }'),
+			context);
+		final loaderPathSource = File.getContent(sourcePath);
+		assertContains(loaderPathSource, "var p = $loader.path[0];", "expected neko.vm.Loader.local().getPath()[0] to lower to the Neko loader path");
+		assertContains(loaderPathSource, '__hxhx_string_ends_with(p, "/")', "expected receiver and StringTools endsWith to use Neko string suffix helper");
+		assertNotContains(loaderPathSource, '__hxhx_field(__hxhx_field(__hxhx_field(__hxhx_field(neko, "vm"), "Loader"), "local")(), "getPath")()',
+			"loader path extern chain must not be emitted as dynamic fields on a fake neko object");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function feq(a:Float, b:Float) {} static function main() { feq(1.2e+35, 1.2e+35); } }'), context);
 		final scientificFloatSource = File.getContent(sourcePath);
 		assertContains(scientificFloatSource, 'feq($$float("1.2e+35"), $$float("1.2e+35"));',

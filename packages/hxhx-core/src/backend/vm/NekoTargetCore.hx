@@ -648,6 +648,9 @@ class NekoTargetCore {
 				case "startsWith":
 					renderRuntimeForwarder(out, context, info, fn, "__hxhx_string_starts_with(s, start)");
 					return true;
+				case "endsWith":
+					renderRuntimeForwarder(out, context, info, fn, "__hxhx_string_ends_with(s, end)");
+					return true;
 				case _:
 			}
 		}
@@ -1042,6 +1045,8 @@ class NekoTargetCore {
 				NekoMacroExprLowering.render(inner, wrappers, function(value) return renderExpr(context, value));
 			case EArrayDecl(values):
 				renderArray(context, values);
+			case EArrayAccess(array, EInt(0)) if (isNekoLoaderLocalGetPathCall(array)):
+				"$loader.path[0]";
 			case EArrayAccess(array, index):
 				renderExpr(context, array) + "[" + renderExpr(context, index) + "]";
 			case EAnon(fieldNames, fieldValues):
@@ -2039,6 +2044,8 @@ class NekoTargetCore {
 				return "__hxhx_reflect_call_method(" + renderedArgs[0] + ", " + renderedArgs[1] + ", " + renderedArgs[2] + ")";
 			case EField(EIdent("StringTools"), "startsWith") if (args.length >= 2):
 				return "__hxhx_string_starts_with(" + renderedArgs[0] + ", " + renderedArgs[1] + ")";
+			case EField(EIdent("StringTools"), "endsWith") if (args.length >= 2):
+				return "__hxhx_string_ends_with(" + renderedArgs[0] + ", " + renderedArgs[1] + ")";
 			case EEnumValue(name):
 				return renderEnumCtorCall(name, renderedArgs);
 			case EField(receiver, method) if (lookupCurrentAbstractValueHelper(context, method) != null):
@@ -2057,6 +2064,8 @@ class NekoTargetCore {
 				return "__hxhx_array_indexOf(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(receiver, "push") if (args.length >= 1):
 				return renderArrayPushExpr(context, receiver, renderedArgs[0]);
+			case EField(receiver, "endsWith") if (args.length >= 1):
+				return "__hxhx_string_ends_with(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(ESuper, _):
 				return "null";
 			case EField(EIdent(className), method) if (isUpperStart(className)):
@@ -2082,6 +2091,15 @@ class NekoTargetCore {
 
 	static function renderEnumCtorCall(name:String, renderedArgs:Array<String>):String {
 		return "__hxhx_enum_value(" + quote(name) + ", $array(" + renderedArgs.join(", ") + "))";
+	}
+
+	static function isNekoLoaderLocalGetPathCall(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ECall(EField(ECall(EField(EField(EField(EIdent("neko"), "vm"), "Loader"), "local"), localArgs), "getPath"),
+				getPathArgs): localArgs.length == 0 && getPathArgs.length == 0;
+			case _:
+				false;
+		}
 	}
 
 	static function lookupClass(context:NekoEmitContext, typePath:String):Null<NekoClassInfo> {
