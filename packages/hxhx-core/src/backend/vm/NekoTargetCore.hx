@@ -634,6 +634,8 @@ class NekoTargetCore {
 				renderNullCoalesceExpr(context, left, right);
 			case EBinop("??=", left, right):
 				renderNullCoalesceAssignExpr(context, left, right);
+			case EBinop("=", left, right):
+				renderAssignExpr(context, left, right);
 			case EBinop(op, left, right):
 				"(" + renderExpr(context, left) + " " + op + " " + renderExpr(context, right) + ")";
 			case ETernary(cond, thenExpr, elseExpr):
@@ -728,6 +730,15 @@ class NekoTargetCore {
 			+ "; } return "
 			+ target
 			+ "; })()";
+	}
+
+	static function renderAssignExpr(context:NekoEmitContext, left:HxExpr, right:HxExpr):String {
+		return switch (left) {
+			case EField(ESuper, _):
+				renderExpr(context, right);
+			case _:
+				"(" + renderAssignableExpr(context, left, "assignment") + " = " + renderExpr(context, right) + ")";
+		}
 	}
 
 	static function renderAssignableExpr(context:NekoEmitContext, expr:HxExpr, detail:String):String {

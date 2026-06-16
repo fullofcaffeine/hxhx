@@ -181,6 +181,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class BaseProp { public function new() {} public var prop(get,set):Int; function get_prop() return 1; function set_prop(v:Int) return v; } class ChildSuperProp extends BaseProp { public function new() { super(); } override function set_prop(v:Int) return (super.prop = v) + 1; } class Main { static function main() { var child = new ChildSuperProp(); Sys.println(child.set_prop(4)); } }'),
+			context);
+		final superPropAssignSource = File.getContent(sourcePath);
+		assertContains(superPropAssignSource, "return (__hxhx_parenthesized(v) + 1);",
+			"expected Neko super property assignment MVP to preserve expression value");
+		assertNotContains(superPropAssignSource, "(null = v)", "super property assignment must not emit an invalid null lvalue");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function fallback() return 2; static function main() { var value:Null<Int> = null; var got = value ?? fallback(); Sys.println(got); } }'),
 			context);
 		final nullCoalesceSource = File.getContent(sourcePath);
