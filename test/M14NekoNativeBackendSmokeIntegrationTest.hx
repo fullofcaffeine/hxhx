@@ -243,6 +243,19 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"__hxhx_neko_ndll_suffix(arch)", "native-decoded enum abstract method calls should use the Neko ndll suffix helper");
 		assertContains(enumAbstractSource, "var __hxhx_neko_ndll_suffix = function(arch) {", "expected Neko ndll suffix fallback helper");
 
+		final serializerClass = new HxClassDecl("Serializer", false, [], [new HxFieldDecl("DEFAULT_RESOLVER", HxVisibility.Public, true, "", null)], "", []);
+		final serializerInfo:Dynamic = {fullName: "haxe.Serializer", shortName: "Serializer", cls: serializerClass};
+		nativeDecodedClasses.set("haxe.Serializer", serializerInfo);
+		final serializerContext = cast {
+			classes: nativeDecodedClasses,
+			selfName: null,
+			currentClass: serializerInfo,
+			symbolTable: "__hxhx_symbols",
+			locals: new haxe.ds.StringMap<Bool>()
+		};
+		assertTrue(@:privateAccess NekoTargetCore.renderExpr(serializerContext, EIdent("DEFAULT_RESOLVER")) != '"DEFAULT_RESOLVER"',
+			"uppercase static fields outside the native-decoded Arch bridge must remain assignable identifiers");
+
 		final splitSysTime = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Sys { public static function time():Float return 0; public static function println(v) {} } class Main { static function main() { Sys.println(Sys.time()); } }'),
 			splitContext, sourcePath);
 		final splitSysTimeSource = supportSource(splitSysTime);

@@ -2043,7 +2043,7 @@ class NekoTargetCore {
 				return renderEnumCtorCall(name, renderedArgs);
 			case EField(receiver, method) if (lookupCurrentAbstractValueHelper(context, method) != null):
 				return renderFunctionRef(context, context.currentClass.fullName, method) + "(" + renderExpr(context, receiver) + ")";
-			case EField(receiver, "getNdllSuffix") if (hasAbstractMarker(context)):
+			case EField(receiver, "getNdllSuffix") if (hasNativeDecodedNekoArchAbstract(context)):
 				return "__hxhx_neko_ndll_suffix(" + renderExpr(context, receiver) + ")";
 			case EField(EIdent("Sys"), "systemName"):
 				return "__hxhx_sys_system_name()";
@@ -2180,23 +2180,27 @@ class NekoTargetCore {
 	static function isEnumAbstractConstantName(context:NekoEmitContext, name:String):Bool {
 		if (context.currentClass == null || name == null || name.length == 0 || !isUpperStart(name))
 			return false;
-		if (!hasAbstractMarker(context))
+		if (!hasNativeDecodedNekoArchAbstract(context))
 			return false;
 		for (field in HxClassDecl.getFields(context.currentClass.cls)) {
-			if (HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name && HxFieldDecl.getInit(field) == null)
+			if (HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name && HxFieldDecl.getInit(field) == null && isNekoArchConstantName(name))
 				return true;
 		}
-		return lookupClass(context, name) == null;
+		return isNekoArchConstantName(name) && lookupClass(context, name) == null;
 	}
 
-	static function hasAbstractMarker(context:NekoEmitContext):Bool {
+	static function hasNativeDecodedNekoArchAbstract(context:NekoEmitContext):Bool {
 		if (context == null || context.classes == null)
 			return false;
 		for (info in context.classes) {
-			if (isAbstractInfo(info))
+			if (isAbstractInfo(info) && info.fullName == "Arch")
 				return true;
 		}
 		return false;
+	}
+
+	static function isNekoArchConstantName(name:String):Bool {
+		return name == "Arm64" || name == "Arm" || name == "X86_64" || name == "X86";
 	}
 
 	static function isAbstractValueHelperFunction(fn:HxFunctionDecl):Bool {
