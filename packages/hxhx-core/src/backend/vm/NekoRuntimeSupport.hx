@@ -170,6 +170,18 @@ class NekoRuntimeSupport {
 		out.push("  return if (arch == \"Arm64\") \"Arm64\" else if (arch == \"Arm\") \"Arm\" else if (arch == \"X86_64\") \"64\" else if (arch == \"X86\") \"\" else null;");
 		out.push("}");
 		out.push("");
+		out.push("var __hxhx_main_loop_add = function(callback) {");
+		out.push("  var event = $new(null);");
+		out.push("  event.__hx_ctor = \"haxe.MainEvent\";");
+		out.push("  event.__hx_params = $array(callback);");
+		out.push("  event.f = callback;");
+		out.push("  event.stopped = false;");
+		out.push("  event.stop = function() { event.stopped = true; return null; };");
+		out.push("  event.call = function() { if (!event.stopped && callback != null) callback(); return null; };");
+		out.push("  event.delay = function(_seconds) { event.call(); return event; };");
+		out.push("  return event;");
+		out.push("}");
+		out.push("");
 		out.push("var __hxhx_process_input = function(handle, read) {");
 		out.push("  var input = $new(null);");
 		out.push("  input.readLine = function() {");

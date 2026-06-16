@@ -173,6 +173,18 @@ let render = fun out classes symbolTable -> ignore ((
     ignore (HxArray.push out "  return if (arch == \"Arm64\") \"Arm64\" else if (arch == \"Arm\") \"Arm\" else if (arch == \"X86_64\") \"64\" else if (arch == \"X86\") \"\" else null;");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_main_loop_add = function(callback) {");
+    ignore (HxArray.push out "  var event = $new(null);");
+    ignore (HxArray.push out "  event.__hx_ctor = \"haxe.MainEvent\";");
+    ignore (HxArray.push out "  event.__hx_params = $array(callback);");
+    ignore (HxArray.push out "  event.f = callback;");
+    ignore (HxArray.push out "  event.stopped = false;");
+    ignore (HxArray.push out "  event.stop = function() { event.stopped = true; return null; };");
+    ignore (HxArray.push out "  event.call = function() { if (!event.stopped && callback != null) callback(); return null; };");
+    ignore (HxArray.push out "  event.delay = function(_seconds) { event.call(); return event; };");
+    ignore (HxArray.push out "  return event;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
     ignore (HxArray.push out "var __hxhx_process_input = function(handle, read) {");
     ignore (HxArray.push out "  var input = $new(null);");
     ignore (HxArray.push out "  input.readLine = function() {");

@@ -1571,7 +1571,51 @@ class NekoTargetCore {
 				+ sanitizeNekoValueExpr(opaqueTypedLocalInit.value)
 				+ "; return null; })()";
 		}
+		final opaqueMainLoopNestedEvent = renderOpaqueMainLoopNestedEventRaw(context, raw);
+		if (opaqueMainLoopNestedEvent != null)
+			return opaqueMainLoopNestedEvent;
 		return unsupportedExpr("ETryCatchRaw(" + raw + ")");
+	}
+
+	static function renderOpaqueMainLoopNestedEventRaw(context:NekoEmitContext, raw:String):Null<String> {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		final start = "opaque_block_expr:{";
+		if (!StringTools.startsWith(compact, start) || !StringTools.endsWith(compact, "}"))
+			return null;
+		final body = compact.substr(start.length, compact.length - start.length - 1);
+		final firstStopEnd = body.indexOf(".stop();var");
+		if (firstStopEnd <= 0)
+			return null;
+		final outerEvent = body.substr(0, firstStopEnd);
+		if (!isSimpleIdent(outerEvent))
+			return null;
+		final afterOuterStop = body.substr(firstStopEnd + ".stop();var".length);
+		final localTypeMarker = ":MainEvent=null;";
+		final localTypeEnd = afterOuterStop.indexOf(localTypeMarker);
+		if (localTypeEnd <= 0)
+			return null;
+		final innerEvent = afterOuterStop.substr(0, localTypeEnd);
+		if (!isSimpleIdent(innerEvent))
+			return null;
+		final afterLocal = afterOuterStop.substr(localTypeEnd + localTypeMarker.length);
+		final addPrefix = innerEvent + "=MainLoop.add(()->{";
+		if (!StringTools.startsWith(afterLocal, addPrefix))
+			return null;
+		final afterAddPrefix = afterLocal.substr(addPrefix.length);
+		final addEnd = afterAddPrefix.indexOf("});" + innerEvent + ".delay(0);");
+		if (addEnd < 0)
+			return null;
+		final callbackBody = afterAddPrefix.substr(0, addEnd);
+		final expectedCallback = innerEvent + ".stop();pass();async.done();";
+		if (callbackBody != expectedCallback)
+			return null;
+
+		final passCall = context != null
+			&& context.selfName != null ? "__hxhx_field(" + context.selfName + ", " + quote("pass") + ")()" : "pass()";
+		return "(function() { " + "__hxhx_field(" + safeIdent(outerEvent) + ", " + quote("stop") + ")(); " + "var " + safeIdent(innerEvent) + " = null; "
+			+ safeIdent(innerEvent) + " = __hxhx_main_loop_add(function() { __hxhx_field(" + safeIdent(innerEvent) + ", " + quote("stop") + ")(); "
+			+ passCall + "; __hxhx_field(async, " + quote("done") + ")(); }); " + "__hxhx_field(" + safeIdent(innerEvent) + ", " + quote("delay")
+			+ ")(0); return null; })()";
 	}
 
 	static function parseBytesSubTryRaw(raw:String):Null<NekoBytesSubRaw> {
@@ -2200,6 +2244,8 @@ class NekoTargetCore {
 				return "$print(" + renderedArgs.join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
+			case EField(EIdent("MainLoop"), "add") | EField(EField(EIdent("haxe"), "MainLoop"), "add") if (args.length >= 1):
+				return "__hxhx_main_loop_add(" + renderedArgs[0] + ")";
 			case EField(receiver, "indexOf") if (args.length >= 1):
 				return "__hxhx_array_indexOf(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(receiver, "push") if (args.length >= 1):
@@ -2521,6 +2567,22 @@ class NekoTargetCore {
 			out.addChar(ok ? c : "_".code);
 		}
 		return out.toString();
+	}
+
+	static function isSimpleIdent(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		for (i in 0...name.length) {
+			final c = name.charCodeAt(i);
+			final ok = (c >= "a".code && c <= "z".code)
+				|| (c >= "A".code && c <= "Z".code)
+				|| c == "_".code
+				|| (i > 0 && c >= "0".code && c <= "9".code);
+			if (!ok)
+				return false;
+		}
+		final first = name.charCodeAt(0);
+		return !(first >= "0".code && first <= "9".code);
 	}
 
 	static function quote(value:String):String {

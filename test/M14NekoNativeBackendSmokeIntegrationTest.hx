@@ -117,6 +117,11 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"ETryCatchRaw");
 		final opaqueTypedLocalInit = @:privateAccess NekoTargetCore.renderExpr(cast null, ETryCatchRaw('opaque_block_expr:{ var i:Int = z; }'));
 		assertContains(opaqueTypedLocalInit, "var i = z;", "opaque typed local init should emit the captured initializer safely");
+		final opaqueMainLoopNestedEvent = @:privateAccess NekoTargetCore.renderExpr(cast null,
+			ETryCatchRaw('opaque_block_expr:{ e1.stop(); var e2:MainEvent = null; e2 = MainLoop.add(() -> { e2.stop(); pass(); async.done(); }); e2.delay(0); }'));
+		assertContains(opaqueMainLoopNestedEvent, "__hxhx_main_loop_add(function()",
+			"opaque MainLoop nested event block should lower to the Neko main-loop helper");
+		assertContains(opaqueMainLoopNestedEvent, '__hxhx_field(e2, "delay")(0);', "opaque MainLoop nested event block should preserve the zero-delay trigger");
 		final putEnvRaw = @:privateAccess NekoTargetCore.renderExpr(cast null,
 			ETryCatchRaw('try{Sys.putEnv("NON_EXISTENT",null);true;}catch(e:Dynamic){trace(e);false;}'));
 		assertContains(putEnvRaw, '__hxhx_sys_put_env("NON_EXISTENT", null); return true;', "Sys.putEnv raw try parser should preserve null and success bool");
@@ -1044,6 +1049,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(sysPutEnvTrySource,
 			'try { __hxhx_sys_put_env("NON_EXISTENT", null); return true; } catch e { ' + "$" + 'print(e, "\\n"); return false; }',
 			"expected Sys.putEnv bool try/catch raw lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class MainLoop { public static function add(callback:Void->Void):Dynamic return null; } class Main { static function main() { var e = MainLoop.add(() -> trace("tick")); e.delay(0); } }'),
+			context);
+		final mainLoopSource = File.getContent(sourcePath);
+		assertContains(mainLoopSource, "var __hxhx_main_loop_add = function(callback) {", "expected MainLoop.add Neko runtime helper");
+		assertContains(mainLoopSource, "__hxhx_main_loop_add(function()", "expected MainLoop.add calls to lower to the runtime helper");
 
 		deleteRecursive(outDir);
 
