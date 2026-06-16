@@ -155,7 +155,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(splitVarArgsSource, "var teardown = __hxhx_args[2];", "expected method varargs to bind omitted arguments as null");
 		assertContains(splitVarArgsSource, 'runner.addCase("case");', "expected call sites to stay idiomatic receiver calls");
 
-		final reflectionSplit = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Case { public var value:Int; public function new() {} public function testFoo() {} public static function helper() {} } class Main { static function main() { var c = new Case(); Sys.println(Type.getClassName(Type.getClass(c))); Sys.println(Type.getInstanceFields(Type.getClass(c)).length); Sys.println(Reflect.hasField(c, "testFoo")); } }'),
+		final reflectionSplit = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Case { public var value:Int; public function new() {} public function testFoo() {} public static function helper() {} } class Main { static function main() { var c = new Case(); Sys.println(Type.getClassName(Type.getClass(c))); Sys.println(Type.getInstanceFields(Type.getClass(c)).length); Sys.println(Reflect.hasField(c, "testFoo")); Sys.println(Reflect.isFunction(Reflect.field(c, "testFoo"))); Reflect.callMethod(c, Reflect.field(c, "testFoo"), []); } }'),
 			splitContext, sourcePath);
 		final reflectionSource = supportSource(reflectionSplit);
 		assertContains(reflectionSource, "$objset(__hxhx_instance_fields, $hash(\"Case\"), $array(\"value\", \"testFoo\"));",
@@ -165,6 +165,10 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(reflectionSource, "$print($asize(__hxhx_type_fields(__hxhx_instance_fields, __hxhx_type_get_class(c))), \"\\n\");",
 			"expected Type.getInstanceFields to return metadata-backed arrays");
 		assertContains(reflectionSource, "$print(__hxhx_reflect_has_field(c, \"testFoo\"), \"\\n\");", "expected Reflect.hasField runtime helper");
+		assertContains(reflectionSource, "$print(__hxhx_reflect_is_function((if (c == null) null else $objget(c, $hash(\"testFoo\")))), \"\\n\");",
+			"expected Reflect.isFunction to lower to runtime helper for method discovery");
+		assertContains(reflectionSource, "__hxhx_reflect_call_method(c, (if (c == null) null else $objget(c, $hash(\"testFoo\"))), $array());",
+			"expected Reflect.callMethod to lower to runtime helper");
 
 		deleteRecursive(outDir);
 

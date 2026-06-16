@@ -1817,6 +1817,10 @@ class NekoTargetCore {
 				return "(if (" + renderedArgs[0] + " == null) null else $objget(" + renderedArgs[0] + ", $hash(" + renderedArgs[1] + ")))";
 			case EField(EIdent("Reflect"), "fields") if (args.length >= 1):
 				return "__hxhx_reflect_fields(" + renderedArgs[0] + ")";
+			case EField(EIdent("Reflect"), "isFunction") if (args.length >= 1):
+				return "__hxhx_reflect_is_function(" + renderedArgs[0] + ")";
+			case EField(EIdent("Reflect"), "callMethod") if (args.length >= 3):
+				return "__hxhx_reflect_call_method(" + renderedArgs[0] + ", " + renderedArgs[1] + ", " + renderedArgs[2] + ")";
 			case EField(EIdent("StringTools"), "startsWith") if (args.length >= 2):
 				return "__hxhx_string_starts_with(" + renderedArgs[0] + ", " + renderedArgs[1] + ")";
 			case EField(EIdent("Sys"), "print"):

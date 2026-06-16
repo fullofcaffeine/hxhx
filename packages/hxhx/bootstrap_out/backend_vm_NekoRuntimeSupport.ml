@@ -94,6 +94,16 @@ let render = fun out classes -> ignore ((
     ignore (HxArray.push out "  return o != null && $typeof(o) == $tobject && $objget(o, $hash(field)) != null;");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_reflect_is_function = function(value) {");
+    ignore (HxArray.push out "  return $typeof(value) == $tfunction;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "var __hxhx_reflect_call_method = function(o, func, args) {");
+    ignore (HxArray.push out "  if (func == null) return null;");
+    ignore (HxArray.push out "  if (args == null) args = $array();");
+    ignore (HxArray.push out "  return $call(func, o, args);");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
     ignore (HxArray.push out "var __hxhx_string_starts_with = function(s, start) {");
     ignore (HxArray.push out "  if (s == null || start == null) return false;");
     ignore (HxArray.push out "  if ($typeof(s) != $tstring) s = __hxhx_string(s);");
