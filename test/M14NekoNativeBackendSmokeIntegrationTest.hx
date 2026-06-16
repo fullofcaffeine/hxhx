@@ -169,6 +169,16 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		deleteRecursive(outDir);
 
+		final postfixThisSource = @:privateAccess NekoTargetCore.renderExpr(cast {
+			classes: null,
+			mainClass: null,
+			currentClass: null,
+			selfName: "__hxhx_self"
+		}, EUnop("post++", EThis));
+		assertContains(postfixThisSource, "var __hxhx_post_old = __hxhx_self.__hx_value;", "expected Neko postfix this update to read backing value slot");
+		assertContains(postfixThisSource, "__hxhx_self.__hx_value = (__hxhx_post_old + 1);", "expected Neko postfix this update to write backing value slot");
+		assertNotContains(postfixThisSource, "post++", "postfix this increment token should not leak into Neko source");
+
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function fallback() return 2; static function main() { var value:Null<Int> = null; var got = value ?? fallback(); Sys.println(got); } }'),
@@ -204,10 +214,12 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
-		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var o = new TestOps(7); } }'), context);
+		BackendDispatchBoundary.emit(backend,
+			program('class TestOps { public function new(v:Int) {} } class Main { static function main() { var o = new TestOps(7); } }'), context);
 		final newSource = File.getContent(sourcePath);
-		assertContains(newSource, "__hxhx_o.__hx_ctor = \"TestOps\";", "expected constructor tag on lowered Neko object");
-		assertContains(newSource, "__hxhx_o.__hx_params = $array(7);", "expected constructor args on lowered Neko object");
+		assertContains(newSource, "__hxhx_self.__hx_ctor = \"TestOps\";", "expected constructor tag on lowered Neko object");
+		assertContains(newSource, "__hxhx_self.__hx_params = $array(v);", "expected constructor params on lowered Neko object");
+		assertContains(newSource, "__hxhx_self.__hx_value = v;", "expected first constructor arg to seed abstract-style this value slot");
 
 		deleteRecursive(outDir);
 

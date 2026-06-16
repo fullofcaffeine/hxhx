@@ -440,6 +440,7 @@ class NekoTargetCore {
 		out.push("  var " + selfName + " = $new(null);");
 		out.push("  " + selfName + ".__hx_ctor = " + quote(info.fullName) + ";");
 		out.push("  " + selfName + ".__hx_params = $array(" + args.join(", ") + ");");
+		out.push("  " + selfName + ".__hx_value = " + (args.length > 0 ? args[0] : "null") + ";");
 		for (field in HxClassDecl.getFields(info.cls)) {
 			if (!HxFieldDecl.getIsStatic(field)) {
 				final init = HxFieldDecl.getInit(field);
@@ -731,11 +732,19 @@ class NekoTargetCore {
 
 	static function renderAssignableExpr(context:NekoEmitContext, expr:HxExpr, detail:String):String {
 		return switch (expr) {
+			case EThis:
+				renderThisValueSlotExpr(context, detail);
 			case EIdent(_) | EField(_, _) | EArrayAccess(_, _):
 				renderExpr(context, expr);
 			case _:
 				unsupportedExpr(detail + " target " + exprTag(expr));
 		}
+	}
+
+	static function renderThisValueSlotExpr(context:NekoEmitContext, detail:String):String {
+		if (context.selfName == null)
+			unsupportedExpr(detail + " target this");
+		return context.selfName + ".__hx_value";
 	}
 
 	static function renderPostfixIncDecExpr(context:NekoEmitContext, expr:HxExpr, delta:Int):String {
