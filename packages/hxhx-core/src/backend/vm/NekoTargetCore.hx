@@ -997,6 +997,24 @@ class NekoTargetCore {
 		}
 	}
 
+	static function renderArrayPushExpr(context:NekoEmitContext, receiver:HxExpr, value:String):String {
+		return switch (receiver) {
+			case EIdent(_) | EField(_, _) | EArrayAccess(_, _):
+				final target = renderAssignableExpr(context, receiver, "array push receiver");
+				"(function() { "
+				+ target
+				+ " = __hxhx_array_push("
+				+ target
+				+ ", "
+				+ value
+				+ "); return $asize("
+				+ target
+				+ "); })()";
+			case _:
+				"__hxhx_array_push(" + renderExpr(context, receiver) + ", " + value + ")";
+		}
+	}
+
 	static function renderAssignableExpr(context:NekoEmitContext, expr:HxExpr, detail:String):String {
 		return switch (expr) {
 			case EThis:
@@ -1207,7 +1225,7 @@ class NekoTargetCore {
 			"var __hxhx_range_i = " + renderExpr(context, start) + ";",
 			"var __hxhx_range_end = " + renderExpr(context, end) + ";",
 			"while (__hxhx_range_i < __hxhx_range_end) {",
-			"__hxhx_array_push(__hxhx_range_out, __hxhx_range_i);",
+			"__hxhx_range_out = __hxhx_array_push(__hxhx_range_out, __hxhx_range_i);",
 			"__hxhx_range_i = __hxhx_range_i + 1;",
 			"}",
 			"return __hxhx_range_out;",
@@ -1409,7 +1427,7 @@ class NekoTargetCore {
 			"var " + safeName + " = " + iterableName + "[" + indexName + "];",
 			indexName + " = " + indexName + " + 1;"
 		];
-		final push = "__hxhx_array_push(" + resultName + ", " + renderExpr(context, yieldExpr) + ");";
+		final push = resultName + " = __hxhx_array_push(" + resultName + ", " + renderExpr(context, yieldExpr) + ");";
 		if (guardExpr == null) {
 			parts.push(push);
 		} else {
@@ -1808,7 +1826,7 @@ class NekoTargetCore {
 			case EField(receiver, "indexOf") if (args.length >= 1):
 				return "__hxhx_array_indexOf(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(receiver, "push") if (args.length >= 1):
-				return "__hxhx_array_push(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
+				return renderArrayPushExpr(context, receiver, renderedArgs[0]);
 			case EField(ESuper, _):
 				return "null";
 			case EField(EIdent(className), method) if (isUpperStart(className)):

@@ -516,7 +516,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(arrayMethodSource, "var __hxhx_array_indexOf = function(a, value)", "expected Neko array indexOf helper");
 		assertContains(arrayMethodSource, "var __hxhx_array_push = function(a, value)", "expected Neko array push helper");
 		assertContains(arrayMethodSource, 'var verbose = (__hxhx_array_indexOf($$loader.args, "-v") >= 0);', "expected Sys.args().indexOf lowering");
-		assertContains(arrayMethodSource, "__hxhx_array_push(values, 2);", "expected array push lowering");
+		assertContains(arrayMethodSource, "values = __hxhx_array_push(values, 2);", "expected array push to retain resized native array");
 
 		deleteRecursive(outDir);
 
@@ -527,7 +527,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(arrayComprehensionSource, "var __hxhx_comp_v = $array();", "expected array comprehension result allocation");
 		assertContains(arrayComprehensionSource, "while (__hxhx_index_v < $asize(__hxhx_iter_v))", "expected array comprehension loop");
 		assertContains(arrayComprehensionSource, "if (v > 1) {", "expected array comprehension guard");
-		assertContains(arrayComprehensionSource, "__hxhx_array_push(__hxhx_comp_v, v);", "expected array comprehension push");
+		assertContains(arrayComprehensionSource, "__hxhx_comp_v = __hxhx_array_push(__hxhx_comp_v, v);",
+			"expected array comprehension push to retain resized native array");
 
 		deleteRecursive(outDir);
 
@@ -635,8 +636,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			context);
 		final arrayCtorSource = File.getContent(sourcePath);
 		assertContains(arrayCtorSource, "(__hxhx_self.handlers = $array())", "expected new Array() instance-field assignment to lower to native Neko array");
-		assertContains(arrayCtorSource, "__hxhx_array_push(__hxhx_self.handlers, handler)",
-			"expected Array.push on the initialized instance field to use native Neko array helper");
+		assertContains(arrayCtorSource, "__hxhx_self.handlers = __hxhx_array_push(__hxhx_self.handlers, handler)",
+			"expected Array.push on the initialized instance field to retain resized native array");
 		assertNotContains(arrayCtorSource, "__hxhx_new_Array()", "new Array() must not construct a Haxe object for Neko array operations");
 
 		deleteRecursive(outDir);
@@ -844,7 +845,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final rangeForSource = File.getContent(sourcePath);
 		assertContains(rangeForSource, "var __hxhx_range_out = $array();", "expected range expression result allocation");
 		assertContains(rangeForSource, "while (__hxhx_range_i < __hxhx_range_end)", "expected range expression loop");
-		assertContains(rangeForSource, "__hxhx_array_push(__hxhx_range_out, __hxhx_range_i);", "expected range expression append");
+		assertContains(rangeForSource, "__hxhx_range_out = __hxhx_array_push(__hxhx_range_out, __hxhx_range_i);",
+			"expected range expression append to retain resized native array");
 		assertContains(rangeForSource, "var __hxhx_iter_i = (function() {", "expected range for-in to reuse iterable lowering");
 
 		deleteRecursive(outDir);
