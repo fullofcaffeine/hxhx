@@ -882,7 +882,9 @@ class Stage3Compiler {
 
 		closeMacroSession();
 
-		final runError = Stage3RunSupport.runEmittedArtifact(backendId, parsedHadCmd, parsedCmdCommands, parsedHadRun, parsedRunArgs, cwd, emitted, noRun);
+		final nekoNdllPaths = backendId == "neko-native" ? Stage3SetupSupport.collectNekoNdllPaths(libsResolved, cwd) : [];
+		final runError = Stage3RunSupport.runEmittedArtifact(backendId, parsedHadCmd, parsedCmdCommands, parsedHadRun, parsedRunArgs, cwd, emitted, noRun,
+			nekoNdllPaths);
 		if (runError != null)
 			return error(runError);
 		return 0;

@@ -114,7 +114,7 @@ class Stage3RunSupport {
 		return runCommandInCwd(matched.command, [matched.script], cwd);
 	}
 
-	public static function runSafeNekoHookForArtifact(commands:Array<String>, cwd:String, artifactPath:String):Null<Int> {
+	public static function runSafeNekoHookForArtifact(commands:Array<String>, cwd:String, artifactPath:String, ?nekoPathEntries:Array<String>):Null<Int> {
 		if (commands == null || commands.length == 0 || artifactPath == null || artifactPath.length == 0)
 			return null;
 		final artifactAbs = Path.normalize(artifactPath);
@@ -131,7 +131,7 @@ class Stage3RunSupport {
 		}
 		if (matched == null)
 			return null;
-		return runCommandInCwd("neko", [matched], cwd);
+		return runNekoCommandInCwd([matched], cwd, nekoPathEntries);
 	}
 
 	public static function runSafeLuaCommands(commands:Array<String>, cwd:String):Null<Int> {
@@ -151,7 +151,7 @@ class Stage3RunSupport {
 	}
 
 	public static function runEmittedArtifact(backendId:String, parsedHadCmd:Bool, parsedCmdCommands:Array<String>, parsedHadRun:Bool,
-			parsedRunArgs:Array<String>, cwd:String, emitted:EmitResult, noRun:Bool):Null<String> {
+			parsedRunArgs:Array<String>, cwd:String, emitted:EmitResult, noRun:Bool, ?nekoPathEntries:Array<String>):Null<String> {
 		if (noRun) {
 			Sys.println("run=skipped");
 			return null;
@@ -177,7 +177,7 @@ class Stage3RunSupport {
 				}
 			}
 			if (backendId == "neko-native" && parsedHadCmd) {
-				final cmdCode = runSafeNekoHookForArtifact(parsedCmdCommands, cwd, emitted.entryPath);
+				final cmdCode = runSafeNekoHookForArtifact(parsedCmdCommands, cwd, emitted.entryPath, nekoPathEntries);
 				if (cmdCode != null) {
 					if (cmdCode != 0)
 						return "command hook failed with exit code " + Std.string(cmdCode);
@@ -329,6 +329,60 @@ class Stage3RunSupport {
 		if (path == null || path.length == 0)
 			return cwd;
 		return Path.isAbsolute(path) ? Path.normalize(path) : Path.normalize(Path.join([cwd, path]));
+	}
+
+	static function runNekoCommandInCwd(args:Array<String>, cwd:String, nekoPathEntries:Array<String>):Int {
+		final entries = normalizeNekoPathEntries(nekoPathEntries);
+		if (entries.length == 0)
+			return runCommandInCwd("neko", args, cwd);
+
+		final previousNekoPath = Sys.getEnv("NEKOPATH");
+		final nextNekoPath = buildNekoPath(entries, previousNekoPath);
+		try {
+			Sys.putEnv("NEKOPATH", nextNekoPath);
+			final code = runCommandInCwd("neko", args, cwd);
+			restoreEnv("NEKOPATH", previousNekoPath);
+			return code;
+		} catch (e:haxe.Exception) {
+			restoreEnv("NEKOPATH", previousNekoPath);
+			throw e;
+		} catch (raw:String) {
+			restoreEnv("NEKOPATH", previousNekoPath);
+			throw raw;
+		}
+	}
+
+	static function normalizeNekoPathEntries(entries:Array<String>):Array<String> {
+		final out = new Array<String>();
+		if (entries == null)
+			return out;
+		for (entry in entries) {
+			if (entry == null || entry.length == 0)
+				continue;
+			if (out.indexOf(entry) == -1)
+				out.push(entry);
+		}
+		return out;
+	}
+
+	static function buildNekoPath(entries:Array<String>, previous:Null<String>):String {
+		final sep = nekoPathSeparator();
+		final parts = entries.copy();
+		if (previous != null && previous.length > 0) {
+			for (part in previous.split(sep)) {
+				if (part.length > 0 && parts.indexOf(part) == -1)
+					parts.push(part);
+			}
+		}
+		return parts.join(sep);
+	}
+
+	static function nekoPathSeparator():String {
+		return Sys.systemName() == "Windows" ? ";" : ":";
+	}
+
+	static function restoreEnv(name:String, value:Null<String>):Void {
+		Sys.putEnv(name, value == null ? "" : value);
 	}
 
 	static function runCommandInCwd(command:String, args:Array<String>, cwd:String):Int {

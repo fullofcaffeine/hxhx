@@ -1,6 +1,7 @@
 import backend.EmitResult;
 import haxe.io.Path;
 import hxhx.Stage3RunSupport;
+import hxhx.Stage3SetupSupport;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -31,13 +32,16 @@ class M14Stage3LuaRunSupportChild {
 		final tmp = Path.normalize(".tmp/m14_stage3_lua_run_support_child_" + mode + "_" + Std.string(Std.int(Date.now().getTime())));
 		final bin = Path.join([tmp, "bin"]);
 		final oldPath = Sys.getEnv("PATH");
+		final oldNekoPath = Sys.getEnv("NEKOPATH");
+		final oldFakeNekoPrintPath = Sys.getEnv("HXHX_FAKE_NEKO_PRINT_PATH");
 		try {
 			mkdirp(bin);
 			final absBin = FileSystem.fullPath(bin);
 			final fakeLua = Path.join([absBin, "lua"]);
 			File.saveContent(fakeLua, "#!/usr/bin/env sh\nprintf '%s\\n' \"lua-stdout:$*\"\n");
 			final fakeNeko = Path.join([absBin, "neko"]);
-			File.saveContent(fakeNeko, "#!/usr/bin/env sh\nprintf '%s\\n' \"neko-stdout:$*\"\n");
+			File.saveContent(fakeNeko,
+				"#!/usr/bin/env sh\nprintf '%s\\n' \"neko-stdout:$*\"\nif [ \"${HXHX_FAKE_NEKO_PRINT_PATH:-}\" = \"1\" ]; then printf '%s\\n' \"neko-path:$NEKOPATH\"; fi\n");
 			final chmodCode = Sys.command("chmod", ["+x", fakeLua]);
 			if (chmodCode != 0)
 				throw "failed to chmod fake lua";
@@ -62,19 +66,54 @@ class M14Stage3LuaRunSupportChild {
 					final err = Stage3RunSupport.runEmittedArtifact("neko-native", true, ["neko bin/main.n"], false, [], tmp, emitted, false);
 					if (err != null)
 						throw err;
+				case "neko-cmd-path":
+					mkdirp(Path.join([tmp, "bin"]));
+					Sys.putEnv("NEKOPATH", "existing-neko-path");
+					Sys.putEnv("HXHX_FAKE_NEKO_PRINT_PATH", "1");
+					final emitted = new EmitResult(Path.join([tmp, "bin", "main.n"]), [], false);
+					final err = Stage3RunSupport.runEmittedArtifact("neko-native", true, ["neko bin/main.n"], false, [], tmp, emitted, false,
+						["lib/ndll/Linux64/"]);
+					Sys.putEnv("HXHX_FAKE_NEKO_PRINT_PATH", "");
+					if (err != null)
+						throw err;
+					if (Sys.getEnv("NEKOPATH") != "existing-neko-path")
+						throw "NEKOPATH was not restored";
+				case "collect-neko-ndll":
+					final libRoot = Path.join([tmp, "dummy_ndll"]);
+					final src = Path.join([libRoot, "src"]);
+					final ndll = Path.join([libRoot, "ndll", Stage3SetupSupport.nekoNdllHostPlatform()]);
+					mkdirp(src);
+					mkdirp(ndll);
+					final paths = Stage3SetupSupport.collectNekoNdllPaths([
+						{
+							classPaths: ["dummy_ndll/src"],
+							defines: [],
+							macros: [],
+							unknownArgs: []
+						}
+					], tmp);
+					if (paths.length != 1)
+						throw "expected one Neko ndll path, got " + paths.length;
+					Sys.println("ndll-path=" + paths[0]);
 				case _:
 					throw "unknown mode: " + mode;
 			}
 		} catch (e:haxe.Exception) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			Sys.putEnv("NEKOPATH", oldNekoPath == null ? "" : oldNekoPath);
+			Sys.putEnv("HXHX_FAKE_NEKO_PRINT_PATH", oldFakeNekoPrintPath == null ? "" : oldFakeNekoPrintPath);
 			rmrf(tmp);
 			throw e.message;
 		} catch (raw:String) {
 			Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+			Sys.putEnv("NEKOPATH", oldNekoPath == null ? "" : oldNekoPath);
+			Sys.putEnv("HXHX_FAKE_NEKO_PRINT_PATH", oldFakeNekoPrintPath == null ? "" : oldFakeNekoPrintPath);
 			rmrf(tmp);
 			throw raw;
 		}
 		Sys.putEnv("PATH", oldPath == null ? "" : oldPath);
+		Sys.putEnv("NEKOPATH", oldNekoPath == null ? "" : oldNekoPath);
+		Sys.putEnv("HXHX_FAKE_NEKO_PRINT_PATH", oldFakeNekoPrintPath == null ? "" : oldFakeNekoPrintPath);
 		rmrf(tmp);
 	}
 }

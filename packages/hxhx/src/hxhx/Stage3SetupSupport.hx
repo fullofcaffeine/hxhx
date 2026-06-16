@@ -57,6 +57,79 @@ class Stage3SetupSupport {
 		return out;
 	}
 
+	public static function collectNekoNdllPaths(libsResolved:Array<HaxelibSpec>, cwd:String):Array<String> {
+		final platform = nekoNdllHostPlatform();
+		final out = new Array<String>();
+		for (s in libsResolved) {
+			for (p in s.classPaths) {
+				for (root in nekoCandidateLibraryRoots(Stage3PathSupport.absFromCwd(cwd, p))) {
+					final ndll = trailingSlash(Path.normalize(Path.join([root, "ndll", platform])));
+					if (sys.FileSystem.exists(ndll) && sys.FileSystem.isDirectory(ndll) && out.indexOf(ndll) == -1)
+						out.push(ndll);
+				}
+			}
+		}
+		return out;
+	}
+
+	public static function nekoNdllHostPlatform():String {
+		return Sys.systemName() + nekoNdllHostSuffix();
+	}
+
+	static function nekoNdllHostSuffix():String {
+		final arch = hostArchitecture().toLowerCase();
+		if (arch.indexOf("64") >= 0 || arch == "aarch64" || arch == "arm64")
+			return "64";
+		return "";
+	}
+
+	static function hostArchitecture():String {
+		for (name in ["PROCESSOR_ARCHITECTURE", "PROCESSOR_ARCHITEW6432", "HOSTTYPE"]) {
+			final value = trim(Sys.getEnv(name));
+			if (value.length > 0)
+				return value;
+		}
+		try {
+			final p = new sys.io.Process("uname", ["-m"]);
+			final stdout = trim(p.stdout.readAll().toString());
+			p.stderr.readAll();
+			final code = p.exitCode();
+			p.close();
+			if (code == 0 && stdout.length > 0)
+				return stdout;
+		} catch (_:haxe.Exception) {} catch (_:String) {}
+		return "";
+	}
+
+	static function nekoCandidateLibraryRoots(classPath:String):Array<String> {
+		final out = new Array<String>();
+		function push(path:String):Void {
+			if (path == null || path.length == 0)
+				return;
+			final normalized = Path.normalize(stripTrailingSlashes(path));
+			if (out.indexOf(normalized) == -1)
+				out.push(normalized);
+		}
+		push(classPath);
+		final parent = Path.directory(stripTrailingSlashes(classPath));
+		if (parent != null && parent.length > 0)
+			push(parent);
+		return out;
+	}
+
+	static function stripTrailingSlashes(path:String):String {
+		if (path == null)
+			return "";
+		var out = path;
+		while (out.length > 1 && (StringTools.endsWith(out, "/") || StringTools.endsWith(out, "\\")))
+			out = out.substr(0, out.length - 1);
+		return out;
+	}
+
+	static function trailingSlash(path:String):String {
+		return StringTools.endsWith(path, "/") ? path : path + "/";
+	}
+
 	public static function collectMacroStdPaths(cwd:String):Array<String> {
 		final out = new Array<String>();
 		final envStd = trim(Sys.getEnv("HAXE_STD_PATH"));

@@ -158,7 +158,58 @@ let absFromCwd = fun cwd path -> try let __fallback_result_95 = (
 ) in Obj.magic __fallback_result_95 with
   | HxRuntime.Hx_return __ret_94 -> Obj.obj __ret_94
 
-let runCommandInCwd = fun command args cwd -> try let __fallback_result_101 = let previous = (HxSys.getCwd () : string) in try (
+let normalizeNekoPathEntries = fun entries -> try let __fallback_result_105 = let out = Obj.magic (HxArray.create ()) in (
+  ignore (if entries == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
+  let _g = ref 0 in (
+    ignore (try while !_g < HxArray.length entries do try ignore (let entry = (HxArray.get (Obj.magic entries) (!_g) : string) in (
+      ignore (let __old_102 = !_g in let __new_103 = HxInt.add __old_102 1 in (
+        ignore (_g := __new_103);
+        __new_103
+      ));
+      ignore (if entry == Obj.magic (HxRuntime.hx_null) || HxString.length entry = 0 then raise (HxRuntime.Hx_continue) else ());
+      if HxArray.indexOf out entry 0 = -1 then ignore (HxArray.push out entry) else ()
+    )) with
+      | HxRuntime.Hx_continue -> () done with
+      | HxRuntime.Hx_break -> ());
+    out
+  )
+) in Obj.magic __fallback_result_105 with
+  | HxRuntime.Hx_return __ret_104 -> Obj.obj __ret_104
+
+let nekoPathSeparator = fun () -> let tempResult = ref ("" : string) in (
+  ignore (if HxString.equals (HxSys.systemName ()) "Windows" then let __assign_108 = (";" : string) in (
+    tempResult := __assign_108;
+    __assign_108
+  ) else let __assign_109 = (":" : string) in (
+    tempResult := __assign_109;
+    __assign_109
+  ));
+  !tempResult
+)
+
+let buildNekoPath = fun entries previous -> let sep = (nekoPathSeparator () : string) in let parts = Obj.magic (HxArray.copy entries) in (
+  ignore (if previous != Obj.magic (HxRuntime.hx_null) && HxString.length previous > 0 then ignore (let _g = ref 0 in let _g1 = Obj.magic (HxString.split previous sep) in while !_g < HxArray.length _g1 do ignore (let part = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+    ignore (let __old_106 = !_g in let __new_107 = HxInt.add __old_106 1 in (
+      ignore (_g := __new_107);
+      __new_107
+    ));
+    if HxString.length part > 0 && HxArray.indexOf parts part 0 = -1 then ignore (HxArray.push parts part) else ()
+  )) done) else ());
+  HxArray.join parts sep (fun x -> x)
+)
+
+let restoreEnv = fun name value -> ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_110 = Obj.magic ("" : string) in (
+    tempMaybeString := __assign_110;
+    __assign_110
+  ) else let __assign_111 = Obj.magic (value : string) in (
+    tempMaybeString := __assign_111;
+    __assign_111
+  ));
+  HxSys.putEnv name (Some (!tempMaybeString))
+))
+
+let runCommandInCwd = fun command args cwd -> try let __fallback_result_117 = let previous = (HxSys.getCwd () : string) in try (
   ignore (HxSys.setCwd cwd);
   let code = HxSys.command command (Some args) in (
     ignore (HxSys.setCwd previous);
@@ -167,34 +218,34 @@ let runCommandInCwd = fun command args cwd -> try let __fallback_result_101 = le
 ) with
   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-  | HxRuntime.Hx_return __ret_96 -> raise (HxRuntime.Hx_return __ret_96)
-  | HxRuntime.Hx_exception (__exn_v_97, __exn_tags_98) -> if true then let e = (if HxRuntime.tags_has __exn_tags_98 "haxe.Exception" then Obj.obj __exn_v_97 else Obj.magic (Haxe_ValueException.create __exn_v_97 (Obj.magic (HxRuntime.hx_null)) __exn_v_97) : Haxe_Exception.t) in (
+  | HxRuntime.Hx_return __ret_112 -> raise (HxRuntime.Hx_return __ret_112)
+  | HxRuntime.Hx_exception (__exn_v_113, __exn_tags_114) -> if true then let e = (if HxRuntime.tags_has __exn_tags_114 "haxe.Exception" then Obj.obj __exn_v_113 else Obj.magic (Haxe_ValueException.create __exn_v_113 (Obj.magic (HxRuntime.hx_null)) __exn_v_113) : Haxe_Exception.t) in (
     ignore e;
     (
       ignore (HxSys.setCwd previous);
       HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "haxe.Exception"]
     )
-  ) else if HxRuntime.tags_has __exn_tags_98 "String" then let raw = (Obj.obj __exn_v_97 : string) in (
+  ) else if HxRuntime.tags_has __exn_tags_114 "String" then let raw = (Obj.obj __exn_v_113 : string) in (
     ignore raw;
     (
       ignore (HxSys.setCwd previous);
       HxType.hx_throw_typed_rtti (Obj.repr raw) ["Dynamic"; "String"]
     )
-  ) else HxRuntime.hx_throw_typed __exn_v_97 __exn_tags_98
-  | __exn_99 -> if true then let e = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_99) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_99) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_99)) : Haxe_Exception.t) in (
+  ) else HxRuntime.hx_throw_typed __exn_v_113 __exn_tags_114
+  | __exn_115 -> if true then let e = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_115) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_115) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_115)) : Haxe_Exception.t) in (
     ignore e;
     (
       ignore (HxSys.setCwd previous);
       HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "haxe.Exception"]
     )
-  ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let raw = (Obj.obj (Obj.repr __exn_99) : string) in (
+  ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let raw = (Obj.obj (Obj.repr __exn_115) : string) in (
     ignore raw;
     (
       ignore (HxSys.setCwd previous);
       HxType.hx_throw_typed_rtti (Obj.repr raw) ["Dynamic"; "String"]
     )
-  ) else raise (__exn_99) in Obj.magic __fallback_result_101 with
-  | HxRuntime.Hx_return __ret_100 -> Obj.obj __ret_100
+  ) else raise (__exn_115) in Obj.magic __fallback_result_117 with
+  | HxRuntime.Hx_return __ret_116 -> Obj.obj __ret_116
 
 let runSafeCommandOnlyHooks = fun commands cwd -> try let __fallback_result_20 = (
   ignore (if commands == Obj.magic (HxRuntime.hx_null) || HxArray.length commands = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
@@ -320,36 +371,6 @@ let runSafePythonHookForArtifact = fun commands cwd artifactPath -> try let __fa
 ) in Obj.magic __fallback_result_35 with
   | HxRuntime.Hx_return __ret_34 -> Obj.magic __ret_34
 
-let runSafeNekoHookForArtifact = fun commands cwd artifactPath -> try let __fallback_result_41 = (
-  ignore (if commands == Obj.magic (HxRuntime.hx_null) || HxArray.length commands = 0 || artifactPath == Obj.magic (HxRuntime.hx_null) || HxString.length artifactPath = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-  let artifactAbs = (Haxe_io_Path.normalize (artifactPath : string) : string) in let matched = ref (Obj.magic (HxRuntime.hx_null) : string) in let _g = ref 0 in (
-    ignore (try while !_g < HxArray.length commands do try ignore (let command = (HxArray.get (Obj.magic commands) (!_g) : string) in (
-      ignore (let __old_36 = !_g in let __new_37 = HxInt.add __old_36 1 in (
-        ignore (_g := __new_37);
-        __new_37
-      ));
-      let neko = (parseSafeNekoCommand (command : string) : string) in (
-        ignore (if neko == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-        let moduleAbs = (Haxe_io_Path.normalize (absFromCwd (cwd : string) (neko : string) : string) : string) in if HxString.equals moduleAbs artifactAbs then ignore ((
-          ignore (let __assign_38 = Obj.magic (neko : string) in (
-            matched := __assign_38;
-            __assign_38
-          ));
-          raise (HxRuntime.Hx_break)
-        )) else ()
-      )
-    )) with
-      | HxRuntime.Hx_continue -> () done with
-      | HxRuntime.Hx_break -> ());
-    ignore (if !matched == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
-    runCommandInCwd ("neko" : string) (Obj.magic (let __arr_39 = HxArray.create () in (
-      ignore (HxArray.push __arr_39 (!matched));
-      __arr_39
-    ))) (cwd : string)
-  )
-) in Obj.magic __fallback_result_41 with
-  | HxRuntime.Hx_return __ret_40 -> Obj.magic __ret_40
-
 let runSafeLuaCommands = fun commands cwd -> try let __fallback_result_48 = (
   ignore (if commands == Obj.magic (HxRuntime.hx_null) || HxArray.length commands = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   let ran = ref false in let _g = ref 0 in (
@@ -383,7 +404,78 @@ let runSafeLuaCommands = fun commands cwd -> try let __fallback_result_48 = (
 ) in Obj.magic __fallback_result_48 with
   | HxRuntime.Hx_return __ret_47 -> Obj.magic __ret_47
 
-let runEmittedArtifact = fun backendId parsedHadCmd parsedCmdCommands parsedHadRun parsedRunArgs cwd emitted noRun -> try let __fallback_result_60 = (
+let runNekoCommandInCwd = fun args cwd nekoPathEntries -> try let __fallback_result_101 = let entries = Obj.magic (normalizeNekoPathEntries (Obj.magic nekoPathEntries)) in (
+  ignore (if HxArray.length entries = 0 then raise (HxRuntime.Hx_return (Obj.repr (runCommandInCwd ("neko" : string) (Obj.magic args) (cwd : string)))) else ());
+  let previousNekoPath = (HxSys.getEnv "NEKOPATH" : string) in let nextNekoPath = (buildNekoPath (Obj.magic entries) (previousNekoPath : string) : string) in try (
+    ignore (HxSys.putEnv "NEKOPATH" (Some nextNekoPath));
+    let code = runCommandInCwd ("neko" : string) (Obj.magic args) (cwd : string) in (
+      ignore (restoreEnv ("NEKOPATH" : string) (previousNekoPath : string));
+      raise (HxRuntime.Hx_return (Obj.repr code))
+    )
+  ) with
+    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_96 -> raise (HxRuntime.Hx_return __ret_96)
+    | HxRuntime.Hx_exception (__exn_v_97, __exn_tags_98) -> if true then let e = (if HxRuntime.tags_has __exn_tags_98 "haxe.Exception" then Obj.obj __exn_v_97 else Obj.magic (Haxe_ValueException.create __exn_v_97 (Obj.magic (HxRuntime.hx_null)) __exn_v_97) : Haxe_Exception.t) in (
+      ignore e;
+      (
+        ignore (restoreEnv ("NEKOPATH" : string) (previousNekoPath : string));
+        HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "haxe.Exception"]
+      )
+    ) else if HxRuntime.tags_has __exn_tags_98 "String" then let raw = (Obj.obj __exn_v_97 : string) in (
+      ignore raw;
+      (
+        ignore (restoreEnv ("NEKOPATH" : string) (previousNekoPath : string));
+        HxType.hx_throw_typed_rtti (Obj.repr raw) ["Dynamic"; "String"]
+      )
+    ) else HxRuntime.hx_throw_typed __exn_v_97 __exn_tags_98
+    | __exn_99 -> if true then let e = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_99) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_99) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_99)) : Haxe_Exception.t) in (
+      ignore e;
+      (
+        ignore (restoreEnv ("NEKOPATH" : string) (previousNekoPath : string));
+        HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "haxe.Exception"]
+      )
+    ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let raw = (Obj.obj (Obj.repr __exn_99) : string) in (
+      ignore raw;
+      (
+        ignore (restoreEnv ("NEKOPATH" : string) (previousNekoPath : string));
+        HxType.hx_throw_typed_rtti (Obj.repr raw) ["Dynamic"; "String"]
+      )
+    ) else raise (__exn_99)
+) in Obj.magic __fallback_result_101 with
+  | HxRuntime.Hx_return __ret_100 -> Obj.obj __ret_100
+
+let runSafeNekoHookForArtifact = fun commands cwd artifactPath nekoPathEntries -> try let __fallback_result_41 = (
+  ignore (if commands == Obj.magic (HxRuntime.hx_null) || HxArray.length commands = 0 || artifactPath == Obj.magic (HxRuntime.hx_null) || HxString.length artifactPath = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+  let artifactAbs = (Haxe_io_Path.normalize (artifactPath : string) : string) in let matched = ref (Obj.magic (HxRuntime.hx_null) : string) in let _g = ref 0 in (
+    ignore (try while !_g < HxArray.length commands do try ignore (let command = (HxArray.get (Obj.magic commands) (!_g) : string) in (
+      ignore (let __old_36 = !_g in let __new_37 = HxInt.add __old_36 1 in (
+        ignore (_g := __new_37);
+        __new_37
+      ));
+      let neko = (parseSafeNekoCommand (command : string) : string) in (
+        ignore (if neko == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+        let moduleAbs = (Haxe_io_Path.normalize (absFromCwd (cwd : string) (neko : string) : string) : string) in if HxString.equals moduleAbs artifactAbs then ignore ((
+          ignore (let __assign_38 = Obj.magic (neko : string) in (
+            matched := __assign_38;
+            __assign_38
+          ));
+          raise (HxRuntime.Hx_break)
+        )) else ()
+      )
+    )) with
+      | HxRuntime.Hx_continue -> () done with
+      | HxRuntime.Hx_break -> ());
+    ignore (if !matched == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+    runNekoCommandInCwd (Obj.magic (let __arr_39 = HxArray.create () in (
+      ignore (HxArray.push __arr_39 (!matched));
+      __arr_39
+    ))) (cwd : string) (Obj.magic nekoPathEntries)
+  )
+) in Obj.magic __fallback_result_41 with
+  | HxRuntime.Hx_return __ret_40 -> Obj.magic __ret_40
+
+let runEmittedArtifact = fun backendId parsedHadCmd parsedCmdCommands parsedHadRun parsedRunArgs cwd emitted noRun nekoPathEntries -> try let __fallback_result_60 = (
   ignore (if noRun then ignore ((
     ignore (print_endline "run=skipped");
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
@@ -399,7 +491,7 @@ let runEmittedArtifact = fun backendId parsedHadCmd parsedCmdCommands parsedHadR
       ignore (print_endline "stage3=cmd_ok");
       raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
     )) else ()) else ());
-    ignore (if HxString.equals backendId "neko-native" && parsedHadCmd then ignore (let cmdCode = runSafeNekoHookForArtifact (Obj.magic parsedCmdCommands) (cwd : string) ((Obj.magic emitted : Backend_EmitResult.t).entryPath : string) in if cmdCode != HxRuntime.hx_null then ignore ((
+    ignore (if HxString.equals backendId "neko-native" && parsedHadCmd then ignore (let cmdCode = runSafeNekoHookForArtifact (Obj.magic parsedCmdCommands) (cwd : string) ((Obj.magic emitted : Backend_EmitResult.t).entryPath : string) (Obj.magic nekoPathEntries) in if cmdCode != HxRuntime.hx_null then ignore ((
       ignore (if not (let __nullable_51 = cmdCode in if __nullable_51 == HxRuntime.hx_null then false else Obj.obj __nullable_51 = 0) then raise (HxRuntime.Hx_return (Obj.repr ("command hook failed with exit code " ^ HxString.toStdString (HxRuntime.nullable_int_toStdString cmdCode) : string))) else ());
       raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
     )) else ()) else ());

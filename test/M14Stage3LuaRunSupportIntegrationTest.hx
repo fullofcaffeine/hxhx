@@ -26,5 +26,13 @@ class M14Stage3LuaRunSupportIntegrationTest {
 
 		final nekoCmdStdout = runChild("neko-cmd");
 		assertTrue(nekoCmdStdout == "neko-stdout:bin/main.n", "expected post-emit Neko --cmd stdout only, got `" + nekoCmdStdout + "`");
+
+		final sep = Sys.systemName() == "Windows" ? ";" : ":";
+		final nekoPathStdout = runChild("neko-cmd-path");
+		assertTrue(nekoPathStdout == "neko-stdout:bin/main.n\nneko-path:lib/ndll/Linux64/" + sep + "existing-neko-path",
+			"expected post-emit Neko --cmd to prepend NEKOPATH, got `" + nekoPathStdout + "`");
+
+		final collectStdout = runChild("collect-neko-ndll");
+		assertTrue(collectStdout.indexOf("/dummy_ndll/ndll/") >= 0, "expected Neko ndll discovery output, got `" + collectStdout + "`");
 	}
 }
