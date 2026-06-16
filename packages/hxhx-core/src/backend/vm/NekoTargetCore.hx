@@ -983,7 +983,9 @@ class NekoTargetCore {
 		return switch (expr) {
 			case EThis:
 				renderThisValueSlotExpr(context, detail);
-			case EIdent(_) | EField(_, _) | EArrayAccess(_, _):
+			case EField(obj, field):
+				renderExpr(context, obj) + "." + safeIdent(field);
+			case EIdent(_) | EArrayAccess(_, _):
 				renderExpr(context, expr);
 			case _:
 				unsupportedExpr(detail + " target " + exprTag(expr));

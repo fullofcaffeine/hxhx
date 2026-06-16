@@ -2528,13 +2528,9 @@ and renderAssignableExpr = fun context expr detail -> let tempResult = ref ("" :
         __assign_243
       )
     )
-    | HxExpr.EField (_p0, _p1) -> (
-      ignore _p0;
-      ignore _p1;
-      let __assign_244 = (renderExpr context (Obj.magic expr) : string) in (
-        tempResult := __assign_244;
-        __assign_244
-      )
+    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let obj = Obj.magic _g in let field = (_g1 : string) in let __assign_244 = ((HxString.toStdString (renderExpr context (Obj.magic obj)) ^ ".") ^ HxString.toStdString (safeIdent (field : string)) : string) in (
+      tempResult := __assign_244;
+      __assign_244
     )
     | HxExpr.EArrayAccess (_p0, _p1) -> (
       ignore _p0;

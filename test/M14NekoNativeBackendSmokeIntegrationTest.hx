@@ -170,6 +170,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Holder { public var length:Int; public function new() { length = 0; } } class Main { static function main() { var h = new Holder(); h.length = 3; Sys.println(h.length); } }'),
+			context);
+		final lengthFieldSource = File.getContent(sourcePath);
+		assertContains(lengthFieldSource, "(h.length = 3);", "expected length assignment to stay a field lvalue");
+		assertContains(lengthFieldSource, "$print($asize(h), \"\\n\")", "expected length reads to lower to Neko array-size access");
+		assertNotContains(lengthFieldSource, "($asize(h) = 3)", "length read lowering must not be used as an assignment target");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Main { static function feq(a:Float, b:Float) {} static function main() { feq(1.2e+35, 1.2e+35); } }'), context);
 		final scientificFloatSource = File.getContent(sourcePath);
 		assertContains(scientificFloatSource, 'feq($$float("1.2e+35"), $$float("1.2e+35"));',
