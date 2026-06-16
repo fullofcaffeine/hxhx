@@ -745,6 +745,20 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
+			program('class Holder { var results:List<String>; public function new() { results = new List(); results.add("ok"); } } class Main { static function main() { new Holder(); } }'),
+			context);
+		final listFieldAssignSource = File.getContent(sourcePath);
+		assertContains(listFieldAssignSource, "var __hxhx_assign_tmp = __hxhx_list_new();",
+			"expected List constructor assignment RHS to be split through a temp");
+		assertContains(listFieldAssignSource, "__hxhx_self.results = __hxhx_assign_tmp;",
+			"expected split List constructor assignment to preserve the instance field target");
+		assertNotContains(listFieldAssignSource, "(__hxhx_self.results = __hxhx_list_new())",
+			"List constructor assignment must avoid the direct assignment-call shape that Neko rejects");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
 			program('class Base { public function new() {} } class Child extends Base { public function new() { super(); } } class Main { static function main() { var child = new Child(); } }'),
 			context);
 		final superCtorSource = File.getContent(sourcePath);

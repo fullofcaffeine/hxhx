@@ -834,6 +834,8 @@ class NekoTargetCore {
 				out.push(indent + "return " + renderExpr(context, expr) + ";");
 			case SExpr(ECall(ESuper, _), _):
 				out.push(indent + "null;");
+			case SExpr(EBinop("=", left, right), _) if (shouldSplitStatementAssignmentRhs(right)):
+				renderSplitAssignmentStmt(out, context, left, right, indent);
 			case SExpr(expr, _):
 				out.push(indent + renderExpr(context, expr) + ";");
 			case SBreak(_):
@@ -849,6 +851,22 @@ class NekoTargetCore {
 			case SDoWhile(_, _, _):
 				unsupported("statement", stmtTag(stmt));
 		}
+	}
+
+	static function shouldSplitStatementAssignmentRhs(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ENew(typePath, args): isListTypePath(typePath) && args.length == 0;
+			case _:
+				false;
+		}
+	}
+
+	static function renderSplitAssignmentStmt(out:Array<String>, context:NekoEmitContext, left:HxExpr, right:HxExpr, indent:String):Void {
+		final target = renderAssignableExpr(context, left, "assignment");
+		out.push(indent + "{");
+		out.push(indent + "  var __hxhx_assign_tmp = " + renderExpr(context, right) + ";");
+		out.push(indent + "  " + target + " = __hxhx_assign_tmp;");
+		out.push(indent + "}");
 	}
 
 	static function renderControlBlock(out:Array<String>, context:NekoEmitContext, header:String, body:HxStmt, indent:String):Void {
