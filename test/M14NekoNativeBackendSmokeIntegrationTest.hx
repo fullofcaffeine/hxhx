@@ -126,6 +126,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(source, "$print(\"hello neko\", \"\\n\")", "expected Sys.println lowering");
 		assertContains(source, "Main_main();", "expected entrypoint invocation");
 
+		final splitContext = new BackendContext(outDir, outputHint, "Main", true, false, new haxe.ds.StringMap<String>());
+		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Helper { public static function value() return 40; } class Main { static function main() { Sys.println(Helper.value() + 2); } }'),
+			splitContext, sourcePath);
+		assertContains(split.support[0].source, "$exports.symbols = $new(null);", "expected split Neko symbol table module");
+		assertContains(split.support[1].source, "__hxhx_symbols.Helper_value = function()", "expected split static function registration");
+		assertContains(split.support[1].source, "__hxhx_symbols.Helper_value()", "expected split static calls to use symbol table");
+		assertContains(split.entrySource, "$loader.loadmodule(", "expected split entry module to load support chunks");
+		assertContains(split.entrySource, "__hxhx_symbols.Main_main();", "expected split entrypoint to call through symbol table");
+
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);

@@ -19,6 +19,7 @@ private typedef NekoEmitContext = {
 	var classes:StringMap<NekoClassInfo>;
 	var selfName:Null<String>;
 	var currentClass:Null<NekoClassInfo>;
+	var symbolTable:Null<String>;
 }
 
 private typedef NekoStaticFunctionRef = {
@@ -30,6 +31,18 @@ private typedef NekoStaticFunctionRef = {
 private typedef NekoReachable = {
 	var constructors:Array<NekoClassInfo>;
 	var staticFunctions:Array<NekoStaticFunctionRef>;
+}
+
+private typedef NekoGeneratedSource = {
+	var kind:String;
+	var path:String;
+	var source:String;
+}
+
+private typedef NekoSplitProgram = {
+	var entryPath:String;
+	var entrySource:String;
+	var support:Array<NekoGeneratedSource>;
 }
 
 private typedef NekoBytesSubRaw = {
@@ -97,16 +110,17 @@ private typedef NekoSwitchPatternLowered = {
 **/
 class NekoTargetCore {
 	public static inline var SOURCE_ONLY_DEFINE = "hxhx_neko_source_only";
+	static inline var SPLIT_CHUNK_DECL_LIMIT = 40;
+	static inline var SPLIT_SYMBOL_TABLE = "__hxhx_symbols";
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		final outputPath = outputBytecodePath(context);
 		final sourcePath = sourcePathForBytecode(outputPath);
 		ensureDirectory(Path.directory(sourcePath));
 
-		final source = renderProgram(program, context);
-		File.saveContent(sourcePath, source);
-
 		if (context.hasDefine(SOURCE_ONLY_DEFINE)) {
+			final source = renderProgram(program, context);
+			File.saveContent(sourcePath, source);
 			return new EmitResult(sourcePath, [new EmitArtifact("entry_neko_source", sourcePath)], false);
 		}
 
@@ -117,15 +131,28 @@ class NekoTargetCore {
 				+ " for source-only diagnostics.";
 		}
 
+		final split = renderSplitProgram(program, context, sourcePath);
+		final artifacts = new Array<EmitArtifact>();
+		for (source in split.support) {
+			File.saveContent(source.path, source.source);
+			compileNekoSource(nekoc, source.path);
+			artifacts.push(new EmitArtifact(source.kind + "_neko_source", source.path));
+			artifacts.push(new EmitArtifact(source.kind + "_neko_bytecode", bytecodePathForSource(source.path)));
+		}
+		File.saveContent(split.entryPath, split.entrySource);
+		compileNekoSource(nekoc, split.entryPath);
+
+		if (!FileSystem.exists(outputPath))
+			throw "nekoc completed but did not produce expected bytecode artifact: " + outputPath;
+		artifacts.unshift(new EmitArtifact("neko_source", sourcePath));
+		artifacts.unshift(new EmitArtifact("entry_neko_bytecode", outputPath));
+		return new EmitResult(outputPath, artifacts, false);
+	}
+
+	static function compileNekoSource(nekoc:String, sourcePath:String):Void {
 		final code = Sys.command(nekoc, [sourcePath]);
 		if (code != 0)
 			throw "nekoc failed with exit code " + code + " while compiling " + sourcePath;
-		if (!FileSystem.exists(outputPath))
-			throw "nekoc completed but did not produce expected bytecode artifact: " + outputPath;
-		return new EmitResult(outputPath, [
-			new EmitArtifact("entry_neko_bytecode", outputPath),
-			new EmitArtifact("neko_source", sourcePath)
-		], false);
 	}
 
 	static function outputBytecodePath(context:BackendContext):String {
@@ -139,6 +166,12 @@ class NekoTargetCore {
 		final dir = Path.directory(outputPath);
 		final base = Path.withoutExtension(Path.withoutDirectory(outputPath));
 		return Path.join([dir, base + ".neko"]);
+	}
+
+	static function bytecodePathForSource(sourcePath:String):String {
+		final dir = Path.directory(sourcePath);
+		final base = Path.withoutExtension(Path.withoutDirectory(sourcePath));
+		return Path.join([dir, base + ".n"]);
 	}
 
 	static function resolveNekoc():Null<String> {
@@ -169,7 +202,8 @@ class NekoTargetCore {
 		final emitContext:NekoEmitContext = {
 			classes: buildClassMap(modules),
 			selfName: null,
-			currentClass: null
+			currentClass: null,
+			symbolTable: null
 		};
 		final mainInfo = lookupClass(emitContext, main.fullName);
 		if (mainInfo == null)
@@ -185,6 +219,93 @@ class NekoTargetCore {
 		out.push(entry + "();");
 		out.push("");
 		return out.join("\n");
+	}
+
+	static function renderSplitProgram(program:GenIrProgram, context:BackendContext, entryPath:String):NekoSplitProgram {
+		final modules = program.getTypedModules();
+		if (modules.length == 0)
+			throw "Neko native backend received an empty program";
+
+		final main = findMain(modules, context.mainModule);
+		if (main == null)
+			throw "Neko native backend requires a static main entrypoint";
+
+		final emitContext:NekoEmitContext = {
+			classes: buildClassMap(modules),
+			selfName: null,
+			currentClass: null,
+			symbolTable: SPLIT_SYMBOL_TABLE
+		};
+		final mainInfo = lookupClass(emitContext, main.fullName);
+		if (mainInfo == null)
+			throw "Neko native backend could not resolve main class: " + main.fullName;
+
+		final reachable = collectReachable(emitContext, mainInfo);
+		final dir = Path.directory(entryPath);
+		final base = Path.withoutExtension(Path.withoutDirectory(entryPath));
+		final symbolsPath = Path.join([dir, base + "_symbols.neko"]);
+		final symbolsLoadName = moduleLoadName(symbolsPath);
+		final support = new Array<NekoGeneratedSource>();
+		support.push({
+			kind: "symbols",
+			path: symbolsPath,
+			source: "// Generated by hxhx native Neko backend MVP symbol table\n$exports.symbols = $new(null);\n"
+		});
+
+		var chunkIndex = 0;
+		var constructorIndex = 0;
+		while (constructorIndex < reachable.constructors.length) {
+			final end = minInt(constructorIndex + SPLIT_CHUNK_DECL_LIMIT, reachable.constructors.length);
+			final chunkPath = Path.join([dir, base + "_chunk" + chunkIndex + ".neko"]);
+			final out = splitChunkHeader(symbolsLoadName);
+			for (i in constructorIndex...end)
+				renderConstructorFactory(out, emitContext, reachable.constructors[i]);
+			support.push({kind: "chunk" + chunkIndex, path: chunkPath, source: out.join("\n")});
+			constructorIndex = end;
+			chunkIndex++;
+		}
+
+		var functionIndex = 0;
+		while (functionIndex < reachable.staticFunctions.length) {
+			final end = minInt(functionIndex + SPLIT_CHUNK_DECL_LIMIT, reachable.staticFunctions.length);
+			final chunkPath = Path.join([dir, base + "_chunk" + chunkIndex + ".neko"]);
+			final out = splitChunkHeader(symbolsLoadName);
+			for (i in functionIndex...end) {
+				final ref = reachable.staticFunctions[i];
+				renderFunction(out, emitContext, ref.info, ref.fn);
+			}
+			support.push({kind: "chunk" + chunkIndex, path: chunkPath, source: out.join("\n")});
+			functionIndex = end;
+			chunkIndex++;
+		}
+
+		final entry = new Array<String>();
+		entry.push("// Generated by hxhx native Neko backend MVP entry module");
+		entry.push("var " + SPLIT_SYMBOL_TABLE + " = $loader.loadmodule(" + quote(symbolsLoadName) + ", $loader).symbols;");
+		for (source in support) {
+			if (source.kind != "symbols")
+				entry.push("$loader.loadmodule(" + quote(moduleLoadName(source.path)) + ", $loader);");
+		}
+		entry.push(renderFunctionRef(emitContext, mainInfo.fullName, "main") + "();");
+		entry.push("");
+		return {entryPath: entryPath, entrySource: entry.join("\n"), support: support};
+	}
+
+	static function splitChunkHeader(symbolsLoadName:String):Array<String> {
+		final out = new Array<String>();
+		out.push("// Generated by hxhx native Neko backend MVP support chunk");
+		out.push("var " + SPLIT_SYMBOL_TABLE + " = $loader.loadmodule(" + quote(symbolsLoadName) + ", $loader).symbols;");
+		out.push("");
+		renderRuntimeHelpers(out);
+		return out;
+	}
+
+	static function moduleLoadName(sourcePath:String):String {
+		return Path.withoutExtension(Path.normalize(sourcePath));
+	}
+
+	static function minInt(a:Int, b:Int):Int {
+		return a < b ? a : b;
 	}
 
 	static function findMain(modules:Array<TypedModule>, requested:String):Null<{decl:HxModuleDecl, cls:HxClassDecl, fullName:String}> {
@@ -394,24 +515,27 @@ class NekoTargetCore {
 	}
 
 	static function renderFunction(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Void {
-		if (renderSpecialFunction(out, info, fn))
+		if (renderSpecialFunction(out, context, info, fn))
 			return;
 		final args = new Array<String>();
 		for (arg in HxFunctionDecl.getArgs(fn))
 			args.push(safeIdent(arg.name));
-		out.push("var " + mangleFunction(info.fullName, HxFunctionDecl.getName(fn)) + " = function(" + args.join(", ") + ") {");
+		out.push(renderFunctionDefinitionPrefix(context, info.fullName, HxFunctionDecl.getName(fn))
+			+ "function("
+			+ args.join(", ")
+			+ ") {");
 		for (stmt in HxFunctionDecl.getBody(fn))
 			renderStmt(out, context, stmt, "  ");
 		out.push("}");
 		out.push("");
 	}
 
-	static function renderSpecialFunction(out:Array<String>, info:NekoClassInfo, fn:HxFunctionDecl):Bool {
+	static function renderSpecialFunction(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Bool {
 		final fnName = HxFunctionDecl.getName(fn);
 		if (info.shortName == "TestLocalStatic" && fnName == "basic") {
 			final slotName = "__hxhx_TestLocalStatic_basic_x";
 			out.push("var " + slotName + " = null;");
-			out.push("var " + mangleFunction(info.fullName, fnName) + " = function() {");
+			out.push(renderFunctionDefinitionPrefix(context, info.fullName, fnName) + "function() {");
 			out.push("  if (" + slotName + " == null) " + slotName + " = 1;");
 			out.push("  " + slotName + " = " + slotName + " + 1;");
 			out.push("  var __hxhx_o = $new(null);");
@@ -436,7 +560,7 @@ class NekoTargetCore {
 			out.push("var " + testLocalStaticBasicSlotName() + " = null;");
 		final selfName = "__hxhx_self";
 		final instanceContext = withSelf(context, selfName, info);
-		out.push("var " + mangleConstructor(info.fullName) + " = function(" + args.join(", ") + ") {");
+		out.push(renderConstructorDefinitionPrefix(context, info.fullName) + "function(" + args.join(", ") + ") {");
 		out.push("  var " + selfName + " = $new(null);");
 		out.push("  " + selfName + ".__hx_ctor = " + quote(info.fullName) + ";");
 		out.push("  " + selfName + ".__hx_params = $array(" + args.join(", ") + ");");
@@ -881,7 +1005,7 @@ class NekoTargetCore {
 			return "__hxhx_map_new(" + quote(mapKind) + ")";
 		final info = lookupClass(context, typePath);
 		if (info != null)
-			return mangleConstructor(info.fullName) + "(" + [for (arg in args) renderExpr(context, arg)].join(", ") + ")";
+			return renderConstructorRef(context, info.fullName) + "(" + [for (arg in args) renderExpr(context, arg)].join(", ") + ")";
 		final tmp = "__hxhx_o";
 		final parts = ["(function() { var " + tmp + " = $new(null);"];
 		parts.push(tmp + ".__hx_ctor = " + quote(typePath) + ";");
@@ -1120,7 +1244,7 @@ class NekoTargetCore {
 	static function renderBytesConstructorCall(context:NekoEmitContext, len:String, data:String):String {
 		final info = lookupBytesClass(context);
 		if (info != null)
-			return mangleConstructor(info.fullName) + "(" + len + ", " + data + ")";
+			return renderConstructorRef(context, info.fullName) + "(" + len + ", " + data + ")";
 		return "(function() { var __hxhx_bytes = $new(null); __hxhx_bytes.__hx_ctor = "
 			+ quote("haxe.io.Bytes")
 			+ "; __hxhx_bytes.__hx_params = $array("
@@ -1528,7 +1652,7 @@ class NekoTargetCore {
 			case EField(EIdent(className), method) if (isUpperStart(className)):
 				final info = lookupClass(context, className);
 				final fullClassName = info == null ? className : info.fullName;
-				return mangleFunction(fullClassName, method) + "(" + renderedArgs.join(", ") + ")";
+				return renderFunctionRef(context, fullClassName, method) + "(" + renderedArgs.join(", ") + ")";
 			case _:
 				return renderExpr(context, callee) + "(" + renderedArgs.join(", ") + ")";
 		}
@@ -1571,7 +1695,8 @@ class NekoTargetCore {
 		return {
 			classes: context.classes,
 			selfName: selfName,
-			currentClass: info
+			currentClass: info,
+			symbolTable: context.symbolTable
 		};
 	}
 
@@ -1585,6 +1710,26 @@ class NekoTargetCore {
 
 	static function mangleFunction(fullClassName:String, method:String):String {
 		return safeIdent(StringTools.replace(fullClassName, ".", "_") + "_" + method);
+	}
+
+	static function renderConstructorDefinitionPrefix(context:NekoEmitContext, fullClassName:String):String {
+		final name = mangleConstructor(fullClassName);
+		return context.symbolTable == null ? "var " + name + " = " : context.symbolTable + "." + name + " = ";
+	}
+
+	static function renderFunctionDefinitionPrefix(context:NekoEmitContext, fullClassName:String, method:String):String {
+		final name = mangleFunction(fullClassName, method);
+		return context.symbolTable == null ? "var " + name + " = " : context.symbolTable + "." + name + " = ";
+	}
+
+	static function renderConstructorRef(context:NekoEmitContext, fullClassName:String):String {
+		final name = mangleConstructor(fullClassName);
+		return context != null && context.symbolTable != null ? context.symbolTable + "." + name : name;
+	}
+
+	static function renderFunctionRef(context:NekoEmitContext, fullClassName:String, method:String):String {
+		final name = mangleFunction(fullClassName, method);
+		return context != null && context.symbolTable != null ? context.symbolTable + "." + name : name;
 	}
 
 	static function isUpperStart(name:String):Bool {
