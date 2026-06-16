@@ -914,7 +914,7 @@ class NekoTargetCore {
 			case EEnumValue(name):
 				quote(name);
 			case EThis:
-				if (context.selfName == null) unsupportedExpr("this"); else context.selfName;
+				renderThisExpr(context);
 			case ESuper:
 				unsupportedExpr("super");
 			case EField(ESuper, _):
@@ -1107,6 +1107,12 @@ class NekoTargetCore {
 		if (context.selfName == null)
 			unsupportedExpr(detail + " target this");
 		return context.selfName + ".__hx_value";
+	}
+
+	static function renderThisExpr(context:NekoEmitContext):String {
+		if (context.selfName == null)
+			unsupportedExpr("this");
+		return isAbstractInfo(context.currentClass) ? context.selfName + ".__hx_value" : context.selfName;
 	}
 
 	static function renderPostfixIncDecExpr(context:NekoEmitContext, expr:HxExpr, delta:Int):String {
@@ -2042,6 +2048,10 @@ class NekoTargetCore {
 
 	static function isDynamicStaticFunction(fn:HxFunctionDecl):Bool {
 		return HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getMetadata(fn).indexOf("dynamic") >= 0;
+	}
+
+	static function isAbstractInfo(info:Null<NekoClassInfo>):Bool {
+		return info != null && HxClassDecl.getMetadata(info.cls).indexOf("__hxhx_abstract") >= 0;
 	}
 
 	static function isCurrentInstanceField(context:NekoEmitContext, name:String):Bool {

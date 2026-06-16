@@ -199,6 +199,19 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(splitStaticFieldSource, "$print(__hxhx_field(__hxhx_static_object(\"AssertLike\"), \"createAsync\")(), \"\\n\");",
 			"expected dynamic static function calls to use static object storage");
 
+		final abstractClass = new HxClassDecl("Flag", false, [], [], "", ["__hxhx_abstract"]);
+		final abstractThisContext = cast {
+			classes: null,
+			selfName: "__hxhx_self",
+			currentClass: {fullName: "Flag", shortName: "Flag", cls: abstractClass},
+			symbolTable: null,
+			locals: new haxe.ds.StringMap<Bool>()
+		};
+		assertTrue(@:privateAccess NekoTargetCore.renderExpr(abstractThisContext, EThis) == "__hxhx_self.__hx_value",
+			"abstract this reads should use the underlying value slot");
+		assertContains(@:privateAccess NekoTargetCore.renderExpr(abstractThisContext, EBinop("!=", EThis, ENull)), "(__hxhx_self.__hx_value != null)",
+			"abstract property getters must not treat the wrapper object as this");
+
 		final splitSysTime = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Sys { public static function time():Float return 0; public static function println(v) {} } class Main { static function main() { Sys.println(Sys.time()); } }'),
 			splitContext, sourcePath);
 		final splitSysTimeSource = supportSource(splitSysTime);
