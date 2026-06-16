@@ -34,6 +34,9 @@ class M14Stage3LuaRunSupportIntegrationTest {
 
 		final collectStdout = runChild("collect-neko-ndll");
 		assertTrue(collectStdout.indexOf("/dummy_ndll/ndll/") >= 0, "expected Neko ndll discovery output, got `" + collectStdout + "`");
+		final collectSynthStdout = runChild("collect-neko-ndll-synth-platform");
+		assertTrue(collectSynthStdout.indexOf("/dummy_ndll/ndll/") >= 0,
+			"expected synthesized Neko ndll platform discovery output, got `" + collectSynthStdout + "`");
 		final collectDirectStdout = runChild("collect-neko-ndll-direct-platform");
 		assertTrue(collectDirectStdout.indexOf("/dummy_ndll/ndll/") >= 0,
 			"expected direct Neko ndll platform discovery output, got `" + collectDirectStdout + "`");

@@ -75,17 +75,30 @@ class Stage3SetupSupport {
 				if (nativeRoot == null)
 					continue;
 				final nativeRootAbs = Stage3PathSupport.absFromCwd(cwd, nativeRoot);
+				var addedNativeRoot = false;
 				for (platform in platforms) {
 					final ndll = trailingSlash(Path.normalize(Path.join([nativeRootAbs, platform])));
-					if (sys.FileSystem.exists(ndll) && sys.FileSystem.isDirectory(ndll) && out.indexOf(ndll) == -1)
-						out.push(ndll);
+					if (sys.FileSystem.exists(ndll) && sys.FileSystem.isDirectory(ndll)) {
+						addedNativeRoot = true;
+						if (out.indexOf(ndll) == -1)
+							out.push(ndll);
+					}
 				}
 				final direct = trailingSlash(Path.normalize(nativeRootAbs));
-				if (isNekoPlatformPath(direct, platforms)
+				if (isNekoPlatformPath(direct, platforms) && sys.FileSystem.exists(direct) && sys.FileSystem.isDirectory(direct)) {
+					addedNativeRoot = true;
+					if (out.indexOf(direct) == -1)
+						out.push(direct);
+				}
+				if (!addedNativeRoot
+					&& !isNekoPlatformPath(direct, platforms)
 					&& sys.FileSystem.exists(direct)
 					&& sys.FileSystem.isDirectory(direct)
-					&& out.indexOf(direct) == -1)
-					out.push(direct);
+					&& platforms.length > 0) {
+					final synthesized = trailingSlash(Path.normalize(Path.join([nativeRootAbs, platforms[0]])));
+					if (out.indexOf(synthesized) == -1)
+						out.push(synthesized);
+				}
 			}
 		}
 		return out;

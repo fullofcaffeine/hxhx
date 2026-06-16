@@ -98,6 +98,22 @@ class M14Stage3LuaRunSupportChild {
 					if (paths.length != 1)
 						throw "expected one Neko ndll path, got " + paths.length;
 					Sys.println("ndll-path=" + paths[0]);
+				case "collect-neko-ndll-synth-platform":
+					final libRoot = Path.join([tmp, "dummy_ndll"]);
+					mkdirp(Path.join([libRoot, "ndll"]));
+					final paths = Stage3SetupSupport.collectNekoNdllPaths([
+						{
+							classPaths: [],
+							defines: [],
+							macros: [],
+							unknownArgs: ["-L dummy_ndll/ndll/"]
+						}
+					], tmp);
+					if (paths.length != 1)
+						throw "expected one synthesized Neko ndll path, got " + paths.length;
+					if (paths[0].indexOf("/dummy_ndll/ndll/" + Stage3SetupSupport.nekoNdllHostPlatform() + "/") == -1)
+						throw "expected synthesized Neko platform path, got " + paths[0];
+					Sys.println("ndll-synth-path=" + paths[0]);
 				case "collect-neko-ndll-direct-platform":
 					final libRoot = Path.join([tmp, "dummy_ndll"]);
 					final ndll = Path.join([libRoot, "ndll", Stage3SetupSupport.nekoNdllHostPlatform()]);
