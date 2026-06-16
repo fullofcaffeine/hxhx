@@ -116,6 +116,19 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(macroInExpr, '.__hx_ctor = "CInt";', "macro in-expression should lower int operands");
 		assertNotContains(macroInExpr, " in ", "macro in-expression syntax should not leak into Neko source");
 
+		final enumCtorExpr = @:privateAccess NekoTargetCore.renderExpr(cast null, ECall(EEnumValue("Ignore"), [EString("reason")]));
+		assertContains(enumCtorExpr, '__hxhx_enum_value("Ignore", ' + "$" + 'array("reason"))',
+			"enum constructor calls with payloads must not emit invalid string calls");
+		final enumSwitchExpr = @:privateAccess NekoTargetCore.renderExpr(cast null, ESwitch(EIdent("result"), [
+			PEnumValue("Success"),
+			PEnumExtract("Failure", [PBind("message"), PWildcard]),
+			PWildcard
+		], [EString("ok"), EIdent("message"), EString("other")]));
+		assertContains(enumSwitchExpr, '__hxhx_enum_ctor_is(__hxhx_switch, "Success")',
+			"enum switches should match no-payload values and enum objects by constructor");
+		assertContains(enumSwitchExpr, '__hxhx_enum_ctor_is(__hxhx_switch, "Failure")', "enum extractor switches should check the constructor name");
+		assertContains(enumSwitchExpr, "var message = __hxhx_enum_params(__hxhx_switch)[0];", "enum extractor switches should bind positional payloads");
+
 		final outDir = Path.join([".tmp", "m14_neko_native_backend_smoke"]);
 		deleteRecursive(outDir);
 		FileSystem.createDirectory(outDir);

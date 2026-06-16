@@ -51,6 +51,28 @@ let render = fun out classes -> ignore ((
   ignore (HxArray.push out "  return next;");
   ignore (HxArray.push out "}");
   ignore (HxArray.push out "");
+  ignore (HxArray.push out "var __hxhx_enum_value = function(name, params) {");
+  ignore (HxArray.push out "  if (params == null) params = $array();");
+  ignore (HxArray.push out "  var value = $new(null);");
+  ignore (HxArray.push out "  value.__hx_ctor = name;");
+  ignore (HxArray.push out "  value.__hx_params = params;");
+  ignore (HxArray.push out "  value.__hx_value = if ($asize(params) > 0) params[0] else null;");
+  ignore (HxArray.push out "  return value;");
+  ignore (HxArray.push out "}");
+  ignore (HxArray.push out "");
+  ignore (HxArray.push out "var __hxhx_enum_ctor_is = function(value, name) {");
+  ignore (HxArray.push out "  if (value == name) return true;");
+  ignore (HxArray.push out "  return value != null && $typeof(value) == $tobject && $objget(value, $hash(\"__hx_ctor\")) == name;");
+  ignore (HxArray.push out "}");
+  ignore (HxArray.push out "");
+  ignore (HxArray.push out "var __hxhx_enum_params = function(value) {");
+  ignore (HxArray.push out "  if (value != null && $typeof(value) == $tobject) {");
+  ignore (HxArray.push out "    var params = $objget(value, $hash(\"__hx_params\"));");
+  ignore (HxArray.push out "    if (params != null) return params;");
+  ignore (HxArray.push out "  }");
+  ignore (HxArray.push out "  return $array();");
+  ignore (HxArray.push out "}");
+  ignore (HxArray.push out "");
   ignore (HxArray.push out "var __hxhx_instance_fields = $new(null);");
   ignore (HxArray.push out "var __hxhx_static_fields = $new(null);");
   let _g = ref 0 in (

@@ -51,6 +51,28 @@ class NekoRuntimeSupport {
 		out.push("  return next;");
 		out.push("}");
 		out.push("");
+		out.push("var __hxhx_enum_value = function(name, params) {");
+		out.push("  if (params == null) params = $array();");
+		out.push("  var value = $new(null);");
+		out.push("  value.__hx_ctor = name;");
+		out.push("  value.__hx_params = params;");
+		out.push("  value.__hx_value = if ($asize(params) > 0) params[0] else null;");
+		out.push("  return value;");
+		out.push("}");
+		out.push("");
+		out.push("var __hxhx_enum_ctor_is = function(value, name) {");
+		out.push("  if (value == name) return true;");
+		out.push("  return value != null && $typeof(value) == $tobject && $objget(value, $hash(\"__hx_ctor\")) == name;");
+		out.push("}");
+		out.push("");
+		out.push("var __hxhx_enum_params = function(value) {");
+		out.push("  if (value != null && $typeof(value) == $tobject) {");
+		out.push("    var params = $objget(value, $hash(\"__hx_params\"));");
+		out.push("    if (params != null) return params;");
+		out.push("  }");
+		out.push("  return $array();");
+		out.push("}");
+		out.push("");
 		out.push("var __hxhx_instance_fields = $new(null);");
 		out.push("var __hxhx_static_fields = $new(null);");
 		for (meta in classes) {

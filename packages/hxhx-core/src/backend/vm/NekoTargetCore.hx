@@ -1614,7 +1614,7 @@ class NekoTargetCore {
 
 	static function patternNeedsNekoIfLowering(pattern:HxSwitchPattern):Bool {
 		return switch (pattern) {
-			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _):
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PEnumValue(_) | PEnumExtract(_, _) | PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _):
 				true;
 			case PCapture(_, inner) | PUnsupportedGuard(inner):
 				patternNeedsNekoIfLowering(inner);
@@ -1637,8 +1637,10 @@ class NekoTargetCore {
 				{cond: "(" + scrutinee + " == " + quote(value) + ")", bindings: []};
 			case PInt(value):
 				{cond: "(" + scrutinee + " == " + Std.string(value) + ")", bindings: []};
-			case PEnumValue(name) | PEnumExtract(name, _):
-				{cond: "(" + scrutinee + " == " + quote(name) + ")", bindings: []};
+			case PEnumValue(name):
+				{cond: nekoEnumCtorCond(scrutinee, name), bindings: []};
+			case PEnumExtract(name, args):
+				lowerNekoEnumExtractPattern(name, args, scrutinee);
 			case PBind(name):
 				{cond: "true", bindings: [{name: name, expr: scrutinee}]};
 			case PCapture(name, inner):
@@ -1668,6 +1670,27 @@ class NekoTargetCore {
 			case PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PParsedIntSwitchGuard(_, _, _, _):
 				unsupportedSwitchPatternLowering(pattern);
 		}
+	}
+
+	static function nekoEnumCtorCond(scrutinee:String, name:String):String {
+		return "__hxhx_enum_ctor_is(" + scrutinee + ", " + quote(name) + ")";
+	}
+
+	static function lowerNekoEnumExtractPattern(name:String, args:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
+		final params = "__hxhx_enum_params(" + scrutinee + ")";
+		final count = args == null ? 0 : args.length;
+		final conds = [nekoEnumCtorCond(scrutinee, name), "($asize(" + params + ") >= " + count + ")"];
+		final bindings = new Array<NekoSwitchPatternBinding>();
+		if (args != null) {
+			for (i in 0...args.length) {
+				final lowered = lowerNekoSwitchPattern(args[i], params + "[" + i + "]");
+				if (lowered.cond != "true")
+					conds.push("(" + lowered.cond + ")");
+				for (binding in lowered.bindings)
+					bindings.push(binding);
+			}
+		}
+		return {cond: conds.join(" && "), bindings: bindings};
 	}
 
 	static function nekoIntCompareGuardCond(value:String, op:String, expected:Int):String {
@@ -1856,6 +1879,8 @@ class NekoTargetCore {
 				return "__hxhx_reflect_call_method(" + renderedArgs[0] + ", " + renderedArgs[1] + ", " + renderedArgs[2] + ")";
 			case EField(EIdent("StringTools"), "startsWith") if (args.length >= 2):
 				return "__hxhx_string_starts_with(" + renderedArgs[0] + ", " + renderedArgs[1] + ")";
+			case EEnumValue(name):
+				return renderEnumCtorCall(name, renderedArgs);
 			case EField(EIdent("Sys"), "print"):
 				return "$print(" + renderedArgs.join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):
@@ -1873,6 +1898,10 @@ class NekoTargetCore {
 			case _:
 				return renderExpr(context, callee) + "(" + renderedArgs.join(", ") + ")";
 		}
+	}
+
+	static function renderEnumCtorCall(name:String, renderedArgs:Array<String>):String {
+		return "__hxhx_enum_value(" + quote(name) + ", $array(" + renderedArgs.join(", ") + "))";
 	}
 
 	static function lookupClass(context:NekoEmitContext, typePath:String):Null<NekoClassInfo> {
@@ -1910,6 +1939,8 @@ class NekoTargetCore {
 		real instance state instead of unqualified Neko globals.
 	**/
 	static function renderIdent(context:NekoEmitContext, name:String):String {
+		if (context == null)
+			return safeIdent(name);
 		if (isLocalName(context, name))
 			return safeIdent(name);
 		if (context.selfName != null && isCurrentInstanceMethod(context, name))
