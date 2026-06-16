@@ -92,11 +92,11 @@ class LibraryResolver {
 
 	static function resolveViaProcess(lib:String):LibrarySpec {
 		final lixSpec = tryResolveViaCommand(lixBin(), ["run-haxelib", "path", lib]);
-		if (lixSpec != null && !isScopedMetadataMiss(lib, lixSpec))
+		if (lixSpec != null && !isProcessResolutionMiss(lib, lixSpec))
 			return lixSpec;
 
 		final haxelibSpec = tryResolveViaCommand(haxelibBin(), ["path", lib]);
-		if (haxelibSpec != null && !isScopedMetadataMiss(lib, haxelibSpec))
+		if (haxelibSpec != null && !isProcessResolutionMiss(lib, haxelibSpec))
 			return haxelibSpec;
 
 		// Lix and lix-shimmed haxelib can report only a scoped haxe_libraries
@@ -106,6 +106,14 @@ class LibraryResolver {
 			return haxelibAlwaysSpec;
 
 		throw "failed to resolve -lib " + lib + " via lix or haxelib";
+	}
+
+	static function isProcessResolutionMiss(lib:String, spec:LibrarySpec):Bool {
+		return isEmptySpec(spec) || isScopedMetadataMiss(lib, spec);
+	}
+
+	static function isEmptySpec(spec:LibrarySpec):Bool {
+		return spec.classPaths.length == 0 && spec.defines.length == 0 && spec.macros.length == 0 && spec.unknownArgs.length == 0;
 	}
 
 	static function isScopedMetadataMiss(lib:String, spec:LibrarySpec):Bool {

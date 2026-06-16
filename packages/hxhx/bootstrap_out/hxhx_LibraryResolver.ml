@@ -123,6 +123,8 @@ let findScopedHxml = fun lib cwd -> try let __fallback_result_30 = let tempStrin
 ) in Obj.magic __fallback_result_30 with
   | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29
 
+let isEmptySpec = fun spec -> HxArray.length (Obj.obj (HxAnon.get spec "classPaths")) = 0 && HxArray.length (Obj.obj (HxAnon.get spec "defines")) = 0 && HxArray.length (Obj.obj (HxAnon.get spec "macros")) = 0 && HxArray.length (Obj.obj (HxAnon.get spec "unknownArgs")) = 0
+
 let isScopedMetadataMiss = fun lib spec -> try let __fallback_result_39 = (
   ignore (if HxArray.length (Obj.obj (HxAnon.get spec "classPaths")) > 0 || HxArray.length (Obj.obj (HxAnon.get spec "defines")) > 0 || HxArray.length (Obj.obj (HxAnon.get spec "macros")) > 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let prefix = (("-lib " ^ HxString.toStdString lib) ^ " is missing " : string) in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get spec "unknownArgs")) in (
@@ -137,6 +139,8 @@ let isScopedMetadataMiss = fun lib spec -> try let __fallback_result_39 = (
   )
 ) in Obj.magic __fallback_result_39 with
   | HxRuntime.Hx_return __ret_38 -> Obj.obj __ret_38
+
+let isProcessResolutionMiss = fun lib spec -> isEmptySpec spec || isScopedMetadataMiss (lib : string) spec
 
 let tryResolveViaCommand = fun bin args -> try let __fallback_result_52 = let p = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : Sys_io_Process.t) in (
   ignore (try let __assign_40 = Obj.magic (Obj.magic (Sys_io_Process.create (bin : string) (Obj.magic args) (HxRuntime.hx_null))) in (
@@ -212,13 +216,13 @@ let resolveViaProcess = fun lib -> try let __fallback_result_35 = let lixSpec = 
   ignore (HxArray.push __arr_31 lib);
   __arr_31
 ))) in (
-  ignore (if lixSpec != Obj.magic (HxRuntime.hx_null) && not (isScopedMetadataMiss (lib : string) lixSpec) then raise (HxRuntime.Hx_return (Obj.repr lixSpec)) else ());
+  ignore (if lixSpec != Obj.magic (HxRuntime.hx_null) && not (isProcessResolutionMiss (lib : string) lixSpec) then raise (HxRuntime.Hx_return (Obj.repr lixSpec)) else ());
   let haxelibSpec = tryResolveViaCommand (haxelibBin () : string) (Obj.magic (let __arr_32 = HxArray.create () in (
     ignore (HxArray.push __arr_32 "path");
     ignore (HxArray.push __arr_32 lib);
     __arr_32
   ))) in (
-    ignore (if haxelibSpec != Obj.magic (HxRuntime.hx_null) && not (isScopedMetadataMiss (lib : string) haxelibSpec) then raise (HxRuntime.Hx_return (Obj.repr haxelibSpec)) else ());
+    ignore (if haxelibSpec != Obj.magic (HxRuntime.hx_null) && not (isProcessResolutionMiss (lib : string) haxelibSpec) then raise (HxRuntime.Hx_return (Obj.repr haxelibSpec)) else ());
     let haxelibAlwaysSpec = tryResolveViaCommand (haxelibBin () : string) (Obj.magic (let __arr_33 = HxArray.create () in (
       ignore (HxArray.push __arr_33 "--always");
       ignore (HxArray.push __arr_33 "path");

@@ -41,5 +41,9 @@ class M14Stage3LuaRunSupportIntegrationTest {
 		final lixResolverStdout = runChild("library-resolver-lix-scoped-miss");
 		assertTrue(lixResolverStdout == "resolver=lix-scoped-miss",
 			"expected Lix scoped metadata miss to fall through to haxelib --always, got `" + lixResolverStdout + "`");
+
+		final emptyLixResolverStdout = runChild("library-resolver-lix-empty");
+		assertTrue(emptyLixResolverStdout == "resolver=lix-empty",
+			"expected empty Lix resolver output to fall through to haxelib --always, got `" + emptyLixResolverStdout + "`");
 	}
 }
