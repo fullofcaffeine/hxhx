@@ -15,6 +15,8 @@ package backend;
 	- `emitFullBodies`: Stage3 bootstrap mode that emits full function bodies.
 	- `buildExecutable`: whether the backend should perform build/link after emit.
 	- `defines`: effective define map after CLI + library + macro-state merging.
+	- `nativeLibraryPaths`: target-native runtime library search paths resolved from
+	  package metadata, such as Neko NDLL directories.
 
 	How
 	- This class is intentionally small and immutable.
@@ -29,9 +31,10 @@ class BackendContext {
 	public final buildExecutable:Bool;
 	public final defines:haxe.ds.StringMap<String>;
 	public final resources:Array<BackendResource>;
+	public final nativeLibraryPaths:Array<String>;
 
 	public function new(outputDir:String, outputFileHint:Null<String>, mainModule:String, emitFullBodies:Bool, buildExecutable:Bool,
-			defines:haxe.ds.StringMap<String>, ?resources:Array<BackendResource>) {
+			defines:haxe.ds.StringMap<String>, ?resources:Array<BackendResource>, ?nativeLibraryPaths:Array<String>) {
 		this.outputDir = outputDir;
 		this.outputFileHint = outputFileHint;
 		this.mainModule = mainModule == null ? "" : mainModule;
@@ -39,6 +42,7 @@ class BackendContext {
 		this.buildExecutable = buildExecutable;
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		this.resources = resources == null ? [] : resources;
+		this.nativeLibraryPaths = nativeLibraryPaths == null ? [] : nativeLibraryPaths;
 	}
 
 	public function hasDefine(name:String):Bool {

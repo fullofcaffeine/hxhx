@@ -859,9 +859,10 @@ class Stage3Compiler {
 		// Bring-up diagnostics: dump HXHX_* defines again after hooks.
 		Stage3DiagnosticsSupport.printHxMacroDefines("macro_define2");
 
+		final nekoNdllPaths = backendId == "neko-native" ? Stage3SetupSupport.collectNekoNdllPaths(libsResolved, cwd) : [];
 		final emitted = try {
 			Stage3EmitSupport.emitWithBackend(backend, expanded, backendId, typedModules.length, cwd, outAbs, targetOutputHintRaw, targetOutputDirHintRaw,
-				parsedMain, emitFullBodies, supportsCustomOutputFile, supportsBuildExecutable, definesMap, backendResources);
+				parsedMain, emitFullBodies, supportsCustomOutputFile, supportsBuildExecutable, definesMap, backendResources, nekoNdllPaths);
 		} catch (e:String) {
 			closeMacroSession();
 			return error("emit failed: " + e);
@@ -882,7 +883,6 @@ class Stage3Compiler {
 
 		closeMacroSession();
 
-		final nekoNdllPaths = backendId == "neko-native" ? Stage3SetupSupport.collectNekoNdllPaths(libsResolved, cwd) : [];
 		final runError = Stage3RunSupport.runEmittedArtifact(backendId, parsedHadCmd, parsedCmdCommands, parsedHadRun, parsedRunArgs, cwd, emitted, noRun,
 			nekoNdllPaths);
 		if (runError != null)

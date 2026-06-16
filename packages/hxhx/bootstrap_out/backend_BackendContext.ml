@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable outputDir : string; mutable outputFileHint : string; mutable mainModule : string; mutable emitFullBodies : bool; mutable buildExecutable : bool; mutable defines : string HxMap.string_map; mutable resources : Obj.t HxArray.t }
+type t = { __hx_type : Obj.t; mutable outputDir : string; mutable outputFileHint : string; mutable mainModule : string; mutable emitFullBodies : bool; mutable buildExecutable : bool; mutable defines : string HxMap.string_map; mutable resources : Obj.t HxArray.t; mutable nativeLibraryPaths : string HxArray.t }
 
-let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExecutable2 defines2 resources2 -> let self = ({ __hx_type = HxType.class_ "backend.BackendContext"; outputDir = ""; outputFileHint = Obj.magic (HxRuntime.hx_null); mainModule = ""; emitFullBodies = false; buildExecutable = false; defines = Obj.magic (HxRuntime.hx_null); resources = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExecutable2 defines2 resources2 nativeLibraryPaths2 -> let self = ({ __hx_type = HxType.class_ "backend.BackendContext"; outputDir = ""; outputFileHint = Obj.magic (HxRuntime.hx_null); mainModule = ""; emitFullBodies = false; buildExecutable = false; defines = Obj.magic (HxRuntime.hx_null); resources = Obj.magic (HxRuntime.hx_null); nativeLibraryPaths = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (outputDir2 : string) in (
       (Obj.magic self : t).outputDir <- __assign_1;
@@ -56,9 +56,22 @@ let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExe
             tempRight2 := __assign_13;
             __assign_13
           ));
-          let __assign_14 = Obj.magic (!tempRight2) in (
+          ignore (let __assign_14 = Obj.magic (!tempRight2) in (
             (Obj.magic self : t).resources <- __assign_14;
             __assign_14
+          ));
+          let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+            ignore (if nativeLibraryPaths2 == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic (let __arr_16 = HxArray.create () in __arr_16) in (
+              tempRight3 := __assign_15;
+              __assign_15
+            ) else let __assign_17 = Obj.magic nativeLibraryPaths2 in (
+              tempRight3 := __assign_17;
+              __assign_17
+            ));
+            let __assign_18 = Obj.magic (!tempRight3) in (
+              (Obj.magic self : t).nativeLibraryPaths <- __assign_18;
+              __assign_18
+            )
           )
         )
       )
@@ -67,15 +80,15 @@ let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExe
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendContext"; outputDir = ""; outputFileHint = Obj.magic (HxRuntime.hx_null); mainModule = ""; emitFullBodies = false; buildExecutable = false; defines = Obj.magic (HxRuntime.hx_null); resources = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendContext"; outputDir = ""; outputFileHint = Obj.magic (HxRuntime.hx_null); mainModule = ""; emitFullBodies = false; buildExecutable = false; defines = Obj.magic (HxRuntime.hx_null); resources = Obj.magic (HxRuntime.hx_null); nativeLibraryPaths = Obj.magic (HxRuntime.hx_null) } : t)
 
 let hasDefine = fun self (name : string) -> name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 && HxMap.exists_string ((Obj.magic self : t).defines) name
 
-let defineValue = fun self (name : string) -> try let __fallback_result_16 = (
+let defineValue = fun self (name : string) -> try let __fallback_result_20 = (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   HxMap.get_string ((Obj.magic self : t).defines) name
-) in Obj.magic __fallback_result_16 with
-  | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
+) in Obj.magic __fallback_result_20 with
+  | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19
 
 let ensureOcamlProfileDefine = fun self () -> let profile = (Backend_OcamlProfile.fromDefineValue (defineValue (Obj.magic self) ("ocaml_profile" : string) : string) : string) in (
   ignore (HxMap.set_string ((Obj.magic self : t).defines) "ocaml_profile" profile);

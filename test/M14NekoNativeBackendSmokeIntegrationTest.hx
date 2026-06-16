@@ -336,10 +336,18 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			program('class Main { static function main() { var p = neko.vm.Loader.local().getPath()[0]; if (p.endsWith("/")) Sys.println(StringTools.endsWith(p, "/")); } }'),
 			context);
 		final loaderPathSource = File.getContent(sourcePath);
-		assertContains(loaderPathSource, "var p = $loader.path[0];", "expected neko.vm.Loader.local().getPath()[0] to lower to the Neko loader path");
+		assertContains(loaderPathSource, "var p = $loader.path[0][0];",
+			"expected neko.vm.Loader.local().getPath()[0] to lower through the Neko loader linked-list path");
 		assertContains(loaderPathSource, '__hxhx_string_ends_with(p, "/")', "expected receiver and StringTools endsWith to use Neko string suffix helper");
 		assertNotContains(loaderPathSource, '__hxhx_field(__hxhx_field(__hxhx_field(__hxhx_field(neko, "vm"), "Loader"), "local")(), "getPath")()',
 			"loader path extern chain must not be emitted as dynamic fields on a fake neko object");
+		assertNotContains(loaderPathSource, "var p = $loader.path[0];", "loader path must not treat the linked-list cell as the string path");
+
+		final loaderPathContext = new BackendContext(outDir, outputHint, "Main", true, false, defines, null, ["dummy/ndll/Linux64/"]);
+		final loaderPathSplit = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Main { static function main() { Sys.println(neko.vm.Loader.local().getPath()[0]); } }'),
+			loaderPathContext, sourcePath);
+		assertContains(loaderPathSplit.entrySource, "$" + 'loader.path = ' + "$" + 'array("dummy/ndll/Linux64/", ' + "$" + "loader.path);",
+			"expected Neko split entry to prepend resolved native library paths to the loader");
 
 		deleteRecursive(outDir);
 
