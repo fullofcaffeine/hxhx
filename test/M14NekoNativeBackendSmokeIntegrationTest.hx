@@ -183,6 +183,20 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(splitVarArgsSource, "if (prefix == null) prefix = \"test\";", "expected method varargs to apply parsed default values");
 		assertContains(splitVarArgsSource, '__hxhx_field(runner, "addCase")("case");', "expected receiver calls to route through property-aware field reads");
 
+		final splitStaticFields = @:privateAccess NekoTargetCore.renderSplitProgram(program('class AssertLike { public static var results:Dynamic; public static var createAsync:Dynamic; } class Handler { public function new() {} public function bind() { AssertLike.results = 1; AssertLike.createAsync = (?x:Int) -> x == null ? 7 : x; } } class Main { static function main() { var h = new Handler(); h.bind(); Sys.println(AssertLike.results); Sys.println(AssertLike.createAsync()); } }'),
+			splitContext, sourcePath);
+		final splitStaticFieldSource = supportSource(splitStaticFields);
+		assertContains(splitStaticFieldSource, "var __hxhx_static_objects = (function() {",
+			"expected split Neko support chunks to share static object storage through the symbol table");
+		assertContains(splitStaticFieldSource, "(__hxhx_static_object(\"AssertLike\").results = 1);",
+			"expected static field writes to target mutable static object storage");
+		assertContains(splitStaticFieldSource, "(__hxhx_static_object(\"AssertLike\").createAsync = __hxhx_optional_lambda",
+			"expected function-valued static field writes to target mutable static object storage");
+		assertContains(splitStaticFieldSource, "$print(__hxhx_field(__hxhx_static_object(\"AssertLike\"), \"results\"), \"\\n\");",
+			"expected static field reads to use static object storage");
+		assertContains(splitStaticFieldSource, "$print(__hxhx_field(__hxhx_static_object(\"AssertLike\"), \"createAsync\")(), \"\\n\");",
+			"expected static function-valued field calls to use static object storage");
+
 		final reflectionSplit = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Case { public var value:Int; public function new() {} public function testFoo() {} public static function helper() {} } class Main { static function main() { var c = new Case(); Sys.println(Type.getClassName(Type.getClass(c))); Sys.println(Type.getInstanceFields(Type.getClass(c)).length); Sys.println(Reflect.hasField(c, "testFoo")); Sys.println(Reflect.isFunction(Reflect.field(c, "testFoo"))); Reflect.callMethod(c, Reflect.field(c, "testFoo"), []); } }'),
 			splitContext, sourcePath);
 		final reflectionSource = supportSource(reflectionSplit);

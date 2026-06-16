@@ -26,7 +26,7 @@ let renderStringArray = fun values -> let _g = Obj.magic (let __arr_3 = HxArray.
   ("$array(" ^ HxString.toStdString (HxArray.join _g ", " (fun x -> x))) ^ ")"
 )
 
-let render = fun out classes -> ignore ((
+let render = fun out classes symbolTable -> ignore ((
   ignore (HxArray.push out "var __hxhx_string = function(value) {");
   ignore (HxArray.push out "  if (value == null) return \"null\";");
   ignore (HxArray.push out "  if ($typeof(value) == $tobject && value.toString != null) return value.toString();");
@@ -84,6 +84,21 @@ let render = fun out classes -> ignore ((
       ignore (HxArray.push out (((("$objset(__hxhx_instance_fields, $hash(" ^ HxString.toStdString (quote (Obj.obj (HxAnon.get meta "fullName") : string))) ^ "), ") ^ HxString.toStdString (renderStringArray (Obj.magic (Obj.obj (HxAnon.get meta "instanceFields"))))) ^ ");"));
       HxArray.push out (((("$objset(__hxhx_static_fields, $hash(" ^ HxString.toStdString (quote (Obj.obj (HxAnon.get meta "fullName") : string))) ^ "), ") ^ HxString.toStdString (renderStringArray (Obj.magic (Obj.obj (HxAnon.get meta "staticFields"))))) ^ ");")
     )) done);
+    ignore (if symbolTable == Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push out "var __hxhx_static_objects = $new(null);") else ignore ((
+      ignore (HxArray.push out "var __hxhx_static_objects = (function() {");
+      ignore (HxArray.push out (((("  if (" ^ HxString.toStdString symbolTable) ^ ".__hxhx_static_objects == null) ") ^ HxString.toStdString symbolTable) ^ ".__hxhx_static_objects = $new(null);"));
+      ignore (HxArray.push out (("  return " ^ HxString.toStdString symbolTable) ^ ".__hxhx_static_objects;"));
+      HxArray.push out "})();"
+    )));
+    ignore (HxArray.push out "var __hxhx_static_object = function(name) {");
+    ignore (HxArray.push out "  var object = $objget(__hxhx_static_objects, $hash(name));");
+    ignore (HxArray.push out "  if (object == null) {");
+    ignore (HxArray.push out "    object = $new(null);");
+    ignore (HxArray.push out "    object.__hx_ctor = name;");
+    ignore (HxArray.push out "    $objset(__hxhx_static_objects, $hash(name), object);");
+    ignore (HxArray.push out "  }");
+    ignore (HxArray.push out "  return object;");
+    ignore (HxArray.push out "}");
     ignore (HxArray.push out "var __hxhx_type_class_name = function(c) {");
     ignore (HxArray.push out "  if (c == null) return null;");
     ignore (HxArray.push out "  return \"\" + c;");

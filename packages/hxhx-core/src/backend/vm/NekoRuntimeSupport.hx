@@ -26,7 +26,7 @@ typedef NekoRuntimeClassMeta = {
 	  growth.
 **/
 class NekoRuntimeSupport {
-	public static function render(out:Array<String>, classes:Array<NekoRuntimeClassMeta>):Void {
+	public static function render(out:Array<String>, classes:Array<NekoRuntimeClassMeta>, ?symbolTable:String):Void {
 		out.push("var __hxhx_string = function(value) {");
 		out.push("  if (value == null) return \"null\";");
 		out.push("  if ($typeof(value) == $tobject && value.toString != null) return value.toString();");
@@ -79,6 +79,23 @@ class NekoRuntimeSupport {
 			out.push("$objset(__hxhx_instance_fields, $hash(" + quote(meta.fullName) + "), " + renderStringArray(meta.instanceFields) + ");");
 			out.push("$objset(__hxhx_static_fields, $hash(" + quote(meta.fullName) + "), " + renderStringArray(meta.staticFields) + ");");
 		}
+		if (symbolTable == null) {
+			out.push("var __hxhx_static_objects = $new(null);");
+		} else {
+			out.push("var __hxhx_static_objects = (function() {");
+			out.push("  if (" + symbolTable + ".__hxhx_static_objects == null) " + symbolTable + ".__hxhx_static_objects = $new(null);");
+			out.push("  return " + symbolTable + ".__hxhx_static_objects;");
+			out.push("})();");
+		}
+		out.push("var __hxhx_static_object = function(name) {");
+		out.push("  var object = $objget(__hxhx_static_objects, $hash(name));");
+		out.push("  if (object == null) {");
+		out.push("    object = $new(null);");
+		out.push("    object.__hx_ctor = name;");
+		out.push("    $objset(__hxhx_static_objects, $hash(name), object);");
+		out.push("  }");
+		out.push("  return object;");
+		out.push("}");
 		out.push("var __hxhx_type_class_name = function(c) {");
 		out.push("  if (c == null) return null;");
 		out.push("  return \"\" + c;");
