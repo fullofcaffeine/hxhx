@@ -645,6 +645,12 @@ class NekoTargetCore {
 				case "time":
 					renderRuntimeForwarder(out, context, info, fn, "$loader.loadprim(\"std@sys_time\", 0)()");
 					return true;
+				case "systemName":
+					renderRuntimeForwarder(out, context, info, fn, "__hxhx_sys_system_name()");
+					return true;
+				case "getEnv":
+					renderRuntimeForwarder(out, context, info, fn, "__hxhx_sys_get_env(s)");
+					return true;
 				case _:
 			}
 		}
@@ -703,6 +709,10 @@ class NekoTargetCore {
 			out.push("");
 			return;
 		}
+		if (isSysIoProcessTypePath(info.fullName)) {
+			renderProcessConstructorFactory(out, context, info);
+			return;
+		}
 		final ctor = findFunction(info.cls, "new", false);
 		final args = new Array<String>();
 		if (ctor != null) {
@@ -743,6 +753,23 @@ class NekoTargetCore {
 				renderStmt(out, constructorContext, stmt, "  ");
 		}
 		out.push("  return " + selfName + ";");
+		out.push(renderFunctionEnd(useVarArgs));
+		out.push("");
+	}
+
+	static function renderProcessConstructorFactory(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo):Void {
+		final ctor = findFunction(info.cls, "new", false);
+		final args = ctor == null ? [] : [for (arg in HxFunctionDecl.getArgs(ctor)) safeIdent(arg.name)];
+		final constructorContext = ctor == null ? context : withFunctionArgs(context, ctor);
+		final useVarArgs = shouldUseVarArgs(context, args);
+		out.push(renderConstructorDefinitionPrefix(context, info.fullName) + renderFunctionStart(args, useVarArgs));
+		if (useVarArgs)
+			renderVarArgBindings(out, constructorContext, HxFunctionDecl.getArgs(ctor), "  ");
+		out.push("  return __hxhx_process_new(" + [
+			args.length > 0 ? args[0] : "null",
+			args.length > 1 ? args[1] : "$array()",
+			args.length > 2 ? args[2] : "null"
+		].join(", ") + ");");
 		out.push(renderFunctionEnd(useVarArgs));
 		out.push("");
 	}
@@ -1264,6 +1291,8 @@ class NekoTargetCore {
 		final mapKind = mapKindForTypePath(typePath);
 		if (mapKind != null)
 			return "__hxhx_map_new(" + quote(mapKind) + ")";
+		if (typePath == "sys.io.Process")
+			return "__hxhx_process_new(" + renderProcessConstructorArgs(context, args).join(", ") + ")";
 		final info = lookupClass(context, typePath);
 		if (info != null)
 			return renderConstructorRef(context, info.fullName) + "(" + [for (arg in args) renderExpr(context, arg)].join(", ") + ")";
@@ -1273,6 +1302,14 @@ class NekoTargetCore {
 		parts.push(tmp + ".__hx_params = " + renderArray(context, args) + ";");
 		parts.push("return " + tmp + "; })()");
 		return parts.join(" ");
+	}
+
+	static function renderProcessConstructorArgs(context:NekoEmitContext, args:Array<HxExpr>):Array<String> {
+		return [
+			args.length > 0 ? renderExpr(context, args[0]) : "null",
+			args.length > 1 ? renderExpr(context, args[1]) : "$array()",
+			args.length > 2 ? renderExpr(context, args[2]) : "null"
+		];
 	}
 
 	static function renderLambda(context:NekoEmitContext, args:Array<String>, body:HxExpr):String {
@@ -1977,6 +2014,10 @@ class NekoTargetCore {
 				return "__hxhx_string_starts_with(" + renderedArgs[0] + ", " + renderedArgs[1] + ")";
 			case EEnumValue(name):
 				return renderEnumCtorCall(name, renderedArgs);
+			case EField(EIdent("Sys"), "systemName"):
+				return "__hxhx_sys_system_name()";
+			case EField(EIdent("Sys"), "getEnv") if (args.length >= 1):
+				return "__hxhx_sys_get_env(" + renderedArgs[0] + ")";
 			case EField(EIdent("Sys"), "print"):
 				return "$print(" + renderedArgs.join(", ") + ")";
 			case EField(EIdent("Sys"), "println"):
@@ -2037,6 +2078,10 @@ class NekoTargetCore {
 				return info;
 		}
 		return null;
+	}
+
+	static function isSysIoProcessTypePath(typePath:String):Bool {
+		return typePath == "sys.io.Process";
 	}
 
 	static function renderStaticObjectRef(fullClassName:String):String {

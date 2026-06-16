@@ -218,6 +218,27 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(splitSysTimeSource, "__hxhx_symbols.Sys_time = function() {", "expected Sys.time to remain a reachable Neko static");
 		assertContains(splitSysTimeSource, "return $loader.loadprim(\"std@sys_time\", 0)();", "expected Sys.time to lower to the Neko std primitive");
 
+		final splitSysRuntime = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Sys { public static function systemName():String return ""; public static function getEnv(s:String):String return null; public static function println(v) {} } class Main { static function main() { Sys.println(Sys.systemName()); Sys.println(Sys.getEnv("PATH")); } }'),
+			splitContext, sourcePath);
+		final splitSysRuntimeSource = supportSource(splitSysRuntime);
+		assertContains(splitSysRuntimeSource, "var __hxhx_sys_system_name = function() {", "expected Neko Sys runtime helper");
+		assertContains(splitSysRuntimeSource, "return __hxhx_sys_system_name();", "expected Sys.systemName static forwarder");
+		assertContains(splitSysRuntimeSource, "return __hxhx_sys_get_env(s);", "expected Sys.getEnv static forwarder");
+		assertNotContains(splitSysRuntimeSource, "__hxhx_symbols.Sys_systemName = function() {\n}", "Sys.systemName must not emit an empty split static");
+		assertNotContains(splitSysRuntimeSource, "__hxhx_symbols.Sys_getEnv = function() {\n}", "Sys.getEnv must not emit an empty split static");
+
+		final splitProcess = @:privateAccess NekoTargetCore.renderSplitProgram(program('package sys.io; class Process { public var stdout:Dynamic; public function new(cmd:String, args:Array<String>, ?detached:Bool) {} public function close() {} public function kill() {} } class Main { static function main() { var p = new Process("uname", ["-m"]); var arch = p.stdout.readLine(); p.kill(); p.close(); } }'),
+			splitContext, sourcePath);
+		final splitProcessSource = supportSource(splitProcess);
+		assertContains(splitProcessSource, "var __hxhx_process_new = function(command, args, detached) {", "expected Neko Process runtime helper");
+		assertContains(splitProcessSource, "return __hxhx_process_new(cmd, args, detached);",
+			"expected sys.io.Process constructor factory to use runtime helper");
+		assertContains(splitProcessSource, 'var p = __hxhx_symbols.__hxhx_new_sys_io_Process("uname", ' + "$" + 'array("-m"));',
+			"expected new sys.io.Process to call the split constructor helper");
+		assertContains(splitProcessSource, "__hxhx_field(__hxhx_field(p, \"stdout\"), \"readLine\")();",
+			"expected Process.stdout.readLine to use property-aware calls");
+		assertNotContains(splitProcessSource, '__hxhx_self.__hx_ctor = "sys.io.Process";', "sys.io.Process must not use the hollow generic constructor body");
+
 		final reflectionSplit = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Case { public var value:Int; public function new() {} public function testFoo() {} public static function helper() {} } class Main { static function main() { var c = new Case(); Sys.println(Type.getClassName(Type.getClass(c))); Sys.println(Type.getInstanceFields(Type.getClass(c)).length); Sys.println(Reflect.hasField(c, "testFoo")); Sys.println(Reflect.isFunction(Reflect.field(c, "testFoo"))); Reflect.callMethod(c, Reflect.field(c, "testFoo"), []); } }'),
 			splitContext, sourcePath);
 		final reflectionSource = supportSource(reflectionSplit);
