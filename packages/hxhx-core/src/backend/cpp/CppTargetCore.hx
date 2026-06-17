@@ -484,6 +484,8 @@ class CppTargetCore {
 				renderExpr(left) + " = " + renderExpr(right);
 			case EBinop(op, left, right) if (isSimpleBinaryOp(op)):
 				"(" + renderExpr(left) + " " + op + " " + renderExpr(right) + ")";
+			case EUnop("-", inner):
+				"(-" + renderExpr(inner) + ")";
 			case EUntyped(inner):
 				renderExpr(inner);
 			case _:
