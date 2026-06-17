@@ -456,6 +456,8 @@ class CppTargetCore {
 					out.push(line);
 				out.push(indent + "}");
 				out;
+			case SForIn(name, iterable, body, _):
+				renderForInStmt(name, iterable, body, indent);
 			case STry(tryBody, catches, _):
 				renderTryStmt(tryBody, catches, indent);
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
@@ -478,6 +480,39 @@ class CppTargetCore {
 			case _:
 				throw "C++ source backend MVP unsupported statement: " + stmtKind(stmt);
 		};
+	}
+
+	/**
+		Lower the C++ MVP subset of Haxe `for (x in iterable)` statements.
+
+		Range loops (`a...b`) are emitted as integer counter loops to preserve Haxe's
+		exclusive upper bound. Other currently supported iterables are emitted as C++
+		range-for loops, which works for the vectors/strings produced by this backend.
+		Full Haxe iterator-protocol lowering is intentionally not claimed here.
+	**/
+	static function renderForInStmt(name:String, iterable:HxExpr, body:HxStmt, indent:String):Array<String> {
+		final local = sanitizeIdentifier(name);
+		final out = switch (iterable) {
+			case ERange(start, end):
+				[indent
+					+ "for (int "
+					+ local
+					+ " = "
+					+ renderExpr(start)
+					+ "; "
+					+ local
+					+ " < "
+					+ renderExpr(end)
+					+ "; "
+					+ local
+					+ "++) {"];
+			case _:
+				[indent + "for (auto " + local + " : " + renderExpr(iterable) + ") {"];
+		}
+		for (line in renderStmtBlockContent(body, indent + "  "))
+			out.push(line);
+		out.push(indent + "}");
+		return out;
 	}
 
 	/**
