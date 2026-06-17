@@ -477,6 +477,8 @@ class CppTargetCore {
 				[indent + "return static_cast<int>(" + renderExpr(expr) + ");"];
 			case SReturnVoid(_):
 				[indent + "return 0;"];
+			case SBreak(_):
+				[indent + "break;"];
 			case _:
 				throw "C++ source backend MVP unsupported statement: " + stmtKind(stmt);
 		};
