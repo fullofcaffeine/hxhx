@@ -200,6 +200,19 @@ class CppTargetCore {
 					out.push(line);
 				out.push(indent + "}");
 				out;
+			case SIf(cond, thenBranch, elseBranch, _):
+				final out = [indent + "if " + conditionExpr(cond) + " {"];
+				for (line in renderStmtBlockContent(thenBranch, indent + "  "))
+					out.push(line);
+				if (elseBranch == null) {
+					out.push(indent + "}");
+				} else {
+					out.push(indent + "} else {");
+					for (line in renderStmtBlockContent(elseBranch, indent + "  "))
+						out.push(line);
+					out.push(indent + "}");
+				}
+				out;
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
 				[indent + "std::cout << " + stringExpr(args[0]) + " << std::endl;"];
 			case SExpr(ECall(EIdent("trace"), args), _) if (args.length >= 1):
@@ -217,6 +230,24 @@ class CppTargetCore {
 				[indent + "return 0;"];
 			case _:
 				throw "C++ source backend MVP unsupported statement: " + stmtKind(stmt);
+		};
+	}
+
+	static function renderStmtBlockContent(stmt:HxStmt, indent:String):Array<String> {
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				renderStmts(stmts, indent);
+			case _:
+				renderStmt(stmt, indent);
+		};
+	}
+
+	static function conditionExpr(expr:HxExpr):String {
+		return switch (expr) {
+			case EBinop(_, _, _):
+				renderExpr(expr);
+			case _:
+				"(" + renderExpr(expr) + ")";
 		};
 	}
 
