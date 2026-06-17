@@ -69,8 +69,9 @@ let init () : unit =
   ignore (HxType.class_ "backend.ITargetBackendProvider");
   ignore (HxType.class_ "backend.ITargetCore");
   ignore (HxType.class_ "backend.TargetCoreBackend");
-  ignore (HxType.class_ "backend.UnsupportedNativeTargetBackend");
   ignore (HxType.class_ "backend._OcamlProfile.OcamlProfile_Impl_");
+  ignore (HxType.class_ "backend.cpp.CppNativeBackend");
+  ignore (HxType.class_ "backend.cpp.CppTargetCore");
   ignore (HxType.class_ "backend.js.JsBackend");
   ignore (HxType.class_ "backend.js.JsExprEmitter");
   ignore (HxType.class_ "backend.js.JsFunctionScope");
@@ -1218,11 +1219,14 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'emitImpl' for backend.TargetCoreBackend" in
     Obj.repr (Backend_TargetCoreBackend.create a0 a1)
   );
-  HxType.register_class_ctor "backend.UnsupportedNativeTargetBackend" (fun (_args : Obj.t HxArray.t) ->
-    Obj.repr (Backend_UnsupportedNativeTargetBackend.create ())
-  );
   HxType.register_class_ctor "backend._OcamlProfile.OcamlProfile_Impl_" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_OcamlProfile.create ())
+  );
+  HxType.register_class_ctor "backend.cpp.CppNativeBackend" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_cpp_CppNativeBackend.create ())
+  );
+  HxType.register_class_ctor "backend.cpp.CppTargetCore" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_cpp_CppTargetCore.create ())
   );
   HxType.register_class_ctor "backend.js.JsBackend" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_js_JsBackend.create ())
@@ -1683,8 +1687,9 @@ let init () : unit =
   HxType.register_class_empty_ctor "backend.EmitResult" (fun () -> Obj.repr (Backend_EmitResult.__empty ()));
   HxType.register_class_empty_ctor "backend.GenIrBoundary" (fun () -> Obj.repr (Backend_GenIrBoundary.__empty ()));
   HxType.register_class_empty_ctor "backend.TargetCoreBackend" (fun () -> Obj.repr (Backend_TargetCoreBackend.__empty ()));
-  HxType.register_class_empty_ctor "backend.UnsupportedNativeTargetBackend" (fun () -> Obj.repr (Backend_UnsupportedNativeTargetBackend.__empty ()));
   HxType.register_class_empty_ctor "backend._OcamlProfile.OcamlProfile_Impl_" (fun () -> Obj.repr (Backend_OcamlProfile.__empty ()));
+  HxType.register_class_empty_ctor "backend.cpp.CppNativeBackend" (fun () -> Obj.repr (Backend_cpp_CppNativeBackend.__empty ()));
+  HxType.register_class_empty_ctor "backend.cpp.CppTargetCore" (fun () -> Obj.repr (Backend_cpp_CppTargetCore.__empty ()));
   HxType.register_class_empty_ctor "backend.js.JsBackend" (fun () -> Obj.repr (Backend_js_JsBackend.__empty ()));
   HxType.register_class_empty_ctor "backend.js.JsExprEmitter" (fun () -> Obj.repr (Backend_js_JsExprEmitter.__empty ()));
   HxType.register_class_empty_ctor "backend.js.JsFunctionScope" (fun () -> Obj.repr (Backend_js_JsFunctionScope.__empty ()));
@@ -1917,10 +1922,12 @@ let init () : unit =
   HxType.register_class_static_fields "backend.ITargetCore" [];
   HxType.register_class_instance_fields "backend.TargetCoreBackend" [ "backendDescriptor"; "capabilities"; "describe"; "emit"; "emitImpl"; "id" ];
   HxType.register_class_static_fields "backend.TargetCoreBackend" [ "emitBridge" ];
-  HxType.register_class_instance_fields "backend.UnsupportedNativeTargetBackend" [];
-  HxType.register_class_static_fields "backend.UnsupportedNativeTargetBackend" [ "cppDescriptor"; "cppRegistration"; "descriptor"; "emitUnsupported" ];
   HxType.register_class_instance_fields "backend._OcamlProfile.OcamlProfile_Impl_" [];
   HxType.register_class_static_fields "backend._OcamlProfile.OcamlProfile_Impl_" [ "fromDefineValue"; "isTrimCode"; "toDefineValue"; "trimAscii" ];
+  HxType.register_class_instance_fields "backend.cpp.CppNativeBackend" [];
+  HxType.register_class_static_fields "backend.cpp.CppNativeBackend" [ "capabilities"; "descriptor"; "registration" ];
+  HxType.register_class_instance_fields "backend.cpp.CppTargetCore" [];
+  HxType.register_class_static_fields "backend.cpp.CppTargetCore" [ "commandExists"; "cppCompilerCommand"; "emit"; "ensureDirectory"; "ensureParentDirectory"; "executablePath"; "exprKind"; "findMainModule"; "isSimpleBinaryOp"; "isStringLike"; "mainModule"; "quoteString"; "renderExpr"; "renderProgram"; "renderStmt"; "renderStmts"; "sanitizeIdentifier"; "stmtKind"; "stringExpr" ];
   HxType.register_class_instance_fields "backend.js.JsBackend" [ "capabilities"; "delegate"; "describe"; "emit"; "id"; "registrations" ];
   HxType.register_class_static_fields "backend.js.JsBackend" [ "capabilitiesStatic"; "descriptor"; "emitBridge"; "providerDescriptor"; "providerRegistrations"; "targetCore"; "targetCoreEmit" ];
   HxType.register_class_instance_fields "backend.js.JsExprEmitter" [];
@@ -2201,8 +2208,9 @@ let init () : unit =
   HxType.register_class_tags "backend.ITargetBackendProvider" [ "backend.ITargetBackendProvider" ];
   HxType.register_class_tags "backend.ITargetCore" [ "backend.ITargetCore" ];
   HxType.register_class_tags "backend.TargetCoreBackend" [ "backend.IBackend"; "backend.TargetCoreBackend" ];
-  HxType.register_class_tags "backend.UnsupportedNativeTargetBackend" [ "backend.UnsupportedNativeTargetBackend" ];
   HxType.register_class_tags "backend._OcamlProfile.OcamlProfile_Impl_" [ "backend._OcamlProfile.OcamlProfile_Impl_" ];
+  HxType.register_class_tags "backend.cpp.CppNativeBackend" [ "backend.cpp.CppNativeBackend" ];
+  HxType.register_class_tags "backend.cpp.CppTargetCore" [ "backend.cpp.CppTargetCore" ];
   HxType.register_class_tags "backend.js.JsBackend" [ "backend.IBackend"; "backend.ITargetBackendProvider"; "backend.js.JsBackend" ];
   HxType.register_class_tags "backend.js.JsExprEmitter" [ "backend.js.JsExprEmitter" ];
   HxType.register_class_tags "backend.js.JsFunctionScope" [ "backend.js.JsFunctionScope" ];

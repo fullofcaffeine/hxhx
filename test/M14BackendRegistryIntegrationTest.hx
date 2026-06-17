@@ -82,7 +82,7 @@ class M14BackendRegistryIntegrationTest {
 
 		final cpp = BackendRegistry.descriptorForTarget("cpp-native");
 		assertTrue(cpp != null, "descriptorForTarget(cpp-native) returned null");
-		assertTrue(cpp.implId == "builtin/cpp-native-placeholder", "unexpected cpp-native implId");
+		assertTrue(cpp.implId == "builtin/cpp-native-source-mvp", "unexpected cpp-native implId");
 
 		final python = BackendRegistry.descriptorForTarget("python-native");
 		assertTrue(python != null, "descriptorForTarget(python-native) returned null");

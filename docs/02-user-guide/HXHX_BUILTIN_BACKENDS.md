@@ -19,10 +19,19 @@ This page defines how backend selection works **after the CLI cutover**.
 - **Builtin backend**: backend implementation linked into the `hxhx` binary.
 - **Backend plugin**: runtime-loaded provider from a manifest (`ocaml-dynlink` or `linked-provider`).
 
-Current builtins in `hxhx`:
+Current builtin backend IDs in `hxhx`:
 
 - `ocaml-stage3` (selected by `--ocaml`)
 - `js-native` (selected by `--js <file>`)
+- `neko-native` (selected by `--neko <file>`, target bring-up)
+- `hl-native` (selected by `--hl <file>`, bytecode boundary only)
+- `cpp-native` (selected by `--cpp <dir>`, C++ source MVP boundary)
+- source-target MVP backends for `python-native`, `java-native`, `cs-native`,
+  `php-native`, and `lua-native`
+
+Only the documented scoped lanes should be treated as user-facing production
+paths today. The extended target backends exist so Full1 parity work reaches
+real target-owned seams instead of generic placeholders.
 
 ## Current lane contract
 
@@ -34,6 +43,24 @@ Current builtins in `hxhx`:
 - `hxhx --js out.js ...`
   - routes to builtin backend `js-native`
   - preserves upstream JS flag semantics (`--js` consumes one output file argument)
+
+### Extended target bring-up lanes
+
+These lanes are for Full1 compatibility burn-down and focused target validation,
+not broad production use yet:
+
+- `hxhx --neko out.n ...`
+- `hxhx --hl out.hl ...`
+- `hxhx --cpp out_dir ...`
+- `hxhx --python out.py ...`
+- `hxhx --java out_dir ...`
+- `hxhx --cs out_dir ...`
+- `hxhx --php out_dir ...`
+- `hxhx --lua out.lua ...`
+
+For the current C++ boundary, see:
+
+- `docs/02-user-guide/HXHX_CPP_NATIVE_TARGET_BOUNDARY.md`
 
 ### Delegated lanes
 

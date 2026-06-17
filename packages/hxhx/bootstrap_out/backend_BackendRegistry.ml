@@ -21,7 +21,7 @@ let buildBuiltinRegistrations = fun () -> let registrations = Obj.magic (HxArray
   )));
   ignore (HxArray.push registrations (Backend_vm_VmNativeBackend.nekoRegistration ()));
   ignore (HxArray.push registrations (Backend_vm_VmNativeBackend.hlRegistration ()));
-  ignore (HxArray.push registrations (Backend_UnsupportedNativeTargetBackend.cppRegistration ()));
+  ignore (HxArray.push registrations (Backend_cpp_CppNativeBackend.registration ()));
   ignore (HxArray.push registrations (Backend_source_SourceNativeBackend.pythonRegistration ()));
   ignore (HxArray.push registrations (Backend_source_SourceNativeBackend.javaRegistration ()));
   ignore (HxArray.push registrations (Backend_source_SourceNativeBackend.csRegistration ()));
