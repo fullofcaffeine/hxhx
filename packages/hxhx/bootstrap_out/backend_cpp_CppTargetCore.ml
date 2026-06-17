@@ -290,7 +290,7 @@ let arrayElementType = fun elements -> try let __fallback_result_352 = (
 ) in Obj.magic __fallback_result_352 with
   | HxRuntime.Hx_return __ret_351 -> Obj.obj __ret_351
 
-let isSimpleBinaryOp = fun op -> HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" || HxString.equals op "==" || HxString.equals op "!=" || HxString.equals op "<" || HxString.equals op "<=" || HxString.equals op ">" || HxString.equals op ">=" || HxString.equals op "||" || HxString.equals op "|" || HxString.equals op "<<" || HxString.equals op ">>"
+let isSimpleBinaryOp = fun op -> HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" || HxString.equals op "==" || HxString.equals op "!=" || HxString.equals op "<" || HxString.equals op "<=" || HxString.equals op ">" || HxString.equals op ">=" || HxString.equals op "||" || HxString.equals op "|" || HxString.equals op "&" || HxString.equals op "<<" || HxString.equals op ">>"
 
 let rec exprKind = fun expr -> let tempResult = ref ("" : string) in (
   ignore (match expr with
