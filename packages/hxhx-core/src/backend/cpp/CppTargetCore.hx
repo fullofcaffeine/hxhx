@@ -455,6 +455,8 @@ class CppTargetCore {
 					out.push(line);
 				out.push(indent + "}");
 				out;
+			case STry(tryBody, catches, _):
+				renderTryStmt(tryBody, catches, indent);
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
 				[indent + "std::cout << " + stringExpr(args[0]) + " << std::endl;"];
 			case SExpr(ECall(EIdent("trace"), args), _) if (args.length >= 1):
@@ -473,6 +475,31 @@ class CppTargetCore {
 			case _:
 				throw "C++ source backend MVP unsupported statement: " + stmtKind(stmt);
 		};
+	}
+
+	/**
+		Emits the C++ MVP shape for Haxe `try/catch` statements.
+
+		This intentionally uses `catch (...)` and renders only the first catch body.
+		The Stage3 AST records Haxe catch names and type hints, but this C++ source
+		backend does not yet have a Haxe exception-object bridge or type-filtering
+		runtime. Keeping this as explicit catch-all lowering preserves native C++
+		control-flow structure for non-throwing/host-throwing code without pretending
+		to implement full Haxe catch matching.
+	**/
+	static function renderTryStmt(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>, indent:String):Array<String> {
+		final out = [indent + "try {"];
+		for (line in renderStmtBlockContent(tryBody, indent + "  "))
+			out.push(line);
+		out.push(indent + "} catch (...) {");
+		if (catches == null || catches.length == 0) {
+			out.push(indent + "  throw;");
+		} else {
+			for (line in renderStmtBlockContent(catches[0].body, indent + "  "))
+				out.push(line);
+		}
+		out.push(indent + "}");
+		return out;
 	}
 
 	static function renderStmtBlockContent(stmt:HxStmt, indent:String):Array<String> {
