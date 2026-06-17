@@ -129,6 +129,11 @@ class CppTargetCore {
 				out.push(line);
 			out.push("");
 		}
+		for (decl in renderMainStaticFunctions(main.cls)) {
+			for (line in decl)
+				out.push(line);
+			out.push("");
+		}
 		out.push("int main(int argc, char** argv) {");
 		out.push("  (void)argc;");
 		out.push("  (void)argv;");
@@ -262,6 +267,31 @@ class CppTargetCore {
 						addStmt(stmt);
 			}
 		}
+		return out;
+	}
+
+	static function renderMainStaticFunctions(cls:HxClassDecl):Array<Array<String>> {
+		final out = new Array<Array<String>>();
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "main")
+				continue;
+			out.push(renderStaticFunction(fn));
+		}
+		return out;
+	}
+
+	static function renderStaticFunction(fn:HxFunctionDecl):Array<String> {
+		final returnType = cppTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
+		final out = ["static "
+			+ returnType
+			+ " "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn))
+			+ ") {"];
+		for (line in renderStmts(HxFunctionDecl.getBody(fn), "  "))
+			out.push(line);
+		out.push("}");
 		return out;
 	}
 
@@ -501,6 +531,8 @@ class CppTargetCore {
 				indexOfExpr(receiver, args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringExpr(args[0]);
+			case ECall(EIdent(name), args):
+				sanitizeIdentifier(name) + "(" + [for (arg in args) renderExpr(arg)].join(", ") + ")";
 			case ECall(EField(receiver, method), args):
 				renderExpr(receiver)
 				+ "."
