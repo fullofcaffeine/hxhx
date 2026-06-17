@@ -547,6 +547,8 @@ class CppTargetCore {
 				+ ")";
 			case EBinop("=", left, right):
 				renderExpr(left) + " = " + renderExpr(right);
+			case EBinop("+=", left, right):
+				renderExpr(left) + " += " + renderExpr(right);
 			case EBinop(op, left, right) if (isSimpleBinaryOp(op)):
 				"(" + renderExpr(left) + " " + op + " " + renderExpr(right) + ")";
 			case EUnop("-", inner):
