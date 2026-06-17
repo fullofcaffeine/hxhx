@@ -129,6 +129,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    if (false || native[0] == 7) {",
 			"      Sys.println(\"or:true\");",
 			"    }",
+			"    if (native[0] == 7 && native[1] == 8) {",
+			"      Sys.println(\"and:true\");",
+			"    }",
 			"    var info = { count: 3 };",
 			"    Sys.println(Std.string(info.count + 4));",
 			"    Sys.println(Std.string(-info.count));",
@@ -245,6 +248,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "__hxhx_comp_out.push_back((value * 2));", "C++ smoke should push array comprehension yield");
 		assertContains(source, "if ((native[0]) == 7) {", "C++ smoke should emit if statement");
 		assertContains(source, "false || ((native[0]) == 7)", "C++ smoke should emit logical-or expression");
+		assertContains(source, "((native[0]) == 7) && ((native[1]) == 8)", "C++ smoke should emit logical-and expression");
 		assertContains(source, "} else {", "C++ smoke should emit else branch");
 		assertContains(source, "struct __hxhx_anon_count_int_ {", "C++ smoke should emit anonymous object struct");
 		assertContains(source, "auto info = __hxhx_anon_count_int_{3};", "C++ smoke should lower anonymous object literal");
@@ -263,7 +267,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n2\n15\n3\nalpha\nbeta\n2\n10\nif:then\nor:true\n7\n-3\nternary:yes\n5\n42\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n2\n15\n3\nalpha\nbeta\n2\n10\nif:then\nor:true\nand:true\n7\n-3\nternary:yes\n5\n42\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}
