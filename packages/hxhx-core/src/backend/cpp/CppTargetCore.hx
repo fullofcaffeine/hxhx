@@ -513,6 +513,8 @@ class CppTargetCore {
 				"(" + renderExpr(left) + " " + op + " " + renderExpr(right) + ")";
 			case EUnop("-", inner):
 				"(-" + renderExpr(inner) + ")";
+			case EUnop("post++", inner):
+				"(" + renderExpr(inner) + "++)";
 			case ETernary(cond, thenExpr, elseExpr):
 				"("
 				+ conditionExpr(cond)
