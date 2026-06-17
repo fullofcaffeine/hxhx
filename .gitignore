@@ -12,7 +12,9 @@ dump_*/
 dump_out_*/
 repomix-output-*
 repomix-output.xml
+repomix-output.haxe.ocaml.hxhx.xml
 repomix-output*.zip
+scripts.zip
 
 # Local upstream repro scratch
 test/upstream_min_repro/
