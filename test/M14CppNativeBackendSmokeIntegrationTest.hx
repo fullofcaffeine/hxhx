@@ -71,6 +71,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    } else {",
 			"      Sys.println(\"if:else\");",
 			"    }",
+			"    var info = { count: 3 };",
+			"    Sys.println(Std.string(info.count + 4));",
 			"    var child = new Child(5);",
 			"    Sys.println(Std.string(child.value));",
 			"  }",
@@ -146,6 +148,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "(native.size())", "C++ smoke should emit NativeArray length read");
 		assertContains(source, "if ((native[0]) == 7) {", "C++ smoke should emit if statement");
 		assertContains(source, "} else {", "C++ smoke should emit else branch");
+		assertContains(source, "struct __hxhx_anon_count_int_ {", "C++ smoke should emit anonymous object struct");
+		assertContains(source, "auto info = __hxhx_anon_count_int_{3};", "C++ smoke should lower anonymous object literal");
+		assertContains(source, "((info.count) + 4)", "C++ smoke should read anonymous object field");
 		assertContains(source, "struct Child {", "C++ smoke should emit child helper class struct");
 		assertContains(source, "/* base constructor call omitted */", "C++ smoke should lower bare super constructor call");
 
@@ -156,7 +161,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n42\n2\n15\nif:then\n5\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n42\n2\n15\nif:then\n7\n5\n",
 				"unexpected C++ smoke stdout: " + run.stdout);
 		}
 

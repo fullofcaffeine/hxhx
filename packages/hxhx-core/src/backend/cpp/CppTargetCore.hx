@@ -6,6 +6,12 @@ import backend.EmitResult;
 import backend.GenIrProgram;
 import haxe.io.Path;
 
+typedef CppAnonStruct = {
+	var name:String;
+	var fieldNames:Array<String>;
+	var fieldTypes:Array<String>;
+}
+
 /**
 	Small native C++ source-emission target core.
 
@@ -113,6 +119,11 @@ class CppTargetCore {
 		out.push("  return -1;");
 		out.push("}");
 		out.push("");
+		for (decl in renderAnonStructs(collectAnonStructs(program))) {
+			for (line in decl)
+				out.push(line);
+			out.push("");
+		}
 		for (decl in renderHelperClasses(program, main.cls)) {
 			for (line in decl)
 				out.push(line);
@@ -126,6 +137,180 @@ class CppTargetCore {
 		out.push("  return 0;");
 		out.push("}");
 		return out.join("\n") + "\n";
+	}
+
+	/**
+		Collects anonymous-object aggregate shapes before C++ source emission.
+
+		Why
+		- C++ needs a concrete type before code can declare `auto info = ...` and
+		  later read `info.field`.
+		- A dynamic anonymous-object runtime would be too broad for this Full1
+		  burn-down seam, so the MVP emits one small aggregate struct per field
+		  signature.
+
+		What/How
+		- Walks the parsed program for `EAnon` literals, including nested values.
+		- Emits nested anonymous structs before their parents so field types are
+		  declared in dependency order.
+		- Infers only the tiny type subset the Cpp MVP already knows how to print;
+		  unsupported dynamic behavior should remain a later explicit seam.
+	**/
+	static function collectAnonStructs(program:GenIrProgram):Array<CppAnonStruct> {
+		final out = new Array<CppAnonStruct>();
+		final seen = new haxe.ds.StringMap<Bool>();
+		function addExpr(expr:HxExpr):Void {
+			switch (expr) {
+				case EAnon(fieldNames, fieldValues):
+					for (value in fieldValues)
+						addExpr(value);
+					final struct = anonStruct(fieldNames, fieldValues);
+					if (!seen.exists(struct.name)) {
+						seen.set(struct.name, true);
+						out.push(struct);
+					}
+				case EField(receiver, _):
+					addExpr(receiver);
+				case ECall(callee, args):
+					addExpr(callee);
+					for (arg in args)
+						addExpr(arg);
+				case EArrayDecl(values):
+					for (value in values)
+						addExpr(value);
+				case EArrayAccess(array, index):
+					addExpr(array);
+					addExpr(index);
+				case EBinop(_, left, right):
+					addExpr(left);
+					addExpr(right);
+				case EUnop(_, inner):
+					addExpr(inner);
+				case ETernary(cond, thenExpr, elseExpr):
+					addExpr(cond);
+					addExpr(thenExpr);
+					addExpr(elseExpr);
+				case ENew(_, args):
+					for (arg in args)
+						addExpr(arg);
+				case ECast(inner, _) | EUntyped(inner):
+					addExpr(inner);
+				case ESwitch(scrutinee, _, exprs):
+					addExpr(scrutinee);
+					for (expr in exprs)
+						addExpr(expr);
+				case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
+					addExpr(iterable);
+					if (guardExpr != null)
+						addExpr(guardExpr);
+					addExpr(yieldExpr);
+				case EMacroExpr(inner, _):
+					addExpr(inner);
+				case _:
+			}
+		}
+		function addStmt(stmt:HxStmt):Void {
+			switch (stmt) {
+				case SBlock(stmts, _):
+					for (s in stmts)
+						addStmt(s);
+				case SVar(_, _, init, _):
+					if (init != null)
+						addExpr(init);
+				case SIf(cond, thenBranch, elseBranch, _):
+					addExpr(cond);
+					addStmt(thenBranch);
+					if (elseBranch != null)
+						addStmt(elseBranch);
+				case SExpr(expr, _) | SReturn(expr, _):
+					addExpr(expr);
+				case SForIn(_, iterable, body, _):
+					addExpr(iterable);
+					addStmt(body);
+				case SForKeyValue(_, _, iterable, body, _):
+					addExpr(iterable);
+					addStmt(body);
+				case SWhile(cond, body, _):
+					addExpr(cond);
+					addStmt(body);
+				case SDoWhile(body, cond, _):
+					addStmt(body);
+					addExpr(cond);
+				case SSwitch(scrutinee, _, bodies, _):
+					addExpr(scrutinee);
+					for (body in bodies)
+						addStmt(body);
+				case STry(tryBody, catches, _):
+					addStmt(tryBody);
+					for (c in catches)
+						addStmt(c.body);
+				case SThrow(expr, _):
+					addExpr(expr);
+				case SReturnVoid(_) | SBreak(_) | SContinue(_):
+			}
+		}
+		for (typed in program.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				for (field in HxClassDecl.getFields(cls)) {
+					final init = HxFieldDecl.getInit(field);
+					if (init != null)
+						addExpr(init);
+				}
+				for (fn in HxClassDecl.getFunctions(cls))
+					for (stmt in HxFunctionDecl.getBody(fn))
+						addStmt(stmt);
+			}
+		}
+		return out;
+	}
+
+	static function renderAnonStructs(structs:Array<CppAnonStruct>):Array<Array<String>> {
+		final out = new Array<Array<String>>();
+		for (struct in structs) {
+			final lines = ["struct " + struct.name + " {"];
+			for (i in 0...struct.fieldNames.length)
+				lines.push("  " + struct.fieldTypes[i] + " " + sanitizeIdentifier(struct.fieldNames[i]) + ";");
+			lines.push("};");
+			out.push(lines);
+		}
+		return out;
+	}
+
+	static function anonStruct(fieldNames:Array<String>, fieldValues:Array<HxExpr>):CppAnonStruct {
+		final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
+		final names = new Array<String>();
+		final types = new Array<String>();
+		for (i in 0...count) {
+			names.push(fieldNames[i]);
+			types.push(cppAnonFieldType(fieldValues[i]));
+		}
+		return {name: anonStructName(names, types), fieldNames: names, fieldTypes: types};
+	}
+
+	static function anonStructName(fieldNames:Array<String>, fieldTypes:Array<String>):String {
+		final parts = ["__hxhx_anon"];
+		for (i in 0...fieldNames.length)
+			parts.push(sanitizeIdentifier(fieldNames[i]) + "_" + sanitizeTypePath(fieldTypes[i]));
+		return parts.join("_");
+	}
+
+	static function cppAnonFieldType(expr:HxExpr):String {
+		return switch (expr) {
+			case EString(_):
+				"std::string";
+			case EFloat(_):
+				"double";
+			case EBool(_):
+				"bool";
+			case EArrayDecl(elements):
+				"std::vector<" + arrayElementType(elements) + ">";
+			case EAnon(fieldNames, fieldValues):
+				final struct = anonStruct(fieldNames, fieldValues);
+				struct.name;
+			case _:
+				"int";
+		};
 	}
 
 	static function renderHelperClasses(program:GenIrProgram, mainClass:HxClassDecl):Array<Array<String>> {
@@ -281,6 +466,8 @@ class CppTargetCore {
 				"(" + renderExpr(receiver) + ".size())";
 			case EArrayAccess(array, index):
 				"(" + renderExpr(array) + "[" + renderExpr(index) + "])";
+			case EAnon(fieldNames, fieldValues):
+				anonExpr(fieldNames, fieldValues);
 			case EField(receiver, field):
 				"(" + renderExpr(receiver) + "." + sanitizeIdentifier(field) + ")";
 			case ECall(EField(receiver, "indexOf"), args) if (args.length == 1 || args.length == 2):
@@ -338,6 +525,15 @@ class CppTargetCore {
 		final needle = stringExpr(args[0]);
 		final start = args.length == 2 ? renderExpr(args[1]) : "0";
 		return "__hxhx_index_of(" + source + ", " + needle + ", " + start + ")";
+	}
+
+	static function anonExpr(fieldNames:Array<String>, fieldValues:Array<HxExpr>):String {
+		final struct = anonStruct(fieldNames, fieldValues);
+		final values = [
+			for (i in 0...struct.fieldNames.length)
+				struct.fieldTypes[i] == "std::string" ? stringExpr(fieldValues[i]) : renderExpr(fieldValues[i])
+		];
+		return struct.name + "{" + values.join(", ") + "}";
 	}
 
 	static function arrayExpr(elements:Array<HxExpr>):String {
