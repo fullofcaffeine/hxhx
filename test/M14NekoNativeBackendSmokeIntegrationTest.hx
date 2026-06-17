@@ -127,6 +127,11 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(putEnvRaw, '__hxhx_sys_put_env("NON_EXISTENT", null); return true;', "Sys.putEnv raw try parser should preserve null and success bool");
 		assertContains(putEnvRaw, "$" + 'print(e, "\\n"); return false;',
 			"Sys.putEnv raw try parser should preserve fallback bool without regex capture noise");
+		final hxcppAndroidMinRaw = @:privateAccess NekoTargetCore.renderExpr(cast null,
+			ETryCatchRaw('try{haxe.Json.parse(sys.io.File.getContent(platformsJson)).min;}catch(e){Log.warn("Unable to determine minimum supported Android platform: "+e.toString());null;}'));
+		assertContains(hxcppAndroidMinRaw, "__hxhx_json_min_field_from_file(platformsJson)",
+			"hxcpp Android platform-min try/catch should lower to the narrow runtime helper");
+		assertContains(hxcppAndroidMinRaw, 'return null; } })()', "hxcpp Android platform-min try/catch should preserve catch-null fallback");
 		final macroInExpr = @:privateAccess NekoTargetCore.renderExpr(cast null, EMacroExpr(EBinop("in", EInt(1), EInt(0)), []));
 		assertContains(macroInExpr, '.__hx_ctor = "EBinop";', "macro in-expression should lower to macro EBinop");
 		assertContains(macroInExpr, '.__hx_ctor = "OpIn";', "macro in-expression should preserve OpIn");
@@ -1061,6 +1066,19 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertContains(sysPutEnvTrySource,
 			'try { __hxhx_sys_put_env("NON_EXISTENT", null); return true; } catch e { ' + "$" + 'print(e, "\\n"); return false; }',
 			"expected Sys.putEnv bool try/catch raw lowering");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Log { public static function warn(message:String) {} } class Main { static function main() { var platformsJson = "platforms.json"; var min = try { haxe.Json.parse(sys.io.File.getContent(platformsJson)).min; } catch(e) { Log.warn("Unable to determine minimum supported Android platform: " + e.toString()); null; }; Sys.println(min); } }'),
+			context);
+		final hxcppAndroidMinTrySource = File.getContent(sourcePath);
+		assertContains(hxcppAndroidMinTrySource, "var __hxhx_json_min_field_from_file = function(path) {",
+			"expected Neko runtime support helper for hxcpp Android platform-min JSON");
+		assertContains(hxcppAndroidMinTrySource, "__hxhx_json_min_field_from_file(platformsJson)",
+			"expected hxcpp Android platform-min try/catch to call the runtime helper");
+		assertNotContains(hxcppAndroidMinTrySource, "ETryCatchRaw(try{haxe.Json.parse", "hxcpp Android platform-min try/catch must not stay unsupported");
 
 		deleteRecursive(outDir);
 

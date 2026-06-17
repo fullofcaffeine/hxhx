@@ -1611,6 +1611,14 @@ class NekoTargetCore {
 			return "(function() { try { __hxhx_sys_put_env(" + quote(sysPutEnvBoolTry.name) + ", " + sysPutEnvBoolTry.envValue + "); return "
 				+ sysPutEnvBoolTry.success + "; } catch e { $print(e, \"\\n\"); return " + sysPutEnvBoolTry.fallback + "; } })()";
 		}
+		final hxcppAndroidMinPath = parseHxcppAndroidPlatformMinTryRaw(raw);
+		if (hxcppAndroidMinPath != null) {
+			return "(function() { try { return __hxhx_json_min_field_from_file("
+				+ hxcppAndroidMinPath
+				+ "); } catch e { $print("
+				+ quote("Unable to determine minimum supported Android platform: ")
+				+ ", __hxhx_string(e), \"\\n\"); return null; } })()";
+		}
 		final opaqueObjectLocal = parseOpaqueObjectLocalRaw(raw);
 		if (opaqueObjectLocal != null) {
 			return "(function() { var "
@@ -1793,6 +1801,12 @@ class NekoTargetCore {
 			success: success,
 			fallback: fallback
 		};
+	}
+
+	static function parseHxcppAndroidPlatformMinTryRaw(raw:String):Null<String> {
+		final compact = StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		final pattern = ~/^try\{haxe\.Json\.parse\(sys\.io\.File\.getContent\(([A-Za-z_][A-Za-z0-9_]*)\)\)\.min;\}catch\(e(:[^)]*)?\)\{Log\.warn\("UnabletodetermineminimumsupportedAndroidplatform:"\+e\.toString\(\)\);null;\}$/;
+		return pattern.match(compact) ? safeIdent(pattern.matched(1)) : null;
 	}
 
 	static function parseOpaqueObjectLocalRaw(raw:String):Null<NekoOpaqueObjectLocalRaw> {
