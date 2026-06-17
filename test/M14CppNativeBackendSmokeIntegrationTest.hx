@@ -135,16 +135,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(info.count == 3 ? \"ternary:yes\" : \"ternary:no\");",
 			"    var child = new Child(5);",
 			"    Sys.println(Std.string(child.value));",
+			"    Sys.println(Std.string(child.inherited()));",
 			"  }",
 			"}",
 			"class Base {",
 			"  public function new() {}",
+			"  public function label():Int {",
+			"    return 40;",
+			"  }",
 			"}",
 			"class Child extends Base {",
 			"  public var value:Int;",
 			"  public function new(value:Int) {",
 			"    super();",
 			"    this.value = value;",
+			"  }",
+			"  public function inherited():Int {",
+			"    return super.label() + 2;",
 			"  }",
 			"}",
 			"class Box {",
@@ -245,7 +252,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "(-(info.count))", "C++ smoke should emit unary minus");
 		assertContains(source, "(((info.count) == 3) ? std::string(\"ternary:yes\") : std::string(\"ternary:no\"))",
 			"C++ smoke should emit ternary expression");
-		assertContains(source, "struct Child {", "C++ smoke should emit child helper class struct");
+		assertContains(source, "struct Child : public Base {", "C++ smoke should emit child helper class inheritance");
+		assertContains(source, "Base::label()", "C++ smoke should lower super method calls to qualified base calls");
 		assertContains(source, "/* base constructor call omitted */", "C++ smoke should lower bare super constructor call");
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
@@ -255,7 +263,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n2\n15\n3\nalpha\nbeta\n2\n10\nif:then\nor:true\n7\n-3\nternary:yes\n5\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n2\n15\n3\nalpha\nbeta\n2\n10\nif:then\nor:true\n7\n-3\nternary:yes\n5\n42\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

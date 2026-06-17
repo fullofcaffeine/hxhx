@@ -12,6 +12,10 @@ typedef CppAnonStruct = {
 	var fieldTypes:Array<String>;
 }
 
+typedef CppRenderScope = {
+	var owner:Null<HxClassDecl>;
+}
+
 /**
 	Small native C++ source-emission target core.
 
@@ -363,13 +367,15 @@ class CppTargetCore {
 
 	static function renderHelperClass(cls:HxClassDecl):Array<String> {
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
-		final out = ["struct " + className + " {"];
+		final baseType = baseTypeName(cls);
+		final out = ["struct " + className + (baseType == null ? "" : " : public " + baseType) + " {"];
+		final scope = classScope(cls);
 		for (field in HxClassDecl.getFields(cls)) {
 			if (HxFieldDecl.getIsStatic(field))
 				continue;
 			final typeName = cppTypeHint(HxFieldDecl.getTypeHint(field));
 			final init = HxFieldDecl.getInit(field);
-			final rhs = init == null ? cppDefaultValue(typeName) : renderExpr(init);
+			final rhs = init == null ? cppDefaultValue(typeName) : renderExpr(init, scope);
 			out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
 		}
 		final ctor = findConstructor(cls);
@@ -377,21 +383,32 @@ class CppTargetCore {
 			out.push("  " + className + "() {}");
 		} else {
 			out.push("  " + className + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(ctor)) + ") {");
-			for (line in renderStmts(HxFunctionDecl.getBody(ctor), "    "))
+			for (line in renderStmts(HxFunctionDecl.getBody(ctor), "    ", scope))
 				out.push(line);
 			out.push("  }");
 		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 				continue;
-			for (line in renderHelperMethod(fn))
+			for (line in renderHelperMethod(fn, scope))
 				out.push(line);
 		}
 		out.push("};");
 		return out;
 	}
 
-	static function renderHelperMethod(fn:HxFunctionDecl):Array<String> {
+	static function classScope(cls:HxClassDecl):CppRenderScope {
+		return {owner: cls};
+	}
+
+	static function baseTypeName(cls:HxClassDecl):Null<String> {
+		final extendsPath = HxClassDecl.getExtendsPath(cls);
+		if (extendsPath == null || extendsPath.length == 0)
+			return null;
+		return sanitizeTypePath(extendsPath);
+	}
+
+	static function renderHelperMethod(fn:HxFunctionDecl, scope:CppRenderScope):Array<String> {
 		final returnType = cppTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
 		final out = ["  "
 			+ returnType
@@ -400,7 +417,7 @@ class CppTargetCore {
 			+ "("
 			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn))
 			+ ") {"];
-		for (line in renderStmts(HxFunctionDecl.getBody(fn), "    "))
+		for (line in renderStmts(HxFunctionDecl.getBody(fn), "    ", scope))
 			out.push(line);
 		out.push("  }");
 		return out;
@@ -420,61 +437,61 @@ class CppTargetCore {
 		].join(", ");
 	}
 
-	static function renderStmts(stmts:Array<HxStmt>, indent:String):Array<String> {
+	static function renderStmts(stmts:Array<HxStmt>, indent:String, ?scope:CppRenderScope):Array<String> {
 		final out = new Array<String>();
 		for (stmt in stmts) {
-			for (line in renderStmt(stmt, indent))
+			for (line in renderStmt(stmt, indent, scope))
 				out.push(line);
 		}
 		return out;
 	}
 
-	static function renderStmt(stmt:HxStmt, indent:String):Array<String> {
+	static function renderStmt(stmt:HxStmt, indent:String, ?scope:CppRenderScope):Array<String> {
 		return switch (stmt) {
 			case SBlock(stmts, _):
 				final out = [indent + "{"];
-				for (line in renderStmts(stmts, indent + "  "))
+				for (line in renderStmts(stmts, indent + "  ", scope))
 					out.push(line);
 				out.push(indent + "}");
 				out;
 			case SIf(cond, thenBranch, elseBranch, _):
-				final out = [indent + "if " + conditionExpr(cond) + " {"];
-				for (line in renderStmtBlockContent(thenBranch, indent + "  "))
+				final out = [indent + "if " + conditionExpr(cond, scope) + " {"];
+				for (line in renderStmtBlockContent(thenBranch, indent + "  ", scope))
 					out.push(line);
 				if (elseBranch == null) {
 					out.push(indent + "}");
 				} else {
 					out.push(indent + "} else {");
-					for (line in renderStmtBlockContent(elseBranch, indent + "  "))
+					for (line in renderStmtBlockContent(elseBranch, indent + "  ", scope))
 						out.push(line);
 					out.push(indent + "}");
 				}
 				out;
 			case SWhile(cond, body, _):
-				final out = [indent + "while " + conditionExpr(cond) + " {"];
-				for (line in renderStmtBlockContent(body, indent + "  "))
+				final out = [indent + "while " + conditionExpr(cond, scope) + " {"];
+				for (line in renderStmtBlockContent(body, indent + "  ", scope))
 					out.push(line);
 				out.push(indent + "}");
 				out;
 			case SForIn(name, iterable, body, _):
-				renderForInStmt(name, iterable, body, indent);
+				renderForInStmt(name, iterable, body, indent, scope);
 			case STry(tryBody, catches, _):
-				renderTryStmt(tryBody, catches, indent);
+				renderTryStmt(tryBody, catches, indent, scope);
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
-				[indent + "std::cout << " + stringExpr(args[0]) + " << std::endl;"];
+				[indent + "std::cout << " + stringExpr(args[0], scope) + " << std::endl;"];
 			case SExpr(ECall(EIdent("trace"), args), _) if (args.length >= 1):
-				[indent + "std::cout << " + stringExpr(args[0]) + " << std::endl;"];
+				[indent + "std::cout << " + stringExpr(args[0], scope) + " << std::endl;"];
 			case SExpr(ECall(ESuper, _), _):
 				[indent + "/* base constructor call omitted */"];
 			case SExpr(expr, _):
-				[indent + renderExpr(expr) + ";"];
+				[indent + renderExpr(expr, scope) + ";"];
 			case SThrow(expr, _):
-				[indent + "throw std::runtime_error(" + stringExpr(expr) + ");"];
+				[indent + "throw std::runtime_error(" + stringExpr(expr, scope) + ");"];
 			case SVar(name, _typeHint, init, _):
-				final rhs = init == null ? "0" : renderExpr(init);
+				final rhs = init == null ? "0" : renderExpr(init, scope);
 					[indent + "auto " + sanitizeIdentifier(name) + " = " + rhs + ";"];
 			case SReturn(expr, _):
-				[indent + "return static_cast<int>(" + renderExpr(expr) + ");"];
+				[indent + "return static_cast<int>(" + renderExpr(expr, scope) + ");"];
 			case SReturnVoid(_):
 				[indent + "return 0;"];
 			case SBreak(_):
@@ -492,7 +509,7 @@ class CppTargetCore {
 		range-for loops, which works for the vectors/strings produced by this backend.
 		Full Haxe iterator-protocol lowering is intentionally not claimed here.
 	**/
-	static function renderForInStmt(name:String, iterable:HxExpr, body:HxStmt, indent:String):Array<String> {
+	static function renderForInStmt(name:String, iterable:HxExpr, body:HxStmt, indent:String, ?scope:CppRenderScope):Array<String> {
 		final local = sanitizeIdentifier(name);
 		final out = switch (iterable) {
 			case ERange(start, end):
@@ -500,18 +517,18 @@ class CppTargetCore {
 					+ "for (int "
 					+ local
 					+ " = "
-					+ renderExpr(start)
+					+ renderExpr(start, scope)
 					+ "; "
 					+ local
 					+ " < "
-					+ renderExpr(end)
+					+ renderExpr(end, scope)
 					+ "; "
 					+ local
 					+ "++) {"];
 			case _:
-				[indent + "for (auto " + local + " : " + renderExpr(iterable) + ") {"];
+				[indent + "for (auto " + local + " : " + renderExpr(iterable, scope) + ") {"];
 		}
-		for (line in renderStmtBlockContent(body, indent + "  "))
+		for (line in renderStmtBlockContent(body, indent + "  ", scope))
 			out.push(line);
 		out.push(indent + "}");
 		return out;
@@ -527,40 +544,41 @@ class CppTargetCore {
 		control-flow structure for non-throwing/host-throwing code without pretending
 		to implement full Haxe catch matching.
 	**/
-	static function renderTryStmt(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>, indent:String):Array<String> {
+	static function renderTryStmt(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>, indent:String,
+			?scope:CppRenderScope):Array<String> {
 		final out = [indent + "try {"];
-		for (line in renderStmtBlockContent(tryBody, indent + "  "))
+		for (line in renderStmtBlockContent(tryBody, indent + "  ", scope))
 			out.push(line);
 		out.push(indent + "} catch (...) {");
 		if (catches == null || catches.length == 0) {
 			out.push(indent + "  throw;");
 		} else {
-			for (line in renderStmtBlockContent(catches[0].body, indent + "  "))
+			for (line in renderStmtBlockContent(catches[0].body, indent + "  ", scope))
 				out.push(line);
 		}
 		out.push(indent + "}");
 		return out;
 	}
 
-	static function renderStmtBlockContent(stmt:HxStmt, indent:String):Array<String> {
+	static function renderStmtBlockContent(stmt:HxStmt, indent:String, ?scope:CppRenderScope):Array<String> {
 		return switch (stmt) {
 			case SBlock(stmts, _):
-				renderStmts(stmts, indent);
+				renderStmts(stmts, indent, scope);
 			case _:
-				renderStmt(stmt, indent);
+				renderStmt(stmt, indent, scope);
 		};
 	}
 
-	static function conditionExpr(expr:HxExpr):String {
+	static function conditionExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
 			case EBinop(_, _, _):
-				renderExpr(expr);
+				renderExpr(expr, scope);
 			case _:
-				"(" + renderExpr(expr) + ")";
+				"(" + renderExpr(expr, scope) + ")";
 		};
 	}
 
-	static function renderExpr(expr:HxExpr):String {
+	static function renderExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
 			case ENull:
 				"nullptr";
@@ -579,115 +597,127 @@ class CppTargetCore {
 			case EField(EThis, field):
 				"this->" + sanitizeIdentifier(field);
 			case ENew(typePath, args):
-				sanitizeTypePath(typePath) + "(" + [for (arg in args) renderExpr(arg)].join(", ") + ")";
+				sanitizeTypePath(typePath) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
 			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
-				"std::vector<int>(" + renderExpr(args[0]) + ")";
+				"std::vector<int>(" + renderExpr(args[0], scope) + ")";
 			case EArrayDecl(elements):
-				arrayExpr(elements);
+				arrayExpr(elements, scope);
 			case EField(receiver, "length"):
-				"(" + renderExpr(receiver) + ".size())";
+				"(" + renderExpr(receiver, scope) + ".size())";
 			case EArrayAccess(array, index):
-				"(" + renderExpr(array) + "[" + renderExpr(index) + "])";
+				"(" + renderExpr(array, scope) + "[" + renderExpr(index, scope) + "])";
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
-				arrayComprehensionExpr(name, iterable, guardExpr, yieldExpr);
+				arrayComprehensionExpr(name, iterable, guardExpr, yieldExpr, scope);
 			case EAnon(fieldNames, fieldValues):
-				anonExpr(fieldNames, fieldValues);
+				anonExpr(fieldNames, fieldValues, scope);
 			case EField(receiver, field):
-				"(" + renderExpr(receiver) + "." + sanitizeIdentifier(field) + ")";
+				"(" + renderExpr(receiver, scope) + "." + sanitizeIdentifier(field) + ")";
 			case ECall(EField(receiver, "indexOf"), args) if (args.length == 1 || args.length == 2):
-				indexOfExpr(receiver, args);
+				indexOfExpr(receiver, args, scope);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
-				stringExpr(args[0]);
+				stringExpr(args[0], scope);
+			case ECall(EField(ESuper, method), args):
+				superMethodCallExpr(method, args, scope);
 			case ECall(EIdent(name), args):
-				sanitizeIdentifier(name) + "(" + [for (arg in args) renderExpr(arg)].join(", ") + ")";
+				sanitizeIdentifier(name) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EField(receiver, method), args):
-				renderExpr(receiver)
+				renderExpr(receiver, scope)
 				+ "."
 				+ sanitizeIdentifier(method)
 				+ "("
-				+ [for (arg in args) renderExpr(arg)].join(", ") + ")";
+				+ [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case EBinop("+", left, right) if (isStringLike(left) || isStringLike(right)):
 				"("
-				+ stringExpr(left)
+				+ stringExpr(left, scope)
 				+ " + "
-				+ stringExpr(right)
+				+ stringExpr(right, scope)
 				+ ")";
 			case EBinop("=", left, right):
-				renderExpr(left) + " = " + renderExpr(right);
+				renderExpr(left, scope) + " = " + renderExpr(right, scope);
 			case EBinop(op, left, right) if (isSimpleCompoundAssignmentOp(op)):
-				renderExpr(left) + " " + op + " " + renderExpr(right);
+				renderExpr(left, scope)
+				+ " "
+				+ op
+				+ " "
+				+ renderExpr(right, scope);
 			case EBinop(">>>", left, right):
-				unsignedRightShiftExpr(left, right);
+				unsignedRightShiftExpr(left, right, scope);
 			case EBinop(op, left, right) if (isSimpleBinaryOp(op)):
-				"(" + renderExpr(left) + " " + op + " " + renderExpr(right) + ")";
+				"("
+				+ renderExpr(left, scope)
+				+ " "
+				+ op
+				+ " "
+				+ renderExpr(right, scope)
+				+ ")";
 			case EUnop("-", inner):
-				"(-" + renderExpr(inner) + ")";
+				"(-" + renderExpr(inner, scope) + ")";
 			case EUnop("~", inner):
-				"(~" + renderExpr(inner) + ")";
+				"(~" + renderExpr(inner, scope) + ")";
 			case EUnop("post++", inner):
-				"(" + renderExpr(inner) + "++)";
+				"(" + renderExpr(inner, scope) + "++)";
 			case EUnop("post--", inner):
-				"(" + renderExpr(inner) + "--)";
+				"(" + renderExpr(inner, scope) + "--)";
 			case ETernary(cond, thenExpr, elseExpr):
 				"("
-				+ conditionExpr(cond)
+				+ conditionExpr(cond, scope)
 				+ " ? "
-				+ renderExpr(thenExpr)
+				+ renderExpr(thenExpr, scope)
 				+ " : "
-				+ renderExpr(elseExpr)
+				+ renderExpr(elseExpr, scope)
 				+ ")";
 			case ECast(inner, _):
-				renderExpr(inner);
+				renderExpr(inner, scope);
 			case EUntyped(inner):
-				renderExpr(inner);
+				renderExpr(inner, scope);
 			case _:
 				throw "C++ source backend MVP unsupported expression: " + exprKind(expr);
 		};
 	}
 
-	static function stringExpr(expr:HxExpr):String {
+	static function stringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
 			case EString(value):
 				"std::string(" + quoteString(value) + ")";
 			case EBool(_):
-				"std::string(" + renderExpr(expr) + " ? \"true\" : \"false\")";
+				"std::string(" + renderExpr(expr, scope) + " ? \"true\" : \"false\")";
 			case EInt(_) | EFloat(_):
-				"std::to_string(" + renderExpr(expr) + ")";
+				"std::to_string(" + renderExpr(expr, scope) + ")";
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
-				stringExpr(args[0]);
+				stringExpr(args[0], scope);
 			case ECall(EField(_, "indexOf"), args) if (args.length == 1 || args.length == 2):
-				"std::to_string(" + renderExpr(expr) + ")";
+				"std::to_string(" + renderExpr(expr, scope) + ")";
 			case EField(_, "length"):
-				"std::to_string(" + renderExpr(expr) + ")";
+				"std::to_string(" + renderExpr(expr, scope) + ")";
 			case EArrayAccess(_, _):
-				"std::string(" + renderExpr(expr) + ")";
+				"std::string(" + renderExpr(expr, scope) + ")";
 			case EBinop("+", left, right) if (isStringLike(left) || isStringLike(right)):
 				"("
-				+ stringExpr(left)
+				+ stringExpr(left, scope)
 				+ " + "
-				+ stringExpr(right)
+				+ stringExpr(right, scope)
 				+ ")";
 			case ETernary(cond, thenExpr, elseExpr) if (isStringLike(thenExpr) && isStringLike(elseExpr)):
 				"("
-				+ conditionExpr(cond)
+				+ conditionExpr(cond, scope)
 				+ " ? "
-				+ stringExpr(thenExpr)
+				+ stringExpr(thenExpr, scope)
 				+ " : "
-				+ stringExpr(elseExpr)
+				+ stringExpr(elseExpr, scope)
 				+ ")";
 			case EIdent(name):
 				"std::string(" + sanitizeIdentifier(name) + ")";
 			case _:
-				"std::to_string(" + renderExpr(expr) + ")";
+				"std::to_string(" + renderExpr(expr, scope) + ")";
 		};
 	}
 
-	static function indexOfExpr(receiver:HxExpr, args:Array<HxExpr>):String {
-		final source = renderExpr(receiver);
-		final needle = stringExpr(args[0]);
-		final start = args.length == 2 ? renderExpr(args[1]) : "0";
+	static function indexOfExpr(receiver:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final source = renderExpr(receiver, scope);
+		final needle = stringExpr(args[0], scope);
+		final start = args.length == 2 ? renderExpr(args[1], scope) : "0";
 		return "__hxhx_index_of(" + source + ", " + needle + ", " + start + ")";
 	}
 
@@ -698,24 +728,32 @@ class CppTargetCore {
 		value. C++ has no separate unsigned-shift operator, so the target-owned
 		intrinsic is an unsigned cast followed by C++ `>>`.
 	**/
-	static function unsignedRightShiftExpr(left:HxExpr, right:HxExpr):String {
-		return "(static_cast<unsigned int>(" + renderExpr(left) + ") >> " + renderExpr(right) + ")";
+	static function unsignedRightShiftExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
+		return "(static_cast<unsigned int>(" + renderExpr(left, scope) + ") >> " + renderExpr(right, scope) + ")";
 	}
 
-	static function anonExpr(fieldNames:Array<String>, fieldValues:Array<HxExpr>):String {
+	static function superMethodCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final owner = scope == null ? null : scope.owner;
+		final baseType = owner == null ? null : baseTypeName(owner);
+		if (baseType == null)
+			throw "C++ source backend MVP unsupported expression: ESuper";
+		return baseType + "::" + sanitizeIdentifier(method) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+	}
+
+	static function anonExpr(fieldNames:Array<String>, fieldValues:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final struct = anonStruct(fieldNames, fieldValues);
 		final values = [
 			for (i in 0...struct.fieldNames.length)
-				struct.fieldTypes[i] == "std::string" ? stringExpr(fieldValues[i]) : renderExpr(fieldValues[i])
+				struct.fieldTypes[i] == "std::string" ? stringExpr(fieldValues[i], scope) : renderExpr(fieldValues[i], scope)
 		];
 		return struct.name + "{" + values.join(", ") + "}";
 	}
 
-	static function arrayExpr(elements:Array<HxExpr>):String {
+	static function arrayExpr(elements:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final typeName = arrayElementType(elements);
 		final values = [
 			for (element in elements)
-				typeName == "std::string" ? stringExpr(element) : renderExpr(element)
+				typeName == "std::string" ? stringExpr(element, scope) : renderExpr(element, scope)
 		];
 		return "std::vector<" + typeName + ">{" + values.join(", ") + "}";
 	}
@@ -729,21 +767,31 @@ class CppTargetCore {
 		backend-owned iterable shapes we can currently render, not the full Haxe
 		iterator protocol.
 	**/
-	static function arrayComprehensionExpr(name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr):String {
+	static function arrayComprehensionExpr(name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr, ?scope:CppRenderScope):String {
 		final local = sanitizeIdentifier(name);
 		final typeName = comprehensionElementType(yieldExpr);
 		final out = ["([&]() {", "  std::vector<" + typeName + "> __hxhx_comp_out;"];
 		switch (iterable) {
 			case ERange(start, end):
-				out.push("  for (int " + local + " = " + renderExpr(start) + "; " + local + " < " + renderExpr(end) + "; " + local + "++) {");
+				out.push("  for (int "
+					+ local
+					+ " = "
+					+ renderExpr(start, scope)
+					+ "; "
+					+ local
+					+ " < "
+					+ renderExpr(end, scope)
+					+ "; "
+					+ local
+					+ "++) {");
 			case _:
-				out.push("  for (auto " + local + " : " + renderExpr(iterable) + ") {");
+				out.push("  for (auto " + local + " : " + renderExpr(iterable, scope) + ") {");
 		}
 		if (guardExpr == null) {
-			out.push("    __hxhx_comp_out.push_back(" + renderExpr(yieldExpr) + ");");
+			out.push("    __hxhx_comp_out.push_back(" + renderExpr(yieldExpr, scope) + ");");
 		} else {
-			out.push("    if " + conditionExpr(guardExpr) + " {");
-			out.push("      __hxhx_comp_out.push_back(" + renderExpr(yieldExpr) + ");");
+			out.push("    if " + conditionExpr(guardExpr, scope) + " {");
+			out.push("      __hxhx_comp_out.push_back(" + renderExpr(yieldExpr, scope) + ");");
 			out.push("    }");
 		}
 		out.push("  }");
