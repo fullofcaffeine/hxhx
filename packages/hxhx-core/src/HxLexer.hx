@@ -352,12 +352,6 @@ class HxLexer {
 
 		while (!eof()) {
 			final c = bump();
-			if (c == "$".code && peek(0) == "{".code) {
-				buf.addChar(c);
-				buf.addChar(bump());
-				copyInterpolationBracePayload(buf);
-				continue;
-			}
 			if (c == 34) { // "
 				return new HxToken(TString(buf.toString(), false), startPos);
 			}

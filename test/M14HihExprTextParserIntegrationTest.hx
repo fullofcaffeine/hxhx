@@ -250,6 +250,19 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected double-quoted dollar text to parse as EString");
 		}
 
+		final dollar = "$";
+		final doubleQuotedDollarBraceStmts = HxParser.parseFunctionBodyText('switch (name) { case "QNX_HOST", "QNX_TARGET": if (StringTools.startsWith(value, "'
+			+ dollar
+			+ '{") && split.length > 2) { value = split[2]; } }');
+		assertTrue(doubleQuotedDollarBraceStmts.length == 1, "expected double-quoted dollar-brace literal switch to parse");
+		switch (doubleQuotedDollarBraceStmts[0]) {
+			case SSwitch(_, [POr([PString("QNX_HOST"), PString("QNX_TARGET")])], [SBlock([SIf(_, _, _, _)], _)], _):
+			case SExpr(EUnsupported(raw), _):
+				fail("double-quoted dollar-brace literal parsed as unsupported: " + raw);
+			case _:
+				fail("expected double-quoted dollar-brace literal inside switch case to parse");
+		}
+
 		final singleQuotedDollarExpr = HxParser.parseExprText("'a $value b'");
 		switch (singleQuotedDollarExpr) {
 			case EBinop(_, _, _):
