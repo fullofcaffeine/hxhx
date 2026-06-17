@@ -63,6 +63,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(words[1]);",
 			"    Sys.println(Std.string(words.indexOf(\"alpha\")));",
 			"    Sys.println(Std.string(helper(4)));",
+			"    var casted:Int = cast helper(5);",
+			"    Sys.println(Std.string(casted + 0));",
 			"    var box = new Box(41);",
 			"    Sys.println(Std.string(box.value + 1));",
 			"    Sys.println(Std.string(box.getHeight()));",
@@ -160,6 +162,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::vector<std::string>{std::string(\"alpha\"), std::string(\"beta\")}", "C++ smoke should emit string array literal");
 		assertContains(source, "static int helper(int x) {", "C++ smoke should emit main-class static helper function");
 		assertContains(source, "helper(4)", "C++ smoke should lower direct identifier function call");
+		assertContains(source, "auto casted = helper(5);", "C++ smoke should lower cast expression");
 		assertContains(source, "struct Box {", "C++ smoke should emit helper class struct");
 		assertContains(source, "int value = 0;", "C++ smoke should emit helper class field");
 		assertContains(source, "Box(int value) {", "C++ smoke should emit helper class constructor");
@@ -192,7 +195,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n42\n41\n0\n1\n1\n0\n2\n2\n15\nif:then\n7\n-3\nternary:yes\n5\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n42\n41\n0\n1\n1\n0\n2\n2\n15\nif:then\n7\n-3\nternary:yes\n5\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

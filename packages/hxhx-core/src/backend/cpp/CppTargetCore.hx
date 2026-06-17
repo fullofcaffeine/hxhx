@@ -563,6 +563,8 @@ class CppTargetCore {
 				+ " : "
 				+ renderExpr(elseExpr)
 				+ ")";
+			case ECast(inner, _):
+				renderExpr(inner);
 			case EUntyped(inner):
 				renderExpr(inner);
 			case _:
