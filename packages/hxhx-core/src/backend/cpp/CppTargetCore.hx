@@ -498,6 +498,8 @@ class CppTargetCore {
 				[indent + "return 0;"];
 			case SBreak(_):
 				[indent + "break;"];
+			case SContinue(_):
+				[indent + "continue;"];
 			case _:
 				throw "C++ source backend MVP unsupported statement: " + stmtKind(stmt);
 		};
