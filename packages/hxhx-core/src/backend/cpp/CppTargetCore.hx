@@ -141,6 +141,8 @@ class CppTargetCore {
 				out;
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
 				[indent + "std::cout << " + stringExpr(args[0]) + " << std::endl;"];
+			case SExpr(ECall(EIdent("trace"), args), _) if (args.length >= 1):
+				[indent + "std::cout << " + stringExpr(args[0]) + " << std::endl;"];
 			case SExpr(expr, _):
 				[indent + renderExpr(expr) + ";"];
 			case SVar(name, _typeHint, init, _):

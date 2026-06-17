@@ -48,6 +48,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    var suffix = \"smoke\";",
 			"    Sys.println(\"cpp-native:\" + suffix);",
+			"    trace(\"trace:\" + suffix);",
 			"    Sys.println(Std.string(\"abc\".indexOf(\"b\")));",
 			"    Sys.println(Std.string(\"abc\".indexOf(\"z\")));",
 			"    var args = Sys.args();",
@@ -96,6 +97,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "int main(int argc, char** argv)", "C++ smoke should emit main");
 		assertContains(source, "auto suffix = \"smoke\";", "C++ smoke should emit local var");
 		assertContains(source, "std::cout << (std::string(\"cpp-native:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit println");
+		assertContains(source, "std::cout << (std::string(\"trace:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit trace");
 		assertContains(source, "__hxhx_args(argc, argv)", "C++ smoke should emit Sys.args helper call");
 		assertContains(source, "__hxhx_index_of(\"abc\", std::string(\"b\"), 0)", "C++ smoke should emit string indexOf helper call");
 		assertContains(source, "__hxhx_index_of(args, std::string(\"needle\"), 0)", "C++ smoke should emit vector indexOf helper call");
@@ -107,7 +109,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\n1\n-1\n1\nneedle\n0\n", "unexpected C++ smoke stdout: " + run.stdout);
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n", "unexpected C++ smoke stdout: " + run.stdout);
 		}
 
 		deleteRecursive(root);
