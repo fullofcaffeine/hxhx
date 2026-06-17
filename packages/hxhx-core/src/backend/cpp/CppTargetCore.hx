@@ -240,6 +240,8 @@ class CppTargetCore {
 				sanitizeTypePath(typePath) + "(" + [for (arg in args) renderExpr(arg)].join(", ") + ")";
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
+			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
+				"std::vector<int>(" + renderExpr(args[0]) + ")";
 			case EArrayDecl(elements):
 				arrayExpr(elements);
 			case EField(receiver, "length"):
