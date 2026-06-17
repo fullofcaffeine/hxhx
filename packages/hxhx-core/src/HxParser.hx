@@ -3674,9 +3674,11 @@ class HxParser {
 			consumePreprocessorLine();
 			return;
 		}
-		final isVarDecl = cur.kind.match(TKeyword(KVar)) || cur.kind.match(TKeyword(KFinal));
+		final isVarDecl = cur.kind.match(TKeyword(KVar)) || cur.kind.match(TKeyword(KFinal)) || isLocalStaticVarDecl();
 		if (isVarDecl) {
 			final pos = cur.pos;
+			if (cur.kind.match(TKeyword(KStatic)))
+				bump();
 			bump();
 			final decls = parseVarDecls(pos);
 			for (stmt in decls)
@@ -3684,6 +3686,12 @@ class HxParser {
 			return;
 		}
 		out.push(parseStmt(stop));
+	}
+
+	function isLocalStaticVarDecl():Bool {
+		if (!cur.kind.match(TKeyword(KStatic)))
+			return false;
+		return peekKind().match(TKeyword(KVar)) || peekKind().match(TKeyword(KFinal));
 	}
 
 	function consumePreprocessorLine():Void {

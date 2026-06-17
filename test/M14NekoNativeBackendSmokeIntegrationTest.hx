@@ -1135,6 +1135,17 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
+		BackendDispatchBoundary.emit(backend,
+			program('class Main { static function main() { static final regex = ~/clang/i; if (regex.match("clang")) Sys.println("clang"); } }'), context);
+		final localStaticRegexSource = File.getContent(sourcePath);
+		assertContains(localStaticRegexSource, "var regex = (function() { var __hxhx_o = " + "$" + "new(null);",
+			"expected local static regex initializer to lower as an EReg construction expression");
+		assertContains(localStaticRegexSource, 'if __hxhx_field(regex, "match")("clang") {', "expected local static regex receiver call to survive parsing");
+		assertNotContains(localStaticRegexSource, "EUnsupported(static@", "local static regex initializer must not become opaque parser poison");
+
+		deleteRecursive(outDir);
+
+		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { for (i in 0...2) Sys.println(i); } }'), context);
 		final rangeForSource = File.getContent(sourcePath);
 		assertContains(rangeForSource, "var __hxhx_range_out = $array();", "expected range expression result allocation");
