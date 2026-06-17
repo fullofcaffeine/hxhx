@@ -614,8 +614,8 @@ class CppTargetCore {
 				+ ")";
 			case EBinop("=", left, right):
 				renderExpr(left) + " = " + renderExpr(right);
-			case EBinop("+=", left, right):
-				renderExpr(left) + " += " + renderExpr(right);
+			case EBinop(op, left, right) if (isSimpleCompoundAssignmentOp(op)):
+				renderExpr(left) + " " + op + " " + renderExpr(right);
 			case EBinop(">>>", left, right):
 				unsignedRightShiftExpr(left, right);
 			case EBinop(op, left, right) if (isSimpleBinaryOp(op)):
@@ -798,6 +798,10 @@ class CppTargetCore {
 	static function isSimpleBinaryOp(op:String):Bool {
 		return op == "+" || op == "-" || op == "*" || op == "/" || op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">="
 			|| op == "||" || op == "|" || op == "&" || op == "<<" || op == ">>";
+	}
+
+	static function isSimpleCompoundAssignmentOp(op:String):Bool {
+		return op == "+=" || op == "-=";
 	}
 
 	static function stmtKind(stmt:HxStmt):String {
