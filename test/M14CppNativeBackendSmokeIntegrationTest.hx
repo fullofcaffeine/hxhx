@@ -80,6 +80,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    }",
 			"    Sys.println(Std.string((1 | 2) + 0));",
 			"    Sys.println(Std.string((1 << 3) + 0));",
+			"    Sys.println(Std.string((8 >> 1) + 0));",
 			"    var box = new Box(41);",
 			"    Sys.println(Std.string(box.value + 1));",
 			"    Sys.println(Std.string(box.getHeight()));",
@@ -187,6 +188,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "} catch (...) {", "C++ smoke should emit catch-all statement");
 		assertContains(source, "(1 | 2)", "C++ smoke should emit bitwise-or expression");
 		assertContains(source, "(1 << 3)", "C++ smoke should emit left-shift expression");
+		assertContains(source, "(8 >> 1)", "C++ smoke should emit right-shift expression");
 		assertContains(source, "struct Box {", "C++ smoke should emit helper class struct");
 		assertContains(source, "int value = 0;", "C++ smoke should emit helper class field");
 		assertContains(source, "Box(int value) {", "C++ smoke should emit helper class constructor");
@@ -220,7 +222,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\ntry:body\ntry:catch\n3\n8\n42\n41\n0\n1\n1\n0\n2\n2\n15\nif:then\nor:true\n7\n-3\nternary:yes\n5\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\ntry:body\ntry:catch\n3\n8\n4\n42\n41\n0\n1\n1\n0\n2\n2\n15\nif:then\nor:true\n7\n-3\nternary:yes\n5\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

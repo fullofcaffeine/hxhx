@@ -700,7 +700,7 @@ class CppTargetCore {
 
 	static function isSimpleBinaryOp(op:String):Bool {
 		return op == "+" || op == "-" || op == "*" || op == "/" || op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">="
-			|| op == "||" || op == "|" || op == "<<";
+			|| op == "||" || op == "|" || op == "<<" || op == ">>";
 	}
 
 	static function stmtKind(stmt:HxStmt):String {
