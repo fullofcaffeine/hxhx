@@ -332,7 +332,7 @@ class CppTargetCore {
 
 	static function cppAnonFieldType(expr:HxExpr):String {
 		return switch (expr) {
-			case EString(_):
+			case EString(_) | EEnumValue(_):
 				"std::string";
 			case EFloat(_):
 				"double";
@@ -586,6 +586,8 @@ class CppTargetCore {
 				value ? "true" : "false";
 			case EString(value):
 				quoteString(value);
+			case EEnumValue(name):
+				"std::string(" + quoteString(name) + ")";
 			case EInt(value):
 				Std.string(value);
 			case EFloat(value):
@@ -681,6 +683,8 @@ class CppTargetCore {
 		return switch (expr) {
 			case EString(value):
 				"std::string(" + quoteString(value) + ")";
+			case EEnumValue(name):
+				"std::string(" + quoteString(name) + ")";
 			case EBool(_):
 				"std::string(" + renderExpr(expr, scope) + " ? \"true\" : \"false\")";
 			case EInt(_) | EFloat(_):
@@ -834,7 +838,7 @@ class CppTargetCore {
 
 	static function isStringLike(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EString(_):
+			case EString(_) | EEnumValue(_):
 				true;
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				true;
