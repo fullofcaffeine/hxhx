@@ -50,6 +50,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(\"cpp-native:\" + suffix);",
 			"    Sys.println(Std.string(\"abc\".indexOf(\"b\")));",
 			"    Sys.println(Std.string(\"abc\".indexOf(\"z\")));",
+			"    var args = Sys.args();",
+			"    Sys.println(Std.string(args.length));",
+			"    Sys.println(args[0]);",
+			"    Sys.println(Std.string(args.indexOf(\"needle\")));",
 			"  }",
 			"}",
 		].join("\n");
@@ -92,17 +96,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "int main(int argc, char** argv)", "C++ smoke should emit main");
 		assertContains(source, "auto suffix = \"smoke\";", "C++ smoke should emit local var");
 		assertContains(source, "std::cout << (std::string(\"cpp-native:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit println");
-		assertContains(source, ".find(std::string(\"b\"), 0)", "C++ smoke should emit string indexOf find call");
-		assertContains(source, "std::string::npos ? -1 : static_cast<int>", "C++ smoke should emit Haxe not-found indexOf behavior");
+		assertContains(source, "__hxhx_args(argc, argv)", "C++ smoke should emit Sys.args helper call");
+		assertContains(source, "__hxhx_index_of(\"abc\", std::string(\"b\"), 0)", "C++ smoke should emit string indexOf helper call");
+		assertContains(source, "__hxhx_index_of(args, std::string(\"needle\"), 0)", "C++ smoke should emit vector indexOf helper call");
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
 			final buildDir = Path.join([root, "build"]);
 			final built = BackendRegistry.createForTarget("cpp-native").emit(program(), context(buildDir, true, false));
 			assertTrue(hasArtifactKind(built.artifacts, "entry_cpp_exe"), "missing entry_cpp_exe artifact");
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
-			final run = commandOutput(built.entryPath, []);
+			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\n1\n-1\n", "unexpected C++ smoke stdout: " + run.stdout);
+			assertTrue(run.stdout == "cpp-native:smoke\n1\n-1\n1\nneedle\n0\n", "unexpected C++ smoke stdout: " + run.stdout);
 		}
 
 		deleteRecursive(root);
