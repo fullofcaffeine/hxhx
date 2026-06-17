@@ -74,6 +74,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    var info = { count: 3 };",
 			"    Sys.println(Std.string(info.count + 4));",
 			"    Sys.println(Std.string(-info.count));",
+			"    Sys.println(info.count == 3 ? \"ternary:yes\" : \"ternary:no\");",
 			"    var child = new Child(5);",
 			"    Sys.println(Std.string(child.value));",
 			"  }",
@@ -153,6 +154,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "auto info = __hxhx_anon_count_int_{3};", "C++ smoke should lower anonymous object literal");
 		assertContains(source, "((info.count) + 4)", "C++ smoke should read anonymous object field");
 		assertContains(source, "(-(info.count))", "C++ smoke should emit unary minus");
+		assertContains(source, "(((info.count) == 3) ? std::string(\"ternary:yes\") : std::string(\"ternary:no\"))",
+			"C++ smoke should emit ternary expression");
 		assertContains(source, "struct Child {", "C++ smoke should emit child helper class struct");
 		assertContains(source, "/* base constructor call omitted */", "C++ smoke should lower bare super constructor call");
 
@@ -163,7 +166,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n42\n2\n15\nif:then\n7\n-3\n5\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n42\n2\n15\nif:then\n7\n-3\nternary:yes\n5\n",
 				"unexpected C++ smoke stdout: " + run.stdout);
 		}
 

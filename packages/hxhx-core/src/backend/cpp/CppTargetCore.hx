@@ -486,6 +486,14 @@ class CppTargetCore {
 				"(" + renderExpr(left) + " " + op + " " + renderExpr(right) + ")";
 			case EUnop("-", inner):
 				"(-" + renderExpr(inner) + ")";
+			case ETernary(cond, thenExpr, elseExpr):
+				"("
+				+ conditionExpr(cond)
+				+ " ? "
+				+ renderExpr(thenExpr)
+				+ " : "
+				+ renderExpr(elseExpr)
+				+ ")";
 			case EUntyped(inner):
 				renderExpr(inner);
 			case _:
@@ -514,6 +522,14 @@ class CppTargetCore {
 				+ stringExpr(left)
 				+ " + "
 				+ stringExpr(right)
+				+ ")";
+			case ETernary(cond, thenExpr, elseExpr) if (isStringLike(thenExpr) && isStringLike(elseExpr)):
+				"("
+				+ conditionExpr(cond)
+				+ " ? "
+				+ stringExpr(thenExpr)
+				+ " : "
+				+ stringExpr(elseExpr)
 				+ ")";
 			case EIdent(name):
 				"std::string(" + sanitizeIdentifier(name) + ")";
@@ -573,6 +589,7 @@ class CppTargetCore {
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				true;
 			case EBinop("+", left, right): isStringLike(left) || isStringLike(right);
+			case ETernary(_, thenExpr, elseExpr): isStringLike(thenExpr) && isStringLike(elseExpr);
 			case _:
 				false;
 		};
