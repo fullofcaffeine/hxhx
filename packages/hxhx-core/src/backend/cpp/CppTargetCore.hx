@@ -419,6 +419,12 @@ class CppTargetCore {
 					out.push(indent + "}");
 				}
 				out;
+			case SWhile(cond, body, _):
+				final out = [indent + "while " + conditionExpr(cond) + " {"];
+				for (line in renderStmtBlockContent(body, indent + "  "))
+					out.push(line);
+				out.push(indent + "}");
+				out;
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
 				[indent + "std::cout << " + stringExpr(args[0]) + " << std::endl;"];
 			case SExpr(ECall(EIdent("trace"), args), _) if (args.length >= 1):

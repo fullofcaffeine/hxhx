@@ -67,6 +67,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(bump + 0));",
 			"    Sys.println(Std.string(bump--));",
 			"    Sys.println(Std.string(bump + 0));",
+			"    var spin = 0;",
+			"    while (spin < 2) {",
+			"      spin++;",
+			"    }",
+			"    Sys.println(Std.string(spin + 0));",
 			"    var native = NativeArray.create(2);",
 			"    native[0] = 7;",
 			"    native[1] = 8;",
@@ -159,6 +164,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "box.getHeight()", "C++ smoke should lower receiver method call");
 		assertContains(source, "(bump++)", "C++ smoke should lower post-increment expression");
 		assertContains(source, "(bump--)", "C++ smoke should lower post-decrement expression");
+		assertContains(source, "while (spin < 2) {", "C++ smoke should emit while statement");
 		assertContains(source, "auto native = std::vector<int>(2);", "C++ smoke should lower NativeArray.create");
 		assertContains(source, "(native[0]) = 7;", "C++ smoke should emit NativeArray indexed assignment");
 		assertContains(source, "(native.size())", "C++ smoke should emit NativeArray length read");
@@ -180,7 +186,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n42\n41\n0\n1\n1\n0\n2\n15\nif:then\n7\n-3\nternary:yes\n5\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n42\n41\n0\n1\n1\n0\n2\n2\n15\nif:then\n7\n-3\nternary:yes\n5\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}
