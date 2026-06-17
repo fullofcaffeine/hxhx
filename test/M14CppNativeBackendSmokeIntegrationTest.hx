@@ -109,6 +109,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    for (word in words) {",
 			"      Sys.println(word);",
 			"    }",
+			"    var doubled = [for (value in [1, 2, 3]) if (value > 1) value * 2];",
+			"    Sys.println(Std.string(doubled.length));",
+			"    Sys.println(Std.string(doubled[0] + doubled[1]));",
 			"    if (native[0] == 7) {",
 			"      Sys.println(\"if:then\");",
 			"    } else {",
@@ -217,6 +220,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "(native.size())", "C++ smoke should emit NativeArray length read");
 		assertContains(source, "for (int i = 0; i < 3; i++) {", "C++ smoke should emit range for-in statement");
 		assertContains(source, "for (auto word : words) {", "C++ smoke should emit iterable for-in statement");
+		assertContains(source, "std::vector<int> __hxhx_comp_out;", "C++ smoke should allocate array comprehension vector");
+		assertContains(source, "for (auto value : std::vector<int>{1, 2, 3}) {", "C++ smoke should iterate array comprehension source");
+		assertContains(source, "if (value > 1) {", "C++ smoke should emit array comprehension guard");
+		assertContains(source, "__hxhx_comp_out.push_back((value * 2));", "C++ smoke should push array comprehension yield");
 		assertContains(source, "if ((native[0]) == 7) {", "C++ smoke should emit if statement");
 		assertContains(source, "false || ((native[0]) == 7)", "C++ smoke should emit logical-or expression");
 		assertContains(source, "} else {", "C++ smoke should emit else branch");
@@ -236,7 +243,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n42\n41\n0\n1\n1\n0\n2\n2\n15\n3\nalpha\nbeta\nif:then\nor:true\n7\n-3\nternary:yes\n5\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n42\n41\n0\n1\n1\n0\n2\n2\n15\n3\nalpha\nbeta\n2\n10\nif:then\nor:true\n7\n-3\nternary:yes\n5\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

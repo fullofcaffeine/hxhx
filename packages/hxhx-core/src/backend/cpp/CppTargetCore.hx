@@ -588,6 +588,8 @@ class CppTargetCore {
 				"(" + renderExpr(receiver) + ".size())";
 			case EArrayAccess(array, index):
 				"(" + renderExpr(array) + "[" + renderExpr(index) + "])";
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				arrayComprehensionExpr(name, iterable, guardExpr, yieldExpr);
 			case EAnon(fieldNames, fieldValues):
 				anonExpr(fieldNames, fieldValues);
 			case EField(receiver, field):
@@ -714,6 +716,38 @@ class CppTargetCore {
 		return "std::vector<" + typeName + ">{" + values.join(", ") + "}";
 	}
 
+	/**
+		Lower the C++ MVP subset of Haxe array comprehensions.
+
+		The result stays expression-position friendly by using an immediately-invoked
+		lambda that captures surrounding locals by reference, appends yielded values to
+		a `std::vector<T>`, and returns that vector. This deliberately models only the
+		backend-owned iterable shapes we can currently render, not the full Haxe
+		iterator protocol.
+	**/
+	static function arrayComprehensionExpr(name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr):String {
+		final local = sanitizeIdentifier(name);
+		final typeName = comprehensionElementType(yieldExpr);
+		final out = ["([&]() {", "  std::vector<" + typeName + "> __hxhx_comp_out;"];
+		switch (iterable) {
+			case ERange(start, end):
+				out.push("  for (int " + local + " = " + renderExpr(start) + "; " + local + " < " + renderExpr(end) + "; " + local + "++) {");
+			case _:
+				out.push("  for (auto " + local + " : " + renderExpr(iterable) + ") {");
+		}
+		if (guardExpr == null) {
+			out.push("    __hxhx_comp_out.push_back(" + renderExpr(yieldExpr) + ");");
+		} else {
+			out.push("    if " + conditionExpr(guardExpr) + " {");
+			out.push("      __hxhx_comp_out.push_back(" + renderExpr(yieldExpr) + ");");
+			out.push("    }");
+		}
+		out.push("  }");
+		out.push("  return __hxhx_comp_out;");
+		out.push("})()");
+		return out.join("\n");
+	}
+
 	static function arrayElementType(elements:Array<HxExpr>):String {
 		for (element in elements)
 			if (isStringLike(element))
@@ -731,6 +765,19 @@ class CppTargetCore {
 				case _: // keep scanning
 			}
 		return "int";
+	}
+
+	static function comprehensionElementType(expr:HxExpr):String {
+		if (isStringLike(expr))
+			return "std::string";
+		return switch (expr) {
+			case EFloat(_):
+				"double";
+			case EBool(_):
+				"bool";
+			case _:
+				"int";
+		};
 	}
 
 	static function isStringLike(expr:HxExpr):Bool {
