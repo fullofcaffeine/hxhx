@@ -214,6 +214,8 @@ class CppTargetCore {
 					if (guardExpr != null)
 						addExpr(guardExpr);
 					addExpr(yieldExpr);
+				case ELambda(_, body):
+					addExpr(body);
 				case EMacroExpr(inner, _):
 					addExpr(inner);
 				case _:
@@ -614,6 +616,8 @@ class CppTargetCore {
 				arrayComprehensionExpr(name, iterable, guardExpr, yieldExpr, scope);
 			case EAnon(fieldNames, fieldValues):
 				anonExpr(fieldNames, fieldValues, scope);
+			case ELambda(args, body):
+				lambdaExpr(args, body, scope);
 			case EField(receiver, field):
 				"(" + renderExpr(receiver, scope) + "." + sanitizeIdentifier(field) + ")";
 			case ECall(EField(receiver, "indexOf"), args) if (args.length == 1 || args.length == 2):
@@ -622,6 +626,11 @@ class CppTargetCore {
 				stringExpr(args[0], scope);
 			case ECall(EField(ESuper, method), args):
 				superMethodCallExpr(method, args, scope);
+			case ECall(ELambda(lambdaArgs, body), args):
+				"("
+				+ lambdaExpr(lambdaArgs, body, scope)
+				+ ")("
+				+ [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EIdent(name), args):
 				sanitizeIdentifier(name) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EField(receiver, method), args):
@@ -742,6 +751,11 @@ class CppTargetCore {
 		if (baseType == null)
 			throw "C++ source backend MVP unsupported expression: ESuper";
 		return baseType + "::" + sanitizeIdentifier(method) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+	}
+
+	static function lambdaExpr(args:Array<String>, body:HxExpr, ?scope:CppRenderScope):String {
+		final params = [for (arg in args) "auto " + sanitizeIdentifier(arg)];
+		return "[&](" + params.join(", ") + ") { return " + renderExpr(body, scope) + "; }";
 	}
 
 	static function anonExpr(fieldNames:Array<String>, fieldValues:Array<HxExpr>, ?scope:CppRenderScope):String {
