@@ -1,0 +1,4 @@
+-cp packages/hxhx-core/src
+-cp test
+-main M14ParserStageScanExpressionBodyIntegrationTest
+-neko .tmp/m14_parser_stage_scan_expression_body_integration_test.n

@@ -1116,6 +1116,8 @@ class ParserStageScanHelpers {
 				final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0;
 				if (atTop && tok.isIdent && tok.text == "return")
 					return {hint: parts.join(""), nextPos: j};
+				if (atTop && tok.isIdent && expressionBodyKeywordStartsWithoutReturn(tok.text))
+					return {hint: parts.join(""), nextPos: j};
 				if (atTop
 					&& (tok.text == ")" || tok.text == "=" || tok.text == "{" || tok.text == ";" || (stopAtComma && tok.text == ",")))
 					return {hint: parts.join(""), nextPos: j};
@@ -1795,6 +1797,8 @@ class ParserStageScanHelpers {
 		while (tok.text.length > 0 && tok.text != "{" && tok.text != ";") {
 			if (tok.isIdent && tok.text == "return" && bodyStart < 0) {
 				bodyStart = tok.nextPos - tok.text.length;
+			} else if (bodyStart < 0 && expressionBodyKeywordStartsWithoutReturn(tok.text)) {
+				bodyStart = tok.nextPos - tok.text.length;
 			}
 			i = tok.nextPos;
 			tok = scanNextToken(source, i);
@@ -1843,6 +1847,15 @@ class ParserStageScanHelpers {
 			}
 		}
 		return {body: body, bodyText: block.bodyText, nextPos: block.nextPos};
+	}
+
+	static function expressionBodyKeywordStartsWithoutReturn(text:String):Bool {
+		return switch (text) {
+			case "for":
+				true;
+			case _:
+				false;
+		}
 	}
 
 	static function leadingWhitespaceLength(text:String):Int {

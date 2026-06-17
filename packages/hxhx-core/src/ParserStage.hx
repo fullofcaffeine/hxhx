@@ -2325,6 +2325,8 @@ class ParserStage {
 		while (tok.text.length > 0 && tok.text != "{" && tok.text != ";") {
 			if (tok.isIdent && tok.text == "return" && bodyStart < 0) {
 				bodyStart = tok.nextPos - tok.text.length;
+			} else if (bodyStart < 0 && expressionBodyKeywordStartsWithoutReturn(tok.text)) {
+				bodyStart = tok.nextPos - tok.text.length;
 			}
 			i = tok.nextPos;
 			tok = scanNextToken(source, i);
@@ -2373,6 +2375,15 @@ class ParserStage {
 			}
 		}
 		return {body: body, bodyText: block.bodyText, nextPos: block.nextPos};
+	}
+
+	static function expressionBodyKeywordStartsWithoutReturn(text:String):Bool {
+		return switch (text) {
+			case "for":
+				true;
+			case _:
+				false;
+		}
 	}
 
 	static function leadingWhitespaceLength(text:String):Int {
