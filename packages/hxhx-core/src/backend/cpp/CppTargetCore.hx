@@ -665,6 +665,8 @@ class CppTargetCore {
 				+ ")";
 			case EUnop("-", inner):
 				"(-" + renderExpr(inner, scope) + ")";
+			case EUnop("!", inner):
+				"(!" + renderExpr(inner, scope) + ")";
 			case EUnop("~", inner):
 				"(~" + renderExpr(inner, scope) + ")";
 			case EUnop("post++", inner):
