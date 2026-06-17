@@ -350,7 +350,28 @@ class CppTargetCore {
 				out.push(line);
 			out.push("  }");
 		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
+				continue;
+			for (line in renderHelperMethod(fn))
+				out.push(line);
+		}
 		out.push("};");
+		return out;
+	}
+
+	static function renderHelperMethod(fn:HxFunctionDecl):Array<String> {
+		final returnType = cppTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
+		final out = ["  "
+			+ returnType
+			+ " "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn))
+			+ ") {"];
+		for (line in renderStmts(HxFunctionDecl.getBody(fn), "    "))
+			out.push(line);
+		out.push("  }");
 		return out;
 	}
 
@@ -474,6 +495,12 @@ class CppTargetCore {
 				indexOfExpr(receiver, args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringExpr(args[0]);
+			case ECall(EField(receiver, method), args):
+				renderExpr(receiver)
+				+ "."
+				+ sanitizeIdentifier(method)
+				+ "("
+				+ [for (arg in args) renderExpr(arg)].join(", ") + ")";
 			case EBinop("+", left, right) if (isStringLike(left) || isStringLike(right)):
 				"("
 				+ stringExpr(left)
