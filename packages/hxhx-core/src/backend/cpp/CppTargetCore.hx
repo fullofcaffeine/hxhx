@@ -380,7 +380,7 @@ class CppTargetCore {
 			case EThis: "EThis";
 			case ESuper: "ESuper";
 			case EIdent(name): "EIdent(" + name + ")";
-			case EField(_, field): "EField(" + field + ")";
+			case EField(receiver, field): "EField(" + exprKind(receiver) + "." + field + ")";
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(_): "EMacroType";

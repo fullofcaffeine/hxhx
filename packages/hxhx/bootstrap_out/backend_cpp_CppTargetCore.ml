@@ -338,12 +338,9 @@ let rec exprKind = fun expr -> let tempResult = ref ("" : string) in (
       tempResult := __assign_199;
       __assign_199
     )
-    | HxExpr.EField (_p0, _p1) -> (
-      ignore _p0;
-      let _g2 = (_p1 : string) in let field = (_g2 : string) in let __assign_200 = (("EField(" ^ HxString.toStdString field) ^ ")" : string) in (
-        tempResult := __assign_200;
-        __assign_200
-      )
+    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let field = (_g1 : string) in let __assign_200 = (((("EField(" ^ HxString.toStdString (exprKind (Obj.magic receiver))) ^ ".") ^ HxString.toStdString field) ^ ")" : string) in (
+      tempResult := __assign_200;
+      __assign_200
     )
     | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
