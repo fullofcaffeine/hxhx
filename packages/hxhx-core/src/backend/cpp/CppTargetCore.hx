@@ -579,6 +579,8 @@ class CppTargetCore {
 				renderExpr(left) + " = " + renderExpr(right);
 			case EBinop("+=", left, right):
 				renderExpr(left) + " += " + renderExpr(right);
+			case EBinop(">>>", left, right):
+				unsignedRightShiftExpr(left, right);
 			case EBinop(op, left, right) if (isSimpleBinaryOp(op)):
 				"(" + renderExpr(left) + " " + op + " " + renderExpr(right) + ")";
 			case EUnop("-", inner):
@@ -646,6 +648,17 @@ class CppTargetCore {
 		final needle = stringExpr(args[0]);
 		final start = args.length == 2 ? renderExpr(args[1]) : "0";
 		return "__hxhx_index_of(" + source + ", " + needle + ", " + start + ")";
+	}
+
+	/**
+		Lower Haxe unsigned right shift for the current C++ MVP integer subset.
+
+		Haxe `>>>` shifts after treating the left operand as an unsigned 32-bit
+		value. C++ has no separate unsigned-shift operator, so the target-owned
+		intrinsic is an unsigned cast followed by C++ `>>`.
+	**/
+	static function unsignedRightShiftExpr(left:HxExpr, right:HxExpr):String {
+		return "(static_cast<unsigned int>(" + renderExpr(left) + ") >> " + renderExpr(right) + ")";
 	}
 
 	static function anonExpr(fieldNames:Array<String>, fieldValues:Array<HxExpr>):String {
