@@ -1927,7 +1927,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.cpp.CppNativeBackend" [];
   HxType.register_class_static_fields "backend.cpp.CppNativeBackend" [ "capabilities"; "descriptor"; "registration" ];
   HxType.register_class_instance_fields "backend.cpp.CppTargetCore" [];
-  HxType.register_class_static_fields "backend.cpp.CppTargetCore" [ "commandExists"; "cppCompilerCommand"; "emit"; "ensureDirectory"; "ensureParentDirectory"; "executablePath"; "exprKind"; "findMainModule"; "indexOfExpr"; "isSimpleBinaryOp"; "isStringLike"; "mainModule"; "quoteString"; "renderExpr"; "renderProgram"; "renderStmt"; "renderStmts"; "sanitizeIdentifier"; "stmtKind"; "stringExpr" ];
+  HxType.register_class_static_fields "backend.cpp.CppTargetCore" [ "arrayElementType"; "arrayExpr"; "commandExists"; "cppCompilerCommand"; "emit"; "ensureDirectory"; "ensureParentDirectory"; "executablePath"; "exprKind"; "findMainModule"; "indexOfExpr"; "isSimpleBinaryOp"; "isStringLike"; "mainModule"; "quoteString"; "renderExpr"; "renderProgram"; "renderStmt"; "renderStmts"; "sanitizeIdentifier"; "stmtKind"; "stringExpr" ];
   HxType.register_class_instance_fields "backend.js.JsBackend" [ "capabilities"; "delegate"; "describe"; "emit"; "id"; "registrations" ];
   HxType.register_class_static_fields "backend.js.JsBackend" [ "capabilitiesStatic"; "descriptor"; "emitBridge"; "providerDescriptor"; "providerRegistrations"; "targetCore"; "targetCoreEmit" ];
   HxType.register_class_instance_fields "backend.js.JsExprEmitter" [];

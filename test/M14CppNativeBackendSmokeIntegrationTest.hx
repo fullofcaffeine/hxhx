@@ -55,6 +55,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(args.length));",
 			"    Sys.println(args[0]);",
 			"    Sys.println(Std.string(args.indexOf(\"needle\")));",
+			"    var words = [\"alpha\", \"beta\"];",
+			"    Sys.println(Std.string(words.length));",
+			"    Sys.println(words[1]);",
+			"    Sys.println(Std.string(words.indexOf(\"alpha\")));",
 			"  }",
 			"}",
 		].join("\n");
@@ -101,6 +105,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "__hxhx_args(argc, argv)", "C++ smoke should emit Sys.args helper call");
 		assertContains(source, "__hxhx_index_of(\"abc\", std::string(\"b\"), 0)", "C++ smoke should emit string indexOf helper call");
 		assertContains(source, "__hxhx_index_of(args, std::string(\"needle\"), 0)", "C++ smoke should emit vector indexOf helper call");
+		assertContains(source, "std::vector<std::string>{std::string(\"alpha\"), std::string(\"beta\")}", "C++ smoke should emit string array literal");
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
 			final buildDir = Path.join([root, "build"]);
@@ -109,7 +114,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n", "unexpected C++ smoke stdout: " + run.stdout);
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n", "unexpected C++ smoke stdout: " + run.stdout);
 		}
 
 		deleteRecursive(root);

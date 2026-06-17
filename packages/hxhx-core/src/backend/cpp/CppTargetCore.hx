@@ -173,6 +173,8 @@ class CppTargetCore {
 				sanitizeIdentifier(name);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
+			case EArrayDecl(elements):
+				arrayExpr(elements);
 			case EField(receiver, "length"):
 				"(" + renderExpr(receiver) + ".size())";
 			case EArrayAccess(array, index):
@@ -226,6 +228,34 @@ class CppTargetCore {
 		final needle = stringExpr(args[0]);
 		final start = args.length == 2 ? renderExpr(args[1]) : "0";
 		return "__hxhx_index_of(" + source + ", " + needle + ", " + start + ")";
+	}
+
+	static function arrayExpr(elements:Array<HxExpr>):String {
+		final typeName = arrayElementType(elements);
+		final values = [
+			for (element in elements)
+				typeName == "std::string" ? stringExpr(element) : renderExpr(element)
+		];
+		return "std::vector<" + typeName + ">{" + values.join(", ") + "}";
+	}
+
+	static function arrayElementType(elements:Array<HxExpr>):String {
+		for (element in elements)
+			if (isStringLike(element))
+				return "std::string";
+		for (element in elements)
+			switch (element) {
+				case EFloat(_):
+					return "double";
+				case _: // keep scanning
+			}
+		for (element in elements)
+			switch (element) {
+				case EBool(_):
+					return "bool";
+				case _: // keep scanning
+			}
+		return "int";
 	}
 
 	static function isStringLike(expr:HxExpr):Bool {
