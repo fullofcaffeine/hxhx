@@ -151,6 +151,8 @@ class CppTargetCore {
 				Std.string(value);
 			case EIdent(name):
 				sanitizeIdentifier(name);
+			case ECall(EField(receiver, "indexOf"), args) if (args.length == 1 || args.length == 2):
+				indexOfExpr(receiver, args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringExpr(args[0]);
 			case EBinop("+", left, right) if (isStringLike(left) || isStringLike(right)):
@@ -178,6 +180,8 @@ class CppTargetCore {
 				"std::to_string(" + renderExpr(expr) + ")";
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringExpr(args[0]);
+			case ECall(EField(_, "indexOf"), args) if (args.length == 1 || args.length == 2):
+				"std::to_string(" + renderExpr(expr) + ")";
 			case EBinop("+", left, right):
 				"(" + stringExpr(left) + " + " + stringExpr(right) + ")";
 			case EIdent(name):
@@ -185,6 +189,19 @@ class CppTargetCore {
 			case _:
 				"std::to_string(" + renderExpr(expr) + ")";
 		};
+	}
+
+	static function indexOfExpr(receiver:HxExpr, args:Array<HxExpr>):String {
+		final source = stringExpr(receiver);
+		final needle = stringExpr(args[0]);
+		final start = args.length == 2 ? renderExpr(args[1]) : "0";
+		return "([&]() { auto __hxhx_pos = "
+			+ source
+			+ ".find("
+			+ needle
+			+ ", "
+			+ start
+			+ "); return __hxhx_pos == std::string::npos ? -1 : static_cast<int>(__hxhx_pos); })()";
 	}
 
 	static function isStringLike(expr:HxExpr):Bool {

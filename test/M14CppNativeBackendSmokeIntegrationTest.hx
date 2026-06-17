@@ -48,6 +48,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    var suffix = \"smoke\";",
 			"    Sys.println(\"cpp-native:\" + suffix);",
+			"    Sys.println(Std.string(\"abc\".indexOf(\"b\")));",
+			"    Sys.println(Std.string(\"abc\".indexOf(\"z\")));",
 			"  }",
 			"}",
 		].join("\n");
@@ -90,6 +92,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "int main(int argc, char** argv)", "C++ smoke should emit main");
 		assertContains(source, "auto suffix = \"smoke\";", "C++ smoke should emit local var");
 		assertContains(source, "std::cout << (std::string(\"cpp-native:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit println");
+		assertContains(source, ".find(std::string(\"b\"), 0)", "C++ smoke should emit string indexOf find call");
+		assertContains(source, "std::string::npos ? -1 : static_cast<int>", "C++ smoke should emit Haxe not-found indexOf behavior");
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
 			final buildDir = Path.join([root, "build"]);
@@ -98,7 +102,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, []);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\n", "unexpected C++ smoke stdout: " + run.stdout);
+			assertTrue(run.stdout == "cpp-native:smoke\n1\n-1\n", "unexpected C++ smoke stdout: " + run.stdout);
 		}
 
 		deleteRecursive(root);
