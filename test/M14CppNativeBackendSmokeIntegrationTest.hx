@@ -66,6 +66,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    native[1] = 8;",
 			"    Sys.println(Std.string(native.length));",
 			"    Sys.println(Std.string(native[0] + native[1]));",
+			"    var child = new Child(5);",
+			"    Sys.println(Std.string(child.value));",
+			"  }",
+			"}",
+			"class Base {",
+			"  public function new() {}",
+			"}",
+			"class Child extends Base {",
+			"  public var value:Int;",
+			"  public function new(value:Int) {",
+			"    super();",
+			"    this.value = value;",
 			"  }",
 			"}",
 			"class Box {",
@@ -127,6 +139,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "auto native = std::vector<int>(2);", "C++ smoke should lower NativeArray.create");
 		assertContains(source, "(native[0]) = 7;", "C++ smoke should emit NativeArray indexed assignment");
 		assertContains(source, "(native.size())", "C++ smoke should emit NativeArray length read");
+		assertContains(source, "struct Child {", "C++ smoke should emit child helper class struct");
+		assertContains(source, "/* base constructor call omitted */", "C++ smoke should lower bare super constructor call");
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
 			final buildDir = Path.join([root, "build"]);
@@ -135,7 +149,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n42\n2\n15\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n42\n2\n15\n5\n",
 				"unexpected C++ smoke stdout: " + run.stdout);
 		}
 
