@@ -1164,7 +1164,7 @@ class CppTargetCore {
 	}
 
 	static function isSimpleCompoundAssignmentOp(op:String):Bool {
-		return op == "+=" || op == "-=";
+		return op == "+=" || op == "-=" || op == "*=";
 	}
 
 	static function stmtKind(stmt:HxStmt):String {
