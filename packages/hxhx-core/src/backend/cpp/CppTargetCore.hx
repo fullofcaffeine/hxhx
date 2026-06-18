@@ -699,6 +699,8 @@ class CppTargetCore {
 				Std.string(value);
 			case EThis:
 				"(*this)";
+			case ESuper:
+				superExpr(scope);
 			case EIdent(name):
 				sanitizeIdentifier(name);
 			case EField(EThis, field):
@@ -1082,6 +1084,14 @@ class CppTargetCore {
 		if (baseType == null)
 			throw "C++ source backend MVP unsupported expression: ESuper";
 		return baseType + "::" + sanitizeIdentifier(method) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+	}
+
+	static function superExpr(?scope:CppRenderScope):String {
+		final owner = scope == null ? null : scope.owner;
+		final baseType = owner == null ? null : baseTypeName(owner);
+		if (baseType == null)
+			throw "C++ source backend MVP unsupported expression: ESuper";
+		return "(*this)";
 	}
 
 	static function lambdaExpr(args:Array<String>, body:HxExpr, ?scope:CppRenderScope):String {
