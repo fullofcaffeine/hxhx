@@ -158,6 +158,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"      default: \"other\";",
 			"    };",
 			"    Sys.println(switched);",
+			"    switch (native[0]) {",
+			"      case 7:",
+			"        Sys.println(\"switch:seven\");",
+			"      default:",
+			"        Sys.println(\"switch:other\");",
+			"    }",
 			"    var info = { count: 3 };",
 			"    Sys.println(Std.string(info.count + 4));",
 			"    Sys.println(Std.string(-info.count));",
@@ -286,6 +292,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "auto switched = ([&]() {", "C++ smoke should lower switch expressions through an IIFE");
 		assertContains(source, "auto __hxhx_switch = 2;", "C++ smoke should bind switch expression scrutinee");
 		assertContains(source, "else if (__hxhx_switch == 2) {", "C++ smoke should lower switch expression int cases");
+		assertContains(source, "auto __hxhx_switch_stmt = (native[0]);", "C++ smoke should bind switch statement scrutinee");
+		assertContains(source, "if (__hxhx_switch_stmt == 7) {", "C++ smoke should lower switch statement int cases");
 		assertContains(source, "} else {", "C++ smoke should emit else branch");
 		assertContains(source, "struct __hxhx_anon_count_int_ {", "C++ smoke should emit anonymous object struct");
 		assertContains(source, "auto info = __hxhx_anon_count_int_{3};", "C++ smoke should lower anonymous object literal");
@@ -304,7 +312,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n4\n2\n15\n3\nalpha\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\n7\nEParenthesis(EConst(CString(macro:value)))\ntwo\n7\n-3\nternary:yes\n5\n42\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n4\n2\n15\n3\nalpha\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\n7\nEParenthesis(EConst(CString(macro:value)))\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

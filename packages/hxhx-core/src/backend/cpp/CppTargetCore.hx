@@ -477,6 +477,8 @@ class CppTargetCore {
 				out;
 			case SForIn(name, iterable, body, _):
 				renderForInStmt(name, iterable, body, indent, scope);
+			case SSwitch(scrutinee, patterns, bodies, _):
+				renderSwitchStmt(scrutinee, patterns, bodies, indent, scope);
 			case STry(tryBody, catches, _):
 				renderTryStmt(tryBody, catches, indent, scope);
 			case SExpr(ECall(EField(EIdent("Sys"), "println"), args), _) if (args.length == 1):
@@ -534,6 +536,44 @@ class CppTargetCore {
 		}
 		for (line in renderStmtBlockContent(body, indent + "  ", scope))
 			out.push(line);
+		out.push(indent + "}");
+		return out;
+	}
+
+	/**
+		Lower the C++ MVP subset of Haxe switch statements.
+
+		This deliberately emits an `if`/`else if` chain instead of a C++ `switch`
+		because Haxe switch patterns can compare strings and enum-like tags. Complex
+		patterns remain non-matching until the target owns their exact semantics.
+	**/
+	static function renderSwitchStmt(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, indent:String,
+			?scope:CppRenderScope):Array<String> {
+		final switchValue = "__hxhx_switch_stmt";
+		final scrutineeExpr = isStringLike(scrutinee) ? stringExpr(scrutinee, scope) : renderExpr(scrutinee, scope);
+		final out = [indent + "{", indent + "  auto " + switchValue + " = " + scrutineeExpr + ";"];
+		var defaultBody:Null<HxStmt> = null;
+		var emitted = 0;
+		final count = patterns.length < bodies.length ? patterns.length : bodies.length;
+		for (i in 0...count) {
+			final pattern = patterns[i];
+			if (switchPatternIsDefault(pattern)) {
+				if (defaultBody == null)
+					defaultBody = bodies[i];
+				continue;
+			}
+			out.push(indent + "  " + (emitted == 0 ? "if" : "else if") + " (" + switchPatternCond(pattern, switchValue) + ") {");
+			for (line in renderStmtBlockContent(bodies[i], indent + "    ", scope))
+				out.push(line);
+			out.push(indent + "  }");
+			emitted++;
+		}
+		if (defaultBody != null) {
+			out.push(indent + "  else {");
+			for (line in renderStmtBlockContent(defaultBody, indent + "    ", scope))
+				out.push(line);
+			out.push(indent + "  }");
+		}
 		out.push(indent + "}");
 		return out;
 	}
