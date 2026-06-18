@@ -148,6 +148,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    if (mode == Macro) {",
 			"      Sys.println(\"enum:eq\");",
 			"    }",
+			"    var ignored = Ignore(\"reason\");",
+			"    Sys.println(ignored);",
 			"    var id = x -> x + 1;",
 			"    Sys.println(Std.string(id(6)));",
 			"    var macroQuote = macro (\"macro:value\");",
@@ -221,6 +223,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	static function main():Void {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("8")) == "8",
 			"numeric unsupported fragments should render as integer literals");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EEnumValue("Ignore"),
+				[EString("reason")])) == "([&]() { auto __hxhx_enum_arg_0 = \"reason\"; (void)__hxhx_enum_arg_0; return std::string(\"Ignore\"); })()",
+			"payload enum constructor calls should lower to their enum tag string for the C++ MVP");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
@@ -288,6 +294,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "if ((!false)) {", "C++ smoke should emit logical-not expression");
 		assertContains(source, "auto mode = std::string(\"Macro\");", "C++ smoke should lower enum value tags as strings");
 		assertContains(source, "(mode == std::string(\"Macro\"))", "C++ smoke should compare enum value tags as strings");
+		assertContains(source, "auto ignored = ([&]() { auto __hxhx_enum_arg_0 = \"reason\"; (void)__hxhx_enum_arg_0; return std::string(\"Ignore\"); })();",
+			"C++ smoke should lower enum constructor calls as tag strings while evaluating payloads");
 		assertContains(source, "auto id = [&](auto x) { return (x + 1); };", "C++ smoke should lower expression lambdas");
 		assertContains(source, "id(6)", "C++ smoke should call local lambda values");
 		assertContains(source, "auto macroQuote = std::string(\"EParenthesis(EConst(CString(macro:value)))\");",
@@ -315,7 +323,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n4\n2\n15\n3\nalpha\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\n7\nEParenthesis(EConst(CString(macro:value)))\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n4\n2\n15\n3\nalpha\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

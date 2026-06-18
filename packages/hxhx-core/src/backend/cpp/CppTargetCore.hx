@@ -648,6 +648,8 @@ class CppTargetCore {
 				"__hxhx_args(argc, argv)";
 			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
 				"std::vector<int>(" + renderExpr(args[0], scope) + ")";
+			case ECall(EEnumValue(name), args):
+				enumCtorExpr(name, args, scope);
 			case EArrayDecl(elements):
 				arrayExpr(elements, scope);
 			case EField(receiver, "length"):
@@ -757,6 +759,19 @@ class CppTargetCore {
 			i++;
 		}
 		return raw;
+	}
+
+	static function enumCtorExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final tag = "std::string(" + quoteString(name) + ")";
+		if (args == null || args.length == 0)
+			return tag;
+		final parts = ["([&]() {"];
+		for (i in 0...args.length)
+			parts.push(" auto __hxhx_enum_arg_" + i + " = " + renderExpr(args[i], scope) + ";");
+		for (i in 0...args.length)
+			parts.push(" (void)__hxhx_enum_arg_" + i + ";");
+		parts.push(" return " + tag + "; })()");
+		return parts.join("");
 	}
 
 	static function stringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -1118,6 +1133,8 @@ class CppTargetCore {
 	static function isStringLike(expr:HxExpr):Bool {
 		return switch (expr) {
 			case EString(_) | EEnumValue(_) | EMacroExpr(_, _):
+				true;
+			case ECall(EEnumValue(_), _):
 				true;
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				true;
