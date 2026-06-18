@@ -264,6 +264,36 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"nested calls should lower by invoking the rendered callee expression");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("=>", EString("key"), EInt(42))) == "std::make_pair(\"key\", 42)",
 			"arrow expressions should lower to C++ pairs");
+		final exceptionStackTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new Exception("");}catch(e:Exception){e.stack;}'));
+		assertContains(exceptionStackTry, "throw std::runtime_error(std::string(\"\"));",
+			"Exception stack try/catch raw should preserve the thrown message shape");
+		assertContains(exceptionStackTry, "return std::vector<std::string>{};",
+			"Exception stack try/catch raw should lower to an empty C++ stack vector for the MVP");
+		final valueExceptionStackTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new ValueException("");}catch(e:Exception){e.stack;}'));
+		assertContains(valueExceptionStackTry, "throw std::runtime_error(std::string(\"\"));",
+			"ValueException stack try/catch raw should preserve the thrown message shape");
+		final constructorValueExceptionStackTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new WithConstructorValueException("");}catch(e:Exception){e.stack;}'));
+		assertContains(constructorValueExceptionStackTry, "throw std::runtime_error(std::string(\"\"));",
+			"WithConstructorValueException stack try/catch raw should preserve the thrown message shape");
+		final customExceptionStackTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new CustomException("boom");}catch(e:Exception){e.stack;}'));
+		assertContains(customExceptionStackTry, "throw std::runtime_error(std::string(\"boom\"));",
+			"Exception stack try/catch raw should support exception-like class names");
+		final thrownExceptionStackTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw @:privateAccess(Exception.thrown("boom"):Exception);}catch(e:Exception){e.stack;}'));
+		assertContains(thrownExceptionStackTry, "throw std::runtime_error(std::string(\"boom\"));",
+			"Exception.thrown stack try/catch raw should preserve the thrown message shape");
+		final genericThrowStackTry = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw value;}catch(e:Exception){e.stack;}'));
+		assertContains(genericThrowStackTry, "throw std::runtime_error(std::string(\"\"));",
+			"Exception stack try/catch raw should support non-constructor throw probes");
+		final catchValueTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new Exception("boom");}catch(e){e;}'));
+		assertContains(catchValueTry, "catch (const std::exception& e) { return std::string(e.what()); }",
+			"catch-value raw try/catch should return a C++ exception message for the MVP");
+		assertContains(catchValueTry, "throw std::runtime_error(std::string(\"boom\"));", "catch-value raw try/catch should preserve the thrown message shape");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");

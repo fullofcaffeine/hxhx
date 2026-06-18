@@ -831,6 +831,18 @@ class CppTargetCore {
 	}
 
 	static function renderTryCatchRaw(raw:String):String {
+		final exceptionStackMessage = parseExceptionStackTryRaw(raw);
+		if (exceptionStackMessage != null) {
+			return "([&]() { try { throw std::runtime_error(std::string("
+				+ quoteString(exceptionStackMessage)
+				+ ")); return std::vector<std::string>{}; } catch (...) { return std::vector<std::string>{}; } })()";
+		}
+		final exceptionValueMessage = parseExceptionCatchValueTryRaw(raw);
+		if (exceptionValueMessage != null) {
+			return "([&]() { try { throw std::runtime_error(std::string("
+				+ quoteString(exceptionValueMessage)
+				+ ")); return std::string(); } catch (const std::exception& e) { return std::string(e.what()); } catch (...) { return std::string(); } })()";
+		}
 		final joinCatch = parseArrayJoinCatchStringRaw(raw);
 		if (joinCatch != null) {
 			return "([&]() { try { return __hxhx_join(" + joinCatch.receiver + ", " + quoteString(joinCatch.separator)
@@ -845,6 +857,24 @@ class CppTargetCore {
 				+ " << std::endl; return 0; } })()";
 		}
 		throw "C++ source backend MVP unsupported expression: ETryCatchRaw";
+	}
+
+	static function parseExceptionStackTryRaw(raw:String):Null<String> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^try\{throw(.+);\}catch\(e:Exception\)\{e\.stack;\}$/;
+		if (!pattern.match(compact))
+			return null;
+		final quoted = ~/"([^"]*)"/;
+		return quoted.match(pattern.matched(1)) ? quoted.matched(1) : "";
+	}
+
+	static function parseExceptionCatchValueTryRaw(raw:String):Null<String> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^try\{throw(.+);\}catch\(e\)\{e;\}$/;
+		if (!pattern.match(compact))
+			return null;
+		final quoted = ~/"([^"]*)"/;
+		return quoted.match(pattern.matched(1)) ? quoted.matched(1) : "";
 	}
 
 	static function parseArrayJoinCatchStringRaw(raw:String):Null<{receiver:String, separator:String, fallback:String}> {
