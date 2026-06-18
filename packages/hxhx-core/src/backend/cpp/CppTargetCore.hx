@@ -734,7 +734,7 @@ class CppTargetCore {
 			case EUntyped(inner):
 				renderExpr(inner, scope);
 			case EUnsupported(raw):
-				final recovery = renderUnsupportedNumericLiteral(raw);
+				final recovery = renderUnsupportedRecoveryLiteral(raw);
 				if (recovery == null)
 					throw "C++ source backend MVP unsupported expression: " + exprKind(expr);
 				recovery;
@@ -759,6 +759,14 @@ class CppTargetCore {
 			i++;
 		}
 		return raw;
+	}
+
+	static function renderUnsupportedRecoveryLiteral(raw:String):Null<String> {
+		if (raw == null)
+			return null;
+		if (raw == "=")
+			return "0";
+		return renderUnsupportedNumericLiteral(raw);
 	}
 
 	static function enumCtorExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {

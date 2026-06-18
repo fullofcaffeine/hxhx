@@ -223,6 +223,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	static function main():Void {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("8")) == "8",
 			"numeric unsupported fragments should render as integer literals");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("=")) == "0",
+			"single-token assignment recovery fragments should render as neutral C++ zero");
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EEnumValue("Ignore"),
 				[EString("reason")])) == "([&]() { auto __hxhx_enum_arg_0 = \"reason\"; (void)__hxhx_enum_arg_0; return std::string(\"Ignore\"); })()",
