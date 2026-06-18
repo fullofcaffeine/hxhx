@@ -687,6 +687,8 @@ class CppTargetCore {
 				+ sanitizeIdentifier(method)
 				+ "("
 				+ [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+			case ECall(callee, args):
+				"(" + renderExpr(callee, scope) + ")(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case EBinop("+", left, right) if (isStringLike(left) || isStringLike(right)):
 				"("
 				+ stringExpr(left, scope)
