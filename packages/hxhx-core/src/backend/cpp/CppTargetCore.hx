@@ -334,7 +334,7 @@ class CppTargetCore {
 
 	static function cppAnonFieldType(expr:HxExpr):String {
 		return switch (expr) {
-			case EString(_) | EEnumValue(_):
+			case EString(_) | EEnumValue(_) | EMacroExpr(_, _):
 				"std::string";
 			case EFloat(_):
 				"double";
@@ -618,6 +618,8 @@ class CppTargetCore {
 				arrayComprehensionExpr(name, iterable, guardExpr, yieldExpr, scope);
 			case EAnon(fieldNames, fieldValues):
 				anonExpr(fieldNames, fieldValues, scope);
+			case EMacroExpr(inner, wrappers):
+				macroExpr(inner, wrappers);
 			case ELambda(args, body):
 				lambdaExpr(args, body, scope);
 			case EField(receiver, field):
@@ -698,6 +700,8 @@ class CppTargetCore {
 				"std::string(" + quoteString(value) + ")";
 			case EEnumValue(name):
 				"std::string(" + quoteString(name) + ")";
+			case EMacroExpr(inner, wrappers):
+				macroExpr(inner, wrappers);
 			case EBool(_):
 				"std::string(" + renderExpr(expr, scope) + " ? \"true\" : \"false\")";
 			case EInt(_) | EFloat(_):
@@ -760,6 +764,69 @@ class CppTargetCore {
 	static function lambdaExpr(args:Array<String>, body:HxExpr, ?scope:CppRenderScope):String {
 		final params = [for (arg in args) "auto " + sanitizeIdentifier(arg)];
 		return "[&](" + params.join(", ") + ") { return " + renderExpr(body, scope) + "; }";
+	}
+
+	static function macroExpr(expr:HxExpr, wrappers:Array<String>):String {
+		return "std::string(" + quoteString(macroExprText(expr, wrappers)) + ")";
+	}
+
+	static function macroExprText(expr:HxExpr, wrappers:Array<String>):String {
+		var text = macroExprDefText(expr);
+		if (wrappers != null) {
+			var i = wrappers.length;
+			while (i > 0) {
+				i--;
+				text = switch (wrappers[i]) {
+					case "parenthesis":
+						"EParenthesis(" + text + ")";
+					case "untyped":
+						"EUntyped(" + text + ")";
+					case other:
+						other + "(" + text + ")";
+				}
+			}
+		}
+		return text;
+	}
+
+	static function macroExprDefText(expr:HxExpr):String {
+		return switch (expr) {
+			case EString(value):
+				"EConst(CString(" + value + "))";
+			case EInt(value):
+				"EConst(CInt(" + Std.string(value) + "))";
+			case EFloat(value):
+				"EConst(CFloat(" + Std.string(value) + "))";
+			case ENull:
+				"EConst(CIdent(null))";
+			case EIdent(name):
+				"EConst(CIdent(" + name + "))";
+			case EField(receiver, field):
+				"EField(" + macroExprText(receiver, []) + "," + field + ")";
+			case EArrayAccess(receiver, index):
+				"EArray(" + macroExprText(receiver, []) + "," + macroExprText(index, []) + ")";
+			case EArrayDecl(values):
+				"EArrayDecl([" + [for (value in values) macroExprText(value, [])].join(",") + "])";
+			case EBinop("in", left, right):
+				"EBinop(OpIn," + macroExprText(left, []) + "," + macroExprText(right, []) + ")";
+			case EBinop("=>", left, right):
+				"EBinop(OpArrow," + macroExprText(left, []) + "," + macroExprText(right, []) + ")";
+			case EBinop(op, left, right):
+				"EBinop(" + op + "," + macroExprText(left, []) + "," + macroExprText(right, []) + ")";
+			case EUnop(op, inner):
+				"EUnop(" + op + "," + macroExprText(inner, []) + ")";
+			case ECall(callee, args):
+				"ECall("
+				+ macroExprText(callee, [])
+				+ ",["
+				+ [for (arg in args) macroExprText(arg, [])].join(",") + "])";
+			case EUntyped(inner):
+				"EUntyped(" + macroExprText(inner, []) + ")";
+			case EMacroExpr(inner, innerWrappers):
+				macroExprText(inner, innerWrappers);
+			case _:
+				"EUnsupported(" + exprKind(expr) + ")";
+		};
 	}
 
 	static function anonExpr(fieldNames:Array<String>, fieldValues:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -856,7 +923,7 @@ class CppTargetCore {
 
 	static function isStringLike(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EString(_) | EEnumValue(_):
+			case EString(_) | EEnumValue(_) | EMacroExpr(_, _):
 				true;
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				true;
