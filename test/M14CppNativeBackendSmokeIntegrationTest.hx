@@ -294,6 +294,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(catchValueTry, "catch (const std::exception& e) { return std::string(e.what()); }",
 			"catch-value raw try/catch should return a C++ exception message for the MVP");
 		assertContains(catchValueTry, "throw std::runtime_error(std::string(\"boom\"));", "catch-value raw try/catch should preserve the thrown message shape");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("is", EInt(1), EIdent("Int"))) == "__hxhx_is_type(1, \"Int\")",
+			"Haxe is-expressions should lower through the C++ MVP type-test helper");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(EBinop("is", EString("s"),
+				EField(EIdent("StdTypes"), "String"))) == "__hxhx_is_type(\"s\", \"StdTypes.String\")",
+			"qualified Haxe type tests should preserve their type path");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("is", EInt(1), EUnsupported("Int"))) == "__hxhx_is_type(1, \"Int\")",
+			"raw type-path fragments in Haxe is-expressions should lower through the C++ MVP type-test helper");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
@@ -390,6 +398,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "__hxhx_json_min_field_from_file(platformsJson)",
 			"C++ smoke should lower hxcpp Android platform-min try/catch expressions through target runtime support");
 		assertContains(source, "__hxhx_join(words, \",\")", "C++ smoke should lower array join try/catch expressions through target runtime support");
+		assertContains(source, "static bool __hxhx_is_type(int, const std::string& type)", "C++ smoke should include Haxe is-expression helper overloads");
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
 			final buildDir = Path.join([root, "build"]);

@@ -138,6 +138,36 @@ class CppTargetCore {
 		out.push("  return out.str();");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T>");
+		out.push("static bool __hxhx_is_type(const T&, const std::string& type) {");
+		out.push("  return type == \"Dynamic\" || type == \"Any\";");
+		out.push("}");
+		out.push("");
+		out.push("static bool __hxhx_is_type(const std::string&, const std::string& type) {");
+		out.push("  return type == \"String\" || type == \"StdTypes.String\" || type == \"Dynamic\" || type == \"Any\";");
+		out.push("}");
+		out.push("");
+		out.push("static bool __hxhx_is_type(const char*, const std::string& type) {");
+		out.push("  return type == \"String\" || type == \"StdTypes.String\" || type == \"Dynamic\" || type == \"Any\";");
+		out.push("}");
+		out.push("");
+		out.push("static bool __hxhx_is_type(int, const std::string& type) {");
+		out.push("  return type == \"Int\" || type == \"StdTypes.Int\" || type == \"Float\" || type == \"StdTypes.Float\" || type == \"Dynamic\" || type == \"Any\";");
+		out.push("}");
+		out.push("");
+		out.push("static bool __hxhx_is_type(double, const std::string& type) {");
+		out.push("  return type == \"Float\" || type == \"StdTypes.Float\" || type == \"Dynamic\" || type == \"Any\";");
+		out.push("}");
+		out.push("");
+		out.push("static bool __hxhx_is_type(bool, const std::string& type) {");
+		out.push("  return type == \"Bool\" || type == \"StdTypes.Bool\" || type == \"Dynamic\" || type == \"Any\";");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static bool __hxhx_is_type(const std::vector<T>&, const std::string& type) {");
+		out.push("  return type == \"Array\" || type == \"Dynamic\" || type == \"Any\";");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_read_file(const std::string& path) {");
 		out.push("  std::ifstream input(path);");
 		out.push("  if (!input) throw std::runtime_error(std::string(\"Unable to read file: \") + path);");
@@ -760,6 +790,8 @@ class CppTargetCore {
 				+ ")";
 			case EBinop("=", left, right):
 				renderExpr(left, scope) + " = " + renderExpr(right, scope);
+			case EBinop("is", left, right):
+				isTypeExpr(left, right, scope);
 			case EBinop("=>", left, right):
 				"std::make_pair(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
 			case EBinop(op, left, right) if (isSimpleCompoundAssignmentOp(op)):
@@ -891,6 +923,42 @@ class CppTargetCore {
 		final compact = compactRawText(raw);
 		final pattern = ~/^try\{haxe\.Json\.parse\(sys\.io\.File\.getContent\(([A-Za-z_][A-Za-z0-9_]*)\)\)\.min;\}catch\(e(:[^)]*)?\)\{Log\.warn\("UnabletodetermineminimumsupportedAndroidplatform:"\+e\.toString\(\)\);null;\}$/;
 		return pattern.match(compact) ? sanitizeIdentifier(pattern.matched(1)) : null;
+	}
+
+	static function isTypeExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
+		final typeName = typePathText(right);
+		if (typeName == null)
+			return "false";
+		return "__hxhx_is_type(" + renderExpr(left, scope) + ", " + quoteString(typeName) + ")";
+	}
+
+	static function typePathText(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EString(value):
+				value;
+			case EIdent(name):
+				name;
+			case EField(owner, field):
+				final prefix = typePathText(owner);
+				prefix == null ? field : prefix + "." + field;
+			case EUnsupported(raw) if (isTypePathText(raw)):
+				raw;
+			case _:
+				null;
+		};
+	}
+
+	static function isTypePathText(value:String):Bool {
+		if (value == null || value.length == 0)
+			return false;
+		for (i in 0...value.length) {
+			final c = value.charCodeAt(i);
+			final ok = c == ".".code || c == "_".code || (c >= "0".code && c <= "9".code) || (c >= "A".code && c <= "Z".code)
+				|| (c >= "a".code && c <= "z".code);
+			if (!ok)
+				return false;
+		}
+		return true;
 	}
 
 	static function compactRawText(raw:String):String {
