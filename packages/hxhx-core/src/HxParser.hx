@@ -1387,8 +1387,16 @@ class HxParser {
 		//   become `body_parse_error`.
 		// - Model identifier splices explicitly because generator code commonly uses
 		//   `$i{name}(...)` to build calls to generated fields.
+		// - Model unbraced expression splices (`$value`, `$receiver.field`) as expression
+		//   splice markers and let normal postfix parsing consume field/call suffixes.
 		if (!acceptOtherChar("$"))
 			return EUnsupported("$");
+		switch (cur.kind) {
+			case TIdent(name) if (!peekKind().match(TLBrace)):
+				bump();
+				return ECall(EIdent("__hxhx_macro_expr_splice"), [EIdent(name)]);
+			case _:
+		}
 		final spliceKind = switch (cur.kind) {
 			case TIdent(name):
 				bump();
