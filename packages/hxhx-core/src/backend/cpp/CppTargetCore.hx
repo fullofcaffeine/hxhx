@@ -105,6 +105,7 @@ class CppTargetCore {
 		out.push("#include <iostream>");
 		out.push("#include <stdexcept>");
 		out.push("#include <string>");
+		out.push("#include <utility>");
 		out.push("#include <vector>");
 		out.push("");
 		out.push("static std::vector<std::string> __hxhx_args(int argc, char** argv) {");
@@ -697,6 +698,8 @@ class CppTargetCore {
 				+ ")";
 			case EBinop("=", left, right):
 				renderExpr(left, scope) + " = " + renderExpr(right, scope);
+			case EBinop("=>", left, right):
+				"std::make_pair(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
 			case EBinop(op, left, right) if (isSimpleCompoundAssignmentOp(op)):
 				renderExpr(left, scope)
 				+ " "

@@ -231,6 +231,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"payload enum constructor calls should lower to their enum tag string for the C++ MVP");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ECall(ECall(EIdent("f6_a"), []), []), [])) == "((f6_a())())()",
 			"nested calls should lower by invoking the rendered callee expression");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("=>", EString("key"), EInt(42))) == "std::make_pair(\"key\", 42)",
+			"arrow expressions should lower to C++ pairs");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
