@@ -620,6 +620,8 @@ class CppTargetCore {
 				anonExpr(fieldNames, fieldValues, scope);
 			case EMacroExpr(inner, wrappers):
 				macroExpr(inner, wrappers);
+			case ESwitch(scrutinee, patterns, exprs):
+				switchExpr(scrutinee, patterns, exprs, scope);
 			case ELambda(args, body):
 				lambdaExpr(args, body, scope);
 			case EField(receiver, field):
@@ -720,6 +722,8 @@ class CppTargetCore {
 				+ " + "
 				+ stringExpr(right, scope)
 				+ ")";
+			case ESwitch(_, _, _) if (switchExprResultType(switchExprBranches(expr)) == "std::string"):
+				renderExpr(expr, scope);
 			case ETernary(cond, thenExpr, elseExpr) if (isStringLike(thenExpr) && isStringLike(elseExpr)):
 				"("
 				+ conditionExpr(cond, scope)
@@ -732,6 +736,133 @@ class CppTargetCore {
 				"std::string(" + sanitizeIdentifier(name) + ")";
 			case _:
 				"std::to_string(" + renderExpr(expr, scope) + ")";
+		};
+	}
+
+	/**
+		Lower the expression-position switch subset currently needed by the C++ gate.
+
+		The result is an immediately-invoked lambda so the emitted code can appear in
+		places like `var x = switch (...) { ... }`. This is intentionally narrower
+		than full Haxe pattern matching: simple scalar patterns become comparisons,
+		wildcard/bind patterns become the default branch, and complex pattern shapes
+		do not match until they get explicit C++ semantics.
+	**/
+	static function switchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final typeName = switchExprResultType(exprs);
+		final switchValue = "__hxhx_switch";
+		final scrutineeExpr = isStringLike(scrutinee) ? stringExpr(scrutinee, scope) : renderExpr(scrutinee, scope);
+		final out = ["([&]() {", "  auto " + switchValue + " = " + scrutineeExpr + ";"];
+		var defaultExpr:Null<HxExpr> = null;
+		var emitted = 0;
+		final count = patterns.length < exprs.length ? patterns.length : exprs.length;
+		for (i in 0...count) {
+			final pattern = patterns[i];
+			if (switchPatternIsDefault(pattern)) {
+				if (defaultExpr == null)
+					defaultExpr = exprs[i];
+				continue;
+			}
+			final cond = switchPatternCond(pattern, switchValue);
+			out.push("  " + (emitted == 0 ? "if" : "else if") + " (" + cond + ") {");
+			out.push("    return " + switchBranchExpr(exprs[i], typeName, scope) + ";");
+			out.push("  }");
+			emitted++;
+		}
+		if (defaultExpr != null) {
+			out.push("  else {");
+			out.push("    return " + switchBranchExpr(defaultExpr, typeName, scope) + ";");
+			out.push("  }");
+		}
+		out.push("  return " + switchFallbackExpr(typeName) + ";");
+		out.push("})()");
+		return out.join("\n");
+	}
+
+	static function switchExprBranches(expr:HxExpr):Array<HxExpr> {
+		return switch (expr) {
+			case ESwitch(_, _, exprs):
+				exprs;
+			case _:
+				[];
+		};
+	}
+
+	static function switchBranchExpr(expr:HxExpr, typeName:String, ?scope:CppRenderScope):String {
+		return typeName == "std::string" ? stringExpr(expr, scope) : renderExpr(expr, scope);
+	}
+
+	static function switchExprResultType(exprs:Array<HxExpr>):String {
+		for (expr in exprs)
+			if (isStringLike(expr))
+				return "std::string";
+		for (expr in exprs)
+			switch (expr) {
+				case EFloat(_):
+					return "double";
+				case _:
+			}
+		for (expr in exprs)
+			switch (expr) {
+				case EBool(_):
+					return "bool";
+				case _:
+			}
+		return "int";
+	}
+
+	static function switchFallbackExpr(typeName:String):String {
+		return switch (typeName) {
+			case "std::string":
+				"std::string()";
+			case "double":
+				"0.0";
+			case "bool":
+				"false";
+			case _:
+				"0";
+		};
+	}
+
+	static function switchPatternIsDefault(pattern:HxSwitchPattern):Bool {
+		return switch (pattern) {
+			case PWildcard | PBind(_):
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function switchPatternCond(pattern:HxSwitchPattern, switchValue:String):String {
+		return switch (pattern) {
+			case PNull:
+				switchValue + " == nullptr";
+			case PWildcard | PBind(_):
+				"true";
+			case PBool(value):
+				switchValue + " == " + (value ? "true" : "false");
+			case PString(value):
+				switchValue + " == std::string(" + quoteString(value) + ")";
+			case PInt(value):
+				switchValue + " == " + Std.string(value);
+			case PEnumValue(name):
+				switchValue + " == std::string(" + quoteString(name) + ")";
+			case PCapture(_, inner):
+				switchPatternCond(inner, switchValue);
+			case PUnsupportedGuard(_):
+				"false";
+			case POr(patterns):
+				if (patterns == null || patterns.length == 0) {
+					"false";
+				} else {
+					"(" + [
+						for (p in patterns)
+							"(" + switchPatternCond(p, switchValue) + ")"
+					].join(" || ") + ")";
+				}
+			case PEnumExtract(_, _) | PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) |
+				PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
+				"false";
 		};
 	}
 
