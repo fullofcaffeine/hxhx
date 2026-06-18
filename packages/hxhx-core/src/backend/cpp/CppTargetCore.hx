@@ -745,6 +745,8 @@ class CppTargetCore {
 				enumCtorExpr(name, args, scope);
 			case EArrayDecl(elements):
 				arrayExpr(elements, scope);
+			case ERange(start, end):
+				rangeExpr(start, end, scope);
 			case EField(receiver, "length"):
 				"(" + renderExpr(receiver, scope) + ".size())";
 			case EArrayAccess(array, index):
@@ -1163,6 +1165,15 @@ class CppTargetCore {
 		final needle = stringExpr(args[0], scope);
 		final start = args.length == 2 ? renderExpr(args[1], scope) : "0";
 		return "__hxhx_index_of(" + source + ", " + needle + ", " + start + ")";
+	}
+
+	static function rangeExpr(start:HxExpr, end:HxExpr, ?scope:CppRenderScope):String {
+		return "([&]() { std::vector<int> __hxhx_range_out; int __hxhx_range_start = "
+			+ renderExpr(start, scope)
+			+ "; int __hxhx_range_end = "
+			+ renderExpr(end, scope)
+			+
+			"; for (int __hxhx_range_i = __hxhx_range_start; __hxhx_range_i < __hxhx_range_end; ++__hxhx_range_i) __hxhx_range_out.push_back(__hxhx_range_i); return __hxhx_range_out; })()";
 	}
 
 	/**
