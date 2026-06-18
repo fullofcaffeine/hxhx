@@ -219,6 +219,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	}
 
 	static function main():Void {
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("8")) == "8",
+			"numeric unsupported fragments should render as integer literals");
+
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
 		assertTrue(descriptor != null, "missing cpp-native descriptor");

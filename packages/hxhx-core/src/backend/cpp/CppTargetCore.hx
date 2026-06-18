@@ -731,9 +731,32 @@ class CppTargetCore {
 				renderExpr(inner, scope);
 			case EUntyped(inner):
 				renderExpr(inner, scope);
+			case EUnsupported(raw):
+				final recovery = renderUnsupportedNumericLiteral(raw);
+				if (recovery == null)
+					throw "C++ source backend MVP unsupported expression: " + exprKind(expr);
+				recovery;
 			case _:
 				throw "C++ source backend MVP unsupported expression: " + exprKind(expr);
 		};
+	}
+
+	static function renderUnsupportedNumericLiteral(raw:String):Null<String> {
+		if (raw == null || raw.length == 0)
+			return null;
+		var i = 0;
+		if (raw.charCodeAt(0) == "-".code) {
+			if (raw.length == 1)
+				return null;
+			i = 1;
+		}
+		while (i < raw.length) {
+			final c = raw.charCodeAt(i);
+			if (c < "0".code || c > "9".code)
+				return null;
+			i++;
+		}
+		return raw;
 	}
 
 	static function stringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
