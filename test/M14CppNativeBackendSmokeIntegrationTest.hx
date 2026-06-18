@@ -179,6 +179,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    var child = new Child(5);",
 			"    Sys.println(Std.string(child.value));",
 			"    Sys.println(Std.string(child.inherited()));",
+			"    var platformsJson = \".tmp/m14_cpp_native_backend_smoke/platforms.json\";",
+			"    var platformMin = try { haxe.Json.parse(sys.io.File.getContent(platformsJson)).min; } catch(e) { Log.warn(\"Unable to determine minimum supported Android platform: \" + e.toString()); null; };",
+			"    Sys.println(Std.string(platformMin + 0));",
+			"    var joined = try { words.join(\",\"); } catch(e:Dynamic) { \"???\"; };",
+			"    Sys.println(joined);",
+			"  }",
+			"}",
+			"class Log {",
+			"  public static function warn(message:String):Void {",
+			"    Sys.println(message);",
 			"  }",
 			"}",
 			"class Base {",
@@ -249,6 +259,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_native_backend_smoke"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
+		File.saveContent(Path.join([root, "platforms.json"]), "{\"min\":4}");
 
 		final sourceOnlyDir = Path.join([root, "source-only"]);
 		final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program(), context(sourceOnlyDir, true, true));
@@ -330,6 +341,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "struct Child : public Base {", "C++ smoke should emit child helper class inheritance");
 		assertContains(source, "Base::label()", "C++ smoke should lower super method calls to qualified base calls");
 		assertContains(source, "/* base constructor call omitted */", "C++ smoke should lower bare super constructor call");
+		assertContains(source, "__hxhx_json_min_field_from_file(platformsJson)",
+			"C++ smoke should lower hxcpp Android platform-min try/catch expressions through target runtime support");
+		assertContains(source, "__hxhx_join(words, \",\")", "C++ smoke should lower array join try/catch expressions through target runtime support");
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
 			final buildDir = Path.join([root, "build"]);
@@ -338,7 +352,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}
