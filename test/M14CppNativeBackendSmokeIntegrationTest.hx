@@ -614,6 +614,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ null-initialized class locals with explicit Haxe type hints should not emit auto/nullptr_t");
 		assertContains(listRemoveLikeLines, "(prev->next) = (l->next);", "C++ typed nullable locals should keep reference field access");
 		assertContains(listRemoveLikeLines, "prev = l;", "C++ typed nullable locals should accept later class-reference assignments");
+		final optionalOwner = new HxClassDecl("OptionalOwner", false, [], []);
+		final optionalLookup = {names: new StringMap<Bool>(), byName: new StringMap<HxClassDecl>()};
+		final optionalLenMethod = new HxFunctionDecl("addSubLike", Public, false, [
+			new HxFunctionArg("s", "String", NoDefault, false, false),
+			new HxFunctionArg("len", "Int", NoDefault, true, false)
+		], "Void", [
+			SIf(EBinop("==", EIdent("len"), ENull), SExpr(ECall(EIdent("use"), [EIdent("s")]), HxPos.unknown()),
+				SExpr(ECall(EIdent("useLen"), [EIdent("len")]), HxPos.unknown()), HxPos.unknown())
+		], "");
+		final optionalLenLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(optionalLenMethod, optionalOwner, optionalLookup).join("\n");
+		assertContains(optionalLenLines, "void addSubLike(std::string s, std::optional<int> len = std::nullopt) {",
+			"C++ optional scalar args should use std::optional instead of invalid int/nullptr pairs");
+		assertContains(optionalLenLines, "if (!len.has_value()) {", "C++ optional scalar null checks should test optional presence");
+		assertContains(optionalLenLines, "useLen(len.value());", "C++ optional scalar value uses should unwrap after null checks");
 		final exprBodyOwner = new HxClassDecl("ExpressionBodyOwner", false, [], [new HxFieldDecl("key", Public, false, "String", null)]);
 		final exprBodyNames = new StringMap<Bool>();
 		exprBodyNames.set("ExpressionBodyOwner", true);

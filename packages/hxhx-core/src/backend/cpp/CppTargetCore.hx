@@ -128,6 +128,7 @@ class CppTargetCore {
 		out.push("#include <functional>");
 		out.push("#include <iostream>");
 		out.push("#include <memory>");
+		out.push("#include <optional>");
 		out.push("#include <sstream>");
 		out.push("#include <stdexcept>");
 		out.push("#include <string>");
@@ -775,7 +776,7 @@ class CppTargetCore {
 		if (scope == null || args == null)
 			return;
 		for (arg in args)
-			scope.localTypes.set(sanitizeIdentifier(HxFunctionArg.getName(arg)), cppTypeHint(HxFunctionArg.getTypeHint(arg)));
+			scope.localTypes.set(sanitizeIdentifier(HxFunctionArg.getName(arg)), cppFunctionArgType(arg));
 	}
 
 	static function baseTypeName(cls:HxClassDecl):Null<String> {
@@ -813,8 +814,37 @@ class CppTargetCore {
 	static function renderFunctionArgs(args:Array<HxFunctionArg>):String {
 		return [
 			for (arg in args)
-				cppTypeHint(HxFunctionArg.getTypeHint(arg)) + " " + sanitizeIdentifier(HxFunctionArg.getName(arg))
+				renderFunctionArg(arg)
 		].join(", ");
+	}
+
+	static function renderFunctionArg(arg:HxFunctionArg):String {
+		final typeName = cppFunctionArgType(arg);
+		return typeName + " " + sanitizeIdentifier(HxFunctionArg.getName(arg)) + cppFunctionArgDefaultSuffix(arg, typeName);
+	}
+
+	static function cppFunctionArgType(arg:HxFunctionArg):String {
+		final typeName = cppTypeHint(HxFunctionArg.getTypeHint(arg));
+		if (HxFunctionArg.getIsOptional(arg) && !HxFunctionArg.getIsRest(arg) && !isCppReferenceType(typeName) && !isCppOptionalType(typeName))
+			return "std::optional<" + typeName + ">";
+		return typeName;
+	}
+
+	static function cppFunctionArgDefaultSuffix(arg:HxFunctionArg, typeName:String):String {
+		if (!HxFunctionArg.getIsOptional(arg) || HxFunctionArg.getIsRest(arg))
+			return "";
+		final isOptionalType = isCppOptionalType(typeName);
+		final isReferenceType = isCppReferenceType(typeName);
+		if (!isOptionalType && !isReferenceType)
+			return "";
+		return switch (HxFunctionArg.getDefaultValue(arg)) {
+			case NoDefault:
+				isOptionalType ? " = std::nullopt" : " = nullptr";
+			case Default(ENull):
+				isOptionalType ? " = std::nullopt" : " = nullptr";
+			case Default(expr):
+				" = " + renderExpr(expr);
+		};
 	}
 
 	static function renderStmts(stmts:Array<HxStmt>, indent:String, ?scope:CppRenderScope):Array<String> {
@@ -895,7 +925,7 @@ class CppTargetCore {
 					scope.localTypes.set(sanitizeIdentifier(name), localType);
 				final hasExplicitType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
 				final declaredType = hasExplicitType && localType.length > 0 ? localType : "auto";
-				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType) : renderExpr(init, scope);
+				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType) : renderLocalInitExpr(init, declaredType, scope);
 					[indent + declaredType + " " + sanitizeIdentifier(name) + " = " + rhs + ";"];
 			case SReturn(expr, _):
 				[indent + returnStmtForExpr(expr, scope)];
@@ -1085,7 +1115,8 @@ class CppTargetCore {
 			case ESuper:
 				superExpr(scope);
 			case EIdent(name):
-				sanitizeIdentifier(name);
+				final local = sanitizeIdentifier(name);
+				exprHasOptionalType(expr, scope) ? local + ".value()" : local;
 			case EField(EThis, field):
 				"this->" + sanitizeIdentifier(field);
 			case ENew(typePath, args):
@@ -1167,6 +1198,14 @@ class CppTargetCore {
 				+ ")";
 			case EBinop("=", left, right):
 				renderExpr(left, scope) + " = " + renderExpr(right, scope);
+			case EBinop("==", left, ENull) if (exprHasOptionalType(left, scope)):
+				"(!" + optionalStorageExpr(left, scope) + ".has_value())";
+			case EBinop("==", ENull, right) if (exprHasOptionalType(right, scope)):
+				"(!" + optionalStorageExpr(right, scope) + ".has_value())";
+			case EBinop("!=", left, ENull) if (exprHasOptionalType(left, scope)):
+				"(" + optionalStorageExpr(left, scope) + ".has_value())";
+			case EBinop("!=", ENull, right) if (exprHasOptionalType(right, scope)):
+				"(" + optionalStorageExpr(right, scope) + ".has_value())";
 			case EBinop("is", left, right):
 				isTypeExpr(left, right, scope);
 			case EBinop("=>", left, right):
@@ -1240,6 +1279,15 @@ class CppTargetCore {
 		};
 	}
 
+	static function renderLocalInitExpr(init:HxExpr, declaredType:String, ?scope:CppRenderScope):String {
+		return switch (init) {
+			case ENull if (isCppOptionalType(declaredType)):
+				"std::nullopt";
+			case _:
+				renderExpr(init, scope);
+		};
+	}
+
 	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final className = sanitizeTypePath(typeBaseName(typePath));
 		final renderedArgs = [for (arg in args) renderExpr(arg, scope)].join(", ");
@@ -1266,6 +1314,19 @@ class CppTargetCore {
 
 	static function exprHasReferenceType(expr:HxExpr, ?scope:CppRenderScope):Bool {
 		return isCppReferenceType(exprCppType(expr, scope));
+	}
+
+	static function exprHasOptionalType(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return isCppOptionalType(exprCppType(expr, scope));
+	}
+
+	static function optionalStorageExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case EIdent(name):
+				sanitizeIdentifier(name);
+			case _:
+				renderExpr(expr, scope);
+		};
 	}
 
 	static function exprCppType(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -2325,7 +2386,10 @@ class CppTargetCore {
 	}
 
 	static function cppTypeHint(typeHint:String):String {
-		final hint = unwrapNullTypeHint(StringTools.trim(typeHint == null ? "" : typeHint));
+		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (StringTools.startsWith(raw, "Null<") && StringTools.endsWith(raw, ">"))
+			return cppNullableTypeHint(raw.substr("Null<".length, raw.length - "Null<".length - 1));
+		final hint = raw;
 		return switch (hint) {
 			case "" | "Void" | "StdTypes.Void":
 				hint.length == 0 ? "std::string" : "void";
@@ -2351,8 +2415,16 @@ class CppTargetCore {
 	}
 
 	static function cppReturnTypeHint(typeHint:String):String {
-		final hint = unwrapNullTypeHint(StringTools.trim(typeHint == null ? "" : typeHint));
-		return isStructuralTypeHint(hint) ? "auto" : cppTypeHint(hint);
+		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		final hint = unwrapNullTypeHint(raw);
+		return isStructuralTypeHint(hint) ? "auto" : cppTypeHint(raw);
+	}
+
+	static function cppNullableTypeHint(typeHint:String):String {
+		final inner = cppTypeHint(typeHint);
+		if (isCppReferenceType(inner) || isCppOptionalType(inner))
+			return inner;
+		return "std::optional<" + inner + ">";
 	}
 
 	static function unwrapNullTypeHint(typeHint:String):String {
@@ -2504,6 +2576,10 @@ class CppTargetCore {
 		return typeName != null && StringTools.startsWith(typeName, "std::shared_ptr<");
 	}
 
+	static function isCppOptionalType(typeName:String):Bool {
+		return typeName != null && StringTools.startsWith(typeName, "std::optional<");
+	}
+
 	static function classNameFromCppType(typeName:String):Null<String> {
 		if (!isCppReferenceType(typeName))
 			return null;
@@ -2524,6 +2600,8 @@ class CppTargetCore {
 				"{}";
 			case _ if (isCppReferenceType(typeName)):
 				"nullptr";
+			case _ if (isCppOptionalType(typeName)):
+				"std::nullopt";
 			case _:
 				"0";
 		};
