@@ -536,7 +536,10 @@ let parse = fun source filePath -> let expectedMainClass = (expectedMainClassFro
             ignore (if HxString.length scannedCompact = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
             let nativeCompact = (compactHint (nativeHint : string) : string) in (
               ignore (if HxString.length nativeCompact = 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-              let nativeLooksErasedCallable = HxString.equals nativeCompact "Dynamic" || HxString.equals nativeCompact "Any" || HxString.equals nativeCompact "Function" || HxString.equals nativeCompact "StdTypes.Function" || HxString.equals nativeCompact "haxe.Constraints.Function" || StringTools.endsWith (nativeCompact : string) (".Function" : string) || isGenericTypeVariableHint (nativeCompact : string) in HxString.indexOf scannedCompact "->" 0 >= 0 && nativeLooksErasedCallable
+              let scannedIsFunction = HxString.indexOf scannedCompact "->" 0 >= 0 in (
+                ignore (if scannedIsFunction && (HxString.equals nativeCompact "String" || HxString.equals nativeCompact "StdTypes.String") then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                let nativeLooksErasedCallable = HxString.equals nativeCompact "Dynamic" || HxString.equals nativeCompact "Any" || HxString.equals nativeCompact "Function" || HxString.equals nativeCompact "StdTypes.Function" || HxString.equals nativeCompact "haxe.Constraints.Function" || StringTools.endsWith (nativeCompact : string) (".Function" : string) || isGenericTypeVariableHint (nativeCompact : string) in scannedIsFunction && nativeLooksErasedCallable
+              )
             )
           ) in Obj.magic __fallback_result_111 with
             | HxRuntime.Hx_return __ret_110 -> Obj.obj __ret_110 in let argsNeedScan = fun nativeArgs scannedArgs allowShapeRepair -> try let __fallback_result_115 = (

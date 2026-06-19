@@ -318,6 +318,9 @@ class ParserStage {
 							final nativeCompact = compactHint(nativeHint);
 							if (nativeCompact.length == 0)
 								return true;
+							final scannedIsFunction = scannedCompact.indexOf("->") >= 0;
+							if (scannedIsFunction && (nativeCompact == "String" || nativeCompact == "StdTypes.String"))
+								return true;
 							final nativeLooksErasedCallable = nativeCompact == "Dynamic"
 								|| nativeCompact == "Any"
 								|| nativeCompact == "Function"
@@ -325,7 +328,7 @@ class ParserStage {
 								|| nativeCompact == "haxe.Constraints.Function"
 								|| StringTools.endsWith(nativeCompact, ".Function")
 								|| isGenericTypeVariableHint(nativeCompact);
-							return scannedCompact.indexOf("->") >= 0 && nativeLooksErasedCallable;
+							return scannedIsFunction && nativeLooksErasedCallable;
 						}
 
 						function argsNeedScan(nativeArgs:Array<HxFunctionArg>, scannedArgs:Array<HxFunctionArg>, allowShapeRepair:Bool):Bool {
