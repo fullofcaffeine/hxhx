@@ -369,6 +369,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"remote Cpp gate typeof safety probes should preserve the success string");
 		assertContains(typeofSafetyProbeTry, "catch (...) { return std::string(\"true\"); }",
 			"remote Cpp gate typeof safety probes should preserve the catch string");
+		final macroErrorProbeTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{typeof(e);null;}catch(e:haxe.macro.Expr.Error){var msg=e.message;if(e.childErrors!=null)for(c in e.childErrors)msg+=""+c.message;msg;}'));
+		assertContains(macroErrorProbeTry, "try { (void)__hxhx_type_name(e); return std::string(); }",
+			"remote Cpp gate macro error probes should preserve the no-error branch as an empty message");
+		assertContains(macroErrorProbeTry, "catch (const std::exception& e) { return std::string(e.what()); }",
+			"remote Cpp gate macro error probes should preserve the catch-message intent");
 		final fileContentContextErrorTry = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{sys.io.File.getContent(Context.resolvePath(file));}catch(e:Dynamic){Context.error(Std.string(e),Context.currentPos());}'));
 		assertContains(fileContentContextErrorTry, "try { return __hxhx_read_file(file); }",
