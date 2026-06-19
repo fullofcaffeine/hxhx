@@ -386,6 +386,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  static var PI(default, null):Float;",
 			"  static var NaN(default, null):Float;",
 			"  static var POSITIVE_INFINITY(default, null):Float;",
+			"  static function cos(value:Float):Float;",
 			"  static function isNaN(value:Float):Bool;",
 			"  static function isFinite(value:Float):Bool;",
 			"  private static function __init__():Void untyped {",
@@ -396,6 +397,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  static function main() {",
 			"    Sys.println(Std.string(Math.isNaN(Math.NaN)));",
 			"    Sys.println(Std.string(Math.isFinite(Math.PI)));",
+			"    var cosine = Math.cos;",
+			"    Sys.println(Std.string(cosine(0.0)));",
 			"  }",
 			"}"
 		].join("\n");
@@ -440,6 +443,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Math"), "round"),
 			[EFloat(1.5)])) == "static_cast<int>(std::floor((1.5) + 0.5))",
 			"C++ Math.round should preserve Haxe's floor(x + 0.5) semantics");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Math"), "cos")) == "[](double v) { return std::cos(v); }",
+			"C++ Math method references should lower to callable target intrinsics");
 		final exceptionStackTry = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new Exception("");}catch(e:Exception){e.stack;}'));
 		assertContains(exceptionStackTry, "throw std::runtime_error(std::string(\"\"));",
@@ -1088,6 +1093,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Math extern calls should lower directly to target intrinsics");
 		assertContains(mathExternSource, "std::isfinite(3.14159265358979323846)",
 			"C++ Math extern constants should lower directly to target intrinsic constants");
+		assertContains(mathExternSource, "auto cosine = [](double v) { return std::cos(v); };",
+			"C++ Math extern method references should lower directly to callable target intrinsics");
 		assertTrue(mathExternSource.indexOf("struct Math") < 0, "C++ should not emit upstream Math extern as a fake helper class");
 		assertTrue(mathExternSource.indexOf("Math::__init__") < 0, "C++ should not emit upstream Math extern initializers");
 		assertTrue(mathExternSource.indexOf("Number[") < 0, "C++ should not leak JS-era Math extern initializer code");

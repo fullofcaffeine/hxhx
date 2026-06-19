@@ -1513,8 +1513,46 @@ class CppTargetCore {
 				"std::numeric_limits<double>::infinity()";
 			case "NEGATIVE_INFINITY":
 				"(-std::numeric_limits<double>::infinity())";
+			case "abs" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "exp" | "log" | "sqrt" | "floor" | "ceil" | "ffloor" | "fceil" | "fround" |
+				"isFinite" | "isNaN":
+				mathFunctionValueExpr(field);
+			case "min" | "max" | "atan2" | "pow":
+				mathFunctionValueExpr(field);
+			case "round" | "random":
+				mathFunctionValueExpr(field);
 			case _:
 				throw "C++ source backend MVP unsupported Math field: " + field;
+		};
+	}
+
+	static function mathFunctionValueExpr(method:String):String {
+		return switch (method) {
+			case "abs":
+				"[](double v) { return std::fabs(v); }";
+			case "min":
+				"[](double a, double b) { return std::fmin(a, b); }";
+			case "max":
+				"[](double a, double b) { return std::fmax(a, b); }";
+			case "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "exp" | "log" | "sqrt" | "floor" | "ceil":
+				"[](double v) { return std::" + method + "(v); }";
+			case "atan2" | "pow":
+				"[](double a, double b) { return std::" + method + "(a, b); }";
+			case "round":
+				"[](double v) { return static_cast<int>(std::floor(v + 0.5)); }";
+			case "random":
+				"[]() { return (static_cast<double>(std::rand()) / (static_cast<double>(RAND_MAX) + 1.0)); }";
+			case "ffloor":
+				"[](double v) { return std::floor(v); }";
+			case "fceil":
+				"[](double v) { return std::ceil(v); }";
+			case "fround":
+				"[](double v) { return static_cast<double>(static_cast<float>(v)); }";
+			case "isFinite":
+				"[](double v) { return std::isfinite(v); }";
+			case "isNaN":
+				"[](double v) { return std::isnan(v); }";
+			case _:
+				throw "C++ source backend MVP unsupported Math function value: " + method;
 		};
 	}
 
