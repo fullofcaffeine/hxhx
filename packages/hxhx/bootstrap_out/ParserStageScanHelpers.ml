@@ -2234,26 +2234,28 @@ let scanClassBodyForStatics = fun source start -> let fields = Obj.magic (HxArra
         ignore (HxAnon.set __anon_218 "nextPos" (Obj.repr (!j)));
         __anon_218
       )))) else ());
-      ignore (if atTop && (HxString.equals (Obj.obj (HxAnon.get tok "text")) ")" || HxString.equals (Obj.obj (HxAnon.get tok "text")) "=" || HxString.equals (Obj.obj (HxAnon.get tok "text")) "{" || HxString.equals (Obj.obj (HxAnon.get tok "text")) ";" || stopAtComma && HxString.equals (Obj.obj (HxAnon.get tok "text")) ",") then raise (HxRuntime.Hx_return (Obj.repr (let __anon_219 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_219 "hint" (Obj.repr (HxArray.join parts "" (fun x -> x))));
-        ignore (HxAnon.set __anon_219 "nextPos" (Obj.repr (!j)));
-        __anon_219
-      )))) else ());
-      ignore (HxArray.push parts (Obj.obj (HxAnon.get tok "text")));
-      ignore (let __assign_220 = Obj.obj (HxAnon.get tok "nextPos") in (
-        j := __assign_220;
-        __assign_220
-      ));
-      let _g = (Obj.obj (HxAnon.get tok "text") : string) in match _g with
-        | "(" -> ignore (parenDepth := HxInt.add (!parenDepth) 1)
-        | ")" -> ignore (if !parenDepth > 0 then ignore (parenDepth := HxInt.sub (!parenDepth) 1) else ())
-        | "<" -> ignore (angleDepth := HxInt.add (!angleDepth) 1)
-        | ">" -> ignore (if !angleDepth > 0 then ignore (angleDepth := HxInt.sub (!angleDepth) 1) else ())
-        | "[" -> ignore (bracketDepth := HxInt.add (!bracketDepth) 1)
-        | "]" -> ignore (if !bracketDepth > 0 then ignore (bracketDepth := HxInt.sub (!bracketDepth) 1) else ())
-        | "{" -> ignore (braceDepth := HxInt.add (!braceDepth) 1)
-        | "}" -> ignore (if !braceDepth > 0 then ignore (braceDepth := HxInt.sub (!braceDepth) 1) else ())
-        | _ -> ignore ()
+      let startsStructuralType = atTop && HxString.equals (Obj.obj (HxAnon.get tok "text")) "{" && HxArray.length parts = 0 in (
+        ignore (if atTop && (HxString.equals (Obj.obj (HxAnon.get tok "text")) ")" || HxString.equals (Obj.obj (HxAnon.get tok "text")) "=" || HxString.equals (Obj.obj (HxAnon.get tok "text")) "{" && not (startsStructuralType) || HxString.equals (Obj.obj (HxAnon.get tok "text")) ";" || stopAtComma && HxString.equals (Obj.obj (HxAnon.get tok "text")) ",") then raise (HxRuntime.Hx_return (Obj.repr (let __anon_219 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_219 "hint" (Obj.repr (HxArray.join parts "" (fun x -> x))));
+          ignore (HxAnon.set __anon_219 "nextPos" (Obj.repr (!j)));
+          __anon_219
+        )))) else ());
+        ignore (HxArray.push parts (Obj.obj (HxAnon.get tok "text")));
+        ignore (let __assign_220 = Obj.obj (HxAnon.get tok "nextPos") in (
+          j := __assign_220;
+          __assign_220
+        ));
+        let _g = (Obj.obj (HxAnon.get tok "text") : string) in match _g with
+          | "(" -> ignore (parenDepth := HxInt.add (!parenDepth) 1)
+          | ")" -> ignore (if !parenDepth > 0 then ignore (parenDepth := HxInt.sub (!parenDepth) 1) else ())
+          | "<" -> ignore (angleDepth := HxInt.add (!angleDepth) 1)
+          | ">" -> ignore (if !angleDepth > 0 then ignore (angleDepth := HxInt.sub (!angleDepth) 1) else ())
+          | "[" -> ignore (bracketDepth := HxInt.add (!bracketDepth) 1)
+          | "]" -> ignore (if !bracketDepth > 0 then ignore (bracketDepth := HxInt.sub (!bracketDepth) 1) else ())
+          | "{" -> ignore (braceDepth := HxInt.add (!braceDepth) 1)
+          | "}" -> ignore (if !braceDepth > 0 then ignore (braceDepth := HxInt.sub (!braceDepth) 1) else ())
+          | _ -> ignore ()
+      )
     )
   )) done);
   let __anon_221 = HxAnon.create () in (

@@ -31,6 +31,15 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		return null;
 	}
 
+	static function findScannedClass(classes:Array<HxClassDecl>, name:String):HxClassDecl {
+		for (cls in classes) {
+			if (HxClassDecl.getName(cls) == name)
+				return cls;
+		}
+		fail("missing scanned class " + name);
+		return null;
+	}
+
 	static function findFunction(cls:HxClassDecl, name:String):HxFunctionDecl {
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == name)
@@ -38,6 +47,32 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		}
 		fail("missing function " + HxClassDecl.getName(cls) + "." + name);
 		return null;
+	}
+
+	static function assertListKeyValueIteratorNextShape(next:HxFunctionDecl, sourceLabel:String):Void {
+		assertEqString(HxFunctionDecl.getReturnTypeHint(next), "{key:Int,value:T}", sourceLabel + ": ListKeyValueIterator.next return type");
+		switch (HxFunctionDecl.getBody(next)) {
+			case [
+				SVar("val", _, EField(EIdent("head"), "item"), _),
+				SExpr(EBinop("=", EIdent("head"), EField(EIdent("head"), "next")), _),
+				SReturn(EAnon(fieldNames, fieldValues), _)
+			]:
+				assertEqInt(fieldNames.length, 2, sourceLabel + ": ListKeyValueIterator.next return field count");
+				assertEqString(fieldNames[0], "value", sourceLabel + ": ListKeyValueIterator.next return field 0");
+				assertEqString(fieldNames[1], "key", sourceLabel + ": ListKeyValueIterator.next return field 1");
+				switch (fieldValues[0]) {
+					case EIdent("val"):
+					case other:
+						fail(sourceLabel + ": ListKeyValueIterator.next value field should return val, got " + Std.string(other));
+				}
+				switch (fieldValues[1]) {
+					case EUnop("post++", EIdent("idx")):
+					case other:
+						fail(sourceLabel + ": ListKeyValueIterator.next key field should post-increment idx, got " + Std.string(other));
+				}
+			case body:
+				fail(sourceLabel + ": ListKeyValueIterator.next body lost key/value return shape: " + Std.string(body));
+		}
 	}
 
 	static function assertBootstrapSnapshotCarriesGenericMethodRepair():Void {
@@ -129,29 +164,12 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 
 		final keyValueIterator = findClass(decl, "ListKeyValueIterator");
 		final next = findFunction(keyValueIterator, "next");
-		assertEqString(HxFunctionDecl.getReturnTypeHint(next), "{key:Int,value:T}", "ListKeyValueIterator.next return type");
-		switch (HxFunctionDecl.getBody(next)) {
-			case [
-				SVar("val", _, EField(EIdent("head"), "item"), _),
-				SExpr(EBinop("=", EIdent("head"), EField(EIdent("head"), "next")), _),
-				SReturn(EAnon(fieldNames, fieldValues), _)
-			]:
-				assertEqInt(fieldNames.length, 2, "ListKeyValueIterator.next return field count");
-				assertEqString(fieldNames[0], "value", "ListKeyValueIterator.next return field 0");
-				assertEqString(fieldNames[1], "key", "ListKeyValueIterator.next return field 1");
-				switch (fieldValues[0]) {
-					case EIdent("val"):
-					case other:
-						fail("ListKeyValueIterator.next value field should return val, got " + Std.string(other));
-				}
-				switch (fieldValues[1]) {
-					case EUnop("post++", EIdent("idx")):
-					case other:
-						fail("ListKeyValueIterator.next key field should post-increment idx, got " + Std.string(other));
-				}
-			case body:
-				fail("ListKeyValueIterator.next body lost key/value return shape: " + Std.string(body));
-		}
+		assertListKeyValueIteratorNextShape(next, "ParserStage");
+
+		final scannedHelpers = ParserStageScanHelpers.scanModuleLocalHelperClasses(listSource, "List");
+		final scannedKeyValueIterator = findScannedClass(scannedHelpers, "ListKeyValueIterator");
+		final scannedNext = findFunction(scannedKeyValueIterator, "next");
+		assertListKeyValueIteratorNextShape(scannedNext, "ParserStageScanHelpers");
 	}
 
 	static function main() {

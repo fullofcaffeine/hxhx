@@ -1118,8 +1118,13 @@ class ParserStageScanHelpers {
 					return {hint: parts.join(""), nextPos: j};
 				if (atTop && tok.isIdent && expressionBodyKeywordStartsWithoutReturn(tok.text))
 					return {hint: parts.join(""), nextPos: j};
+				final startsStructuralType = atTop && tok.text == "{" && parts.length == 0;
 				if (atTop
-					&& (tok.text == ")" || tok.text == "=" || tok.text == "{" || tok.text == ";" || (stopAtComma && tok.text == ",")))
+					&& (tok.text == ")"
+						|| tok.text == "="
+						|| (tok.text == "{" && !startsStructuralType)
+						|| tok.text == ";"
+						|| (stopAtComma && tok.text == ",")))
 					return {hint: parts.join(""), nextPos: j};
 				parts.push(tok.text);
 				j = tok.nextPos;
