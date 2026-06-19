@@ -1275,6 +1275,8 @@ class CppTargetCore {
 				mathCallExpr(method, args, scope);
 			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
 				"std::vector<int>(" + renderExpr(args[0], scope) + ")";
+			case ECall(EField(receiver, "create"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
+				"std::vector<int>(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("HelperMacros"), "typeErrorText"), [EUnsupported(raw)]) if (raw != null
 				&& StringTools.startsWith(raw, "for_expr:")):
 				quoteString("Int has no field keyValueIterator");
@@ -1678,6 +1680,17 @@ class CppTargetCore {
 	static function isCppCoreExternClass(name:String):Bool {
 		final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
 		return clean == "Math";
+	}
+
+	static function isCppNativeArrayReceiver(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EIdent("NativeArray"):
+				true;
+			case EField(EIdent("cpp"), "NativeArray"):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function scopeHasClass(?scope:CppRenderScope, className:String):Bool {

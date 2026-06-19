@@ -320,6 +320,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return {value: array[current], key: current++};",
 			"  }",
 			"}",
+			"class QualifiedNativeArrayUser {",
+			"  public function new() {}",
+			"  public function make(length:Int):Array<Int> {",
+			"    return cpp.NativeArray.create(length);",
+			"  }",
+			"}",
 			"class Log {",
 			"  public static function warn(message:String):Void {",
 			"    Sys.println(message);",
@@ -1052,6 +1058,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "break;", "C++ smoke should emit break statement");
 		assertContains(source, "continue;", "C++ smoke should emit continue statement");
 		assertContains(source, "auto native = std::vector<int>(2);", "C++ smoke should lower NativeArray.create");
+		assertContains(source, "return std::vector<int>(length);", "C++ smoke should lower qualified cpp.NativeArray.create");
+		assertTrue(source.indexOf("(cpp.NativeArray).create") < 0, "C++ smoke should not leak qualified cpp.NativeArray.create syntax");
 		assertContains(source, "(native[0]) = 7;", "C++ smoke should emit NativeArray indexed assignment");
 		assertContains(source, "(native.size())", "C++ smoke should emit NativeArray length read");
 		assertContains(source, "for (int i = 0; i < 3; i++) {", "C++ smoke should emit range for-in statement");
