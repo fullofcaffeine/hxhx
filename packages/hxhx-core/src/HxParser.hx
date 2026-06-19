@@ -697,6 +697,13 @@ class HxParser {
 					case _:
 						PWildcard;
 				}
+			case TKeyword(KCast):
+				// Upstream stdlib uses class-value switch cases like `case cast Array:`
+				// after target-specific conditional compilation chooses the native branch.
+				bump();
+				final typeText = StringTools.trim(readTypeHintText(() -> cur.kind.match(TColon) || cur.kind.match(TComma) || cur.kind.match(TRBrace)
+					|| cur.kind.match(TEof) || cur.kind.match(TKeyword(KIf)) || isOtherChar("|")));
+				typeText.length == 0 ? PWildcard : PEnumValue(typeText);
 			case TIdent("_"):
 				bump();
 				PWildcard;

@@ -1429,6 +1429,16 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected dense conditional class switch statement");
 		}
 
+		final castClassSwitchStmts = HxParser.parseFunctionBodyText('switch (c) { case cast Array: value = 1; case cast haxe.ds.StringMap: value = 2; }');
+		assertTrue(castClassSwitchStmts.length == 1, "expected cast class switch to parse");
+		switch (castClassSwitchStmts[0]) {
+			case SSwitch(EIdent("c"), [PEnumValue("Array"), PEnumValue("haxe.ds.StringMap")], _):
+			case SExpr(EUnsupported(raw), _):
+				fail("cast class switch parsed as unsupported: " + raw);
+			case _:
+				fail("expected cast class switch statement");
+		}
+
 		final macroIdentSpliceStmts = HxParser.parseFunctionBodyText('tests.push(macro deq(0, $$i{name}(0)));');
 		assertTrue(macroIdentSpliceStmts.length == 1, "expected macro identifier splice push to parse");
 		switch (macroIdentSpliceStmts[0]) {
