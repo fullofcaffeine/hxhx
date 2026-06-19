@@ -661,6 +661,12 @@ class CppTargetCore {
 					out.push(line);
 				out.push(indent + "}");
 				out;
+			case SDoWhile(body, cond, _):
+				final out = [indent + "do {"];
+				for (line in renderStmtBlockContent(body, indent + "  ", scope))
+					out.push(line);
+				out.push(indent + "} while " + conditionExpr(cond, scope) + ";");
+				out;
 			case SForIn(name, iterable, body, _):
 				renderForInStmt(name, iterable, body, indent, scope);
 			case SForKeyValue(keyName, valueName, iterable, body, _):
