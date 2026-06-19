@@ -673,6 +673,11 @@ class CppTargetCore {
 					addExprClassDependencies(arg, add);
 			case EField(receiver, _):
 				addExprClassDependencies(receiver, add);
+			case ECall(EField(receiver, _), args):
+				addStaticReceiverClassDependency(receiver, add);
+				addExprClassDependencies(receiver, add);
+				for (arg in args)
+					addExprClassDependencies(arg, add);
 			case ECall(callee, args):
 				addExprClassDependencies(callee, add);
 				for (arg in args)
@@ -710,6 +715,14 @@ class CppTargetCore {
 			case ECast(inner, typeHint):
 				addExprClassDependencies(inner, add);
 				addTypeHintDependencies(typeHint, add);
+			case _:
+		}
+	}
+
+	static function addStaticReceiverClassDependency(receiver:HxExpr, add:String->Void):Void {
+		switch (receiver) {
+			case EIdent(typeName):
+				add(sanitizeTypePath(typeBaseName(typeName)));
 			case _:
 		}
 	}

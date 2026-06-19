@@ -249,6 +249,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return text;",
 			"  }",
 			"}",
+			"class StaticBodyUser {",
+			"  public function new() {}",
+			"  public function render():String {",
+			"    return StaticBodyProvider.check(\"ok\");",
+			"  }",
+			"}",
+			"class StaticBodyProvider {",
+			"  public function new() {}",
+			"  public static function check(value:String):String {",
+			"    return value;",
+			"  }",
+			"}",
 			"class UsesLater {",
 			"  public var node:LaterNode;",
 			"  public function new(node:LaterNode) {",
@@ -755,6 +767,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should emit helper class definitions before classes that dereference them through shared_ptr fields");
 		assertTrue(source.indexOf("struct BodyOnlyBuffer {") < source.indexOf("struct BodyOnlyUser {"),
 			"C++ smoke should emit helper definitions before inline methods that construct/use them in method bodies");
+		assertTrue(source.indexOf("struct StaticBodyProvider {") < source.indexOf("struct StaticBodyUser {"),
+			"C++ smoke should emit helper definitions before inline static method calls on later classes");
 		assertContains(source, "struct __hxhx_anon_value_std__string_key_int_ {",
 			"C++ smoke should collect structural anonymous return payloads with identifier values as strings");
 		assertContains(source, "auto next() {\n    auto val = current;\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
