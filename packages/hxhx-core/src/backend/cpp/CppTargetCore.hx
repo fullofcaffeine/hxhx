@@ -756,6 +756,8 @@ class CppTargetCore {
 			return renderPosInfosClass();
 		if (isArrayBackedAbstractClass(cls))
 			return renderArrayBackedAbstractClass(cls, classLookup);
+		if (isStdArrayHelperClass(cls))
+			return renderStdArrayHelperClass(cls, classLookup);
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		final baseType = baseTypeName(cls);
 		final out = ["struct " + className + (baseType == null ? "" : " : public " + baseType) + " {"];
@@ -784,6 +786,41 @@ class CppTargetCore {
 				out.push(line);
 			out.push("  }");
 		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getName(fn) == "new")
+				continue;
+			for (line in renderHelperMethod(fn, cls, classLookup))
+				out.push(line);
+		}
+		out.push("};");
+		return out;
+	}
+
+	static function renderStdArrayHelperClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final out = ["struct " + className + " {"];
+		out.push("  std::vector<std::string> __values;");
+		for (field in HxClassDecl.getFields(cls)) {
+			if (HxFieldDecl.getIsStatic(field))
+				continue;
+			final scope = renderScope(cls, classLookup, "void");
+			final typeName = cppTypeHint(HxFieldDecl.getTypeHint(field), scope);
+			final init = HxFieldDecl.getInit(field);
+			final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
+			out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
+		}
+		out.push("  " + className + "() {}");
+		out.push("  " + className + "(std::vector<std::string> values) : __values(values) {");
+		if (hasInstanceField(cls, "length"))
+			out.push("    length = static_cast<int>(__values.size());");
+		out.push("  }");
+		out.push("  std::size_t size() const { return __values.size(); }");
+		out.push("  std::string& operator[](int index) { return __values[index]; }");
+		out.push("  const std::string& operator[](int index) const { return __values[index]; }");
+		out.push("  auto begin() { return __values.begin(); }");
+		out.push("  auto end() { return __values.end(); }");
+		out.push("  auto begin() const { return __values.begin(); }");
+		out.push("  auto end() const { return __values.end(); }");
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == "new")
 				continue;
@@ -2827,6 +2864,10 @@ class CppTargetCore {
 		return underlying != null && StringTools.startsWith(removeTypeHintWhitespace(underlying), "Array<");
 	}
 
+	static function isStdArrayHelperClass(cls:HxClassDecl):Bool {
+		return cls != null && sanitizeTypePath(HxClassDecl.getName(cls)) == "Array";
+	}
+
 	static function isPosInfosPlaceholder(cls:HxClassDecl):Bool {
 		return cls != null
 			&& sanitizeTypePath(HxClassDecl.getName(cls)) == "PosInfos"
@@ -2880,6 +2921,15 @@ class CppTargetCore {
 				return meta.substr(ABSTRACT_UNDERLYING_PREFIX.length);
 		}
 		return null;
+	}
+
+	static function hasInstanceField(cls:HxClassDecl, name:String):Bool {
+		if (cls == null)
+			return false;
+		for (field in HxClassDecl.getFields(cls))
+			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name)
+				return true;
+		return false;
 	}
 
 	static function arrayBackedAbstractValueCppType(cls:HxClassDecl, classLookup:CppClassLookup):String {

@@ -875,6 +875,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final abstractFieldLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(abstractFieldOwner, abstractLookup).join("\n");
 		assertContains(abstractFieldLines, "LocalCallStack stack = LocalCallStack();",
 			"C++ fields typed as array-backed abstracts should default to value wrappers instead of int zero");
+		final stdArray = new HxClassDecl("Array", false, [
+			new HxFunctionDecl("map", Public, false, [new HxFunctionArg("f", "String->String", NoDefault, false, false)], "Array<String>", [
+				SVar("result", "Array<String>", ECall(EField(EIdent("cpp.NativeArray"), "create"), [EField(EThis, "length")]), HxPos.unknown()),
+				SExpr(EBinop("=", EArrayAccess(EIdent("result"), EInt(0)), ECall(EIdent("f"), [EArrayAccess(EThis, EInt(0))])), HxPos.unknown()),
+				SForIn("value", EThis, SBlock([], HxPos.unknown()), HxPos.unknown()),
+				SReturn(EIdent("result"), HxPos.unknown())
+			], "")
+		], [new HxFieldDecl("length", Public, false, "Int", null)]);
+		final stdArrayNames = new StringMap<Bool>();
+		stdArrayNames.set("Array", true);
+		final stdArrayClasses = new StringMap<HxClassDecl>();
+		stdArrayClasses.set("Array", stdArray);
+		final stdArrayLookup = {names: stdArrayNames, byName: stdArrayClasses};
+		final stdArrayLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stdArray, stdArrayLookup).join("\n");
+		assertContains(stdArrayLines, "std::vector<std::string> __values;",
+			"C++ std Array helper should own vector-backed storage instead of being an empty fake helper");
+		assertContains(stdArrayLines, "std::string& operator[](int index) { return __values[index]; }",
+			"C++ std Array helper should expose mutable operator[] for generated Array.map writes/reads");
+		assertContains(stdArrayLines, "auto begin() { return __values.begin(); }", "C++ std Array helper should expose begin() for range-for over this");
+		assertContains(stdArrayLines, "auto end() { return __values.end(); }", "C++ std Array helper should expose end() for range-for over this");
+		assertContains(stdArrayLines, "(result[0]) = f(((*this)[0]));", "C++ std Array helper methods should compile lowered unsafeGet/indexing on this");
+		assertContains(stdArrayLines, "for (auto value : (*this)) {", "C++ std Array helper should support generated range-for over this");
 		final ctorBase = new HxClassDecl("CtorBase", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, false, false)], "Void", [], "")
 		], []);
