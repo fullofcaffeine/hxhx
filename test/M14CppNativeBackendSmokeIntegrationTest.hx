@@ -710,6 +710,46 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ vector-valued return expressions should return directly instead of falling through to int casts");
 		assertTrue(vectorReturnLines.indexOf("static_cast<int>(VectorProvider::items())") < 0,
 			"C++ vector-valued return expressions should not emit static_cast<int>");
+		final stackItem = new HxClassDecl("StackItem", false, [], []);
+		final nativeTraceProvider = new HxClassDecl("NativeTraceProvider", false, [
+			new HxFunctionDecl("toHaxe", Public, true, [], "Array<StackItem>", [SReturn(EArrayDecl([]), HxPos.unknown())], "")
+		], []);
+		final localCallStack = new HxClassDecl("LocalCallStack", false, [
+			new HxFunctionDecl("exceptionStackLike", Public, true, [], "Array<StackItem>", [
+				SVar("eStack", "LocalCallStack", ECall(EField(EIdent("NativeTraceProvider"), "toHaxe"), []), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("eStack"), "asArray"), []), HxPos.unknown())
+			],
+				""),
+			new HxFunctionDecl("take", Public, false, [new HxFunctionArg("n", "Int", NoDefault, false, false)], "LocalCallStack",
+				[SReturn(ECall(EField(EThis, "slice"), [EInt(0), EIdent("n")]), HxPos.unknown())], ""),
+			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("i", "Int", NoDefault, false, false)], "StackItem",
+				[SReturn(EArrayAccess(EThis, EIdent("i")), HxPos.unknown())], ""),
+			new HxFunctionDecl("len", Public, false, [], "Int", [SReturn(EField(EThis, "length"), HxPos.unknown())], ""),
+			new HxFunctionDecl("asArray", Public, false, [], "Array<StackItem>", [SReturn(EThis, HxPos.unknown())], "")
+		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=Array<StackItem>"]);
+		final abstractNames = new StringMap<Bool>();
+		for (name in ["StackItem", "NativeTraceProvider", "LocalCallStack"])
+			abstractNames.set(name, true);
+		final abstractClasses = new StringMap<HxClassDecl>();
+		abstractClasses.set("StackItem", stackItem);
+		abstractClasses.set("NativeTraceProvider", nativeTraceProvider);
+		abstractClasses.set("LocalCallStack", localCallStack);
+		final abstractLookup = {names: abstractNames, byName: abstractClasses};
+		final abstractLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(localCallStack, abstractLookup).join("\n");
+		assertContains(abstractLines, "std::vector<std::shared_ptr<StackItem>> __values;",
+			"C++ array-backed abstract wrappers should store the underlying vector");
+		assertContains(abstractLines, "LocalCallStack(std::vector<std::shared_ptr<StackItem>> values) : __values(values) {}",
+			"C++ array-backed abstract wrappers should accept the underlying vector without shared_ptr mismatch");
+		assertContains(abstractLines, "LocalCallStack eStack = NativeTraceProvider::toHaxe();",
+			"C++ locals typed as array-backed abstracts should be value wrappers, not std::shared_ptr<Abstract>");
+		assertContains(abstractLines, "return eStack.asArray();", "C++ array-backed abstract locals should call abstract methods through value access");
+		assertContains(abstractLines, "LocalCallStack slice(int start, int end) const {",
+			"C++ array-backed abstract wrappers should provide forwarded slice support");
+		assertContains(abstractLines, "return ((*this)[i]);", "C++ array-backed abstract wrappers should provide operator[] support for array access");
+		assertContains(abstractLines, "return static_cast<int>(this->__values.size());",
+			"C++ array-backed abstract self length should read the underlying vector size");
+		assertTrue(abstractLines.indexOf("std::shared_ptr<LocalCallStack> eStack") < 0,
+			"C++ array-backed abstract locals should not be emitted as shared_ptr values");
 		final genericReturnOwner = new HxClassDecl("GenericReturnOwner", false, [], []);
 		final genericReturnNames = new StringMap<Bool>();
 		genericReturnNames.set("GenericReturnOwner", true);

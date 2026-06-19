@@ -61,6 +61,8 @@ typedef CppFieldReadCatchString = {
 	  before rerunning the upstream-derived Cpp gate.
 **/
 class CppTargetCore {
+	static inline final ABSTRACT_UNDERLYING_PREFIX = "__hxhx_abstract_underlying=";
+
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		final main = mainModule(program, context);
 		final className = sanitizeIdentifier(HxClassDecl.getName(main.cls));
@@ -449,7 +451,7 @@ class CppTargetCore {
 			+ " "
 			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
 			+ "("
-			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn))
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
 			+ ") {"];
 		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "  ", scope))
 			out.push(line);
@@ -744,6 +746,8 @@ class CppTargetCore {
 	}
 
 	static function renderHelperClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		if (isArrayBackedAbstractClass(cls))
+			return renderArrayBackedAbstractClass(cls, classLookup);
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		final baseType = baseTypeName(cls);
 		final out = ["struct " + className + (baseType == null ? "" : " : public " + baseType) + " {"];
@@ -751,7 +755,7 @@ class CppTargetCore {
 		for (field in HxClassDecl.getFields(cls)) {
 			if (HxFieldDecl.getIsStatic(field))
 				continue;
-			final typeName = cppTypeHint(HxFieldDecl.getTypeHint(field));
+			final typeName = cppTypeHint(HxFieldDecl.getTypeHint(field), scope);
 			final init = HxFieldDecl.getInit(field);
 			final rhs = init == null ? cppDefaultValue(typeName) : renderExpr(init, scope);
 			out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
@@ -760,11 +764,37 @@ class CppTargetCore {
 		if (ctor == null) {
 			out.push("  " + className + "() {}");
 		} else {
-			out.push("  " + className + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(ctor)) + ") {");
+			out.push("  " + className + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(ctor), scope) + ") {");
 			for (line in renderStmts(HxFunctionDecl.getBody(ctor), "    ", scope))
 				out.push(line);
 			out.push("  }");
 		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getName(fn) == "new")
+				continue;
+			for (line in renderHelperMethod(fn, cls, classLookup))
+				out.push(line);
+		}
+		out.push("};");
+		return out;
+	}
+
+	static function renderArrayBackedAbstractClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final valueType = arrayBackedAbstractValueCppType(cls, classLookup);
+		final out = ["struct " + className + " {"];
+		out.push("  " + valueType + " __values;");
+		out.push("  " + className + "() {}");
+		out.push("  " + className + "(" + valueType + " values) : __values(values) {}");
+		out.push("  std::size_t size() const { return __values.size(); }");
+		out.push("  auto operator[](int index) const { return __values[index]; }");
+		out.push("  " + className + " slice(int start, int end) const {");
+		out.push("    if (start < 0) start = 0;");
+		out.push("    if (end < start) end = start;");
+		out.push("    if (static_cast<std::size_t>(end) > __values.size()) end = static_cast<int>(__values.size());");
+		out.push("    return " + className + "(" + valueType + "(__values.begin() + start, __values.begin() + end));");
+		out.push("  }");
+		out.push("  operator " + valueType + "() const { return __values; }");
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == "new")
 				continue;
@@ -789,7 +819,7 @@ class CppTargetCore {
 		if (scope == null || args == null)
 			return;
 		for (arg in args)
-			scope.localTypes.set(sanitizeIdentifier(HxFunctionArg.getName(arg)), cppFunctionArgType(arg));
+			scope.localTypes.set(sanitizeIdentifier(HxFunctionArg.getName(arg)), cppFunctionArgType(arg, scope));
 	}
 
 	static function baseTypeName(cls:HxClassDecl):Null<String> {
@@ -809,7 +839,7 @@ class CppTargetCore {
 			+ " "
 			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
 			+ "("
-			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn))
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
 			+ ") {"];
 		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
 			out.push(line);
@@ -824,20 +854,20 @@ class CppTargetCore {
 		return null;
 	}
 
-	static function renderFunctionArgs(args:Array<HxFunctionArg>):String {
+	static function renderFunctionArgs(args:Array<HxFunctionArg>, ?scope:CppRenderScope):String {
 		return [
 			for (arg in args)
-				renderFunctionArg(arg)
+				renderFunctionArg(arg, scope)
 		].join(", ");
 	}
 
-	static function renderFunctionArg(arg:HxFunctionArg):String {
-		final typeName = cppFunctionArgType(arg);
+	static function renderFunctionArg(arg:HxFunctionArg, ?scope:CppRenderScope):String {
+		final typeName = cppFunctionArgType(arg, scope);
 		return typeName + " " + sanitizeIdentifier(HxFunctionArg.getName(arg)) + cppFunctionArgDefaultSuffix(arg, typeName);
 	}
 
-	static function cppFunctionArgType(arg:HxFunctionArg):String {
-		final typeName = cppTypeHint(HxFunctionArg.getTypeHint(arg));
+	static function cppFunctionArgType(arg:HxFunctionArg, ?scope:CppRenderScope):String {
+		final typeName = cppTypeHint(HxFunctionArg.getTypeHint(arg), scope);
 		if (HxFunctionArg.getIsOptional(arg) && !HxFunctionArg.getIsRest(arg) && !isCppReferenceType(typeName) && !isCppOptionalType(typeName))
 			return "std::optional<" + typeName + ">";
 		return typeName;
@@ -1092,6 +1122,8 @@ class CppTargetCore {
 				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppVectorType(returnType)):
 				"return " + renderExpr(expr, scope) + ";";
+			case _ if (isCppArrayBackedAbstractType(returnType, scope)):
+				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppReferenceType(returnType)):
 				"return " + renderExpr(expr, scope) + ";";
 			case _:
@@ -1143,6 +1175,8 @@ class CppTargetCore {
 			case EIdent(name):
 				final local = sanitizeIdentifier(name);
 				exprHasOptionalType(expr, scope) ? local + ".value()" : local;
+			case EField(EThis, "length") if (scopeOwnerIsArrayBackedAbstract(scope)):
+				"this->__values.size()";
 			case EField(EThis, field):
 				"this->" + sanitizeIdentifier(field);
 			case ENew(typePath, args):
@@ -1365,9 +1399,9 @@ class CppTargetCore {
 			case EThis:
 				sanitizeTypePath(HxClassDecl.getName(scope.owner));
 			case ENew(typePath, _):
-				cppTypeHint(typePath);
+				cppTypeHint(typePath, scope);
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
-				cppTypeHint(typeName);
+				cppTypeHint(typeName, scope);
 			case ECall(EField(receiver, method), _):
 				final staticOwner = staticReceiverClassName(receiver, scope);
 				if (staticOwner != null) {
@@ -1389,7 +1423,7 @@ class CppTargetCore {
 			return "";
 		for (field in HxClassDecl.getFields(scope.owner)) {
 			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name)
-				return cppTypeHint(HxFieldDecl.getTypeHint(field));
+				return cppTypeHint(HxFieldDecl.getTypeHint(field), scope);
 		}
 		return "";
 	}
@@ -1402,7 +1436,7 @@ class CppTargetCore {
 			return "";
 		for (field in HxClassDecl.getFields(cls)) {
 			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == fieldName)
-				return cppTypeHint(HxFieldDecl.getTypeHint(field));
+				return cppTypeHint(HxFieldDecl.getTypeHint(field), scope);
 		}
 		return "";
 	}
@@ -1417,7 +1451,7 @@ class CppTargetCore {
 			if (HxFunctionDecl.getName(fn) == methodName
 				&& HxFunctionDecl.getName(fn) != "new"
 				&& HxFunctionDecl.getIsStatic(fn) == wantStatic)
-				return cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
+				return cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope);
 		}
 		return "";
 	}
@@ -1439,7 +1473,7 @@ class CppTargetCore {
 	static function cppLocalTypeHint(typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
 		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
 		if (explicit.length > 0)
-			return cppTypeHint(explicit);
+			return cppTypeHint(explicit, scope);
 		return init == null ? "" : inferExprCppType(init, scope);
 	}
 
@@ -1448,9 +1482,9 @@ class CppTargetCore {
 			case EIdent(_):
 				exprCppType(expr, scope);
 			case ENew(typePath, _):
-				cppTypeHint(typePath);
+				cppTypeHint(typePath, scope);
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
-				cppTypeHint(typeName);
+				cppTypeHint(typeName, scope);
 			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
 				"std::string";
 			case EInt(_):
@@ -2438,11 +2472,61 @@ class CppTargetCore {
 		return sanitizeIdentifier(StringTools.replace(path, ".", "_"));
 	}
 
-	static function cppTypeHint(typeHint:String):String {
+	static function scopeOwnerIsArrayBackedAbstract(?scope:CppRenderScope):Bool {
+		return scope != null && scope.owner != null && isArrayBackedAbstractClass(scope.owner);
+	}
+
+	static function isArrayBackedAbstractClass(cls:HxClassDecl):Bool {
+		final underlying = abstractUnderlyingTypeHint(cls);
+		return underlying != null && StringTools.startsWith(removeTypeHintWhitespace(underlying), "Array<");
+	}
+
+	static function abstractUnderlyingTypeHint(cls:HxClassDecl):Null<String> {
+		if (cls == null)
+			return null;
+		for (meta in HxClassDecl.getMetadata(cls)) {
+			if (StringTools.startsWith(meta, ABSTRACT_UNDERLYING_PREFIX))
+				return meta.substr(ABSTRACT_UNDERLYING_PREFIX.length);
+		}
+		return null;
+	}
+
+	static function arrayBackedAbstractValueCppType(cls:HxClassDecl, classLookup:CppClassLookup):String {
+		final underlying = removeTypeHintWhitespace(abstractUnderlyingTypeHint(cls));
+		if (StringTools.startsWith(underlying, "Array<") && StringTools.endsWith(underlying, ">"))
+			return cppTypeHint(underlying, null, classLookup);
+		return "std::vector<std::string>";
+	}
+
+	static function arrayBackedAbstractNameForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
+		final cls = lookupClassForTypeHint(typeHint, scope, classLookup);
+		return cls != null && isArrayBackedAbstractClass(cls) ? sanitizeTypePath(HxClassDecl.getName(cls)) : null;
+	}
+
+	static function lookupClassForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (hint.length == 0
+			|| StringTools.startsWith(hint, "Array<")
+			|| StringTools.startsWith(hint, "Null<")
+			|| isFunctionTypeHint(hint))
+			return null;
+		final name = sanitizeTypePath(typeBaseName(hint));
+		if (scope != null) {
+			final scoped = scope.classByName.get(name);
+			if (scoped != null)
+				return scoped;
+		}
+		return classLookup == null ? null : classLookup.byName.get(name);
+	}
+
+	static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		if (StringTools.startsWith(raw, "Null<") && StringTools.endsWith(raw, ">"))
-			return cppNullableTypeHint(raw.substr("Null<".length, raw.length - "Null<".length - 1));
+			return cppNullableTypeHint(raw.substr("Null<".length, raw.length - "Null<".length - 1), scope, classLookup);
 		final hint = raw;
+		final abstractName = arrayBackedAbstractNameForTypeHint(hint, scope, classLookup);
+		if (abstractName != null)
+			return abstractName;
 		return switch (hint) {
 			case "" | "Void" | "StdTypes.Void":
 				hint.length == 0 ? "std::string" : "void";
@@ -2457,9 +2541,9 @@ class CppTargetCore {
 			case "Dynamic" | "Any":
 				"std::string";
 			case _ if (StringTools.startsWith(hint, "Array<") && StringTools.endsWith(hint, ">")):
-				"std::vector<" + cppTypeHint(hint.substr("Array<".length, hint.length - "Array<".length - 1)) + ">";
+				"std::vector<" + cppTypeHint(hint.substr("Array<".length, hint.length - "Array<".length - 1), scope, classLookup) + ">";
 			case _ if (isFunctionTypeHint(hint)):
-				cppFunctionTypeHint(hint);
+				cppFunctionTypeHint(hint, scope, classLookup);
 			case _ if (isClassLikeTypeHint(hint)):
 				"std::shared_ptr<" + sanitizeTypePath(typeBaseName(hint)) + ">";
 			case _:
@@ -2467,16 +2551,16 @@ class CppTargetCore {
 		};
 	}
 
-	static function cppReturnTypeHint(typeHint:String):String {
+	static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
 		final hint = unwrapNullTypeHint(raw);
-		return isStructuralTypeHint(hint) ? "auto" : cppTypeHint(raw);
+		return isStructuralTypeHint(hint) ? "auto" : cppTypeHint(raw, scope, classLookup);
 	}
 
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
 		if (raw.length > 0)
-			return cppReturnTypeHint(raw);
+			return cppReturnTypeHint(raw, null, classLookup);
 		final scope = renderScope(owner, classLookup, "auto");
 		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 		for (stmt in HxFunctionDecl.getBody(fn)) {
@@ -2484,7 +2568,7 @@ class CppTargetCore {
 			if (inferred.length > 0)
 				return inferred;
 		}
-		return cppReturnTypeHint(raw);
+		return cppReturnTypeHint(raw, null, classLookup);
 	}
 
 	static function inferReturnTypeFromStmt(stmt:HxStmt, scope:CppRenderScope):String {
@@ -2515,8 +2599,8 @@ class CppTargetCore {
 		return "";
 	}
 
-	static function cppNullableTypeHint(typeHint:String):String {
-		final inner = cppTypeHint(typeHint);
+	static function cppNullableTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final inner = cppTypeHint(typeHint, scope, classLookup);
 		if (isCppReferenceType(inner) || isCppOptionalType(inner))
 			return inner;
 		return "std::optional<" + inner + ">";
@@ -2533,14 +2617,14 @@ class CppTargetCore {
 		return splitTopLevelFunctionType(typeHint).length > 1;
 	}
 
-	static function cppFunctionTypeHint(typeHint:String):String {
+	static function cppFunctionTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final parts = splitTopLevelFunctionType(typeHint);
 		if (parts.length <= 1)
 			return "std::function<std::string()>";
-		final returnType = cppTypeHint(parts[parts.length - 1]);
+		final returnType = cppTypeHint(parts[parts.length - 1], scope, classLookup);
 		final args = [
 			for (arg in functionArgTypeParts(parts.slice(0, parts.length - 1)))
-				cppTypeHint(arg)
+				cppTypeHint(arg, scope, classLookup)
 		].filter(t -> t != "void");
 		return "std::function<" + returnType + "(" + args.join(", ") + ")>";
 	}
@@ -2675,6 +2759,13 @@ class CppTargetCore {
 		return typeName != null && StringTools.startsWith(typeName, "std::vector<");
 	}
 
+	static function isCppArrayBackedAbstractType(typeName:String, ?scope:CppRenderScope):Bool {
+		if (scope == null || typeName == null || typeName.length == 0)
+			return false;
+		final cls = scope.classByName.get(typeName);
+		return cls != null && isArrayBackedAbstractClass(cls);
+	}
+
 	static function isCppOptionalType(typeName:String):Bool {
 		return typeName != null && StringTools.startsWith(typeName, "std::optional<");
 	}
@@ -2704,6 +2795,8 @@ class CppTargetCore {
 				"false";
 			case _ if (StringTools.startsWith(typeName, "std::vector<")):
 				"{}";
+			case _ if (isCppArrayBackedAbstractType(typeName)):
+				typeName + "()";
 			case _ if (isCppReferenceType(typeName)):
 				"nullptr";
 			case _ if (isCppOptionalType(typeName)):
