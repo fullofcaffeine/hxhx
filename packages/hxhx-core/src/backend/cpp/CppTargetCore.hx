@@ -1619,6 +1619,9 @@ class CppTargetCore {
 	}
 
 	static function stringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final enumCtor = enumMetadataCtorStringExpr(expr, scope);
+		if (enumCtor != null)
+			return enumCtor;
 		return switch (expr) {
 			case EString(value):
 				"std::string(" + quoteString(value) + ")";
@@ -1664,6 +1667,28 @@ class CppTargetCore {
 				"std::string()";
 			case _:
 				"std::to_string(" + renderExpr(expr, scope) + ")";
+		};
+	}
+
+	/**
+		Stringify the temporary enum metadata shape used by scanned helper enums.
+
+		These values are not a general anonymous-object runtime for C++; they are the
+		Stage3 bring-up representation for enum constructor identity. When a `Dynamic`
+		constructor result is currently lowered as `std::string`, preserve the existing
+		C++ MVP contract by returning the constructor tag instead of asking
+		`std::to_string` to format an aggregate.
+	**/
+	static function enumMetadataCtorStringExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case EAnon(fieldNames, fieldValues):
+				final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
+				for (i in 0...count)
+					if (fieldNames[i] == "__hx_ctor")
+						return stringExpr(fieldValues[i], scope);
+				null;
+			case _:
+				null;
 		};
 	}
 
