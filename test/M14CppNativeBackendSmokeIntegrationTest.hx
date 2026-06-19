@@ -786,6 +786,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ array-backed abstract self length should read the underlying vector size");
 		assertTrue(abstractLines.indexOf("std::shared_ptr<LocalCallStack> eStack") < 0,
 			"C++ array-backed abstract locals should not be emitted as shared_ptr values");
+		final abstractFieldOwner = new HxClassDecl("AbstractFieldOwner", false, [], [new HxFieldDecl("stack", Public, false, "LocalCallStack", null)]);
+		abstractNames.set("AbstractFieldOwner", true);
+		abstractClasses.set("AbstractFieldOwner", abstractFieldOwner);
+		final abstractFieldLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(abstractFieldOwner, abstractLookup).join("\n");
+		assertContains(abstractFieldLines, "LocalCallStack stack = LocalCallStack();",
+			"C++ fields typed as array-backed abstracts should default to value wrappers instead of int zero");
 		final genericReturnOwner = new HxClassDecl("GenericReturnOwner", false, [], []);
 		final genericReturnNames = new StringMap<Bool>();
 		genericReturnNames.set("GenericReturnOwner", true);

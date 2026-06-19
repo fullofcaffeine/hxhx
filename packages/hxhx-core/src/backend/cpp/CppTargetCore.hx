@@ -757,7 +757,7 @@ class CppTargetCore {
 				continue;
 			final typeName = cppTypeHint(HxFieldDecl.getTypeHint(field), scope);
 			final init = HxFieldDecl.getInit(field);
-			final rhs = init == null ? cppDefaultValue(typeName) : renderExpr(init, scope);
+			final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
 			out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
 		}
 		final ctor = findConstructor(cls);
@@ -980,7 +980,8 @@ class CppTargetCore {
 					scope.localTypes.set(sanitizeIdentifier(name), localType);
 				final hasExplicitType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
 				final declaredType = hasExplicitType && localType.length > 0 ? localType : "auto";
-				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType) : renderLocalInitExpr(init, declaredType, scope);
+				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
+					scope) : renderLocalInitExpr(init, declaredType, scope);
 					[indent + declaredType + " " + sanitizeIdentifier(name) + " = " + rhs + ";"];
 			case SReturn(expr, _):
 				[indent + returnStmtForExpr(expr, scope)];
@@ -1152,7 +1153,7 @@ class CppTargetCore {
 
 	static function returnVoidStmt(?scope:CppRenderScope):String {
 		final returnType = scope == null ? "int" : scope.returnType;
-		return returnType == "void" ? "return;" : "return " + cppDefaultValue(returnType) + ";";
+		return returnType == "void" ? "return;" : "return " + cppDefaultValue(returnType, scope) + ";";
 	}
 
 	static function optionalReturnExpr(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -2867,7 +2868,7 @@ class CppTargetCore {
 		return scopeHasClass(scope, typeName) ? typeName : null;
 	}
 
-	static function cppDefaultValue(typeName:String):String {
+	static function cppDefaultValue(typeName:String, ?scope:CppRenderScope):String {
 		return switch (typeName) {
 			case "void":
 				"";
@@ -2879,7 +2880,7 @@ class CppTargetCore {
 				"false";
 			case _ if (StringTools.startsWith(typeName, "std::vector<")):
 				"{}";
-			case _ if (isCppArrayBackedAbstractType(typeName)):
+			case _ if (isCppArrayBackedAbstractType(typeName, scope)):
 				typeName + "()";
 			case _ if (isCppReferenceType(typeName)):
 				"nullptr";
