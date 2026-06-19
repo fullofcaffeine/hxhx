@@ -638,6 +638,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ optional string returns should use std::optional instead of falling through to int casts");
 		assertContains(optionalReturnLines, "return std::nullopt;", "C++ optional returns should lower return null to std::nullopt");
 		assertContains(optionalReturnLines, "return value;", "C++ optional returns should return payload expressions without static_cast<int>");
+		final stringSource = new HxClassDecl("StringSource", false, [
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("source"), HxPos.unknown())], "")
+		], []);
+		final stringCaller = new HxClassDecl("StringCaller", false, [], []);
+		final stringCallNames = new StringMap<Bool>();
+		stringCallNames.set("StringSource", true);
+		stringCallNames.set("StringCaller", true);
+		final stringCallClasses = new StringMap<HxClassDecl>();
+		stringCallClasses.set("StringSource", stringSource);
+		stringCallClasses.set("StringCaller", stringCaller);
+		final stringCallLookup = {names: stringCallNames, byName: stringCallClasses};
+		final stringCallMethod = new HxFunctionDecl("renderLike", Public, false, [], "String", [
+			SVar("s", "", ENew("StringSource", []), HxPos.unknown()),
+			SReturn(ECall(EField(EIdent("s"), "toString"), []), HxPos.unknown())
+		], "");
+		final stringCallLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(stringCallMethod, stringCaller, stringCallLookup).join("\n");
+		assertContains(stringCallLines, "return s->toString();",
+			"C++ string-returning method calls should flow directly instead of std::to_string(std::string)");
+		assertTrue(stringCallLines.indexOf("std::to_string(s->toString())") < 0, "C++ string-returning method calls should not be wrapped in std::to_string");
 		final exprBodyOwner = new HxClassDecl("ExpressionBodyOwner", false, [], [new HxFieldDecl("key", Public, false, "String", null)]);
 		final exprBodyNames = new StringMap<Bool>();
 		exprBodyNames.set("ExpressionBodyOwner", true);

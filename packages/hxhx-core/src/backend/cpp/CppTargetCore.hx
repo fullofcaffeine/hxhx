@@ -1353,8 +1353,16 @@ class CppTargetCore {
 				cppTypeHint(typePath);
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName);
+			case ECall(EField(receiver, method), _):
+				final staticOwner = staticReceiverClassName(receiver, scope);
+				if (staticOwner != null) {
+					classMethodCppReturnType(staticOwner, method, true, scope);
+				} else {
+					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+					ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
+				}
 			case EField(receiver, field):
-				final ownerType = classNameFromCppType(exprCppType(receiver, scope));
+				final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
 				ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
 			case _:
 				"";
@@ -1380,6 +1388,21 @@ class CppTargetCore {
 		for (field in HxClassDecl.getFields(cls)) {
 			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == fieldName)
 				return cppTypeHint(HxFieldDecl.getTypeHint(field));
+		}
+		return "";
+	}
+
+	static function classMethodCppReturnType(className:String, methodName:String, wantStatic:Bool, scope:CppRenderScope):String {
+		if (scope == null || className == null || className.length == 0)
+			return "";
+		final cls = scope.classByName.get(className);
+		if (cls == null)
+			return "";
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getName(fn) == methodName
+				&& HxFunctionDecl.getName(fn) != "new"
+				&& HxFunctionDecl.getIsStatic(fn) == wantStatic)
+				return cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
 		}
 		return "";
 	}
@@ -1817,6 +1840,8 @@ class CppTargetCore {
 				stringExpr(args[0], scope);
 			case ECall(EField(_, "indexOf"), args) if (args.length == 1 || args.length == 2):
 				"std::to_string(" + renderExpr(expr, scope) + ")";
+			case ECall(EField(_, _), _) if (exprCppType(expr, scope) == "std::string"):
+				renderExpr(expr, scope);
 			case EField(_, "length"):
 				"std::to_string(" + renderExpr(expr, scope) + ")";
 			case EField(_, _) if (exprCppType(expr, scope) == "std::string"):
@@ -2595,6 +2620,13 @@ class CppTargetCore {
 		if (!isCppReferenceType(typeName))
 			return null;
 		return typeName.substr("std::shared_ptr<".length, typeName.length - "std::shared_ptr<".length - 1);
+	}
+
+	static function classNameFromCppExprType(typeName:String, ?scope:CppRenderScope):Null<String> {
+		final referenceName = classNameFromCppType(typeName);
+		if (referenceName != null)
+			return referenceName;
+		return scopeHasClass(scope, typeName) ? typeName : null;
 	}
 
 	static function cppDefaultValue(typeName:String):String {
