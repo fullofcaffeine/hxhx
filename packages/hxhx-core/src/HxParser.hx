@@ -1408,7 +1408,7 @@ class HxParser {
 					parsePrimaryExpr();
 				} else if (k == KNew) {
 					bump();
-					final typePath = readDottedPath();
+					final typePath = readConstructorTypePath();
 					// Optional constructor type arguments: `new Foo<Bar,Baz>(...)`.
 					//
 					// Without consuming `<...>` here, the expression parser treats `<`/`>` as
@@ -2648,6 +2648,14 @@ class HxParser {
 			return "__hxhx_macro_field_splice:" + name;
 		}
 		return readIdent("field name");
+	}
+
+	function readConstructorTypePath():String {
+		if (acceptOtherChar("$")) {
+			final name = readIdent("type path splice name");
+			return "__hxhx_macro_type_path_splice:" + name;
+		}
+		return readDottedPath();
 	}
 
 	function parseMacroQuoteExpr(stop:() -> Bool):HxExpr {

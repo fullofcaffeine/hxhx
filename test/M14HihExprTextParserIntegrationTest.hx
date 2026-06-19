@@ -1528,6 +1528,18 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected macro field splice quote expression");
 		}
 
+		final macroConstructorSpliceStmts = HxParser.parseFunctionBodyText('el.push(macro classes.push(new $$tp()));');
+		assertTrue(macroConstructorSpliceStmts.length == 1, "expected macro constructor type-path splice to parse");
+		switch (macroConstructorSpliceStmts[0]) {
+			case SExpr(ECall(EField(EIdent("el"), "push"), [
+				EMacroExpr(ECall(EField(EIdent("classes"), "push"), [ENew("__hxhx_macro_type_path_splice:tp", [])]), _)
+			]), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("macro constructor type-path splice parsed as unsupported: " + raw);
+			case _:
+				fail("expected macro constructor type-path splice expression");
+		}
+
 		final exprMetaCalls = HxParser.parseFunctionBodyText('eq(readMeta(@tag ("value")).name, "tag"); eq(readMeta(@tag("arg") "value").args.length, 1);');
 		assertTrue(exprMetaCalls.length == 2, "expected expression metadata calls to parse");
 		switch (exprMetaCalls[0]) {
