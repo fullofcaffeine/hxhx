@@ -520,9 +520,19 @@ class HxParser {
 		if (bodySource == null || bodySource.indexOf("#") < 0)
 			return bodySource == null ? "" : bodySource;
 		var normalized = normalizeInlineNekoElseConditionalMarkers(bodySource);
+		normalized = normalizeInlineStdClassSwitchConditionalMarkers(normalized);
 		normalized = StringTools.replace(normalized, "#if js", " ");
 		normalized = StringTools.replace(normalized, "#end", " ");
 		return normalized;
+	}
+
+	static function normalizeInlineStdClassSwitchConditionalMarkers(source:String):String {
+		if (source == null || source.indexOf("#if (neko || cs || python)") < 0)
+			return source;
+		var out = source;
+		out = StringTools.replace(out, "#if (neko || cs || python) Type.getClassName(c) #else c #end", "Type.getClassName(c)");
+		out = StringTools.replace(out, '#if (neko || cs || python) "Array" #else cast Array #end', '"Array"');
+		return out;
 	}
 
 	static function normalizeInlineNekoElseConditionalMarkers(source:String):String {
