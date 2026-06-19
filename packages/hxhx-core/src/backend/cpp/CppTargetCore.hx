@@ -1071,6 +1071,8 @@ class CppTargetCore {
 				"return " + stringExpr(expr, scope) + ";";
 			case "auto":
 				"return " + renderExpr(expr, scope) + ";";
+			case _ if (isCppOptionalType(returnType)):
+				"return " + optionalReturnExpr(expr, scope) + ";";
 			case "bool":
 				"return " + renderExpr(expr, scope) + ";";
 			case "double":
@@ -1085,6 +1087,15 @@ class CppTargetCore {
 	static function returnVoidStmt(?scope:CppRenderScope):String {
 		final returnType = scope == null ? "int" : scope.returnType;
 		return returnType == "void" ? "return;" : "return " + cppDefaultValue(returnType) + ";";
+	}
+
+	static function optionalReturnExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case ENull:
+				"std::nullopt";
+			case _:
+				renderExpr(expr, scope);
+		};
 	}
 
 	static function conditionExpr(expr:HxExpr, ?scope:CppRenderScope):String {

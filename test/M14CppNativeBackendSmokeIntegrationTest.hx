@@ -628,6 +628,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ optional scalar args should use std::optional instead of invalid int/nullptr pairs");
 		assertContains(optionalLenLines, "if (!len.has_value()) {", "C++ optional scalar null checks should test optional presence");
 		assertContains(optionalLenLines, "useLen(len.value());", "C++ optional scalar value uses should unwrap after null checks");
+		final optionalReturnMethod = new HxFunctionDecl("firstLike", Public, false, [new HxFunctionArg("value", "String", NoDefault, false, false)],
+			"Null<String>", [
+				SIf(EBinop("==", EIdent("value"), EString("")), SReturn(ENull, HxPos.unknown()), SReturn(EIdent("value"), HxPos.unknown()), HxPos.unknown())
+			], "");
+		final optionalReturnLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(optionalReturnMethod, optionalOwner, optionalLookup)
+			.join("\n");
+		assertContains(optionalReturnLines, "std::optional<std::string> firstLike(std::string value) {",
+			"C++ optional string returns should use std::optional instead of falling through to int casts");
+		assertContains(optionalReturnLines, "return std::nullopt;", "C++ optional returns should lower return null to std::nullopt");
+		assertContains(optionalReturnLines, "return value;", "C++ optional returns should return payload expressions without static_cast<int>");
 		final exprBodyOwner = new HxClassDecl("ExpressionBodyOwner", false, [], [new HxFieldDecl("key", Public, false, "String", null)]);
 		final exprBodyNames = new StringMap<Bool>();
 		exprBodyNames.set("ExpressionBodyOwner", true);
