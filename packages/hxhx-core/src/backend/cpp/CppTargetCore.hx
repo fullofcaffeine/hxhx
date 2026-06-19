@@ -939,6 +939,12 @@ class CppTargetCore {
 				+ quoteString(exceptionValueMessage)
 				+ ")); return std::string(); } catch (const std::exception& e) { return std::string(e.what()); } catch (...) { return std::string(); } })()";
 		}
+		final simpleCallCatchValue = parseSimpleCallCatchValueRaw(raw);
+		if (simpleCallCatchValue != null) {
+			return "([&]() { try { return "
+				+ simpleCallCatchValue
+				+ "(); } catch (const std::exception& e) { return std::string(e.what()); } catch (...) { return std::string(); } })()";
+		}
 		final joinCatch = parseArrayJoinCatchStringRaw(raw);
 		if (joinCatch != null) {
 			return "([&]() { try { return __hxhx_join(" + joinCatch.receiver + ", " + quoteString(joinCatch.separator)
@@ -979,6 +985,12 @@ class CppTargetCore {
 			return null;
 		final quoted = ~/"([^"]*)"/;
 		return quoted.match(pattern.matched(1)) ? quoted.matched(1) : "";
+	}
+
+	static function parseSimpleCallCatchValueRaw(raw:String):Null<String> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^try\{([A-Za-z_][A-Za-z0-9_]*)\(\);\}catch\(e(:[^)]*)?\)\{e;\}$/;
+		return pattern.match(compact) ? sanitizeIdentifier(pattern.matched(1)) : null;
 	}
 
 	static function parseArrayJoinCatchStringRaw(raw:String):Null<{receiver:String, separator:String, fallback:String}> {

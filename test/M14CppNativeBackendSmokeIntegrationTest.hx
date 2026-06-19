@@ -308,6 +308,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(catchValueTry, "catch (const std::exception& e) { return std::string(e.what()); }",
 			"catch-value raw try/catch should return a C++ exception message for the MVP");
 		assertContains(catchValueTry, "throw std::runtime_error(std::string(\"boom\"));", "catch-value raw try/catch should preserve the thrown message shape");
+		final simpleCallCatchValueTry = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{test();}catch(e:String){e;}'));
+		assertContains(simpleCallCatchValueTry, "try { return test(); }",
+			"simple call catch-value raw try/catch should preserve the successful call expression");
+		assertContains(simpleCallCatchValueTry, "catch (const std::exception& e) { return std::string(e.what()); }",
+			"simple call catch-value raw try/catch should return a C++ exception message");
 		final classNameProbeTry = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{Type.getClassName(t);}catch(e:Dynamic){"";}'));
 		assertContains(classNameProbeTry, "try { return __hxhx_type_name(t); }",
