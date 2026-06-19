@@ -353,6 +353,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(opaqueTypedLocalRefBlock, "std::string x = std::string();",
 			"opaque typed local reference should default-initialize through the current C++ type-hint model");
 		assertContains(opaqueTypedLocalRefBlock, "return x;", "opaque typed local reference should return the local value");
+		final opaqueTypedLocalInitBlock = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw("opaque_block_expr:{ var i:Int = z; }"));
+		assertContains(opaqueTypedLocalInitBlock, "int i = z;", "opaque typed local init should preserve the initializer expression");
+		assertContains(opaqueTypedLocalInitBlock, "return 0;", "opaque typed local init should produce a C++ MVP expression value");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("t")])) == "__hxhx_type_name(t)",
 			"direct Type.getClassName calls should lower through the C++ type-name helper");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getEnumName"), [EIdent("t")])) == "__hxhx_type_name(t)",

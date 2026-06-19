@@ -1010,6 +1010,9 @@ class CppTargetCore {
 		final opaqueTypedLocalRef = renderOpaqueTypedLocalRefRaw(raw);
 		if (opaqueTypedLocalRef != null)
 			return opaqueTypedLocalRef;
+		final opaqueTypedLocalInit = renderOpaqueTypedLocalInitRaw(raw);
+		if (opaqueTypedLocalInit != null)
+			return opaqueTypedLocalInit;
 		throw "C++ source backend MVP unsupported expression: ETryCatchRaw(" + summarizeRaw(raw) + ")";
 	}
 
@@ -1126,6 +1129,23 @@ class CppTargetCore {
 		final local = sanitizeIdentifier(pattern.matched(1));
 		final typeName = cppTypeHint(pattern.matched(2));
 		return "([&]() { " + typeName + " " + local + " = " + cppDefaultValue(typeName) + "; return " + local + "; })()";
+	}
+
+	static function renderOpaqueTypedLocalInitRaw(raw:String):Null<String> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):([^=;{}]+)=([A-Za-z_][A-Za-z0-9_]*|"[^"]*"|-?[0-9.]+);\}$/;
+		if (!pattern.match(compact))
+			return null;
+		final local = sanitizeIdentifier(pattern.matched(1));
+		final typeName = cppTypeHint(pattern.matched(2));
+		return "([&]() { " + typeName + " " + local + " = " + renderOpaqueSimpleValue(pattern.matched(3)) + "; return 0; })()";
+	}
+
+	static function renderOpaqueSimpleValue(rawValue:String):String {
+		final numericPattern = ~/^-?[0-9.]+$/;
+		if (StringTools.startsWith(rawValue, "\"") || numericPattern.match(rawValue))
+			return rawValue;
+		return sanitizeIdentifier(rawValue);
 	}
 
 	static function isTypeExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
