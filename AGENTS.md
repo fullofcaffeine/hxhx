@@ -147,6 +147,10 @@ hxhx --ocaml -main Main -cp src --hxhx-no-emit
   Keep it aligned with the current production-readiness reality and with the owning bead plan.
   If a checkpoint changes the production usability of any main goal, update the table in the same slice.
   If the table does not change, record that decision in the relevant bead/checkpoint note.
+- Keep the README Goals status progress bars evidence-based and current.
+  - Update the per-goal bar and the total north-star bar when beads, local gates, CI evidence, or release-contract docs materially change production readiness.
+  - Do not inflate bars for internal progress that only advances the next blocker unless it changes user-facing readiness; record "progress bars unchanged" in the bead/checkpoint note when appropriate.
+  - Keep progress wording plain and user-facing. Put the technical rationale in beads or `docs/00-project/NORTH_STAR_GOALS.md`, not in the README table.
 - Prefer one commit per verified step over one commit per long session.
 
 ## Landing the Plane (Session Completion)

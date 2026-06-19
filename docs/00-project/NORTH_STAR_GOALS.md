@@ -24,6 +24,22 @@ Current planning owners:
 - `hxhx + reflaxe.ocaml` production-route status: `haxe.ocaml-n5ae`
 - public status board: README `Goals status` table
 
+## Public Progress Tracking
+
+The README `Goals status` table is the public progress board. Its ASCII bars
+are coarse production-readiness indicators, not exact completion percentages.
+
+Update the bars only when evidence changes readiness for an intended use case:
+
+- a bead closes or opens a material release/compatibility gap,
+- a local or CI gate changes the production-readiness picture,
+- a release-contract document changes,
+- or a user-facing workflow becomes more or less suitable for real projects.
+
+If a checkpoint advances an internal burn-down blocker but does not change a
+user-facing readiness claim, keep the bars unchanged and record that decision in
+the relevant bead/checkpoint note.
+
 ## Goal 2: Stable `hxhx` parity
 
 `hxhx` should become a practical drop-in equivalent to upstream Haxe `4.3.7` while staying MIT-compatible and clean-room in implementation.
