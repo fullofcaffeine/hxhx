@@ -401,6 +401,31 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function urlDecode(s:String):String {",
 			"    return untyped s.__URLDecode();",
 			"  }",
+			"  public static function htmlUnescape(s:String):String {",
+			"    return s.split(\"&gt;\").join(\">\").split(\"&lt;\").join(\"<\");",
+			"  }",
+			"  public static function startsWith(s:String, start:String):Bool {",
+			"    return s.length >= start.length && s.lastIndexOf(start, 0) == 0;",
+			"  }",
+			"  public static function isSpace(s:String, pos:Int):Bool {",
+			"    var c = s.charCodeAt(pos);",
+			"    return c == 32;",
+			"  }",
+			"  public static function trimPiece(s:String):String {",
+			"    return s.substr(1, 2);",
+			"  }",
+			"  public static function middle(s:String):String {",
+			"    return s.substring(1, 3);",
+			"  }",
+			"  public static function hexLike(n:Int):String {",
+			"    var s = \"\";",
+			"    var hexChars = \"0123456789ABCDEF\";",
+			"    s = hexChars.charAt(n & 15) + s;",
+			"    return s;",
+			"  }",
+			"  public static function zeroCode():Int {",
+			"    return \"0\".code;",
+			"  }",
 			"}",
 			"class StringIteratorUnicode {",
 			"  var offset = 0;",
@@ -1210,7 +1235,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(!sourceOnly.builtExecutable, "no-compilation C++ smoke should not build executable");
 		final source = File.getContent(sourceOnly.entryPath);
 		assertContains(source, "int main(int argc, char** argv)", "C++ smoke should emit main");
-		assertContains(source, "auto suffix = \"smoke\";", "C++ smoke should emit local var");
+		assertContains(source, "auto suffix = std::string(\"smoke\");", "C++ smoke should emit string local vars as std::string");
 		assertContains(source, "std::cout << (std::string(\"cpp-native:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit println");
 		assertContains(source, "std::cout << (std::string(\"trace:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit trace");
 		assertContains(source, "__hxhx_args(argc, argv)", "C++ smoke should emit Sys.args helper call");
@@ -1259,7 +1284,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should emit helper definitions before inline static method calls on later classes");
 		assertContains(source, "struct __hxhx_anon_value_std__string_key_int_ {",
 			"C++ smoke should collect structural anonymous return payloads with identifier values as strings");
-		assertContains(source, "auto next() {\n    auto val = current;\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
+		assertContains(source,
+			"auto next() {\n    auto val = std::string(current);\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
 			"C++ smoke should lower structural anonymous return types through C++ auto instead of stringifying the key field");
 		assertContains(source,
 			"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
@@ -1337,6 +1363,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "return __hxhx_url_encode(s);", "C++ smoke should lower StringTools URL encode native string calls to support helpers");
 		assertContains(source, "return __hxhx_url_decode(s);", "C++ smoke should lower StringTools URL decode native string calls to support helpers");
 		assertTrue(source.indexOf("std::to_string(__hxhx_url_encode") < 0, "C++ smoke should not stringify URL encode helper results");
+		assertContains(source, "__hxhx_split(s, std::string(\"&gt;\"))", "C++ smoke should lower String.split to target support helpers");
+		assertContains(source, "__hxhx_join(__hxhx_split(s, std::string(\"&gt;\")), std::string(\">\"))",
+			"C++ smoke should lower split/join chains through target support helpers");
+		assertContains(source, "__hxhx_last_index_of(s, std::string(start), 0)", "C++ smoke should lower String.lastIndexOf to target support helpers");
+		assertContains(source, "auto c = static_cast<int>(static_cast<unsigned char>(s[pos]));",
+			"C++ smoke should lower String.charCodeAt to direct code-point reads");
+		assertContains(source, "return s.substr(1, 2);", "C++ smoke should preserve std::string substr results without stringifying");
+		assertContains(source, "return __hxhx_substring(s, 1, 3);", "C++ smoke should lower Haxe substring to target support helpers");
+		assertContains(source, "auto s = std::string(\"\");", "C++ smoke should infer mutable literal string locals as std::string");
+		assertContains(source, "__hxhx_char_at(hexChars, (n & 15)) + s", "C++ smoke should lower String.charAt to target support helpers");
+		assertContains(source, "return static_cast<int>(static_cast<int>(static_cast<unsigned char>(\"0\"[0])));",
+			"C++ smoke should lower String literal .code to a code-point read");
+		assertTrue(source.indexOf(".split(") < 0, "C++ smoke should not emit nonexistent std::string split calls");
+		assertTrue(source.indexOf(".lastIndexOf(") < 0, "C++ smoke should not emit nonexistent std::string lastIndexOf calls");
+		assertTrue(source.indexOf(".charCodeAt(") < 0, "C++ smoke should not emit nonexistent std::string charCodeAt calls");
+		assertTrue(source.indexOf(".substring(") < 0, "C++ smoke should not emit nonexistent std::string substring calls");
+		assertTrue(source.indexOf("std::to_string(s.substr") < 0, "C++ smoke should not stringify std::string substr results");
 		assertContains(source, "auto __hxhx_iter_code = std::make_shared<StringIteratorUnicode>(s);",
 			"C++ smoke should bind Haxe iterator protocol objects before looping");
 		assertContains(source, "while (__hxhx_iter_code->hasNext()) {", "C++ smoke should lower Haxe iterator protocol loops through hasNext()");

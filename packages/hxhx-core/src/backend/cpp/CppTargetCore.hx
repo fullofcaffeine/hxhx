@@ -167,6 +167,45 @@ class CppTargetCore {
 		out.push("  return out.str();");
 		out.push("}");
 		out.push("");
+		out.push("static std::vector<std::string> __hxhx_split(const std::string& source, const std::string& delimiter) {");
+		out.push("  std::vector<std::string> out;");
+		out.push("  if (delimiter.empty()) {");
+		out.push("    for (char c : source) out.push_back(std::string(1, c));");
+		out.push("    return out;");
+		out.push("  }");
+		out.push("  std::size_t start = 0;");
+		out.push("  while (true) {");
+		out.push("    std::size_t pos = source.find(delimiter, start);");
+		out.push("    if (pos == std::string::npos) {");
+		out.push("      out.push_back(source.substr(start));");
+		out.push("      return out;");
+		out.push("    }");
+		out.push("    out.push_back(source.substr(start, pos - start));");
+		out.push("    start = pos + delimiter.size();");
+		out.push("  }");
+		out.push("}");
+		out.push("");
+		out.push("static int __hxhx_last_index_of(const std::string& source, const std::string& needle, int start) {");
+		out.push("  if (start < 0) return -1;");
+		out.push("  std::size_t pos = source.rfind(needle, static_cast<std::size_t>(start));");
+		out.push("  return pos == std::string::npos ? -1 : static_cast<int>(pos);");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_char_at(const std::string& source, int index) {");
+		out.push("  if (index < 0 || index >= static_cast<int>(source.size())) return std::string();");
+		out.push("  return std::string(1, source[static_cast<std::size_t>(index)]);");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_substring(const std::string& source, int start, int end) {");
+		out.push("  int len = static_cast<int>(source.size());");
+		out.push("  if (start < 0) start = 0;");
+		out.push("  if (end < 0) end = 0;");
+		out.push("  if (start > len) start = len;");
+		out.push("  if (end > len) end = len;");
+		out.push("  if (start > end) std::swap(start, end);");
+		out.push("  return source.substr(static_cast<std::size_t>(start), static_cast<std::size_t>(end - start));");
+		out.push("}");
+		out.push("");
 		out.push("static char __hxhx_hex_digit(unsigned char value) {");
 		out.push("  return value < 10 ? static_cast<char>('0' + value) : static_cast<char>('A' + (value - 10));");
 		out.push("}");
@@ -1574,6 +1613,8 @@ class CppTargetCore {
 				"this->__values.size()";
 			case EField(EThis, field):
 				"this->" + sanitizeIdentifier(field);
+			case EField(receiver, "code") if (inferExprCppType(receiver, scope) == "std::string"):
+				stringCodeAtExpr(receiver, EInt(0), scope);
 			case ENew(typePath, args):
 				newExpr(typePath, args, scope);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
@@ -1765,6 +1806,8 @@ class CppTargetCore {
 				nativeArrayCreateExpr(args[0], scope, localType);
 			case ECall(EField(receiver, "create"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
 				nativeArrayCreateExpr(args[0], scope, localType);
+			case _ if (localType == "std::string"):
+				stringExpr(init, scope);
 			case _:
 				renderExpr(init, scope);
 		};
@@ -1933,6 +1976,36 @@ class CppTargetCore {
 		final renderedArgs = [for (arg in args) renderExpr(arg, scope)].join(", ");
 		if (method == "push" && isCppVectorType(exprCppType(receiver, scope)))
 			return renderExpr(receiver, scope) + ".push_back(" + renderedArgs + ")";
+		if (exprCppType(receiver, scope) == "std::string") {
+			return switch (method) {
+				case "split" if (args.length == 1):
+					"__hxhx_split(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
+				case "lastIndexOf" if (args.length == 1 || args.length == 2):
+					"__hxhx_last_index_of("
+					+ renderExpr(receiver, scope)
+					+ ", "
+					+ stringExpr(args[0], scope)
+					+ ", "
+					+ (args.length == 2 ? renderExpr(args[1], scope) : "static_cast<int>(" + renderExpr(receiver, scope) + ".size())")
+					+ ")";
+				case "charCodeAt" | "cca" if (args.length == 1):
+					stringCodeAtExpr(receiver, args[0], scope);
+				case "charAt" if (args.length == 1):
+					"__hxhx_char_at(" + renderExpr(receiver, scope) + ", " + renderExpr(args[0], scope) + ")";
+				case "substring" if (args.length == 1 || args.length == 2):
+					"__hxhx_substring("
+					+ renderExpr(receiver, scope)
+					+ ", "
+					+ renderExpr(args[0], scope)
+					+ ", "
+					+ (args.length == 2 ? renderExpr(args[1], scope) : "static_cast<int>(" + renderExpr(receiver, scope) + ".size())")
+					+ ")";
+				case _:
+					renderExpr(receiver, scope) + "." + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+			};
+		}
+		if (method == "join" && isCppVectorType(exprCppType(receiver, scope)) && args.length == 1)
+			return "__hxhx_join(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
 		if (receiverTypeName != null) {
 			if (method == "create")
 				return "std::make_shared<" + receiverTypeName + ">(" + renderedArgs + ")";
@@ -2017,6 +2090,10 @@ class CppTargetCore {
 			case ECall(EField(ESuper, method), _):
 				final baseType = scope.owner == null ? null : baseTypeName(scope.owner);
 				baseType == null ? "" : classMethodCppReturnType(baseType, method, false, scope);
+			case ECall(EField(receiver, method), _) if (exprCppType(receiver, scope) == "std::string"):
+				stringMethodReturnCppType(method);
+			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
+				"std::string";
 			case ECall(EField(receiver, method), _):
 				final staticOwner = staticReceiverClassName(receiver, scope);
 				if (staticOwner != null) {
@@ -2128,6 +2205,10 @@ class CppTargetCore {
 				cppFunctionReturnTypeFromCppType(exprCppType(EIdent(name), scope));
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
 				"std::string";
+			case ECall(EField(receiver, method), _) if (exprCppType(receiver, scope) == "std::string"):
+				stringMethodReturnCppType(method);
+			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
+				"std::string";
 			case ECall(EField(_, "flatten"), [ECall(EField(_, "map"), [_, mapper])]):
 				cppFunctionReturnTypeFromCppType(exprCppType(mapper, scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
@@ -2148,6 +2229,19 @@ class CppTargetCore {
 				inferExprCppType(inner, scope);
 			case ECast(inner, _) | EUntyped(inner):
 				inferExprCppType(inner, scope);
+			case _:
+				"";
+		};
+	}
+
+	static function stringMethodReturnCppType(method:String):String {
+		return switch (method) {
+			case "split":
+				"std::vector<std::string>";
+			case "lastIndexOf" | "charCodeAt" | "cca":
+				"int";
+			case "charAt" | "substring" | "substr":
+				"std::string";
 			case _:
 				"";
 		};
