@@ -427,6 +427,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedList], []);
 	}
 
+	static function vendorLambdaProgramWhenAvailable():Null<GenIrProgram> {
+		final lambdaPath = "vendor/haxe/std/Lambda.hx";
+		if (!FileSystem.exists(lambdaPath))
+			return null;
+		final lambdaSource = File.getContent(lambdaPath);
+		final mainSource = "class Main { static function main() {} }";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedLambda = TyperStage.typeModule(ParserStage.parse(lambdaSource, lambdaPath));
+		return MacroStage.expandProgram([typedMain, typedLambda], []);
+	}
+
 	static function mathExternProgram():GenIrProgram {
 		final src = [
 			"extern class Math {",
@@ -1218,6 +1229,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertContains(vendorListSource,
 				"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
 				"C++ smoke should preserve upstream ListKeyValueIterator.next key/value return body");
+		}
+
+		final vendorLambdaProgram = vendorLambdaProgramWhenAvailable();
+		if (vendorLambdaProgram != null) {
+			final vendorLambdaDir = Path.join([root, "vendor-lambda-source-only"]);
+			final vendorLambdaEmit = BackendRegistry.createForTarget("cpp-native").emit(vendorLambdaProgram, context(vendorLambdaDir, true, true));
+			final vendorLambdaSource = File.getContent(vendorLambdaEmit.entryPath);
+			assertContains(vendorLambdaSource,
+				"static std::vector<std::string> mapi(std::vector<std::string> it, std::function<std::string(int, std::string)> f) {",
+				"C++ smoke should preserve upstream Lambda.mapi callback type shape");
+			assertContains(vendorLambdaSource, "__hxhx_comp_out.push_back(f((i++), x));",
+				"C++ smoke should keep upstream Lambda.mapi callback invocation callable");
 		}
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {

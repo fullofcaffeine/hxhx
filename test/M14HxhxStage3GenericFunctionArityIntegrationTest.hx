@@ -143,6 +143,25 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertEqString(HxFunctionDecl.getReturnTypeHint(create), "GenericMethods<T>", sourceLabel + ": create return type");
 	}
 
+	static function assertScannedGenericNamedFunctionArg():Void {
+		final source = [
+			"class LambdaLike {",
+			"  public static function mapi<A,B>(it:Iterable<A>, f:(index:Int, item:A) -> B):Array<B> {",
+			"    var i = 0;",
+			"    return [for (x in it) f(i++, x)];",
+			"  }",
+			"}"
+		].join("\n");
+		final helpers = ParserStageScanHelpers.scanModuleLocalHelperClasses(source, null);
+		final lambdaLike = findScannedClass(helpers, "LambdaLike");
+		final mapi = findFunction(lambdaLike, "mapi");
+		assertEqInt(HxFunctionDecl.getArgs(mapi).length, 2, "scanned generic mapi arg count");
+		final fArg = HxFunctionDecl.getArgs(mapi)[1];
+		assertEqString(HxFunctionArg.getName(fArg), "f", "scanned generic mapi callback arg name");
+		assertEqString(HxFunctionArg.getTypeHint(fArg), "(index:Int,item:A)->B", "scanned generic mapi callback arg type");
+		assertEqString(HxFunctionDecl.getReturnTypeHint(mapi), "Array<B>", "scanned generic mapi return type");
+	}
+
 	static function assertVendorListParsesWhenAvailable():Void {
 		final listPath = "vendor/haxe/std/haxe/ds/List.hx";
 		final listSource = readOptional(listPath);
@@ -184,6 +203,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertBootstrapNativeParserAllowsKeywordPathSegments();
 		assertBootstrapNativeParserEscapesStringTokenText();
 		assertNativeDecodeStripsUntypedReturnModifier();
+		assertScannedGenericNamedFunctionArg();
 
 		final src = '@:generic class GenericMethods<T> {\n'
 			+ '  public function new() {}\n'

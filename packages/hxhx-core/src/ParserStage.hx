@@ -287,12 +287,54 @@ class ParserStage {
 							return s.length > 0 && s != "Unknown";
 						}
 
+						function compactHint(value:String):String {
+							var s = StringTools.trim(value == null ? "" : value);
+							s = StringTools.replace(s, " ", "");
+							s = StringTools.replace(s, "\t", "");
+							s = StringTools.replace(s, "\r", "");
+							return StringTools.replace(s, "\n", "");
+						}
+
+						function isGenericTypeVariableHint(value:String):Bool {
+							if (value == null || value.length == 0 || value.indexOf(".") >= 0)
+								return false;
+							final first = value.charCodeAt(0);
+							if (first < "A".code || first > "Z".code)
+								return false;
+							for (i in 1...value.length) {
+								final code = value.charCodeAt(i);
+								final isLetter = (code >= "A".code && code <= "Z".code) || (code >= "a".code && code <= "z".code);
+								final isDigit = code >= "0".code && code <= "9".code;
+								if (!isLetter && !isDigit && code != "_".code)
+									return false;
+							}
+							return true;
+						}
+
+						function scannedArgHintIsMoreSpecific(nativeHint:String, scannedHint:String):Bool {
+							final scannedCompact = compactHint(scannedHint);
+							if (scannedCompact.length == 0)
+								return false;
+							final nativeCompact = compactHint(nativeHint);
+							if (nativeCompact.length == 0)
+								return true;
+							final nativeLooksErasedCallable = nativeCompact == "Dynamic"
+								|| nativeCompact == "Any"
+								|| nativeCompact == "Function"
+								|| nativeCompact == "StdTypes.Function"
+								|| nativeCompact == "haxe.Constraints.Function"
+								|| StringTools.endsWith(nativeCompact, ".Function")
+								|| isGenericTypeVariableHint(nativeCompact);
+							return scannedCompact.indexOf("->") >= 0 && nativeLooksErasedCallable;
+						}
+
 						function argsNeedScan(nativeArgs:Array<HxFunctionArg>, scannedArgs:Array<HxFunctionArg>, allowShapeRepair:Bool):Bool {
 							if (nativeArgs == null || scannedArgs == null || nativeArgs.length != scannedArgs.length)
 								return false;
 							for (i in 0...nativeArgs.length) {
-								if (!usefulHint(HxFunctionArg.getTypeHint(nativeArgs[i]))
-									&& usefulHint(HxFunctionArg.getTypeHint(scannedArgs[i])))
+								final nativeHint = HxFunctionArg.getTypeHint(nativeArgs[i]);
+								final scannedHint = HxFunctionArg.getTypeHint(scannedArgs[i]);
+								if (scannedArgHintIsMoreSpecific(nativeHint, scannedHint) && usefulHint(scannedHint))
 									return true;
 								if (allowShapeRepair
 									&& HxFunctionArg.getIsOptional(nativeArgs[i]) != HxFunctionArg.getIsOptional(scannedArgs[i]))
