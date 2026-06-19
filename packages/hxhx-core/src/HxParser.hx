@@ -520,10 +520,44 @@ class HxParser {
 		if (bodySource == null || bodySource.indexOf("#") < 0)
 			return bodySource == null ? "" : bodySource;
 		var normalized = normalizeInlineNekoElseConditionalMarkers(bodySource);
+		normalized = normalizeInlineStdCppLengthConditionalMarkers(normalized);
 		normalized = normalizeInlineStdClassSwitchConditionalMarkers(normalized);
 		normalized = StringTools.replace(normalized, "#if js", " ");
 		normalized = StringTools.replace(normalized, "#end", " ");
 		return normalized;
+	}
+
+	static function normalizeInlineStdCppLengthConditionalMarkers(source:String):String {
+		if (source == null || source.indexOf("#elseif cpp") < 0 || source.indexOf("#end") < 0)
+			return source;
+		var out = source;
+		var search = 0;
+		while (search < out.length) {
+			final idxIf = out.indexOf("#if", search);
+			if (idxIf < 0)
+				break;
+			final idxElseIfCpp = out.indexOf("#elseif cpp", idxIf + 3);
+			final idxEnd = out.indexOf("#end", idxIf + 3);
+			if (idxElseIfCpp < 0 || idxEnd < 0 || idxElseIfCpp > idxEnd)
+				break;
+			final idxElse = out.indexOf("#else", idxElseIfCpp + 12);
+			final cppPayloadEnd = idxElse >= 0 && idxElse < idxEnd ? idxElse : idxEnd;
+			final cppPayload = StringTools.trim(out.substr(idxElseIfCpp + 12, cppPayloadEnd - (idxElseIfCpp + 12)));
+			if (cppPayload != "v.__length()") {
+				search = idxEnd + 4;
+				continue;
+			}
+			final conditionalText = out.substr(idxIf, idxEnd + 4 - idxIf);
+			if (conditionalText.indexOf("v.length") < 0 && conditionalText.indexOf("__getField") < 0) {
+				search = idxEnd + 4;
+				continue;
+			}
+			final prefix = out.substr(0, idxIf);
+			final suffix = out.substr(idxEnd + 4);
+			out = prefix + cppPayload + suffix;
+			search = prefix.length + cppPayload.length;
+		}
+		return out;
 	}
 
 	static function normalizeInlineStdClassSwitchConditionalMarkers(source:String):String {

@@ -10345,40 +10345,46 @@ let offsetFunctionBodyColumns = fun stmts delta -> try let __fallback_result_515
 ) in Obj.magic __fallback_result_5151 with
   | HxRuntime.Hx_return __ret_5150 -> Obj.obj __ret_5150
 
-let normalizeInlineStdClassSwitchConditionalMarkers = fun source2 -> let source2 = ref source2 in try let __fallback_result_5188 = (
-  ignore (if !source2 == Obj.magic (HxRuntime.hx_null) || HxString.indexOf (!source2) "#if" 0 < 0 || HxString.indexOf (!source2) "#else" 0 < 0 || HxString.indexOf (!source2) "#end" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (!source2 : string))) else ());
+let normalizeInlineStdCppLengthConditionalMarkers = fun source2 -> let source2 = ref source2 in try let __fallback_result_5188 = (
+  ignore (if !source2 == Obj.magic (HxRuntime.hx_null) || HxString.indexOf (!source2) "#elseif cpp" 0 < 0 || HxString.indexOf (!source2) "#end" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (!source2 : string))) else ());
   let search = ref 0 in (
     ignore (try while !search < HxString.length (!source2) do try ignore (let idxIf = HxString.indexOf (!source2) "#if" (!search) in (
       ignore (if idxIf < 0 then raise (HxRuntime.Hx_break) else ());
-      let idxElse = HxString.indexOf (!source2) "#else" (HxInt.add idxIf 3) in let idxEnd = HxString.indexOf (!source2) "#end" (HxInt.add idxIf 3) in (
-        ignore (if idxElse < 0 || idxEnd < 0 || idxElse > idxEnd then raise (HxRuntime.Hx_break) else ());
-        let thenPayload = (HxString.substr (!source2) idxIf (HxInt.sub idxElse idxIf) : string) in let tempMaybeMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-          ignore (if HxString.indexOf thenPayload "Type.getClassName(c)" 0 >= 0 then let __assign_5181 = Obj.magic ("Type.getClassName(c)" : string) in (
-            tempMaybeMaybeString := __assign_5181;
+      let idxElseIfCpp = HxString.indexOf (!source2) "#elseif cpp" (HxInt.add idxIf 3) in let idxEnd = HxString.indexOf (!source2) "#end" (HxInt.add idxIf 3) in (
+        ignore (if idxElseIfCpp < 0 || idxEnd < 0 || idxElseIfCpp > idxEnd then raise (HxRuntime.Hx_break) else ());
+        let idxElse = HxString.indexOf (!source2) "#else" (HxInt.add idxElseIfCpp 12) in let tempNumber = ref (0 : int) in (
+          ignore (if idxElse >= 0 && idxElse < idxEnd then let __assign_5181 = idxElse in (
+            tempNumber := __assign_5181;
             __assign_5181
-          ) else if HxString.indexOf thenPayload "\"Array\"" 0 >= 0 then let __assign_5182 = Obj.magic ("\"Array\"" : string) in (
-            tempMaybeMaybeString := __assign_5182;
+          ) else let __assign_5182 = idxEnd in (
+            tempNumber := __assign_5182;
             __assign_5182
-          ) else let __assign_5183 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempMaybeMaybeString := __assign_5183;
-            __assign_5183
           ));
-          let replacement = (!tempMaybeMaybeString : string) in (
-            ignore (if replacement == Obj.magic (HxRuntime.hx_null) then ignore ((
-              ignore (let __assign_5184 = HxInt.add idxEnd 4 in (
-                search := __assign_5184;
-                __assign_5184
+          let cppPayloadEnd = !tempNumber in let cppPayload = (StringTools.trim (HxString.substr (!source2) (HxInt.add idxElseIfCpp 12) (HxInt.sub cppPayloadEnd (HxInt.add idxElseIfCpp 12)) : string) : string) in (
+            ignore (if not (HxString.equals cppPayload "v.__length()") then ignore ((
+              ignore (let __assign_5183 = HxInt.add idxEnd 4 in (
+                search := __assign_5183;
+                __assign_5183
               ));
               raise (HxRuntime.Hx_continue)
             )) else ());
-            let prefix = (HxString.substr (!source2) 0 idxIf : string) in let suffix = (HxString.substr (!source2) (HxInt.add idxEnd 4) (-1) : string) in (
-              ignore (let __assign_5185 = ((HxString.toStdString prefix ^ HxString.toStdString replacement) ^ HxString.toStdString suffix : string) in (
-                source2 := __assign_5185;
-                __assign_5185
-              ));
-              let __assign_5186 = HxInt.add (HxString.length prefix) (HxString.length replacement) in (
-                search := __assign_5186;
-                __assign_5186
+            let conditionalText = (HxString.substr (!source2) idxIf (HxInt.sub (HxInt.add idxEnd 4) idxIf) : string) in (
+              ignore (if HxString.indexOf conditionalText "v.length" 0 < 0 && HxString.indexOf conditionalText "__getField" 0 < 0 then ignore ((
+                ignore (let __assign_5184 = HxInt.add idxEnd 4 in (
+                  search := __assign_5184;
+                  __assign_5184
+                ));
+                raise (HxRuntime.Hx_continue)
+              )) else ());
+              let prefix = (HxString.substr (!source2) 0 idxIf : string) in let suffix = (HxString.substr (!source2) (HxInt.add idxEnd 4) (-1) : string) in (
+                ignore (let __assign_5185 = ((HxString.toStdString prefix ^ HxString.toStdString cppPayload) ^ HxString.toStdString suffix : string) in (
+                  source2 := __assign_5185;
+                  __assign_5185
+                ));
+                let __assign_5186 = HxInt.add (HxString.length prefix) (HxString.length cppPayload) in (
+                  search := __assign_5186;
+                  __assign_5186
+                )
               )
             )
           )
@@ -10392,23 +10398,41 @@ let normalizeInlineStdClassSwitchConditionalMarkers = fun source2 -> let source2
 ) in Obj.magic __fallback_result_5188 with
   | HxRuntime.Hx_return __ret_5187 -> Obj.obj __ret_5187
 
-let normalizeInlineNekoElseConditionalMarkers = fun source2 -> let source2 = ref source2 in try let __fallback_result_5192 = (
-  ignore (if !source2 == Obj.magic (HxRuntime.hx_null) || HxString.indexOf (!source2) "#if neko" 0 < 0 || HxString.indexOf (!source2) "#else" 0 < 0 || HxString.indexOf (!source2) "#end" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (!source2 : string))) else ());
+let normalizeInlineStdClassSwitchConditionalMarkers = fun source2 -> let source2 = ref source2 in try let __fallback_result_5196 = (
+  ignore (if !source2 == Obj.magic (HxRuntime.hx_null) || HxString.indexOf (!source2) "#if" 0 < 0 || HxString.indexOf (!source2) "#else" 0 < 0 || HxString.indexOf (!source2) "#end" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (!source2 : string))) else ());
   let search = ref 0 in (
-    ignore (try while !search < HxString.length (!source2) do try ignore (let idxIf = HxString.indexOf (!source2) "#if neko" (!search) in (
+    ignore (try while !search < HxString.length (!source2) do try ignore (let idxIf = HxString.indexOf (!source2) "#if" (!search) in (
       ignore (if idxIf < 0 then raise (HxRuntime.Hx_break) else ());
-      let idxElse = HxString.indexOf (!source2) "#else" (HxInt.add idxIf 8) in let idxEnd = HxString.indexOf (!source2) "#end" (HxInt.add idxIf 8) in (
+      let idxElse = HxString.indexOf (!source2) "#else" (HxInt.add idxIf 3) in let idxEnd = HxString.indexOf (!source2) "#end" (HxInt.add idxIf 3) in (
         ignore (if idxElse < 0 || idxEnd < 0 || idxElse > idxEnd then raise (HxRuntime.Hx_break) else ());
-        let lineEnd = HxString.indexOf (!source2) "\n" idxIf in (
-          ignore (if lineEnd >= 0 && idxEnd > lineEnd then raise (HxRuntime.Hx_break) else ());
-          let prefix = (HxString.substr (!source2) 0 idxIf : string) in let elsePayload = (HxString.substr (!source2) (HxInt.add idxElse 5) (HxInt.sub idxEnd (HxInt.add idxElse 5)) : string) in let suffix = (HxString.substr (!source2) (HxInt.add idxEnd 4) (-1) : string) in (
-            ignore (let __assign_5189 = ((HxString.toStdString prefix ^ HxString.toStdString elsePayload) ^ HxString.toStdString suffix : string) in (
-              source2 := __assign_5189;
-              __assign_5189
-            ));
-            let __assign_5190 = HxInt.add (HxString.length prefix) (HxString.length elsePayload) in (
-              search := __assign_5190;
-              __assign_5190
+        let thenPayload = (HxString.substr (!source2) idxIf (HxInt.sub idxElse idxIf) : string) in let tempMaybeMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ignore (if HxString.indexOf thenPayload "Type.getClassName(c)" 0 >= 0 then let __assign_5189 = Obj.magic ("Type.getClassName(c)" : string) in (
+            tempMaybeMaybeString := __assign_5189;
+            __assign_5189
+          ) else if HxString.indexOf thenPayload "\"Array\"" 0 >= 0 then let __assign_5190 = Obj.magic ("\"Array\"" : string) in (
+            tempMaybeMaybeString := __assign_5190;
+            __assign_5190
+          ) else let __assign_5191 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            tempMaybeMaybeString := __assign_5191;
+            __assign_5191
+          ));
+          let replacement = (!tempMaybeMaybeString : string) in (
+            ignore (if replacement == Obj.magic (HxRuntime.hx_null) then ignore ((
+              ignore (let __assign_5192 = HxInt.add idxEnd 4 in (
+                search := __assign_5192;
+                __assign_5192
+              ));
+              raise (HxRuntime.Hx_continue)
+            )) else ());
+            let prefix = (HxString.substr (!source2) 0 idxIf : string) in let suffix = (HxString.substr (!source2) (HxInt.add idxEnd 4) (-1) : string) in (
+              ignore (let __assign_5193 = ((HxString.toStdString prefix ^ HxString.toStdString replacement) ^ HxString.toStdString suffix : string) in (
+                source2 := __assign_5193;
+                __assign_5193
+              ));
+              let __assign_5194 = HxInt.add (HxString.length prefix) (HxString.length replacement) in (
+                search := __assign_5194;
+                __assign_5194
+              )
             )
           )
         )
@@ -10418,8 +10442,37 @@ let normalizeInlineNekoElseConditionalMarkers = fun source2 -> let source2 = ref
       | HxRuntime.Hx_break -> ());
     !source2
   )
-) in Obj.magic __fallback_result_5192 with
-  | HxRuntime.Hx_return __ret_5191 -> Obj.obj __ret_5191
+) in Obj.magic __fallback_result_5196 with
+  | HxRuntime.Hx_return __ret_5195 -> Obj.obj __ret_5195
+
+let normalizeInlineNekoElseConditionalMarkers = fun source2 -> let source2 = ref source2 in try let __fallback_result_5200 = (
+  ignore (if !source2 == Obj.magic (HxRuntime.hx_null) || HxString.indexOf (!source2) "#if neko" 0 < 0 || HxString.indexOf (!source2) "#else" 0 < 0 || HxString.indexOf (!source2) "#end" 0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (!source2 : string))) else ());
+  let search = ref 0 in (
+    ignore (try while !search < HxString.length (!source2) do try ignore (let idxIf = HxString.indexOf (!source2) "#if neko" (!search) in (
+      ignore (if idxIf < 0 then raise (HxRuntime.Hx_break) else ());
+      let idxElse = HxString.indexOf (!source2) "#else" (HxInt.add idxIf 8) in let idxEnd = HxString.indexOf (!source2) "#end" (HxInt.add idxIf 8) in (
+        ignore (if idxElse < 0 || idxEnd < 0 || idxElse > idxEnd then raise (HxRuntime.Hx_break) else ());
+        let lineEnd = HxString.indexOf (!source2) "\n" idxIf in (
+          ignore (if lineEnd >= 0 && idxEnd > lineEnd then raise (HxRuntime.Hx_break) else ());
+          let prefix = (HxString.substr (!source2) 0 idxIf : string) in let elsePayload = (HxString.substr (!source2) (HxInt.add idxElse 5) (HxInt.sub idxEnd (HxInt.add idxElse 5)) : string) in let suffix = (HxString.substr (!source2) (HxInt.add idxEnd 4) (-1) : string) in (
+            ignore (let __assign_5197 = ((HxString.toStdString prefix ^ HxString.toStdString elsePayload) ^ HxString.toStdString suffix : string) in (
+              source2 := __assign_5197;
+              __assign_5197
+            ));
+            let __assign_5198 = HxInt.add (HxString.length prefix) (HxString.length elsePayload) in (
+              search := __assign_5198;
+              __assign_5198
+            )
+          )
+        )
+      )
+    )) with
+      | HxRuntime.Hx_continue -> () done with
+      | HxRuntime.Hx_break -> ());
+    !source2
+  )
+) in Obj.magic __fallback_result_5200 with
+  | HxRuntime.Hx_return __ret_5199 -> Obj.obj __ret_5199
 
 let normalizeInlineJsConditionalMarkers = fun bodySource -> try let __fallback_result_5180 = (
   ignore (if bodySource == Obj.magic (HxRuntime.hx_null) || HxString.indexOf bodySource "#" 0 < 0 then ignore (let tempResult = ref ("" : string) in (
@@ -10432,76 +10485,76 @@ let normalizeInlineJsConditionalMarkers = fun bodySource -> try let __fallback_r
     ));
     raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
   )) else ());
-  let normalized = (normalizeInlineNekoElseConditionalMarkers (bodySource : string) : string) in let normalized = (normalizeInlineStdClassSwitchConditionalMarkers (normalized : string) : string) in let normalized = (StringTools.replace (normalized : string) ("#if js" : string) (" " : string) : string) in let normalized = (StringTools.replace (normalized : string) ("#end" : string) (" " : string) : string) in normalized
+  let normalized = (normalizeInlineNekoElseConditionalMarkers (bodySource : string) : string) in let normalized = (normalizeInlineStdCppLengthConditionalMarkers (normalized : string) : string) in let normalized = (normalizeInlineStdClassSwitchConditionalMarkers (normalized : string) : string) in let normalized = (StringTools.replace (normalized : string) ("#if js" : string) (" " : string) : string) in let normalized = (StringTools.replace (normalized : string) ("#end" : string) (" " : string) : string) in normalized
 ) in Obj.magic __fallback_result_5180 with
   | HxRuntime.Hx_return __ret_5179 -> Obj.obj __ret_5179
 
 let binopPrec = fun op -> let tempResult = ref (0 : int) in (
   ignore (match op with
-    | "%" -> let __assign_5194 = 8 in (
-      tempResult := __assign_5194;
-      __assign_5194
-    )
-    | "&&" -> let __assign_5195 = 3 in (
-      tempResult := __assign_5195;
-      __assign_5195
-    )
-    | "+" | "-" -> let __assign_5196 = 6 in (
-      tempResult := __assign_5196;
-      __assign_5196
-    )
-    | "*" | "/" -> let __assign_5197 = 7 in (
-      tempResult := __assign_5197;
-      __assign_5197
-    )
-    | "<" | "<=" | ">" | ">=" -> let __assign_5198 = 5 in (
-      tempResult := __assign_5198;
-      __assign_5198
-    )
-    | "<<" | ">>" | ">>>" -> let __assign_5199 = 5 in (
-      tempResult := __assign_5199;
-      __assign_5199
-    )
-    | "?" -> let __assign_5200 = 2 in (
-      tempResult := __assign_5200;
-      __assign_5200
-    )
-    | "??" -> let __assign_5201 = 2 in (
-      tempResult := __assign_5201;
-      __assign_5201
-    )
-    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_5202 = 1 in (
+    | "%" -> let __assign_5202 = 8 in (
       tempResult := __assign_5202;
       __assign_5202
     )
-    | "&" | "^" | "|" -> let __assign_5203 = 5 in (
+    | "&&" -> let __assign_5203 = 3 in (
       tempResult := __assign_5203;
       __assign_5203
     )
-    | "!=" | "==" | "is" -> let __assign_5204 = 4 in (
+    | "+" | "-" -> let __assign_5204 = 6 in (
       tempResult := __assign_5204;
       __assign_5204
     )
-    | "||" -> let __assign_5205 = 2 in (
+    | "*" | "/" -> let __assign_5205 = 7 in (
       tempResult := __assign_5205;
       __assign_5205
     )
-    | _ -> let __assign_5193 = 0 in (
-      tempResult := __assign_5193;
-      __assign_5193
+    | "<" | "<=" | ">" | ">=" -> let __assign_5206 = 5 in (
+      tempResult := __assign_5206;
+      __assign_5206
+    )
+    | "<<" | ">>" | ">>>" -> let __assign_5207 = 5 in (
+      tempResult := __assign_5207;
+      __assign_5207
+    )
+    | "?" -> let __assign_5208 = 2 in (
+      tempResult := __assign_5208;
+      __assign_5208
+    )
+    | "??" -> let __assign_5209 = 2 in (
+      tempResult := __assign_5209;
+      __assign_5209
+    )
+    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_5210 = 1 in (
+      tempResult := __assign_5210;
+      __assign_5210
+    )
+    | "&" | "^" | "|" -> let __assign_5211 = 5 in (
+      tempResult := __assign_5211;
+      __assign_5211
+    )
+    | "!=" | "==" | "is" -> let __assign_5212 = 4 in (
+      tempResult := __assign_5212;
+      __assign_5212
+    )
+    | "||" -> let __assign_5213 = 2 in (
+      tempResult := __assign_5213;
+      __assign_5213
+    )
+    | _ -> let __assign_5201 = 0 in (
+      tempResult := __assign_5201;
+      __assign_5201
     ));
   !tempResult
 )
 
 let isAssignmentBinop = fun op -> let tempResult = ref (false : bool) in (
   ignore (match op with
-    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_5207 = true in (
-      tempResult := __assign_5207;
-      __assign_5207
+    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | ">>>=" | "??=" | "^=" | "|=" -> let __assign_5215 = true in (
+      tempResult := __assign_5215;
+      __assign_5215
     )
-    | _ -> let __assign_5206 = false in (
-      tempResult := __assign_5206;
-      __assign_5206
+    | _ -> let __assign_5214 = false in (
+      tempResult := __assign_5214;
+      __assign_5214
     ));
   !tempResult
 )
@@ -10539,9 +10592,9 @@ let markTraceExpressionLine = fun expr line -> let tempResult = ref (Obj.magic (
     | HxExpr.ECast (_, _) -> 26
     | HxExpr.EUntyped _ -> 27
     | HxExpr.EUnsupported _ -> 28) = 10 then let _g = Obj.magic (match expr with
-    | HxExpr.ECall (__enum_param_5208, _) -> __enum_param_5208
+    | HxExpr.ECall (__enum_param_5216, _) -> __enum_param_5216
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
-    | HxExpr.ECall (_, __enum_param_5209) -> __enum_param_5209
+    | HxExpr.ECall (_, __enum_param_5217) -> __enum_param_5217
     | _ -> failwith "Unexpected enum parameter") in if (match _g with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -10572,27 +10625,27 @@ let markTraceExpressionLine = fun expr line -> let tempResult = ref (Obj.magic (
     | HxExpr.ECast (_, _) -> 26
     | HxExpr.EUntyped _ -> 27
     | HxExpr.EUnsupported _ -> 28) = 8 then let _g2 = (match _g with
-    | HxExpr.EIdent __enum_param_5210 -> __enum_param_5210
-    | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "trace" then let args = Obj.magic _g1 in if line > 0 then let __assign_5211 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EIdent ("__hxhx_trace_at_" ^ HxString.toStdString (string_of_int line) : string)), Obj.magic args)) in (
-    tempResult := __assign_5211;
-    __assign_5211
-  ) else let __assign_5212 = Obj.magic expr in (
-    tempResult := __assign_5212;
-    __assign_5212
-  ) else let __assign_5213 = Obj.magic expr in (
-    tempResult := __assign_5213;
-    __assign_5213
-  ) else let __assign_5214 = Obj.magic expr in (
-    tempResult := __assign_5214;
-    __assign_5214
-  ) else let __assign_5215 = Obj.magic expr in (
-    tempResult := __assign_5215;
-    __assign_5215
+    | HxExpr.EIdent __enum_param_5218 -> __enum_param_5218
+    | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "trace" then let args = Obj.magic _g1 in if line > 0 then let __assign_5219 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EIdent ("__hxhx_trace_at_" ^ HxString.toStdString (string_of_int line) : string)), Obj.magic args)) in (
+    tempResult := __assign_5219;
+    __assign_5219
+  ) else let __assign_5220 = Obj.magic expr in (
+    tempResult := __assign_5220;
+    __assign_5220
+  ) else let __assign_5221 = Obj.magic expr in (
+    tempResult := __assign_5221;
+    __assign_5221
+  ) else let __assign_5222 = Obj.magic expr in (
+    tempResult := __assign_5222;
+    __assign_5222
+  ) else let __assign_5223 = Obj.magic expr in (
+    tempResult := __assign_5223;
+    __assign_5223
   ));
   !tempResult
 )
 
-let tokenCanStartStatement = fun kind -> try let __fallback_result_5227 = let tempBool = ref (false : bool) in (
+let tokenCanStartStatement = fun kind -> try let __fallback_result_5235 = let tempBool = ref (false : bool) in (
   ignore (if (match kind with
     | HxTokenKind.TEof -> 0
     | HxTokenKind.TIdent _ -> 1
@@ -10611,15 +10664,15 @@ let tokenCanStartStatement = fun kind -> try let __fallback_result_5227 = let te
     | HxTokenKind.TComma -> 14
     | HxTokenKind.TOther _ -> 15) = 1 then (
     ignore (match kind with
-      | HxTokenKind.TIdent __enum_param_5216 -> __enum_param_5216
+      | HxTokenKind.TIdent __enum_param_5224 -> __enum_param_5224
       | _ -> failwith "Unexpected enum parameter");
-    let __assign_5217 = true in (
-      tempBool := __assign_5217;
-      __assign_5217
+    let __assign_5225 = true in (
+      tempBool := __assign_5225;
+      __assign_5225
     )
-  ) else let __assign_5218 = false in (
-    tempBool := __assign_5218;
-    __assign_5218
+  ) else let __assign_5226 = false in (
+    tempBool := __assign_5226;
+    __assign_5226
   ));
   let tempBool1 = ref (false : bool) in (
     ignore (if (match kind with
@@ -10638,12 +10691,12 @@ let tokenCanStartStatement = fun kind -> try let __fallback_result_5227 = let te
       | HxTokenKind.TColon -> 12
       | HxTokenKind.TDot -> 13
       | HxTokenKind.TComma -> 14
-      | HxTokenKind.TOther _ -> 15) = 7 then let __assign_5219 = true in (
-      tempBool1 := __assign_5219;
-      __assign_5219
-    ) else let __assign_5220 = false in (
-      tempBool1 := __assign_5220;
-      __assign_5220
+      | HxTokenKind.TOther _ -> 15) = 7 then let __assign_5227 = true in (
+      tempBool1 := __assign_5227;
+      __assign_5227
+    ) else let __assign_5228 = false in (
+      tempBool1 := __assign_5228;
+      __assign_5228
     ));
     let tempBool2 = ref (false : bool) in (
       ignore (if (match kind with
@@ -10662,34 +10715,34 @@ let tokenCanStartStatement = fun kind -> try let __fallback_result_5227 = let te
         | HxTokenKind.TColon -> 12
         | HxTokenKind.TDot -> 13
         | HxTokenKind.TComma -> 14
-        | HxTokenKind.TOther _ -> 15) = 9 then let __assign_5221 = true in (
-        tempBool2 := __assign_5221;
-        __assign_5221
-      ) else let __assign_5222 = false in (
-        tempBool2 := __assign_5222;
-        __assign_5222
+        | HxTokenKind.TOther _ -> 15) = 9 then let __assign_5229 = true in (
+        tempBool2 := __assign_5229;
+        __assign_5229
+      ) else let __assign_5230 = false in (
+        tempBool2 := __assign_5230;
+        __assign_5230
       ));
       ignore (if !tempBool || !tempBool1 || !tempBool2 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
       let tempResult = ref (false : bool) in (
         ignore (match kind with
-          | HxTokenKind.TKeyword _p0 -> let _g = Obj.magic _p0 in let k = Obj.magic _g in let __assign_5224 = k = HxKeyword.KIf || k = HxKeyword.KSwitch || k = HxKeyword.KTry || k = HxKeyword.KWhile || k = HxKeyword.KDo || k = HxKeyword.KFor || k = HxKeyword.KThrow || k = HxKeyword.KReturn || k = HxKeyword.KInline || k = HxKeyword.KFunction || k = HxKeyword.KVar || k = HxKeyword.KFinal || k = HxKeyword.KBreak || k = HxKeyword.KContinue in (
-            tempResult := __assign_5224;
-            __assign_5224
+          | HxTokenKind.TKeyword _p0 -> let _g = Obj.magic _p0 in let k = Obj.magic _g in let __assign_5232 = k = HxKeyword.KIf || k = HxKeyword.KSwitch || k = HxKeyword.KTry || k = HxKeyword.KWhile || k = HxKeyword.KDo || k = HxKeyword.KFor || k = HxKeyword.KThrow || k = HxKeyword.KReturn || k = HxKeyword.KInline || k = HxKeyword.KFunction || k = HxKeyword.KVar || k = HxKeyword.KFinal || k = HxKeyword.KBreak || k = HxKeyword.KContinue in (
+            tempResult := __assign_5232;
+            __assign_5232
           )
-          | HxTokenKind.TOther _p0 -> let _g = _p0 in let c = _g in let __assign_5225 = c = 64 || c = 35 in (
-            tempResult := __assign_5225;
-            __assign_5225
+          | HxTokenKind.TOther _p0 -> let _g = _p0 in let c = _g in let __assign_5233 = c = 64 || c = 35 in (
+            tempResult := __assign_5233;
+            __assign_5233
           )
-          | _ -> let __assign_5223 = false in (
-            tempResult := __assign_5223;
-            __assign_5223
+          | _ -> let __assign_5231 = false in (
+            tempResult := __assign_5231;
+            __assign_5231
           ));
         !tempResult
       )
     )
   )
-) in Obj.magic __fallback_result_5227 with
-  | HxRuntime.Hx_return __ret_5226 -> Obj.obj __ret_5226
+) in Obj.magic __fallback_result_5235 with
+  | HxRuntime.Hx_return __ret_5234 -> Obj.obj __ret_5234
 
 let isSemicolonlessStatementBoundary = fun self () -> try let __fallback_result_3494 = let tempNumber = ref (0 : int) in let pos = Obj.magic (HxToken.getPos (Obj.magic ((Obj.magic self : t).cur)) ()) in (
   ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_3480 = 0 in (
@@ -10903,7 +10956,7 @@ let syncToStmtEndUntil = fun self (stop : unit -> bool) -> ignore (ignore (try (
 
 let syncToStmtEnd = fun self () -> ignore (ignore (syncToStmtEndUntil (Obj.magic self) (fun () -> false)))
 
-let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_5242 = (
+let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_5250 = (
   ignore (if decls == Obj.magic (HxRuntime.hx_null) || HxArray.length decls = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let last = Obj.magic (HxArray.get (Obj.magic decls) (HxInt.sub (HxArray.length decls) 1)) in let tempResult = ref (false : bool) in (
     ignore (if (match last with
@@ -10923,21 +10976,21 @@ let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_5242 = 
       | HxStmt.SReturn (_, _) -> 13
       | HxStmt.SExpr (_, _) -> 14) = 1 then (
       ignore (match last with
-        | HxStmt.SVar (__enum_param_5228, _, _, _) -> __enum_param_5228
+        | HxStmt.SVar (__enum_param_5236, _, _, _) -> __enum_param_5236
         | _ -> failwith "Unexpected enum parameter");
       ignore (match last with
-        | HxStmt.SVar (_, __enum_param_5229, _, _) -> __enum_param_5229
+        | HxStmt.SVar (_, __enum_param_5237, _, _) -> __enum_param_5237
         | _ -> failwith "Unexpected enum parameter");
       let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (match last with
-        | HxStmt.SVar (_, _, __enum_param_5230, _) -> __enum_param_5230
+        | HxStmt.SVar (_, _, __enum_param_5238, _) -> __enum_param_5238
         | _ -> failwith "Unexpected enum parameter")) in (
         ignore (match last with
-          | HxStmt.SVar (_, _, _, __enum_param_5231) -> __enum_param_5231
+          | HxStmt.SVar (_, _, _, __enum_param_5239) -> __enum_param_5239
           | _ -> failwith "Unexpected enum parameter");
-        if _g3 == Obj.magic (HxRuntime.hx_null) then let __assign_5232 = false in (
-          tempResult := __assign_5232;
-          __assign_5232
-        ) else if (let __enum_idx_5233 = _g3 in if __enum_idx_5233 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_5233 with
+        if _g3 == Obj.magic (HxRuntime.hx_null) then let __assign_5240 = false in (
+          tempResult := __assign_5240;
+          __assign_5240
+        ) else if (let __enum_idx_5241 = _g3 in if __enum_idx_5241 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_5241 with
           | HxExpr.ENull -> 0
           | HxExpr.EBool _ -> 1
           | HxExpr.EString _ -> 2
@@ -10967,37 +11020,37 @@ let declsCanEndBeforeIdentifier = fun decls -> try let __fallback_result_5242 = 
           | HxExpr.ECast (_, _) -> 26
           | HxExpr.EUntyped _ -> 27
           | HxExpr.EUnsupported _ -> 28) = 21 then (
-          ignore (let __enum_param_5235 = _g3 in if __enum_param_5235 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_5235 with
-            | HxExpr.EAnon (__enum_param_5234, _) -> __enum_param_5234
+          ignore (let __enum_param_5243 = _g3 in if __enum_param_5243 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_5243 with
+            | HxExpr.EAnon (__enum_param_5242, _) -> __enum_param_5242
             | _ -> failwith "Unexpected enum parameter");
-          ignore (let __enum_param_5237 = _g3 in if __enum_param_5237 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_5237 with
-            | HxExpr.EAnon (_, __enum_param_5236) -> __enum_param_5236
+          ignore (let __enum_param_5245 = _g3 in if __enum_param_5245 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_5245 with
+            | HxExpr.EAnon (_, __enum_param_5244) -> __enum_param_5244
             | _ -> failwith "Unexpected enum parameter");
-          let __assign_5238 = true in (
-            tempResult := __assign_5238;
-            __assign_5238
+          let __assign_5246 = true in (
+            tempResult := __assign_5246;
+            __assign_5246
           )
-        ) else let __assign_5239 = false in (
-          tempResult := __assign_5239;
-          __assign_5239
+        ) else let __assign_5247 = false in (
+          tempResult := __assign_5247;
+          __assign_5247
         )
       )
-    ) else let __assign_5240 = false in (
-      tempResult := __assign_5240;
-      __assign_5240
+    ) else let __assign_5248 = false in (
+      tempResult := __assign_5248;
+      __assign_5248
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_5242 with
-  | HxRuntime.Hx_return __ret_5241 -> Obj.obj __ret_5241
+) in Obj.magic __fallback_result_5250 with
+  | HxRuntime.Hx_return __ret_5249 -> Obj.obj __ret_5249
 
 let isRestTypeHintText = fun typeHint -> let tempString = ref ("" : string) in (
-  ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_5243 = ("" : string) in (
-    tempString := __assign_5243;
-    __assign_5243
-  ) else let __assign_5244 = (typeHint : string) in (
-    tempString := __assign_5244;
-    __assign_5244
+  ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_5251 = ("" : string) in (
+    tempString := __assign_5251;
+    __assign_5251
+  ) else let __assign_5252 = (typeHint : string) in (
+    tempString := __assign_5252;
+    __assign_5252
   ));
   let hint = (StringTools.trim (!tempString : string) : string) in HxString.equals hint "Rest" || StringTools.startsWith (hint : string) ("Rest<" : string) || StringTools.startsWith (hint : string) ("haxe.Rest<" : string) || StringTools.startsWith (hint : string) ("haxe.extern.Rest<" : string)
 )

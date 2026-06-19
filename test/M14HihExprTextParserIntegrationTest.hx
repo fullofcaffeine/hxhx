@@ -1439,6 +1439,16 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected cast class switch statement");
 		}
 
+		final cppLengthConditionalStmts = HxParser.parseFunctionBodyText('var l = #if (neko || flash || php || cs || java || python || hl || lua || eval) v.length #elseif cpp v.__length() #else __getField(v, "length") #end;');
+		assertTrue(cppLengthConditionalStmts.length == 1, "expected cpp length conditional var to parse");
+		switch (cppLengthConditionalStmts[0]) {
+			case SVar("l", _, ECall(EField(EIdent("v"), "__length"), []), _):
+			case SVar(_, _, EUnsupported(raw), _):
+				fail("cpp length conditional parsed as unsupported: " + raw);
+			case _:
+				fail("expected cpp length conditional var");
+		}
+
 		final macroIdentSpliceStmts = HxParser.parseFunctionBodyText('tests.push(macro deq(0, $$i{name}(0)));');
 		assertTrue(macroIdentSpliceStmts.length == 1, "expected macro identifier splice push to parse");
 		switch (macroIdentSpliceStmts[0]) {
