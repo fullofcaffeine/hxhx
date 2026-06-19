@@ -867,10 +867,22 @@ class CppTargetCore {
 	}
 
 	static function cppFunctionArgType(arg:HxFunctionArg, ?scope:CppRenderScope):String {
-		final typeName = cppTypeHint(HxFunctionArg.getTypeHint(arg), scope);
+		final rawTypeHint = HxFunctionArg.getTypeHint(arg);
+		final explicit = StringTools.trim(rawTypeHint == null ? "" : rawTypeHint);
+		final inferred = explicit.length > 0 ? "" : cppFunctionArgDefaultType(arg, scope);
+		final typeName = explicit.length > 0 ? cppTypeHint(explicit, scope) : (inferred.length > 0 ? inferred : cppTypeHint("", scope));
 		if (HxFunctionArg.getIsOptional(arg) && !HxFunctionArg.getIsRest(arg) && !isCppReferenceType(typeName) && !isCppOptionalType(typeName))
 			return "std::optional<" + typeName + ">";
 		return typeName;
+	}
+
+	static function cppFunctionArgDefaultType(arg:HxFunctionArg, ?scope:CppRenderScope):String {
+		return switch (HxFunctionArg.getDefaultValue(arg)) {
+			case Default(expr):
+				inferExprCppType(expr, scope);
+			case NoDefault:
+				"";
+		};
 	}
 
 	static function cppFunctionArgDefaultSuffix(arg:HxFunctionArg, typeName:String):String {

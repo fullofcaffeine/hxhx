@@ -650,6 +650,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ optional string returns should use std::optional instead of falling through to int casts");
 		assertContains(optionalReturnLines, "return std::nullopt;", "C++ optional returns should lower return null to std::nullopt");
 		assertContains(optionalReturnLines, "return value;", "C++ optional returns should return payload expressions without static_cast<int>");
+		final defaultBoolMethod = new HxFunctionDecl("exceptionStackLike", Public, true,
+			[new HxFunctionArg("fullStack", "", Default(EBool(false)), false, false)], "Bool", [
+				SReturn(ETernary(EIdent("fullStack"), EBool(true), EBool(false)), HxPos.unknown())
+			], "");
+		final defaultBoolLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(defaultBoolMethod, optionalOwner, optionalLookup).join("\n");
+		assertContains(defaultBoolLines, "static bool exceptionStackLike(bool fullStack) {",
+			"C++ default false arguments without explicit type hints should infer bool, not std::string");
+		assertContains(defaultBoolLines, "return ((fullStack) ? true : false);", "C++ default false arguments should be usable as boolean ternary conditions");
+		assertTrue(defaultBoolLines.indexOf("std::string fullStack") < 0, "C++ default false arguments should not fall back to std::string");
 		final stringSource = new HxClassDecl("StringSource", false, [
 			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("source"), HxPos.unknown())], "")
 		], []);
