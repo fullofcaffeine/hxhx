@@ -499,6 +499,9 @@ class CppTargetCore {
 			case EIdent(_):
 				final scoped = exprCppType(expr, scope);
 				scoped.length > 0 ? scoped : "std::string";
+			case EArrayAccess(_, _):
+				final scoped = exprCppType(expr, scope);
+				scoped.length > 0 ? scoped : "int";
 			case EFloat(_):
 				"double";
 			case EBool(_):
@@ -1612,6 +1615,8 @@ class CppTargetCore {
 					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
 					ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
 				}
+			case EArrayAccess(array, _):
+				cppVectorElementType(exprCppType(array, scope));
 			case EField(receiver, field):
 				final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
 				ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
@@ -3092,6 +3097,12 @@ class CppTargetCore {
 
 	static function isCppVectorType(typeName:String):Bool {
 		return typeName != null && StringTools.startsWith(typeName, "std::vector<");
+	}
+
+	static function cppVectorElementType(typeName:String):String {
+		if (!isCppVectorType(typeName) || !StringTools.endsWith(typeName, ">"))
+			return "";
+		return typeName.substr("std::vector<".length, typeName.length - "std::vector<".length - 1);
 	}
 
 	static function isCppArrayBackedAbstractType(typeName:String, ?scope:CppRenderScope):Bool {

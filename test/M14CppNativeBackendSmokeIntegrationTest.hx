@@ -309,6 +309,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return {value: val, key: idx++};",
 			"  }",
 			"}",
+			"class ArrayKeyValueLike {",
+			"  var current:Int;",
+			"  var array:Array<String>;",
+			"  public function new(array:Array<String>) {",
+			"    this.array = array;",
+			"    this.current = 0;",
+			"  }",
+			"  public function next():{key:Int, value:String} {",
+			"    return {value: array[current], key: current++};",
+			"  }",
+			"}",
 			"class Log {",
 			"  public static function warn(message:String):Void {",
 			"    Sys.println(message);",
@@ -1025,6 +1036,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source,
 			"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
 			"C++ smoke should lower generic key/value iterator structural returns through C++ auto");
+		assertContains(source, "return __hxhx_anon_value_std__string_key_int_{std::string((array[current])), (current++)};",
+			"C++ smoke should infer anonymous return value fields from array access element types");
+		assertTrue(source.indexOf("__hxhx_anon_value_int__key_int_{(array[current])") < 0,
+			"C++ smoke should not infer string array accesses as int anonymous return fields");
 		assertContains(source, "auto ref = std::make_shared<RefNode>(\"root\", nullptr);",
 			"C++ smoke should lower class create factories to constructors without requiring inline runtime stubs");
 		assertContains(source, "(ref->item)", "C++ smoke should read fields through class references");
