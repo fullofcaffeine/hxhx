@@ -244,6 +244,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    this.label = label;",
 			"  }",
 			"}",
+			"class StructReturnIterator {",
+			"  var idx:Int;",
+			"  var current:String;",
+			"  public function new(current:String) {",
+			"    this.current = current;",
+			"    this.idx = 0;",
+			"  }",
+			"  public function next():{key:Int, value:String} {",
+			"    var val = current;",
+			"    return {value: val, key: idx++};",
+			"  }",
+			"}",
 			"class Log {",
 			"  public static function warn(message:String):Void {",
 			"    Sys.println(message);",
@@ -581,6 +593,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower Void function arguments to zero-argument std::function signatures");
 		assertTrue(source.indexOf("struct LaterNode {") < source.indexOf("struct UsesLater {"),
 			"C++ smoke should emit helper class definitions before classes that dereference them through shared_ptr fields");
+		assertContains(source, "struct __hxhx_anon_value_std__string_key_int_ {",
+			"C++ smoke should collect structural anonymous return payloads with identifier values as strings");
+		assertContains(source, "auto next() {\n    auto val = current;\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
+			"C++ smoke should lower structural anonymous return types through C++ auto instead of stringifying the key field");
 		assertContains(source, "auto ref = std::make_shared<RefNode>(\"root\", nullptr);",
 			"C++ smoke should lower class create factories to constructors without requiring inline runtime stubs");
 		assertContains(source, "(ref->item)", "C++ smoke should read fields through class references");

@@ -434,7 +434,7 @@ class CppTargetCore {
 	}
 
 	static function renderStaticFunction(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final returnType = cppTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
+		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
 		final out = ["static "
 			+ returnType
 			+ " "
@@ -482,10 +482,14 @@ class CppTargetCore {
 		return switch (expr) {
 			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
 				"std::string";
+			case EIdent(_):
+				"std::string";
 			case EFloat(_):
 				"double";
 			case EBool(_):
 				"bool";
+			case EUnop("post++", _) | EUnop("post--", _):
+				"int";
 			case EArrayDecl(elements):
 				"std::vector<" + arrayElementType(elements) + ">";
 			case EAnon(fieldNames, fieldValues):
@@ -663,7 +667,7 @@ class CppTargetCore {
 	}
 
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final returnType = cppTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
+		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
 		final scope = renderScope(owner, classLookup, returnType);
 		final out = ["  "
 			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
@@ -912,6 +916,8 @@ class CppTargetCore {
 				renderExpr(expr, scope) + "; return;";
 			case "std::string":
 				"return " + stringExpr(expr, scope) + ";";
+			case "auto":
+				"return " + renderExpr(expr, scope) + ";";
 			case "bool":
 				"return " + renderExpr(expr, scope) + ";";
 			case "double":
@@ -2189,6 +2195,11 @@ class CppTargetCore {
 		};
 	}
 
+	static function cppReturnTypeHint(typeHint:String):String {
+		final hint = unwrapNullTypeHint(StringTools.trim(typeHint == null ? "" : typeHint));
+		return isStructuralTypeHint(hint) ? "auto" : cppTypeHint(hint);
+	}
+
 	static function unwrapNullTypeHint(typeHint:String):String {
 		final hint = removeTypeHintWhitespace(typeHint);
 		if (StringTools.startsWith(hint, "Null<") && StringTools.endsWith(hint, ">"))
@@ -2327,6 +2338,11 @@ class CppTargetCore {
 		}
 		final first = base.charCodeAt(0);
 		return first >= "A".code && first <= "Z".code;
+	}
+
+	static function isStructuralTypeHint(typeHint:String):Bool {
+		final hint = removeTypeHintWhitespace(typeHint == null ? "" : typeHint);
+		return StringTools.startsWith(hint, "{") && StringTools.endsWith(hint, "}");
 	}
 
 	static function isCppReferenceType(typeName:String):Bool {
