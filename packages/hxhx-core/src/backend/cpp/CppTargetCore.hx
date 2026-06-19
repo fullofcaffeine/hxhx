@@ -30,17 +30,6 @@ typedef CppTryStringProbe = {
 	var fallback:String;
 }
 
-typedef CppTryTypeofSafetyProbe = {
-	var value:String;
-	var success:String;
-	var failure:String;
-}
-
-typedef CppTryExceptionMessageProbe = {
-	var value:String;
-	var success:String;
-}
-
 typedef CppFieldReadCatchString = {
 	var receiver:String;
 	var field:String;
@@ -1213,8 +1202,8 @@ class CppTargetCore {
 		}
 		final typeofSafetyProbe = parseTypeofSafetyProbeRaw(raw);
 		if (typeofSafetyProbe != null) {
-			return "([&]() { try { (void)__hxhx_type_name(" + typeofSafetyProbe.value + "); return std::string(" + quoteString(typeofSafetyProbe.success)
-				+ "); } catch (...) { return std::string(" + quoteString(typeofSafetyProbe.failure) + "); } })()";
+			return "([&]() { try { (void)__hxhx_type_name(" + typeofSafetyProbe[0] + "); return std::string(" + quoteString(typeofSafetyProbe[1])
+				+ "); } catch (...) { return std::string(" + quoteString(typeofSafetyProbe[2]) + "); } })()";
 		}
 		final macroErrorProbe = parseTypeofMacroErrorProbeRaw(raw);
 		if (macroErrorProbe != null) {
@@ -1225,9 +1214,9 @@ class CppTargetCore {
 		final exceptionMessageProbe = parseTypeofExceptionMessageProbeRaw(raw);
 		if (exceptionMessageProbe != null) {
 			return "([&]() { try { (void)__hxhx_type_name("
-				+ exceptionMessageProbe.value
+				+ exceptionMessageProbe[0]
 				+ "); return std::string("
-				+ quoteString(exceptionMessageProbe.success)
+				+ quoteString(exceptionMessageProbe[1])
 				+ "); } catch (const std::exception& e) { return std::string(e.what()); } catch (...) { return std::string(); } })()";
 		}
 		final fileContentContextErrorPath = parseFileContentContextErrorTryRaw(raw);
@@ -1333,14 +1322,10 @@ class CppTargetCore {
 		return null;
 	}
 
-	static function parseTypeofSafetyProbeRaw(raw:String):Null<CppTryTypeofSafetyProbe> {
+	static function parseTypeofSafetyProbeRaw(raw:String):Null<Array<String>> {
 		final compact = compactRawText(raw);
 		final pattern = ~/^try\{typeof\(([A-Za-z_][A-Za-z0-9_]*)\);"([^"]*)";\}catch\(e(:[^)]*)?\)\{"([^"]*)";?\}$/;
-		return pattern.match(compact) ? {
-			value: sanitizeIdentifier(pattern.matched(1)),
-			success: pattern.matched(2),
-			failure: pattern.matched(4)
-		} : null;
+		return pattern.match(compact) ? [sanitizeIdentifier(pattern.matched(1)), pattern.matched(2), pattern.matched(4)] : null;
 	}
 
 	static function parseTypeofMacroErrorProbeRaw(raw:String):Null<String> {
@@ -1349,13 +1334,10 @@ class CppTargetCore {
 		return pattern.match(compact) ? sanitizeIdentifier(pattern.matched(1)) : null;
 	}
 
-	static function parseTypeofExceptionMessageProbeRaw(raw:String):Null<CppTryExceptionMessageProbe> {
+	static function parseTypeofExceptionMessageProbeRaw(raw:String):Null<Array<String>> {
 		final compact = compactRawText(raw);
 		final pattern = ~/^try\{typeof\(([A-Za-z_][A-Za-z0-9_]*)\);"([^"]*)";\}catch\(e:haxe\.Exception\)\{Std\.string\(e\.message\);\}$/;
-		return pattern.match(compact) ? {
-			value: sanitizeIdentifier(pattern.matched(1)),
-			success: pattern.matched(2)
-		} : null;
+		return pattern.match(compact) ? [sanitizeIdentifier(pattern.matched(1)), pattern.matched(2)] : null;
 	}
 
 	static function parseFileContentContextErrorTryRaw(raw:String):Null<String> {

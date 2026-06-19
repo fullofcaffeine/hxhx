@@ -1512,20 +1512,20 @@ let parseTryStringProbeRaw = fun raw -> try let __fallback_result_487 = let comp
 ) in Obj.magic __fallback_result_487 with
   | HxRuntime.Hx_return __ret_486 -> Obj.magic __ret_486
 
-let parseTypeofSafetyProbeRaw = fun raw -> let compact = (compactRawText (raw : string) : string) in let pattern = Obj.magic (EReg.create ("^try\\{typeof\\(([A-Za-z_][A-Za-z0-9_]*)\\);\"([^\"]*)\";\\}catch\\(e(:[^)]*)?\\)\\{\"([^\"]*)\";?\\}$" : string) ("" : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if EReg.hx_match (Obj.magic pattern) (compact : string) then let __assign_488 = Obj.magic (let __anon_489 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_489 "value" (Obj.repr (sanitizeIdentifier (EReg.matched (Obj.magic pattern) 1 : string))));
-    ignore (HxAnon.set __anon_489 "success" (Obj.repr (EReg.matched (Obj.magic pattern) 2)));
-    ignore (HxAnon.set __anon_489 "failure" (Obj.repr (EReg.matched (Obj.magic pattern) 4)));
-    __anon_489
-  )) in (
+let parseTypeofSafetyProbeRaw = fun raw -> let compact = (compactRawText (raw : string) : string) in let pattern = Obj.magic (EReg.create ("^try\\{typeof\\(([A-Za-z_][A-Za-z0-9_]*)\\);\"([^\"]*)\";\\}catch\\(e(:[^)]*)?\\)\\{\"([^\"]*)\";?\\}$" : string) ("" : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+  ignore (if EReg.hx_match (Obj.magic pattern) (compact : string) then let __assign_488 = Obj.magic (Obj.magic (let __arr_489 = HxArray.create () in (
+    ignore (HxArray.push __arr_489 (sanitizeIdentifier (EReg.matched (Obj.magic pattern) 1 : string)));
+    ignore (HxArray.push __arr_489 (EReg.matched (Obj.magic pattern) 2));
+    ignore (HxArray.push __arr_489 (EReg.matched (Obj.magic pattern) 4));
+    __arr_489
+  ))) in (
     tempResult := __assign_488;
     __assign_488
-  ) else let __assign_490 = Obj.magic (HxRuntime.hx_null) in (
+  ) else let __assign_490 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_490;
     __assign_490
   ));
-  Obj.magic (!tempResult)
+  !tempResult
 )
 
 let parseTypeofMacroErrorProbeRaw = fun raw -> let compact = (compactRawText (raw : string) : string) in let pattern = Obj.magic (EReg.create ("^try\\{typeof\\(([A-Za-z_][A-Za-z0-9_]*)\\);null;\\}catch\\(e:haxe\\.macro\\.Expr\\.Error\\)\\{var[A-Za-z_][A-Za-z0-9_]*=e\\.message;if\\(e\\.childErrors!=null\\)for\\(cine\\.childErrors\\)[A-Za-z_][A-Za-z0-9_]*\\+=\"\"\\+c\\.message;[A-Za-z_][A-Za-z0-9_]*;\\}$" : string) ("" : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
@@ -1539,19 +1539,19 @@ let parseTypeofMacroErrorProbeRaw = fun raw -> let compact = (compactRawText (ra
   !tempResult
 )
 
-let parseTypeofExceptionMessageProbeRaw = fun raw -> let compact = (compactRawText (raw : string) : string) in let pattern = Obj.magic (EReg.create ("^try\\{typeof\\(([A-Za-z_][A-Za-z0-9_]*)\\);\"([^\"]*)\";\\}catch\\(e:haxe\\.Exception\\)\\{Std\\.string\\(e\\.message\\);\\}$" : string) ("" : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if EReg.hx_match (Obj.magic pattern) (compact : string) then let __assign_493 = Obj.magic (let __anon_494 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_494 "value" (Obj.repr (sanitizeIdentifier (EReg.matched (Obj.magic pattern) 1 : string))));
-    ignore (HxAnon.set __anon_494 "success" (Obj.repr (EReg.matched (Obj.magic pattern) 2)));
-    __anon_494
-  )) in (
+let parseTypeofExceptionMessageProbeRaw = fun raw -> let compact = (compactRawText (raw : string) : string) in let pattern = Obj.magic (EReg.create ("^try\\{typeof\\(([A-Za-z_][A-Za-z0-9_]*)\\);\"([^\"]*)\";\\}catch\\(e:haxe\\.Exception\\)\\{Std\\.string\\(e\\.message\\);\\}$" : string) ("" : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+  ignore (if EReg.hx_match (Obj.magic pattern) (compact : string) then let __assign_493 = Obj.magic (Obj.magic (let __arr_494 = HxArray.create () in (
+    ignore (HxArray.push __arr_494 (sanitizeIdentifier (EReg.matched (Obj.magic pattern) 1 : string)));
+    ignore (HxArray.push __arr_494 (EReg.matched (Obj.magic pattern) 2));
+    __arr_494
+  ))) in (
     tempResult := __assign_493;
     __assign_493
-  ) else let __assign_495 = Obj.magic (HxRuntime.hx_null) in (
+  ) else let __assign_495 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_495;
     __assign_495
   ));
-  Obj.magic (!tempResult)
+  !tempResult
 )
 
 let parseFileContentContextErrorTryRaw = fun raw -> let compact = (compactRawText (raw : string) : string) in let pattern = Obj.magic (EReg.create ("^try\\{sys\\.io\\.File\\.getContent\\(Context\\.resolvePath\\(([A-Za-z_][A-Za-z0-9_]*)\\)\\);\\}catch\\(e(:[^)]*)?\\)\\{Context\\.error\\(Std\\.string\\(e\\),Context\\.currentPos\\(\\)\\);\\}$" : string) ("" : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
@@ -2668,12 +2668,12 @@ let renderTryCatchRaw = fun raw -> try let __fallback_result_465 = let exception
           ignore (if fieldReadCatch != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("([&]() { try { return " ^ HxString.toStdString (Obj.obj (HxAnon.get fieldReadCatch "receiver"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get fieldReadCatch "field"))) ^ "; } catch (...) { return std::string(") ^ HxString.toStdString (quoteString (Obj.obj (HxAnon.get fieldReadCatch "fallback") : string))) ^ "); } })()" : string))) else ());
           let stringProbe = parseTryStringProbeRaw (raw : string) in (
             ignore (if stringProbe != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((("([&]() { try { return " ^ HxString.toStdString (Obj.obj (HxAnon.get stringProbe "expr"))) ^ "; } catch (...) { return std::string(") ^ HxString.toStdString (quoteString (Obj.obj (HxAnon.get stringProbe "fallback") : string))) ^ "); } })()" : string))) else ());
-            let typeofSafetyProbe = parseTypeofSafetyProbeRaw (raw : string) in (
-              ignore (if typeofSafetyProbe != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("([&]() { try { (void)__hxhx_type_name(" ^ HxString.toStdString (snd typeofSafetyProbe)) ^ "); return std::string(") ^ HxString.toStdString (quoteString (Obj.obj (HxAnon.get typeofSafetyProbe "success") : string))) ^ "); } catch (...) { return std::string(") ^ HxString.toStdString (quoteString (Obj.obj (HxAnon.get typeofSafetyProbe "failure") : string))) ^ "); } })()" : string))) else ());
+            let typeofSafetyProbe = Obj.magic (parseTypeofSafetyProbeRaw (raw : string)) in (
+              ignore (if typeofSafetyProbe != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((((("([&]() { try { (void)__hxhx_type_name(" ^ HxString.toStdString (HxArray.get (Obj.magic typeofSafetyProbe) 0)) ^ "); return std::string(") ^ HxString.toStdString (quoteString (HxArray.get (Obj.magic typeofSafetyProbe) 1 : string))) ^ "); } catch (...) { return std::string(") ^ HxString.toStdString (quoteString (HxArray.get (Obj.magic typeofSafetyProbe) 2 : string))) ^ "); } })()" : string))) else ());
               let macroErrorProbe = (parseTypeofMacroErrorProbeRaw (raw : string) : string) in (
                 ignore (if macroErrorProbe != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (("([&]() { try { (void)__hxhx_type_name(" ^ HxString.toStdString macroErrorProbe) ^ "); return std::string(); } catch (const std::exception& e) { return std::string(e.what()); } catch (...) { return std::string(); } })()" : string))) else ());
-                let exceptionMessageProbe = parseTypeofExceptionMessageProbeRaw (raw : string) in (
-                  ignore (if exceptionMessageProbe != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((("([&]() { try { (void)__hxhx_type_name(" ^ HxString.toStdString (snd exceptionMessageProbe)) ^ "); return std::string(") ^ HxString.toStdString (quoteString (Obj.obj (HxAnon.get exceptionMessageProbe "success") : string))) ^ "); } catch (const std::exception& e) { return std::string(e.what()); } catch (...) { return std::string(); } })()" : string))) else ());
+                let exceptionMessageProbe = Obj.magic (parseTypeofExceptionMessageProbeRaw (raw : string)) in (
+                  ignore (if exceptionMessageProbe != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((("([&]() { try { (void)__hxhx_type_name(" ^ HxString.toStdString (HxArray.get (Obj.magic exceptionMessageProbe) 0)) ^ "); return std::string(") ^ HxString.toStdString (quoteString (HxArray.get (Obj.magic exceptionMessageProbe) 1 : string))) ^ "); } catch (const std::exception& e) { return std::string(e.what()); } catch (...) { return std::string(); } })()" : string))) else ());
                   let fileContentContextErrorPath = (parseFileContentContextErrorTryRaw (raw : string) : string) in (
                     ignore (if fileContentContextErrorPath != Obj.magic (HxRuntime.hx_null) then ignore (let readExpr = (("__hxhx_read_file(" ^ HxString.toStdString fileContentContextErrorPath) ^ ")" : string) in let stdExceptionCatch = ("catch (const std::exception& e) { throw std::runtime_error(std::string(e.what())); }" : string) in let unknownCatch = (("catch (...) { throw std::runtime_error(std::string(" ^ HxString.toStdString (quoteString ("Unable to read file" : string))) ^ ")); }" : string) in raise (HxRuntime.Hx_return (Obj.repr (((((("([&]() { try { return " ^ HxString.toStdString readExpr) ^ "; } ") ^ HxString.toStdString stdExceptionCatch) ^ " ") ^ HxString.toStdString unknownCatch) ^ " })()")))) else ());
                     let platformMinPath = (parseHxcppAndroidPlatformMinTryRaw (raw : string) : string) in (
