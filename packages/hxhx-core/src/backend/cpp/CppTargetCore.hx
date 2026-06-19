@@ -2021,8 +2021,8 @@ class CppTargetCore {
 				"bool";
 			case EArrayDecl(elements):
 				"std::vector<" + arrayElementType(elements, scope) + ">";
-			case EArrayComprehension(_, _, _, yieldExpr):
-				"std::vector<" + comprehensionElementType(yieldExpr, scope) + ">";
+			case EArrayComprehension(name, iterable, _, yieldExpr):
+				"std::vector<" + arrayComprehensionElementType(name, iterable, yieldExpr, scope) + ">";
 			case EUnop("post++", inner) | EUnop("post--", inner):
 				inferExprCppType(inner, scope);
 			case _:
@@ -2982,6 +2982,14 @@ class CppTargetCore {
 			case _:
 				"int";
 		};
+	}
+
+	static function arrayComprehensionElementType(name:String, iterable:HxExpr, yieldExpr:HxExpr, ?scope:CppRenderScope):String {
+		final local = sanitizeIdentifier(name);
+		final loopElementType = iterableElementType(iterable, scope);
+		var elementType = "";
+		withScopedLocal(scope, local, loopElementType, () -> elementType = comprehensionElementType(yieldExpr, scope));
+		return elementType.length > 0 ? elementType : "int";
 	}
 
 	static function isStringLike(expr:HxExpr):Bool {

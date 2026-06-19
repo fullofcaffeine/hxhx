@@ -367,6 +367,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function filter(it:Iterable<String>, f:String->Bool):Array<String> {",
 			"    return [for (x in it) if (f(x)) x];",
 			"  }",
+			"  public static function filterInferred(it:Iterable<String>, f:String->Bool) {",
+			"    return [for (x in it) if (f(x)) x];",
+			"  }",
 			"  public static function count(it:Iterable<String>, ?pred:String->Bool):Int {",
 			"    var n = 0;",
 			"    if (pred == null) {",
@@ -1209,6 +1212,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "__hxhx_flat_map_out.push_back(__hxhx_flat_map_value);", "C++ smoke should append flattened mapper values directly");
 		assertContains(source, "static std::vector<std::string> filter(std::vector<std::string> it, std::function<bool(std::string)> f) {",
 			"C++ smoke should infer vector returns from filtered comprehensions");
+		assertContains(source, "static std::vector<std::string> filterInferred(std::vector<std::string> it, std::function<bool(std::string)> f) {",
+			"C++ smoke should infer omitted return types from filtered comprehensions with scoped loop binders");
+		assertTrue(source.indexOf("static std::vector<int> filterInferred") < 0, "C++ smoke should not infer filtered string comprehensions as vector<int>");
 		assertTrue(source.indexOf("return std::to_string(([&]() {\n  std::vector<std::string> __hxhx_comp_out;") < 0,
 			"C++ smoke should not stringify filtered array comprehensions");
 		assertContains(source, "static int count(std::vector<std::string> it, std::optional<std::function<bool(std::string)>> pred = std::nullopt) {",
