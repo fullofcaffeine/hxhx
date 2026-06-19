@@ -340,6 +340,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function array(it:Iterable<String>):Array<String> {",
 			"    return [for (x in it) x];",
 			"  }",
+			"  public static function arrayFromNew(it:Iterable<String>):Array<String> {",
+			"    var a = new Array();",
+			"    for (x in it) a.push(x);",
+			"    return a;",
+			"  }",
 			"  public static function flatMap(it:Iterable<String>, f:String->Iterable<String>):Array<String> {",
 			"    return [\"ok\"];",
 			"  }",
@@ -1119,6 +1124,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should not infer Array<String> NativeArray.create locals as vector<int>");
 		assertContains(source, "static std::vector<std::string> array(std::vector<std::string> it) {",
 			"C++ smoke should lower Iterable<String> arguments to vector values");
+		assertContains(source, "static std::vector<std::string> arrayFromNew(std::vector<std::string> it) {",
+			"C++ smoke should keep Array<T> return helpers on vector values");
+		assertContains(source, "auto a = std::vector<std::string>{};", "C++ smoke should lower new Array() to the function vector return shape");
+		assertContains(source, "a.push_back(x);", "C++ smoke should lower Array.push on vector locals to push_back");
+		assertContains(source, "return a;", "C++ smoke should return vector-backed Array locals directly");
+		assertTrue(source.indexOf("std::make_shared<Array>") < 0, "C++ smoke should not construct std Array values as shared_ptr helper classes");
 		assertContains(source,
 			"static std::vector<std::string> flatMap(std::vector<std::string> it, std::function<std::vector<std::string>(std::string)> f) {",
 			"C++ smoke should lower Iterable<T> inside function types to vector values");

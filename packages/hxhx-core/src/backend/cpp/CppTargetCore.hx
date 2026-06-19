@@ -1508,10 +1508,23 @@ class CppTargetCore {
 	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final className = sanitizeTypePath(typeBaseName(typePath));
 		final renderedArgs = [for (arg in args) renderExpr(arg, scope)].join(", ");
+		if (isStdArrayTypePath(typePath))
+			return stdArrayConstructionExpr(typePath, args, scope);
 		return scopeHasClass(scope, className) ? "std::make_shared<" + className + ">(" + renderedArgs + ")" : className
 			+ "("
 			+ renderedArgs
 			+ ")";
+	}
+
+	static function stdArrayConstructionExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (args.length > 0)
+			throw "C++ source backend MVP unsupported Array constructor arity: " + args.length;
+		final typeName = isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope);
+		return typeName + "{}";
+	}
+
+	static function stdArrayDefaultVectorType(?scope:CppRenderScope):String {
+		return scope != null && isCppVectorType(scope.returnType) ? scope.returnType : "std::vector<std::string>";
 	}
 
 	/**
@@ -1633,6 +1646,8 @@ class CppTargetCore {
 	static function fieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final receiverTypeName = staticReceiverClassName(receiver, scope);
 		final renderedArgs = [for (arg in args) renderExpr(arg, scope)].join(", ");
+		if (method == "push" && isCppVectorType(exprCppType(receiver, scope)))
+			return renderExpr(receiver, scope) + ".push_back(" + renderedArgs + ")";
 		if (receiverTypeName != null) {
 			if (method == "create")
 				return "std::make_shared<" + receiverTypeName + ">(" + renderedArgs + ")";
@@ -1783,6 +1798,8 @@ class CppTargetCore {
 		return switch (expr) {
 			case EIdent(_):
 				exprCppType(expr, scope);
+			case ENew(typePath, _) if (isStdArrayTypePath(typePath)):
+				isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope);
 			case ENew(typePath, _):
 				cppTypeHint(typePath, scope);
 			case ECall(EField(EIdent("NativeArray"), "create"), _):
@@ -2999,6 +3016,10 @@ class CppTargetCore {
 	static function isArrayLikeTypeHint(typeHint:String):Bool {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		return typeBaseName(hint) == "Array" && StringTools.endsWith(hint, ">");
+	}
+
+	static function isStdArrayTypePath(typeHint:String):Bool {
+		return typeBaseName(removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint))) == "Array";
 	}
 
 	static function isIterableTypeHint(typeHint:String):Bool {
