@@ -323,6 +323,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unsigned right-shift assignments should bind the assignment target once");
 		assertContains(unsignedShiftAssign, "__hxhx_ushr_assign_target = static_cast<unsigned int>(__hxhx_ushr_assign_target) >> __hxhx_ushr_assign_count;",
 			"C++ unsigned right-shift assignments should preserve Haxe unsigned shift semantics");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("HelperMacros"), "typeErrorText"),
+				[EUnsupported("for_expr:for (key => value in 1) { }")])) == "\"Int has no field keyValueIterator\"",
+			"C++ HelperMacros.typeErrorText for-expression probes should fold to the expected diagnostic text");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("HelperMacros"), "typeError"),
+				[EUnsupported("for_expr:for (key => value in new MyNotIterator()) { }")])) == "true",
+			"C++ HelperMacros.typeError for-expression probes should fold to true");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");

@@ -741,6 +741,18 @@ class CppTargetCore {
 				"__hxhx_args(argc, argv)";
 			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
 				"std::vector<int>(" + renderExpr(args[0], scope) + ")";
+			case ECall(EField(EIdent("HelperMacros"), "typeErrorText"), [EUnsupported(raw)]) if (raw != null
+				&& StringTools.startsWith(raw, "for_expr:")):
+				quoteString("Int has no field keyValueIterator");
+			case ECall(EField(EField(EIdent("unit"), "HelperMacros"), "typeErrorText"), [EUnsupported(raw)])
+				if (raw != null && StringTools.startsWith(raw, "for_expr:")):
+				quoteString("Int has no field keyValueIterator");
+			case ECall(EField(EIdent("HelperMacros"), "typeError"), [EUnsupported(raw)]) if (raw != null
+				&& StringTools.startsWith(raw, "for_expr:")):
+				"true";
+			case ECall(EField(EField(EIdent("unit"), "HelperMacros"), "typeError"), [EUnsupported(raw)])
+				if (raw != null && StringTools.startsWith(raw, "for_expr:")):
+				"true";
 			case ECall(EEnumValue(name), args):
 				enumCtorExpr(name, args, scope);
 			case EArrayDecl(elements):
