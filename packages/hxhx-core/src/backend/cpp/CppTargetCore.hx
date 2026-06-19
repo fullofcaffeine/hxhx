@@ -1215,6 +1215,9 @@ class CppTargetCore {
 				+ quoteString("Unable to determine minimum supported Android platform")
 				+ " << std::endl; return 0; } })()";
 		}
+		final opaqueEnumSwitchProbe = renderOpaqueEnumSwitchProbeRaw(raw);
+		if (opaqueEnumSwitchProbe != null)
+			return opaqueEnumSwitchProbe;
 		final opaqueObject = renderOpaqueObjectLocalRaw(raw);
 		if (opaqueObject != null)
 			return opaqueObject;
@@ -1310,6 +1313,16 @@ class CppTargetCore {
 		final compact = compactRawText(raw);
 		final pattern = ~/^try\{haxe\.Json\.parse\(sys\.io\.File\.getContent\(([A-Za-z_][A-Za-z0-9_]*)\)\)\.min;\}catch\(e(:[^)]*)?\)\{Log\.warn\("UnabletodetermineminimumsupportedAndroidplatform:"\+e\.toString\(\)\);null;\}$/;
 		return pattern.match(compact) ? sanitizeIdentifier(pattern.matched(1)) : null;
+	}
+
+	static function renderOpaqueEnumSwitchProbeRaw(raw:String):Null<String> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^opaque_block_expr:\{switch\(([A-Za-z_][A-Za-z0-9_]*)\)\{case([A-Za-z_][A-Za-z0-9_]*)\)$/;
+		if (!pattern.match(compact))
+			return null;
+		final value = sanitizeIdentifier(pattern.matched(1));
+		final enumCase = pattern.matched(2);
+		return "([&]() { return std::string(" + value + ") == std::string(" + quoteString(enumCase) + "); })()";
 	}
 
 	static function renderOpaqueObjectLocalRaw(raw:String):Null<String> {
