@@ -764,8 +764,14 @@ class CppTargetCore {
 		if (ctor == null) {
 			out.push("  " + className + "() {}");
 		} else {
-			out.push("  " + className + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(ctor), scope) + ") {");
-			for (line in renderStmts(HxFunctionDecl.getBody(ctor), "    ", scope))
+			out.push("  "
+				+ className
+				+ "("
+				+ renderFunctionArgs(HxFunctionDecl.getArgs(ctor), scope)
+				+ ")"
+				+ constructorBaseInitializer(ctor, scope)
+				+ " {");
+			for (line in renderStmts(constructorBodyAfterLeadingSuper(ctor), "    ", scope))
 				out.push(line);
 			out.push("  }");
 		}
@@ -852,6 +858,34 @@ class CppTargetCore {
 			if (!HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "new")
 				return fn;
 		return null;
+	}
+
+	static function constructorBaseInitializer(ctor:HxFunctionDecl, scope:CppRenderScope):String {
+		final baseType = scope == null || scope.owner == null ? null : baseTypeName(scope.owner);
+		if (baseType == null)
+			return "";
+		return switch (leadingSuperCallArgs(HxFunctionDecl.getBody(ctor))) {
+			case null:
+				"";
+			case args:
+				" : " + baseType + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+		};
+	}
+
+	static function constructorBodyAfterLeadingSuper(ctor:HxFunctionDecl):Array<HxStmt> {
+		final body = HxFunctionDecl.getBody(ctor);
+		return leadingSuperCallArgs(body) == null ? body : body.slice(1);
+	}
+
+	static function leadingSuperCallArgs(stmts:Array<HxStmt>):Null<Array<HxExpr>> {
+		if (stmts == null || stmts.length == 0)
+			return null;
+		return switch (stmts[0]) {
+			case SExpr(ECall(ESuper, args), _):
+				args;
+			case _:
+				null;
+		};
 	}
 
 	static function renderFunctionArgs(args:Array<HxFunctionArg>, ?scope:CppRenderScope):String {

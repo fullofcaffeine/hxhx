@@ -792,6 +792,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final abstractFieldLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(abstractFieldOwner, abstractLookup).join("\n");
 		assertContains(abstractFieldLines, "LocalCallStack stack = LocalCallStack();",
 			"C++ fields typed as array-backed abstracts should default to value wrappers instead of int zero");
+		final ctorBase = new HxClassDecl("CtorBase", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, false, false)], "Void", [], "")
+		], []);
+		final ctorSub = new HxClassDecl("CtorSub", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, false, false)], "Void",
+				[SExpr(ECall(ESuper, [EIdent("message")]), HxPos.unknown())], "")
+		], [], "CtorBase");
+		final ctorNames = new StringMap<Bool>();
+		for (name in ["CtorBase", "CtorSub"])
+			ctorNames.set(name, true);
+		final ctorClasses = new StringMap<HxClassDecl>();
+		ctorClasses.set("CtorBase", ctorBase);
+		ctorClasses.set("CtorSub", ctorSub);
+		final ctorLookup = {names: ctorNames, byName: ctorClasses};
+		final ctorSubLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(ctorSub, ctorLookup).join("\n");
+		assertContains(ctorSubLines, "CtorSub(std::string message) : CtorBase(message) {",
+			"C++ subclass constructors should lower leading super(...) to a base initializer list");
+		assertTrue(ctorSubLines.indexOf("base constructor call omitted") < 0, "C++ leading super(...) should not remain as an omitted body comment");
 		final genericReturnOwner = new HxClassDecl("GenericReturnOwner", false, [], []);
 		final genericReturnNames = new StringMap<Bool>();
 		genericReturnNames.set("GenericReturnOwner", true);
@@ -948,7 +966,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should emit ternary expression");
 		assertContains(source, "struct Child : public Base {", "C++ smoke should emit child helper class inheritance");
 		assertContains(source, "Base::label()", "C++ smoke should lower super method calls to qualified base calls");
-		assertContains(source, "/* base constructor call omitted */", "C++ smoke should lower bare super constructor call");
+		assertContains(source, "Child(int value) : Base() {", "C++ smoke should lower bare super constructor calls to base initializer lists");
+		assertTrue(source.indexOf("/* base constructor call omitted */") < 0, "C++ leading super constructor calls should not remain as omitted body comments");
 		assertContains(source, "auto parent = (*this);", "C++ smoke should lower bare super expressions to the current base-backed object");
 		assertContains(source, "__hxhx_json_min_field_from_file(platformsJson)",
 			"C++ smoke should lower hxcpp Android platform-min try/catch expressions through target runtime support");
