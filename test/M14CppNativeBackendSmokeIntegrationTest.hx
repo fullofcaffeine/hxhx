@@ -574,6 +574,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderHelperMethod(enumCtorHelper, enumPayloadOwner, enumPayloadLookup).join("\n");
 		assertContains(enumCtorHelperLines, "static std::string U1(std::string x) {\n    return std::string(\"U1\");\n  }",
 			"C++ enum metadata constructors with Dynamic return should stringify to their constructor tag, not std::to_string an aggregate");
+		final listNode = new HxClassDecl("ListNode", false, [], [new HxFieldDecl("next", Public, false, "Null<ListNode>", null)]);
+		final listOwner = new HxClassDecl("ListOwner", false, [], []);
+		final listNames = new StringMap<Bool>();
+		listNames.set("ListNode", true);
+		listNames.set("ListOwner", true);
+		final listClasses = new StringMap<HxClassDecl>();
+		listClasses.set("ListNode", listNode);
+		listClasses.set("ListOwner", listOwner);
+		final listLookup = {names: listNames, byName: listClasses};
+		final listRemoveLike = new HxFunctionDecl("removeLike", Public, false, [], "Bool", [
+			SVar("prev", "Null<ListNode>", ENull, HxPos.unknown()),
+			SVar("l", "Null<ListNode>", ENull, HxPos.unknown()),
+			SExpr(EBinop("=", EField(EIdent("prev"), "next"), EField(EIdent("l"), "next")), HxPos.unknown()),
+			SExpr(EBinop("=", EIdent("prev"), EIdent("l")), HxPos.unknown()),
+			SReturn(EBool(true), HxPos.unknown())
+		], "");
+		final listRemoveLikeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(listRemoveLike, listOwner, listLookup).join("\n");
+		assertContains(listRemoveLikeLines, "std::shared_ptr<ListNode> prev = nullptr;",
+			"C++ null-initialized class locals with explicit Haxe type hints should not emit auto/nullptr_t");
+		assertContains(listRemoveLikeLines, "(prev->next) = (l->next);", "C++ typed nullable locals should keep reference field access");
+		assertContains(listRemoveLikeLines, "prev = l;", "C++ typed nullable locals should accept later class-reference assignments");
 		final exprBodyOwner = new HxClassDecl("ExpressionBodyOwner", false, [], [new HxFieldDecl("key", Public, false, "String", null)]);
 		final exprBodyNames = new StringMap<Bool>();
 		exprBodyNames.set("ExpressionBodyOwner", true);
@@ -618,7 +639,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::vector<std::string>{std::string(\"alpha\"), std::string(\"beta\")}", "C++ smoke should emit string array literal");
 		assertContains(source, "static int helper(int x) {", "C++ smoke should emit main-class static helper function");
 		assertContains(source, "helper(4)", "C++ smoke should lower direct identifier function call");
-		assertContains(source, "auto casted = helper(5);", "C++ smoke should lower cast expression");
+		assertContains(source, "int casted = helper(5);", "C++ smoke should lower cast expression with explicit local type");
 		assertContains(source, "total += 4;", "C++ smoke should lower compound plus assignment");
 		assertContains(source, "total -= 2;", "C++ smoke should lower compound minus assignment");
 		assertContains(source, "total *= 3;", "C++ smoke should lower compound multiply assignment");

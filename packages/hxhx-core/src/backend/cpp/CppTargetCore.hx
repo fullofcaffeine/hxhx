@@ -787,10 +787,13 @@ class CppTargetCore {
 			case SThrow(expr, _):
 				[indent + "throw std::runtime_error(" + stringExpr(expr, scope) + ");"];
 			case SVar(name, typeHint, init, _):
+				final localType = cppLocalTypeHint(typeHint, init, scope);
 				if (scope != null)
-					scope.localTypes.set(sanitizeIdentifier(name), cppLocalTypeHint(typeHint, init, scope));
-				final rhs = init == null ? "0" : renderExpr(init, scope);
-					[indent + "auto " + sanitizeIdentifier(name) + " = " + rhs + ";"];
+					scope.localTypes.set(sanitizeIdentifier(name), localType);
+				final hasExplicitType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
+				final declaredType = hasExplicitType && localType.length > 0 ? localType : "auto";
+				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType) : renderExpr(init, scope);
+					[indent + declaredType + " " + sanitizeIdentifier(name) + " = " + rhs + ";"];
 			case SReturn(expr, _):
 				[indent + returnStmtForExpr(expr, scope)];
 			case SReturnVoid(_):
