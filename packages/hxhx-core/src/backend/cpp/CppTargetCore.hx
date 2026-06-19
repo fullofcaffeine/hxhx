@@ -766,6 +766,7 @@ class CppTargetCore {
 		if (ctor == null) {
 			out.push("  " + className + "() {}");
 		} else {
+			registerFunctionArgs(scope, HxFunctionDecl.getArgs(ctor));
 			out.push("  "
 				+ className
 				+ "("

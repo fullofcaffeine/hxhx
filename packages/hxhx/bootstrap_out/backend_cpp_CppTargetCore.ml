@@ -6528,6 +6528,7 @@ let renderHelperClass = fun cls classLookup -> try let __fallback_result_174 = (
         | HxRuntime.Hx_break -> ());
       let ctor = Obj.magic (findConstructor (Obj.magic cls)) in (
         ignore (if ctor == Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push out (("  " ^ HxString.toStdString className) ^ "() {}")) else ignore ((
+          ignore (registerFunctionArgs scope (Obj.magic (HxFunctionDecl.getArgs (Obj.magic ctor))));
           ignore (HxArray.push out (((((("  " ^ HxString.toStdString className) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic (HxFunctionDecl.getArgs (Obj.magic ctor))) scope)) ^ ")") ^ HxString.toStdString (constructorBaseInitializer (Obj.magic ctor) scope)) ^ " {"));
           ignore (let _g = ref 0 in let _g1 = Obj.magic (renderStmts (Obj.magic (constructorBodyAfterLeadingSuper (Obj.magic ctor))) ("    " : string) scope) in while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
             ignore (let __old_167 = !_g in let __new_168 = HxInt.add __old_167 1 in (

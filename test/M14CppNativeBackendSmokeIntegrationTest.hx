@@ -829,6 +829,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(ctorSubLines, "CtorSub(std::string message) : CtorBase(message) {",
 			"C++ subclass constructors should lower leading super(...) to a base initializer list");
 		assertTrue(ctorSubLines.indexOf("base constructor call omitted") < 0, "C++ leading super(...) should not remain as an omitted body comment");
+		final optionalCtorBase = new HxClassDecl("OptionalCtorBase", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, false, false)], "Void", [], "")
+		], []);
+		final optionalCtorSub = new HxClassDecl("OptionalCtorSub", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, true, false)], "Void",
+				[SExpr(ECall(ESuper, [EIdent("message")]), HxPos.unknown())], "")
+		], [], "OptionalCtorBase");
+		final optionalCtorNames = new StringMap<Bool>();
+		for (name in ["OptionalCtorBase", "OptionalCtorSub"])
+			optionalCtorNames.set(name, true);
+		final optionalCtorClasses = new StringMap<HxClassDecl>();
+		optionalCtorClasses.set("OptionalCtorBase", optionalCtorBase);
+		optionalCtorClasses.set("OptionalCtorSub", optionalCtorSub);
+		final optionalCtorLookup = {names: optionalCtorNames, byName: optionalCtorClasses};
+		final optionalCtorSubLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(optionalCtorSub, optionalCtorLookup).join("\n");
+		assertContains(optionalCtorSubLines, "OptionalCtorSub(std::optional<std::string> message = std::nullopt) : OptionalCtorBase(message.value()) {",
+			"C++ constructor scopes should type optional args before rendering super initializer lists");
 		final posInfos = new HxClassDecl("PosInfos", false, [], []);
 		final posException = new HxClassDecl("PosException", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)], "Void", [
