@@ -1037,6 +1037,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			"native protocol decode should prefer source function hints over erased Function");
 		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Dynamic", "String -> Array<String>"),
 			"native protocol decode should prefer source function hints over erased Dynamic");
+		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("B", "(index:Int, item:A) -> B"),
+			"native protocol decode should prefer source function hints over erased generic type variables");
 		assertTrue(! @:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Bool", "String"),
 			"native protocol decode should not treat unrelated source hints as more specific");
 		assertTrue(! @:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("String", "String -> Array<String>"),

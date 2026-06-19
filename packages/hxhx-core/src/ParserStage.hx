@@ -3146,7 +3146,24 @@ class ParserStage {
 			|| typeHint == "Function"
 			|| typeHint == "StdTypes.Function"
 			|| typeHint == "haxe.Constraints.Function"
-			|| StringTools.endsWith(typeHint, ".Function");
+			|| StringTools.endsWith(typeHint, ".Function")
+			|| isGenericTypeVariableHintText(typeHint);
+	}
+
+	static function isGenericTypeVariableHintText(typeHint:String):Bool {
+		if (typeHint == null || typeHint.length == 0 || typeHint.indexOf(".") >= 0)
+			return false;
+		final first = typeHint.charCodeAt(0);
+		if (first < "A".code || first > "Z".code)
+			return false;
+		for (i in 1...typeHint.length) {
+			final code = typeHint.charCodeAt(i);
+			final isLetter = (code >= "A".code && code <= "Z".code) || (code >= "a".code && code <= "z".code);
+			final isDigit = code >= "0".code && code <= "9".code;
+			if (!isLetter && !isDigit && code != "_".code)
+				return false;
+		}
+		return true;
 	}
 
 	static function defaultValueFromText(text:String):HxDefaultValue {
