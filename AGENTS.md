@@ -40,6 +40,12 @@ Agent policy:
 - If implementation/debugging gets stuck for too long without a credible local next step, escalate to Oracle explicitly instead of grinding indefinitely.
   - Use Oracle to unblock strategy, seam selection, or closure criteria.
   - Do not use Oracle as a substitute for implementation, tests, or CI evidence once the next step is clear.
+- If a compiler/runtime issue is too complex, architecture-sensitive, or likely to invite a band-aid fix, stop before implementation and propose an external GPT 5.5 Pro design review with a detailed prompt that includes the whole repo.
+  - This is rare: upstream Haxe remains the primary behavior oracle, and local tests/CI remain the proof.
+  - Use this escalation only when upstream-oracle evidence is not enough to choose a safe architecture or when the fix touches broad semantics across multiple compiler/runtime layers.
+  - Examples: receiver/state threading across AST lowering, IIFE transforms, and runtime behavior; Haxe stdlib semantics that do not map cleanly to BEAM; changes that could affect many generated snapshots or app examples; or cases where a local patch would likely hide the bug instead of fixing the model.
+  - For NaN/Infinity/Math-style issues, escalate before implementation because semantics can affect `Math`, `Float`, comparisons, parsing, JSON, binary float encoding, and upstream runtime conformance.
+  - The escalation proposal should include a concrete prompt, the relevant beads, the observed failing gates, local evidence, upstream oracle expectations, and a request for architecture guidance rather than code transcription.
 - If the user says to stop on `thinking:xhigh`, stop immediately when that threshold is reached and ask the user before continuing.
   - Do not silently continue `thinking:xhigh` implementation work.
   - Do not substitute Oracle or extended reasoning for that approval; ask first.
