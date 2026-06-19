@@ -535,6 +535,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedList], []);
 	}
 
+	static function vendorReadOnlyArrayProgramWhenAvailable():Null<GenIrProgram> {
+		final readOnlyArrayPath = "vendor/haxe/std/haxe/ds/ReadOnlyArray.hx";
+		if (!FileSystem.exists(readOnlyArrayPath))
+			return null;
+		final readOnlyArraySource = File.getContent(readOnlyArrayPath);
+		final mainSource = "class Main { static function main() {} }";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedReadOnlyArray = TyperStage.typeModule(ParserStage.parse(readOnlyArraySource, readOnlyArrayPath));
+		return MacroStage.expandProgram([typedMain, typedReadOnlyArray], []);
+	}
+
 	static function vendorLambdaProgramWhenAvailable():Null<GenIrProgram> {
 		final lambdaPath = "vendor/haxe/std/Lambda.hx";
 		if (!FileSystem.exists(lambdaPath))
@@ -1483,6 +1494,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertContains(vendorListSource,
 				"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
 				"C++ smoke should preserve upstream ListKeyValueIterator.next key/value return body");
+		}
+		final vendorReadOnlyArrayProgram = vendorReadOnlyArrayProgramWhenAvailable();
+		if (vendorReadOnlyArrayProgram != null) {
+			final vendorReadOnlyArrayDir = Path.join([root, "vendor-readonlyarray-source-only"]);
+			final vendorReadOnlyArrayEmit = BackendRegistry.createForTarget("cpp-native")
+				.emit(vendorReadOnlyArrayProgram, context(vendorReadOnlyArrayDir, true, true));
+			final vendorReadOnlyArraySource = File.getContent(vendorReadOnlyArrayEmit.entryPath);
+			assertContains(vendorReadOnlyArraySource, "struct ReadOnlyArray {", "C++ smoke should emit upstream haxe.ds.ReadOnlyArray as a helper");
+			assertContains(vendorReadOnlyArraySource, "auto operator[](int index) const { return __values[index]; }",
+				"C++ smoke should expose operator[] for upstream haxe.ds.ReadOnlyArray array access");
+			assertContains(vendorReadOnlyArraySource, "((*this)[i])", "C++ smoke should preserve upstream ReadOnlyArray.get through the wrapper operator[]");
 		}
 
 		final vendorLambdaProgram = vendorLambdaProgramWhenAvailable();

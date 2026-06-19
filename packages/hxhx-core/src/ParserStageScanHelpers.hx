@@ -683,7 +683,22 @@ class ParserStageScanHelpers {
 	}
 
 	static function scanAbstractUnderlyingType(source:String, start:Int):String {
-		final open = scanNextToken(source, start);
+		var open = scanNextToken(source, start);
+		if (open.text == "<") {
+			var depth = 1;
+			var i = open.nextPos;
+			while (depth > 0) {
+				final tok = scanNextToken(source, i);
+				if (tok.text.length == 0)
+					return "";
+				i = tok.nextPos;
+				if (tok.text == "<")
+					depth += 1;
+				else if (tok.text == ">")
+					depth -= 1;
+			}
+			open = scanNextToken(source, i);
+		}
 		if (open.text != "(")
 			return "";
 		final parts = new Array<String>();
@@ -1784,6 +1799,8 @@ class ParserStageScanHelpers {
 			return simple;
 		final text = raw == null ? "" : StringTools.trim(raw);
 		if (text.length == 0)
+			return null;
+		if (StringTools.startsWith(text, "untyped ") || StringTools.startsWith(text, "if "))
 			return null;
 		try {
 			final expr = HxParser.parseExprText(text);

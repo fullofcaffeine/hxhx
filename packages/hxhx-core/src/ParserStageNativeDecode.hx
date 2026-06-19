@@ -708,6 +708,14 @@ class ParserStageNativeDecode {
 		return native == inner || StringTools.endsWith(native, "." + inner);
 	}
 
+	static function sourceArgTypeHintIsMoreSpecific(nativeTypeHint:String, sourceTypeHint:String):Bool {
+		if (sourceTypeHintIsMoreSpecific(nativeTypeHint, sourceTypeHint))
+			return true;
+		final native = compactTypeHint(nativeTypeHint);
+		final source = compactTypeHint(sourceTypeHint);
+		return (native == "String" || native == "StdTypes.String") && isFunctionTypeHintText(source);
+	}
+
 	static function isFunctionTypeHintText(typeHint:String):Bool {
 		return typeHint.indexOf("->") >= 0;
 	}
@@ -719,7 +727,12 @@ class ParserStageNativeDecode {
 			|| typeHint == "StdTypes.Function"
 			|| typeHint == "haxe.Constraints.Function"
 			|| StringTools.endsWith(typeHint, ".Function")
-			|| isGenericTypeVariableHintText(typeHint);
+			|| (!isKnownConcreteTypeHintText(typeHint) && isGenericTypeVariableHintText(typeHint));
+	}
+
+	static function isKnownConcreteTypeHintText(typeHint:String):Bool {
+		return typeHint == "String" || typeHint == "Bool" || typeHint == "Int" || typeHint == "Float" || typeHint == "Array"
+			|| typeHint == "StdTypes.String" || typeHint == "StdTypes.Bool" || typeHint == "StdTypes.Int" || typeHint == "StdTypes.Float";
 	}
 
 	static function isGenericTypeVariableHintText(typeHint:String):Bool {
@@ -839,7 +852,7 @@ class ParserStageNativeDecode {
 				if (sourceHint != null) {
 					if (sourceHint.isOptional)
 						isOptional = true;
-					if (sourceTypeHintIsMoreSpecific(ty, sourceHint.typeHint))
+					if (sourceArgTypeHintIsMoreSpecific(ty, sourceHint.typeHint))
 						ty = sourceHint.typeHint;
 					defaultValueText = sourceHint.defaultText;
 					defaultValue = defaultValueFromText(defaultValueText);
