@@ -247,6 +247,79 @@ class CppTargetCore {
 		out.push("  return out.str();");
 		out.push("}");
 		out.push("");
+		out.push("static bool __hxhx_quote_unix_safe_char(unsigned char c) {");
+		out.push("  return std::isalnum(c) || c == '_' || c == '@' || c == '%' || c == '+' || c == '=' || c == ':' || c == ',' || c == '.' || c == '/' || c == '-';");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_quote_unix_arg(const std::string& argument) {");
+		out.push("  if (argument.empty()) return std::string(\"''\");");
+		out.push("  bool safe = true;");
+		out.push("  for (unsigned char c : argument) {");
+		out.push("    if (!__hxhx_quote_unix_safe_char(c)) { safe = false; break; }");
+		out.push("  }");
+		out.push("  if (safe) return argument;");
+		out.push("  std::string out = \"'\";");
+		out.push("  for (char c : argument) {");
+		out.push("    if (c == 39) out += \"'\\\"'\\\"'\";");
+		out.push("    else out.push_back(c);");
+		out.push("  }");
+		out.push("  out += \"'\";");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
+		out.push("static bool __hxhx_quote_win_simple_arg(const std::string& argument) {");
+		out.push("  if (argument.empty()) return false;");
+		out.push("  std::size_t start = argument[0] == '/' ? 1 : 0;");
+		out.push("  if (start >= argument.size()) return false;");
+		out.push("  for (std::size_t i = start; i < argument.size(); ++i) {");
+		out.push("    unsigned char c = static_cast<unsigned char>(argument[i]);");
+		out.push("    if (c == 32 || c == 9 || c == '/' || c == 92 || c == 34) return false;");
+		out.push("  }");
+		out.push("  return true;");
+		out.push("}");
+		out.push("");
+		out.push("static bool __hxhx_quote_win_meta_char(unsigned char c) {");
+		out.push("  switch (c) {");
+		out.push("    case 32: case 40: case 41: case 37: case 33: case 94: case 34: case 60: case 62: case 38: case 124: case 10: case 13: case 44: case 59:");
+		out.push("      return true;");
+		out.push("    default:");
+		out.push("      return false;");
+		out.push("  }");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_quote_win_arg(std::string argument, bool escapeMetaCharacters) {");
+		out.push("  if (!__hxhx_quote_win_simple_arg(argument)) {");
+		out.push("    std::string result;");
+		out.push("    bool needquote = argument.find(' ') != std::string::npos || argument.find(static_cast<char>(9)) != std::string::npos || argument.empty() || argument.find('/') > 0;");
+		out.push("    if (needquote) result.push_back(static_cast<char>(34));");
+		out.push("    std::string bs;");
+		out.push("    for (char ch : argument) {");
+		out.push("      if (ch == 92) {");
+		out.push("        bs.push_back(static_cast<char>(92));");
+		out.push("      } else if (ch == 34) {");
+		out.push("        result += bs;");
+		out.push("        result += bs;");
+		out.push("        bs.clear();");
+		out.push("        result.push_back(static_cast<char>(92));");
+		out.push("        result.push_back(static_cast<char>(34));");
+		out.push("      } else {");
+		out.push("        if (!bs.empty()) { result += bs; bs.clear(); }");
+		out.push("        result.push_back(ch);");
+		out.push("      }");
+		out.push("    }");
+		out.push("    result += bs;");
+		out.push("    if (needquote) { result += bs; result.push_back(static_cast<char>(34)); }");
+		out.push("    argument = result;");
+		out.push("  }");
+		out.push("  if (!escapeMetaCharacters) return argument;");
+		out.push("  std::string escaped;");
+		out.push("  for (unsigned char c : argument) {");
+		out.push("    if (__hxhx_quote_win_meta_char(c)) escaped.push_back('^');");
+		out.push("    escaped.push_back(static_cast<char>(c));");
+		out.push("  }");
+		out.push("  return escaped;");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T>");
 		out.push("static bool __hxhx_is_type(const T&, const std::string& type) {");
 		out.push("  return type == \"Dynamic\" || type == \"Any\";");
@@ -1627,6 +1700,14 @@ class CppTargetCore {
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("Math"), method), args):
 				mathCallExpr(method, args, scope);
+			case ECall(EField(EField(EIdent("haxe"), "SysTools"), "quoteUnixArg"), args) if (args.length == 1):
+				"__hxhx_quote_unix_arg(" + stringExpr(args[0], scope) + ")";
+			case ECall(EField(EField(EIdent("haxe"), "SysTools"), "quoteWinArg"), args) if (args.length == 2):
+				"__hxhx_quote_win_arg("
+				+ stringExpr(args[0], scope)
+				+ ", "
+				+ renderExpr(args[1], scope)
+				+ ")";
 			case ECall(EField(receiver, "__URLEncode"), args) if (args.length == 0):
 				"__hxhx_url_encode(" + renderExpr(receiver, scope) + ")";
 			case ECall(EField(receiver, "__URLDecode"), args) if (args.length == 0):
@@ -2083,6 +2164,8 @@ class CppTargetCore {
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
 				"std::string";
+			case ECall(EField(EField(EIdent("haxe"), "SysTools"), method), _) if (method == "quoteUnixArg" || method == "quoteWinArg"):
+				"std::string";
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case ECall(EField(EIdent("StringTools"), method), _) if (method == "fastCodeAt" || method == "unsafeCodeAt"):
@@ -2228,6 +2311,8 @@ class CppTargetCore {
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
+				"std::string";
+			case ECall(EField(EField(EIdent("haxe"), "SysTools"), method), _) if (method == "quoteUnixArg" || method == "quoteWinArg"):
 				"std::string";
 			case ECall(EField(receiver, method), _) if (exprCppType(receiver, scope) == "std::string"):
 				stringMethodReturnCppType(method);

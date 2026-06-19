@@ -426,6 +426,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function trim(s:String):String {",
 			"    return ltrim(rtrim(s));",
 			"  }",
+			"  public static function quoteUnixArg(argument:String):String {",
+			"    return haxe.SysTools.quoteUnixArg(argument);",
+			"  }",
+			"  public static function quoteWinArg(argument:String, escapeMetaCharacters:Bool):String {",
+			"    return haxe.SysTools.quoteWinArg(argument, escapeMetaCharacters);",
+			"  }",
 			"  public static function hexLike(n:Int):String {",
 			"    var s = \"\";",
 			"    var hexChars = \"0123456789ABCDEF\";",
@@ -1382,6 +1388,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "return __hxhx_substring(s, 1, 3);", "C++ smoke should lower Haxe substring to target support helpers");
 		assertContains(source, "return ltrim(rtrim(s));", "C++ smoke should preserve same-class string-returning static calls");
 		assertTrue(source.indexOf("std::to_string(ltrim(rtrim(s)))") < 0, "C++ smoke should not stringify same-class String helper results");
+		assertContains(source, "return __hxhx_quote_unix_arg(std::string(argument));",
+			"C++ smoke should lower haxe.SysTools.quoteUnixArg to a target support helper");
+		assertContains(source, "return __hxhx_quote_win_arg(std::string(argument), escapeMetaCharacters);",
+			"C++ smoke should lower haxe.SysTools.quoteWinArg to a target support helper");
+		assertTrue(source.indexOf("(haxe.SysTools).quote") < 0, "C++ smoke should not leak qualified haxe.SysTools static syntax");
+		assertTrue(source.indexOf("std::to_string(__hxhx_quote_") < 0, "C++ smoke should not stringify haxe.SysTools quote helper results");
 		assertContains(source, "auto s = std::string(\"\");", "C++ smoke should infer mutable literal string locals as std::string");
 		assertContains(source, "__hxhx_char_at(hexChars, (n & 15)) + s", "C++ smoke should lower String.charAt to target support helpers");
 		assertContains(source, "return static_cast<int>(static_cast<int>(static_cast<unsigned char>(\"0\"[0])));",
