@@ -507,6 +507,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ HelperMacros.typeError for-expression probes should fold to true");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EMacroType("X -> Y")) == "std::string(\"X -> Y\")",
 			"C++ macro type quotes should lower to stable printable text in the MVP");
+		final exprBodyOwner = new HxClassDecl("ExpressionBodyOwner", false, [], [new HxFieldDecl("key", Public, false, "String", null)]);
+		final exprBodyNames = new StringMap<Bool>();
+		exprBodyNames.set("ExpressionBodyOwner", true);
+		final exprBodyClasses = new StringMap<HxClassDecl>();
+		exprBodyClasses.set("ExpressionBodyOwner", exprBodyOwner);
+		final exprBodyLookup = {names: exprBodyNames, byName: exprBodyClasses};
+		final exprBodyMethod = new HxFunctionDecl("next", Public, false, [], "String", [SExpr(EIdent("key"), HxPos.unknown())], "");
+		final exprBodyMethodLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(exprBodyMethod, exprBodyOwner, exprBodyLookup).join("\n");
+		assertContains(exprBodyMethodLines, "std::string next() {\n    return std::string(key);\n  }",
+			"C++ smoke should return non-void helper expression bodies instead of emitting bare expression statements");
+		final exprBodyStatic = new HxFunctionDecl("staticNext", Public, true, [], "String", [SExpr(EString("static-key"), HxPos.unknown())], "");
+		final exprBodyStaticLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(exprBodyStatic, exprBodyOwner, exprBodyLookup).join("\n");
+		assertContains(exprBodyStaticLines, "static std::string staticNext() {\n    return std::string(\"static-key\");\n  }",
+			"C++ smoke should return non-void static helper expression bodies");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");

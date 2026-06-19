@@ -442,7 +442,7 @@ class CppTargetCore {
 			+ "("
 			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn))
 			+ ") {"];
-		for (line in renderStmts(HxFunctionDecl.getBody(fn), "  ", renderScope(owner, classLookup, returnType)))
+		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "  ", renderScope(owner, classLookup, returnType)))
 			out.push(line);
 		out.push("}");
 		return out;
@@ -673,7 +673,7 @@ class CppTargetCore {
 			+ "("
 			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn))
 			+ ") {"];
-		for (line in renderStmts(HxFunctionDecl.getBody(fn), "    ", scope))
+		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
 			out.push(line);
 		out.push("  }");
 		return out;
@@ -700,6 +700,18 @@ class CppTargetCore {
 				out.push(line);
 		}
 		return out;
+	}
+
+	static function renderFunctionBody(stmts:Array<HxStmt>, indent:String, ?scope:CppRenderScope):Array<String> {
+		final returnType = scope == null ? "int" : scope.returnType;
+		if (returnType != "void" && stmts.length == 1) {
+			switch (stmts[0]) {
+				case SExpr(expr, _):
+					return [indent + returnStmtForExpr(expr, scope)];
+				case _:
+			}
+		}
+		return renderStmts(stmts, indent, scope);
 	}
 
 	static function renderStmt(stmt:HxStmt, indent:String, ?scope:CppRenderScope):Array<String> {
