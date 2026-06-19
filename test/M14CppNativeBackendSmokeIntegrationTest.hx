@@ -442,6 +442,34 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return \"0\".code;",
 			"  }",
 			"}",
+			"class CppInt64HelperLike {",
+			"  public static function trim(s:String):String {",
+			"    return s;",
+			"  }",
+			"  public static function parseStringLike(sParam:String):Int64 {",
+			"    var base = Int64.ofInt(10);",
+			"    var current = Int64.ofInt(0);",
+			"    var multiplier = Int64.ofInt(1);",
+			"    var s = StringTools.trim(sParam);",
+			"    if (s.charAt(0) == \"-\") {",
+			"      current = Int64.sub(current, multiplier);",
+			"      s = s.substring(1, s.length);",
+			"    }",
+			"    var digitInt = s.charCodeAt(s.length - 1) - \"0\".code;",
+			"    current = Int64.add(current, Int64.mul(multiplier, Int64.ofInt(digitInt)));",
+			"    if (Int64.isNeg(current)) {",
+			"      return Int64.neg(current);",
+			"    }",
+			"    return current;",
+			"  }",
+			"  public static function fromFloatLike(f:Float):Int64 {",
+			"    var noFractions = f - (f % 1);",
+			"    var neg = noFractions < 0;",
+			"    var rest = neg ? -noFractions : noFractions;",
+			"    var curr = rest % 2;",
+			"    return Int64.ofInt(0);",
+			"  }",
+			"}",
 			"class StringIteratorUnicode {",
 			"  var offset = 0;",
 			"  var s:String;",
@@ -1048,6 +1076,26 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ primitive-backed abstract helpers should not emit instance wrapper methods that require abstract this semantics");
 		assertTrue(primitiveLines.indexOf("std::shared_ptr<Int32>") < 0,
 			"C++ primitive-backed abstracts should not leak shared_ptr wrapper types into helper signatures");
+		final int64Abstract = new HxClassDecl("Int64", false, [
+			new HxFunctionDecl("ofInt", Public, true, [new HxFunctionArg("x", "Int", NoDefault, false, false)], "Int64",
+				[SReturn(EIdent("x"), HxPos.unknown())], ""),
+			new HxFunctionDecl("add", Public, true, [
+				new HxFunctionArg("a", "Int64", NoDefault, false, false),
+				new HxFunctionArg("b", "Int64", NoDefault, false, false)
+			], "Int64",
+				[SReturn(EBinop("+", EIdent("a"), EIdent("b")), HxPos.unknown())], "")
+		], [], "", []);
+		final int64Names = new StringMap<Bool>();
+		int64Names.set("Int64", true);
+		final int64Classes = new StringMap<HxClassDecl>();
+		int64Classes.set("Int64", int64Abstract);
+		final int64Lookup = {names: int64Names, byName: int64Classes};
+		final int64Lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(int64Abstract, int64Lookup).join("\n");
+		assertTrue(int64Lines.length == 0, "C++ Int64 should be a target-owned intrinsic surface, not a generated helper class");
+		assertTrue(int64Lines.indexOf("std::shared_ptr<Int64>") < 0, "C++ Int64 primitive-backed helpers should not leak shared_ptr wrapper types");
+		final int64Carrier = new HxClassDecl("__Int64", false, [], [], "", []);
+		final int64CarrierLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(int64Carrier, int64Lookup).join("\n");
+		assertTrue(int64CarrierLines.length == 0, "C++ __Int64 abstract carriers should not emit stale high/low helper bodies");
 		final stringIterator = new HxClassDecl("StringIterator", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "s"), EIdent("s")), HxPos.unknown())], ""),
@@ -1414,6 +1462,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(source.indexOf(".charCodeAt(") < 0, "C++ smoke should not emit nonexistent std::string charCodeAt calls");
 		assertTrue(source.indexOf(".substring(") < 0, "C++ smoke should not emit nonexistent std::string substring calls");
 		assertTrue(source.indexOf("std::to_string(s.substr") < 0, "C++ smoke should not stringify std::string substr results");
+		assertContains(source, "static long long parseStringLike(std::string sParam) {", "C++ smoke should erase Int64 helper returns to primitive values");
+		assertContains(source, "auto base = static_cast<long long>(10);",
+			"C++ smoke should lower Int64.ofInt directly instead of calling an incomplete helper class");
+		assertContains(source, "current = (current + (multiplier * static_cast<long long>(digitInt)));",
+			"C++ smoke should lower Int64 add/mul helper calls as primitive value operations");
+		assertContains(source, "auto noFractions = (f - std::fmod(f, 1));", "C++ smoke should lower Float modulo through std::fmod");
+		assertContains(source, "auto curr = std::fmod(rest, 2);", "C++ smoke should remember double arithmetic locals for later Float modulo");
+		assertContains(source, "if ((current < 0)) {", "C++ smoke should lower Int64.isNeg as a primitive comparison");
+		assertContains(source, "auto s = __hxhx_trim(std::string(sParam));", "C++ smoke should infer StringTools.trim string-return locals");
+		assertContains(source, "__hxhx_char_at(s, 0)", "C++ smoke should lower string locals initialized from same-owner calls");
+		assertContains(source, "__hxhx_substring(s, 1, (s.size()))", "C++ smoke should preserve string-local type through reassignment paths");
+		assertContains(source, "return current;", "C++ smoke should return Int64 primitive values without narrowing to int");
+		assertTrue(source.indexOf("Int64::ofInt") < 0, "C++ smoke should not emit incomplete Int64 static helper calls");
 		assertContains(source, "auto __hxhx_iter_code = std::make_shared<StringIteratorUnicode>(s);",
 			"C++ smoke should bind Haxe iterator protocol objects before looping");
 		assertContains(source, "while (__hxhx_iter_code->hasNext()) {", "C++ smoke should lower Haxe iterator protocol loops through hasNext()");
