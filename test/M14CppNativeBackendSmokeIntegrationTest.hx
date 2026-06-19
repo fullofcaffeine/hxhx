@@ -326,6 +326,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return cpp.NativeArray.create(length);",
 			"  }",
 			"}",
+			"class QualifiedNativeArrayStringUser {",
+			"  public function new() {}",
+			"  public function copyFirst(length:Int):Array<String> {",
+			"    var result = cpp.NativeArray.create(length);",
+			"    var seed = [\"seed\"];",
+			"    cpp.NativeArray.unsafeSet(result, 0, cpp.NativeArray.unsafeGet(seed, 0));",
+			"    return result;",
+			"  }",
+			"}",
 			"class Log {",
 			"  public static function warn(message:String):Void {",
 			"    Sys.println(message);",
@@ -1059,7 +1068,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "continue;", "C++ smoke should emit continue statement");
 		assertContains(source, "auto native = std::vector<int>(2);", "C++ smoke should lower NativeArray.create");
 		assertContains(source, "return std::vector<int>(length);", "C++ smoke should lower qualified cpp.NativeArray.create");
+		assertContains(source, "auto result = std::vector<std::string>(length);",
+			"C++ smoke should use enclosing vector return type for qualified cpp.NativeArray.create locals");
+		assertContains(source, "auto seed = std::vector<std::string>{std::string(\"seed\")};",
+			"C++ smoke should keep string array element type for NativeArray unsafe access coverage");
+		assertContains(source, "(result[0]) = (seed[0]);", "C++ smoke should lower qualified cpp.NativeArray unsafeSet/unsafeGet intrinsics");
 		assertTrue(source.indexOf("(cpp.NativeArray).create") < 0, "C++ smoke should not leak qualified cpp.NativeArray.create syntax");
+		assertTrue(source.indexOf("(cpp.NativeArray).unsafeSet") < 0, "C++ smoke should not leak qualified cpp.NativeArray.unsafeSet syntax");
+		assertTrue(source.indexOf("(cpp.NativeArray).unsafeGet") < 0, "C++ smoke should not leak qualified cpp.NativeArray.unsafeGet syntax");
+		assertTrue(source.indexOf("auto result = std::vector<int>(length);") < 0,
+			"C++ smoke should not infer Array<String> NativeArray.create locals as vector<int>");
 		assertContains(source, "(native[0]) = 7;", "C++ smoke should emit NativeArray indexed assignment");
 		assertContains(source, "(native.size())", "C++ smoke should emit NativeArray length read");
 		assertContains(source, "for (int i = 0; i < 3; i++) {", "C++ smoke should emit range for-in statement");

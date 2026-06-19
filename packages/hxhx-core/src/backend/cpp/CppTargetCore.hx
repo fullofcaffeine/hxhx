@@ -1038,7 +1038,7 @@ class CppTargetCore {
 				final hasExplicitType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
 				final declaredType = hasExplicitType && localType.length > 0 ? localType : "auto";
 				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
-					scope) : renderLocalInitExpr(init, declaredType, scope);
+					scope) : renderLocalInitExpr(init, declaredType, localType, scope);
 					[indent + declaredType + " " + sanitizeIdentifier(name) + " = " + rhs + ";"];
 			case SReturn(expr, _):
 				[indent + returnStmtForExpr(expr, scope)];
@@ -1274,9 +1274,13 @@ class CppTargetCore {
 			case ECall(EField(EIdent("Math"), method), args):
 				mathCallExpr(method, args, scope);
 			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
-				"std::vector<int>(" + renderExpr(args[0], scope) + ")";
+				nativeArrayCreateExpr(args[0], scope);
 			case ECall(EField(receiver, "create"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
-				"std::vector<int>(" + renderExpr(args[0], scope) + ")";
+				nativeArrayCreateExpr(args[0], scope);
+			case ECall(EField(receiver, "unsafeGet"), args) if (args.length == 2 && isCppNativeArrayReceiver(receiver)):
+				nativeArrayUnsafeGetExpr(args[0], args[1], scope);
+			case ECall(EField(receiver, "unsafeSet"), args) if (args.length == 3 && isCppNativeArrayReceiver(receiver)):
+				nativeArrayUnsafeSetExpr(args[0], args[1], args[2], scope);
 			case ECall(EField(EIdent("HelperMacros"), "typeErrorText"), [EUnsupported(raw)]) if (raw != null
 				&& StringTools.startsWith(raw, "for_expr:")):
 				quoteString("Int has no field keyValueIterator");
@@ -1427,13 +1431,37 @@ class CppTargetCore {
 		};
 	}
 
-	static function renderLocalInitExpr(init:HxExpr, declaredType:String, ?scope:CppRenderScope):String {
+	static function renderLocalInitExpr(init:HxExpr, declaredType:String, localType:String, ?scope:CppRenderScope):String {
 		return switch (init) {
 			case ENull if (isCppOptionalType(declaredType)):
 				"std::nullopt";
+			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
+				nativeArrayCreateExpr(args[0], scope, localType);
+			case ECall(EField(receiver, "create"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
+				nativeArrayCreateExpr(args[0], scope, localType);
 			case _:
 				renderExpr(init, scope);
 		};
+	}
+
+	static function nativeArrayCreateExpr(length:HxExpr, ?scope:CppRenderScope, ?preferredType:String):String {
+		return nativeArrayVectorType(scope, preferredType) + "(" + renderExpr(length, scope) + ")";
+	}
+
+	static function nativeArrayVectorType(?scope:CppRenderScope, ?preferredType:String):String {
+		if (isCppVectorType(preferredType))
+			return preferredType;
+		if (scope != null && isCppVectorType(scope.returnType))
+			return scope.returnType;
+		return "std::vector<int>";
+	}
+
+	static function nativeArrayUnsafeGetExpr(array:HxExpr, index:HxExpr, ?scope:CppRenderScope):String {
+		return "(" + renderExpr(array, scope) + "[" + renderExpr(index, scope) + "])";
+	}
+
+	static function nativeArrayUnsafeSetExpr(array:HxExpr, index:HxExpr, value:HxExpr, ?scope:CppRenderScope):String {
+		return nativeArrayUnsafeGetExpr(array, index, scope) + " = " + renderExpr(value, scope);
 	}
 
 	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -1604,6 +1632,12 @@ class CppTargetCore {
 				sanitizeTypePath(HxClassDecl.getName(scope.owner));
 			case ENew(typePath, _):
 				cppTypeHint(typePath, scope);
+			case ECall(EField(EIdent("NativeArray"), "create"), _):
+				nativeArrayVectorType(scope);
+			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
+				nativeArrayVectorType(scope);
+			case ECall(EField(receiver, "unsafeGet"), args) if (args.length == 2 && isCppNativeArrayReceiver(receiver)):
+				cppVectorElementType(exprCppType(args[0], scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case ECall(EField(ESuper, method), _):
@@ -1710,6 +1744,10 @@ class CppTargetCore {
 				exprCppType(expr, scope);
 			case ENew(typePath, _):
 				cppTypeHint(typePath, scope);
+			case ECall(EField(EIdent("NativeArray"), "create"), _):
+				nativeArrayVectorType(scope);
+			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
+				nativeArrayVectorType(scope);
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
