@@ -2633,7 +2633,12 @@ class CppTargetCore {
 	**/
 	static function arrayComprehensionExpr(name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr, ?scope:CppRenderScope):String {
 		final local = sanitizeIdentifier(name);
-		final typeName = comprehensionElementType(yieldExpr);
+		final hadPreviousLocal = scope != null && scope.localTypes.exists(local);
+		final previousLocalType = hadPreviousLocal ? scope.localTypes.get(local) : "";
+		final loopElementType = iterableElementType(iterable, scope);
+		if (scope != null && loopElementType.length > 0)
+			scope.localTypes.set(local, loopElementType);
+		final typeName = comprehensionElementType(yieldExpr, scope);
 		final out = ["([&]() {", "  std::vector<" + typeName + "> __hxhx_comp_out;"];
 		switch (iterable) {
 			case ERange(start, end):
@@ -2661,6 +2666,12 @@ class CppTargetCore {
 		out.push("  }");
 		out.push("  return __hxhx_comp_out;");
 		out.push("})()");
+		if (scope != null) {
+			if (hadPreviousLocal)
+				scope.localTypes.set(local, previousLocalType);
+			else
+				scope.localTypes.remove(local);
+		}
 		return out.join("\n");
 	}
 
@@ -2688,7 +2699,27 @@ class CppTargetCore {
 		return "int";
 	}
 
-	static function comprehensionElementType(expr:HxExpr):String {
+	static function iterableElementType(iterable:HxExpr, ?scope:CppRenderScope):String {
+		return switch (iterable) {
+			case ERange(_, _):
+				"int";
+			case _:
+				cppIterableElementType(exprCppType(iterable, scope), scope);
+		};
+	}
+
+	static function cppIterableElementType(typeName:String, ?scope:CppRenderScope):String {
+		if (isCppVectorType(typeName))
+			return cppVectorElementType(typeName);
+		if (typeName == "Array")
+			return "std::string";
+		return "";
+	}
+
+	static function comprehensionElementType(expr:HxExpr, ?scope:CppRenderScope):String {
+		final inferred = inferExprCppType(expr, scope);
+		if (inferred.length > 0)
+			return inferred;
 		if (isStringLike(expr))
 			return "std::string";
 		return switch (expr) {

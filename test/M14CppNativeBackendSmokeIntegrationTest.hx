@@ -881,6 +881,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SExpr(EBinop("=", EArrayAccess(EIdent("result"), EInt(0)), ECall(EIdent("f"), [EArrayAccess(EThis, EInt(0))])), HxPos.unknown()),
 				SForIn("value", EThis, SBlock([], HxPos.unknown()), HxPos.unknown()),
 				SReturn(EIdent("result"), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("filter", Public, false, [new HxFunctionArg("f", "String->Bool", NoDefault, false, false)], "Array<String>", [
+				SReturn(EArrayComprehension("v", EThis, ECall(EIdent("f"), [EIdent("v")]), EIdent("v")), HxPos.unknown())
 			], "")
 		], [new HxFieldDecl("length", Public, false, "Int", null)]);
 		final stdArrayNames = new StringMap<Bool>();
@@ -897,6 +900,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stdArrayLines, "auto end() { return __values.end(); }", "C++ std Array helper should expose end() for range-for over this");
 		assertContains(stdArrayLines, "(result[0]) = f(((*this)[0]));", "C++ std Array helper methods should compile lowered unsafeGet/indexing on this");
 		assertContains(stdArrayLines, "for (auto value : (*this)) {", "C++ std Array helper should support generated range-for over this");
+		assertContains(stdArrayLines, "std::vector<std::string> __hxhx_comp_out;",
+			"C++ std Array helper comprehensions should infer string vector output from the this-iterator binder");
+		assertContains(stdArrayLines, "__hxhx_comp_out.push_back(v);", "C++ std Array helper comprehensions should push string binders into string vectors");
+		assertTrue(stdArrayLines.indexOf("std::vector<int> __hxhx_comp_out;") < 0,
+			"C++ std Array helper comprehensions should not default string binder output to vector<int>");
 		final ctorBase = new HxClassDecl("CtorBase", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, false, false)], "Void", [], "")
 		], []);
