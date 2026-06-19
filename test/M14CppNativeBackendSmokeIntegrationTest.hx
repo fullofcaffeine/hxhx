@@ -674,6 +674,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(switchPatternLines, "auto m2 = __hxhx_switch;",
 			"C++ nested switch branches should bind enum-pattern variables before rendering branch expressions");
 		assertContains(switchPatternLines, "return (m1 == m2);", "C++ switch branch expressions should use pattern variables after they are declared");
+		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
+			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
+				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],
+					[EBinop("==", EIdent("item1"), EIdent("item2")), EBool(false)]),
+					HxPos.unknown())
+			], "");
+		final arrayPatternLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(arrayPatternMethod, optionalOwner, optionalLookup).join("\n");
+		assertContains(arrayPatternLines, "auto item1 = (__hxhx_switch[0]);",
+			"C++ array-pattern variables should bind to indexed elements, not the whole array value");
+		assertContains(arrayPatternLines, "auto item2 = (__hxhx_switch[1]);",
+			"C++ array-pattern variables should bind each requested index before rendering branch expressions");
+		assertContains(arrayPatternLines, "return (item1 == item2);", "C++ array-pattern branch expressions should use indexed binders after declaration");
 		final stringSource = new HxClassDecl("StringSource", false, [
 			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("source"), HxPos.unknown())], "")
 		], []);

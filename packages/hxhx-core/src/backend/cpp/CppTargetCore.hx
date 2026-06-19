@@ -2109,8 +2109,8 @@ class CppTargetCore {
 		  MVP, C++ type-checks the branch body and fails if those names are absent.
 
 		What/How:
-		- Bind every captured name to the current switch value as a conservative,
-		  compile-safe placeholder.
+		- Bind every captured name to the current switch value, or to an indexed
+		  element for exact-length array patterns.
 		- This intentionally does not claim full enum/array/object destructuring
 		  semantics. Real extraction from `__hx_params` or target runtime enum
 		  values should land as a separate behavior-owned seam.
@@ -2140,8 +2140,8 @@ class CppTargetCore {
 							walk(fieldPattern, value);
 				case PArray(items):
 					if (items != null)
-						for (item in items)
-							walk(item, value);
+						for (i in 0...items.length)
+							walk(items[i], "(" + value + "[" + Std.string(i) + "])");
 				case PExtractor(_, resultPattern):
 					walk(resultPattern, value);
 				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
