@@ -937,6 +937,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stdArrayLines, "__hxhx_comp_out.push_back(v);", "C++ std Array helper comprehensions should push string binders into string vectors");
 		assertTrue(stdArrayLines.indexOf("std::vector<int> __hxhx_comp_out;") < 0,
 			"C++ std Array helper comprehensions should not default string binder output to vector<int>");
+		final erasedMapiMethod = new HxFunctionDecl("mapiErased", Public, true, [
+			new HxFunctionArg("it", "Iterable<String>", NoDefault, false, false),
+			new HxFunctionArg("f", "String", NoDefault, false, false)
+		], "Array<String>", [
+			SVar("i", "Int", EInt(0), HxPos.unknown()),
+			SReturn(EArrayComprehension("x", EIdent("it"), null, ECall(EIdent("f"), [EUnop("post++", EIdent("i")), EIdent("x")])), HxPos.unknown())
+		], "");
+		final erasedMapiLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(erasedMapiMethod, stdArray, stdArrayLookup).join("\n");
+		assertContains(erasedMapiLines,
+			"static std::vector<std::string> mapiErased(std::vector<std::string> it, std::function<std::string(int, std::string)> f) {",
+			"C++ helper rendering should recover erased callable parameter shapes from call usage");
+		assertContains(erasedMapiLines, "std::vector<std::string> __hxhx_comp_out;",
+			"C++ erased callable recovery should let mapi comprehensions use the callback return type");
+		assertTrue(erasedMapiLines.indexOf("std::string f") < 0,
+			"C++ helper rendering should not keep erased String callback parameters as std::string when the body calls them");
 		final ctorBase = new HxClassDecl("CtorBase", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, false, false)], "Void", [], "")
 		], []);

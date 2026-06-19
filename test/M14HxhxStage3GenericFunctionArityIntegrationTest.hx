@@ -197,12 +197,28 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertEqString(HxFunctionDecl.getReturnTypeHint(fn), "Void", "native decode should not merge trailing untyped into the return type");
 	}
 
+	static function assertNativeDecodeRecoversSourceFunctionHintFromStringFallback():Void {
+		final source = [
+			"class LambdaLike {",
+			"  public static function mapi<A,B>(it:Iterable<A>, f:(index:Int, item:A) -> B):Array<B> {",
+			"    return [for (x in it) f(0, x)];",
+			"  }",
+			"}"
+		].join("\n");
+		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("mapi|public|1|it,f|Array<B>|||it:Iterable<A>,f:String|",
+			"return [for (x in it) f(0, x)];", source.indexOf("return [for"), source);
+		final fArg = HxFunctionDecl.getArgs(fn)[1];
+		assertEqString(HxFunctionArg.getTypeHint(fArg), "(index:Int, item:A) -> B",
+			"native decode should recover source callback hints when the native protocol uses String as an erased fallback");
+	}
+
 	static function main() {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
 		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
 		assertBootstrapNativeParserAllowsKeywordPathSegments();
 		assertBootstrapNativeParserEscapesStringTokenText();
 		assertNativeDecodeStripsUntypedReturnModifier();
+		assertNativeDecodeRecoversSourceFunctionHintFromStringFallback();
 		assertScannedGenericNamedFunctionArg();
 
 		final src = '@:generic class GenericMethods<T> {\n'
