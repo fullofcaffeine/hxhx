@@ -1004,6 +1004,9 @@ class CppTargetCore {
 				+ quoteString("Unable to determine minimum supported Android platform")
 				+ " << std::endl; return 0; } })()";
 		}
+		final opaqueObject = renderOpaqueObjectLocalRaw(raw);
+		if (opaqueObject != null)
+			return opaqueObject;
 		throw "C++ source backend MVP unsupported expression: ETryCatchRaw(" + summarizeRaw(raw) + ")";
 	}
 
@@ -1084,6 +1087,25 @@ class CppTargetCore {
 		final compact = compactRawText(raw);
 		final pattern = ~/^try\{haxe\.Json\.parse\(sys\.io\.File\.getContent\(([A-Za-z_][A-Za-z0-9_]*)\)\)\.min;\}catch\(e(:[^)]*)?\)\{Log\.warn\("UnabletodetermineminimumsupportedAndroidplatform:"\+e\.toString\(\)\);null;\}$/;
 		return pattern.match(compact) ? sanitizeIdentifier(pattern.matched(1)) : null;
+	}
+
+	static function renderOpaqueObjectLocalRaw(raw:String):Null<String> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\}=\{([A-Za-z_][A-Za-z0-9_]*):("[^"]*"|-?[0-9.]+)\};\}$/;
+		if (!pattern.match(compact))
+			return null;
+		if (pattern.matched(2) != pattern.matched(3))
+			return null;
+		final field = sanitizeIdentifier(pattern.matched(2));
+		final value = pattern.matched(4);
+		final fieldType = StringTools.startsWith(value, "\"") ? "std::string" : (value.indexOf(".") >= 0 ? "double" : "int");
+		return "([&]() { struct __hxhx_opaque_block { "
+			+ fieldType
+			+ " "
+			+ field
+			+ "; }; return __hxhx_opaque_block{"
+			+ value
+			+ "}; })()";
 	}
 
 	static function isTypeExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {

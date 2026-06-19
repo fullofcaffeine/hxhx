@@ -337,6 +337,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"utest-style Std.string try/catch probes should lower through normal string conversion");
 		assertContains(stdStringProbeTry, "catch (...) { return std::string(\"fallback\"); }",
 			"utest-style Std.string try/catch probes should preserve non-empty fallback strings");
+		final opaqueObjectBlock = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('opaque_block_expr:{ var b:{v:Dynamic} = {v:"foo"}; }'));
+		assertContains(opaqueObjectBlock, "struct __hxhx_opaque_block { std::string v; };",
+			"opaque object block should declare a local C++ aggregate for the captured field");
+		assertContains(opaqueObjectBlock, "return __hxhx_opaque_block{\"foo\"};", "opaque object block should preserve the captured string field value");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("t")])) == "__hxhx_type_name(t)",
 			"direct Type.getClassName calls should lower through the C++ type-name helper");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getEnumName"), [EIdent("t")])) == "__hxhx_type_name(t)",
