@@ -313,6 +313,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"simple call catch-value raw try/catch should preserve the successful call expression");
 		assertContains(simpleCallCatchValueTry, "catch (const std::exception& e) { return std::string(e.what()); }",
 			"simple call catch-value raw try/catch should return a C++ exception message");
+		final fieldReadCatchStringTry = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{nf1.s;}catch(e:Any){"NPE";}'));
+		assertContains(fieldReadCatchStringTry, "try { return nf1.s; }", "field-read catch-string raw try/catch should preserve the successful field read");
+		assertContains(fieldReadCatchStringTry, "catch (...) { return std::string(\"NPE\"); }",
+			"field-read catch-string raw try/catch should preserve the fallback string");
 		final classNameProbeTry = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{Type.getClassName(t);}catch(e:Dynamic){"";}'));
 		assertContains(classNameProbeTry, "try { return __hxhx_type_name(t); }",

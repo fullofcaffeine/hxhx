@@ -21,6 +21,12 @@ typedef CppTryStringProbe = {
 	var fallback:String;
 }
 
+typedef CppFieldReadCatchString = {
+	var receiver:String;
+	var field:String;
+	var fallback:String;
+}
+
 /**
 	Small native C++ source-emission target core.
 
@@ -950,6 +956,11 @@ class CppTargetCore {
 			return "([&]() { try { return __hxhx_join(" + joinCatch.receiver + ", " + quoteString(joinCatch.separator)
 				+ "); } catch (...) { return std::string(" + quoteString(joinCatch.fallback) + "); } })()";
 		}
+		final fieldReadCatch = parseFieldReadCatchStringRaw(raw);
+		if (fieldReadCatch != null) {
+			return "([&]() { try { return " + fieldReadCatch.receiver + "." + fieldReadCatch.field + "; } catch (...) { return std::string("
+				+ quoteString(fieldReadCatch.fallback) + "); } })()";
+		}
 		final stringProbe = parseTryStringProbeRaw(raw);
 		if (stringProbe != null) {
 			return "([&]() { try { return "
@@ -999,6 +1010,16 @@ class CppTargetCore {
 		return pattern.match(compact) ? {
 			receiver: sanitizeIdentifier(pattern.matched(1)),
 			separator: pattern.matched(2),
+			fallback: pattern.matched(4)
+		} : null;
+	}
+
+	static function parseFieldReadCatchStringRaw(raw:String):Null<CppFieldReadCatchString> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^try\{([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*);\}catch\(e(:[^)]*)?\)\{"([^"]*)";?\}$/;
+		return pattern.match(compact) ? {
+			receiver: sanitizeIdentifier(pattern.matched(1)),
+			field: sanitizeIdentifier(pattern.matched(2)),
 			fallback: pattern.matched(4)
 		} : null;
 	}
