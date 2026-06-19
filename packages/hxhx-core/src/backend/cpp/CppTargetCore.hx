@@ -1836,6 +1836,8 @@ class CppTargetCore {
 		final enumCtor = enumMetadataCtorStringExpr(expr, scope);
 		if (enumCtor != null)
 			return enumCtor;
+		if (classNameFromCppExprType(exprCppType(expr, scope), scope) != null)
+			return "__hxhx_type_name(" + renderExpr(expr, scope) + ")";
 		return switch (expr) {
 			case EString(value):
 				"std::string(" + quoteString(value) + ")";

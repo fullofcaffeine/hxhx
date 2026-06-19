@@ -669,6 +669,26 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stringCallLines, "return s->toString();",
 			"C++ string-returning method calls should flow directly instead of std::to_string(std::string)");
 		assertTrue(stringCallLines.indexOf("std::to_string(s->toString())") < 0, "C++ string-returning method calls should not be wrapped in std::to_string");
+		final selfStringOwner = new HxClassDecl("SelfStringOwner", false, [], []);
+		final selfStringNames = new StringMap<Bool>();
+		selfStringNames.set("SelfStringOwner", true);
+		final selfStringClasses = new StringMap<HxClassDecl>();
+		selfStringClasses.set("SelfStringOwner", selfStringOwner);
+		final selfStringLookup = {names: selfStringNames, byName: selfStringClasses};
+		final selfStringMethod = new HxFunctionDecl("toStringLike", Public, false, [], "String", [SReturn(EThis, HxPos.unknown())], "");
+		final selfStringLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(selfStringMethod, selfStringOwner, selfStringLookup).join("\n");
+		assertContains(selfStringLines, "return __hxhx_type_name((*this));",
+			"C++ class-like self stringification should use the target type-name helper instead of std::to_string(object)");
+		assertTrue(selfStringLines.indexOf("std::to_string((*this))") < 0, "C++ class-like self stringification should not call std::to_string");
+		final classRefStringMethod = new HxFunctionDecl("refStringLike", Public, false, [], "String", [
+			SVar("next", "", ENew("SelfStringOwner", []), HxPos.unknown()),
+			SReturn(EIdent("next"), HxPos.unknown())
+		], "");
+		final classRefStringLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(classRefStringMethod, selfStringOwner, selfStringLookup).join("\n");
+		assertContains(classRefStringLines, "return __hxhx_type_name(next);",
+			"C++ class-like reference stringification should use the target type-name helper instead of std::to_string(shared_ptr)");
+		assertTrue(classRefStringLines.indexOf("std::to_string(next)") < 0, "C++ class-like reference stringification should not call std::to_string");
 		final genericReturnOwner = new HxClassDecl("GenericReturnOwner", false, [], []);
 		final genericReturnNames = new StringMap<Bool>();
 		genericReturnNames.set("GenericReturnOwner", true);

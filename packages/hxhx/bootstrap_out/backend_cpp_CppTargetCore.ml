@@ -4563,6 +4563,7 @@ and enumCtorExpr = fun name args scope -> try let __fallback_result_684 = let ta
   | HxRuntime.Hx_return __ret_683 -> Obj.obj __ret_683
 and stringExpr = fun expr scope -> try let __fallback_result_729 = let enumCtor = (enumMetadataCtorStringExpr (Obj.magic expr) scope : string) in (
   ignore (if enumCtor != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (enumCtor : string))) else ());
+  ignore (if classNameFromCppExprType (exprCppType (Obj.magic expr) scope : string) scope != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_type_name(" ^ HxString.toStdString (renderExpr (Obj.magic expr) scope)) ^ ")" : string))) else ());
   let tempResult = ref ("" : string) in (
     ignore (match expr with
       | HxExpr.ENull -> let __assign_686 = ("std::string()" : string) in (
