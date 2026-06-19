@@ -5165,7 +5165,7 @@ let renderProgram = fun program main -> (
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
     let classLookup = collectClassLookup (Obj.magic program) in (
-      ignore (let _g = ref 0 in let _g1 = Obj.magic (renderAnonStructs (Obj.magic (collectAnonStructs (Obj.magic program) classLookup))) in while !_g < HxArray.length _g1 do ignore (let decl = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+      ignore (let _g = ref 0 in let _g1 = Obj.magic (renderForwardDeclarations (Obj.magic program) (Obj.magic (Obj.obj (HxAnon.get main "cls")))) in while !_g < HxArray.length _g1 do ignore (let decl = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
         ignore (let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
           ignore (_g := __new_25);
           __new_25
@@ -5179,7 +5179,7 @@ let renderProgram = fun program main -> (
         )) done);
         HxArray.push out ""
       )) done);
-      ignore (let _g = ref 0 in let _g1 = Obj.magic (renderForwardDeclarations (Obj.magic program) (Obj.magic (Obj.obj (HxAnon.get main "cls")))) in while !_g < HxArray.length _g1 do ignore (let decl = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+      ignore (let _g = ref 0 in let _g1 = Obj.magic (renderAnonStructs (Obj.magic (collectAnonStructs (Obj.magic program) classLookup))) in while !_g < HxArray.length _g1 do ignore (let decl = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
         ignore (let __old_28 = !_g in let __new_29 = HxInt.add __old_28 1 in (
           ignore (_g := __new_29);
           __new_29

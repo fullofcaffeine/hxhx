@@ -101,6 +101,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(((-1) >>> 1) + 0));",
 			"    Sys.println(Std.string((~1) + 0));",
 			"    var box = new Box(41);",
+			"    var boxInfo = {box: box};",
 			"    Sys.println(Std.string(box.value + 1));",
 			"    Sys.println(Std.string(box.getHeight()));",
 			"    var ref = RefNode.create(\"root\", null);",
@@ -629,6 +630,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "int getHeight() {", "C++ smoke should emit helper class method");
 		assertContains(source, "return static_cast<int>(value);", "C++ smoke should emit helper method return");
 		assertContains(source, "auto box = std::make_shared<Box>(41);", "C++ smoke should lower class construction to nullable references");
+		assertContains(source, "auto boxInfo = __hxhx_anon_box_std__shared_ptr_Box_{box};",
+			"C++ smoke should lower anonymous objects containing class references");
+		assertTrue(source.indexOf("struct Box;") < source.indexOf("struct __hxhx_anon_box_std__shared_ptr_Box_ {"),
+			"C++ smoke should emit helper forward declarations before anonymous structs that reference helpers");
 		assertContains(source, "box->getHeight()", "C++ smoke should lower class receiver method calls through reference access");
 		assertContains(source, "std::shared_ptr<RefNode> next = nullptr;", "C++ smoke should type nullable class fields as C++ references");
 		assertContains(source, "std::string filterGeneric(std::function<bool(std::string)> f) {",

@@ -265,12 +265,12 @@ class CppTargetCore {
 		out.push("}");
 		out.push("");
 		final classLookup = collectClassLookup(program);
-		for (decl in renderAnonStructs(collectAnonStructs(program, classLookup))) {
+		for (decl in renderForwardDeclarations(program, main.cls)) {
 			for (line in decl)
 				out.push(line);
 			out.push("");
 		}
-		for (decl in renderForwardDeclarations(program, main.cls)) {
+		for (decl in renderAnonStructs(collectAnonStructs(program, classLookup))) {
 			for (line in decl)
 				out.push(line);
 			out.push("");
