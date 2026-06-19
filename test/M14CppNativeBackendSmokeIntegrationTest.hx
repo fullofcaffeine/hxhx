@@ -360,6 +360,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ null-coalescing expressions should lower through a lazy target helper");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("??", ENull, EInt(2))) == "__hxhx_null_coalesce(nullptr, [&]() { return 2; })",
 			"C++ null-coalescing should preserve explicit null left operands");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(EBinop("??=", EIdent("slot"),
+				ECall(EIdent("fallback"),
+					[]))) == "([&]() { auto& __hxhx_null_assign_target = slot; __hxhx_null_assign_target = __hxhx_null_coalesce(__hxhx_null_assign_target, [&]() { return fallback(); }); return __hxhx_null_assign_target; })()",
+			"C++ null-coalescing assignment should bind the assignment target once");
 		final rangeExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ERange(EInt(1), EInt(4)));
 		assertContains(rangeExpr, "std::vector<int> __hxhx_range_out;", "range expressions should lower to a C++ vector builder");
 		assertContains(rangeExpr, "int __hxhx_range_start = 1;", "range expressions should bind the start once");

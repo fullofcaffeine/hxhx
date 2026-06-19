@@ -878,6 +878,12 @@ class CppTargetCore {
 				+ ", [&]() { return "
 				+ renderExpr(right, scope)
 				+ "; })";
+			case EBinop("??=", left, right):
+				"([&]() { auto& __hxhx_null_assign_target = "
+				+ renderExpr(left, scope)
+				+ "; __hxhx_null_assign_target = __hxhx_null_coalesce(__hxhx_null_assign_target, [&]() { return "
+				+ renderExpr(right, scope)
+				+ "; }); return __hxhx_null_assign_target; })()";
 			case EBinop(">>>=", left, right):
 				"([&]() { auto& __hxhx_ushr_assign_target = "
 				+ renderExpr(left, scope)
