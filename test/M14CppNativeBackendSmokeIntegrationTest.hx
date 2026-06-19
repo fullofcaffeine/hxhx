@@ -348,6 +348,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"opaque object block should declare local aggregate fields from the initializer");
 		assertContains(opaqueObjectMultiFieldBlock, "return __hxhx_opaque_block{0, \"foo\"};",
 			"opaque object block should preserve multiple initializer field values");
+		final opaqueTypedLocalRefBlock = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('opaque_block_expr:{ var x:TypedefToStringMap<String>; x; }'));
+		assertContains(opaqueTypedLocalRefBlock, "std::string x = std::string();",
+			"opaque typed local reference should default-initialize through the current C++ type-hint model");
+		assertContains(opaqueTypedLocalRefBlock, "return x;", "opaque typed local reference should return the local value");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("t")])) == "__hxhx_type_name(t)",
 			"direct Type.getClassName calls should lower through the C++ type-name helper");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getEnumName"), [EIdent("t")])) == "__hxhx_type_name(t)",

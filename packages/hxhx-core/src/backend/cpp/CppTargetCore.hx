@@ -1007,6 +1007,9 @@ class CppTargetCore {
 		final opaqueObject = renderOpaqueObjectLocalRaw(raw);
 		if (opaqueObject != null)
 			return opaqueObject;
+		final opaqueTypedLocalRef = renderOpaqueTypedLocalRefRaw(raw);
+		if (opaqueTypedLocalRef != null)
+			return opaqueTypedLocalRef;
 		throw "C++ source backend MVP unsupported expression: ETryCatchRaw(" + summarizeRaw(raw) + ")";
 	}
 
@@ -1113,6 +1116,16 @@ class CppTargetCore {
 			+ " }; return __hxhx_opaque_block{"
 			+ values.join(", ")
 			+ "}; })()";
+	}
+
+	static function renderOpaqueTypedLocalRefRaw(raw:String):Null<String> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):([^;{}]+);\1;\}$/;
+		if (!pattern.match(compact))
+			return null;
+		final local = sanitizeIdentifier(pattern.matched(1));
+		final typeName = cppTypeHint(pattern.matched(2));
+		return "([&]() { " + typeName + " " + local + " = " + cppDefaultValue(typeName) + "; return " + local + "; })()";
 	}
 
 	static function isTypeExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
