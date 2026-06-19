@@ -402,6 +402,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return s.__URLDecode();",
 			"  }",
 			"}",
+			"class StringIteratorUnicode {",
+			"  var offset = 0;",
+			"  var s:String;",
+			"  public function new(s:String) {",
+			"    this.s = s;",
+			"  }",
+			"  public function hasNext() {",
+			"    return offset < s.length;",
+			"  }",
+			"  public function next() {",
+			"    return StringTools.unsafeCodeAt(s, offset++);",
+			"  }",
+			"}",
+			"class CppStringIteratorForInLike {",
+			"  public static function sum(s:String):Int {",
+			"    var total = 0;",
+			"    for (code in new StringIteratorUnicode(s)) {",
+			"      total += code;",
+			"    }",
+			"    return total;",
+			"  }",
+			"}",
 			"class Log {",
 			"  public static function warn(message:String):Void {",
 			"    Sys.println(message);",
@@ -1315,6 +1337,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "return __hxhx_url_encode(s);", "C++ smoke should lower StringTools URL encode native string calls to support helpers");
 		assertContains(source, "return __hxhx_url_decode(s);", "C++ smoke should lower StringTools URL decode native string calls to support helpers");
 		assertTrue(source.indexOf("std::to_string(__hxhx_url_encode") < 0, "C++ smoke should not stringify URL encode helper results");
+		assertContains(source, "auto __hxhx_iter_code = std::make_shared<StringIteratorUnicode>(s);",
+			"C++ smoke should bind Haxe iterator protocol objects before looping");
+		assertContains(source, "while (__hxhx_iter_code->hasNext()) {", "C++ smoke should lower Haxe iterator protocol loops through hasNext()");
+		assertContains(source, "auto code = __hxhx_iter_code->next();", "C++ smoke should lower Haxe iterator protocol loop values through next()");
+		assertTrue(source.indexOf("for (auto code : std::make_shared<StringIteratorUnicode>(s))") < 0,
+			"C++ smoke should not use C++ range-for over Haxe iterator objects");
 		assertContains(source, "if (pred.value()(x)) {", "C++ smoke should unwrap optional callables before invocation");
 		assertContains(source, "static bool empty(std::vector<std::string> it) {", "C++ smoke should lower Array<String> arguments to vector values");
 		assertContains(source, "return (!(!it.empty()));", "C++ smoke should lower iterator().hasNext() on vectors through empty()");

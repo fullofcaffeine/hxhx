@@ -1356,7 +1356,24 @@ class CppTargetCore {
 	**/
 	static function renderForInStmt(name:String, iterable:HxExpr, body:HxStmt, indent:String, ?scope:CppRenderScope):Array<String> {
 		final local = sanitizeIdentifier(name);
-		final out = switch (iterable) {
+		final iteratorElementType = iteratorProtocolElementType(iterable, scope);
+		final out = if (iteratorElementType.length > 0) {
+			final iteratorLocal = "__hxhx_iter_" + local;
+			final access = isCppReferenceType(exprCppType(iterable, scope)) ? "->" : ".";
+				[indent + "auto " + iteratorLocal + " = " + renderExpr(iterable, scope) + ";",
+					indent
+					+ "while ("
+					+ iteratorLocal
+					+ access
+					+ "hasNext()) {",
+					indent
+					+ "  auto "
+					+ local
+					+ " = "
+					+ iteratorLocal
+					+ access
+					+ "next();"];
+		} else switch (iterable) {
 			case ERange(start, end):
 				[indent
 					+ "for (int "
@@ -1373,8 +1390,11 @@ class CppTargetCore {
 			case _:
 				[indent + "for (auto " + local + " : " + renderExpr(iterable, scope) + ") {"];
 		}
-		for (line in renderStmtBlockContent(body, indent + "  ", scope))
-			out.push(line);
+		final loopElementType = iteratorElementType.length > 0 ? iteratorElementType : iterableElementType(iterable, scope);
+		withScopedLocal(scope, local, loopElementType, () -> {
+			for (line in renderStmtBlockContent(body, indent + "  ", scope))
+				out.push(line);
+		});
 		out.push(indent + "}");
 		return out;
 	}
@@ -2534,6 +2554,8 @@ class CppTargetCore {
 				"std::string(" + renderExpr(expr, scope) + " ? \"true\" : \"false\")";
 			case EInt(_) | EFloat(_):
 				"std::to_string(" + renderExpr(expr, scope) + ")";
+			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
+				renderExpr(expr, scope);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringExpr(args[0], scope);
 			case ECall(EField(_, "indexOf"), args) if (args.length == 1 || args.length == 2):
@@ -3043,12 +3065,37 @@ class CppTargetCore {
 	}
 
 	static function iterableElementType(iterable:HxExpr, ?scope:CppRenderScope):String {
+		final iteratorElement = iteratorProtocolElementType(iterable, scope);
+		if (iteratorElement.length > 0)
+			return iteratorElement;
 		return switch (iterable) {
 			case ERange(_, _):
 				"int";
 			case _:
 				cppIterableElementType(exprCppType(iterable, scope), scope);
 		};
+	}
+
+	static function iteratorProtocolElementType(iterable:HxExpr, ?scope:CppRenderScope):String {
+		final className = classNameFromCppExprType(exprCppType(iterable, scope), scope);
+		if (className == null)
+			return "";
+		if (!classHasInstanceMethod(className, "hasNext", scope) || !classHasInstanceMethod(className, "next", scope))
+			return "";
+		final nextType = classMethodCppReturnType(className, "next", false, scope);
+		return nextType.length > 0 && nextType != "auto" ? nextType : "auto";
+	}
+
+	static function classHasInstanceMethod(className:String, methodName:String, ?scope:CppRenderScope):Bool {
+		if (scope == null || className == null || className.length == 0)
+			return false;
+		final cls = scope.classByName.get(className);
+		if (cls == null)
+			return false;
+		for (fn in HxClassDecl.getFunctions(cls))
+			if (HxFunctionDecl.getName(fn) == methodName && !HxFunctionDecl.getIsStatic(fn))
+				return true;
+		return false;
 	}
 
 	static function cppIterableElementType(typeName:String, ?scope:CppRenderScope):String {
