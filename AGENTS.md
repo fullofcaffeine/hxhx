@@ -41,9 +41,15 @@ Agent policy:
   - Use Oracle to unblock strategy, seam selection, or closure criteria.
   - Do not use Oracle as a substitute for implementation, tests, or CI evidence once the next step is clear.
 - If a compiler/runtime issue starts feeling circular, fragile, architecture-heavy, or likely to invite another local patch without fixing the model, stop grinding before implementation and propose an external GPT 5.5 Pro design review with a detailed prompt that includes the whole repo.
-  - This is rare: upstream Haxe remains the primary behavior oracle, and local tests/CI remain the proof. GPT 5.5 Pro is for finding a way forward when the seam/model is unclear, not for replacing oracle evidence.
+  - This should be rare: upstream Haxe 4.3.7 remains the primary behavior oracle, and local tests/CI remain the proof. GPT 5.5 Pro is for finding a way forward when the seam/model is unclear, not for replacing oracle evidence.
   - Use this escalation when repeated local attempts are running in circles, when upstream-oracle evidence is not enough to choose a safe architecture, or when the fix touches broad semantics across multiple compiler/runtime layers.
-  - Examples: receiver/state threading across AST lowering, IIFE transforms, and target runtime behavior; Haxe stdlib semantics that do not map cleanly to OCaml or to source-native targets; `reflaxe.ocaml` runtime/stdlib semantics; plugin-vs-builtin target promotion boundaries; changes that could affect many generated bootstrap snapshots, target snapshots, or app examples; or cases where a local patch would likely hide the bug instead of fixing the model.
+  - Good escalation candidates include:
+    - closure capture, receiver/state threading, AST lowering, or expression-to-statement lowering that affects multiple target backends,
+    - Haxe stdlib semantics that do not map cleanly to OCaml output or source-native targets,
+    - `reflaxe.ocaml` runtime/stdlib semantics that affect portable pure-Haxe programs,
+    - macro/plugin/native-target boundaries where `reflaxe.ocaml` behavior could live as upstream-Haxe plugin support, `hxhx` plugin support, or builtin `hxhx` target support,
+    - changes that would churn many generated bootstrap snapshots, target snapshots, or app examples,
+    - or cases where a local patch would likely hide the bug instead of fixing the model.
   - For NaN/Infinity/Math-style issues, escalate before implementation because semantics can affect `Math`, `Float`, comparisons, parsing, JSON, binary float encoding, OCaml output/runtime behavior, source-native target behavior, and upstream Haxe 4.3.7 runtime conformance.
   - The escalation proposal should include a concrete prompt, the relevant beads, the observed failing gates, local evidence, upstream oracle expectations, and a request for architecture guidance rather than code transcription.
 - If the user says to stop on `thinking:xhigh`, stop immediately when that threshold is reached and ask the user before continuing.
