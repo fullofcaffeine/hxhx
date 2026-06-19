@@ -2080,7 +2080,7 @@ class CppTargetCore {
 			case ECall(EField(receiver, "unsafeGet"), args) if (args.length == 2 && isCppNativeArrayReceiver(receiver)):
 				cppVectorElementType(exprCppType(args[0], scope));
 			case ECall(EIdent(name), _):
-				cppFunctionReturnTypeFromCppType(exprCppType(EIdent(name), scope));
+				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
 				"std::string";
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
@@ -2153,6 +2153,30 @@ class CppTargetCore {
 		return "";
 	}
 
+	static function currentOwnerMethodCppReturnType(methodName:String, scope:CppRenderScope):String {
+		if (scope == null || scope.owner == null)
+			return "";
+		final className = sanitizeTypePath(HxClassDecl.getName(scope.owner));
+		final cls = scope.classByName.get(className);
+		if (cls == null)
+			return "";
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getName(fn) == methodName && HxFunctionDecl.getName(fn) != "new")
+				return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
+		}
+		return "";
+	}
+
+	static function callableOrSameOwnerReturnCppType(name:String, ?scope:CppRenderScope):String {
+		if (scope == null)
+			return "";
+		final localName = sanitizeIdentifier(name);
+		final localType = scope.localTypes.get(localName);
+		if (localType != null && localType.length > 0)
+			return cppFunctionReturnTypeFromCppType(localType);
+		return currentOwnerMethodCppReturnType(name, scope);
+	}
+
 	static function staticReceiverClassName(receiver:HxExpr, ?scope:CppRenderScope):Null<String> {
 		return switch (receiver) {
 			case EIdent(typeName): final clean = sanitizeTypePath(typeBaseName(typeName)); scopeHasClass(scope,
@@ -2202,7 +2226,7 @@ class CppTargetCore {
 			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
 				nativeArrayVectorType(scope);
 			case ECall(EIdent(name), _):
-				cppFunctionReturnTypeFromCppType(exprCppType(EIdent(name), scope));
+				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
 				"std::string";
 			case ECall(EField(receiver, method), _) if (exprCppType(receiver, scope) == "std::string"):
@@ -2658,6 +2682,8 @@ class CppTargetCore {
 				stringExpr(args[0], scope);
 			case ECall(EField(_, "indexOf"), args) if (args.length == 1 || args.length == 2):
 				"std::to_string(" + renderExpr(expr, scope) + ")";
+			case ECall(EIdent(_), _) if (exprCppType(expr, scope) == "std::string"):
+				renderExpr(expr, scope);
 			case ECall(EField(_, _), _) if (exprCppType(expr, scope) == "std::string"):
 				renderExpr(expr, scope);
 			case EField(_, "length"):

@@ -417,6 +417,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function middle(s:String):String {",
 			"    return s.substring(1, 3);",
 			"  }",
+			"  public static function ltrim(s:String):String {",
+			"    return s.substr(0, s.length);",
+			"  }",
+			"  public static function rtrim(s:String):String {",
+			"    return s.substr(0, s.length);",
+			"  }",
+			"  public static function trim(s:String):String {",
+			"    return ltrim(rtrim(s));",
+			"  }",
 			"  public static function hexLike(n:Int):String {",
 			"    var s = \"\";",
 			"    var hexChars = \"0123456789ABCDEF\";",
@@ -1371,6 +1380,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower String.charCodeAt to direct code-point reads");
 		assertContains(source, "return s.substr(1, 2);", "C++ smoke should preserve std::string substr results without stringifying");
 		assertContains(source, "return __hxhx_substring(s, 1, 3);", "C++ smoke should lower Haxe substring to target support helpers");
+		assertContains(source, "return ltrim(rtrim(s));", "C++ smoke should preserve same-class string-returning static calls");
+		assertTrue(source.indexOf("std::to_string(ltrim(rtrim(s)))") < 0, "C++ smoke should not stringify same-class String helper results");
 		assertContains(source, "auto s = std::string(\"\");", "C++ smoke should infer mutable literal string locals as std::string");
 		assertContains(source, "__hxhx_char_at(hexChars, (n & 15)) + s", "C++ smoke should lower String.charAt to target support helpers");
 		assertContains(source, "return static_cast<int>(static_cast<int>(static_cast<unsigned char>(\"0\"[0])));",
