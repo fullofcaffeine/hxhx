@@ -51,6 +51,7 @@ The bar is not “passes our local smoke tests.” The bar is upstream-derived b
 - no required stage0 fallback for correctness,
 - performance parity or better for compiler workloads,
 - materially faster edit-compile-test loops once `hxhx + reflaxe.ocaml` is native and stage0-free by default,
+- faster Reflaxe-compiler promotion loops once stable Reflaxe targets can be compiled to native OCaml-backed plugin/builtin artifacts instead of repeatedly paying the full stage0/delegated path,
 - release enforcement that blocks misleading public `1.0` claims.
 
 Current planning owners:
@@ -64,6 +65,7 @@ Iteration-speed note:
 
 - Today, small compiler fixes can still pay heavy validation costs: stage0-based bootstrap regeneration, dune verification of large generated snapshots, repo-wide format checks, and aggregated guard scripts.
 - The native `hxhx + reflaxe.ocaml` path should reduce the expensive stage0/reflaxe bootstrap loop over time, but full upstream-derived gates will remain heavier by design.
+- Fully native Reflaxe compiler artifacts should make the normal "edit target -> build native plugin/builtin -> run focused smoke" loop faster than the current delegated bootstrap path. Do not assume this automatically: measure it separately from target-language compile time and from full upstream oracle gates.
 - Treat latency as a product quality metric: measure focused local loops, snapshot regeneration, stage0-free rebuilds, and Full 1.0 gates separately so "faster" is evidence-based rather than vibes-based.
 
 ## Goal 3: Hackable Haxe-in-Haxe compiler
