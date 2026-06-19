@@ -14,6 +14,15 @@ typedef CppAnonStruct = {
 
 typedef CppRenderScope = {
 	var owner:Null<HxClassDecl>;
+	var classNames:haxe.ds.StringMap<Bool>;
+	var classByName:haxe.ds.StringMap<HxClassDecl>;
+	var localTypes:haxe.ds.StringMap<String>;
+	var returnType:String;
+}
+
+typedef CppClassLookup = {
+	var names:haxe.ds.StringMap<Bool>;
+	var byName:haxe.ds.StringMap<HxClassDecl>;
 }
 
 typedef CppTryStringProbe = {
@@ -117,6 +126,7 @@ class CppTargetCore {
 		out.push("#include <cstddef>");
 		out.push("#include <fstream>");
 		out.push("#include <iostream>");
+		out.push("#include <memory>");
 		out.push("#include <sstream>");
 		out.push("#include <stdexcept>");
 		out.push("#include <string>");
@@ -258,12 +268,18 @@ class CppTargetCore {
 				out.push(line);
 			out.push("");
 		}
-		for (decl in renderHelperClasses(program, main.cls)) {
+		final classLookup = collectClassLookup(program);
+		for (decl in renderForwardDeclarations(program, main.cls)) {
 			for (line in decl)
 				out.push(line);
 			out.push("");
 		}
-		for (decl in renderMainStaticFunctions(main.cls)) {
+		for (decl in renderHelperClasses(program, main.cls, classLookup)) {
+			for (line in decl)
+				out.push(line);
+			out.push("");
+		}
+		for (decl in renderMainStaticFunctions(main.cls, classLookup)) {
 			for (line in decl)
 				out.push(line);
 			out.push("");
@@ -271,7 +287,7 @@ class CppTargetCore {
 		out.push("int main(int argc, char** argv) {");
 		out.push("  (void)argc;");
 		out.push("  (void)argv;");
-		for (line in renderStmts(HxFunctionDecl.getBody(main.fn), "  "))
+		for (line in renderStmts(HxFunctionDecl.getBody(main.fn), "  ", renderScope(main.cls, classLookup, "int")))
 			out.push(line);
 		out.push("  return 0;");
 		out.push("}");
@@ -406,17 +422,17 @@ class CppTargetCore {
 		return out;
 	}
 
-	static function renderMainStaticFunctions(cls:HxClassDecl):Array<Array<String>> {
+	static function renderMainStaticFunctions(cls:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
 		final out = new Array<Array<String>>();
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "main")
 				continue;
-			out.push(renderStaticFunction(fn));
+			out.push(renderStaticFunction(fn, cls, classLookup));
 		}
 		return out;
 	}
 
-	static function renderStaticFunction(fn:HxFunctionDecl):Array<String> {
+	static function renderStaticFunction(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
 		final out = ["static "
 			+ returnType
@@ -425,7 +441,7 @@ class CppTargetCore {
 			+ "("
 			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn))
 			+ ") {"];
-		for (line in renderStmts(HxFunctionDecl.getBody(fn), "  "))
+		for (line in renderStmts(HxFunctionDecl.getBody(fn), "  ", renderScope(owner, classLookup, returnType)))
 			out.push(line);
 		out.push("}");
 		return out;
@@ -479,7 +495,7 @@ class CppTargetCore {
 		};
 	}
 
-	static function renderHelperClasses(program:GenIrProgram, mainClass:HxClassDecl):Array<Array<String>> {
+	static function renderForwardDeclarations(program:GenIrProgram, mainClass:HxClassDecl):Array<Array<String>> {
 		final out = new Array<Array<String>>();
 		final emitted = new haxe.ds.StringMap<Bool>();
 		final mainName = HxClassDecl.getName(mainClass);
@@ -490,17 +506,50 @@ class CppTargetCore {
 				if (rawName == mainName || emitted.exists(rawName) || HxClassDecl.getIsInterface(cls))
 					continue;
 				emitted.set(rawName, true);
-				out.push(renderHelperClass(cls));
+				out.push(["struct " + sanitizeTypePath(rawName) + ";"]);
 			}
 		}
 		return out;
 	}
 
-	static function renderHelperClass(cls:HxClassDecl):Array<String> {
+	static function collectClassLookup(program:GenIrProgram):CppClassLookup {
+		final names = new haxe.ds.StringMap<Bool>();
+		final byName = new haxe.ds.StringMap<HxClassDecl>();
+		for (typed in program.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				if (HxClassDecl.getIsInterface(cls))
+					continue;
+				final name = sanitizeTypePath(HxClassDecl.getName(cls));
+				names.set(name, true);
+				byName.set(name, cls);
+			}
+		}
+		return {names: names, byName: byName};
+	}
+
+	static function renderHelperClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
+		final out = new Array<Array<String>>();
+		final emitted = new haxe.ds.StringMap<Bool>();
+		final mainName = HxClassDecl.getName(mainClass);
+		for (typed in program.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				final rawName = HxClassDecl.getName(cls);
+				if (rawName == mainName || emitted.exists(rawName) || HxClassDecl.getIsInterface(cls))
+					continue;
+				emitted.set(rawName, true);
+				out.push(renderHelperClass(cls, classLookup));
+			}
+		}
+		return out;
+	}
+
+	static function renderHelperClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		final baseType = baseTypeName(cls);
 		final out = ["struct " + className + (baseType == null ? "" : " : public " + baseType) + " {"];
-		final scope = classScope(cls);
+		final scope = renderScope(cls, classLookup, "void");
 		for (field in HxClassDecl.getFields(cls)) {
 			if (HxFieldDecl.getIsStatic(field))
 				continue;
@@ -519,17 +568,23 @@ class CppTargetCore {
 			out.push("  }");
 		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
-			if (HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
+			if (HxFunctionDecl.getName(fn) == "new")
 				continue;
-			for (line in renderHelperMethod(fn, scope))
+			for (line in renderHelperMethod(fn, cls, classLookup))
 				out.push(line);
 		}
 		out.push("};");
 		return out;
 	}
 
-	static function classScope(cls:HxClassDecl):CppRenderScope {
-		return {owner: cls};
+	static function renderScope(cls:HxClassDecl, classLookup:CppClassLookup, returnType:String):CppRenderScope {
+		return {
+			owner: cls,
+			classNames: classLookup.names,
+			classByName: classLookup.byName,
+			localTypes: new haxe.ds.StringMap<String>(),
+			returnType: returnType
+		};
 	}
 
 	static function baseTypeName(cls:HxClassDecl):Null<String> {
@@ -539,9 +594,11 @@ class CppTargetCore {
 		return sanitizeTypePath(extendsPath);
 	}
 
-	static function renderHelperMethod(fn:HxFunctionDecl, scope:CppRenderScope):Array<String> {
+	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
+		final scope = renderScope(owner, classLookup, returnType);
 		final out = ["  "
+			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
 			+ returnType
 			+ " "
 			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
@@ -622,13 +679,15 @@ class CppTargetCore {
 				[indent + renderExpr(expr, scope) + ";"];
 			case SThrow(expr, _):
 				[indent + "throw std::runtime_error(" + stringExpr(expr, scope) + ");"];
-			case SVar(name, _typeHint, init, _):
+			case SVar(name, typeHint, init, _):
+				if (scope != null)
+					scope.localTypes.set(sanitizeIdentifier(name), cppLocalTypeHint(typeHint, init, scope));
 				final rhs = init == null ? "0" : renderExpr(init, scope);
 					[indent + "auto " + sanitizeIdentifier(name) + " = " + rhs + ";"];
 			case SReturn(expr, _):
-				[indent + "return static_cast<int>(" + renderExpr(expr, scope) + ");"];
+				[indent + returnStmtForExpr(expr, scope)];
 			case SReturnVoid(_):
-				[indent + "return 0;"];
+				[indent + returnVoidStmt(scope)];
 			case SBreak(_):
 				[indent + "break;"];
 			case SContinue(_):
@@ -760,6 +819,29 @@ class CppTargetCore {
 		};
 	}
 
+	static function returnStmtForExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final returnType = scope == null ? "int" : scope.returnType;
+		return switch (returnType) {
+			case "void":
+				renderExpr(expr, scope) + "; return;";
+			case "std::string":
+				"return " + stringExpr(expr, scope) + ";";
+			case "bool":
+				"return " + renderExpr(expr, scope) + ";";
+			case "double":
+				"return " + renderExpr(expr, scope) + ";";
+			case _ if (isCppReferenceType(returnType)):
+				"return " + renderExpr(expr, scope) + ";";
+			case _:
+				"return static_cast<int>(" + renderExpr(expr, scope) + ");";
+		};
+	}
+
+	static function returnVoidStmt(?scope:CppRenderScope):String {
+		final returnType = scope == null ? "int" : scope.returnType;
+		return returnType == "void" ? "return;" : "return " + cppDefaultValue(returnType) + ";";
+	}
+
 	static function conditionExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
 			case EBinop(_, _, _):
@@ -792,7 +874,7 @@ class CppTargetCore {
 			case EField(EThis, field):
 				"this->" + sanitizeIdentifier(field);
 			case ENew(typePath, args):
-				sanitizeTypePath(typePath) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+				newExpr(typePath, args, scope);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
 			case ECall(EField(EIdent("Type"), "getClassName"), args) if (args.length == 1):
@@ -821,6 +903,8 @@ class CppTargetCore {
 				arrayExpr(elements, scope);
 			case ERange(start, end):
 				rangeExpr(start, end, scope);
+			case EField(receiver, "length") if (exprHasReferenceType(receiver, scope)):
+				"(" + renderExpr(receiver, scope) + "->length)";
 			case EField(receiver, "length"):
 				"(" + renderExpr(receiver, scope) + ".size())";
 			case EArrayAccess(array, index):
@@ -838,7 +922,11 @@ class CppTargetCore {
 			case ELambda(args, body):
 				lambdaExpr(args, body, scope);
 			case EField(receiver, field):
-				"(" + renderExpr(receiver, scope) + "." + sanitizeIdentifier(field) + ")";
+				"("
+				+ renderExpr(receiver, scope)
+				+ fieldAccessOp(receiver, scope)
+				+ sanitizeIdentifier(field)
+				+ ")";
 			case ECall(EField(receiver, "indexOf"), args) if (args.length == 1 || args.length == 2):
 				indexOfExpr(receiver, args, scope);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
@@ -853,11 +941,7 @@ class CppTargetCore {
 			case ECall(EIdent(name), args):
 				sanitizeIdentifier(name) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EField(receiver, method), args):
-				renderExpr(receiver, scope)
-				+ "."
-				+ sanitizeIdentifier(method)
-				+ "("
-				+ [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+				fieldCallExpr(receiver, method, args, scope);
 			case ECall(callee, args):
 				"(" + renderExpr(callee, scope) + ")(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case EBinop("+", left, right) if (isStringLike(left) || isStringLike(right)):
@@ -938,6 +1022,120 @@ class CppTargetCore {
 				recovery;
 			case _:
 				throw "C++ source backend MVP unsupported expression: " + exprKind(expr);
+		};
+	}
+
+	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final className = sanitizeTypePath(typeBaseName(typePath));
+		final renderedArgs = [for (arg in args) renderExpr(arg, scope)].join(", ");
+		return scopeHasClass(scope, className) ? "std::make_shared<" + className + ">(" + renderedArgs + ")" : className
+			+ "("
+			+ renderedArgs
+			+ ")";
+	}
+
+	static function fieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final receiverTypeName = staticReceiverClassName(receiver, scope);
+		final renderedArgs = [for (arg in args) renderExpr(arg, scope)].join(", ");
+		if (receiverTypeName != null) {
+			if (method == "create")
+				return "std::make_shared<" + receiverTypeName + ">(" + renderedArgs + ")";
+			return receiverTypeName + "::" + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+		}
+		return renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+	}
+
+	static function fieldAccessOp(receiver:HxExpr, ?scope:CppRenderScope):String {
+		return exprHasReferenceType(receiver, scope) ? "->" : ".";
+	}
+
+	static function exprHasReferenceType(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return isCppReferenceType(exprCppType(expr, scope));
+	}
+
+	static function exprCppType(expr:HxExpr, ?scope:CppRenderScope):String {
+		if (scope == null)
+			return "";
+		return switch (expr) {
+			case EIdent(name):
+				final local = scope.localTypes.get(sanitizeIdentifier(name));
+				if (local != null && local.length > 0) local; else currentInstanceFieldCppType(name, scope);
+			case EThis:
+				sanitizeTypePath(HxClassDecl.getName(scope.owner));
+			case ENew(typePath, _):
+				cppTypeHint(typePath);
+			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
+				cppTypeHint(typeName);
+			case EField(receiver, field):
+				final ownerType = classNameFromCppType(exprCppType(receiver, scope));
+				ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
+			case _:
+				"";
+		};
+	}
+
+	static function currentInstanceFieldCppType(name:String, scope:CppRenderScope):String {
+		if (scope == null || scope.owner == null)
+			return "";
+		for (field in HxClassDecl.getFields(scope.owner)) {
+			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name)
+				return cppTypeHint(HxFieldDecl.getTypeHint(field));
+		}
+		return "";
+	}
+
+	static function classFieldCppType(className:String, fieldName:String, scope:CppRenderScope):String {
+		if (scope == null || className == null || className.length == 0)
+			return "";
+		final cls = scope.classByName.get(className);
+		if (cls == null)
+			return "";
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == fieldName)
+				return cppTypeHint(HxFieldDecl.getTypeHint(field));
+		}
+		return "";
+	}
+
+	static function staticReceiverClassName(receiver:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (receiver) {
+			case EIdent(typeName):
+				final clean = sanitizeTypePath(typeBaseName(typeName));
+				scopeHasClass(scope, clean) ? clean : null;
+			case _:
+				null;
+		};
+	}
+
+	static function scopeHasClass(?scope:CppRenderScope, className:String):Bool {
+		return scope != null && className != null && scope.classNames.exists(className);
+	}
+
+	static function cppLocalTypeHint(typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
+		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (explicit.length > 0)
+			return cppTypeHint(explicit);
+		return init == null ? "" : inferExprCppType(init, scope);
+	}
+
+	static function inferExprCppType(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case ENew(typePath, _):
+				cppTypeHint(typePath);
+			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
+				cppTypeHint(typeName);
+			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
+				"std::string";
+			case EInt(_):
+				"int";
+			case EFloat(_):
+				"double";
+			case EBool(_):
+				"bool";
+			case EArrayDecl(elements):
+				"std::vector<" + arrayElementType(elements) + ">";
+			case _:
+				"";
 		};
 	}
 
@@ -1238,6 +1436,8 @@ class CppTargetCore {
 				"std::to_string(" + renderExpr(expr, scope) + ")";
 			case EField(_, "length"):
 				"std::to_string(" + renderExpr(expr, scope) + ")";
+			case EField(_, _) if (exprCppType(expr, scope) == "std::string"):
+				renderExpr(expr, scope);
 			case EArrayAccess(_, _):
 				"std::string(" + renderExpr(expr, scope) + ")";
 			case EBinop("+", left, right) if (isStringLike(left) || isStringLike(right)):
@@ -1258,6 +1458,8 @@ class CppTargetCore {
 				+ ")";
 			case EIdent(name):
 				"std::string(" + sanitizeIdentifier(name) + ")";
+			case ENull:
+				"std::string()";
 			case _:
 				"std::to_string(" + renderExpr(expr, scope) + ")";
 		};
@@ -1785,8 +1987,10 @@ class CppTargetCore {
 	}
 
 	static function cppTypeHint(typeHint:String):String {
-		final hint = typeHint == null ? "" : StringTools.trim(typeHint);
+		final hint = unwrapNullTypeHint(StringTools.trim(typeHint == null ? "" : typeHint));
 		return switch (hint) {
+			case "" | "Void" | "StdTypes.Void":
+				hint.length == 0 ? "std::string" : "void";
 			case "String" | "StdTypes.String":
 				"std::string";
 			case "Int" | "StdTypes.Int":
@@ -1795,15 +1999,71 @@ class CppTargetCore {
 				"double";
 			case "Bool" | "StdTypes.Bool":
 				"bool";
+			case "Dynamic" | "Any":
+				"std::string";
 			case _ if (StringTools.startsWith(hint, "Array<") && StringTools.endsWith(hint, ">")):
 				"std::vector<" + cppTypeHint(hint.substr("Array<".length, hint.length - "Array<".length - 1)) + ">";
+			case _ if (isClassLikeTypeHint(hint)):
+				"std::shared_ptr<" + sanitizeTypePath(typeBaseName(hint)) + ">";
 			case _:
 				"std::string";
 		};
 	}
 
+	static function unwrapNullTypeHint(typeHint:String):String {
+		final hint = removeTypeHintWhitespace(typeHint);
+		if (StringTools.startsWith(hint, "Null<") && StringTools.endsWith(hint, ">"))
+			return hint.substr("Null<".length, hint.length - "Null<".length - 1);
+		return hint;
+	}
+
+	static function removeTypeHintWhitespace(typeHint:String):String {
+		var out = "";
+		final raw = typeHint == null ? "" : typeHint;
+		for (i in 0...raw.length) {
+			final c = raw.charAt(i);
+			if (c != " " && c != "\t" && c != "\n" && c != "\r")
+				out += c;
+		}
+		return out;
+	}
+
+	static function typeBaseName(typeHint:String):String {
+		var hint = unwrapNullTypeHint(typeHint);
+		final generic = hint.indexOf("<");
+		if (generic >= 0)
+			hint = hint.substr(0, generic);
+		final dot = hint.lastIndexOf(".");
+		return dot >= 0 ? hint.substr(dot + 1) : hint;
+	}
+
+	static function isClassLikeTypeHint(typeHint:String):Bool {
+		final base = typeBaseName(typeHint);
+		if (base.length == 0)
+			return false;
+		if (base.length == 1) {
+			final c = base.charCodeAt(0);
+			if (c >= "A".code && c <= "Z".code)
+				return false;
+		}
+		final first = base.charCodeAt(0);
+		return first >= "A".code && first <= "Z".code;
+	}
+
+	static function isCppReferenceType(typeName:String):Bool {
+		return typeName != null && StringTools.startsWith(typeName, "std::shared_ptr<");
+	}
+
+	static function classNameFromCppType(typeName:String):Null<String> {
+		if (!isCppReferenceType(typeName))
+			return null;
+		return typeName.substr("std::shared_ptr<".length, typeName.length - "std::shared_ptr<".length - 1);
+	}
+
 	static function cppDefaultValue(typeName:String):String {
 		return switch (typeName) {
+			case "void":
+				"";
 			case "std::string":
 				"std::string()";
 			case "double":
@@ -1812,6 +2072,8 @@ class CppTargetCore {
 				"false";
 			case _ if (StringTools.startsWith(typeName, "std::vector<")):
 				"{}";
+			case _ if (isCppReferenceType(typeName)):
+				"nullptr";
 			case _:
 				"0";
 		};

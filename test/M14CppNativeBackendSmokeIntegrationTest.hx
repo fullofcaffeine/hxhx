@@ -103,6 +103,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    var box = new Box(41);",
 			"    Sys.println(Std.string(box.value + 1));",
 			"    Sys.println(Std.string(box.getHeight()));",
+			"    var ref = RefNode.create(\"root\", null);",
+			"    Sys.println(ref.item);",
+			"    if (ref.next == null) {",
+			"      Sys.println(\"ref:null\");",
+			"    }",
 			"    var bump = 0;",
 			"    Sys.println(Std.string(bump++));",
 			"    Sys.println(Std.string(bump + 0));",
@@ -245,6 +250,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return value;",
 			"  }",
 			"}",
+			"class RefNode {",
+			"  public var item:String;",
+			"  public var next:Null<RefNode>;",
+			"  public function new(item:String, next:Null<RefNode>) {",
+			"    this.item = item;",
+			"    this.next = next;",
+			"  }",
+			"  public static function create(item:String, next:Null<RefNode>):RefNode {",
+			"    return new RefNode(item, next);",
+			"  }",
+			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
@@ -350,8 +366,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"opaque object block should preserve multiple initializer field values");
 		final opaqueTypedLocalRefBlock = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('opaque_block_expr:{ var x:TypedefToStringMap<String>; x; }'));
-		assertContains(opaqueTypedLocalRefBlock, "std::string x = std::string();",
-			"opaque typed local reference should default-initialize through the current C++ type-hint model");
+		assertContains(opaqueTypedLocalRefBlock, "std::shared_ptr<TypedefToStringMap> x = nullptr;",
+			"opaque typed class-like local references should default-initialize as nullable C++ references");
 		assertContains(opaqueTypedLocalRefBlock, "return x;", "opaque typed local reference should return the local value");
 		final opaqueTypedLocalInitBlock = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw("opaque_block_expr:{ var i:Int = z; }"));
@@ -469,8 +485,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "this->value = value;", "C++ smoke should emit constructor field assignment");
 		assertContains(source, "int getHeight() {", "C++ smoke should emit helper class method");
 		assertContains(source, "return static_cast<int>(value);", "C++ smoke should emit helper method return");
-		assertContains(source, "auto box = Box(41);", "C++ smoke should lower new expression");
-		assertContains(source, "box.getHeight()", "C++ smoke should lower receiver method call");
+		assertContains(source, "auto box = std::make_shared<Box>(41);", "C++ smoke should lower class construction to nullable references");
+		assertContains(source, "box->getHeight()", "C++ smoke should lower class receiver method calls through reference access");
+		assertContains(source, "std::shared_ptr<RefNode> next = nullptr;", "C++ smoke should type nullable class fields as C++ references");
+		assertContains(source, "auto ref = std::make_shared<RefNode>(\"root\", nullptr);",
+			"C++ smoke should lower class create factories to constructors without requiring inline runtime stubs");
+		assertContains(source, "(ref->item)", "C++ smoke should read fields through class references");
+		assertContains(source, "(ref->next) == nullptr", "C++ smoke should compare nullable class references with nullptr");
 		assertContains(source, "(bump++)", "C++ smoke should lower post-increment expression");
 		assertContains(source, "(bump--)", "C++ smoke should lower post-decrement expression");
 		assertContains(source, "while (spin < 2) {", "C++ smoke should emit while statement");
@@ -530,7 +551,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}
