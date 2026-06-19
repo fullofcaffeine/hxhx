@@ -16,6 +16,11 @@ typedef CppRenderScope = {
 	var owner:Null<HxClassDecl>;
 }
 
+typedef CppTryStringProbe = {
+	var expr:String;
+	var fallback:String;
+}
+
 /**
 	Small native C++ source-emission target core.
 
@@ -166,6 +171,36 @@ class CppTargetCore {
 		out.push("template<typename T>");
 		out.push("static bool __hxhx_is_type(const std::vector<T>&, const std::string& type) {");
 		out.push("  return type == \"Array\" || type == \"Dynamic\" || type == \"Any\";");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::string __hxhx_type_name(const T&) {");
+		out.push("  return std::string(\"Dynamic\");");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_type_name(const std::string&) {");
+		out.push("  return std::string(\"String\");");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_type_name(const char*) {");
+		out.push("  return std::string(\"String\");");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_type_name(int) {");
+		out.push("  return std::string(\"Int\");");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_type_name(double) {");
+		out.push("  return std::string(\"Float\");");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_type_name(bool) {");
+		out.push("  return std::string(\"Bool\");");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::string __hxhx_type_name(const std::vector<T>&) {");
+		out.push("  return std::string(\"Array\");");
 		out.push("}");
 		out.push("");
 		out.push("static std::string __hxhx_read_file(const std::string& path) {");
@@ -739,6 +774,12 @@ class CppTargetCore {
 				sanitizeTypePath(typePath) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
+			case ECall(EField(EIdent("Type"), "getClassName"), args) if (args.length == 1):
+				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
+			case ECall(EField(EIdent("Type"), "getEnumName"), args) if (args.length == 1):
+				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
+			case ECall(EField(EIdent("Type"), "typeof"), args) if (args.length == 1):
+				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
 				"std::vector<int>(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("HelperMacros"), "typeErrorText"), [EUnsupported(raw)]) if (raw != null
@@ -903,6 +944,14 @@ class CppTargetCore {
 			return "([&]() { try { return __hxhx_join(" + joinCatch.receiver + ", " + quoteString(joinCatch.separator)
 				+ "); } catch (...) { return std::string(" + quoteString(joinCatch.fallback) + "); } })()";
 		}
+		final stringProbe = parseTryStringProbeRaw(raw);
+		if (stringProbe != null) {
+			return "([&]() { try { return "
+				+ stringProbe.expr
+				+ "; } catch (...) { return std::string("
+				+ quoteString(stringProbe.fallback)
+				+ "); } })()";
+		}
 		final platformMinPath = parseHxcppAndroidPlatformMinTryRaw(raw);
 		if (platformMinPath != null) {
 			return "([&]() { try { return __hxhx_json_min_field_from_file("
@@ -940,6 +989,35 @@ class CppTargetCore {
 			separator: pattern.matched(2),
 			fallback: pattern.matched(4)
 		} : null;
+	}
+
+	static function parseTryStringProbeRaw(raw:String):Null<CppTryStringProbe> {
+		final compact = compactRawText(raw);
+		final classNamePattern = ~/^try\{Type\.getClassName\(([A-Za-z_][A-Za-z0-9_]*)\);\}catch\(e(:[^)]*)?\)\{"([^"]*)";?\}$/;
+		if (classNamePattern.match(compact))
+			return {
+				expr: "__hxhx_type_name(" + sanitizeIdentifier(classNamePattern.matched(1)) + ")",
+				fallback: classNamePattern.matched(3)
+			};
+		final enumNamePattern = ~/^try\{Type\.getEnumName\(([A-Za-z_][A-Za-z0-9_]*)\);\}catch\(e(:[^)]*)?\)\{"([^"]*)";?\}$/;
+		if (enumNamePattern.match(compact))
+			return {
+				expr: "__hxhx_type_name(" + sanitizeIdentifier(enumNamePattern.matched(1)) + ")",
+				fallback: enumNamePattern.matched(3)
+			};
+		final typeofPattern = ~/^try\{Std\.string\(Type\.typeof\(([A-Za-z_][A-Za-z0-9_]*)\)\);\}catch\(e(:[^)]*)?\)\{"([^"]*)";?\}$/;
+		if (typeofPattern.match(compact))
+			return {
+				expr: "__hxhx_type_name(" + sanitizeIdentifier(typeofPattern.matched(1)) + ")",
+				fallback: typeofPattern.matched(3)
+			};
+		final stdStringPattern = ~/^try\{Std\.string\(([A-Za-z_][A-Za-z0-9_]*)\);\}catch\(e(:[^)]*)?\)\{"([^"]*)";?\}$/;
+		if (stdStringPattern.match(compact))
+			return {
+				expr: "std::string(" + sanitizeIdentifier(stdStringPattern.matched(1)) + ")",
+				fallback: stdStringPattern.matched(3)
+			};
+		return null;
 	}
 
 	static function parseHxcppAndroidPlatformMinTryRaw(raw:String):Null<String> {

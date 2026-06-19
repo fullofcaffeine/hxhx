@@ -296,6 +296,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(catchValueTry, "catch (const std::exception& e) { return std::string(e.what()); }",
 			"catch-value raw try/catch should return a C++ exception message for the MVP");
 		assertContains(catchValueTry, "throw std::runtime_error(std::string(\"boom\"));", "catch-value raw try/catch should preserve the thrown message shape");
+		final classNameProbeTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{Type.getClassName(t);}catch(e:Dynamic){"";}'));
+		assertContains(classNameProbeTry, "try { return __hxhx_type_name(t); }",
+			"utest-style Type.getClassName try/catch probes should lower through the C++ type-name helper");
+		assertContains(classNameProbeTry, "catch (...) { return std::string(\"\"); }",
+			"utest-style Type.getClassName try/catch probes should preserve the fallback string");
+		final enumNameProbeTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{Type.getEnumName(t);}catch(e:Dynamic){"";}'));
+		assertContains(enumNameProbeTry, "try { return __hxhx_type_name(t); }",
+			"utest-style Type.getEnumName try/catch probes should lower through the C++ type-name helper");
+		final typeofProbeTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{Std.string(Type.typeof(t));}catch(e:Dynamic){"";}'));
+		assertContains(typeofProbeTry, "try { return __hxhx_type_name(t); }",
+			"utest-style Std.string(Type.typeof(...)) try/catch probes should lower through the C++ type-name helper");
+		final stdStringProbeTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{Std.string(t);}catch(e:Dynamic){\"fallback\";}'));
+		assertContains(stdStringProbeTry, "try { return std::string(t); }",
+			"utest-style Std.string try/catch probes should lower through normal string conversion");
+		assertContains(stdStringProbeTry, "catch (...) { return std::string(\"fallback\"); }",
+			"utest-style Std.string try/catch probes should preserve non-empty fallback strings");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("t")])) == "__hxhx_type_name(t)",
+			"direct Type.getClassName calls should lower through the C++ type-name helper");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getEnumName"), [EIdent("t")])) == "__hxhx_type_name(t)",
+			"direct Type.getEnumName calls should lower through the C++ type-name helper");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "typeof"), [EIdent("t")])) == "__hxhx_type_name(t)",
+			"direct Type.typeof calls should lower to a printable C++ MVP type name");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("is", EInt(1), EIdent("Int"))) == "__hxhx_is_type(1, \"Int\")",
 			"Haxe is-expressions should lower through the C++ MVP type-test helper");
 		assertTrue(@:privateAccess
@@ -433,6 +459,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower hxcpp Android platform-min try/catch expressions through target runtime support");
 		assertContains(source, "__hxhx_join(words, \",\")", "C++ smoke should lower array join try/catch expressions through target runtime support");
 		assertContains(source, "static bool __hxhx_is_type(int, const std::string& type)", "C++ smoke should include Haxe is-expression helper overloads");
+		assertContains(source, "static std::string __hxhx_type_name(int)", "C++ smoke should include Haxe type-name helper overloads");
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
 			final buildDir = Path.join([root, "build"]);
