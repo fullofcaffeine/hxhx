@@ -1090,6 +1090,8 @@ class CppTargetCore {
 				"return " + renderExpr(expr, scope) + ";";
 			case "double":
 				"return " + renderExpr(expr, scope) + ";";
+			case _ if (isCppVectorType(returnType)):
+				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppReferenceType(returnType)):
 				"return " + renderExpr(expr, scope) + ";";
 			case _:
@@ -2667,6 +2669,10 @@ class CppTargetCore {
 
 	static function isCppReferenceType(typeName:String):Bool {
 		return typeName != null && StringTools.startsWith(typeName, "std::shared_ptr<");
+	}
+
+	static function isCppVectorType(typeName:String):Bool {
+		return typeName != null && StringTools.startsWith(typeName, "std::vector<");
 	}
 
 	static function isCppOptionalType(typeName:String):Bool {

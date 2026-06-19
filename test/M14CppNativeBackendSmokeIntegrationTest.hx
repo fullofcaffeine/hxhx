@@ -689,6 +689,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(classRefStringLines, "return __hxhx_type_name(next);",
 			"C++ class-like reference stringification should use the target type-name helper instead of std::to_string(shared_ptr)");
 		assertTrue(classRefStringLines.indexOf("std::to_string(next)") < 0, "C++ class-like reference stringification should not call std::to_string");
+		final vectorItem = new HxClassDecl("VectorItem", false, [], []);
+		final vectorProvider = new HxClassDecl("VectorProvider", false, [
+			new HxFunctionDecl("items", Public, true, [], "Array<VectorItem>", [SReturn(EArrayDecl([]), HxPos.unknown())], "")
+		], []);
+		final vectorReturnOwner = new HxClassDecl("VectorReturnOwner", false, [], []);
+		final vectorReturnNames = new StringMap<Bool>();
+		for (name in ["VectorItem", "VectorProvider", "VectorReturnOwner"])
+			vectorReturnNames.set(name, true);
+		final vectorReturnClasses = new StringMap<HxClassDecl>();
+		vectorReturnClasses.set("VectorItem", vectorItem);
+		vectorReturnClasses.set("VectorProvider", vectorProvider);
+		vectorReturnClasses.set("VectorReturnOwner", vectorReturnOwner);
+		final vectorReturnLookup = {names: vectorReturnNames, byName: vectorReturnClasses};
+		final vectorReturnMethod = new HxFunctionDecl("callStackLike", Public, true, [], "Array<VectorItem>",
+			[SReturn(ECall(EField(EIdent("VectorProvider"), "items"), []), HxPos.unknown())], "");
+		final vectorReturnLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(vectorReturnMethod, vectorReturnOwner, vectorReturnLookup).join("\n");
+		assertContains(vectorReturnLines, "return VectorProvider::items();",
+			"C++ vector-valued return expressions should return directly instead of falling through to int casts");
+		assertTrue(vectorReturnLines.indexOf("static_cast<int>(VectorProvider::items())") < 0,
+			"C++ vector-valued return expressions should not emit static_cast<int>");
 		final genericReturnOwner = new HxClassDecl("GenericReturnOwner", false, [], []);
 		final genericReturnNames = new StringMap<Bool>();
 		genericReturnNames.set("GenericReturnOwner", true);
