@@ -217,6 +217,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(joined);",
 			"  }",
 			"}",
+			"class FunctionSlot {",
+			"  public function new() {}",
+			"  public function filterGeneric(f:T -> Bool):String {",
+			"    return \"ok\";",
+			"  }",
+			"  public function mapGeneric(f:T -> X):String {",
+			"    return \"ok\";",
+			"  }",
+			"  public function noArg(f:Void -> String):String {",
+			"    return \"ok\";",
+			"  }",
+			"}",
 			"class Log {",
 			"  public static function warn(message:String):Void {",
 			"    Sys.println(message);",
@@ -530,6 +542,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "auto box = std::make_shared<Box>(41);", "C++ smoke should lower class construction to nullable references");
 		assertContains(source, "box->getHeight()", "C++ smoke should lower class receiver method calls through reference access");
 		assertContains(source, "std::shared_ptr<RefNode> next = nullptr;", "C++ smoke should type nullable class fields as C++ references");
+		assertContains(source, "std::string filterGeneric(std::function<bool(std::string)> f) {",
+			"C++ smoke should lower generic function type parameters to callable C++ types instead of undefined sanitized identifiers");
+		assertContains(source, "std::string mapGeneric(std::function<std::string(std::string)> f) {",
+			"C++ smoke should lower generic function return segments through the MVP dynamic string fallback");
+		assertContains(source, "std::string noArg(std::function<std::string()> f) {",
+			"C++ smoke should lower Void function arguments to zero-argument std::function signatures");
 		assertContains(source, "auto ref = std::make_shared<RefNode>(\"root\", nullptr);",
 			"C++ smoke should lower class create factories to constructors without requiring inline runtime stubs");
 		assertContains(source, "(ref->item)", "C++ smoke should read fields through class references");

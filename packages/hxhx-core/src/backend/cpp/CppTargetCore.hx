@@ -125,6 +125,7 @@ class CppTargetCore {
 		out.push("#include <cctype>");
 		out.push("#include <cstddef>");
 		out.push("#include <fstream>");
+		out.push("#include <functional>");
 		out.push("#include <iostream>");
 		out.push("#include <memory>");
 		out.push("#include <sstream>");
@@ -2100,6 +2101,8 @@ class CppTargetCore {
 				"std::string";
 			case _ if (StringTools.startsWith(hint, "Array<") && StringTools.endsWith(hint, ">")):
 				"std::vector<" + cppTypeHint(hint.substr("Array<".length, hint.length - "Array<".length - 1)) + ">";
+			case _ if (isFunctionTypeHint(hint)):
+				cppFunctionTypeHint(hint);
 			case _ if (isClassLikeTypeHint(hint)):
 				"std::shared_ptr<" + sanitizeTypePath(typeBaseName(hint)) + ">";
 			case _:
@@ -2112,6 +2115,106 @@ class CppTargetCore {
 		if (StringTools.startsWith(hint, "Null<") && StringTools.endsWith(hint, ">"))
 			return hint.substr("Null<".length, hint.length - "Null<".length - 1);
 		return hint;
+	}
+
+	static function isFunctionTypeHint(typeHint:String):Bool {
+		return splitTopLevelFunctionType(typeHint).length > 1;
+	}
+
+	static function cppFunctionTypeHint(typeHint:String):String {
+		final parts = splitTopLevelFunctionType(typeHint);
+		if (parts.length <= 1)
+			return "std::function<std::string()>";
+		final returnType = cppTypeHint(parts[parts.length - 1]);
+		final args = [
+			for (arg in functionArgTypeParts(parts.slice(0, parts.length - 1)))
+				cppTypeHint(arg)
+		].filter(t -> t != "void");
+		return "std::function<" + returnType + "(" + args.join(", ") + ")>";
+	}
+
+	static function splitTopLevelFunctionType(typeHint:String):Array<String> {
+		final parts = [];
+		var start = 0;
+		var angleDepth = 0;
+		var parenDepth = 0;
+		var i = 0;
+		while (i < typeHint.length) {
+			final c = typeHint.charAt(i);
+			if (c == "<")
+				angleDepth++;
+			else if (c == ">" && angleDepth > 0)
+				angleDepth--;
+			else if (c == "(")
+				parenDepth++;
+			else if (c == ")" && parenDepth > 0)
+				parenDepth--;
+			else if (c == "-" && i + 1 < typeHint.length && typeHint.charAt(i + 1) == ">" && angleDepth == 0 && parenDepth == 0) {
+				parts.push(stripTypeParens(typeHint.substring(start, i)));
+				i += 2;
+				start = i;
+				continue;
+			}
+			i++;
+		}
+		if (parts.length > 0)
+			parts.push(stripTypeParens(typeHint.substr(start)));
+		return parts;
+	}
+
+	static function functionArgTypeParts(parts:Array<String>):Array<String> {
+		if (parts.length != 1)
+			return parts;
+		final single = stripTypeParens(parts[0]);
+		if (single == "Void" || single == "StdTypes.Void")
+			return [];
+		return splitTopLevelComma(single);
+	}
+
+	static function splitTopLevelComma(text:String):Array<String> {
+		final parts = [];
+		var start = 0;
+		var angleDepth = 0;
+		var parenDepth = 0;
+		for (i in 0...text.length) {
+			final c = text.charAt(i);
+			if (c == "<")
+				angleDepth++;
+			else if (c == ">" && angleDepth > 0)
+				angleDepth--;
+			else if (c == "(")
+				parenDepth++;
+			else if (c == ")" && parenDepth > 0)
+				parenDepth--;
+			else if (c == "," && angleDepth == 0 && parenDepth == 0) {
+				parts.push(stripTypeParens(text.substring(start, i)));
+				start = i + 1;
+			}
+		}
+		parts.push(stripTypeParens(text.substr(start)));
+		return parts.filter(part -> part.length > 0);
+	}
+
+	static function stripTypeParens(typeHint:String):String {
+		var hint = StringTools.trim(typeHint == null ? "" : typeHint);
+		while (StringTools.startsWith(hint, "(") && StringTools.endsWith(hint, ")") && enclosesWholeType(hint))
+			hint = StringTools.trim(hint.substr(1, hint.length - 2));
+		return hint;
+	}
+
+	static function enclosesWholeType(typeHint:String):Bool {
+		var depth = 0;
+		for (i in 0...typeHint.length) {
+			final c = typeHint.charAt(i);
+			if (c == "(")
+				depth++;
+			else if (c == ")") {
+				depth--;
+				if (depth == 0 && i < typeHint.length - 1)
+					return false;
+			}
+		}
+		return depth == 0;
 	}
 
 	static function removeTypeHintWhitespace(typeHint:String):String {
