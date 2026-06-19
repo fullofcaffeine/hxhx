@@ -1472,6 +1472,9 @@ class CppTargetCore {
 				cppTypeHint(typePath, scope);
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
+			case ECall(EField(ESuper, method), _):
+				final baseType = scope.owner == null ? null : baseTypeName(scope.owner);
+				baseType == null ? "" : classMethodCppReturnType(baseType, method, false, scope);
 			case ECall(EField(receiver, method), _):
 				final staticOwner = staticReceiverClassName(receiver, scope);
 				if (staticOwner != null) {

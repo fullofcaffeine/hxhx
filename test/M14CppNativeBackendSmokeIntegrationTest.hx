@@ -705,6 +705,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stringCallLines, "return s->toString();",
 			"C++ string-returning method calls should flow directly instead of std::to_string(std::string)");
 		assertTrue(stringCallLines.indexOf("std::to_string(s->toString())") < 0, "C++ string-returning method calls should not be wrapped in std::to_string");
+		final baseString = new HxClassDecl("BaseString", false, [
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("base"), HxPos.unknown())], "")
+		], []);
+		final childString = new HxClassDecl("ChildString", false, [], [], "BaseString");
+		final superStringNames = new StringMap<Bool>();
+		for (name in ["BaseString", "ChildString"])
+			superStringNames.set(name, true);
+		final superStringClasses = new StringMap<HxClassDecl>();
+		superStringClasses.set("BaseString", baseString);
+		superStringClasses.set("ChildString", childString);
+		final superStringLookup = {names: superStringNames, byName: superStringClasses};
+		final superStringMethod = new HxFunctionDecl("renderSuperString", Public, false, [], "String",
+			[SReturn(ECall(EField(ESuper, "toString"), []), HxPos.unknown())], "");
+		final superStringLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(superStringMethod, childString, superStringLookup).join("\n");
+		assertContains(superStringLines, "return BaseString::toString();",
+			"C++ string-returning super method calls should flow directly instead of std::to_string(std::string)");
+		assertTrue(superStringLines.indexOf("std::to_string(BaseString::toString())") < 0,
+			"C++ string-returning super method calls should not be wrapped in std::to_string");
 		final selfStringOwner = new HxClassDecl("SelfStringOwner", false, [], []);
 		final selfStringNames = new StringMap<Bool>();
 		selfStringNames.set("SelfStringOwner", true);
