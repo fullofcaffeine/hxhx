@@ -375,6 +375,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"remote Cpp gate macro error probes should preserve the no-error branch as an empty message");
 		assertContains(macroErrorProbeTry, "catch (const std::exception& e) { return std::string(e.what()); }",
 			"remote Cpp gate macro error probes should preserve the catch-message intent");
+		final exceptionMessageProbeTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{typeof(e);"noerror";}catch(e:haxe.Exception){Std.string(e.message);}'));
+		assertContains(exceptionMessageProbeTry, "try { (void)__hxhx_type_name(e); return std::string(\"noerror\"); }",
+			"remote Cpp gate haxe.Exception probes should preserve the success marker");
+		assertContains(exceptionMessageProbeTry, "catch (const std::exception& e) { return std::string(e.what()); }",
+			"remote Cpp gate haxe.Exception probes should preserve message extraction intent");
 		final fileContentContextErrorTry = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{sys.io.File.getContent(Context.resolvePath(file));}catch(e:Dynamic){Context.error(Std.string(e),Context.currentPos());}'));
 		assertContains(fileContentContextErrorTry, "try { return __hxhx_read_file(file); }",

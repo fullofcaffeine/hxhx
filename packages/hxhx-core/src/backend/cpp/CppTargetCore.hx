@@ -36,6 +36,11 @@ typedef CppTryTypeofSafetyProbe = {
 	var failure:String;
 }
 
+typedef CppTryExceptionMessageProbe = {
+	var value:String;
+	var success:String;
+}
+
 typedef CppFieldReadCatchString = {
 	var receiver:String;
 	var field:String;
@@ -1217,6 +1222,14 @@ class CppTargetCore {
 				+ macroErrorProbe
 				+ "); return std::string(); } catch (const std::exception& e) { return std::string(e.what()); } catch (...) { return std::string(); } })()";
 		}
+		final exceptionMessageProbe = parseTypeofExceptionMessageProbeRaw(raw);
+		if (exceptionMessageProbe != null) {
+			return "([&]() { try { (void)__hxhx_type_name("
+				+ exceptionMessageProbe.value
+				+ "); return std::string("
+				+ quoteString(exceptionMessageProbe.success)
+				+ "); } catch (const std::exception& e) { return std::string(e.what()); } catch (...) { return std::string(); } })()";
+		}
 		final fileContentContextErrorPath = parseFileContentContextErrorTryRaw(raw);
 		if (fileContentContextErrorPath != null) {
 			final readExpr = "__hxhx_read_file(" + fileContentContextErrorPath + ")";
@@ -1334,6 +1347,15 @@ class CppTargetCore {
 		final compact = compactRawText(raw);
 		final pattern = ~/^try\{typeof\(([A-Za-z_][A-Za-z0-9_]*)\);null;\}catch\(e:haxe\.macro\.Expr\.Error\)\{var[A-Za-z_][A-Za-z0-9_]*=e\.message;if\(e\.childErrors!=null\)for\(cine\.childErrors\)[A-Za-z_][A-Za-z0-9_]*\+=""\+c\.message;[A-Za-z_][A-Za-z0-9_]*;\}$/;
 		return pattern.match(compact) ? sanitizeIdentifier(pattern.matched(1)) : null;
+	}
+
+	static function parseTypeofExceptionMessageProbeRaw(raw:String):Null<CppTryExceptionMessageProbe> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^try\{typeof\(([A-Za-z_][A-Za-z0-9_]*)\);"([^"]*)";\}catch\(e:haxe\.Exception\)\{Std\.string\(e\.message\);\}$/;
+		return pattern.match(compact) ? {
+			value: sanitizeIdentifier(pattern.matched(1)),
+			success: pattern.matched(2)
+		} : null;
 	}
 
 	static function parseFileContentContextErrorTryRaw(raw:String):Null<String> {
