@@ -2509,7 +2509,7 @@ class HxParser {
 					e = ERange(e, right);
 				case TDot:
 					bump();
-					final field = readIdent("field name");
+					final field = readPostfixFieldName();
 					e = EField(e, field);
 				case TLParen:
 					bump();
@@ -2640,6 +2640,14 @@ class HxParser {
 			case _:
 				parsePostfixExpr(stop);
 		}
+	}
+
+	function readPostfixFieldName():String {
+		if (acceptOtherChar("$")) {
+			final name = readIdent("field splice name");
+			return "__hxhx_macro_field_splice:" + name;
+		}
+		return readIdent("field name");
 	}
 
 	function parseMacroQuoteExpr(stop:() -> Bool):HxExpr {

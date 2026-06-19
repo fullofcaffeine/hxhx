@@ -1518,6 +1518,16 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected macro expression-splice receiver call to parse");
 		}
 
+		final macroFieldSpliceStmts = HxParser.parseFunctionBodyText('var fieldExpr = macro $$e.$$s;');
+		assertTrue(macroFieldSpliceStmts.length == 1, "expected macro field splice quote to parse");
+		switch (macroFieldSpliceStmts[0]) {
+			case SVar("fieldExpr", _, EMacroExpr(EField(ECall(EIdent("__hxhx_macro_expr_splice"), [EIdent("e")]), "__hxhx_macro_field_splice:s"), _), _):
+			case SExpr(EUnsupported(raw), _):
+				fail("macro field splice quote parsed as unsupported: " + raw);
+			case _:
+				fail("expected macro field splice quote expression");
+		}
+
 		final exprMetaCalls = HxParser.parseFunctionBodyText('eq(readMeta(@tag ("value")).name, "tag"); eq(readMeta(@tag("arg") "value").args.length, 1);');
 		assertTrue(exprMetaCalls.length == 2, "expected expression metadata calls to parse");
 		switch (exprMetaCalls[0]) {
