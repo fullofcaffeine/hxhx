@@ -5011,11 +5011,11 @@ let cppFunctionReturnType = fun fn owner classLookup -> try let __fallback_resul
     ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_1604 = ("" : string) in (
       tempString1 := __assign_1604;
       __assign_1604
-    ) else let __assign_1605 = (sanitizeTypePath (HxClassDecl.getName (Obj.magic owner) : string) : string) in (
+    ) else let __assign_1605 = (sanitizeTypePath (typeBaseName (HxClassDecl.getName (Obj.magic owner) : string) : string) : string) in (
       tempString1 := __assign_1605;
       __assign_1605
     ));
-    ignore (if isStringIteratorHelper (!tempString1 : string) && HxString.length raw > 0 then raise (HxRuntime.Hx_return (Obj.repr (knownStdlibMethodReturnCppType (!tempString1 : string) (HxFunctionDecl.getName (Obj.magic fn) : string) (raw : string) (HxRuntime.hx_null) classLookup : string))) else ());
+    ignore (if isStringIteratorHelper (!tempString1 : string) then raise (HxRuntime.Hx_return (Obj.repr (knownStdlibMethodReturnCppType (!tempString1 : string) (HxFunctionDecl.getName (Obj.magic fn) : string) (raw : string) (HxRuntime.hx_null) classLookup : string))) else ());
     ignore (if HxString.length raw > 0 then raise (HxRuntime.Hx_return (Obj.repr (cppReturnTypeHint (raw : string) (HxRuntime.hx_null) classLookup : string))) else ());
     let scope = renderScope (Obj.magic owner) classLookup ("auto" : string) in (
       ignore (registerFunctionArgs scope (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))));

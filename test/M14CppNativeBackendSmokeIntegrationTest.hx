@@ -970,10 +970,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final stringIterator = new HxClassDecl("StringIterator", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "s"), EIdent("s")), HxPos.unknown())], ""),
-			new HxFunctionDecl("hasNext", Public, false, [], "String", [
+			new HxFunctionDecl("hasNext", Public, false, [], "", [
 				SReturn(EBinop("<", EIdent("offset"), EField(EIdent("s"), "length")), HxPos.unknown())
 			], ""),
-			new HxFunctionDecl("next", Public, false, [], "String", [
+			new HxFunctionDecl("next", Public, false, [], "", [
 				SReturn(ECall(EField(EIdent("StringTools"), "unsafeCodeAt"), [EIdent("s"), EUnop("post++", EIdent("offset"))]), HxPos.unknown())
 			], "")
 		], [
@@ -981,7 +981,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFieldDecl("s", Public, false, "String", null)
 		]);
 		final stringKeyValueIterator = new HxClassDecl("StringKeyValueIterator", false, [
-			new HxFunctionDecl("next", Public, false, [], "String", [
+			new HxFunctionDecl("next", Public, false, [], "", [
 				SReturn(EAnon(["key", "value"], [
 					EIdent("offset"),
 					ECall(EField(EIdent("StringTools"), "fastCodeAt"), [EIdent("s"), EUnop("post++", EIdent("offset"))])

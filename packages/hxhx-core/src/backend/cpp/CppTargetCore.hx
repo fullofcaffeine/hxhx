@@ -3411,8 +3411,8 @@ class CppTargetCore {
 
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
-		final ownerName = owner == null ? "" : sanitizeTypePath(HxClassDecl.getName(owner));
-		if (isStringIteratorHelper(ownerName) && raw.length > 0)
+		final ownerName = owner == null ? "" : sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		if (isStringIteratorHelper(ownerName))
 			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null, classLookup);
 		if (raw.length > 0)
 			return cppReturnTypeHint(raw, null, classLookup);
