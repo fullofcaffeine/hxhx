@@ -172,11 +172,18 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertListKeyValueIteratorNextShape(scannedNext, "ParserStageScanHelpers");
 	}
 
+	static function assertNativeDecodeStripsUntypedReturnModifier():Void {
+		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("__init__|private|1||Void untyped||||", "untyped {}", -1,
+			"class Math { static function __init__():Void untyped {} }");
+		assertEqString(HxFunctionDecl.getReturnTypeHint(fn), "Void", "native decode should not merge trailing untyped into the return type");
+	}
+
 	static function main() {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
 		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
 		assertBootstrapNativeParserAllowsKeywordPathSegments();
 		assertBootstrapNativeParserEscapesStringTokenText();
+		assertNativeDecodeStripsUntypedReturnModifier();
 
 		final src = '@:generic class GenericMethods<T> {\n'
 			+ '  public function new() {}\n'

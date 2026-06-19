@@ -824,7 +824,7 @@ class ParserStageNativeDecode {
 			}
 		}
 
-		final returnTypeHint = parts[4];
+		final returnTypeHint = normalizeMethodReturnTypeHint(parts[4]);
 		final retStr = parts[5];
 		final retId = parts[6];
 		final retExpr = parts[8];
@@ -888,6 +888,11 @@ class ParserStageNativeDecode {
 		#end
 
 		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr, null, null, null, methodBodySrc == null ? "" : methodBodySrc);
+	}
+
+	static function normalizeMethodReturnTypeHint(typeHint:String):String {
+		final text = StringTools.trim(typeHint == null ? "" : typeHint);
+		return ~/[\r\n\t ]+untyped$/.replace(text, "");
 	}
 
 	static function findFunctionBodyStart(source:String, name:String):Int {
