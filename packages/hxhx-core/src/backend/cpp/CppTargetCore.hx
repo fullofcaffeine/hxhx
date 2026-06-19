@@ -1057,16 +1057,21 @@ class CppTargetCore {
 		final scrutineeExpr = isStringLike(scrutinee) ? stringExpr(scrutinee, scope) : renderExpr(scrutinee, scope);
 		final out = [indent + "{", indent + "  auto " + switchValue + " = " + scrutineeExpr + ";"];
 		var defaultBody:Null<HxStmt> = null;
+		var defaultPattern:Null<HxSwitchPattern> = null;
 		var emitted = 0;
 		final count = patterns.length < bodies.length ? patterns.length : bodies.length;
 		for (i in 0...count) {
 			final pattern = patterns[i];
 			if (switchPatternIsDefault(pattern)) {
-				if (defaultBody == null)
+				if (defaultBody == null) {
 					defaultBody = bodies[i];
+					defaultPattern = pattern;
+				}
 				continue;
 			}
 			out.push(indent + "  " + (emitted == 0 ? "if" : "else if") + " (" + switchPatternCond(pattern, switchValue) + ") {");
+			for (line in switchPatternBindingLines(pattern, switchValue, indent + "    "))
+				out.push(line);
 			for (line in renderStmtBlockContent(bodies[i], indent + "    ", scope))
 				out.push(line);
 			out.push(indent + "  }");
@@ -1074,6 +1079,8 @@ class CppTargetCore {
 		}
 		if (defaultBody != null) {
 			out.push(indent + "  else {");
+			for (line in switchPatternBindingLines(defaultPattern, switchValue, indent + "    "))
+				out.push(line);
 			for (line in renderStmtBlockContent(defaultBody, indent + "    ", scope))
 				out.push(line);
 			out.push(indent + "  }");
@@ -1973,23 +1980,30 @@ class CppTargetCore {
 		final scrutineeExpr = isStringLike(scrutinee) ? stringExpr(scrutinee, scope) : renderExpr(scrutinee, scope);
 		final out = ["([&]() {", "  auto " + switchValue + " = " + scrutineeExpr + ";"];
 		var defaultExpr:Null<HxExpr> = null;
+		var defaultPattern:Null<HxSwitchPattern> = null;
 		var emitted = 0;
 		final count = patterns.length < exprs.length ? patterns.length : exprs.length;
 		for (i in 0...count) {
 			final pattern = patterns[i];
 			if (switchPatternIsDefault(pattern)) {
-				if (defaultExpr == null)
+				if (defaultExpr == null) {
 					defaultExpr = exprs[i];
+					defaultPattern = pattern;
+				}
 				continue;
 			}
 			final cond = switchPatternCond(pattern, switchValue);
 			out.push("  " + (emitted == 0 ? "if" : "else if") + " (" + cond + ") {");
+			for (line in switchPatternBindingLines(pattern, switchValue, "    "))
+				out.push(line);
 			out.push("    return " + switchBranchExpr(exprs[i], typeName, scope) + ";");
 			out.push("  }");
 			emitted++;
 		}
 		if (defaultExpr != null) {
 			out.push("  else {");
+			for (line in switchPatternBindingLines(defaultPattern, switchValue, "    "))
+				out.push(line);
 			out.push("    return " + switchBranchExpr(defaultExpr, typeName, scope) + ";");
 			out.push("  }");
 		}
@@ -2083,6 +2097,64 @@ class CppTargetCore {
 				PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
 				"false";
 		};
+	}
+
+	/**
+		Declare C++ locals for pattern names before a branch body is rendered.
+
+		Why:
+		- The C++ MVP already parses switch patterns with binders such as
+		  `Module(m)` and then renders branch bodies that reference `m`.
+		- Even when a complex pattern is still semantically non-matching in this
+		  MVP, C++ type-checks the branch body and fails if those names are absent.
+
+		What/How:
+		- Bind every captured name to the current switch value as a conservative,
+		  compile-safe placeholder.
+		- This intentionally does not claim full enum/array/object destructuring
+		  semantics. Real extraction from `__hx_params` or target runtime enum
+		  values should land as a separate behavior-owned seam.
+	**/
+	static function switchPatternBindingLines(pattern:HxSwitchPattern, switchValue:String, indent:String):Array<String> {
+		final out = new Array<String>();
+		function bind(name:String, value:String):Void {
+			if (name != null && name.length > 0 && name != "_")
+				out.push(indent + "auto " + sanitizeIdentifier(name) + " = " + value + ";");
+		}
+		function walk(p:HxSwitchPattern, value:String):Void {
+			if (p == null)
+				return;
+			switch (p) {
+				case PBind(name):
+					bind(name, value);
+				case PCapture(name, inner):
+					bind(name, value);
+					walk(inner, value);
+				case PEnumExtract(_, args):
+					if (args != null)
+						for (arg in args)
+							walk(arg, value);
+				case PObject(_, fieldPatterns):
+					if (fieldPatterns != null)
+						for (fieldPattern in fieldPatterns)
+							walk(fieldPattern, value);
+				case PArray(items):
+					if (items != null)
+						for (item in items)
+							walk(item, value);
+				case PExtractor(_, resultPattern):
+					walk(resultPattern, value);
+				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
+					PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
+					walk(inner, value);
+				case POr(patterns):
+					if (patterns != null && patterns.length > 0)
+						walk(patterns[0], value);
+				case _:
+			}
+		}
+		walk(pattern, switchValue);
+		return out;
 	}
 
 	static function indexOfExpr(receiver:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {

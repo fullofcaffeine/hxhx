@@ -659,6 +659,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ default false arguments without explicit type hints should infer bool, not std::string");
 		assertContains(defaultBoolLines, "return ((fullStack) ? true : false);", "C++ default false arguments should be usable as boolean ternary conditions");
 		assertTrue(defaultBoolLines.indexOf("std::string fullStack") < 0, "C++ default false arguments should not fall back to std::string");
+		final switchPatternMethod = new HxFunctionDecl("equalItemsLike", Public, true, [
+			new HxFunctionArg("item1", "String", NoDefault, false, false),
+			new HxFunctionArg("item2", "String", NoDefault, false, false)
+		], "Bool", [
+			SReturn(ESwitch(EIdent("item1"), [PEnumExtract("Module", [PBind("m1")]), PWildcard], [
+				ESwitch(EIdent("item2"), [PEnumExtract("Module", [PBind("m2")]), PWildcard], [EBinop("==", EIdent("m1"), EIdent("m2")), EBool(false)]),
+				EBool(false)
+			]), HxPos.unknown())
+		], "");
+		final switchPatternLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(switchPatternMethod, optionalOwner, optionalLookup).join("\n");
+		assertContains(switchPatternLines, "auto m1 = __hxhx_switch;",
+			"C++ switch branches should bind enum-pattern variables before rendering branch expressions");
+		assertContains(switchPatternLines, "auto m2 = __hxhx_switch;",
+			"C++ nested switch branches should bind enum-pattern variables before rendering branch expressions");
+		assertContains(switchPatternLines, "return (m1 == m2);", "C++ switch branch expressions should use pattern variables after they are declared");
 		final stringSource = new HxClassDecl("StringSource", false, [
 			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("source"), HxPos.unknown())], "")
 		], []);
