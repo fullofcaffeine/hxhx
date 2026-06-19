@@ -318,6 +318,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ left-shift assignments should lower as simple compound assignments");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop(">>=", EIdent("mask"), EInt(1))) == "mask >>= 1",
 			"C++ right-shift assignments should lower as simple compound assignments");
+		final unsignedShiftAssign = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop(">>>=", EIdent("mask"), EInt(1)));
+		assertContains(unsignedShiftAssign, "auto& __hxhx_ushr_assign_target = mask;",
+			"C++ unsigned right-shift assignments should bind the assignment target once");
+		assertContains(unsignedShiftAssign, "__hxhx_ushr_assign_target = static_cast<unsigned int>(__hxhx_ushr_assign_target) >> __hxhx_ushr_assign_count;",
+			"C++ unsigned right-shift assignments should preserve Haxe unsigned shift semantics");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");

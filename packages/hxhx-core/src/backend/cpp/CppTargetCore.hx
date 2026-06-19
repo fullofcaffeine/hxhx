@@ -796,6 +796,13 @@ class CppTargetCore {
 				isTypeExpr(left, right, scope);
 			case EBinop("=>", left, right):
 				"std::make_pair(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
+			case EBinop(">>>=", left, right):
+				"([&]() { auto& __hxhx_ushr_assign_target = "
+				+ renderExpr(left, scope)
+				+ "; auto __hxhx_ushr_assign_count = "
+				+ renderExpr(right, scope)
+				+
+				"; __hxhx_ushr_assign_target = static_cast<unsigned int>(__hxhx_ushr_assign_target) >> __hxhx_ushr_assign_count; return __hxhx_ushr_assign_target; })()";
 			case EBinop(op, left, right) if (isSimpleCompoundAssignmentOp(op)):
 				renderExpr(left, scope)
 				+ " "
