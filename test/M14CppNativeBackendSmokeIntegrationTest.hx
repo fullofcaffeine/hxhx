@@ -657,6 +657,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stringCallLines, "return s->toString();",
 			"C++ string-returning method calls should flow directly instead of std::to_string(std::string)");
 		assertTrue(stringCallLines.indexOf("std::to_string(s->toString())") < 0, "C++ string-returning method calls should not be wrapped in std::to_string");
+		final genericReturnOwner = new HxClassDecl("GenericReturnOwner", false, [], []);
+		final genericReturnNames = new StringMap<Bool>();
+		genericReturnNames.set("GenericReturnOwner", true);
+		final genericReturnClasses = new StringMap<HxClassDecl>();
+		genericReturnClasses.set("GenericReturnOwner", genericReturnOwner);
+		final genericReturnLookup = {names: genericReturnNames, byName: genericReturnClasses};
+		final genericReturnMethod = new HxFunctionDecl("filterLike", Public, false, [], "", [
+			SVar("next", "", ENew("GenericReturnOwner", []), HxPos.unknown()),
+			SReturn(EIdent("next"), HxPos.unknown())
+		], "");
+		final genericReturnLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(genericReturnMethod, genericReturnOwner, genericReturnLookup).join("\n");
+		assertContains(genericReturnLines, "std::shared_ptr<GenericReturnOwner> filterLike() {",
+			"C++ helper methods with inferred class return locals should not fall back to std::string");
+		assertContains(genericReturnLines, "return next;",
+			"C++ helper methods returning inferred class locals should forward the reference instead of stringifying it");
+		assertTrue(genericReturnLines.indexOf("std::string filterLike()") < 0,
+			"C++ helper methods returning inferred class locals should not declare std::string");
 		final exprBodyOwner = new HxClassDecl("ExpressionBodyOwner", false, [], [new HxFieldDecl("key", Public, false, "String", null)]);
 		final exprBodyNames = new StringMap<Bool>();
 		exprBodyNames.set("ExpressionBodyOwner", true);

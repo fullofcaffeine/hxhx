@@ -420,7 +420,7 @@ class CppTargetCore {
 						addExpr(init, fieldScope);
 				}
 				for (fn in HxClassDecl.getFunctions(cls)) {
-					final scope = renderScope(cls, classLookup, cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn)));
+					final scope = renderScope(cls, classLookup, cppFunctionReturnType(fn, cls, classLookup));
 					registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 					for (stmt in HxFunctionDecl.getBody(fn))
 						addStmt(stmt, scope);
@@ -441,7 +441,7 @@ class CppTargetCore {
 	}
 
 	static function renderStaticFunction(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 		final out = ["static "
@@ -787,7 +787,7 @@ class CppTargetCore {
 	}
 
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 		final out = ["  "
@@ -2454,6 +2454,48 @@ class CppTargetCore {
 		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
 		final hint = unwrapNullTypeHint(raw);
 		return isStructuralTypeHint(hint) ? "auto" : cppTypeHint(raw);
+	}
+
+	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
+		if (raw.length > 0)
+			return cppReturnTypeHint(raw);
+		final scope = renderScope(owner, classLookup, "auto");
+		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+		for (stmt in HxFunctionDecl.getBody(fn)) {
+			final inferred = inferReturnTypeFromStmt(stmt, scope);
+			if (inferred.length > 0)
+				return inferred;
+		}
+		return cppReturnTypeHint(raw);
+	}
+
+	static function inferReturnTypeFromStmt(stmt:HxStmt, scope:CppRenderScope):String {
+		return switch (stmt) {
+			case SVar(name, typeHint, init, _):
+				scope.localTypes.set(sanitizeIdentifier(name), cppLocalTypeHint(typeHint, init, scope));
+				"";
+			case SReturn(expr, _):
+				inferExprCppType(expr, scope);
+			case SReturnVoid(_):
+				"void";
+			case SBlock(stmts, _):
+				inferReturnTypeFromStmts(stmts, scope);
+			case SIf(_, thenBranch, elseBranch, _):
+				final thenType = inferReturnTypeFromStmt(thenBranch, scope);
+				if (thenType.length > 0) thenType; else elseBranch == null ? "" : inferReturnTypeFromStmt(elseBranch, scope);
+			case _:
+				"";
+		};
+	}
+
+	static function inferReturnTypeFromStmts(stmts:Array<HxStmt>, scope:CppRenderScope):String {
+		for (stmt in stmts) {
+			final inferred = inferReturnTypeFromStmt(stmt, scope);
+			if (inferred.length > 0)
+				return inferred;
+		}
+		return "";
 	}
 
 	static function cppNullableTypeHint(typeHint:String):String {
