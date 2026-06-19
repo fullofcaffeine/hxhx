@@ -314,6 +314,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ modulo expressions should lower as simple binary operators");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("^", EIdent("mask"), EInt(1))) == "(mask ^ 1)",
 			"C++ bitwise xor expressions should lower as simple binary operators");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("<<=", EIdent("mask"), EInt(1))) == "mask <<= 1",
+			"C++ left-shift assignments should lower as simple compound assignments");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
