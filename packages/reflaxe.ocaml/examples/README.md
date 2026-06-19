@@ -15,6 +15,18 @@ Run all example suites from repo root:
 npm run test:examples
 ```
 
+When adding or changing an example, also run the fast inventory guard:
+
+```bash
+npm run guard:example-coverage
+```
+
+Buildable examples should include `build.hxml`, `README.md`, and
+`expected.stdout`. The runner compiles through the declared lane, builds the OCaml
+artifact when applicable, runs it, and compares stdout. If an example needs checks
+beyond stdout, add `test.hxml` or `test.sh`; the runner executes those
+example-specific checks after the stdout diff.
+
 Run heavier acceptance-only suites:
 
 ```bash

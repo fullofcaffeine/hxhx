@@ -21,6 +21,11 @@ opam install -y extlib
 From the repo root:
 
 ```bash
-RUN_ACCEPTANCE_EXAMPLES=1 npm run test:examples
+npm run test:acceptance
 ```
 
+For direct runner debugging, this is equivalent to:
+
+```bash
+RUN_ACCEPTANCE_EXAMPLES=1 npm run test:examples
+```

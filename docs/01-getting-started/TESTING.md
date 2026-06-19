@@ -631,6 +631,30 @@ If `dune` and `ocamlc` are available, we additionally run:
   - `examples/**`
   - `packages/reflaxe.ocaml/examples/**`
 
+`EXAMPLE_COVERAGE_CONTRACT:PASS` is emitted by `npm run guard:example-coverage`.
+That guard inventories both example roots and fails if a buildable example has no
+`expected.stdout`, no README, or is not wired into the documented example runner
+contract.
+
+The intended split is:
+
+- normal buildable examples: `npm run test:examples`
+- heavier or host-tool-dependent examples: `npm run test:acceptance`
+- non-`build.hxml` fixtures: a dedicated command documented in the fixture README
+
+Every example should prove what the compiler alone cannot prove. For pure compile
+smokes, this can be a tiny `expected.stdout`; for behavior examples, assert the
+observable runtime result in stdout so CI catches stale examples after compiler or
+runtime changes. If an example needs checks beyond stdout, add `test.hxml` or
+`test.sh`; `scripts/test-examples.sh` runs those example-specific checks after the
+compile/build/run/stdout-diff step.
+
+Do not snapshot every example's generated output by default. The normal example
+contract is stronger for user-facing confidence: compile the example, build the
+artifact, run it, and compare behavior. Add targeted snapshots only when generated
+code shape is itself the contract, when runtime output cannot expose the bug, or
+when a compiler/lowering seam needs a stable golden artifact.
+
 These catch regressions that pure snapshot tests can’t, like:
 
 - OCaml type errors caused by ordering/dependencies

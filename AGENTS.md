@@ -103,6 +103,28 @@ Agent policy:
   - If backgrounding is unavoidable, record the exact command, PID, log path, and expected completion artifact before moving on.
   - Do not rely on loose `ps` reconstruction alone for multi-minute workflows when a resumable session is available.
 
+## Example Coverage Policy
+
+- Treat public examples as compatibility contracts, not disposable demos.
+- Buildable examples under `examples/` and `packages/reflaxe.ocaml/examples/` must be covered by `npm run test:examples` unless they are explicitly marked `ACCEPTANCE_ONLY`.
+  - `test:examples` must compile the example, build the target artifact when applicable, run it when applicable, and compare behavior with `expected.stdout`.
+  - If the example has extra behavior worth testing beyond stdout, add `test.hxml` or `test.sh`; the example runner executes those example-specific checks after the stdout diff.
+  - Do not snapshot every example's generated output by default; that is usually redundant with compile/build/run evidence and creates noisy churn.
+  - Add targeted snapshots only when generated-code shape is itself the contract, when runtime output cannot expose the regression, or when a compiler/lowering seam needs a stable golden artifact.
+  - If an example only proves compile-time behavior, keep `expected.stdout` intentionally small but still present so the runner proves the artifact can execute.
+  - If an example has behavior the compiler cannot catch, add an actual runtime assertion/output check instead of relying on "it compiled".
+- Heavy or host-tool-dependent examples may be marked `ACCEPTANCE_ONLY`, but they must still be reachable through `npm run test:acceptance` and documented in the example README.
+- Non-`build.hxml` example fixtures are allowed only when they are exercised by a dedicated script, documented with the command, and covered by `npm run guard:example-coverage`.
+- When adding, renaming, or changing an example:
+  - update the example README,
+  - update root example listings if the user-facing set changes,
+  - add or update `expected.stdout`,
+  - add or update `test.hxml` / `test.sh` for example-specific unit or behavior checks when stdout alone is not enough,
+  - run `npm run guard:example-coverage`,
+  - run the narrow example command (`npm run test:examples`, `npm run test:acceptance`, or the dedicated command),
+  - and record whether README Goals status changed.
+- `EXAMPLE_COVERAGE_CONTRACT:PASS` means the repo has a machine-checked inventory contract; it does not replace actually running examples in CI.
+
 ## Compatibility Policy
 
 - Use a hard cutover approach and never implement backward compatibility.

@@ -20,7 +20,11 @@ read_example_roots() {
 collect_example_dirs() {
   local -a roots=("$@")
   for root in "${roots[@]}"; do
-    find "$root" -mindepth 1 -maxdepth 1 -type d | sort
+    if [ -f "${root}/build.hxml" ]; then
+      echo "$root"
+    else
+      find "$root" -mindepth 1 -maxdepth 1 -type d | sort
+    fi
   done
 }
 
@@ -160,6 +164,26 @@ apply_example_env() {
   done < "$env_file"
 }
 
+run_example_tests() {
+  local ran=0
+
+  if [ -f "test.hxml" ]; then
+    echo "== Example checks: $(pwd)/test.hxml"
+    "$HAXE_BIN" test.hxml
+    ran=1
+  fi
+
+  if [ -f "test.sh" ]; then
+    echo "== Example checks: $(pwd)/test.sh"
+    bash test.sh
+    ran=1
+  fi
+
+  if [ "$ran" -eq 1 ]; then
+    echo "== Example checks passed: $(pwd)"
+  fi
+}
+
 EXAMPLE_DIRS=()
 while IFS= read -r dir; do
   EXAMPLE_DIRS+=("$dir")
@@ -254,5 +278,7 @@ for dir in "${EXAMPLE_DIRS[@]}"; do
     HX_TEST_ENV=ok "${run_cmd[@]}" > "$tmp"
     diff -u "expected.stdout" "$tmp"
     rm -f "$tmp"
+
+    run_example_tests
   )
 done

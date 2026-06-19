@@ -17,3 +17,8 @@ haxe build.hxml -D ocaml_build=native
 ./out/_build/default/out.exe
 ```
 
+Run it through the repo example harness:
+
+```bash
+npm run test:examples
+```

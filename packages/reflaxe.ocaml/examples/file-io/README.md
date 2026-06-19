@@ -10,3 +10,8 @@ Small acceptance example that exercises:
 This is intended to QA the runtime shims (`HxSys`, `HxFile`, `HxFileSystem`)
 in addition to compiler snapshots.
 
+Run it from the repo root:
+
+```bash
+npm run test:examples
+```

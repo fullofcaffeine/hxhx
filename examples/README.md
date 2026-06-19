@@ -15,6 +15,19 @@ Run all examples from the repo root:
 npm run test:examples
 ```
 
+When adding or changing an example, also run the fast inventory guard:
+
+```bash
+npm run guard:example-coverage
+```
+
+Buildable examples should include `build.hxml`, `README.md`, and
+`expected.stdout`. The runner compiles the example, runs the produced artifact
+when applicable, and compares stdout so examples do not silently drift after
+compiler changes. If an example needs checks beyond stdout, add `test.hxml` or
+`test.sh`; the runner executes those example-specific checks after the stdout
+diff.
+
 Some examples are intentionally heavier and are **skipped** by `test:examples`.
 Run those with:
 
