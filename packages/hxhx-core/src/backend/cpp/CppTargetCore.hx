@@ -1091,20 +1091,27 @@ class CppTargetCore {
 
 	static function renderOpaqueObjectLocalRaw(raw:String):Null<String> {
 		final compact = compactRawText(raw);
-		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):\{([A-Za-z_][A-Za-z0-9_]*):[^}]+\}=\{([A-Za-z_][A-Za-z0-9_]*):("[^"]*"|-?[0-9.]+)\};\}$/;
+		final pattern = ~/^opaque_block_expr:\{var[A-Za-z_][A-Za-z0-9_]*:\{[^}]+\}=\{([^}]+)\};\}$/;
 		if (!pattern.match(compact))
 			return null;
-		if (pattern.matched(2) != pattern.matched(3))
+		final declarations = [];
+		final values = [];
+		final fieldPattern = ~/^([A-Za-z_][A-Za-z0-9_]*):("[^"]*"|-?[0-9.]+)$/;
+		for (fieldInit in pattern.matched(1).split(",")) {
+			if (!fieldPattern.match(fieldInit))
+				return null;
+			final field = sanitizeIdentifier(fieldPattern.matched(1));
+			final value = fieldPattern.matched(2);
+			final fieldType = StringTools.startsWith(value, "\"") ? "std::string" : (value.indexOf(".") >= 0 ? "double" : "int");
+			declarations.push(fieldType + " " + field + ";");
+			values.push(value);
+		}
+		if (values.length == 0)
 			return null;
-		final field = sanitizeIdentifier(pattern.matched(2));
-		final value = pattern.matched(4);
-		final fieldType = StringTools.startsWith(value, "\"") ? "std::string" : (value.indexOf(".") >= 0 ? "double" : "int");
 		return "([&]() { struct __hxhx_opaque_block { "
-			+ fieldType
-			+ " "
-			+ field
-			+ "; }; return __hxhx_opaque_block{"
-			+ value
+			+ declarations.join(" ")
+			+ " }; return __hxhx_opaque_block{"
+			+ values.join(", ")
 			+ "}; })()";
 	}
 
