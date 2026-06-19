@@ -2146,6 +2146,8 @@ class CppTargetCore {
 				"std::vector<" + arrayComprehensionElementType(name, iterable, yieldExpr, scope) + ">";
 			case EUnop("post++", inner) | EUnop("post--", inner):
 				inferExprCppType(inner, scope);
+			case ECast(inner, _) | EUntyped(inner):
+				inferExprCppType(inner, scope);
 			case _:
 				"";
 		};
@@ -2550,6 +2552,8 @@ class CppTargetCore {
 				macroExpr(inner, wrappers);
 			case EMacroType(typeText):
 				macroTypeExpr(typeText);
+			case ECast(inner, _) | EUntyped(inner):
+				stringExpr(inner, scope);
 			case EBool(_):
 				"std::string(" + renderExpr(expr, scope) + " ? \"true\" : \"false\")";
 			case EInt(_) | EFloat(_):
