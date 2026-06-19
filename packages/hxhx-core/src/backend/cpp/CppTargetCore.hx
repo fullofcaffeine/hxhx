@@ -739,8 +739,12 @@ class CppTargetCore {
 		final hint = unwrapNullTypeHint(StringTools.trim(typeHint == null ? "" : typeHint));
 		if (hint.length == 0)
 			return;
-		if (StringTools.startsWith(hint, "Array<") && StringTools.endsWith(hint, ">")) {
-			addTypeHintDependencies(hint.substr("Array<".length, hint.length - "Array<".length - 1), add);
+		if (isArrayLikeTypeHint(hint)) {
+			addTypeHintDependencies(genericTypeHintArg(hint), add);
+			return;
+		}
+		if (isIterableTypeHint(hint)) {
+			addTypeHintDependencies(genericTypeHintArg(hint), add);
 			return;
 		}
 		if (isFunctionTypeHint(hint)) {
@@ -2978,7 +2982,8 @@ class CppTargetCore {
 	static function lookupClassForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		if (hint.length == 0
-			|| StringTools.startsWith(hint, "Array<")
+			|| isArrayLikeTypeHint(hint)
+			|| isIterableTypeHint(hint)
 			|| StringTools.startsWith(hint, "Null<")
 			|| isFunctionTypeHint(hint))
 			return null;
@@ -2989,6 +2994,22 @@ class CppTargetCore {
 				return scoped;
 		}
 		return classLookup == null ? null : classLookup.byName.get(name);
+	}
+
+	static function isArrayLikeTypeHint(typeHint:String):Bool {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		return typeBaseName(hint) == "Array" && StringTools.endsWith(hint, ">");
+	}
+
+	static function isIterableTypeHint(typeHint:String):Bool {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		return typeBaseName(hint) == "Iterable" && StringTools.endsWith(hint, ">");
+	}
+
+	static function genericTypeHintArg(typeHint:String):String {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final open = hint.indexOf("<");
+		return open < 0 || !StringTools.endsWith(hint, ">") ? "" : hint.substr(open + 1, hint.length - open - 2);
 	}
 
 	static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
@@ -3012,8 +3033,8 @@ class CppTargetCore {
 				"bool";
 			case "Dynamic" | "Any":
 				"std::string";
-			case _ if (StringTools.startsWith(hint, "Array<") && StringTools.endsWith(hint, ">")):
-				"std::vector<" + cppTypeHint(hint.substr("Array<".length, hint.length - "Array<".length - 1), scope, classLookup) + ">";
+			case _ if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint)):
+				"std::vector<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">";
 			case _ if (isFunctionTypeHint(hint)):
 				cppFunctionTypeHint(hint, scope, classLookup);
 			case _ if (isClassLikeTypeHint(hint)):

@@ -335,6 +335,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return result;",
 			"  }",
 			"}",
+			"class LambdaLike {",
+			"  public function new() {}",
+			"  public static function array(it:Iterable<String>):Array<String> {",
+			"    return [for (x in it) x];",
+			"  }",
+			"  public static function flatMap(it:Iterable<String>, f:String->Iterable<String>):Array<String> {",
+			"    return [\"ok\"];",
+			"  }",
+			"}",
 			"class Log {",
 			"  public static function warn(message:String):Void {",
 			"    Sys.println(message);",
@@ -1108,6 +1117,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(source.indexOf("(cpp.NativeArray).unsafeGet") < 0, "C++ smoke should not leak qualified cpp.NativeArray.unsafeGet syntax");
 		assertTrue(source.indexOf("auto result = std::vector<int>(length);") < 0,
 			"C++ smoke should not infer Array<String> NativeArray.create locals as vector<int>");
+		assertContains(source, "static std::vector<std::string> array(std::vector<std::string> it) {",
+			"C++ smoke should lower Iterable<String> arguments to vector values");
+		assertContains(source,
+			"static std::vector<std::string> flatMap(std::vector<std::string> it, std::function<std::vector<std::string>(std::string)> f) {",
+			"C++ smoke should lower Iterable<T> inside function types to vector values");
+		assertTrue(source.indexOf("std::shared_ptr<Iterable>") < 0, "C++ smoke should not emit a fake unresolved Iterable runtime class in helper signatures");
 		assertContains(source, "(native[0]) = 7;", "C++ smoke should emit NativeArray indexed assignment");
 		assertContains(source, "(native.size())", "C++ smoke should emit NativeArray length read");
 		assertContains(source, "for (int i = 0; i < 3; i++) {", "C++ smoke should emit range for-in statement");
