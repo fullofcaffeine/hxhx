@@ -909,6 +909,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderHelperMethod(exprBodyStatic, exprBodyOwner, exprBodyLookup).join("\n");
 		assertContains(exprBodyStaticLines, "static std::string staticNext() {\n    return std::string(\"static-key\");\n  }",
 			"C++ smoke should return non-void static helper expression bodies");
+		final vectorNullMethod = new HxFunctionDecl("splitLike", Public, false, [], "Array<String>", [SReturn(ENull, HxPos.unknown())], "");
+		final vectorNullLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(vectorNullMethod, exprBodyOwner, exprBodyLookup).join("\n");
+		assertContains(vectorNullLines, "std::vector<std::string> splitLike() {\n    return {};\n  }",
+			"C++ value-vector returns should default null to an empty vector instead of nullptr");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");

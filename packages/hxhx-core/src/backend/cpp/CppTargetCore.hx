@@ -1192,7 +1192,12 @@ class CppTargetCore {
 			case "double":
 				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppVectorType(returnType)):
-				"return " + renderExpr(expr, scope) + ";";
+				switch (expr) {
+					case ENull:
+						"return " + cppDefaultValue(returnType, scope) + ";";
+					case _:
+						"return " + renderExpr(expr, scope) + ";";
+				}
 			case _ if (isCppArrayBackedAbstractType(returnType, scope)):
 				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppReferenceType(returnType)):
