@@ -945,6 +945,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final abstractFieldLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(abstractFieldOwner, abstractLookup).join("\n");
 		assertContains(abstractFieldLines, "LocalCallStack stack = LocalCallStack();",
 			"C++ fields typed as array-backed abstracts should default to value wrappers instead of int zero");
+		final primitiveAbstract = new HxClassDecl("Int32", false, [
+			new HxFunctionDecl("negate", Public, false, [], "Int32", [SReturn(EUnop("~", EThis), HxPos.unknown())], ""),
+			new HxFunctionDecl("ucompare", Public, true, [
+				new HxFunctionArg("a", "Int32", NoDefault, false, false),
+				new HxFunctionArg("b", "Int32", NoDefault, false, false)
+			], "Int",
+				[SReturn(EBinop("-", EIdent("a"), EIdent("b")), HxPos.unknown())], "")
+		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=Int"]);
+		final primitiveNames = new StringMap<Bool>();
+		primitiveNames.set("Int32", true);
+		final primitiveClasses = new StringMap<HxClassDecl>();
+		primitiveClasses.set("Int32", primitiveAbstract);
+		final primitiveLookup = {names: primitiveNames, byName: primitiveClasses};
+		final primitiveLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(primitiveAbstract, primitiveLookup).join("\n");
+		assertContains(primitiveLines, "static int ucompare(int a, int b) {",
+			"C++ primitive-backed abstract helpers should erase abstract argument types to the underlying primitive");
+		assertContains(primitiveLines, "return static_cast<int>((a - b));",
+			"C++ primitive-backed abstract static helper bodies should operate on primitive values");
+		assertTrue(primitiveLines.indexOf("negate(") < 0,
+			"C++ primitive-backed abstract helpers should not emit instance wrapper methods that require abstract this semantics");
+		assertTrue(primitiveLines.indexOf("std::shared_ptr<Int32>") < 0,
+			"C++ primitive-backed abstracts should not leak shared_ptr wrapper types into helper signatures");
 		final stdArray = new HxClassDecl("Array", false, [
 			new HxFunctionDecl("map", Public, false, [new HxFunctionArg("f", "String->String", NoDefault, false, false)], "Array<String>", [
 				SVar("result", "Array<String>", ECall(EField(EIdent("cpp.NativeArray"), "create"), [EField(EThis, "length")]), HxPos.unknown()),

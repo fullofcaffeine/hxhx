@@ -761,6 +761,8 @@ class CppTargetCore {
 			return renderPosInfosClass();
 		if (isArrayBackedAbstractClass(cls))
 			return renderArrayBackedAbstractClass(cls, classLookup);
+		if (isPrimitiveBackedAbstractClass(cls))
+			return renderPrimitiveBackedAbstractClass(cls, classLookup);
 		if (isStdArrayHelperClass(cls))
 			return renderStdArrayHelperClass(cls, classLookup);
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
@@ -868,6 +870,19 @@ class CppTargetCore {
 		out.push("  operator " + valueType + "() const { return __values; }");
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == "new")
+				continue;
+			for (line in renderHelperMethod(fn, cls, classLookup))
+				out.push(line);
+		}
+		out.push("};");
+		return out;
+	}
+
+	static function renderPrimitiveBackedAbstractClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final out = ["struct " + className + " {"];
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 				continue;
 			for (line in renderHelperMethod(fn, cls, classLookup))
 				out.push(line);
@@ -3156,6 +3171,10 @@ class CppTargetCore {
 		return underlying != null && StringTools.startsWith(removeTypeHintWhitespace(underlying), "Array<");
 	}
 
+	static function isPrimitiveBackedAbstractClass(cls:HxClassDecl):Bool {
+		return primitiveAbstractUnderlyingCppType(cls) != null;
+	}
+
 	static function isStdArrayHelperClass(cls:HxClassDecl):Bool {
 		return cls != null && sanitizeTypePath(HxClassDecl.getName(cls)) == "Array";
 	}
@@ -3231,6 +3250,32 @@ class CppTargetCore {
 		return "std::vector<std::string>";
 	}
 
+	static function primitiveAbstractUnderlyingCppType(cls:HxClassDecl):Null<String> {
+		if (cls == null)
+			return null;
+		return primitiveTypeHintCppType(removeTypeHintWhitespace(abstractUnderlyingTypeHint(cls)));
+	}
+
+	static function primitiveTypeHintCppType(typeHint:String):Null<String> {
+		return switch (typeHint) {
+			case "String" | "StdTypes.String":
+				"std::string";
+			case "Int" | "StdTypes.Int":
+				"int";
+			case "Float" | "StdTypes.Float":
+				"double";
+			case "Bool" | "StdTypes.Bool":
+				"bool";
+			case _:
+				null;
+		};
+	}
+
+	static function primitiveBackedAbstractCppTypeForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
+		final cls = lookupClassForTypeHint(typeHint, scope, classLookup);
+		return primitiveAbstractUnderlyingCppType(cls);
+	}
+
 	static function arrayBackedAbstractNameForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
 		final cls = lookupClassForTypeHint(typeHint, scope, classLookup);
 		return cls != null && isArrayBackedAbstractClass(cls) ? sanitizeTypePath(HxClassDecl.getName(cls)) : null;
@@ -3278,6 +3323,9 @@ class CppTargetCore {
 		if (StringTools.startsWith(raw, "Null<") && StringTools.endsWith(raw, ">"))
 			return cppNullableTypeHint(raw.substr("Null<".length, raw.length - "Null<".length - 1), scope, classLookup);
 		final hint = raw;
+		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
+		if (primitiveAbstractType != null)
+			return primitiveAbstractType;
 		final abstractName = arrayBackedAbstractNameForTypeHint(hint, scope, classLookup);
 		if (abstractName != null)
 			return abstractName;
