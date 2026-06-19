@@ -337,6 +337,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function vendorListProgramWhenAvailable():Null<GenIrProgram> {
+		final listPath = "vendor/haxe/std/haxe/ds/List.hx";
+		if (!FileSystem.exists(listPath))
+			return null;
+		final listSource = File.getContent(listPath);
+		final mainSource = "class Main { static function main() {} }";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedList = TyperStage.typeModule(ParserStage.parse(listSource, listPath));
+		return MacroStage.expandProgram([typedMain, typedList], []);
+	}
+
 	static function context(outDir:String, buildExecutable:Bool, noCompilation:Bool):BackendContext {
 		final defines = new StringMap<String>();
 		if (noCompilation)
@@ -678,6 +689,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "static bool __hxhx_is_type(int, const std::string& type)", "C++ smoke should include Haxe is-expression helper overloads");
 		assertContains(source, "static std::string __hxhx_type_name(int)", "C++ smoke should include Haxe type-name helper overloads");
 		assertContains(source, "auto __hxhx_null_coalesce(std::nullptr_t, F fallback)", "C++ smoke should include Haxe null-coalescing helper overloads");
+
+		final vendorListProgram = vendorListProgramWhenAvailable();
+		if (vendorListProgram != null) {
+			final vendorListDir = Path.join([root, "vendor-list-source-only"]);
+			final vendorListEmit = BackendRegistry.createForTarget("cpp-native").emit(vendorListProgram, context(vendorListDir, true, true));
+			final vendorListSource = File.getContent(vendorListEmit.entryPath);
+			assertContains(vendorListSource,
+				"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
+				"C++ smoke should preserve upstream ListKeyValueIterator.next key/value return body");
+		}
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
 			final buildDir = Path.join([root, "build"]);

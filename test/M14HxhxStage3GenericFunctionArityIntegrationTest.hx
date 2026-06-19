@@ -126,6 +126,32 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertTrue(HxFunctionDecl.getIsStatic(create), "ListNode.create should be static");
 		assertEqInt(HxFunctionDecl.getArgs(create).length, 2, "ListNode.create arg count");
 		assertEqString(HxFunctionDecl.getReturnTypeHint(create), "ListNode<T>", "ListNode.create return type");
+
+		final keyValueIterator = findClass(decl, "ListKeyValueIterator");
+		final next = findFunction(keyValueIterator, "next");
+		assertEqString(HxFunctionDecl.getReturnTypeHint(next), "{key:Int,value:T}", "ListKeyValueIterator.next return type");
+		switch (HxFunctionDecl.getBody(next)) {
+			case [
+				SVar("val", _, EField(EIdent("head"), "item"), _),
+				SExpr(EBinop("=", EIdent("head"), EField(EIdent("head"), "next")), _),
+				SReturn(EAnon(fieldNames, fieldValues), _)
+			]:
+				assertEqInt(fieldNames.length, 2, "ListKeyValueIterator.next return field count");
+				assertEqString(fieldNames[0], "value", "ListKeyValueIterator.next return field 0");
+				assertEqString(fieldNames[1], "key", "ListKeyValueIterator.next return field 1");
+				switch (fieldValues[0]) {
+					case EIdent("val"):
+					case other:
+						fail("ListKeyValueIterator.next value field should return val, got " + Std.string(other));
+				}
+				switch (fieldValues[1]) {
+					case EUnop("post++", EIdent("idx")):
+					case other:
+						fail("ListKeyValueIterator.next key field should post-increment idx, got " + Std.string(other));
+				}
+			case body:
+				fail("ListKeyValueIterator.next body lost key/value return shape: " + Std.string(body));
+		}
 	}
 
 	static function main() {

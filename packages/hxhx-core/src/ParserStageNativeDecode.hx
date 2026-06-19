@@ -48,8 +48,8 @@ class ParserStageNativeDecode {
 		final methodPayloads = new Array<String>();
 		final fieldPayloads = new Array<String>();
 		final staticFinalPayloads = new Array<String>();
-		final methodBodies:Map<String, String> = [];
-		final methodBodyStarts:Map<String, Int> = [];
+		final methodBodies:Map<String, Array<String>> = [];
+		final methodBodyStarts:Map<String, Array<Int>> = [];
 		final functions = new Array<HxFunctionDecl>();
 		final fields = new Array<HxFieldDecl>();
 		var sawOk = false;
@@ -104,18 +104,25 @@ class ParserStageNativeDecode {
 						final nl = payload.indexOf("\n");
 						if (nl > 0) {
 							final name = payload.substr(0, nl);
-							if (!methodBodies.exists(name)) {
-								final bodySource = payload.substr(nl + 1);
-								methodBodies.set(name, bodySource);
-								if (source != null && source.length > 0 && bodySource.length > 0) {
-									final fallbackStart = findFunctionBodyStart(source, name);
-									final bodyStart = source.indexOf(bodySource);
-									if (fallbackStart >= 0)
-										methodBodyStarts.set(name, fallbackStart);
-									else if (bodyStart >= 0)
-										methodBodyStarts.set(name, bodyStart);
-								}
+							final bodySource = payload.substr(nl + 1);
+							var bodies = methodBodies.get(name);
+							if (bodies == null) {
+								bodies = [];
+								methodBodies.set(name, bodies);
 							}
+							bodies.push(bodySource);
+							var starts = methodBodyStarts.get(name);
+							if (starts == null) {
+								starts = [];
+								methodBodyStarts.set(name, starts);
+							}
+							var start = -1;
+							if (source != null && source.length > 0 && bodySource.length > 0) {
+								final bodyStart = source.indexOf(bodySource);
+								final fallbackStart = findFunctionBodyStart(source, name);
+								start = bodyStart >= 0 ? bodyStart : fallbackStart;
+							}
+							starts.push(start);
 						}
 					case _:
 				}
@@ -129,13 +136,18 @@ class ParserStageNativeDecode {
 
 		final sourceFieldHints = sourceFieldTypeHints(source, className);
 
+		final methodBodyUseCounts:Map<String, Int> = [];
 		for (mp in methodPayloads) {
 			final name = {
 				final parts = mp.split("|");
 				parts.length == 0 ? "" : parts[0];
 			};
-			functions.push(decodeMethodPayload(mp, methodBodies.exists(name) ? methodBodies.get(name) : null,
-				methodBodyStarts.exists(name) ? methodBodyStarts.get(name) : -1, source));
+			final bodyIndex = methodBodyUseCounts.exists(name) ? methodBodyUseCounts.get(name) : 0;
+			methodBodyUseCounts.set(name, bodyIndex + 1);
+			final bodies = methodBodies.get(name);
+			final starts = methodBodyStarts.get(name);
+			functions.push(decodeMethodPayload(mp, bodies != null && bodyIndex < bodies.length ? bodies[bodyIndex] : null, starts != null && bodyIndex < starts.length ? starts[bodyIndex] : -1,
+				source));
 		}
 
 		final seenFields:Map<String, Bool> = [];

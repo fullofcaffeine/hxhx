@@ -10456,6 +10456,46 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(HxFieldDecl.getTypeHint(fields[0]) == "Null<Bool>", "native protocol should recover source generic Null<Bool> over erased payload Bool");
 	}
 
+	static function assertNativeProtocolDuplicateMethodBodiesDecodeByOccurrence():Void {
+		final source = [
+			"class Iterators {",
+			"  function next():String {",
+			"    return \"first\";",
+			"  }",
+			"  function next():{key:Int, value:String} {",
+			"    var val = item;",
+			"    return {value: val, key: idx++};",
+			"  }",
+			"}"
+		].join("\n");
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("class", "Iterators"),
+			"ast static_main 0",
+			protocolLine("method", "next|private|0||String||||\"first\""),
+			protocolLine("method", "next|private|0||{key:Int,value:String}||||key"),
+			protocolLine("method_body", "next\nreturn \"first\";"),
+			protocolLine("method_body", "next\nvar val = item;\nreturn {value: val, key: idx++};"),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
+		final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(decl));
+		assertTrue(functions.length == 2, "native protocol should decode both duplicate method names");
+		switch (HxFunctionDecl.getBody(functions[1])) {
+			case [SVar("val", _, EIdent("item"), _), SReturn(EAnon(fieldNames, fieldValues), _)]:
+				assertTrue(fieldNames.length == 2, "duplicate method body should preserve anonymous return field count");
+				assertTrue(fieldNames[0] == "value", "duplicate method body should preserve value field");
+				assertTrue(fieldNames[1] == "key", "duplicate method body should preserve key field");
+				switch (fieldValues[1]) {
+					case EUnop("post++", EIdent("idx")):
+					case other:
+						throw "duplicate method body should preserve key post-increment, got " + Std.string(other);
+				}
+			case body:
+				throw "native protocol duplicate method body used the wrong body: " + Std.string(body);
+		}
+	}
+
 	static function assertPhpPlusSemantics():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_plus_semantics_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -16125,6 +16165,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNativeProtocolDefaultArgSourceDecode();
 		assertNativeProtocolConstructorDefaultArgSourceDecode();
 		assertNativeProtocolSourceFieldNullHintDecode();
+		assertNativeProtocolDuplicateMethodBodiesDecodeByOccurrence();
 		assertNullableLocalTypeInferenceForMacroTypeof();
 		assertPhpPlusSemantics();
 		assertPhpDynamicAddOrConcatNullSemantics();
