@@ -2204,6 +2204,8 @@ class CppTargetCore {
 				cppVectorElementType(exprCppType(args[0], scope));
 			case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
 				int64DivModStruct().name;
+			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
+				"int";
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -2372,6 +2374,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
 				int64DivModStruct().name;
+			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
+				"int";
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -3137,6 +3141,10 @@ class CppTargetCore {
 				"(-" + renderExpr(args[0], scope) + ")";
 			case "isNeg" if (args.length == 1):
 				"(" + renderExpr(args[0], scope) + " < 0)";
+			case "compare" if (args.length == 2):
+				int64CompareExpr(args[0], args[1], false, scope);
+			case "ucompare" if (args.length == 2):
+				int64CompareExpr(args[0], args[1], true, scope);
 			case "toStr" if (args.length == 1):
 				"std::to_string(" + renderExpr(args[0], scope) + ")";
 			case "parseString" if (args.length == 1):
@@ -3152,6 +3160,10 @@ class CppTargetCore {
 		return method == "parseString" || method == "fromFloat";
 	}
 
+	static function int64StaticCallReturnsInt(method:String):Bool {
+		return method == "compare" || method == "ucompare";
+	}
+
 	static function int64DivModStruct():CppAnonStruct {
 		return {
 			name: anonStructName(["quotient", "modulus"], ["long long", "long long"]),
@@ -3165,6 +3177,16 @@ class CppTargetCore {
 		final left = renderExpr(dividend, scope);
 		final right = renderExpr(divisor, scope);
 		return struct.name + "{(" + left + " / " + right + "), (" + left + " % " + right + ")}";
+	}
+
+	static function int64CompareExpr(leftExpr:HxExpr, rightExpr:HxExpr, unsigned:Bool, ?scope:CppRenderScope):String {
+		var left = renderExpr(leftExpr, scope);
+		var right = renderExpr(rightExpr, scope);
+		if (unsigned) {
+			left = "static_cast<unsigned long long>(" + left + ")";
+			right = "static_cast<unsigned long long>(" + right + ")";
+		}
+		return "((" + left + " < " + right + ") ? -1 : ((" + left + " > " + right + ") ? 1 : 0))";
 	}
 
 	static function isStringToolsTrimMethod(method:String):Bool {

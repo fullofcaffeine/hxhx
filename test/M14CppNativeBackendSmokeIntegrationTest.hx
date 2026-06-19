@@ -489,6 +489,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    var result = Int64.divMod(a, b);",
 			"    return result.quotient;",
 			"  }",
+			"  public static function compareSigned(a:Int64, b:Int64):Int {",
+			"    return Int64.compare(a, b);",
+			"  }",
+			"  public static function compareUnsigned(a:Int64, b:Int64):Int {",
+			"    return Int64.ucompare(a, b);",
+			"  }",
 			"}",
 			"class StringIteratorUnicode {",
 			"  var offset = 0;",
@@ -1501,6 +1507,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "auto result = __hxhx_anon_quotient_long_long_modulus_long_long{(a / b), (a % b)};",
 			"C++ smoke should lower Int64.divMod as a primitive quotient/modulus aggregate");
 		assertContains(source, "return (result.quotient);", "C++ smoke should preserve Int64.divMod quotient field access");
+		assertContains(source, "return static_cast<int>(((a < b) ? -1 : ((a > b) ? 1 : 0)));",
+			"C++ smoke should lower Int64.compare to primitive signed ordering");
+		assertContains(source,
+			"return static_cast<int>(((static_cast<unsigned long long>(a) < static_cast<unsigned long long>(b)) ? -1 : ((static_cast<unsigned long long>(a) > static_cast<unsigned long long>(b)) ? 1 : 0)));",
+			"C++ smoke should lower Int64.ucompare to primitive unsigned ordering");
 		assertTrue(source.indexOf("struct Int64Helper") < source.indexOf("struct CppInt64StaticUseLike"),
 			"C++ smoke should order Int64Helper before helper classes that call Int64.parseString/fromFloat");
 		assertTrue(source.indexOf("Int64::ofInt") < 0, "C++ smoke should not emit incomplete Int64 static helper calls");
