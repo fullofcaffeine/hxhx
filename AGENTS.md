@@ -43,6 +43,8 @@ Agent policy:
 - If a compiler/runtime issue starts feeling circular, fragile, architecture-heavy, or likely to invite another local patch without fixing the model, stop grinding before implementation.
   - The plain rule: if the agent is running in circles, the fix boundary is unclear, or the next patch feels like a band-aid, pause and propose an external GPT 5.5 Pro design review instead of stacking more local guesses.
   - This should be rare. Upstream Haxe 4.3.7 remains the primary behavior oracle, and local tests/CI remain the proof. GPT 5.5 Pro is only for finding a safe way forward when the seam/model is unclear.
+  - Do not escalate merely because a gate is red, a fix is tedious, or the next failing target is unfamiliar.
+    If upstream behavior is clear and there is a bounded repo-local seam, implement the seam, add focused coverage, and validate normally.
   - Use this escalation when repeated local attempts fail to produce a credible next step, when upstream-oracle evidence confirms behavior but not a safe implementation boundary, or when the fix touches broad semantics across multiple compiler/runtime layers.
   - Do not use GPT 5.5 Pro to replace upstream oracle evidence, write implementation code for direct transcription, rubber-stamp a local workaround, or avoid running the required tests and gates.
   - Good escalation candidates include:
@@ -54,6 +56,9 @@ Agent policy:
     - or cases where a local patch would likely hide the bug instead of fixing the model.
   - For NaN/Infinity/Math-style issues, escalate before implementation because semantics can affect `Math`, `Float`, comparisons, parsing, JSON, binary float encoding, OCaml output/runtime behavior, source-native target behavior, and upstream Haxe 4.3.7 runtime conformance.
   - The escalation proposal should include a concrete prompt, the whole-repo review request, the relevant beads, observed failing gates, local evidence, upstream oracle expectations, constraints about MIT/provenance, and a request for architecture guidance rather than code transcription.
+  - Ask GPT 5.5 Pro for a way forward: the desired output is a seam recommendation, tradeoff analysis, invariants, and validation plan, not pasted implementation code.
+  - If adapting this rule from another project, translate examples to this repo before committing them. Avoid irrelevant project-specific terms; use `hxhx`, `reflaxe.ocaml`, upstream Haxe 4.3.7 parity, source-native targets, native plugin boundaries, and bootstrap snapshot risk as the frame.
+  - In the bead/checkpoint note, record whether the GPT 5.5 Pro path was used, deliberately skipped because a bounded seam existed, or deferred to a follow-up architecture bead.
 - If the user says to stop on `thinking:xhigh`, stop immediately when that threshold is reached and ask the user before continuing.
   - Do not silently continue `thinking:xhigh` implementation work.
   - Do not substitute Oracle or extended reasoning for that approval; ask first.
