@@ -3100,9 +3100,10 @@ class CppTargetCore {
 		if (first >= "0" && first <= "9")
 			return "_" + s;
 		return switch (s) {
-			case "auto" | "bool" | "break" | "case" | "catch" | "class" | "const" | "continue" | "delete" | "do" | "double" | "else" | "false" | "float" |
-				"for" | "if" | "int" | "long" | "namespace" | "new" | "nullptr" | "private" | "public" | "return" | "short" | "static" | "std" | "struct" |
-				"switch" | "this" | "throw" | "true" | "try" | "void" | "while":
+			case "and" | "and_eq" | "auto" | "bitand" | "bitor" | "bool" | "break" | "case" | "catch" | "class" | "compl" | "const" | "continue" | "delete" |
+				"do" | "double" | "else" | "false" | "float" | "for" | "if" | "int" | "long" | "namespace" | "new" | "not" | "not_eq" | "nullptr" | "or" |
+				"or_eq" | "private" | "public" | "return" | "short" | "static" | "std" | "struct" | "switch" | "this" | "throw" | "true" | "try" | "void" |
+				"while" | "xor" | "xor_eq":
 				s
 				+ "_";
 			case _:

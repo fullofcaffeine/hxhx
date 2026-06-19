@@ -335,6 +335,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return result;",
 			"  }",
 			"}",
+			"class CppReservedNames {",
+			"  public static function and(a:Int, b:Int):Int {",
+			"    return a + b;",
+			"  }",
+			"  public static function or(a:Int, b:Int):Int {",
+			"    return a - b;",
+			"  }",
+			"  public static function xor(a:Int, b:Int):Int {",
+			"    return a * b;",
+			"  }",
+			"}",
 			"class LambdaLike {",
 			"  public function new() {}",
 			"  public static function array(it:Iterable<String>):Array<String> {",
@@ -1182,6 +1193,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(source.indexOf("(cpp.NativeArray).unsafeGet") < 0, "C++ smoke should not leak qualified cpp.NativeArray.unsafeGet syntax");
 		assertTrue(source.indexOf("auto result = std::vector<int>(length);") < 0,
 			"C++ smoke should not infer Array<String> NativeArray.create locals as vector<int>");
+		assertContains(source, "static int and_(int a, int b) {", "C++ smoke should sanitize alternative-token method names");
+		assertContains(source, "static int or_(int a, int b) {", "C++ smoke should sanitize alternative-token method names");
+		assertContains(source, "static int xor_(int a, int b) {", "C++ smoke should sanitize alternative-token method names");
+		assertTrue(source.indexOf("static int and(int a, int b)") < 0, "C++ smoke should not emit unsanitized and method names");
+		assertTrue(source.indexOf("static int or(int a, int b)") < 0, "C++ smoke should not emit unsanitized or method names");
+		assertTrue(source.indexOf("static int xor(int a, int b)") < 0, "C++ smoke should not emit unsanitized xor method names");
 		assertContains(source, "static std::vector<std::string> array(std::vector<std::string> it) {",
 			"C++ smoke should lower Iterable<String> arguments to vector values");
 		assertContains(source, "static std::vector<std::string> arrayFromNew(std::vector<std::string> it) {",
