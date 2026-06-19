@@ -2852,10 +2852,10 @@ class CppTargetCore {
 				out.push("  for (auto " + local + " : " + renderExpr(iterable, scope) + ") {");
 		}
 		if (guardExpr == null) {
-			out.push("    __hxhx_comp_out.push_back(" + renderExpr(yieldExpr, scope) + ");");
+			addComprehensionYieldLines(out, "    ", yieldExpr, scope);
 		} else {
 			out.push("    if " + conditionExpr(guardExpr, scope) + " {");
-			out.push("      __hxhx_comp_out.push_back(" + renderExpr(yieldExpr, scope) + ");");
+			addComprehensionYieldLines(out, "      ", yieldExpr, scope);
 			out.push("    }");
 		}
 		out.push("  }");
@@ -2868,6 +2868,20 @@ class CppTargetCore {
 				scope.localTypes.remove(local);
 		}
 		return out.join("\n");
+	}
+
+	static function addComprehensionYieldLines(out:Array<String>, indent:String, yieldExpr:HxExpr, ?scope:CppRenderScope):Void {
+		switch (yieldExpr) {
+			case ECall(EIdent("__hxhx_for_in"), [innerIterable, ELambda([innerName], innerYield), _]):
+				final local = sanitizeIdentifier(innerName);
+				final renderedIterable = renderExpr(innerIterable, scope);
+				final loopElementType = iterableElementType(innerIterable, scope);
+				out.push(indent + "for (auto " + local + " : " + renderedIterable + ") {");
+				withScopedLocal(scope, local, loopElementType, () -> addComprehensionYieldLines(out, indent + "  ", innerYield, scope));
+				out.push(indent + "}");
+			case _:
+				out.push(indent + "__hxhx_comp_out.push_back(" + renderExpr(yieldExpr, scope) + ");");
+		}
 	}
 
 	static function arrayElementType(elements:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -2912,6 +2926,16 @@ class CppTargetCore {
 	}
 
 	static function comprehensionElementType(expr:HxExpr, ?scope:CppRenderScope):String {
+		switch (expr) {
+			case ECall(EIdent("__hxhx_for_in"), [innerIterable, ELambda([innerName], innerYield), _]):
+				final local = sanitizeIdentifier(innerName);
+				final loopElementType = iterableElementType(innerIterable, scope);
+				var nestedType = "";
+				withScopedLocal(scope, local, loopElementType, () -> nestedType = comprehensionElementType(innerYield, scope));
+				if (nestedType.length > 0)
+					return nestedType;
+			case _:
+		}
 		final inferred = inferExprCppType(expr, scope);
 		if (inferred.length > 0)
 			return inferred;

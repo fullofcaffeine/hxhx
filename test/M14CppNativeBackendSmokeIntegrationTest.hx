@@ -352,6 +352,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    var i = 0;",
 			"    return [for (x in it) f(i++, x)];",
 			"  }",
+			"  public static function flattenLike(it:Iterable<Iterable<String>>):Array<String> {",
+			"    return [for (x in it) for (y in x) y];",
+			"  }",
 			"  public static function flatMap(it:Iterable<String>, f:String->Iterable<String>):Array<String> {",
 			"    return [\"ok\"];",
 			"  }",
@@ -1170,6 +1173,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower named function-typed mapi helpers to callable C++ signatures");
 		assertContains(source, "__hxhx_comp_out.push_back(f((i++), x));",
 			"C++ smoke should infer comprehension output from multi-argument local std::function calls");
+		assertContains(source, "static std::vector<std::string> flattenLike(std::vector<std::vector<std::string>> it) {",
+			"C++ smoke should lower nested Iterable<T> arguments to vector values");
+		assertContains(source, "for (auto y : x) {", "C++ smoke should lower nested comprehension for-in markers to nested loops");
+		assertContains(source, "__hxhx_comp_out.push_back(y);", "C++ smoke should push nested comprehension yields directly");
+		assertTrue(source.indexOf("__hxhx_for_in") < 0, "C++ smoke should not leak internal nested for-in markers into generated source");
 		assertContains(source,
 			"static std::vector<std::string> flatMap(std::vector<std::string> it, std::function<std::vector<std::string>(std::string)> f) {",
 			"C++ smoke should lower Iterable<T> inside function types to vector values");
