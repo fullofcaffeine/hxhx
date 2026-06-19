@@ -501,6 +501,12 @@ class CppTargetCore {
 						seen.set(struct.name, true);
 						out.push(struct);
 					}
+				case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
+					final struct = int64DivModStruct();
+					if (!seen.exists(struct.name)) {
+						seen.set(struct.name, true);
+						out.push(struct);
+					}
 				case EField(receiver, _):
 					addExpr(receiver, scope);
 				case ECall(callee, args):
@@ -683,6 +689,8 @@ class CppTargetCore {
 			case EAnon(fieldNames, fieldValues):
 				final struct = anonStruct(fieldNames, fieldValues, scope);
 				struct.name;
+			case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
+				int64DivModStruct().name;
 			case _:
 				"int";
 		};
@@ -2194,6 +2202,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "unsafeGet"), args) if (args.length == 2 && isCppNativeArrayReceiver(receiver)):
 				cppVectorElementType(exprCppType(args[0], scope));
+			case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
+				int64DivModStruct().name;
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -2360,6 +2370,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
 				nativeArrayVectorType(scope);
+			case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
+				int64DivModStruct().name;
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -3103,6 +3115,8 @@ class CppTargetCore {
 				"(" + renderExpr(args[0], scope) + " / " + renderExpr(args[1], scope) + ")";
 			case "mod" if (args.length == 2):
 				"(" + renderExpr(args[0], scope) + " % " + renderExpr(args[1], scope) + ")";
+			case "divMod" if (args.length == 2):
+				int64DivModExpr(args[0], args[1], scope);
 			case "and" if (args.length == 2):
 				"(" + renderExpr(args[0], scope) + " & " + renderExpr(args[1], scope) + ")";
 			case "or" if (args.length == 2):
@@ -3136,6 +3150,21 @@ class CppTargetCore {
 
 	static function int64StaticCallNeedsHelper(method:String):Bool {
 		return method == "parseString" || method == "fromFloat";
+	}
+
+	static function int64DivModStruct():CppAnonStruct {
+		return {
+			name: anonStructName(["quotient", "modulus"], ["long long", "long long"]),
+			fieldNames: ["quotient", "modulus"],
+			fieldTypes: ["long long", "long long"]
+		};
+	}
+
+	static function int64DivModExpr(dividend:HxExpr, divisor:HxExpr, ?scope:CppRenderScope):String {
+		final struct = int64DivModStruct();
+		final left = renderExpr(dividend, scope);
+		final right = renderExpr(divisor, scope);
+		return struct.name + "{(" + left + " / " + right + "), (" + left + " % " + right + ")}";
 	}
 
 	static function isStringToolsTrimMethod(method:String):Bool {
