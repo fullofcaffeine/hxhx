@@ -311,6 +311,33 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected switch expression with case statement sequences");
 		}
 
+		final splice = "$";
+		final macroPatternStmts = HxParser.parseFunctionBodyText("switch (e) { case macro @:markup " + splice + "v{(s:String)}: 1; case macro " + splice
+			+ "b{el}: 2; case macro " + splice + "i{dependency}: 3; case macro runHaxe(" + splice + "a{args}): 4; case macro var " + splice + "name:"
+			+ splice + "ct: 5; case _: 0; }");
+		assertTrue(macroPatternStmts.length == 1, "expected macro expression switch patterns to stay inside one switch");
+		switch (macroPatternStmts[0]) {
+			case SSwitch(_, patterns, bodies, _):
+				assertTrue(patterns.length == 6, "expected all macro expression switch patterns to parse");
+				assertTrue(bodies.length == 6, "expected all macro expression switch bodies to parse");
+				for (i in 0...5) {
+					switch (patterns[i]) {
+						case PUnsupportedGuard(PWildcard):
+						case other:
+							fail("expected macro expression pattern to be consumed as unsupported guarded wildcard, got " + other);
+					}
+				}
+				switch (patterns[5]) {
+					case PWildcard:
+					case other:
+						fail("expected final wildcard pattern, got " + other);
+				}
+			case SExpr(EUnsupported(raw), _):
+				fail("macro expression switch pattern parsed as unsupported statement: " + raw);
+			case _:
+				fail("expected macro expression switch pattern statement");
+		}
+
 		final charCodeSwitchModule = "class CharCodeSwitch {\n" + "  static function postProcess(s:String) {\n" + "    switch (s.charAt(0)) {\n"
 			+ "      case '+'.code:\n" + "        return 1;\n" + "      case '%'.code if (s.length > 1):\n" + "        switch [s.charAt(1), s.charAt(2)] {\n"
 			+ "          case ['2'.code, '1'.code]: return 2;\n" + "          case _: return 3;\n" + "        }\n" + "      case _: return 0;\n" + "    }\n"

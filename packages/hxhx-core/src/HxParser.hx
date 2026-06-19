@@ -858,6 +858,8 @@ class HxParser {
 				PInt(v);
 			case TIdent(name) if (name == "macro" && peekKind().match(TColon)):
 				parseMacroTypeSwitchPattern();
+			case TIdent(name) if (name == "macro"):
+				parseMacroExprSwitchPattern();
 			case TIdent(name):
 				bump();
 				if (isUpperStart(name) && cur.kind.match(TLParen)) {
@@ -902,6 +904,54 @@ class HxParser {
 		final typeText = readTypeHintText(() -> cur.kind.match(TColon) || cur.kind.match(TComma) || cur.kind.match(TRBrace) || cur.kind.match(TEof)
 			|| cur.kind.match(TKeyword(KIf)) || isOtherChar("|"));
 		return PEnumValue("macro:" + typeText);
+	}
+
+	function parseMacroExprSwitchPattern():HxSwitchPattern {
+		// `case macro <expr>:` is a Haxe macro-pattern quote. Full macro-pattern
+		// matching is larger than the Stage3 switch subset, but the parser must
+		// consume the quote as one case pattern so metadata like `@:markup` and
+		// splice forms like `$v{...}` do not make the case separator look missing.
+		switch (cur.kind) {
+			case TIdent("macro"):
+				bump();
+			case _:
+				return PUnsupportedGuard(PWildcard);
+		}
+
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var braceDepth = 0;
+		var previousTokenWasAt = false;
+		while (!cur.kind.match(TEof)) {
+			final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0;
+			if (atTop && cur.kind.match(TColon) && !previousTokenWasAt && !peekKind().match(TOther("$".code)))
+				break;
+			if (atTop && (cur.kind.match(TComma) || cur.kind.match(TKeyword(KIf)) || cur.kind.match(TRBrace) || isOtherChar("|")))
+				break;
+
+			final currentWasAt = cur.kind.match(TOther("@".code));
+			switch (cur.kind) {
+				case TLParen:
+					parenDepth++;
+				case TRParen:
+					if (parenDepth > 0)
+						parenDepth--;
+				case TLBrace:
+					braceDepth++;
+				case TRBrace:
+					if (braceDepth > 0)
+						braceDepth--;
+				case TOther(c) if (c == "[".code):
+					bracketDepth++;
+				case TOther(c) if (c == "]".code):
+					if (bracketDepth > 0)
+						bracketDepth--;
+				case _:
+			}
+			bump();
+			previousTokenWasAt = currentWasAt;
+		}
+		return PUnsupportedGuard(PWildcard);
 	}
 
 	function isLikelyExtractorPatternStart():Bool {
