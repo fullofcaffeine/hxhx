@@ -394,6 +394,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return !it.iterator().hasNext();",
 			"  }",
 			"}",
+			"class CppStringToolsLike {",
+			"  public static function urlEncode(s:String):String {",
+			"    return s.__URLEncode();",
+			"  }",
+			"  public static function urlDecode(s:String):String {",
+			"    return s.__URLDecode();",
+			"  }",
+			"}",
 			"class Log {",
 			"  public static function warn(message:String):Void {",
 			"    Sys.println(message);",
@@ -1304,6 +1312,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should not stringify filtered array comprehensions");
 		assertContains(source, "static int count(std::vector<std::string> it, std::optional<std::function<bool(std::string)>> pred = std::nullopt) {",
 			"C++ smoke should keep optional Lambda.count predicates typed as optional callables");
+		assertContains(source, "return __hxhx_url_encode(s);", "C++ smoke should lower StringTools URL encode native string calls to support helpers");
+		assertContains(source, "return __hxhx_url_decode(s);", "C++ smoke should lower StringTools URL decode native string calls to support helpers");
+		assertTrue(source.indexOf("std::to_string(__hxhx_url_encode") < 0, "C++ smoke should not stringify URL encode helper results");
 		assertContains(source, "if (pred.value()(x)) {", "C++ smoke should unwrap optional callables before invocation");
 		assertContains(source, "static bool empty(std::vector<std::string> it) {", "C++ smoke should lower Array<String> arguments to vector values");
 		assertContains(source, "return (!(!it.empty()));", "C++ smoke should lower iterator().hasNext() on vectors through empty()");

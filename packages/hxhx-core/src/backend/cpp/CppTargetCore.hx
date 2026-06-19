@@ -167,6 +167,47 @@ class CppTargetCore {
 		out.push("  return out.str();");
 		out.push("}");
 		out.push("");
+		out.push("static char __hxhx_hex_digit(unsigned char value) {");
+		out.push("  return value < 10 ? static_cast<char>('0' + value) : static_cast<char>('A' + (value - 10));");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_url_encode(const std::string& value) {");
+		out.push("  std::ostringstream out;");
+		out.push("  for (unsigned char c : value) {");
+		out.push("    if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {");
+		out.push("      out << static_cast<char>(c);");
+		out.push("    } else {");
+		out.push("      out << '%' << __hxhx_hex_digit(static_cast<unsigned char>(c >> 4)) << __hxhx_hex_digit(static_cast<unsigned char>(c & 15));");
+		out.push("    }");
+		out.push("  }");
+		out.push("  return out.str();");
+		out.push("}");
+		out.push("");
+		out.push("static int __hxhx_from_hex(unsigned char c) {");
+		out.push("  if (c >= '0' && c <= '9') return c - '0';");
+		out.push("  if (c >= 'A' && c <= 'F') return 10 + (c - 'A');");
+		out.push("  if (c >= 'a' && c <= 'f') return 10 + (c - 'a');");
+		out.push("  return -1;");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_url_decode(const std::string& value) {");
+		out.push("  std::ostringstream out;");
+		out.push("  for (std::size_t i = 0; i < value.size(); ++i) {");
+		out.push("    unsigned char c = static_cast<unsigned char>(value[i]);");
+		out.push("    if (c == '%' && i + 2 < value.size()) {");
+		out.push("      int hi = __hxhx_from_hex(static_cast<unsigned char>(value[i + 1]));");
+		out.push("      int lo = __hxhx_from_hex(static_cast<unsigned char>(value[i + 2]));");
+		out.push("      if (hi >= 0 && lo >= 0) {");
+		out.push("        out << static_cast<char>((hi << 4) | lo);");
+		out.push("        i += 2;");
+		out.push("        continue;");
+		out.push("      }");
+		out.push("    }");
+		out.push("    out << static_cast<char>(c);");
+		out.push("  }");
+		out.push("  return out.str();");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T>");
 		out.push("static bool __hxhx_is_type(const T&, const std::string& type) {");
 		out.push("  return type == \"Dynamic\" || type == \"Any\";");
@@ -1525,6 +1566,10 @@ class CppTargetCore {
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("Math"), method), args):
 				mathCallExpr(method, args, scope);
+			case ECall(EField(receiver, "__URLEncode"), args) if (args.length == 0):
+				"__hxhx_url_encode(" + renderExpr(receiver, scope) + ")";
+			case ECall(EField(receiver, "__URLDecode"), args) if (args.length == 0):
+				"__hxhx_url_decode(" + renderExpr(receiver, scope) + ")";
 			case ECall(EField(EIdent("StringTools"), method), args) if (args.length == 2
 				&& (method == "fastCodeAt" || method == "unsafeCodeAt")):
 				stringCodeAtExpr(args[0], args[1], scope);
@@ -1943,6 +1988,8 @@ class CppTargetCore {
 				cppVectorElementType(exprCppType(args[0], scope));
 			case ECall(EIdent(name), _):
 				cppFunctionReturnTypeFromCppType(exprCppType(EIdent(name), scope));
+			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
+				"std::string";
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case ECall(EField(EIdent("StringTools"), method), _) if (method == "fastCodeAt" || method == "unsafeCodeAt"):
@@ -2059,6 +2106,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EIdent(name), _):
 				cppFunctionReturnTypeFromCppType(exprCppType(EIdent(name), scope));
+			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
+				"std::string";
 			case ECall(EField(_, "flatten"), [ECall(EField(_, "map"), [_, mapper])]):
 				cppFunctionReturnTypeFromCppType(exprCppType(mapper, scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
