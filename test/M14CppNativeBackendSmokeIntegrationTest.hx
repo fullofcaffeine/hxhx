@@ -380,6 +380,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedList], []);
 	}
 
+	static function mathExternProgram():GenIrProgram {
+		final src = [
+			"extern class Math {",
+			"  static var PI(default, null):Float;",
+			"  static var NaN(default, null):Float;",
+			"  static var POSITIVE_INFINITY(default, null):Float;",
+			"  static function isNaN(value:Float):Bool;",
+			"  static function isFinite(value:Float):Bool;",
+			"  private static function __init__():Void untyped {",
+			"    Math.NaN = Number[\"NaN\"];",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Std.string(Math.isNaN(Math.NaN)));",
+			"    Sys.println(Std.string(Math.isFinite(Math.PI)));",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function context(outDir:String, buildExecutable:Bool, noCompilation:Bool):BackendContext {
 		final defines = new StringMap<String>();
 		if (noCompilation)
@@ -407,6 +431,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"nested calls should lower by invoking the rendered callee expression");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("=>", EString("key"), EInt(42))) == "std::make_pair(\"key\", 42)",
 			"arrow expressions should lower to C++ pairs");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Math"), "NaN")) == "std::numeric_limits<double>::quiet_NaN()",
+			"C++ Math.NaN should lower as a target intrinsic instead of a generated helper field");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Math"), "isNaN"),
+				[EField(EIdent("Math"), "NaN")])) == "std::isnan(std::numeric_limits<double>::quiet_NaN())",
+			"C++ Math.isNaN should lower as a target intrinsic instead of a generated helper method");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Math"), "round"),
+			[EFloat(1.5)])) == "static_cast<int>(std::floor((1.5) + 0.5))",
+			"C++ Math.round should preserve Haxe's floor(x + 0.5) semantics");
 		final exceptionStackTry = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new Exception("");}catch(e:Exception){e.stack;}'));
 		assertContains(exceptionStackTry, "throw std::runtime_error(std::string(\"\"));",
@@ -1045,6 +1078,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "static bool __hxhx_is_type(int, const std::string& type)", "C++ smoke should include Haxe is-expression helper overloads");
 		assertContains(source, "static std::string __hxhx_type_name(int)", "C++ smoke should include Haxe type-name helper overloads");
 		assertContains(source, "auto __hxhx_null_coalesce(std::nullptr_t, F fallback)", "C++ smoke should include Haxe null-coalescing helper overloads");
+
+		final mathExternDir = Path.join([root, "math-extern-source-only"]);
+		final mathExternEmit = BackendRegistry.createForTarget("cpp-native").emit(mathExternProgram(), context(mathExternDir, true, true));
+		final mathExternSource = File.getContent(mathExternEmit.entryPath);
+		assertContains(mathExternSource, "#include <cmath>", "C++ Math intrinsics should include <cmath>");
+		assertContains(mathExternSource, "#include <limits>", "C++ Math constants should include <limits>");
+		assertContains(mathExternSource, "std::isnan(std::numeric_limits<double>::quiet_NaN())",
+			"C++ Math extern calls should lower directly to target intrinsics");
+		assertContains(mathExternSource, "std::isfinite(3.14159265358979323846)",
+			"C++ Math extern constants should lower directly to target intrinsic constants");
+		assertTrue(mathExternSource.indexOf("struct Math") < 0, "C++ should not emit upstream Math extern as a fake helper class");
+		assertTrue(mathExternSource.indexOf("Math::__init__") < 0, "C++ should not emit upstream Math extern initializers");
+		assertTrue(mathExternSource.indexOf("Number[") < 0, "C++ should not leak JS-era Math extern initializer code");
 
 		final vendorListProgram = vendorListProgramWhenAvailable();
 		if (vendorListProgram != null) {
