@@ -3142,7 +3142,7 @@ class CppTargetCore {
 		final returnType = cppTypeHint(parts[parts.length - 1], scope, classLookup);
 		final args = [
 			for (arg in functionArgTypeParts(parts.slice(0, parts.length - 1)))
-				cppTypeHint(arg, scope, classLookup)
+				cppTypeHint(functionArgTypePartType(arg), scope, classLookup)
 		].filter(t -> t != "void");
 		return "std::function<" + returnType + "(" + args.join(", ") + ")>";
 	}
@@ -3201,6 +3201,57 @@ class CppTargetCore {
 		if (single == "Void" || single == "StdTypes.Void")
 			return [];
 		return splitTopLevelComma(single);
+	}
+
+	static function functionArgTypePartType(part:String):String {
+		final text = stripTypeParens(part);
+		final colon = topLevelColonIndex(text);
+		if (colon <= 0)
+			return text;
+		var name = StringTools.trim(text.substring(0, colon));
+		if (StringTools.startsWith(name, "?"))
+			name = StringTools.trim(name.substr(1));
+		return isIdentifierText(name) ? StringTools.trim(text.substr(colon + 1)) : text;
+	}
+
+	static function topLevelColonIndex(text:String):Int {
+		var angleDepth = 0;
+		var parenDepth = 0;
+		var braceDepth = 0;
+		for (i in 0...text.length) {
+			final c = text.charAt(i);
+			if (c == "<")
+				angleDepth++;
+			else if (c == ">" && angleDepth > 0)
+				angleDepth--;
+			else if (c == "(")
+				parenDepth++;
+			else if (c == ")" && parenDepth > 0)
+				parenDepth--;
+			else if (c == "{")
+				braceDepth++;
+			else if (c == "}" && braceDepth > 0)
+				braceDepth--;
+			else if (c == ":" && angleDepth == 0 && parenDepth == 0 && braceDepth == 0)
+				return i;
+		}
+		return -1;
+	}
+
+	static function isIdentifierText(text:String):Bool {
+		if (text == null || text.length == 0)
+			return false;
+		for (i in 0...text.length) {
+			final code = text.charCodeAt(i);
+			final isLetter = (code >= "A".code && code <= "Z".code) || (code >= "a".code && code <= "z".code) || code == "_".code;
+			final isDigit = code >= "0".code && code <= "9".code;
+			if (i == 0) {
+				if (!isLetter)
+					return false;
+			} else if (!isLetter && !isDigit)
+				return false;
+		}
+		return true;
 	}
 
 	static function splitTopLevelComma(text:String):Array<String> {

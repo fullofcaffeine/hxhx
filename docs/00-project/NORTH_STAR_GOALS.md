@@ -5,7 +5,7 @@ This page records the long-term product direction for this repository. It is a p
 The short version:
 
 1. Make `reflaxe.ocaml` a stable OCaml target that works well with both upstream Haxe and `hxhx`.
-2. Make `hxhx` a stable, MIT-licensed Haxe-in-Haxe compiler that is 1:1 compatible with Haxe `4.3.7`, or better where compatibility allows, including compiler performance.
+2. Make `hxhx` a stable, MIT-licensed Haxe-in-Haxe compiler that is 1:1 compatible with Haxe `4.3.7`, or better where compatibility allows, including compiler performance and developer iteration speed.
 3. Make Haxe easier to hack by implementing the compiler in Haxe: the compiler should be readable, editable, testable, and approachable to Haxe developers.
 4. Make Haxe easy to bend without breaking Haxe: extensions should be pluggable, removable, and isolated from the baseline compiler contract.
 5. Make it practical to create full Haxe-family compiler variations in Haxe when a project needs a real fork or dialect.
@@ -50,13 +50,21 @@ The bar is not “passes our local smoke tests.” The bar is upstream-derived b
 - macro and plugin parity,
 - no required stage0 fallback for correctness,
 - performance parity or better for compiler workloads,
+- materially faster edit-compile-test loops once `hxhx + reflaxe.ocaml` is native and stage0-free by default,
 - release enforcement that blocks misleading public `1.0` claims.
 
 Current planning owners:
 
 - Full 1.0 closure: `haxe.ocaml-f1cl`
+- native iteration latency/perf metric: `haxe.ocaml-5rjl`
 - strict upstream target gates: `haxe.ocaml-f1cl.3`, `haxe.ocaml-f1cl.3.1`, `haxe.ocaml-blsl`, `haxe.ocaml-sssk`
 - release enforcement: `haxe.ocaml-f1cl.6`, `haxe.ocaml-f1cl.7`
+
+Iteration-speed note:
+
+- Today, small compiler fixes can still pay heavy validation costs: stage0-based bootstrap regeneration, dune verification of large generated snapshots, repo-wide format checks, and aggregated guard scripts.
+- The native `hxhx + reflaxe.ocaml` path should reduce the expensive stage0/reflaxe bootstrap loop over time, but full upstream-derived gates will remain heavier by design.
+- Treat latency as a product quality metric: measure focused local loops, snapshot regeneration, stage0-free rebuilds, and Full 1.0 gates separately so "faster" is evidence-based rather than vibes-based.
 
 ## Goal 3: Hackable Haxe-in-Haxe compiler
 

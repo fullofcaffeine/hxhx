@@ -588,10 +588,15 @@ let compactTypeHint = fun typeHint -> let tempString = ref ("" : string) in (
   let compact = (StringTools.trim (!tempString : string) : string) in let compact = (StringTools.replace (compact : string) (" " : string) ("" : string) : string) in let compact = (StringTools.replace (compact : string) ("\t" : string) ("" : string) : string) in let compact = (StringTools.replace (compact : string) ("\r" : string) ("" : string) : string) in let compact = (StringTools.replace (compact : string) ("\n" : string) ("" : string) : string) in compact
 )
 
+let isFunctionTypeHintText = fun typeHint -> HxString.indexOf typeHint "->" 0 >= 0
+
+let isErasedFunctionTypeHintText = fun typeHint -> HxString.equals typeHint "Dynamic" || HxString.equals typeHint "Any" || HxString.equals typeHint "Function" || HxString.equals typeHint "StdTypes.Function" || HxString.equals typeHint "haxe.Constraints.Function" || StringTools.endsWith (typeHint : string) (".Function" : string)
+
 let sourceTypeHintIsMoreSpecific = fun nativeTypeHint sourceTypeHint -> try let __fallback_result_157 = let source = (compactTypeHint (sourceTypeHint : string) : string) in (
   ignore (if HxString.length source = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let native = (compactTypeHint (nativeTypeHint : string) : string) in (
     ignore (if HxString.length native = 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+    ignore (if isFunctionTypeHintText (source : string) && isErasedFunctionTypeHintText (native : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
     let sourceIsNull = StringTools.startsWith (source : string) ("Null<" : string) || StringTools.startsWith (source : string) ("StdTypes.Null<" : string) in (
       ignore (if (HxString.equals native "Null" || HxString.equals native "StdTypes.Null") && sourceIsNull then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
       ignore (if not (sourceIsNull) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());

@@ -3123,6 +3123,8 @@ class ParserStage {
 		final native = compactTypeHint(nativeTypeHint);
 		if (native.length == 0)
 			return true;
+		if (isFunctionTypeHintText(source) && isErasedFunctionTypeHintText(native))
+			return true;
 		final sourceIsNull = StringTools.startsWith(source, "Null<") || StringTools.startsWith(source, "StdTypes.Null<");
 		if ((native == "Null" || native == "StdTypes.Null") && sourceIsNull)
 			return true;
@@ -3132,6 +3134,19 @@ class ParserStage {
 			"Null<") ? source.substr("Null<".length,
 				source.length - "Null<".length - 1) : source.substr("StdTypes.Null<".length, source.length - "StdTypes.Null<".length - 1);
 		return native == inner || StringTools.endsWith(native, "." + inner);
+	}
+
+	static function isFunctionTypeHintText(typeHint:String):Bool {
+		return typeHint.indexOf("->") >= 0;
+	}
+
+	static function isErasedFunctionTypeHintText(typeHint:String):Bool {
+		return typeHint == "Dynamic"
+			|| typeHint == "Any"
+			|| typeHint == "Function"
+			|| typeHint == "StdTypes.Function"
+			|| typeHint == "haxe.Constraints.Function"
+			|| StringTools.endsWith(typeHint, ".Function");
 	}
 
 	static function defaultValueFromText(text:String):HxDefaultValue {

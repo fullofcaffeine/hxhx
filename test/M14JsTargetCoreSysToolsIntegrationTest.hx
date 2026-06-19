@@ -1033,8 +1033,14 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			"native protocol decode should prefer source Null<Bool> over erased Bool");
 		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("StdTypes.Null", "StdTypes.Null<Bool>"),
 			"native protocol decode should preserve explicit StdTypes.Null<T> hints");
+		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Function", "(index:Int, item:String) -> String"),
+			"native protocol decode should prefer source function hints over erased Function");
+		assertTrue(@:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Dynamic", "String -> Array<String>"),
+			"native protocol decode should prefer source function hints over erased Dynamic");
 		assertTrue(! @:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("Bool", "String"),
 			"native protocol decode should not treat unrelated source hints as more specific");
+		assertTrue(! @:privateAccess ParserStageNativeDecode.sourceTypeHintIsMoreSpecific("String", "String -> Array<String>"),
+			"native protocol decode should not replace concrete non-function hints with source function hints");
 	}
 
 	static function assertScannedHelperClassInheritance():Void {

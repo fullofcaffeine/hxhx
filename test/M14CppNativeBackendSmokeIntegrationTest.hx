@@ -348,6 +348,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function mapLike(it:Iterable<String>, f:String->String):Array<String> {",
 			"    return [for (x in it) f(x)];",
 			"  }",
+			"  public static function mapiLike(it:Iterable<String>, f:(index:Int, item:String)->String):Array<String> {",
+			"    var i = 0;",
+			"    return [for (x in it) f(i++, x)];",
+			"  }",
 			"  public static function flatMap(it:Iterable<String>, f:String->Iterable<String>):Array<String> {",
 			"    return [\"ok\"];",
 			"  }",
@@ -1136,6 +1140,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "static std::vector<std::string> mapLike(std::vector<std::string> it, std::function<std::string(std::string)> f) {",
 			"C++ smoke should keep function-valued map helpers typed");
 		assertContains(source, "__hxhx_comp_out.push_back(f(x));", "C++ smoke should infer comprehension output from local std::function call return types");
+		assertContains(source, "static std::vector<std::string> mapiLike(std::vector<std::string> it, std::function<std::string(int, std::string)> f) {",
+			"C++ smoke should lower named function-typed mapi helpers to callable C++ signatures");
+		assertContains(source, "__hxhx_comp_out.push_back(f((i++), x));",
+			"C++ smoke should infer comprehension output from multi-argument local std::function calls");
 		assertContains(source,
 			"static std::vector<std::string> flatMap(std::vector<std::string> it, std::function<std::vector<std::string>(std::string)> f) {",
 			"C++ smoke should lower Iterable<T> inside function types to vector values");

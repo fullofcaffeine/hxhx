@@ -269,6 +269,7 @@ Keep these aligned with beads whenever scope changes. The current long-term goal
 
 - stable `reflaxe.ocaml` with both upstream Haxe and `hxhx`,
 - stable `hxhx` as a Haxe `4.3.7`-equivalent or better MIT compiler, including performance,
+- native `hxhx + reflaxe.ocaml` loops that improve practical developer and CI iteration latency, not only final compiler throughput,
 - a hackable Haxe-in-Haxe compiler that makes Haxe itself easier for Haxe developers to read, modify, test, and fork,
 - pluggable compiler customization that can be enabled/disabled without corrupting the baseline Haxe contract,
 - practical Haxe-family compiler variations/forks implemented in Haxe when a plugin is not enough,
