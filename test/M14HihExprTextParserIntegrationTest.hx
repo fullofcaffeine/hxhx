@@ -1449,6 +1449,16 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected cpp length conditional var");
 		}
 
+		final hxSerializeConditionalStmts = HxParser.parseFunctionBodyText('if (#if flash try v.hxSerialize != null catch (e:Dynamic) false #elseif (cs || java || python) Reflect.hasField(v, "hxSerialize") #elseif php php.Global.method_exists(v, "hxSerialize") #else v.hxSerialize != null #end) { value = 1; }');
+		assertTrue(hxSerializeConditionalStmts.length == 1, "expected hxSerialize conditional if to parse");
+		switch (hxSerializeConditionalStmts[0]) {
+			case SIf(EBinop("!=", EField(EIdent("v"), "hxSerialize"), ENull), _, null, _):
+			case SExpr(EUnsupported(raw), _):
+				fail("hxSerialize conditional parsed as unsupported: " + raw);
+			case _:
+				fail("expected hxSerialize conditional if");
+		}
+
 		final macroIdentSpliceStmts = HxParser.parseFunctionBodyText('tests.push(macro deq(0, $$i{name}(0)));');
 		assertTrue(macroIdentSpliceStmts.length == 1, "expected macro identifier splice push to parse");
 		switch (macroIdentSpliceStmts[0]) {

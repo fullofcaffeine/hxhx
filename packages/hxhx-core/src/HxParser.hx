@@ -521,6 +521,7 @@ class HxParser {
 			return bodySource == null ? "" : bodySource;
 		var normalized = normalizeInlineNekoElseConditionalMarkers(bodySource);
 		normalized = normalizeInlineStdCppLengthConditionalMarkers(normalized);
+		normalized = normalizeInlineStdHxSerializeConditionalMarkers(normalized);
 		normalized = normalizeInlineStdClassSwitchConditionalMarkers(normalized);
 		normalized = StringTools.replace(normalized, "#if js", " ");
 		normalized = StringTools.replace(normalized, "#end", " ");
@@ -556,6 +557,43 @@ class HxParser {
 			final suffix = out.substr(idxEnd + 4);
 			out = prefix + cppPayload + suffix;
 			search = prefix.length + cppPayload.length;
+		}
+		return out;
+	}
+
+	static function normalizeInlineStdHxSerializeConditionalMarkers(source:String):String {
+		if (source == null || source.indexOf("hxSerialize") < 0 || source.indexOf("#else") < 0 || source.indexOf("#end") < 0)
+			return source;
+		var out = source;
+		var search = 0;
+		while (search < out.length) {
+			final idxIf = out.indexOf("#if", search);
+			if (idxIf < 0)
+				break;
+			final idxEnd = out.indexOf("#end", idxIf + 3);
+			if (idxEnd < 0)
+				break;
+			final conditionalText = out.substr(idxIf, idxEnd + 4 - idxIf);
+			if (conditionalText.indexOf("hxSerialize") < 0
+				|| conditionalText.indexOf("Reflect.hasField") < 0
+				|| conditionalText.indexOf("method_exists") < 0) {
+				search = idxEnd + 4;
+				continue;
+			}
+			final idxElse = conditionalText.lastIndexOf("#else");
+			if (idxElse < 0) {
+				search = idxEnd + 4;
+				continue;
+			}
+			final elsePayload = StringTools.trim(conditionalText.substr(idxElse + 5, conditionalText.length - 4 - (idxElse + 5)));
+			if (elsePayload != "v.hxSerialize != null") {
+				search = idxEnd + 4;
+				continue;
+			}
+			final prefix = out.substr(0, idxIf);
+			final suffix = out.substr(idxEnd + 4);
+			out = prefix + elsePayload + suffix;
+			search = prefix.length + elsePayload.length;
 		}
 		return out;
 	}
