@@ -1200,6 +1200,13 @@ class CppTargetCore {
 				+ quoteString(stringProbe.fallback)
 				+ "); } })()";
 		}
+		final fileContentContextErrorPath = parseFileContentContextErrorTryRaw(raw);
+		if (fileContentContextErrorPath != null) {
+			final readExpr = "__hxhx_read_file(" + fileContentContextErrorPath + ")";
+			final stdExceptionCatch = "catch (const std::exception& e) { throw std::runtime_error(std::string(e.what())); }";
+			final unknownCatch = "catch (...) { throw std::runtime_error(std::string(" + quoteString("Unable to read file") + ")); }";
+			return "([&]() { try { return " + readExpr + "; } " + stdExceptionCatch + " " + unknownCatch + " })()";
+		}
 		final platformMinPath = parseHxcppAndroidPlatformMinTryRaw(raw);
 		if (platformMinPath != null) {
 			return "([&]() { try { return __hxhx_json_min_field_from_file("
@@ -1291,6 +1298,12 @@ class CppTargetCore {
 				fallback: stdStringPattern.matched(3)
 			};
 		return null;
+	}
+
+	static function parseFileContentContextErrorTryRaw(raw:String):Null<String> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^try\{sys\.io\.File\.getContent\(Context\.resolvePath\(([A-Za-z_][A-Za-z0-9_]*)\)\);\}catch\(e(:[^)]*)?\)\{Context\.error\(Std\.string\(e\),Context\.currentPos\(\)\);\}$/;
+		return pattern.match(compact) ? sanitizeIdentifier(pattern.matched(1)) : null;
 	}
 
 	static function parseHxcppAndroidPlatformMinTryRaw(raw:String):Null<String> {
