@@ -363,6 +363,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"utest-style Std.string try/catch probes should lower through normal string conversion");
 		assertContains(stdStringProbeTry, "catch (...) { return std::string(\"fallback\"); }",
 			"utest-style Std.string try/catch probes should preserve non-empty fallback strings");
+		final typeofSafetyProbeTry = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{typeof(e);"false";}catch(e:Dynamic){"true";}'));
+		assertContains(typeofSafetyProbeTry, "try { (void)__hxhx_type_name(e); return std::string(\"false\"); }",
+			"remote Cpp gate typeof safety probes should preserve the success string");
+		assertContains(typeofSafetyProbeTry, "catch (...) { return std::string(\"true\"); }",
+			"remote Cpp gate typeof safety probes should preserve the catch string");
 		final fileContentContextErrorTry = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{sys.io.File.getContent(Context.resolvePath(file));}catch(e:Dynamic){Context.error(Std.string(e),Context.currentPos());}'));
 		assertContains(fileContentContextErrorTry, "try { return __hxhx_read_file(file); }",

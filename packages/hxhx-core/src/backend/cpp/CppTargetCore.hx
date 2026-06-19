@@ -30,6 +30,12 @@ typedef CppTryStringProbe = {
 	var fallback:String;
 }
 
+typedef CppTryTypeofSafetyProbe = {
+	var value:String;
+	var success:String;
+	var failure:String;
+}
+
 typedef CppFieldReadCatchString = {
 	var receiver:String;
 	var field:String;
@@ -1200,6 +1206,11 @@ class CppTargetCore {
 				+ quoteString(stringProbe.fallback)
 				+ "); } })()";
 		}
+		final typeofSafetyProbe = parseTypeofSafetyProbeRaw(raw);
+		if (typeofSafetyProbe != null) {
+			return "([&]() { try { (void)__hxhx_type_name(" + typeofSafetyProbe.value + "); return std::string(" + quoteString(typeofSafetyProbe.success)
+				+ "); } catch (...) { return std::string(" + quoteString(typeofSafetyProbe.failure) + "); } })()";
+		}
 		final fileContentContextErrorPath = parseFileContentContextErrorTryRaw(raw);
 		if (fileContentContextErrorPath != null) {
 			final readExpr = "__hxhx_read_file(" + fileContentContextErrorPath + ")";
@@ -1301,6 +1312,16 @@ class CppTargetCore {
 				fallback: stdStringPattern.matched(3)
 			};
 		return null;
+	}
+
+	static function parseTypeofSafetyProbeRaw(raw:String):Null<CppTryTypeofSafetyProbe> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^try\{typeof\(([A-Za-z_][A-Za-z0-9_]*)\);"([^"]*)";\}catch\(e(:[^)]*)?\)\{"([^"]*)";?\}$/;
+		return pattern.match(compact) ? {
+			value: sanitizeIdentifier(pattern.matched(1)),
+			success: pattern.matched(2),
+			failure: pattern.matched(4)
+		} : null;
 	}
 
 	static function parseFileContentContextErrorTryRaw(raw:String):Null<String> {
