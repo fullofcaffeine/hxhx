@@ -746,6 +746,8 @@ class CppTargetCore {
 	}
 
 	static function renderHelperClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		if (isPosInfosPlaceholder(cls))
+			return renderPosInfosClass();
 		if (isArrayBackedAbstractClass(cls))
 			return renderArrayBackedAbstractClass(cls, classLookup);
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
@@ -783,6 +785,20 @@ class CppTargetCore {
 		}
 		out.push("};");
 		return out;
+	}
+
+	static function renderPosInfosClass():Array<String> {
+		return [
+			"struct PosInfos {",
+			"  std::string fileName = std::string();",
+			"  int lineNumber = 0;",
+			"  std::string className = std::string();",
+			"  std::string methodName = std::string();",
+			"  PosInfos() {}",
+			"  PosInfos(std::string fileName, int lineNumber, std::string className, std::string methodName)",
+			"    : fileName(fileName), lineNumber(lineNumber), className(className), methodName(methodName) {}",
+			"};"
+		];
 	}
 
 	static function renderArrayBackedAbstractClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -1311,7 +1327,7 @@ class CppTargetCore {
 				+ stringExpr(right, scope)
 				+ ")";
 			case EBinop("=", left, right):
-				renderExpr(left, scope) + " = " + renderExpr(right, scope);
+				renderExpr(left, scope) + " = " + assignmentRhsExpr(left, right, scope);
 			case EBinop("==", left, ENull) if (exprHasOptionalType(left, scope)):
 				"(!" + optionalStorageExpr(left, scope) + ".has_value())";
 			case EBinop("==", ENull, right) if (exprHasOptionalType(right, scope)):
@@ -1485,6 +1501,9 @@ class CppTargetCore {
 	static function classFieldCppType(className:String, fieldName:String, scope:CppRenderScope):String {
 		if (scope == null || className == null || className.length == 0)
 			return "";
+		final posInfosFieldType = posInfosFieldCppType(className, fieldName);
+		if (posInfosFieldType.length > 0)
+			return posInfosFieldType;
 		final cls = scope.classByName.get(className);
 		if (cls == null)
 			return "";
@@ -1920,6 +1939,22 @@ class CppTargetCore {
 			parts.push(" (void)__hxhx_enum_arg_" + i + ";");
 		parts.push(" return " + tag + "; })()");
 		return parts.join("");
+	}
+
+	static function assignmentRhsExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
+		final leftType = exprCppType(left, scope);
+		if (leftType == "std::shared_ptr<PosInfos>")
+			return posInfosSharedPtrExpr(right, scope);
+		return renderExpr(right, scope);
+	}
+
+	static function posInfosSharedPtrExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case EAnon(fieldNames, fieldValues) if (isPosInfosAnon(fieldNames, fieldValues)):
+				"std::make_shared<PosInfos>(" + posInfosCtorArgs(fieldNames, fieldValues, scope).join(", ") + ")";
+			case _:
+				renderExpr(expr, scope);
+		};
 	}
 
 	static function stringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -2598,6 +2633,51 @@ class CppTargetCore {
 	static function isArrayBackedAbstractClass(cls:HxClassDecl):Bool {
 		final underlying = abstractUnderlyingTypeHint(cls);
 		return underlying != null && StringTools.startsWith(removeTypeHintWhitespace(underlying), "Array<");
+	}
+
+	static function isPosInfosPlaceholder(cls:HxClassDecl):Bool {
+		return cls != null
+			&& sanitizeTypePath(HxClassDecl.getName(cls)) == "PosInfos"
+			&& HxClassDecl.getFields(cls).length == 0
+			&& HxClassDecl.getFunctions(cls).length == 0;
+	}
+
+	static function posInfosFieldCppType(className:String, fieldName:String):String {
+		if (sanitizeTypePath(className) != "PosInfos")
+			return "";
+		return switch (fieldName) {
+			case "fileName" | "className" | "methodName":
+				"std::string";
+			case "lineNumber":
+				"int";
+			case _:
+				"";
+		};
+	}
+
+	static function isPosInfosAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>):Bool {
+		if (fieldNames == null || fieldValues == null || fieldNames.length != 4 || fieldValues.length != 4)
+			return false;
+		for (name in ["fileName", "lineNumber", "className", "methodName"])
+			if (fieldNames.indexOf(name) < 0)
+				return false;
+		return true;
+	}
+
+	static function posInfosCtorArgs(fieldNames:Array<String>, fieldValues:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		return [
+			posInfosFieldExpr("fileName", fieldNames, fieldValues, scope),
+			posInfosFieldExpr("lineNumber", fieldNames, fieldValues, scope),
+			posInfosFieldExpr("className", fieldNames, fieldValues, scope),
+			posInfosFieldExpr("methodName", fieldNames, fieldValues, scope)
+		];
+	}
+
+	static function posInfosFieldExpr(name:String, fieldNames:Array<String>, fieldValues:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final index = fieldNames.indexOf(name);
+		if (index < 0 || index >= fieldValues.length)
+			return name == "lineNumber" ? "0" : "std::string()";
+		return name == "lineNumber" ? renderExpr(fieldValues[index], scope) : stringExpr(fieldValues[index], scope);
 	}
 
 	static function abstractUnderlyingTypeHint(cls:HxClassDecl):Null<String> {

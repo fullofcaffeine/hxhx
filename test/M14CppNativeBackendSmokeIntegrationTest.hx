@@ -810,6 +810,35 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(ctorSubLines, "CtorSub(std::string message) : CtorBase(message) {",
 			"C++ subclass constructors should lower leading super(...) to a base initializer list");
 		assertTrue(ctorSubLines.indexOf("base constructor call omitted") < 0, "C++ leading super(...) should not remain as an omitted body comment");
+		final posInfos = new HxClassDecl("PosInfos", false, [], []);
+		final posException = new HxClassDecl("PosException", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)], "Void", [
+				SIf(EBinop("==", EIdent("pos"), ENull),
+					SExpr(EBinop("=", EIdent("posInfos"),
+						EAnon(["fileName", "lineNumber", "className", "methodName"],
+							[EString("(unknown)"), EInt(0), EString("(unknown)"), EString("(unknown)")])),
+						HxPos.unknown()),
+					SExpr(EBinop("=", EIdent("posInfos"), EIdent("pos")), HxPos.unknown()), HxPos.unknown())
+			],
+				""),
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EField(EIdent("posInfos"), "className"), HxPos.unknown())], "")
+		], [new HxFieldDecl("posInfos", Public, false, "PosInfos", null)]);
+		final posNames = new StringMap<Bool>();
+		for (name in ["PosInfos", "PosException"])
+			posNames.set(name, true);
+		final posClasses = new StringMap<HxClassDecl>();
+		posClasses.set("PosInfos", posInfos);
+		posClasses.set("PosException", posException);
+		final posLookup = {names: posNames, byName: posClasses};
+		final posInfosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(posInfos, posLookup).join("\n");
+		final posExceptionLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(posException, posLookup).join("\n");
+		assertContains(posInfosLines, "std::string fileName = std::string();", "C++ PosInfos typedef placeholders should render the stdlib position fields");
+		assertContains(posExceptionLines, "std::shared_ptr<PosInfos> pos = nullptr", "C++ optional PosInfos args should stay nullable references");
+		assertContains(posExceptionLines,
+			"posInfos = std::make_shared<PosInfos>(std::string(\"(unknown)\"), 0, std::string(\"(unknown)\"), std::string(\"(unknown)\"));",
+			"C++ assignments from matching position literals should wrap into PosInfos shared pointers");
+		assertContains(posExceptionLines, "posInfos = pos;", "C++ PosInfos reference assignments should pass existing pointers through");
+		assertContains(posExceptionLines, "return (posInfos->className);", "C++ PosInfos string fields should not be wrapped with std::to_string");
 		final genericReturnOwner = new HxClassDecl("GenericReturnOwner", false, [], []);
 		final genericReturnNames = new StringMap<Bool>();
 		genericReturnNames.set("GenericReturnOwner", true);
