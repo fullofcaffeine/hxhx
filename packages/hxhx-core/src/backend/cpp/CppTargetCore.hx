@@ -960,7 +960,7 @@ class CppTargetCore {
 				+ quoteString("Unable to determine minimum supported Android platform")
 				+ " << std::endl; return 0; } })()";
 		}
-		throw "C++ source backend MVP unsupported expression: ETryCatchRaw";
+		throw "C++ source backend MVP unsupported expression: ETryCatchRaw(" + summarizeRaw(raw) + ")";
 	}
 
 	static function parseExceptionStackTryRaw(raw:String):Null<String> {
@@ -1066,6 +1066,13 @@ class CppTargetCore {
 		if (raw == null)
 			return "";
 		return StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+	}
+
+	static function summarizeRaw(raw:String):String {
+		if (raw == null)
+			return "";
+		final compact = compactRawText(raw);
+		return compact.length <= 220 ? compact : compact.substr(0, 217) + "...";
 	}
 
 	static function renderUnsupportedRecoveryLiteral(raw:String):Null<String> {

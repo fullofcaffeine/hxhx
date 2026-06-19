@@ -17,6 +17,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			throw message + " (missing `" + needle + "` in `" + haystack + "`)";
 	}
 
+	static function assertThrowsContains(fn:Void->Void, needle:String, message:String):Void {
+		try {
+			fn();
+		} catch (e:Dynamic) {
+			final text = Std.string(e);
+			if (text.indexOf(needle) >= 0)
+				return;
+			throw message + " (missing `" + needle + "` in `" + text + "`)";
+		}
+		throw message + " (function did not throw)";
+	}
+
 	static function commandExists(name:String):Bool {
 		return Sys.command("sh", ["-c", "command -v " + name + " >/dev/null 2>&1"]) == 0;
 	}
@@ -322,6 +334,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"direct Type.getEnumName calls should lower through the C++ type-name helper");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "typeof"), [EIdent("t")])) == "__hxhx_type_name(t)",
 			"direct Type.typeof calls should lower to a printable C++ MVP type name");
+		assertThrowsContains(() -> @:privateAccess backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw("try{unsupported();}catch(e:Dynamic){}")),
+			"ETryCatchRaw(try{unsupported();}catch(e:Dynamic){})",
+			"unsupported raw try/catch diagnostics should include a compact raw payload for remote gate triage");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("is", EInt(1), EIdent("Int"))) == "__hxhx_is_type(1, \"Int\")",
 			"Haxe is-expressions should lower through the C++ MVP type-test helper");
 		assertTrue(@:privateAccess
