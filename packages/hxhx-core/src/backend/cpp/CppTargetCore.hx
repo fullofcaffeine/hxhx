@@ -264,12 +264,12 @@ class CppTargetCore {
 		out.push("  return negative ? -value : value;");
 		out.push("}");
 		out.push("");
-		for (decl in renderAnonStructs(collectAnonStructs(program))) {
+		final classLookup = collectClassLookup(program);
+		for (decl in renderAnonStructs(collectAnonStructs(program, classLookup))) {
 			for (line in decl)
 				out.push(line);
 			out.push("");
 		}
-		final classLookup = collectClassLookup(program);
 		for (decl in renderForwardDeclarations(program, main.cls)) {
 			for (line in decl)
 				out.push(line);
@@ -312,112 +312,118 @@ class CppTargetCore {
 		- Infers only the tiny type subset the Cpp MVP already knows how to print;
 		  unsupported dynamic behavior should remain a later explicit seam.
 	**/
-	static function collectAnonStructs(program:GenIrProgram):Array<CppAnonStruct> {
+	static function collectAnonStructs(program:GenIrProgram, classLookup:CppClassLookup):Array<CppAnonStruct> {
 		final out = new Array<CppAnonStruct>();
 		final seen = new haxe.ds.StringMap<Bool>();
-		function addExpr(expr:HxExpr):Void {
+		function addExpr(expr:HxExpr, ?scope:CppRenderScope):Void {
 			switch (expr) {
 				case EAnon(fieldNames, fieldValues):
 					for (value in fieldValues)
-						addExpr(value);
-					final struct = anonStruct(fieldNames, fieldValues);
+						addExpr(value, scope);
+					final struct = anonStruct(fieldNames, fieldValues, scope);
 					if (!seen.exists(struct.name)) {
 						seen.set(struct.name, true);
 						out.push(struct);
 					}
 				case EField(receiver, _):
-					addExpr(receiver);
+					addExpr(receiver, scope);
 				case ECall(callee, args):
-					addExpr(callee);
+					addExpr(callee, scope);
 					for (arg in args)
-						addExpr(arg);
+						addExpr(arg, scope);
 				case EArrayDecl(values):
 					for (value in values)
-						addExpr(value);
+						addExpr(value, scope);
 				case EArrayAccess(array, index):
-					addExpr(array);
-					addExpr(index);
+					addExpr(array, scope);
+					addExpr(index, scope);
 				case EBinop(_, left, right):
-					addExpr(left);
-					addExpr(right);
+					addExpr(left, scope);
+					addExpr(right, scope);
 				case EUnop(_, inner):
-					addExpr(inner);
+					addExpr(inner, scope);
 				case ETernary(cond, thenExpr, elseExpr):
-					addExpr(cond);
-					addExpr(thenExpr);
-					addExpr(elseExpr);
+					addExpr(cond, scope);
+					addExpr(thenExpr, scope);
+					addExpr(elseExpr, scope);
 				case ENew(_, args):
 					for (arg in args)
-						addExpr(arg);
+						addExpr(arg, scope);
 				case ECast(inner, _) | EUntyped(inner):
-					addExpr(inner);
+					addExpr(inner, scope);
 				case ESwitch(scrutinee, _, exprs):
-					addExpr(scrutinee);
+					addExpr(scrutinee, scope);
 					for (expr in exprs)
-						addExpr(expr);
+						addExpr(expr, scope);
 				case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
-					addExpr(iterable);
+					addExpr(iterable, scope);
 					if (guardExpr != null)
-						addExpr(guardExpr);
-					addExpr(yieldExpr);
+						addExpr(guardExpr, scope);
+					addExpr(yieldExpr, scope);
 				case ELambda(_, body):
-					addExpr(body);
+					addExpr(body, scope);
 				case EMacroExpr(inner, _):
-					addExpr(inner);
+					addExpr(inner, scope);
 				case _:
 			}
 		}
-		function addStmt(stmt:HxStmt):Void {
+		function addStmt(stmt:HxStmt, ?scope:CppRenderScope):Void {
 			switch (stmt) {
 				case SBlock(stmts, _):
 					for (s in stmts)
-						addStmt(s);
-				case SVar(_, _, init, _):
+						addStmt(s, scope);
+				case SVar(name, typeHint, init, _):
 					if (init != null)
-						addExpr(init);
+						addExpr(init, scope);
+					if (scope != null)
+						scope.localTypes.set(sanitizeIdentifier(name), cppLocalTypeHint(typeHint, init, scope));
 				case SIf(cond, thenBranch, elseBranch, _):
-					addExpr(cond);
-					addStmt(thenBranch);
+					addExpr(cond, scope);
+					addStmt(thenBranch, scope);
 					if (elseBranch != null)
-						addStmt(elseBranch);
+						addStmt(elseBranch, scope);
 				case SExpr(expr, _) | SReturn(expr, _):
-					addExpr(expr);
+					addExpr(expr, scope);
 				case SForIn(_, iterable, body, _):
-					addExpr(iterable);
-					addStmt(body);
+					addExpr(iterable, scope);
+					addStmt(body, scope);
 				case SForKeyValue(_, _, iterable, body, _):
-					addExpr(iterable);
-					addStmt(body);
+					addExpr(iterable, scope);
+					addStmt(body, scope);
 				case SWhile(cond, body, _):
-					addExpr(cond);
-					addStmt(body);
+					addExpr(cond, scope);
+					addStmt(body, scope);
 				case SDoWhile(body, cond, _):
-					addStmt(body);
-					addExpr(cond);
+					addStmt(body, scope);
+					addExpr(cond, scope);
 				case SSwitch(scrutinee, _, bodies, _):
-					addExpr(scrutinee);
+					addExpr(scrutinee, scope);
 					for (body in bodies)
-						addStmt(body);
+						addStmt(body, scope);
 				case STry(tryBody, catches, _):
-					addStmt(tryBody);
+					addStmt(tryBody, scope);
 					for (c in catches)
-						addStmt(c.body);
+						addStmt(c.body, scope);
 				case SThrow(expr, _):
-					addExpr(expr);
+					addExpr(expr, scope);
 				case SReturnVoid(_) | SBreak(_) | SContinue(_):
 			}
 		}
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
+				final fieldScope = renderScope(cls, classLookup, "void");
 				for (field in HxClassDecl.getFields(cls)) {
 					final init = HxFieldDecl.getInit(field);
 					if (init != null)
-						addExpr(init);
+						addExpr(init, fieldScope);
 				}
-				for (fn in HxClassDecl.getFunctions(cls))
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					final scope = renderScope(cls, classLookup, cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn)));
+					registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 					for (stmt in HxFunctionDecl.getBody(fn))
-						addStmt(stmt);
+						addStmt(stmt, scope);
+				}
 			}
 		}
 		return out;
@@ -435,6 +441,8 @@ class CppTargetCore {
 
 	static function renderStaticFunction(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
+		final scope = renderScope(owner, classLookup, returnType);
+		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 		final out = ["static "
 			+ returnType
 			+ " "
@@ -442,7 +450,7 @@ class CppTargetCore {
 			+ "("
 			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn))
 			+ ") {"];
-		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "  ", renderScope(owner, classLookup, returnType)))
+		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "  ", scope))
 			out.push(line);
 		out.push("}");
 		return out;
@@ -460,13 +468,13 @@ class CppTargetCore {
 		return out;
 	}
 
-	static function anonStruct(fieldNames:Array<String>, fieldValues:Array<HxExpr>):CppAnonStruct {
+	static function anonStruct(fieldNames:Array<String>, fieldValues:Array<HxExpr>, ?scope:CppRenderScope):CppAnonStruct {
 		final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
 		final names = new Array<String>();
 		final types = new Array<String>();
 		for (i in 0...count) {
 			names.push(fieldNames[i]);
-			types.push(cppAnonFieldType(fieldValues[i]));
+			types.push(cppAnonFieldType(fieldValues[i], scope));
 		}
 		return {name: anonStructName(names, types), fieldNames: names, fieldTypes: types};
 	}
@@ -478,12 +486,13 @@ class CppTargetCore {
 		return parts.join("_");
 	}
 
-	static function cppAnonFieldType(expr:HxExpr):String {
+	static function cppAnonFieldType(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
 			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
 				"std::string";
 			case EIdent(_):
-				"std::string";
+				final scoped = exprCppType(expr, scope);
+				scoped.length > 0 ? scoped : "std::string";
 			case EFloat(_):
 				"double";
 			case EBool(_):
@@ -491,9 +500,9 @@ class CppTargetCore {
 			case EUnop("post++", _) | EUnop("post--", _):
 				"int";
 			case EArrayDecl(elements):
-				"std::vector<" + arrayElementType(elements) + ">";
+				"std::vector<" + arrayElementType(elements, scope) + ">";
 			case EAnon(fieldNames, fieldValues):
-				final struct = anonStruct(fieldNames, fieldValues);
+				final struct = anonStruct(fieldNames, fieldValues, scope);
 				struct.name;
 			case _:
 				"int";
@@ -659,6 +668,13 @@ class CppTargetCore {
 		};
 	}
 
+	static function registerFunctionArgs(scope:CppRenderScope, args:Array<HxFunctionArg>):Void {
+		if (scope == null || args == null)
+			return;
+		for (arg in args)
+			scope.localTypes.set(sanitizeIdentifier(HxFunctionArg.getName(arg)), cppTypeHint(HxFunctionArg.getTypeHint(arg)));
+	}
+
 	static function baseTypeName(cls:HxClassDecl):Null<String> {
 		final extendsPath = HxClassDecl.getExtendsPath(cls);
 		if (extendsPath == null || extendsPath.length == 0)
@@ -669,6 +685,7 @@ class CppTargetCore {
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn));
 		final scope = renderScope(owner, classLookup, returnType);
+		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 		final out = ["  "
 			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
 			+ returnType
@@ -1212,6 +1229,8 @@ class CppTargetCore {
 
 	static function inferExprCppType(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
+			case EIdent(_):
+				exprCppType(expr, scope);
 			case ENew(typePath, _):
 				cppTypeHint(typePath);
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
@@ -1225,7 +1244,7 @@ class CppTargetCore {
 			case EBool(_):
 				"bool";
 			case EArrayDecl(elements):
-				"std::vector<" + arrayElementType(elements) + ">";
+				"std::vector<" + arrayElementType(elements, scope) + ">";
 			case _:
 				"";
 		};
@@ -1924,7 +1943,7 @@ class CppTargetCore {
 	}
 
 	static function anonExpr(fieldNames:Array<String>, fieldValues:Array<HxExpr>, ?scope:CppRenderScope):String {
-		final struct = anonStruct(fieldNames, fieldValues);
+		final struct = anonStruct(fieldNames, fieldValues, scope);
 		final values = [
 			for (i in 0...struct.fieldNames.length)
 				struct.fieldTypes[i] == "std::string" ? stringExpr(fieldValues[i], scope) : renderExpr(fieldValues[i], scope)
@@ -1933,7 +1952,7 @@ class CppTargetCore {
 	}
 
 	static function arrayExpr(elements:Array<HxExpr>, ?scope:CppRenderScope):String {
-		final typeName = arrayElementType(elements);
+		final typeName = arrayElementType(elements, scope);
 		final values = [
 			for (element in elements)
 				typeName == "std::string" ? stringExpr(element, scope) : renderExpr(element, scope)
@@ -1983,7 +2002,12 @@ class CppTargetCore {
 		return out.join("\n");
 	}
 
-	static function arrayElementType(elements:Array<HxExpr>):String {
+	static function arrayElementType(elements:Array<HxExpr>, ?scope:CppRenderScope):String {
+		for (element in elements) {
+			final inferred = inferExprCppType(element, scope);
+			if (inferred.length > 0)
+				return inferred;
+		}
 		for (element in elements)
 			if (isStringLike(element))
 				return "std::string";

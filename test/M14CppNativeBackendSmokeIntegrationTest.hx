@@ -551,6 +551,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ HelperMacros.typeError for-expression probes should fold to true");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EMacroType("X -> Y")) == "std::string(\"X -> Y\")",
 			"C++ macro type quotes should lower to stable printable text in the MVP");
+		final enumPayloadOwner = new HxClassDecl("EnumPayloadOwner", false, [], []);
+		final enumPayloadNames = new StringMap<Bool>();
+		enumPayloadNames.set("EnumPayloadOwner", true);
+		final enumPayloadClasses = new StringMap<HxClassDecl>();
+		enumPayloadClasses.set("EnumPayloadOwner", enumPayloadOwner);
+		final enumPayloadLookup = {names: enumPayloadNames, byName: enumPayloadClasses};
+		final enumPayloadScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(enumPayloadOwner, enumPayloadLookup, "auto");
+		enumPayloadScope.localTypes.set("x", "std::string");
+		final enumPayloadStruct = @:privateAccess backend.cpp.CppTargetCore.anonStruct(["__hx_params"], [EArrayDecl([EIdent("x")])], enumPayloadScope);
+		assertTrue(enumPayloadStruct.fieldTypes[0] == "std::vector<std::string>",
+			"C++ enum payload arrays should preserve scoped string argument element types");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EArrayDecl([EIdent("x")]),
+			enumPayloadScope) == "std::vector<std::string>{std::string(x)}",
+			"C++ enum payload arrays should render string arguments with matching vector element types");
 		final exprBodyOwner = new HxClassDecl("ExpressionBodyOwner", false, [], [new HxFieldDecl("key", Public, false, "String", null)]);
 		final exprBodyNames = new StringMap<Bool>();
 		exprBodyNames.set("ExpressionBodyOwner", true);
