@@ -1538,6 +1538,10 @@ class CppTargetCore {
 				indexOfExpr(receiver, args, scope);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringExpr(args[0], scope);
+			case ECall(EField(ECall(EField(receiver, "iterator"), []), "hasNext"), []) if (isCppVectorType(exprCppType(receiver, scope))):
+				"(!" + renderExpr(receiver, scope) + ".empty())";
+			case ECall(EField(_, "flatten"), [ECall(EField(_, "map"), [iterable, mapper])]):
+				flatMapExpr(iterable, mapper, scope);
 			case ECall(EField(ESuper, method), args):
 				superMethodCallExpr(method, args, scope);
 			case ECall(ELambda(lambdaArgs, body), args):
@@ -1545,6 +1549,8 @@ class CppTargetCore {
 				+ lambdaExpr(lambdaArgs, body, scope)
 				+ ")("
 				+ [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+			case ECall(EIdent(name), args) if (exprHasOptionalType(EIdent(name), scope)):
+				sanitizeIdentifier(name) + ".value()(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EIdent(name), args):
 				sanitizeIdentifier(name) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EField(receiver, method), args):
@@ -1824,6 +1830,29 @@ class CppTargetCore {
 		return renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
 	}
 
+	static function flatMapExpr(iterable:HxExpr, mapper:HxExpr, ?scope:CppRenderScope):String {
+		final mappedType = cppFunctionReturnTypeFromCppType(exprCppType(mapper, scope));
+		final elementType = cppIterableElementType(mappedType, scope);
+		final outputType = elementType.length > 0 ? elementType : "std::string";
+		final source = renderExpr(iterable, scope);
+		final f = renderExpr(mapper, scope);
+		return "([&]() {\n"
+			+ "  std::vector<"
+			+ outputType
+			+ "> __hxhx_flat_map_out;\n"
+			+ "  for (auto __hxhx_flat_map_item : "
+			+ source
+			+ ") {\n"
+			+ "    for (auto __hxhx_flat_map_value : "
+			+ f
+			+ "(__hxhx_flat_map_item)) {\n"
+			+ "      __hxhx_flat_map_out.push_back(__hxhx_flat_map_value);\n"
+			+ "    }\n"
+			+ "  }\n"
+			+ "  return __hxhx_flat_map_out;\n"
+			+ "})()";
+	}
+
 	static function fieldAccessOp(receiver:HxExpr, ?scope:CppRenderScope):String {
 		return exprHasReferenceType(receiver, scope) ? "->" : ".";
 	}
@@ -1978,6 +2007,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EIdent(name), _):
 				cppFunctionReturnTypeFromCppType(exprCppType(EIdent(name), scope));
+			case ECall(EField(_, "flatten"), [ECall(EField(_, "map"), [_, mapper])]):
+				cppFunctionReturnTypeFromCppType(exprCppType(mapper, scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
@@ -1990,6 +2021,8 @@ class CppTargetCore {
 				"bool";
 			case EArrayDecl(elements):
 				"std::vector<" + arrayElementType(elements, scope) + ">";
+			case EArrayComprehension(_, _, _, yieldExpr):
+				"std::vector<" + comprehensionElementType(yieldExpr, scope) + ">";
 			case EUnop("post++", inner) | EUnop("post--", inner):
 				inferExprCppType(inner, scope);
 			case _:

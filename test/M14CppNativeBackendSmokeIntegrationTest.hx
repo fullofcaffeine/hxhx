@@ -355,8 +355,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function flattenLike(it:Iterable<Iterable<String>>):Array<String> {",
 			"    return [for (x in it) for (y in x) y];",
 			"  }",
+			"  public static function flatten(it:Iterable<Iterable<String>>):Array<String> {",
+			"    return [for (x in it) for (y in x) y];",
+			"  }",
+			"  public static function map(it:Iterable<String>, f:String->Iterable<String>):Array<Iterable<String>> {",
+			"    return [for (x in it) f(x)];",
+			"  }",
 			"  public static function flatMap(it:Iterable<String>, f:String->Iterable<String>):Array<String> {",
-			"    return [\"ok\"];",
+			"    return LambdaLike.flatten(LambdaLike.map(it, f));",
+			"  }",
+			"  public static function filter(it:Iterable<String>, f:String->Bool):Array<String> {",
+			"    return [for (x in it) if (f(x)) x];",
+			"  }",
+			"  public static function count(it:Iterable<String>, ?pred:String->Bool):Int {",
+			"    var n = 0;",
+			"    if (pred == null) {",
+			"      for (_ in it) n++;",
+			"    } else {",
+			"      for (x in it) if (pred(x)) n++;",
+			"    }",
+			"    return n;",
+			"  }",
+			"  public static function empty(it:Array<String>):Bool {",
+			"    return !it.iterator().hasNext();",
 			"  }",
 			"}",
 			"class Log {",
@@ -1181,6 +1202,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source,
 			"static std::vector<std::string> flatMap(std::vector<std::string> it, std::function<std::vector<std::string>(std::string)> f) {",
 			"C++ smoke should lower Iterable<T> inside function types to vector values");
+		assertContains(source, "std::vector<std::string> __hxhx_flat_map_out;",
+			"C++ smoke should lower flatten(map(...)) to a direct flatMap vector accumulator");
+		assertContains(source, "for (auto __hxhx_flat_map_value : f(__hxhx_flat_map_item)) {",
+			"C++ smoke should call the flatMap mapper directly inside the nested loop");
+		assertContains(source, "__hxhx_flat_map_out.push_back(__hxhx_flat_map_value);", "C++ smoke should append flattened mapper values directly");
+		assertContains(source, "static std::vector<std::string> filter(std::vector<std::string> it, std::function<bool(std::string)> f) {",
+			"C++ smoke should infer vector returns from filtered comprehensions");
+		assertTrue(source.indexOf("return std::to_string(([&]() {\n  std::vector<std::string> __hxhx_comp_out;") < 0,
+			"C++ smoke should not stringify filtered array comprehensions");
+		assertContains(source, "static int count(std::vector<std::string> it, std::optional<std::function<bool(std::string)>> pred = std::nullopt) {",
+			"C++ smoke should keep optional Lambda.count predicates typed as optional callables");
+		assertContains(source, "if (pred.value()(x)) {", "C++ smoke should unwrap optional callables before invocation");
+		assertContains(source, "static bool empty(std::vector<std::string> it) {", "C++ smoke should lower Array<String> arguments to vector values");
+		assertContains(source, "return (!(!it.empty()));", "C++ smoke should lower iterator().hasNext() on vectors through empty()");
 		assertTrue(source.indexOf("std::shared_ptr<Iterable>") < 0, "C++ smoke should not emit a fake unresolved Iterable runtime class in helper signatures");
 		assertContains(source, "(native[0]) = 7;", "C++ smoke should emit NativeArray indexed assignment");
 		assertContains(source, "(native.size())", "C++ smoke should emit NativeArray length read");
