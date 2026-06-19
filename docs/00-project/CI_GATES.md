@@ -154,6 +154,11 @@ Full1 Gate3 extended timing artifacts:
 - measured phases include host/toolchain setup, npm/Haxe dependency prep, upstream checkout fetch, and `strict_extended_gate3_matrix`
 - `strict_extended_gate3_matrix` is wrapped in an inner timeout below the job timeout so overruns fail with uploaded artifacts instead of GitHub job cancellation being mistaken for a successful matrix phase.
 
+Native iteration latency contract:
+- `docs/00-project/NATIVE_ITERATION_LATENCY_CONTRACT.md` defines the project-level buckets for focused local smokes, bootstrap regeneration, stage0-free `hxhx` rebuilds, native Reflaxe artifact loops, and Full1 gates.
+- `scripts/ci/native-iteration-latency-contract-check.js` validates that the contract stays connected to existing timing/reporting surfaces.
+- The contract marker is `NATIVE_ITERATION_LATENCY_POLICY:PASS`; it is a policy/coverage marker only, not measured speed evidence.
+
 Diagnostic Full1 timing scope:
 - `.github/workflows/full1-source-probe.yml` and `.github/workflows/full1-bootstrap-source-reconcile.yml` are intentionally outside the mandatory per-phase timing-artifact contract while they remain non-blocking diagnostic lanes.
 - Their purpose is source-vs-bootstrap failure classification, not release throughput regression detection. They already publish compact JSON summaries with run duration, build/suite timeout status, and pass/warn classification data.

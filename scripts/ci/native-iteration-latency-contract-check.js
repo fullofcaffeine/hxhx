@@ -1,0 +1,138 @@
+#!/usr/bin/env node
+/**
+ * Guard the native iteration latency north-star contract.
+ *
+ * This check validates the measurement contract and its references. It does not
+ * execute performance workloads or claim that latency targets have been met.
+ */
+
+const fs = require('fs')
+
+const contractPath = 'docs/00-project/NATIVE_ITERATION_LATENCY_CONTRACT.md'
+const northStarPath = 'docs/00-project/NORTH_STAR_GOALS.md'
+const ciGatesPath = 'docs/00-project/CI_GATES.md'
+const readmePath = 'README.md'
+const packageJsonPath = 'package.json'
+
+function fail(message) {
+  console.error(`[native-iteration-latency-contract-check] ERROR: ${message}`)
+  process.exitCode = 1
+}
+
+function readText(filePath) {
+  if (!fs.existsSync(filePath)) {
+    fail(`missing required file: ${filePath}`)
+    return ''
+  }
+  return fs.readFileSync(filePath, 'utf8')
+}
+
+function requireIncludes(filePath, text, snippet) {
+  if (!text.includes(snippet)) {
+    fail(`${filePath} must include: ${snippet}`)
+  }
+}
+
+function extractPolicyJson(doc) {
+  const match = doc.match(
+    /<!-- NATIVE_ITERATION_LATENCY_POLICY_JSON_START -->\s*```json\s*([\s\S]*?)\s*```\s*<!-- NATIVE_ITERATION_LATENCY_POLICY_JSON_END -->/
+  )
+  if (!match) {
+    fail(`${contractPath} must include NATIVE_ITERATION_LATENCY_POLICY_JSON_START/END markers`)
+    return null
+  }
+  try {
+    return JSON.parse(match[1])
+  } catch (error) {
+    fail(`${contractPath} policy JSON is invalid: ${error.message}`)
+    return null
+  }
+}
+
+function checkEvidence(bucket) {
+  if (!Array.isArray(bucket.evidence) || bucket.evidence.length === 0) {
+    fail(`bucket ${bucket.id} must define evidence[]`)
+    return
+  }
+  for (const evidencePath of bucket.evidence) {
+    if (!fs.existsSync(evidencePath)) {
+      fail(`bucket ${bucket.id} references missing evidence path: ${evidencePath}`)
+    }
+  }
+}
+
+function main() {
+  const contract = readText(contractPath)
+  const northStar = readText(northStarPath)
+  const ciGates = readText(ciGatesPath)
+  const readme = readText(readmePath)
+  const packageJson = readText(packageJsonPath)
+
+  for (const snippet of [
+    'NATIVE_ITERATION_LATENCY_POLICY:PASS',
+    'haxe.ocaml-5rjl',
+    'scripts/ci/full1-phase-timing.js',
+    'scripts/hxhx/bench-bootstrap-regen.sh',
+    'scripts/hxhx/bench-native-reflaxe.sh',
+    'FULL1_PERF_PARITY:PASS',
+    'README `Goals status` table'
+  ]) {
+    requireIncludes(contractPath, contract, snippet)
+  }
+
+  requireIncludes(northStarPath, northStar, contractPath)
+  requireIncludes(ciGatesPath, ciGates, contractPath)
+  requireIncludes(readmePath, readme, 'practical edit-compile-test latency')
+  requireIncludes(packageJsonPath, packageJson, 'native-iteration-latency-contract-check.js')
+
+  const policy = extractPolicyJson(contract)
+  if (!policy) return
+
+  if (policy.schema !== 'native-iteration-latency-policy.v1') {
+    fail(`unexpected policy schema: ${policy.schema}`)
+  }
+  if (policy.contractMarker !== 'NATIVE_ITERATION_LATENCY_POLICY:PASS') {
+    fail(`unexpected contract marker: ${policy.contractMarker}`)
+  }
+  if (policy.haxeCompatibilityBaseline !== '4.3.7') {
+    fail(`policy baseline must be 4.3.7, received ${policy.haxeCompatibilityBaseline}`)
+  }
+  if (policy.primaryOwnerBead !== 'haxe.ocaml-5rjl') {
+    fail(`policy.primaryOwnerBead must be haxe.ocaml-5rjl`)
+  }
+  if (!policy.timingTool || !fs.existsSync(policy.timingTool)) {
+    fail(`policy.timingTool references missing path: ${policy.timingTool}`)
+  }
+  if (!policy.policyGuard || policy.policyGuard !== 'scripts/ci/native-iteration-latency-contract-check.js') {
+    fail('policy.policyGuard must point at scripts/ci/native-iteration-latency-contract-check.js')
+  }
+  if (!Array.isArray(policy.measurementBuckets) || policy.measurementBuckets.length < 5) {
+    fail('policy.measurementBuckets must define at least five buckets')
+  } else {
+    const requiredIds = new Set([
+      'focused-local-smoke',
+      'bootstrap-snapshot-regeneration',
+      'stage0-free-hxhx-rebuild',
+      'native-reflaxe-artifact-loop',
+      'full1-evidence-gates',
+    ])
+    const seen = new Set()
+    for (const bucket of policy.measurementBuckets) {
+      if (!bucket.id || !bucket.purpose || !bucket.target) {
+        fail('each measurement bucket must include id, purpose, and target')
+        continue
+      }
+      seen.add(bucket.id)
+      checkEvidence(bucket)
+    }
+    for (const id of requiredIds) {
+      if (!seen.has(id)) fail(`missing required measurement bucket: ${id}`)
+    }
+  }
+
+  if (process.exitCode) return
+  console.log('[ci:guards] OK: native iteration latency contract is valid')
+  console.log('NATIVE_ITERATION_LATENCY_POLICY:PASS')
+}
+
+main()
