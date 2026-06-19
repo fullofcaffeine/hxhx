@@ -851,7 +851,9 @@ class CppTargetCore {
 					addExprClassDependencies(arg, add);
 			case EField(receiver, _):
 				addExprClassDependencies(receiver, add);
-			case ECall(EField(receiver, _), args):
+			case ECall(EField(receiver, method), args):
+				if (isInt64StaticReceiver(receiver) && int64StaticCallNeedsHelper(method))
+					add("Int64Helper");
 				addStaticReceiverClassDependency(receiver, add);
 				addExprClassDependencies(receiver, add);
 				for (arg in args)
@@ -3123,9 +3125,17 @@ class CppTargetCore {
 				"(" + renderExpr(args[0], scope) + " < 0)";
 			case "toStr" if (args.length == 1):
 				"std::to_string(" + renderExpr(args[0], scope) + ")";
+			case "parseString" if (args.length == 1):
+				"Int64Helper::parseString(" + stringExpr(args[0], scope) + ")";
+			case "fromFloat" if (args.length == 1):
+				"Int64Helper::fromFloat(" + renderExpr(args[0], scope) + ")";
 			case _:
 				throw "C++ source backend MVP unsupported Int64 static call: " + method;
 		};
+	}
+
+	static function int64StaticCallNeedsHelper(method:String):Bool {
+		return method == "parseString" || method == "fromFloat";
 	}
 
 	static function isStringToolsTrimMethod(method:String):Bool {

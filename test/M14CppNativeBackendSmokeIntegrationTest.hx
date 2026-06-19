@@ -470,6 +470,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return Int64.ofInt(0);",
 			"  }",
 			"}",
+			"class Int64Helper {",
+			"  public static function parseString(s:String):Int64 {",
+			"    return Int64.ofInt(0);",
+			"  }",
+			"  public static function fromFloat(f:Float):Int64 {",
+			"    return Int64.ofInt(0);",
+			"  }",
+			"}",
+			"class CppInt64StaticUseLike {",
+			"  public static function parse(s:String):Int64 {",
+			"    return Int64.parseString(s);",
+			"  }",
+			"  public static function from(f:Float):Int64 {",
+			"    return Int64.fromFloat(f);",
+			"  }",
+			"}",
 			"class StringIteratorUnicode {",
 			"  var offset = 0;",
 			"  var s:String;",
@@ -1474,6 +1490,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "__hxhx_char_at(s, 0)", "C++ smoke should lower string locals initialized from same-owner calls");
 		assertContains(source, "__hxhx_substring(s, 1, (s.size()))", "C++ smoke should preserve string-local type through reassignment paths");
 		assertContains(source, "return current;", "C++ smoke should return Int64 primitive values without narrowing to int");
+		assertContains(source, "return Int64Helper::parseString(std::string(s));", "C++ smoke should lower Int64.parseString through Int64Helper");
+		assertContains(source, "return Int64Helper::fromFloat(f);", "C++ smoke should lower Int64.fromFloat through Int64Helper");
+		assertTrue(source.indexOf("struct Int64Helper") < source.indexOf("struct CppInt64StaticUseLike"),
+			"C++ smoke should order Int64Helper before helper classes that call Int64.parseString/fromFloat");
 		assertTrue(source.indexOf("Int64::ofInt") < 0, "C++ smoke should not emit incomplete Int64 static helper calls");
 		assertContains(source, "auto __hxhx_iter_code = std::make_shared<StringIteratorUnicode>(s);",
 			"C++ smoke should bind Haxe iterator protocol objects before looping");
