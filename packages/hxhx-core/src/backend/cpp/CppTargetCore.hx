@@ -3253,7 +3253,8 @@ class CppTargetCore {
 	static function primitiveAbstractUnderlyingCppType(cls:HxClassDecl):Null<String> {
 		if (cls == null)
 			return null;
-		return primitiveTypeHintCppType(removeTypeHintWhitespace(abstractUnderlyingTypeHint(cls)));
+		final metadataType = primitiveTypeHintCppType(removeTypeHintWhitespace(abstractUnderlyingTypeHint(cls)));
+		return metadataType != null ? metadataType : knownPrimitiveBackedAbstractCppType(HxClassDecl.getName(cls));
 	}
 
 	static function primitiveTypeHintCppType(typeHint:String):Null<String> {
@@ -3271,9 +3272,21 @@ class CppTargetCore {
 		};
 	}
 
+	static function knownPrimitiveBackedAbstractCppType(typeHint:String):Null<String> {
+		return switch (sanitizeTypePath(typeBaseName(removeTypeHintWhitespace(typeHint)))) {
+			case "Int32":
+				"int";
+			case "UInt":
+				"unsigned int";
+			case _:
+				null;
+		};
+	}
+
 	static function primitiveBackedAbstractCppTypeForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
 		final cls = lookupClassForTypeHint(typeHint, scope, classLookup);
-		return primitiveAbstractUnderlyingCppType(cls);
+		final metadataType = primitiveAbstractUnderlyingCppType(cls);
+		return metadataType != null ? metadataType : knownPrimitiveBackedAbstractCppType(typeHint);
 	}
 
 	static function arrayBackedAbstractNameForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {

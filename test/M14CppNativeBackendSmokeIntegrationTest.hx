@@ -952,7 +952,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				new HxFunctionArg("b", "Int32", NoDefault, false, false)
 			], "Int",
 				[SReturn(EBinop("-", EIdent("a"), EIdent("b")), HxPos.unknown())], "")
-		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=Int"]);
+		], [], "", []);
 		final primitiveNames = new StringMap<Bool>();
 		primitiveNames.set("Int32", true);
 		final primitiveClasses = new StringMap<HxClassDecl>();
