@@ -266,6 +266,7 @@ For Haxe-to-target compiler, target-runtime, extern, plugin, and framework layer
 - Target-shaped Haxe APIs are fine, and sometimes preferable, when they are intentional.
   - Use them when they help migration, interop, predictable escape hatches, direct access to target capabilities, or exact target-semantic clarity.
   - Examples: thin extern facades, `php.Syntax`-style compile-time syntax bridges, native plugin host APIs, or low-level runtime support bindings.
+  - Do not treat target-shaped Haxe as an anti-pattern by default; the anti-pattern is exposing target shape accidentally because the compiler/runtime layer is incomplete or expedient.
 - Prefer canonical Haxe-facing APIs that use Haxe's strengths when designing new public surfaces:
   - concrete types instead of untyped strings,
   - macros or generated refs instead of fragile manual names,
