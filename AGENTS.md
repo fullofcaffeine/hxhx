@@ -256,6 +256,30 @@ If the library is not available locally, you may fetch it in a temporary locatio
 
 This is a hard rule to reduce API mistakes and keep integrations idiomatic.
 
+## Haxe-First API Design For Target Layers
+
+For Haxe-to-target compiler, target-runtime, extern, plugin, and framework layers, target compatibility is the floor, not the Haxe API design ceiling.
+
+- Preserve target behavior and upstream Haxe `4.3.7` compatibility as hard constraints.
+  - Do not hide semantic mismatches behind friendlier APIs.
+  - Do not weaken oracle-driven parity to make a wrapper feel nicer.
+- Target-shaped Haxe APIs are fine, and sometimes preferable, when they are intentional.
+  - Use them when they help migration, interop, predictable escape hatches, direct access to target capabilities, or exact target-semantic clarity.
+  - Examples: thin extern facades, `php.Syntax`-style compile-time syntax bridges, native plugin host APIs, or low-level runtime support bindings.
+- Prefer canonical Haxe-facing APIs that use Haxe's strengths when designing new public surfaces:
+  - concrete types instead of untyped strings,
+  - macros or generated refs instead of fragile manual names,
+  - properties and abstracts when they clarify intent,
+  - completion-friendly declarations,
+  - compile-time diagnostics over runtime surprises.
+- For Reflaxe target promotion, expose both layers where useful:
+  - a 1:1 target facade for interop, predictability, migration, and escape hatches,
+  - and a semantic Haxe wrapper for normal user-facing code when it improves readability, safety, or migration without changing generated target behavior.
+- Backend implementation convenience is not an API-design reason.
+  - Do not force users to write target-shaped Haxe only because the emitter currently lacks a better lowering.
+  - If a target-shaped API is chosen as the canonical API, document why that shape is intentional rather than an emitter limitation.
+  - If the canonical Haxe API needs new lowering, externs, generated refs, or docs, track that explicitly in beads instead of making the lower-level facade the only path.
+
 ## Licensing (MIT Goal, Keep Private for Now)
 
 This repository is intended to become:
