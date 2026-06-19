@@ -527,11 +527,35 @@ class HxParser {
 	}
 
 	static function normalizeInlineStdClassSwitchConditionalMarkers(source:String):String {
-		if (source == null || source.indexOf("#if (neko || cs || python)") < 0)
+		if (source == null || source.indexOf("#if") < 0 || source.indexOf("#else") < 0 || source.indexOf("#end") < 0)
 			return source;
 		var out = source;
-		out = StringTools.replace(out, "#if (neko || cs || python) Type.getClassName(c) #else c #end", "Type.getClassName(c)");
-		out = StringTools.replace(out, '#if (neko || cs || python) "Array" #else cast Array #end', '"Array"');
+		var search = 0;
+		while (search < out.length) {
+			final idxIf = out.indexOf("#if", search);
+			if (idxIf < 0)
+				break;
+			final idxElse = out.indexOf("#else", idxIf + 3);
+			final idxEnd = out.indexOf("#end", idxIf + 3);
+			if (idxElse < 0 || idxEnd < 0 || idxElse > idxEnd)
+				break;
+			final thenPayload = out.substr(idxIf, idxElse - idxIf);
+			final replacement = if (thenPayload.indexOf("Type.getClassName(c)") >= 0) {
+				"Type.getClassName(c)";
+			} else if (thenPayload.indexOf('"Array"') >= 0) {
+				'"Array"';
+			} else {
+				null;
+			}
+			if (replacement == null) {
+				search = idxEnd + 4;
+				continue;
+			}
+			final prefix = out.substr(0, idxIf);
+			final suffix = out.substr(idxEnd + 4);
+			out = prefix + replacement + suffix;
+			search = prefix.length + replacement.length;
+		}
 		return out;
 	}
 

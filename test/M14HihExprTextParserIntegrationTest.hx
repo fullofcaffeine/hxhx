@@ -1419,6 +1419,16 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected conditional class switch statement");
 		}
 
+		final denseConditionalClassSwitchStmts = HxParser.parseFunctionBodyText('switch(#if(neko||cs||python)Type.getClassName(c)#else c #end){case #if(neko||cs||python)"Array"#else cast Array #end:value=1;}');
+		assertTrue(denseConditionalClassSwitchStmts.length == 1, "expected dense conditional class switch to parse");
+		switch (denseConditionalClassSwitchStmts[0]) {
+			case SSwitch(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("c")]), [PString("Array")], _):
+			case SExpr(EUnsupported(raw), _):
+				fail("dense conditional class switch parsed as unsupported: " + raw);
+			case _:
+				fail("expected dense conditional class switch statement");
+		}
+
 		final macroIdentSpliceStmts = HxParser.parseFunctionBodyText('tests.push(macro deq(0, $$i{name}(0)));');
 		assertTrue(macroIdentSpliceStmts.length == 1, "expected macro identifier splice push to parse");
 		switch (macroIdentSpliceStmts[0]) {
