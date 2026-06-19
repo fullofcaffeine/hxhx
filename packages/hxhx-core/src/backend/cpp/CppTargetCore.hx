@@ -606,8 +606,111 @@ class CppTargetCore {
 			addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), add);
 			for (arg in HxFunctionDecl.getArgs(fn))
 				addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), add);
+			addStmtClassDependencies(HxFunctionDecl.getBody(fn), add);
 		}
 		return deps;
+	}
+
+	/**
+		Collect helper classes that inline C++ method bodies need fully defined.
+
+		Forward declarations are enough for fields like `std::shared_ptr<T>`, but not
+		for inline method bodies that instantiate `T` or call through a `T` reference.
+		Those body-only dependencies must therefore participate in helper ordering.
+	**/
+	static function addStmtClassDependencies(stmts:Array<HxStmt>, add:String->Void):Void {
+		for (stmt in stmts)
+			addOneStmtClassDependencies(stmt, add);
+	}
+
+	static function addOneStmtClassDependencies(stmt:HxStmt, add:String->Void):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				addStmtClassDependencies(stmts, add);
+			case SVar(_, typeHint, init, _):
+				addTypeHintDependencies(typeHint, add);
+				if (init != null)
+					addExprClassDependencies(init, add);
+			case SIf(cond, thenBranch, elseBranch, _):
+				addExprClassDependencies(cond, add);
+				addOneStmtClassDependencies(thenBranch, add);
+				if (elseBranch != null)
+					addOneStmtClassDependencies(elseBranch, add);
+			case SForIn(_, iterable, body, _):
+				addExprClassDependencies(iterable, add);
+				addOneStmtClassDependencies(body, add);
+			case SForKeyValue(_, _, iterable, body, _):
+				addExprClassDependencies(iterable, add);
+				addOneStmtClassDependencies(body, add);
+			case SWhile(cond, body, _):
+				addExprClassDependencies(cond, add);
+				addOneStmtClassDependencies(body, add);
+			case SDoWhile(body, cond, _):
+				addOneStmtClassDependencies(body, add);
+				addExprClassDependencies(cond, add);
+			case SSwitch(scrutinee, _, bodies, _):
+				addExprClassDependencies(scrutinee, add);
+				for (body in bodies)
+					addOneStmtClassDependencies(body, add);
+			case STry(tryBody, catches, _):
+				addOneStmtClassDependencies(tryBody, add);
+				for (c in catches) {
+					addTypeHintDependencies(c.typeHint, add);
+					addOneStmtClassDependencies(c.body, add);
+				}
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				addExprClassDependencies(expr, add);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function addExprClassDependencies(expr:HxExpr, add:String->Void):Void {
+		switch (expr) {
+			case ENew(typePath, args):
+				addTypeHintDependencies(typePath, add);
+				for (arg in args)
+					addExprClassDependencies(arg, add);
+			case EField(receiver, _):
+				addExprClassDependencies(receiver, add);
+			case ECall(callee, args):
+				addExprClassDependencies(callee, add);
+				for (arg in args)
+					addExprClassDependencies(arg, add);
+			case EArrayDecl(values):
+				for (value in values)
+					addExprClassDependencies(value, add);
+			case EArrayAccess(array, index):
+				addExprClassDependencies(array, add);
+				addExprClassDependencies(index, add);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
+				addExprClassDependencies(iterable, add);
+				if (guardExpr != null)
+					addExprClassDependencies(guardExpr, add);
+				addExprClassDependencies(yieldExpr, add);
+			case ERange(start, end):
+				addExprClassDependencies(start, add);
+				addExprClassDependencies(end, add);
+			case EBinop(_, left, right):
+				addExprClassDependencies(left, add);
+				addExprClassDependencies(right, add);
+			case EUnop(_, inner) | ELambda(_, inner) | EMacroExpr(inner, _) | EUntyped(inner):
+				addExprClassDependencies(inner, add);
+			case ETernary(cond, thenExpr, elseExpr):
+				addExprClassDependencies(cond, add);
+				addExprClassDependencies(thenExpr, add);
+				addExprClassDependencies(elseExpr, add);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					addExprClassDependencies(value, add);
+			case ESwitch(scrutinee, _, exprs):
+				addExprClassDependencies(scrutinee, add);
+				for (caseExpr in exprs)
+					addExprClassDependencies(caseExpr, add);
+			case ECast(inner, typeHint):
+				addExprClassDependencies(inner, add);
+				addTypeHintDependencies(typeHint, add);
+			case _:
+		}
 	}
 
 	static function addTypeHintDependencies(typeHint:String, add:String->Void):Void {
