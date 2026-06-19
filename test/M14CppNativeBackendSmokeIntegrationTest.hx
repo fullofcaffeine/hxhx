@@ -345,6 +345,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    for (x in it) a.push(x);",
 			"    return a;",
 			"  }",
+			"  public static function mapLike(it:Iterable<String>, f:String->String):Array<String> {",
+			"    return [for (x in it) f(x)];",
+			"  }",
 			"  public static function flatMap(it:Iterable<String>, f:String->Iterable<String>):Array<String> {",
 			"    return [\"ok\"];",
 			"  }",
@@ -1130,6 +1133,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "a.push_back(x);", "C++ smoke should lower Array.push on vector locals to push_back");
 		assertContains(source, "return a;", "C++ smoke should return vector-backed Array locals directly");
 		assertTrue(source.indexOf("std::make_shared<Array>") < 0, "C++ smoke should not construct std Array values as shared_ptr helper classes");
+		assertContains(source, "static std::vector<std::string> mapLike(std::vector<std::string> it, std::function<std::string(std::string)> f) {",
+			"C++ smoke should keep function-valued map helpers typed");
+		assertContains(source, "__hxhx_comp_out.push_back(f(x));", "C++ smoke should infer comprehension output from local std::function call return types");
 		assertContains(source,
 			"static std::vector<std::string> flatMap(std::vector<std::string> it, std::function<std::vector<std::string>(std::string)> f) {",
 			"C++ smoke should lower Iterable<T> inside function types to vector values");

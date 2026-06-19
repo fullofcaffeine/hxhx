@@ -1694,6 +1694,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "unsafeGet"), args) if (args.length == 2 && isCppNativeArrayReceiver(receiver)):
 				cppVectorElementType(exprCppType(args[0], scope));
+			case ECall(EIdent(name), _):
+				cppFunctionReturnTypeFromCppType(exprCppType(EIdent(name), scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case ECall(EField(ESuper, method), _):
@@ -1806,6 +1808,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
 				nativeArrayVectorType(scope);
+			case ECall(EIdent(name), _):
+				cppFunctionReturnTypeFromCppType(exprCppType(EIdent(name), scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
@@ -3141,6 +3145,24 @@ class CppTargetCore {
 				cppTypeHint(arg, scope, classLookup)
 		].filter(t -> t != "void");
 		return "std::function<" + returnType + "(" + args.join(", ") + ")>";
+	}
+
+	static function cppFunctionReturnTypeFromCppType(typeName:String):String {
+		final prefix = "std::function<";
+		if (typeName == null || !StringTools.startsWith(typeName, prefix) || !StringTools.endsWith(typeName, ">"))
+			return "";
+		final signature = typeName.substr(prefix.length, typeName.length - prefix.length - 1);
+		var angleDepth = 0;
+		for (i in 0...signature.length) {
+			final c = signature.charAt(i);
+			if (c == "<")
+				angleDepth++;
+			else if (c == ">" && angleDepth > 0)
+				angleDepth--;
+			else if (c == "(" && angleDepth == 0)
+				return StringTools.trim(signature.substring(0, i));
+		}
+		return "";
 	}
 
 	static function splitTopLevelFunctionType(typeHint:String):Array<String> {
