@@ -407,7 +407,7 @@ class CppTargetCore {
 
 	static function cppAnonFieldType(expr:HxExpr):String {
 		return switch (expr) {
-			case EString(_) | EEnumValue(_) | EMacroExpr(_, _):
+			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
 				"std::string";
 			case EFloat(_):
 				"double";
@@ -769,6 +769,8 @@ class CppTargetCore {
 				anonExpr(fieldNames, fieldValues, scope);
 			case EMacroExpr(inner, wrappers):
 				macroExpr(inner, wrappers);
+			case EMacroType(typeText):
+				macroTypeExpr(typeText);
 			case ESwitch(scrutinee, patterns, exprs):
 				switchExpr(scrutinee, patterns, exprs, scope);
 			case ELambda(args, body):
@@ -1017,6 +1019,8 @@ class CppTargetCore {
 				"std::string(" + quoteString(name) + ")";
 			case EMacroExpr(inner, wrappers):
 				macroExpr(inner, wrappers);
+			case EMacroType(typeText):
+				macroTypeExpr(typeText);
 			case EBool(_):
 				"std::string(" + renderExpr(expr, scope) + " ? \"true\" : \"false\")";
 			case EInt(_) | EFloat(_):
@@ -1231,6 +1235,43 @@ class CppTargetCore {
 		return "std::string(" + quoteString(macroExprText(expr, wrappers)) + ")";
 	}
 
+	/**
+		Lower C++ MVP `macro :Type` quotes to stable printable text.
+
+		C++ does not yet have a target-owned recursive `haxe.macro.ComplexType`
+		runtime. Emitting a string mirrors this backend's existing `macro expr`
+		quote MVP and supports printer-style upstream probes without generating a
+		fake macro runtime class in the emitter.
+	**/
+	static function macroTypeExpr(typeText:String):String {
+		return "std::string(" + quoteString(macroTypeText(typeText)) + ")";
+	}
+
+	static function macroTypeText(typeText:String):String {
+		var text = StringTools.trim(typeText == null ? "" : typeText);
+		if (StringTools.startsWith(text, ":"))
+			text = StringTools.trim(text.substr(1));
+		return collapseSpaces(StringTools.replace(text, "->", " -> "));
+	}
+
+	static function collapseSpaces(value:String):String {
+		final out = new StringBuf();
+		var pendingSpace = false;
+		for (i in 0...value.length) {
+			final c = value.charCodeAt(i);
+			final isSpace = c == " ".code || c == "\n".code || c == "\t".code || c == "\r".code;
+			if (isSpace) {
+				pendingSpace = out.length > 0;
+			} else {
+				if (pendingSpace)
+					out.add(" ");
+				out.addChar(c);
+				pendingSpace = false;
+			}
+		}
+		return out.toString();
+	}
+
 	static function macroExprText(expr:HxExpr, wrappers:Array<String>):String {
 		var text = macroExprDefText(expr);
 		if (wrappers != null) {
@@ -1384,7 +1425,7 @@ class CppTargetCore {
 
 	static function isStringLike(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EString(_) | EEnumValue(_) | EMacroExpr(_, _):
+			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
 				true;
 			case ECall(EEnumValue(_), _):
 				true;

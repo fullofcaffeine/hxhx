@@ -160,6 +160,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(id(6)));",
 			"    var macroQuote = macro (\"macro:value\");",
 			"    Sys.println(macroQuote);",
+			"    var macroType = macro :X -> Y;",
+			"    Sys.println(macroType);",
 			"    var switched = switch (2) {",
 			"      case 1: \"one\";",
 			"      case 2: \"two\";",
@@ -331,6 +333,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("HelperMacros"), "typeError"),
 				[EUnsupported("for_expr:for (key => value in new MyNotIterator()) { }")])) == "true",
 			"C++ HelperMacros.typeError for-expression probes should fold to true");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EMacroType("X -> Y")) == "std::string(\"X -> Y\")",
+			"C++ macro type quotes should lower to stable printable text in the MVP");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
@@ -408,6 +412,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "id(6)", "C++ smoke should call local lambda values");
 		assertContains(source, "auto macroQuote = std::string(\"EParenthesis(EConst(CString(macro:value)))\");",
 			"C++ smoke should lower macro quote wrappers to stable text");
+		assertContains(source, "auto macroType = std::string(\"X -> Y\");", "C++ smoke should lower macro type quotes to stable text");
 		assertContains(source, "auto switched = ([&]() {", "C++ smoke should lower switch expressions through an IIFE");
 		assertContains(source, "auto __hxhx_switch = 2;", "C++ smoke should bind switch expression scrutinee");
 		assertContains(source, "else if (__hxhx_switch == 2) {", "C++ smoke should lower switch expression int cases");
@@ -436,7 +441,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\n0\n1\n1\n0\n2\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}
