@@ -957,7 +957,7 @@ capture_target_failure_artifacts() {
   fi
 
   case "$t_lower" in
-    neko) ;;
+    cpp|cppia|neko) ;;
     *) return 0 ;;
   esac
 
@@ -970,14 +970,28 @@ capture_target_failure_artifacts() {
     echo "captured_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   } >"$target_artifacts/manifest.txt"
 
-  while IFS= read -r source_file; do
-    copied=1
-    cp "$source_file" "$target_artifacts/$(basename "$source_file")"
-    nl -ba "$source_file" >"$target_artifacts/$(basename "$source_file").nl.txt"
-  done < <(find "$UPSTREAM_DIR/tests" \( -path '*/bin/*.neko' -o -path '*/export/*.neko' \) -type f -size -2M 2>/dev/null | sort)
+  if [ "$t_lower" = "cpp" ] || [ "$t_lower" = "cppia" ]; then
+    while IFS= read -r source_file; do
+      local rel="${source_file#$UPSTREAM_DIR/tests/}"
+      local safe="${rel//\//__}"
+      copied=1
+      cp "$source_file" "$target_artifacts/$safe"
+      nl -ba "$source_file" >"$target_artifacts/$safe.nl.txt"
+    done < <(find "$UPSTREAM_DIR/tests" \( -name 'TestMain.cpp' -o -name 'Build.xml' -o -name 'compile-cpp.hxml' -o -name 'compile.hxml' \) -type f -size -4M 2>/dev/null | sort)
+  fi
+
+  if [ "$t_lower" = "neko" ]; then
+    while IFS= read -r source_file; do
+      local rel="${source_file#$UPSTREAM_DIR/tests/}"
+      local safe="${rel//\//__}"
+      copied=1
+      cp "$source_file" "$target_artifacts/$safe"
+      nl -ba "$source_file" >"$target_artifacts/$safe.nl.txt"
+    done < <(find "$UPSTREAM_DIR/tests" \( -path '*/bin/*.neko' -o -path '*/export/*.neko' \) -type f -size -2M 2>/dev/null | sort)
+  fi
 
   issue10937_dir="$UPSTREAM_DIR/tests/misc/neko/projects/Issue10937"
-  if [ -d "$issue10937_dir" ]; then
+  if [ "$t_lower" = "neko" ] && [ -d "$issue10937_dir" ]; then
     {
       echo "cwd=$issue10937_dir"
       echo "haxelib_wrapper=$WRAP_DIR/haxelib"

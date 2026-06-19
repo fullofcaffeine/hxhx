@@ -256,6 +256,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return {value: val, key: idx++};",
 			"  }",
 			"}",
+			"class GenericListNode<T> {",
+			"  public var item:T;",
+			"  public var next:GenericListNode<T>;",
+			"  public function new(item:T, next:GenericListNode<T>) {",
+			"    this.item = item;",
+			"    this.next = next;",
+			"  }",
+			"}",
+			"class GenericListKeyValueIterator<T> {",
+			"  var idx:Int;",
+			"  var head:GenericListNode<T>;",
+			"  public function new(head:GenericListNode<T>) {",
+			"    this.head = head;",
+			"    this.idx = 0;",
+			"  }",
+			"  public function next():{key:Int, value:T} {",
+			"    var val = head.item;",
+			"    head = head.next;",
+			"    return {value: val, key: idx++};",
+			"  }",
+			"}",
 			"class Log {",
 			"  public static function warn(message:String):Void {",
 			"    Sys.println(message);",
@@ -597,6 +618,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should collect structural anonymous return payloads with identifier values as strings");
 		assertContains(source, "auto next() {\n    auto val = current;\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
 			"C++ smoke should lower structural anonymous return types through C++ auto instead of stringifying the key field");
+		assertContains(source,
+			"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
+			"C++ smoke should lower generic key/value iterator structural returns through C++ auto");
 		assertContains(source, "auto ref = std::make_shared<RefNode>(\"root\", nullptr);",
 			"C++ smoke should lower class create factories to constructors without requiring inline runtime stubs");
 		assertContains(source, "(ref->item)", "C++ smoke should read fields through class references");
