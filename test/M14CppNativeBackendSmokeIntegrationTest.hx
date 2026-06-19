@@ -967,6 +967,52 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ primitive-backed abstract helpers should not emit instance wrapper methods that require abstract this semantics");
 		assertTrue(primitiveLines.indexOf("std::shared_ptr<Int32>") < 0,
 			"C++ primitive-backed abstracts should not leak shared_ptr wrapper types into helper signatures");
+		final stringIterator = new HxClassDecl("StringIterator", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Void",
+				[SExpr(EBinop("=", EField(EThis, "s"), EIdent("s")), HxPos.unknown())], ""),
+			new HxFunctionDecl("hasNext", Public, false, [], "String", [
+				SReturn(EBinop("<", EIdent("offset"), EField(EIdent("s"), "length")), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("next", Public, false, [], "String", [
+				SReturn(ECall(EField(EIdent("StringTools"), "unsafeCodeAt"), [EIdent("s"), EUnop("post++", EIdent("offset"))]), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("offset", Public, false, "", EInt(0)),
+			new HxFieldDecl("s", Public, false, "String", null)
+		]);
+		final stringKeyValueIterator = new HxClassDecl("StringKeyValueIterator", false, [
+			new HxFunctionDecl("next", Public, false, [], "String", [
+				SReturn(EAnon(["key", "value"], [
+					EIdent("offset"),
+					ECall(EField(EIdent("StringTools"), "fastCodeAt"), [EIdent("s"), EUnop("post++", EIdent("offset"))])
+				]), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("offset", Public, false, "", EInt(0)),
+			new HxFieldDecl("s", Public, false, "String", null)
+		]);
+		final stringIteratorNames = new StringMap<Bool>();
+		for (name in ["StringIterator", "StringKeyValueIterator"])
+			stringIteratorNames.set(name, true);
+		final stringIteratorClasses = new StringMap<HxClassDecl>();
+		stringIteratorClasses.set("StringIterator", stringIterator);
+		stringIteratorClasses.set("StringKeyValueIterator", stringKeyValueIterator);
+		final stringIteratorLookup = {names: stringIteratorNames, byName: stringIteratorClasses};
+		final stringIteratorLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringIterator, stringIteratorLookup).join("\n");
+		final stringKeyValueIteratorLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringKeyValueIterator, stringIteratorLookup)
+			.join("\n");
+		assertContains(stringIteratorLines, "int offset = 0;", "C++ string iterator offset fields should keep integer defaults");
+		assertContains(stringIteratorLines, "bool hasNext() {\n    return (offset < (s.size()));\n  }",
+			"C++ string iterator hasNext should repair erased String hints to Bool");
+		assertContains(stringIteratorLines, "int next() {\n    return static_cast<int>(static_cast<int>(static_cast<unsigned char>(s[(offset++)])));\n  }",
+			"C++ string iterator next should lower StringTools.unsafeCodeAt directly to an int code point");
+		assertContains(stringKeyValueIteratorLines, "auto next() {", "C++ string key/value iterator records should return auto, not String");
+		assertContains(stringKeyValueIteratorLines,
+			"return __hxhx_anon_key_int__value_int_{offset, static_cast<int>(static_cast<unsigned char>(s[(offset++)]))};",
+			"C++ string key/value iterator records should infer integer key/value fields");
+		assertTrue(stringIteratorLines.indexOf("std::string offset = 0;") < 0, "C++ string iterator offset fields should not default through std::string");
+		assertTrue(stringIteratorLines.indexOf("std::to_string(StringTools::unsafeCodeAt") < 0,
+			"C++ string iterator code-point calls should not leak incomplete StringTools static calls");
 		final stdArray = new HxClassDecl("Array", false, [
 			new HxFunctionDecl("map", Public, false, [new HxFunctionArg("f", "String->String", NoDefault, false, false)], "Array<String>", [
 				SVar("result", "Array<String>", ECall(EField(EIdent("cpp.NativeArray"), "create"), [EField(EThis, "length")]), HxPos.unknown()),

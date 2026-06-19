@@ -772,7 +772,7 @@ class CppTargetCore {
 		for (field in HxClassDecl.getFields(cls)) {
 			if (HxFieldDecl.getIsStatic(field))
 				continue;
-			final typeName = cppTypeHint(HxFieldDecl.getTypeHint(field), scope);
+			final typeName = knownStdlibFieldCppType(className, HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field), scope);
 			final init = HxFieldDecl.getInit(field);
 			final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
 			out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
@@ -889,6 +889,34 @@ class CppTargetCore {
 		}
 		out.push("};");
 		return out;
+	}
+
+	static function knownStdlibFieldCppType(className:String, fieldName:String, typeHint:String, ?scope:CppRenderScope):String {
+		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
+		if (isStringIteratorHelper(owner) && (field == "offset" || field == "byteOffset" || field == "charOffset"))
+			return "int";
+		return cppTypeHint(typeHint, scope);
+	}
+
+	static function knownStdlibMethodReturnCppType(className:String, methodName:String, typeHint:String, ?scope:CppRenderScope,
+			?classLookup:CppClassLookup):String {
+		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
+		if (isStringIteratorHelper(owner)) {
+			if (method == "hasNext")
+				return "bool";
+			if (method == "next")
+				return owner == "StringIterator" || owner == "StringIteratorUnicode" ? "int" : "auto";
+		}
+		return cppReturnTypeHint(typeHint, scope, classLookup);
+	}
+
+	static function isStringIteratorHelper(className:String):Bool {
+		return className == "StringIterator"
+			|| className == "StringIteratorUnicode"
+			|| className == "StringKeyValueIterator"
+			|| className == "StringKeyValueIteratorUnicode";
 	}
 
 	static function renderScope(cls:HxClassDecl, classLookup:CppClassLookup, returnType:String):CppRenderScope {
@@ -1497,6 +1525,9 @@ class CppTargetCore {
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("Math"), method), args):
 				mathCallExpr(method, args, scope);
+			case ECall(EField(EIdent("StringTools"), method), args) if (args.length == 2
+				&& (method == "fastCodeAt" || method == "unsafeCodeAt")):
+				stringCodeAtExpr(args[0], args[1], scope);
 			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
 				nativeArrayCreateExpr(args[0], scope);
 			case ECall(EField(receiver, "create"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
@@ -1845,6 +1876,10 @@ class CppTargetCore {
 		return renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
 	}
 
+	static function stringCodeAtExpr(s:HxExpr, index:HxExpr, ?scope:CppRenderScope):String {
+		return "static_cast<int>(static_cast<unsigned char>(" + renderExpr(s, scope) + "[" + renderExpr(index, scope) + "]))";
+	}
+
 	static function flatMapExpr(iterable:HxExpr, mapper:HxExpr, ?scope:CppRenderScope):String {
 		final mappedType = cppFunctionReturnTypeFromCppType(exprCppType(mapper, scope));
 		final elementType = cppIterableElementType(mappedType, scope);
@@ -1910,6 +1945,8 @@ class CppTargetCore {
 				cppFunctionReturnTypeFromCppType(exprCppType(EIdent(name), scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
+			case ECall(EField(EIdent("StringTools"), method), _) if (method == "fastCodeAt" || method == "unsafeCodeAt"):
+				"int";
 			case ECall(EField(ESuper, method), _):
 				final baseType = scope.owner == null ? null : baseTypeName(scope.owner);
 				baseType == null ? "" : classMethodCppReturnType(baseType, method, false, scope);
@@ -1936,7 +1973,7 @@ class CppTargetCore {
 			return "";
 		for (field in HxClassDecl.getFields(scope.owner)) {
 			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name)
-				return cppTypeHint(HxFieldDecl.getTypeHint(field), scope);
+				return knownStdlibFieldCppType(sanitizeTypePath(HxClassDecl.getName(scope.owner)), name, HxFieldDecl.getTypeHint(field), scope);
 		}
 		return "";
 	}
@@ -1952,7 +1989,7 @@ class CppTargetCore {
 			return "";
 		for (field in HxClassDecl.getFields(cls)) {
 			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == fieldName)
-				return cppTypeHint(HxFieldDecl.getTypeHint(field), scope);
+				return knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), scope);
 		}
 		return "";
 	}
@@ -1967,7 +2004,7 @@ class CppTargetCore {
 			if (HxFunctionDecl.getName(fn) == methodName
 				&& HxFunctionDecl.getName(fn) != "new"
 				&& HxFunctionDecl.getIsStatic(fn) == wantStatic)
-				return cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope);
+				return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
 		}
 		return "";
 	}
@@ -3374,6 +3411,9 @@ class CppTargetCore {
 
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
+		final ownerName = owner == null ? "" : sanitizeTypePath(HxClassDecl.getName(owner));
+		if (isStringIteratorHelper(ownerName) && raw.length > 0)
+			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null, classLookup);
 		if (raw.length > 0)
 			return cppReturnTypeHint(raw, null, classLookup);
 		final scope = renderScope(owner, classLookup, "auto");
