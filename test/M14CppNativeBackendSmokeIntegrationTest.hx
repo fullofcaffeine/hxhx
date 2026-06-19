@@ -229,6 +229,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return \"ok\";",
 			"  }",
 			"}",
+			"class UsesLater {",
+			"  public var node:LaterNode;",
+			"  public function new(node:LaterNode) {",
+			"    this.node = node;",
+			"  }",
+			"  public function label():String {",
+			"    return node.label;",
+			"  }",
+			"}",
+			"class LaterNode {",
+			"  public var label:String;",
+			"  public function new(label:String) {",
+			"    this.label = label;",
+			"  }",
+			"}",
 			"class Log {",
 			"  public static function warn(message:String):Void {",
 			"    Sys.println(message);",
@@ -548,6 +563,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower generic function return segments through the MVP dynamic string fallback");
 		assertContains(source, "std::string noArg(std::function<std::string()> f) {",
 			"C++ smoke should lower Void function arguments to zero-argument std::function signatures");
+		assertTrue(source.indexOf("struct LaterNode {") < source.indexOf("struct UsesLater {"),
+			"C++ smoke should emit helper class definitions before classes that dereference them through shared_ptr fields");
 		assertContains(source, "auto ref = std::make_shared<RefNode>(\"root\", nullptr);",
 			"C++ smoke should lower class create factories to constructors without requiring inline runtime stubs");
 		assertContains(source, "(ref->item)", "C++ smoke should read fields through class references");

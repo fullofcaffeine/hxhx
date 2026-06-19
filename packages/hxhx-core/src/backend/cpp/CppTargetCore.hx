@@ -532,6 +532,7 @@ class CppTargetCore {
 	static function renderHelperClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
 		final out = new Array<Array<String>>();
 		final emitted = new haxe.ds.StringMap<Bool>();
+		final helpers = new Array<HxClassDecl>();
 		final mainName = HxClassDecl.getName(mainClass);
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
@@ -540,10 +541,76 @@ class CppTargetCore {
 				if (rawName == mainName || emitted.exists(rawName) || HxClassDecl.getIsInterface(cls))
 					continue;
 				emitted.set(rawName, true);
-				out.push(renderHelperClass(cls, classLookup));
+				helpers.push(cls);
 			}
 		}
+		for (cls in orderHelperClasses(helpers, classLookup))
+			out.push(renderHelperClass(cls, classLookup));
 		return out;
+	}
+
+	static function orderHelperClasses(classes:Array<HxClassDecl>, classLookup:CppClassLookup):Array<HxClassDecl> {
+		final byName = new haxe.ds.StringMap<HxClassDecl>();
+		for (cls in classes)
+			byName.set(sanitizeTypePath(HxClassDecl.getName(cls)), cls);
+		final ordered = new Array<HxClassDecl>();
+		final state = new haxe.ds.StringMap<Int>();
+		function visit(cls:HxClassDecl):Void {
+			final name = sanitizeTypePath(HxClassDecl.getName(cls));
+			final current = state.get(name);
+			if (current == 2)
+				return;
+			if (current == 1)
+				return;
+			state.set(name, 1);
+			for (dep in helperClassDependencies(cls, classLookup)) {
+				final depCls = byName.get(dep);
+				if (depCls != null)
+					visit(depCls);
+			}
+			state.set(name, 2);
+			ordered.push(cls);
+		}
+		for (cls in classes)
+			visit(cls);
+		return ordered;
+	}
+
+	static function helperClassDependencies(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final deps = new Array<String>();
+		final seen = new haxe.ds.StringMap<Bool>();
+		final self = sanitizeTypePath(HxClassDecl.getName(cls));
+		function add(name:String):Void {
+			if (name == null || name == self || !classLookup.names.exists(name) || seen.exists(name))
+				return;
+			seen.set(name, true);
+			deps.push(name);
+		}
+		add(baseTypeName(cls));
+		for (field in HxClassDecl.getFields(cls))
+			addTypeHintDependencies(HxFieldDecl.getTypeHint(field), add);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), add);
+			for (arg in HxFunctionDecl.getArgs(fn))
+				addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), add);
+		}
+		return deps;
+	}
+
+	static function addTypeHintDependencies(typeHint:String, add:String->Void):Void {
+		final hint = unwrapNullTypeHint(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (hint.length == 0)
+			return;
+		if (StringTools.startsWith(hint, "Array<") && StringTools.endsWith(hint, ">")) {
+			addTypeHintDependencies(hint.substr("Array<".length, hint.length - "Array<".length - 1), add);
+			return;
+		}
+		if (isFunctionTypeHint(hint)) {
+			for (part in splitTopLevelFunctionType(hint))
+				addTypeHintDependencies(part, add);
+			return;
+		}
+		add(sanitizeTypePath(typeBaseName(hint)));
 	}
 
 	static function renderHelperClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
