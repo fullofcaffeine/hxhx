@@ -1122,6 +1122,77 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final int64Carrier = new HxClassDecl("__Int64", false, [], [], "", []);
 		final int64CarrierLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(int64Carrier, int64Lookup).join("\n");
 		assertTrue(int64CarrierLines.length == 0, "C++ __Int64 abstract carriers should not emit stale high/low helper bodies");
+		final bytesData = new HxClassDecl("BytesData", false, [], [], "", []);
+		final bytes = new HxClassDecl("Bytes", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("length", "", NoDefault, false, false),
+				new HxFunctionArg("b", "", NoDefault, false, false)
+			], "Void", [
+				SExpr(EBinop("=", EField(EThis, "length"), EIdent("length")), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EThis, "b"), EIdent("b")), HxPos.unknown())
+			],
+				""),
+			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("pos", "Int", NoDefault, false, false)], "Int",
+				[SReturn(EArrayAccess(EIdent("b"), EIdent("pos")), HxPos.unknown())], ""),
+			new HxFunctionDecl("set", Public, false, [
+				new HxFunctionArg("pos", "Int", NoDefault, false, false),
+				new HxFunctionArg("v", "Int", NoDefault, false, false)
+			], "Void", [
+				SExpr(EBinop("=", EArrayAccess(EIdent("b"), EIdent("pos")), EIdent("v")), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("blit", Public, false, [
+				new HxFunctionArg("pos", "Int", NoDefault, false, false),
+				new HxFunctionArg("src", "Bytes", NoDefault, false, false),
+				new HxFunctionArg("srcpos", "Int", NoDefault, false, false),
+				new HxFunctionArg("len", "Int", NoDefault, false, false)
+			], "Void", [
+				SExpr(ECall(EField(EIdent("b"), "blit"), [EIdent("pos"), EField(EIdent("src"), "b"), EIdent("srcpos"), EIdent("len")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("sub", Public, false, [
+				new HxFunctionArg("pos", "Int", NoDefault, false, false),
+				new HxFunctionArg("len", "Int", NoDefault, false, false)
+			], "Bytes", [
+				SReturn(ENew("Bytes",
+					[
+						EIdent("len"),
+						ECall(EField(EIdent("b"), "slice"), [EIdent("pos"), EBinop("+", EIdent("pos"), EIdent("len"))])
+					]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("compare", Public, false, [new HxFunctionArg("other", "Bytes", NoDefault, false, false)], "Int", [
+				SReturn(ECall(EField(EIdent("b"), "memcmp"), [EField(EIdent("other"), "b")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("alloc", Public, true, [new HxFunctionArg("length", "Int", NoDefault, false, false)], "Bytes", [
+				SVar("a", "BytesData", ENew("BytesData", []), HxPos.unknown()),
+				SExpr(ECall(EField(EField(EIdent("cpp"), "NativeArray"), "setSize"), [EIdent("a"), EIdent("length")]), HxPos.unknown()),
+				SReturn(ENew("Bytes", [EIdent("length"), EIdent("a")]), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("length", Public, false, "Int", null),
+			new HxFieldDecl("b", Public, false, "BytesData", null)
+		]);
+		final bytesNames = new StringMap<Bool>();
+		for (name in ["BytesData", "Bytes"])
+			bytesNames.set(name, true);
+		final bytesClasses = new StringMap<HxClassDecl>();
+		bytesClasses.set("BytesData", bytesData);
+		bytesClasses.set("Bytes", bytes);
+		final bytesLookup = {names: bytesNames, byName: bytesClasses};
+		final bytesDataLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(bytesData, bytesLookup).join("\n");
+		assertTrue(bytesDataLines.length == 0, "C++ BytesData should be target-owned byte storage, not a generated fake helper class");
+		final bytesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(bytes, bytesLookup).join("\n");
+		assertContains(bytesLines, "std::vector<int> b = {};", "C++ Bytes.b should use vector-backed BytesData storage");
+		assertContains(bytesLines, "Bytes(int length, std::vector<int> b) {", "C++ should recover erased Bytes constructor args from typed field assignments");
+		assertContains(bytesLines, "return static_cast<int>((b[pos]));", "C++ Bytes.get should index vector-backed BytesData directly");
+		assertContains(bytesLines, "(b[pos]) = v;", "C++ Bytes.set should write vector-backed BytesData directly");
+		assertContains(bytesLines, "__hxhx_bytes_blit(b, pos, (src->b), srcpos, len);", "C++ BytesData.blit should lower through target runtime support");
+		assertContains(bytesLines, "return std::make_shared<Bytes>(len, __hxhx_bytes_slice(b, pos, (pos + len)));",
+			"C++ BytesData.slice should lower through target runtime support");
+		assertContains(bytesLines, "return static_cast<int>(__hxhx_bytes_memcmp(b, (other->b)));",
+			"C++ BytesData.memcmp should lower through target runtime support");
+		assertContains(bytesLines, "std::vector<int> a = std::vector<int>{};", "C++ new BytesData() should create vector-backed storage");
+		assertContains(bytesLines, "a.resize(length);", "C++ cpp.NativeArray.setSize should resize vector-backed BytesData storage");
+		assertContains(bytesLines, "return std::make_shared<Bytes>(length, a);",
+			"C++ Bytes.alloc should pass vector-backed BytesData to the recovered constructor");
 		final stringIterator = new HxClassDecl("StringIterator", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "s"), EIdent("s")), HxPos.unknown())], ""),
