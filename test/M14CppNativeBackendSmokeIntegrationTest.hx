@@ -393,6 +393,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw("opaque_block_expr:{switch(va){caseAccNormal)"));
 		assertContains(opaqueEnumSwitchProbe, "return std::string(va) == std::string(\"AccNormal\");",
 			"remote Cpp gate opaque enum-switch probe should lower to a narrow enum-name comparison");
+		final opaqueEnumSwitchProbeWithHiddenSuffix = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw("opaque_block_expr:{switch(va){caseAccNormal)\r}"));
+		assertContains(opaqueEnumSwitchProbeWithHiddenSuffix, "return std::string(va) == std::string(\"AccNormal\");",
+			"remote Cpp gate opaque enum-switch probe should tolerate hidden line-ending/suffix delimiters");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("t")])) == "__hxhx_type_name(t)",
 			"direct Type.getClassName calls should lower through the C++ type-name helper");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getEnumName"), [EIdent("t")])) == "__hxhx_type_name(t)",

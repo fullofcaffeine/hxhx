@@ -1317,11 +1317,25 @@ class CppTargetCore {
 
 	static function renderOpaqueEnumSwitchProbeRaw(raw:String):Null<String> {
 		final compact = compactRawText(raw);
-		final pattern = ~/^opaque_block_expr:\{switch\(([A-Za-z_][A-Za-z0-9_]*)\)\{case([A-Za-z_][A-Za-z0-9_]*)\)$/;
-		if (!pattern.match(compact))
+		final prefix = "opaque_block_expr:{switch(";
+		if (!StringTools.startsWith(compact, prefix))
 			return null;
-		final value = sanitizeIdentifier(pattern.matched(1));
-		final enumCase = pattern.matched(2);
+		final separator = "){case";
+		final separatorIndex = compact.indexOf(separator, prefix.length);
+		if (separatorIndex <= prefix.length)
+			return null;
+		final value = compact.substr(prefix.length, separatorIndex - prefix.length);
+		if (!isSimpleIdentifierText(value))
+			return null;
+		var enumEnd = separatorIndex + separator.length;
+		while (enumEnd < compact.length && isIdentifierCharAt(compact, enumEnd, enumEnd > separatorIndex + separator.length))
+			enumEnd++;
+		final enumCase = compact.substring(separatorIndex + separator.length, enumEnd);
+		if (enumCase.length == 0)
+			return null;
+		final trailing = compact.substr(enumEnd);
+		if (trailing.length > 0 && trailing.charAt(0) != ")" && trailing.charAt(0) != ":" && trailing.charAt(0) != "}")
+			return null;
 		return "([&]() { return std::string(" + value + ") == std::string(" + quoteString(enumCase) + "); })()";
 	}
 
@@ -1417,7 +1431,21 @@ class CppTargetCore {
 	static function compactRawText(raw:String):String {
 		if (raw == null)
 			return "";
-		return StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", "");
+		return StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", ""), "\r", "");
+	}
+
+	static function isSimpleIdentifierText(value:String):Bool {
+		if (value == null || value.length == 0)
+			return false;
+		for (i in 0...value.length)
+			if (!isIdentifierCharAt(value, i, i > 0))
+				return false;
+		return true;
+	}
+
+	static function isIdentifierCharAt(value:String, index:Int, allowDigit:Bool):Bool {
+		final c = value.charAt(index);
+		return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_" || (allowDigit && c >= "0" && c <= "9");
 	}
 
 	static function summarizeRaw(raw:String):String {
