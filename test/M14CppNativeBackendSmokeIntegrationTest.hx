@@ -354,6 +354,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"qualified Haxe type tests should preserve their type path");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("is", EInt(1), EUnsupported("Int"))) == "__hxhx_is_type(1, \"Int\")",
 			"raw type-path fragments in Haxe is-expressions should lower through the C++ MVP type-test helper");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(EBinop("??", EIdent("value"),
+				ECall(EIdent("fallback"), []))) == "__hxhx_null_coalesce(value, [&]() { return fallback(); })",
+			"C++ null-coalescing expressions should lower through a lazy target helper");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("??", ENull, EInt(2))) == "__hxhx_null_coalesce(nullptr, [&]() { return 2; })",
+			"C++ null-coalescing should preserve explicit null left operands");
 		final rangeExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ERange(EInt(1), EInt(4)));
 		assertContains(rangeExpr, "std::vector<int> __hxhx_range_out;", "range expressions should lower to a C++ vector builder");
 		assertContains(rangeExpr, "int __hxhx_range_start = 1;", "range expressions should bind the start once");
@@ -490,6 +496,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "__hxhx_join(words, \",\")", "C++ smoke should lower array join try/catch expressions through target runtime support");
 		assertContains(source, "static bool __hxhx_is_type(int, const std::string& type)", "C++ smoke should include Haxe is-expression helper overloads");
 		assertContains(source, "static std::string __hxhx_type_name(int)", "C++ smoke should include Haxe type-name helper overloads");
+		assertContains(source, "auto __hxhx_null_coalesce(std::nullptr_t, F fallback)", "C++ smoke should include Haxe null-coalescing helper overloads");
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
 			final buildDir = Path.join([root, "build"]);

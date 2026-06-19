@@ -209,6 +209,21 @@ class CppTargetCore {
 		out.push("  return std::string(\"Array\");");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T, typename F>");
+		out.push("auto __hxhx_null_coalesce(const T& value, F fallback) {");
+		out.push("  return value;");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T, typename F>");
+		out.push("auto __hxhx_null_coalesce(T* value, F fallback) {");
+		out.push("  return value != nullptr ? value : fallback();");
+		out.push("}");
+		out.push("");
+		out.push("template<typename F>");
+		out.push("auto __hxhx_null_coalesce(std::nullptr_t, F fallback) {");
+		out.push("  return fallback();");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_read_file(const std::string& path) {");
 		out.push("  std::ifstream input(path);");
 		out.push("  if (!input) throw std::runtime_error(std::string(\"Unable to read file: \") + path);");
@@ -857,6 +872,12 @@ class CppTargetCore {
 				isTypeExpr(left, right, scope);
 			case EBinop("=>", left, right):
 				"std::make_pair(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
+			case EBinop("??", left, right):
+				"__hxhx_null_coalesce("
+				+ renderExpr(left, scope)
+				+ ", [&]() { return "
+				+ renderExpr(right, scope)
+				+ "; })";
 			case EBinop(">>>=", left, right):
 				"([&]() { auto& __hxhx_ushr_assign_target = "
 				+ renderExpr(left, scope)
