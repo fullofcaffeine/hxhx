@@ -593,7 +593,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 			"class Misc {",
-			"  public static function isOfType(v:Dynamic, t:Class<Dynamic>):Bool {",
+			"  public static function isOfType<T>(v:Dynamic, t:Class<T>):Bool {",
 			"    return true;",
 			"  }",
 			"}",
@@ -1844,6 +1844,35 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(staticGenericFacadeLines.indexOf("template<typename") < 0, "C++ should not over-template Std-shaped static utility facades");
 		assertContains(staticGenericFacadeOwnerLines, "return StaticGenericFacade::is(\"v\", \"t\");",
 			"C++ static facade calls should not require class template arguments");
+		final parsedClassParamModule = new HxParser("class ParsedMisc { public static function isOfType<T>(v:Dynamic, t:Class<T>):Bool { return true; } }")
+			.parseModule("ParsedMisc");
+		final parsedClassParamOwner = HxModuleDecl.getMainClass(parsedClassParamModule);
+		final parsedClassParamNames = new StringMap<Bool>();
+		parsedClassParamNames.set("ParsedMisc", true);
+		final parsedClassParamClasses = new StringMap<HxClassDecl>();
+		parsedClassParamClasses.set("ParsedMisc", parsedClassParamOwner);
+		final parsedClassParamLookup = {names: parsedClassParamNames, byName: parsedClassParamClasses};
+		final parsedClassParamLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedClassParamOwner, parsedClassParamLookup).join("\n");
+		assertContains(parsedClassParamLines, "struct ParsedMisc {",
+			"C++ parsed method-generic facades should stay normal classes when the generic only belongs to a static method");
+		assertContains(parsedClassParamLines, "static bool isOfType(std::string v, std::shared_ptr<Class> t)",
+			"C++ parsed Class<T> method params should preserve the Class meta-value parameter");
+		final dynamicIsOfTypeOwner = new HxClassDecl("DynamicIsOfTypeOwner", false, [
+			new HxFunctionDecl("isOfType", Public, true, [
+				new HxFunctionArg("v", "Dynamic", NoDefault, false, false),
+				new HxFunctionArg("t", "Dynamic", NoDefault, false, false)
+			], "Bool", [SReturn(EBool(true), HxPos.unknown())], "")
+		], []);
+		final dynamicIsOfTypeNames = new StringMap<Bool>();
+		dynamicIsOfTypeNames.set("DynamicIsOfTypeOwner", true);
+		final dynamicIsOfTypeClasses = new StringMap<HxClassDecl>();
+		dynamicIsOfTypeClasses.set("DynamicIsOfTypeOwner", dynamicIsOfTypeOwner);
+		final dynamicIsOfTypeLookup = {names: dynamicIsOfTypeNames, byName: dynamicIsOfTypeClasses};
+		final dynamicIsOfTypeLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(dynamicIsOfTypeOwner, dynamicIsOfTypeLookup).join("\n");
+		assertContains(dynamicIsOfTypeLines, "template<typename TValue, typename TType>\n  static bool isOfType(const TValue& v, const TType& t)",
+			"C++ Dynamic/Dynamic isOfType-style helpers should accept class meta-values without erasing the second arg to std::string");
 		final staticFieldOwner = new HxClassDecl("StaticFieldOwner", false, [
 			new HxFunctionDecl("set", Public, true, [new HxFunctionArg("v", "String", NoDefault, false, false)], "Void", [
 				SExpr(EBinop("=", EIdent("store"), EIdent("v")), HxPos.unknown()),

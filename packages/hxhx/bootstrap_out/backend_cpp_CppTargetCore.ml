@@ -15411,9 +15411,41 @@ let renderMainStaticFunctions = fun cls classLookup -> let out = Obj.magic (HxAr
   out
 )
 
+let isPolymorphicIsOfTypeHelper = fun fn -> try let __fallback_result_2929 = (
+  ignore (if fn == Obj.magic (HxRuntime.hx_null) || not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || not (HxString.equals (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string)) "isOfType") then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if not (HxString.equals (StringTools.trim (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string)) "Bool") then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in HxArray.length args = 2 && HxString.equals (removeTypeHintWhitespace (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic args) 0)) : string)) "Dynamic" && HxString.equals (removeTypeHintWhitespace (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic args) 1)) : string)) "Dynamic"
+) in Obj.magic __fallback_result_2929 with
+  | HxRuntime.Hx_return __ret_2928 -> Obj.obj __ret_2928
+
+let renderPolymorphicIsOfTypeHelper = fun fn owner classLookup -> let scope = renderScope (Obj.magic owner) classLookup ("bool" : string) in let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let valueName = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic args) 0)) : string) : string) in let typeName = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic args) 1)) : string) : string) in (
+  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) valueName "TValue");
+  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) typeName "TType");
+  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localNames")) valueName valueName);
+  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localNames")) typeName typeName);
+  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localNameCounts")) valueName 1);
+  ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localNameCounts")) typeName 1);
+  let out = Obj.magic (let __arr_2930 = HxArray.create () in (
+    ignore (HxArray.push __arr_2930 "  template<typename TValue, typename TType>");
+    ignore (HxArray.push __arr_2930 (((((("  static bool " ^ HxString.toStdString (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ "(const TValue& ") ^ HxString.toStdString valueName) ^ ", const TType& ") ^ HxString.toStdString typeName) ^ ") {"));
+    __arr_2930
+  )) in let _g = ref 0 in let _g1 = Obj.magic (renderFunctionBody (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) ("    " : string) scope) in (
+    ignore (while !_g < HxArray.length _g1 do ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+      ignore (let __old_2931 = !_g in let __new_2932 = HxInt.add __old_2931 1 in (
+        ignore (_g := __new_2932);
+        __new_2932
+      ));
+      HxArray.push out line
+    )) done);
+    ignore (HxArray.push out "  }");
+    out
+  )
+)
+
 let renderHelperMethod = fun fn owner classLookup -> try let __fallback_result_313 = (
   ignore (if isAssertPolymorphicStringifyHelper (Obj.magic fn) (Obj.magic owner) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderAssertPolymorphicStringifyHelper (Obj.magic fn))))) else ());
   ignore (if isAssertPolymorphicSameAsHelper (Obj.magic fn) (Obj.magic owner) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderAssertPolymorphicSameAsHelper (Obj.magic fn) (Obj.magic owner) classLookup)))) else ());
+  ignore (if isPolymorphicIsOfTypeHelper (Obj.magic fn) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderPolymorphicIsOfTypeHelper (Obj.magic fn) (Obj.magic owner) classLookup)))) else ());
   let returnType = (cppFunctionReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
     ignore (prepareFunctionScope scope (Obj.magic fn));
     let tempString = ref ("" : string) in (

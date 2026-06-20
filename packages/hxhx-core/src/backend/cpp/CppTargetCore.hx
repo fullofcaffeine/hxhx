@@ -1522,6 +1522,8 @@ class CppTargetCore {
 			return renderAssertPolymorphicStringifyHelper(fn);
 		if (isAssertPolymorphicSameAsHelper(fn, owner))
 			return renderAssertPolymorphicSameAsHelper(fn, owner, classLookup);
+		if (isPolymorphicIsOfTypeHelper(fn))
+			return renderPolymorphicIsOfTypeHelper(fn, owner, classLookup);
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
@@ -5249,5 +5251,41 @@ class CppTargetCore {
 
 	static function cppDefaultValue(typeName:String, ?scope:CppRenderScope):String {
 		return CppTypeModel.cppDefaultValue(typeName, scope);
+	}
+
+	static function isPolymorphicIsOfTypeHelper(fn:HxFunctionDecl):Bool {
+		if (fn == null || !HxFunctionDecl.getIsStatic(fn) || sanitizeIdentifier(HxFunctionDecl.getName(fn)) != "isOfType")
+			return false;
+		if (StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn)) != "Bool")
+			return false;
+		final args = HxFunctionDecl.getArgs(fn);
+		return args.length == 2
+			&& removeTypeHintWhitespace(HxFunctionArg.getTypeHint(args[0])) == "Dynamic"
+			&& removeTypeHintWhitespace(HxFunctionArg.getTypeHint(args[1])) == "Dynamic";
+	}
+
+	static function renderPolymorphicIsOfTypeHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final scope = renderScope(owner, classLookup, "bool");
+		final args = HxFunctionDecl.getArgs(fn);
+		final valueName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final typeName = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
+		scope.localTypes.set(valueName, "TValue");
+		scope.localTypes.set(typeName, "TType");
+		scope.localNames.set(valueName, valueName);
+		scope.localNames.set(typeName, typeName);
+		scope.localNameCounts.set(valueName, 1);
+		scope.localNameCounts.set(typeName, 1);
+		final out = ["  template<typename TValue, typename TType>",
+			"  static bool "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "(const TValue& "
+			+ valueName
+			+ ", const TType& "
+			+ typeName
+			+ ") {"];
+		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
+			out.push(line);
+		out.push("  }");
+		return out;
 	}
 }
