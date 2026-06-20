@@ -1231,7 +1231,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(enumMetaLines, "inline static std::vector<std::string> __hx_enum_ctors = std::vector<std::string>{",
 			"C++ static fields with erased type hints should infer vector types from array initializers");
 		assertContains(enumMetaLines,
-			"inline static __hxhx_anon___hx_enum_std__string___hx_ctor_std__string___hx_index_int____hx_params_std__vector_int_ U2 =",
+			"inline static __hxhx_anon___hx_enum_std__string___hx_ctor_std__string___hx_index_int____hx_params_std__vector_std__string_ U2 =",
 			"C++ static fields with erased type hints should infer generated anon struct types from object initializers");
 		assertTrue(enumMetaLines.indexOf("inline static std::string __hx_enum_ctors = std::vector") < 0,
 			"C++ enum metadata arrays should not fall back to string-typed static fields");
@@ -1320,6 +1320,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EArrayDecl([EIdent("x")]),
 			enumPayloadScope) == "std::vector<std::string>{std::string(x)}",
 			"C++ enum payload arrays should render string arguments with matching vector element types");
+		enumPayloadScope.localTypes.set("op", "std::shared_ptr<Binop>");
+		enumPayloadScope.localTypes.set("constant", "std::shared_ptr<Constant>");
+		final enumRawCarrierStruct = @:privateAccess
+			backend.cpp.CppTargetCore.anonStruct(["__hx_params"], [EArrayDecl([EIdent("op"), EIdent("constant")])], enumPayloadScope);
+		assertTrue(enumRawCarrierStruct.fieldTypes[0] == "std::vector<std::string>",
+			"C++ enum metadata payload arrays should not infer raw enum-carrier class vector types");
+		final enumRawCarrierPayload = @:privateAccess
+			backend.cpp.CppTargetCore.valueExprForExpectedType(EArrayDecl([EIdent("op"), EIdent("constant")]), enumRawCarrierStruct.fieldTypes[0],
+				enumPayloadScope);
+		assertContains(enumRawCarrierPayload, "std::vector<std::string>{",
+			"C++ enum metadata payload rendering should keep the string-vector storage contract");
+		assertTrue(enumRawCarrierPayload.indexOf("std::vector<std::shared_ptr<Binop>>") < 0,
+			"C++ enum metadata payload rendering should not leak raw Binop carrier vector types");
 		final enumCtorHelper = new HxFunctionDecl("U1", Public, true, [new HxFunctionArg("x", "String", NoDefault, false, false)], "Dynamic", [
 			SReturn(EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString("X"), EString("U1"), EInt(0), EArrayDecl([EIdent("x")])]),
 				HxPos.unknown())

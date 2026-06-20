@@ -997,6 +997,8 @@ class CppTargetCore {
 			return "std::string";
 		if (assertStatusShape && cleanField == "recursive")
 			return "bool";
+		if (cleanField == "__hx_params")
+			return "std::vector<std::string>";
 		final scoped = exprCppType(expr, scope);
 		final optionalInner = cppOptionalInnerType(scoped);
 		if (optionalInner.length > 0)
@@ -3282,6 +3284,13 @@ class CppTargetCore {
 			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
 		if (expectedType == "std::string")
 			return stringExpr(expr, scope);
+		if (isCppVectorType(expectedType)) {
+			switch (expr) {
+				case EArrayDecl(elements):
+					return arrayExprWithElementType(elements, cppVectorElementType(expectedType), scope);
+				case _:
+			}
+		}
 		return renderExpr(expr, scope);
 	}
 
@@ -5763,6 +5772,10 @@ class CppTargetCore {
 
 	static function arrayExpr(elements:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final typeName = arrayElementType(elements, scope);
+		return arrayExprWithElementType(elements, typeName, scope);
+	}
+
+	static function arrayExprWithElementType(elements:Array<HxExpr>, typeName:String, ?scope:CppRenderScope):String {
 		final values = [
 			for (element in elements)
 				typeName == "std::string" ? stringExpr(element, scope) : renderExpr(element, scope)
