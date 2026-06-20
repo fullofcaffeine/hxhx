@@ -1203,8 +1203,9 @@ class ParserStage {
 			final scanned = scanClassBodyForStatics(source, header.bodyStart);
 			i = scanned.nextPos;
 
+			final metadata = classMetadata.concat(typeParamsMetadata(header.typeParams));
 			if (shouldRecord)
-				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, classMetadata, isInterface,
+				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields, header.extendsPath, metadata, isInterface,
 					header.implementsPaths));
 		}
 
@@ -1215,13 +1216,15 @@ class ParserStage {
 		bodyStart:Int,
 		nextPos:Int,
 		extendsPath:String,
-		implementsPaths:Array<String>
+		implementsPaths:Array<String>,
+		typeParams:Array<String>
 	} {
 		var extendsPath = "";
 		var mode = "";
 		var genericDepth = 0;
 		var parts = new Array<String>();
 		final implementsPaths = new Array<String>();
+		final typeParams = scanTypeParameterNames(source, start);
 		function flushPath():Void {
 			if (parts.length == 0 || mode.length == 0)
 				return;
@@ -1233,7 +1236,7 @@ class ParserStage {
 			parts = [];
 		}
 
-		var tok = scanNextToken(source, start);
+		var tok = scanNextToken(source, typeParams.nextPos);
 		while (tok.text.length > 0 && tok.text != "{") {
 			if (tok.isIdent) {
 				if (genericDepth == 0 && (tok.text == "extends" || tok.text == "implements")) {
@@ -1271,8 +1274,13 @@ class ParserStage {
 			bodyStart: tok.text == "{" ? tok.nextPos : -1,
 			nextPos: tok.nextPos,
 			extendsPath: extendsPath,
-			implementsPaths: implementsPaths
+			implementsPaths: implementsPaths,
+			typeParams: typeParams.params
 		};
+	}
+
+	static function typeParamsMetadata(params:Array<String>):Array<String> {
+		return params == null || params.length == 0 ? [] : ["__hxhx_type_params=" + params.join(",")];
 	}
 
 	/**

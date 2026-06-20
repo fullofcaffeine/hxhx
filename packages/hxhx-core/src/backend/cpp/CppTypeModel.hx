@@ -177,6 +177,9 @@ class CppTypeModel {
 		final abstractName = arrayBackedAbstractNameForTypeHint(hint, scope, classLookup);
 		if (abstractName != null)
 			return abstractName;
+		final scopedTypeParam = scopedGenericTypeParam(hint, scope);
+		if (scopedTypeParam != null)
+			return scopedTypeParam;
 		return switch (hint) {
 			case "" | "Void" | "StdTypes.Void":
 				hint.length == 0 ? "std::string" : "void";
@@ -194,6 +197,8 @@ class CppTypeModel {
 				"bool";
 			case "Dynamic" | "Any":
 				"std::string";
+			case _ if (isCppPointerTypeHint(hint)):
+				"std::shared_ptr<" + cppPointerTypeName(hint, scope, classLookup) + ">";
 			case _ if (isIteratorTypeHint(hint)):
 				"std::shared_ptr<__hxhx_iterator<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">>";
 			case _ if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint)):
@@ -220,6 +225,45 @@ class CppTypeModel {
 			case _:
 				null;
 		};
+	}
+
+	static function scopedGenericTypeParam(typeHint:String, ?scope:CppRenderScope):Null<String> {
+		final clean = sanitizeTypePath(removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint)));
+		if (clean.length == 0 || scope == null || scope.owner == null)
+			return null;
+		if (scope.typeParams != null)
+			for (param in scope.typeParams) {
+				final candidate = sanitizeTypePath(StringTools.trim(param));
+				if (candidate == clean)
+					return candidate;
+			}
+		for (meta in HxClassDecl.getMetadata(scope.owner)) {
+			final prefix = "__hxhx_type_params=";
+			if (!StringTools.startsWith(meta, prefix))
+				continue;
+			for (param in meta.substr(prefix.length).split(",")) {
+				final candidate = sanitizeTypePath(StringTools.trim(param));
+				if (candidate == clean)
+					return candidate;
+			}
+		}
+		return null;
+	}
+
+	static function isCppPointerTypeHint(typeHint:String):Bool {
+		return switch (sanitizeTypePath(typeBaseName(typeHint))) {
+			case "RawConstPointer" | "ConstPointer" | "RawPointer" | "Pointer":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function cppPointerTypeName(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final base = sanitizeTypePath(typeBaseName(typeHint));
+		final args = genericTypeHintArgs(typeHint);
+		final arg = args.length == 0 ? "void" : cppTypeHint(args[0], scope, classLookup);
+		return base + "<" + arg + ">";
 	}
 
 	static function cppClassLikeTypeName(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {

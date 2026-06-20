@@ -1599,10 +1599,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final nativeStringFromGcPointerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(nativeStringFromGcPointer, nativeStringOwner,
 			nativeStringLookup)
 			.join("\n");
-		assertContains(nativeStringRawLines, "return std::make_shared<RawConstPointer>(inString.c_str());",
+		assertContains(nativeStringRawLines, "return std::make_shared<RawConstPointer<void>>(inString.c_str());",
 			"C++ NativeString.raw should lower raw_ptr through target-owned pointer support");
-		assertContains(nativeStringCStrLines, "return std::make_shared<ConstPointer>(inString.c_str());",
+		assertContains(nativeStringCStrLines, "return std::make_shared<ConstPointer<void>>(inString.c_str());",
 			"C++ cpp.ConstPointer.fromPointer should lower to target-owned pointer support");
+		assertTrue(@:privateAccess backend.cpp.CppTypeModel.cppTypeHint("RawConstPointer<Char>") == "std::shared_ptr<RawConstPointer<std::shared_ptr<Char>>>",
+			"C++ RawConstPointer<T> extern hints should preserve the target-owned generic argument");
 		assertContains(nativeStringFromPointerLines, "return __hxhx_string_from_pointer((inPtr->ptr));",
 			"C++ __global__.String(pointer) should lower to target-owned string-from-pointer support");
 		assertContains(nativeStringFromGcPointerLines, "return __hxhx_string_from_pointer((inPtr->ptr), inLen);",
@@ -2313,11 +2315,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		mapIteratorClasses.set("MapKeyValueIterator", mapKeyValueIterator);
 		final mapKeyValueIteratorLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperClass(mapKeyValueIterator, {names: mapIteratorNames, byName: mapIteratorClasses}).join("\n");
-		assertContains(mapKeyValueIteratorLines, "struct MapKeyValueIterator : public KeyValueIterator {",
+		assertContains(mapKeyValueIteratorLines, "template<typename K, typename V>\nstruct MapKeyValueIterator : public KeyValueIterator {",
 			"C++ structural key/value iterator helpers should inherit the target-owned KeyValueIterator marker");
 		assertContains(mapKeyValueIteratorLines, "auto key = keys->next();", "C++ iterator-protocol next calls should support unhinted key locals");
 		assertContains(mapKeyValueIteratorLines,
-			"return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",
+			"return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), __hxhx_stringify(key)};",
 			"C++ IMap key/value iterator records should unwrap optional map.get values into concrete anonymous value fields");
 		assertTrue(mapKeyValueIteratorLines.indexOf("__hxhx_anon_value_int_key_std__string_") < 0,
 			"C++ optional method-call anonymous fields should not fall back to Int");
@@ -2326,7 +2328,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final fallbackMapKeyValueIteratorLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperClass(mapKeyValueIterator, {names: mapIteratorNames, byName: fallbackMapIteratorClasses}).join("\n");
 		assertContains(fallbackMapKeyValueIteratorLines,
-			"return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",
+			"return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), __hxhx_stringify(key)};",
 			"C++ fallback IMap method typing should also unwrap optional map.get values when IMap is target-owned");
 		assertTrue(fallbackMapKeyValueIteratorLines.indexOf("__hxhx_anon_value_int__key_std__string") < 0,
 			"C++ target-owned IMap key/value iterator records should not fall back to Int anonymous value fields");
@@ -2641,6 +2643,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic helper construction should use the deducing factory for function values");
 		assertTrue(genericBoxOwnerLines.indexOf("std::make_shared<GenericBox>(") < 0,
 			"C++ generic helper construction should not instantiate the erased non-template class shape");
+		final nestedGenericHolder = new HxClassDecl("NestedGenericHolder", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("box", "GenericBox<T>", NoDefault, false, false)], "Void",
+				[SExpr(EBinop("=", EField(EThis, "box"), EIdent("box")), HxPos.unknown())], "")
+		], [new HxFieldDecl("box", Public, false, "GenericBox<T>", null)]);
+		genericBoxNames.set("NestedGenericHolder", true);
+		genericBoxClasses.set("NestedGenericHolder", nestedGenericHolder);
+		final nestedGenericHolderLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(nestedGenericHolder, genericBoxLookup).join("\n");
+		assertContains(nestedGenericHolderLines, "template<typename T>\nstruct NestedGenericHolder {",
+			"C++ helper classes should infer class template params from nested field and constructor type hints");
+		assertContains(nestedGenericHolderLines, "std::shared_ptr<GenericBox<T>> box = nullptr;",
+			"C++ nested generic helper fields should preserve template arguments");
 		final methodGenericBuffer = new HxClassDecl("MethodGenericBuffer", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
 			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",
@@ -2941,6 +2954,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "struct __hxhx_throw_bottom", "C++ smoke should include target-owned throw-expression bottom support");
 		assertContains(source, "static __hxhx_throw_bottom __hxhx_throw(const T& value)", "C++ smoke should include target-owned throw-expression helper");
 		assertContains(source, "static TResult __hxhx_throw_as(const T& value)", "C++ smoke should include target-owned typed throw-expression helper");
+		assertContains(source, "template<typename T>\nstruct RawConstPointer {",
+			"C++ smoke should expose cpp.RawConstPointer<T> as a target-owned generic support surface");
+		assertContains(source, "template<typename T>\nstruct ConstPointer {",
+			"C++ smoke should expose cpp.ConstPointer<T> as a target-owned generic support surface");
 		assertContains(source, "struct __hxhx_anon_ms_double__seconds_int__minutes_int__hours_int__days_int_ {",
 			"C++ smoke should declare structural type-hint aggregates even when the shape is used as an argument");
 		assertContains(source, "static double make(__hxhx_anon_ms_double__seconds_int__minutes_int__hours_int__days_int_ o) {",
@@ -3013,6 +3030,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source,
 			"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{__hxhx_stringify(val), (idx++)};\n  }",
 			"C++ smoke should lower generic key/value iterator structural returns through C++ auto");
+		assertContains(source, "template<typename T>\nstruct GenericListKeyValueIterator {",
+			"C++ smoke should preserve helper class type parameters declared in parsed class headers");
 		assertContains(source, "return __hxhx_anon_value_std__string_key_int_{std::string((array[current])), (current++)};",
 			"C++ smoke should infer anonymous return value fields from array access element types");
 		assertTrue(source.indexOf("__hxhx_anon_value_int__key_int_{(array[current])") < 0,
@@ -3231,13 +3250,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final mapKeyValueSource = File.getContent(mapKeyValueEmit.entryPath);
 		assertContains(mapKeyValueSource, "struct KeyValueIterator {",
 			"C++ structural KeyValueIterator typedef support should emit a target-owned marker declaration");
-		assertTrue(mapKeyValueSource.indexOf("struct KeyValueIterator {") < mapKeyValueSource.indexOf("struct MapKeyValueIterator : public KeyValueIterator {"),
+		assertTrue(mapKeyValueSource.indexOf("struct KeyValueIterator {") < mapKeyValueSource.indexOf("template<typename K, typename V>\nstruct MapKeyValueIterator : public KeyValueIterator {"),
 			"C++ KeyValueIterator marker should be declared before structural key/value iterator helpers inherit it");
 		assertContains(mapKeyValueSource, "struct __hxhx_anon_value_std__string_key_std__string {",
 			"C++ anon predeclaration collection should preserve generic IMap key/value iterator field types");
-		assertContains(mapKeyValueSource, "struct MapKeyValueIterator : public KeyValueIterator {",
+		assertContains(mapKeyValueSource, "template<typename K, typename V>\nstruct MapKeyValueIterator : public KeyValueIterator {",
 			"C++ generic IMap key/value iterator helpers should be upcastable to KeyValueIterator");
-		assertContains(mapKeyValueSource, "return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",
+		assertContains(mapKeyValueSource,
+			"return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), __hxhx_stringify(key)};",
 			"C++ generic IMap key/value iterators should unwrap optional values when the key local is inferred from Iterator.next()");
 		assertTrue(mapKeyValueSource.indexOf("struct __hxhx_anon_value_int__key_std__string") < 0,
 			"C++ generic IMap key/value iterator records should not predeclare optional values as Int");

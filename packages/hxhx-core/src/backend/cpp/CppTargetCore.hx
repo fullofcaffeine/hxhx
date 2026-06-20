@@ -140,11 +140,13 @@ class CppTargetCore {
 		out.push("#include <utility>");
 		out.push("#include <vector>");
 		out.push("");
+		out.push("template<typename T>");
 		out.push("struct RawConstPointer {");
 		out.push("  const char* ptr;");
 		out.push("  explicit RawConstPointer(const char* ptr = nullptr) : ptr(ptr) {}");
 		out.push("};");
 		out.push("");
+		out.push("template<typename T>");
 		out.push("struct ConstPointer {");
 		out.push("  const char* ptr;");
 		out.push("  explicit ConstPointer(const char* ptr = nullptr) : ptr(ptr) {}");
@@ -980,7 +982,8 @@ class CppTargetCore {
 		final types = new Array<String>();
 		for (field in fields) {
 			names.push(field.name);
-			types.push(cppTypeHint(field.typeHint, scope, classLookup));
+			final fieldType = cppTypeHint(field.typeHint, scope, classLookup);
+			types.push(isScopeTypeParam(fieldType, scope) ? "std::string" : fieldType);
 		}
 		final struct = {name: anonStructName(names, types), fieldNames: names, fieldTypes: types};
 		if (scope != null)
@@ -998,6 +1001,8 @@ class CppTargetCore {
 		final optionalInner = cppOptionalInnerType(scoped);
 		if (optionalInner.length > 0)
 			return optionalInner;
+		if (isScopeTypeParam(scoped, scope))
+			return "std::string";
 		if (scoped.length > 0)
 			return scoped;
 		final inferred = inferExprCppType(expr, scope);
@@ -1028,6 +1033,16 @@ class CppTargetCore {
 			case _:
 				"int";
 		};
+	}
+
+	static function isScopeTypeParam(typeName:String, ?scope:CppRenderScope):Bool {
+		final clean = sanitizeTypePath(StringTools.trim(typeName == null ? "" : typeName));
+		if (clean.length == 0 || scope == null || scope.typeParams == null)
+			return false;
+		for (param in scope.typeParams)
+			if (clean == sanitizeTypePath(StringTools.trim(param)))
+				return true;
+		return false;
 	}
 
 	static function isAssertStatusStringField(fieldName:String):Bool {
@@ -1072,8 +1087,12 @@ class CppTargetCore {
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
+				final typeParams = genericClassTypeParams(cls);
 				function addMissing(name:String):Void {
 					final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
+					for (param in typeParams)
+						if (clean == sanitizeTypePath(param))
+							return;
 					if (shouldForwardDeclareMissingType(clean, classLookup))
 						emitType(clean);
 				}
@@ -1794,6 +1813,7 @@ class CppTargetCore {
 			owner: cls,
 			classNames: classLookup.names,
 			classByName: classLookup.byName,
+			typeParams: genericClassTemplateParams(cls),
 			localTypes: new haxe.ds.StringMap<String>(),
 			localNames: new haxe.ds.StringMap<String>(),
 			localNameCounts: new haxe.ds.StringMap<Int>(),
@@ -2070,11 +2090,8 @@ class CppTargetCore {
 					addParam(param);
 			}
 		}
-		function addHint(typeHint:String):Void {
-			final param = genericTypeParamName(typeHint);
-			if (param.length > 0)
-				addParam(param);
-		}
+		function addHint(typeHint:String):Void
+			addGenericTypeParamsFromHint(typeHint, addParam);
 		for (field in HxClassDecl.getFields(cls))
 			addHint(HxFieldDecl.getTypeHint(field));
 		final ctor = findConstructor(cls);
@@ -2082,6 +2099,29 @@ class CppTargetCore {
 			for (arg in HxFunctionDecl.getArgs(ctor))
 				addHint(HxFunctionArg.getTypeHint(arg));
 		return params;
+	}
+
+	static function addGenericTypeParamsFromHint(typeHint:String, addParam:String->Void):Void {
+		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (raw.length == 0)
+			return;
+		final direct = genericTypeParamName(raw);
+		if (direct.length > 0) {
+			addParam(direct);
+			return;
+		}
+		if (isFunctionTypeHint(raw)) {
+			for (part in splitTopLevelFunctionType(raw))
+				addGenericTypeParamsFromHint(part, addParam);
+			return;
+		}
+		if (isStructuralTypeHint(raw)) {
+			for (field in CppTypeModel.structuralTypeHintFields(raw))
+				addGenericTypeParamsFromHint(field.typeHint, addParam);
+			return;
+		}
+		for (arg in genericTypeHintArgs(raw))
+			addGenericTypeParamsFromHint(arg, addParam);
 	}
 
 	static function genericClassTemplateParams(cls:HxClassDecl):Array<String> {
@@ -3810,7 +3850,7 @@ class CppTargetCore {
 		if (exprCppType(receiver, scope) == "std::string") {
 			return switch (method) {
 				case "raw_ptr" if (args.length == 0):
-					"std::make_shared<RawConstPointer>(" + renderExpr(receiver, scope) + ".c_str())";
+					"std::make_shared<RawConstPointer<void>>(" + renderExpr(receiver, scope) + ".c_str())";
 				case "split" if (args.length == 1):
 					"__hxhx_split(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
 				case "lastIndexOf" if (args.length == 1 || args.length == 2):
@@ -3844,7 +3884,7 @@ class CppTargetCore {
 		if (isReflectStaticReceiver(receiver) && method == "isEnumValue" && args.length == 1)
 			return "__hxhx_is_enum_value(" + renderExpr(args[0], scope) + ")";
 		if (isCppConstPointerStaticReceiver(receiver) && method == "fromPointer" && args.length == 1)
-			return "std::make_shared<ConstPointer>(" + renderExpr(args[0], scope) + ")";
+			return "std::make_shared<ConstPointer<void>>(" + renderExpr(args[0], scope) + ")";
 		if (receiverTypeName != null) {
 			if (method == "create")
 				return "std::make_shared<" + receiverTypeName + ">(" + renderedArgs + ")";
