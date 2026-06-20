@@ -53,6 +53,14 @@ class ParserStage {
 		return native == inner || StringTools.endsWith(native, "." + inner);
 	}
 
+	static function sourceStructuralTypeHintIsMoreSpecific(nativeTypeHint:String, sourceTypeHint:String):Bool {
+		final source = compactSourceTypeHint(sourceTypeHint);
+		if (!StringTools.startsWith(source, "{") || !StringTools.endsWith(source, "}"))
+			return false;
+		final native = compactSourceTypeHint(nativeTypeHint);
+		return native.length == 0 || native == "String" || native == "StdTypes.String" || native == "Dynamic" || native == "Any";
+	}
+
 	static function scanToplevelFunctions(source:String, expectedMainClass:Null<String>):Array<HxFunctionDecl> {
 		final out = new Array<HxFunctionDecl>();
 		if (source == null || source.length == 0 || expectedMainClass == null || expectedMainClass.length == 0)
@@ -312,6 +320,8 @@ class ParserStage {
 						}
 
 						function scannedArgHintIsMoreSpecific(nativeHint:String, scannedHint:String):Bool {
+							if (sourceStructuralTypeHintIsMoreSpecific(nativeHint, scannedHint))
+								return true;
 							final scannedCompact = compactHint(scannedHint);
 							if (scannedCompact.length == 0)
 								return false;

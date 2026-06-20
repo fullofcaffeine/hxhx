@@ -929,6 +929,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"arrow expressions should lower to C++ pairs");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Math"), "NaN")) == "std::numeric_limits<double>::quiet_NaN()",
 			"C++ Math.NaN should lower as a target intrinsic instead of a generated helper field");
+		assertTrue(@:privateAccess ParserStage.sourceStructuralTypeHintIsMoreSpecific("String", "{ ms:Float, seconds:Int }"),
+			"parser enrichment should prefer scanned structural source hints over erased native String argument hints");
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Math"), "isNaN"),
 				[EField(EIdent("Math"), "NaN")])) == "std::isnan(std::numeric_limits<double>::quiet_NaN())",
