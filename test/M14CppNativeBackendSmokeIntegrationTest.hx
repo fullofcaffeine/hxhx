@@ -1063,6 +1063,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			.join("\n");
 		assertContains(assertPassFromPosLines, "return pass(std::string(\"pass expected\"), pos);",
 			"C++ same-owner calls should pad skipped optional arguments when a PosInfos argument targets the trailing position parameter");
+		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [
+			new HxFunctionArg("ex", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("msg", "String", NoDefault, false, false)
+		], "Bool", [SReturn(EBool(true), HxPos.unknown())], "");
+		final assertRaisesLike = new HxFunctionDecl("raisesLike", Public, true, [], "Bool", [
+			STry(SThrow(EString("boom"), HxPos.unknown()), [
+				{
+					name: "ex",
+					typeHint: "Dynamic",
+					body: SBlock([
+						SVar("msg", "String", EBinop("+", EString("caught:"), EIdent("ex")), HxPos.unknown()),
+						SReturn(ECall(EIdent("use"), [EIdent("ex"), EIdent("msg")]), HxPos.unknown())
+					], HxPos.unknown())
+				}
+			], HxPos.unknown())
+		], "");
+		final assertRaisesOwner = new HxClassDecl("Assert", false, [assertRaisesUse, assertRaisesLike], []);
+		final assertRaisesNames = new StringMap<Bool>();
+		assertRaisesNames.set("Assert", true);
+		final assertRaisesClasses = new StringMap<HxClassDecl>();
+		assertRaisesClasses.set("Assert", assertRaisesOwner);
+		final assertRaisesLookup = {names: assertRaisesNames, byName: assertRaisesClasses};
+		final assertRaisesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(assertRaisesLike, assertRaisesOwner, assertRaisesLookup)
+			.join("\n");
+		assertContains(assertRaisesLines, "std::string ex = std::string();",
+			"C++ catch blocks should bind the Haxe catch variable before rendering catch-body references");
+		assertContains(assertRaisesLines, "return use(ex, msg);", "C++ catch-body calls should keep using the declared catch variable name");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",

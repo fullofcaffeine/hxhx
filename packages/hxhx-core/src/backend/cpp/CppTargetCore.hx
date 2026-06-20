@@ -2390,8 +2390,17 @@ class CppTargetCore {
 		if (catches == null || catches.length == 0) {
 			out.push(indent + "  throw;");
 		} else {
-			for (line in renderStmtBlockContent(catches[0].body, indent + "  ", scope))
-				out.push(line);
+			final catchName = sanitizeIdentifier(catches[0].name);
+			if (catchName.length > 0 && catchName != "_") {
+				out.push(indent + "  std::string " + catchName + " = std::string();");
+				withScopedLocal(scope, catchName, "std::string", () -> {
+					for (line in renderStmtBlockContent(catches[0].body, indent + "  ", scope))
+						out.push(line);
+				});
+			} else {
+				for (line in renderStmtBlockContent(catches[0].body, indent + "  ", scope))
+					out.push(line);
+			}
 		}
 		out.push(indent + "}");
 		return out;
