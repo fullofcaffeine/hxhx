@@ -1546,6 +1546,8 @@ class CppTargetCore {
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		if (isAssertPolymorphicStringifyHelper(fn, owner))
 			return renderAssertPolymorphicStringifyHelper(fn);
+		if (isAssertPolymorphicSameHelper(fn, owner))
+			return renderAssertPolymorphicSameHelper(fn, owner, classLookup);
 		if (isAssertPolymorphicSameAsHelper(fn, owner))
 			return renderAssertPolymorphicSameAsHelper(fn, owner, classLookup);
 		if (isPolymorphicIsOfTypeHelper(fn))
@@ -1586,6 +1588,68 @@ class CppTargetCore {
 			"    return __hxhx_stringify(" + argName + ");",
 			"  }"
 		];
+	}
+
+	static function isAssertPolymorphicSameHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Assert")
+			return false;
+		if (!HxFunctionDecl.getIsStatic(fn) || sanitizeIdentifier(HxFunctionDecl.getName(fn)) != "same")
+			return false;
+		return HxFunctionDecl.getArgs(fn).length >= 2;
+	}
+
+	static function renderAssertPolymorphicSameHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final args = HxFunctionDecl.getArgs(fn);
+		final expectedName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final valueName = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
+		final scope = renderScope(owner, classLookup, "bool");
+		prepareFunctionScope(scope, fn);
+		scope.localTypes.set(expectedName, "TExpected");
+		scope.localTypes.set(valueName, "TValue");
+		final renderedArgs = ["const TExpected& " + expectedName, "const TValue& " + valueName];
+		for (i in 2...args.length)
+			renderedArgs.push(renderFunctionArg(args[i], scope));
+		final recursiveName = args.length > 2 ? sanitizeIdentifier(HxFunctionArg.getName(args[2])) : "__hxhx_recursive_opt";
+		final msgName = args.length > 3 ? sanitizeIdentifier(HxFunctionArg.getName(args[3])) : "__hxhx_msg_opt";
+		final approxName = args.length > 4 ? sanitizeIdentifier(HxFunctionArg.getName(args[4])) : "__hxhx_approx_opt";
+		final posExpr = args.length > 5 ? sanitizeIdentifier(HxFunctionArg.getName(args[5])) : "nullptr";
+		final out = [
+			"  template<typename TExpected, typename TValue>",
+			"  static bool same(" + renderedArgs.join(", ") + ") {"
+		];
+		if (args.length <= 2)
+			out.push("    std::optional<bool> " + recursiveName + " = std::nullopt;");
+		if (args.length <= 3)
+			out.push("    std::optional<std::string> " + msgName + " = std::nullopt;");
+		if (args.length <= 4)
+			out.push("    std::optional<double> " + approxName + " = std::nullopt;");
+		out.push("    if (!" + approxName + ".has_value()) " + approxName + " = 1e-05;");
+		out.push("    struct __hxhx_same_status {");
+		out.push("      bool recursive;");
+		out.push("      std::string path;");
+		out.push("      std::string error;");
+		out.push("      std::string expectedValue;");
+		out.push("      std::string actualValue;");
+		out.push("    };");
+		out.push("    auto __hxhx_status = __hxhx_same_status{");
+		out.push("      " + recursiveName + ".has_value() ? " + recursiveName + ".value() : true,");
+		out.push("      std::string(),");
+		out.push("      std::string(),");
+		out.push("      __hxhx_stringify(" + expectedName + "),");
+		out.push("      __hxhx_stringify(" + valueName + ")");
+		out.push("    };");
+		out.push("    if (__hxhx_same_as(" + expectedName + ", " + valueName + ", " + approxName + ".value())) {");
+		out.push("      return pass("
+			+ msgName
+			+ ".has_value() ? "
+			+ msgName
+			+ ".value() : std::string(\"pass expected\"), "
+			+ posExpr
+			+ ");");
+		out.push("    }");
+		out.push("    return fail((!" + msgName + ".has_value()) ? __hxhx_status.error : " + msgName + ".value(), " + posExpr + ");");
+		out.push("  }");
+		return out;
 	}
 
 	static function isAssertPolymorphicSameAsHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
@@ -2201,6 +2265,7 @@ class CppTargetCore {
 				for (arg in args)
 					collectCallableArgTypeOverridesFromExpr(arg, scope, candidates, "");
 			case ECall(callee, args):
+				collectForwardedCallArgTypeOverrides(callee, args, scope, candidates);
 				collectCallableArgTypeOverridesFromExpr(callee, scope, candidates, "");
 				for (arg in args)
 					collectCallableArgTypeOverridesFromExpr(arg, scope, candidates, "");
@@ -2241,6 +2306,70 @@ class CppTargetCore {
 			case ENew(_, args):
 				for (arg in args)
 					collectCallableArgTypeOverridesFromExpr(arg, scope, candidates, "");
+			case _:
+		}
+	}
+
+	static function collectForwardedCallArgTypeOverrides(callee:HxExpr, args:Array<HxExpr>, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+		final params = knownCallParams(callee, scope);
+		if (params == null || params.length == 0 || args == null || args.length == 0)
+			return;
+		var paramIndex = 0;
+		var argIndex = 0;
+		while (argIndex < args.length && paramIndex < params.length) {
+			final param = params[paramIndex];
+			final arg = args[argIndex];
+			if (callArgMatchesParam(arg, param, scope) || !callParamCanBeSkipped(param)) {
+				applyForwardedArgTypeOverride(arg, param, scope, candidates);
+				paramIndex++;
+				argIndex++;
+				continue;
+			}
+			final later = findLaterMatchingParam(params, arg, paramIndex + 1, scope);
+			if (later < 0) {
+				applyForwardedArgTypeOverride(arg, param, scope, candidates);
+				paramIndex++;
+				argIndex++;
+				continue;
+			}
+			paramIndex = later;
+			applyForwardedArgTypeOverride(arg, params[paramIndex], scope, candidates);
+			paramIndex++;
+			argIndex++;
+		}
+	}
+
+	static function knownCallParams(callee:HxExpr, scope:CppRenderScope):Null<Array<HxFunctionArg>> {
+		return switch (callee) {
+			case EIdent(name):
+				final fn = currentOwnerMethod(name, scope);
+				fn == null ? null : HxFunctionDecl.getArgs(fn);
+			case EField(receiver, method):
+				final staticOwner = staticReceiverClassName(receiver, scope);
+				if (staticOwner != null) {
+					final fn = classMethodDecl(staticOwner, method, true, scope);
+					fn == null ? null : HxFunctionDecl.getArgs(fn);
+				} else {
+					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+					if (ownerType == null)
+						null;
+					else {
+						final fn = classMethodDecl(ownerType, method, false, scope);
+						fn == null ? null : HxFunctionDecl.getArgs(fn);
+					}
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function applyForwardedArgTypeOverride(arg:HxExpr, param:HxFunctionArg, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+		switch (arg) {
+			case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
+				final paramType = cppFunctionArgType(param, scope);
+				final expectedType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
+				if (expectedType.length > 0 && expectedType != "std::string")
+					setAssignedArgTypeOverride(scope, sanitizeIdentifier(name), expectedType);
 			case _:
 		}
 	}

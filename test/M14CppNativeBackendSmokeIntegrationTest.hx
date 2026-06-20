@@ -1030,6 +1030,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Assert.sameAs should stringify Dynamic expected values when storing diagnostic status");
 		assertTrue(assertSameAsLines.indexOf("sameAs(std::string expected, std::string value") < 0,
 			"C++ Assert.sameAs should not reject numeric diagnostic values through a string-only signature");
+		final assertSame = new HxFunctionDecl("same", Public, true, [
+			new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("value", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("recursive", "Bool", NoDefault, true, false),
+			new HxFunctionArg("msg", "String", NoDefault, true, false),
+			new HxFunctionArg("approx", "Float", NoDefault, true, false),
+			new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+		], "Bool", [SReturn(EBool(true), HxPos.unknown())], "");
+		final assertSameLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(assertSame, assertOwner, assertLookup).join("\n");
+		assertContains(assertSameLines, "template<typename TExpected, typename TValue>\n  static bool same(const TExpected& expected, const TValue& value",
+			"C++ Assert.same should accept Dynamic-erased expected/value through a template boundary");
+		assertContains(assertSameLines, "__hxhx_stringify(expected)", "C++ Assert.same diagnostics should stringify templated expected values");
+		assertContains(assertSameLines, "__hxhx_same_as(expected, value", "C++ Assert.same should compare templated values without narrowing to strings");
+		assertTrue(assertSameLines.indexOf("same(std::string expected, std::string value") < 0,
+			"C++ Assert.same should not reject array/bool values through a string-only signature");
 		final assertSameStatusScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "bool");
 		assertSameStatusScope.localTypes.set("recursive", "std::optional<bool>");
 		assertSameStatusScope.localTypes.set("expected", "std::string");
@@ -1074,6 +1089,39 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			.join("\n");
 		assertContains(assertPassFromPosLines, "return pass(std::string(\"pass expected\"), pos);",
 			"C++ same-owner calls should pad skipped optional arguments when a PosInfos argument targets the trailing position parameter");
+		final assertBoolHelpers = new HxClassDecl("Assert", false, [
+			new HxFunctionDecl("isTrue", Public, true, [
+				new HxFunctionArg("value", "Bool", NoDefault, false, false),
+				new HxFunctionArg("msg", "String", NoDefault, true, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Bool", [SReturn(EIdent("value"), HxPos.unknown())], ""),
+			new HxFunctionDecl("isFalse", Public, true, [
+				new HxFunctionArg("value", "Bool", NoDefault, false, false),
+				new HxFunctionArg("msg", "String", NoDefault, true, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Bool", [SReturn(EUnop("!", EIdent("value")), HxPos.unknown())], "")
+		], []);
+		final testBoolWrapper = new HxFunctionDecl("t", Public, false, [
+			new HxFunctionArg("v", "", NoDefault, false, false),
+			new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+		], "String", [
+			SReturn(ETernary(ECall(EField(EIdent("Assert"), "isTrue"), [EIdent("v"), ENull, EIdent("pos")]), EString("true"), EString("false")),
+				HxPos.unknown())
+		], "");
+		final testBoolOwner = new HxClassDecl("Test", false, [testBoolWrapper], []);
+		final testBoolNames = new StringMap<Bool>();
+		for (name in ["Test", "Assert", "PosInfos"])
+			testBoolNames.set(name, true);
+		final testBoolClasses = new StringMap<HxClassDecl>();
+		testBoolClasses.set("Test", testBoolOwner);
+		testBoolClasses.set("Assert", assertBoolHelpers);
+		testBoolClasses.set("PosInfos", new HxClassDecl("PosInfos", false, [], []));
+		final testBoolLookup = {names: testBoolNames, byName: testBoolClasses};
+		final testBoolWrapperLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(testBoolWrapper, testBoolOwner, testBoolLookup).join("\n");
+		assertContains(testBoolWrapperLines, "std::string t(bool v, std::shared_ptr<PosInfos> pos = nullptr)",
+			"C++ wrappers that forward erased args into known Bool helper params should infer bool, not std::string");
+		assertTrue(testBoolWrapperLines.indexOf("std::string t(std::string v") < 0,
+			"C++ Assert.isTrue wrapper args should not stay string-only when call sites pass bools");
 		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [
 			new HxFunctionArg("ex", "Dynamic", NoDefault, false, false),
 			new HxFunctionArg("msg", "String", NoDefault, false, false)
