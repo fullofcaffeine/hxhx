@@ -1216,6 +1216,54 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ ArraySort-like binary-search helpers should infer forwarded compare indexes as int");
 		assertTrue(arraySortRecLines.indexOf("std::string from") < 0 && arraySortRecLines.indexOf("std::string to") < 0,
 			"C++ ArraySort-like helper indexes should not stay string-shaped");
+		final nativeStringRaw = new HxFunctionDecl("raw", Public, true, [new HxFunctionArg("inString", "String", NoDefault, false, false)], "RawConstPointer",
+			[SReturn(ECall(EField(EIdent("inString"), "raw_ptr"), []), HxPos.unknown())], "");
+		final nativeStringCStr = new HxFunctionDecl("c_str", Public, true, [new HxFunctionArg("inString", "String", NoDefault, false, false)], "ConstPointer",
+			[
+				SReturn(ECall(EField(EField(EIdent("cpp"), "ConstPointer"), "fromPointer"), [ECall(EField(EIdent("inString"), "c_str"), [])]), HxPos.unknown())
+			], "");
+		final nativeStringFromPointer = new HxFunctionDecl("fromPointer", Public, true, [new HxFunctionArg("inPtr", "ConstPointer", NoDefault, false, false)],
+			"String", [
+				SReturn(ECall(EField(EIdent("__global__"), "String"), [EField(EIdent("inPtr"), "ptr")]), HxPos.unknown())
+			], "");
+		final nativeStringFromGcPointer = new HxFunctionDecl("fromGcPointer", Public, true, [
+			new HxFunctionArg("inPtr", "ConstPointer", NoDefault, false, false),
+			new HxFunctionArg("inLen", "Int", NoDefault, false, false)
+		], "String", [
+			SReturn(ECall(EField(EIdent("__global__"), "String"), [EField(EIdent("inPtr"), "ptr"), EIdent("inLen")]), HxPos.unknown())
+		], "");
+		final nativeStringOwner = new HxClassDecl("NativeString", false, [
+			nativeStringRaw,
+			nativeStringCStr,
+			nativeStringFromPointer,
+			nativeStringFromGcPointer
+		], []);
+		final nativeStringNames = new StringMap<Bool>();
+		for (name in ["NativeString", "RawConstPointer", "ConstPointer"])
+			nativeStringNames.set(name, true);
+		final nativeStringClasses = new StringMap<HxClassDecl>();
+		nativeStringClasses.set("NativeString", nativeStringOwner);
+		final nativeStringLookup = {names: nativeStringNames, byName: nativeStringClasses};
+		final nativeStringRawLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(nativeStringRaw, nativeStringOwner, nativeStringLookup)
+			.join("\n");
+		final nativeStringCStrLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(nativeStringCStr, nativeStringOwner, nativeStringLookup)
+			.join("\n");
+		final nativeStringFromPointerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(nativeStringFromPointer, nativeStringOwner,
+			nativeStringLookup)
+			.join("\n");
+		final nativeStringFromGcPointerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(nativeStringFromGcPointer, nativeStringOwner,
+			nativeStringLookup)
+			.join("\n");
+		assertContains(nativeStringRawLines, "return std::make_shared<RawConstPointer>(inString.c_str());",
+			"C++ NativeString.raw should lower raw_ptr through target-owned pointer support");
+		assertContains(nativeStringCStrLines, "return std::make_shared<ConstPointer>(inString.c_str());",
+			"C++ cpp.ConstPointer.fromPointer should lower to target-owned pointer support");
+		assertContains(nativeStringFromPointerLines, "return __hxhx_string_from_pointer((inPtr->ptr));",
+			"C++ __global__.String(pointer) should lower to target-owned string-from-pointer support");
+		assertContains(nativeStringFromGcPointerLines, "return __hxhx_string_from_pointer((inPtr->ptr), inLen);",
+			"C++ __global__.String(pointer, len) should lower to target-owned string-from-pointer support");
+		assertTrue(nativeStringCStrLines.indexOf("cpp.ConstPointer") < 0 && nativeStringFromPointerLines.indexOf("__global__.String") < 0,
+			"C++ NativeString pointer intrinsics should not leak hxcpp-native syntax into generated C++");
 		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [
 			new HxFunctionArg("ex", "Dynamic", NoDefault, false, false),
 			new HxFunctionArg("msg", "String", NoDefault, false, false)

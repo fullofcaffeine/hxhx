@@ -138,6 +138,25 @@ class CppTargetCore {
 		out.push("#include <utility>");
 		out.push("#include <vector>");
 		out.push("");
+		out.push("struct RawConstPointer {");
+		out.push("  const char* ptr;");
+		out.push("  explicit RawConstPointer(const char* ptr = nullptr) : ptr(ptr) {}");
+		out.push("};");
+		out.push("");
+		out.push("struct ConstPointer {");
+		out.push("  const char* ptr;");
+		out.push("  explicit ConstPointer(const char* ptr = nullptr) : ptr(ptr) {}");
+		out.push("};");
+		out.push("");
+		out.push("static std::string __hxhx_string_from_pointer(const char* ptr) {");
+		out.push("  return ptr == nullptr ? std::string() : std::string(ptr);");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_string_from_pointer(const char* ptr, int len) {");
+		out.push("  if (ptr == nullptr || len <= 0) return std::string();");
+		out.push("  return std::string(ptr, static_cast<std::size_t>(len));");
+		out.push("}");
+		out.push("");
 		for (line in CppMacroExpr.runtimePreludeLines())
 			out.push(line);
 		out.push("static std::string __hxhx_stringify(const __HxMacroExpr& value) {");
@@ -3422,6 +3441,8 @@ class CppTargetCore {
 		}
 		if (exprCppType(receiver, scope) == "std::string") {
 			return switch (method) {
+				case "raw_ptr" if (args.length == 0):
+					"std::make_shared<RawConstPointer>(" + renderExpr(receiver, scope) + ".c_str())";
 				case "split" if (args.length == 1):
 					"__hxhx_split(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
 				case "lastIndexOf" if (args.length == 1 || args.length == 2):
@@ -3450,6 +3471,8 @@ class CppTargetCore {
 		}
 		if (method == "join" && isCppVectorType(exprCppType(receiver, scope)) && args.length == 1)
 			return "__hxhx_join(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
+		if (isCppConstPointerStaticReceiver(receiver) && method == "fromPointer" && args.length == 1)
+			return "std::make_shared<ConstPointer>(" + renderExpr(args[0], scope) + ")";
 		if (receiverTypeName != null) {
 			if (method == "create")
 				return "std::make_shared<" + receiverTypeName + ">(" + renderedArgs + ")";
@@ -3599,6 +3622,14 @@ class CppTargetCore {
 				+ ")";
 			case "__hxcpp_bytes_of_string" if (args.length == 2):
 				"__hxhx_bytes_of_string(" + rendered.join(", ") + ")";
+			case "String" if (args.length == 1):
+				"__hxhx_string_from_pointer(" + renderExpr(args[0], scope) + ")";
+			case "String" if (args.length == 2):
+				"__hxhx_string_from_pointer("
+				+ renderExpr(args[0], scope)
+				+ ", "
+				+ renderExpr(args[1], scope)
+				+ ")";
 			case _:
 				renderExpr(EIdent("__global__"), scope) + "." + sanitizeIdentifier(method) + "(" + rendered.join(", ") + ")";
 		};
@@ -3608,6 +3639,8 @@ class CppTargetCore {
 		return switch (method) {
 			case "__hxcpp_memory_get_double" | "__hxcpp_memory_get_float":
 				"double";
+			case "String":
+				"std::string";
 			case "__hxcpp_memory_set_double" | "__hxcpp_memory_set_float" | "__hxcpp_string_of_bytes" | "__hxcpp_bytes_of_string":
 				"void";
 			case _:
@@ -3834,6 +3867,11 @@ class CppTargetCore {
 		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "StringTools";
 	}
 
+	static function isCppConstPointerStaticReceiver(receiver:HxExpr):Bool {
+		final typePath = staticReceiverTypePath(receiver);
+		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "ConstPointer";
+	}
+
 	static function isStringToolsIntrinsicCall(receiver:HxExpr, method:String):Bool {
 		if (!isStringToolsStaticReceiver(receiver))
 			return false;
@@ -3859,8 +3897,9 @@ class CppTargetCore {
 
 	static function isCppCoreExternClass(name:String):Bool {
 		final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
-		return clean == "Math" || clean == "NativeArray" || clean == "Pointer" || clean == "ConstPointer" || clean == "Reference" || clean == "Star"
-			|| clean == "AutoCast" || clean == "ArrayBase" || isBytesDataTypeName(clean) || isCppPrimitiveIntrinsicClass(clean);
+		return clean == "Math" || clean == "NativeArray" || clean == "Pointer" || clean == "ConstPointer" || clean == "RawConstPointer"
+			|| clean == "Reference" || clean == "Star" || clean == "AutoCast" || clean == "ArrayBase" || isBytesDataTypeName(clean)
+			|| isCppPrimitiveIntrinsicClass(clean);
 	}
 
 	static function isBytesDataTypeName(name:String):Bool {
