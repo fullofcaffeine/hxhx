@@ -5123,6 +5123,31 @@ class CppTargetCore {
 		return CppTypeModel.cppReturnTypeHint(typeHint, scope, classLookup);
 	}
 
+	static function functionReturnsLambda(fn:HxFunctionDecl):Bool {
+		if (fn == null)
+			return false;
+		for (stmt in HxFunctionDecl.getBody(fn))
+			if (stmtReturnsLambda(stmt))
+				return true;
+		return false;
+	}
+
+	static function stmtReturnsLambda(stmt:HxStmt):Bool {
+		return switch (stmt) {
+			case SReturn(ELambda(_, _), _):
+				true;
+			case SBlock(stmts, _):
+				var found = false;
+				for (s in stmts)
+					if (stmtReturnsLambda(s))
+						found = true;
+				found;
+			case SIf(_, thenBranch, elseBranch, _): stmtReturnsLambda(thenBranch) || (elseBranch != null && stmtReturnsLambda(elseBranch));
+			case _:
+				false;
+		};
+	}
+
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
 		final ownerName = owner == null ? "" : sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
@@ -5132,6 +5157,8 @@ class CppTargetCore {
 			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null, classLookup);
 		if (raw.length > 0)
 			return cppReturnTypeHint(raw, null, classLookup);
+		if (functionReturnsLambda(fn))
+			return "auto";
 		final scope = renderScope(owner, classLookup, "auto");
 		inferCallableArgTypeOverrides(scope, fn);
 		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));

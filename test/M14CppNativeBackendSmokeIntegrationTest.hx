@@ -1124,6 +1124,26 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ enum-tag arguments inside erased string-context calls should preserve their string payload");
 		assertTrue(assertWarnAddString.indexOf("std::to_string(results->add") < 0,
 			"C++ Assert.warn-like results.add calls should not become std::to_string(std::string)");
+		final assertCreateAsyncLike = new HxFunctionDecl("createAsyncLike", Public, true, [], "", [SReturn(ELambda([], ENull), HxPos.unknown())], "");
+		final assertCreateEventLike = new HxFunctionDecl("createEventLike", Public, true, [], "", [SReturn(ELambda(["e"], ENull), HxPos.unknown())], "");
+		final assertCreateLambdaOwner = new HxClassDecl("Assert", false, [assertCreateAsyncLike, assertCreateEventLike], []);
+		final assertCreateLambdaNames = new StringMap<Bool>();
+		assertCreateLambdaNames.set("Assert", true);
+		final assertCreateLambdaClasses = new StringMap<HxClassDecl>();
+		assertCreateLambdaClasses.set("Assert", assertCreateLambdaOwner);
+		final assertCreateLambdaLookup = {names: assertCreateLambdaNames, byName: assertCreateLambdaClasses};
+		final assertCreateAsyncLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(assertCreateAsyncLike, assertCreateLambdaOwner, assertCreateLambdaLookup).join("\n");
+		final assertCreateEventLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(assertCreateEventLike, assertCreateLambdaOwner, assertCreateLambdaLookup).join("\n");
+		assertContains(assertCreateAsyncLines, "static auto createAsyncLike() {",
+			"C++ lambda-returning helpers with erased return hints should infer auto instead of std::string");
+		assertContains(assertCreateAsyncLines, "return [&]() { return nullptr; };", "C++ lambda-returning helpers should return the lambda value directly");
+		assertContains(assertCreateEventLines, "static auto createEventLike() {",
+			"C++ one-arg lambda-returning helpers with erased return hints should infer auto instead of std::string");
+		assertContains(assertCreateEventLines, "return [&](auto e) { return nullptr; };", "C++ event-lambda helpers should return the lambda value directly");
+		assertTrue(assertCreateAsyncLines.indexOf("std::to_string([&]()") < 0, "C++ createAsync-like helpers should not stringify returned lambdas");
+		assertTrue(assertCreateEventLines.indexOf("std::to_string([&](auto e)") < 0, "C++ createEvent-like helpers should not stringify returned lambdas");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",
