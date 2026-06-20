@@ -1331,6 +1331,8 @@ class CppTargetCore {
 
 	static function renderInterfaceClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		if (HxClassDecl.getFunctions(cls).length == 0 && renderMissingInterfaceDeclaration(className) != null)
+			return [];
 		final scope = renderScope(cls, classLookup, "void");
 		final out = ["struct " + className + " {", "  virtual ~" + className + "() = default;"];
 		for (fn in HxClassDecl.getFunctions(cls)) {

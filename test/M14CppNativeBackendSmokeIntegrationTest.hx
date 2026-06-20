@@ -1354,6 +1354,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ class lookup should alias package-qualified interfaces by their rendered basename");
 		assertTrue(packagedIMapClasses.get("IMap") == packagedIMap,
 			"C++ class lookup basename aliases should let missing-interface guards see the real packaged interface");
+		final emptyIMapLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(new HxClassDecl("IMap", false, [], [], "", null, true), {
+				names: iMapNames,
+				byName: iMapClasses
+			}).join("\n");
+		assertTrue(emptyIMapLines.length == 0,
+			"C++ empty parsed IMap placeholders should not emit an empty struct that conflicts with target-owned IMap declarations");
 		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [
 			new HxFunctionArg("ex", "Dynamic", NoDefault, false, false),
 			new HxFunctionArg("msg", "String", NoDefault, false, false)
