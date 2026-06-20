@@ -4059,6 +4059,8 @@ class CppTargetCore {
 				renderExpr(expr, scope);
 			case ECall(EField(_, _), _) if (exprCppType(expr, scope) == "std::string"):
 				renderExpr(expr, scope);
+			case ECall(EIdent(_), _) | ECall(EField(_, _), _):
+				callStringExpr(expr, scope);
 			case EField(_, "length"):
 				"std::to_string(" + renderExpr(expr, scope) + ")";
 			case EField(_, _) if (exprCppType(expr, scope) == "std::string"):
@@ -5256,6 +5258,22 @@ class CppTargetCore {
 	static function cStyleConditionExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		final rendered = conditionExpr(expr, scope);
 		return StringTools.startsWith(rendered, "(") && StringTools.endsWith(rendered, ")") ? rendered : "(" + rendered + ")";
+	}
+
+	static function callStringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final typeName = exprCppType(expr, scope);
+		final inferredType = typeName.length > 0 ? typeName : inferExprCppType(expr, scope);
+		final rendered = renderExpr(expr, scope);
+		return switch (inferredType) {
+			case "std::string":
+				rendered;
+			case "bool":
+				"std::string(" + rendered + " ? \"true\" : \"false\")";
+			case "int" | "double" | "float" | "long long" | "unsigned int":
+				"std::to_string(" + rendered + ")";
+			case _:
+				"__hxhx_stringify(" + rendered + ")";
+		};
 	}
 
 	static function isPolymorphicIsOfTypeHelper(fn:HxFunctionDecl):Bool {

@@ -1113,6 +1113,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(assertStringSequenceLikeLines, "if (__hxhx_is_type(value, \"String\")) {",
 			"C++ if statements should parenthesize raw helper-call conditions");
 		assertTrue(assertStringSequenceLikeLines.indexOf("if false {") < 0, "C++ if statements must use valid C-style condition syntax");
+		final assertWarnScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
+		assertWarnScope.localTypes.set("results", "std::shared_ptr<ResultSink>");
+		assertWarnScope.localTypes.set("msg", "std::string");
+		final assertWarnAdd:HxExpr = ECall(EField(EIdent("results"), "add"), [ECall(EEnumValue("Warning"), [EIdent("msg")])]);
+		final assertWarnAddString = @:privateAccess backend.cpp.CppTargetCore.stringExpr(assertWarnAdd, assertWarnScope);
+		assertContains(assertWarnAddString, "__hxhx_stringify(results->add(([&]() {",
+			"C++ unknown string-context calls should use target-owned stringify instead of assuming numeric std::to_string");
+		assertContains(assertWarnAddString, "return std::string(\"Warning\");",
+			"C++ enum-tag arguments inside erased string-context calls should preserve their string payload");
+		assertTrue(assertWarnAddString.indexOf("std::to_string(results->add") < 0,
+			"C++ Assert.warn-like results.add calls should not become std::to_string(std::string)");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",
