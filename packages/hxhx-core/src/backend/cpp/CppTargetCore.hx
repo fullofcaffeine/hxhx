@@ -1276,6 +1276,11 @@ class CppTargetCore {
 			return [];
 		if (isBytesDataTypeName(HxClassDecl.getName(cls)))
 			return [];
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		if (HxClassDecl.getFields(cls).length == 0
+			&& HxClassDecl.getFunctions(cls).length == 0
+			&& renderMissingInterfaceDeclaration(className) != null)
+			return [];
 		if (HxClassDecl.getIsInterface(cls))
 			return renderInterfaceClass(cls, classLookup);
 		if (isPosInfosSupportClass(cls))
@@ -1289,7 +1294,6 @@ class CppTargetCore {
 		if (isStdArrayHelperClass(cls))
 			return renderStdArrayHelperClass(cls, classLookup);
 		final typeParams = genericClassTemplateParams(cls);
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		final baseType = baseTypeName(cls);
 		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
 		out.push("struct " + className + (baseType == null ? "" : " : public " + baseType) + " {");

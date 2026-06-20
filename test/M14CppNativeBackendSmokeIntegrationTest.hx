@@ -1361,6 +1361,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			}).join("\n");
 		assertTrue(emptyIMapLines.length == 0,
 			"C++ empty parsed IMap placeholders should not emit an empty struct that conflicts with target-owned IMap declarations");
+		final emptyIMapClassLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(new HxClassDecl("IMap", false, [], []), {
+				names: iMapNames,
+				byName: iMapClasses
+			}).join("\n");
+		assertTrue(emptyIMapClassLines.length == 0,
+			"C++ empty parsed IMap classes should not emit an empty struct that conflicts with target-owned IMap declarations");
 		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [
 			new HxFunctionArg("ex", "Dynamic", NoDefault, false, false),
 			new HxFunctionArg("msg", "String", NoDefault, false, false)
