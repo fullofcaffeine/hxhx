@@ -1346,6 +1346,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ IMap-like interfaces should declare keys for MapKeyValueIterator");
 		assertContains(iMapLines, "virtual std::shared_ptr<KeyValueIterator> keyValueIterator() = 0;",
 			"C++ IMap-like interfaces should preserve class-like iterator return declarations");
+		final packagedIMapNames = new StringMap<Bool>();
+		final packagedIMapClasses = new StringMap<HxClassDecl>();
+		final packagedIMap = new HxClassDecl("haxe.Constraints.IMap", false, [], [], "", null, true);
+		@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases("haxe.Constraints.IMap", packagedIMap, packagedIMapNames, packagedIMapClasses);
+		assertTrue(packagedIMapNames.exists("haxe_Constraints_IMap") && packagedIMapNames.exists("IMap"),
+			"C++ class lookup should alias package-qualified interfaces by their rendered basename");
+		assertTrue(packagedIMapClasses.get("IMap") == packagedIMap,
+			"C++ class lookup basename aliases should let missing-interface guards see the real packaged interface");
 		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [
 			new HxFunctionArg("ex", "Dynamic", NoDefault, false, false),
 			new HxFunctionArg("msg", "String", NoDefault, false, false)

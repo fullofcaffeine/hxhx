@@ -1038,12 +1038,22 @@ class CppTargetCore {
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
-				final name = sanitizeTypePath(HxClassDecl.getName(cls));
-				names.set(name, true);
-				byName.set(name, cls);
+				addClassLookupAliases(HxClassDecl.getName(cls), cls, names, byName);
 			}
 		}
 		return {names: names, byName: byName};
+	}
+
+	static function addClassLookupAliases(rawName:String, cls:HxClassDecl, names:haxe.ds.StringMap<Bool>, byName:haxe.ds.StringMap<HxClassDecl>):Void {
+		final fullName = sanitizeTypePath(rawName);
+		names.set(fullName, true);
+		byName.set(fullName, cls);
+		final baseName = sanitizeTypePath(typeBaseName(rawName == null ? "" : rawName));
+		if (baseName.length > 0 && baseName != fullName) {
+			names.set(baseName, true);
+			if (!byName.exists(baseName))
+				byName.set(baseName, cls);
+		}
 	}
 
 	static function renderHelperClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
