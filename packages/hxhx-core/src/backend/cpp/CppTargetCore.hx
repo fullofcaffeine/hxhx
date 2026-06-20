@@ -130,11 +130,16 @@ class CppTargetCore {
 		out.push("#include <sstream>");
 		out.push("#include <stdexcept>");
 		out.push("#include <string>");
+		out.push("#include <type_traits>");
 		out.push("#include <utility>");
 		out.push("#include <vector>");
 		out.push("");
 		for (line in CppMacroExpr.runtimePreludeLines())
 			out.push(line);
+		out.push("static std::string __hxhx_stringify(const __HxMacroExpr& value) {");
+		out.push("  return __hxhx_macro_to_string(value);");
+		out.push("}");
+		out.push("");
 		out.push("static std::vector<std::string> __hxhx_args(int argc, char** argv) {");
 		out.push("  std::vector<std::string> out;");
 		out.push("  for (int i = 1; i < argc; ++i) out.push_back(std::string(argv[i]));");
@@ -519,6 +524,24 @@ class CppTargetCore {
 		out.push("  }");
 		out.push("  out << \"]\";");
 		out.push("  return out.str();");
+		out.push("}");
+		out.push("");
+		out.push("template<typename A, typename B>");
+		out.push("static bool __hxhx_same_as(const A& expected, const B& value, double approx) {");
+		out.push("  if constexpr (std::is_arithmetic_v<A> && std::is_arithmetic_v<B>) {");
+		out.push("    return std::fabs(static_cast<double>(expected) - static_cast<double>(value)) <= approx;");
+		out.push("  } else {");
+		out.push("    return __hxhx_stringify(expected) == __hxhx_stringify(value);");
+		out.push("  }");
+		out.push("}");
+		out.push("");
+		out.push("template<typename A, typename B>");
+		out.push("static bool __hxhx_same_as(const std::vector<A>& expected, const std::vector<B>& value, double approx) {");
+		out.push("  if (expected.size() != value.size()) return false;");
+		out.push("  for (std::size_t i = 0; i < expected.size(); ++i) {");
+		out.push("    if (!__hxhx_same_as(expected[i], value[i], approx)) return false;");
+		out.push("  }");
+		out.push("  return true;");
 		out.push("}");
 		out.push("");
 		out.push("template<typename T, typename F>");
@@ -1467,6 +1490,8 @@ class CppTargetCore {
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		if (isAssertPolymorphicStringifyHelper(fn, owner))
 			return renderAssertPolymorphicStringifyHelper(fn);
+		if (isAssertPolymorphicSameAsHelper(fn, owner))
+			return renderAssertPolymorphicSameAsHelper(fn, owner, classLookup);
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
@@ -1501,6 +1526,68 @@ class CppTargetCore {
 			"    return __hxhx_stringify(" + argName + ");",
 			"  }"
 		];
+	}
+
+	static function isAssertPolymorphicSameAsHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Assert")
+			return false;
+		if (!HxFunctionDecl.getIsStatic(fn) || sanitizeIdentifier(HxFunctionDecl.getName(fn)) != "sameAs")
+			return false;
+		return HxFunctionDecl.getArgs(fn).length >= 3;
+	}
+
+	static function renderAssertPolymorphicSameAsHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final args = HxFunctionDecl.getArgs(fn);
+		final expectedName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final valueName = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
+		final statusName = sanitizeIdentifier(HxFunctionArg.getName(args[2]));
+		final scope = renderScope(owner, classLookup, "bool");
+		prepareFunctionScope(scope, fn);
+		scope.localTypes.set(expectedName, "TExpected");
+		scope.localTypes.set(valueName, "TValue");
+		final statusArg = renderFunctionArg(args[2], scope);
+		final hasApprox = args.length >= 4;
+		final approxName = hasApprox ? sanitizeIdentifier(HxFunctionArg.getName(args[3])) : "__hxhx_approx";
+		final renderedArgs = ["const TExpected& " + expectedName, "const TValue& " + valueName, statusArg];
+		if (hasApprox)
+			renderedArgs.push(renderFunctionArg(args[3], scope));
+		final out = ["  template<typename TExpected, typename TValue>",
+			"  static bool sameAs(" + renderedArgs.join(", ") + ") {",
+			"    if ("
+			+ statusName
+			+ " == nullptr) "
+			+ statusName
+			+ " = std::make_shared<LikeStatus>();",
+			"    ("
+			+ statusName
+			+ "->expectedValue) = __hxhx_stringify("
+			+ expectedName
+			+ ");",
+			"    ("
+			+ statusName
+			+ "->actualValue) = __hxhx_stringify("
+			+ valueName
+			+ ");",
+			"    const double __hxhx_same_as_approx = " + (hasApprox ? approxName : "0.0") + ";",
+			"    if (!__hxhx_same_as("
+			+ expectedName
+			+ ", "
+			+ valueName
+			+ ", __hxhx_same_as_approx)) {",
+			"      ("
+			+ statusName
+			+ "->error) = std::string(\"expected \") + __hxhx_stringify("
+			+ expectedName
+			+ ") + std::string(\" but it is \") + __hxhx_stringify("
+			+ valueName
+			+ ");",
+			"      return false;",
+			"    }",
+			"    (" + statusName + "->error) = std::string();",
+			"    return true;",
+			"  }"
+		];
+		return out;
 	}
 
 	static function findConstructor(cls:HxClassDecl):Null<HxFunctionDecl> {
@@ -3820,7 +3907,14 @@ class CppTargetCore {
 				+ ")";
 			case EIdent(name):
 				final local = localCppName(name, scope);
-				if (exprCppType(expr, scope) == CppMacroExpr.CPP_TYPE) "__hxhx_macro_to_string(" + local + ")" else "std::string(" + local + ")";
+				final typeName = exprCppType(expr, scope);
+				if (typeName == CppMacroExpr.CPP_TYPE) "__hxhx_macro_to_string("
+					+ local
+					+ ")"; else if (typeName == "std::string") "std::string(" + local + ")"; else if (typeName == "bool") "std::string(" + local
+					+ " ? \"true\" : \"false\")"; else if (typeName == "int" || typeName == "double" || typeName == "float" || typeName == "long long")
+					"std::to_string("
+					+ local
+					+ ")"; else "__hxhx_stringify(" + local + ")";
 			case ENull:
 				"std::string()";
 			case _:

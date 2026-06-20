@@ -573,11 +573,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function q(v:Dynamic):String {",
 			"    return Std.string(v);",
 			"  }",
-			"  public static function sameAs(expected:Dynamic, value:Dynamic, status:LikeStatus):Bool {",
+			"  public static function sameAs(expected:Dynamic, value:Dynamic, status:LikeStatus, approx:Float):Bool {",
 			"    status.expectedValue = expected;",
 			"    status.actualValue = value;",
+			"    if (!_floatEquals(expected, value, approx)) {",
+			"      status.error = \"float mismatch\";",
+			"    }",
+			"    var path = status.path;",
+			"    for (i in 0...2) {",
+			"      status.path = path == \"\" ? \"array[\" + i + \"]\" : path + \"[\" + i + \"]\";",
+			"    }",
 			"    status.error = status.path;",
 			"    return status.error == \"\" || status.recursive;",
+			"  }",
+			"  static function _floatEquals(expected:Float, value:Float, approx:Float):Bool {",
+			"    return Math.abs(expected - value) <= approx;",
 			"  }",
 			"}",
 			"class Box {",
@@ -979,6 +989,38 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final assertQErasedLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(assertQErased, assertOwner, assertLookup).join("\n");
 		assertContains(assertQErasedLines, "template<typename T>\n  static std::string q(const T& v)",
 			"C++ Assert.q should stay polymorphic even if upstream helper hints are erased during parsing");
+		final likeStatus = new HxClassDecl("LikeStatus", false, [], [
+			new HxFieldDecl("expectedValue", Public, false, "Dynamic", null),
+			new HxFieldDecl("actualValue", Public, false, "Dynamic", null),
+			new HxFieldDecl("error", Public, false, "String", null),
+			new HxFieldDecl("path", Public, false, "String", null),
+			new HxFieldDecl("recursive", Public, false, "Bool", null)
+		]);
+		assertNames.set("LikeStatus", true);
+		assertClasses.set("LikeStatus", likeStatus);
+		final assertSameAs = new HxFunctionDecl("sameAs", Public, true, [
+			new HxFunctionArg("expected", "", NoDefault, false, false),
+			new HxFunctionArg("value", "", NoDefault, false, false),
+			new HxFunctionArg("status", "LikeStatus", NoDefault, false, false),
+			new HxFunctionArg("approx", "Float", NoDefault, false, false)
+		], "Bool", [
+			SExpr(EBinop("=", EField(EIdent("status"), "expectedValue"), EIdent("expected")), HxPos.unknown()),
+			SReturn(ECall(EIdent("_floatEquals"), [EIdent("expected"), EIdent("value"), EIdent("approx")]), HxPos.unknown())
+		], "");
+		final assertSameAsLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(assertSameAs, assertOwner, assertLookup).join("\n");
+		assertContains(assertSameAsLines,
+			"template<typename TExpected, typename TValue>\n  static bool sameAs(const TExpected& expected, const TValue& value, std::shared_ptr<LikeStatus> status, double approx)",
+			"C++ Assert.sameAs should accept Dynamic-erased expected/value without narrowing to std::string");
+		assertContains(assertSameAsLines, "__hxhx_same_as(expected, value, __hxhx_same_as_approx)",
+			"C++ Assert.sameAs should delegate mixed numeric/vector/string comparison to a compile-safe target helper");
+		assertContains(assertSameAsLines, "(status->expectedValue) = __hxhx_stringify(expected);",
+			"C++ Assert.sameAs should stringify Dynamic expected values when storing diagnostic status");
+		assertTrue(assertSameAsLines.indexOf("sameAs(std::string expected, std::string value") < 0,
+			"C++ Assert.sameAs should not reject numeric diagnostic values through a string-only signature");
+		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
+		assertStringScope.localTypes.set("i", "int");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",
+			"C++ string contexts should stringify integer locals with std::to_string, not std::string(i)");
 		final listNode = new HxClassDecl("ListNode", false, [], [new HxFieldDecl("next", Public, false, "Null<ListNode>", null)]);
 		final listOwner = new HxClassDecl("ListOwner", false, [], []);
 		final listNames = new StringMap<Bool>();
@@ -1900,15 +1942,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "helper(4)", "C++ smoke should lower direct identifier function call");
 		assertContains(source, "template<typename T>\n  static std::string q(const T& v)", "C++ smoke should emit Assert.q as a template");
 		assertContains(source, "Assert::q(1.5)", "C++ smoke should allow numeric Assert.q calls");
+		assertContains(source, "static std::string __hxhx_stringify(const __HxMacroExpr& value)",
+			"C++ smoke should stringify macro-expression values without falling through to ostream fallback");
 		assertContains(source, "struct LikeStatus {", "C++ smoke should emit named structural typedef helpers as concrete structs");
 		assertContains(source, "std::string expectedValue = std::string();", "C++ smoke should retain LikeStatus expectedValue field");
 		assertContains(source, "std::string actualValue = std::string();", "C++ smoke should retain LikeStatus actualValue field");
 		assertContains(source, "std::string error = std::string();", "C++ smoke should retain LikeStatus error field");
 		assertContains(source, "std::string path = std::string();", "C++ smoke should retain LikeStatus path field");
 		assertContains(source, "bool recursive = false;", "C++ smoke should retain LikeStatus recursive field");
-		assertContains(source, "static bool sameAs(std::string expected, std::string value, std::shared_ptr<LikeStatus> status)",
-			"C++ smoke should keep named structural typedef helper args as references");
-		assertContains(source, "(status->expectedValue) = expected;", "C++ smoke should access retained structural typedef fields");
+		assertContains(source,
+			"template<typename TExpected, typename TValue>\n  static bool sameAs(const TExpected& expected, const TValue& value, std::shared_ptr<LikeStatus> status, double approx)",
+			"C++ smoke should keep Assert.sameAs Dynamic expected/value args polymorphic");
+		assertContains(source, "__hxhx_same_as(expected, value, __hxhx_same_as_approx)",
+			"C++ smoke should compare Assert.sameAs Dynamic values through the compile-safe helper");
+		assertContains(source, "(status->expectedValue) = __hxhx_stringify(expected);", "C++ smoke should stringify retained structural typedef status fields");
 		assertContains(source, "int casted = helper(5);", "C++ smoke should lower cast expression with explicit local type");
 		assertContains(source, "total += 4;", "C++ smoke should lower compound plus assignment");
 		assertContains(source, "total -= 2;", "C++ smoke should lower compound minus assignment");
@@ -1953,7 +2000,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"auto next() {\n    auto val = std::string(current);\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
 			"C++ smoke should lower structural anonymous return types through C++ auto instead of stringifying the key field");
 		assertContains(source,
-			"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
+			"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{__hxhx_stringify(val), (idx++)};\n  }",
 			"C++ smoke should lower generic key/value iterator structural returns through C++ auto");
 		assertContains(source, "return __hxhx_anon_value_std__string_key_int_{std::string((array[current])), (current++)};",
 			"C++ smoke should infer anonymous return value fields from array access element types");
@@ -2164,7 +2211,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			final vendorListEmit = BackendRegistry.createForTarget("cpp-native").emit(vendorListProgram, context(vendorListDir, true, true));
 			final vendorListSource = File.getContent(vendorListEmit.entryPath);
 			assertContains(vendorListSource,
-				"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{std::string(val), (idx++)};\n  }",
+				"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{__hxhx_stringify(val), (idx++)};\n  }",
 				"C++ smoke should preserve upstream ListKeyValueIterator.next key/value return body");
 		}
 		final vendorReadOnlyArrayProgram = vendorReadOnlyArrayProgramWhenAvailable();
