@@ -234,6 +234,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(joined);",
 			"  }",
 			"}",
+			"class DateToolsLike {",
+			"  public static function parse(t:Float) {",
+			"    return { ms: t % 1000, seconds: 2, minutes: 3, hours: 4, days: 5 };",
+			"  }",
+			"  public static function make(o:{ ms:Float, seconds:Int, minutes:Int, hours:Int, days:Int }) {",
+			"    return o.ms + 1000.0 * (o.seconds + 60.0 * (o.minutes + 60.0 * (o.hours + 24.0 * o.days)));",
+			"  }",
+			"}",
 			"class FunctionSlot {",
 			"  public function new() {}",
 			"  public function filterGeneric(f:T -> Bool):String {",
@@ -2799,6 +2807,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ throw expressions should compile in string-valued return contexts through target-owned bottom support");
 		assertTrue(throwExprLines.indexOf("std::to_string(__hxhx_throw") < 0,
 			"C++ throw expressions in string contexts should not be wrapped in numeric std::to_string");
+		final dateToolsMake = new HxFunctionDecl("make", Public, true, [
+			new HxFunctionArg("o", "{ ms:Float, seconds:Int, minutes:Int, hours:Int, days:Int }", NoDefault, false, false)
+		], "", [
+			SReturn(EBinop("+", EField(EIdent("o"), "ms"), EField(EIdent("o"), "seconds")), HxPos.unknown())
+		], "");
+		final dateToolsOwner = new HxClassDecl("DateToolsLike", false, [dateToolsMake], []);
+		final dateToolsNames = new StringMap<Bool>();
+		dateToolsNames.set("DateToolsLike", true);
+		final dateToolsClasses = new StringMap<HxClassDecl>();
+		dateToolsClasses.set("DateToolsLike", dateToolsOwner);
+		final dateToolsLookup = {names: dateToolsNames, byName: dateToolsClasses};
+		final dateToolsMakeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(dateToolsMake, dateToolsOwner, dateToolsLookup).join("\n");
+		assertContains(dateToolsMakeLines, "static double make(__hxhx_anon_ms_double__seconds_int__minutes_int__hours_int__days_int_ o) {",
+			"C++ structural argument hints should render as concrete aggregate parameters, not strings");
+		assertContains(dateToolsMakeLines, "return ((o.ms) + (o.seconds));", "C++ structural argument fields should be read through value field access");
+		assertTrue(dateToolsMakeLines.indexOf("make(std::string o)") < 0, "C++ structural argument hints should not collapse to std::string");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
@@ -2840,6 +2864,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "struct __hxhx_throw_bottom", "C++ smoke should include target-owned throw-expression bottom support");
 		assertContains(source, "static __hxhx_throw_bottom __hxhx_throw(const T& value)", "C++ smoke should include target-owned throw-expression helper");
 		assertContains(source, "static TResult __hxhx_throw_as(const T& value)", "C++ smoke should include target-owned typed throw-expression helper");
+		assertContains(source, "struct __hxhx_anon_ms_double__seconds_int__minutes_int__hours_int__days_int_ {",
+			"C++ smoke should declare structural type-hint aggregates even when the shape is used as an argument");
+		assertContains(source, "static double make(__hxhx_anon_ms_double__seconds_int__minutes_int__hours_int__days_int_ o) {",
+			"C++ smoke should preserve DateTools-like structural argument hints instead of emitting std::string parameters");
+		assertTrue(source.indexOf("make(std::string o)") < 0, "C++ smoke should not collapse structural DateTools-like arguments to strings");
 		assertContains(source, "struct LikeStatus {", "C++ smoke should emit named structural typedef helpers as concrete structs");
 		assertContains(source, "std::string expectedValue = std::string();", "C++ smoke should retain LikeStatus expectedValue field");
 		assertContains(source, "std::string actualValue = std::string();", "C++ smoke should retain LikeStatus actualValue field");

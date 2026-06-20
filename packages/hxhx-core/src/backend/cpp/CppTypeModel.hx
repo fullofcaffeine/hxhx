@@ -290,6 +290,7 @@ class CppTypeModel {
 		var start = 0;
 		var angleDepth = 0;
 		var parenDepth = 0;
+		var braceDepth = 0;
 		for (i in 0...text.length) {
 			final c = text.charAt(i);
 			if (c == "<")
@@ -300,13 +301,61 @@ class CppTypeModel {
 				parenDepth++;
 			else if (c == ")" && parenDepth > 0)
 				parenDepth--;
-			else if (c == "," && angleDepth == 0 && parenDepth == 0) {
+			else if (c == "{")
+				braceDepth++;
+			else if (c == "}" && braceDepth > 0)
+				braceDepth--;
+			else if (c == "," && angleDepth == 0 && parenDepth == 0 && braceDepth == 0) {
 				parts.push(stripTypeParens(text.substring(start, i)));
 				start = i + 1;
 			}
 		}
 		parts.push(stripTypeParens(text.substr(start)));
 		return parts.filter(part -> part.length > 0);
+	}
+
+	public static function structuralTypeHintFields(typeHint:String):Array<{name:String, typeHint:String}> {
+		final hint = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (!isStructuralTypeHint(hint))
+			return [];
+		final inner = hint.substr(1, hint.length - 2);
+		final fields = new Array<{name:String, typeHint:String}>();
+		for (part in splitTopLevelComma(inner)) {
+			final colon = topLevelColonIndex(part);
+			if (colon < 0)
+				continue;
+			var name = StringTools.trim(part.substring(0, colon));
+			if (StringTools.startsWith(name, "?"))
+				name = StringTools.trim(name.substr(1));
+			final fieldTypeHint = StringTools.trim(part.substr(colon + 1));
+			if (name.length > 0 && fieldTypeHint.length > 0)
+				fields.push({name: name, typeHint: fieldTypeHint});
+		}
+		return fields;
+	}
+
+	static function topLevelColonIndex(text:String):Int {
+		var angleDepth = 0;
+		var parenDepth = 0;
+		var braceDepth = 0;
+		for (i in 0...text.length) {
+			final c = text.charAt(i);
+			if (c == "<")
+				angleDepth++;
+			else if (c == ">" && angleDepth > 0)
+				angleDepth--;
+			else if (c == "(")
+				parenDepth++;
+			else if (c == ")" && parenDepth > 0)
+				parenDepth--;
+			else if (c == "{")
+				braceDepth++;
+			else if (c == "}" && braceDepth > 0)
+				braceDepth--;
+			else if (c == ":" && angleDepth == 0 && parenDepth == 0 && braceDepth == 0)
+				return i;
+		}
+		return -1;
 	}
 
 	public static function stripTypeParens(typeHint:String):String {
@@ -448,30 +497,6 @@ class CppTypeModel {
 		if (StringTools.startsWith(name, "?"))
 			name = StringTools.trim(name.substr(1));
 		return isIdentifierText(name) ? StringTools.trim(text.substr(colon + 1)) : text;
-	}
-
-	static function topLevelColonIndex(text:String):Int {
-		var angleDepth = 0;
-		var parenDepth = 0;
-		var braceDepth = 0;
-		for (i in 0...text.length) {
-			final c = text.charAt(i);
-			if (c == "<")
-				angleDepth++;
-			else if (c == ">" && angleDepth > 0)
-				angleDepth--;
-			else if (c == "(")
-				parenDepth++;
-			else if (c == ")" && parenDepth > 0)
-				parenDepth--;
-			else if (c == "{")
-				braceDepth++;
-			else if (c == "}" && braceDepth > 0)
-				braceDepth--;
-			else if (c == ":" && angleDepth == 0 && parenDepth == 0 && braceDepth == 0)
-				return i;
-		}
-		return -1;
 	}
 
 	static function isIdentifierText(text:String):Bool {

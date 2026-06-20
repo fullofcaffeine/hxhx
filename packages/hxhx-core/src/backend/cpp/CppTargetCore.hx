@@ -780,22 +780,28 @@ class CppTargetCore {
 	static function collectAnonStructs(program:GenIrProgram, classLookup:CppClassLookup):Array<CppAnonStruct> {
 		final out = new Array<CppAnonStruct>();
 		final seen = new haxe.ds.StringMap<Bool>();
+		function addStruct(struct:CppAnonStruct):Void {
+			if (struct != null && !seen.exists(struct.name)) {
+				seen.set(struct.name, true);
+				out.push(struct);
+			}
+		}
+		function addTypeHint(typeHint:String, ?scope:CppRenderScope):Void {
+			final fields = CppTypeModel.structuralTypeHintFields(typeHint);
+			if (fields.length == 0)
+				return;
+			for (field in fields)
+				addTypeHint(field.typeHint, scope);
+			addStruct(structuralTypeHintStruct(typeHint, scope, classLookup));
+		}
 		function addExpr(expr:HxExpr, ?scope:CppRenderScope):Void {
 			switch (expr) {
 				case EAnon(fieldNames, fieldValues):
 					for (value in fieldValues)
 						addExpr(value, scope);
-					final struct = anonStruct(fieldNames, fieldValues, scope);
-					if (!seen.exists(struct.name)) {
-						seen.set(struct.name, true);
-						out.push(struct);
-					}
+					addStruct(anonStruct(fieldNames, fieldValues, scope));
 				case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
-					final struct = int64DivModStruct();
-					if (!seen.exists(struct.name)) {
-						seen.set(struct.name, true);
-						out.push(struct);
-					}
+					addStruct(int64DivModStruct());
 				case EField(receiver, _):
 					addExpr(receiver, scope);
 				case ECall(callee, args):
@@ -844,6 +850,7 @@ class CppTargetCore {
 					for (s in stmts)
 						addStmt(s, scope);
 				case SVar(name, typeHint, init, _):
+					addTypeHint(typeHint, scope);
 					if (init != null)
 						addExpr(init, scope);
 					if (scope != null)
@@ -885,6 +892,7 @@ class CppTargetCore {
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final fieldScope = renderScope(cls, classLookup, "void");
 				for (field in HxClassDecl.getFields(cls)) {
+					addTypeHint(HxFieldDecl.getTypeHint(field), fieldScope);
 					final init = HxFieldDecl.getInit(field);
 					if (init != null)
 						addExpr(init, fieldScope);
@@ -892,6 +900,9 @@ class CppTargetCore {
 				for (fn in HxClassDecl.getFunctions(cls)) {
 					final scope = renderScope(cls, classLookup, cppFunctionReturnType(fn, cls, classLookup));
 					prepareFunctionScope(scope, fn);
+					addTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope);
+					for (arg in HxFunctionDecl.getArgs(fn))
+						addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
 					for (stmt in HxFunctionDecl.getBody(fn))
 						addStmt(stmt, scope);
 				}
@@ -948,7 +959,10 @@ class CppTargetCore {
 			names.push(fieldNames[i]);
 			types.push(cppAnonFieldType(fieldNames[i], fieldValues[i], assertStatusShape, scope));
 		}
-		return {name: anonStructName(names, types), fieldNames: names, fieldTypes: types};
+		final struct = {name: anonStructName(names, types), fieldNames: names, fieldTypes: types};
+		if (scope != null)
+			scope.anonStructs.set(struct.name, struct);
+		return struct;
 	}
 
 	static function anonStructName(fieldNames:Array<String>, fieldTypes:Array<String>):String {
@@ -956,6 +970,22 @@ class CppTargetCore {
 		for (i in 0...fieldNames.length)
 			parts.push(sanitizeIdentifier(fieldNames[i]) + "_" + sanitizeTypePath(fieldTypes[i]));
 		return parts.join("_");
+	}
+
+	static function structuralTypeHintStruct(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<CppAnonStruct> {
+		final fields = CppTypeModel.structuralTypeHintFields(typeHint);
+		if (fields.length == 0)
+			return null;
+		final names = new Array<String>();
+		final types = new Array<String>();
+		for (field in fields) {
+			names.push(field.name);
+			types.push(cppTypeHint(field.typeHint, scope, classLookup));
+		}
+		final struct = {name: anonStructName(names, types), fieldNames: names, fieldTypes: types};
+		if (scope != null)
+			scope.anonStructs.set(struct.name, struct);
+		return struct;
 	}
 
 	static function cppAnonFieldType(fieldName:String, expr:HxExpr, assertStatusShape:Bool, ?scope:CppRenderScope):String {
@@ -970,6 +1000,9 @@ class CppTargetCore {
 			return optionalInner;
 		if (scoped.length > 0)
 			return scoped;
+		final inferred = inferExprCppType(expr, scope);
+		if (inferred.length > 0)
+			return inferred;
 		return switch (expr) {
 			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
 				"std::string";
@@ -1755,6 +1788,7 @@ class CppTargetCore {
 			localNameCounts: new haxe.ds.StringMap<Int>(),
 			argTypeOverrides: new haxe.ds.StringMap<String>(),
 			localTypeOverrides: new haxe.ds.StringMap<String>(),
+			anonStructs: new haxe.ds.StringMap<CppAnonStruct>(),
 			returnType: returnType
 		};
 	}
@@ -4135,8 +4169,14 @@ class CppTargetCore {
 			case EField(receiver, field):
 				final staticOwner = staticReceiverClassName(receiver, scope);
 				if (staticOwner != null) classFieldCppType(staticOwner, field, scope); else {
-					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
-					ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
+					final receiverType = exprCppType(receiver, scope);
+					final anonFieldType = anonStructFieldCppType(receiverType, field, scope);
+					if (anonFieldType.length > 0)
+						anonFieldType;
+					else {
+						final ownerType = classNameFromCppExprType(receiverType, scope);
+						ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
+					}
 				}
 			case EBinop(op, _, _) if (isBoolBinaryOp(op)):
 				"bool";
@@ -4171,6 +4211,19 @@ class CppTargetCore {
 			if (HxFieldDecl.getName(field) == fieldName)
 				return knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
 		}
+		return "";
+	}
+
+	static function anonStructFieldCppType(typeName:String, fieldName:String, scope:CppRenderScope):String {
+		if (scope == null || typeName == null || typeName.length == 0)
+			return "";
+		final struct = scope.anonStructs.get(typeName);
+		if (struct == null)
+			return "";
+		final wanted = sanitizeIdentifier(fieldName == null ? "" : fieldName);
+		for (i in 0...struct.fieldNames.length)
+			if (sanitizeIdentifier(struct.fieldNames[i]) == wanted)
+				return struct.fieldTypes[i];
 		return "";
 	}
 
@@ -6066,6 +6119,11 @@ class CppTargetCore {
 	static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		if (scope != null && scope.owner != null && isGenericTypeParamHint(typeHint, scope.owner))
 			return genericTypeParamName(typeHint);
+		if (isStructuralTypeHint(typeHint)) {
+			final struct = structuralTypeHintStruct(typeHint, scope, classLookup);
+			if (struct != null)
+				return struct.name;
+		}
 		return CppTypeModel.cppTypeHint(typeHint, scope, classLookup);
 	}
 
