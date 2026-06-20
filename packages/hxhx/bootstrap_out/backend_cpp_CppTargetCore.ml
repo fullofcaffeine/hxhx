@@ -2727,7 +2727,7 @@ let isPrimitiveBackedAbstractClass = fun cls -> Backend_cpp_CppTypeModel.isPrimi
 
 let isStdArrayHelperClass = fun cls -> Backend_cpp_CppTypeModel.isStdArrayHelperClass (Obj.magic cls)
 
-let isPosInfosPlaceholder = fun cls -> cls != Obj.magic (HxRuntime.hx_null) && HxString.equals (sanitizeTypePath (HxClassDecl.getName (Obj.magic cls) : string)) "PosInfos" && HxArray.length (HxClassDecl.getFields (Obj.magic cls)) = 0 && HxArray.length (HxClassDecl.getFunctions (Obj.magic cls)) = 0
+let isPosInfosSupportClass = fun cls -> cls != Obj.magic (HxRuntime.hx_null) && HxString.equals (sanitizeTypePath (HxClassDecl.getName (Obj.magic cls) : string)) "PosInfos"
 
 let posInfosFieldCppType = fun className fieldName -> try let __fallback_result_3191 = (
   ignore (if not (HxString.equals (sanitizeTypePath (className : string)) "PosInfos") then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
@@ -17639,7 +17639,7 @@ let renderHelperClass = fun cls classLookup -> try let __fallback_result_237 = (
   ignore (if isCppCoreExternClass (HxClassDecl.getName (Obj.magic cls) : string) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_212 = HxArray.create () in __arr_212)))) else ());
   ignore (if isBytesDataTypeName (HxClassDecl.getName (Obj.magic cls) : string) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_213 = HxArray.create () in __arr_213)))) else ());
   ignore (if HxClassDecl.getIsInterface (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderInterfaceClass (Obj.magic cls) classLookup)))) else ());
-  ignore (if isPosInfosPlaceholder (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderPosInfosClass ())))) else ());
+  ignore (if isPosInfosSupportClass (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderPosInfosClass ())))) else ());
   ignore (if isStdVectorHelperClass (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderStdVectorSupportClass (Obj.magic cls) classLookup)))) else ());
   ignore (if isArrayBackedAbstractClass (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderArrayBackedAbstractClass (Obj.magic cls) classLookup)))) else ());
   ignore (if isPrimitiveBackedAbstractClass (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderPrimitiveBackedAbstractClass (Obj.magic cls) classLookup)))) else ());
@@ -18245,11 +18245,21 @@ let renderProgram = fun program main -> (
     ignore (HxArray.push out "  return __hxhx_type_name(value);");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
+    ignore (HxArray.push out "template<typename T, typename = void>");
+    ignore (HxArray.push out "struct __hxhx_is_streamable : std::false_type {};");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "template<typename T>");
+    ignore (HxArray.push out "struct __hxhx_is_streamable<T, std::void_t<decltype(std::declval<std::ostringstream&>() << std::declval<const T&>())>> : std::true_type {};");
+    ignore (HxArray.push out "");
     ignore (HxArray.push out "template<typename T>");
     ignore (HxArray.push out "static std::string __hxhx_stringify(const T& value) {");
-    ignore (HxArray.push out "  std::ostringstream out;");
-    ignore (HxArray.push out "  out << value;");
-    ignore (HxArray.push out "  return out.str();");
+    ignore (HxArray.push out "  if constexpr (__hxhx_is_streamable<T>::value) {");
+    ignore (HxArray.push out "    std::ostringstream out;");
+    ignore (HxArray.push out "    out << value;");
+    ignore (HxArray.push out "    return out.str();");
+    ignore (HxArray.push out "  } else {");
+    ignore (HxArray.push out "    return __hxhx_type_name(value);");
+    ignore (HxArray.push out "  }");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
     ignore (HxArray.push out "template<typename T>");

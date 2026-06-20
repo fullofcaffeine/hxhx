@@ -573,11 +573,21 @@ class CppTargetCore {
 		out.push("  return __hxhx_type_name(value);");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T, typename = void>");
+		out.push("struct __hxhx_is_streamable : std::false_type {};");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("struct __hxhx_is_streamable<T, std::void_t<decltype(std::declval<std::ostringstream&>() << std::declval<const T&>())>> : std::true_type {};");
+		out.push("");
 		out.push("template<typename T>");
 		out.push("static std::string __hxhx_stringify(const T& value) {");
-		out.push("  std::ostringstream out;");
-		out.push("  out << value;");
-		out.push("  return out.str();");
+		out.push("  if constexpr (__hxhx_is_streamable<T>::value) {");
+		out.push("    std::ostringstream out;");
+		out.push("    out << value;");
+		out.push("    return out.str();");
+		out.push("  } else {");
+		out.push("    return __hxhx_type_name(value);");
+		out.push("  }");
 		out.push("}");
 		out.push("");
 		out.push("template<typename T>");
@@ -1268,7 +1278,7 @@ class CppTargetCore {
 			return [];
 		if (HxClassDecl.getIsInterface(cls))
 			return renderInterfaceClass(cls, classLookup);
-		if (isPosInfosPlaceholder(cls))
+		if (isPosInfosSupportClass(cls))
 			return renderPosInfosClass();
 		if (isStdVectorHelperClass(cls))
 			return renderStdVectorSupportClass(cls, classLookup);
@@ -5588,11 +5598,8 @@ class CppTargetCore {
 		return CppTypeModel.isStdArrayHelperClass(cls);
 	}
 
-	static function isPosInfosPlaceholder(cls:HxClassDecl):Bool {
-		return cls != null
-			&& sanitizeTypePath(HxClassDecl.getName(cls)) == "PosInfos"
-			&& HxClassDecl.getFields(cls).length == 0
-			&& HxClassDecl.getFunctions(cls).length == 0;
+	static function isPosInfosSupportClass(cls:HxClassDecl):Bool {
+		return cls != null && sanitizeTypePath(HxClassDecl.getName(cls)) == "PosInfos";
 	}
 
 	static function posInfosFieldCppType(className:String, fieldName:String):String {

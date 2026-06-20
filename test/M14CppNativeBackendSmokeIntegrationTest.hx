@@ -2153,8 +2153,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		posClasses.set("PosException", posException);
 		final posLookup = {names: posNames, byName: posClasses};
 		final posInfosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(posInfos, posLookup).join("\n");
+		final parsedPosInfosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(new HxClassDecl("PosInfos", false, [], [
+			new HxFieldDecl("fileName", Public, false, "String", null),
+			new HxFieldDecl("lineNumber", Public, false, "Int", null),
+			new HxFieldDecl("className", Public, false, "String", null),
+			new HxFieldDecl("methodName", Public, false, "String", null)
+		]), posLookup).join("\n");
 		final posExceptionLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(posException, posLookup).join("\n");
 		assertContains(posInfosLines, "std::string fileName = std::string();", "C++ PosInfos typedef placeholders should render the stdlib position fields");
+		assertContains(parsedPosInfosLines, "PosInfos(std::string fileName, int lineNumber, std::string className, std::string methodName)",
+			"C++ parsed PosInfos helpers should still expose the target-owned position constructor");
 		assertContains(posExceptionLines, "std::shared_ptr<PosInfos> pos = nullptr", "C++ optional PosInfos args should stay nullable references");
 		assertContains(posExceptionLines,
 			"posInfos = std::make_shared<PosInfos>(std::string(\"(unknown)\"), 0, std::string(\"(unknown)\"), std::string(\"(unknown)\"));",
@@ -2486,6 +2494,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "Assert::q(1.5)", "C++ smoke should allow numeric Assert.q calls");
 		assertContains(source, "static std::string __hxhx_stringify(const __HxMacroExpr& value)",
 			"C++ smoke should stringify macro-expression values without falling through to ostream fallback");
+		assertContains(source, "struct __hxhx_is_streamable", "C++ stringify support should detect non-streamable values before using ostream fallback");
+		assertContains(source, "return __hxhx_type_name(value);", "C++ stringify support should fall back for non-streamable closure values");
 		assertContains(source, "struct LikeStatus {", "C++ smoke should emit named structural typedef helpers as concrete structs");
 		assertContains(source, "std::string expectedValue = std::string();", "C++ smoke should retain LikeStatus expectedValue field");
 		assertContains(source, "std::string actualValue = std::string();", "C++ smoke should retain LikeStatus actualValue field");
