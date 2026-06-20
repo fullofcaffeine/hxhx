@@ -119,6 +119,7 @@ class CppTargetCore {
 		out.push("#include <cmath>");
 		out.push("#include <cstddef>");
 		out.push("#include <cstdlib>");
+		out.push("#include <cstring>");
 		out.push("#include <fstream>");
 		out.push("#include <functional>");
 		out.push("#include <iostream>");
@@ -210,6 +211,47 @@ class CppTargetCore {
 		out.push("static void __hxhx_bytes_fill(std::vector<int>& dst, int pos, int len, int value) {");
 		out.push("  if (pos < 0 || len < 0 || pos + len > static_cast<int>(dst.size())) throw std::runtime_error(\"OutsideBounds\");");
 		out.push("  std::fill(dst.begin() + pos, dst.begin() + pos + len, value & 0xFF);");
+		out.push("}");
+		out.push("");
+		out.push("static double __hxhx_memory_get_double(const std::vector<int>& src, int pos) {");
+		out.push("  unsigned char bytes[8];");
+		out.push("  for (int i = 0; i < 8; ++i) bytes[i] = static_cast<unsigned char>(src[pos + i] & 0xFF);");
+		out.push("  double out = 0;");
+		out.push("  std::memcpy(&out, bytes, 8);");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
+		out.push("static double __hxhx_memory_get_float(const std::vector<int>& src, int pos) {");
+		out.push("  unsigned char bytes[4];");
+		out.push("  for (int i = 0; i < 4; ++i) bytes[i] = static_cast<unsigned char>(src[pos + i] & 0xFF);");
+		out.push("  float out = 0;");
+		out.push("  std::memcpy(&out, bytes, 4);");
+		out.push("  return static_cast<double>(out);");
+		out.push("}");
+		out.push("");
+		out.push("static void __hxhx_memory_set_double(std::vector<int>& dst, int pos, double value) {");
+		out.push("  unsigned char bytes[8];");
+		out.push("  std::memcpy(bytes, &value, 8);");
+		out.push("  for (int i = 0; i < 8; ++i) dst[pos + i] = static_cast<int>(bytes[i]);");
+		out.push("}");
+		out.push("");
+		out.push("static void __hxhx_memory_set_float(std::vector<int>& dst, int pos, double value) {");
+		out.push("  float f = static_cast<float>(value);");
+		out.push("  unsigned char bytes[4];");
+		out.push("  std::memcpy(bytes, &f, 4);");
+		out.push("  for (int i = 0; i < 4; ++i) dst[pos + i] = static_cast<int>(bytes[i]);");
+		out.push("}");
+		out.push("");
+		out.push("static void __hxhx_string_of_bytes(const std::vector<int>& src, std::string& out, int pos, int len) {");
+		out.push("  out.clear();");
+		out.push("  out.reserve(static_cast<std::size_t>(len));");
+		out.push("  for (int i = 0; i < len; ++i) out.push_back(static_cast<char>(src[pos + i] & 0xFF));");
+		out.push("}");
+		out.push("");
+		out.push("static void __hxhx_bytes_of_string(std::vector<int>& out, const std::string& source) {");
+		out.push("  out.clear();");
+		out.push("  out.reserve(source.size());");
+		out.push("  for (unsigned char c : source) out.push_back(static_cast<int>(c));");
 		out.push("}");
 		out.push("");
 		out.push("static std::string __hxhx_char_at(const std::string& source, int index) {");
@@ -1171,6 +1213,8 @@ class CppTargetCore {
 			if (method == "next")
 				return owner == "StringIterator" || owner == "StringIteratorUnicode" ? "int" : "auto";
 		}
+		if (owner == "Bytes" && method == "fill")
+			return "void";
 		return cppReturnTypeHint(typeHint, scope, classLookup);
 	}
 
@@ -2089,6 +2133,8 @@ class CppTargetCore {
 				Std.string(value);
 			case EFloat(value):
 				Std.string(value);
+			case EIdent("UTF8"):
+				"nullptr";
 			case EThis:
 				"(*this)";
 			case ESuper:
@@ -2155,6 +2201,8 @@ class CppTargetCore {
 				+ ", "
 				+ renderExpr(args[3], scope)
 				+ ")";
+			case ECall(EField(EIdent("__global__"), method), args):
+				globalIntrinsicCallExpr(method, args, scope);
 			case ECall(EField(EIdent("HelperMacros"), "typeErrorText"), [EUnsupported(raw)]) if (raw != null
 				&& StringTools.startsWith(raw, "for_expr:")):
 				quoteString("Int has no field keyValueIterator");
@@ -2177,6 +2225,8 @@ class CppTargetCore {
 				"(" + renderExpr(receiver, scope) + "->length)";
 			case EField(EIdent("Math"), field):
 				mathFieldExpr(field);
+			case EField(EIdent("Error"), field):
+				"std::string(" + quoteString(field) + ")";
 			case EField(receiver, "length"):
 				"(" + renderExpr(receiver, scope) + ".size())";
 			case EArrayAccess(array, index):
@@ -2647,6 +2697,45 @@ class CppTargetCore {
 		return renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
 	}
 
+	static function globalIntrinsicCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final rendered = [for (arg in args) renderExpr(arg, scope)];
+		return switch (method) {
+			case "__hxcpp_memory_get_double" if (args.length == 2):
+				"__hxhx_memory_get_double(" + rendered.join(", ") + ")";
+			case "__hxcpp_memory_get_float" if (args.length == 2):
+				"__hxhx_memory_get_float(" + rendered.join(", ") + ")";
+			case "__hxcpp_memory_set_double" if (args.length == 3):
+				"__hxhx_memory_set_double(" + rendered.join(", ") + ")";
+			case "__hxcpp_memory_set_float" if (args.length == 3):
+				"__hxhx_memory_set_float(" + rendered.join(", ") + ")";
+			case "__hxcpp_string_of_bytes" if (args.length >= 4):
+				"__hxhx_string_of_bytes("
+				+ renderExpr(args[0], scope)
+				+ ", "
+				+ renderExpr(args[1], scope)
+				+ ", "
+				+ renderExpr(args[2], scope)
+				+ ", "
+				+ renderExpr(args[3], scope)
+				+ ")";
+			case "__hxcpp_bytes_of_string" if (args.length == 2):
+				"__hxhx_bytes_of_string(" + rendered.join(", ") + ")";
+			case _:
+				renderExpr(EIdent("__global__"), scope) + "." + sanitizeIdentifier(method) + "(" + rendered.join(", ") + ")";
+		};
+	}
+
+	static function globalIntrinsicReturnCppType(method:String):String {
+		return switch (method) {
+			case "__hxcpp_memory_get_double" | "__hxcpp_memory_get_float":
+				"double";
+			case "__hxcpp_memory_set_double" | "__hxcpp_memory_set_float" | "__hxcpp_string_of_bytes" | "__hxcpp_bytes_of_string":
+				"void";
+			case _:
+				"";
+		};
+	}
+
 	static function stringCodeAtExpr(s:HxExpr, index:HxExpr, ?scope:CppRenderScope):String {
 		return "static_cast<int>(static_cast<unsigned char>(" + renderExpr(s, scope) + "[" + renderExpr(index, scope) + "]))";
 	}
@@ -2722,6 +2811,8 @@ class CppTargetCore {
 				"std::string";
 			case ECall(EField(EField(EIdent("haxe"), "SysTools"), method), _) if (method == "quoteUnixArg" || method == "quoteWinArg"):
 				"std::string";
+			case ECall(EField(EIdent("__global__"), method), _):
+				globalIntrinsicReturnCppType(method);
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case ECall(EField(EIdent("StringTools"), method), _) if (method == "fastCodeAt" || method == "unsafeCodeAt"):
@@ -2747,6 +2838,8 @@ class CppTargetCore {
 				cppVectorElementType(exprCppType(array, scope));
 			case EField(receiver, "expr") if (exprCppType(receiver, scope) == CppMacroExpr.CPP_TYPE):
 				CppMacroExpr.CPP_TYPE;
+			case EField(EIdent("Error"), _):
+				"std::string";
 			case EField(receiver, field):
 				final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
 				ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
@@ -2902,6 +2995,8 @@ class CppTargetCore {
 				"std::string";
 			case ECall(EField(EField(EIdent("haxe"), "SysTools"), method), _) if (method == "quoteUnixArg" || method == "quoteWinArg"):
 				"std::string";
+			case ECall(EField(EIdent("__global__"), method), _):
+				globalIntrinsicReturnCppType(method);
 			case ECall(EField(EIdent("StringTools"), method), _) if (isStringToolsTrimMethod(method)):
 				"std::string";
 			case ECall(EField(receiver, method), _) if (exprCppType(receiver, scope) == "std::string"):
@@ -2913,6 +3008,8 @@ class CppTargetCore {
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case EString(_) | EEnumValue(_) | EMacroType(_):
+				"std::string";
+			case EField(EIdent("Error"), _):
 				"std::string";
 			case EMacroExpr(_, _):
 				CppMacroExpr.CPP_TYPE;
@@ -3353,6 +3450,8 @@ class CppTargetCore {
 				"std::string(" + quoteString(value) + ")";
 			case EEnumValue(name):
 				"std::string(" + quoteString(name) + ")";
+			case EField(EIdent("Error"), field):
+				"std::string(" + quoteString(field) + ")";
 			case EMacroExpr(inner, wrappers):
 				CppMacroExpr.macroExpr(inner, wrappers);
 			case EMacroType(typeText):
@@ -4420,6 +4519,8 @@ class CppTargetCore {
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
 		final ownerName = owner == null ? "" : sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		if (ownerName == "Bytes" && sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "fill")
+			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null, classLookup);
 		if (isStringIteratorHelper(ownerName))
 			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null, classLookup);
 		if (raw.length > 0)

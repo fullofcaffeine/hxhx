@@ -682,6 +682,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Math.round should preserve Haxe's floor(x + 0.5) semantics");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Math"), "cos")) == "[](double v) { return std::cos(v); }",
 			"C++ Math method references should lower to callable target intrinsics");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Error"), "OutsideBounds")) == "std::string(\"OutsideBounds\")",
+			"C++ Error enum-like fields should lower to tag strings instead of invalid dotted values");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("__global__"), "__hxcpp_memory_get_double"),
+				[EIdent("b"), EIdent("pos")])) == "__hxhx_memory_get_double(b, pos)",
+			"C++ hxcpp byte-memory float intrinsics should lower to target-owned helpers");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("__global__"), "__hxcpp_string_of_bytes"),
+				[EIdent("b"), EIdent("result"), EIdent("pos"), EIdent("len"), EBool(true)])) == "__hxhx_string_of_bytes(b, result, pos, len)",
+			"C++ hxcpp string-of-bytes intrinsic should ignore optional target flags and lower to target-owned helpers");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EIdent("UTF8")) == "nullptr",
+			"C++ Encoding.UTF8 constructor shorthand should not render as an unresolved bare identifier in the MVP");
 		final exceptionStackTry = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new Exception("");}catch(e:Exception){e.stack;}'));
 		assertContains(exceptionStackTry, "throw std::runtime_error(std::string(\"\"));",
@@ -1146,6 +1158,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], "Void", [
 				SExpr(EBinop("=", EArrayAccess(EIdent("b"), EIdent("pos")), EIdent("v")), HxPos.unknown())
 			], ""),
+			new HxFunctionDecl("fill", Public, false, [
+				new HxFunctionArg("pos", "Int", NoDefault, false, false),
+				new HxFunctionArg("len", "Int", NoDefault, false, false),
+				new HxFunctionArg("value", "Int", NoDefault, false, false)
+			], "", [
+				SReturn(ECall(EField(EIdent("__global__"), "__hxcpp_memory_memset"), [EIdent("b"), EIdent("pos"), EIdent("len"), EIdent("value")]),
+					HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("getDouble", Public, false, [new HxFunctionArg("pos", "Int", NoDefault, false, false)], "Float", [
+				SReturn(ECall(EField(EIdent("__global__"), "__hxcpp_memory_get_double"), [EIdent("b"), EIdent("pos")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("setDouble", Public, false, [
+				new HxFunctionArg("pos", "Int", NoDefault, false, false),
+				new HxFunctionArg("v", "Float", NoDefault, false, false)
+			], "Void", [
+				SExpr(ECall(EField(EIdent("__global__"), "__hxcpp_memory_set_double"), [EIdent("b"), EIdent("pos"), EIdent("v")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("getString", Public, false, [
+				new HxFunctionArg("pos", "Int", NoDefault, false, false),
+				new HxFunctionArg("len", "Int", NoDefault, false, false)
+			], "String", [
+				SVar("result", "String", EString(""), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("__global__"), "__hxcpp_string_of_bytes"), [EIdent("b"), EIdent("result"), EIdent("pos"), EIdent("len")]),
+					HxPos.unknown()),
+				SReturn(EIdent("result"), HxPos.unknown())
+			], ""),
 			new HxFunctionDecl("blit", Public, false, [
 				new HxFunctionArg("pos", "Int", NoDefault, false, false),
 				new HxFunctionArg("src", "Bytes", NoDefault, false, false),
@@ -1171,6 +1209,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SVar("a", "BytesData", ENew("BytesData", []), HxPos.unknown()),
 				SExpr(ECall(EField(EField(EIdent("cpp"), "NativeArray"), "setSize"), [EIdent("a"), EIdent("length")]), HxPos.unknown()),
 				SReturn(ENew("Bytes", [EIdent("length"), EIdent("a")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("ofString", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Bytes", [
+				SVar("a", "BytesData", ENew("BytesData", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("__global__"), "__hxcpp_bytes_of_string"), [EIdent("a"), EIdent("s")]), HxPos.unknown()),
+				SReturn(ENew("Bytes", [EField(EIdent("a"), "length"), EIdent("a")]), HxPos.unknown())
 			], "")
 		], [
 			new HxFieldDecl("length", Public, false, "Int", null),
@@ -1191,6 +1234,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ should recover erased Bytes constructor args and initialize fields directly");
 		assertContains(bytesLines, "return static_cast<int>((b[pos]));", "C++ Bytes.get should index vector-backed BytesData directly");
 		assertContains(bytesLines, "(b[pos]) = v;", "C++ Bytes.set should write vector-backed BytesData directly");
+		assertContains(bytesLines, "void fill(int pos, int len, int value) {", "C++ Bytes.fill should keep its target stdlib Void return type");
+		assertContains(bytesLines, "__hxhx_bytes_fill(b, pos, len, value); return;",
+			"C++ Bytes.fill should lower hxcpp memset without returning a void helper");
+		assertContains(bytesLines, "return __hxhx_memory_get_double(b, pos);", "C++ Bytes.getDouble should lower through target byte-memory helpers");
+		assertContains(bytesLines, "__hxhx_memory_set_double(b, pos, v);", "C++ Bytes.setDouble should lower through target byte-memory helpers");
+		assertContains(bytesLines, "__hxhx_string_of_bytes(b, result, pos, len);", "C++ Bytes.getString should lower through target string byte helpers");
+		assertContains(bytesLines, "__hxhx_bytes_of_string(a, s);", "C++ Bytes.ofString should lower through target byte string helpers");
 		assertContains(bytesLines, "__hxhx_bytes_blit(b, pos, (src->b), srcpos, len);", "C++ BytesData.blit should lower through target runtime support");
 		assertContains(bytesLines, "return std::make_shared<Bytes>(len, __hxhx_bytes_slice(b, pos, (pos + len)));",
 			"C++ BytesData.slice should lower through target runtime support");
