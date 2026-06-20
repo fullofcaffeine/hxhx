@@ -606,6 +606,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedReadOnlyArray], []);
 	}
 
+	static function vendorVectorProgramWhenAvailable():Null<GenIrProgram> {
+		final vectorPath = "vendor/haxe/std/haxe/ds/Vector.hx";
+		if (!FileSystem.exists(vectorPath))
+			return null;
+		final vectorSource = File.getContent(vectorPath);
+		final mainSource = "class Main { static function main() {} }";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedVector = TyperStage.typeModule(ParserStage.parse(vectorSource, vectorPath));
+		return MacroStage.expandProgram([typedMain, typedVector], []);
+	}
+
+	static function vendorNativeArrayProgramWhenAvailable():Null<GenIrProgram> {
+		final nativeArrayPath = "vendor/haxe/std/cpp/NativeArray.hx";
+		if (!FileSystem.exists(nativeArrayPath))
+			return null;
+		final nativeArraySource = File.getContent(nativeArrayPath);
+		final mainSource = "class Main { static function main() {} }";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedNativeArray = TyperStage.typeModule(ParserStage.parse(nativeArraySource, nativeArrayPath));
+		return MacroStage.expandProgram([typedMain, typedNativeArray], []);
+	}
+
 	static function vendorLambdaProgramWhenAvailable():Null<GenIrProgram> {
 		final lambdaPath = "vendor/haxe/std/Lambda.hx";
 		if (!FileSystem.exists(lambdaPath))
@@ -1124,6 +1146,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final abstractFieldLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(abstractFieldOwner, abstractLookup).join("\n");
 		assertContains(abstractFieldLines, "LocalCallStack stack = LocalCallStack();",
 			"C++ fields typed as array-backed abstracts should default to value wrappers instead of int zero");
+		final stdVector = new HxClassDecl("Vector", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("length", "Int", NoDefault, false, false)], "Void", [], "")
+		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=VectorData<T>"]);
+		final stdVectorNames = new StringMap<Bool>();
+		stdVectorNames.set("Vector", true);
+		final stdVectorClasses = new StringMap<HxClassDecl>();
+		stdVectorClasses.set("Vector", stdVector);
+		final stdVectorLookup = {names: stdVectorNames, byName: stdVectorClasses};
+		final stdVectorLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stdVector, stdVectorLookup).join("\n");
+		assertContains(stdVectorLines, "std::vector<std::string> __values;",
+			"C++ haxe.ds.Vector support should own native vector storage instead of rendering upstream abstract branch bodies");
+		assertContains(stdVectorLines, "Vector(int length) : __values(length), length(length) {}",
+			"C++ haxe.ds.Vector support should expose the length constructor as target-owned runtime support");
+		assertContains(stdVectorLines, "std::string unsafeGet(int index) const { return __values[index]; }",
+			"C++ haxe.ds.Vector support should provide unsafeGet over native vector storage");
+		assertContains(stdVectorLines, "std::string unsafeSet(int index, std::string value) { __values[index] = value; return value; }",
+			"C++ haxe.ds.Vector support should provide unsafeSet over native vector storage");
+		assertTrue(stdVectorLines.indexOf("(*this) =") < 0, "C++ haxe.ds.Vector support should not emit inactive upstream #if assignment branches");
+		final nativeArrayExtern = new HxClassDecl("NativeArray", false, [
+			new HxFunctionDecl("create", Public, true, [new HxFunctionArg("length", "Int", NoDefault, false, false)], "Array<String>", [], "")
+		]);
+		final nativeArrayLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(nativeArrayExtern, stdVectorLookup).join("\n");
+		assertTrue(nativeArrayLines.length == 0, "C++ cpp.NativeArray is an extern/intrinsic surface and should not emit a fake helper struct");
 		final primitiveAbstract = new HxClassDecl("Int32", false, [
 			new HxFunctionDecl("negate", Public, false, [], "Int32", [SReturn(EUnop("~", EThis), HxPos.unknown())], ""),
 			new HxFunctionDecl("ucompare", Public, true, [
@@ -2048,6 +2093,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertContains(vendorReadOnlyArraySource, "auto operator[](int index) const { return __values[index]; }",
 				"C++ smoke should expose operator[] for upstream haxe.ds.ReadOnlyArray array access");
 			assertContains(vendorReadOnlyArraySource, "((*this)[i])", "C++ smoke should preserve upstream ReadOnlyArray.get through the wrapper operator[]");
+		}
+		final vendorVectorProgram = vendorVectorProgramWhenAvailable();
+		if (vendorVectorProgram != null) {
+			final vendorVectorDir = Path.join([root, "vendor-vector-source-only"]);
+			final vendorVectorEmit = BackendRegistry.createForTarget("cpp-native").emit(vendorVectorProgram, context(vendorVectorDir, true, true));
+			final vendorVectorSource = File.getContent(vendorVectorEmit.entryPath);
+			assertContains(vendorVectorSource, "struct Vector {", "C++ smoke should emit target-owned haxe.ds.Vector support");
+			assertContains(vendorVectorSource, "Vector(int length) : __values(length), length(length) {}",
+				"C++ smoke should render haxe.ds.Vector through target-owned support, not upstream inactive branches");
+			assertContains(vendorVectorSource, "std::string unsafeGet(int index) const { return __values[index]; }",
+				"C++ smoke should expose haxe.ds.Vector unsafeGet through native vector storage");
+			assertTrue(vendorVectorSource.indexOf("(*this) = std::make_shared<Vector>") < 0,
+				"C++ smoke should not emit inactive non-C++ haxe.ds.Vector constructor branches");
+			assertTrue(vendorVectorSource.indexOf("((python.internal).ArrayImpl)") < 0, "C++ smoke should not emit inactive Python haxe.ds.Vector branches");
+		}
+		final vendorNativeArrayProgram = vendorNativeArrayProgramWhenAvailable();
+		if (vendorNativeArrayProgram != null) {
+			final vendorNativeArrayDir = Path.join([root, "vendor-nativearray-source-only"]);
+			final vendorNativeArrayEmit = BackendRegistry.createForTarget("cpp-native")
+				.emit(vendorNativeArrayProgram, context(vendorNativeArrayDir, true, true));
+			final vendorNativeArraySource = File.getContent(vendorNativeArrayEmit.entryPath);
+			assertTrue(vendorNativeArraySource.indexOf("struct NativeArray {") < 0, "C++ smoke should not emit cpp.NativeArray externs as fake helper structs");
 		}
 
 		final vendorLambdaProgram = vendorLambdaProgramWhenAvailable();

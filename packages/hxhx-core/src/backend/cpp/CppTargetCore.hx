@@ -1038,12 +1038,14 @@ class CppTargetCore {
 	}
 
 	static function renderHelperClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		if (isCppPrimitiveIntrinsicClass(HxClassDecl.getName(cls)))
+		if (isCppCoreExternClass(HxClassDecl.getName(cls)))
 			return [];
 		if (isBytesDataTypeName(HxClassDecl.getName(cls)))
 			return [];
 		if (isPosInfosPlaceholder(cls))
 			return renderPosInfosClass();
+		if (isStdVectorHelperClass(cls))
+			return renderStdVectorSupportClass(cls, classLookup);
 		if (isArrayBackedAbstractClass(cls))
 			return renderArrayBackedAbstractClass(cls, classLookup);
 		if (isPrimitiveBackedAbstractClass(cls))
@@ -1218,6 +1220,83 @@ class CppTargetCore {
 		}
 		out.push("};");
 		return out;
+	}
+
+	static function renderStdVectorSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final valueType = arrayBackedAbstractValueCppType(cls, classLookup);
+		final elementType = cppVectorElementType(valueType);
+		return ["struct " + className + " {",
+			"  " + valueType + " __values;",
+			"  int length = 0;",
+			"  " + className + "() {}",
+			"  " + className + "(int length) : __values(length), length(length) {}",
+			"  "
+			+ className
+			+ "("
+			+ valueType
+			+ " values) : __values(values), length(static_cast<int>(values.size())) {}",
+			"  std::size_t size() const { return __values.size(); }",
+			"  " + elementType + "& operator[](int index) { return __values[index]; }",
+			"  const " + elementType + "& operator[](int index) const { return __values[index]; }",
+			"  " + elementType + " unsafeGet(int index) const { return __values[index]; }",
+			"  "
+			+ elementType
+			+ " unsafeSet(int index, "
+			+ elementType
+			+ " value) { __values[index] = value; return value; }",
+			"  " + elementType + " get(int index) const { return unsafeGet(index); }",
+			"  "
+			+ elementType
+			+ " set(int index, "
+			+ elementType
+			+ " value) { return unsafeSet(index, value); }",
+			"  int get_length() const { return static_cast<int>(__values.size()); }",
+			"  void fill(" + elementType + " value) { std::fill(__values.begin(), __values.end(), value); length = static_cast<int>(__values.size()); }",
+			"  static void blit(const "
+			+ className
+			+ "& src, int srcPos, "
+			+ className
+			+ "& dest, int destPos, int len) {",
+			"    for (int i = 0; i < len; i++) dest.__values[destPos + i] = src.__values[srcPos + i];",
+			"    dest.length = static_cast<int>(dest.__values.size());",
+			"  }",
+			"  " + valueType + " toArray() const { return __values; }",
+			"  " + valueType + " toData() const { return __values; }",
+			"  static "
+			+ className
+			+ " fromData("
+			+ valueType
+			+ " data) { return "
+			+ className
+			+ "(data); }",
+			"  static "
+			+ className
+			+ " fromArrayCopy("
+			+ valueType
+			+ " array) { return "
+			+ className
+			+ "(array); }",
+			"  " + className + " copy() const { return " + className + "(__values); }",
+			"  std::string join(std::string sep) const { return __hxhx_join(__values, sep); }",
+			"  "
+			+ className
+			+ " map(std::function<"
+			+ elementType
+			+ "("
+			+ elementType
+			+ ")> f) const {",
+			"    " + valueType + " out;",
+			"    out.reserve(__values.size());",
+			"    for (const auto& value : __values) out.push_back(f(value));",
+			"    return " + className + "(out);",
+			"  }",
+			"  void sort(std::function<int(" + elementType + ", " + elementType + ")> f) {",
+			"    std::sort(__values.begin(), __values.end(), [&](const auto& a, const auto& b) { return f(a, b) < 0; });",
+			"  }",
+			"  operator " + valueType + "() const { return __values; }",
+			"};"
+		];
 	}
 
 	static function renderPrimitiveBackedAbstractClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -2489,6 +2568,8 @@ class CppTargetCore {
 		}
 		if (isStdArrayTypePath(typePath))
 			return stdArrayConstructionExpr(typePath, args, scope);
+		if (scopeHasClass(scope, className) && isStdVectorHelperClass(scope.classByName.get(className)))
+			return className + "(" + renderConstructorArgs(className, args, scope).join(", ") + ")";
 		final renderedArgs = renderConstructorArgs(className, args, scope).join(", ");
 		if (scopeHasClass(scope, className) && genericClassTypeParamsForName(className, scope).length > 0)
 			return "__hxhx_make_shared_" + className + "(" + renderedArgs + ")";
@@ -3027,7 +3108,8 @@ class CppTargetCore {
 
 	static function isCppCoreExternClass(name:String):Bool {
 		final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
-		return clean == "Math" || isBytesDataTypeName(clean) || isCppPrimitiveIntrinsicClass(clean);
+		return clean == "Math" || clean == "NativeArray" || clean == "Pointer" || clean == "ConstPointer" || clean == "Reference" || clean == "Star"
+			|| clean == "AutoCast" || clean == "ArrayBase" || isBytesDataTypeName(clean) || isCppPrimitiveIntrinsicClass(clean);
 	}
 
 	static function isBytesDataTypeName(name:String):Bool {
@@ -4528,6 +4610,10 @@ class CppTargetCore {
 
 	static function isArrayBackedAbstractClass(cls:HxClassDecl):Bool {
 		return CppTypeModel.isArrayBackedAbstractClass(cls);
+	}
+
+	static function isStdVectorHelperClass(cls:HxClassDecl):Bool {
+		return CppTypeModel.isStdVectorHelperClass(cls);
 	}
 
 	static function isPrimitiveBackedAbstractClass(cls:HxClassDecl):Bool {

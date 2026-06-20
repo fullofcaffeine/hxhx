@@ -38,7 +38,18 @@ class CppTypeModel {
 
 	public static function isArrayBackedAbstractClass(cls:HxClassDecl):Bool {
 		final underlying = abstractUnderlyingTypeHint(cls);
-		return underlying != null && StringTools.startsWith(removeTypeHintWhitespace(underlying), "Array<");
+		if (underlying == null)
+			return false;
+		final compact = removeTypeHintWhitespace(underlying);
+		return StringTools.startsWith(compact, "Array<") || isStdVectorUnderlying(compact);
+	}
+
+	public static function isStdVectorHelperClass(cls:HxClassDecl):Bool {
+		final underlying = abstractUnderlyingTypeHint(cls);
+		return cls != null
+			&& sanitizeTypePath(HxClassDecl.getName(cls)) == "Vector"
+			&& underlying != null
+			&& isStdVectorUnderlying(removeTypeHintWhitespace(underlying));
 	}
 
 	public static function isPrimitiveBackedAbstractClass(cls:HxClassDecl):Bool {
@@ -53,7 +64,13 @@ class CppTypeModel {
 		final underlying = removeTypeHintWhitespace(abstractUnderlyingTypeHint(cls));
 		if (StringTools.startsWith(underlying, "Array<") && StringTools.endsWith(underlying, ">"))
 			return cppTypeHint(underlying, null, classLookup);
+		if (isStdVectorUnderlying(underlying))
+			return "std::vector<" + cppTypeHint(genericTypeHintArg(underlying), null, classLookup) + ">";
 		return "std::vector<std::string>";
+	}
+
+	static function isStdVectorUnderlying(underlying:String):Bool {
+		return underlying != null && StringTools.startsWith(underlying, "VectorData<") && StringTools.endsWith(underlying, ">");
 	}
 
 	public static function primitiveAbstractUnderlyingCppType(cls:HxClassDecl):Null<String> {
