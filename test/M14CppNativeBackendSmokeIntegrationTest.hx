@@ -1438,6 +1438,42 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper methods returning inferred class locals should forward the reference instead of stringifying it");
 		assertTrue(genericReturnLines.indexOf("std::string filterLike()") < 0,
 			"C++ helper methods returning inferred class locals should not declare std::string");
+		final genericBox = new HxClassDecl("GenericBox", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("value", "T", NoDefault, false, false)], "Void",
+				[SExpr(EBinop("=", EField(EThis, "value"), EIdent("value")), HxPos.unknown())], "")
+		], [new HxFieldDecl("value", Public, false, "T", null)]);
+		final genericBoxOwner = new HxClassDecl("GenericBoxOwner", false, [
+			new HxFunctionDecl("make", Public, false, [], "Void", [
+				SVar("intBox", "", ENew("GenericBox", [EInt(12)]), HxPos.unknown()),
+				SVar("stringBox", "", ENew("GenericBox", [EString("12")]), HxPos.unknown()),
+				SVar("fnBox", "", ENew("GenericBox", [ELambda(["i"], EBinop("*", EIdent("i"), EIdent("i")))]), HxPos.unknown())
+			], "")
+		], []);
+		final genericBoxNames = new StringMap<Bool>();
+		for (name in ["GenericBox", "GenericBoxOwner"])
+			genericBoxNames.set(name, true);
+		final genericBoxClasses = new StringMap<HxClassDecl>();
+		genericBoxClasses.set("GenericBox", genericBox);
+		genericBoxClasses.set("GenericBoxOwner", genericBoxOwner);
+		final genericBoxLookup = {names: genericBoxNames, byName: genericBoxClasses};
+		final genericBoxLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(genericBox, genericBoxLookup).join("\n");
+		final genericBoxOwnerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(genericBoxOwner)[0],
+			genericBoxOwner, genericBoxLookup)
+			.join("\n");
+		assertContains(genericBoxLines, "template<typename T>\nstruct GenericBox {",
+			"C++ generic helper classes should render as templates instead of erasing T to std::string");
+		assertContains(genericBoxLines, "T value;", "C++ generic helper fields should preserve the type parameter");
+		assertContains(genericBoxLines, "GenericBox(T value) {", "C++ generic helper constructors should preserve the type parameter");
+		assertContains(genericBoxLines, "std::shared_ptr<GenericBox<T>> __hxhx_make_shared_GenericBox(T value) {",
+			"C++ generic helper classes should emit a factory that can deduce lambdas and anonymous value types");
+		assertContains(genericBoxOwnerLines, "auto intBox = __hxhx_make_shared_GenericBox(12);",
+			"C++ generic helper construction should use the deducing factory for primitive values");
+		assertContains(genericBoxOwnerLines, "auto stringBox = __hxhx_make_shared_GenericBox(\"12\");",
+			"C++ generic helper construction should use the deducing factory for string values");
+		assertContains(genericBoxOwnerLines, "auto fnBox = __hxhx_make_shared_GenericBox([&](auto i) { return (i * i); });",
+			"C++ generic helper construction should use the deducing factory for function values");
+		assertTrue(genericBoxOwnerLines.indexOf("std::make_shared<GenericBox>(") < 0,
+			"C++ generic helper construction should not instantiate the erased non-template class shape");
 		final restIterator = new HxClassDecl("RestIterator", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("args", "Rest", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "args"), EIdent("args")), HxPos.unknown())], "")

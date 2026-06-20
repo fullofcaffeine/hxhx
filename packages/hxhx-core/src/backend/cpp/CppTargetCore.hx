@@ -723,7 +723,11 @@ class CppTargetCore {
 				if (rawName == mainName || emitted.exists(rawName) || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName))
 					continue;
 				emitted.set(rawName, true);
-				out.push(["struct " + sanitizeTypePath(rawName) + ";"]);
+				final typeParams = genericClassTemplateParams(cls);
+				if (typeParams.length > 0)
+					out.push([genericTemplatePrefix(typeParams), "struct " + sanitizeTypePath(rawName) + ";"]);
+				else
+					out.push(["struct " + sanitizeTypePath(rawName) + ";"]);
 			}
 		}
 		return out;
@@ -964,17 +968,24 @@ class CppTargetCore {
 			return renderPrimitiveBackedAbstractClass(cls, classLookup);
 		if (isStdArrayHelperClass(cls))
 			return renderStdArrayHelperClass(cls, classLookup);
+		final typeParams = genericClassTemplateParams(cls);
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		final baseType = baseTypeName(cls);
-		final out = ["struct " + className + (baseType == null ? "" : " : public " + baseType) + " {"];
+		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
+		out.push("struct " + className + (baseType == null ? "" : " : public " + baseType) + " {");
 		final scope = renderScope(cls, classLookup, "void");
 		for (field in HxClassDecl.getFields(cls)) {
 			if (HxFieldDecl.getIsStatic(field))
 				continue;
 			final typeName = knownStdlibFieldCppType(className, HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field), scope);
 			final init = HxFieldDecl.getInit(field);
-			final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
-			out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
+			final genericField = isGenericTypeParamHint(HxFieldDecl.getTypeHint(field), cls);
+			if (init == null && genericField) {
+				out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + ";");
+			} else {
+				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
+				out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
+			}
 		}
 		final ctor = findConstructor(cls);
 		if (ctor == null) {
@@ -1000,7 +1011,35 @@ class CppTargetCore {
 				out.push(line);
 		}
 		out.push("};");
+		for (line in renderGenericClassFactory(className, typeParams, ctor, scope))
+			out.push(line);
 		return out;
+	}
+
+	static function renderGenericClassFactory(className:String, typeParams:Array<String>, ctor:Null<HxFunctionDecl>, scope:CppRenderScope):Array<String> {
+		if (typeParams.length == 0 || ctor == null)
+			return [];
+		final args = HxFunctionDecl.getArgs(ctor);
+		final argNames = [for (arg in args) sanitizeIdentifier(HxFunctionArg.getName(arg))];
+		return [genericTemplatePrefix(typeParams),
+			"std::shared_ptr<"
+			+ className
+			+ "<"
+			+ typeParams.join(", ")
+			+ ">> __hxhx_make_shared_"
+			+ className
+			+ "("
+			+ renderFunctionArgs(args, scope)
+			+ ") {",
+			"  return std::make_shared<"
+			+ className
+			+ "<"
+			+ typeParams.join(", ")
+			+ ">>("
+			+ argNames.join(", ")
+			+ ");",
+			"}"
+		];
 	}
 
 	static function renderImplicitConstructors(className:String, baseType:Null<String>, scope:CppRenderScope):Array<String> {
@@ -1190,6 +1229,75 @@ class CppTargetCore {
 			if (!HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "new")
 				return fn;
 		return null;
+	}
+
+	static function genericClassTypeParams(cls:HxClassDecl):Array<String> {
+		final params = new Array<String>();
+		final seen = new haxe.ds.StringMap<Bool>();
+		function addHint(typeHint:String):Void {
+			final param = genericTypeParamName(typeHint);
+			if (param.length > 0 && !seen.exists(param)) {
+				seen.set(param, true);
+				params.push(param);
+			}
+		}
+		for (field in HxClassDecl.getFields(cls))
+			addHint(HxFieldDecl.getTypeHint(field));
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			addHint(HxFunctionDecl.getReturnTypeHint(fn));
+			for (arg in HxFunctionDecl.getArgs(fn))
+				addHint(HxFunctionArg.getTypeHint(arg));
+		}
+		return params;
+	}
+
+	static function genericClassTemplateParams(cls:HxClassDecl):Array<String> {
+		final params = genericClassTypeParams(cls);
+		if (params.length == 0 || hasRawSelfTypeReference(cls))
+			return [];
+		return params;
+	}
+
+	static function hasRawSelfTypeReference(cls:HxClassDecl):Bool {
+		final self = sanitizeTypePath(HxClassDecl.getName(cls));
+		function rawSelf(typeHint:String):Bool {
+			final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+			final hint = unwrapNullTypeHint(raw);
+			return sanitizeTypePath(typeBaseName(hint)) == self;
+		}
+		for (field in HxClassDecl.getFields(cls))
+			if (rawSelf(HxFieldDecl.getTypeHint(field)))
+				return true;
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (rawSelf(HxFunctionDecl.getReturnTypeHint(fn)))
+				return true;
+			for (arg in HxFunctionDecl.getArgs(fn))
+				if (rawSelf(HxFunctionArg.getTypeHint(arg)))
+					return true;
+		}
+		return false;
+	}
+
+	static function genericTemplatePrefix(typeParams:Array<String>):String {
+		return "template<" + [for (param in typeParams) "typename " + sanitizeIdentifier(param)].join(", ") + ">";
+	}
+
+	static function genericTypeParamName(typeHint:String):String {
+		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (raw.length != 1)
+			return "";
+		final code = raw.charCodeAt(0);
+		return code >= "A".code && code <= "Z".code ? sanitizeIdentifier(raw) : "";
+	}
+
+	static function isGenericTypeParamHint(typeHint:String, cls:HxClassDecl):Bool {
+		final param = genericTypeParamName(typeHint);
+		if (param.length == 0)
+			return false;
+		for (known in genericClassTemplateParams(cls))
+			if (known == param)
+				return true;
+		return false;
 	}
 
 	static function constructorBaseInitializer(ctor:HxFunctionDecl, scope:CppRenderScope):String {
@@ -2169,10 +2277,19 @@ class CppTargetCore {
 		if (isStdArrayTypePath(typePath))
 			return stdArrayConstructionExpr(typePath, args, scope);
 		final renderedArgs = renderConstructorArgs(className, args, scope).join(", ");
+		if (scopeHasClass(scope, className) && genericClassTypeParamsForName(className, scope).length > 0)
+			return "__hxhx_make_shared_" + className + "(" + renderedArgs + ")";
 		return scopeHasClass(scope, className) ? "std::make_shared<" + className + ">(" + renderedArgs + ")" : className
 			+ "("
 			+ renderedArgs
 			+ ")";
+	}
+
+	static function genericClassTypeParamsForName(className:String, ?scope:CppRenderScope):Array<String> {
+		if (scope == null || className == null || className.length == 0)
+			return [];
+		final cls = scope.classByName.get(className);
+		return cls == null ? [] : genericClassTemplateParams(cls);
 	}
 
 	static function renderConstructorArgs(className:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
@@ -4202,6 +4319,8 @@ class CppTargetCore {
 	}
 
 	static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		if (scope != null && scope.owner != null && isGenericTypeParamHint(typeHint, scope.owner))
+			return genericTypeParamName(typeHint);
 		return CppTypeModel.cppTypeHint(typeHint, scope, classLookup);
 	}
 
