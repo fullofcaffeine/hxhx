@@ -641,6 +641,26 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedList], []);
 	}
 
+	static function missingIMapProgram():GenIrProgram {
+		final src = [
+			"class UsesMissingIMap {",
+			"  var map:IMap;",
+			"  public function new(map:IMap) {",
+			"    this.map = map;",
+			"  }",
+			"  public function keys():Iterator<String> {",
+			"    return map.keys();",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {}",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function vendorReadOnlyArrayProgramWhenAvailable():Null<GenIrProgram> {
 		final readOnlyArrayPath = "vendor/haxe/std/haxe/ds/ReadOnlyArray.hx";
 		if (!FileSystem.exists(readOnlyArrayPath))
@@ -2699,6 +2719,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "static bool __hxhx_is_type(int, const std::string& type)", "C++ smoke should include Haxe is-expression helper overloads");
 		assertContains(source, "static std::string __hxhx_type_name(int)", "C++ smoke should include Haxe type-name helper overloads");
 		assertContains(source, "auto __hxhx_null_coalesce(std::nullptr_t, F fallback)", "C++ smoke should include Haxe null-coalescing helper overloads");
+
+		final missingIMapDir = Path.join([root, "missing-imap-source-only"]);
+		final missingIMapEmit = BackendRegistry.createForTarget("cpp-native").emit(missingIMapProgram(), context(missingIMapDir, true, true));
+		final missingIMapSource = File.getContent(missingIMapEmit.entryPath);
+		assertContains(missingIMapSource, "struct IMap {",
+			"C++ missing haxe.Constraints.IMap references should emit an abstract interface declaration, not a bare forward declaration");
+		assertContains(missingIMapSource, "virtual std::shared_ptr<__hxhx_iterator<std::string>> keys() = 0;",
+			"C++ missing IMap declarations should expose keys() for MapKeyValueIterator-style consumers");
+		assertTrue(missingIMapSource.indexOf("struct IMap {") < missingIMapSource.indexOf("struct UsesMissingIMap {"),
+			"C++ missing IMap declaration should appear before helper classes that call IMap methods");
+		assertTrue(missingIMapSource.indexOf("struct IMap;\n") < 0, "C++ missing IMap should not be emitted only as a bare forward declaration");
 
 		final mathExternDir = Path.join([root, "math-extern-source-only"]);
 		final mathExternEmit = BackendRegistry.createForTarget("cpp-native").emit(mathExternProgram(), context(mathExternDir, true, true));

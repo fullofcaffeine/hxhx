@@ -949,7 +949,10 @@ class CppTargetCore {
 			if (name == sanitizeTypePath(mainName) || emitted.exists(name))
 				return;
 			emitted.set(name, true);
-			if (typeParams != null && typeParams.length > 0)
+			final missingInterface = renderMissingInterfaceDeclaration(name);
+			if (missingInterface != null)
+				out.push(missingInterface);
+			else if (typeParams != null && typeParams.length > 0)
 				out.push([genericTemplatePrefix(typeParams), "struct " + name + ";"]);
 			else
 				out.push(["struct " + name + ";"]);
@@ -981,6 +984,38 @@ class CppTargetCore {
 			}
 		}
 		return out;
+	}
+
+	/**
+		Emits small target-owned declarations for stdlib interfaces that can be
+		referenced by upstream-derived helper code before their defining module is
+		present in the current Cpp MVP program.
+
+		This is declaration surface only: concrete map behavior still belongs in
+		real stdlib/runtime support, not in generated fake backend classes.
+	**/
+	static function renderMissingInterfaceDeclaration(name:String):Null<Array<String>> {
+		return switch (sanitizeTypePath(typeBaseName(name == null ? "" : name))) {
+			case "IMap":
+				[
+					"struct KeyValueIterator;",
+					"struct IMap {",
+					"  virtual ~IMap() = default;",
+					"  virtual std::optional<std::string> get(std::string k) = 0;",
+					"  virtual void set(std::string k, std::string v) = 0;",
+					"  virtual bool exists(std::string k) = 0;",
+					"  virtual bool remove(std::string k) = 0;",
+					"  virtual std::shared_ptr<__hxhx_iterator<std::string>> keys() = 0;",
+					"  virtual std::shared_ptr<__hxhx_iterator<std::string>> iterator() = 0;",
+					"  virtual std::shared_ptr<KeyValueIterator> keyValueIterator() = 0;",
+					"  virtual std::shared_ptr<IMap> copy() = 0;",
+					"  virtual std::string toString() = 0;",
+					"  virtual void clear() = 0;",
+					"};"
+				];
+			case _:
+				null;
+		}
 	}
 
 	static function shouldForwardDeclareMissingType(name:String, classLookup:CppClassLookup):Bool {
