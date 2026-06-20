@@ -3982,9 +3982,37 @@ class CppTargetCore {
 
 	static function classMethodCppReturnType(className:String, methodName:String, wantStatic:Bool, scope:CppRenderScope):String {
 		final fn = classMethodDecl(className, methodName, wantStatic, scope);
-		if (fn == null)
-			return "";
+		if (fn == null) {
+			final fallback = missingInterfaceMethodReturnCppType(className, methodName);
+			return fallback.length > 0 ? fallback : "";
+		}
 		return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
+	}
+
+	static function missingInterfaceMethodReturnCppType(className:String, methodName:String):String {
+		return switch (sanitizeTypePath(typeBaseName(className == null ? "" : className))) {
+			case "IMap":
+				switch (sanitizeIdentifier(methodName == null ? "" : methodName)) {
+					case "get":
+						"std::optional<std::string>";
+					case "set" | "clear":
+						"void";
+					case "exists" | "remove":
+						"bool";
+					case "keys" | "iterator":
+						"std::shared_ptr<__hxhx_iterator<std::string>>";
+					case "keyValueIterator":
+						"std::shared_ptr<KeyValueIterator>";
+					case "copy":
+						"std::shared_ptr<IMap>";
+					case "toString":
+						"std::string";
+					case _:
+						"";
+				}
+			case _:
+				"";
+		};
 	}
 
 	static function classMethodDecl(className:String, methodName:String, wantStatic:Bool, scope:CppRenderScope):Null<HxFunctionDecl> {

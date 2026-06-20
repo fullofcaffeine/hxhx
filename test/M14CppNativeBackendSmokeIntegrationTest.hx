@@ -651,6 +651,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function keys():Iterator<String> {",
 			"    return map.keys();",
 			"  }",
+			"  public function next() {",
+			"    var key = map.keys().next();",
+			"    return { value: map.get(key), key: key };",
+			"  }",
 			"}",
 			"class Main {",
 			"  static function main() {}",
@@ -2837,6 +2841,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(missingIMapSource.indexOf("struct IMap {") < missingIMapSource.indexOf("struct UsesMissingIMap {"),
 			"C++ missing IMap declaration should appear before helper classes that call IMap methods");
 		assertTrue(missingIMapSource.indexOf("struct IMap;\n") < 0, "C++ missing IMap should not be emitted only as a bare forward declaration");
+		assertContains(missingIMapSource, "return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",
+			"C++ fallback IMap method typing should unwrap optional get values into key/value iterator records");
+		assertTrue(missingIMapSource.indexOf("struct __hxhx_anon_value_int__key_std__string") < 0,
+			"C++ fallback IMap key/value iterator records should not predeclare optional values as Int");
 
 		final mapKeyValueDir = Path.join([root, "imap-key-value-iterator-source-only"]);
 		final mapKeyValueEmit = BackendRegistry.createForTarget("cpp-native").emit(mapKeyValueIteratorProgram(), context(mapKeyValueDir, true, true));
