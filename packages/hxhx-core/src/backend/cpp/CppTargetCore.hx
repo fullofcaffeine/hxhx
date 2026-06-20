@@ -1490,6 +1490,7 @@ class CppTargetCore {
 			localNames: new haxe.ds.StringMap<String>(),
 			localNameCounts: new haxe.ds.StringMap<Int>(),
 			argTypeOverrides: new haxe.ds.StringMap<String>(),
+			localTypeOverrides: new haxe.ds.StringMap<String>(),
 			returnType: returnType
 		};
 	}
@@ -1508,6 +1509,7 @@ class CppTargetCore {
 	static function prepareFunctionScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
 		inferCallableArgTypeOverrides(scope, fn);
 		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+		inferDynamicLocalTypeOverrides(scope, fn);
 	}
 
 	static function baseTypeName(cls:HxClassDecl):Null<String> {
@@ -1837,6 +1839,141 @@ class CppTargetCore {
 		for (stmt in HxFunctionDecl.getBody(fn))
 			collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
 		scope.localTypes = new haxe.ds.StringMap<String>();
+	}
+
+	static function inferDynamicLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null)
+			return;
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final candidates = new haxe.ds.StringMap<Bool>();
+		for (stmt in HxFunctionDecl.getBody(fn))
+			collectDynamicLocalTypeOverridesFromStmt(stmt, scope, candidates);
+		scope.localTypes = savedLocalTypes;
+	}
+
+	static function collectDynamicLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectDynamicLocalTypeOverridesFromStmt(s, scope, candidates);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectDynamicLocalTypeOverridesFromExpr(cond, scope, candidates);
+				collectDynamicLocalTypeOverridesFromStmt(thenBranch, scope, candidates);
+				if (elseBranch != null)
+					collectDynamicLocalTypeOverridesFromStmt(elseBranch, scope, candidates);
+			case SForIn(name, iterable, body, _):
+				collectDynamicLocalTypeOverridesFromExpr(iterable, scope, candidates);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					collectDynamicLocalTypeOverridesFromStmt(body, scope, candidates);
+				});
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				collectDynamicLocalTypeOverridesFromExpr(iterable, scope, candidates);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), "int", () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), iterableElementType(iterable, scope), () -> {
+						collectDynamicLocalTypeOverridesFromStmt(body, scope, candidates);
+					});
+				});
+			case SWhile(cond, body, _):
+				collectDynamicLocalTypeOverridesFromExpr(cond, scope, candidates);
+				collectDynamicLocalTypeOverridesFromStmt(body, scope, candidates);
+			case SDoWhile(body, cond, _):
+				collectDynamicLocalTypeOverridesFromStmt(body, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExpr(cond, scope, candidates);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectDynamicLocalTypeOverridesFromExpr(scrutinee, scope, candidates);
+				for (body in bodies)
+					collectDynamicLocalTypeOverridesFromStmt(body, scope, candidates);
+			case STry(tryBody, catches, _):
+				collectDynamicLocalTypeOverridesFromStmt(tryBody, scope, candidates);
+				for (c in catches)
+					collectDynamicLocalTypeOverridesFromStmt(c.body, scope, candidates);
+			case SVar(name, typeHint, init, _):
+				if (init != null)
+					collectDynamicLocalTypeOverridesFromExpr(init, scope, candidates);
+				final local = sanitizeIdentifier(name);
+				if (isDynamicLikeTypeHint(typeHint)) {
+					candidates.set(local, true);
+					final inferred = init == null ? "" : dynamicLocalAssignedType(init, scope);
+					if (inferred.length > 0)
+						setDynamicLocalTypeOverride(scope, local, inferred);
+					else
+						scope.localTypes.set(local, "std::string");
+				} else {
+					final localType = cppLocalTypeHint(typeHint, init, scope);
+					if (localType.length > 0)
+						scope.localTypes.set(local, localType);
+				}
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectDynamicLocalTypeOverridesFromExpr(expr, scope, candidates);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function collectDynamicLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+		switch (expr) {
+			case EBinop("=", EIdent(name), rhs) if (candidates.exists(sanitizeIdentifier(name))):
+				collectDynamicLocalTypeOverridesFromExpr(rhs, scope, candidates);
+				final inferred = dynamicLocalAssignedType(rhs, scope);
+				if (inferred.length > 0)
+					setDynamicLocalTypeOverride(scope, sanitizeIdentifier(name), inferred);
+			case EBinop(_, left, right):
+				collectDynamicLocalTypeOverridesFromExpr(left, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExpr(right, scope, candidates);
+			case ECall(callee, args):
+				collectDynamicLocalTypeOverridesFromExpr(callee, scope, candidates);
+				for (arg in args)
+					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
+			case EArrayAccess(array, index):
+				collectDynamicLocalTypeOverridesFromExpr(array, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExpr(index, scope, candidates);
+			case EField(receiver, _):
+				collectDynamicLocalTypeOverridesFromExpr(receiver, scope, candidates);
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectDynamicLocalTypeOverridesFromExpr(element, scope, candidates);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				collectDynamicLocalTypeOverridesFromExpr(iterable, scope, candidates);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					if (guardExpr != null)
+						collectDynamicLocalTypeOverridesFromExpr(guardExpr, scope, candidates);
+					collectDynamicLocalTypeOverridesFromExpr(yieldExpr, scope, candidates);
+				});
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				collectDynamicLocalTypeOverridesFromExpr(inner, scope, candidates);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectDynamicLocalTypeOverridesFromExpr(cond, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExpr(thenExpr, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExpr(elseExpr, scope, candidates);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectDynamicLocalTypeOverridesFromExpr(value, scope, candidates);
+			case ESwitch(scrutinee, _, exprs):
+				collectDynamicLocalTypeOverridesFromExpr(scrutinee, scope, candidates);
+				for (value in exprs)
+					collectDynamicLocalTypeOverridesFromExpr(value, scope, candidates);
+			case ELambda(_, body):
+				collectDynamicLocalTypeOverridesFromExpr(body, scope, candidates);
+			case ENew(_, args):
+				for (arg in args)
+					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
+			case _:
+		}
+	}
+
+	static function dynamicLocalAssignedType(expr:HxExpr, scope:CppRenderScope):String {
+		final explicit = exprCppType(expr, scope);
+		final inferred = explicit.length > 0 ? explicit : inferExprCppType(expr, scope);
+		return inferred.length > 0 && inferred != "std::string" ? inferred : "";
+	}
+
+	static function setDynamicLocalTypeOverride(scope:CppRenderScope, local:String, typeName:String):Void {
+		if (scope == null || local == null || local.length == 0 || typeName == null || typeName.length == 0)
+			return;
+		final existing = scope.localTypeOverrides.get(local);
+		if (existing != null && existing.length > 0 && existing != typeName)
+			return;
+		scope.localTypeOverrides.set(local, typeName);
+		scope.localTypes.set(local, typeName);
 	}
 
 	static function collectForwardedConstructorArgTypeOverrides(stmts:Array<HxStmt>, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
@@ -2237,7 +2374,7 @@ class CppTargetCore {
 			case SThrow(expr, _):
 				[indent + "throw std::runtime_error(" + stringExpr(expr, scope) + ");"];
 			case SVar(name, typeHint, init, _):
-				final localType = cppLocalTypeHint(typeHint, init, scope);
+				final localType = cppLocalDeclaredType(name, typeHint, init, scope);
 				final localName = declareLocalName(name, scope);
 				if (scope != null)
 					scope.localTypes.set(sanitizeIdentifier(name), localType);
@@ -3308,6 +3445,8 @@ class CppTargetCore {
 				int64DivModStruct().name;
 			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
 				"int";
+			case ECall(EField(EIdent("Type"), method), args):
+				typeIntrinsicReturnCppType(method, args);
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -3523,10 +3662,18 @@ class CppTargetCore {
 		return init == null ? "" : inferExprCppType(init, scope);
 	}
 
+	static function cppLocalDeclaredType(name:String, typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
+		final local = sanitizeIdentifier(name);
+		final overrideType = scope == null ? null : scope.localTypeOverrides.get(local);
+		return overrideType != null && overrideType.length > 0 ? overrideType : cppLocalTypeHint(typeHint, init, scope);
+	}
+
 	static function inferExprCppType(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
 			case EIdent(_):
 				exprCppType(expr, scope);
+			case ECall(EField(EIdent("Type"), method), args):
+				typeIntrinsicReturnCppType(method, args);
 			case ENew(typePath, _) if (isStdArrayTypePath(typePath)):
 				isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope);
 			case ENew(typePath, _):
@@ -5121,6 +5268,36 @@ class CppTargetCore {
 
 	static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		return CppTypeModel.cppReturnTypeHint(typeHint, scope, classLookup);
+	}
+
+	static function typeIntrinsicReturnCppType(method:String, args:Array<HxExpr>):String {
+		return switch (method) {
+			case "getClass" | "getSuperClass" if (args.length == 1):
+				"std::shared_ptr<Class>";
+			case "getEnum" if (args.length == 1):
+				"std::shared_ptr<EnumValue>";
+			case "createEnum" | "createEnumIndex" if (args.length == 2 || args.length == 3):
+				"std::shared_ptr<EnumValue>";
+			case "getClassName" | "getEnumName" | "typeof" if (args.length == 1):
+				"std::string";
+			case "getClassFields" | "getInstanceFields" | "getEnumConstructs" if (args.length == 1):
+				"std::vector<std::string>";
+			case _:
+				"";
+		};
+	}
+
+	static function isDynamicLikeTypeHint(typeHint:String):Bool {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		return hint == "Dynamic" || hint == "Any";
+	}
+
+	static function copyStringMap(values:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
+		final out = new haxe.ds.StringMap<String>();
+		if (values != null)
+			for (key in values.keys())
+				out.set(key, values.get(key));
+		return out;
 	}
 
 	static function functionReturnsLambda(fn:HxFunctionDecl):Bool {

@@ -8,5 +8,6 @@ typedef CppRenderScope = {
 	var localNames:haxe.ds.StringMap<String>;
 	var localNameCounts:haxe.ds.StringMap<Int>;
 	var argTypeOverrides:haxe.ds.StringMap<String>;
+	var localTypeOverrides:haxe.ds.StringMap<String>;
 	var returnType:String;
 }

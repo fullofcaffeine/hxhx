@@ -1144,6 +1144,42 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(assertCreateEventLines, "return [&](auto e) { return nullptr; };", "C++ event-lambda helpers should return the lambda value directly");
 		assertTrue(assertCreateAsyncLines.indexOf("std::to_string([&]()") < 0, "C++ createAsync-like helpers should not stringify returned lambdas");
 		assertTrue(assertCreateEventLines.indexOf("std::to_string([&](auto e)") < 0, "C++ createEvent-like helpers should not stringify returned lambdas");
+		final typeHelper = new HxClassDecl("Type", false, [
+			new HxFunctionDecl("getClass", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "Class<Dynamic>", [], ""),
+			new HxFunctionDecl("getEnum", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "EnumValue", [], "")
+		], []);
+		final classValue = new HxClassDecl("Class", false, [], []);
+		final enumValue = new HxClassDecl("EnumValue", false, [], []);
+		final typeStringOwner = new HxClassDecl("TypeStringOwner", false, [], []);
+		final typeStringNames = new StringMap<Bool>();
+		for (name in ["TypeStringOwner", "Type", "Class", "EnumValue"])
+			typeStringNames.set(name, true);
+		final typeStringClasses = new StringMap<HxClassDecl>();
+		typeStringClasses.set("TypeStringOwner", typeStringOwner);
+		typeStringClasses.set("Type", typeHelper);
+		typeStringClasses.set("Class", classValue);
+		typeStringClasses.set("EnumValue", enumValue);
+		final typeStringLookup = {names: typeStringNames, byName: typeStringClasses};
+		final typeStringMethod = new HxFunctionDecl("typeToStringLike", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)],
+			"String", [
+				SVar("cls", "Dynamic", ENull, HxPos.unknown()),
+				SExpr(EBinop("=", EIdent("cls"), ECall(EField(EIdent("Type"), "getClass"), [EIdent("value")])), HxPos.unknown()),
+				SVar("enm", "Dynamic", ENull, HxPos.unknown()),
+				SExpr(EBinop("=", EIdent("enm"), ECall(EField(EIdent("Type"), "getEnum"), [EIdent("value")])), HxPos.unknown()),
+				SReturn(EBinop("+", ECall(EField(EIdent("Type"), "getClassName"), [EIdent("cls")]),
+					ECall(EField(EIdent("Type"), "getEnumName"), [EIdent("enm")])),
+					HxPos.unknown())
+			], "");
+		final typeStringLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(typeStringMethod, typeStringOwner, typeStringLookup).join("\n");
+		assertContains(typeStringLines, "std::shared_ptr<Class> cls = nullptr;",
+			"C++ Dynamic locals assigned Type.getClass results should declare Class meta-value storage");
+		assertContains(typeStringLines, "cls = Type::getClass(value);", "C++ Class meta-value locals should accept Type.getClass assignments");
+		assertContains(typeStringLines, "std::shared_ptr<EnumValue> enm = nullptr;",
+			"C++ Dynamic locals assigned Type.getEnum results should declare EnumValue meta-value storage");
+		assertContains(typeStringLines, "enm = Type::getEnum(value);", "C++ EnumValue meta-value locals should accept Type.getEnum assignments");
+		assertTrue(typeStringLines.indexOf("std::string cls") < 0, "C++ Type.getClass locals should not be declared as std::string");
+		assertTrue(typeStringLines.indexOf("std::string enm") < 0, "C++ Type.getEnum locals should not be declared as std::string");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",
