@@ -157,6 +157,27 @@ class CppTargetCore {
 		out.push("  return std::string(ptr, static_cast<std::size_t>(len));");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T>");
+		out.push("struct __hxhx_iterator {");
+		out.push("  virtual ~__hxhx_iterator() = default;");
+		out.push("  virtual bool hasNext() = 0;");
+		out.push("  virtual T next() = 0;");
+		out.push("};");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("struct __hxhx_vector_iterator : public __hxhx_iterator<T> {");
+		out.push("  const std::vector<T>* values;");
+		out.push("  std::size_t index;");
+		out.push("  explicit __hxhx_vector_iterator(const std::vector<T>& values) : values(&values), index(0) {}");
+		out.push("  bool hasNext() override { return values != nullptr && index < values->size(); }");
+		out.push("  T next() override { return (*values)[index++]; }");
+		out.push("};");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::shared_ptr<__hxhx_iterator<T>> __hxhx_vector_iterator_of(const std::vector<T>& values) {");
+		out.push("  return std::make_shared<__hxhx_vector_iterator<T>>(values);");
+		out.push("}");
+		out.push("");
 		for (line in CppMacroExpr.runtimePreludeLines())
 			out.push(line);
 		out.push("static std::string __hxhx_stringify(const __HxMacroExpr& value) {");
@@ -3402,6 +3423,8 @@ class CppTargetCore {
 					+ ", "
 					+ stringExpr(args[0], scope)
 					+ ")";
+				case "iterator" if (args.length == 0):
+					"__hxhx_vector_iterator_of(" + target + ")";
 				case "blit" if (args.length == 4 && isCppBytesDataVectorType(receiverCppType)):
 					"__hxhx_bytes_blit("
 					+ target
@@ -3745,6 +3768,8 @@ class CppTargetCore {
 				baseType == null ? "" : classMethodCppReturnType(baseType, method, false, scope);
 			case ECall(EField(receiver, method), _) if (exprCppType(receiver, scope) == "std::string"):
 				stringMethodReturnCppType(method);
+			case ECall(EField(receiver, "iterator"), _) if (isCppVectorType(exprCppType(receiver, scope))):
+				iteratorCppTypeForVector(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				"std::string";
 			case ECall(EField(receiver, method), _):
@@ -3980,6 +4005,8 @@ class CppTargetCore {
 				"std::string";
 			case ECall(EField(receiver, method), _) if (exprCppType(receiver, scope) == "std::string"):
 				stringMethodReturnCppType(method);
+			case ECall(EField(receiver, "iterator"), _) if (isCppVectorType(exprCppType(receiver, scope))):
+				iteratorCppTypeForVector(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				"std::string";
 			case ECall(EField(_, "flatten"), [ECall(EField(_, "map"), [_, mapper])]):
@@ -4038,6 +4065,11 @@ class CppTargetCore {
 			case _:
 				"";
 		};
+	}
+
+	static function iteratorCppTypeForVector(vectorType:String):String {
+		final elementType = cppVectorElementType(vectorType);
+		return "std::shared_ptr<__hxhx_iterator<" + (elementType.length == 0 ? "std::string" : elementType) + ">>";
 	}
 
 	static function renderUnsupportedNumericLiteral(raw:String):Null<String> {

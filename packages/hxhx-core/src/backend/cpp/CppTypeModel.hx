@@ -150,6 +150,11 @@ class CppTypeModel {
 		return typeBaseName(hint) == "Iterable" && StringTools.endsWith(hint, ">");
 	}
 
+	public static function isIteratorTypeHint(typeHint:String):Bool {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		return typeBaseName(hint) == "Iterator" && StringTools.endsWith(hint, ">");
+	}
+
 	public static function genericTypeHintArg(typeHint:String):String {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		final open = hint.indexOf("<");
@@ -184,6 +189,8 @@ class CppTypeModel {
 				"bool";
 			case "Dynamic" | "Any":
 				"std::string";
+			case _ if (isIteratorTypeHint(hint)):
+				"std::shared_ptr<__hxhx_iterator<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">>";
 			case _ if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint)):
 				"std::vector<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">";
 			case _ if (isFunctionTypeHint(hint)):
