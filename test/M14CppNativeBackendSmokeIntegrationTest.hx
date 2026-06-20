@@ -1,6 +1,7 @@
 import backend.BackendContext;
 import backend.BackendRegistry;
 import backend.GenIrProgram;
+import HxExpr;
 import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
@@ -1297,6 +1298,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ __global__.String(pointer, len) should lower to target-owned string-from-pointer support");
 		assertTrue(nativeStringCStrLines.indexOf("cpp.ConstPointer") < 0 && nativeStringFromPointerLines.indexOf("__global__.String") < 0,
 			"C++ NativeString pointer intrinsics should not leak hxcpp-native syntax into generated C++");
+		final metadataWrappedValue = ECall(EIdent("__hxhx_expr_meta"), [EString("nullSafety"), EString("Off"), EString("wrapped")]);
+		final metadataExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(metadataWrappedValue);
+		final metadataStringExpr = @:privateAccess backend.cpp.CppTargetCore.stringExpr(metadataWrappedValue);
+		final metadataType = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(metadataWrappedValue);
+		assertTrue(metadataExpr == "\"wrapped\"", "C++ expression metadata should erase to the wrapped expression, got: " + metadataExpr);
+		assertTrue(metadataStringExpr == "std::string(\"wrapped\")",
+			"C++ string expression metadata should erase before string lowering, got: " + metadataStringExpr);
+		assertTrue(metadataType == "std::string", "C++ expression metadata should infer from the wrapped expression, got: " + metadataType);
+		assertTrue(metadataExpr.indexOf("__hxhx_expr_meta") < 0 && metadataStringExpr.indexOf("__hxhx_expr_meta") < 0,
+			"C++ expression metadata should not leak as a runtime helper call");
 		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [
 			new HxFunctionArg("ex", "Dynamic", NoDefault, false, false),
 			new HxFunctionArg("msg", "String", NoDefault, false, false)

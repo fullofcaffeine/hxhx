@@ -3004,6 +3004,8 @@ class CppTargetCore {
 			case ECall(EField(EField(EIdent("unit"), "HelperMacros"), "typeError"), [EUnsupported(raw)])
 				if (raw != null && StringTools.startsWith(raw, "for_expr:")):
 				"true";
+			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
+				renderExpr(args[2], scope);
 			case ECall(EEnumValue(name), args):
 				enumCtorExpr(name, args, scope);
 			case EArrayDecl(elements):
@@ -4017,6 +4019,8 @@ class CppTargetCore {
 				"int";
 			case ECall(EField(receiver, "compare"), _) if (isReflectStaticReceiver(receiver)):
 				"int";
+			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
+				inferExprCppType(args[2], scope);
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -4544,6 +4548,8 @@ class CppTargetCore {
 				renderExpr(expr, scope);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringExpr(args[0], scope);
+			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
+				stringExpr(args[2], scope);
 			case ETernary(cond, thenExpr, elseExpr) if (inferExprCppType(expr, scope) == "std::string"):
 				"("
 				+ conditionExpr(cond, scope)
