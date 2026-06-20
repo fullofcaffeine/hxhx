@@ -2256,6 +2256,10 @@ class CppTargetCore {
 
 	static function collectCallableArgTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>, expectedType:String):Void {
 		switch (expr) {
+			case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
+				final overrideType = concreteForwardedOverrideType(expectedType);
+				if (overrideType.length > 0)
+					setAssignedArgTypeOverride(scope, sanitizeIdentifier(name), overrideType);
 			case ECall(EIdent(name), args) if (candidates.exists(sanitizeIdentifier(name))):
 				final argTypes = [for (arg in args) callableArgExprType(arg, scope)].filter(t -> t.length > 0);
 				if (argTypes.length == args.length) {
@@ -2286,8 +2290,10 @@ class CppTargetCore {
 			case EField(receiver, _):
 				collectCallableArgTypeOverridesFromExpr(receiver, scope, candidates, "");
 			case EBinop(_, left, right):
-				collectCallableArgTypeOverridesFromExpr(left, scope, candidates, "");
-				collectCallableArgTypeOverridesFromExpr(right, scope, candidates, "");
+				final leftExpected = binaryOperandExpectedType(expr, left, right, scope);
+				final rightExpected = binaryOperandExpectedType(expr, right, left, scope);
+				collectCallableArgTypeOverridesFromExpr(left, scope, candidates, leftExpected);
+				collectCallableArgTypeOverridesFromExpr(right, scope, candidates, rightExpected);
 			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectCallableArgTypeOverridesFromExpr(inner, scope, candidates, expectedType);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -2308,6 +2314,29 @@ class CppTargetCore {
 					collectCallableArgTypeOverridesFromExpr(arg, scope, candidates, "");
 			case _:
 		}
+	}
+
+	static function binaryOperandExpectedType(expr:HxExpr, operand:HxExpr, other:HxExpr, scope:CppRenderScope):String {
+		return switch (expr) {
+			case EBinop(op, _, _):
+				if (isIntegerArithmeticBinaryOp(op)) "int"; else if (isNumericComparisonOp(op)) numericExpectedTypeFromPeer(other,
+					scope); else if (op == "+") numericExpectedTypeFromPeer(other, scope); else "";
+			case _:
+				"";
+		};
+	}
+
+	static function isIntegerArithmeticBinaryOp(op:String):Bool {
+		return op == "-" || op == "*" || op == "%" || op == "<<" || op == ">>" || op == ">>>";
+	}
+
+	static function isNumericComparisonOp(op:String):Bool {
+		return op == "<" || op == "<=" || op == ">" || op == ">=";
+	}
+
+	static function numericExpectedTypeFromPeer(peer:HxExpr, scope:CppRenderScope):String {
+		final peerType = callableArgExprType(peer, scope);
+		return peerType == "int" || peerType == "double" ? peerType : "";
 	}
 
 	static function collectForwardedCallArgTypeOverrides(callee:HxExpr, args:Array<HxExpr>, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
@@ -2367,11 +2396,20 @@ class CppTargetCore {
 		switch (arg) {
 			case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
 				final paramType = cppFunctionArgType(param, scope);
-				final expectedType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
-				if (expectedType.length > 0 && expectedType != "std::string")
+				final expectedType = concreteForwardedOverrideType(paramType);
+				if (expectedType.length > 0)
 					setAssignedArgTypeOverride(scope, sanitizeIdentifier(name), expectedType);
 			case _:
 		}
+	}
+
+	static function concreteForwardedOverrideType(typeName:String):String {
+		if (typeName == null || typeName.length == 0 || typeName == "auto" || typeName == "std::any" || typeName == "std::string")
+			return "";
+		final inner = cppOptionalInnerType(typeName);
+		if (inner.length > 0)
+			return inner == "std::string" ? "" : inner;
+		return typeName;
 	}
 
 	static function callableArgExprType(expr:HxExpr, scope:CppRenderScope):String {
