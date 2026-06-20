@@ -1681,8 +1681,13 @@ class CppTargetCore {
 		if (baseType != null && baseType.length > 0)
 			bases.push("public " + baseType);
 		for (iface in implementedInterfaceNames(cls, classLookup))
-			bases.push("public " + iface);
+			if (shouldInheritCppInterface(iface))
+				bases.push("public " + iface);
 		return bases;
+	}
+
+	static function shouldInheritCppInterface(name:String):Bool {
+		return sanitizeTypePath(typeBaseName(name == null ? "" : name)) != "IMap";
 	}
 
 	static function implementedInterfaceNames(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {

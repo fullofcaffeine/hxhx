@@ -1401,6 +1401,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			}).join("\n");
 		assertTrue(emptyIMapClassLines.length == 0,
 			"C++ empty parsed IMap classes should not emit an empty struct that conflicts with target-owned IMap declarations");
+		final iMapImplementingClass = new HxClassDecl("StringMap", false, [
+			new HxFunctionDecl("copy", Public, false, [], "StringMap", [SReturn(EThis, HxPos.unknown())], "")
+		], [], "", null, false, ["haxe.Constraints.IMap"]);
+		final iMapImplementingNames = new StringMap<Bool>();
+		iMapImplementingNames.set("StringMap", true);
+		iMapImplementingNames.set("IMap", true);
+		final iMapImplementingClasses = new StringMap<HxClassDecl>();
+		iMapImplementingClasses.set("StringMap", iMapImplementingClass);
+		iMapImplementingClasses.set("IMap", iMapInterface);
+		final iMapImplementingLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(iMapImplementingClass, {
+			names: iMapImplementingNames,
+			byName: iMapImplementingClasses
+		}).join("\n");
+		assertContains(iMapImplementingLines, "struct StringMap {", "C++ IMap implementors should still render as helpers");
+		assertTrue(iMapImplementingLines.indexOf(": public IMap") < 0,
+			"C++ IMap is a target-owned generic surface and should not be forced into one nominal C++ base");
 		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [
 			new HxFunctionArg("ex", "Dynamic", NoDefault, false, false),
 			new HxFunctionArg("msg", "String", NoDefault, false, false)
