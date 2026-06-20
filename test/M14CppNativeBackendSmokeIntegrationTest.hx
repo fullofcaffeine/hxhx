@@ -2003,7 +2003,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final mapKeyValueIterator = new HxClassDecl("MapKeyValueIterator", false, [
 			new HxFunctionDecl("next", Public, false, [], "", [
 				SVar("key", "", ECall(EField(EIdent("keys"), "next"), []), HxPos.unknown()),
-				SReturn(EAnon(["value", "key"], [ECast(ECall(EField(EIdent("map"), "get"), [EIdent("key")]), "V"), EIdent("key")]), HxPos.unknown())
+				SReturn(EAnon(["value", "key"], [
+					ECall(EIdent("__hxhx_expr_meta"), [
+						EString("nullSafety"),
+						EString("Off"),
+						ECast(ECall(EField(EIdent("map"), "get"), [EIdent("key")]), "V")
+					]),
+					EIdent("key")
+				]), HxPos.unknown())
 			], "")
 		], [
 			new HxFieldDecl("map", Public, false, "IMap<K,V>", null),
