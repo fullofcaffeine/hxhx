@@ -1254,11 +1254,10 @@ class CppTargetCore {
 		}
 		for (field in HxClassDecl.getFields(cls))
 			addHint(HxFieldDecl.getTypeHint(field));
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			addHint(HxFunctionDecl.getReturnTypeHint(fn));
-			for (arg in HxFunctionDecl.getArgs(fn))
+		final ctor = findConstructor(cls);
+		if (ctor != null)
+			for (arg in HxFunctionDecl.getArgs(ctor))
 				addHint(HxFunctionArg.getTypeHint(arg));
-		}
 		return params;
 	}
 

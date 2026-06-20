@@ -1478,6 +1478,65 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic helper construction should use the deducing factory for function values");
 		assertTrue(genericBoxOwnerLines.indexOf("std::make_shared<GenericBox>(") < 0,
 			"C++ generic helper construction should not instantiate the erased non-template class shape");
+		final methodGenericBuffer = new HxClassDecl("MethodGenericBuffer", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",
+				[SExpr(EBinop("+=", EField(EThis, "b"), EIdent("x")), HxPos.unknown())], "")
+		], [new HxFieldDecl("b", Public, false, "String", null)]);
+		final methodGenericBufferOwner = new HxClassDecl("MethodGenericBufferOwner", false, [
+			new HxFunctionDecl("make", Public, false, [], "Void", [
+				SVar("buf", "", ENew("MethodGenericBuffer", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("buf"), "add"), [EString("x")]), HxPos.unknown())
+			], "")
+		], []);
+		final methodGenericBufferNames = new StringMap<Bool>();
+		for (name in ["MethodGenericBuffer", "MethodGenericBufferOwner"])
+			methodGenericBufferNames.set(name, true);
+		final methodGenericBufferClasses = new StringMap<HxClassDecl>();
+		methodGenericBufferClasses.set("MethodGenericBuffer", methodGenericBuffer);
+		methodGenericBufferClasses.set("MethodGenericBufferOwner", methodGenericBufferOwner);
+		final methodGenericBufferLookup = {names: methodGenericBufferNames, byName: methodGenericBufferClasses};
+		final methodGenericBufferLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(methodGenericBuffer, methodGenericBufferLookup).join("\n");
+		final methodGenericBufferOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(methodGenericBufferOwner)[0], methodGenericBufferOwner,
+				methodGenericBufferLookup)
+				.join("\n");
+		assertContains(methodGenericBufferLines, "struct MethodGenericBuffer {",
+			"C++ method-local generic-looking args should not make the helper class a template");
+		assertTrue(methodGenericBufferLines.indexOf("template<typename T>\nstruct MethodGenericBuffer") < 0,
+			"C++ should not over-template StringBuf-shaped classes whose T appears only on methods");
+		assertContains(methodGenericBufferOwnerLines, "auto buf = std::make_shared<MethodGenericBuffer>();",
+			"C++ zero-arg construction of method-generic utility classes should not require template deduction");
+		final staticGenericFacade = new HxClassDecl("StaticGenericFacade", false, [
+			new HxFunctionDecl("is", Public, true, [
+				new HxFunctionArg("v", "S", NoDefault, false, false),
+				new HxFunctionArg("t", "T", NoDefault, false, false)
+			], "Bool", [SReturn(EBool(true), HxPos.unknown())], "")
+		], []);
+		final staticGenericFacadeOwner = new HxClassDecl("StaticGenericFacadeOwner", false, [
+			new HxFunctionDecl("check", Public, false, [], "Bool", [
+				SReturn(ECall(EField(EIdent("StaticGenericFacade"), "is"), [EString("v"), EString("t")]), HxPos.unknown())
+			], "")
+		], []);
+		final staticGenericFacadeNames = new StringMap<Bool>();
+		for (name in ["StaticGenericFacade", "StaticGenericFacadeOwner"])
+			staticGenericFacadeNames.set(name, true);
+		final staticGenericFacadeClasses = new StringMap<HxClassDecl>();
+		staticGenericFacadeClasses.set("StaticGenericFacade", staticGenericFacade);
+		staticGenericFacadeClasses.set("StaticGenericFacadeOwner", staticGenericFacadeOwner);
+		final staticGenericFacadeLookup = {names: staticGenericFacadeNames, byName: staticGenericFacadeClasses};
+		final staticGenericFacadeLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(staticGenericFacade, staticGenericFacadeLookup).join("\n");
+		final staticGenericFacadeOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(staticGenericFacadeOwner)[0], staticGenericFacadeOwner,
+				staticGenericFacadeLookup)
+				.join("\n");
+		assertContains(staticGenericFacadeLines, "struct StaticGenericFacade {",
+			"C++ static utility facades should stay normal classes even with generic-looking method args");
+		assertTrue(staticGenericFacadeLines.indexOf("template<typename") < 0, "C++ should not over-template Std-shaped static utility facades");
+		assertContains(staticGenericFacadeOwnerLines, "return StaticGenericFacade::is(\"v\", \"t\");",
+			"C++ static facade calls should not require class template arguments");
 		final redeclaredLocalOwner = new HxClassDecl("RedeclaredLocalOwner", false, [
 			new HxFunctionDecl("pick", Public, false, [], "String", [
 				SVar("mg", "", EInt(12), HxPos.unknown()),
