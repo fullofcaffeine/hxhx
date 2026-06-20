@@ -75,6 +75,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(words[1]);",
 			"    Sys.println(Std.string(words.indexOf(\"alpha\")));",
 			"    Sys.println(Std.string(helper(4)));",
+			"    Sys.println(\"q:\" + Assert.q(1.5) + \":\" + Assert.q(true) + \":\" + Assert.q(\"ok\"));",
 			"    var casted:Int = cast helper(5);",
 			"    Sys.println(Std.string(casted + 0));",
 			"    var total = 1;",
@@ -561,6 +562,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return parent.value;",
 			"  }",
 			"}",
+			"class Assert {",
+			"  public static function q(v:Dynamic):String {",
+			"    return Std.string(v);",
+			"  }",
+			"}",
 			"class Box {",
 			"  public var value:Int;",
 			"  public function new(value:Int) {",
@@ -943,6 +949,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderHelperMethod(enumCtorHelper, enumPayloadOwner, enumPayloadLookup).join("\n");
 		assertContains(enumCtorHelperLines, "static std::string U1(std::string x) {\n    return std::string(\"U1\");\n  }",
 			"C++ enum metadata constructors with Dynamic return should stringify to their constructor tag, not std::to_string an aggregate");
+		final assertOwner = new HxClassDecl("Assert", false, [], []);
+		final assertNames = new StringMap<Bool>();
+		assertNames.set("Assert", true);
+		final assertClasses = new StringMap<HxClassDecl>();
+		assertClasses.set("Assert", assertOwner);
+		final assertLookup = {names: assertNames, byName: assertClasses};
+		final assertQStringify = new HxFunctionDecl("q", Public, true, [new HxFunctionArg("v", "Dynamic", NoDefault, false, false)], "String",
+			[SReturn(ECall(EField(EIdent("Std"), "string"), [EIdent("v")]), HxPos.unknown())], "");
+		final assertQLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(assertQStringify, assertOwner, assertLookup).join("\n");
+		assertContains(assertQLines, "template<typename T>\n  static std::string q(const T& v) {\n    return __hxhx_stringify(v);\n  }",
+			"C++ Assert.q Dynamic stringification should be a polymorphic diagnostic helper, not q(std::string)");
+		assertTrue(assertQLines.indexOf("q(std::string v)") < 0, "C++ Assert.q should not reject numeric diagnostic values");
 		final listNode = new HxClassDecl("ListNode", false, [], [new HxFieldDecl("next", Public, false, "Null<ListNode>", null)]);
 		final listOwner = new HxClassDecl("ListOwner", false, [], []);
 		final listNames = new StringMap<Bool>();
@@ -1855,12 +1873,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "auto suffix = std::string(\"smoke\");", "C++ smoke should emit string local vars as std::string");
 		assertContains(source, "std::cout << (std::string(\"cpp-native:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit println");
 		assertContains(source, "std::cout << (std::string(\"trace:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit trace");
+		assertContains(source, "static std::string __hxhx_stringify(bool value)", "C++ smoke should include target-owned stringify support");
 		assertContains(source, "__hxhx_args(argc, argv)", "C++ smoke should emit Sys.args helper call");
 		assertContains(source, "__hxhx_index_of(\"abc\", std::string(\"b\"), 0)", "C++ smoke should emit string indexOf helper call");
 		assertContains(source, "__hxhx_index_of(args, std::string(\"needle\"), 0)", "C++ smoke should emit vector indexOf helper call");
 		assertContains(source, "std::vector<std::string>{std::string(\"alpha\"), std::string(\"beta\")}", "C++ smoke should emit string array literal");
 		assertContains(source, "static int helper(int x) {", "C++ smoke should emit main-class static helper function");
 		assertContains(source, "helper(4)", "C++ smoke should lower direct identifier function call");
+		assertContains(source, "template<typename T>\n  static std::string q(const T& v)", "C++ smoke should emit Assert.q as a template");
+		assertContains(source, "Assert::q(1.5)", "C++ smoke should allow numeric Assert.q calls");
 		assertContains(source, "int casted = helper(5);", "C++ smoke should lower cast expression with explicit local type");
 		assertContains(source, "total += 4;", "C++ smoke should lower compound plus assignment");
 		assertContains(source, "total -= 2;", "C++ smoke should lower compound minus assignment");
@@ -2172,7 +2193,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

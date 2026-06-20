@@ -490,6 +490,37 @@ class CppTargetCore {
 		out.push("  return std::string(\"Array\");");
 		out.push("}");
 		out.push("");
+		out.push("static std::string __hxhx_stringify(const std::string& value) {");
+		out.push("  return value;");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_stringify(const char* value) {");
+		out.push("  return value == nullptr ? std::string() : std::string(value);");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_stringify(bool value) {");
+		out.push("  return value ? std::string(\"true\") : std::string(\"false\");");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::string __hxhx_stringify(const T& value) {");
+		out.push("  std::ostringstream out;");
+		out.push("  out << value;");
+		out.push("  return out.str();");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::string __hxhx_stringify(const std::vector<T>& values) {");
+		out.push("  std::ostringstream out;");
+		out.push("  out << \"[\";");
+		out.push("  for (std::size_t i = 0; i < values.size(); ++i) {");
+		out.push("    if (i > 0) out << \",\";");
+		out.push("    out << __hxhx_stringify(values[i]);");
+		out.push("  }");
+		out.push("  out << \"]\";");
+		out.push("  return out.str();");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T, typename F>");
 		out.push("auto __hxhx_null_coalesce(const T& value, F fallback) {");
 		out.push("  return value;");
@@ -1434,6 +1465,8 @@ class CppTargetCore {
 	}
 
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		if (isAssertPolymorphicStringifyHelper(fn, owner))
+			return renderAssertPolymorphicStringifyHelper(fn);
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
@@ -1449,6 +1482,30 @@ class CppTargetCore {
 			out.push(line);
 		out.push("  }");
 		return out;
+	}
+
+	static function isAssertPolymorphicStringifyHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Assert")
+			return false;
+		if (!HxFunctionDecl.getIsStatic(fn) || sanitizeIdentifier(HxFunctionDecl.getName(fn)) != "q")
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxFunctionDecl.getReturnTypeHint(fn))) != "String")
+			return false;
+		final args = HxFunctionDecl.getArgs(fn);
+		if (args.length != 1)
+			return false;
+		final argType = sanitizeTypePath(typeBaseName(HxFunctionArg.getTypeHint(args[0])));
+		return argType == "Dynamic" || argType == "Any";
+	}
+
+	static function renderAssertPolymorphicStringifyHelper(fn:HxFunctionDecl):Array<String> {
+		final argName = sanitizeIdentifier(HxFunctionArg.getName(HxFunctionDecl.getArgs(fn)[0]));
+		return [
+			"  template<typename T>",
+			"  static std::string q(const T& " + argName + ") {",
+			"    return __hxhx_stringify(" + argName + ");",
+			"  }"
+		];
 	}
 
 	static function findConstructor(cls:HxClassDecl):Null<HxFunctionDecl> {
