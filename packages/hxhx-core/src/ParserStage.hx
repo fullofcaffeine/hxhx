@@ -3583,7 +3583,7 @@ class ParserStage {
 		final restArgsByName:Map<String, Bool> = [];
 		final argTypesPayload = parts[7];
 		if (argTypesPayload.length > 0) {
-			for (entry in argTypesPayload.split(",")) {
+			for (entry in splitTopLevelComma(argTypesPayload)) {
 				if (entry.length == 0)
 					continue;
 				final idx = entry.indexOf(":");

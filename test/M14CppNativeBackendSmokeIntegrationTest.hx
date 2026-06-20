@@ -43,6 +43,35 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return {code: code, stdout: stdout, stderr: stderr};
 	}
 
+	static function protocolLine(key:String, payload:String):String {
+		final escaped = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(payload, "\\", "\\\\"), "\n", "\\n"), "\r", "\\r"),
+			"\t", "\\t");
+		return "ast " + key + " " + escaped.length + ":" + escaped;
+	}
+
+	static function assertNativeProtocolStructuralArgTypeSplitting():Void {
+		final structural = "{ms:Float,seconds:Int,minutes:Int,hours:Int,days:Int}";
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("class", "DateToolsLike"),
+			"ast static_main 0",
+			protocolLine("method", "make|public|1|o|Float|||o:" + structural + "|"),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded);
+		final cls = HxModuleDecl.getMainClass(decl);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getName(fn) == "make") {
+				final args = HxFunctionDecl.getArgs(fn);
+				assertTrue(args.length == 1, "native protocol structural arg fixture should decode one arg");
+				assertTrue(HxFunctionArg.getTypeHint(args[0]) == structural,
+					"native protocol argtypes should split at top-level commas only, preserving structural hints");
+				return;
+			}
+		}
+		throw "native protocol structural arg fixture should decode make";
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -915,6 +944,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	}
 
 	static function main():Void {
+		assertNativeProtocolStructuralArgTypeSplitting();
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("8")) == "8",
 			"numeric unsupported fragments should render as integer literals");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("=")) == "0",
