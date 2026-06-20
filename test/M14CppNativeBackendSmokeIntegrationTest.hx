@@ -975,6 +975,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				[EIdent("b"), EIdent("pos")])) == "__hxhx_memory_get_double(b, pos)",
 			"C++ hxcpp byte-memory float intrinsics should lower to target-owned helpers");
 		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("__global__"), "__hxcpp_reinterpret_le_int32_as_float32"),
+				[EIdent("i")])) == "__hxhx_reinterpret_le_int32_as_float32(i)",
+			"C++ hxcpp float reinterpret intrinsics should lower to target-owned helpers");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("__global__"), "__hxcpp_reinterpret_float64_as_le_int32_high"),
+				[EIdent("v")])) == "__hxhx_reinterpret_float64_as_le_int32_high(v)",
+			"C++ hxcpp float64 high-word reinterpret intrinsics should lower to target-owned helpers");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.inferExprCppType(ECall(EField(EIdent("__global__"), "__hxcpp_reinterpret_float32_as_le_int32"), [EFloat(1.0)])) == "int",
+			"C++ hxcpp float-to-int reinterpret intrinsics should infer integer return types");
+		final parenthesizedAssignmentExpr = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("__hxhx_parenthesized"), [EBinop("=", EIdent("last"), ECall(EIdent("readByte"), []))]));
+		assertTrue(parenthesizedAssignmentExpr == "(last = readByte())",
+			"C++ parenthesized assignment sentinels should preserve grouping instead of leaking helper calls, got: " + parenthesizedAssignmentExpr);
+		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("__global__"), "__hxcpp_string_of_bytes"),
 				[EIdent("b"), EIdent("result"), EIdent("pos"), EIdent("len"), EBool(true)])) == "__hxhx_string_of_bytes(b, result, pos, len)",
 			"C++ hxcpp string-of-bytes intrinsic should ignore optional target flags and lower to target-owned helpers");
@@ -2108,6 +2123,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(bytesLines, "a.resize(length);", "C++ cpp.NativeArray.setSize should resize vector-backed BytesData storage");
 		assertContains(bytesLines, "return std::make_shared<Bytes>(length, a);",
 			"C++ Bytes.alloc should pass vector-backed BytesData to the recovered constructor");
+		final bytesBufferGetBytes = new HxFunctionDecl("getBytes", Public, false, [], "Bytes", [
+			SVar("b", "BytesData", ENew("BytesData", []), HxPos.unknown()),
+			SExpr(EBinop("=", EIdent("b"), ENull), HxPos.unknown()),
+			SReturn(ENew("Bytes", [EInt(0), EIdent("b")]), HxPos.unknown())
+		], "");
+		final bytesBufferOwner = new HxClassDecl("BytesBuffer", false, [bytesBufferGetBytes], []);
+		final bytesBufferLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(bytesBufferGetBytes, bytesBufferOwner, bytesLookup).join("\n");
+		assertContains(bytesBufferLines, "b = {};", "C++ BytesBuffer-style BytesData nulling should reset vector storage instead of assigning nullptr");
+		assertTrue(bytesBufferLines.indexOf("b = nullptr") < 0, "C++ BytesData locals are vector-backed and should not receive nullptr assignments");
 		final stringIterator = new HxClassDecl("StringIterator", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "s"), EIdent("s")), HxPos.unknown())], ""),
@@ -2740,6 +2764,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(!sourceOnly.builtExecutable, "no-compilation C++ smoke should not build executable");
 		final source = File.getContent(sourceOnly.entryPath);
 		assertContains(source, "int main(int argc, char** argv)", "C++ smoke should emit main");
+		assertContains(source, "#include <cstdint>", "C++ smoke should include fixed-width integer types for bit reinterpret helpers");
+		assertContains(source, "static double __hxhx_reinterpret_le_int32_as_float32(int value)",
+			"C++ smoke should include target-owned hxcpp FP reinterpret support");
 		assertContains(source, "auto suffix = std::string(\"smoke\");", "C++ smoke should emit string local vars as std::string");
 		assertContains(source, "std::cout << (std::string(\"cpp-native:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit println");
 		assertContains(source, "std::cout << (std::string(\"trace:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit trace");

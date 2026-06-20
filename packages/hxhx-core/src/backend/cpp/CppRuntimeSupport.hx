@@ -15,6 +15,43 @@ package backend.cpp;
 	  declaration order remains explicit at the call site.
 **/
 class CppRuntimeSupport {
+	public static function fpReinterpretLines():Array<String> {
+		return [
+			"static double __hxhx_reinterpret_le_int32_as_float32(int value) {",
+			"  std::uint32_t bits = static_cast<std::uint32_t>(value);",
+			"  float out = 0;",
+			"  std::memcpy(&out, &bits, sizeof(out));",
+			"  return static_cast<double>(out);",
+			"}",
+			"",
+			"static int __hxhx_reinterpret_float32_as_le_int32(double value) {",
+			"  float narrowed = static_cast<float>(value);",
+			"  std::uint32_t bits = 0;",
+			"  std::memcpy(&bits, &narrowed, sizeof(bits));",
+			"  return static_cast<int>(bits);",
+			"}",
+			"",
+			"static double __hxhx_reinterpret_le_int32s_as_float64(int low, int high) {",
+			"  std::uint64_t bits = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(high)) << 32) | static_cast<std::uint32_t>(low);",
+			"  double out = 0;",
+			"  std::memcpy(&out, &bits, sizeof(out));",
+			"  return out;",
+			"}",
+			"",
+			"static int __hxhx_reinterpret_float64_as_le_int32_low(double value) {",
+			"  std::uint64_t bits = 0;",
+			"  std::memcpy(&bits, &value, sizeof(bits));",
+			"  return static_cast<int>(static_cast<std::uint32_t>(bits & 0xFFFFFFFFULL));",
+			"}",
+			"",
+			"static int __hxhx_reinterpret_float64_as_le_int32_high(double value) {",
+			"  std::uint64_t bits = 0;",
+			"  std::memcpy(&bits, &value, sizeof(bits));",
+			"  return static_cast<int>(static_cast<std::uint32_t>((bits >> 32) & 0xFFFFFFFFULL));",
+			"}"
+		];
+	}
+
 	public static function sysEventLoopLines():Array<String> {
 		return [
 			"template<typename T>",

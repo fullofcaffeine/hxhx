@@ -122,6 +122,7 @@ class CppTargetCore {
 		out.push("#include <chrono>");
 		out.push("#include <cmath>");
 		out.push("#include <cstddef>");
+		out.push("#include <cstdint>");
 		out.push("#include <cstdlib>");
 		out.push("#include <cstring>");
 		out.push("#include <fstream>");
@@ -160,6 +161,9 @@ class CppTargetCore {
 		out.push("  if (ptr == nullptr || len <= 0) return std::string();");
 		out.push("  return std::string(ptr, static_cast<std::size_t>(len));");
 		out.push("}");
+		out.push("");
+		for (line in CppRuntimeSupport.fpReinterpretLines())
+			out.push(line);
 		out.push("");
 		for (line in CppRuntimeSupport.sysEventLoopLines())
 			out.push(line);
@@ -3242,6 +3246,8 @@ class CppTargetCore {
 				+ ")";
 			case ECall(EField(EIdent("__global__"), method), args):
 				globalIntrinsicCallExpr(method, args, scope);
+			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
+				"(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("HelperMacros"), "typeErrorText"), [EUnsupported(raw)]) if (raw != null
 				&& StringTools.startsWith(raw, "for_expr:")):
 				quoteString("Int has no field keyValueIterator");
@@ -3917,6 +3923,16 @@ class CppTargetCore {
 				"__hxhx_memory_set_double(" + rendered.join(", ") + ")";
 			case "__hxcpp_memory_set_float" if (args.length == 3):
 				"__hxhx_memory_set_float(" + rendered.join(", ") + ")";
+			case "__hxcpp_reinterpret_le_int32_as_float32" if (args.length == 1):
+				"__hxhx_reinterpret_le_int32_as_float32(" + rendered.join(", ") + ")";
+			case "__hxcpp_reinterpret_float32_as_le_int32" if (args.length == 1):
+				"__hxhx_reinterpret_float32_as_le_int32(" + rendered.join(", ") + ")";
+			case "__hxcpp_reinterpret_le_int32s_as_float64" if (args.length == 2):
+				"__hxhx_reinterpret_le_int32s_as_float64(" + rendered.join(", ") + ")";
+			case "__hxcpp_reinterpret_float64_as_le_int32_low" if (args.length == 1):
+				"__hxhx_reinterpret_float64_as_le_int32_low(" + rendered.join(", ") + ")";
+			case "__hxcpp_reinterpret_float64_as_le_int32_high" if (args.length == 1):
+				"__hxhx_reinterpret_float64_as_le_int32_high(" + rendered.join(", ") + ")";
 			case "__hxcpp_string_of_bytes" if (args.length >= 4):
 				"__hxhx_string_of_bytes("
 				+ renderExpr(args[0], scope)
@@ -3946,6 +3962,10 @@ class CppTargetCore {
 		return switch (method) {
 			case "__hxcpp_memory_get_double" | "__hxcpp_memory_get_float":
 				"double";
+			case "__hxcpp_reinterpret_le_int32_as_float32" | "__hxcpp_reinterpret_le_int32s_as_float64":
+				"double";
+			case "__hxcpp_reinterpret_float32_as_le_int32" | "__hxcpp_reinterpret_float64_as_le_int32_low" | "__hxcpp_reinterpret_float64_as_le_int32_high":
+				"int";
 			case "String":
 				"std::string";
 			case "__hxcpp_memory_set_double" | "__hxcpp_memory_set_float" | "__hxcpp_string_of_bytes" | "__hxcpp_bytes_of_string":
@@ -4019,6 +4039,8 @@ class CppTargetCore {
 				exprCppType(inner, scope);
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				exprCppType(args[2], scope);
+			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
+				exprCppType(args[0], scope);
 			case EThis:
 				sanitizeTypePath(HxClassDecl.getName(scope.owner));
 			case ENew(typePath, _):
@@ -4347,6 +4369,8 @@ class CppTargetCore {
 				"bool";
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				inferExprCppType(args[2], scope);
+			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
+				inferExprCppType(args[0], scope);
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -4845,6 +4869,13 @@ class CppTargetCore {
 		final leftType = exprCppType(left, scope);
 		if (leftType == "std::shared_ptr<PosInfos>")
 			return posInfosSharedPtrExpr(right, scope);
+		if (isCppVectorType(leftType)) {
+			switch (right) {
+				case ENull:
+					return cppDefaultValue(leftType, scope);
+				case _:
+			}
+		}
 		return renderExpr(right, scope);
 	}
 
