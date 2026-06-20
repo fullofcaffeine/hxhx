@@ -115,6 +115,7 @@
 		"backend_cpp_CppTypeModel.ml",
 		"backend_cpp_CppTargetCore.ml",
 		"backend_cpp_CppNativeBackend.ml",
+		"backend_cpp_CppMacroExpr.ml",
 		"backend_TargetCoreBackend.ml",
 		"backend_OcamlProfile.ml",
 		"backend_ITargetCore.ml",

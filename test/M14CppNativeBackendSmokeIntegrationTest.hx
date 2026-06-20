@@ -189,6 +189,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(id(6)));",
 			"    var macroQuote = macro (\"macro:value\");",
 			"    Sys.println(macroQuote);",
+			"    var macroExtract = switch (macroQuote.expr) {",
+			"      case EParenthesis({ expr: EConst(CString(s)) }): s;",
+			"      case _: \"none\";",
+			"    };",
+			"    Sys.println(macroExtract);",
 			"    var macroType = macro :X -> Y;",
 			"    Sys.println(macroType);",
 			"    var switched = switch (2) {",
@@ -1617,8 +1622,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower enum constructor calls as tag strings while evaluating payloads");
 		assertContains(source, "auto id = [&](auto x) { return (x + 1); };", "C++ smoke should lower expression lambdas");
 		assertContains(source, "id(6)", "C++ smoke should call local lambda values");
-		assertContains(source, "auto macroQuote = std::string(\"EParenthesis(EConst(CString(macro:value)))\");",
-			"C++ smoke should lower macro quote wrappers to stable text");
+		assertContains(source, "auto macroQuote = __hxhx_macro_expr(", "C++ smoke should lower macro quotes to structural macro objects");
+		assertContains(source, "__hxhx_macro_enum(\"EParenthesis\"", "C++ smoke should preserve macro quote wrappers structurally");
 		assertContains(source, "auto macroType = std::string(\"X -> Y\");", "C++ smoke should lower macro type quotes to stable text");
 		assertContains(source, "auto switched = ([&]() {", "C++ smoke should lower switch expressions through an IIFE");
 		assertContains(source, "auto __hxhx_switch = 2;", "C++ smoke should bind switch expression scrutinee");
@@ -1699,7 +1704,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

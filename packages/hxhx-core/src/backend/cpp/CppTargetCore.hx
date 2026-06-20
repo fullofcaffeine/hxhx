@@ -126,6 +126,8 @@ class CppTargetCore {
 		out.push("#include <utility>");
 		out.push("#include <vector>");
 		out.push("");
+		for (line in CppMacroExpr.runtimePreludeLines())
+			out.push(line);
 		out.push("static std::vector<std::string> __hxhx_args(int argc, char** argv) {");
 		out.push("  std::vector<std::string> out;");
 		out.push("  for (int i = 1; i < argc; ++i) out.push_back(std::string(argv[i]));");
@@ -1831,6 +1833,8 @@ class CppTargetCore {
 				"this->__values.size()";
 			case EField(EThis, field):
 				"this->" + sanitizeIdentifier(field);
+			case EField(receiver, "expr") if (exprCppType(receiver, scope) == CppMacroExpr.CPP_TYPE):
+				"__hxhx_macro_expr_field(" + renderExpr(receiver, scope) + ")";
 			case EField(receiver, "code") if (inferExprCppType(receiver, scope) == "std::string"):
 				stringCodeAtExpr(receiver, EInt(0), scope);
 			case ENew(typePath, args):
@@ -1915,7 +1919,7 @@ class CppTargetCore {
 			case EAnon(fieldNames, fieldValues):
 				anonExpr(fieldNames, fieldValues, scope);
 			case EMacroExpr(inner, wrappers):
-				macroExpr(inner, wrappers);
+				CppMacroExpr.macroExpr(inner, wrappers);
 			case EMacroType(typeText):
 				macroTypeExpr(typeText);
 			case ESwitch(scrutinee, patterns, exprs):
@@ -2416,6 +2420,8 @@ class CppTargetCore {
 				}
 			case EArrayAccess(array, _):
 				cppVectorElementType(exprCppType(array, scope));
+			case EField(receiver, "expr") if (exprCppType(receiver, scope) == CppMacroExpr.CPP_TYPE):
+				CppMacroExpr.CPP_TYPE;
 			case EField(receiver, field):
 				final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
 				ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
@@ -2581,8 +2587,10 @@ class CppTargetCore {
 				cppFunctionReturnTypeFromCppType(exprCppType(mapper, scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
-			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
+			case EString(_) | EEnumValue(_) | EMacroType(_):
 				"std::string";
+			case EMacroExpr(_, _):
+				CppMacroExpr.CPP_TYPE;
 			case EInt(_):
 				"int";
 			case EFloat(_):
@@ -3021,7 +3029,7 @@ class CppTargetCore {
 			case EEnumValue(name):
 				"std::string(" + quoteString(name) + ")";
 			case EMacroExpr(inner, wrappers):
-				macroExpr(inner, wrappers);
+				CppMacroExpr.macroExpr(inner, wrappers);
 			case EMacroType(typeText):
 				macroTypeExpr(typeText);
 			case ECast(inner, _) | EUntyped(inner):
@@ -3065,7 +3073,8 @@ class CppTargetCore {
 				+ stringExpr(elseExpr, scope)
 				+ ")";
 			case EIdent(name):
-				"std::string(" + sanitizeIdentifier(name) + ")";
+				final local = sanitizeIdentifier(name);
+				if (exprCppType(expr, scope) == CppMacroExpr.CPP_TYPE) "__hxhx_macro_to_string(" + local + ")" else "std::string(" + local + ")";
 			case ENull:
 				"std::string()";
 			case _:
@@ -3223,9 +3232,47 @@ class CppTargetCore {
 							"(" + switchPatternCond(p, switchValue) + ")"
 					].join(" || ") + ")";
 				}
-			case PEnumExtract(_, _) | PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) |
-				PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
+			case PEnumExtract(name, args):
+				switchEnumExtractPatternCond(name, args, switchValue);
+			case PObject(fieldNames, fieldPatterns):
+				switchObjectPatternCond(fieldNames, fieldPatterns, switchValue);
+			case PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _) |
+				PParsedIntSwitchGuard(_, _, _, _):
 				"false";
+		};
+	}
+
+	static function switchEnumExtractPatternCond(name:String, args:Array<HxSwitchPattern>, switchValue:String):String {
+		final parts = ["__hxhx_macro_ctor(" + switchValue + ", " + quoteString(name) + ")"];
+		if (args != null) {
+			for (i in 0...args.length) {
+				final argValue = "__hxhx_macro_param(" + switchValue + ", " + Std.string(i) + ")";
+				parts.push("(" + switchPatternCond(args[i], argValue) + ")");
+			}
+		}
+		return "(" + parts.join(" && ") + ")";
+	}
+
+	static function switchObjectPatternCond(fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>, switchValue:String):String {
+		if (fieldNames == null || fieldPatterns == null)
+			return "false";
+		final parts = new Array<String>();
+		final count = fieldNames.length < fieldPatterns.length ? fieldNames.length : fieldPatterns.length;
+		for (i in 0...count) {
+			final fieldValue = switchObjectPatternFieldValue(fieldNames[i], switchValue);
+			if (fieldValue == null)
+				return "false";
+			parts.push("(" + switchPatternCond(fieldPatterns[i], fieldValue) + ")");
+		}
+		return parts.length == 0 ? "true" : "(" + parts.join(" && ") + ")";
+	}
+
+	static function switchObjectPatternFieldValue(fieldName:String, switchValue:String):Null<String> {
+		return switch (fieldName) {
+			case "expr":
+				"__hxhx_macro_expr_field(" + switchValue + ")";
+			case _:
+				null;
 		};
 	}
 
@@ -3260,14 +3307,23 @@ class CppTargetCore {
 				case PCapture(name, inner):
 					bind(name, value);
 					walk(inner, value);
-				case PEnumExtract(_, args):
-					if (args != null)
+				case PEnumExtract(name, args):
+					if (args != null && switchPatternIsMacroExprCtor(name)) {
+						for (i in 0...args.length)
+							walk(args[i], "__hxhx_macro_param(" + value + ", " + Std.string(i) + ")");
+					} else if (args != null) {
 						for (arg in args)
 							walk(arg, value);
-				case PObject(_, fieldPatterns):
-					if (fieldPatterns != null)
-						for (fieldPattern in fieldPatterns)
-							walk(fieldPattern, value);
+					}
+				case PObject(fieldNames, fieldPatterns):
+					if (fieldNames != null && fieldPatterns != null) {
+						final count = fieldNames.length < fieldPatterns.length ? fieldNames.length : fieldPatterns.length;
+						for (i in 0...count) {
+							final fieldValue = switchObjectPatternFieldValue(fieldNames[i], value);
+							if (fieldValue != null)
+								walk(fieldPatterns[i], fieldValue);
+						}
+					}
 				case PArray(items):
 					if (items != null)
 						for (i in 0...items.length)
@@ -3285,6 +3341,16 @@ class CppTargetCore {
 		}
 		walk(pattern, switchValue);
 		return out;
+	}
+
+	static function switchPatternIsMacroExprCtor(name:String):Bool {
+		return switch (name) {
+			case "EConst" | "EParenthesis" | "EUntyped" | "EField" | "EArray" | "EArrayDecl" | "EBinop" | "EUnop" | "ECall" | "CString" | "CInt" | "CFloat" |
+				"CIdent" | "OpIn" | "OpArrow" | "DoubleQuotes":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function indexOfExpr(receiver:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -3737,7 +3803,7 @@ class CppTargetCore {
 
 	static function isStringLike(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
+			case EString(_) | EEnumValue(_) | EMacroType(_):
 				true;
 			case ECall(EEnumValue(_), _):
 				true;
