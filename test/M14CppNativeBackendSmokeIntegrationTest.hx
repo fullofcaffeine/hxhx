@@ -1187,7 +1187,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(bytesDataLines.length == 0, "C++ BytesData should be target-owned byte storage, not a generated fake helper class");
 		final bytesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(bytes, bytesLookup).join("\n");
 		assertContains(bytesLines, "std::vector<int> b = {};", "C++ Bytes.b should use vector-backed BytesData storage");
-		assertContains(bytesLines, "Bytes(int length, std::vector<int> b) {", "C++ should recover erased Bytes constructor args from typed field assignments");
+		assertContains(bytesLines, "Bytes(int length, std::vector<int> b) : length(length), b(b) {",
+			"C++ should recover erased Bytes constructor args and initialize fields directly");
 		assertContains(bytesLines, "return static_cast<int>((b[pos]));", "C++ Bytes.get should index vector-backed BytesData directly");
 		assertContains(bytesLines, "(b[pos]) = v;", "C++ Bytes.set should write vector-backed BytesData directly");
 		assertContains(bytesLines, "__hxhx_bytes_blit(b, pos, (src->b), srcpos, len);", "C++ BytesData.blit should lower through target runtime support");
@@ -1463,7 +1464,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(genericBoxLines, "template<typename T>\nstruct GenericBox {",
 			"C++ generic helper classes should render as templates instead of erasing T to std::string");
 		assertContains(genericBoxLines, "T value;", "C++ generic helper fields should preserve the type parameter");
-		assertContains(genericBoxLines, "GenericBox(T value) {", "C++ generic helper constructors should preserve the type parameter");
+		assertContains(genericBoxLines, "GenericBox(T value) : value(value) {",
+			"C++ generic helper constructors should initialize T fields without requiring default construction or assignment");
+		assertTrue(genericBoxLines.indexOf("this->value = value;") < 0,
+			"C++ generic helper constructors should not body-assign T fields because lambdas can delete copy assignment");
 		assertContains(genericBoxLines, "std::shared_ptr<GenericBox<T>> __hxhx_make_shared_GenericBox(T value) {",
 			"C++ generic helper classes should emit a factory that can deduce lambdas and anonymous value types");
 		assertContains(genericBoxOwnerLines, "auto intBox = __hxhx_make_shared_GenericBox(12);",
@@ -1490,7 +1494,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final restLookup = {names: restNames, byName: restClasses};
 		final restIteratorLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(restIterator, restLookup).join("\n");
 		final restLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(rest, restLookup).join("\n");
-		assertContains(restIteratorLines, "RestIterator(std::shared_ptr<Rest> args) {",
+		assertContains(restIteratorLines, "RestIterator(std::shared_ptr<Rest> args) : args(args) {",
 			"C++ helper constructors should keep class-typed parameters as reference handles");
 		assertContains(restLines, "return std::make_shared<RestIterator>(std::shared_ptr<Rest>(this, [](Rest*) {}));",
 			"C++ helper constructors should pass `this` through the expected class reference handle");
@@ -1574,8 +1578,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "(~1)", "C++ smoke should emit bitwise-not expression");
 		assertContains(source, "struct Box {", "C++ smoke should emit helper class struct");
 		assertContains(source, "int value = 0;", "C++ smoke should emit helper class field");
-		assertContains(source, "Box(int value) {", "C++ smoke should emit helper class constructor");
-		assertContains(source, "this->value = value;", "C++ smoke should emit constructor field assignment");
+		assertContains(source, "Box(int value) : value(value) {", "C++ smoke should emit direct constructor field initialization");
+		assertTrue(source.indexOf("this->value = value;") < 0, "C++ smoke should not body-assign direct constructor field initializers");
 		assertContains(source, "int getHeight() {", "C++ smoke should emit helper class method");
 		assertContains(source, "return static_cast<int>(value);", "C++ smoke should emit helper method return");
 		assertContains(source, "auto box = std::make_shared<Box>(41);", "C++ smoke should lower class construction to nullable references");
@@ -1777,7 +1781,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should emit ternary expression");
 		assertContains(source, "struct Child : public Base {", "C++ smoke should emit child helper class inheritance");
 		assertContains(source, "Base::label()", "C++ smoke should lower super method calls to qualified base calls");
-		assertContains(source, "Child(int value) : Base() {", "C++ smoke should lower bare super constructor calls to base initializer lists");
+		assertContains(source, "Child(int value) : Base(), value(value) {",
+			"C++ smoke should lower bare super constructor calls and direct field initialization to initializer lists");
 		assertTrue(source.indexOf("/* base constructor call omitted */") < 0, "C++ leading super constructor calls should not remain as omitted body comments");
 		assertContains(source, "auto parent = (*this);", "C++ smoke should lower bare super expressions to the current base-backed object");
 		assertContains(source, "__hxhx_json_min_field_from_file(platformsJson)",

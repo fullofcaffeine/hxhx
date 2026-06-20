@@ -23,6 +23,11 @@ typedef CppFieldReadCatchString = {
 	var fallback:String;
 }
 
+typedef CppConstructorFieldInitializer = {
+	var field:String;
+	var arg:String;
+}
+
 /**
 	Small native C++ source-emission target core.
 
@@ -998,9 +1003,9 @@ class CppTargetCore {
 				+ "("
 				+ renderFunctionArgs(HxFunctionDecl.getArgs(ctor), scope)
 				+ ")"
-				+ constructorBaseInitializer(ctor, scope)
+				+ constructorInitializerList(ctor, scope)
 				+ " {");
-			for (line in renderStmts(constructorBodyWithoutSuperCall(ctor), "    ", scope))
+			for (line in renderStmts(constructorBodyWithoutInitializerStmts(ctor, scope), "    ", scope))
 				out.push(line);
 			out.push("  }");
 		}
@@ -1300,16 +1305,18 @@ class CppTargetCore {
 		return false;
 	}
 
-	static function constructorBaseInitializer(ctor:HxFunctionDecl, scope:CppRenderScope):String {
+	static function constructorInitializerList(ctor:HxFunctionDecl, scope:CppRenderScope):String {
+		final parts = new Array<String>();
 		final baseType = scope == null || scope.owner == null ? null : baseTypeName(scope.owner);
-		if (baseType == null)
-			return "";
-		return switch (constructorSuperCallArgs(HxFunctionDecl.getBody(ctor))) {
-			case null:
-				"";
-			case args:
-				" : " + baseType + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
-		};
+		if (baseType != null)
+			switch (constructorSuperCallArgs(HxFunctionDecl.getBody(ctor))) {
+				case null:
+				case args:
+					parts.push(baseType + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")");
+			}
+		for (init in constructorFieldInitializers(ctor, scope))
+			parts.push(init.field + "(" + init.arg + ")");
+		return parts.length == 0 ? "" : " : " + parts.join(", ");
 	}
 
 	static function constructorBodyWithoutSuperCall(ctor:HxFunctionDecl):Array<HxStmt> {
@@ -1324,6 +1331,52 @@ class CppTargetCore {
 					out.push(stmt);
 			}
 		return out;
+	}
+
+	static function constructorBodyWithoutInitializerStmts(ctor:HxFunctionDecl, scope:CppRenderScope):Array<HxStmt> {
+		final out = new Array<HxStmt>();
+		for (stmt in constructorBodyWithoutSuperCall(ctor))
+			if (constructorFieldInitializer(stmt, ctor, scope) == null)
+				out.push(stmt);
+		return out;
+	}
+
+	static function constructorFieldInitializers(ctor:HxFunctionDecl, scope:CppRenderScope):Array<CppConstructorFieldInitializer> {
+		final out = new Array<CppConstructorFieldInitializer>();
+		for (stmt in constructorBodyWithoutSuperCall(ctor)) {
+			final init = constructorFieldInitializer(stmt, ctor, scope);
+			if (init != null)
+				out.push(init);
+		}
+		return out;
+	}
+
+	static function constructorFieldInitializer(stmt:HxStmt, ctor:HxFunctionDecl, scope:CppRenderScope):Null<CppConstructorFieldInitializer> {
+		return switch (stmt) {
+			case SExpr(EBinop("=", EField(EThis, fieldName), EIdent(argName)), _)
+				if (constructorHasField(scope, fieldName) && constructorHasArg(ctor, argName)):
+				{field: sanitizeIdentifier(fieldName), arg: sanitizeIdentifier(argName)};
+			case _:
+				null;
+		};
+	}
+
+	static function constructorHasField(scope:CppRenderScope, fieldName:String):Bool {
+		if (scope == null || scope.owner == null)
+			return false;
+		final wanted = sanitizeIdentifier(fieldName);
+		for (field in HxClassDecl.getFields(scope.owner))
+			if (!HxFieldDecl.getIsStatic(field) && sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
+				return true;
+		return false;
+	}
+
+	static function constructorHasArg(ctor:HxFunctionDecl, argName:String):Bool {
+		final wanted = sanitizeIdentifier(argName);
+		for (arg in HxFunctionDecl.getArgs(ctor))
+			if (sanitizeIdentifier(HxFunctionArg.getName(arg)) == wanted)
+				return true;
+		return false;
 	}
 
 	static function constructorSuperCallArgs(stmts:Array<HxStmt>):Null<Array<HxExpr>> {
