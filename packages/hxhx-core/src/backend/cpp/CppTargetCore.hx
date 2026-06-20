@@ -6071,7 +6071,9 @@ class CppTargetCore {
 				inferReturnTypeFromStmts(stmts, scope);
 			case SIf(_, thenBranch, elseBranch, _):
 				final thenType = inferReturnTypeFromStmt(thenBranch, scope);
-				if (thenType.length > 0) thenType; else elseBranch == null ? "" : inferReturnTypeFromStmt(elseBranch, scope);
+				final elseType = elseBranch == null ? "" : inferReturnTypeFromStmt(elseBranch, scope);
+				if (thenType.length > 0 && thenType != "void") thenType; else if (elseType.length > 0 && elseType != "void") elseType; else
+					if (thenType.length > 0) thenType; else elseType;
 			case _:
 				"";
 		};

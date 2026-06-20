@@ -624,6 +624,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return new RefNode(item, next);",
 			"  }",
 			"}",
+			"class ReturnIfNode {",
+			"  public var left:ReturnIfNode;",
+			"  public function new(left:ReturnIfNode) {",
+			"    this.left = left;",
+			"  }",
+			"}",
+			"class ReturnIfTreeLike {",
+			"  public function new() {}",
+			"  public function firstNode(t:ReturnIfNode) {",
+			"    return if (t == null) throw \"missing\"; else if (t.left == null) t; else firstNode(t.left);",
+			"  }",
+			"}",
 		].join("\n");
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
@@ -2659,6 +2671,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should emit helper forward declarations before anonymous structs that reference helpers");
 		assertContains(source, "box->getHeight()", "C++ smoke should lower class receiver method calls through reference access");
 		assertContains(source, "std::shared_ptr<RefNode> next = nullptr;", "C++ smoke should type nullable class fields as C++ references");
+		assertContains(source, "std::shared_ptr<ReturnIfNode> firstNode(std::shared_ptr<ReturnIfNode> t) {",
+			"C++ smoke should infer value returns through nested return-if/else-if helpers");
+		assertContains(source, "return t;", "C++ smoke should preserve nested return-if value branches as returns");
+		assertContains(source, "return firstNode((t->left));", "C++ smoke should preserve nested return-if recursive value branches as returns");
+		assertTrue(source.indexOf("void firstNode(std::shared_ptr<ReturnIfNode> t)") < 0,
+			"C++ smoke should not infer nested return-if helpers as void from throw-only branches");
 		assertContains(source, "std::string filterGeneric(std::function<bool(std::string)> f) {",
 			"C++ smoke should lower generic function type parameters to callable C++ types instead of undefined sanitized identifiers");
 		assertContains(source, "std::string mapGeneric(std::function<std::string(std::string)> f) {",

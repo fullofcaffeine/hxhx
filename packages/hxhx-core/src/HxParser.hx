@@ -3639,6 +3639,8 @@ class HxParser {
 						s;
 					case SExpr(e, p):
 						SReturn(e, p);
+					case SIf(cond, thenBranch, elseBranch, p):
+						SIf(cond, ensureBranchReturns(thenBranch), elseBranch == null ? SReturnVoid(p) : ensureBranchReturns(elseBranch), p);
 					case SBlock(stmts, p):
 						if (stmts.length == 0) {
 							SBlock([SReturnVoid(p)], p);
