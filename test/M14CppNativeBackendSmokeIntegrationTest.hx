@@ -706,6 +706,95 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function mainLoopRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Lock {",
+			"  public function new() {}",
+			"  public function acquire():Void {}",
+			"  public function wait(?timeout:Float):Bool return true;",
+			"  public function release():Void {}",
+			"}",
+			"class Mutex {",
+			"  public function new() {}",
+			"  public function acquire():Void {}",
+			"  public function tryAcquire():Bool return true;",
+			"  public function release():Void {}",
+			"}",
+			"class Timer {",
+			"  public static function stamp():Float return 0.0;",
+			"}",
+			"class MainEvent {",
+			"  public var f:Void->Void;",
+			"  public var prev:MainEvent;",
+			"  public var next:MainEvent;",
+			"  public var nextRun:Float;",
+			"  public var priority:Int;",
+			"  public function new(f:Void->Void, ?priority:Int = 0) {",
+			"    this.f = f;",
+			"    this.priority = priority;",
+			"  }",
+			"  public function delay(?t:Float):Void {",
+			"    nextRun = t == null ? Math.NEGATIVE_INFINITY : Timer.stamp() + t;",
+			"  }",
+			"  public function stop():Void {",
+			"    if (prev != null) prev.next = next;",
+			"    if (next != null) next.prev = prev;",
+			"    if (MainLoop.pending == this) MainLoop.pending = next;",
+			"  }",
+			"}",
+			"class MainLoop {",
+			"  public static var pending:MainEvent;",
+			"  public static function add(f:Void->Void, ?priority:Int = 0):MainEvent {",
+			"    var event = new MainEvent(f, priority);",
+			"    pending = event;",
+			"    return event;",
+			"  }",
+			"  public static function hasEvents():Bool return pending != null;",
+			"  public static function sortEvents():Void {",
+			"    var p = pending;",
+			"    var q = p.next;",
+			"    if (q != null && p.priority > q.priority) pending = q;",
+			"  }",
+			"  public static function tick():Float {",
+			"    sortEvents();",
+			"    return Timer.stamp();",
+			"  }",
+			"}",
+			"class EntryPoint {",
+			"  static var sleepLock:Lock = new Lock();",
+			"  static var mutex:Mutex = new Mutex();",
+			"  static var threadCount:Int = 0;",
+			"  static var pending:Array<Void->Void> = [];",
+			"  public static function wakeup():Void sleepLock.release();",
+			"  public static function runInMainThread(f:Void->Void):Void {",
+			"    mutex.acquire();",
+			"    pending.push(f);",
+			"    mutex.release();",
+			"    wakeup();",
+			"  }",
+			"  public static function processEvents():Float {",
+			"    mutex.acquire();",
+			"    var f = pending.shift();",
+			"    mutex.release();",
+			"    f();",
+			"    return MainLoop.tick();",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    EntryPoint.runInMainThread(() -> {});",
+			"    var event = MainLoop.add(() -> {}, 1);",
+			"    event.delay(0.0);",
+			"    event.stop();",
+			"    EntryPoint.processEvents();",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "MainLoopRuntime.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function vendorReadOnlyArrayProgramWhenAvailable():Null<GenIrProgram> {
 		final readOnlyArrayPath = "vendor/haxe/std/haxe/ds/ReadOnlyArray.hx";
 		if (!FileSystem.exists(readOnlyArrayPath))
@@ -2954,6 +3043,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic IMap key/value iterators should unwrap optional values when the key local is inferred from Iterator.next()");
 		assertTrue(mapKeyValueSource.indexOf("struct __hxhx_anon_value_int__key_std__string") < 0,
 			"C++ generic IMap key/value iterator records should not predeclare optional values as Int");
+
+		final mainLoopDir = Path.join([root, "main-loop-runtime-source-only"]);
+		final mainLoopEmit = BackendRegistry.createForTarget("cpp-native").emit(mainLoopRuntimeProgram(), context(mainLoopDir, true, true));
+		final mainLoopSource = File.getContent(mainLoopEmit.entryPath);
+		assertContains(mainLoopSource, "#include <chrono>", "C++ Timer.stamp support should include chrono");
+		assertContains(mainLoopSource, "struct Timer {", "C++ Timer should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "struct Lock {", "C++ Lock should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "struct Mutex {", "C++ Mutex should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "struct MainEvent {", "C++ MainEvent should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "struct MainLoop {", "C++ MainLoop should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "struct EntryPoint {", "C++ EntryPoint should be provided by target-owned runtime support");
+		assertTrue(mainLoopSource.indexOf("struct Timer {") < mainLoopSource.indexOf("EntryPoint::runInMainThread"),
+			"C++ target-owned Timer support should appear before generated calls use it");
+		assertContains(mainLoopSource, "inline static std::vector<std::function<void()>> pending = {};",
+			"C++ EntryPoint.pending should be a function queue, not a bool or ArrayVoid expression");
+		assertContains(mainLoopSource, "inline static std::shared_ptr<MainEvent> pending = nullptr;",
+			"C++ MainLoop.pending should be a MainEvent link, not an erased scalar");
+		assertContains(mainLoopSource, "std::shared_ptr<MainEvent> prev = nullptr;", "C++ MainEvent.prev should retain the linked-list reference type");
+		assertContains(mainLoopSource, "std::shared_ptr<MainEvent> next = nullptr;", "C++ MainEvent.next should retain the linked-list reference type");
+		assertContains(mainLoopSource, "static T __hxhx_shift(std::vector<T>& values)",
+			"C++ function queues should have a target-owned shift helper for Array.shift lowering");
+		assertContains(mainLoopSource, "EntryPoint::runInMainThread([&]() {", "C++ generated code should call the target-owned EntryPoint support class");
+		assertContains(mainLoopSource, "MainLoop::add([&]() {", "C++ generated code should call the target-owned MainLoop support class");
+		assertContains(mainLoopSource, "event->delay(0);", "C++ generated code should call MainEvent support methods through shared_ptr");
+		assertTrue(mainLoopSource.indexOf("ArrayVoid") < 0, "C++ event queue support should not leak ArrayVoid into generated source");
+		assertTrue(mainLoopSource.indexOf("inline static bool pending =") < 0, "C++ event queue support should not infer pending as bool");
 
 		final mathExternDir = Path.join([root, "math-extern-source-only"]);
 		final mathExternEmit = BackendRegistry.createForTarget("cpp-native").emit(mathExternProgram(), context(mathExternDir, true, true));

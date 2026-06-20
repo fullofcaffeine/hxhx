@@ -119,6 +119,7 @@ class CppTargetCore {
 		out.push("#include <cctype>");
 		out.push("#include <algorithm>");
 		out.push("#include <any>");
+		out.push("#include <chrono>");
 		out.push("#include <cmath>");
 		out.push("#include <cstddef>");
 		out.push("#include <cstdlib>");
@@ -159,6 +160,9 @@ class CppTargetCore {
 		out.push("  if (ptr == nullptr || len <= 0) return std::string();");
 		out.push("  return std::string(ptr, static_cast<std::size_t>(len));");
 		out.push("}");
+		out.push("");
+		for (line in CppRuntimeSupport.sysEventLoopLines())
+			out.push(line);
 		out.push("");
 		out.push("template<typename T>");
 		out.push("struct __hxhx_iterator {");
@@ -1608,6 +1612,26 @@ class CppTargetCore {
 	static function knownStdlibFieldCppType(className:String, fieldName:String, typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
+		if (owner == "EntryPoint" && field == "pending")
+			return "std::vector<std::function<void()>>";
+		if (owner == "EntryPoint" && field == "sleepLock")
+			return "std::shared_ptr<Lock>";
+		if (owner == "EntryPoint" && field == "mutex")
+			return "std::shared_ptr<Mutex>";
+		if (owner == "EntryPoint" && field == "threadCount")
+			return "int";
+		if (owner == "MainLoop" && field == "pending")
+			return "std::shared_ptr<MainEvent>";
+		if (owner == "MainEvent" && (field == "prev" || field == "next"))
+			return "std::shared_ptr<MainEvent>";
+		if (owner == "MainEvent" && field == "nextRun")
+			return "double";
+		if (owner == "MainEvent" && field == "priority")
+			return "int";
+		if (owner == "MainEvent" && field == "isMain")
+			return "bool";
+		if (owner == "MainEvent" && field == "f")
+			return "std::function<void()>";
 		if (isStringIteratorHelper(owner) && (field == "offset" || field == "byteOffset" || field == "charOffset"))
 			return "int";
 		if (field == "winMetaCharacters" && (owner == "SysTools" || owner == "StringTools"))
@@ -1641,6 +1665,9 @@ class CppTargetCore {
 			?classLookup:CppClassLookup):String {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
+		final preludeReturn = cppPreludeMethodReturnType(owner, method);
+		if (preludeReturn.length > 0)
+			return preludeReturn;
 		if (isStringIteratorHelper(owner)) {
 			if (method == "hasNext")
 				return "bool";
@@ -1650,6 +1677,36 @@ class CppTargetCore {
 		if (owner == "Bytes" && method == "fill")
 			return "void";
 		return cppReturnTypeHint(typeHint, scope, classLookup);
+	}
+
+	static function cppPreludeMethodReturnType(className:String, methodName:String):String {
+		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
+		if (owner == "Timer" && method == "stamp")
+			return "double";
+		if (owner == "Lock" && (method == "acquire" || method == "release"))
+			return "void";
+		if (owner == "Lock" && method == "wait")
+			return "bool";
+		if (owner == "Mutex" && (method == "acquire" || method == "release"))
+			return "void";
+		if (owner == "Mutex" && method == "tryAcquire")
+			return "bool";
+		if (owner == "MainLoop" && method == "add")
+			return "std::shared_ptr<MainEvent>";
+		if (owner == "MainLoop" && method == "hasEvents")
+			return "bool";
+		if (owner == "MainLoop" && method == "tick")
+			return "double";
+		if (owner == "MainLoop" && method == "sortEvents")
+			return "void";
+		if (owner == "MainEvent" && (method == "delay" || method == "stop" || method == "wakeup"))
+			return "void";
+		if (owner == "EntryPoint" && (method == "wakeup" || method == "runInMainThread" || method == "addThread"))
+			return "void";
+		if (owner == "EntryPoint" && method == "processEvents")
+			return "double";
+		return "";
 	}
 
 	static function isStringIteratorHelper(className:String):Bool {
@@ -4064,6 +4121,9 @@ class CppTargetCore {
 	}
 
 	static function classMethodCppReturnType(className:String, methodName:String, wantStatic:Bool, scope:CppRenderScope):String {
+		final preludeReturn = cppPreludeMethodReturnType(className, methodName);
+		if (preludeReturn.length > 0)
+			return preludeReturn;
 		final fn = classMethodDecl(className, methodName, wantStatic, scope);
 		if (fn == null) {
 			final fallback = missingInterfaceMethodReturnCppType(className, methodName);
@@ -4147,7 +4207,7 @@ class CppTargetCore {
 		if (typePath == null)
 			return null;
 		final clean = sanitizeTypePath(typeBaseName(typePath));
-		return scopeHasClass(scope, clean) && !isCppCoreExternClass(clean) ? clean : null;
+		return scopeHasClass(scope, clean) && (!isCppCoreExternClass(clean) || isCppPreludeStaticClass(clean)) ? clean : null;
 	}
 
 	static function isStringToolsStaticReceiver(receiver:HxExpr):Bool {
@@ -4192,7 +4252,16 @@ class CppTargetCore {
 		final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
 		return clean == "Math" || clean == "NativeArray" || clean == "EnumValue" || clean == "Pointer" || clean == "ConstPointer"
 			|| clean == "RawConstPointer" || clean == "Reference" || clean == "Star" || clean == "AutoCast" || clean == "ArrayBase"
-			|| isBytesDataTypeName(clean) || isCppPrimitiveIntrinsicClass(clean);
+			|| isCppPreludeStaticClass(clean) || isBytesDataTypeName(clean) || isCppPrimitiveIntrinsicClass(clean);
+	}
+
+	static function isCppPreludeStaticClass(name:String):Bool {
+		return switch (sanitizeTypePath(typeBaseName(name == null ? "" : name))) {
+			case "Timer" | "Lock" | "Mutex" | "MainEvent" | "MainLoop" | "EntryPoint":
+				true;
+			case _:
+				false;
+		}
 	}
 
 	static function isBytesDataTypeName(name:String):Bool {
@@ -4302,6 +4371,14 @@ class CppTargetCore {
 				cppFunctionReturnTypeFromCppType(exprCppType(mapper, scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
+			case ECall(EField(receiver, method), _):
+				final staticOwner = staticReceiverClassName(receiver, scope);
+				if (staticOwner != null) {
+					classMethodCppReturnType(staticOwner, method, true, scope);
+				} else {
+					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+					ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
+				}
 			case EString(_) | EEnumValue(_) | EMacroType(_):
 				"std::string";
 			case EField(EIdent("Error"), _):
