@@ -1352,6 +1352,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ constructors should preserve ordinary String/Int/Bool default argument values");
 		assertContains(defaultCtorSubLines, "DefaultCtorSub(std::string s = \"test2\", int i = -6) : DefaultCtorBase(s, i, true) {",
 			"C++ subclass constructors should preserve defaults while forwarding explicit super args");
+		final erasedForwardBase = new HxClassDecl("ErasedForwardBase", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("value", "Int", NoDefault, false, false)], "Void", [], "")
+		], []);
+		final erasedForwardSub = new HxClassDecl("ErasedForwardSub", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("value", "", NoDefault, false, false)], "Void", [
+				SExpr(EBinop("=", EIdent("tag"), EString("ready")), HxPos.unknown()),
+				SExpr(ECall(ESuper, [EIdent("value")]), HxPos.unknown())
+			], "")
+		], [new HxFieldDecl("tag", Public, false, "String", null)], "ErasedForwardBase");
+		final erasedForwardNames = new StringMap<Bool>();
+		for (name in ["ErasedForwardBase", "ErasedForwardSub"])
+			erasedForwardNames.set(name, true);
+		final erasedForwardClasses = new StringMap<HxClassDecl>();
+		erasedForwardClasses.set("ErasedForwardBase", erasedForwardBase);
+		erasedForwardClasses.set("ErasedForwardSub", erasedForwardSub);
+		final erasedForwardLookup = {names: erasedForwardNames, byName: erasedForwardClasses};
+		final erasedForwardSubLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(erasedForwardSub, erasedForwardLookup).join("\n");
+		assertContains(erasedForwardSubLines, "ErasedForwardSub(int value) : ErasedForwardBase(value) {",
+			"C++ subclass constructors should recover erased parameter types from forwarded super arguments");
+		assertTrue(erasedForwardSubLines.indexOf("base constructor call omitted") < 0,
+			"C++ non-leading top-level super constructor calls should still become base initializer lists");
 		final optionalCtorBase = new HxClassDecl("OptionalCtorBase", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, false, false)], "Void", [], "")
 		], []);

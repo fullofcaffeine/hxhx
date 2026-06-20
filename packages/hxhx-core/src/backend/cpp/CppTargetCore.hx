@@ -989,7 +989,7 @@ class CppTargetCore {
 				+ ")"
 				+ constructorBaseInitializer(ctor, scope)
 				+ " {");
-			for (line in renderStmts(constructorBodyAfterLeadingSuper(ctor), "    ", scope))
+			for (line in renderStmts(constructorBodyWithoutSuperCall(ctor), "    ", scope))
 				out.push(line);
 			out.push("  }");
 		}
@@ -1196,7 +1196,7 @@ class CppTargetCore {
 		final baseType = scope == null || scope.owner == null ? null : baseTypeName(scope.owner);
 		if (baseType == null)
 			return "";
-		return switch (leadingSuperCallArgs(HxFunctionDecl.getBody(ctor))) {
+		return switch (constructorSuperCallArgs(HxFunctionDecl.getBody(ctor))) {
 			case null:
 				"";
 			case args:
@@ -1204,20 +1204,30 @@ class CppTargetCore {
 		};
 	}
 
-	static function constructorBodyAfterLeadingSuper(ctor:HxFunctionDecl):Array<HxStmt> {
+	static function constructorBodyWithoutSuperCall(ctor:HxFunctionDecl):Array<HxStmt> {
 		final body = HxFunctionDecl.getBody(ctor);
-		return leadingSuperCallArgs(body) == null ? body : body.slice(1);
+		var skipped = false;
+		final out = new Array<HxStmt>();
+		for (stmt in body)
+			switch (stmt) {
+				case SExpr(ECall(ESuper, _), _) if (!skipped):
+					skipped = true;
+				case _:
+					out.push(stmt);
+			}
+		return out;
 	}
 
-	static function leadingSuperCallArgs(stmts:Array<HxStmt>):Null<Array<HxExpr>> {
+	static function constructorSuperCallArgs(stmts:Array<HxStmt>):Null<Array<HxExpr>> {
 		if (stmts == null || stmts.length == 0)
 			return null;
-		return switch (stmts[0]) {
-			case SExpr(ECall(ESuper, args), _):
-				args;
-			case _:
-				null;
-		};
+		for (stmt in stmts)
+			switch (stmt) {
+				case SExpr(ECall(ESuper, args), _):
+					return args;
+				case _:
+			}
+		return null;
 	}
 
 	static function renderFunctionArgs(args:Array<HxFunctionArg>, ?scope:CppRenderScope):String {
@@ -1264,11 +1274,40 @@ class CppTargetCore {
 			scope.localTypes = new haxe.ds.StringMap<String>();
 			return;
 		}
+		collectForwardedConstructorArgTypeOverrides(HxFunctionDecl.getBody(fn), scope, candidates);
 		for (stmt in HxFunctionDecl.getBody(fn))
 			collectAssignedArgTypeOverridesFromStmt(stmt, scope, candidates);
 		for (stmt in HxFunctionDecl.getBody(fn))
 			collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
 		scope.localTypes = new haxe.ds.StringMap<String>();
+	}
+
+	static function collectForwardedConstructorArgTypeOverrides(stmts:Array<HxStmt>, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+		final expectedTypes = baseConstructorArgCppTypes(scope);
+		if (expectedTypes.length == 0)
+			return;
+		for (stmt in stmts)
+			switch (stmt) {
+				case SExpr(ECall(ESuper, args), _):
+					for (i in 0...args.length)
+						switch (args[i]) {
+							case EIdent(name) if (i < expectedTypes.length && candidates.exists(sanitizeIdentifier(name))):
+								final expectedType = expectedTypes[i];
+								if (expectedType.length > 0 && expectedType != "std::string") {
+									final local = sanitizeIdentifier(name);
+									scope.argTypeOverrides.set(local, expectedType);
+									scope.localTypes.set(local, expectedType);
+								}
+							case _:
+						}
+					return;
+				case _:
+			}
+	}
+
+	static function baseConstructorArgCppTypes(?scope:CppRenderScope):Array<String> {
+		final baseType = scope == null || scope.owner == null ? null : baseTypeName(scope.owner);
+		return baseType == null ? [] : constructorArgCppTypes(baseType, scope);
 	}
 
 	static function collectAssignedArgTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
