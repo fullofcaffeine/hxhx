@@ -14075,7 +14075,7 @@ let renderAssertPolymorphicSameAsHelper = fun fn owner classLookup -> let args =
   ignore (prepareFunctionScope scope (Obj.magic fn));
   ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) expectedName "TExpected");
   ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "localTypes")) valueName "TValue");
-  let statusArg = (renderFunctionArg (Obj.magic (HxArray.get (Obj.magic args) 2)) scope : string) in let hasApprox = HxArray.length args >= 4 in let tempString = ref ("" : string) in (
+  let hasApprox = HxArray.length args >= 4 in let tempString = ref ("" : string) in (
     ignore (if hasApprox then let __assign_319 = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic args) 3)) : string) : string) in (
       tempString := __assign_319;
       __assign_319
@@ -14086,11 +14086,11 @@ let renderAssertPolymorphicSameAsHelper = fun fn owner classLookup -> let args =
     let renderedArgs = Obj.magic (let __arr_321 = HxArray.create () in (
       ignore (HxArray.push __arr_321 ("const TExpected& " ^ HxString.toStdString expectedName));
       ignore (HxArray.push __arr_321 ("const TValue& " ^ HxString.toStdString valueName));
-      ignore (HxArray.push __arr_321 statusArg);
+      ignore (HxArray.push __arr_321 ("TStatus& " ^ HxString.toStdString statusName));
       __arr_321
     )) in (
       ignore (if hasApprox then ignore (HxArray.push renderedArgs (renderFunctionArg (Obj.magic (HxArray.get (Obj.magic args) 3)) scope)) else ());
-      let tempString1 = ref ("" : string) in (
+      let statusRef = ("__hxhx_status" : string) in let tempString1 = ref ("" : string) in (
         ignore (if hasApprox then let __assign_322 = (!tempString : string) in (
           tempString1 := __assign_322;
           __assign_322
@@ -14099,17 +14099,17 @@ let renderAssertPolymorphicSameAsHelper = fun fn owner classLookup -> let args =
           __assign_323
         ));
         let out = Obj.magic (let __arr_324 = HxArray.create () in (
-          ignore (HxArray.push __arr_324 "  template<typename TExpected, typename TValue>");
+          ignore (HxArray.push __arr_324 "  template<typename TExpected, typename TValue, typename TStatus>");
           ignore (HxArray.push __arr_324 (("  static bool sameAs(" ^ HxString.toStdString (HxArray.join renderedArgs ", " (fun x -> x))) ^ ") {"));
-          ignore (HxArray.push __arr_324 (((("    if (" ^ HxString.toStdString statusName) ^ " == nullptr) ") ^ HxString.toStdString statusName) ^ " = std::make_shared<LikeStatus>();"));
-          ignore (HxArray.push __arr_324 (((("    (" ^ HxString.toStdString statusName) ^ "->expectedValue) = __hxhx_stringify(") ^ HxString.toStdString expectedName) ^ ");"));
-          ignore (HxArray.push __arr_324 (((("    (" ^ HxString.toStdString statusName) ^ "->actualValue) = __hxhx_stringify(") ^ HxString.toStdString valueName) ^ ");"));
+          ignore (HxArray.push __arr_324 (((("    auto& " ^ HxString.toStdString statusRef) ^ " = __hxhx_status_ref(") ^ HxString.toStdString statusName) ^ ");"));
+          ignore (HxArray.push __arr_324 (((("    (" ^ HxString.toStdString statusRef) ^ ".expectedValue) = __hxhx_stringify(") ^ HxString.toStdString expectedName) ^ ");"));
+          ignore (HxArray.push __arr_324 (((("    (" ^ HxString.toStdString statusRef) ^ ".actualValue) = __hxhx_stringify(") ^ HxString.toStdString valueName) ^ ");"));
           ignore (HxArray.push __arr_324 (("    const double __hxhx_same_as_approx = " ^ HxString.toStdString (!tempString1)) ^ ";"));
           ignore (HxArray.push __arr_324 (((("    if (!__hxhx_same_as(" ^ HxString.toStdString expectedName) ^ ", ") ^ HxString.toStdString valueName) ^ ", __hxhx_same_as_approx)) {"));
-          ignore (HxArray.push __arr_324 (((((("      (" ^ HxString.toStdString statusName) ^ "->error) = std::string(\"expected \") + __hxhx_stringify(") ^ HxString.toStdString expectedName) ^ ") + std::string(\" but it is \") + __hxhx_stringify(") ^ HxString.toStdString valueName) ^ ");"));
+          ignore (HxArray.push __arr_324 (((((("      (" ^ HxString.toStdString statusRef) ^ ".error) = std::string(\"expected \") + __hxhx_stringify(") ^ HxString.toStdString expectedName) ^ ") + std::string(\" but it is \") + __hxhx_stringify(") ^ HxString.toStdString valueName) ^ ");"));
           ignore (HxArray.push __arr_324 "      return false;");
           ignore (HxArray.push __arr_324 "    }");
-          ignore (HxArray.push __arr_324 (("    (" ^ HxString.toStdString statusName) ^ "->error) = std::string();"));
+          ignore (HxArray.push __arr_324 (("    (" ^ HxString.toStdString statusRef) ^ ".error) = std::string();"));
           ignore (HxArray.push __arr_324 "    return true;");
           ignore (HxArray.push __arr_324 "  }");
           __arr_324
@@ -15929,6 +15929,17 @@ let renderProgram = fun program main -> (
     ignore (HxArray.push out "  }");
     ignore (HxArray.push out "  out << \"]\";");
     ignore (HxArray.push out "  return out.str();");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "template<typename T>");
+    ignore (HxArray.push out "T& __hxhx_status_ref(T& status) {");
+    ignore (HxArray.push out "  return status;");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "template<typename T>");
+    ignore (HxArray.push out "T& __hxhx_status_ref(std::shared_ptr<T>& status) {");
+    ignore (HxArray.push out "  if (status == nullptr) status = std::make_shared<T>();");
+    ignore (HxArray.push out "  return *status;");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
     ignore (HxArray.push out "template<typename A, typename B>");

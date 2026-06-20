@@ -526,6 +526,17 @@ class CppTargetCore {
 		out.push("  return out.str();");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T>");
+		out.push("T& __hxhx_status_ref(T& status) {");
+		out.push("  return status;");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("T& __hxhx_status_ref(std::shared_ptr<T>& status) {");
+		out.push("  if (status == nullptr) status = std::make_shared<T>();");
+		out.push("  return *status;");
+		out.push("}");
+		out.push("");
 		out.push("template<typename A, typename B>");
 		out.push("static bool __hxhx_same_as(const A& expected, const B& value, double approx) {");
 		out.push("  if constexpr (std::is_arithmetic_v<A> && std::is_arithmetic_v<B>) {");
@@ -1564,27 +1575,31 @@ class CppTargetCore {
 		prepareFunctionScope(scope, fn);
 		scope.localTypes.set(expectedName, "TExpected");
 		scope.localTypes.set(valueName, "TValue");
-		final statusArg = renderFunctionArg(args[2], scope);
 		final hasApprox = args.length >= 4;
 		final approxName = hasApprox ? sanitizeIdentifier(HxFunctionArg.getName(args[3])) : "__hxhx_approx";
-		final renderedArgs = ["const TExpected& " + expectedName, "const TValue& " + valueName, statusArg];
+		final renderedArgs = [
+			"const TExpected& " + expectedName,
+			"const TValue& " + valueName,
+			"TStatus& " + statusName
+		];
 		if (hasApprox)
 			renderedArgs.push(renderFunctionArg(args[3], scope));
-		final out = ["  template<typename TExpected, typename TValue>",
+		final statusRef = "__hxhx_status";
+		final out = ["  template<typename TExpected, typename TValue, typename TStatus>",
 			"  static bool sameAs(" + renderedArgs.join(", ") + ") {",
-			"    if ("
+			"    auto& "
+			+ statusRef
+			+ " = __hxhx_status_ref("
 			+ statusName
-			+ " == nullptr) "
-			+ statusName
-			+ " = std::make_shared<LikeStatus>();",
+			+ ");",
 			"    ("
-			+ statusName
-			+ "->expectedValue) = __hxhx_stringify("
+			+ statusRef
+			+ ".expectedValue) = __hxhx_stringify("
 			+ expectedName
 			+ ");",
 			"    ("
-			+ statusName
-			+ "->actualValue) = __hxhx_stringify("
+			+ statusRef
+			+ ".actualValue) = __hxhx_stringify("
 			+ valueName
 			+ ");",
 			"    const double __hxhx_same_as_approx = " + (hasApprox ? approxName : "0.0") + ";",
@@ -1594,15 +1609,15 @@ class CppTargetCore {
 			+ valueName
 			+ ", __hxhx_same_as_approx)) {",
 			"      ("
-			+ statusName
-			+ "->error) = std::string(\"expected \") + __hxhx_stringify("
+			+ statusRef
+			+ ".error) = std::string(\"expected \") + __hxhx_stringify("
 			+ expectedName
 			+ ") + std::string(\" but it is \") + __hxhx_stringify("
 			+ valueName
 			+ ");",
 			"      return false;",
 			"    }",
-			"    (" + statusName + "->error) = std::string();",
+			"    (" + statusRef + ".error) = std::string();",
 			"    return true;",
 			"  }"
 		];

@@ -1009,11 +1009,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], "");
 		final assertSameAsLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(assertSameAs, assertOwner, assertLookup).join("\n");
 		assertContains(assertSameAsLines,
-			"template<typename TExpected, typename TValue>\n  static bool sameAs(const TExpected& expected, const TValue& value, std::shared_ptr<LikeStatus> status, double approx)",
-			"C++ Assert.sameAs should accept Dynamic-erased expected/value without narrowing to std::string");
+			"template<typename TExpected, typename TValue, typename TStatus>\n  static bool sameAs(const TExpected& expected, const TValue& value, TStatus& status, double approx)",
+			"C++ Assert.sameAs should accept Dynamic-erased expected/value and structural status objects");
 		assertContains(assertSameAsLines, "__hxhx_same_as(expected, value, __hxhx_same_as_approx)",
 			"C++ Assert.sameAs should delegate mixed numeric/vector/string comparison to a compile-safe target helper");
-		assertContains(assertSameAsLines, "(status->expectedValue) = __hxhx_stringify(expected);",
+		assertContains(assertSameAsLines, "auto& __hxhx_status = __hxhx_status_ref(status);",
+			"C++ Assert.sameAs should normalize pointer or structural status values through a small target helper");
+		assertContains(assertSameAsLines, "(__hxhx_status.expectedValue) = __hxhx_stringify(expected);",
 			"C++ Assert.sameAs should stringify Dynamic expected values when storing diagnostic status");
 		assertTrue(assertSameAsLines.indexOf("sameAs(std::string expected, std::string value") < 0,
 			"C++ Assert.sameAs should not reject numeric diagnostic values through a string-only signature");
@@ -1977,11 +1979,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::string path = std::string();", "C++ smoke should retain LikeStatus path field");
 		assertContains(source, "bool recursive = false;", "C++ smoke should retain LikeStatus recursive field");
 		assertContains(source,
-			"template<typename TExpected, typename TValue>\n  static bool sameAs(const TExpected& expected, const TValue& value, std::shared_ptr<LikeStatus> status, double approx)",
-			"C++ smoke should keep Assert.sameAs Dynamic expected/value args polymorphic");
+			"template<typename TExpected, typename TValue, typename TStatus>\n  static bool sameAs(const TExpected& expected, const TValue& value, TStatus& status, double approx)",
+			"C++ smoke should keep Assert.sameAs Dynamic expected/value args and status values polymorphic");
 		assertContains(source, "__hxhx_same_as(expected, value, __hxhx_same_as_approx)",
 			"C++ smoke should compare Assert.sameAs Dynamic values through the compile-safe helper");
-		assertContains(source, "(status->expectedValue) = __hxhx_stringify(expected);", "C++ smoke should stringify retained structural typedef status fields");
+		assertContains(source, "(__hxhx_status.expectedValue) = __hxhx_stringify(expected);", "C++ smoke should stringify retained structural status fields");
 		assertContains(source, "int casted = helper(5);", "C++ smoke should lower cast expression with explicit local type");
 		assertContains(source, "total += 4;", "C++ smoke should lower compound plus assignment");
 		assertContains(source, "total -= 2;", "C++ smoke should lower compound minus assignment");
