@@ -2147,7 +2147,10 @@ test "$(echo "$out" | grep -c '^stage3=type_only_ok$')" -eq 1
 echo "== Stage3 bring-up: cmd-only haxelib dev hook runs"
 tmpcmdlib="$tmpdir/cmd_only_haxelib_dev"
 mkdir -p "$tmpcmdlib/dummy_ndll" "$tmpcmdlib/bin"
-abs_tmpcmdlib="$PWD/$tmpcmdlib"
+case "$tmpcmdlib" in
+  /*) abs_tmpcmdlib="$tmpcmdlib" ;;
+  *) abs_tmpcmdlib="$PWD/$tmpcmdlib" ;;
+esac
 cat >"$tmpcmdlib/bin/haxelib" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
