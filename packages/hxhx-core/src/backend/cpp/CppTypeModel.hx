@@ -161,7 +161,7 @@ class CppTypeModel {
 		return open < 0 || !StringTools.endsWith(hint, ">") ? "" : hint.substr(open + 1, hint.length - open - 2);
 	}
 
-	static function genericTypeHintArgs(typeHint:String):Array<String> {
+	public static function genericTypeHintArgs(typeHint:String):Array<String> {
 		final arg = genericTypeHintArg(typeHint);
 		return arg.length == 0 ? [] : splitTopLevelComma(arg);
 	}

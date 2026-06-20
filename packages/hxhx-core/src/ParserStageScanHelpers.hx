@@ -606,10 +606,34 @@ class ParserStageScanHelpers {
 			if (tok.text != "=")
 				continue;
 
-			final rhs = scanNextToken(source, i);
-			if (rhs.text == "{")
-				return scanAnonymousTypedefFields(source, rhs.nextPos);
-			return skipTypedefDeclaration(source, rhs.nextPos);
+			return scanTypedefRhsShape(source, i);
+		}
+	}
+
+	static function scanTypedefRhsShape(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>} {
+		var i = start;
+		var parenDepth = 0;
+		var angleDepth = 0;
+		while (true) {
+			final tok = scanNextToken(source, i);
+			i = tok.nextPos;
+			if (tok.text.length == 0 || (tok.text == ";" && parenDepth == 0 && angleDepth == 0))
+				return {nextPos: i, fields: []};
+			switch (tok.text) {
+				case "{" if (parenDepth == 0 && angleDepth == 0):
+					return scanAnonymousTypedefFields(source, tok.nextPos);
+				case "(" | "[":
+					parenDepth += 1;
+				case ")" | "]":
+					if (parenDepth > 0)
+						parenDepth -= 1;
+				case "<":
+					angleDepth += 1;
+				case ">":
+					if (angleDepth > 0)
+						angleDepth -= 1;
+				case _:
+			}
 		}
 	}
 

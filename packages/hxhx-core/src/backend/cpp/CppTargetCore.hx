@@ -1370,6 +1370,8 @@ class CppTargetCore {
 				addTypeHintDependencies(part, add);
 			return;
 		}
+		for (arg in genericTypeHintArgs(hint))
+			addTypeHintDependencies(arg, add);
 		add(sanitizeTypePath(typeBaseName(hint)));
 	}
 
@@ -6130,6 +6132,10 @@ class CppTargetCore {
 
 	static function genericTypeHintArg(typeHint:String):String {
 		return CppTypeModel.genericTypeHintArg(typeHint);
+	}
+
+	static function genericTypeHintArgs(typeHint:String):Array<String> {
+		return CppTypeModel.genericTypeHintArgs(typeHint);
 	}
 
 	static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
