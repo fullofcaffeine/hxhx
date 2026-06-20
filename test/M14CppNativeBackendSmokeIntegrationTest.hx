@@ -1308,6 +1308,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(ctorSubLines, "CtorSub(std::string message) : CtorBase(message) {",
 			"C++ subclass constructors should lower leading super(...) to a base initializer list");
 		assertTrue(ctorSubLines.indexOf("base constructor call omitted") < 0, "C++ leading super(...) should not remain as an omitted body comment");
+		final inheritedCtorBase = new HxClassDecl("InheritedCtorBase", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("value", "Int", NoDefault, false, false)], "Void", [], "")
+		], []);
+		final inheritedCtorSub = new HxClassDecl("InheritedCtorSub", false, [], [], "InheritedCtorBase");
+		final inheritedCtorNames = new StringMap<Bool>();
+		for (name in ["InheritedCtorBase", "InheritedCtorSub"])
+			inheritedCtorNames.set(name, true);
+		final inheritedCtorClasses = new StringMap<HxClassDecl>();
+		inheritedCtorClasses.set("InheritedCtorBase", inheritedCtorBase);
+		inheritedCtorClasses.set("InheritedCtorSub", inheritedCtorSub);
+		final inheritedCtorLookup = {names: inheritedCtorNames, byName: inheritedCtorClasses};
+		final inheritedCtorSubLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(inheritedCtorSub, inheritedCtorLookup).join("\n");
+		assertContains(inheritedCtorSubLines, "InheritedCtorSub(int value) : InheritedCtorBase(value) {}",
+			"C++ subclasses without explicit constructors should forward to the base constructor shape");
+		assertTrue(inheritedCtorSubLines.indexOf("InheritedCtorSub()") < 0,
+			"C++ subclasses whose base needs constructor args should not emit an invalid default constructor");
 		final optionalCtorBase = new HxClassDecl("OptionalCtorBase", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, false, false)], "Void", [], "")
 		], []);

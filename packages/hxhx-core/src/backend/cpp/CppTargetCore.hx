@@ -978,7 +978,8 @@ class CppTargetCore {
 		}
 		final ctor = findConstructor(cls);
 		if (ctor == null) {
-			out.push("  " + className + "() {}");
+			for (line in renderImplicitConstructors(className, baseType, scope))
+				out.push(line);
 		} else {
 			prepareFunctionScope(scope, ctor);
 			out.push("  "
@@ -1000,6 +1001,24 @@ class CppTargetCore {
 		}
 		out.push("};");
 		return out;
+	}
+
+	static function renderImplicitConstructors(className:String, baseType:Null<String>, scope:CppRenderScope):Array<String> {
+		if (baseType == null)
+			return ["  " + className + "() {}"];
+		final baseCls = scope == null ? null : scope.classByName.get(baseType);
+		if (baseCls == null)
+			return ["  " + className + "() : " + baseType + "() {}"];
+		final baseCtor = findConstructor(baseCls);
+		if (baseCtor == null)
+			return ["  " + className + "() : " + baseType + "() {}"];
+		final baseScope = renderScope(baseCls, {names: scope.classNames, byName: scope.classByName}, "void");
+		prepareFunctionScope(baseScope, baseCtor);
+		final args = HxFunctionDecl.getArgs(baseCtor);
+		final argNames = [for (arg in args) sanitizeIdentifier(HxFunctionArg.getName(arg))];
+		return [
+			"  " + className + "(" + renderFunctionArgs(args, baseScope) + ") : " + baseType + "(" + argNames.join(", ") + ") {}"
+		];
 	}
 
 	static function renderStdArrayHelperClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
