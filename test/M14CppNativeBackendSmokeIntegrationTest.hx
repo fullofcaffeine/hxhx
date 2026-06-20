@@ -1372,6 +1372,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper methods returning inferred class locals should forward the reference instead of stringifying it");
 		assertTrue(genericReturnLines.indexOf("std::string filterLike()") < 0,
 			"C++ helper methods returning inferred class locals should not declare std::string");
+		final vectorPushMethod = new HxFunctionDecl("cloneInto", Public, true, [
+			new HxFunctionArg("seed", "", NoDefault, false, false),
+			new HxFunctionArg("items", "", NoDefault, false, false)
+		], "", [
+			SVar("clone", "", EIdent("seed"), HxPos.unknown()),
+			SExpr(ECall(EField(EIdent("items"), "push"), [EIdent("clone")]), HxPos.unknown()),
+			SReturn(EIdent("items"), HxPos.unknown())
+		], "");
+		final vectorPushLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(vectorPushMethod, genericReturnOwner, genericReturnLookup).join("\n");
+		assertContains(vectorPushLines, "static std::vector<std::string> cloneInto(std::string seed, std::vector<std::string> items) {",
+			"C++ helper methods should infer untyped args mutated via push as value vectors");
+		assertContains(vectorPushLines, "items.push_back(clone);", "C++ vector push inference should render push_back on the inferred vector");
+		assertContains(vectorPushLines, "return items;", "C++ vector push inference should return the vector instead of stringifying it");
 		final exprBodyOwner = new HxClassDecl("ExpressionBodyOwner", false, [], [new HxFieldDecl("key", Public, false, "String", null)]);
 		final exprBodyNames = new StringMap<Bool>();
 		exprBodyNames.set("ExpressionBodyOwner", true);

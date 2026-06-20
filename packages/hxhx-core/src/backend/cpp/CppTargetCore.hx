@@ -1288,9 +1288,12 @@ class CppTargetCore {
 				collectAssignedArgTypeOverridesFromStmt(tryBody, scope, candidates);
 				for (c in catches)
 					collectAssignedArgTypeOverridesFromStmt(c.body, scope, candidates);
-			case SVar(_, _, init, _):
+			case SVar(name, typeHint, init, _):
 				if (init != null)
 					collectAssignedArgTypeOverridesFromExpr(init, scope, candidates);
+				final localType = cppLocalTypeHint(typeHint, init, scope);
+				if (localType.length > 0)
+					scope.localTypes.set(sanitizeIdentifier(name), localType);
 			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
 				collectAssignedArgTypeOverridesFromExpr(expr, scope, candidates);
 			case SReturnVoid(_) | SBreak(_) | SContinue(_):
@@ -1299,6 +1302,17 @@ class CppTargetCore {
 
 	static function collectAssignedArgTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
 		switch (expr) {
+			case ECall(EField(EIdent(name), "push"), [value]) if (candidates.exists(sanitizeIdentifier(name))):
+				collectAssignedArgTypeOverridesFromExpr(value, scope, candidates);
+				var elementType = inferExprCppType(value, scope);
+				if (elementType.length == 0)
+					elementType = callableArgExprType(value, scope);
+				if (elementType.length == 0)
+					elementType = "std::string";
+				final local = sanitizeIdentifier(name);
+				final vectorType = "std::vector<" + elementType + ">";
+				scope.argTypeOverrides.set(local, vectorType);
+				scope.localTypes.set(local, vectorType);
 			case EBinop("=", left, EIdent(name)) if (candidates.exists(sanitizeIdentifier(name))):
 				final targetType = exprCppType(left, scope);
 				if (targetType.length > 0 && targetType != "std::string")
@@ -4098,6 +4112,7 @@ class CppTargetCore {
 		if (raw.length > 0)
 			return cppReturnTypeHint(raw, null, classLookup);
 		final scope = renderScope(owner, classLookup, "auto");
+		inferCallableArgTypeOverrides(scope, fn);
 		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 		for (stmt in HxFunctionDecl.getBody(fn)) {
 			final inferred = inferReturnTypeFromStmt(stmt, scope);
