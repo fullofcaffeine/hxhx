@@ -632,6 +632,20 @@ class CppTargetCore {
 		out.push("  return out.str();");
 		out.push("}");
 		out.push("");
+		out.push("struct __hxhx_throw_bottom {");
+		out.push("  template<typename T>");
+		out.push("  operator T() const { throw std::runtime_error(\"unreachable throw expression\"); }");
+		out.push("};");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static __hxhx_throw_bottom __hxhx_throw(const T& value) {");
+		out.push("  throw std::runtime_error(__hxhx_stringify(value));");
+		out.push("}");
+		out.push("");
+		out.push("static __hxhx_throw_bottom __hxhx_throw(const char* value) {");
+		out.push("  throw std::runtime_error(__hxhx_stringify(value));");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T>");
 		out.push("T& __hxhx_status_ref(T& status) {");
 		out.push("  return status;");
@@ -3264,6 +3278,8 @@ class CppTargetCore {
 				"true";
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				renderExpr(args[2], scope);
+			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
+				"__hxhx_throw(" + renderExpr(args[0], scope) + ")";
 			case ECall(EEnumValue(name), args):
 				enumCtorExpr(name, args, scope);
 			case EArrayDecl(elements):
@@ -4935,6 +4951,8 @@ class CppTargetCore {
 				stringExpr(args[0], scope);
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				stringExpr(args[2], scope);
+			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
+				renderExpr(expr, scope);
 			case ETernary(cond, thenExpr, elseExpr) if (inferExprCppType(expr, scope) == "std::string"):
 				"("
 				+ conditionExpr(cond, scope)
