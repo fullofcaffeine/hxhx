@@ -811,6 +811,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"remote Cpp gate opaque StringMap escape-table block should lower to a target-owned C++ string map");
 		assertContains(opaqueStringMapBlock, 'h["quot"] = "\\"";', "opaque StringMap escape-table block should preserve escaped quote values");
 		assertContains(opaqueStringMapBlock, "return h;", "opaque StringMap escape-table block should return the constructed map");
+		final enumMetaOwner = new HxClassDecl("EnumMetaOwner", false, [], [
+			new HxFieldDecl("__hx_enum_ctors", Public, true, "", EArrayDecl([EString("U1"), EString("U2")])),
+			new HxFieldDecl("U2", Public, true, "",
+				EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString("EnumMetaOwner"), EString("U2"), EInt(1), EArrayDecl([])]))
+		]);
+		final enumMetaNames = new StringMap<Bool>();
+		enumMetaNames.set("EnumMetaOwner", true);
+		final enumMetaClasses = new StringMap<HxClassDecl>();
+		enumMetaClasses.set("EnumMetaOwner", enumMetaOwner);
+		final enumMetaLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(enumMetaOwner, {names: enumMetaNames, byName: enumMetaClasses}).join("\n");
+		assertContains(enumMetaLines, "inline static std::vector<std::string> __hx_enum_ctors = std::vector<std::string>{",
+			"C++ static fields with erased type hints should infer vector types from array initializers");
+		assertContains(enumMetaLines,
+			"inline static __hxhx_anon___hx_enum_std__string___hx_ctor_std__string___hx_index_int____hx_params_std__vector_int_ U2 =",
+			"C++ static fields with erased type hints should infer generated anon struct types from object initializers");
+		assertTrue(enumMetaLines.indexOf("inline static std::string __hx_enum_ctors = std::vector") < 0,
+			"C++ enum metadata arrays should not fall back to string-typed static fields");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("t")])) == "__hxhx_type_name(t)",
 			"direct Type.getClassName calls should lower through the C++ type-name helper");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getEnumName"), [EIdent("t")])) == "__hxhx_type_name(t)",

@@ -1059,8 +1059,8 @@ class CppTargetCore {
 		out.push("struct " + className + (baseType == null ? "" : " : public " + baseType) + " {");
 		final scope = renderScope(cls, classLookup, "void");
 		for (field in HxClassDecl.getFields(cls)) {
-			final typeName = knownStdlibFieldCppType(className, HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field), scope);
 			final init = HxFieldDecl.getInit(field);
+			final typeName = knownStdlibFieldCppType(className, HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field), init, scope);
 			if (HxFieldDecl.getIsStatic(field)) {
 				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
 				out.push("  inline static " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
@@ -1155,8 +1155,8 @@ class CppTargetCore {
 			if (HxFieldDecl.getIsStatic(field))
 				continue;
 			final scope = renderScope(cls, classLookup, "void");
-			final typeName = cppTypeHint(HxFieldDecl.getTypeHint(field), scope);
 			final init = HxFieldDecl.getInit(field);
+			final typeName = knownStdlibFieldCppType(className, HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field), init, scope);
 			final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
 			out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
 		}
@@ -1235,12 +1235,16 @@ class CppTargetCore {
 		return out;
 	}
 
-	static function knownStdlibFieldCppType(className:String, fieldName:String, typeHint:String, ?scope:CppRenderScope):String {
+	static function knownStdlibFieldCppType(className:String, fieldName:String, typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
 		if (isStringIteratorHelper(owner) && (field == "offset" || field == "byteOffset" || field == "charOffset"))
 			return "int";
-		return cppTypeHint(typeHint, scope);
+		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (explicit.length > 0)
+			return cppTypeHint(explicit, scope);
+		final inferred = init == null ? "" : inferExprCppType(init, scope);
+		return inferred.length > 0 ? inferred : cppTypeHint(typeHint, scope);
 	}
 
 	static function knownStdlibMethodReturnCppType(className:String, methodName:String, typeHint:String, ?scope:CppRenderScope,
@@ -2919,7 +2923,8 @@ class CppTargetCore {
 			return "";
 		for (field in HxClassDecl.getFields(scope.owner)) {
 			if (HxFieldDecl.getName(field) == name)
-				return knownStdlibFieldCppType(sanitizeTypePath(HxClassDecl.getName(scope.owner)), name, HxFieldDecl.getTypeHint(field), scope);
+				return knownStdlibFieldCppType(sanitizeTypePath(HxClassDecl.getName(scope.owner)), name, HxFieldDecl.getTypeHint(field),
+					HxFieldDecl.getInit(field), scope);
 		}
 		return "";
 	}
@@ -2935,7 +2940,7 @@ class CppTargetCore {
 			return "";
 		for (field in HxClassDecl.getFields(cls)) {
 			if (HxFieldDecl.getName(field) == fieldName)
-				return knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), scope);
+				return knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
 		}
 		return "";
 	}
@@ -3092,6 +3097,8 @@ class CppTargetCore {
 				"std::vector<" + arrayElementType(elements, scope) + ">";
 			case EArrayComprehension(name, iterable, _, yieldExpr):
 				"std::vector<" + arrayComprehensionElementType(name, iterable, yieldExpr, scope) + ">";
+			case EAnon(fieldNames, fieldValues):
+				anonStruct(fieldNames, fieldValues, scope).name;
 			case EUnop("-", inner):
 				inferExprCppType(inner, scope);
 			case EUnop("post++", inner) | EUnop("post--", inner):
