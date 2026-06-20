@@ -910,15 +910,19 @@ class CppTargetCore {
 			return "std::string";
 		if (assertStatusShape && cleanField == "recursive")
 			return "bool";
+		final scoped = exprCppType(expr, scope);
+		final optionalInner = cppOptionalInnerType(scoped);
+		if (optionalInner.length > 0)
+			return optionalInner;
+		if (scoped.length > 0)
+			return scoped;
 		return switch (expr) {
 			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
 				"std::string";
 			case EIdent(_):
-				final scoped = exprCppType(expr, scope);
-				scoped.length > 0 ? scoped : "std::string";
+				"std::string";
 			case EArrayAccess(_, _):
-				final scoped = exprCppType(expr, scope);
-				scoped.length > 0 ? scoped : "int";
+				"int";
 			case EFloat(_):
 				"double";
 			case EBool(_):
@@ -2101,9 +2105,10 @@ class CppTargetCore {
 				if (init != null)
 					collectDynamicLocalTypeOverridesFromExpr(init, scope, candidates);
 				final local = sanitizeIdentifier(name);
-				if (isDynamicLikeTypeHint(typeHint)) {
+				final unhintedEmptyArray = isUnhintedEmptyArray(typeHint, init);
+				if (isDynamicLikeTypeHint(typeHint) || unhintedEmptyArray) {
 					candidates.set(local, true);
-					final inferred = init == null ? "" : dynamicLocalAssignedType(init, scope);
+					final inferred = init == null || unhintedEmptyArray ? "" : dynamicLocalAssignedType(init, scope);
 					if (inferred.length > 0)
 						setDynamicLocalTypeOverride(scope, local, inferred);
 					else
@@ -2129,7 +2134,13 @@ class CppTargetCore {
 			case EBinop(_, left, right):
 				collectDynamicLocalTypeOverridesFromExpr(left, scope, candidates);
 				collectDynamicLocalTypeOverridesFromExpr(right, scope, candidates);
+			case ECall(EIdent(methodName), args):
+				collectSameOwnerDeclaredArgTypeOverrides(methodName, args, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExpr(EIdent(methodName), scope, candidates);
+				for (arg in args)
+					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
 			case ECall(callee, args):
+				collectForwardedCallArgTypeOverrides(callee, args, scope, candidates);
 				collectDynamicLocalTypeOverridesFromExpr(callee, scope, candidates);
 				for (arg in args)
 					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
@@ -2497,6 +2508,24 @@ class CppTargetCore {
 		}
 	}
 
+	static function collectSameOwnerDeclaredArgTypeOverrides(methodName:String, args:Array<HxExpr>, scope:CppRenderScope,
+			candidates:haxe.ds.StringMap<Bool>):Void {
+		final fn = currentOwnerMethod(methodName, scope);
+		if (fn == null || args == null || args.length == 0)
+			return;
+		final params = HxFunctionDecl.getArgs(fn);
+		final count = args.length < params.length ? args.length : params.length;
+		for (i in 0...count) {
+			switch (args[i]) {
+				case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
+					final expectedType = concreteForwardedOverrideType(cppFunctionArgType(params[i], scope));
+					if (expectedType.length > 0)
+						setDynamicLocalTypeOverride(scope, sanitizeIdentifier(name), expectedType);
+				case _:
+			}
+		}
+	}
+
 	static function knownCallParams(callee:HxExpr, scope:CppRenderScope):Null<Array<HxFunctionArg>> {
 		return switch (callee) {
 			case EIdent(name):
@@ -2561,8 +2590,10 @@ class CppTargetCore {
 				final paramType = inferredParamType != null
 					&& inferredParamType.length > 0 ? inferredParamType : cppFunctionArgType(param, scope);
 				final expectedType = concreteForwardedOverrideType(paramType);
-				if (expectedType.length > 0)
+				if (expectedType.length > 0) {
 					setAssignedArgTypeOverride(scope, sanitizeIdentifier(name), expectedType);
+					setDynamicLocalTypeOverride(scope, sanitizeIdentifier(name), expectedType);
+				}
 			case _:
 		}
 	}
@@ -2944,6 +2975,8 @@ class CppTargetCore {
 				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppReferenceType(returnType)):
 				"return " + renderExpr(expr, scope) + ";";
+			case _ if (isCppAnonStructType(returnType)):
+				"return " + renderExpr(expr, scope) + ";";
 			case "int":
 				"return static_cast<int>(" + renderExpr(expr, scope) + ");";
 			case _:
@@ -2963,6 +2996,15 @@ class CppTargetCore {
 			case _:
 				renderExpr(expr, scope);
 		};
+	}
+
+	static function valueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
+		final optionalInner = cppOptionalInnerType(exprCppType(expr, scope));
+		if (optionalInner.length > 0 && optionalInner == expectedType)
+			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
+		if (expectedType == "std::string")
+			return stringExpr(expr, scope);
+		return renderExpr(expr, scope);
 	}
 
 	static function conditionExpr(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -3254,6 +3296,8 @@ class CppTargetCore {
 				nativeArrayCreateExpr(args[0], scope, localType);
 			case ECall(EField(receiver, "create"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
 				nativeArrayCreateExpr(args[0], scope, localType);
+			case EArrayDecl([]) if (isCppVectorType(localType)):
+				localType + "{}";
 			case _ if (localType == "std::string"):
 				stringExpr(init, scope);
 			case _:
@@ -3698,6 +3742,13 @@ class CppTargetCore {
 		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
 		if (valueType == "std::shared_ptr<PosInfos>")
 			return posInfosSharedPtrExpr(arg, scope);
+		if (isCppVectorType(valueType)) {
+			switch (arg) {
+				case EArrayDecl([]):
+					return valueType + "{}";
+				case _:
+			}
+		}
 		return renderExpr(arg, scope);
 	}
 
@@ -4075,6 +4126,17 @@ class CppTargetCore {
 		final local = sanitizeIdentifier(name);
 		final overrideType = scope == null ? null : scope.localTypeOverrides.get(local);
 		return overrideType != null && overrideType.length > 0 ? overrideType : cppLocalTypeHint(typeHint, init, scope);
+	}
+
+	static function isUnhintedEmptyArray(typeHint:String, init:Null<HxExpr>):Bool {
+		if (StringTools.trim(typeHint == null ? "" : typeHint).length > 0)
+			return false;
+		return switch (init) {
+			case EArrayDecl(values):
+				values.length == 0;
+			case _:
+				false;
+		};
 	}
 
 	static function inferExprCppType(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -5238,7 +5300,7 @@ class CppTargetCore {
 		final struct = anonStruct(fieldNames, fieldValues, scope);
 		final values = [
 			for (i in 0...struct.fieldNames.length)
-				struct.fieldTypes[i] == "std::string" ? stringExpr(fieldValues[i], scope) : renderExpr(fieldValues[i], scope)
+				valueExprForExpectedType(fieldValues[i], struct.fieldTypes[i], scope)
 		];
 		return struct.name + "{" + values.join(", ") + "}";
 	}
@@ -6003,6 +6065,10 @@ class CppTargetCore {
 
 	static function isCppOptionalType(typeName:String):Bool {
 		return CppTypeModel.isCppOptionalType(typeName);
+	}
+
+	static function isCppAnonStructType(typeName:String):Bool {
+		return typeName != null && StringTools.startsWith(typeName, "__hxhx_anon_");
 	}
 
 	static function classNameFromCppType(typeName:String):Null<String> {

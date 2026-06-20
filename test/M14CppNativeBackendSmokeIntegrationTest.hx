@@ -1964,6 +1964,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stringKeyValueIteratorLines,
 			"return __hxhx_anon_key_int__value_int_{offset, static_cast<int>(static_cast<unsigned char>(s[(offset++)]))};",
 			"C++ string key/value iterator records should infer integer key/value fields");
+		final iMapForIterator = new HxClassDecl("IMap", false, [
+			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("key", "String", NoDefault, false, false)], "Null<String>", [], "")
+		], [], "", null, true);
+		final mapKeyValueIterator = new HxClassDecl("MapKeyValueIterator", false, [
+			new HxFunctionDecl("next", Public, false, [], "", [
+				SVar("key", "String", EString("k"), HxPos.unknown()),
+				SReturn(EAnon(["value", "key"], [ECall(EField(EIdent("map"), "get"), [EIdent("key")]), EIdent("key")]), HxPos.unknown())
+			], "")
+		], [new HxFieldDecl("map", Public, false, "IMap", null)]);
+		final mapIteratorNames = new StringMap<Bool>();
+		for (name in ["IMap", "MapKeyValueIterator"])
+			mapIteratorNames.set(name, true);
+		final mapIteratorClasses = new StringMap<HxClassDecl>();
+		mapIteratorClasses.set("IMap", iMapForIterator);
+		mapIteratorClasses.set("MapKeyValueIterator", mapKeyValueIterator);
+		final mapKeyValueIteratorLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(mapKeyValueIterator, {names: mapIteratorNames, byName: mapIteratorClasses}).join("\n");
+		assertContains(mapKeyValueIteratorLines,
+			"return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",
+			"C++ IMap key/value iterator records should unwrap optional map.get values into concrete anonymous value fields");
+		assertTrue(mapKeyValueIteratorLines.indexOf("__hxhx_anon_value_int_key_std__string_") < 0,
+			"C++ optional method-call anonymous fields should not fall back to Int");
 		assertTrue(stringIteratorLines.indexOf("std::string offset = 0;") < 0, "C++ string iterator offset fields should not default through std::string");
 		assertTrue(stringIteratorLines.indexOf("std::to_string(StringTools::unsafeCodeAt") < 0,
 			"C++ string iterator code-point calls should not leak incomplete StringTools static calls");
@@ -2008,6 +2030,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(erasedMapiLines,
 			"static std::vector<std::string> mapiErased(std::vector<std::string> it, std::function<std::string(int, std::string)> f) {",
 			"C++ helper rendering should recover erased callable parameter shapes from call usage");
+		final emptyArrayForwarding = new HxClassDecl("EmptyArrayForwarding", false, [
+			new HxFunctionDecl("fill", Public, false, [new HxFunctionArg("ret", "Array<String>", NoDefault, false, false)], "Void", [], ""),
+			new HxFunctionDecl("values", Public, false, [], "Array<String>", [
+				SVar("ret", "", EArrayDecl([]), HxPos.unknown()),
+				SExpr(ECall(EIdent("fill"), [EIdent("ret")]), HxPos.unknown()),
+				SReturn(EIdent("ret"), HxPos.unknown())
+			], "")
+		], []);
+		final emptyArrayNames = new StringMap<Bool>();
+		emptyArrayNames.set("EmptyArrayForwarding", true);
+		final emptyArrayClasses = new StringMap<HxClassDecl>();
+		emptyArrayClasses.set("EmptyArrayForwarding", emptyArrayForwarding);
+		final emptyArrayValuesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(emptyArrayForwarding)[1],
+			emptyArrayForwarding, {
+				names: emptyArrayNames,
+				byName: emptyArrayClasses
+			})
+			.join("\n");
+		assertContains(emptyArrayValuesLines, "auto ret = std::vector<std::string>{};",
+			"C++ empty array locals should recover vector element type from later same-owner method calls");
+		assertTrue(emptyArrayValuesLines.indexOf("std::vector<int> ret") < 0,
+			"C++ empty array locals passed to typed vector parameters should not stay vector<int>");
 		assertContains(erasedMapiLines, "std::vector<std::string> __hxhx_comp_out;",
 			"C++ erased callable recovery should let mapi comprehensions use the callback return type");
 		assertTrue(erasedMapiLines.indexOf("std::string f") < 0,
