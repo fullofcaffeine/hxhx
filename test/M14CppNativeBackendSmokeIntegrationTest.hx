@@ -410,6 +410,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function htmlUnescape(s:String):String {",
 			"    return s.split(\"&gt;\").join(\">\").split(\"&lt;\").join(\"<\");",
 			"  }",
+			"  public static function replaceLiteral(s:String):String {",
+			"    return StringTools.replace(s, \"na\", \"X\");",
+			"  }",
 			"  public static function startsWith(s:String, start:String):Bool {",
 			"    return s.length >= start.length && s.lastIndexOf(start, 0) == 0;",
 			"  }",
@@ -1702,6 +1705,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final sysToolsOwner = new HxClassDecl("SysTools", false, [
 			new HxFunctionDecl("needsEscape", Public, true, [new HxFunctionArg("c", "Int", NoDefault, false, false)], "Bool", [
 				SReturn(EBinop(">=", ECall(EField(EIdent("winMetaCharacters"), "indexOf"), [EIdent("c")]), EInt(0)), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("quoteUnixArg", Public, true, [new HxFunctionArg("argument", "String", NoDefault, false, false)], "String", [
+				SReturn(EBinop("+", EString("'"), ECall(EField(EIdent("StringTools"), "replace"), [EIdent("argument"), EString("'"), EString("'\"'\"'")])),
+					HxPos.unknown())
 			], "")
 		], [
 			new HxFieldDecl("winMetaCharacters", Public, true, "ReadOnlyArray<Int>", EArrayDecl([EInt(32)]))
@@ -1729,6 +1736,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ SysTools.winMetaCharacters should erase ReadOnlyArray<Int> to vector<int> for native field initialization");
 		assertContains(sysToolsLines, "return (__hxhx_index_of(winMetaCharacters, c, 0) >= 0);",
 			"C++ indexOf on winMetaCharacters should pass the integer needle directly");
+		assertContains(sysToolsLines, "__hxhx_replace(std::string(argument),",
+			"C++ SysTools helpers should lower StringTools.replace through target support instead of requiring StringTools definition order");
+		assertTrue(sysToolsLines.indexOf("StringTools::replace(argument") < 0,
+			"C++ SysTools helpers should not depend on a fully declared StringTools helper for replace");
 		assertContains(stringToolsLines, "inline static std::vector<int> winMetaCharacters = SysTools::winMetaCharacters;",
 			"C++ StringTools.winMetaCharacters should consume the SysTools vector<int> field directly");
 		final qualifiedStdScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(sysToolsOwner,
@@ -1972,6 +1983,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "__hxhx_split(s, std::string(\"&gt;\"))", "C++ smoke should lower String.split to target support helpers");
 		assertContains(source, "__hxhx_join(__hxhx_split(s, std::string(\"&gt;\")), std::string(\">\"))",
 			"C++ smoke should lower split/join chains through target support helpers");
+		assertContains(source, "return __hxhx_replace(std::string(s), std::string(\"na\"), std::string(\"X\"));",
+			"C++ smoke should lower StringTools.replace to target support helpers");
+		assertContains(source, "static std::string __hxhx_replace(", "C++ smoke should include target support for StringTools.replace");
+		assertTrue(source.indexOf("StringTools::replace(std::string(s)") < 0,
+			"C++ smoke should not emit generated StringTools static calls for replace intrinsic lowering");
 		assertContains(source, "__hxhx_last_index_of(s, std::string(start), 0)", "C++ smoke should lower String.lastIndexOf to target support helpers");
 		assertContains(source, "auto c = static_cast<int>(static_cast<unsigned char>(s[pos]));",
 			"C++ smoke should lower String.charCodeAt to direct code-point reads");

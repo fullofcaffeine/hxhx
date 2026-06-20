@@ -191,6 +191,30 @@ class CppTargetCore {
 		out.push("  return pos == std::string::npos ? -1 : static_cast<int>(pos);");
 		out.push("}");
 		out.push("");
+		out.push("static std::string __hxhx_replace(const std::string& source, const std::string& needle, const std::string& replacement) {");
+		out.push("  if (needle.empty()) {");
+		out.push("    if (source.empty()) return std::string();");
+		out.push("    std::ostringstream out;");
+		out.push("    for (std::size_t i = 0; i < source.size(); ++i) {");
+		out.push("      if (i > 0) out << replacement;");
+		out.push("      out << source[i];");
+		out.push("    }");
+		out.push("    return out.str();");
+		out.push("  }");
+		out.push("  std::string out;");
+		out.push("  std::size_t start = 0;");
+		out.push("  while (true) {");
+		out.push("    std::size_t pos = source.find(needle, start);");
+		out.push("    if (pos == std::string::npos) {");
+		out.push("      out.append(source, start, std::string::npos);");
+		out.push("      return out;");
+		out.push("    }");
+		out.push("    out.append(source, start, pos - start);");
+		out.push("    out.append(replacement);");
+		out.push("    start = pos + needle.size();");
+		out.push("  }");
+		out.push("}");
+		out.push("");
 		out.push("static void __hxhx_bytes_blit(std::vector<int>& dst, int dstPos, const std::vector<int>& src, int srcPos, int len) {");
 		out.push("  if (dstPos < 0 || srcPos < 0 || len < 0 || dstPos + len > static_cast<int>(dst.size()) || srcPos + len > static_cast<int>(src.size()))");
 		out.push("    throw std::runtime_error(\"OutsideBounds\");");
@@ -972,7 +996,8 @@ class CppTargetCore {
 			case ECall(EField(receiver, method), args):
 				if (isInt64StaticReceiver(receiver) && int64StaticCallNeedsHelper(method))
 					add("Int64Helper");
-				addStaticReceiverClassDependency(receiver, add);
+				if (!isStringToolsIntrinsicCall(receiver, method))
+					addStaticReceiverClassDependency(receiver, add);
 				addExprClassDependencies(receiver, add);
 				for (arg in args)
 					addExprClassDependencies(arg, add);
@@ -2323,6 +2348,14 @@ class CppTargetCore {
 				+ ", "
 				+ renderExpr(args[1], scope)
 				+ ")";
+			case ECall(EField(receiver, "replace"), args) if (args.length == 3 && isStringToolsStaticReceiver(receiver)):
+				"__hxhx_replace("
+				+ stringExpr(args[0], scope)
+				+ ", "
+				+ stringExpr(args[1], scope)
+				+ ", "
+				+ stringExpr(args[2], scope)
+				+ ")";
 			case ECall(EField(receiver, "__URLEncode"), args) if (args.length == 0):
 				"__hxhx_url_encode(" + renderExpr(receiver, scope) + ")";
 			case ECall(EField(receiver, "__URLDecode"), args) if (args.length == 0):
@@ -2979,6 +3012,8 @@ class CppTargetCore {
 				"std::string";
 			case ECall(EField(EField(EIdent("haxe"), "SysTools"), method), _) if (method == "quoteUnixArg" || method == "quoteWinArg"):
 				"std::string";
+			case ECall(EField(receiver, "replace"), _) if (isStringToolsStaticReceiver(receiver)):
+				"std::string";
 			case ECall(EField(EIdent("__global__"), method), _):
 				globalIntrinsicReturnCppType(method);
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
@@ -3095,6 +3130,17 @@ class CppTargetCore {
 			return null;
 		final clean = sanitizeTypePath(typeBaseName(typePath));
 		return scopeHasClass(scope, clean) && !isCppCoreExternClass(clean) ? clean : null;
+	}
+
+	static function isStringToolsStaticReceiver(receiver:HxExpr):Bool {
+		final typePath = staticReceiverTypePath(receiver);
+		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "StringTools";
+	}
+
+	static function isStringToolsIntrinsicCall(receiver:HxExpr, method:String):Bool {
+		if (!isStringToolsStaticReceiver(receiver))
+			return false;
+		return method == "replace" || method == "fastCodeAt" || method == "unsafeCodeAt" || isStringToolsTrimMethod(method);
 	}
 
 	static function staticReceiverTypePath(receiver:HxExpr):Null<String> {
