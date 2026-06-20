@@ -2126,29 +2126,7 @@ class CppTargetCore {
 
 	static function genericClassTemplateParams(cls:HxClassDecl):Array<String> {
 		final params = genericClassTypeParams(cls);
-		if (params.length == 0 || hasRawSelfTypeReference(cls))
-			return [];
 		return params;
-	}
-
-	static function hasRawSelfTypeReference(cls:HxClassDecl):Bool {
-		final self = sanitizeTypePath(HxClassDecl.getName(cls));
-		function rawSelf(typeHint:String):Bool {
-			final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-			final hint = unwrapNullTypeHint(raw);
-			return sanitizeTypePath(typeBaseName(hint)) == self;
-		}
-		for (field in HxClassDecl.getFields(cls))
-			if (rawSelf(HxFieldDecl.getTypeHint(field)))
-				return true;
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			if (rawSelf(HxFunctionDecl.getReturnTypeHint(fn)))
-				return true;
-			for (arg in HxFunctionDecl.getArgs(fn))
-				if (rawSelf(HxFunctionArg.getTypeHint(arg)))
-					return true;
-		}
-		return false;
 	}
 
 	static function genericTemplatePrefix(typeParams:Array<String>):String {
@@ -3602,8 +3580,15 @@ class CppTargetCore {
 		if (scopeHasClass(scope, className) && isStdVectorHelperClass(scope.classByName.get(className)))
 			return className + "(" + renderConstructorArgs(className, args, scope).join(", ") + ")";
 		final renderedArgs = renderConstructorArgs(className, args, scope).join(", ");
-		if (scopeHasClass(scope, className) && genericClassTypeParamsForName(className, scope).length > 0)
-			return "__hxhx_make_shared_" + className + "(" + renderedArgs + ")";
+		if (scopeHasClass(scope, className) && genericClassTypeParamsForName(className, scope).length > 0) {
+			final templateArgs = scopedTemplateArgsForClass(className, scope);
+			return "__hxhx_make_shared_"
+				+ className
+				+ (templateArgs.length > 0 ? "<" + templateArgs.join(", ") + ">" : "")
+				+ "("
+				+ renderedArgs
+				+ ")";
+		}
 		return scopeHasClass(scope, className) ? "std::make_shared<" + className + ">(" + renderedArgs + ")" : className
 			+ "("
 			+ renderedArgs
@@ -3615,6 +3600,23 @@ class CppTargetCore {
 			return [];
 		final cls = scope.classByName.get(className);
 		return cls == null ? [] : genericClassTemplateParams(cls);
+	}
+
+	static function scopedTemplateArgsForClass(className:String, ?scope:CppRenderScope):Array<String> {
+		final params = genericClassTypeParamsForName(className, scope);
+		if (params.length == 0 || scope == null || scope.typeParams == null || scope.typeParams.length == 0)
+			return [];
+		final scoped = new haxe.ds.StringMap<Bool>();
+		for (param in scope.typeParams)
+			scoped.set(sanitizeIdentifier(param), true);
+		final args = new Array<String>();
+		for (param in params) {
+			final clean = sanitizeIdentifier(param);
+			if (!scoped.exists(clean))
+				return [];
+			args.push(clean);
+		}
+		return args;
 	}
 
 	static function renderConstructorArgs(className:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
@@ -6305,8 +6307,9 @@ class CppTargetCore {
 		if (isStringIteratorHelper(ownerName))
 			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
 				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+		final returnScope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, "auto");
 		if (raw.length > 0)
-			return cppReturnTypeHint(raw, null, {names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+			return cppReturnTypeHint(raw, returnScope, {names: classNamesFromByName(classByName), byName: classByName});
 		if (functionReturnsLambda(fn))
 			return "auto";
 		final key = functionSignatureKey(owner, fn);
@@ -6324,7 +6327,7 @@ class CppTargetCore {
 			}
 		}
 		inferredSignatureStack.remove(key);
-		return functionHasValueReturn(fn) ? cppReturnTypeHint(raw, null, {names: new haxe.ds.StringMap<Bool>(), byName: classByName}) : "void";
+		return functionHasValueReturn(fn) ? cppReturnTypeHint(raw, returnScope, {names: classNamesFromByName(classByName), byName: classByName}) : "void";
 	}
 
 	static function inferredFunctionArgCppTypes(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>):Array<String> {

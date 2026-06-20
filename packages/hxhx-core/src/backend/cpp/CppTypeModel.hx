@@ -271,30 +271,7 @@ class CppTypeModel {
 		final args = genericTypeHintArgs(typeHint);
 		if (args.length == 0)
 			return base;
-		final cls = lookupClassForTypeHint(typeHint, scope, classLookup);
-		if (cls != null && classHasRawSelfTypeReference(cls))
-			return base;
 		return base + "<" + [for (arg in args) cppTypeHint(arg, scope, classLookup)].join(", ") + ">";
-	}
-
-	static function classHasRawSelfTypeReference(cls:HxClassDecl):Bool {
-		final self = sanitizeTypePath(HxClassDecl.getName(cls));
-		function rawSelf(typeHint:String):Bool {
-			final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-			final hint = unwrapNullTypeHint(raw);
-			return sanitizeTypePath(typeBaseName(hint)) == self;
-		}
-		for (field in HxClassDecl.getFields(cls))
-			if (rawSelf(HxFieldDecl.getTypeHint(field)))
-				return true;
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			if (rawSelf(HxFunctionDecl.getReturnTypeHint(fn)))
-				return true;
-			for (arg in HxFunctionDecl.getArgs(fn))
-				if (rawSelf(HxFunctionArg.getTypeHint(arg)))
-					return true;
-		}
-		return false;
 	}
 
 	public static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {

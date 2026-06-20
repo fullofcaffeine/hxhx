@@ -2654,6 +2654,41 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper classes should infer class template params from nested field and constructor type hints");
 		assertContains(nestedGenericHolderLines, "std::shared_ptr<GenericBox<T>> box = nullptr;",
 			"C++ nested generic helper fields should preserve template arguments");
+		final selfGenericNode = new HxClassDecl("SelfGenericNode", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("item", "T", NoDefault, false, false),
+				new HxFunctionArg("next", "SelfGenericNode<T>", NoDefault, false, false)
+			], "Void", [
+				SExpr(EBinop("=", EField(EThis, "item"), EIdent("item")), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EThis, "next"), EIdent("next")), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("item", Public, false, "T", null),
+			new HxFieldDecl("next", Public, false, "SelfGenericNode<T>", null)
+		]);
+		final selfGenericList = new HxClassDecl("SelfGenericList", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("filter", Public, false, [new HxFunctionArg("f", "T -> Bool", NoDefault, false, false)], "SelfGenericList<T>", [
+				SVar("l2", "", ENew("SelfGenericList", []), HxPos.unknown()),
+				SReturn(EIdent("l2"), HxPos.unknown())
+			], "")
+		], [new HxFieldDecl("h", Public, false, "SelfGenericNode<T>", null)]);
+		for (name in ["SelfGenericNode", "SelfGenericList"])
+			genericBoxNames.set(name, true);
+		genericBoxClasses.set("SelfGenericNode", selfGenericNode);
+		genericBoxClasses.set("SelfGenericList", selfGenericList);
+		final selfGenericNodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(selfGenericNode, genericBoxLookup).join("\n");
+		final selfGenericListLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(selfGenericList, genericBoxLookup).join("\n");
+		assertContains(selfGenericNodeLines, "template<typename T>\nstruct SelfGenericNode {",
+			"C++ self-referential generic helper classes should stay templates instead of forward-declaring fake T");
+		assertContains(selfGenericNodeLines, "std::shared_ptr<SelfGenericNode<T>> next = nullptr;",
+			"C++ self-referential generic helper fields should preserve the owner template argument");
+		assertContains(selfGenericListLines, "template<typename T>\nstruct SelfGenericList {",
+			"C++ generic containers with self-returning methods should stay templates");
+		assertContains(selfGenericListLines, "std::shared_ptr<SelfGenericList<T>> filter(std::function<bool(T)> f) {",
+			"C++ generic container methods should preserve owner template parameters in returns and function args");
+		assertContains(selfGenericListLines, "auto l2 = __hxhx_make_shared_SelfGenericList<T>();",
+			"C++ zero-arg construction inside a generic owner should pass explicit template args to the deducing factory");
 		final methodGenericBuffer = new HxClassDecl("MethodGenericBuffer", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
 			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",
