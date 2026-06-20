@@ -1490,6 +1490,7 @@ class CppTargetCore {
 			"  int lineNumber = 0;",
 			"  std::string className = std::string();",
 			"  std::string methodName = std::string();",
+			"  std::vector<std::string> customParams = {};",
 			"  PosInfos() {}",
 			"  PosInfos(std::string fileName, int lineNumber, std::string className, std::string methodName)",
 			"    : fileName(fileName), lineNumber(lineNumber), className(className), methodName(methodName) {}",
@@ -4058,6 +4059,8 @@ class CppTargetCore {
 				"int";
 			case ECall(EField(EIdent("Type"), method), args):
 				typeIntrinsicReturnCppType(method, args);
+			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
+				"std::string";
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -4095,6 +4098,8 @@ class CppTargetCore {
 					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
 					ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
 				}
+			case ECall(ELambda(lambdaArgs, body), args):
+				lambdaCallReturnCppType(lambdaArgs, body, args, scope);
 			case EArrayAccess(array, _):
 				cppVectorElementType(exprCppType(array, scope));
 			case EField(receiver, "expr") if (exprCppType(receiver, scope) == CppMacroExpr.CPP_TYPE):
@@ -4356,6 +4361,8 @@ class CppTargetCore {
 				exprCppType(expr, scope);
 			case ECall(EField(EIdent("Type"), method), args):
 				typeIntrinsicReturnCppType(method, args);
+			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
+				"std::string";
 			case ENew(typePath, _) if (isStdArrayTypePath(typePath)):
 				isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope);
 			case ENew(typePath, _):
@@ -4408,6 +4415,8 @@ class CppTargetCore {
 					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
 					ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
 				}
+			case ECall(ELambda(lambdaArgs, body), args):
+				lambdaCallReturnCppType(lambdaArgs, body, args, scope);
 			case EString(_) | EEnumValue(_) | EMacroType(_):
 				"std::string";
 			case EField(EIdent("Error"), _):
@@ -4436,6 +4445,8 @@ class CppTargetCore {
 				"bool";
 			case EBinop(op, left, right) if (isArithmeticBinaryOp(op) && (isCppDoubleExpr(left, scope) || isCppDoubleExpr(right, scope))):
 				"double";
+			case EBinop("+", left, right) if (isCppStringExpr(left, scope) || isCppStringExpr(right, scope)):
+				"std::string";
 			case EBinop(op, _, _) if (isIntegerArithmeticBinaryOp(op)):
 				"int";
 			case EBinop("+", left, right) if (isCppIntExpr(left, scope) || isCppIntExpr(right, scope)):
@@ -4932,6 +4943,8 @@ class CppTargetCore {
 				+ " : "
 				+ stringExpr(elseExpr, scope)
 				+ ")";
+			case ECall(ELambda(_, _), _) if (inferExprCppType(expr, scope) == "std::string"):
+				renderExpr(expr, scope);
 			case ECall(EField(_, "indexOf"), args) if (args.length == 1 || args.length == 2):
 				"std::to_string(" + renderExpr(expr, scope) + ")";
 			case ECall(EIdent(_), _) if (exprCppType(expr, scope) == "std::string"):
@@ -4946,7 +4959,7 @@ class CppTargetCore {
 				renderExpr(expr, scope);
 			case EArrayAccess(_, _):
 				"std::string(" + renderExpr(expr, scope) + ")";
-			case EBinop("+", left, right) if (isStringLike(left) || isStringLike(right)):
+			case EBinop("+", left, right) if (isCppStringExpr(left, scope) || isCppStringExpr(right, scope)):
 				"("
 				+ stringExpr(left, scope)
 				+ " + "
@@ -5407,6 +5420,10 @@ class CppTargetCore {
 				true;
 			case _: exprCppType(expr, scope) == "bool" || inferExprCppType(expr, scope) == "bool";
 		};
+	}
+
+	static function isCppStringExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return isStringLike(expr) || exprCppType(expr, scope) == "std::string" || inferExprCppType(expr, scope) == "std::string";
 	}
 
 	static function superMethodCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -5910,9 +5927,30 @@ class CppTargetCore {
 				"std::string";
 			case "lineNumber":
 				"int";
+			case "customParams":
+				"std::vector<std::string>";
 			case _:
 				"";
 		};
+	}
+
+	static function lambdaCallReturnCppType(lambdaArgs:Array<String>, body:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (lambdaArgs == null || lambdaArgs.length == 0)
+			return inferExprCppType(body, scope);
+		var result = "";
+		function visit(index:Int):Void {
+			if (index >= lambdaArgs.length || index >= args.length) {
+				result = inferExprCppType(body, scope);
+				return;
+			}
+			final local = sanitizeIdentifier(lambdaArgs[index]);
+			var typeName = exprCppType(args[index], scope);
+			if (typeName.length == 0)
+				typeName = inferExprCppType(args[index], scope);
+			withScopedLocal(scope, local, typeName, () -> visit(index + 1));
+		}
+		visit(0);
+		return result;
 	}
 
 	static function isPosInfosAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>):Bool {

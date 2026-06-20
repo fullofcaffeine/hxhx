@@ -1640,6 +1640,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ enum-tag arguments inside erased string-context calls should preserve their string payload");
 		assertTrue(assertWarnAddString.indexOf("std::to_string(results->add") < 0,
 			"C++ Assert.warn-like results.add calls should not become std::to_string(std::string)");
+		final lambdaStringContext = @:privateAccess backend.cpp.CppTargetCore.stringExpr(ECall(ELambda(["t"],
+			ETernary(EBinop("==", EIdent("t"), EInt(0)), EString("7"), ECall(EField(EIdent("Std"), "string"), [EIdent("t")]))), [EInt(1)]),
+			assertWarnScope);
+		assertContains(lambdaStringContext, "([&](auto t) { return", "C++ string contexts should preserve immediate lambda calls");
+		assertTrue(lambdaStringContext.indexOf("std::to_string(([&]") < 0,
+			"C++ string-returning immediate lambda calls should not be wrapped in std::to_string");
 		final assertCreateAsyncLike = new HxFunctionDecl("createAsyncLike", Public, true, [], "", [SReturn(ELambda([], ENull), HxPos.unknown())], "");
 		final assertCreateEventLike = new HxFunctionDecl("createEventLike", Public, true, [], "", [SReturn(ELambda(["e"], ENull), HxPos.unknown())], "");
 		final assertCreateLambdaOwner = new HxClassDecl("Assert", false, [assertCreateAsyncLike, assertCreateEventLike], []);
@@ -2449,12 +2455,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				""),
 			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EField(EIdent("posInfos"), "className"), HxPos.unknown())], "")
 		], [new HxFieldDecl("posInfos", Public, false, "PosInfos", null)]);
+		final logFormatOutputLike = new HxFunctionDecl("formatOutput", Public, true, [
+			new HxFunctionArg("str", "String", NoDefault, false, false),
+			new HxFunctionArg("infos", "PosInfos", NoDefault, false, false)
+		], "String", [
+			SVar("pstr", "", EBinop("+", EBinop("+", EField(EIdent("infos"), "className"), EString(".")), EField(EIdent("infos"), "methodName")),
+				HxPos.unknown()),
+			SForIn("v", EField(EIdent("infos"), "customParams"), SExpr(EBinop("+=", EIdent("pstr"), EBinop("+", EString(","), EIdent("v"))), HxPos.unknown()),
+				HxPos.unknown()),
+			SReturn(EBinop("+", EBinop("+", EIdent("pstr"), EString(": ")), EIdent("str")), HxPos.unknown())
+		], "");
+		final logLike = new HxClassDecl("Log", false, [logFormatOutputLike], []);
 		final posNames = new StringMap<Bool>();
-		for (name in ["PosInfos", "PosException"])
+		for (name in ["PosInfos", "PosException", "Log"])
 			posNames.set(name, true);
 		final posClasses = new StringMap<HxClassDecl>();
 		posClasses.set("PosInfos", posInfos);
 		posClasses.set("PosException", posException);
+		posClasses.set("Log", logLike);
 		final posLookup = {names: posNames, byName: posClasses};
 		final posInfosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(posInfos, posLookup).join("\n");
 		final parsedPosInfosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(new HxClassDecl("PosInfos", false, [], [
@@ -2464,7 +2482,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFieldDecl("methodName", Public, false, "String", null)
 		]), posLookup).join("\n");
 		final posExceptionLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(posException, posLookup).join("\n");
+		final logFormatOutputLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(logFormatOutputLike, logLike, posLookup).join("\n");
 		assertContains(posInfosLines, "std::string fileName = std::string();", "C++ PosInfos typedef placeholders should render the stdlib position fields");
+		assertContains(posInfosLines, "std::vector<std::string> customParams = {};",
+			"C++ PosInfos support should include the stdlib customParams field used by Log.formatOutput");
 		assertContains(parsedPosInfosLines, "PosInfos(std::string fileName, int lineNumber, std::string className, std::string methodName)",
 			"C++ parsed PosInfos helpers should still expose the target-owned position constructor");
 		assertContains(posExceptionLines, "std::shared_ptr<PosInfos> pos = nullptr", "C++ optional PosInfos args should stay nullable references");
@@ -2473,6 +2494,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ assignments from matching position literals should wrap into PosInfos shared pointers");
 		assertContains(posExceptionLines, "posInfos = pos;", "C++ PosInfos reference assignments should pass existing pointers through");
 		assertContains(posExceptionLines, "return (posInfos->className);", "C++ PosInfos string fields should not be wrapped with std::to_string");
+		assertContains(logFormatOutputLines, "for (auto v : (infos->customParams)) {",
+			"C++ Log.formatOutput-like helpers should iterate PosInfos.customParams");
+		assertContains(logFormatOutputLines, "return ((std::string(pstr) + std::string(\": \")) + std::string(str));",
+			"C++ string accumulators should stay in string context when returned");
+		assertTrue(logFormatOutputLines.indexOf("std::to_string(pstr)") < 0, "C++ string accumulators should not be wrapped in std::to_string");
 		final genericReturnOwner = new HxClassDecl("GenericReturnOwner", false, [], []);
 		final genericReturnNames = new StringMap<Bool>();
 		genericReturnNames.set("GenericReturnOwner", true);
