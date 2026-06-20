@@ -1489,13 +1489,8 @@ class CppTargetCore {
 			return false;
 		if (!HxFunctionDecl.getIsStatic(fn) || sanitizeIdentifier(HxFunctionDecl.getName(fn)) != "q")
 			return false;
-		if (sanitizeTypePath(typeBaseName(HxFunctionDecl.getReturnTypeHint(fn))) != "String")
-			return false;
 		final args = HxFunctionDecl.getArgs(fn);
-		if (args.length != 1)
-			return false;
-		final argType = sanitizeTypePath(typeBaseName(HxFunctionArg.getTypeHint(args[0])));
-		return argType == "Dynamic" || argType == "Any";
+		return args.length == 1;
 	}
 
 	static function renderAssertPolymorphicStringifyHelper(fn:HxFunctionDecl):Array<String> {

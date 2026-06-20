@@ -2906,11 +2906,7 @@ let knownStdlibMethodReturnCppType = fun className methodName typeHint scope cla
 let isAssertPolymorphicStringifyHelper = fun fn owner -> try let __fallback_result_305 = (
   ignore (if owner == Obj.magic (HxRuntime.hx_null) || not (HxString.equals (sanitizeTypePath (typeBaseName (HxClassDecl.getName (Obj.magic owner) : string) : string)) "Assert") then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || not (HxString.equals (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string)) "q") then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  ignore (if not (HxString.equals (sanitizeTypePath (typeBaseName (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) : string)) "String") then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in (
-    ignore (if HxArray.length args <> 1 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-    let argType = (sanitizeTypePath (typeBaseName (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic args) 0)) : string) : string) : string) in HxString.equals argType "Dynamic" || HxString.equals argType "Any"
-  )
+  let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in HxArray.length args = 1
 ) in Obj.magic __fallback_result_305 with
   | HxRuntime.Hx_return __ret_304 -> Obj.obj __ret_304
 

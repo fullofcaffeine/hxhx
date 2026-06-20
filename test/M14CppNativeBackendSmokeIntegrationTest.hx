@@ -961,6 +961,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(assertQLines, "template<typename T>\n  static std::string q(const T& v) {\n    return __hxhx_stringify(v);\n  }",
 			"C++ Assert.q Dynamic stringification should be a polymorphic diagnostic helper, not q(std::string)");
 		assertTrue(assertQLines.indexOf("q(std::string v)") < 0, "C++ Assert.q should not reject numeric diagnostic values");
+		final assertQErased = new HxFunctionDecl("q", Public, true, [new HxFunctionArg("v", "", NoDefault, false, false)], "",
+			[SReturn(ECall(EField(EIdent("Std"), "string"), [EIdent("v")]), HxPos.unknown())], "");
+		final assertQErasedLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(assertQErased, assertOwner, assertLookup).join("\n");
+		assertContains(assertQErasedLines, "template<typename T>\n  static std::string q(const T& v)",
+			"C++ Assert.q should stay polymorphic even if upstream helper hints are erased during parsing");
 		final listNode = new HxClassDecl("ListNode", false, [], [new HxFieldDecl("next", Public, false, "Null<ListNode>", null)]);
 		final listOwner = new HxClassDecl("ListOwner", false, [], []);
 		final listNames = new StringMap<Bool>();
