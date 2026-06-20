@@ -646,6 +646,16 @@ class CppTargetCore {
 		out.push("  throw std::runtime_error(__hxhx_stringify(value));");
 		out.push("}");
 		out.push("");
+		out.push("template<typename TResult, typename T>");
+		out.push("static TResult __hxhx_throw_as(const T& value) {");
+		out.push("  throw std::runtime_error(__hxhx_stringify(value));");
+		out.push("}");
+		out.push("");
+		out.push("template<typename TResult>");
+		out.push("static TResult __hxhx_throw_as(const char* value) {");
+		out.push("  throw std::runtime_error(__hxhx_stringify(value));");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T>");
 		out.push("T& __hxhx_status_ref(T& status) {");
 		out.push("  return status;");
@@ -4952,7 +4962,7 @@ class CppTargetCore {
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				stringExpr(args[2], scope);
 			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
-				renderExpr(expr, scope);
+				"__hxhx_throw_as<std::string>(" + renderExpr(args[0], scope) + ")";
 			case ETernary(cond, thenExpr, elseExpr) if (inferExprCppType(expr, scope) == "std::string"):
 				"("
 				+ conditionExpr(cond, scope)

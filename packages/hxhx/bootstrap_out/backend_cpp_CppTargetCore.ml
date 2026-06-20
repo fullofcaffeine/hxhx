@@ -17671,7 +17671,7 @@ and stringExpr = fun expr scope -> try let __fallback_result_3551 = let enumCtor
             tempResult := __assign_3507;
             __assign_3507
           )
-          | "__hxhx_throw" -> let args = Obj.magic _g1 in if HxArray.length args = 1 then let __assign_3508 = (renderExpr (Obj.magic expr) scope : string) in (
+          | "__hxhx_throw" -> let args = Obj.magic _g1 in if HxArray.length args = 1 then let __assign_3508 = (("__hxhx_throw_as<std::string>(" ^ HxString.toStdString (renderExpr (Obj.magic (HxArray.get (Obj.magic args) 0)) scope)) ^ ")" : string) in (
             tempResult := __assign_3508;
             __assign_3508
           ) else if HxString.equals (exprCppType (Obj.magic expr) scope) "std::string" then let __assign_3509 = (renderExpr (Obj.magic expr) scope : string) in (
@@ -21114,6 +21114,16 @@ let renderProgram = fun program main -> (
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");
     ignore (HxArray.push out "static __hxhx_throw_bottom __hxhx_throw(const char* value) {");
+    ignore (HxArray.push out "  throw std::runtime_error(__hxhx_stringify(value));");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "template<typename TResult, typename T>");
+    ignore (HxArray.push out "static TResult __hxhx_throw_as(const T& value) {");
+    ignore (HxArray.push out "  throw std::runtime_error(__hxhx_stringify(value));");
+    ignore (HxArray.push out "}");
+    ignore (HxArray.push out "");
+    ignore (HxArray.push out "template<typename TResult>");
+    ignore (HxArray.push out "static TResult __hxhx_throw_as(const char* value) {");
     ignore (HxArray.push out "  throw std::runtime_error(__hxhx_stringify(value));");
     ignore (HxArray.push out "}");
     ignore (HxArray.push out "");

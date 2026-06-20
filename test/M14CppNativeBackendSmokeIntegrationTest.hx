@@ -2795,7 +2795,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			[SReturn(ECall(EIdent("__hxhx_throw"), [EString("nope")]), HxPos.unknown())], "");
 		final throwExprLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(throwExprMethod, exprBodyOwner, exprBodyLookup).join("\n");
-		assertContains(throwExprLines, "static std::string failAsString() {\n    return __hxhx_throw(\"nope\");\n  }",
+		assertContains(throwExprLines, "static std::string failAsString() {\n    return __hxhx_throw_as<std::string>(\"nope\");\n  }",
 			"C++ throw expressions should compile in string-valued return contexts through target-owned bottom support");
 		assertTrue(throwExprLines.indexOf("std::to_string(__hxhx_throw") < 0,
 			"C++ throw expressions in string contexts should not be wrapped in numeric std::to_string");
@@ -2839,6 +2839,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "return __hxhx_type_name(value);", "C++ stringify support should fall back for non-streamable closure values");
 		assertContains(source, "struct __hxhx_throw_bottom", "C++ smoke should include target-owned throw-expression bottom support");
 		assertContains(source, "static __hxhx_throw_bottom __hxhx_throw(const T& value)", "C++ smoke should include target-owned throw-expression helper");
+		assertContains(source, "static TResult __hxhx_throw_as(const T& value)", "C++ smoke should include target-owned typed throw-expression helper");
 		assertContains(source, "struct LikeStatus {", "C++ smoke should emit named structural typedef helpers as concrete structs");
 		assertContains(source, "std::string expectedValue = std::string();", "C++ smoke should retain LikeStatus expectedValue field");
 		assertContains(source, "std::string actualValue = std::string();", "C++ smoke should retain LikeStatus actualValue field");
