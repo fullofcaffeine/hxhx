@@ -124,6 +124,7 @@ class CppTargetCore {
 		out.push("#include <functional>");
 		out.push("#include <iostream>");
 		out.push("#include <limits>");
+		out.push("#include <map>");
 		out.push("#include <memory>");
 		out.push("#include <optional>");
 		out.push("#include <sstream>");
@@ -3215,6 +3216,9 @@ class CppTargetCore {
 		final opaqueEnumSwitchProbe = renderOpaqueEnumSwitchProbeRaw(raw);
 		if (opaqueEnumSwitchProbe != null)
 			return opaqueEnumSwitchProbe;
+		final opaqueStringMap = renderOpaqueStringMapRaw(raw);
+		if (opaqueStringMap != null)
+			return opaqueStringMap;
 		final opaqueObject = renderOpaqueObjectLocalRaw(raw);
 		if (opaqueObject != null)
 			return opaqueObject;
@@ -3380,6 +3384,32 @@ class CppTargetCore {
 			+ "}; })()";
 	}
 
+	static function renderOpaqueStringMapRaw(raw:String):Null<String> {
+		final compact = compactRawText(raw);
+		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*)=newhaxe\.ds\.StringMap\(\);(.+)\1;\}$/;
+		if (!pattern.match(compact))
+			return null;
+		final local = sanitizeIdentifier(pattern.matched(1));
+		final body = pattern.matched(2);
+		final statements = new Array<String>();
+		final setPattern = ~/^([A-Za-z_][A-Za-z0-9_]*)\.set\("((\\.|[^"])*)","((\\.|[^"])*)"\)$/;
+		for (stmt in body.split(";")) {
+			if (stmt.length == 0)
+				continue;
+			if (!setPattern.match(stmt) || sanitizeIdentifier(setPattern.matched(1)) != local)
+				return null;
+			statements.push(local
+				+ "["
+				+ quoteString(unescapeRawStringSegment(setPattern.matched(2)))
+				+ "] = "
+				+ quoteString(unescapeRawStringSegment(setPattern.matched(4)))
+				+ ";");
+		}
+		if (statements.length == 0)
+			return null;
+		return "([&]() { std::map<std::string, std::string> " + local + "; " + statements.join(" ") + " return " + local + "; })()";
+	}
+
 	static function renderOpaqueTypedLocalRefRaw(raw:String):Null<String> {
 		final compact = compactRawText(raw);
 		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*):([^;{}]+);\1;\}$/;
@@ -3405,6 +3435,10 @@ class CppTargetCore {
 		if (StringTools.startsWith(rawValue, "\"") || numericPattern.match(rawValue))
 			return rawValue;
 		return sanitizeIdentifier(rawValue);
+	}
+
+	static function unescapeRawStringSegment(value:String):String {
+		return StringTools.replace(StringTools.replace(StringTools.replace(value, "\\\\", "\\"), "\\\"", "\""), "\\'", "'");
 	}
 
 	static function isTypeExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
