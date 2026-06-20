@@ -2419,6 +2419,10 @@ class CppTargetCore {
 			case EField(receiver, field):
 				final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
 				ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
+			case EBinop(op, _, _) if (isBoolBinaryOp(op)):
+				"bool";
+			case EUnop("!", _):
+				"bool";
 			case _:
 				"";
 		};
@@ -2593,6 +2597,10 @@ class CppTargetCore {
 				inferExprCppType(inner, scope);
 			case EUnop("post++", inner) | EUnop("post--", inner):
 				inferExprCppType(inner, scope);
+			case EUnop("!", _):
+				"bool";
+			case EBinop(op, _, _) if (isBoolBinaryOp(op)):
+				"bool";
 			case EBinop(op, left, right) if (isArithmeticBinaryOp(op) && (isCppDoubleExpr(left, scope) || isCppDoubleExpr(right, scope))):
 				"double";
 			case ETernary(_, thenExpr, elseExpr) if (isCppDoubleExpr(thenExpr, scope) && isCppDoubleExpr(elseExpr, scope)):
@@ -3019,6 +3027,8 @@ class CppTargetCore {
 			case ECast(inner, _) | EUntyped(inner):
 				stringExpr(inner, scope);
 			case EBool(_):
+				"std::string(" + renderExpr(expr, scope) + " ? \"true\" : \"false\")";
+			case _ if (exprCppType(expr, scope) == "bool" || inferExprCppType(expr, scope) == "bool"):
 				"std::string(" + renderExpr(expr, scope) + " ? \"true\" : \"false\")";
 			case EInt(_) | EFloat(_):
 				"std::to_string(" + renderExpr(expr, scope) + ")";
@@ -3747,6 +3757,10 @@ class CppTargetCore {
 
 	static function isArithmeticBinaryOp(op:String):Bool {
 		return op == "+" || op == "-" || op == "*" || op == "/" || op == "%";
+	}
+
+	static function isBoolBinaryOp(op:String):Bool {
+		return op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=" || op == "||" || op == "&&" || op == "is";
 	}
 
 	static function isSimpleCompoundAssignmentOp(op:String):Bool {
