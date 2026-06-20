@@ -4045,8 +4045,10 @@ class CppTargetCore {
 				"int";
 			case EBinop("+", left, right) if (isCppIntExpr(left, scope) || isCppIntExpr(right, scope)):
 				"int";
-			case ETernary(_, thenExpr, elseExpr) if (isCppDoubleExpr(thenExpr, scope) && isCppDoubleExpr(elseExpr, scope)):
-				"double";
+			case ETernary(_, thenExpr, elseExpr):
+				final thenType = inferExprCppType(thenExpr, scope);
+				final elseType = inferExprCppType(elseExpr, scope);
+				if (thenType.length > 0 && thenType == elseType) thenType; else "";
 			case ECast(inner, _) | EUntyped(inner):
 				inferExprCppType(inner, scope);
 			case _:

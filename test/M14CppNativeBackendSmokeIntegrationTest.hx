@@ -1963,6 +1963,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper inheritance should resolve package-qualified extends paths to emitted helper basenames");
 		assertTrue(qualifiedSubLines.indexOf("demo_pkg_QualifiedBase") < 0,
 			"C++ helper inheritance should not emit package-qualified synthetic base names when only the basename helper exists");
+		final inferredGetterNode = new HxClassDecl("InferredGetterNode", false, [
+			new HxFunctionDecl("get_height", Public, false, [], "", [SReturn(ETernary(EBool(false), EInt(0), EIdent("_height")), HxPos.unknown())], "")
+		], [new HxFieldDecl("_height", Public, false, "Int", EInt(0))]);
+		final inferredGetterNames = new StringMap<Bool>();
+		inferredGetterNames.set("InferredGetterNode", true);
+		final inferredGetterClasses = new StringMap<HxClassDecl>();
+		inferredGetterClasses.set("InferredGetterNode", inferredGetterNode);
+		final inferredGetterLookup = {names: inferredGetterNames, byName: inferredGetterClasses};
+		final inferredGetterLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(inferredGetterNode, inferredGetterLookup).join("\n");
+		assertContains(inferredGetterLines, "int get_height() {", "C++ inferred helper return types should preserve int/int ternary getter results");
+		assertTrue(inferredGetterLines.indexOf("std::string get_height()") < 0,
+			"C++ inferred helper return types should not fall back to string for int field ternaries");
 		final defaultCtorBase = new HxClassDecl("DefaultCtorBase", false, [
 			new HxFunctionDecl("new", Public, false, [
 				new HxFunctionArg("s", "String", Default(EString("test")), false, false),

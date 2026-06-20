@@ -9652,7 +9652,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
     )
     | HxExpr.ETernary (_p0, _p1, _p2) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let thenExpr = Obj.magic _g2 in let elseExpr = Obj.magic _g1 in if isCppDoubleExpr (Obj.magic thenExpr) scope && isCppDoubleExpr (Obj.magic elseExpr) scope then let __assign_2544 = ("double" : string) in (
+      let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let thenExpr = Obj.magic _g2 in let elseExpr = Obj.magic _g1 in let thenType = (inferExprCppType (Obj.magic thenExpr) scope : string) in let elseType = (inferExprCppType (Obj.magic elseExpr) scope : string) in if HxString.length thenType > 0 && HxString.equals thenType elseType then let __assign_2544 = (thenType : string) in (
         tempResult := __assign_2544;
         __assign_2544
       ) else let __assign_2545 = ("" : string) in (
