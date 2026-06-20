@@ -229,8 +229,8 @@ let scanToplevelFunctions = fun source expectedMainClass -> try let __fallback_r
 ) in Obj.magic __fallback_result_43 with
   | HxRuntime.Hx_return __ret_42 -> Obj.obj __ret_42
 
-let enrichPureParserDecl = fun source expectedMainClass parsed -> try let __fallback_result_381 = let enumDecls = Obj.magic (ParserStageScanHelpers.scanModuleLocalHelperEnums (source : string) (Obj.magic (HxRuntime.hx_null))) in let abstractDecls = Obj.magic (ParserStageScanHelpers.scanModuleLocalHelperAbstracts (source : string) (Obj.magic (HxRuntime.hx_null))) in (
-  ignore (if (enumDecls == Obj.magic (HxRuntime.hx_null) || HxArray.length enumDecls = 0) && (abstractDecls == Obj.magic (HxRuntime.hx_null) || HxArray.length abstractDecls = 0) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic parsed))) else ());
+let enrichPureParserDecl = fun source expectedMainClass parsed -> try let __fallback_result_384 = let enumDecls = Obj.magic (ParserStageScanHelpers.scanModuleLocalHelperEnums (source : string) (Obj.magic (HxRuntime.hx_null))) in let typedefDecls = Obj.magic (ParserStageScanHelpers.scanModuleLocalHelperTypedefs (source : string) (Obj.magic (HxRuntime.hx_null))) in let abstractDecls = Obj.magic (ParserStageScanHelpers.scanModuleLocalHelperAbstracts (source : string) (Obj.magic (HxRuntime.hx_null))) in (
+  ignore (if (enumDecls == Obj.magic (HxRuntime.hx_null) || HxArray.length enumDecls = 0) && (typedefDecls == Obj.magic (HxRuntime.hx_null) || HxArray.length typedefDecls = 0) && (abstractDecls == Obj.magic (HxRuntime.hx_null) || HxArray.length abstractDecls = 0) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic parsed))) else ());
   let abstractByName = HxMap.create_string () in (
     ignore (let _g = ref 0 in while !_g < HxArray.length abstractDecls do ignore (let c = Obj.magic (HxArray.get (Obj.magic abstractDecls) (!_g)) in (
       ignore (let __old_315 = !_g in let __new_316 = HxInt.add __old_315 1 in (
@@ -513,7 +513,7 @@ let enrichPureParserDecl = fun source expectedMainClass parsed -> try let __fall
               pushUnique (Obj.magic c)
             )) else ()
           )) done);
-          ignore (let _g = ref 0 in while !_g < HxArray.length abstractDecls do ignore (let c = Obj.magic (HxArray.get (Obj.magic abstractDecls) (!_g)) in (
+          ignore (let _g = ref 0 in while !_g < HxArray.length typedefDecls do ignore (let c = Obj.magic (HxArray.get (Obj.magic typedefDecls) (!_g)) in (
             ignore (let __old_375 = !_g in let __new_376 = HxInt.add __old_375 1 in (
               ignore (_g := __new_376);
               __new_376
@@ -526,13 +526,26 @@ let enrichPureParserDecl = fun source expectedMainClass parsed -> try let __fall
               pushUnique (Obj.magic c)
             )) else ()
           )) done);
+          ignore (let _g = ref 0 in while !_g < HxArray.length abstractDecls do ignore (let c = Obj.magic (HxArray.get (Obj.magic abstractDecls) (!_g)) in (
+            ignore (let __old_378 = !_g in let __new_379 = HxInt.add __old_378 1 in (
+              ignore (_g := __new_379);
+              __new_379
+            ));
+            let nm = (HxClassDecl.getName (Obj.magic c) : string) in if nm != Obj.magic (HxRuntime.hx_null) && HxString.length nm > 0 && not (HxMap.exists_string seen nm) then ignore ((
+              ignore (let __assign_380 = true in (
+                changed := __assign_380;
+                __assign_380
+              ));
+              pushUnique (Obj.magic c)
+            )) else ()
+          )) done);
           let tempResult1 = ref (Obj.magic (HxRuntime.hx_null) : HxModuleDecl.t) in (
-            ignore (if !changed then let __assign_378 = Obj.magic (HxModuleDecl.create (HxModuleDecl.getPackagePath (Obj.magic parsed) : string) (Obj.magic (HxModuleDecl.getImports (Obj.magic parsed))) (Obj.magic (!main)) (Obj.magic classes) (HxModuleDecl.getHeaderOnly (Obj.magic parsed)) (HxModuleDecl.getHasToplevelMain (Obj.magic parsed))) in (
-              tempResult1 := __assign_378;
-              __assign_378
-            ) else let __assign_379 = Obj.magic parsed in (
-              tempResult1 := __assign_379;
-              __assign_379
+            ignore (if !changed then let __assign_381 = Obj.magic (HxModuleDecl.create (HxModuleDecl.getPackagePath (Obj.magic parsed) : string) (Obj.magic (HxModuleDecl.getImports (Obj.magic parsed))) (Obj.magic (!main)) (Obj.magic classes) (HxModuleDecl.getHeaderOnly (Obj.magic parsed)) (HxModuleDecl.getHasToplevelMain (Obj.magic parsed))) in (
+              tempResult1 := __assign_381;
+              __assign_381
+            ) else let __assign_382 = Obj.magic parsed in (
+              tempResult1 := __assign_382;
+              __assign_382
             ));
             !tempResult1
           )
@@ -540,16 +553,16 @@ let enrichPureParserDecl = fun source expectedMainClass parsed -> try let __fall
       )
     )
   )
-) in Obj.magic __fallback_result_381 with
-  | HxRuntime.Hx_return __ret_380 -> Obj.obj __ret_380
+) in Obj.magic __fallback_result_384 with
+  | HxRuntime.Hx_return __ret_383 -> Obj.obj __ret_383
 
 let parseViaNativeHooks = fun source expectedMainClass -> let tempString = ref ("" : string) in (
-  ignore (if expectedMainClass != Obj.magic (HxRuntime.hx_null) && HxString.length expectedMainClass > 0 then let __assign_382 = (HxHxNativeParser.parse_module_decl_with_expected (source : string) (expectedMainClass : string) : string) in (
-    tempString := __assign_382;
-    __assign_382
-  ) else let __assign_383 = (HxHxNativeParser.parse_module_decl (source : string) : string) in (
-    tempString := __assign_383;
-    __assign_383
+  ignore (if expectedMainClass != Obj.magic (HxRuntime.hx_null) && HxString.length expectedMainClass > 0 then let __assign_385 = (HxHxNativeParser.parse_module_decl_with_expected (source : string) (expectedMainClass : string) : string) in (
+    tempString := __assign_385;
+    __assign_385
+  ) else let __assign_386 = (HxHxNativeParser.parse_module_decl (source : string) : string) in (
+    tempString := __assign_386;
+    __assign_386
   ));
   ParserStageNativeDecode.decodeNativeProtocol (!tempString : string) (source : string)
 )

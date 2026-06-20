@@ -43,5 +43,25 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 			case _:
 				throw "expected expression-bodied for assignment to parse into a for-in array-access assignment";
 		}
+
+		final typedefSource = [
+			"typedef LikeStatus = {",
+			"  var expectedValue:Dynamic;",
+			"  var actualValue:Dynamic;",
+			"  var error:String;",
+			"  var path:String;",
+			"  var recursive:Bool;",
+			"}"
+		].join("\n");
+		final typedefs = ParserStageScanHelpers.scanModuleLocalHelperTypedefs(typedefSource, null);
+		assertTrue(typedefs.length == 1, "expected one structural typedef helper");
+		final status = typedefs[0];
+		assertTrue(HxClassDecl.getName(status) == "LikeStatus", "expected LikeStatus helper typedef");
+		final fields = HxClassDecl.getFields(status);
+		assertTrue(fields.length == 5, "expected LikeStatus structural fields to be retained");
+		assertTrue(HxFieldDecl.getName(fields[0]) == "expectedValue" && HxFieldDecl.getTypeHint(fields[0]) == "Dynamic",
+			"expected Dynamic expectedValue field");
+		assertTrue(HxFieldDecl.getName(fields[4]) == "recursive"
+			&& HxFieldDecl.getTypeHint(fields[4]) == "Bool", "expected Bool recursive field");
 	}
 }

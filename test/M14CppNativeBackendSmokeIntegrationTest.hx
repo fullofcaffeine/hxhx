@@ -562,9 +562,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return parent.value;",
 			"  }",
 			"}",
+			"typedef LikeStatus = {",
+			"  var expectedValue:Dynamic;",
+			"  var actualValue:Dynamic;",
+			"  var error:String;",
+			"  var path:String;",
+			"  var recursive:Bool;",
+			"}",
 			"class Assert {",
 			"  public static function q(v:Dynamic):String {",
 			"    return Std.string(v);",
+			"  }",
+			"  public static function sameAs(expected:Dynamic, value:Dynamic, status:LikeStatus):Bool {",
+			"    status.expectedValue = expected;",
+			"    status.actualValue = value;",
+			"    status.error = status.path;",
+			"    return status.error == \"\" || status.recursive;",
 			"  }",
 			"}",
 			"class Box {",
@@ -1887,6 +1900,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "helper(4)", "C++ smoke should lower direct identifier function call");
 		assertContains(source, "template<typename T>\n  static std::string q(const T& v)", "C++ smoke should emit Assert.q as a template");
 		assertContains(source, "Assert::q(1.5)", "C++ smoke should allow numeric Assert.q calls");
+		assertContains(source, "struct LikeStatus {", "C++ smoke should emit named structural typedef helpers as concrete structs");
+		assertContains(source, "std::string expectedValue = std::string();", "C++ smoke should retain LikeStatus expectedValue field");
+		assertContains(source, "std::string actualValue = std::string();", "C++ smoke should retain LikeStatus actualValue field");
+		assertContains(source, "std::string error = std::string();", "C++ smoke should retain LikeStatus error field");
+		assertContains(source, "std::string path = std::string();", "C++ smoke should retain LikeStatus path field");
+		assertContains(source, "bool recursive = false;", "C++ smoke should retain LikeStatus recursive field");
+		assertContains(source, "static bool sameAs(std::string expected, std::string value, std::shared_ptr<LikeStatus> status)",
+			"C++ smoke should keep named structural typedef helper args as references");
+		assertContains(source, "(status->expectedValue) = expected;", "C++ smoke should access retained structural typedef fields");
 		assertContains(source, "int casted = helper(5);", "C++ smoke should lower cast expression with explicit local type");
 		assertContains(source, "total += 4;", "C++ smoke should lower compound plus assignment");
 		assertContains(source, "total -= 2;", "C++ smoke should lower compound minus assignment");

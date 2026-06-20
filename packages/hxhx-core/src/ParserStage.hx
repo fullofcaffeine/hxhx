@@ -814,9 +814,13 @@ class ParserStage {
 	static function enrichPureParserDecl(source:String, expectedMainClass:Null<String>, parsed:HxModuleDecl):HxModuleDecl {
 		final enumDecls = #if hxhx_stage0_no_parser_scan_extract scanModuleLocalHelperEnums(source,
 			null) #else ParserStageScanHelpers.scanModuleLocalHelperEnums(source, null) #end;
+		final typedefDecls = #if hxhx_stage0_no_parser_scan_extract scanModuleLocalHelperTypedefs(source,
+			null) #else ParserStageScanHelpers.scanModuleLocalHelperTypedefs(source, null) #end;
 		final abstractDecls = #if hxhx_stage0_no_parser_scan_extract scanModuleLocalHelperAbstracts(source,
 			null) #else ParserStageScanHelpers.scanModuleLocalHelperAbstracts(source, null) #end;
-		if ((enumDecls == null || enumDecls.length == 0) && (abstractDecls == null || abstractDecls.length == 0))
+		if ((enumDecls == null || enumDecls.length == 0)
+			&& (typedefDecls == null || typedefDecls.length == 0)
+			&& (abstractDecls == null || abstractDecls.length == 0))
 			return parsed;
 
 		final abstractByName:Map<String, HxClassDecl> = new Map();
@@ -980,6 +984,13 @@ class ParserStage {
 		for (c in HxModuleDecl.getClasses(parsed))
 			pushUnique(c);
 		for (c in enumDecls) {
+			final nm = HxClassDecl.getName(c);
+			if (nm != null && nm.length > 0 && !seen.exists(nm)) {
+				changed = true;
+				pushUnique(c);
+			}
+		}
+		for (c in typedefDecls) {
 			final nm = HxClassDecl.getName(c);
 			if (nm != null && nm.length > 0 && !seen.exists(nm)) {
 				changed = true;
@@ -1472,23 +1483,28 @@ class ParserStage {
 	}
 
 	/**
-		Best-effort scanner for top-level `typedef` declarations.
+			Best-effort scanner for top-level `typedef` declarations.
 
-		Why
-		- Upstream code often references module-local typedefs via `Module.TypeAlias`.
-		- The native frontend protocol v1 only returns one top-level class declaration, so
-		  these aliases would otherwise be invisible to Stage3 emission and type indexing.
+			Why
+			- Upstream code often references module-local typedefs via `Module.TypeAlias`.
+			- The native frontend protocol v1 only returns one top-level class declaration, so
+			  these aliases would otherwise be invisible to Stage3 emission and type indexing.
 
 		What
 		- Scans for top-level `typedef <Name> = ...;` declarations.
-		- Emits a placeholder type provider (`HxClassDecl`) with no fields/functions.
+		- Emits a type provider (`HxClassDecl`) for the alias name.
+		- For simple anonymous-object typedefs, preserves field names and type hints so
+		  target backends can emit the structural surface instead of an empty nominal
+		  placeholder.
 
-		How
-		- Uses the same lightweight token scanner as other module-local helpers.
-		- Tracks brace depth and only records declarations at depth 0.
+			How
+			- Uses the same lightweight token scanner as other module-local helpers.
+			- Tracks brace depth and only records declarations at depth 0.
 
 		Limitations
-		- Does not model typedef structure; only the alias name is retained.
+		- Models only top-level anonymous-object typedef fields.
+		- Does not model typedef expressions, generics, method fields, or complex
+		  structural constraints.
 	**/
 	static function scanModuleLocalHelperTypedefs(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
 		final out = new Array<HxClassDecl>();
@@ -1534,10 +1550,140 @@ class ParserStage {
 				continue;
 			seen.set(typeName, true);
 
-			out.push(new HxClassDecl(typeName, false, [], []));
+			final scanned = scanTypedefShape(source, i);
+			i = scanned.nextPos;
+			out.push(new HxClassDecl(typeName, false, [], scanned.fields));
 		}
 
 		return out;
+	}
+
+	static function scanTypedefShape(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>} {
+		var i = start;
+		while (true) {
+			final tok = scanNextToken(source, i);
+			i = tok.nextPos;
+			if (tok.text.length == 0)
+				return {nextPos: i, fields: []};
+			if (tok.text == ";")
+				return {nextPos: i, fields: []};
+			if (tok.text != "=")
+				continue;
+
+			final rhs = scanNextToken(source, i);
+			if (rhs.text == "{")
+				return scanAnonymousTypedefFields(source, rhs.nextPos);
+			return skipTypedefDeclaration(source, rhs.nextPos);
+		}
+	}
+
+	static function skipTypedefDeclaration(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>} {
+		var i = start;
+		var depth = 0;
+		while (true) {
+			final tok = scanNextToken(source, i);
+			i = tok.nextPos;
+			if (tok.text.length == 0 || (tok.text == ";" && depth == 0))
+				return {nextPos: i, fields: []};
+			switch (tok.text) {
+				case "(" | "[" | "{":
+					depth += 1;
+				case ")" | "]" | "}":
+					if (depth > 0)
+						depth -= 1;
+				case "<":
+					depth += 1;
+				case ">":
+					if (depth > 0)
+						depth -= 1;
+				case _:
+			}
+		}
+	}
+
+	static function scanAnonymousTypedefFields(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>} {
+		final fields = new Array<HxFieldDecl>();
+		var i = start;
+		var depth = 1;
+		while (true) {
+			var tok = scanNextToken(source, i);
+			i = tok.nextPos;
+			if (tok.text.length == 0)
+				return {nextPos: i, fields: fields};
+			if (!tok.isIdent) {
+				switch (tok.text) {
+					case "{":
+						depth += 1;
+					case "}":
+						depth -= 1;
+						if (depth <= 0)
+							return {nextPos: i, fields: fields};
+					case _:
+				}
+				continue;
+			}
+			if (depth != 1)
+				continue;
+			if (tok.text == "var" || tok.text == "final") {
+				tok = scanNextFieldNameToken(source, i);
+				i = tok.nextPos;
+			}
+			if (!tok.isIdent || tok.text.length == 0 || tok.text == "function")
+				continue;
+			final typeHint = scanFieldTypeHint(source, tok.nextPos);
+			fields.push(new HxFieldDecl(tok.text, HxVisibility.Public, false, typeHint, null));
+			final end = skipTypedefField(source, tok.nextPos);
+			i = end.nextPos;
+			if (end.closed)
+				return {nextPos: i, fields: fields};
+		}
+	}
+
+	static function scanNextFieldNameToken(source:String, start:Int):{
+		text:String,
+		startPos:Int,
+		nextPos:Int,
+		isIdent:Bool
+	} {
+		var i = start;
+		while (true) {
+			final tok = scanNextToken(source, i);
+			i = tok.nextPos;
+			if (tok.text == "?")
+				continue;
+			return tok;
+		}
+	}
+
+	static function skipTypedefField(source:String, start:Int):{nextPos:Int, closed:Bool} {
+		var i = start;
+		var depth = 0;
+		while (true) {
+			final tok = scanNextToken(source, i);
+			i = tok.nextPos;
+			if (tok.text.length == 0)
+				return {nextPos: i, closed: false};
+			switch (tok.text) {
+				case "(" | "[" | "{":
+					depth += 1;
+				case ")" | "]":
+					if (depth > 0)
+						depth -= 1;
+				case "}":
+					if (depth == 0)
+						return {nextPos: i, closed: true};
+					depth -= 1;
+				case "<":
+					depth += 1;
+				case ">":
+					if (depth > 0)
+						depth -= 1;
+				case "," | ";":
+					if (depth == 0)
+						return {nextPos: i, closed: false};
+				case _:
+			}
+		}
 	}
 
 	/**
