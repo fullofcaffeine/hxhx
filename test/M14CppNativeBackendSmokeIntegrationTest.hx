@@ -661,6 +661,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function mapKeyValueIteratorProgram():GenIrProgram {
+		final src = [
+			"interface IMap<K,V> {",
+			"  public function get(key:K):Null<V>;",
+			"  public function keys():Iterator<K>;",
+			"}",
+			"class MapKeyValueIterator<K,V> {",
+			"  var map:IMap<K,V>;",
+			"  var keys:Iterator<K>;",
+			"  public function new(map:IMap<K,V>) {",
+			"    this.map = map;",
+			"    this.keys = map.keys();",
+			"  }",
+			"  public function next() {",
+			"    var key = keys.next();",
+			"    return { value: map.get(key), key: key };",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {}",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function vendorReadOnlyArrayProgramWhenAvailable():Null<GenIrProgram> {
 		final readOnlyArrayPath = "vendor/haxe/std/haxe/ds/ReadOnlyArray.hx";
 		if (!FileSystem.exists(readOnlyArrayPath))
@@ -1965,14 +1992,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"return __hxhx_anon_key_int__value_int_{offset, static_cast<int>(static_cast<unsigned char>(s[(offset++)]))};",
 			"C++ string key/value iterator records should infer integer key/value fields");
 		final iMapForIterator = new HxClassDecl("IMap", false, [
-			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("key", "String", NoDefault, false, false)], "Null<String>", [], "")
+			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("key", "K", NoDefault, false, false)], "Null<V>", [], "")
 		], [], "", null, true);
 		final mapKeyValueIterator = new HxClassDecl("MapKeyValueIterator", false, [
 			new HxFunctionDecl("next", Public, false, [], "", [
-				SVar("key", "String", EString("k"), HxPos.unknown()),
+				SVar("key", "", ECall(EField(EIdent("keys"), "next"), []), HxPos.unknown()),
 				SReturn(EAnon(["value", "key"], [ECall(EField(EIdent("map"), "get"), [EIdent("key")]), EIdent("key")]), HxPos.unknown())
 			], "")
-		], [new HxFieldDecl("map", Public, false, "IMap", null)]);
+		], [
+			new HxFieldDecl("map", Public, false, "IMap<K,V>", null),
+			new HxFieldDecl("keys", Public, false, "Iterator<K>", null)
+		]);
 		final mapIteratorNames = new StringMap<Bool>();
 		for (name in ["IMap", "MapKeyValueIterator"])
 			mapIteratorNames.set(name, true);
@@ -1981,6 +2011,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		mapIteratorClasses.set("MapKeyValueIterator", mapKeyValueIterator);
 		final mapKeyValueIteratorLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperClass(mapKeyValueIterator, {names: mapIteratorNames, byName: mapIteratorClasses}).join("\n");
+		assertContains(mapKeyValueIteratorLines, "auto key = keys->next();", "C++ iterator-protocol next calls should support unhinted key locals");
 		assertContains(mapKeyValueIteratorLines,
 			"return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",
 			"C++ IMap key/value iterator records should unwrap optional map.get values into concrete anonymous value fields");
@@ -2806,6 +2837,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(missingIMapSource.indexOf("struct IMap {") < missingIMapSource.indexOf("struct UsesMissingIMap {"),
 			"C++ missing IMap declaration should appear before helper classes that call IMap methods");
 		assertTrue(missingIMapSource.indexOf("struct IMap;\n") < 0, "C++ missing IMap should not be emitted only as a bare forward declaration");
+
+		final mapKeyValueDir = Path.join([root, "imap-key-value-iterator-source-only"]);
+		final mapKeyValueEmit = BackendRegistry.createForTarget("cpp-native").emit(mapKeyValueIteratorProgram(), context(mapKeyValueDir, true, true));
+		final mapKeyValueSource = File.getContent(mapKeyValueEmit.entryPath);
+		assertContains(mapKeyValueSource, "struct __hxhx_anon_value_std__string_key_std__string {",
+			"C++ anon predeclaration collection should preserve generic IMap key/value iterator field types");
+		assertContains(mapKeyValueSource, "return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",
+			"C++ generic IMap key/value iterators should unwrap optional values when the key local is inferred from Iterator.next()");
+		assertTrue(mapKeyValueSource.indexOf("struct __hxhx_anon_value_int__key_std__string") < 0,
+			"C++ generic IMap key/value iterator records should not predeclare optional values as Int");
 
 		final mathExternDir = Path.join([root, "math-extern-source-only"]);
 		final mathExternEmit = BackendRegistry.createForTarget("cpp-native").emit(mathExternProgram(), context(mathExternDir, true, true));

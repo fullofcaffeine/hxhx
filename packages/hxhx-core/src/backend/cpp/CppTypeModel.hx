@@ -372,6 +372,13 @@ class CppTypeModel {
 		return typeName.substr("std::vector<".length, typeName.length - "std::vector<".length - 1);
 	}
 
+	public static function cppIteratorElementType(typeName:String):String {
+		final prefix = "std::shared_ptr<__hxhx_iterator<";
+		if (typeName == null || !StringTools.startsWith(typeName, prefix) || !StringTools.endsWith(typeName, ">>"))
+			return "";
+		return typeName.substr(prefix.length, typeName.length - prefix.length - 2);
+	}
+
 	public static function isCppArrayBackedAbstractType(typeName:String, ?scope:CppRenderScope):Bool {
 		if (scope == null || typeName == null || typeName.length == 0)
 			return false;

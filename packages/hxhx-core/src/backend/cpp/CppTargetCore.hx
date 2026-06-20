@@ -837,7 +837,7 @@ class CppTargetCore {
 				}
 				for (fn in HxClassDecl.getFunctions(cls)) {
 					final scope = renderScope(cls, classLookup, cppFunctionReturnType(fn, cls, classLookup));
-					registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+					prepareFunctionScope(scope, fn);
 					for (stmt in HxFunctionDecl.getBody(fn))
 						addStmt(stmt, scope);
 				}
@@ -3920,6 +3920,10 @@ class CppTargetCore {
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				"std::string";
+			case ECall(EField(receiver, "next"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
+				cppIteratorElementType(exprCppType(receiver, scope));
+			case ECall(EField(receiver, "hasNext"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
+				"bool";
 			case ECall(EField(receiver, method), _):
 				final staticOwner = staticReceiverClassName(receiver, scope);
 				if (staticOwner != null) {
@@ -4177,6 +4181,10 @@ class CppTargetCore {
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				"std::string";
+			case ECall(EField(receiver, "next"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
+				cppIteratorElementType(exprCppType(receiver, scope));
+			case ECall(EField(receiver, "hasNext"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
+				"bool";
 			case ECall(EField(_, "flatten"), [ECall(EField(_, "map"), [_, mapper])]):
 				cppFunctionReturnTypeFromCppType(exprCppType(mapper, scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
@@ -6057,6 +6065,10 @@ class CppTargetCore {
 
 	static function cppVectorElementType(typeName:String):String {
 		return CppTypeModel.cppVectorElementType(typeName);
+	}
+
+	static function cppIteratorElementType(typeName:String):String {
+		return CppTypeModel.cppIteratorElementType(typeName);
 	}
 
 	static function isCppArrayBackedAbstractType(typeName:String, ?scope:CppRenderScope):Bool {
