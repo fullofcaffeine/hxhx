@@ -769,6 +769,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function macroRefTypeProgram():GenIrProgram {
+		final src = [
+			"typedef Ref<T> = {",
+			"  public function get():T;",
+			"  public function toString():String;",
+			"}",
+			"class ClassType {",
+			"  public function new() {}",
+			"}",
+			"class MacroTypeUse {",
+			"  public static function getLocalClass():Ref<ClassType> {",
+			"    return null;",
+			"  }",
+			"  public static function getLocalUsing():Array<Ref<ClassType>> {",
+			"    return [];",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {}",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function mainLoopRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Lock {",
@@ -1157,7 +1183,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"opaque object block should preserve multiple initializer field values");
 		final opaqueTypedLocalRefBlock = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('opaque_block_expr:{ var x:TypedefToStringMap<String>; x; }'));
-		assertContains(opaqueTypedLocalRefBlock, "std::shared_ptr<TypedefToStringMap> x = nullptr;",
+		assertContains(opaqueTypedLocalRefBlock, "std::shared_ptr<TypedefToStringMap<std::string>> x = nullptr;",
 			"opaque typed class-like local references should default-initialize as nullable C++ references");
 		assertContains(opaqueTypedLocalRefBlock, "return x;", "opaque typed local reference should return the local value");
 		final opaqueTypedLocalInitBlock = @:privateAccess
@@ -3202,6 +3228,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic IMap key/value iterators should unwrap optional values when the key local is inferred from Iterator.next()");
 		assertTrue(mapKeyValueSource.indexOf("struct __hxhx_anon_value_int__key_std__string") < 0,
 			"C++ generic IMap key/value iterator records should not predeclare optional values as Int");
+
+		final macroRefDir = Path.join([root, "macro-ref-type-source-only"]);
+		final macroRefEmit = BackendRegistry.createForTarget("cpp-native").emit(macroRefTypeProgram(), context(macroRefDir, true, true));
+		final macroRefSource = File.getContent(macroRefEmit.entryPath);
+		assertContains(macroRefSource, "template<typename T>\nstruct Ref;",
+			"C++ generic typedef helper placeholders should remain generic forward declarations");
+		assertContains(macroRefSource, "static std::shared_ptr<Ref<std::shared_ptr<ClassType>>> getLocalClass()",
+			"C++ macro Ref<ClassType> return types should preserve generic type arguments");
+		assertContains(macroRefSource, "static std::vector<std::shared_ptr<Ref<std::shared_ptr<ClassType>>>> getLocalUsing()",
+			"C++ Array<Ref<ClassType>> return types should preserve nested generic type arguments");
+		assertTrue(macroRefSource.indexOf("std::shared_ptr<Ref>") < 0, "C++ generic class-like type hints should not erase template arguments to raw Ref");
+		assertTrue(macroRefSource.indexOf("public_") < 0, "C++ typedef function surfaces should not be mis-scanned as duplicate public_ fields");
 
 		final mainLoopDir = Path.join([root, "main-loop-runtime-source-only"]);
 		final mainLoopEmit = BackendRegistry.createForTarget("cpp-native").emit(mainLoopRuntimeProgram(), context(mainLoopDir, true, true));

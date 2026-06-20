@@ -1559,13 +1559,49 @@ class ParserStage {
 			if (seen.exists(typeName))
 				continue;
 			seen.set(typeName, true);
+			final typeParams = scanTypeParameterNames(source, i);
+			i = typeParams.nextPos;
 
 			final scanned = scanTypedefShape(source, i);
 			i = scanned.nextPos;
-			out.push(new HxClassDecl(typeName, false, [], scanned.fields));
+			final metadata = typeParams.params.length == 0 ? [] : ["__hxhx_type_params=" + typeParams.params.join(",")];
+			out.push(new HxClassDecl(typeName, false, [], scanned.fields, "", metadata));
 		}
 
 		return out;
+	}
+
+	static function scanTypeParameterNames(source:String, start:Int):{nextPos:Int, params:Array<String>} {
+		final params = new Array<String>();
+		final first = scanNextToken(source, start);
+		if (first.text != "<")
+			return {nextPos: start, params: params};
+		var i = first.nextPos;
+		var depth = 1;
+		var expectingName = true;
+		while (true) {
+			final tok = scanNextToken(source, i);
+			i = tok.nextPos;
+			if (tok.text.length == 0)
+				return {nextPos: i, params: params};
+			switch (tok.text) {
+				case "<":
+					depth += 1;
+				case ">":
+					depth -= 1;
+					if (depth <= 0)
+						return {nextPos: i, params: params};
+				case "," if (depth == 1):
+					expectingName = true;
+				case ":" if (depth == 1):
+					expectingName = false;
+				case _:
+					if (depth == 1 && expectingName && tok.isIdent) {
+						params.push(tok.text);
+						expectingName = false;
+					}
+			}
+		}
 	}
 
 	static function scanTypedefShape(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>} {
@@ -1634,11 +1670,22 @@ class ParserStage {
 			}
 			if (depth != 1)
 				continue;
+			while (isTypedefFieldModifier(tok.text)) {
+				tok = scanNextToken(source, i);
+				i = tok.nextPos;
+			}
 			if (tok.text == "var" || tok.text == "final") {
 				tok = scanNextFieldNameToken(source, i);
 				i = tok.nextPos;
 			}
-			if (!tok.isIdent || tok.text.length == 0 || tok.text == "function")
+			if (tok.text == "function") {
+				final end = skipTypedefField(source, i);
+				i = end.nextPos;
+				if (end.closed)
+					return {nextPos: i, fields: fields};
+				continue;
+			}
+			if (!tok.isIdent || tok.text.length == 0)
 				continue;
 			final typeHint = scanFieldTypeHint(source, tok.nextPos);
 			fields.push(new HxFieldDecl(tok.text, HxVisibility.Public, false, typeHint, null));
@@ -1663,6 +1710,10 @@ class ParserStage {
 				continue;
 			return tok;
 		}
+	}
+
+	static function isTypedefFieldModifier(text:String):Bool {
+		return text == "public" || text == "private" || text == "static" || text == "inline" || text == "dynamic" || text == "overload" || text == "extern";
 	}
 
 	static function skipTypedefField(source:String, start:Int):{nextPos:Int, closed:Bool} {

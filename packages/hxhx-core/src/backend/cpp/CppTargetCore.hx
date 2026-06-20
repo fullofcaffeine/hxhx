@@ -1213,9 +1213,13 @@ class CppTargetCore {
 		final deps = new Array<String>();
 		final seen = new haxe.ds.StringMap<Bool>();
 		final self = sanitizeTypePath(HxClassDecl.getName(cls));
+		final typeParams = genericClassTypeParams(cls);
 		function add(name:String):Void {
 			if (name == null || name == self || !classLookup.names.exists(name) || seen.exists(name))
 				return;
+			for (param in typeParams)
+				if (name == sanitizeIdentifier(param))
+					return;
 			seen.set(name, true);
 			deps.push(name);
 		}
@@ -2045,12 +2049,24 @@ class CppTargetCore {
 	static function genericClassTypeParams(cls:HxClassDecl):Array<String> {
 		final params = new Array<String>();
 		final seen = new haxe.ds.StringMap<Bool>();
+		function addParam(param:String):Void {
+			final clean = sanitizeIdentifier(StringTools.trim(param == null ? "" : param));
+			if (clean.length > 0 && !seen.exists(clean)) {
+				seen.set(clean, true);
+				params.push(clean);
+			}
+		}
+		for (meta in HxClassDecl.getMetadata(cls)) {
+			final prefix = "__hxhx_type_params=";
+			if (StringTools.startsWith(meta, prefix)) {
+				for (param in meta.substr(prefix.length).split(","))
+					addParam(param);
+			}
+		}
 		function addHint(typeHint:String):Void {
 			final param = genericTypeParamName(typeHint);
-			if (param.length > 0 && !seen.exists(param)) {
-				seen.set(param, true);
-				params.push(param);
-			}
+			if (param.length > 0)
+				addParam(param);
 		}
 		for (field in HxClassDecl.getFields(cls))
 			addHint(HxFieldDecl.getTypeHint(field));

@@ -161,6 +161,11 @@ class CppTypeModel {
 		return open < 0 || !StringTools.endsWith(hint, ">") ? "" : hint.substr(open + 1, hint.length - open - 2);
 	}
 
+	static function genericTypeHintArgs(typeHint:String):Array<String> {
+		final arg = genericTypeHintArg(typeHint);
+		return arg.length == 0 ? [] : splitTopLevelComma(arg);
+	}
+
 	public static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		if (StringTools.startsWith(raw, "Null<") && StringTools.endsWith(raw, ">"))
@@ -195,11 +200,57 @@ class CppTypeModel {
 				"std::vector<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">";
 			case _ if (isFunctionTypeHint(hint)):
 				cppFunctionTypeHint(hint, scope, classLookup);
+			case _ if (erasedClassLikeTypeName(hint) != null):
+				"std::shared_ptr<" + erasedClassLikeTypeName(hint) + ">";
 			case _ if (isClassLikeTypeHint(hint)):
-				"std::shared_ptr<" + sanitizeTypePath(typeBaseName(hint)) + ">";
+				"std::shared_ptr<" + cppClassLikeTypeName(hint, scope, classLookup) + ">";
 			case _:
 				"std::string";
 		};
+	}
+
+	static function erasedClassLikeTypeName(typeHint:String):Null<String> {
+		return switch (sanitizeTypePath(typeBaseName(typeHint))) {
+			case "Class":
+				"Class";
+			case "Enum":
+				"Enum";
+			case "KeyValueIterator":
+				"KeyValueIterator";
+			case _:
+				null;
+		};
+	}
+
+	static function cppClassLikeTypeName(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final base = sanitizeTypePath(typeBaseName(typeHint));
+		final args = genericTypeHintArgs(typeHint);
+		if (args.length == 0)
+			return base;
+		final cls = lookupClassForTypeHint(typeHint, scope, classLookup);
+		if (cls != null && classHasRawSelfTypeReference(cls))
+			return base;
+		return base + "<" + [for (arg in args) cppTypeHint(arg, scope, classLookup)].join(", ") + ">";
+	}
+
+	static function classHasRawSelfTypeReference(cls:HxClassDecl):Bool {
+		final self = sanitizeTypePath(HxClassDecl.getName(cls));
+		function rawSelf(typeHint:String):Bool {
+			final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+			final hint = unwrapNullTypeHint(raw);
+			return sanitizeTypePath(typeBaseName(hint)) == self;
+		}
+		for (field in HxClassDecl.getFields(cls))
+			if (rawSelf(HxFieldDecl.getTypeHint(field)))
+				return true;
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (rawSelf(HxFunctionDecl.getReturnTypeHint(fn)))
+				return true;
+			for (arg in HxFunctionDecl.getArgs(fn))
+				if (rawSelf(HxFunctionArg.getTypeHint(arg)))
+					return true;
+		}
+		return false;
 	}
 
 	public static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
