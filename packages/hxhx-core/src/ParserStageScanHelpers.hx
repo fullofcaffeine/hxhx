@@ -463,7 +463,7 @@ class ParserStageScanHelpers {
 						final args = new Array<HxFunctionArg>();
 						final values = new Array<HxExpr>();
 						for (a in ctorArgs)
-							args.push(new HxFunctionArg(a.name, "", HxDefaultValue.NoDefault, a.isOptional, false));
+							args.push(new HxFunctionArg(a.name, a.typeHint, HxDefaultValue.NoDefault, a.isOptional, false));
 						for (a in ctorArgs)
 							values.push(EIdent(a.name));
 						// Constructors conceptually return an enum value; during bring-up we keep the
@@ -908,8 +908,8 @@ class ParserStageScanHelpers {
 	}
 
 	public static function scanEnumBodyForCtors(source:String,
-			start:Int):{nextPos:Int, ctors:Array<{name:String, args:Array<{name:String, isOptional:Bool}>, metadata:Array<String>}>} {
-		final ctors = new Array<{name:String, args:Array<{name:String, isOptional:Bool}>, metadata:Array<String>}>();
+			start:Int):{nextPos:Int, ctors:Array<{name:String, args:Array<{name:String, typeHint:String, isOptional:Bool}>, metadata:Array<String>}>} {
+		final ctors = new Array<{name:String, args:Array<{name:String, typeHint:String, isOptional:Bool}>, metadata:Array<String>}>();
 
 		var depth = 1; // we start just after `{`
 		var i = start;
@@ -989,6 +989,51 @@ class ParserStageScanHelpers {
 			}
 		}
 
+		function scanParamTypeHint(startPos:Int):{hint:String, nextPos:Int} {
+			final colon = scanNextToken(source, startPos);
+			if (colon.text != ":")
+				return {hint: "", nextPos: startPos};
+			final parts = new Array<String>();
+			var j = colon.nextPos;
+			var parenDepth = 0;
+			var bracketDepth = 0;
+			var braceDepth = 0;
+			var angleDepth = 0;
+			while (true) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0)
+					return {hint: parts.join(""), nextPos: j};
+				final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0;
+				if (atTop && (tok.text == "," || tok.text == ")" || tok.text == "="))
+					return {hint: parts.join(""), nextPos: j};
+				parts.push(tok.text);
+				j = tok.nextPos;
+				switch (tok.text) {
+					case "(":
+						parenDepth += 1;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth -= 1;
+					case "[":
+						bracketDepth += 1;
+					case "]":
+						if (bracketDepth > 0)
+							bracketDepth -= 1;
+					case "{":
+						braceDepth += 1;
+					case "}":
+						if (braceDepth > 0)
+							braceDepth -= 1;
+					case "<":
+						angleDepth += 1;
+					case ">":
+						if (angleDepth > 0)
+							angleDepth -= 1;
+					case _:
+				}
+			}
+		}
+
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
@@ -1018,7 +1063,7 @@ class ParserStageScanHelpers {
 			if (depth != 1)
 				continue;
 			final ctorName = t.text;
-			final ctorArgs = new Array<{name:String, isOptional:Bool}>();
+			final ctorArgs = new Array<{name:String, typeHint:String, isOptional:Bool}>();
 			final ctorMetadata = pendingMetadata.copy();
 			pendingMetadata = [];
 
@@ -1093,7 +1138,9 @@ class ParserStageScanHelpers {
 
 					final nm = at.text;
 					final argName = (nm == null || nm.length == 0) ? ("arg" + argIndex) : nm;
-					ctorArgs.push({name: argName, isOptional: pendingOptional});
+					final typeHint = scanParamTypeHint(i);
+					i = typeHint.nextPos;
+					ctorArgs.push({name: argName, typeHint: typeHint.hint, isOptional: pendingOptional});
 					argIndex += 1;
 					expectArg = false;
 					pendingOptional = false;

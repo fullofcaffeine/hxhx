@@ -775,6 +775,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function get():T;",
 			"  public function toString():String;",
 			"}",
+			"enum ModuleType {",
+			"  TClassDecl(c:Ref<ClassType>);",
+			"}",
 			"class ClassType {",
 			"  public function new() {}",
 			"}",
@@ -3238,6 +3241,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ macro Ref<ClassType> return types should preserve generic type arguments");
 		assertContains(macroRefSource, "static std::vector<std::shared_ptr<Ref<std::shared_ptr<ClassType>>>> getLocalUsing()",
 			"C++ Array<Ref<ClassType>> return types should preserve nested generic type arguments");
+		assertContains(macroRefSource, "static std::string TClassDecl(std::shared_ptr<Ref<std::shared_ptr<ClassType>>> c)",
+			"C++ enum constructor payloads should preserve generic Ref<T> type arguments");
 		assertTrue(macroRefSource.indexOf("std::shared_ptr<Ref>") < 0, "C++ generic class-like type hints should not erase template arguments to raw Ref");
 		assertTrue(macroRefSource.indexOf("public_") < 0, "C++ typedef function surfaces should not be mis-scanned as duplicate public_ fields");
 
