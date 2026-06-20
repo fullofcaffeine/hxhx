@@ -2024,6 +2024,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		mapIteratorClasses.set("MapKeyValueIterator", mapKeyValueIterator);
 		final mapKeyValueIteratorLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperClass(mapKeyValueIterator, {names: mapIteratorNames, byName: mapIteratorClasses}).join("\n");
+		assertContains(mapKeyValueIteratorLines, "struct MapKeyValueIterator : public KeyValueIterator {",
+			"C++ structural key/value iterator helpers should inherit the target-owned KeyValueIterator marker");
 		assertContains(mapKeyValueIteratorLines, "auto key = keys->next();", "C++ iterator-protocol next calls should support unhinted key locals");
 		assertContains(mapKeyValueIteratorLines,
 			"return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",
@@ -2867,8 +2869,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final mapKeyValueDir = Path.join([root, "imap-key-value-iterator-source-only"]);
 		final mapKeyValueEmit = BackendRegistry.createForTarget("cpp-native").emit(mapKeyValueIteratorProgram(), context(mapKeyValueDir, true, true));
 		final mapKeyValueSource = File.getContent(mapKeyValueEmit.entryPath);
+		assertContains(mapKeyValueSource, "struct KeyValueIterator {",
+			"C++ structural KeyValueIterator typedef support should emit a target-owned marker declaration");
+		assertTrue(mapKeyValueSource.indexOf("struct KeyValueIterator {") < mapKeyValueSource.indexOf("struct MapKeyValueIterator : public KeyValueIterator {"),
+			"C++ KeyValueIterator marker should be declared before structural key/value iterator helpers inherit it");
 		assertContains(mapKeyValueSource, "struct __hxhx_anon_value_std__string_key_std__string {",
 			"C++ anon predeclaration collection should preserve generic IMap key/value iterator field types");
+		assertContains(mapKeyValueSource, "struct MapKeyValueIterator : public KeyValueIterator {",
+			"C++ generic IMap key/value iterator helpers should be upcastable to KeyValueIterator");
 		assertContains(mapKeyValueSource, "return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",
 			"C++ generic IMap key/value iterators should unwrap optional values when the key local is inferred from Iterator.next()");
 		assertTrue(mapKeyValueSource.indexOf("struct __hxhx_anon_value_int__key_std__string") < 0,

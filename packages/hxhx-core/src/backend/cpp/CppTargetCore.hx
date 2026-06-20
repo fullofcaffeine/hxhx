@@ -988,6 +988,8 @@ class CppTargetCore {
 					if (shouldForwardDeclareMissingType(clean, classLookup))
 						emitType(clean);
 				}
+				for (iface in implementedInterfaceNames(cls, classLookup))
+					addMissing(iface);
 				for (field in HxClassDecl.getFields(cls))
 					addTypeHintDependencies(HxFieldDecl.getTypeHint(field), addMissing);
 				for (fn in HxClassDecl.getFunctions(cls)) {
@@ -1010,9 +1012,10 @@ class CppTargetCore {
 	**/
 	static function renderMissingInterfaceDeclaration(name:String):Null<Array<String>> {
 		return switch (sanitizeTypePath(typeBaseName(name == null ? "" : name))) {
+			case "KeyValueIterator":
+				["struct KeyValueIterator {", "  virtual ~KeyValueIterator() = default;", "};"];
 			case "IMap":
 				[
-					"struct KeyValueIterator;",
 					"struct IMap {",
 					"  virtual ~IMap() = default;",
 					"  virtual std::optional<std::string> get(std::string k) = 0;",
@@ -1128,6 +1131,8 @@ class CppTargetCore {
 			deps.push(name);
 		}
 		add(baseTypeName(cls));
+		for (iface in implementedInterfaceNames(cls, classLookup))
+			add(iface);
 		for (field in HxClassDecl.getFields(cls))
 			addTypeHintDependencies(HxFieldDecl.getTypeHint(field), add);
 		for (fn in HxClassDecl.getFunctions(cls)) {
@@ -1299,8 +1304,9 @@ class CppTargetCore {
 			return renderStdArrayHelperClass(cls, classLookup);
 		final typeParams = genericClassTemplateParams(cls);
 		final baseType = baseTypeName(cls);
+		final baseTypes = inheritedCppBaseTypes(cls, classLookup);
 		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
-		out.push("struct " + className + (baseType == null ? "" : " : public " + baseType) + " {");
+		out.push("struct " + className + (baseTypes.length == 0 ? "" : " : " + baseTypes.join(", ")) + " {");
 		final scope = renderScope(cls, classLookup, "void");
 		for (field in HxClassDecl.getFields(cls)) {
 			final init = HxFieldDecl.getInit(field);
@@ -1665,6 +1671,44 @@ class CppTargetCore {
 		if (extendsPath == null || extendsPath.length == 0)
 			return null;
 		return sanitizeTypePath(typeBaseName(extendsPath));
+	}
+
+	static function inheritedCppBaseTypes(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final bases = new Array<String>();
+		final baseType = baseTypeName(cls);
+		if (baseType != null && baseType.length > 0)
+			bases.push("public " + baseType);
+		for (iface in implementedInterfaceNames(cls, classLookup))
+			bases.push("public " + iface);
+		return bases;
+	}
+
+	static function implementedInterfaceNames(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final out = new Array<String>();
+		final seen = new haxe.ds.StringMap<Bool>();
+		function add(name:String):Void {
+			final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
+			if (clean.length == 0 || seen.exists(clean))
+				return;
+			seen.set(clean, true);
+			out.push(clean);
+		}
+		for (path in HxClassDecl.getImplementsPaths(cls))
+			add(path);
+		for (name in syntheticStructuralInterfaceNames(cls, classLookup))
+			add(name);
+		return out;
+	}
+
+	static function syntheticStructuralInterfaceNames(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls)));
+		return switch (className) {
+			case "MapKeyValueIterator" | "HashMapKeyValueIterator" | "ListKeyValueIterator" | "ArrayKeyValueIterator" | "RestKeyValueIterator" |
+				"StringKeyValueIterator" | "StringKeyValueIteratorUnicode" | "DynamicAccessKeyValueIterator":
+				["KeyValueIterator"];
+			case _:
+				[];
+		};
 	}
 
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
