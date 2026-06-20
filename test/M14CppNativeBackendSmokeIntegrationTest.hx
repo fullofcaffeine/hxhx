@@ -1122,6 +1122,49 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ wrappers that forward erased args into known Bool helper params should infer bool, not std::string");
 		assertTrue(testBoolWrapperLines.indexOf("std::string t(std::string v") < 0,
 			"C++ Assert.isTrue wrapper args should not stay string-only when call sites pass bools");
+		final arraySortCompare = new HxFunctionDecl("compare", Public, true, [
+			new HxFunctionArg("a", "Array<String>", NoDefault, false, false),
+			new HxFunctionArg("cmp", "String->String->Int", NoDefault, false, false),
+			new HxFunctionArg("i", "", NoDefault, false, false),
+			new HxFunctionArg("j", "", NoDefault, false, false)
+		], "Int", [
+			SReturn(ECall(EIdent("cmp"), [EArrayAccess(EIdent("a"), EIdent("i")), EArrayAccess(EIdent("a"), EIdent("j"))]), HxPos.unknown())
+		], "");
+		final arraySortLower = new HxFunctionDecl("lower", Public, true, [
+			new HxFunctionArg("a", "Array<String>", NoDefault, false, false),
+			new HxFunctionArg("cmp", "String->String->Int", NoDefault, false, false),
+			new HxFunctionArg("from", "", NoDefault, false, false),
+			new HxFunctionArg("to", "", NoDefault, false, false),
+			new HxFunctionArg("val", "", NoDefault, false, false)
+		], "Int", [
+			SIf(EBinop("<", ECall(EIdent("compare"), [EIdent("a"), EIdent("cmp"), EIdent("val"), EIdent("from")]), EInt(0)),
+				SReturn(EIdent("to"), HxPos.unknown()), null, HxPos.unknown()),
+			SReturn(EIdent("from"), HxPos.unknown())
+		], "");
+		final arraySortDoMerge = new HxFunctionDecl("doMerge", Public, true, [
+			new HxFunctionArg("a", "Array<String>", NoDefault, false, false),
+			new HxFunctionArg("cmp", "String->String->Int", NoDefault, false, false),
+			new HxFunctionArg("from", "", NoDefault, false, false),
+			new HxFunctionArg("pivot", "", NoDefault, false, false),
+			new HxFunctionArg("to", "", NoDefault, false, false),
+			new HxFunctionArg("len1", "", NoDefault, false, false),
+			new HxFunctionArg("len2", "", NoDefault, false, false)
+		], "Void", [
+			SVar("len11", "", EBinop(">>", EIdent("len1"), EInt(1)), HxPos.unknown()),
+			SVar("len22", "", EBinop(">>", EIdent("len2"), EInt(1)), HxPos.unknown()),
+			SVar("first_cut", "", EBinop("+", EIdent("from"), EIdent("len11")), HxPos.unknown()),
+			SExpr(ECall(EIdent("lower"), [EIdent("a"), EIdent("cmp"), EIdent("pivot"), EIdent("to"), EIdent("first_cut")]), HxPos.unknown()),
+			SExpr(ECall(EIdent("doMerge"), [
+				EIdent("a"),
+				EIdent("cmp"),
+				EIdent("from"),
+				EIdent("first_cut"),
+				EIdent("to"),
+				EIdent("len11"),
+				EIdent("len22")
+			]), HxPos.unknown()),
+			SReturnVoid(HxPos.unknown())
+		], "");
 		final arraySortRec = new HxFunctionDecl("rec", Public, true, [
 			new HxFunctionArg("a", "Array<String>", NoDefault, false, false),
 			new HxFunctionArg("cmp", "String->String->Int", NoDefault, false, false),
@@ -1133,24 +1176,44 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SIf(EBinop("<=", EIdent("to"), EIdent("from")), SReturnVoid(HxPos.unknown()), null, HxPos.unknown()),
 				SExpr(EArrayAccess(EIdent("a"), EBinop("-", EIdent("to"), EInt(1))), HxPos.unknown())
 			], HxPos.unknown()), null, HxPos.unknown()),
+			SExpr(ECall(EIdent("doMerge"), [
+				EIdent("a"),
+				EIdent("cmp"),
+				EIdent("from"),
+				EIdent("middle"),
+				EIdent("to"),
+				EBinop("-", EIdent("middle"), EIdent("from")),
+				EBinop("-", EIdent("to"), EIdent("middle"))
+			]), HxPos.unknown()),
 			SReturnVoid(HxPos.unknown())
 		], "");
 		final arraySortSort = new HxFunctionDecl("sort", Public, true, [
 			new HxFunctionArg("a", "Array<String>", NoDefault, false, false),
 			new HxFunctionArg("cmp", "String->String->Int", NoDefault, false, false)
-		], "Void", [
-			SExpr(ECall(EIdent("rec"), [EIdent("a"), EIdent("cmp"), EInt(0), EField(EIdent("a"), "length")]), HxPos.unknown()),
-			SReturnVoid(HxPos.unknown())
+		], "", [
+			SReturn(ECall(EIdent("rec"), [EIdent("a"), EIdent("cmp"), EInt(0), EField(EIdent("a"), "length")]), HxPos.unknown())
 		], "");
-		final arraySortOwner = new HxClassDecl("ArraySort", false, [arraySortSort, arraySortRec], []);
+		final arraySortOwner = new HxClassDecl("ArraySort", false, [arraySortSort, arraySortRec, arraySortDoMerge, arraySortLower, arraySortCompare], []);
 		final arraySortNames = new StringMap<Bool>();
 		arraySortNames.set("ArraySort", true);
 		final arraySortClasses = new StringMap<HxClassDecl>();
 		arraySortClasses.set("ArraySort", arraySortOwner);
 		final arraySortLookup = {names: arraySortNames, byName: arraySortClasses};
+		final arraySortSortLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(arraySortSort, arraySortOwner, arraySortLookup).join("\n");
 		final arraySortRecLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(arraySortRec, arraySortOwner, arraySortLookup).join("\n");
+		final arraySortDoMergeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(arraySortDoMerge, arraySortOwner, arraySortLookup)
+			.join("\n");
+		final arraySortLowerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(arraySortLower, arraySortOwner, arraySortLookup).join("\n");
+		assertContains(arraySortSortLines, "static void sort(std::vector<std::string> a, std::function<int(std::string, std::string)> cmp)",
+			"C++ ArraySort-like wrappers returning void helper calls should infer void rather than std::string");
 		assertContains(arraySortRecLines, "static void rec(std::vector<std::string> a, std::function<int(std::string, std::string)> cmp, int from, int to)",
 			"C++ ArraySort-like index/range helper parameters should infer int from arithmetic and array-index use");
+		assertContains(arraySortDoMergeLines,
+			"static void doMerge(std::vector<std::string> a, std::function<int(std::string, std::string)> cmp, int from, int pivot, int to, int len1, int len2)",
+			"C++ ArraySort-like sibling helper calls should reuse inferred integer range parameters");
+		assertContains(arraySortLowerLines,
+			"static int lower(std::vector<std::string> a, std::function<int(std::string, std::string)> cmp, int from, int to, int val)",
+			"C++ ArraySort-like binary-search helpers should infer forwarded compare indexes as int");
 		assertTrue(arraySortRecLines.indexOf("std::string from") < 0 && arraySortRecLines.indexOf("std::string to") < 0,
 			"C++ ArraySort-like helper indexes should not stay string-shaped");
 		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [

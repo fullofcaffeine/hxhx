@@ -53,6 +53,8 @@ typedef CppConstructorFieldInitializer = {
 	  before rerunning the upstream-derived Cpp gate.
 **/
 class CppTargetCore {
+	static final inferredSignatureStack = new haxe.ds.StringMap<Bool>();
+
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		final main = mainModule(program, context);
 		final className = sanitizeIdentifier(HxClassDecl.getName(main.cls));
@@ -2214,9 +2216,10 @@ class CppTargetCore {
 				for (s in stmts)
 					collectCallableArgTypeOverridesFromStmt(s, scope, candidates, expectedType);
 			case SVar(name, typeHint, init, _):
+				final localType = inferredLocalTypeForArgInference(typeHint, init, scope);
 				if (init != null)
-					collectCallableArgTypeOverridesFromExpr(init, scope, candidates, cppLocalTypeHint(typeHint, init, scope));
-				scope.localTypes.set(sanitizeIdentifier(name), cppLocalTypeHint(typeHint, init, scope));
+					collectCallableArgTypeOverridesFromExpr(init, scope, candidates, localType);
+				scope.localTypes.set(sanitizeIdentifier(name), localType);
 			case SIf(cond, thenBranch, elseBranch, _):
 				collectCallableArgTypeOverridesFromExpr(cond, scope, candidates, "bool");
 				collectCallableArgTypeOverridesFromStmt(thenBranch, scope, candidates, expectedType);
@@ -2316,6 +2319,13 @@ class CppTargetCore {
 		}
 	}
 
+	static function inferredLocalTypeForArgInference(typeHint:String, init:HxExpr, scope:CppRenderScope):String {
+		final hinted = cppLocalTypeHint(typeHint, init, scope);
+		if (hinted.length > 0)
+			return hinted;
+		return init == null ? "" : inferExprCppType(init, scope);
+	}
+
 	static function binaryOperandExpectedType(expr:HxExpr, operand:HxExpr, other:HxExpr, scope:CppRenderScope):String {
 		return switch (expr) {
 			case EBinop(op, _, _):
@@ -2343,26 +2353,27 @@ class CppTargetCore {
 		final params = knownCallParams(callee, scope);
 		if (params == null || params.length == 0 || args == null || args.length == 0)
 			return;
+		final paramTypes = knownCallParamCppTypes(callee, scope);
 		var paramIndex = 0;
 		var argIndex = 0;
 		while (argIndex < args.length && paramIndex < params.length) {
 			final param = params[paramIndex];
 			final arg = args[argIndex];
 			if (callArgMatchesParam(arg, param, scope) || !callParamCanBeSkipped(param)) {
-				applyForwardedArgTypeOverride(arg, param, scope, candidates);
+				applyForwardedArgTypeOverride(arg, param, paramTypes == null ? "" : paramTypes[paramIndex], scope, candidates);
 				paramIndex++;
 				argIndex++;
 				continue;
 			}
 			final later = findLaterMatchingParam(params, arg, paramIndex + 1, scope);
 			if (later < 0) {
-				applyForwardedArgTypeOverride(arg, param, scope, candidates);
+				applyForwardedArgTypeOverride(arg, param, paramTypes == null ? "" : paramTypes[paramIndex], scope, candidates);
 				paramIndex++;
 				argIndex++;
 				continue;
 			}
 			paramIndex = later;
-			applyForwardedArgTypeOverride(arg, params[paramIndex], scope, candidates);
+			applyForwardedArgTypeOverride(arg, params[paramIndex], paramTypes == null ? "" : paramTypes[paramIndex], scope, candidates);
 			paramIndex++;
 			argIndex++;
 		}
@@ -2392,10 +2403,45 @@ class CppTargetCore {
 		};
 	}
 
-	static function applyForwardedArgTypeOverride(arg:HxExpr, param:HxFunctionArg, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+	static function knownCallParamCppTypes(callee:HxExpr, scope:CppRenderScope):Null<Array<String>> {
+		final fn = knownCallDecl(callee, scope);
+		if (fn == null)
+			return null;
+		return inferredFunctionArgCppTypes(fn, ownerForKnownCall(callee, scope), scope.classByName);
+	}
+
+	static function knownCallDecl(callee:HxExpr, scope:CppRenderScope):Null<HxFunctionDecl> {
+		return switch (callee) {
+			case EIdent(name):
+				currentOwnerMethod(name, scope);
+			case EField(receiver, method):
+				final staticOwner = staticReceiverClassName(receiver, scope);
+				if (staticOwner != null) classMethodDecl(staticOwner, method, true, scope); else {
+					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+					ownerType == null ? null : classMethodDecl(ownerType, method, false, scope);
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function ownerForKnownCall(callee:HxExpr, scope:CppRenderScope):HxClassDecl {
+		return switch (callee) {
+			case EField(receiver, _):
+				final staticOwner = staticReceiverClassName(receiver, scope);
+				if (staticOwner != null && scope != null && scope.classByName.exists(staticOwner)) scope.classByName.get(staticOwner); else
+					scope == null ? null : scope.owner;
+			case _:
+				scope == null ? null : scope.owner;
+		};
+	}
+
+	static function applyForwardedArgTypeOverride(arg:HxExpr, param:HxFunctionArg, inferredParamType:String, scope:CppRenderScope,
+			candidates:haxe.ds.StringMap<Bool>):Void {
 		switch (arg) {
 			case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
-				final paramType = cppFunctionArgType(param, scope);
+				final paramType = inferredParamType != null
+					&& inferredParamType.length > 0 ? inferredParamType : cppFunctionArgType(param, scope);
 				final expectedType = concreteForwardedOverrideType(paramType);
 				if (expectedType.length > 0)
 					setAssignedArgTypeOverride(scope, sanitizeIdentifier(name), expectedType);
@@ -3749,8 +3795,7 @@ class CppTargetCore {
 		final fn = currentOwnerMethod(methodName, scope);
 		if (fn == null)
 			return "";
-		final className = sanitizeTypePath(HxClassDecl.getName(scope.owner));
-		return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
+		return inferredFunctionReturnCppType(fn, scope.owner, scope.classByName);
 	}
 
 	static function currentOwnerMethod(methodName:String, scope:CppRenderScope):Null<HxFunctionDecl> {
@@ -3930,6 +3975,10 @@ class CppTargetCore {
 				"bool";
 			case EBinop(op, left, right) if (isArithmeticBinaryOp(op) && (isCppDoubleExpr(left, scope) || isCppDoubleExpr(right, scope))):
 				"double";
+			case EBinop(op, _, _) if (isIntegerArithmeticBinaryOp(op)):
+				"int";
+			case EBinop("+", left, right) if (isCppIntExpr(left, scope) || isCppIntExpr(right, scope)):
+				"int";
 			case ETernary(_, thenExpr, elseExpr) if (isCppDoubleExpr(thenExpr, scope) && isCppDoubleExpr(elseExpr, scope)):
 				"double";
 			case ECast(inner, _) | EUntyped(inner):
@@ -4859,6 +4908,14 @@ class CppTargetCore {
 		};
 	}
 
+	static function isCppIntExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return switch (expr) {
+			case EInt(_):
+				true;
+			case _: exprCppType(expr, scope) == "int" || inferExprCppType(expr, scope) == "int";
+		};
+	}
+
 	static function isCppBoolExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
 		return switch (expr) {
 			case EBool(_):
@@ -5563,25 +5620,103 @@ class CppTargetCore {
 	}
 
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		return inferredFunctionReturnCppType(fn, owner, classLookup.byName);
+	}
+
+	static function inferredFunctionReturnCppType(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>):String {
 		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
 		final ownerName = owner == null ? "" : sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
 		if (ownerName == "Bytes" && sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "fill")
-			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null, classLookup);
+			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
+				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
 		if (isStringIteratorHelper(ownerName))
-			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null, classLookup);
+			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
+				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
 		if (raw.length > 0)
-			return cppReturnTypeHint(raw, null, classLookup);
+			return cppReturnTypeHint(raw, null, {names: new haxe.ds.StringMap<Bool>(), byName: classByName});
 		if (functionReturnsLambda(fn))
 			return "auto";
-		final scope = renderScope(owner, classLookup, "auto");
+		final key = functionSignatureKey(owner, fn);
+		if (inferredSignatureStack.exists(key))
+			return "";
+		inferredSignatureStack.set(key, true);
+		final scope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, "auto");
 		inferCallableArgTypeOverrides(scope, fn);
 		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 		for (stmt in HxFunctionDecl.getBody(fn)) {
 			final inferred = inferReturnTypeFromStmt(stmt, scope);
-			if (inferred.length > 0)
+			if (inferred.length > 0) {
+				inferredSignatureStack.remove(key);
 				return inferred;
+			}
 		}
-		return cppReturnTypeHint(raw, null, classLookup);
+		inferredSignatureStack.remove(key);
+		return functionHasValueReturn(fn) ? cppReturnTypeHint(raw, null, {names: new haxe.ds.StringMap<Bool>(), byName: classByName}) : "void";
+	}
+
+	static function inferredFunctionArgCppTypes(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>):Array<String> {
+		final rawReturn = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
+		final returnType = rawReturn.length > 0 ? cppReturnTypeHint(rawReturn, null, {names: classNamesFromByName(classByName), byName: classByName}) : "auto";
+		final key = functionSignatureKey(owner, fn);
+		if (inferredSignatureStack.exists(key))
+			return [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgBaseType(arg, null)];
+		inferredSignatureStack.set(key, true);
+		final scope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, returnType);
+		inferCallableArgTypeOverrides(scope, fn);
+		final types = [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgType(arg, scope)];
+		inferredSignatureStack.remove(key);
+		return types;
+	}
+
+	static function functionSignatureKey(owner:HxClassDecl, fn:HxFunctionDecl):String {
+		final ownerName = owner == null ? "" : sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		return ownerName + "." + sanitizeIdentifier(HxFunctionDecl.getName(fn));
+	}
+
+	static function classNamesFromByName(classByName:haxe.ds.StringMap<HxClassDecl>):haxe.ds.StringMap<Bool> {
+		final names = new haxe.ds.StringMap<Bool>();
+		if (classByName != null)
+			for (name in classByName.keys())
+				names.set(name, true);
+		return names;
+	}
+
+	static function functionHasValueReturn(fn:HxFunctionDecl):Bool {
+		for (stmt in HxFunctionDecl.getBody(fn))
+			if (stmtHasValueReturn(stmt))
+				return true;
+		return false;
+	}
+
+	static function stmtHasValueReturn(stmt:HxStmt):Bool {
+		return switch (stmt) {
+			case SReturn(_, _):
+				true;
+			case SBlock(stmts, _):
+				stmtsHaveValueReturn(stmts);
+			case SIf(_, thenBranch, elseBranch, _): stmtHasValueReturn(thenBranch) || (elseBranch != null && stmtHasValueReturn(elseBranch));
+			case SWhile(_, body, _) | SDoWhile(body, _, _):
+				stmtHasValueReturn(body);
+			case SSwitch(_, _, bodies, _):
+				stmtsHaveValueReturn(bodies);
+			case STry(tryBody, catches, _):
+				if (stmtHasValueReturn(tryBody)) true; else {
+					var found = false;
+					for (c in catches)
+						if (stmtHasValueReturn(c.body))
+							found = true;
+					found;
+				}
+			case _:
+				false;
+		};
+	}
+
+	static function stmtsHaveValueReturn(stmts:Array<HxStmt>):Bool {
+		for (stmt in stmts)
+			if (stmtHasValueReturn(stmt))
+				return true;
+		return false;
 	}
 
 	static function inferReturnTypeFromStmt(stmt:HxStmt, scope:CppRenderScope):String {
