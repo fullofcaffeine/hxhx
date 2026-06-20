@@ -1372,6 +1372,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper methods returning inferred class locals should forward the reference instead of stringifying it");
 		assertTrue(genericReturnLines.indexOf("std::string filterLike()") < 0,
 			"C++ helper methods returning inferred class locals should not declare std::string");
+		final restIterator = new HxClassDecl("RestIterator", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("args", "Rest", NoDefault, false, false)], "Void",
+				[SExpr(EBinop("=", EField(EThis, "args"), EIdent("args")), HxPos.unknown())], "")
+		], [new HxFieldDecl("args", Public, false, "Rest", null)]);
+		final rest = new HxClassDecl("Rest", false, [
+			new HxFunctionDecl("iterator", Public, false, [], "RestIterator", [SReturn(ENew("RestIterator", [EThis]), HxPos.unknown())], "")
+		], [new HxFieldDecl("length", Public, false, "Int", null)]);
+		final restNames = new StringMap<Bool>();
+		for (name in ["Rest", "RestIterator"])
+			restNames.set(name, true);
+		final restClasses = new StringMap<HxClassDecl>();
+		restClasses.set("Rest", rest);
+		restClasses.set("RestIterator", restIterator);
+		final restLookup = {names: restNames, byName: restClasses};
+		final restIteratorLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(restIterator, restLookup).join("\n");
+		final restLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(rest, restLookup).join("\n");
+		assertContains(restIteratorLines, "RestIterator(std::shared_ptr<Rest> args) {",
+			"C++ helper constructors should keep class-typed parameters as reference handles");
+		assertContains(restLines, "return std::make_shared<RestIterator>(std::shared_ptr<Rest>(this, [](Rest*) {}));",
+			"C++ helper constructors should pass `this` through the expected class reference handle");
+		assertTrue(restLines.indexOf("std::make_shared<RestIterator>((*this))") < 0,
+			"C++ helper constructors should not pass the current object by value to shared_ptr-backed parameters");
 		final vectorPushMethod = new HxFunctionDecl("cloneInto", Public, true, [
 			new HxFunctionArg("seed", "", NoDefault, false, false),
 			new HxFunctionArg("items", "", NoDefault, false, false)

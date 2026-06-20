@@ -2105,7 +2105,6 @@ class CppTargetCore {
 
 	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final className = sanitizeTypePath(typeBaseName(typePath));
-		final renderedArgs = [for (arg in args) renderExpr(arg, scope)].join(", ");
 		if (isBytesDataTypeName(typePath)) {
 			if (args.length > 0)
 				throw "C++ source backend MVP unsupported BytesData constructor arity: " + args.length;
@@ -2113,10 +2112,60 @@ class CppTargetCore {
 		}
 		if (isStdArrayTypePath(typePath))
 			return stdArrayConstructionExpr(typePath, args, scope);
+		final renderedArgs = renderConstructorArgs(className, args, scope).join(", ");
 		return scopeHasClass(scope, className) ? "std::make_shared<" + className + ">(" + renderedArgs + ")" : className
 			+ "("
 			+ renderedArgs
 			+ ")";
+	}
+
+	static function renderConstructorArgs(className:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		final expectedTypes = constructorArgCppTypes(className, scope);
+		return [
+			for (i in 0...args.length)
+				constructorArgExpr(args[i], i < expectedTypes.length ? expectedTypes[i] : "", scope)
+		];
+	}
+
+	static function constructorArgCppTypes(className:String, ?scope:CppRenderScope):Array<String> {
+		if (scope == null || className == null || className.length == 0)
+			return [];
+		final cls = scope.classByName.get(className);
+		if (cls == null)
+			return [];
+		final ctor = findConstructor(cls);
+		if (ctor == null)
+			return [];
+		final ctorScope = renderScope(cls, {names: scope.classNames, byName: scope.classByName}, "void");
+		prepareFunctionScope(ctorScope, ctor);
+		return [for (arg in HxFunctionDecl.getArgs(ctor)) cppFunctionArgType(arg, ctorScope)];
+	}
+
+	static function constructorArgExpr(arg:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
+		final expectedClass = classNameFromCppType(expectedType);
+		if (expectedClass != null) {
+			switch (arg) {
+				case EThis if (currentOwnerIsOrExtends(expectedClass, scope)):
+					final ownerName = sanitizeTypePath(HxClassDecl.getName(scope.owner));
+					return "std::shared_ptr<" + expectedClass + ">(this, [](" + ownerName + "*) {})";
+				case _:
+			}
+		}
+		return renderExpr(arg, scope);
+	}
+
+	static function currentOwnerIsOrExtends(expectedClass:String, ?scope:CppRenderScope):Bool {
+		if (scope == null || scope.owner == null || expectedClass == null || expectedClass.length == 0)
+			return false;
+		var className = sanitizeTypePath(HxClassDecl.getName(scope.owner));
+		while (className != null && className.length > 0) {
+			if (className == expectedClass)
+				return true;
+			final cls = scope.classByName.get(className);
+			final base = cls == null ? null : baseTypeName(cls);
+			className = base == null ? "" : sanitizeTypePath(base);
+		}
+		return false;
 	}
 
 	static function stdArrayConstructionExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
