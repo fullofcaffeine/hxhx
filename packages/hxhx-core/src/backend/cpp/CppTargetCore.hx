@@ -3494,6 +3494,8 @@ class CppTargetCore {
 		}
 		if (method == "join" && isCppVectorType(exprCppType(receiver, scope)) && args.length == 1)
 			return "__hxhx_join(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
+		if (isReflectStaticReceiver(receiver) && method == "compare")
+			return reflectCompareExpr(args, scope);
 		if (isCppConstPointerStaticReceiver(receiver) && method == "fromPointer" && args.length == 1)
 			return "std::make_shared<ConstPointer>(" + renderExpr(args[0], scope) + ")";
 		if (receiverTypeName != null) {
@@ -3513,6 +3515,21 @@ class CppTargetCore {
 		final fn = currentOwnerMethod(name, scope);
 		final renderedArgs = fn == null ? renderSimpleCallArgs(args, scope) : renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope);
 		return sanitizeIdentifier(name) + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function reflectCompareExpr(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (args.length != 2)
+			throw "C++ Reflect.compare expects 2 argument(s)";
+		return "([&]() { auto __hxhx_cmp_left = "
+			+ reflectCompareArgExpr(args[0], scope)
+			+ "; auto __hxhx_cmp_right = "
+			+ reflectCompareArgExpr(args[1], scope)
+			+ "; return (__hxhx_cmp_left < __hxhx_cmp_right ? -1 : (__hxhx_cmp_left > __hxhx_cmp_right ? 1 : 0)); })()";
+	}
+
+	static function reflectCompareArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final typeName = inferExprCppType(expr, scope);
+		return typeName == "std::string" || isStringLike(expr) ? stringExpr(expr, scope) : renderExpr(expr, scope);
 	}
 
 	static function renderSimpleCallArgs(args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
@@ -3892,6 +3909,11 @@ class CppTargetCore {
 		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "StringTools";
 	}
 
+	static function isReflectStaticReceiver(receiver:HxExpr):Bool {
+		final typePath = staticReceiverTypePath(receiver);
+		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "Reflect";
+	}
+
 	static function isCppConstPointerStaticReceiver(receiver:HxExpr):Bool {
 		final typePath = staticReceiverTypePath(receiver);
 		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "ConstPointer";
@@ -3992,6 +4014,8 @@ class CppTargetCore {
 			case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
 				int64DivModStruct().name;
 			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
+				"int";
+			case ECall(EField(receiver, "compare"), _) if (isReflectStaticReceiver(receiver)):
 				"int";
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);

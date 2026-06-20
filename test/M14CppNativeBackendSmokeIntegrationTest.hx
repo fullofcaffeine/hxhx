@@ -751,6 +751,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Math method references should lower to callable target intrinsics");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Error"), "OutsideBounds")) == "std::string(\"OutsideBounds\")",
 			"C++ Error enum-like fields should lower to tag strings instead of invalid dotted values");
+		final reflectCompareExpr = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "compare"), [EString("a"), EString("b")]));
+		assertContains(reflectCompareExpr, "auto __hxhx_cmp_left = std::string(\"a\");",
+			"C++ Reflect.compare string literals should compare std::string values instead of raw C string addresses");
+		assertContains(reflectCompareExpr, "return (__hxhx_cmp_left < __hxhx_cmp_right ? -1",
+			"C++ Reflect.compare should lower to a target-owned numeric comparison expression");
+		assertTrue(reflectCompareExpr.indexOf("Reflect::compare") < 0, "C++ Reflect.compare should not emit an undeclared generated static helper call");
+		final reflectCompareOwner = new HxClassDecl("ReflectCompareOwner", false, [], []);
+		final reflectCompareMethod = new HxFunctionDecl("compareLike", Public, false, [
+			new HxFunctionArg("left", "String", NoDefault, false, false),
+			new HxFunctionArg("right", "String", NoDefault, false, false)
+		], "", [
+			SReturn(ECall(EField(EIdent("Reflect"), "compare"), [EIdent("left"), EIdent("right")]), HxPos.unknown())
+		], "");
+		final reflectCompareLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(reflectCompareMethod, reflectCompareOwner,
+				{names: new StringMap<Bool>(), byName: new StringMap<HxClassDecl>()})
+				.join("\n");
+		assertContains(reflectCompareLines, "int compareLike(std::string left, std::string right) {",
+			"C++ helpers returning Reflect.compare should infer Int instead of falling back to String");
+		assertTrue(reflectCompareLines.indexOf("std::string compareLike") < 0, "C++ Reflect.compare helpers should not infer std::string returns");
 		final typeNameStringTernary = @:privateAccess backend.cpp.CppTargetCore.stringExpr(ECall(EField(EIdent("Std"), "string"), [
 			ETernary(EBinop("!=", EIdent("type"), ENull), ECall(EField(EIdent("Type"), "getClassName"), [EIdent("type")]), EString("Dynamic"))
 		]));
