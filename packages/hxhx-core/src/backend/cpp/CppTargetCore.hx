@@ -2239,13 +2239,14 @@ class CppTargetCore {
 				if (init != null)
 					collectDynamicLocalTypeOverridesFromExpr(init, scope, candidates);
 				final local = sanitizeIdentifier(name);
+				final unhintedNoInit = isUnhintedNoInitLocal(typeHint, init);
 				final unhintedEmptyArray = isUnhintedEmptyArray(typeHint, init);
-				if (isDynamicLikeTypeHint(typeHint) || unhintedEmptyArray) {
+				if (isDynamicLikeTypeHint(typeHint) || unhintedNoInit || unhintedEmptyArray) {
 					candidates.set(local, true);
 					final inferred = init == null || unhintedEmptyArray ? "" : dynamicLocalAssignedType(init, scope);
 					if (inferred.length > 0)
 						setDynamicLocalTypeOverride(scope, local, inferred);
-					else
+					else if (!unhintedNoInit)
 						scope.localTypes.set(local, "std::string");
 				} else {
 					final localType = cppLocalTypeHint(typeHint, init, scope);
@@ -2318,7 +2319,7 @@ class CppTargetCore {
 	static function dynamicLocalAssignedType(expr:HxExpr, scope:CppRenderScope):String {
 		final explicit = exprCppType(expr, scope);
 		final inferred = explicit.length > 0 ? explicit : inferExprCppType(expr, scope);
-		return inferred.length > 0 && inferred != "std::string" ? inferred : "";
+		return inferred.length > 0 ? inferred : "";
 	}
 
 	static function setDynamicLocalTypeOverride(scope:CppRenderScope, local:String, typeName:String):Void {
@@ -2906,7 +2907,7 @@ class CppTargetCore {
 				if (scope != null)
 					scope.localTypes.set(sanitizeIdentifier(name), localType);
 				final hasExplicitType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
-				final declaredType = hasExplicitType && localType.length > 0 ? localType : "auto";
+				final declaredType = (hasExplicitType || init == null) && localType.length > 0 ? localType : "auto";
 				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
 					scope) : renderLocalInitExpr(init, declaredType, localType, scope);
 					[indent + declaredType + " " + localName + " = " + rhs + ";"];
@@ -4332,6 +4333,10 @@ class CppTargetCore {
 		final local = sanitizeIdentifier(name);
 		final overrideType = scope == null ? null : scope.localTypeOverrides.get(local);
 		return overrideType != null && overrideType.length > 0 ? overrideType : cppLocalTypeHint(typeHint, init, scope);
+	}
+
+	static function isUnhintedNoInitLocal(typeHint:String, init:Null<HxExpr>):Bool {
+		return init == null && StringTools.trim(typeHint == null ? "" : typeHint).length == 0;
 	}
 
 	static function isUnhintedEmptyArray(typeHint:String, init:Null<HxExpr>):Bool {

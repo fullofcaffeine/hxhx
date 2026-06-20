@@ -461,6 +461,26 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return \"0\".code;",
 			"  }",
 			"}",
+			"class CppInputReadLineLike {",
+			"  public static function fromBuffer():String {",
+			"    var buf = new BodyOnlyBuffer();",
+			"    var s;",
+			"    try {",
+			"      s = buf.toString();",
+			"      if (s.charCodeAt(s.length - 1) == 13) {",
+			"        s = s.substr(0, -1);",
+			"      }",
+			"    } catch (e:Dynamic) {",
+			"      s = buf.toString();",
+			"    }",
+			"    return s;",
+			"  }",
+			"  public static function inferredNoInitInt():Int {",
+			"    var x;",
+			"    x = 1;",
+			"    return x;",
+			"  }",
+			"}",
 			"class CppInt64HelperLike {",
 			"  public static function trim(s:String):String {",
 			"    return s;",
@@ -2953,6 +2973,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(source.indexOf(".charCodeAt(") < 0, "C++ smoke should not emit nonexistent std::string charCodeAt calls");
 		assertTrue(source.indexOf(".substring(") < 0, "C++ smoke should not emit nonexistent std::string substring calls");
 		assertTrue(source.indexOf("std::to_string(s.substr") < 0, "C++ smoke should not stringify std::string substr results");
+		assertContains(source, "static std::string fromBuffer() {", "C++ smoke should keep Input.readLine-like helpers returning strings");
+		assertContains(source, "std::string s = std::string();", "C++ smoke should infer no-init locals assigned from String expressions as std::string");
+		assertContains(source, "static_cast<int>(static_cast<unsigned char>(s[((s.size()) - 1)]))",
+			"C++ smoke should lower string operations on no-init locals after assignment inference");
+		assertContains(source, "s = s.substr(0, (-1));", "C++ smoke should preserve String.substr reassignment on no-init locals");
+		assertTrue(source.indexOf("auto s = 0;") < 0, "C++ smoke should not default no-init String locals to integer auto");
+		assertContains(source, "static int inferredNoInitInt() {", "C++ smoke should keep integer no-init local inference working");
+		assertContains(source, "int x = 0;", "C++ smoke should infer no-init locals assigned from Int expressions as int");
 		assertContains(source, "static long long parseStringLike(std::string sParam) {", "C++ smoke should erase Int64 helper returns to primitive values");
 		assertContains(source, "auto base = static_cast<long long>(10);",
 			"C++ smoke should lower Int64.ofInt directly instead of calling an incomplete helper class");
