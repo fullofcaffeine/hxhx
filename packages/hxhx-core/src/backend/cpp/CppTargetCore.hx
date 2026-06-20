@@ -4520,6 +4520,14 @@ class CppTargetCore {
 				renderExpr(expr, scope);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringExpr(args[0], scope);
+			case ETernary(cond, thenExpr, elseExpr) if (inferExprCppType(expr, scope) == "std::string"):
+				"("
+				+ conditionExpr(cond, scope)
+				+ " ? "
+				+ stringExpr(thenExpr, scope)
+				+ " : "
+				+ stringExpr(elseExpr, scope)
+				+ ")";
 			case ECall(EField(_, "indexOf"), args) if (args.length == 1 || args.length == 2):
 				"std::to_string(" + renderExpr(expr, scope) + ")";
 			case ECall(EIdent(_), _) if (exprCppType(expr, scope) == "std::string"):

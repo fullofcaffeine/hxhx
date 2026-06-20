@@ -751,6 +751,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Math method references should lower to callable target intrinsics");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Error"), "OutsideBounds")) == "std::string(\"OutsideBounds\")",
 			"C++ Error enum-like fields should lower to tag strings instead of invalid dotted values");
+		final typeNameStringTernary = @:privateAccess backend.cpp.CppTargetCore.stringExpr(ECall(EField(EIdent("Std"), "string"), [
+			ETernary(EBinop("!=", EIdent("type"), ENull), ECall(EField(EIdent("Type"), "getClassName"), [EIdent("type")]), EString("Dynamic"))
+		]));
+		assertContains(typeNameStringTernary, "? __hxhx_type_name(type) : std::string(\"Dynamic\")",
+			"C++ string contexts should preserve string-typed ternaries instead of numeric stringifying them");
+		assertTrue(typeNameStringTernary.indexOf("std::to_string") < 0, "C++ string contexts should not wrap string-typed ternaries in std::to_string");
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("__global__"), "__hxcpp_memory_get_double"),
 				[EIdent("b"), EIdent("pos")])) == "__hxhx_memory_get_double(b, pos)",
