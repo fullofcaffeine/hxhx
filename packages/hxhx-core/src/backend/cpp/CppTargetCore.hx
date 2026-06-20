@@ -3879,6 +3879,8 @@ class CppTargetCore {
 			case EIdent(name):
 				final local = scope.localTypes.get(sanitizeIdentifier(name));
 				if (local != null && local.length > 0) local; else currentInstanceFieldCppType(name, scope);
+			case ECast(inner, _) | EUntyped(inner):
+				exprCppType(inner, scope);
 			case EThis:
 				sanitizeTypePath(HxClassDecl.getName(scope.owner));
 			case ENew(typePath, _):

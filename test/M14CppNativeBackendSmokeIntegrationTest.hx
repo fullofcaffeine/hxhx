@@ -645,14 +645,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final src = [
 			"class UsesMissingIMap {",
 			"  var map:IMap;",
+			"  var keys:Iterator<String>;",
 			"  public function new(map:IMap) {",
 			"    this.map = map;",
+			"    this.keys = map.keys();",
 			"  }",
 			"  public function keys():Iterator<String> {",
 			"    return map.keys();",
 			"  }",
 			"  public function next() {",
-			"    var key = map.keys().next();",
+			"    var key = keys.next();",
 			"    return { value: map.get(key), key: key };",
 			"  }",
 			"}",
@@ -2001,7 +2003,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final mapKeyValueIterator = new HxClassDecl("MapKeyValueIterator", false, [
 			new HxFunctionDecl("next", Public, false, [], "", [
 				SVar("key", "", ECall(EField(EIdent("keys"), "next"), []), HxPos.unknown()),
-				SReturn(EAnon(["value", "key"], [ECall(EField(EIdent("map"), "get"), [EIdent("key")]), EIdent("key")]), HxPos.unknown())
+				SReturn(EAnon(["value", "key"], [ECast(ECall(EField(EIdent("map"), "get"), [EIdent("key")]), "V"), EIdent("key")]), HxPos.unknown())
 			], "")
 		], [
 			new HxFieldDecl("map", Public, false, "IMap<K,V>", null),
@@ -2021,6 +2023,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ IMap key/value iterator records should unwrap optional map.get values into concrete anonymous value fields");
 		assertTrue(mapKeyValueIteratorLines.indexOf("__hxhx_anon_value_int_key_std__string_") < 0,
 			"C++ optional method-call anonymous fields should not fall back to Int");
+		final fallbackMapIteratorClasses = new StringMap<HxClassDecl>();
+		fallbackMapIteratorClasses.set("MapKeyValueIterator", mapKeyValueIterator);
+		final fallbackMapKeyValueIteratorLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(mapKeyValueIterator, {names: mapIteratorNames, byName: fallbackMapIteratorClasses}).join("\n");
+		assertContains(fallbackMapKeyValueIteratorLines,
+			"return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",
+			"C++ fallback IMap method typing should also unwrap optional map.get values when IMap is target-owned");
+		assertTrue(fallbackMapKeyValueIteratorLines.indexOf("__hxhx_anon_value_int__key_std__string") < 0,
+			"C++ target-owned IMap key/value iterator records should not fall back to Int anonymous value fields");
 		assertTrue(stringIteratorLines.indexOf("std::string offset = 0;") < 0, "C++ string iterator offset fields should not default through std::string");
 		assertTrue(stringIteratorLines.indexOf("std::to_string(StringTools::unsafeCodeAt") < 0,
 			"C++ string iterator code-point calls should not leak incomplete StringTools static calls");
