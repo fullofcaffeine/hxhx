@@ -12,20 +12,6 @@ typedef CppAnonStruct = {
 	var fieldTypes:Array<String>;
 }
 
-typedef CppRenderScope = {
-	var owner:Null<HxClassDecl>;
-	var classNames:haxe.ds.StringMap<Bool>;
-	var classByName:haxe.ds.StringMap<HxClassDecl>;
-	var localTypes:haxe.ds.StringMap<String>;
-	var argTypeOverrides:haxe.ds.StringMap<String>;
-	var returnType:String;
-}
-
-typedef CppClassLookup = {
-	var names:haxe.ds.StringMap<Bool>;
-	var byName:haxe.ds.StringMap<HxClassDecl>;
-}
-
 typedef CppTryStringProbe = {
 	var expr:String;
 	var fallback:String;
@@ -62,8 +48,6 @@ typedef CppFieldReadCatchString = {
 	  before rerunning the upstream-derived Cpp gate.
 **/
 class CppTargetCore {
-	static inline final ABSTRACT_UNDERLYING_PREFIX = "__hxhx_abstract_underlying=";
-
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		final main = mainModule(program, context);
 		final className = sanitizeIdentifier(HxClassDecl.getName(main.cls));
@@ -3901,20 +3885,19 @@ class CppTargetCore {
 	}
 
 	static function scopeOwnerIsArrayBackedAbstract(?scope:CppRenderScope):Bool {
-		return scope != null && scope.owner != null && isArrayBackedAbstractClass(scope.owner);
+		return scope != null && scope.owner != null && CppTypeModel.isArrayBackedAbstractClass(scope.owner);
 	}
 
 	static function isArrayBackedAbstractClass(cls:HxClassDecl):Bool {
-		final underlying = abstractUnderlyingTypeHint(cls);
-		return underlying != null && StringTools.startsWith(removeTypeHintWhitespace(underlying), "Array<");
+		return CppTypeModel.isArrayBackedAbstractClass(cls);
 	}
 
 	static function isPrimitiveBackedAbstractClass(cls:HxClassDecl):Bool {
-		return primitiveAbstractUnderlyingCppType(cls) != null;
+		return CppTypeModel.isPrimitiveBackedAbstractClass(cls);
 	}
 
 	static function isStdArrayHelperClass(cls:HxClassDecl):Bool {
-		return cls != null && sanitizeTypePath(HxClassDecl.getName(cls)) == "Array";
+		return CppTypeModel.isStdArrayHelperClass(cls);
 	}
 
 	static function isPosInfosPlaceholder(cls:HxClassDecl):Bool {
@@ -3963,13 +3946,7 @@ class CppTargetCore {
 	}
 
 	static function abstractUnderlyingTypeHint(cls:HxClassDecl):Null<String> {
-		if (cls == null)
-			return null;
-		for (meta in HxClassDecl.getMetadata(cls)) {
-			if (StringTools.startsWith(meta, ABSTRACT_UNDERLYING_PREFIX))
-				return meta.substr(ABSTRACT_UNDERLYING_PREFIX.length);
-		}
-		return null;
+		return CppTypeModel.abstractUnderlyingTypeHint(cls);
 	}
 
 	static function hasInstanceField(cls:HxClassDecl, name:String):Bool {
@@ -3982,138 +3959,55 @@ class CppTargetCore {
 	}
 
 	static function arrayBackedAbstractValueCppType(cls:HxClassDecl, classLookup:CppClassLookup):String {
-		final underlying = removeTypeHintWhitespace(abstractUnderlyingTypeHint(cls));
-		if (StringTools.startsWith(underlying, "Array<") && StringTools.endsWith(underlying, ">"))
-			return cppTypeHint(underlying, null, classLookup);
-		return "std::vector<std::string>";
+		return CppTypeModel.arrayBackedAbstractValueCppType(cls, classLookup);
 	}
 
 	static function primitiveAbstractUnderlyingCppType(cls:HxClassDecl):Null<String> {
-		if (cls == null)
-			return null;
-		final metadataType = primitiveTypeHintCppType(removeTypeHintWhitespace(abstractUnderlyingTypeHint(cls)));
-		return metadataType != null ? metadataType : knownPrimitiveBackedAbstractCppType(HxClassDecl.getName(cls));
+		return CppTypeModel.primitiveAbstractUnderlyingCppType(cls);
 	}
 
 	static function primitiveTypeHintCppType(typeHint:String):Null<String> {
-		return switch (typeHint) {
-			case "String" | "StdTypes.String":
-				"std::string";
-			case "Int" | "StdTypes.Int":
-				"int";
-			case "Float" | "StdTypes.Float":
-				"double";
-			case "Bool" | "StdTypes.Bool":
-				"bool";
-			case _:
-				null;
-		};
+		return CppTypeModel.primitiveTypeHintCppType(typeHint);
 	}
 
 	static function knownPrimitiveBackedAbstractCppType(typeHint:String):Null<String> {
-		return switch (sanitizeTypePath(typeBaseName(removeTypeHintWhitespace(typeHint)))) {
-			case "Int32":
-				"int";
-			case "Int64":
-				"long long";
-			case "UInt":
-				"unsigned int";
-			case _:
-				null;
-		};
+		return CppTypeModel.knownPrimitiveBackedAbstractCppType(typeHint);
 	}
 
 	static function primitiveBackedAbstractCppTypeForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
-		final cls = lookupClassForTypeHint(typeHint, scope, classLookup);
-		final metadataType = primitiveAbstractUnderlyingCppType(cls);
-		return metadataType != null ? metadataType : knownPrimitiveBackedAbstractCppType(typeHint);
+		return CppTypeModel.primitiveBackedAbstractCppTypeForTypeHint(typeHint, scope, classLookup);
 	}
 
 	static function arrayBackedAbstractNameForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
-		final cls = lookupClassForTypeHint(typeHint, scope, classLookup);
-		return cls != null && isArrayBackedAbstractClass(cls) ? sanitizeTypePath(HxClassDecl.getName(cls)) : null;
+		return CppTypeModel.arrayBackedAbstractNameForTypeHint(typeHint, scope, classLookup);
 	}
 
 	static function lookupClassForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
-		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-		if (hint.length == 0
-			|| isArrayLikeTypeHint(hint)
-			|| isIterableTypeHint(hint)
-			|| StringTools.startsWith(hint, "Null<")
-			|| isFunctionTypeHint(hint))
-			return null;
-		final name = sanitizeTypePath(typeBaseName(hint));
-		if (scope != null) {
-			final scoped = scope.classByName.get(name);
-			if (scoped != null)
-				return scoped;
-		}
-		return classLookup == null ? null : classLookup.byName.get(name);
+		return CppTypeModel.lookupClassForTypeHint(typeHint, scope, classLookup);
 	}
 
 	static function isArrayLikeTypeHint(typeHint:String):Bool {
-		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-		return typeBaseName(hint) == "Array" && StringTools.endsWith(hint, ">");
+		return CppTypeModel.isArrayLikeTypeHint(typeHint);
 	}
 
 	static function isStdArrayTypePath(typeHint:String):Bool {
-		return typeBaseName(removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint))) == "Array";
+		return CppTypeModel.isStdArrayTypePath(typeHint);
 	}
 
 	static function isIterableTypeHint(typeHint:String):Bool {
-		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-		return typeBaseName(hint) == "Iterable" && StringTools.endsWith(hint, ">");
+		return CppTypeModel.isIterableTypeHint(typeHint);
 	}
 
 	static function genericTypeHintArg(typeHint:String):String {
-		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-		final open = hint.indexOf("<");
-		return open < 0 || !StringTools.endsWith(hint, ">") ? "" : hint.substr(open + 1, hint.length - open - 2);
+		return CppTypeModel.genericTypeHintArg(typeHint);
 	}
 
 	static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
-		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-		if (StringTools.startsWith(raw, "Null<") && StringTools.endsWith(raw, ">"))
-			return cppNullableTypeHint(raw.substr("Null<".length, raw.length - "Null<".length - 1), scope, classLookup);
-		final hint = raw;
-		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
-		if (primitiveAbstractType != null)
-			return primitiveAbstractType;
-		final abstractName = arrayBackedAbstractNameForTypeHint(hint, scope, classLookup);
-		if (abstractName != null)
-			return abstractName;
-		return switch (hint) {
-			case "" | "Void" | "StdTypes.Void":
-				hint.length == 0 ? "std::string" : "void";
-			case "String" | "StdTypes.String":
-				"std::string";
-			case "Int" | "StdTypes.Int":
-				"int";
-			case "UInt8" | "cpp.UInt8" | "StdTypes.UInt8":
-				"int";
-			case _ if (isBytesDataTypeName(hint)):
-				"std::vector<int>";
-			case "Float" | "StdTypes.Float":
-				"double";
-			case "Bool" | "StdTypes.Bool":
-				"bool";
-			case "Dynamic" | "Any":
-				"std::string";
-			case _ if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint)):
-				"std::vector<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">";
-			case _ if (isFunctionTypeHint(hint)):
-				cppFunctionTypeHint(hint, scope, classLookup);
-			case _ if (isClassLikeTypeHint(hint)):
-				"std::shared_ptr<" + sanitizeTypePath(typeBaseName(hint)) + ">";
-			case _:
-				"std::string";
-		};
+		return CppTypeModel.cppTypeHint(typeHint, scope, classLookup);
 	}
 
 	static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
-		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
-		final hint = unwrapNullTypeHint(raw);
-		return isStructuralTypeHint(hint) ? "auto" : cppTypeHint(raw, scope, classLookup);
+		return CppTypeModel.cppReturnTypeHint(typeHint, scope, classLookup);
 	}
 
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
@@ -4162,288 +4056,86 @@ class CppTargetCore {
 	}
 
 	static function cppNullableTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
-		final inner = cppTypeHint(typeHint, scope, classLookup);
-		if (isCppReferenceType(inner) || isCppOptionalType(inner))
-			return inner;
-		return "std::optional<" + inner + ">";
+		return CppTypeModel.cppNullableTypeHint(typeHint, scope, classLookup);
 	}
 
 	static function unwrapNullTypeHint(typeHint:String):String {
-		final hint = removeTypeHintWhitespace(typeHint);
-		if (StringTools.startsWith(hint, "Null<") && StringTools.endsWith(hint, ">"))
-			return hint.substr("Null<".length, hint.length - "Null<".length - 1);
-		return hint;
+		return CppTypeModel.unwrapNullTypeHint(typeHint);
 	}
 
 	static function isFunctionTypeHint(typeHint:String):Bool {
-		return splitTopLevelFunctionType(typeHint).length > 1;
+		return CppTypeModel.isFunctionTypeHint(typeHint);
 	}
 
 	static function cppFunctionTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
-		final parts = splitTopLevelFunctionType(typeHint);
-		if (parts.length <= 1)
-			return "std::function<std::string()>";
-		final returnType = cppTypeHint(parts[parts.length - 1], scope, classLookup);
-		final args = [
-			for (arg in functionArgTypeParts(parts.slice(0, parts.length - 1)))
-				cppTypeHint(functionArgTypePartType(arg), scope, classLookup)
-		].filter(t -> t != "void");
-		return "std::function<" + returnType + "(" + args.join(", ") + ")>";
+		return CppTypeModel.cppFunctionTypeHint(typeHint, scope, classLookup);
 	}
 
 	static function cppFunctionReturnTypeFromCppType(typeName:String):String {
-		final prefix = "std::function<";
-		if (typeName == null || !StringTools.startsWith(typeName, prefix) || !StringTools.endsWith(typeName, ">"))
-			return "";
-		final signature = typeName.substr(prefix.length, typeName.length - prefix.length - 1);
-		var angleDepth = 0;
-		for (i in 0...signature.length) {
-			final c = signature.charAt(i);
-			if (c == "<")
-				angleDepth++;
-			else if (c == ">" && angleDepth > 0)
-				angleDepth--;
-			else if (c == "(" && angleDepth == 0)
-				return StringTools.trim(signature.substring(0, i));
-		}
-		return "";
+		return CppTypeModel.cppFunctionReturnTypeFromCppType(typeName);
 	}
 
 	static function splitTopLevelFunctionType(typeHint:String):Array<String> {
-		final parts = [];
-		var start = 0;
-		var angleDepth = 0;
-		var parenDepth = 0;
-		var i = 0;
-		while (i < typeHint.length) {
-			final c = typeHint.charAt(i);
-			if (c == "<")
-				angleDepth++;
-			else if (c == ">" && angleDepth > 0)
-				angleDepth--;
-			else if (c == "(")
-				parenDepth++;
-			else if (c == ")" && parenDepth > 0)
-				parenDepth--;
-			else if (c == "-" && i + 1 < typeHint.length && typeHint.charAt(i + 1) == ">" && angleDepth == 0 && parenDepth == 0) {
-				parts.push(stripTypeParens(typeHint.substring(start, i)));
-				i += 2;
-				start = i;
-				continue;
-			}
-			i++;
-		}
-		if (parts.length > 0)
-			parts.push(stripTypeParens(typeHint.substr(start)));
-		return parts;
-	}
-
-	static function functionArgTypeParts(parts:Array<String>):Array<String> {
-		if (parts.length != 1)
-			return parts;
-		final single = stripTypeParens(parts[0]);
-		if (single == "Void" || single == "StdTypes.Void")
-			return [];
-		return splitTopLevelComma(single);
-	}
-
-	static function functionArgTypePartType(part:String):String {
-		final text = stripTypeParens(part);
-		final colon = topLevelColonIndex(text);
-		if (colon <= 0)
-			return text;
-		var name = StringTools.trim(text.substring(0, colon));
-		if (StringTools.startsWith(name, "?"))
-			name = StringTools.trim(name.substr(1));
-		return isIdentifierText(name) ? StringTools.trim(text.substr(colon + 1)) : text;
-	}
-
-	static function topLevelColonIndex(text:String):Int {
-		var angleDepth = 0;
-		var parenDepth = 0;
-		var braceDepth = 0;
-		for (i in 0...text.length) {
-			final c = text.charAt(i);
-			if (c == "<")
-				angleDepth++;
-			else if (c == ">" && angleDepth > 0)
-				angleDepth--;
-			else if (c == "(")
-				parenDepth++;
-			else if (c == ")" && parenDepth > 0)
-				parenDepth--;
-			else if (c == "{")
-				braceDepth++;
-			else if (c == "}" && braceDepth > 0)
-				braceDepth--;
-			else if (c == ":" && angleDepth == 0 && parenDepth == 0 && braceDepth == 0)
-				return i;
-		}
-		return -1;
-	}
-
-	static function isIdentifierText(text:String):Bool {
-		if (text == null || text.length == 0)
-			return false;
-		for (i in 0...text.length) {
-			final code = text.charCodeAt(i);
-			final isLetter = (code >= "A".code && code <= "Z".code) || (code >= "a".code && code <= "z".code) || code == "_".code;
-			final isDigit = code >= "0".code && code <= "9".code;
-			if (i == 0) {
-				if (!isLetter)
-					return false;
-			} else if (!isLetter && !isDigit)
-				return false;
-		}
-		return true;
+		return CppTypeModel.splitTopLevelFunctionType(typeHint);
 	}
 
 	static function splitTopLevelComma(text:String):Array<String> {
-		final parts = [];
-		var start = 0;
-		var angleDepth = 0;
-		var parenDepth = 0;
-		for (i in 0...text.length) {
-			final c = text.charAt(i);
-			if (c == "<")
-				angleDepth++;
-			else if (c == ">" && angleDepth > 0)
-				angleDepth--;
-			else if (c == "(")
-				parenDepth++;
-			else if (c == ")" && parenDepth > 0)
-				parenDepth--;
-			else if (c == "," && angleDepth == 0 && parenDepth == 0) {
-				parts.push(stripTypeParens(text.substring(start, i)));
-				start = i + 1;
-			}
-		}
-		parts.push(stripTypeParens(text.substr(start)));
-		return parts.filter(part -> part.length > 0);
+		return CppTypeModel.splitTopLevelComma(text);
 	}
 
 	static function stripTypeParens(typeHint:String):String {
-		var hint = StringTools.trim(typeHint == null ? "" : typeHint);
-		while (StringTools.startsWith(hint, "(") && StringTools.endsWith(hint, ")") && enclosesWholeType(hint))
-			hint = StringTools.trim(hint.substr(1, hint.length - 2));
-		return hint;
-	}
-
-	static function enclosesWholeType(typeHint:String):Bool {
-		var depth = 0;
-		for (i in 0...typeHint.length) {
-			final c = typeHint.charAt(i);
-			if (c == "(")
-				depth++;
-			else if (c == ")") {
-				depth--;
-				if (depth == 0 && i < typeHint.length - 1)
-					return false;
-			}
-		}
-		return depth == 0;
+		return CppTypeModel.stripTypeParens(typeHint);
 	}
 
 	static function removeTypeHintWhitespace(typeHint:String):String {
-		var out = "";
-		final raw = typeHint == null ? "" : typeHint;
-		for (i in 0...raw.length) {
-			final c = raw.charAt(i);
-			if (c != " " && c != "\t" && c != "\n" && c != "\r")
-				out += c;
-		}
-		return out;
+		return CppTypeModel.removeTypeHintWhitespace(typeHint);
 	}
 
 	static function typeBaseName(typeHint:String):String {
-		var hint = unwrapNullTypeHint(typeHint);
-		final generic = hint.indexOf("<");
-		if (generic >= 0)
-			hint = hint.substr(0, generic);
-		final dot = hint.lastIndexOf(".");
-		return dot >= 0 ? hint.substr(dot + 1) : hint;
+		return CppTypeModel.typeBaseName(typeHint);
 	}
 
 	static function isClassLikeTypeHint(typeHint:String):Bool {
-		final base = typeBaseName(typeHint);
-		if (base.length == 0)
-			return false;
-		if (base.length == 1) {
-			final c = base.charCodeAt(0);
-			if (c >= "A".code && c <= "Z".code)
-				return false;
-		}
-		final first = base.charCodeAt(0);
-		return first >= "A".code && first <= "Z".code;
+		return CppTypeModel.isClassLikeTypeHint(typeHint);
 	}
 
 	static function isStructuralTypeHint(typeHint:String):Bool {
-		final hint = removeTypeHintWhitespace(typeHint == null ? "" : typeHint);
-		return StringTools.startsWith(hint, "{") && StringTools.endsWith(hint, "}");
+		return CppTypeModel.isStructuralTypeHint(typeHint);
 	}
 
 	static function isCppReferenceType(typeName:String):Bool {
-		return typeName != null && StringTools.startsWith(typeName, "std::shared_ptr<");
+		return CppTypeModel.isCppReferenceType(typeName);
 	}
 
 	static function isCppVectorType(typeName:String):Bool {
-		return typeName != null && StringTools.startsWith(typeName, "std::vector<");
+		return CppTypeModel.isCppVectorType(typeName);
 	}
 
 	static function isCppBytesDataVectorType(typeName:String):Bool {
-		return typeName == "std::vector<int>";
+		return CppTypeModel.isCppBytesDataVectorType(typeName);
 	}
 
 	static function cppVectorElementType(typeName:String):String {
-		if (!isCppVectorType(typeName) || !StringTools.endsWith(typeName, ">"))
-			return "";
-		return typeName.substr("std::vector<".length, typeName.length - "std::vector<".length - 1);
+		return CppTypeModel.cppVectorElementType(typeName);
 	}
 
 	static function isCppArrayBackedAbstractType(typeName:String, ?scope:CppRenderScope):Bool {
-		if (scope == null || typeName == null || typeName.length == 0)
-			return false;
-		final cls = scope.classByName.get(typeName);
-		return cls != null && isArrayBackedAbstractClass(cls);
+		return CppTypeModel.isCppArrayBackedAbstractType(typeName, scope);
 	}
 
 	static function isCppOptionalType(typeName:String):Bool {
-		return typeName != null && StringTools.startsWith(typeName, "std::optional<");
+		return CppTypeModel.isCppOptionalType(typeName);
 	}
 
 	static function classNameFromCppType(typeName:String):Null<String> {
-		if (!isCppReferenceType(typeName))
-			return null;
-		return typeName.substr("std::shared_ptr<".length, typeName.length - "std::shared_ptr<".length - 1);
+		return CppTypeModel.classNameFromCppType(typeName);
 	}
 
 	static function classNameFromCppExprType(typeName:String, ?scope:CppRenderScope):Null<String> {
-		final referenceName = classNameFromCppType(typeName);
-		if (referenceName != null)
-			return referenceName;
-		return scopeHasClass(scope, typeName) ? typeName : null;
+		return CppTypeModel.classNameFromCppExprType(typeName, scope);
 	}
 
 	static function cppDefaultValue(typeName:String, ?scope:CppRenderScope):String {
-		return switch (typeName) {
-			case "void":
-				"";
-			case "std::string":
-				"std::string()";
-			case "double":
-				"0.0";
-			case "bool":
-				"false";
-			case _ if (StringTools.startsWith(typeName, "std::vector<")):
-				"{}";
-			case _ if (isCppArrayBackedAbstractType(typeName, scope)):
-				typeName + "()";
-			case _ if (isCppReferenceType(typeName)):
-				"nullptr";
-			case _ if (isCppOptionalType(typeName)):
-				"std::nullopt";
-			case _:
-				"0";
-		};
+		return CppTypeModel.cppDefaultValue(typeName, scope);
 	}
 }
