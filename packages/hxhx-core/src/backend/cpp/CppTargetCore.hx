@@ -504,7 +504,7 @@ class CppTargetCore {
 		out.push("}");
 		out.push("");
 		final classLookup = collectClassLookup(program);
-		for (decl in renderForwardDeclarations(program, main.cls)) {
+		for (decl in renderForwardDeclarations(program, main.cls, classLookup)) {
 			for (line in decl)
 				out.push(line);
 			out.push("");
@@ -759,25 +759,61 @@ class CppTargetCore {
 		};
 	}
 
-	static function renderForwardDeclarations(program:GenIrProgram, mainClass:HxClassDecl):Array<Array<String>> {
+	static function renderForwardDeclarations(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
 		final out = new Array<Array<String>>();
 		final emitted = new haxe.ds.StringMap<Bool>();
 		final mainName = HxClassDecl.getName(mainClass);
+		function emitType(rawName:String, ?typeParams:Array<String>):Void {
+			final name = sanitizeTypePath(rawName);
+			if (name == sanitizeTypePath(mainName) || emitted.exists(name))
+				return;
+			emitted.set(name, true);
+			if (typeParams != null && typeParams.length > 0)
+				out.push([genericTemplatePrefix(typeParams), "struct " + name + ";"]);
+			else
+				out.push(["struct " + name + ";"]);
+		}
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
 				if (rawName == mainName || emitted.exists(rawName) || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName))
 					continue;
-				emitted.set(rawName, true);
-				final typeParams = genericClassTemplateParams(cls);
-				if (typeParams.length > 0)
-					out.push([genericTemplatePrefix(typeParams), "struct " + sanitizeTypePath(rawName) + ";"]);
-				else
-					out.push(["struct " + sanitizeTypePath(rawName) + ";"]);
+				emitType(rawName, genericClassTemplateParams(cls));
+			}
+		}
+		for (typed in program.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				function addMissing(name:String):Void {
+					final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
+					if (shouldForwardDeclareMissingType(clean, classLookup))
+						emitType(clean);
+				}
+				for (field in HxClassDecl.getFields(cls))
+					addTypeHintDependencies(HxFieldDecl.getTypeHint(field), addMissing);
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), addMissing);
+					for (arg in HxFunctionDecl.getArgs(fn))
+						addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), addMissing);
+				}
 			}
 		}
 		return out;
+	}
+
+	static function shouldForwardDeclareMissingType(name:String, classLookup:CppClassLookup):Bool {
+		final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
+		if (clean.length == 0 || clean == "_" || classLookup.names.exists(clean) || isCppCoreExternClass(clean))
+			return false;
+		if (primitiveTypeHintCppType(clean) != null || knownPrimitiveBackedAbstractCppType(clean) != null)
+			return false;
+		return switch (clean) {
+			case "Any" | "Array" | "Bool" | "Class" | "Dynamic" | "Float" | "Function" | "Int" | "Iterable" | "Iterator" | "Null" | "String" | "Void":
+				false;
+			case _:
+				true;
+		}
 	}
 
 	static function collectClassLookup(program:GenIrProgram):CppClassLookup {
@@ -1022,10 +1058,13 @@ class CppTargetCore {
 		out.push("struct " + className + (baseType == null ? "" : " : public " + baseType) + " {");
 		final scope = renderScope(cls, classLookup, "void");
 		for (field in HxClassDecl.getFields(cls)) {
-			if (HxFieldDecl.getIsStatic(field))
-				continue;
 			final typeName = knownStdlibFieldCppType(className, HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field), scope);
 			final init = HxFieldDecl.getInit(field);
+			if (HxFieldDecl.getIsStatic(field)) {
+				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
+				out.push("  inline static " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
+				continue;
+			}
 			final genericField = isGenericTypeParamHint(HxFieldDecl.getTypeHint(field), cls);
 			if (init == null && genericField) {
 				out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + ";");
@@ -2231,6 +2270,8 @@ class CppTargetCore {
 				mathFieldExpr(field);
 			case EField(EIdent("Error"), field):
 				"std::string(" + quoteString(field) + ")";
+			case EField(receiver, field) if (staticFieldExpr(receiver, field, scope) != null):
+				staticFieldExpr(receiver, field, scope);
 			case EField(receiver, "length"):
 				"(" + renderExpr(receiver, scope) + ".size())";
 			case EArrayAccess(array, index):
@@ -2858,8 +2899,11 @@ class CppTargetCore {
 			case EField(EIdent("Error"), _):
 				"std::string";
 			case EField(receiver, field):
-				final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
-				ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
+				final staticOwner = staticReceiverClassName(receiver, scope);
+				if (staticOwner != null) classFieldCppType(staticOwner, field, scope); else {
+					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+					ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
+				}
 			case EBinop(op, _, _) if (isBoolBinaryOp(op)):
 				"bool";
 			case EUnop("!", _):
@@ -2873,7 +2917,7 @@ class CppTargetCore {
 		if (scope == null || scope.owner == null)
 			return "";
 		for (field in HxClassDecl.getFields(scope.owner)) {
-			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name)
+			if (HxFieldDecl.getName(field) == name)
 				return knownStdlibFieldCppType(sanitizeTypePath(HxClassDecl.getName(scope.owner)), name, HxFieldDecl.getTypeHint(field), scope);
 		}
 		return "";
@@ -2889,7 +2933,7 @@ class CppTargetCore {
 		if (cls == null)
 			return "";
 		for (field in HxClassDecl.getFields(cls)) {
-			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == fieldName)
+			if (HxFieldDecl.getName(field) == fieldName)
 				return knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), scope);
 		}
 		return "";
@@ -2941,6 +2985,13 @@ class CppTargetCore {
 			case _:
 				null;
 		};
+	}
+
+	static function staticFieldExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
+		final owner = staticReceiverClassName(receiver, scope);
+		if (owner == null || classFieldCppType(owner, field, scope).length == 0)
+			return null;
+		return owner + "::" + sanitizeIdentifier(field);
 	}
 
 	static function isCppCoreExternClass(name:String):Bool {

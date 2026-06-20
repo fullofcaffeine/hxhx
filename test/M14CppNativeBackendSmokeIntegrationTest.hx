@@ -1612,6 +1612,26 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(staticGenericFacadeLines.indexOf("template<typename") < 0, "C++ should not over-template Std-shaped static utility facades");
 		assertContains(staticGenericFacadeOwnerLines, "return StaticGenericFacade::is(\"v\", \"t\");",
 			"C++ static facade calls should not require class template arguments");
+		final staticFieldOwner = new HxClassDecl("StaticFieldOwner", false, [
+			new HxFunctionDecl("set", Public, true, [new HxFunctionArg("v", "String", NoDefault, false, false)], "Void", [
+				SExpr(EBinop("=", EIdent("store"), EIdent("v")), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EIdent("StaticFieldOwner"), "store"), EString("class")), HxPos.unknown())
+			], "")
+		], [new HxFieldDecl("store", Public, true, "String", EString("init"))]);
+		final staticFieldNames = new StringMap<Bool>();
+		staticFieldNames.set("StaticFieldOwner", true);
+		final staticFieldClasses = new StringMap<HxClassDecl>();
+		staticFieldClasses.set("StaticFieldOwner", staticFieldOwner);
+		final staticFieldLookup = {names: staticFieldNames, byName: staticFieldClasses};
+		final staticFieldLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(staticFieldOwner, staticFieldLookup).join("\n");
+		assertContains(staticFieldLines, "inline static std::string store = \"init\";",
+			"C++ helper classes should emit static fields instead of dropping them from the struct");
+		assertContains(staticFieldLines, "store = v;", "C++ static methods should type unqualified same-owner static field access");
+		assertContains(staticFieldLines, "StaticFieldOwner::store = \"class\";", "C++ static field access through the owner type should use scope resolution");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.shouldForwardDeclareMissingType("EventArg", staticFieldLookup),
+			"C++ forward declarations should include referenced non-core type hints even when the class is not emitted as a helper");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.shouldForwardDeclareMissingType("String", staticFieldLookup),
+			"C++ forward declarations should not emit primitive/core type hints");
 		final redeclaredLocalOwner = new HxClassDecl("RedeclaredLocalOwner", false, [
 			new HxFunctionDecl("pick", Public, false, [], "String", [
 				SVar("mg", "", EInt(12), HxPos.unknown()),
