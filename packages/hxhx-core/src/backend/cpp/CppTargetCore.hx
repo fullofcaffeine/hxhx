@@ -1370,6 +1370,11 @@ class CppTargetCore {
 				addTypeHintDependencies(part, add);
 			return;
 		}
+		if (isStructuralTypeHint(hint)) {
+			for (field in CppTypeModel.structuralTypeHintFields(hint))
+				addTypeHintDependencies(field.typeHint, add);
+			return;
+		}
 		for (arg in genericTypeHintArgs(hint))
 			addTypeHintDependencies(arg, add);
 		add(sanitizeTypePath(typeBaseName(hint)));

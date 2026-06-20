@@ -795,6 +795,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function getLocalUsing():Array<Ref<ClassType>> {",
 			"    return [];",
 			"  }",
+			"  public static function typeAndStoreExpr():{final type:Ref<ClassType>; final expr:String;} {",
+			"    return null;",
+			"  }",
 			"}",
 			"class Main {",
 			"  static function main() {}",
@@ -3254,6 +3257,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ intersection typedef fields should preserve generic Ref<T> type arguments");
 		assertContains(macroRefSource, "std::shared_ptr<Ref<std::vector<std::shared_ptr<ClassType>>>> fields = nullptr;",
 			"C++ intersection typedef fields should preserve nested generic Ref<Array<T>> type arguments");
+		assertContains(macroRefSource, "std::shared_ptr<Ref<std::shared_ptr<ClassType>>> type;",
+			"C++ structural final fields should strip the final modifier and preserve generic Ref<T> type arguments");
+		assertTrue(macroRefSource.indexOf("finaltype") < 0, "C++ structural final fields should not merge modifiers into field names");
 		assertTrue(macroRefSource.indexOf("std::shared_ptr<Ref>") < 0, "C++ generic class-like type hints should not erase template arguments to raw Ref");
 		assertTrue(macroRefSource.indexOf("public_") < 0, "C++ typedef function surfaces should not be mis-scanned as duplicate public_ fields");
 

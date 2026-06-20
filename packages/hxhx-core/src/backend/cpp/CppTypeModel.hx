@@ -365,24 +365,76 @@ class CppTypeModel {
 		return parts.filter(part -> part.length > 0);
 	}
 
+	static function splitTopLevelStructuralFields(text:String):Array<String> {
+		final parts = [];
+		var start = 0;
+		var angleDepth = 0;
+		var parenDepth = 0;
+		var braceDepth = 0;
+		for (i in 0...text.length) {
+			final c = text.charAt(i);
+			if (c == "<")
+				angleDepth++;
+			else if (c == ">" && angleDepth > 0)
+				angleDepth--;
+			else if (c == "(")
+				parenDepth++;
+			else if (c == ")" && parenDepth > 0)
+				parenDepth--;
+			else if (c == "{")
+				braceDepth++;
+			else if (c == "}" && braceDepth > 0)
+				braceDepth--;
+			else if ((c == "," || c == ";") && angleDepth == 0 && parenDepth == 0 && braceDepth == 0) {
+				parts.push(stripTypeParens(text.substring(start, i)));
+				start = i + 1;
+			}
+		}
+		parts.push(stripTypeParens(text.substr(start)));
+		return parts.filter(part -> part.length > 0);
+	}
+
 	public static function structuralTypeHintFields(typeHint:String):Array<{name:String, typeHint:String}> {
 		final hint = StringTools.trim(typeHint == null ? "" : typeHint);
 		if (!isStructuralTypeHint(hint))
 			return [];
 		final inner = hint.substr(1, hint.length - 2);
 		final fields = new Array<{name:String, typeHint:String}>();
-		for (part in splitTopLevelComma(inner)) {
+		for (part in splitTopLevelStructuralFields(inner)) {
 			final colon = topLevelColonIndex(part);
 			if (colon < 0)
 				continue;
-			var name = StringTools.trim(part.substring(0, colon));
-			if (StringTools.startsWith(name, "?"))
-				name = StringTools.trim(name.substr(1));
+			final name = normalizeStructuralFieldName(part.substring(0, colon));
 			final fieldTypeHint = StringTools.trim(part.substr(colon + 1));
 			if (name.length > 0 && fieldTypeHint.length > 0)
 				fields.push({name: name, typeHint: fieldTypeHint});
 		}
 		return fields;
+	}
+
+	static function normalizeStructuralFieldName(name:String):String {
+		var out = StringTools.trim(name == null ? "" : name);
+		var changed = true;
+		while (changed) {
+			changed = false;
+			if (StringTools.startsWith(out, "?")) {
+				out = StringTools.trim(out.substr(1));
+				changed = true;
+			}
+			for (modifier in ["final", "var", "public", "private"]) {
+				if (out == modifier)
+					return "";
+				if (StringTools.startsWith(out, modifier + " ")) {
+					out = StringTools.trim(out.substr(modifier.length));
+					changed = true;
+				}
+				if (modifier == "final" && StringTools.startsWith(out, modifier) && out.length > modifier.length) {
+					out = StringTools.trim(out.substr(modifier.length));
+					changed = true;
+				}
+			}
+		}
+		return out;
 	}
 
 	static function topLevelColonIndex(text:String):Int {
