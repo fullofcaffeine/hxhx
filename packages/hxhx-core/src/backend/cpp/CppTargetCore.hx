@@ -802,9 +802,10 @@ class CppTargetCore {
 		final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
 		final names = new Array<String>();
 		final types = new Array<String>();
+		final assertStatusShape = isAssertStatusFieldSet(fieldNames);
 		for (i in 0...count) {
 			names.push(fieldNames[i]);
-			types.push(cppAnonFieldType(fieldValues[i], scope));
+			types.push(cppAnonFieldType(fieldNames[i], fieldValues[i], assertStatusShape, scope));
 		}
 		return {name: anonStructName(names, types), fieldNames: names, fieldTypes: types};
 	}
@@ -816,7 +817,12 @@ class CppTargetCore {
 		return parts.join("_");
 	}
 
-	static function cppAnonFieldType(expr:HxExpr, ?scope:CppRenderScope):String {
+	static function cppAnonFieldType(fieldName:String, expr:HxExpr, assertStatusShape:Bool, ?scope:CppRenderScope):String {
+		final cleanField = sanitizeIdentifier(fieldName == null ? "" : fieldName);
+		if (assertStatusShape && isAssertStatusStringField(cleanField))
+			return "std::string";
+		if (assertStatusShape && cleanField == "recursive")
+			return "bool";
 		return switch (expr) {
 			case EString(_) | EEnumValue(_) | EMacroExpr(_, _) | EMacroType(_):
 				"std::string";
@@ -830,6 +836,8 @@ class CppTargetCore {
 				"double";
 			case EBool(_):
 				"bool";
+			case ETernary(_, thenExpr, elseExpr) if (isCppBoolExpr(thenExpr, scope) && isCppBoolExpr(elseExpr, scope)):
+				"bool";
 			case EUnop("post++", _) | EUnop("post--", _):
 				"int";
 			case EArrayDecl(elements):
@@ -842,6 +850,17 @@ class CppTargetCore {
 			case _:
 				"int";
 		};
+	}
+
+	static function isAssertStatusStringField(fieldName:String):Bool {
+		return fieldName == "expectedValue" || fieldName == "actualValue" || fieldName == "error" || fieldName == "path";
+	}
+
+	static function isAssertStatusFieldSet(fieldNames:Array<String>):Bool {
+		final seen = new haxe.ds.StringMap<Bool>();
+		for (fieldName in fieldNames)
+			seen.set(sanitizeIdentifier(fieldName == null ? "" : fieldName), true);
+		return seen.exists("expectedValue") && seen.exists("actualValue") && seen.exists("error") && seen.exists("path") && seen.exists("recursive");
 	}
 
 	static function renderForwardDeclarations(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
@@ -4333,6 +4352,14 @@ class CppTargetCore {
 			case EFloat(_):
 				true;
 			case _: exprCppType(expr, scope) == "double" || inferExprCppType(expr, scope) == "double";
+		};
+	}
+
+	static function isCppBoolExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return switch (expr) {
+			case EBool(_):
+				true;
+			case _: exprCppType(expr, scope) == "bool" || inferExprCppType(expr, scope) == "bool";
 		};
 	}
 

@@ -1017,6 +1017,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Assert.sameAs should stringify Dynamic expected values when storing diagnostic status");
 		assertTrue(assertSameAsLines.indexOf("sameAs(std::string expected, std::string value") < 0,
 			"C++ Assert.sameAs should not reject numeric diagnostic values through a string-only signature");
+		final assertSameStatusScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "bool");
+		assertSameStatusScope.localTypes.set("recursive", "std::optional<bool>");
+		assertSameStatusScope.localTypes.set("expected", "std::string");
+		assertSameStatusScope.localTypes.set("value", "std::string");
+		final assertSameStatusExpr:HxExpr = EAnon(["recursive", "path", "error", "expectedValue", "actualValue"], [
+			ETernary(EBinop("==", EIdent("recursive"), ENull), EBool(true), EIdent("recursive")),
+			EString(""),
+			ENull,
+			EIdent("expected"),
+			EIdent("value")
+		]);
+		final assertSameStatusStruct = @:privateAccess backend.cpp.CppTargetCore.anonStruct(["recursive", "path", "error", "expectedValue", "actualValue"], [
+			ETernary(EBinop("==", EIdent("recursive"), ENull), EBool(true), EIdent("recursive")),
+			EString(""),
+			ENull,
+			EIdent("expected"),
+			EIdent("value")
+		], assertSameStatusScope);
+		assertTrue(assertSameStatusStruct.name.indexOf("recursive_bool") >= 0,
+			"C++ Assert.same status anonymous object should infer recursive as Bool, not Int");
+		assertTrue(assertSameStatusStruct.name.indexOf("error_std__string") >= 0,
+			"C++ Assert.same status anonymous object should infer null error as String, not Int");
+		final assertSameStatusLiteral = @:privateAccess backend.cpp.CppTargetCore.renderExpr(assertSameStatusExpr, assertSameStatusScope);
+		assertContains(assertSameStatusLiteral, "recursive_bool", "C++ Assert.same status literal should use the bool aggregate shape");
+		assertContains(assertSameStatusLiteral, "error_std__string", "C++ Assert.same status literal should use the string error aggregate shape");
+		assertContains(assertSameStatusLiteral, "std::string()", "C++ Assert.same status null error should initialize as an empty string");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",
