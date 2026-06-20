@@ -697,6 +697,8 @@ class ParserStageNativeDecode {
 			return true;
 		if (isFunctionTypeHintText(source) && isErasedFunctionTypeHintText(native))
 			return true;
+		if (isStructuralTypeHintText(source) && isErasedStructuralFallbackTypeHint(native))
+			return true;
 		final sourceIsNull = StringTools.startsWith(source, "Null<") || StringTools.startsWith(source, "StdTypes.Null<");
 		if ((native == "Null" || native == "StdTypes.Null") && sourceIsNull)
 			return true;
@@ -714,6 +716,14 @@ class ParserStageNativeDecode {
 		final native = compactTypeHint(nativeTypeHint);
 		final source = compactTypeHint(sourceTypeHint);
 		return (native == "String" || native == "StdTypes.String") && isFunctionTypeHintText(source);
+	}
+
+	static function isStructuralTypeHintText(typeHint:String):Bool {
+		return StringTools.startsWith(typeHint, "{") && StringTools.endsWith(typeHint, "}");
+	}
+
+	static function isErasedStructuralFallbackTypeHint(typeHint:String):Bool {
+		return typeHint == "String" || typeHint == "StdTypes.String" || typeHint == "Dynamic" || typeHint == "Any";
 	}
 
 	static function isFunctionTypeHintText(typeHint:String):Bool {
