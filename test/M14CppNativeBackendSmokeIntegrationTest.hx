@@ -1949,6 +1949,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ subclasses without explicit constructors should forward to the base constructor shape");
 		assertTrue(inheritedCtorSubLines.indexOf("InheritedCtorSub()") < 0,
 			"C++ subclasses whose base needs constructor args should not emit an invalid default constructor");
+		final qualifiedBase = new HxClassDecl("QualifiedBase", false, [], []);
+		final qualifiedSub = new HxClassDecl("QualifiedSub", false, [], [], "demo.pkg.QualifiedBase");
+		final qualifiedNames = new StringMap<Bool>();
+		for (name in ["QualifiedBase", "QualifiedSub"])
+			qualifiedNames.set(name, true);
+		final qualifiedClasses = new StringMap<HxClassDecl>();
+		qualifiedClasses.set("QualifiedBase", qualifiedBase);
+		qualifiedClasses.set("QualifiedSub", qualifiedSub);
+		final qualifiedLookup = {names: qualifiedNames, byName: qualifiedClasses};
+		final qualifiedSubLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(qualifiedSub, qualifiedLookup).join("\n");
+		assertContains(qualifiedSubLines, "struct QualifiedSub : public QualifiedBase {",
+			"C++ helper inheritance should resolve package-qualified extends paths to emitted helper basenames");
+		assertTrue(qualifiedSubLines.indexOf("demo_pkg_QualifiedBase") < 0,
+			"C++ helper inheritance should not emit package-qualified synthetic base names when only the basename helper exists");
 		final defaultCtorBase = new HxClassDecl("DefaultCtorBase", false, [
 			new HxFunctionDecl("new", Public, false, [
 				new HxFunctionArg("s", "String", Default(EString("test")), false, false),

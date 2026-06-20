@@ -2703,45 +2703,6 @@ let collectClassLookup = fun program -> let names = Obj.magic (HxMap.create_stri
   )
 )
 
-let baseTypeName = fun cls -> try let __fallback_result_306 = let extendsPath = (HxClassDecl.getExtendsPath (Obj.magic cls) : string) in (
-  ignore (if extendsPath == Obj.magic (HxRuntime.hx_null) || HxString.length extendsPath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  sanitizeTypePath (extendsPath : string)
-) in Obj.magic __fallback_result_306 with
-  | HxRuntime.Hx_return __ret_305 -> Obj.obj __ret_305
-
-let currentOwnerIsOrExtends = fun expectedClass scope -> try let __fallback_result_1550 = (
-  ignore (if scope == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get scope "owner") == Obj.magic (HxRuntime.hx_null) || expectedClass == Obj.magic (HxRuntime.hx_null) || HxString.length expectedClass = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  let className = ref (sanitizeTypePath (HxClassDecl.getName (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) : string) : string) in (
-    ignore (while !className != Obj.magic (HxRuntime.hx_null) && HxString.length (!className) > 0 do ignore ((
-      ignore (if HxString.equals (!className) expectedClass then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-      let cls = Obj.magic (HxMap.get_string (Obj.obj (HxAnon.get scope "classByName")) (!className)) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-        ignore (if cls == Obj.magic (HxRuntime.hx_null) then let __assign_1544 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempMaybeString := __assign_1544;
-          __assign_1544
-        ) else let __assign_1545 = Obj.magic (baseTypeName (Obj.magic cls) : string) in (
-          tempMaybeString := __assign_1545;
-          __assign_1545
-        ));
-        let base = (!tempMaybeString : string) in let tempRight = ref ("" : string) in (
-          ignore (if base == Obj.magic (HxRuntime.hx_null) then let __assign_1546 = ("" : string) in (
-            tempRight := __assign_1546;
-            __assign_1546
-          ) else let __assign_1547 = (sanitizeTypePath (base : string) : string) in (
-            tempRight := __assign_1547;
-            __assign_1547
-          ));
-          let __assign_1548 = (!tempRight : string) in (
-            className := __assign_1548;
-            __assign_1548
-          )
-        )
-      )
-    )) done);
-    false
-  )
-) in Obj.magic __fallback_result_1550 with
-  | HxRuntime.Hx_return __ret_1549 -> Obj.obj __ret_1549
-
 let currentOwnerMethod = fun methodName scope -> try let __fallback_result_2184 = (
   ignore (if scope == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get scope "owner") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   let className = (sanitizeTypePath (HxClassDecl.getName (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) : string) : string) in let cls = Obj.magic (HxMap.get_string (Obj.obj (HxAnon.get scope "classByName")) className) in (
@@ -2781,29 +2742,6 @@ let int64DivModStruct = fun () -> let __anon_2878 = HxAnon.create () in (
     __arr_2882
   ))));
   __anon_2878
-)
-
-let superExpr = fun scope -> let tempMaybeHxClassDecl = ref (Obj.magic (HxRuntime.hx_null) : HxClassDecl.t) in (
-  ignore (if scope == Obj.magic (HxRuntime.hx_null) then let __assign_2904 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-    tempMaybeHxClassDecl := __assign_2904;
-    __assign_2904
-  ) else let __assign_2905 = Obj.magic (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) in (
-    tempMaybeHxClassDecl := __assign_2905;
-    __assign_2905
-  ));
-  let owner = Obj.magic (!tempMaybeHxClassDecl) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_2906 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_2906;
-      __assign_2906
-    ) else let __assign_2907 = Obj.magic (baseTypeName (Obj.magic owner) : string) in (
-      tempMaybeString := __assign_2907;
-      __assign_2907
-    ));
-    let baseType = (!tempMaybeString : string) in (
-      ignore (if baseType == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "C++ source backend MVP unsupported expression: ESuper") ["Dynamic"; "String"]) else ());
-      "(*this)"
-    )
-  )
 )
 
 let scopeOwnerIsArrayBackedAbstract = fun scope -> scope != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get scope "owner") != Obj.magic (HxRuntime.hx_null) && Backend_cpp_CppTypeModel.isArrayBackedAbstractClass (Obj.magic (Obj.obj (HxAnon.get scope "owner")))
@@ -3318,6 +3256,12 @@ let knownStdlibMethodReturnCppType = fun className methodName typeHint scope cla
 ) in Obj.magic __fallback_result_300 with
   | HxRuntime.Hx_return __ret_299 -> Obj.obj __ret_299
 
+let baseTypeName = fun cls -> try let __fallback_result_306 = let extendsPath = (HxClassDecl.getExtendsPath (Obj.magic cls) : string) in (
+  ignore (if extendsPath == Obj.magic (HxRuntime.hx_null) || HxString.length extendsPath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  sanitizeTypePath (typeBaseName (extendsPath : string) : string)
+) in Obj.magic __fallback_result_306 with
+  | HxRuntime.Hx_return __ret_305 -> Obj.obj __ret_305
+
 let isAssertPolymorphicStringifyHelper = fun fn owner -> try let __fallback_result_315 = (
   ignore (if owner == Obj.magic (HxRuntime.hx_null) || not (HxString.equals (sanitizeTypePath (typeBaseName (HxClassDecl.getName (Obj.magic owner) : string) : string)) "Assert") then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || not (HxString.equals (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string)) "q") then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
@@ -3409,6 +3353,39 @@ let genericClassTypeParamsForName = fun className scope -> try let __fallback_re
   )
 ) in Obj.magic __fallback_result_1527 with
   | HxRuntime.Hx_return __ret_1526 -> Obj.obj __ret_1526
+
+let currentOwnerIsOrExtends = fun expectedClass scope -> try let __fallback_result_1550 = (
+  ignore (if scope == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get scope "owner") == Obj.magic (HxRuntime.hx_null) || expectedClass == Obj.magic (HxRuntime.hx_null) || HxString.length expectedClass = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let className = ref (sanitizeTypePath (HxClassDecl.getName (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) : string) : string) in (
+    ignore (while !className != Obj.magic (HxRuntime.hx_null) && HxString.length (!className) > 0 do ignore ((
+      ignore (if HxString.equals (!className) expectedClass then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+      let cls = Obj.magic (HxMap.get_string (Obj.obj (HxAnon.get scope "classByName")) (!className)) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+        ignore (if cls == Obj.magic (HxRuntime.hx_null) then let __assign_1544 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeString := __assign_1544;
+          __assign_1544
+        ) else let __assign_1545 = Obj.magic (baseTypeName (Obj.magic cls) : string) in (
+          tempMaybeString := __assign_1545;
+          __assign_1545
+        ));
+        let base = (!tempMaybeString : string) in let tempRight = ref ("" : string) in (
+          ignore (if base == Obj.magic (HxRuntime.hx_null) then let __assign_1546 = ("" : string) in (
+            tempRight := __assign_1546;
+            __assign_1546
+          ) else let __assign_1547 = (sanitizeTypePath (base : string) : string) in (
+            tempRight := __assign_1547;
+            __assign_1547
+          ));
+          let __assign_1548 = (!tempRight : string) in (
+            className := __assign_1548;
+            __assign_1548
+          )
+        )
+      )
+    )) done);
+    false
+  )
+) in Obj.magic __fallback_result_1550 with
+  | HxRuntime.Hx_return __ret_1549 -> Obj.obj __ret_1549
 
 let classMethodCppReturnType = fun className methodName wantStatic scope -> try let __fallback_result_2174 = let fn = Obj.magic (classMethodDecl (className : string) (methodName : string) wantStatic scope) in (
   ignore (if fn == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
@@ -3969,6 +3946,29 @@ let ownerForKnownCall = fun callee scope -> let tempResult = ref (Obj.magic (HxR
     __assign_619
   ));
   !tempResult
+)
+
+let superExpr = fun scope -> let tempMaybeHxClassDecl = ref (Obj.magic (HxRuntime.hx_null) : HxClassDecl.t) in (
+  ignore (if scope == Obj.magic (HxRuntime.hx_null) then let __assign_2904 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempMaybeHxClassDecl := __assign_2904;
+    __assign_2904
+  ) else let __assign_2905 = Obj.magic (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) in (
+    tempMaybeHxClassDecl := __assign_2905;
+    __assign_2905
+  ));
+  let owner = Obj.magic (!tempMaybeHxClassDecl) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_2906 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_2906;
+      __assign_2906
+    ) else let __assign_2907 = Obj.magic (baseTypeName (Obj.magic owner) : string) in (
+      tempMaybeString := __assign_2907;
+      __assign_2907
+    ));
+    let baseType = (!tempMaybeString : string) in (
+      ignore (if baseType == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "C++ source backend MVP unsupported expression: ESuper") ["Dynamic"; "String"]) else ());
+      "(*this)"
+    )
+  )
 )
 
 let cppTypeHint = fun typeHint scope classLookup -> try let __fallback_result_3139 = (

@@ -1582,7 +1582,7 @@ class CppTargetCore {
 		final extendsPath = HxClassDecl.getExtendsPath(cls);
 		if (extendsPath == null || extendsPath.length == 0)
 			return null;
-		return sanitizeTypePath(extendsPath);
+		return sanitizeTypePath(typeBaseName(extendsPath));
 	}
 
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
