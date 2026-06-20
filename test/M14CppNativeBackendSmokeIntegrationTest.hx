@@ -2856,6 +2856,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final missingIMapSource = File.getContent(missingIMapEmit.entryPath);
 		assertContains(missingIMapSource, "struct IMap {",
 			"C++ missing haxe.Constraints.IMap references should emit an abstract interface declaration, not a bare forward declaration");
+		assertTrue(missingIMapSource.indexOf("struct KeyValueIterator {") < missingIMapSource.indexOf("struct IMap {"),
+			"C++ missing IMap declarations should emit KeyValueIterator before methods reference it");
 		assertContains(missingIMapSource, "virtual std::shared_ptr<__hxhx_iterator<std::string>> keys() = 0;",
 			"C++ missing IMap declarations should expose keys() for MapKeyValueIterator-style consumers");
 		assertTrue(missingIMapSource.indexOf("struct IMap {") < missingIMapSource.indexOf("struct UsesMissingIMap {"),

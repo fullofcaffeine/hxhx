@@ -962,6 +962,8 @@ class CppTargetCore {
 			final name = sanitizeTypePath(rawName);
 			if (name == sanitizeTypePath(mainName) || emitted.exists(name))
 				return;
+			if (name == "IMap")
+				emitType("KeyValueIterator");
 			emitted.set(name, true);
 			final missingInterface = renderMissingInterfaceDeclaration(name);
 			if (missingInterface != null)
